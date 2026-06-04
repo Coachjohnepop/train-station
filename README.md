@@ -29,8 +29,14 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## Deploy (GitHub + Supabase + Vercel)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+See [DEPLOY.md](./DEPLOY.md) for the exact step-by-step (you do the logins; I run the commands, edits, and verification).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+High level:
+- Supabase Postgres (free tier) for the DB — replaces the local sqlite.
+- GitHub for source + CI trigger.
+- Vercel for hosting + automatic deploys + env var injection for DATABASE_URL.
+- No DNS/custom domain steps yet (per request).
+
+Local: `npm run dev`, `npm run db:push`, `npm run db:seed`, `npm run build`.

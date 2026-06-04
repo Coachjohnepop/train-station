@@ -1,26 +1,425 @@
 @import "tailwindcss";
 
+/* Prince-inspired: deep purple night + violet accents */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #0a0612;
+  --surface: #140a22;
+  --surface-2: #1f1035;
+  --border: #3d2660;
+  --text: #f2ecf9;
+  --muted: #9d8ab8;
+  --accent: #7c3aed;
+  --accent-light: #c4b5fd;
+  --accent-deep: #5b21b6;
+  --accent-hover: #a78bfa;
+  --accent-glow: rgba(124, 58, 237, 0.28);
+  --success: #4ade9a;
+  --danger: #f07178;
+  /* legacy alias used by components */
+  --brass: var(--accent);
+  --brass-hover: var(--accent-hover);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  min-height: 100%;
+  background-color: var(--bg);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* Deep purple canvas — member, admin, and marketing home */
+.app-shell-bg {
+  min-height: 100vh;
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(
+      ellipse 90% 50% at 50% -12%,
+      rgba(91, 33, 182, 0.42),
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 55% 35% at 0% 80%,
+      rgba(76, 29, 149, 0.22),
+      transparent
+    ),
+    radial-gradient(
+      ellipse 50% 30% at 100% 40%,
+      rgba(124, 58, 237, 0.14),
+      transparent
+    );
+  background-attachment: fixed;
+}
+
+.app-shell-header {
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 72%, var(--surface));
+  backdrop-filter: blur(10px);
+}
+
+.app-shell-subbar {
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 88%, var(--surface-2));
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1.25rem;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, var(--accent-hover) 0%, var(--accent-deep) 100%);
+  color: #faf8ff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--accent-light) 25%, var(--accent-deep));
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s, filter 0.15s;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 0 24px var(--accent-glow);
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.btn-ghost:hover {
+  background: var(--surface-2);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+
+.input {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.25rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+table.data th,
+table.data td {
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+table.data th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tag {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+/* Shared accent utilities (Prince purple) */
+.text-accent {
+  color: var(--accent-light);
+}
+
+.text-accent-deep {
+  color: var(--accent-hover);
+}
+
+.border-accent-soft {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+
+.border-accent {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.bg-accent-subtle {
+  background: color-mix(in srgb, var(--accent-deep) 18%, var(--surface));
+}
+
+.bg-accent-muted {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.ring-accent {
+  --tw-ring-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.hover-accent-border:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+/* Member workout: past performance silhouette behind active card */
+.member-silhouette {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  margin: 8px 6px -8px -6px;
+  padding: 1rem;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  opacity: 0.38;
+  filter: blur(0.2px);
+  transform: scale(0.98) translateY(6px);
+  pointer-events: none;
+}
+
+.member-active-card {
+  position: relative;
+  z-index: 1;
+  cursor: pointer;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 1.25rem;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.member-active-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.member-set-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  min-height: 3.5rem;
+  padding: 0.5rem 0.25rem;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--surface-2);
+  font-weight: 700;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.1s;
+}
+
+.member-set-btn:active {
+  transform: scale(0.96);
+}
+
+.member-set-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+}
+
+.member-set-btn--done {
+  border-color: var(--success);
+  background: color-mix(in srgb, var(--success) 18%, var(--surface-2));
+  color: var(--success);
+}
+
+.member-set-btn__num {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.member-set-btn__label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+/* In-workout video overlay */
+.member-video-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1rem;
+  pointer-events: auto;
+}
+
+@media (min-width: 480px) {
+  .member-video-modal {
+    align-items: center;
+  }
+}
+
+.member-video-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(10, 6, 18, 0.82);
+  cursor: pointer;
+}
+
+.member-video-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 28rem;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 24px 48px rgba(20, 10, 34, 0.65);
+  overflow: hidden;
+}
+
+.member-video-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.member-video-modal__close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 0.875rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.member-video-modal__close:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.member-video-modal__player {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  background: #000;
+}
+
+.member-video-modal__hint {
+  padding: 0.625rem 1rem 0.875rem;
+  text-align: center;
+}
+
+.member-exercise-done {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--success) 35%, var(--border));
+  background: color-mix(in srgb, var(--success) 8%, var(--surface));
+  padding: 0.875rem 1rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.member-exercise-done:hover {
+  border-color: color-mix(in srgb, var(--success) 55%, var(--border));
+}
+
+.member-exercise-done__check {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  background: var(--success);
+  color: #09090b;
+  font-size: 0.875rem;
+  font-weight: 800;
+}
+
+.member-exercise-done__name {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Selected chips / cascade buttons */
+.chip-selected {
+  border-color: var(--accent) !important;
+  background: color-mix(in srgb, var(--accent-deep) 35%, var(--surface-2)) !important;
+}
+
+.chip-hover:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border)) !important;
+}
+
+.badge-accent {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent-light);
+}
+
+.step-badge-active {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent-light);
+}
+
+.step-badge-dot-active {
+  background: var(--accent);
+  color: #faf8ff;
+}
+
+.card-accent-frame {
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+.card-accent-highlight {
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
+  background: color-mix(in srgb, var(--accent-deep) 12%, var(--surface));
+}
+
+.nav-tab-active {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent-light);
 }
