@@ -1,22 +1,14 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { listPrograms } from "@/lib/program-data";
 import LandingHero from "@/components/LandingHero";
+import { PROGRAM_IMAGES } from "@/lib/program-constants";
 
 export const dynamic = "force-dynamic";
 
 export default async function LandingPage() {
-  const programs = await prisma.program.findMany({
-    where: { published: true },
-    orderBy: { sortOrder: "asc" },
-  });
+  const programs = await listPrograms();
 
-  const programImages: Record<string, string> = {
-    adult: "/images/programs/adult.jpg",
-    "strength-training": "/images/programs/strength.jpg",
-    "boot-camp-preparation": "/images/programs/bootcamp.jpg",
-    "combat-training": "/images/programs/combat.jpg",
-    "youth-sports": "/images/programs/youth.jpg",
-  };
+  const programImages = PROGRAM_IMAGES;
 
   return (
     <div className="min-h-screen bg-[#0a0612] text-[#f2ecf9]">
@@ -31,40 +23,55 @@ export default async function LandingPage() {
           <p className="text-xl text-[#9d8ab8]">Every program is 4 weeks. Built by coaches, for people who want results that stick.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-          {programs.map((program) => {
-            const imgSrc = programImages[program.slug] || "/images/programs/adult.jpg";
-            return (
-              <Link
-                key={program.slug}
-                href={`/member/programs/${program.slug}`}
-                className="group block rounded-3xl overflow-hidden border border-[#3d2660] bg-[#140a22] hover:border-[#7c3aed] transition-all duration-300 hover:-translate-y-0.5"
-              >
-                <div className="relative aspect-[16/10] overflow-hidden">
-                  <img 
-                    src={imgSrc} 
-                    alt={program.name}
-                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/30 to-black/70" />
-                  <div className="absolute top-4 right-4 rounded-full bg-black/60 px-3 py-1 text-xs font-medium tracking-widest text-white/90 backdrop-blur">
-                    {program.durationWeeks} WEEKS
-                  </div>
-                </div>
-                
-                <div className="p-6">
-                  <h3 className="text-2xl font-semibold tracking-tight mb-2 group-hover:text-[#7c3aed] transition-colors">{program.name}</h3>
-                  <p className="text-[#9d8ab8] text-[15px] leading-relaxed line-clamp-3 mb-4">
-                    {program.description}
-                  </p>
-                  <div className="inline-flex items-center text-sm font-medium text-[#7c3aed] group-hover:underline">
-                    Start this program <span className="ml-1.5 text-lg leading-none transition-transform group-hover:translate-x-0.5">→</span>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+        {(() => {
+          const grouped = programs.reduce((acc: Record<string, any[]>, p: any) => {
+            const c = p.category || "workout";
+            (acc[c] ||= []).push(p);
+            return acc;
+          }, {});
+          const cats = ["workout", "yoga"].filter((c) => grouped[c]?.length); // eating coming soon
+          return cats.map((cat) => (
+            <div key={cat} className="mb-12">
+              <div className="uppercase tracking-[2px] text-xs font-semibold text-[#7c3aed] mb-2">
+                {cat === "workout" ? "WORKOUT PROGRAMS" : "YOGA CHANNELS"} {/* eating coming soon */}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+                {grouped[cat].map((program: any) => {
+                  const imgSrc = programImages[program.slug] || "/images/programs/adult.jpg";
+                  return (
+                    <Link
+                      key={program.slug}
+                      href={`/member/programs/${program.slug}`}
+                      className="group block rounded-3xl overflow-hidden border border-[#3d2660] bg-[#140a22] hover:border-[#7c3aed] transition-all duration-300 hover:-translate-y-0.5"
+                    >
+                      <div className="relative aspect-[16/10] overflow-hidden">
+                        <img 
+                          src={imgSrc} 
+                          alt={program.name}
+                          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/30 to-black/70" />
+                        <div className="absolute top-4 right-4 rounded-full bg-black/60 px-3 py-1 text-xs font-medium tracking-widest text-white/90 backdrop-blur">
+                          {program.durationWeeks} WEEKS
+                        </div>
+                      </div>
+                      
+                      <div className="p-6">
+                        <h3 className="text-2xl font-semibold tracking-tight mb-2 group-hover:text-[#7c3aed] transition-colors">{program.name}</h3>
+                        <p className="text-[#9d8ab8] text-[15px] leading-relaxed line-clamp-3 mb-4">
+                          {program.description}
+                        </p>
+                        <div className="inline-flex items-center text-sm font-medium text-[#7c3aed] group-hover:underline">
+                          Start this program <span className="ml-1.5 text-lg leading-none transition-transform group-hover:translate-x-0.5">→</span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ));
+        })()}
       </div>
 
       {/* Trust / value section - professional and minimal */}
@@ -95,11 +102,14 @@ export default async function LandingPage() {
         <div className="mx-auto max-w-xl text-center px-6">
           <h3 className="text-3xl font-semibold tracking-tight mb-4">Ready to get serious?</h3>
           <p className="text-[#9d8ab8] mb-8 text-lg">Join the platform built for people who want more than another app.</p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/member" className="inline-flex h-12 items-center justify-center rounded-full bg-[#7c3aed] px-9 text-sm font-semibold text-white hover:bg-[#6d2dd6] transition-colors">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+            <Link href="/member" className="inline-flex h-12 items-center justify-center rounded-full bg-white px-9 text-sm font-semibold text-[#7c3aed] hover:bg-gray-100 transition-all hover:scale-[1.1]">
               Get started as a member
             </Link>
-            <Link href="/admin" className="inline-flex h-12 items-center justify-center rounded-full border border-[#3d2660] px-9 text-sm font-semibold hover:bg-white/5 transition-colors">
+            <Link href="/join" className="inline-flex h-12 items-center justify-center rounded-full bg-[#7c3aed] px-9 text-sm font-semibold text-white hover:bg-[#6d2dd6] transition-all hover:scale-[1.1]">
+              Join the site
+            </Link>
+            <Link href="/admin" className="inline-flex h-12 items-center justify-center rounded-full border border-[#3d2660] px-9 text-sm font-semibold hover:bg-white/5 transition-all hover:scale-[1.1]">
               I'm a coach
             </Link>
           </div>

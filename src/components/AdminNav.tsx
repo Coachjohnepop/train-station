@@ -25,6 +25,16 @@ const items = [
     label: "Users",
     match: (p: string) => p.startsWith("/admin/users"),
   },
+  {
+    href: "/admin/bookings",
+    label: "Bookings",
+    match: (p: string) => p.startsWith("/admin/bookings"),
+  },
+  {
+    href: "/admin/reports",
+    label: "Reports",
+    match: (p: string) => p.startsWith("/admin/reports"),
+  },
 ];
 
 export default function AdminNav() {

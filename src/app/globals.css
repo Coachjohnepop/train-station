@@ -218,10 +218,10 @@ table.data th {
   position: relative;
   z-index: 1;
   cursor: pointer;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--surface);
-  padding: 1.25rem;
+  padding: 0.75rem;
   transition: box-shadow 0.15s, border-color 0.15s;
 }
 
@@ -234,10 +234,10 @@ table.data th {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.125rem;
-  min-height: 3.5rem;
-  padding: 0.5rem 0.25rem;
-  border-radius: 12px;
+  gap: 0.0625rem;
+  min-height: 2.75rem;
+  padding: 0.25rem 0.125rem;
+  border-radius: 10px;
   border: 2px solid var(--border);
   background: var(--surface-2);
   font-weight: 700;
@@ -254,17 +254,27 @@ table.data th {
 
 .member-set-btn--done {
   border-color: var(--success);
-  background: color-mix(in srgb, var(--success) 18%, var(--surface-2));
-  color: var(--success);
+  background: var(--success);
+  color: white;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+.member-set-btn--done .member-set-btn__num {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.member-set-btn--done .member-set-btn__label {
+  display: none;
 }
 
 .member-set-btn__num {
-  font-size: 1.125rem;
+  font-size: 0.95rem;
   line-height: 1;
 }
 
 .member-set-btn__label {
-  font-size: 0.625rem;
+  font-size: 0.55rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;

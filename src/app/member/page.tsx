@@ -5,6 +5,9 @@ import {
 } from "@/lib/access";
 import { getMemberDashboard } from "@/lib/member-context";
 import EnrollButton from "@/components/EnrollButton";
+import { PROGRAM_IMAGES } from "@/lib/program-constants";
+import MemberHomeEquipment from '../../components/MemberHomeEquipment';
+import MemberReminderSettings from '../../components/MemberReminderSettings';
 
 export const dynamic = "force-dynamic";
 
@@ -12,136 +15,190 @@ export default async function MemberDashboardPage() {
   const data = await getMemberDashboard();
   if (!data) notFound();
 
-  const { access, stats, enrollments, programs, continueUrl, continueLabel } =
+  const { access, stats, enrollments, programs, continueUrl, continueLabel, activeContinues } =
     data;
 
   const enrolledSlugs = new Set(enrollments.map((e) => e.program.slug));
 
+  const CATEGORY_ORDER = ["workout", "yoga", "journey"] as const; // eating temporarily disabled (coming soon)
+  const CATEGORY_LABELS: Record<string, string> = {
+    workout: "Workouts",
+    // eating: "Eating Approaches", // coming soon
+    yoga: "Yoga Channels",
+    journey: "Journeys",
+  };
+
+  const groupedPrograms = programs.reduce((acc: Record<string, any[]>, p: any) => {
+    const cat = (p.category || "workout") as string;
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(p);
+    return acc;
+  }, {});
+
   return (
-    <div className="space-y-8">
-      <section>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">
+    <div className="space-y-4 lg:space-y-3">
+      <section className="mb-1 lg:mb-0">
+        <h1 className="text-xl lg:text-2xl font-bold">Dashboard</h1>
+        <p className="mt-0.5 text-xs lg:text-sm text-[var(--muted)]">
           Your training hub — everything is open while we finish billing setup.
         </p>
       </section>
 
-      {continueUrl && continueLabel && (
-        <Link href={continueUrl} className="card block card-accent-frame bg-accent-muted transition hover-accent-border">
-          <p className="text-xs font-semibold uppercase tracking-wide text-accent">
-            Continue training
-          </p>
-          <p className="mt-2 text-lg font-semibold">{continueLabel}</p>
-          <p className="mt-2 text-sm text-accent">Resume →</p>
-        </Link>
-      )}
+      {/* Home equipment inventory - now editable by the member */}
+      <MemberHomeEquipment />
 
-      <section className="grid grid-cols-3 gap-3">
-        <div className="card text-center">
-          <p className="text-2xl font-bold">{stats.dayStreak}</p>
-          <p className="mt-1 text-xs text-[var(--muted)]">Day streak</p>
-        </div>
-        <div className="card text-center">
-          <p className="text-2xl font-bold">{stats.totalWorkouts}</p>
-          <p className="mt-1 text-xs text-[var(--muted)]">Logged</p>
-        </div>
-        <div className="card text-center">
-          <p className="text-2xl font-bold">{stats.scheduledThisWeek}</p>
-          <p className="mt-1 text-xs text-[var(--muted)]">In programs</p>
-        </div>
-      </section>
-
-      {enrollments.length > 0 && (
-        <section>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Active programs
-          </h2>
-          <ul className="mt-3 space-y-2">
-            {enrollments.map((e) => (
-              <li key={e.id}>
+      {/* Top stratum: enrolled programs on left, metrics (with descriptions) , continue */}
+      <div className="flex flex-col lg:flex-row gap-3 lg:gap-2 lg:items-stretch">
+        {/* Currently enrolled programs - on the left */}
+        {enrollments.length > 0 && (
+          <div className="lg:w-64 lg:flex-shrink-0">
+            <div className="text-[10px] uppercase tracking-wide text-[var(--muted)] mb-1">Currently enrolled</div>
+            <div className="space-y-1">
+              {enrollments.map((e) => (
                 <Link
+                  key={e.id}
                   href={`/member/programs/${e.program.slug}`}
-                  className="card flex items-center justify-between transition hover-accent-border"
+                  className="card flex items-center justify-between py-1 px-2 text-sm transition hover-accent-border"
                 >
-                  <div>
-                    <p className="font-medium">{e.program.name}</p>
-                    <p className="text-xs text-[var(--muted)]">
-                      Week {e.currentWeek} · Day {e.currentDay}
-                    </p>
-                  </div>
-                  <span className="text-accent">→</span>
+                  <span className="font-medium truncate">{e.program.name}</span>
+                  <span className="text-xs text-[var(--muted)] ml-2 whitespace-nowrap">W{e.currentWeek}D{e.currentDay}</span>
                 </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Metrics with more description of what the numbers mean */}
+        <div className="flex-shrink-0 lg:w-48">
+          <div className="flex flex-col gap-2">
+            <div className="card flex flex-col items-center text-center py-2 px-3">
+              <p className="text-2xl font-bold tabular-nums leading-none">{stats.dayStreak}</p>
+              <p className="mt-0.5 text-xs font-medium">Day streak</p>
+              <p className="text-[9px] text-[var(--muted)]">consecutive training days</p>
+            </div>
+            <div className="card flex flex-col items-center text-center py-2 px-3">
+              <p className="text-2xl font-bold tabular-nums leading-none">{stats.totalWorkouts}</p>
+              <p className="mt-0.5 text-xs font-medium">Workouts logged</p>
+              <p className="text-[9px] text-[var(--muted)]">total sessions completed</p>
+            </div>
+            <div className="card flex flex-col items-center text-center py-2 px-3">
+              <p className="text-2xl font-bold tabular-nums leading-none">{stats.strengthScore || 0}</p>
+              <p className="mt-0.5 text-xs font-medium">Strength Score</p>
+              <p className="text-[9px] text-[var(--muted)]">est. bench 6RM (lbs) — see below</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Continue training - supports doing workouts + eating + yoga in parallel */}
+        <div className="flex-1">
+          <div className="text-[10px] uppercase tracking-wide text-[var(--muted)] mb-1">Continue (independent per program)</div>
+          {activeContinues && activeContinues.length > 0 ? (
+            <div className="flex flex-col gap-1.5">
+              {activeContinues.map((c: any, idx: number) => (
+                <Link
+                  key={idx}
+                  href={c.url}
+                  className="card block card-accent-frame bg-accent-muted transition hover-accent-border py-1 px-2 text-sm"
+                >
+                  <span className="font-semibold">{c.label}</span> <span className="text-accent">→</span>
+                </Link>
+              ))}
+            </div>
+          ) : (continueUrl && continueLabel ? (
+            <Link href={continueUrl} className="card block card-accent-frame bg-accent-muted transition hover-accent-border py-1.5 px-3 text-sm">
+              <span className="font-semibold">Continue:</span> {continueLabel} <span className="text-accent">→</span>
+            </Link>
+          ) : null)}
+        </div>
+      </div>
+
+      <MemberReminderSettings />
+
+      <p className="text-[10px] text-[var(--muted)] -mt-1 mb-2">
+        Strength Score (power score): no upper limit. Computed from your best logged performances (weight × reps factor via Epley 1RM estimator then ~6RM) on key lifts. Each lift is converted to an estimated "bench press 6-rep max equivalent" using standard strength ratios (squat ~1.5× bench, OHP/military ~0.65×, DB bench ~0.9× total, rows/pulldowns ~0.85-1.1×, triceps extensions ~0.4×). The score is the average of those bench-equivalents across the lifts you have data for (Back Squat, Bench Press, DB Bench, Military/Shoulder Press, Pulldown/Row, Tricep work). Log more volume on these to raise it.
+      </p>
 
       <section>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            All programs
+            Programs
           </h2>
           <Link href="/member/programs" className="text-xs text-accent hover:underline">
             View all
           </Link>
         </div>
-        <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {programs.map((program) => {
-            const state = getProgramAccessState(program, access);
-            const locked = state === "upgrade";
-            const img = {
-              adult: "/images/programs/adult.jpg",
-              "strength-training": "/images/programs/strength.jpg",
-              "boot-camp-preparation": "/images/programs/bootcamp.jpg",
-              "combat-training": "/images/programs/combat.jpg",
-              "youth-sports": "/images/programs/youth.jpg",
-            }[program.slug] || "/images/programs/adult.jpg";
-            const isEnrolled = enrolledSlugs.has(program.slug);
-            return (
-              <div
-                key={program.id}
-                className={`group relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] transition-all hover:border-[var(--accent)] hover:shadow-xl ${locked ? "opacity-60" : ""}`}
-              >
-                <Link href={`/member/programs/${program.slug}`}>
-                  <div className="relative aspect-[16/9] w-full overflow-hidden">
-                    <img
-                      src={img}
-                      alt={program.name}
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                    <div className="absolute bottom-0 left-0 p-4">
-                      <span className="inline-block rounded bg-[var(--success)]/90 px-2 py-0.5 text-[10px] font-medium text-white">
-                        Included
-                      </span>
-                      <h3 className="mt-1 text-xl font-semibold text-white">{program.name}</h3>
-                    </div>
-                  </div>
-                </Link>
-                <div className="p-4">
-                  {program.description && (
-                    <p className="text-sm text-[var(--muted)] line-clamp-2">
-                      {program.description}
-                    </p>
-                  )}
-                  <p className="mt-2 text-xs text-[var(--muted)]">
-                    {program.workoutCount} workouts scheduled
-                  </p>
-                  <div className="mt-3">
-                    <EnrollButton
-                      slug={program.slug}
-                      isEnrolled={isEnrolled}
-                    />
-                  </div>
-                </div>
+        <p className="text-[10px] text-[var(--muted)] mb-3">Higher-level menu: Workouts • Yoga Channels • Journeys (chronicle recorded live sessions; substitute matching days into your workouts). <span className="text-[var(--accent)]">Eating Approaches: coming soon</span></p>
+
+        {CATEGORY_ORDER.map((cat) => {
+          const progs = groupedPrograms[cat] || [];
+          if (progs.length === 0) return null;
+          return (
+            <div key={cat} className="mb-8">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs uppercase tracking-[1px] font-semibold text-[var(--accent)] bg-[var(--surface-2)] px-2 py-0.5 rounded">
+                  {CATEGORY_LABELS[cat]}
+                </span>
+                <span className="text-[10px] text-[var(--muted)]">({progs.length})</span>
               </div>
-            );
-          })}
-        </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                {progs.map((program: any) => {
+                  const state = getProgramAccessState(program, access);
+                  const locked = state === "upgrade";
+                  const img = PROGRAM_IMAGES[program.slug] || "/images/programs/adult.jpg";
+                  const isEnrolled = enrolledSlugs.has(program.slug);
+                  const countLabel = cat === "workout" ? `${program.workoutCount || 0} workouts` : cat === "yoga" ? "Channel • flows & sessions" : "Recorded sessions • sub into workouts"; // eating coming soon
+                  const actionLabel = isEnrolled ? "Review & track →" : "Preview →";
+
+                  return (
+                    <div
+                      key={program.id}
+                      className={`group relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] transition-all hover:border-[var(--accent)] hover:shadow-xl ${locked ? "opacity-60" : ""}`}
+                    >
+                      <Link href={`/member/programs/${program.slug}`} className="block">
+                        <div className="relative aspect-[16/9] w-full overflow-hidden">
+                          <img
+                            src={img}
+                            alt={program.name}
+                            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                          <div className="absolute bottom-0 left-0 p-4">
+                            <h3 className="mt-1 text-xl font-semibold text-white">{program.name}</h3>
+                          </div>
+                        </div>
+
+                        <div className="p-4 pr-20">
+                          {program.description && (
+                            <p className="text-sm text-[var(--muted)] line-clamp-2">
+                              {program.description}
+                            </p>
+                          )}
+                          <p className="mt-2 text-xs text-[var(--muted)]">
+                            {countLabel}
+                          </p>
+                          <div className="mt-1 text-[10px] text-accent group-hover:underline">
+                            {actionLabel}
+                          </div>
+                        </div>
+                      </Link>
+
+                      {/* Enroll / Unenroll as clear button in bottom right */}
+                      <div className="absolute bottom-3 right-3 z-10">
+                        <EnrollButton
+                          slug={program.slug}
+                          isEnrolled={isEnrolled}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
         <Link
           href="/member/workout"
           className="card transition hover-accent-border"
@@ -167,7 +224,7 @@ export default async function MemberDashboardPage() {
 
       {!access.isPreview && (
         <p className="text-center text-xs text-[var(--muted)]">
-          Upgrade to 1st Class for premium programs and live sessions.
+          Upgrade to 1st Class for live sessions (Coach tier is on-demand only).
         </p>
       )}
     </div>

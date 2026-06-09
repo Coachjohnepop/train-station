@@ -12,11 +12,11 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   await prisma.subscriptionTier.upsert({
-    where: { slug: "starter" },
+    where: { slug: "coach" },
     update: {},
     create: {
-      slug: "starter",
-      name: "Starter",
+      slug: "coach",
+      name: "Coach",
       monthlyCents: 0,
     },
   });
@@ -46,7 +46,7 @@ async function main() {
         description: track.description,
         sortOrder: track.sortOrder,
         published: true,
-        tierSlug: "starter",
+        tierSlug: "coach",
         durationWeeks: 4,
       },
     });
@@ -75,24 +75,37 @@ async function main() {
       await prisma.programWeek.upsert({ where: { id: row.id }, update: row, create: row });
     }
     for (const row of seedData.programDays || []) {
-      await prisma.programDay.upsert({ where: { id: row.id }, update: row, create: row });
+      // Strip any embedded options if present (we use the separate programDayOptions table)
+      const { options, ...dayData } = row;
+      await prisma.programDay.upsert({ where: { id: dayData.id }, update: dayData, create: dayData });
+    }
+    for (const row of seedData.programDayOptions || []) {
+      await prisma.programDayOption.upsert({ where: { id: row.id }, update: row, create: row });
+    }
+    for (const row of seedData.equipment || []) {
+      await prisma.equipment.upsert({ where: { id: row.id }, update: row, create: row });
+    }
+    for (const row of seedData.userEquipment || []) {
+      await prisma.userEquipment.upsert({ where: { id: row.id }, update: row, create: row });
     }
     if (seedData.liveSessions?.length) {
       for (const row of seedData.liveSessions) {
         await prisma.liveSession.upsert({ where: { id: row.id }, update: row, create: row });
       }
     }
-    console.log(`[seed] Imported ${seedData.exercises?.length || 0} exercises, ${seedData.workouts?.length || 0} workouts, ${seedData.programDays?.length || 0} program days.`);
+    console.log(`[seed] Imported ${seedData.exercises?.length || 0} exercises, ${seedData.workouts?.length || 0} workouts, ${seedData.programDays?.length || 0} program days, ${seedData.programDayOptions?.length || 0} day options, ${seedData.equipment?.length || 0} equipment items.`);
   } else {
     console.log("[seed] No prisma/seed-data.json — schedule will be minimal (run export script while sqlite data exists).");
   }
 
   const demoUser = await prisma.user.upsert({
     where: { email: "demo@thetrainstation.co" },
-    update: { name: "Alex" },
+    update: { name: "Alex", phone: "(555) 987-6543", dailyReminderTime: "07:30" },
     create: {
       email: "demo@thetrainstation.co",
       name: "Alex",
+      phone: "(555) 987-6543",
+      dailyReminderTime: "07:30",
       role: "MEMBER",
     },
   });
@@ -284,17 +297,52 @@ async function main() {
     });
   }
 
-  // Give the free member a starter subscription (no paid tier)
-  const starterTier = await prisma.subscriptionTier.findUnique({ where: { slug: "starter" } });
-  if (starterTier) {
+  // Give the free/coach member a coach subscription (on-demand only)
+  const coachTier = await prisma.subscriptionTier.findUnique({ where: { slug: "coach" } });
+  if (coachTier) {
     const freeUser = await prisma.user.findUnique({ where: { email: "free@thetrainstation.co" } });
     if (freeUser) {
+      await prisma.user.update({
+        where: { id: freeUser.id },
+        data: { phone: "(555) 111-2222", dailyReminderTime: "08:00" },
+      });
       const existing = await prisma.subscription.findFirst({ where: { userId: freeUser.id } });
       if (!existing) {
         await prisma.subscription.create({
-          data: { userId: freeUser.id, tierId: starterTier.id, status: "active" },
+          data: { userId: freeUser.id, tierId: coachTier.id, status: "active" },
         });
       }
+    }
+  }
+
+  // Seed admin contact info for booking system
+  await prisma.adminContact.upsert({
+    where: { id: "admin-contact" },
+    update: {
+      email: "coach@thetrainstation.co",
+      phone: "(555) 123-4567",
+    },
+    create: {
+      id: "admin-contact",
+      email: "coach@thetrainstation.co",
+      phone: "(555) 123-4567",
+    },
+  });
+
+  // Seed default availability: Mon-Fri 9am-5pm, 15min slots
+  const existingAvails = await prisma.adminAvailability.count();
+  if (existingAvails === 0) {
+    for (let wd = 1; wd <= 5; wd++) { // Mon-Fri
+      await prisma.adminAvailability.create({
+        data: {
+          weekday: wd,
+          startHour: 9,
+          startMinute: 0,
+          endHour: 17,
+          endMinute: 0,
+          slotDurationMin: 15,
+        },
+      });
     }
   }
 }

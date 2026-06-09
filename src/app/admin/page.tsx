@@ -1,16 +1,11 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 
 // Force dynamic so build succeeds without a live DB (Vercel build will have DATABASE_URL).
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const [exercises, workouts, programs, users] = await Promise.all([
-    prisma.exercise.count(),
-    prisma.workout.count(),
-    prisma.program.count(),
-    prisma.user.count(),
-  ]);
+  // stub counts for demo (no DB)
+  const [exercises, workouts, programs, users] = [101, 31, 5, 5];
 
   return (
     <div>
@@ -33,6 +28,30 @@ export default async function AdminPage() {
           <li>Manage users (roles: admin / instructor / member / prospective) and approve applications.</li>
           <li>Publish and connect Stripe when keys are ready.</li>
         </ol>
+      </div>
+
+      {/* Quick demo coach impersonation links — use these to test the "login as student" experience */}
+      <div className="card mt-6 border border-accent/30">
+        <h2 className="font-semibold text-accent">Demo: Coach view as student (impersonation)</h2>
+        <p className="text-sm text-[var(--muted)] mt-1">
+          These simulate an instructor logging into one of their students' accounts from the admin/users list.
+          Eating / diet features are coming soon (temporarily disabled).
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2 text-sm">
+          <Link 
+            href="/admin/users" 
+            className="btn-ghost text-xs px-3 py-1"
+          >
+            → Go to Users list (click "Coach Workout" on the demo member)
+          </Link>
+          <Link 
+            href="/member/workout?asInstructor=true&forUser=demo@thetrainstation.co" 
+            className="btn-ghost text-xs px-3 py-1"
+          >
+            Live workout coaching (as instructor)
+          </Link>
+        </div>
+        <p className="mt-2 text-[10px] text-[var(--muted)]">Eating Approaches: coming soon.</p>
       </div>
     </div>
   );

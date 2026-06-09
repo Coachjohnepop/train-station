@@ -54,9 +54,12 @@ export default function EnrollButton({
   if (isEnrolled) {
     return (
       <button
-        onClick={handleUnenroll}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleUnenroll();
+        }}
         disabled={loading}
-        className="text-xs text-[var(--danger)] hover:underline disabled:opacity-50"
+        className="text-[10px] px-2 py-0.5 rounded border border-[var(--danger)]/70 text-[var(--danger)] hover:bg-[var(--danger)]/10 hover:border-[var(--danger)] transition disabled:opacity-50"
       >
         {loading ? "..." : "Unenroll"}
       </button>
@@ -65,11 +68,14 @@ export default function EnrollButton({
 
   return (
     <button
-      onClick={handleEnroll}
+      onClick={(e) => {
+        e.stopPropagation();
+        handleEnroll();
+      }}
       disabled={loading}
-      className="rounded bg-accent px-3 py-1 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-50"
+      className="text-[10px] px-2.5 py-0.5 rounded bg-accent text-white font-medium hover:brightness-110 transition disabled:opacity-50"
     >
-      {loading ? "Enrolling..." : "Enroll (free)"}
+      {loading ? "..." : "Enroll (free)"}
     </button>
   );
 }

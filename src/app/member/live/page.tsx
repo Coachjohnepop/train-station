@@ -33,9 +33,13 @@ export default async function MemberLivePage() {
           </>
         ) : (
           <p className="mt-3 text-sm text-[var(--muted)]">
-            Upgrade to 1st Class to book live sessions when billing is enabled.
+            1st Class required for live sessions (Coach access is on-demand only).
           </p>
         )}
+        <p className="mt-4 text-sm">
+          New members must book a 15-min onboarding Zoom call first.{" "}
+          <Link href="/member/book" className="text-accent hover:underline">Book your call →</Link>
+        </p>
       </div>
 
       <Link href="/member" className="btn-ghost mt-6 inline-flex text-sm">

@@ -42,7 +42,7 @@ export default function SplashCarousel() {
           <img
             src="/images/logo.png"
             alt="The Train Station"
-            className="h-16 w-auto drop-shadow-2xl"
+            className="h-24 w-auto drop-shadow-2xl"
           />
         </Link>
       </div>
@@ -56,16 +56,22 @@ export default function SplashCarousel() {
           <p className="mx-auto mt-4 max-w-xl text-xl text-white/80">
             Professional training programs. Real accountability. Results that last.
           </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
             <a
               href="/member"
-              className="inline-flex items-center justify-center rounded-full bg-white px-8 py-3 text-sm font-semibold text-black transition hover:bg-white/90"
+              className="inline-flex items-center justify-center rounded-full bg-white px-8 py-3 text-sm font-semibold text-[#7c3aed] transition-all hover:bg-white/90 hover:scale-[1.1]"
             >
               Enter as Member
             </a>
             <a
+              href="/join"
+              className="inline-flex items-center justify-center rounded-full bg-[#7c3aed] px-8 py-3 text-sm font-semibold text-white transition-all hover:bg-[#6d2dd6] hover:scale-[1.1]"
+            >
+              Join the site
+            </a>
+            <a
               href="/admin"
-              className="inline-flex items-center justify-center rounded-full border border-white/70 px-8 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+              className="inline-flex items-center justify-center rounded-full border border-white/70 px-8 py-3 text-sm font-semibold text-white transition-all hover:bg-white/10 hover:scale-[1.1]"
             >
               Coach Admin
             </a>

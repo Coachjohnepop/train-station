@@ -2,7 +2,7 @@
   "_meta": {
     "exportedAt": "2026-06-04T17:32:44.834Z",
     "source": "sqlite dev.db",
-    "note": "Content tables only (exercises, workouts, schedule). User data / logs recreated in seed."
+    "note": "Full content snapshot including hybrid program options (Gym/Home), equipment inventory, etc. Use db:seed to restore."
   },
   "subscriptionTiers": [
     {
@@ -37,7 +37,7 @@
       "id": "cmpyqegas0003r7rzz0k0lc86",
       "name": "Romanian Deadlift",
       "description": null,
-      "videoUrl": null,
+      "videoUrl": "https://www.youtube.com/watch?v=1f8yoFFdkcY",
       "tags": "legs,hinge",
       "createdAt": "2026-06-04T00:02:42.820+00:00",
       "updatedAt": "2026-06-04T16:57:05.731+00:00",
@@ -49,7 +49,7 @@
       "id": "cmpyqegat0004r7rz0klfamt0",
       "name": "Bench Press",
       "description": null,
-      "videoUrl": null,
+      "videoUrl": "https://www.youtube.com/watch?v=VmB1G1K7v94",
       "tags": "push,upper",
       "createdAt": "2026-06-04T00:02:42.821+00:00",
       "updatedAt": "2026-06-04T16:57:05.732+00:00",
@@ -61,7 +61,7 @@
       "id": "cmpyqegau0005r7rz6fo4pkk4",
       "name": "Pull-Up",
       "description": null,
-      "videoUrl": null,
+      "videoUrl": "https://www.youtube.com/watch?v=eGo4IYlbE5g",
       "tags": "pull,upper",
       "createdAt": "2026-06-04T00:02:42.822+00:00",
       "updatedAt": "2026-06-04T16:57:05.733+00:00",
@@ -97,7 +97,7 @@
       "id": "cmpyru2540000tfrzohth07yi",
       "name": "Dumbell Bench Press",
       "description": "Use about 10% less than a heavy weight for this exercise.",
-      "videoUrl": null,
+      "videoUrl": "https://www.youtube.com/watch?v=8iPEnn-ltC8",
       "tags": "conditioning and preparation for future",
       "createdAt": "2026-06-04T00:42:50.584+00:00",
       "updatedAt": "2026-06-04T00:42:50.584+00:00",
@@ -1232,6 +1232,570 @@
       "defaultSetScheme": null,
       "defaultWeightTier": null,
       "defaultSets": null
+    },
+    {
+      "id": "exmq4prcrt",
+      "name": "Standing Back Row",
+      "description": "Standing Back Row",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.229Z",
+      "updatedAt": "2026-06-08T04:31:22.235Z"
+    },
+    {
+      "id": "exmq4prcru",
+      "name": "Double Arm, Light to Medium Band with Handles",
+      "description": "anchored around pole",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.237Z",
+      "updatedAt": "2026-06-08T04:31:22.237Z"
+    },
+    {
+      "id": "exmq4prcrv",
+      "name": "Incline Dumbbell Chest Press",
+      "description": "40 Degree Angle on Bench or Sink hips on Stability Ball",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.237Z",
+      "updatedAt": "2026-06-08T04:31:22.237Z"
+    },
+    {
+      "id": "exmq4prcrw",
+      "name": "Seated Dumbbell Should Press",
+      "description": "Seated Dumbbell Should Press",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.237Z",
+      "updatedAt": "2026-06-08T04:31:22.237Z"
+    },
+    {
+      "id": "exmq4prcrx",
+      "name": "Elbow Under Wrist",
+      "description": "Standing Lateral and Frontal Shoulder Raises Combo/Superset (20,20) 2 SETS of 20 both frontally and laterally Test 1 Minute of Sit Ups and log your number",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.237Z",
+      "updatedAt": "2026-06-08T04:31:22.237Z"
+    },
+    {
+      "id": "exmq4prcry",
+      "name": "Double Arm Dumbbell Tricep Extensions",
+      "description": "Double Arm Dumbbell Tricep Extensions",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.237Z",
+      "updatedAt": "2026-06-08T04:31:22.237Z"
+    },
+    {
+      "id": "exmq4prcrz",
+      "name": "Seated Double Arm Supinated Bicep Curls",
+      "description": "30 second Plank *Push up plank position",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.237Z",
+      "updatedAt": "2026-06-08T04:31:22.237Z"
+    },
+    {
+      "id": "exmq4prcs0",
+      "name": "Alternating Step Ups onto 12” Step or 1st or 2nd Step on Stairs",
+      "description": "(30,30) 15 repetitions each leg each set",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.237Z",
+      "updatedAt": "2026-06-08T04:31:22.237Z"
+    },
+    {
+      "id": "exmq4prcs1",
+      "name": "Standing Dumbbell Goblet Squat (",
+      "description": "Standing Dumbbell Goblet Squat (Light Weight)",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.237Z",
+      "updatedAt": "2026-06-08T04:31:22.237Z"
+    },
+    {
+      "id": "exmq4prcs2",
+      "name": "Standing Alternating Step Back Lunges (no weight)",
+      "description": "(30,30) 15 repetitions on each leg each set",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.237Z",
+      "updatedAt": "2026-06-08T04:31:22.237Z"
+    },
+    {
+      "id": "exmq4prcs3",
+      "name": "Standing Lateral Leg Raises, no resistance",
+      "description": "(30,30,30) each leg",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.237Z",
+      "updatedAt": "2026-06-08T04:31:22.237Z"
+    },
+    {
+      "id": "exmq4prcs4",
+      "name": "Abdominal Scissor Kicks",
+      "description": "(50, 50)",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.237Z",
+      "updatedAt": "2026-06-08T04:31:22.237Z"
+    },
+    {
+      "id": "exmq4prcs5",
+      "name": "Standing Calve Raises",
+      "description": "(30,30)",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.237Z",
+      "updatedAt": "2026-06-08T04:31:22.237Z"
+    },
+    {
+      "id": "exmq4prcs6",
+      "name": "Straight Leg Abdominal Crunches, Laying on mat",
+      "description": "50",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.238Z",
+      "updatedAt": "2026-06-08T04:31:22.238Z"
+    },
+    {
+      "id": "exmq4prcs7",
+      "name": "Standing Bands with Handles, Lat Pull Over",
+      "description": "Standing Bands with Handles, Lat Pull Over",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.238Z",
+      "updatedAt": "2026-06-08T04:31:22.238Z"
+    },
+    {
+      "id": "exmq4prcs8",
+      "name": "Or Laying on Back, Bands with Handles, Lat Pull overs",
+      "description": "Or Laying on Back, Bands with Handles, Lat Pull overs",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.238Z",
+      "updatedAt": "2026-06-08T04:31:22.238Z"
+    },
+    {
+      "id": "exmq4prcs9",
+      "name": "Find an anchor to use",
+      "description": "Find an anchor to use",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.238Z",
+      "updatedAt": "2026-06-08T04:31:22.238Z"
+    },
+    {
+      "id": "exmq4prcsa",
+      "name": "Step up Knee Drives onto stair or step 8” minimum",
+      "description": "Step up Knee Drives onto stair or step 8” minimum",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.238Z",
+      "updatedAt": "2026-06-08T04:31:22.238Z"
+    },
+    {
+      "id": "exmq4prcsb",
+      "name": "Same leg though all steps",
+      "description": "(30,30)  each leg each set",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.238Z",
+      "updatedAt": "2026-06-08T04:31:22.238Z"
+    },
+    {
+      "id": "exmq4prcsc",
+      "name": "Standing Dumbbell Hack Squat (",
+      "description": "Standing Dumbbell Hack Squat (Light Weight)",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.238Z",
+      "updatedAt": "2026-06-08T04:31:22.238Z"
+    },
+    {
+      "id": "exmq4prcsd",
+      "name": "Laying on your side,  Lateral Leg Raises, no resistance",
+      "description": "(30,30,30) each leg",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.238Z",
+      "updatedAt": "2026-06-08T04:31:22.238Z"
+    },
+    {
+      "id": "exmq4prcse",
+      "name": "Goblet Squats with Single Dumbbell",
+      "description": "(20,20,20)",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.238Z",
+      "updatedAt": "2026-06-08T04:31:22.238Z"
+    },
+    {
+      "id": "exmq4prcsf",
+      "name": "Sit ups 30",
+      "description": "Sit ups 30",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.238Z",
+      "updatedAt": "2026-06-08T04:31:22.238Z"
+    },
+    {
+      "id": "exmq4prcsg",
+      "name": "Sit ups on the ground with your feet anchored.",
+      "description": "20 repetitions",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.238Z",
+      "updatedAt": "2026-06-08T04:31:22.238Z"
+    },
+    {
+      "id": "exmq4prcsh",
+      "name": "Pronated Grip/ Double Arm Tricep Extensions",
+      "description": "Pronated Grip/ Double Arm Tricep Extensions",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.238Z",
+      "updatedAt": "2026-06-08T04:31:22.238Z"
+    },
+    {
+      "id": "exmq4prcsi",
+      "name": "Push Up Position, Shoulder Taps",
+      "description": "30",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.238Z",
+      "updatedAt": "2026-06-08T04:31:22.238Z"
+    },
+    {
+      "id": "exmq4prcsj",
+      "name": "Interval  HIIT Cardio",
+      "description": "Interval  HIIT Cardio",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.238Z",
+      "updatedAt": "2026-06-08T04:31:22.238Z"
+    },
+    {
+      "id": "exmq4prcsk",
+      "name": "Choose between:",
+      "description": "Choose between:",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.238Z",
+      "updatedAt": "2026-06-08T04:31:22.238Z"
+    },
+    {
+      "id": "exmq4prcsl",
+      "name": "Jump Squats, Power Step Ups, Air Squats, Jumping Jacks, 12” box jumps",
+      "description": "20 second intervals (20 seconds working, 20 seconds rest)",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.238Z",
+      "updatedAt": "2026-06-08T04:31:22.238Z"
+    },
+    {
+      "id": "exmq4prcsm",
+      "name": "This is a strength test, only do what you can",
+      "description": "This is a strength test, only do what you can",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.238Z",
+      "updatedAt": "2026-06-08T04:31:22.238Z"
+    },
+    {
+      "id": "exmq4prcsn",
+      "name": "Single Dumbbell Goblet Squats",
+      "description": "Single Dumbbell Goblet Squats",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.238Z",
+      "updatedAt": "2026-06-08T04:31:22.238Z"
+    },
+    {
+      "id": "exmq4prcso",
+      "name": "Single Leg Step Back Lunges",
+      "description": "Single Leg Step Back Lunges",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.238Z",
+      "updatedAt": "2026-06-08T04:31:22.238Z"
+    },
+    {
+      "id": "exmq4prcsp",
+      "name": "Band Lat Pull Downs",
+      "description": "Band Lat Pull Downs",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.239Z",
+      "updatedAt": "2026-06-08T04:31:22.239Z"
+    },
+    {
+      "id": "exmq4prcsq",
+      "name": "Anchor Bands overhead or laying on back",
+      "description": "Anchor Bands overhead or laying on back",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.239Z",
+      "updatedAt": "2026-06-08T04:31:22.239Z"
+    },
+    {
+      "id": "exmq4prcsr",
+      "name": "Light Band",
+      "description": "Light Band",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.239Z",
+      "updatedAt": "2026-06-08T04:31:22.239Z"
+    },
+    {
+      "id": "exmq4prcss",
+      "name": "Single Arm Dumbbell Bent Over Row",
+      "description": "Single Arm Dumbbell Bent Over Row",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.239Z",
+      "updatedAt": "2026-06-08T04:31:22.239Z"
+    },
+    {
+      "id": "exmq4prcst",
+      "name": "Knee and Hand on Bench or Chair",
+      "description": "Knee and Hand on Bench or Chair",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.239Z",
+      "updatedAt": "2026-06-08T04:31:22.239Z"
+    },
+    {
+      "id": "exmq4prcsu",
+      "name": "Standing Pronated Grip Band Back Pull Overs",
+      "description": "Standing Pronated Grip Band Back Pull Overs",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.239Z",
+      "updatedAt": "2026-06-08T04:31:22.239Z"
+    },
+    {
+      "id": "exmq4prcsv",
+      "name": "Anchor overhead or Lay on Ground and anchor",
+      "description": "Anchor overhead or Lay on Ground and anchor",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.239Z",
+      "updatedAt": "2026-06-08T04:31:22.239Z"
+    },
+    {
+      "id": "exmq4prcsw",
+      "name": "Seated Dumbbell Double Arm Bicep Curls",
+      "description": "Seated Dumbbell Double Arm Bicep Curls",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.239Z",
+      "updatedAt": "2026-06-08T04:31:22.239Z"
+    },
+    {
+      "id": "exmq4prcsx",
+      "name": "Both Arms at the Same time",
+      "description": "Both Arms at the Same time",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.239Z",
+      "updatedAt": "2026-06-08T04:31:22.239Z"
+    },
+    {
+      "id": "exmq4prcsy",
+      "name": "Supinated Grip",
+      "description": "Supinated Grip",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.239Z",
+      "updatedAt": "2026-06-08T04:31:22.239Z"
+    },
+    {
+      "id": "exmq4prcsz",
+      "name": "Standing Double Arm Lateral Shoulder Raises",
+      "description": "Standing Double Arm Lateral Shoulder Raises",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.239Z",
+      "updatedAt": "2026-06-08T04:31:22.239Z"
+    },
+    {
+      "id": "exmq4prct0",
+      "name": "Standing Dumbbell Double Arm Frontal Shoulder Raises",
+      "description": "Standing Dumbbell Double Arm Frontal Shoulder Raises",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.239Z",
+      "updatedAt": "2026-06-08T04:31:22.239Z"
+    },
+    {
+      "id": "exmq4prct1",
+      "name": "Two dumbbells",
+      "description": "Two dumbbells light weight",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.239Z",
+      "updatedAt": "2026-06-08T04:31:22.239Z"
+    },
+    {
+      "id": "exmq4prct2",
+      "name": "Increase weight from last week",
+      "description": "Increase weight from last week",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.239Z",
+      "updatedAt": "2026-06-08T04:31:22.239Z"
+    },
+    {
+      "id": "exmq4prct3",
+      "name": "Bent Over Dumbbell Rear Dealt Extensios",
+      "description": "Bent Over Dumbbell Rear Dealt Extensios",
+      "videoUrl": null,
+      "tags": "home,strength",
+      "defaultSetScheme": "straight",
+      "defaultSets": 3,
+      "defaultWeightTier": "light",
+      "createdAt": "2026-06-08T04:31:22.239Z",
+      "updatedAt": "2026-06-08T04:31:22.239Z"
     }
   ],
   "workouts": [
@@ -1451,6 +2015,202 @@
       "description": null,
       "createdAt": "2026-06-04T17:12:40.354+00:00",
       "updatedAt": "2026-06-04T17:12:40.354+00:00"
+    },
+    {
+      "id": "womq4prct4",
+      "name": "Day 1 Upper Body Workout (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcte",
+      "name": "Day 2 Lower Body Workout (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prctm",
+      "name": "Day 3 Workout (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prctn",
+      "name": "Day 4 Upper Body Workout (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prctw",
+      "name": "Day 5 Lower Body (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcu6",
+      "name": "Day 6 Active Recovery Rest Day (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcu7",
+      "name": "Day 7 Fasted Cardio Workout (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcu8",
+      "name": "Day 8 Upper Body Workout (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcuh",
+      "name": "Day 9 Lower Body (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcus",
+      "name": "Day 10 Workout (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcut",
+      "name": "Day 11 Upper Body Workout (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcv2",
+      "name": "Day 12 Lower Body (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcvd",
+      "name": "Day 13 Active Recovery Rest Day (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcve",
+      "name": "DAY 14 REST AND STRETCH DAY (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcvf",
+      "name": "Day 15 Split Routine Chest/Shoulders/Triceps (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcvs",
+      "name": "Day 16 Leg Day (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcw1",
+      "name": "Day 17 Fasted Cardio (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcw2",
+      "name": "Day 18  Back/Bicep (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcwf",
+      "name": "Day 19 Shoulder/Tricep/Ab/Calves (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcwr",
+      "name": "Day 20 Fasted Cardio (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcws",
+      "name": "Day 21 Rest Day (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcwt",
+      "name": "Day 22 Split Routine Chest/Shoulders/Triceps (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcx6",
+      "name": "Day 23 Leg Day (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcxe",
+      "name": "Day 24  Back/Bicep (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcxr",
+      "name": "Day 25 Fasted Cardio (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcxs",
+      "name": "Day 26 Shoulder/Tricep/Ab/Calves (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcy5",
+      "name": "Day 27 Fasted Cardio (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
+    },
+    {
+      "id": "womq4prcy6",
+      "name": "Day 28 Rest Day (Home)",
+      "description": "Home version - Month 1 programming. Warmup + main lifts using limited home equipment (dumbbells, bands, stability ball, bodyweight).",
+      "createdAt": "2026-06-08T04:31:22.240Z",
+      "updatedAt": "2026-06-08T04:31:22.240Z"
     }
   ],
   "workoutExercises": [
@@ -4586,6 +5346,1556 @@
       "setScheme": "standard",
       "weightTier": "medium",
       "repPattern": null
+    },
+    {
+      "id": "wemq4prct5",
+      "workoutId": "womq4prct4",
+      "exerciseId": "cmpzjajfp000695rz8d6nbnvu",
+      "sortOrder": 0,
+      "sets": 3,
+      "reps": "30 repetitions",
+      "setScheme": "straight",
+      "notes": "Light Weight, 2-3 SETS of 30 repetitions, (30,30,30) "
+    },
+    {
+      "id": "wemq4prct6",
+      "workoutId": "womq4prct4",
+      "exerciseId": "exmq4prcrt",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prct7",
+      "workoutId": "womq4prct4",
+      "exerciseId": "exmq4prcru",
+      "sortOrder": 2,
+      "sets": 2,
+      "reps": "30,30",
+      "setScheme": "straight",
+      "notes": "Light weight, 2 SETS of 30, (30,30) anchored around pole"
+    },
+    {
+      "id": "wemq4prct8",
+      "workoutId": "womq4prct4",
+      "exerciseId": "exmq4prcrv",
+      "sortOrder": 3,
+      "sets": 3,
+      "reps": "30,30",
+      "setScheme": "straight",
+      "notes": "Light Weight, (30,30) 40 Degree Angle on Bench or Sink hips on Stability Ball"
+    },
+    {
+      "id": "wemq4prct9",
+      "workoutId": "womq4prct4",
+      "exerciseId": "exmq4prcrw",
+      "sortOrder": 4,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcta",
+      "workoutId": "womq4prct4",
+      "exerciseId": "exmq4prcrx",
+      "sortOrder": 5,
+      "sets": 3,
+      "reps": "30,30",
+      "setScheme": "straight",
+      "notes": "Light weight, (30,30) Standing Lateral and Frontal Shoulder Raises Combo/Superset (20,20) 2 SETS of 20 both frontally and laterally Test 1 Minute of Sit Ups and log your number"
+    },
+    {
+      "id": "wemq4prctb",
+      "workoutId": "womq4prct4",
+      "exerciseId": "exmq4prcry",
+      "sortOrder": 6,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prctc",
+      "workoutId": "womq4prct4",
+      "exerciseId": "cmpzkks4s001b95rzx9sdzr2x",
+      "sortOrder": 7,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": "Light Weight (20, 20) "
+    },
+    {
+      "id": "wemq4prctd",
+      "workoutId": "womq4prct4",
+      "exerciseId": "exmq4prcrz",
+      "sortOrder": 8,
+      "sets": 3,
+      "reps": "20,20",
+      "setScheme": "straight",
+      "notes": "Light Weight (20,20) 30 second Plank *Push up plank position"
+    },
+    {
+      "id": "wemq4prctf",
+      "workoutId": "womq4prcte",
+      "exerciseId": "exmq4prcs0",
+      "sortOrder": 0,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " (30,30) 15 repetitions each leg each set"
+    },
+    {
+      "id": "wemq4prctg",
+      "workoutId": "womq4prcte",
+      "exerciseId": "exmq4prcs1",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "30,30",
+      "setScheme": "straight",
+      "notes": "3 sets of 30 (30,30,30) "
+    },
+    {
+      "id": "wemq4prcth",
+      "workoutId": "womq4prcte",
+      "exerciseId": "exmq4prcs2",
+      "sortOrder": 2,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " (30,30) 15 repetitions on each leg each set"
+    },
+    {
+      "id": "wemq4prcti",
+      "workoutId": "womq4prcte",
+      "exerciseId": "exmq4prcs3",
+      "sortOrder": 3,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " (30,30,30) each leg"
+    },
+    {
+      "id": "wemq4prctj",
+      "workoutId": "womq4prcte",
+      "exerciseId": "exmq4prcs4",
+      "sortOrder": 4,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " (50, 50)"
+    },
+    {
+      "id": "wemq4prctk",
+      "workoutId": "womq4prcte",
+      "exerciseId": "exmq4prcs5",
+      "sortOrder": 5,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": "Light weight (30,30)"
+    },
+    {
+      "id": "wemq4prctl",
+      "workoutId": "womq4prcte",
+      "exerciseId": "exmq4prcs6",
+      "sortOrder": 6,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " 50"
+    },
+    {
+      "id": "wemq4prcto",
+      "workoutId": "womq4prctn",
+      "exerciseId": "cmpzjajfp000695rz8d6nbnvu",
+      "sortOrder": 0,
+      "sets": 3,
+      "reps": "30 repetitions",
+      "setScheme": "straight",
+      "notes": "Light Weight, 3 SETS of 30 repetitions, (30,30,30) "
+    },
+    {
+      "id": "wemq4prctp",
+      "workoutId": "womq4prctn",
+      "exerciseId": "exmq4prcs7",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prctq",
+      "workoutId": "womq4prctn",
+      "exerciseId": "exmq4prcs8",
+      "sortOrder": 2,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prctr",
+      "workoutId": "womq4prctn",
+      "exerciseId": "exmq4prcs9",
+      "sortOrder": 3,
+      "sets": 2,
+      "reps": "30,30",
+      "setScheme": "straight",
+      "notes": "Light weight, 2 SETS of 30, (30,30) "
+    },
+    {
+      "id": "wemq4prcts",
+      "workoutId": "womq4prctn",
+      "exerciseId": "exmq4prcrv",
+      "sortOrder": 4,
+      "sets": 3,
+      "reps": "30,30",
+      "setScheme": "straight",
+      "notes": "Light Weight, (30,30) 40 Degree Angle on Bench or Ball sinking hips"
+    },
+    {
+      "id": "wemq4prctt",
+      "workoutId": "womq4prctn",
+      "exerciseId": "cmpzjajf9000395rz0mflsjwv",
+      "sortOrder": 5,
+      "sets": 3,
+      "reps": "30,30",
+      "setScheme": "straight",
+      "notes": "Light weight, (30,30) Standing Lateral and Frontal Shoulder Raises Combo/Superset (20,20) 2 SETS of 20 both frontally and laterally"
+    },
+    {
+      "id": "wemq4prctu",
+      "workoutId": "womq4prctn",
+      "exerciseId": "cmpzjajhb000a95rz00t98gwt",
+      "sortOrder": 6,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": "Light Weight (20, 20, 20) "
+    },
+    {
+      "id": "wemq4prctv",
+      "workoutId": "womq4prctn",
+      "exerciseId": "exmq4prcs2",
+      "sortOrder": 7,
+      "sets": 3,
+      "reps": "20,20",
+      "setScheme": "straight",
+      "notes": "Light Weight (20,20) 45 second Plank *On Elbow/forearm, hands apart plank position"
+    },
+    {
+      "id": "wemq4prctx",
+      "workoutId": "womq4prctw",
+      "exerciseId": "cmpzkkspv002q95rzf6nqlqga",
+      "sortOrder": 0,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " (20,20)"
+    },
+    {
+      "id": "wemq4prcty",
+      "workoutId": "womq4prctw",
+      "exerciseId": "exmq4prcsa",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prctz",
+      "workoutId": "womq4prctw",
+      "exerciseId": "exmq4prcsb",
+      "sortOrder": 2,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " (30,30)  each leg each set"
+    },
+    {
+      "id": "wemq4prcu0",
+      "workoutId": "womq4prctw",
+      "exerciseId": "exmq4prcsc",
+      "sortOrder": 3,
+      "sets": 3,
+      "reps": "30,30",
+      "setScheme": "straight",
+      "notes": "3 sets of 30 (30,30,30) "
+    },
+    {
+      "id": "wemq4prcu1",
+      "workoutId": "womq4prctw",
+      "exerciseId": "exmq4prcs2",
+      "sortOrder": 4,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " (30,30) 15 repetitions on each leg each set"
+    },
+    {
+      "id": "wemq4prcu2",
+      "workoutId": "womq4prctw",
+      "exerciseId": "exmq4prcsd",
+      "sortOrder": 5,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " (30,30,30) each leg"
+    },
+    {
+      "id": "wemq4prcu3",
+      "workoutId": "womq4prctw",
+      "exerciseId": "exmq4prcs4",
+      "sortOrder": 6,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " (50, 50)"
+    },
+    {
+      "id": "wemq4prcu4",
+      "workoutId": "womq4prctw",
+      "exerciseId": "exmq4prcs5",
+      "sortOrder": 7,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": "Light weight (30,30)"
+    },
+    {
+      "id": "wemq4prcu5",
+      "workoutId": "womq4prctw",
+      "exerciseId": "exmq4prcs6",
+      "sortOrder": 8,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " 50"
+    },
+    {
+      "id": "wemq4prcu9",
+      "workoutId": "womq4prcu8",
+      "exerciseId": "cmpzjajfp000695rz8d6nbnvu",
+      "sortOrder": 0,
+      "sets": 3,
+      "reps": "20 repetitions",
+      "setScheme": "straight",
+      "notes": "3 SETS of 20 repetitions, (20,20,20) "
+    },
+    {
+      "id": "wemq4prcua",
+      "workoutId": "womq4prcu8",
+      "exerciseId": "exmq4prcs7",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcub",
+      "workoutId": "womq4prcu8",
+      "exerciseId": "exmq4prcs8",
+      "sortOrder": 2,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcuc",
+      "workoutId": "womq4prcu8",
+      "exerciseId": "exmq4prcs9",
+      "sortOrder": 3,
+      "sets": 3,
+      "reps": "20,20",
+      "setScheme": "straight",
+      "notes": "Light weight, 3 SETS of 20, (20,20,20) "
+    },
+    {
+      "id": "wemq4prcud",
+      "workoutId": "womq4prcu8",
+      "exerciseId": "exmq4prcrv",
+      "sortOrder": 4,
+      "sets": 3,
+      "reps": "20,20",
+      "setScheme": "straight",
+      "notes": "Light Weight, (20,20,20) 40 Degree Angle on Bench or Ball sinking hips"
+    },
+    {
+      "id": "wemq4prcue",
+      "workoutId": "womq4prcu8",
+      "exerciseId": "cmpzjajf9000395rz0mflsjwv",
+      "sortOrder": 5,
+      "sets": 3,
+      "reps": "20,20",
+      "setScheme": "straight",
+      "notes": "Light weight, (20,20,20) Standing Lateral and Frontal Shoulder Raises Combo/Superset (20,20) 2 SETS of 20 both frontally and laterally"
+    },
+    {
+      "id": "wemq4prcuf",
+      "workoutId": "womq4prcu8",
+      "exerciseId": "cmpzjajhb000a95rz00t98gwt",
+      "sortOrder": 6,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "Light Weight (15,15,15) "
+    },
+    {
+      "id": "wemq4prcug",
+      "workoutId": "womq4prcu8",
+      "exerciseId": "exmq4prcs2",
+      "sortOrder": 7,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "Light Weight (15,15,15) 45 second Plank *On Elbow/forearm, hands apart plank position"
+    },
+    {
+      "id": "wemq4prcui",
+      "workoutId": "womq4prcuh",
+      "exerciseId": "cmpzkkspv002q95rzf6nqlqga",
+      "sortOrder": 0,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " (20,20)"
+    },
+    {
+      "id": "wemq4prcuj",
+      "workoutId": "womq4prcuh",
+      "exerciseId": "exmq4prcse",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " (20,20,20)"
+    },
+    {
+      "id": "wemq4prcuk",
+      "workoutId": "womq4prcuh",
+      "exerciseId": "exmq4prcsc",
+      "sortOrder": 2,
+      "sets": 3,
+      "reps": "20,20",
+      "setScheme": "straight",
+      "notes": "3 sets of 20 (20,20,20) "
+    },
+    {
+      "id": "wemq4prcul",
+      "workoutId": "womq4prcuh",
+      "exerciseId": "exmq4prcs2",
+      "sortOrder": 3,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " (20,20,20) 10 repetitions on each leg each set"
+    },
+    {
+      "id": "wemq4prcum",
+      "workoutId": "womq4prcuh",
+      "exerciseId": "exmq4prcsd",
+      "sortOrder": 4,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " (30,30,30,30) 4 sets each leg"
+    },
+    {
+      "id": "wemq4prcun",
+      "workoutId": "womq4prcuh",
+      "exerciseId": "exmq4prcs4",
+      "sortOrder": 5,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " (50, 50)"
+    },
+    {
+      "id": "wemq4prcuo",
+      "workoutId": "womq4prcuh",
+      "exerciseId": "exmq4prcs5",
+      "sortOrder": 6,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcup",
+      "workoutId": "womq4prcuh",
+      "exerciseId": "cmpzkktau004395rzjqk40q9b",
+      "sortOrder": 7,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": "Light weight (30,30,30)"
+    },
+    {
+      "id": "wemq4prcuq",
+      "workoutId": "womq4prcuh",
+      "exerciseId": "exmq4prcsf",
+      "sortOrder": 8,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcur",
+      "workoutId": "womq4prcuh",
+      "exerciseId": "exmq4prcs6",
+      "sortOrder": 9,
+      "sets": 3,
+      "reps": "30,30",
+      "setScheme": "straight",
+      "notes": "30,30 "
+    },
+    {
+      "id": "wemq4prcuu",
+      "workoutId": "womq4prcut",
+      "exerciseId": "cmpzjajfp000695rz8d6nbnvu",
+      "sortOrder": 0,
+      "sets": 4,
+      "reps": "15 repetitions",
+      "setScheme": "straight",
+      "notes": "4 SETS of 15 repetitions, (15,15,15,15) "
+    },
+    {
+      "id": "wemq4prcuv",
+      "workoutId": "womq4prcut",
+      "exerciseId": "exmq4prcs7",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcuw",
+      "workoutId": "womq4prcut",
+      "exerciseId": "exmq4prcs8",
+      "sortOrder": 2,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcux",
+      "workoutId": "womq4prcut",
+      "exerciseId": "exmq4prcs9",
+      "sortOrder": 3,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "Light weight, 3 SETS of 15, (15,15,15) "
+    },
+    {
+      "id": "wemq4prcuy",
+      "workoutId": "womq4prcut",
+      "exerciseId": "exmq4prcrv",
+      "sortOrder": 4,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "Light Weight, (15,15,15) 40 Degree Angle on Bench or Ball sinking hips"
+    },
+    {
+      "id": "wemq4prcuz",
+      "workoutId": "womq4prcut",
+      "exerciseId": "cmpzjajf9000395rz0mflsjwv",
+      "sortOrder": 5,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "Light weight, (15,15,15) Standing Lateral and Frontal Shoulder Raises Combo/Superset (15,15) 2 SETS of 15 both frontally and laterally"
+    },
+    {
+      "id": "wemq4prcv0",
+      "workoutId": "womq4prcut",
+      "exerciseId": "cmpzjajhb000a95rz00t98gwt",
+      "sortOrder": 6,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "Light Weight (15,15,15) "
+    },
+    {
+      "id": "wemq4prcv1",
+      "workoutId": "womq4prcut",
+      "exerciseId": "exmq4prcs2",
+      "sortOrder": 7,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "Light Weight (15,15,15) 45 second Plank *On Elbow/forearm, hands apart plank position"
+    },
+    {
+      "id": "wemq4prcv3",
+      "workoutId": "womq4prcv2",
+      "exerciseId": "cmpzkkspv002q95rzf6nqlqga",
+      "sortOrder": 0,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " (20,20)"
+    },
+    {
+      "id": "wemq4prcv4",
+      "workoutId": "womq4prcv2",
+      "exerciseId": "exmq4prcse",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " (15,15,15)"
+    },
+    {
+      "id": "wemq4prcv5",
+      "workoutId": "womq4prcv2",
+      "exerciseId": "exmq4prcsc",
+      "sortOrder": 2,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "3 sets of 15 (15,15,15) "
+    },
+    {
+      "id": "wemq4prcv6",
+      "workoutId": "womq4prcv2",
+      "exerciseId": "exmq4prcs2",
+      "sortOrder": 3,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " (15,15,15)  each leg individually"
+    },
+    {
+      "id": "wemq4prcv7",
+      "workoutId": "womq4prcv2",
+      "exerciseId": "exmq4prcsd",
+      "sortOrder": 4,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " (30,30,30,30) 4 sets each leg"
+    },
+    {
+      "id": "wemq4prcv8",
+      "workoutId": "womq4prcv2",
+      "exerciseId": "exmq4prcs4",
+      "sortOrder": 5,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " (50, 50)"
+    },
+    {
+      "id": "wemq4prcv9",
+      "workoutId": "womq4prcv2",
+      "exerciseId": "exmq4prcs5",
+      "sortOrder": 6,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcva",
+      "workoutId": "womq4prcv2",
+      "exerciseId": "cmpzkktau004395rzjqk40q9b",
+      "sortOrder": 7,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": "Light weight (30,30,30)"
+    },
+    {
+      "id": "wemq4prcvb",
+      "workoutId": "womq4prcv2",
+      "exerciseId": "exmq4prcsf",
+      "sortOrder": 8,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcvc",
+      "workoutId": "womq4prcv2",
+      "exerciseId": "exmq4prcs6",
+      "sortOrder": 9,
+      "sets": 3,
+      "reps": "30,30",
+      "setScheme": "straight",
+      "notes": "30,30 "
+    },
+    {
+      "id": "wemq4prcvg",
+      "workoutId": "womq4prcvf",
+      "exerciseId": "cmpzjajfp000695rz8d6nbnvu",
+      "sortOrder": 0,
+      "sets": 4,
+      "reps": "20 repetitions",
+      "setScheme": "straight",
+      "notes": "Light/medium Weight, 4 SETS of 20 repetitions, (20,20,20,20) "
+    },
+    {
+      "id": "wemq4prcvh",
+      "workoutId": "womq4prcvf",
+      "exerciseId": "exmq4prcsg",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " 20 repetitions"
+    },
+    {
+      "id": "wemq4prcvi",
+      "workoutId": "womq4prcvf",
+      "exerciseId": "cmpzjajgf000895rzkbecuupa",
+      "sortOrder": 2,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcvj",
+      "workoutId": "womq4prcvf",
+      "exerciseId": "cmpzjajfp000695rz8d6nbnvu",
+      "sortOrder": 3,
+      "sets": 3,
+      "reps": "20,20",
+      "setScheme": "straight",
+      "notes": "20,20,20,20 "
+    },
+    {
+      "id": "wemq4prcvk",
+      "workoutId": "womq4prcvf",
+      "exerciseId": "cmpzkkucb007795rz73ps9rj8",
+      "sortOrder": 4,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " 2 sets of 30 seconds or one straight minute with good form"
+    },
+    {
+      "id": "wemq4prcvl",
+      "workoutId": "womq4prcvf",
+      "exerciseId": "cmpzjajgy000995rz5rdrmets",
+      "sortOrder": 5,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15 "
+    },
+    {
+      "id": "wemq4prcvm",
+      "workoutId": "womq4prcvf",
+      "exerciseId": "exmq4prcs7",
+      "sortOrder": 6,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcvn",
+      "workoutId": "womq4prcvf",
+      "exerciseId": "exmq4prcsh",
+      "sortOrder": 7,
+      "sets": 3,
+      "reps": "20,20",
+      "setScheme": "straight",
+      "notes": "20,20,20,20 "
+    },
+    {
+      "id": "wemq4prcvo",
+      "workoutId": "womq4prcvf",
+      "exerciseId": "exmq4prcsi",
+      "sortOrder": 8,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " 30"
+    },
+    {
+      "id": "wemq4prcvp",
+      "workoutId": "womq4prcvf",
+      "exerciseId": "exmq4prcsj",
+      "sortOrder": 9,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcvq",
+      "workoutId": "womq4prcvf",
+      "exerciseId": "exmq4prcsk",
+      "sortOrder": 10,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcvr",
+      "workoutId": "womq4prcvf",
+      "exerciseId": "exmq4prcsl",
+      "sortOrder": 11,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " 20 second intervals (20 seconds working, 20 seconds rest)"
+    },
+    {
+      "id": "wemq4prcvt",
+      "workoutId": "womq4prcvs",
+      "exerciseId": "cmpzkktr3005f95rz1o37eefn",
+      "sortOrder": 0,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " 1 set of 10 on each leg"
+    },
+    {
+      "id": "wemq4prcvu",
+      "workoutId": "womq4prcvs",
+      "exerciseId": "exmq4prcsm",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcvv",
+      "workoutId": "womq4prcvs",
+      "exerciseId": "exmq4prcsn",
+      "sortOrder": 2,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15 (3 sets of 15) "
+    },
+    {
+      "id": "wemq4prcvw",
+      "workoutId": "womq4prcvs",
+      "exerciseId": "cmpzkktmf004x95rzp8pivj54",
+      "sortOrder": 3,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 "
+    },
+    {
+      "id": "wemq4prcvx",
+      "workoutId": "womq4prcvs",
+      "exerciseId": "cmpzkks2j001395rzmyhclofr",
+      "sortOrder": 4,
+      "sets": 3,
+      "reps": "30,30",
+      "setScheme": "straight",
+      "notes": "30,30,30 each leg "
+    },
+    {
+      "id": "wemq4prcvy",
+      "workoutId": "womq4prcvs",
+      "exerciseId": "exmq4prcso",
+      "sortOrder": 5,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcvz",
+      "workoutId": "womq4prcvs",
+      "exerciseId": "cmpzkksc9001t95rzu33weoq5",
+      "sortOrder": 6,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15 each leg "
+    },
+    {
+      "id": "wemq4prcw0",
+      "workoutId": "womq4prcvs",
+      "exerciseId": "exmq4prcs5",
+      "sortOrder": 7,
+      "sets": 3,
+      "reps": "30,30",
+      "setScheme": "straight",
+      "notes": "30,30,30 "
+    },
+    {
+      "id": "wemq4prcw3",
+      "workoutId": "womq4prcw2",
+      "exerciseId": "exmq4prcsp",
+      "sortOrder": 0,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcw4",
+      "workoutId": "womq4prcw2",
+      "exerciseId": "exmq4prcsq",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcw5",
+      "workoutId": "womq4prcw2",
+      "exerciseId": "exmq4prcsh",
+      "sortOrder": 2,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcw6",
+      "workoutId": "womq4prcw2",
+      "exerciseId": "exmq4prcsr",
+      "sortOrder": 3,
+      "sets": 3,
+      "reps": "20,20",
+      "setScheme": "straight",
+      "notes": "20,20,20 "
+    },
+    {
+      "id": "wemq4prcw7",
+      "workoutId": "womq4prcw2",
+      "exerciseId": "exmq4prcss",
+      "sortOrder": 4,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcw8",
+      "workoutId": "womq4prcw2",
+      "exerciseId": "exmq4prcst",
+      "sortOrder": 5,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 each arm "
+    },
+    {
+      "id": "wemq4prcw9",
+      "workoutId": "womq4prcw2",
+      "exerciseId": "cmpzkku09006395rz70rr558c",
+      "sortOrder": 6,
+      "sets": 3,
+      "reps": "20,20",
+      "setScheme": "straight",
+      "notes": "20,20,20 "
+    },
+    {
+      "id": "wemq4prcwa",
+      "workoutId": "womq4prcw2",
+      "exerciseId": "exmq4prcsu",
+      "sortOrder": 7,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcwb",
+      "workoutId": "womq4prcw2",
+      "exerciseId": "exmq4prcsv",
+      "sortOrder": 8,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15 "
+    },
+    {
+      "id": "wemq4prcwc",
+      "workoutId": "womq4prcw2",
+      "exerciseId": "exmq4prcsw",
+      "sortOrder": 9,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcwd",
+      "workoutId": "womq4prcw2",
+      "exerciseId": "exmq4prcsx",
+      "sortOrder": 10,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcwe",
+      "workoutId": "womq4prcw2",
+      "exerciseId": "exmq4prcsy",
+      "sortOrder": 11,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 "
+    },
+    {
+      "id": "wemq4prcwg",
+      "workoutId": "womq4prcwf",
+      "exerciseId": "exmq4prcrw",
+      "sortOrder": 0,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 "
+    },
+    {
+      "id": "wemq4prcwh",
+      "workoutId": "womq4prcwf",
+      "exerciseId": "exmq4prcsz",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 "
+    },
+    {
+      "id": "wemq4prcwi",
+      "workoutId": "womq4prcwf",
+      "exerciseId": "exmq4prct0",
+      "sortOrder": 2,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 "
+    },
+    {
+      "id": "wemq4prcwj",
+      "workoutId": "womq4prcwf",
+      "exerciseId": "cmpzkku7r006n95rzyy57u9yi",
+      "sortOrder": 3,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 each arm "
+    },
+    {
+      "id": "wemq4prcwk",
+      "workoutId": "womq4prcwf",
+      "exerciseId": "cmpzkku87006p95rzqmfjh3cb",
+      "sortOrder": 4,
+      "sets": 3,
+      "reps": "20,20",
+      "setScheme": "straight",
+      "notes": "20,20,20,20 "
+    },
+    {
+      "id": "wemq4prcwl",
+      "workoutId": "womq4prcwf",
+      "exerciseId": "cmpzkku9h006t95rzp6h7gnca",
+      "sortOrder": 5,
+      "sets": 3,
+      "reps": "50,50",
+      "setScheme": "straight",
+      "notes": "50,50 "
+    },
+    {
+      "id": "wemq4prcwm",
+      "workoutId": "womq4prcwf",
+      "exerciseId": "cmpzkku9t006v95rzc9l6m6g2",
+      "sortOrder": 6,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " 100"
+    },
+    {
+      "id": "wemq4prcwn",
+      "workoutId": "womq4prcwf",
+      "exerciseId": "exmq4prcs4",
+      "sortOrder": 7,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " 100"
+    },
+    {
+      "id": "wemq4prcwo",
+      "workoutId": "womq4prcwf",
+      "exerciseId": "exmq4prcsj",
+      "sortOrder": 8,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcwp",
+      "workoutId": "womq4prcwf",
+      "exerciseId": "exmq4prcsk",
+      "sortOrder": 9,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcwq",
+      "workoutId": "womq4prcwf",
+      "exerciseId": "exmq4prcsl",
+      "sortOrder": 10,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " 20 second intervals (20 seconds working, 20 seconds rest)"
+    },
+    {
+      "id": "wemq4prcwu",
+      "workoutId": "womq4prcwt",
+      "exerciseId": "cmpzjajfp000695rz8d6nbnvu",
+      "sortOrder": 0,
+      "sets": 4,
+      "reps": "15 repetitions",
+      "setScheme": "straight",
+      "notes": "4 SETS of 15 repetitions, (15,15,15,15) "
+    },
+    {
+      "id": "wemq4prcwv",
+      "workoutId": "womq4prcwt",
+      "exerciseId": "exmq4prcsg",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "20 repetitions",
+      "setScheme": "straight",
+      "notes": "20, 20 repetitions "
+    },
+    {
+      "id": "wemq4prcww",
+      "workoutId": "womq4prcwt",
+      "exerciseId": "cmpzjajgf000895rzkbecuupa",
+      "sortOrder": 2,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcwx",
+      "workoutId": "womq4prcwt",
+      "exerciseId": "cmpzjajfp000695rz8d6nbnvu",
+      "sortOrder": 3,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 "
+    },
+    {
+      "id": "wemq4prcwy",
+      "workoutId": "womq4prcwt",
+      "exerciseId": "cmpzkkucb007795rz73ps9rj8",
+      "sortOrder": 4,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " 2 sets of 30 seconds or one straight minute with good form"
+    },
+    {
+      "id": "wemq4prcwz",
+      "workoutId": "womq4prcwt",
+      "exerciseId": "cmpzjajgy000995rz5rdrmets",
+      "sortOrder": 5,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 "
+    },
+    {
+      "id": "wemq4prcx0",
+      "workoutId": "womq4prcwt",
+      "exerciseId": "exmq4prcs7",
+      "sortOrder": 6,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcx1",
+      "workoutId": "womq4prcwt",
+      "exerciseId": "exmq4prcsh",
+      "sortOrder": 7,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 "
+    },
+    {
+      "id": "wemq4prcx2",
+      "workoutId": "womq4prcwt",
+      "exerciseId": "exmq4prcsi",
+      "sortOrder": 8,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " 50"
+    },
+    {
+      "id": "wemq4prcx3",
+      "workoutId": "womq4prcwt",
+      "exerciseId": "exmq4prcsj",
+      "sortOrder": 9,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcx4",
+      "workoutId": "womq4prcwt",
+      "exerciseId": "exmq4prcsk",
+      "sortOrder": 10,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcx5",
+      "workoutId": "womq4prcwt",
+      "exerciseId": "exmq4prcsl",
+      "sortOrder": 11,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " 20 second intervals (20 seconds working, 20 seconds rest)"
+    },
+    {
+      "id": "wemq4prcx7",
+      "workoutId": "womq4prcx6",
+      "exerciseId": "exmq4prcsn",
+      "sortOrder": 0,
+      "sets": 4,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 (4 sets of 15) "
+    },
+    {
+      "id": "wemq4prcx8",
+      "workoutId": "womq4prcx6",
+      "exerciseId": "cmpzkktmf004x95rzp8pivj54",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcx9",
+      "workoutId": "womq4prcx6",
+      "exerciseId": "cmpzkkugd007j95rzpjy3229d",
+      "sortOrder": 2,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 "
+    },
+    {
+      "id": "wemq4prcxa",
+      "workoutId": "womq4prcx6",
+      "exerciseId": "cmpzkks2j001395rzmyhclofr",
+      "sortOrder": 3,
+      "sets": 3,
+      "reps": "30,30",
+      "setScheme": "straight",
+      "notes": "30,30,30 each leg "
+    },
+    {
+      "id": "wemq4prcxb",
+      "workoutId": "womq4prcx6",
+      "exerciseId": "exmq4prcso",
+      "sortOrder": 4,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcxc",
+      "workoutId": "womq4prcx6",
+      "exerciseId": "exmq4prct1",
+      "sortOrder": 5,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 each leg "
+    },
+    {
+      "id": "wemq4prcxd",
+      "workoutId": "womq4prcx6",
+      "exerciseId": "exmq4prcs5",
+      "sortOrder": 6,
+      "sets": 3,
+      "reps": "30,30",
+      "setScheme": "straight",
+      "notes": "30,30,30,30 "
+    },
+    {
+      "id": "wemq4prcxf",
+      "workoutId": "womq4prcxe",
+      "exerciseId": "exmq4prcsp",
+      "sortOrder": 0,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcxg",
+      "workoutId": "womq4prcxe",
+      "exerciseId": "exmq4prcsq",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcxh",
+      "workoutId": "womq4prcxe",
+      "exerciseId": "exmq4prcsh",
+      "sortOrder": 2,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcxi",
+      "workoutId": "womq4prcxe",
+      "exerciseId": "exmq4prcru",
+      "sortOrder": 3,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 "
+    },
+    {
+      "id": "wemq4prcxj",
+      "workoutId": "womq4prcxe",
+      "exerciseId": "exmq4prcss",
+      "sortOrder": 4,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcxk",
+      "workoutId": "womq4prcxe",
+      "exerciseId": "exmq4prcst",
+      "sortOrder": 5,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 each arm "
+    },
+    {
+      "id": "wemq4prcxl",
+      "workoutId": "womq4prcxe",
+      "exerciseId": "cmpzkku09006395rz70rr558c",
+      "sortOrder": 6,
+      "sets": 3,
+      "reps": "20,20",
+      "setScheme": "straight",
+      "notes": "20,20,20,20 "
+    },
+    {
+      "id": "wemq4prcxm",
+      "workoutId": "womq4prcxe",
+      "exerciseId": "exmq4prcsu",
+      "sortOrder": 7,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcxn",
+      "workoutId": "womq4prcxe",
+      "exerciseId": "exmq4prcsv",
+      "sortOrder": 8,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 "
+    },
+    {
+      "id": "wemq4prcxo",
+      "workoutId": "womq4prcxe",
+      "exerciseId": "exmq4prcsw",
+      "sortOrder": 9,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcxp",
+      "workoutId": "womq4prcxe",
+      "exerciseId": "exmq4prcsx",
+      "sortOrder": 10,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcxq",
+      "workoutId": "womq4prcxe",
+      "exerciseId": "exmq4prcsy",
+      "sortOrder": 11,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 "
+    },
+    {
+      "id": "wemq4prcxt",
+      "workoutId": "womq4prcxs",
+      "exerciseId": "exmq4prcrw",
+      "sortOrder": 0,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcxu",
+      "workoutId": "womq4prcxs",
+      "exerciseId": "exmq4prct2",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 "
+    },
+    {
+      "id": "wemq4prcxv",
+      "workoutId": "womq4prcxs",
+      "exerciseId": "exmq4prcsz",
+      "sortOrder": 2,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 "
+    },
+    {
+      "id": "wemq4prcxw",
+      "workoutId": "womq4prcxs",
+      "exerciseId": "exmq4prct0",
+      "sortOrder": 3,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 "
+    },
+    {
+      "id": "wemq4prcxx",
+      "workoutId": "womq4prcxs",
+      "exerciseId": "cmpzkku7r006n95rzyy57u9yi",
+      "sortOrder": 4,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15,15 each arm "
+    },
+    {
+      "id": "wemq4prcxy",
+      "workoutId": "womq4prcxs",
+      "exerciseId": "cmpzkku87006p95rzqmfjh3cb",
+      "sortOrder": 5,
+      "sets": 3,
+      "reps": "20,20",
+      "setScheme": "straight",
+      "notes": "20,20,20,20 "
+    },
+    {
+      "id": "wemq4prcxz",
+      "workoutId": "womq4prcxs",
+      "exerciseId": "cmpzkku9h006t95rzp6h7gnca",
+      "sortOrder": 6,
+      "sets": 3,
+      "reps": "50,50",
+      "setScheme": "straight",
+      "notes": "50,50 "
+    },
+    {
+      "id": "wemq4prcy0",
+      "workoutId": "womq4prcxs",
+      "exerciseId": "exmq4prct3",
+      "sortOrder": 7,
+      "sets": 3,
+      "reps": "15,15",
+      "setScheme": "straight",
+      "notes": "15,15,15 "
+    },
+    {
+      "id": "wemq4prcy1",
+      "workoutId": "womq4prcxs",
+      "exerciseId": "exmq4prcs4",
+      "sortOrder": 8,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " 100"
+    },
+    {
+      "id": "wemq4prcy2",
+      "workoutId": "womq4prcxs",
+      "exerciseId": "exmq4prcsj",
+      "sortOrder": 9,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcy3",
+      "workoutId": "womq4prcxs",
+      "exerciseId": "exmq4prcsk",
+      "sortOrder": 10,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " "
+    },
+    {
+      "id": "wemq4prcy4",
+      "workoutId": "womq4prcxs",
+      "exerciseId": "exmq4prcsl",
+      "sortOrder": 11,
+      "sets": 3,
+      "reps": "10-12",
+      "setScheme": "straight",
+      "notes": " 20 second intervals (20 seconds working, 20 seconds rest)"
     }
   ],
   "programs": [
@@ -4593,9 +6903,9 @@
       "id": "cmpyrkpc900003irzxwgebubc",
       "slug": "adult",
       "name": "Adult",
-      "description": "General fitness and strength for adults — sustainable progress at any level.",
+      "description": "General fitness and strength for adults — sustainable progress at any level. Hybrid programming: each day offers a full Gym version and a Home version (bodyweight, light dumbbells, bands, stability ball alternatives). Choose per day based on where you are training.",
       "tierSlug": "starter",
-      "category": null,
+      "category": "workout",
       "durationWeeks": 4,
       "sortOrder": 1,
       "published": 1,
@@ -4609,7 +6919,7 @@
       "name": "Strength Training",
       "description": "Structured strength cycles with progressive overload and clear set approaches.",
       "tierSlug": "starter",
-      "category": null,
+      "category": "workout",
       "durationWeeks": 4,
       "sortOrder": 2,
       "published": 1,
@@ -4623,7 +6933,7 @@
       "name": "Boot Camp Preparation",
       "description": "Conditioning and resilience work to get ready for boot camp demands.",
       "tierSlug": "starter",
-      "category": null,
+      "category": "workout",
       "durationWeeks": 4,
       "sortOrder": 3,
       "published": 1,
@@ -4637,7 +6947,7 @@
       "name": "Combat Training",
       "description": "Power, agility, and fight-ready conditioning for combat athletes.",
       "tierSlug": "starter",
-      "category": null,
+      "category": "workout",
       "durationWeeks": 4,
       "sortOrder": 4,
       "published": 1,
@@ -4651,13 +6961,83 @@
       "name": "Youth Sports",
       "description": "Age-appropriate athletic development for young athletes.",
       "tierSlug": "starter",
-      "category": null,
+      "category": "workout",
       "durationWeeks": 4,
       "sortOrder": 5,
       "published": 1,
       "coverUrl": null,
       "createdAt": "2026-06-04T00:35:34.096+00:00",
       "updatedAt": "2026-06-04T16:57:05.726+00:00"
+    },
+    {
+      "id": "eat001muscle",
+      "slug": "muscle-max",
+      "name": "Muscle Max",
+      "description": "Eating approach for building lean muscle. High protein targets, peri-workout nutrition, recovery focus.",
+      "tierSlug": "starter",
+      "category": "eating",
+      "durationWeeks": 4,
+      "sortOrder": 10,
+      "published": 1,
+      "coverUrl": null,
+      "createdAt": "2026-06-04T22:00:00.000+00:00",
+      "updatedAt": "2026-06-04T22:00:00.000+00:00"
+    },
+    {
+      "id": "eat002weight",
+      "slug": "weight-loss",
+      "name": "Weight Loss",
+      "description": "Sustainable fat loss eating: deficit control, satiety protocols, habit stacking for long term results.",
+      "tierSlug": "starter",
+      "category": "eating",
+      "durationWeeks": 4,
+      "sortOrder": 11,
+      "published": 1,
+      "coverUrl": null,
+      "createdAt": "2026-06-04T22:00:00.000+00:00",
+      "updatedAt": "2026-06-04T22:00:00.000+00:00"
+    },
+    {
+      "id": "eat003grace",
+      "slug": "gracefully-age",
+      "name": "Gracefully Age",
+      "description": "Anti-inflammatory, bone/joint supportive nutrition with protein emphasis for longevity and vitality.",
+      "tierSlug": "starter",
+      "category": "eating",
+      "durationWeeks": 4,
+      "sortOrder": 12,
+      "published": 1,
+      "coverUrl": null,
+      "createdAt": "2026-06-04T22:00:00.000+00:00",
+      "updatedAt": "2026-06-04T22:00:00.000+00:00"
+    },
+    {
+      "id": "yog001chan",
+      "slug": "yoga-channel",
+      "name": "Yoga Channel",
+      "description": "Instructor-led yoga flows and mobility. Yoga instructors can create their own channels (Patreon-style memberships).",
+      "tierSlug": "starter",
+      "category": "yoga",
+      "durationWeeks": 4,
+      "sortOrder": 20,
+      "published": 1,
+      "coverUrl": null,
+      "createdAt": "2026-06-04T22:00:00.000+00:00",
+      "updatedAt": "2026-06-04T22:00:00.000+00:00"
+    },
+    {
+      "id": "jsteph001",
+      "slug": "john-steph",
+      "name": "John & Steph",
+      "description": "Recorded live sessions with John & Steph. Chronicle of coaching sessions — substitute matching days (e.g. leg day) into your regular workout programs to follow along with the recording.",
+      "tierSlug": "starter",
+      "category": "journey",
+      "durationWeeks": 4,
+      "sortOrder": 30,
+      "published": 1,
+      "coverUrl": null,
+      "createdAt": "2026-06-04T22:00:00.000+00:00",
+      "updatedAt": "2026-06-04T22:00:00.000+00:00"
     }
   ],
   "programWeeks": [
@@ -4719,6 +7099,106 @@
     {
       "id": "cmpzrc1u5001qn9rz3azd2da4",
       "programId": "cmpyrkpce00023irzwl7yrxat",
+      "weekNumber": 4
+    },
+    {
+      "id": "pw-eat-m-1",
+      "programId": "eat001muscle",
+      "weekNumber": 1
+    },
+    {
+      "id": "pw-eat-m-2",
+      "programId": "eat001muscle",
+      "weekNumber": 2
+    },
+    {
+      "id": "pw-eat-m-3",
+      "programId": "eat001muscle",
+      "weekNumber": 3
+    },
+    {
+      "id": "pw-eat-m-4",
+      "programId": "eat001muscle",
+      "weekNumber": 4
+    },
+    {
+      "id": "pw-eat-wl-1",
+      "programId": "eat002weight",
+      "weekNumber": 1
+    },
+    {
+      "id": "pw-eat-wl-2",
+      "programId": "eat002weight",
+      "weekNumber": 2
+    },
+    {
+      "id": "pw-eat-wl-3",
+      "programId": "eat002weight",
+      "weekNumber": 3
+    },
+    {
+      "id": "pw-eat-wl-4",
+      "programId": "eat002weight",
+      "weekNumber": 4
+    },
+    {
+      "id": "pw-eat-ga-1",
+      "programId": "eat003grace",
+      "weekNumber": 1
+    },
+    {
+      "id": "pw-eat-ga-2",
+      "programId": "eat003grace",
+      "weekNumber": 2
+    },
+    {
+      "id": "pw-eat-ga-3",
+      "programId": "eat003grace",
+      "weekNumber": 3
+    },
+    {
+      "id": "pw-eat-ga-4",
+      "programId": "eat003grace",
+      "weekNumber": 4
+    },
+    {
+      "id": "pw-yog-1",
+      "programId": "yog001chan",
+      "weekNumber": 1
+    },
+    {
+      "id": "pw-yog-2",
+      "programId": "yog001chan",
+      "weekNumber": 2
+    },
+    {
+      "id": "pw-yog-3",
+      "programId": "yog001chan",
+      "weekNumber": 3
+    },
+    {
+      "id": "pw-yog-4",
+      "programId": "yog001chan",
+      "weekNumber": 4
+    },
+    {
+      "id": "pw-jst-1",
+      "programId": "jsteph001",
+      "weekNumber": 1
+    },
+    {
+      "id": "pw-jst-2",
+      "programId": "jsteph001",
+      "weekNumber": 2
+    },
+    {
+      "id": "pw-jst-3",
+      "programId": "jsteph001",
+      "weekNumber": 3
+    },
+    {
+      "id": "pw-jst-4",
+      "programId": "jsteph001",
       "weekNumber": 4
     }
   ],
@@ -4923,394 +7403,1107 @@
       "id": "cmpzr6jfs0005n9rzvatedvga",
       "weekId": "cmpzr6jfd0004n9rzmj5mirsf",
       "dayNumber": 1,
-      "workoutId": null,
+      "workoutId": "cmpzkkryb000s95rzdsxn44js",
       "notes": null
     },
     {
       "id": "cmpzr6jfx0006n9rz7rncaqqe",
       "weekId": "cmpzr6jfd0004n9rzmj5mirsf",
       "dayNumber": 2,
-      "workoutId": null,
+      "workoutId": "cmpzkks91001l95rzheuz6vkw",
       "notes": null
     },
     {
       "id": "cmpzr6jg10007n9rzznn4f6ya",
       "weekId": "cmpzr6jfd0004n9rzmj5mirsf",
       "dayNumber": 3,
-      "workoutId": null,
+      "workoutId": "cmpzkksjf002a95rzjvmo70ms",
       "notes": null
     },
     {
       "id": "cmpzr6jg70008n9rzocui62e6",
       "weekId": "cmpzr6jfd0004n9rzmj5mirsf",
       "dayNumber": 4,
-      "workoutId": null,
+      "workoutId": "cmpzkkskt002e95rzrk2vgaj3",
       "notes": null
     },
     {
       "id": "cmpzr6jge0009n9rzhxxepi5g",
       "weekId": "cmpzr6jfd0004n9rzmj5mirsf",
       "dayNumber": 5,
-      "workoutId": null,
+      "workoutId": "cmpzkksoo002p95rz7407826d",
       "notes": null
     },
     {
       "id": "cmpzr6jgk000an9rz017oddp4",
       "weekId": "cmpzr6jfd0004n9rzmj5mirsf",
       "dayNumber": 6,
-      "workoutId": null,
+      "workoutId": "cmpzklxt5008i95rzevusgiq7",
       "notes": null
     },
     {
       "id": "cmpzr6jgr000bn9rz58reo31e",
       "weekId": "cmpzr6jfd0004n9rzmj5mirsf",
       "dayNumber": 7,
-      "workoutId": null,
+      "workoutId": "cmpzkkswq003695rzmh95szul",
       "notes": null
     },
     {
       "id": "cmpzr6jh5000dn9rzjglte4mt",
       "weekId": "cmpzr6jgy000cn9rzth5xncuv",
       "dayNumber": 1,
-      "workoutId": null,
+      "workoutId": "cmpzkkszr003c95rzbv9yo6db",
       "notes": null
     },
     {
       "id": "cmpzr6jhd000en9rzvxr76kwi",
       "weekId": "cmpzr6jgy000cn9rzth5xncuv",
       "dayNumber": 2,
-      "workoutId": null,
+      "workoutId": "cmpzkkt6o003r95rzr7p1qgtc",
       "notes": null
     },
     {
       "id": "cmpzr6jhk000fn9rz69cujsoq",
       "weekId": "cmpzr6jgy000cn9rzth5xncuv",
       "dayNumber": 3,
-      "workoutId": null,
+      "workoutId": "cmpzkktd6004a95rzoaly4h22",
       "notes": null
     },
     {
       "id": "cmpzr6jhq000gn9rzur5f2soh",
       "weekId": "cmpzr6jgy000cn9rzth5xncuv",
       "dayNumber": 4,
-      "workoutId": null,
+      "workoutId": "cmpzkktf1004e95rze2djnufn",
       "notes": null
     },
     {
       "id": "cmpzr6jhx000hn9rzzi9a4946",
       "weekId": "cmpzr6jgy000cn9rzth5xncuv",
       "dayNumber": 5,
-      "workoutId": null,
+      "workoutId": "cmpzkktk0004r95rzp5483mwq",
       "notes": null
     },
     {
       "id": "cmpzr6ji3000in9rzh7efkgko",
       "weekId": "cmpzr6jgy000cn9rzth5xncuv",
       "dayNumber": 6,
-      "workoutId": null,
+      "workoutId": "cmpzkktpl005a95rz8mnkzcwi",
       "notes": null
     },
     {
       "id": "cmpzr6ji8000jn9rziwc7rpr9",
       "weekId": "cmpzr6jgy000cn9rzth5xncuv",
       "dayNumber": 7,
-      "workoutId": null,
+      "workoutId": "cmpzklxub008l95rzfiir78zh",
       "notes": null
     },
     {
       "id": "cmpzr6jin000ln9rzhz00l8i9",
       "weekId": "cmpzr6jig000kn9rzr8r51s23",
       "dayNumber": 1,
-      "workoutId": null,
+      "workoutId": "cmpzjajjh000d95rzzu5ksqtx",
       "notes": null
     },
     {
       "id": "cmpzr6jiz000mn9rz5odf9zi8",
       "weekId": "cmpzr6jig000kn9rzr8r51s23",
       "dayNumber": 2,
-      "workoutId": null,
+      "workoutId": "cmpzkktqr005e95rz99plr1oy",
       "notes": null
     },
     {
       "id": "cmpzr6jj3000nn9rzcpd0gxnc",
       "weekId": "cmpzr6jig000kn9rzr8r51s23",
       "dayNumber": 3,
-      "workoutId": null,
+      "workoutId": "cmpzkktwl005u95rz9v9ulb67",
       "notes": null
     },
     {
       "id": "cmpzr6jj8000on9rzrgyxfwmo",
       "weekId": "cmpzr6jig000kn9rzr8r51s23",
       "dayNumber": 4,
-      "workoutId": null,
+      "workoutId": "cmpzkktyq005y95rz0bbuytzc",
       "notes": null
     },
     {
       "id": "cmpzr6jje000pn9rzmtkffbo7",
       "weekId": "cmpzr6jig000kn9rzr8r51s23",
       "dayNumber": 5,
-      "workoutId": null,
+      "workoutId": "cmpzkku55006g95rzurs8dwjf",
       "notes": null
     },
     {
       "id": "cmpzr6jji000qn9rzzxh47icp",
       "weekId": "cmpzr6jig000kn9rzr8r51s23",
       "dayNumber": 6,
-      "workoutId": null,
+      "workoutId": "cmpzklxw6008r95rz7yjwh164",
       "notes": null
     },
     {
       "id": "cmpzr6jjn000rn9rz2a7bduc6",
       "weekId": "cmpzr6jig000kn9rzr8r51s23",
       "dayNumber": 7,
-      "workoutId": null,
+      "workoutId": "cmpzklxuy008n95rz0qcm49ws",
       "notes": null
     },
     {
       "id": "cmpzr6jjx000tn9rzjpyfnzz7",
       "weekId": "cmpzr6jjs000sn9rz88z5s0a4",
       "dayNumber": 1,
-      "workoutId": null,
+      "workoutId": "cmpzkkubc007395rzqn9jrslk",
       "notes": null
     },
     {
       "id": "cmpzr6jk3000un9rzrh0u8dv7",
       "weekId": "cmpzr6jjs000sn9rz88z5s0a4",
       "dayNumber": 2,
-      "workoutId": null,
+      "workoutId": "cmpzkkuew007f95rzqxtxxwjr",
       "notes": null
     },
     {
       "id": "cmpzr6jk8000vn9rzub0cs9r8",
       "weekId": "cmpzr6jjs000sn9rz88z5s0a4",
       "dayNumber": 3,
-      "workoutId": null,
+      "workoutId": "cmpzklxxe008u95rzm4ccoia3",
       "notes": null
     },
     {
       "id": "cmpzr6jke000wn9rzvogdk2mm",
       "weekId": "cmpzr6jjs000sn9rz88z5s0a4",
       "dayNumber": 4,
-      "workoutId": null,
+      "workoutId": "cmpzkkujf007r95rz8p0e9t37",
       "notes": null
     },
     {
       "id": "cmpzr6jkk000xn9rzp7ecwt9k",
       "weekId": "cmpzr6jjs000sn9rz88z5s0a4",
       "dayNumber": 5,
-      "workoutId": null,
+      "workoutId": "cmpzkkuoe008295rz1eyxlmqn",
       "notes": null
     },
     {
       "id": "cmpzr6jkp000yn9rz9fe4voqz",
       "weekId": "cmpzr6jjs000sn9rz88z5s0a4",
       "dayNumber": 6,
-      "workoutId": null,
+      "workoutId": "cmpzklxxy008w95rzjvcvoxza",
       "notes": null
     },
     {
       "id": "cmpzr6jkv000zn9rzuiib4r8c",
       "weekId": "cmpzr6jjs000sn9rz88z5s0a4",
       "dayNumber": 7,
-      "workoutId": null,
+      "workoutId": "cmpzklxvi008p95rz96hrp4rk",
       "notes": null
     },
     {
       "id": "cmpzrc1m40013n9rzh8wlo3vl",
       "weekId": "cmpzrc1lv0012n9rz626zwdjw",
       "dayNumber": 1,
-      "workoutId": null,
+      "workoutId": "cmpzkkryb000s95rzdsxn44js",
       "notes": null
     },
     {
       "id": "cmpzrc1mf0014n9rzkoly3c8s",
       "weekId": "cmpzrc1lv0012n9rz626zwdjw",
       "dayNumber": 2,
-      "workoutId": null,
+      "workoutId": "cmpzkks91001l95rzheuz6vkw",
       "notes": null
     },
     {
       "id": "cmpzrc1mr0015n9rzpj8argih",
       "weekId": "cmpzrc1lv0012n9rz626zwdjw",
       "dayNumber": 3,
-      "workoutId": null,
+      "workoutId": "cmpzkksjf002a95rzjvmo70ms",
       "notes": null
     },
     {
       "id": "cmpzrc1n70016n9rzyfpsg4zj",
       "weekId": "cmpzrc1lv0012n9rz626zwdjw",
       "dayNumber": 4,
-      "workoutId": null,
+      "workoutId": "cmpzkkskt002e95rzrk2vgaj3",
       "notes": null
     },
     {
       "id": "cmpzrc1ni0017n9rzazytxpzo",
       "weekId": "cmpzrc1lv0012n9rz626zwdjw",
       "dayNumber": 5,
-      "workoutId": null,
+      "workoutId": "cmpzkksoo002p95rz7407826d",
       "notes": null
     },
     {
       "id": "cmpzrc1nu0018n9rzsrctigi8",
       "weekId": "cmpzrc1lv0012n9rz626zwdjw",
       "dayNumber": 6,
-      "workoutId": null,
+      "workoutId": "cmpzklxt5008i95rzevusgiq7",
       "notes": null
     },
     {
       "id": "cmpzrc1o60019n9rz0n7niiz4",
       "weekId": "cmpzrc1lv0012n9rz626zwdjw",
       "dayNumber": 7,
-      "workoutId": null,
+      "workoutId": "cmpzkkswq003695rzmh95szul",
       "notes": null
     },
     {
       "id": "cmpzrc1ot001bn9rzeshph0ic",
       "weekId": "cmpzrc1of001an9rz42nkr7g3",
       "dayNumber": 1,
-      "workoutId": null,
+      "workoutId": "cmpzkkszr003c95rzbv9yo6db",
       "notes": null
     },
     {
       "id": "cmpzrc1p3001cn9rzifx1baak",
       "weekId": "cmpzrc1of001an9rz42nkr7g3",
       "dayNumber": 2,
-      "workoutId": null,
+      "workoutId": "cmpzkkt6o003r95rzr7p1qgtc",
       "notes": null
     },
     {
       "id": "cmpzrc1pg001dn9rzwvoxtlb9",
       "weekId": "cmpzrc1of001an9rz42nkr7g3",
       "dayNumber": 3,
-      "workoutId": null,
+      "workoutId": "cmpzkktd6004a95rzoaly4h22",
       "notes": null
     },
     {
       "id": "cmpzrc1pr001en9rz0ua00ui1",
       "weekId": "cmpzrc1of001an9rz42nkr7g3",
       "dayNumber": 4,
-      "workoutId": null,
+      "workoutId": "cmpzkktf1004e95rze2djnufn",
       "notes": null
     },
     {
       "id": "cmpzrc1q1001fn9rzr2gluiju",
       "weekId": "cmpzrc1of001an9rz42nkr7g3",
       "dayNumber": 5,
-      "workoutId": null,
+      "workoutId": "cmpzkktk0004r95rzp5483mwq",
       "notes": null
     },
     {
       "id": "cmpzrc1rt001gn9rz2l3136hj",
       "weekId": "cmpzrc1of001an9rz42nkr7g3",
       "dayNumber": 6,
-      "workoutId": null,
+      "workoutId": "cmpzkktpl005a95rz8mnkzcwi",
       "notes": null
     },
     {
       "id": "cmpzrc1s1001hn9rzqqp3oy0p",
       "weekId": "cmpzrc1of001an9rz42nkr7g3",
       "dayNumber": 7,
-      "workoutId": null,
+      "workoutId": "cmpzklxub008l95rzfiir78zh",
       "notes": null
     },
     {
       "id": "cmpzrc1si001jn9rz9a7rs9kh",
       "weekId": "cmpzrc1s9001in9rz9df1jrim",
       "dayNumber": 1,
-      "workoutId": null,
+      "workoutId": "cmpzjajjh000d95rzzu5ksqtx",
       "notes": null
     },
     {
       "id": "cmpzrc1sq001kn9rz5z0td7w7",
       "weekId": "cmpzrc1s9001in9rz9df1jrim",
       "dayNumber": 2,
-      "workoutId": null,
+      "workoutId": "cmpzkktqr005e95rz99plr1oy",
       "notes": null
     },
     {
       "id": "cmpzrc1t0001ln9rztg2d4rvv",
       "weekId": "cmpzrc1s9001in9rz9df1jrim",
       "dayNumber": 3,
-      "workoutId": null,
+      "workoutId": "cmpzkktwl005u95rz9v9ulb67",
       "notes": null
     },
     {
       "id": "cmpzrc1ta001mn9rzl4e92t9s",
       "weekId": "cmpzrc1s9001in9rz9df1jrim",
       "dayNumber": 4,
-      "workoutId": null,
+      "workoutId": "cmpzkktyq005y95rz0bbuytzc",
       "notes": null
     },
     {
       "id": "cmpzrc1th001nn9rzfi168han",
       "weekId": "cmpzrc1s9001in9rz9df1jrim",
       "dayNumber": 5,
-      "workoutId": null,
+      "workoutId": "cmpzkku55006g95rzurs8dwjf",
       "notes": null
     },
     {
       "id": "cmpzrc1tp001on9rztj7s7bjy",
       "weekId": "cmpzrc1s9001in9rz9df1jrim",
       "dayNumber": 6,
-      "workoutId": null,
+      "workoutId": "cmpzklxw6008r95rz7yjwh164",
       "notes": null
     },
     {
       "id": "cmpzrc1ty001pn9rzkf09vdnt",
       "weekId": "cmpzrc1s9001in9rz9df1jrim",
       "dayNumber": 7,
-      "workoutId": null,
+      "workoutId": "cmpzklxuy008n95rz0qcm49ws",
       "notes": null
     },
     {
       "id": "cmpzrc1ud001rn9rzvz2aiz2y",
       "weekId": "cmpzrc1u5001qn9rz3azd2da4",
       "dayNumber": 1,
-      "workoutId": null,
+      "workoutId": "cmpzkkubc007395rzqn9jrslk",
       "notes": null
     },
     {
       "id": "cmpzrc1uk001sn9rzi8s69v92",
       "weekId": "cmpzrc1u5001qn9rz3azd2da4",
       "dayNumber": 2,
-      "workoutId": null,
+      "workoutId": "cmpzkkuew007f95rzqxtxxwjr",
       "notes": null
     },
     {
       "id": "cmpzrc1ur001tn9rzbwm0h26f",
       "weekId": "cmpzrc1u5001qn9rz3azd2da4",
       "dayNumber": 3,
-      "workoutId": null,
+      "workoutId": "cmpzklxxe008u95rzm4ccoia3",
       "notes": null
     },
     {
       "id": "cmpzrc1v1001un9rzgl58bu74",
       "weekId": "cmpzrc1u5001qn9rz3azd2da4",
       "dayNumber": 4,
-      "workoutId": null,
+      "workoutId": "cmpzkkujf007r95rz8p0e9t37",
       "notes": null
     },
     {
       "id": "cmpzrc1vc001vn9rztpc9brhq",
       "weekId": "cmpzrc1u5001qn9rz3azd2da4",
       "dayNumber": 5,
-      "workoutId": null,
+      "workoutId": "cmpzkkuoe008295rz1eyxlmqn",
       "notes": null
     },
     {
       "id": "cmpzrc1vm001wn9rz432xa1iq",
       "weekId": "cmpzrc1u5001qn9rz3azd2da4",
       "dayNumber": 6,
-      "workoutId": null,
+      "workoutId": "cmpzklxxy008w95rzjvcvoxza",
       "notes": null
     },
     {
       "id": "cmpzrc1vv001xn9rz929zr3rm",
       "weekId": "cmpzrc1u5001qn9rz3azd2da4",
       "dayNumber": 7,
-      "workoutId": null,
+      "workoutId": "cmpzklxvi008p95rz96hrp4rk",
       "notes": null
+    },
+    {
+      "id": "pd-eat-m-w1d1",
+      "weekId": "pw-eat-m-1",
+      "dayNumber": 1,
+      "workoutId": null,
+      "notes": "Prompt cascade: Set protein target (g). Log 3 meals. Rate energy 1-10."
+    },
+    {
+      "id": "pd-eat-m-w1d2",
+      "weekId": "pw-eat-m-1",
+      "dayNumber": 2,
+      "workoutId": null,
+      "notes": "Prompt cascade: Track carbs around training. Note sleep quality. Adjust portions."
+    },
+    {
+      "id": "pd-eat-m-w1d3",
+      "weekId": "pw-eat-m-1",
+      "dayNumber": 3,
+      "workoutId": null,
+      "notes": "Prompt cascade: Review weekly protein avg. Plan refeed meal if needed."
+    },
+    {
+      "id": "pd-eat-m-w1d4",
+      "weekId": "pw-eat-m-1",
+      "dayNumber": 4,
+      "workoutId": null,
+      "notes": "Prompt cascade: Hydration check. Log cravings and triggers. Choose 1 habit win."
+    },
+    {
+      "id": "pd-eat-m-w1d5",
+      "weekId": "pw-eat-m-1",
+      "dayNumber": 5,
+      "workoutId": null,
+      "notes": "Prompt cascade: Post-workout nutrition timing. Full day food log review."
+    },
+    {
+      "id": "pd-eat-m-w1d6",
+      "weekId": "pw-eat-m-1",
+      "dayNumber": 6,
+      "workoutId": null,
+      "notes": "Prompt cascade: Weekly body comp check-in (scale/photos/measurements). Reflect."
+    },
+    {
+      "id": "pd-eat-m-w1d7",
+      "weekId": "pw-eat-m-1",
+      "dayNumber": 7,
+      "workoutId": null,
+      "notes": "Prompt cascade: Plan next week meals. Set 1 micro-goal for eating consistency."
+    },
+    {
+      "id": "pd-eat-wl-w1d1",
+      "weekId": "pw-eat-wl-1",
+      "dayNumber": 1,
+      "workoutId": null,
+      "notes": "Prompt cascade: Calculate daily calorie target. Log all intake. Hunger scale AM/PM."
+    },
+    {
+      "id": "pd-eat-wl-w1d2",
+      "weekId": "pw-eat-wl-1",
+      "dayNumber": 2,
+      "workoutId": null,
+      "notes": "Prompt cascade: Focus on volume eating (high fiber). Note energy dips."
+    },
+    {
+      "id": "pd-eat-wl-w1d3",
+      "weekId": "pw-eat-wl-1",
+      "dayNumber": 3,
+      "workoutId": null,
+      "notes": "Prompt cascade: Protein priority at every meal.  Step count tie-in."
+    },
+    {
+      "id": "pd-eat-wl-w1d4",
+      "weekId": "pw-eat-wl-1",
+      "dayNumber": 4,
+      "workoutId": null,
+      "notes": "Prompt cascade: Identify emotional eating triggers. Alternative coping list."
+    },
+    {
+      "id": "pd-eat-wl-w1d5",
+      "weekId": "pw-eat-wl-1",
+      "dayNumber": 5,
+      "workoutId": null,
+      "notes": "Prompt cascade: Mid-week deficit check. Adjust one meal for satiety."
+    },
+    {
+      "id": "pd-eat-wl-w1d6",
+      "weekId": "pw-eat-wl-1",
+      "dayNumber": 6,
+      "workoutId": null,
+      "notes": "Prompt cascade: Non-scale victories journal. Sleep & stress impact on hunger."
+    },
+    {
+      "id": "pd-eat-wl-w1d7",
+      "weekId": "pw-eat-wl-1",
+      "dayNumber": 7,
+      "workoutId": null,
+      "notes": "Prompt cascade: Weekly review: adherence %, weight trend, next week tweak."
+    },
+    {
+      "id": "pd-eat-ga-w1d1",
+      "weekId": "pw-eat-ga-1",
+      "dayNumber": 1,
+      "workoutId": null,
+      "notes": "Prompt cascade: Omega-3 + anti-inflam focus. Log joint comfort 1-10."
+    },
+    {
+      "id": "pd-eat-ga-w1d2",
+      "weekId": "pw-eat-ga-1",
+      "dayNumber": 2,
+      "workoutId": null,
+      "notes": "Prompt cascade: Calcium/vit D sources. Protein for muscle maintenance."
+    },
+    {
+      "id": "pd-eat-ga-w1d3",
+      "weekId": "pw-eat-ga-1",
+      "dayNumber": 3,
+      "workoutId": null,
+      "notes": "Prompt cascade: Fiber for gut/aging. Colorful plants count."
+    },
+    {
+      "id": "pd-eat-ga-w1d4",
+      "weekId": "pw-eat-ga-1",
+      "dayNumber": 4,
+      "workoutId": null,
+      "notes": "Prompt cascade: Hydration + electrolytes. Mindful eating practice."
+    },
+    {
+      "id": "pd-eat-ga-w1d5",
+      "weekId": "pw-eat-ga-1",
+      "dayNumber": 5,
+      "workoutId": null,
+      "notes": "Prompt cascade: Review supplements (if any). Whole food first."
+    },
+    {
+      "id": "pd-eat-ga-w1d6",
+      "weekId": "pw-eat-ga-1",
+      "dayNumber": 6,
+      "workoutId": null,
+      "notes": "Prompt cascade: Social eating strategy. Longevity markers check-in."
+    },
+    {
+      "id": "pd-eat-ga-w1d7",
+      "weekId": "pw-eat-ga-1",
+      "dayNumber": 7,
+      "workoutId": null,
+      "notes": "Prompt cascade: Weekly reflection on energy, mood, mobility from nutrition."
+    },
+    {
+      "id": "pd-yog-w1d1",
+      "weekId": "pw-yog-1",
+      "dayNumber": 1,
+      "workoutId": null,
+      "notes": "Yoga channel day: Sun salutation flow + breathwork. 20-30min video."
+    },
+    {
+      "id": "pd-yog-w1d2",
+      "weekId": "pw-yog-1",
+      "dayNumber": 2,
+      "workoutId": null,
+      "notes": "Yoga channel day: Hip openers & mobility. Live or on-demand class link."
+    },
+    {
+      "id": "pd-yog-w1d3",
+      "weekId": "pw-yog-1",
+      "dayNumber": 3,
+      "workoutId": null,
+      "notes": "Yoga channel day: Strength in yoga (core & arms). Journal intention."
+    },
+    {
+      "id": "pd-yog-w1d4",
+      "weekId": "pw-yog-1",
+      "dayNumber": 4,
+      "workoutId": null,
+      "notes": "Yoga channel day: Restorative / yin. Focus on recovery."
+    },
+    {
+      "id": "pd-yog-w1d5",
+      "weekId": "pw-yog-1",
+      "dayNumber": 5,
+      "workoutId": null,
+      "notes": "Yoga channel day: Balance & inversions prep. Short flow."
+    },
+    {
+      "id": "pd-yog-w1d6",
+      "weekId": "pw-yog-1",
+      "dayNumber": 6,
+      "workoutId": null,
+      "notes": "Yoga channel day: Full vinyasa or instructor live session."
+    },
+    {
+      "id": "pd-yog-w1d7",
+      "weekId": "pw-yog-1",
+      "dayNumber": 7,
+      "workoutId": null,
+      "notes": "Yoga channel day: Weekly reflection + optional meditation. Log practice."
+    },
+    {
+      "id": "pd-jst-w1d1",
+      "weekId": "pw-jst-1",
+      "dayNumber": 1,
+      "workoutId": null,
+      "notes": "John & Steph: Full body warm-up + intro coaching cues. Great sub for any light day.",
+      "videoUrl": "https://www.youtube.com/watch?v=ultWZbUMr08"
+    },
+    {
+      "id": "pd-jst-w1d2",
+      "weekId": "pw-jst-1",
+      "dayNumber": 2,
+      "workoutId": null,
+      "notes": "John & Steph: Leg day focus — squats, lunges, hip hinges. Perfect sub for Adult/strength leg day.",
+      "videoUrl": "https://www.youtube.com/watch?v=VmB1G1K7v94"
+    },
+    {
+      "id": "pd-jst-w1d3",
+      "weekId": "pw-jst-1",
+      "dayNumber": 3,
+      "workoutId": null,
+      "notes": "John & Steph: Upper body push + core. Follow along recording.",
+      "videoUrl": "https://www.youtube.com/watch?v=1f8yoFFdkcY"
+    },
+    {
+      "id": "pd-jst-w2d1",
+      "weekId": "pw-jst-2",
+      "dayNumber": 1,
+      "workoutId": null,
+      "notes": "John & Steph: Recovery mobility session. Sub for active rest day.",
+      "videoUrl": "https://www.youtube.com/watch?v=eGo4IYlbE5g"
     }
   ],
-  "liveSessions": []
+  "liveSessions": [],
+  "equipment": [
+    {
+      "id": "eq-bodyweightonly",
+      "name": "Bodyweight only",
+      "category": "bodyweight",
+      "createdAt": "2026-06-08T04:11:58.555Z"
+    },
+    {
+      "id": "eq-dumbbellspair",
+      "name": "Dumbbells (pair)",
+      "category": "dumbbells",
+      "createdAt": "2026-06-08T04:11:58.559Z"
+    },
+    {
+      "id": "eq-resistancebands",
+      "name": "Resistance bands",
+      "category": "bands",
+      "createdAt": "2026-06-08T04:11:58.559Z"
+    },
+    {
+      "id": "eq-pullupbar",
+      "name": "Pull-up bar",
+      "category": "pullup",
+      "createdAt": "2026-06-08T04:11:58.559Z"
+    },
+    {
+      "id": "eq-bench",
+      "name": "Bench",
+      "category": "bench",
+      "createdAt": "2026-06-08T04:11:58.559Z"
+    },
+    {
+      "id": "eq-kettlebell",
+      "name": "Kettlebell",
+      "category": "kettlebell",
+      "createdAt": "2026-06-08T04:11:58.559Z"
+    },
+    {
+      "id": "eqmq4prcy7",
+      "name": "Adjustable Dumbbells",
+      "category": "dumbbells",
+      "createdAt": "2026-06-08T04:31:22.241Z"
+    },
+    {
+      "id": "eqmq4prcy8",
+      "name": "Resistance Bands with Handles",
+      "category": "bands",
+      "createdAt": "2026-06-08T04:31:22.241Z"
+    },
+    {
+      "id": "eqmq4prcy9",
+      "name": "Stability Ball",
+      "category": "accessory",
+      "createdAt": "2026-06-08T04:31:22.241Z"
+    },
+    {
+      "id": "eqmq4prcya",
+      "name": "Pull-up Bar / Doorway Bar",
+      "category": "pullup",
+      "createdAt": "2026-06-08T04:31:22.241Z"
+    },
+    {
+      "id": "eqmq4prcyb",
+      "name": "Bench or Sturdy Chair",
+      "category": "bench",
+      "createdAt": "2026-06-08T04:31:22.241Z"
+    }
+  ],
+  "userEquipment": [
+    {
+      "id": "ue1",
+      "userId": "demo-user",
+      "equipmentId": "eq-dumbbellspair",
+      "hasAtHome": true,
+      "quantity": 1,
+      "notes": "Adjustable 5-25lb"
+    },
+    {
+      "id": "ue2",
+      "userId": "demo-user",
+      "equipmentId": "eq-resistancebands",
+      "hasAtHome": true,
+      "quantity": 3
+    },
+    {
+      "id": "ue3",
+      "userId": "demo-user",
+      "equipmentId": "eq-bodyweightonly",
+      "hasAtHome": true
+    }
+  ],
+  "programDayOptions": [
+    {
+      "id": "pdo-1780893433317xw5i1h8r08",
+      "dayId": "cmpys1gf90004tfrz9vm6qkb1",
+      "workoutId": "cmpzkkryb000s95rzdsxn44js",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317z22jzr3k72",
+      "dayId": "cmpys1gf90004tfrz9vm6qkb1",
+      "workoutId": "womq4prct4",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317yvtnv09v55s",
+      "dayId": "cmpys1gfk0005tfrz6x7rs3e3",
+      "workoutId": "cmpzkks91001l95rzheuz6vkw",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-17808934333175wvp09asctc",
+      "dayId": "cmpys1gfk0005tfrz6x7rs3e3",
+      "workoutId": "womq4prcte",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317lba7m4lhkzh",
+      "dayId": "cmpys1gfu0006tfrzxypdwbu8",
+      "workoutId": "cmpzkksjf002a95rzjvmo70ms",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-17808934333176qjqnjtuw6h",
+      "dayId": "cmpys1gfu0006tfrzxypdwbu8",
+      "workoutId": "womq4prctm",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317lusbhuihxi",
+      "dayId": "cmpys1gg20007tfrz50ftfbzd",
+      "workoutId": "cmpzkkskt002e95rzrk2vgaj3",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317iimph570jhd",
+      "dayId": "cmpys1gg20007tfrz50ftfbzd",
+      "workoutId": "womq4prctn",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317r26wz1ph7w",
+      "dayId": "cmpys1gg90008tfrzh9c7okbp",
+      "workoutId": "cmpzkksoo002p95rz7407826d",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317f4q3gywm3pq",
+      "dayId": "cmpys1gg90008tfrzh9c7okbp",
+      "workoutId": "womq4prctw",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317zosb9y16dag",
+      "dayId": "cmpys1ggh0009tfrz8uvqkv7y",
+      "workoutId": "cmpzklxt5008i95rzevusgiq7",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-17808934333177gltygo8huc",
+      "dayId": "cmpys1ggh0009tfrz8uvqkv7y",
+      "workoutId": "womq4prcu6",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317aj5h4aao89q",
+      "dayId": "cmpys1ggp000atfrzeho50uon",
+      "workoutId": "cmpzkkswq003695rzmh95szul",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317rgf5r0xgn6o",
+      "dayId": "cmpys1ggp000atfrzeho50uon",
+      "workoutId": "womq4prcu7",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317wpz1cpmrs4a",
+      "dayId": "cmpys1gh4000ctfrz26wt3vlf",
+      "workoutId": "cmpzkkszr003c95rzbv9yo6db",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317aovrvhpxr9",
+      "dayId": "cmpys1gh4000ctfrz26wt3vlf",
+      "workoutId": "womq4prcu8",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317y994cl1lgff",
+      "dayId": "cmpys1ghd000dtfrz98wtan6d",
+      "workoutId": "cmpzkkt6o003r95rzr7p1qgtc",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317nd66duaoks",
+      "dayId": "cmpys1ghd000dtfrz98wtan6d",
+      "workoutId": "womq4prcuh",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317w2rrwfv5tl",
+      "dayId": "cmpys1ghl000etfrzrn4l53o0",
+      "workoutId": "cmpzkktd6004a95rzoaly4h22",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317vgd9jdmgei",
+      "dayId": "cmpys1ghl000etfrzrn4l53o0",
+      "workoutId": "womq4prcus",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317p99glnqsbq",
+      "dayId": "cmpys1ghz000ftfrzhk1owobe",
+      "workoutId": "cmpzkktf1004e95rze2djnufn",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-17808934333177xn3e9hegxr",
+      "dayId": "cmpys1ghz000ftfrzhk1owobe",
+      "workoutId": "womq4prcut",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317nvh55b4jo",
+      "dayId": "cmpys1gi6000gtfrzjfa3wkgf",
+      "workoutId": "cmpzkktk0004r95rzp5483mwq",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-17808934333171996vcid466",
+      "dayId": "cmpys1gi6000gtfrzjfa3wkgf",
+      "workoutId": "womq4prcv2",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317fsb6a1php26",
+      "dayId": "cmpys1gid000htfrz171oqy3t",
+      "workoutId": "cmpzkktpl005a95rz8mnkzcwi",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-17808934333177r3itscvr4y",
+      "dayId": "cmpys1gid000htfrz171oqy3t",
+      "workoutId": "womq4prcvd",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317hmyylmihfpi",
+      "dayId": "cmpys1gik000itfrzzcwo2784",
+      "workoutId": "cmpzklxub008l95rzfiir78zh",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-17808934333176yibvewuzqp",
+      "dayId": "cmpys1gik000itfrzzcwo2784",
+      "workoutId": "womq4prcve",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317s3m1m0ri7wn",
+      "dayId": "cmpys1gix000ktfrz83vthuzz",
+      "workoutId": "cmpzjajjh000d95rzzu5ksqtx",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317oy04hr9alg",
+      "dayId": "cmpys1gix000ktfrz83vthuzz",
+      "workoutId": "womq4prcvf",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-17808934333178hvnkjxl969",
+      "dayId": "cmpys1gj4000ltfrzwi9q7zgh",
+      "workoutId": "cmpzkktqr005e95rz99plr1oy",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317213yyxar2ub",
+      "dayId": "cmpys1gj4000ltfrzwi9q7zgh",
+      "workoutId": "womq4prcvs",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317o2zyu4rihxq",
+      "dayId": "cmpys1gja000mtfrzgz9hd7j2",
+      "workoutId": "cmpzkktwl005u95rz9v9ulb67",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-178089343331761zmr3ulacn",
+      "dayId": "cmpys1gja000mtfrzgz9hd7j2",
+      "workoutId": "womq4prcw1",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317d7zbj1afbgo",
+      "dayId": "cmpys1gjh000ntfrzdk6mogh4",
+      "workoutId": "cmpzkktyq005y95rz0bbuytzc",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317wzclwozzfqn",
+      "dayId": "cmpys1gjh000ntfrzdk6mogh4",
+      "workoutId": "womq4prcw2",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317jl69806ws8",
+      "dayId": "cmpys1gjn000otfrz8jy75c7x",
+      "workoutId": "cmpzkku55006g95rzurs8dwjf",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317j10ram5ihy",
+      "dayId": "cmpys1gjn000otfrz8jy75c7x",
+      "workoutId": "womq4prcwf",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-17808934333179oaeczd3mfh",
+      "dayId": "cmpys1gjt000ptfrza1clymfb",
+      "workoutId": "cmpzklxw6008r95rz7yjwh164",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317le2lb2mx1o",
+      "dayId": "cmpys1gjt000ptfrza1clymfb",
+      "workoutId": "womq4prcwr",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317mmb9surhqr",
+      "dayId": "cmpys1gk0000qtfrztplpkyrg",
+      "workoutId": "cmpzklxuy008n95rz0qcm49ws",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317ax1f7iino5p",
+      "dayId": "cmpys1gk0000qtfrztplpkyrg",
+      "workoutId": "womq4prcws",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317r2rloheuuha",
+      "dayId": "cmpys1gkd000stfrzhgk2qu3b",
+      "workoutId": "cmpzkkubc007395rzqn9jrslk",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317ooije7g7ob",
+      "dayId": "cmpys1gkd000stfrzhgk2qu3b",
+      "workoutId": "womq4prcwt",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317q7ydrtfwmxc",
+      "dayId": "cmpys1gkj000ttfrzqnvgn5h6",
+      "workoutId": "cmpzkkuew007f95rzqxtxxwjr",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317sblqctbbbmg",
+      "dayId": "cmpys1gkj000ttfrzqnvgn5h6",
+      "workoutId": "womq4prcx6",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317jw20of06ly",
+      "dayId": "cmpys1gkp000utfrz5qq7187b",
+      "workoutId": "cmpzklxxe008u95rzm4ccoia3",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317lcfe74lx7yj",
+      "dayId": "cmpys1gkp000utfrz5qq7187b",
+      "workoutId": "womq4prcxe",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-17808934333179lzo0o5evf4",
+      "dayId": "cmpys1gkw000vtfrzicxxaigk",
+      "workoutId": "cmpzkkujf007r95rz8p0e9t37",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317inl5ch72s7s",
+      "dayId": "cmpys1gkw000vtfrzicxxaigk",
+      "workoutId": "womq4prcxr",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317244bmnnuod",
+      "dayId": "cmpys1gl3000wtfrzy9vjp26y",
+      "workoutId": "cmpzkkuoe008295rz1eyxlmqn",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317ss9le8trx0l",
+      "dayId": "cmpys1gl3000wtfrzy9vjp26y",
+      "workoutId": "womq4prcxs",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317mgl9m12fhui",
+      "dayId": "cmpys1gl9000xtfrzrfdj833b",
+      "workoutId": "cmpzklxxy008w95rzjvcvoxza",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317wzlrasx0h1m",
+      "dayId": "cmpys1gl9000xtfrzrfdj833b",
+      "workoutId": "womq4prcy5",
+      "label": "Home",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317tc1sl5dttkc",
+      "dayId": "cmpys1glg000ytfrz1cz00ydu",
+      "workoutId": "cmpzklxvi008p95rz96hrp4rk",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-1780893433317174thmd43ck",
+      "dayId": "cmpys1glg000ytfrz1cz00ydu",
+      "workoutId": "womq4prcy6",
+      "label": "Home",
+      "sortOrder": 0
+    }
+  ]
 }

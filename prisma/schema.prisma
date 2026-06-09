@@ -19,18 +19,23 @@ enum Role {
 }
 
 model User {
-  id            String              @id @default(cuid())
-  email         String              @unique
-  name          String?
-  role          Role                @default(MEMBER)
-  status        String              @default("active")
-  notes         String?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @default(now()) @updatedAt
-  subscriptions Subscription[]
-  enrollments   ProgramEnrollment[]
-  performances  ExercisePerformance[]
-  workoutLogs   WorkoutLog[]
+  id                 String              @id @default(cuid())
+  email              String              @unique
+  name               String?
+  phone              String?
+  dailyReminderTime  String?             // e.g. "07:30" in 24h format
+  role               Role                @default(MEMBER)
+  status             String              @default("active")
+  notes              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @default(now()) @updatedAt
+  subscriptions      Subscription[]
+  enrollments        ProgramEnrollment[]
+  performances       ExercisePerformance[]
+  workoutLogs        WorkoutLog[]
+  smsLogs            SmsLog[]
+  bookings           Booking[]
+  homeEquipment      UserEquipment[]
 }
 
 model SubscriptionTier {
@@ -66,6 +71,7 @@ model Exercise {
   updatedAt         DateTime              @updatedAt
   workoutItems      WorkoutExercise[]
   performances      ExercisePerformance[]
+  requiredEquipment ExerciseEquipment[]
 }
 
 model Workout {
@@ -76,6 +82,7 @@ model Workout {
   updatedAt   DateTime          @updatedAt
   exercises   WorkoutExercise[]
   programDays ProgramDay[]
+  dayOptions  ProgramDayOption[]
   logs        WorkoutLog[]
 }
 
@@ -105,6 +112,8 @@ model ExercisePerformance {
   setScheme         String
   weightTier        String
   startingWeightLbs Float?
+  repsCompleted     Int?     // total reps completed at the logged weight in this session
+  setsCompleted     Int?     // number of sets completed
   performedAt       DateTime @default(now())
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   exercise          Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
@@ -118,6 +127,7 @@ model WorkoutLog {
   workoutId   String
   performedAt DateTime @default(now())
   completed   Boolean  @default(true)
+  progress    Int      @default(100)  // % of exercises marked finished when logged (0-100)
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   workout     Workout  @relation(fields: [workoutId], references: [id])
 
@@ -152,15 +162,27 @@ model ProgramWeek {
 }
 
 model ProgramDay {
-  id        String      @id @default(cuid())
+  id        String             @id @default(cuid())
   weekId    String
   dayNumber Int
-  workoutId String?
+  workoutId String?            // legacy / default option
   notes     String?
-  week      ProgramWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
-  workout   Workout?    @relation(fields: [workoutId], references: [id])
+  videoUrl  String?
+  week      ProgramWeek        @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  workout   Workout?           @relation(fields: [workoutId], references: [id])
+  options   ProgramDayOption[]
 
   @@unique([weekId, dayNumber])
+}
+
+model ProgramDayOption {
+  id        String     @id @default(cuid())
+  dayId     String
+  workoutId String
+  label     String     // e.g. "Gym", "Home - Bodyweight", "Home - Dumbbells + Bands"
+  sortOrder Int        @default(0)
+  day       ProgramDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  workout   Workout    @relation(fields: [workoutId], references: [id])
 }
 
 model ProgramEnrollment {
@@ -182,4 +204,80 @@ model LiveSession {
   meetingUrl  String?
   tierSlug    String   @default("first_class")
   createdAt   DateTime @default(now())
+}
+
+model AdminContact {
+  id        String   @id @default(cuid())
+  email     String
+  phone     String?
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model AdminAvailability {
+  id              String   @id @default(cuid())
+  weekday         Int      // 0=Sunday ... 6=Saturday
+  startHour       Int      // 0-23
+  startMinute     Int      // 0-59
+  endHour         Int
+  endMinute       Int
+  slotDurationMin Int      @default(15)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+}
+
+model Booking {
+  id            String   @id @default(cuid())
+  memberEmail   String
+  memberPhone   String?
+  adminEmail    String
+  adminPhone    String?
+  scheduledAt   DateTime
+  durationMin   Int      @default(15)
+  zoomUrl       String?
+  status        String   @default("pending") // pending, confirmed, completed, cancelled
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id])
+}
+
+model SmsLog {
+  id        String   @id @default(cuid())
+  userId    String
+  phone     String
+  message   String
+  sentAt    DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Equipment {
+  id          String             @id @default(cuid())
+  name        String             @unique
+  category    String?            // e.g. "bodyweight", "dumbbells", "bands", "bench", "barbell", "pullup", "kettlebell"
+  description String?
+  createdAt   DateTime           @default(now())
+  exercises   ExerciseEquipment[]
+  userItems   UserEquipment[]
+}
+
+model ExerciseEquipment {
+  exerciseId  String
+  equipmentId String
+  exercise    Exercise   @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  equipment   Equipment  @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  @@id([exerciseId, equipmentId])
+}
+
+model UserEquipment {
+  id          String     @id @default(cuid())
+  userId      String
+  equipmentId String
+  hasAtHome   Boolean    @default(true)
+  quantity    Int        @default(1)
+  notes       String?
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  equipment   Equipment  @relation(fields: [equipmentId], references: [id])
+  @@unique([userId, equipmentId])
 }

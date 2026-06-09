@@ -6,11 +6,19 @@ import { DAY_LABELS } from "@/lib/program-constants";
 
 type WorkoutOption = { id: string; name: string };
 
+type DayOption = {
+  workoutId: string;
+  label: string;
+};
+
 type ProgramDay = {
   id: string;
   dayNumber: number;
   workoutId: string | null;
   workout: WorkoutOption | null;
+  videoUrl?: string | null;
+  notes?: string | null;
+  options?: DayOption[];
 };
 
 type ProgramWeek = {
@@ -88,6 +96,98 @@ export default function ProgramScheduleBuilder({
     setTimeout(() => setMessage(null), 2000);
   }
 
+  async function setVideo(dayId: string, videoUrl: string | null) {
+    setSaving(dayId);
+    setMessage(null);
+    const res = await fetch(`/api/programs/days/${dayId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ videoUrl }),
+    });
+    setSaving(null);
+    if (!res.ok) {
+      setMessage("Could not save video — try again.");
+      return;
+    }
+    const updated = await res.json();
+    setProgram((prev) => ({
+      ...prev,
+      weeks: prev.weeks.map((week) => ({
+        ...week,
+        days: week.days.map((d) =>
+          d.id === dayId ? { ...d, videoUrl: updated.videoUrl } : d,
+        ),
+      })),
+    }));
+    setMessage("Saved.");
+    setTimeout(() => setMessage(null), 2000);
+  }
+
+  async function setDayOptions(dayId: string, options: { workoutId: string; label: string }[]) {
+    setSaving(dayId);
+    setMessage(null);
+    const res = await fetch(`/api/programs/days/${dayId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ options }),
+    });
+    setSaving(null);
+    if (!res.ok) {
+      setMessage("Could not save options — try again.");
+      return;
+    }
+    const updated = await res.json();
+    setProgram((prev) => ({
+      ...prev,
+      weeks: prev.weeks.map((week) => ({
+        ...week,
+        days: week.days.map((d) =>
+          d.id === dayId
+            ? {
+                ...d,
+                options: updated.options || options,
+                workoutId: updated.workoutId || (options[0]?.workoutId ?? null),
+                workout: updated.workout || (options[0] ? workouts.find((w) => w.id === options[0].workoutId) || null : null),
+              }
+            : d,
+        ),
+      })),
+    }));
+    setMessage("Saved.");
+    setTimeout(() => setMessage(null), 2000);
+  }
+
+  function addOptionToDay(dayId: string, defaultLabel = "Home") {
+    const week = program.weeks.find((w) => w.days.some((d) => d.id === dayId));
+    if (!week) return;
+    const day = week.days.find((d) => d.id === dayId);
+    if (!day) return;
+    const currentOpts = day.options || (day.workoutId ? [{ workoutId: day.workoutId, label: "Gym" }] : []);
+    const newOpts = [...currentOpts, { workoutId: "", label: defaultLabel }];
+    setDayOptions(dayId, newOpts);
+  }
+
+  function updateDayOption(dayId: string, idx: number, field: "workoutId" | "label", value: string) {
+    const week = program.weeks.find((w) => w.days.some((d) => d.id === dayId));
+    if (!week) return;
+    const day = week.days.find((d) => d.id === dayId);
+    if (!day) return;
+    const currentOpts = [...(day.options || (day.workoutId ? [{ workoutId: day.workoutId, label: "Gym" }] : []))];
+    if (!currentOpts[idx]) return;
+    currentOpts[idx] = { ...currentOpts[idx], [field]: value };
+    setDayOptions(dayId, currentOpts);
+  }
+
+  function removeDayOption(dayId: string, idx: number) {
+    const week = program.weeks.find((w) => w.days.some((d) => d.id === dayId));
+    if (!week) return;
+    const day = week.days.find((d) => d.id === dayId);
+    if (!day) return;
+    const currentOpts = [...(day.options || [])];
+    currentOpts.splice(idx, 1);
+    setDayOptions(dayId, currentOpts);
+  }
+
   async function copyWeek(fromWeekNumber: number, toWeekNumber: number) {
     const fromWeek = program.weeks.find((w) => w.weekNumber === fromWeekNumber);
     const toWeek = program.weeks.find((w) => w.weekNumber === toWeekNumber);
@@ -110,7 +210,7 @@ export default function ProgramScheduleBuilder({
 
     setMessage(null);
     for (const day of week.days) {
-      await assignWorkout(day.id, null);
+      await setDayOptions(day.id, []);
     }
     setMessage("Week cleared to rest.");
     setTimeout(() => setMessage(null), 2000);
@@ -124,7 +224,7 @@ export default function ProgramScheduleBuilder({
     <div className="space-y-6">
       <div className="card flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-[var(--muted)]">
-          Assign a workout to each day, or leave as <strong>Rest</strong>.{" "}
+          Assign workouts as <strong>options per day</strong> (e.g. “Gym” + “Home”) so clients can mix environments. Use labels like “Gym”, “Home - Bodyweight”, “Home - Dumbbells”. Equipment on exercises will later filter what’s possible for a client’s home inventory.{" "}
           {program.durationWeeks} weeks · 7 days per week.
         </p>
         <div className="flex gap-2">
@@ -197,24 +297,77 @@ export default function ProgramScheduleBuilder({
                     <span className="w-12 shrink-0 text-sm font-medium text-[var(--muted)]">
                       {label}
                     </span>
-                    <select
-                      className="input min-w-[200px] flex-1"
-                      value={day.workoutId ?? ""}
-                      disabled={saving === day.id}
-                      onChange={(e) =>
-                        assignWorkout(
-                          day.id,
-                          e.target.value ? e.target.value : null,
-                        )
-                      }
-                    >
-                      <option value="">Rest / off</option>
-                      {workouts.map((w) => (
-                        <option key={w.id} value={w.id}>
-                          {w.name}
-                        </option>
+
+                    {/* Hybrid options support: multiple labeled workouts per day (Gym / Home etc) */}
+                    <div className="flex-1 min-w-[280px] space-y-2">
+                      {(day.options && day.options.length > 0 ? day.options : (day.workoutId ? [{ workoutId: day.workoutId, label: "Standard" }] : [])).map((opt, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <input
+                            className="input text-xs w-28"
+                            value={opt.label}
+                            placeholder="Label"
+                            onChange={(e) => updateDayOption(day.id, idx, "label", e.target.value)}
+                            disabled={saving === day.id}
+                          />
+                          <select
+                            className="input flex-1 text-sm"
+                            value={opt.workoutId}
+                            disabled={saving === day.id}
+                            onChange={(e) => updateDayOption(day.id, idx, "workoutId", e.target.value)}
+                          >
+                            <option value="">— choose workout —</option>
+                            {workouts.map((w) => (
+                              <option key={w.id} value={w.id}>{w.name}</option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            className="text-xs text-[var(--danger)] px-1"
+                            onClick={() => removeDayOption(day.id, idx)}
+                            disabled={saving === day.id || (day.options?.length || 0) <= 1}
+                            title="Remove option"
+                          >
+                            ×
+                          </button>
+                        </div>
                       ))}
-                    </select>
+
+                      <div className="flex gap-2 text-xs">
+                        <button
+                          type="button"
+                          className="btn-ghost text-xs px-2 py-0.5"
+                          onClick={() => addOptionToDay(day.id, "Gym")}
+                          disabled={saving === day.id}
+                        >
+                          + Gym option
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-ghost text-xs px-2 py-0.5"
+                          onClick={() => addOptionToDay(day.id, "Home")}
+                          disabled={saving === day.id}
+                        >
+                          + Home option
+                        </button>
+                        {(!day.options || day.options.length === 0) && (
+                          <button
+                            type="button"
+                            className="btn-ghost text-xs px-2 py-0.5"
+                            onClick={() => assignWorkout(day.id, day.workoutId ?? null)}
+                            disabled={saving === day.id}
+                          >
+                            Use single (legacy)
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <input
+                      className="input text-xs w-48"
+                      placeholder="YouTube URL (for journeys)"
+                      defaultValue={day.videoUrl || ""}
+                      onBlur={(e) => setVideo(day.id, e.target.value || null)}
+                      disabled={saving === day.id}
+                    />
                     {saving === day.id && (
                       <span className="text-xs text-[var(--muted)]">
                         Saving…

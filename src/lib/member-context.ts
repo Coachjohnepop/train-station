@@ -1,52 +1,154 @@
+import 'server-only';
+
 import { getMemberAccess, type MemberAccess } from "@/lib/access";
 import { DEMO_MEMBER_EMAIL } from "@/lib/demo-workout";
+import { listPrograms } from "@/lib/program-data";
+import { isDemoMode, getDemoEnrollments } from "@/lib/demo-enrollments";
+import { getDemoWorkoutLogCount, getDemoStrengthScore, computeStrengthScoreFromPerfs } from "@/lib/demo-logs";
+import { getDemoUserSettings } from "@/lib/demo-reminders";
 import { prisma } from "@/lib/prisma";
 
-function toDateKey(d: Date): string {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
+export async function getMemberDashboard() {
+  // Mock for quick demo (no DB). Uses real program data from seed export.
+  const programs = await listPrograms();
 
-async function getCurrentStreak(userId: string): Promise<number> {
-  const logs = await prisma.workoutLog.findMany({
-    where: { userId },
-    select: { performedAt: true },
-    orderBy: { performedAt: "desc" },
-    take: 90,
-  });
-  if (logs.length === 0) return 0;
+  const adult = programs.find((p: any) => p.slug === "adult") || programs.find((p: any) => (p.category || "workout") === "workout") || programs[0];
 
-  const daySet = new Set(logs.map((l) => toDateKey(new Date(l.performedAt))));
+  // Fake demo member enrolled in Adult with some progress
+  const demoUser = {
+    id: "demo-user",
+    name: "Demo Member",
+    email: DEMO_MEMBER_EMAIL,
+  };
 
-  let streak = 0;
-  const today = new Date();
-  let cursor = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-  // allow streak to start from today or yesterday (common in fitness apps)
-  for (let i = 0; i < 2; i++) {
-    const key = toDateKey(cursor);
-    if (daySet.has(key)) {
-      streak = 1;
-      cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() - 1);
-      break;
-    }
-    cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() - 1);
+  let mockEnrollments: any[] = [];
+  if (isDemoMode()) {
+    const demoEnrolls = getDemoEnrollments();
+    mockEnrollments = Object.entries(demoEnrolls).map(([slug, prog]) => {
+      const p = programs.find((pp: any) => pp.slug === slug) || adult;
+      return {
+        id: `demo-enroll-${slug}`,
+        program: {
+          id: p.id,
+          slug: p.slug,
+          name: p.name,
+          description: p.description,
+          tierSlug: p.tierSlug || "coach",
+          durationWeeks: p.durationWeeks || 4,
+        },
+        currentWeek: prog.currentWeek,
+        currentDay: prog.currentDay,
+      };
+    });
+  } else if (adult) {
+    mockEnrollments = [
+      {
+        id: "demo-enroll-adult",
+        program: {
+          id: adult.id,
+          slug: adult.slug,
+          name: adult.name,
+          description: adult.description,
+          tierSlug: adult.tierSlug || "coach",
+          category: adult.category || "workout",
+          durationWeeks: adult.durationWeeks || 4,
+        },
+        currentWeek: 2,
+        currentDay: 5,
+      },
+    ];
   }
-  if (streak === 0) return 0;
 
-  // continue backward
-  while (true) {
-    const key = toDateKey(cursor);
-    if (daySet.has(key)) {
-      streak += 1;
-      cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() - 1);
-    } else {
-      break;
+  const totalWorkouts = isDemoMode() ? getDemoWorkoutLogCount() : 12;
+
+  let strengthScore = 0;
+  if (isDemoMode()) {
+    strengthScore = getDemoStrengthScore();
+  } else {
+    try {
+      const demoUser = await prisma.user.findUnique({ where: { email: DEMO_MEMBER_EMAIL } });
+      if (demoUser) {
+        const perfs = await prisma.exercisePerformance.findMany({
+          where: { userId: demoUser.id },
+          include: { exercise: { select: { name: true } } },
+        });
+        strengthScore = computeStrengthScoreFromPerfs(
+          perfs.map((p: any) => ({
+            exercise: { name: p.exercise?.name },
+            startingWeightLbs: p.startingWeightLbs,
+            repsCompleted: p.repsCompleted,
+            setsCompleted: p.setsCompleted,
+          }))
+        );
+      }
+    } catch (e) {
+      // ignore, fall to 0
     }
   }
-  return streak;
+
+  // Support doing workouts + yoga + journeys in parallel: provide per-program continues
+  // Eating temporarily disabled (coming soon)
+  const activeContinues = mockEnrollments.length > 0
+    ? mockEnrollments
+        .filter((enr: any) => (enr.program.category || "workout") !== "eating")
+        .map((enr: any) => {
+          const prog = programs.find((pp: any) => pp.slug === enr.program.slug) || enr.program;
+          const cat = prog.category || "workout";
+          const labelBase = cat === "yoga" ? "Yoga" : cat === "journey" ? "Journey" : "Workouts";
+          const contUrl = cat === "journey" 
+            ? `/member/journey?program=${enr.program.slug}` 
+            : `/member/programs/${enr.program.slug}`;
+          return {
+            url: contUrl,
+            label: `${labelBase}: ${prog.name} (W${enr.currentWeek}D${enr.currentDay})`,
+            category: cat,
+            currentWeek: enr.currentWeek,
+            currentDay: enr.currentDay,
+          };
+        })
+    : (adult ? [{
+        url: `/member/programs/${adult.slug}`,
+        label: `Continue ${adult.name}`,
+        category: adult.category || "workout",
+        currentWeek: 2,
+        currentDay: 5,
+      }] : []);
+
+  const primaryContinue = activeContinues[0] || null;
+
+  let reminderSettings = { phone: "(555) 987-6543", dailyReminderTime: "07:30" };
+  if (isDemoMode()) {
+    const demoSettings = getDemoUserSettings("demo-user");
+    reminderSettings = {
+      phone: demoSettings.phone || "(555) 987-6543",
+      dailyReminderTime: demoSettings.dailyReminderTime || "07:30",
+    };
+  }
+
+  return {
+    user: { ...demoUser, dailyReminderTime: reminderSettings.dailyReminderTime as string | null, phone: reminderSettings.phone as string | null },
+    access: getMemberAccess("first_class"),
+    enrollments: mockEnrollments,
+    programs: programs.map((p: any) => ({
+      id: p.id,
+      slug: p.slug,
+      name: p.name,
+      description: p.description,
+      tierSlug: p.tierSlug || "coach",
+      category: p.category || "workout",
+      sortOrder: p.sortOrder || 0,
+      workoutCount: p.weeks?.reduce((n: number, w: any) => n + (w.days?.length || 0), 0) || 0,
+    })),
+    stats: {
+      dayStreak: 5,
+      totalWorkouts,
+      strengthScore,
+    },
+    continueUrl: primaryContinue?.url || null,
+    continueLabel: primaryContinue?.label || null,
+    activeContinues,
+    dailyReminderTime: reminderSettings.dailyReminderTime,
+  };
 }
 
 export type MemberDashboardData = {
@@ -60,6 +162,7 @@ export type MemberDashboardData = {
       name: string;
       description: string | null;
       tierSlug: string;
+      category?: string;
       durationWeeks: number;
     };
     currentWeek: number;
@@ -71,112 +174,24 @@ export type MemberDashboardData = {
     name: string;
     description: string | null;
     tierSlug: string;
+    category?: string;
     sortOrder: number;
     workoutCount: number;
   }[];
   stats: {
     dayStreak: number;
     totalWorkouts: number;
-    scheduledThisWeek: number;
+    strengthScore: number;
   };
   continueUrl: string | null;
   continueLabel: string | null;
+  activeContinues?: Array<{
+    url: string;
+    label: string;
+    category: string;
+    currentWeek: number;
+    currentDay: number;
+  }>;
+  dailyReminderTime?: string | null;
 };
 
-export async function getMemberDashboard(): Promise<MemberDashboardData | null> {
-  const user = await prisma.user.findUnique({
-    where: { email: DEMO_MEMBER_EMAIL },
-    include: {
-      subscriptions: {
-        where: { status: "active" },
-        include: { tier: true },
-        take: 1,
-      },
-      enrollments: {
-        include: {
-          program: true,
-        },
-        orderBy: { startedAt: "desc" },
-      },
-    },
-  });
-
-  if (!user) return null;
-
-  const tierSlug = user.subscriptions[0]?.tier.slug as
-    | "starter"
-    | "first_class"
-    | undefined;
-  const access = getMemberAccess(tierSlug ?? "first_class");
-
-  const programs = await prisma.program.findMany({
-    where: { published: true },
-    orderBy: { sortOrder: "asc" },
-    include: {
-      weeks: {
-        include: {
-          days: { where: { workoutId: { not: null } } },
-        },
-      },
-    },
-  });
-
-  let scheduledThisWeek = 0;
-  for (const p of programs) {
-    for (const w of p.weeks) {
-      scheduledThisWeek += w.days.length;
-    }
-  }
-
-  const [totalWorkouts, dayStreak] = await Promise.all([
-    prisma.workoutLog.count({ where: { userId: user.id } }),
-    getCurrentStreak(user.id),
-  ]);
-
-  const activeEnrollment = user.enrollments[0];
-  let continueUrl: string | null = "/member/workout";
-  let continueLabel: string | null = "Continue sample workout";
-
-  if (activeEnrollment) {
-    continueUrl = `/member/programs/${activeEnrollment.program.slug}`;
-    continueLabel = `Continue ${activeEnrollment.program.name}`;
-  }
-
-  return {
-    user: {
-      id: user.id,
-      name: user.name ?? "Member",
-      email: user.email,
-    },
-    access,
-    enrollments: user.enrollments.map((e) => ({
-      id: e.id,
-      program: {
-        id: e.program.id,
-        slug: e.program.slug,
-        name: e.program.name,
-        description: e.program.description,
-        tierSlug: e.program.tierSlug,
-        durationWeeks: e.program.durationWeeks,
-      },
-      currentWeek: e.currentWeek,
-      currentDay: e.currentDay,
-    })),
-    programs: programs.map((p) => ({
-      id: p.id,
-      slug: p.slug,
-      name: p.name,
-      description: p.description,
-      tierSlug: p.tierSlug,
-      sortOrder: p.sortOrder,
-      workoutCount: p.weeks.reduce((n, w) => n + w.days.length, 0),
-    })),
-    stats: {
-      dayStreak,
-      totalWorkouts,
-      scheduledThisWeek,
-    },
-    continueUrl,
-    continueLabel,
-  };
-}

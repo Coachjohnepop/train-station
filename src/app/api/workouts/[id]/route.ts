@@ -1,6 +1,21 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import fs from "fs";
+import path from "path";
+
+const SEED_FILE = path.join(process.cwd(), "prisma", "seed-data.json");
+let seedCache: any = null;
+function loadSeed() {
+  if (!seedCache) {
+    seedCache = JSON.parse(fs.readFileSync(SEED_FILE, "utf8"));
+  }
+  return seedCache;
+}
+function isDemoMode() {
+  const url = process.env.DATABASE_URL ?? "";
+  return !url || url.includes("dummy.supabase") || url.includes("dummy");
+}
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -11,6 +26,31 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
+  if (isDemoMode()) {
+    const data = loadSeed();
+    const w = (data.workouts || []).find((ww: any) => ww.id === id);
+    if (!w) {
+      return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
+    }
+    const items = (data.workoutExercises || [])
+      .filter((we: any) => we.workoutId === id)
+      .sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+      .map((we: any) => {
+        const ex = (data.exercises || []).find((e: any) => e.id === we.exerciseId);
+        return {
+          id: we.id,
+          sortOrder: we.sortOrder,
+          setScheme: we.setScheme,
+          repPattern: we.repPattern,
+          reps: we.reps,
+          sets: we.sets,
+          weightTier: we.weightTier,
+          notes: we.notes,
+          exercise: ex || { id: we.exerciseId, name: "Unknown" },
+        };
+      });
+    return NextResponse.json({ ...w, exercises: items });
+  }
   const workout = await prisma.workout.findUnique({
     where: { id },
     include: {

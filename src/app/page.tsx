@@ -1,22 +1,14 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { listPrograms } from "@/lib/program-data";
 import SplashCarousel from "@/components/SplashCarousel";
+import { PROGRAM_IMAGES } from "@/lib/program-constants";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const programs = await prisma.program.findMany({
-    where: { published: true },
-    orderBy: { sortOrder: "asc" },
-  });
+  const programs = await listPrograms();
 
-  const programImages: Record<string, string> = {
-    adult: "/images/programs/adult.jpg",
-    "strength-training": "/images/programs/strength.jpg",
-    "boot-camp-preparation": "/images/programs/bootcamp.jpg",
-    "combat-training": "/images/programs/combat.jpg",
-    "youth-sports": "/images/programs/youth.jpg",
-  };
+  const programImages = PROGRAM_IMAGES;
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
@@ -38,7 +30,7 @@ export default async function HomePage() {
         </div>
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {programs.map((program) => (
+          {programs.map((program: any) => (
             <Link
               key={program.id}
               href={`/member/programs/${program.slug}`}
@@ -105,6 +97,9 @@ export default async function HomePage() {
         <div className="mx-auto max-w-4xl px-6 text-center text-sm text-[var(--muted)]">
           Built for coaches who care about real progress.{" "}
           <span className="text-[var(--accent)]">The Train Station</span> — memberships, on-demand programs, and live sessions.
+          <div className="mt-2">
+            <Link href="/join" className="text-[var(--accent)] hover:underline">View membership &amp; payment options →</Link>
+          </div>
           <div className="mt-3 text-xs">Greenfield rebuild at <code className="rounded bg-[var(--surface-2)] px-1 py-px">~/projects/train-station</code></div>
         </div>
       </div>

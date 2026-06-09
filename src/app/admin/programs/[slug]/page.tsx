@@ -4,6 +4,9 @@ import ProgramScheduleBuilder from "@/components/ProgramScheduleBuilder";
 import { getProgramBySlug } from "@/lib/program-data";
 import { syncProgramSchedule } from "@/lib/program-schedule";
 import { prisma } from "@/lib/prisma";
+import { isDemoMode } from "@/lib/demo-enrollments";
+import fs from "fs";
+import path from "path";
 
 export const dynamic = "force-dynamic";
 
@@ -11,20 +14,38 @@ type Props = { params: Promise<{ slug: string }> };
 
 export default async function ProgramAdminDetailPage({ params }: Props) {
   const { slug } = await params;
-  const programRecord = await prisma.program.findUnique({ where: { slug } });
-  if (!programRecord) notFound();
 
-  await syncProgramSchedule(programRecord.id);
   const program = await getProgramBySlug(slug);
   if (!program) notFound();
 
-  const workouts = await prisma.workout.findMany({
-    orderBy: { name: "asc" },
-    select: { id: true, name: true },
-  });
+  let workouts: { id: string; name: string }[] = [];
+
+  if (isDemoMode()) {
+    // In pure demo mode (DATABASE_URL contains "dummy") we load everything from seed-data.json.
+    // No real Prisma connection is possible/necessary.
+    try {
+      const seedPath = path.join(process.cwd(), "prisma/seed-data.json");
+      const seed = JSON.parse(fs.readFileSync(seedPath, "utf8"));
+      workouts = (seed.workouts || []).map((w: any) => ({ id: w.id, name: w.name }));
+    } catch {
+      workouts = [];
+    }
+    // syncProgramSchedule + direct prisma.program.findUnique are DB-only; we skip them in demo
+    // because getProgramBySlug (called above) already reconstructs the full schedule from JSON.
+  } else {
+    const programRecord = await prisma.program.findUnique({ where: { slug } });
+    if (!programRecord) notFound();
+
+    await syncProgramSchedule(programRecord.id);
+
+    workouts = await prisma.workout.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    });
+  }
 
   const assignedCount = program.weeks.reduce(
-    (n, w) => n + w.days.filter((d) => d.workoutId).length,
+    (n: number, w: any) => n + w.days.filter((d: any) => d.workoutId).length,
     0,
   );
 
@@ -39,7 +60,7 @@ export default async function ProgramAdminDetailPage({ params }: Props) {
       <h1 className="mt-4 text-2xl font-bold">{program.name}</h1>
       <p className="mt-2 text-[var(--muted)]">{program.description}</p>
       <p className="mt-1 text-sm text-[var(--muted)]">
-        {assignedCount} workout slot{assignedCount === 1 ? "" : "s"} assigned
+        {assignedCount} {program.category === "workout" ? "workout" : program.category === "journey" ? "journey session" : "content"} slot{assignedCount === 1 ? "" : "s"} assigned
       </p>
 
       <div className="mt-8">

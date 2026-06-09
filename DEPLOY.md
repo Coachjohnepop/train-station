@@ -1,8 +1,33 @@
-# Deploy The Train Station (GitHub + Supabase + Vercel)
+# Deploy The Train Station (GitHub + Vercel)
+
+**Current plan (per your note):** Deploy the working demo in ~10 hours. This gets a stable public URL where the member dashboard (including the SMS settings and home equipment widgets), workout logging with green per-set checks, coach live progress buttons, review grids, schedules, etc. all load reliably without dev server churn.
 
 You handle logins in the browsers / CLIs when prompted. I (the agent) will run the terminal commands, edit configs, and test.
 
 We stop before any DNS / custom domain changes.
+
+## Quick demo deploy (recommended right now — the version with all the green checks + coach features)
+The app is deliberately built in "demo mode" using only committed files:
+- `prisma/seed-data.json` (exercises, workouts, full program schedules)
+- `prisma/enrollments.dev.json`, `logs.dev.json`, `user-equipment.dev.json`, `user-settings.dev.json` (live demo user state: progress, setsCompleted for the buttons, equipment toggles, SMS phone + reminder time)
+
+No real database is required for the launch/demo. All the `isDemoMode()` checks now default to the file-backed demo when `DATABASE_URL` is unset or contains "dummy".
+
+### Steps for the ~10h deploy
+1. Make sure your latest changes (including any final state in the .dev.json files) are committed and pushed to the GitHub repo for this project.
+2. Go to https://vercel.com and "Add New Project" → import the GitHub repo (or I can run `npx vercel` here).
+3. (Optional but explicit) In the project settings → Environment Variables, add for **Production, Preview, and Development**:
+   - `DATABASE_URL` = `dummy`   (or any string containing "dummy"; this forces demo paths. Because of the recent defaulting changes, it will also work if you set nothing.)
+4. Deploy. Vercel will run `npm run build` (which we just verified passes cleanly, including all the /api/equipment, /api/member/reminder-settings, member pages, logging routes, etc.).
+5. Visit the new `https://your-project.vercel.app` URL.
+6. The /member dashboard should show the equipment and SMS widgets loading instantly (no more spinners from restarts). Test logging sets on a workout — the buttons should turn green with ✓ and persist in review/schedule views. Coach impersonation banner + live checkoff should also work.
+
+After this, every push to main auto-deploys.
+
+The widgets will stay up because there are no Turbopack recompiles, no port 3000/3002 fights, and the fs reads for demo data are instantaneous.
+
+## Later: real Postgres (Supabase) when you want multi-user persistence + real auth
+(Everything below is the previous full instructions — we can do this after the deadline deploy if/when you add real users and billing.)
 
 ## 0. Prerequisites (you have these)
 - GitHub account
@@ -10,7 +35,7 @@ We stop before any DNS / custom domain changes.
 - Vercel account
 - This repo folder: `projects/train-station`
 
-Current local dev still works with sqlite in spirit, but we have switched the app to Postgres via Supabase for prod.
+Current local dev still works in demo mode from the committed JSON files (the path we're shipping first). Real DB is for the next phase.
 
 ## 1. Supabase (Postgres DB) — do this first
 
@@ -100,8 +125,20 @@ After first deploy, every push to main will auto-deploy previews + prod.
 ## Local development after switch
 - Set real `DATABASE_URL` + `DIRECT_URL` in `.env` (or `.env.local`) and run `npm run dev`.
 - `npm run db:push` after schema changes.
-- `npm run db:seed` to reset demo data.
+- `npm run db:seed` to reset demo data (loads the full deliverable content: 101 exercises + 31 workouts + full schedules for Adult/Strength/Boot Camp + demo users + sample streak data).
+- `npm run db:export-seed` (after editing via admin) to export current DB content back to `prisma/seed-data.json` — this preserves the data you build as part of the platform deliverable (committed in git). Use this when you customize for a customer so the "base" includes your edits. The seed-data.json is the canonical snapshot of the initial content.
 - `npm run db:studio` to browse the live Supabase tables.
+
+## The content / data is part of the deliverable (and how to handle new customers)
+- `prisma/seed-data.json` (committed) contains the full original content you built (101 exercises from the ~40 workout files, 31 workouts, detailed 28-day Adult schedule + partial for Strength/Boot Camp, 5 programs, etc.). This is preserved exactly via IDs so sample data, logs, etc. attach.
+- It is **editable** via the admin tools (Exercise library, Workout builder, Program scheduler with week copy/clear/assign).
+- For a **new customer / fresh platform instance**: 
+  - Use `npx prisma db push --force-reset` (or drop tables) then `npm run db:seed` to completely clear custom data and reload the base deliverable content.
+  - Or in future, we can add an admin "Factory Reset to Base Content" button that does the truncate + re-import (safe because seed is the golden source).
+- After you edit/customize the content for a specific customer, run `npm run db:export-seed` so the updated state becomes the new "base" in the repo (no data loss across deploys, team members, or customer handoffs).
+- The demo mode (when using dummy DB URL) also loads from the same seed-data.json so the full detailed schedules, workout names, exercise lists etc. are always visible and consistent even before the real DB is connected.
+
+This ensures the data you invested in building is never lost, is versioned with the code, ships as part of the product, yet the platform remains reusable/cleanable.
 
 ## Rollback note
 The old `dev.db` sqlite file is still in the folder (gitignored). If you ever need to go back temporarily, we can restore the old prisma.ts + schema + reinstall the sqlite adapter packages.

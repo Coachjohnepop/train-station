@@ -1,0 +1,26 @@
+{
+  "adult": {
+    "currentWeek": 3,
+    "currentDay": 3
+  },
+  "strength-training": {
+    "currentWeek": 2,
+    "currentDay": 4
+  },
+  "muscle-max": {
+    "currentWeek": 2,
+    "currentDay": 5
+  },
+  "yoga-channel": {
+    "currentWeek": 1,
+    "currentDay": 3
+  },
+  "john-steph": {
+    "currentWeek": 1,
+    "currentDay": 4
+  },
+  "boot-camp-preparation": {
+    "currentWeek": 1,
+    "currentDay": 2
+  }
+}

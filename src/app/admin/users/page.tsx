@@ -12,6 +12,8 @@ type UserRow = {
   role: Role;
   status: string;
   notes: string | null;
+  phone: string | null;
+  dailyReminderTime: string | null;
   createdAt: string;
   subscription: { tier: string; status: string } | null;
   counts: { enrollments: number; performances: number; workoutLogs: number };
@@ -33,6 +35,8 @@ export default function AdminUsersPage() {
     role: "MEMBER" as Role,
     status: "active",
     notes: "",
+    phone: "",
+    dailyReminderTime: "",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -54,7 +58,7 @@ export default function AdminUsersPage() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ email: "", name: "", role: "MEMBER", status: "active", notes: "" });
+    setForm({ email: "", name: "", role: "MEMBER", status: "active", notes: "", phone: "", dailyReminderTime: "" });
     setError("");
     setModalOpen(true);
   }
@@ -67,6 +71,8 @@ export default function AdminUsersPage() {
       role: u.role,
       status: u.status,
       notes: u.notes || "",
+      phone: u.phone || "",
+      dailyReminderTime: u.dailyReminderTime || "",
     });
     setError("");
     setModalOpen(true);
@@ -82,6 +88,8 @@ export default function AdminUsersPage() {
       role: form.role,
       status: form.status,
       notes: form.notes || null,
+      phone: form.phone || null,
+      dailyReminderTime: form.dailyReminderTime || null,
     };
 
     let res: Response;
@@ -174,6 +182,7 @@ export default function AdminUsersPage() {
               <th className="py-2 pr-4">Name / Email</th>
               <th className="py-2 pr-4">Role</th>
               <th className="py-2 pr-4">Status</th>
+              <th className="py-2 pr-4">Phone / SMS</th>
               <th className="py-2 pr-4">Subscription</th>
               <th className="py-2 pr-4">Activity</th>
               <th className="py-2 pr-4">Created</th>
@@ -183,13 +192,13 @@ export default function AdminUsersPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-[var(--muted)]">
+                <td colSpan={8} className="py-8 text-center text-[var(--muted)]">
                   Loading...
                 </td>
               </tr>
             ) : users.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-[var(--muted)]">
+                <td colSpan={8} className="py-8 text-center text-[var(--muted)]">
                   No users found.
                 </td>
               </tr>
@@ -224,6 +233,16 @@ export default function AdminUsersPage() {
                     </span>
                   </td>
                   <td className="py-3 pr-4 text-xs">
+                    {u.phone ? (
+                      <div>
+                        <span className="font-mono">{u.phone}</span>
+                        {u.dailyReminderTime && <div className="text-[10px] text-[var(--muted)]">remind {u.dailyReminderTime}</div>}
+                      </div>
+                    ) : (
+                      <span className="text-[var(--muted)]">—</span>
+                    )}
+                  </td>
+                  <td className="py-3 pr-4 text-xs">
                     {u.subscription ? (
                       <>
                         {u.subscription.tier} <span className="text-[var(--muted)]">({u.subscription.status})</span>
@@ -246,6 +265,14 @@ export default function AdminUsersPage() {
                       >
                         Edit
                       </button>
+                      {u.role === "MEMBER" && (
+                        <Link
+                          href={`/member/workout?asInstructor=true&forUser=${encodeURIComponent(u.email)}`}
+                          className="rounded border border-accent/40 px-2 py-1 text-accent hover:bg-accent/10"
+                        >
+                          Coach Workout
+                        </Link>
+                      )} {/* Eating (diet) coming soon - removed from coach drills */}
                       <button
                         onClick={() => deleteUser(u.id, u.email)}
                         className="rounded border border-[var(--danger)]/40 px-2 py-1 text-[var(--danger)] hover:bg-[var(--danger)]/10"
@@ -332,6 +359,29 @@ export default function AdminUsersPage() {
                   placeholder="e.g. Approved after interview. Background check passed."
                 />
               </label>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="text-xs text-[var(--muted)]">Phone (for SMS)</span>
+                  <input
+                    type="tel"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    className="input mt-1 w-full"
+                    placeholder="(555) 123-4567"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs text-[var(--muted)]">Daily SMS Reminder</span>
+                  <input
+                    type="text"
+                    value={form.dailyReminderTime}
+                    onChange={(e) => setForm({ ...form, dailyReminderTime: e.target.value })}
+                    className="input mt-1 w-full"
+                    placeholder="07:30"
+                  />
+                </label>
+              </div>
 
               {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
 

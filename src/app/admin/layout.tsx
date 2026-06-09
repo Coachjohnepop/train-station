@@ -17,7 +17,7 @@ export default function AdminLayout({
               <img
                 src="/images/logo-icon.png"
                 alt="The Train Station"
-                className="h-11 w-auto"
+                className="h-16 w-auto"
               />
             </Link>
             <p className="text-sm text-[var(--muted)]">Coach admin</p>

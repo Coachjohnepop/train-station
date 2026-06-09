@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import {
+  isDemoMode,
+  loadDemoExercises,
+  saveDemoExercises,
+} from "@/lib/demo-exercises";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -31,6 +36,22 @@ export async function PATCH(request: Request, { params }: Params) {
     data.videoUrl = parsed.data.videoUrl?.trim() || null;
   }
 
+  if (isDemoMode()) {
+    const list = loadDemoExercises();
+    const idx = list.findIndex((e: any) => e.id === id);
+    if (idx === -1) {
+      return NextResponse.json({ detail: "Exercise not found" }, { status: 404 });
+    }
+    const ex = { ...list[idx] };
+    if (data.name !== undefined) ex.name = data.name;
+    if (data.description !== undefined) ex.description = data.description;
+    if (data.videoUrl !== undefined) ex.videoUrl = data.videoUrl;
+    ex.updatedAt = new Date().toISOString();
+    list[idx] = ex;
+    saveDemoExercises(list);
+    return NextResponse.json(ex);
+  }
+
   try {
     const exercise = await prisma.exercise.update({
       where: { id },
@@ -44,6 +65,16 @@ export async function PATCH(request: Request, { params }: Params) {
 
 export async function DELETE(_request: Request, { params }: Params) {
   const { id } = await params;
+  if (isDemoMode()) {
+    const list = loadDemoExercises();
+    const idx = list.findIndex((e: any) => e.id === id);
+    if (idx === -1) {
+      return NextResponse.json({ detail: "Exercise not found" }, { status: 404 });
+    }
+    list.splice(idx, 1);
+    saveDemoExercises(list);
+    return new NextResponse(null, { status: 204 });
+  }
   try {
     await prisma.exercise.delete({ where: { id } });
     return new NextResponse(null, { status: 204 });

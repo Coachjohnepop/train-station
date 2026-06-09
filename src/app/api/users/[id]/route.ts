@@ -9,6 +9,8 @@ const updateUserSchema = z.object({
   role: z.enum(ROLES).optional(),
   status: z.string().optional(),
   notes: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  dailyReminderTime: z.string().optional().nullable(),
 });
 
 type Params = { params: Promise<{ id: string }> };

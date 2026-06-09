@@ -2,6 +2,21 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { workoutPrescriptionSchema } from "@/lib/exercise-schema";
+import fs from "fs";
+import path from "path";
+
+const SEED_FILE = path.join(process.cwd(), "prisma", "seed-data.json");
+let seedCache: any = null;
+function loadSeed() {
+  if (!seedCache) {
+    seedCache = JSON.parse(fs.readFileSync(SEED_FILE, "utf8"));
+  }
+  return seedCache;
+}
+function isDemoMode() {
+  const url = process.env.DATABASE_URL ?? "";
+  return !url || url.includes("dummy.supabase") || url.includes("dummy");
+}
 
 const addSchema = workoutPrescriptionSchema.extend({
   exerciseId: z.string().min(1),
@@ -50,6 +65,27 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
   }
 
+  if (isDemoMode()) {
+    // Demo: pretend it saved (no persistence for workout items in demo mode)
+    const data = loadSeed();
+    const ex = (data.exercises || []).find((e: any) => e.id === parsed.data.exerciseId);
+    const fakeItem = {
+      id: "demo-we-" + Date.now(),
+      workoutId,
+      exerciseId: parsed.data.exerciseId,
+      sortOrder,
+      setScheme: parsed.data.setScheme,
+      repPattern: parsed.data.repPattern ?? null,
+      reps: parsed.data.reps ?? null,
+      weightTier: parsed.data.weightTier,
+      sets: parsed.data.sets,
+      restSec: parsed.data.restSec ?? null,
+      notes: parsed.data.notes ?? null,
+      exercise: ex || { id: parsed.data.exerciseId, name: "Exercise" },
+    };
+    return NextResponse.json(fakeItem, { status: 201 });
+  }
+
   try {
     const item = await prisma.workoutExercise.create({
       data: {
@@ -82,6 +118,16 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
   }
   const { itemId, ...data } = parsed.data;
+  if (isDemoMode()) {
+    const dataSeed = loadSeed();
+    const ex = (dataSeed.exercises || []).find((e: any) => e.id === itemId); // loose
+    const fake = {
+      id: itemId,
+      ...data,
+      exercise: ex || { id: itemId, name: "Exercise" },
+    };
+    return NextResponse.json(fake);
+  }
   try {
     const item = await prisma.workoutExercise.update({
       where: { id: itemId },

@@ -3,7 +3,7 @@
  * Set MEMBER_ACCESS_MODE=enforced in .env when Stripe tiers are live.
  */
 
-export type MemberTier = "starter" | "first_class";
+export type MemberTier = "coach" | "first_class";
 
 export type MemberFeature =
   | "programs"
@@ -32,10 +32,10 @@ export function getMemberAccess(tier: MemberTier = "first_class"): MemberAccess 
   return {
     tier,
     isPreview,
-    tierLabel: tier === "first_class" ? "1st Class" : "Starter",
+    tierLabel: tier === "first_class" ? "1st Class" : "Coach",
     canAccessProgram(program) {
       if (isPreview) return true;
-      if (program.tierSlug === "starter") return true;
+      if (program.tierSlug === "coach" || program.tierSlug === "starter") return true;
       return tier === "first_class";
     },
     canAccessFeature(_feature) {
@@ -43,6 +43,7 @@ export function getMemberAccess(tier: MemberTier = "first_class"): MemberAccess 
       if (_feature === "programs" || _feature === "workout_player") {
         return true;
       }
+      // live_sessions and premium_programs require first_class
       return tier === "first_class";
     },
   };

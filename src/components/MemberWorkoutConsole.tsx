@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import Link from "next/link";
 import {
   approachLabel,
@@ -28,6 +28,7 @@ export type MemberExerciseBlock = {
     repPattern: string | null;
     reps: string | null;
     sets: number | null;
+    setsCompleted?: number | null;
     weightTier: string;
     startingWeightLbs: number | null;
     performedAt: string;
@@ -46,11 +47,17 @@ export default function MemberWorkoutConsole({
   backHref = "/member",
   backLabel = "← Dashboard",
   programSlug,
+  targetUserId,
+  instructorName,
+  reviewMode = false,
 }: {
   workout: MemberWorkoutView;
   backHref?: string;
   backLabel?: string;
   programSlug?: string;
+  targetUserId?: string;
+  instructorName?: string;
+  reviewMode?: boolean;
 }) {
   const [weights, setWeights] = useState<Record<string, string>>({});
   const [activeId, setActiveId] = useState(workout.exercises[0]?.id ?? "");
@@ -64,11 +71,36 @@ export default function MemberWorkoutConsole({
     null,
   );
   const [isLogging, setIsLogging] = useState(false);
-  const [logResult, setLogResult] = useState<null | { performedAt: string; count: number }>(null);
+  const [logResult, setLogResult] = useState<null | { performedAt: string; count: number; progress?: number }>(null);
+
+  // Seed local completedSets from past when opening in (pure) review mode.
+  // This makes the "log your sets" buttons pre-render with green checks (✓ on --success)
+  // matching the previously logged setsCompleted. For active member or instructor sessions
+  // we start empty so clicks immediately drive the green visual state.
+  useEffect(() => {
+    if (reviewMode && !instructorName) {
+      const seed: Record<string, Set<number>> = {};
+      for (const b of workout.exercises) {
+        const n = b.past?.setsCompleted ?? b.past?.sets ?? 0;
+        if (n > 0) {
+          seed[b.id] = new Set(Array.from({ length: n }, (_, k) => k + 1));
+        }
+      }
+      if (Object.keys(seed).length > 0) {
+        setCompletedSets((prev) => ({ ...prev, ...seed }));
+      }
+    }
+  }, [reviewMode, instructorName, workout]);
 
   const videoModalBlock = workout.exercises.find(
     (b) => b.id === videoModalBlockId && b.videoUrl,
   );
+
+  // For peeking next exercise (space efficient)
+  const activeIdx = workout.exercises.findIndex((e) => e.id === activeId);
+  const nextExercise = workout.exercises
+    .slice(activeIdx + 1)
+    .find((e) => !finishedExercises.has(e.id));
 
   const toggleSet = useCallback((blockId: string, setNum: number) => {
     setCompletedSets((prev) => {
@@ -109,30 +141,68 @@ export default function MemberWorkoutConsole({
     setActiveId(blockId);
   }, []);
 
-  const handleLogComplete = useCallback(async () => {
-    const finishedIds = Array.from(finishedExercises);
-    if (finishedIds.length === 0) {
-      alert("Mark at least one exercise finished before logging the workout.");
-      return;
-    }
+  // Auto-finish exercise when all its sets are marked done via the "log your sets" buttons.
+  // This makes the set progress buttons feel complete without requiring an extra click on "Exercise finished"
+  // for exercises where the user has marked every set.
+  useEffect(() => {
+    if (reviewMode && !instructorName) return;
+    workout.exercises.forEach((block) => {
+      if (finishedExercises.has(block.id)) return;
+      const doneForBlock = completedSets[block.id] ?? new Set<number>();
+      const isTimedBlock = isTimedApproach(block.setScheme);
+      const allSetsDoneForBlock = isTimedBlock
+        ? doneForBlock.has(1)
+        : doneForBlock.size >= block.setCount;
+      if (allSetsDoneForBlock) {
+        markExerciseFinished(block.id);
+      }
+    });
+  }, [completedSets, finishedExercises, workout.exercises, reviewMode, markExerciseFinished, instructorName]);
 
+  const handleLogComplete = useCallback(async () => {
+    // Collect all exercises that were explicitly finished OR have per-set progress marked.
+    // This ensures the "log your sets" buttons (per-set toggles) actually contribute setsCompleted to the log.
+    const blocksWithSets = Object.keys(completedSets).filter(id => (completedSets[id]?.size ?? 0) > 0);
+    let idsToLog = Array.from(new Set([...finishedExercises, ...blocksWithSets]));
+
+    const total = workout.exercises.length;
+    const progress = total > 0 ? Math.round((idsToLog.length / total) * 100) : 0;
+
+    // Log whatever the current state is (supports 0% partial or "just noting progress")
     setIsLogging(true);
     try {
-      const exercisesPayload = finishedIds.map((blockId) => {
+      const exercisesPayload = idsToLog.map((blockId) => {
         const block = workout.exercises.find((b) => b.id === blockId)!;
         const w = weights[blockId];
         const startingWeightLbs = w ? parseFloat(w) : (block.past?.startingWeightLbs ?? null);
+        const doneForBlock = completedSets[blockId] ?? new Set<number>();
+        const setsCompleted = doneForBlock.size;
+        let repsCompleted = setsCompleted * 5; // default ~5 reps/set
+        if (block.reps) {
+          const repNum = parseInt(block.reps, 10) || 5;
+          repsCompleted = setsCompleted * repNum;
+        }
+        // treat timed as ~12 "rep equiv" if the set was completed
+        if (block.setScheme?.toLowerCase().includes("time") || block.setScheme?.toLowerCase().includes("timed")) {
+          repsCompleted = setsCompleted > 0 ? 12 : 0;
+        }
         return {
           workoutExerciseId: block.id,
           exerciseId: block.exerciseId,
           setScheme: block.setScheme,
+          repPattern: block.repPattern,
+          reps: block.reps,
+          sets: block.setCount,
           weightTier: block.weightTier,
           startingWeightLbs: Number.isFinite(startingWeightLbs) ? startingWeightLbs : null,
+          repsCompleted,
+          setsCompleted,
         };
       });
 
-      const payload: any = { exercises: exercisesPayload };
+      const payload: any = { exercises: exercisesPayload, progress };
       if (programSlug) payload.programSlug = programSlug;
+      if (targetUserId) payload.targetUserId = targetUserId;
       const res = await fetch(`/api/workouts/${workout.workoutId}/log`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -145,17 +215,21 @@ export default function MemberWorkoutConsole({
       }
 
       const data = await res.json();
-      setLogResult({ performedAt: data.performedAt, count: data.performances || finishedIds.length });
+      setLogResult({ 
+        performedAt: data.performedAt, 
+        count: data.performances || idsToLog.length,
+        progress: data.progress ?? progress 
+      });
       // keep the finished marks so user can review what was logged
     } catch (e: any) {
       alert(e?.message || "Could not save. Check connection and try again.");
     } finally {
       setIsLogging(false);
     }
-  }, [finishedExercises, workout, weights]);
+  }, [finishedExercises, workout, weights, completedSets, activeId, programSlug, targetUserId]);
 
   return (
-    <div className="mx-auto max-w-md px-4 py-6">
+    <div className="mx-auto w-full max-w-md md:max-w-2xl lg:max-w-2xl xl:max-w-2xl px-4 py-6 md:px-6">
       <p className="text-xs font-semibold uppercase tracking-widest text-accent">
         Today&apos;s workout
       </p>
@@ -177,9 +251,9 @@ export default function MemberWorkoutConsole({
         </span>
       </div>
 
-      <div className="mt-6 space-y-4">
+      <div className="mt-4 space-y-3">
         {workout.exercises.map((block) => {
-          const isFinished = finishedExercises.has(block.id);
+          const isFinished = finishedExercises.has(block.id) && !reviewMode;
 
           if (isFinished) {
             return (
@@ -264,166 +338,184 @@ export default function MemberWorkoutConsole({
                   </p>
                 )}
 
-                {block.videoUrl && (
-                  <div className="mt-3">
-                    <button
-                      type="button"
-                      className="badge-accent inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition hover:brightness-110"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        openVideo(block.id);
-                      }}
-                    >
-                      <span
-                        className="flex h-6 w-6 items-center justify-center rounded-full bg-accent-muted text-xs"
-                        aria-hidden="true"
-                      >
-                        ▶
-                      </span>
-                      Watch demo
-                    </button>
-                  </div>
-                )}
-
-                <div className="mt-4 space-y-2 rounded-lg bg-[var(--surface-2)] p-3 text-sm">
-                  <div>
-                    <span className="text-xs text-[var(--muted)]">
-                      Approach
-                    </span>
-                    <p className="font-medium text-accent-deep">
-                      {approachLabel(prescription.approach)}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-[var(--muted)]">
-                      Prescription
-                    </span>
-                    <p className="font-medium">{summary}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-[var(--muted)]">
-                      Weight tier
-                    </span>
-                    <p className="font-medium">
-                      {weightTierLabel(block.weightTier)}
-                    </p>
-                  </div>
-                </div>
-
-                <div
-                  className="mt-5"
-                  onClick={(e) => e.stopPropagation()}
-                  role="group"
-                  aria-label={`${block.name} ${isTimed ? "timed set" : "set"} completion`}
-                >
-                  {isTimed ? (
-                    <>
-                      <p className="text-sm font-semibold">Timed set</p>
-                      <p className="mt-1 text-xs text-[var(--muted)]">
-                        Train for {summary}
-                        , then mark complete.
-                      </p>
+                <div className="mt-3">
+                  {block.videoUrl ? (
+                    <div className="flex flex-wrap items-center gap-3">
                       <button
                         type="button"
-                        aria-pressed={allSetsDone}
-                        className={`member-set-btn mt-3 w-full max-w-xs ${allSetsDone ? "member-set-btn--done" : ""}`}
-                        onClick={() => toggleSet(block.id, 1)}
+                        className="badge-accent inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition hover:brightness-110"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openVideo(block.id);
+                        }}
                       >
-                        <span className="member-set-btn__num">
-                          {allSetsDone ? "✓" : "▶"}
+                        <span
+                          className="flex h-6 w-6 items-center justify-center rounded-full bg-accent-muted text-xs"
+                          aria-hidden="true"
+                        >
+                          ▶
                         </span>
-                        <span className="member-set-btn__label">
-                          {allSetsDone ? "Done" : "Mark timed set complete"}
-                        </span>
+                        Watch demo
                       </button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-baseline justify-between gap-2">
-                        <p className="text-sm font-semibold">Log your sets</p>
-                        <p className="text-xs text-[var(--muted)]">
-                          {doneForBlock.size}/{block.setCount} done
-                        </p>
-                      </div>
-                      <p className="mt-1 text-xs text-[var(--muted)]">
-                        Tap each button when you finish that set.
-                      </p>
-                      <div
-                        className={`mt-3 grid gap-2 ${
-                          block.setCount <= 5
-                            ? "grid-cols-5"
-                            : "grid-cols-5 sm:grid-cols-10"
-                        }`}
+                      <a
+                        href={block.videoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-accent hover:underline"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        {Array.from({ length: block.setCount }, (_, i) => {
-                          const setNum = i + 1;
-                          const done = doneForBlock.has(setNum);
-                          return (
-                            <button
-                              key={setNum}
-                              type="button"
-                              aria-pressed={done}
-                              aria-label={`Set ${setNum}${done ? ", completed" : ""}`}
-                              className={`member-set-btn ${done ? "member-set-btn--done" : ""}`}
-                              onClick={() => toggleSet(block.id, setNum)}
-                            >
-                              <span className="member-set-btn__num">
-                                {done ? "✓" : setNum}
-                              </span>
-                              <span className="member-set-btn__label">Set</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                  {allSetsDone && (
-                    <p className="mt-3 text-center text-sm font-medium text-[var(--success)]">
-                      {isTimed ? "Timed set complete" : "All sets logged"}
+                        YouTube link →
+                      </a>
+                    </div>
+                  ) : (
+                    <p className="text-xs italic text-[var(--muted)]">
+                      No demo video linked yet — tell your instructor to add one in the exercise library.
                     </p>
                   )}
                 </div>
 
-                <label className="mt-4 block" onClick={(e) => e.stopPropagation()}>
-                  <span className="text-xs text-[var(--muted)]">
-                    Starting weight today (lbs)
-                  </span>
+                {/* Compact two-column: scheme info (left) + log sets (right) for better space use */}
+                <div className="mt-3 flex gap-3 text-sm">
+                  {/* Left: Approach / Prescription / Weight tier - tighter */}
+                  <div className="w-5/12 space-y-1 rounded-lg bg-[var(--surface-2)] p-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-[var(--muted)]">Approach</span>
+                      <span className="font-medium text-accent-deep">{approachLabel(prescription.approach)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[var(--muted)]">Prescription</span>
+                      <span className="font-medium">{summary}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[var(--muted)]">Weight tier</span>
+                      <span className="font-medium">{weightTierLabel(block.weightTier)}</span>
+                    </div>
+                  </div>
+
+                  {/* Right: Log your sets - now side-by-side */}
+                  <div
+                    className="flex-1"
+                    onClick={(e) => e.stopPropagation()}
+                    role="group"
+                    aria-label={`${block.name} ${isTimed ? "timed set" : "set"} completion`}
+                  >
+                    {isTimed ? (
+                      <>
+                        <p className="text-xs font-semibold">Timed set</p>
+                        <p className="mt-0.5 text-[10px] text-[var(--muted)]">
+                          Train for {summary}, then mark.
+                        </p>
+                        <button
+                          type="button"
+                          aria-pressed={allSetsDone}
+                          className={`member-set-btn mt-2 w-full text-xs py-1 ${allSetsDone ? "member-set-btn--done" : ""}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSet(block.id, 1);
+                          }}
+                          disabled={reviewMode && !instructorName}
+                        >
+                          <span className="member-set-btn__num text-sm">
+                            {allSetsDone ? "✓" : "▶"}
+                          </span>
+                          <span className="member-set-btn__label text-[9px]">
+                            {allSetsDone ? "Done" : "Mark complete"}
+                          </span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-baseline justify-between gap-1">
+                          <p className="text-xs font-semibold">Log your sets</p>
+                          <p className="text-[10px] text-[var(--muted)]">
+                            {doneForBlock.size}/{block.setCount}
+                          </p>
+                        </div>
+                        <div className="mt-1 grid grid-cols-5 gap-1">
+                          {Array.from({ length: block.setCount }, (_, i) => {
+                            const setNum = i + 1;
+                            const done = doneForBlock.has(setNum);
+                            return (
+                              <button
+                                key={setNum}
+                                type="button"
+                                aria-pressed={done}
+                                aria-label={`Set ${setNum}${done ? ", completed" : ""}`}
+                                className={`member-set-btn text-xs py-0.5 ${done ? "member-set-btn--done" : ""}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleSet(block.id, setNum);
+                                }}
+                                disabled={reviewMode && !instructorName}
+                              >
+                                <span className="member-set-btn__num text-sm">
+                                  {done ? "✓" : setNum}
+                                </span>
+                                <span className="member-set-btn__label text-[8px]">Set</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                    {allSetsDone && (
+                      <p className="mt-1 text-center text-[10px] font-medium text-[var(--success)]">
+                        {isTimed ? "Timed complete" : "Sets logged"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Weight input - now more compact, below the two-col */}
+                <label className="mt-2 block text-xs" onClick={(e) => e.stopPropagation()}>
+                  <span className="text-[var(--muted)]">Starting weight (lbs)</span>
                   <input
-                    className="input mt-1"
+                    className="input mt-0.5 text-sm py-1"
                     type="number"
                     placeholder={
                       block.past?.startingWeightLbs != null
-                        ? `Last: ${block.past.startingWeightLbs} lbs`
+                        ? `Last: ${block.past.startingWeightLbs}`
                         : "e.g. 30"
                     }
-                    value={weights[block.id] ?? ""}
+                    value={reviewMode && block.past?.startingWeightLbs != null 
+                      ? block.past.startingWeightLbs.toString() 
+                      : (weights[block.id] ?? "")}
                     onChange={(e) =>
                       setWeights((w) => ({
                         ...w,
                         [block.id]: e.target.value,
                       }))
                     }
+                    disabled={reviewMode && !instructorName}
                   />
                 </label>
 
                 {block.past && (
-                  <p className="mt-3 text-xs text-[var(--muted)]">
-                    This session will become the silhouette next time you do
-                    this movement.
+                  <p className="mt-1 text-[9px] text-[var(--muted)]">
+                    This becomes the silhouette next time.
                   </p>
+                )}
+
+                {/* Peek next exercise - space efficient teaser */}
+                {nextExercise && isActive && (
+                  <div className="mt-1 text-[10px] text-[var(--muted)] flex items-center gap-1">
+                    <span>Next:</span>{" "}
+                    <span className="font-medium text-[var(--text)] truncate">{nextExercise.name}</span>
+                  </div>
                 )}
 
                 <button
                   type="button"
-                  className="btn-primary mt-6 w-full"
+                  className="btn-primary mt-3 w-full text-sm py-1.5"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     markExerciseFinished(block.id);
                   }}
+                  disabled={reviewMode && !instructorName}
                 >
-                  Exercise finished
+                  {reviewMode && !instructorName ? "Session already logged (review)" : instructorName ? "Mark done for member" : "Exercise finished"}
                 </button>
               </div>
             </section>
@@ -431,13 +523,20 @@ export default function MemberWorkoutConsole({
         })}
       </div>
 
-      {logResult ? (
+      {reviewMode ? null : logResult ? (
         <div className="mt-10 rounded-2xl border border-[var(--success)]/40 bg-[var(--success)]/10 p-6 text-center">
           <div className="mx-auto mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--success)]/20 text-xl">✓</div>
           <p className="text-lg font-semibold text-[var(--success)]">Workout logged!</p>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            {logResult.count} exercise{logResult.count === 1 ? "" : "s"} saved. Your silhouettes are updated for next time.
+            {logResult.count > 0
+              ? `${logResult.count} exercise${logResult.count === 1 ? "" : "s"} saved. Your silhouettes are updated for next time.`
+              : "Session progress noted (no exercises marked finished this time)."}
           </p>
+          {logResult.progress != null && (
+            <p className="mt-1 text-sm font-medium text-[var(--success)]">
+              {logResult.progress}% complete {logResult.progress < 100 ? "— partial (instructor sees which exercises you marked)" : "— full workout"}
+            </p>
+          )}
           <p className="mt-3 text-xs text-[var(--muted)]">
             Logged {new Date(logResult.performedAt).toLocaleString()}
           </p>
@@ -469,7 +568,7 @@ export default function MemberWorkoutConsole({
           type="button"
           className="btn-primary mt-10 w-full"
           onClick={handleLogComplete}
-          disabled={isLogging || finishedExercises.size === 0}
+          disabled={isLogging}
         >
           {isLogging ? "Saving your session..." : "Log workout complete"}
         </button>
