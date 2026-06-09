@@ -59,6 +59,10 @@ body {
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg) 72%, var(--surface));
   backdrop-filter: blur(10px);
+  /* iOS/Android notch + dynamic island + home indicator safe areas */
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 .app-shell-subbar {
@@ -432,4 +436,17 @@ table.data th {
 .nav-tab-active {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   color: var(--accent-light);
+}
+
+/* Safe area padding for main content (member app + general pages on notched phones) */
+main,
+.app-main-safe {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* Extra top safe area for absolute elements like splash logo when in standalone PWA */
+.splash-safe-top {
+  top: max(2rem, env(safe-area-inset-top) + 1rem) !important;
 }
