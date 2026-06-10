@@ -68,12 +68,13 @@ export default async function MemberDashboardPage() {
           </div>
         )}
 
-        {/* Metrics with more description of what the numbers mean */}
+        {/* Metrics — streak emphasized at top per client feedback ("your streak should be at the very top") */}
         <div className="flex-shrink-0 lg:w-48">
           <div className="flex flex-col gap-2">
-            <div className="card flex flex-col items-center text-center py-2 px-3">
-              <p className="text-2xl font-bold tabular-nums leading-none">{stats.dayStreak}</p>
-              <p className="mt-0.5 text-xs font-medium">Day streak</p>
+            {/* Streak first + slightly stronger visual */}
+            <div className="card flex flex-col items-center text-center py-2.5 px-3 ring-1 ring-accent/30">
+              <p className="text-3xl font-bold tabular-nums leading-none text-accent">{stats.dayStreak}</p>
+              <p className="mt-0.5 text-xs font-semibold">Day streak</p>
               <p className="text-[9px] text-[var(--muted)]">consecutive training days</p>
             </div>
             <div className="card flex flex-col items-center text-center py-2 px-3">

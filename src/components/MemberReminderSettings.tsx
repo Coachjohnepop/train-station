@@ -123,6 +123,11 @@ export default function MemberReminderSettings() {
             Instructors can also send broadcast messages. This is low-security demo SMS.
           </div>
 
+          {/* Calendly note per client feedback (booking vs reminders) */}
+          <div className="text-[10px] text-[var(--muted)] pt-1 border-t border-[var(--border)]/60">
+            To book a live session with your coach, use the Calendly link (in “Live sessions” or ask your coach for the direct scheduling link). These SMS settings are for daily workout reminders only.
+          </div>
+
           {/* Simple reply / contact coach */}
           <div className="pt-2 border-t border-[var(--border)] mt-2">
             <label className="block text-[10px] text-[var(--muted)] mb-0.5">Quick message to your coach</label>

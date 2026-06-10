@@ -16,7 +16,7 @@ export default function MemberHomeEquipment() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [isOpen, setIsOpen] = useState(true); // collapsible state
+  const [isOpen, setIsOpen] = useState(false); // default collapsed per client feedback for cleaner dashboard
 
   async function load() {
     setLoading(true);
@@ -77,13 +77,13 @@ export default function MemberHomeEquipment() {
   return (
     <div className="card text-xs p-3 bg-[var(--surface-2)]">
       <div
-        className="font-medium mb-1 flex items-center justify-between cursor-pointer select-none"
+        className="font-semibold text-sm mb-1 flex items-center justify-between cursor-pointer select-none"
         onClick={() => setIsOpen(!isOpen)}
       >
         <span>
           Your Home Equipment
           {hasItems && (
-            <span className="ml-1 text-[var(--muted)]">
+            <span className="ml-1 text-[var(--muted)] font-normal">
               ({selectedCount}/{items.length} selected)
             </span>
           )}

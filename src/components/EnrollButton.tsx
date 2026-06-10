@@ -59,7 +59,7 @@ export default function EnrollButton({
           handleUnenroll();
         }}
         disabled={loading}
-        className="text-[10px] px-2 py-0.5 rounded border border-[var(--danger)]/70 text-[var(--danger)] hover:bg-[var(--danger)]/10 hover:border-[var(--danger)] transition disabled:opacity-50"
+        className="text-xs px-2.5 py-0.5 rounded border border-[var(--danger)]/70 text-[var(--danger)] hover:bg-[var(--danger)]/10 hover:border-[var(--danger)] transition disabled:opacity-50"
       >
         {loading ? "..." : "Unenroll"}
       </button>

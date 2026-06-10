@@ -375,6 +375,31 @@ export default function MemberWorkoutConsole({
                   )}
                 </div>
 
+                {/* Weight input — moved here and made more prominent per client feedback: "the first thing you do on the exercise" */}
+                <label className="mt-3 block" onClick={(e) => e.stopPropagation()}>
+                  <span className="text-sm font-medium text-[var(--text)]">Starting weight (lbs)</span>
+                  <input
+                    className="input mt-1 text-base py-2 w-full"
+                    type="number"
+                    placeholder={
+                      block.past?.startingWeightLbs != null
+                        ? `Last: ${block.past.startingWeightLbs}`
+                        : "e.g. 30 — enter first"
+                    }
+                    value={reviewMode && block.past?.startingWeightLbs != null 
+                      ? block.past.startingWeightLbs.toString() 
+                      : (weights[block.id] ?? "")}
+                    onChange={(e) =>
+                      setWeights((w) => ({
+                        ...w,
+                        [block.id]: e.target.value,
+                      }))
+                    }
+                    disabled={reviewMode && !instructorName}
+                  />
+                  <p className="mt-0.5 text-[10px] text-[var(--muted)]">Enter weight before logging sets (becomes your silhouette next time).</p>
+                </label>
+
                 {/* Compact two-column: scheme info (left) + log sets (right) for better space use */}
                 <div className="mt-3 flex gap-3 text-sm">
                   {/* Left: Approach / Prescription / Weight tier - tighter */}
@@ -467,35 +492,7 @@ export default function MemberWorkoutConsole({
                   </div>
                 </div>
 
-                {/* Weight input - now more compact, below the two-col */}
-                <label className="mt-2 block text-xs" onClick={(e) => e.stopPropagation()}>
-                  <span className="text-[var(--muted)]">Starting weight (lbs)</span>
-                  <input
-                    className="input mt-0.5 text-sm py-1"
-                    type="number"
-                    placeholder={
-                      block.past?.startingWeightLbs != null
-                        ? `Last: ${block.past.startingWeightLbs}`
-                        : "e.g. 30"
-                    }
-                    value={reviewMode && block.past?.startingWeightLbs != null 
-                      ? block.past.startingWeightLbs.toString() 
-                      : (weights[block.id] ?? "")}
-                    onChange={(e) =>
-                      setWeights((w) => ({
-                        ...w,
-                        [block.id]: e.target.value,
-                      }))
-                    }
-                    disabled={reviewMode && !instructorName}
-                  />
-                </label>
-
-                {block.past && (
-                  <p className="mt-1 text-[9px] text-[var(--muted)]">
-                    This becomes the silhouette next time.
-                  </p>
-                )}
+                {/* (weight input moved above the sets grid for prominence) */}
 
                 {/* Peek next exercise - space efficient teaser */}
                 {nextExercise && isActive && (
