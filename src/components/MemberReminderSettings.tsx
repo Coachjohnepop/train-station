@@ -69,25 +69,25 @@ export default function MemberReminderSettings() {
   }, []);
 
   if (loading) {
-    return <div className="card text-xs p-3 bg-[var(--surface-2)]">Loading SMS settings...</div>;
+    return <div className="card text-xs p-3 bg-[var(--bg)] border border-[var(--accent)]/40">Loading SMS settings...</div>;
   }
 
   return (
-    <div className="card text-xs p-3 bg-[var(--surface-2)] space-y-2">
+    <div className="card text-xs p-3 bg-[var(--bg)] border border-[var(--accent)]/40 space-y-2">
       <div
-        className="font-medium flex items-center justify-between cursor-pointer select-none"
+        className="font-medium flex items-center justify-between cursor-pointer select-none bg-white text-[#7c3aed] px-2 py-1 rounded-md"
         onClick={() => setIsOpen(!isOpen)}
       >
         <span>
           SMS Reminders &amp; Contact
           {settings.dailyReminderTime && (
-            <span className="ml-1 text-[var(--muted)]">
+            <span className="ml-1 text-[#7c3aed]/70">
               — {settings.dailyReminderTime}
               {settings.phone && " • phone set"}
             </span>
           )}
         </span>
-        <span className="text-[var(--muted)]">{isOpen ? "−" : "+"}</span>
+        <span className="text-[#7c3aed]">{isOpen ? "−" : "+"}</span>
         {message && <span className="text-[var(--success)] text-[10px]">{message}</span>}
       </div>
 
