@@ -66,13 +66,16 @@ export function isDemoMode() {
   return !url || url.includes("dummy.supabase") || url.includes("dummy");
 }
 
-/** Returns enrollments for a specific user id (falls back to demo-user bucket for legacy callers) */
+/** Returns enrollments for a specific user id (falls back to demo-user bucket for legacy callers and new joined users in demo) */
 export function getDemoEnrollments(userId?: string) {
-  if (userId) {
-    const store = loadEnrollmentsStore();
-    return store[userId] || {};
+  const uid = userId || "demo-user";
+  const store = loadEnrollmentsStore();
+  let data = store[uid] || {};
+  if (Object.keys(data).length === 0 && uid !== "demo-user") {
+    // new joined user in demo mode inherits the default demo state so member dashboard + schedule feels alive immediately
+    data = store["demo-user"] || {};
   }
-  return loadDemoEnrollments();
+  return data;
 }
 
 export function enrollDemo(slug: string, userId?: string) {

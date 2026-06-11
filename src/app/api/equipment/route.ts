@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { isDemoMode, getAllEquipmentWithUserStatus, setDemoUserEquipment, getDemoUserEquipment } from "@/lib/demo-equipment";
+import { resolveUserId } from "@/lib/current-user";
 
 export async function GET() {
   if (isDemoMode()) {
-    const equipment = getAllEquipmentWithUserStatus();
+    const uid = await resolveUserId();
+    const equipment = getAllEquipmentWithUserStatus(uid);
     return NextResponse.json({ equipment });
   }
 
@@ -20,8 +22,9 @@ export async function POST(request: Request) {
   }
 
   if (isDemoMode()) {
-    // For demo, we only persist the hasAtHome etc for the demo user
-    const current = getDemoUserEquipment();
+    const uid = await resolveUserId();
+    // persist per joined user
+    const current = getDemoUserEquipment(uid);
     const map = new Map(current.map(u => [u.equipmentId, u]));
 
     updates.forEach((u: any) => {
@@ -35,8 +38,8 @@ export async function POST(request: Request) {
       }
     });
 
-    setDemoUserEquipment(Array.from(map.values()));
-    const equipment = getAllEquipmentWithUserStatus();
+    setDemoUserEquipment(Array.from(map.values()), uid);
+    const equipment = getAllEquipmentWithUserStatus(uid);
     return NextResponse.json({ success: true, equipment });
   }
 

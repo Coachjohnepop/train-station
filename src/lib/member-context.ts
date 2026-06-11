@@ -171,7 +171,7 @@ export async function getMemberDashboard() {
       workoutCount: p.weeks?.reduce((n: number, w: any) => n + (w.days?.length || 0), 0) || 0,
     })),
     stats: {
-      dayStreak: 5,
+      dayStreak: totalWorkouts > 0 ? Math.min(5, Math.max(1, totalWorkouts)) : 0,
       totalWorkouts,
       strengthScore,
     },

@@ -92,7 +92,7 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
             backHref={backHref}
             backLabel={backLabel}
             programSlug={program}
-            targetUserId={asInstructor ? "demo-user" : undefined}
+            targetUserId={asInstructor ? undefined : undefined}  // main member path uses cookie uid via resolveUserId in logging + pasts; instructor mode falls back to demo snapshot
             instructorName={asInstructor ? "Instructor" : undefined}
             reviewMode={!!review}
           />
