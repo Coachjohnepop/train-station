@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { MEMBER_COOKIE, MEMBER_NAME_COOKIE } from "@/lib/current-user";
+import LandingHero from "@/components/LandingHero";
 
 export default async function HomePage() {
   const cookieStore = await cookies();
@@ -41,37 +42,25 @@ export default async function HomePage() {
     );
   }
 
-  // First time / not yet joined: simple focused entry (no heavy 3-button splash)
+  // First time / not yet joined: use the scrolling hero with the 4 people graphics.
+  // "Enter as a Member" is the prominent top button.
+  // "Explore the site" leads into the member layout (programs + info) to encourage sign up.
+  // The "Join the site" is the classy fixed bottom-right pane button, always visible until signed up.
   return (
-    <div className="min-h-screen bg-[#0a0612] text-[#f2ecf9] flex flex-col items-center justify-center px-6">
-      <div className="max-w-md text-center">
-        <img src="/images/logo.png" alt="The Train Station" className="h-16 w-auto mx-auto mb-8 drop-shadow-2xl" />
-        <h1 className="text-5xl font-semibold tracking-[-1.5px] mb-3">The Train Station</h1>
-        <p className="text-lg text-[#9d8ab8] mb-8">Structured programs. Real accountability.<br />Results that last.</p>
+    <>
+      <LandingHero />
 
-        <div className="flex flex-col gap-3">
-          <Link
-            href="/join/questions"
-            className="inline-flex h-12 items-center justify-center rounded-full bg-[#7c3aed] px-8 text-sm font-semibold text-white hover:bg-[#6d2dd6] transition-all"
-          >
-            Join the site
-          </Link>
-          <Link
-            href="/member"
-            className="inline-flex h-12 items-center justify-center rounded-full border border-[#3d2660] px-8 text-sm font-semibold hover:bg-white/5 transition-all"
-          >
-            Enter as member (demo)
-          </Link>
-          <Link
-            href="/admin"
-            className="text-xs text-[#9d8ab8] hover:text-white mt-2"
-          >
-            I&apos;m a coach →
-          </Link>
-        </div>
+      {/* Classy fixed bottom-right "Join the site" pane/button - visible always on landing until signup */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <Link
+          href="/join/questions"
+          className="group inline-flex items-center gap-2 rounded-2xl border border-[#3d2660] bg-[#0a0612]/90 px-5 py-2.5 text-sm font-semibold text-white shadow-xl backdrop-blur-md transition-all hover:border-[#7c3aed] hover:bg-[#1a1428] hover:shadow-2xl active:scale-[0.985]"
+        >
+          Join the site
+          <span className="text-[#7c3aed] transition group-hover:translate-x-0.5">→</span>
+        </Link>
       </div>
-      <div className="absolute bottom-6 text-[10px] text-[#9d8ab8]/50 tracking-[2px]">4-WEEK PROGRAMS • LOGGING • PROGRESS</div>
-    </div>
+    </>
   );
 }
 

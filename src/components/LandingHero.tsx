@@ -84,13 +84,13 @@ export default function LandingHero() {
               href="/member" 
               className="inline-flex h-14 items-center justify-center rounded-full bg-white px-10 text-sm font-bold !text-[#7c3aed] transition-all hover:bg-white hover:scale-[1.1] active:scale-[0.985]"
             >
-              Start Training
+              Enter as a Member
             </a>
             <a 
-              href="/join/questions" 
-              className="inline-flex h-14 items-center justify-center rounded-full bg-[#7c3aed] px-10 text-sm font-semibold text-white backdrop-blur transition-all hover:bg-[#6d2dd6] hover:scale-[1.1] active:scale-[0.985]"
+              href="/member/programs" 
+              className="inline-flex h-14 items-center justify-center rounded-full border border-white/40 px-10 text-sm font-semibold text-white backdrop-blur transition-all hover:bg-white/10 hover:scale-[1.1] active:scale-[0.985]"
             >
-              Join the site
+              Explore the site
             </a>
             <a 
               href="/admin" 
