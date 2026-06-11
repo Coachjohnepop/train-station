@@ -59,15 +59,15 @@ export default function SplashCarousel() {
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
             <Link
               href="/member"
-              className="inline-flex items-center justify-center rounded-full bg-white px-8 py-3 text-sm font-semibold text-[#7c3aed] transition-all hover:bg-white/90 hover:scale-[1.1]"
+              className="inline-flex items-center justify-center rounded-full bg-white px-8 py-3 text-sm font-semibold transition-all hover:bg-white/90 hover:scale-[1.1]"
             >
-              Enter as Member
+              <span className="text-[#7c3aed]">Enter as Member (demo review)</span>
             </Link>
             <Link
               href="/join/questions"
               className="inline-flex items-center justify-center rounded-full bg-[#7c3aed] px-8 py-3 text-sm font-semibold text-white transition-all hover:bg-[#6d2dd6] hover:scale-[1.1]"
             >
-              Join the site
+              Join the site (new user flow)
             </Link>
             <Link
               href="/admin"
