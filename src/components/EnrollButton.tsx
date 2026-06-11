@@ -20,7 +20,8 @@ export default function EnrollButton({
         method: "POST",
       });
       if (res.ok) {
-        router.refresh();
+        // After enrolling, send user into the guided onboarding wizard (step 2 from client feedback)
+        router.push('/member/onboard');
       } else {
         const err = await res.json().catch(() => ({}));
         alert(err.detail || "Failed to enroll");
@@ -75,7 +76,7 @@ export default function EnrollButton({
       disabled={loading}
       className="text-[10px] px-2.5 py-0.5 rounded bg-accent text-white font-medium hover:brightness-110 transition disabled:opacity-50"
     >
-      {loading ? "..." : "Enroll (free)"}
+      {loading ? "..." : "Enroll & start setup"}
     </button>
   );
 }
