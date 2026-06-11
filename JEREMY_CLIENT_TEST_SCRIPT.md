@@ -4,11 +4,21 @@
 
 Designed for the current **fresh review state** (0 enrollments, 0 logs, empty equipment/settings in the demo data). This is exactly what a brand-new member sees after the reset.
 
-**How to run**:
-1. Make sure you're on the latest preview / test server URL (the branch deploy with the latest push).
-2. Use an incognito/private window or hard refresh (Cmd/Ctrl + Shift + R) often.
-3. Follow the numbered steps in order.
-4. Note anything that feels off or broken.
+**Starting point (known-good baseline build)**:
+Use ONLY this preview as the base for all testing and comparisons going forward:
+- train-station-1vlm8grmi-johnepop-s-projects.vercel.app
+
+**How to run from this baseline**:
+1. Always start fresh tests from the baseline URL above (hard refresh with Cmd/Ctrl+Shift+R).
+2. After each new push on the branch, Vercel will create a new preview. Test the new preview side-by-side with the baseline.
+3. Use incognito/private window for every test session.
+4. Follow the numbered steps in order.
+5. Note anything that feels off or broken, especially regressions vs the baseline.
+
+**New project build plan rule**:
+- We will only keep the baseline + the very latest good build.
+- Delete any intermediate broken previews immediately after testing (as discussed).
+- All changes must be small and incremental so we can bisect easily against the baseline.
 
 **Key new stuff being validated**:
 - Middle assessment (join/questions) with 4 habit questions + auto recommendation (Explorer/Member/Pro).
