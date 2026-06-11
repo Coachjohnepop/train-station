@@ -3,7 +3,8 @@ import 'server-only';
 import { getMemberAccess, type MemberAccess } from "@/lib/access";
 import { DEMO_MEMBER_EMAIL } from "@/lib/demo-workout";
 import { listPrograms } from "@/lib/program-data";
-import { isDemoMode, getDemoEnrollments } from "@/lib/demo-enrollments";
+import { isDemoMode } from "@/lib/demo-enrollments";
+import { getUserEnrollments, getUserEnrollmentsAsArray } from "@/lib/data/user-data";
 import { getDemoWorkoutLogCount, getDemoStrengthScore, computeStrengthScoreFromPerfs } from "@/lib/demo-logs";
 import { getDemoUserSettings } from "@/lib/demo-reminders";
 import { getCurrentUser, resolveUserId, getCurrentUserName } from "@/lib/current-user";
@@ -24,9 +25,11 @@ export async function getMemberDashboard() {
   };
 
   let mockEnrollments: any[] = [];
-  const demoEnrolls = getDemoEnrollments(uid); // now supports per-uid in demo
-  if (Object.keys(demoEnrolls).length > 0) {
-    mockEnrollments = Object.entries(demoEnrolls).map(([slug, prog]: any) => {
+  // Use the new UserData layer (Phase 0 stabilization). Today this still delegates
+  // to the preview JSON stores, but the call site no longer knows about demo-*.ts directly.
+  const userEnrolls = getUserEnrollments(uid);
+  if (Object.keys(userEnrolls).length > 0) {
+    mockEnrollments = Object.entries(userEnrolls).map(([slug, prog]: any) => {
       const p = programs.find((pp: any) => pp.slug === slug) || adult;
       return {
         id: `enroll-${uid}-${slug}`,
@@ -107,6 +110,8 @@ export async function getMemberDashboard() {
 
   // Support doing workouts + yoga + journeys in parallel: provide per-program continues
   // Eating temporarily disabled (coming soon)
+  // In fresh 0-enroll demo state (for review / new user testing), leave empty so the page shows clean 0-state
+  // (the "Workouts logged" snippet below provides links to browse or open logger).
   const activeContinues = mockEnrollments.length > 0
     ? mockEnrollments
         .filter((enr: any) => (enr.program.category || "workout") !== "eating")
@@ -125,15 +130,9 @@ export async function getMemberDashboard() {
             currentDay: enr.currentDay,
           };
         })
-    : (adult ? [{
-        url: `/member/programs/${adult.slug}`,
-        label: `Continue ${adult.name}`,
-        category: adult.category || "workout",
-        currentWeek: 2,
-        currentDay: 5,
-      }] : []);
+    : [];
 
-  const primaryContinue = activeContinues[0] || null;
+  const primaryContinue = activeContinues && activeContinues.length > 0 ? activeContinues[0] : null;
 
   let reminderSettings = { phone: "(555) 987-6543", dailyReminderTime: "07:30" };
   if (isDemoMode()) {
