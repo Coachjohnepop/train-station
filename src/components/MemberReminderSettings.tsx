@@ -12,7 +12,7 @@ export default function MemberReminderSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [isOpen, setIsOpen] = useState(true); // collapsible like home equipment
+  const [isOpen, setIsOpen] = useState(false); // collapsed by default (users set this in signup wizard)
 
   async function load() {
     setLoading(true);
