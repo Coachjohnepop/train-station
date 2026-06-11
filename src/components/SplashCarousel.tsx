@@ -61,10 +61,10 @@ export default function SplashCarousel() {
               href="/member"
               className="inline-flex items-center justify-center rounded-full bg-white px-8 py-3 text-sm font-semibold transition-all hover:bg-white/90 hover:scale-[1.1]"
             >
-              <span style={{ color: '#7c3aed' }}>Enter as Member (demo review)</span>
+              <span style={{ color: '#7c3aed' }}>Back to your program</span>
             </Link>
             <Link
-              href="/join/questions"
+              href="/join"
               className="inline-flex items-center justify-center rounded-full bg-[#7c3aed] px-8 py-3 text-sm font-semibold text-white transition-all hover:bg-[#6d2dd6] hover:scale-[1.1]"
             >
               Join the site (new user flow)

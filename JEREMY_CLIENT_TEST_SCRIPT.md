@@ -34,7 +34,7 @@ Use ONLY this preview as the base for all testing and comparisons going forward:
 ## 1. Landing → Start the Join Flow (New Middle Assessment)
 
 1. Go to the site root / landing page.
-2. Click the prominent **"Join the site"** button (or "Get started as a member" to compare paths).
+2. Click the prominent **"Join the site (new user flow)"** button (or "Back to your program" to compare the demo review path).
 3. You should land on the pricing overview (/join).
    - Notice the callout banner right above the three plans: "NOT SURE WHICH PLAN?" + big "Take the 1-minute assessment →" button.
 4. Click the assessment button.
@@ -42,6 +42,7 @@ Use ONLY this preview as the base for all testing and comparisons going forward:
 **Verify**:
 - Clean, on-brand dark UI.
 - The three pricing cards (Explorer free, Member $29 popular, Pro annual) are visible but you are guided to the quiz first.
+- "Back to your program" takes you to the personal dashboard (starting-over / fresh review state in current data).
 
 ---
 
