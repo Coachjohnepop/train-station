@@ -6,11 +6,11 @@ Designed for the current **fresh review state** (0 enrollments, 0 logs, empty eq
 
 **Starting point (known-good baseline build)**:
 Use ONLY this preview as the base for all testing and comparisons going forward:
-- train-station-1vlm8grmi-johnepop-s-projects.vercel.app
+- train-station-1vlm8grmi-johnepop-s-projects.vercel.app (deployed to production for safety as of this session)
 
 **How to run from this baseline**:
-1. Always start fresh tests from the baseline URL above (hard refresh with Cmd/Ctrl+Shift+R).
-2. After each new push on the branch, Vercel will create a new preview. Test the new preview side-by-side with the baseline.
+1. Always start fresh tests from the baseline URL above (hard refresh with Cmd/Ctrl+Shift+R). Production is now on this baseline.
+2. After each new push on the branch, Vercel will create a new preview. Test the new preview side-by-side with the baseline (and production).
 3. Use incognito/private window for every test session.
 4. Follow the numbered steps in order.
 5. Note anything that feels off or broken, especially regressions vs the baseline.
