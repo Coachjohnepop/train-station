@@ -13,6 +13,19 @@ function createPrisma(): PrismaClient {
   const connectionString =
     process.env.DATABASE_URL ?? "postgresql://user:pass@localhost:5432/db";
 
+  if (!connectionString || connectionString.includes("dummy") || connectionString.includes("user:pass") || connectionString.includes("localhost")) {
+    // Demo mode or no real DB / placeholder: return a proxy that throws if accidentally used.
+    // Prevents adapter/client creation errors with placeholder, dummy, or local URLs in preview envs.
+    return new Proxy({} as PrismaClient, {
+      get() {
+        throw new Error(
+          "Prisma client accessed in demo mode (DATABASE_URL contains 'dummy', is unset, or is a placeholder/local URL). " +
+          "Use isDemoMode() checks before any DB access. For previews, set DATABASE_URL=dummy in Vercel env."
+        );
+      },
+    });
+  }
+
   const adapter = new PrismaPg({ connectionString });
 
   return new PrismaClient({ adapter });

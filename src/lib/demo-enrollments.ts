@@ -6,10 +6,13 @@ const DEV_FILE = path.join(process.cwd(), "prisma", "enrollments.dev.json");
 function loadDemoEnrollments(): Record<string, { currentWeek: number; currentDay: number }> {
   if (fs.existsSync(DEV_FILE)) {
     try {
-      return JSON.parse(fs.readFileSync(DEV_FILE, "utf8"));
+      const parsed = JSON.parse(fs.readFileSync(DEV_FILE, "utf8"));
+      if (parsed && Object.keys(parsed).length > 0) {
+        return parsed;
+      }
     } catch {}
   }
-  // default initial for demo
+  // default initial for demo (used for "Enter as a member" direct link; join flow can override via enroll API)
   const initial = { 
     adult: { currentWeek: 2, currentDay: 5 },
     "john-steph": { currentWeek: 1, currentDay: 2 }  // pre-enroll demo in journey for testing substitution

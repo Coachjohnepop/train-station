@@ -6,7 +6,6 @@ import { listPrograms } from "@/lib/program-data";
 import { isDemoMode, getDemoEnrollments } from "@/lib/demo-enrollments";
 import { getDemoWorkoutLogCount, getDemoStrengthScore, computeStrengthScoreFromPerfs } from "@/lib/demo-logs";
 import { getDemoUserSettings } from "@/lib/demo-reminders";
-import { prisma } from "@/lib/prisma";
 
 export async function getMemberDashboard() {
   // Mock for quick demo (no DB). Uses real program data from seed export.
@@ -66,6 +65,8 @@ export async function getMemberDashboard() {
     strengthScore = getDemoStrengthScore();
   } else {
     try {
+      const prismaModule = await import("@/lib/prisma");
+      const prisma = prismaModule.prisma;
       const demoUser = await prisma.user.findUnique({ where: { email: DEMO_MEMBER_EMAIL } });
       if (demoUser) {
         const perfs = await prisma.exercisePerformance.findMany({
