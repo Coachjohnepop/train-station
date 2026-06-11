@@ -125,7 +125,7 @@ export default function MemberReminderSettings() {
 
           {/* Calendly note per client feedback (booking vs reminders) */}
           <div className="text-[10px] text-[var(--muted)] pt-1 border-t border-[var(--border)]/60">
-            To book a live session with your coach, use the Calendly link (in “Live sessions” or ask your coach for the direct scheduling link). These SMS settings are for daily workout reminders only.
+            To book your onboarding call or live sessions, use the Calendly link in Live sessions or the Book Call page. These SMS settings are for daily workout reminders only.
           </div>
 
           {/* Simple reply / contact coach */}

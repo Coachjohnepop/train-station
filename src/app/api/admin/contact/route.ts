@@ -6,11 +6,16 @@ function isDemoMode() {
   const url = process.env.DATABASE_URL ?? "";
   return !url || url.includes("dummy.supabase") || url.includes("dummy");
 }
-let demoContact = { email: "coach@thetrainstation.co", phone: "(555) 123-4567" };
+let demoContact = { 
+  email: "coach@thetrainstation.co", 
+  phone: "(555) 123-4567",
+  calendlyUrl: null as string | null
+};
 
 const updateSchema = z.object({
   email: z.string().email(),
   phone: z.string().optional(),
+  calendlyUrl: z.string().url().optional().or(z.literal("")),
 });
 
 export async function GET() {
@@ -28,6 +33,6 @@ export async function PATCH(request: Request) {
     demoContact = { ...demoContact, ...parsed.data };
     return NextResponse.json(demoContact);
   }
-  const updated = await updateAdminContact(parsed.data.email, parsed.data.phone);
+  const updated = await updateAdminContact(parsed.data.email, parsed.data.phone, parsed.data.calendlyUrl || undefined);
   return NextResponse.json(updated);
 }

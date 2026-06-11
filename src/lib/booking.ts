@@ -16,7 +16,12 @@ export type AvailabilitySlot = {
 
 export async function getAdminContact() {
   if (isDemoMode()) {
-    return { id: "demo-contact", email: "coach@thetrainstation.co", phone: "(555) 123-4567" };
+    return { 
+      id: "demo-contact", 
+      email: "coach@thetrainstation.co", 
+      phone: "(555) 123-4567",
+      calendlyUrl: "https://calendly.com/jeremy/15min" // TODO: will be replaced by real one via admin
+    };
   }
   let contact = await prisma.adminContact.findFirst();
   if (!contact) {
@@ -31,18 +36,18 @@ export async function getAdminContact() {
   return contact;
 }
 
-export async function updateAdminContact(email: string, phone?: string) {
+export async function updateAdminContact(email: string, phone?: string, calendlyUrl?: string) {
   if (isDemoMode()) {
-    return { id: "demo-contact", email, phone: phone || null };
+    return { id: "demo-contact", email, phone: phone || null, calendlyUrl: calendlyUrl || null };
   }
   const existing = await prisma.adminContact.findFirst();
   if (existing) {
     return prisma.adminContact.update({
       where: { id: existing.id },
-      data: { email, phone: phone || null },
+      data: { email, phone: phone || null, calendlyUrl: calendlyUrl || null },
     });
   }
-  return prisma.adminContact.create({ data: { email, phone: phone || null } });
+  return prisma.adminContact.create({ data: { email, phone: phone || null, calendlyUrl: calendlyUrl || null } });
 }
 
 export async function getAvailabilities() {

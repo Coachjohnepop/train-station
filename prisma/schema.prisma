@@ -207,10 +207,11 @@ model LiveSession {
 }
 
 model AdminContact {
-  id        String   @id @default(cuid())
-  email     String
-  phone     String?
-  updatedAt DateTime @default(now()) @updatedAt
+  id          String   @id @default(cuid())
+  email       String
+  phone       String?
+  calendlyUrl String?
+  updatedAt   DateTime @default(now()) @updatedAt
 }
 
 model AdminAvailability {

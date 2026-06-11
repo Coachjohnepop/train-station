@@ -60,6 +60,8 @@ export default function MemberBookPage() {
 
   if (!contact) return <p className="mt-6 text-center text-[var(--muted)]">Loading booking info…</p>;
 
+  const calendly = (contact as any).calendlyUrl || null;
+
   return (
     <div className="max-w-2xl mx-auto">
       <Link href="/member" className="text-xs text-accent hover:underline">← Back to dashboard</Link>
@@ -72,6 +74,11 @@ export default function MemberBookPage() {
       <div className="mt-6 card">
         <h2 className="font-semibold">Coach Contact</h2>
         <p className="mt-1 text-sm">{contact.email} {contact.phone && `• ${contact.phone}`}</p>
+        { (contact as any).calendlyUrl && (
+          <p className="mt-2 text-sm">
+            Quick book: <a href={(contact as any).calendlyUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Calendly →</a>
+          </p>
+        )}
       </div>
 
       <div className="mt-6 card space-y-4">

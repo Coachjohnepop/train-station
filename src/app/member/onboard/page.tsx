@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import MemberHomeEquipment from "@/components/MemberHomeEquipment";
 
@@ -8,6 +8,16 @@ export default function OnboardingWizard() {
   const [currentStep, setCurrentStep] = useState(1);
   const [measurements, setMeasurements] = useState({ weight: "", notes: "" });
   const [completed, setCompleted] = useState(false);
+  const [calendlyUrl, setCalendlyUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/contact")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.calendlyUrl) setCalendlyUrl(data.calendlyUrl);
+      })
+      .catch(() => {});
+  }, []);
 
   const totalSteps = 4;
 
@@ -139,7 +149,7 @@ export default function OnboardingWizard() {
             </p>
             <div className="pt-4 space-y-3">
               <a
-                href="https://calendly.com/your-coach-link" // TODO: replace with real Calendly link
+                href={calendlyUrl || "https://calendly.com/jeremy/15min"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-primary block text-center"
@@ -147,7 +157,7 @@ export default function OnboardingWizard() {
                 Open Calendly to book
               </a>
               <p className="text-xs text-center text-[var(--muted)]">
-                (This will create a booking and trigger a coach SMS in the full version)
+                (Uses coach's Calendly. Editable in admin.)
               </p>
             </div>
             <div className="flex gap-3 pt-4">

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMemberDashboard } from "@/lib/member-context";
+import { getAdminContact } from "@/lib/booking";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,8 @@ export default async function MemberLivePage() {
   const data = await getMemberDashboard();
   if (!data) notFound();
 
+  const contact = await getAdminContact();
+  const calendly = (contact as any).calendlyUrl || "https://calendly.com/jeremy/15min";
   const canLive = data.access.canAccessFeature("live_sessions");
 
   return (
@@ -38,7 +41,8 @@ export default async function MemberLivePage() {
         )}
         <p className="mt-4 text-sm">
           New members must book a 15-min onboarding Zoom call first.{" "}
-          <Link href="/member/book" className="text-accent hover:underline">Book your call →</Link>
+          <Link href="/member/book" className="text-accent hover:underline">Use form</Link> or{" "}
+          <a href={calendly} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">book via Calendly →</a>
         </p>
       </div>
 

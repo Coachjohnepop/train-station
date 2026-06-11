@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type Contact = { email: string; phone?: string | null };
+type Contact = { email: string; phone?: string | null; calendlyUrl?: string | null };
 type Availability = { id: string; weekday: number; startHour: number; startMinute: number; endHour: number; endMinute: number; slotDurationMin: number };
 type Booking = {
   id: string;
@@ -22,7 +22,7 @@ type Booking = {
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function AdminBookingsPage() {
-  const [contact, setContact] = useState<Contact>({ email: "", phone: "" });
+  const [contact, setContact] = useState<Contact>({ email: "", phone: "", calendlyUrl: "" });
   const [avails, setAvails] = useState<Availability[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [smsLogs, setSmsLogs] = useState<any[]>([]);
@@ -200,6 +200,15 @@ export default function AdminBookingsPage() {
               className="input mt-1 w-full"
               value={contact.phone || ""}
               onChange={(e) => setContact({ ...contact, phone: e.target.value })}
+            />
+          </label>
+          <label className="block sm:col-span-2">
+            <span className="text-xs text-[var(--muted)]">Calendly Link (for onboarding &amp; quick booking)</span>
+            <input
+              className="input mt-1 w-full"
+              value={contact.calendlyUrl || ""}
+              placeholder="https://calendly.com/jeremy/15min"
+              onChange={(e) => setContact({ ...contact, calendlyUrl: e.target.value })}
             />
           </label>
         </div>
