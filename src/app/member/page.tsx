@@ -44,15 +44,12 @@ export default async function MemberDashboardPage() {
         </p>
       </section>
 
-      {/* Home equipment inventory - now editable by the member */}
-      <MemberHomeEquipment />
-
       {/* Top stratum: enrolled programs on left, metrics (with descriptions) , continue */}
       <div className="flex flex-col lg:flex-row gap-3 lg:gap-2 lg:items-stretch">
         {/* Currently enrolled programs - on the left */}
         {enrollments.length > 0 && (
           <div className="lg:w-64 lg:flex-shrink-0">
-            <div className="text-[10px] uppercase tracking-wide text-[var(--muted)] mb-1">Currently enrolled</div>
+            <div className="text-[10px] uppercase tracking-wide text-[var(--muted)] mb-1">Current enrolled classes</div>
             <div className="space-y-1">
               {enrollments.map((e) => (
                 <Link
@@ -95,7 +92,7 @@ export default async function MemberDashboardPage() {
           </div>
         </div>
 
-        {/* Continue training - supports doing workouts + eating + yoga in parallel. Hidden for fresh (0-enroll) review until user enrolls via join flow. */}
+        {/* Continue training - supports doing workouts + eating + yoga in parallel. */}
         {(activeContinues && activeContinues.length > 0) || (continueUrl && continueLabel) ? (
           <div className="flex-1">
             <div className="text-[10px] uppercase tracking-wide text-[var(--muted)] mb-1">Continue (independent per program)</div>
@@ -273,6 +270,9 @@ export default async function MemberDashboardPage() {
           </p>
         )}
       </details>
+
+      {/* Home equipment inventory moved to bottom (users set this in signup wizard; editable later as they acquire gear) */}
+      <MemberHomeEquipment />
     </div>
   );
 }
