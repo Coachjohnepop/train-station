@@ -163,9 +163,9 @@ export default async function MemberDashboardPage() {
               </h2>
               <span className="text-xs text-accent group-open:rotate-90 transition">▶</span>
             </div>
-            <Link href="/member/programs" className="text-xs text-accent hover:underline" onClick={(e) => e.stopPropagation()}>
+            <a href="/member/programs" className="text-xs text-accent hover:underline">
               View all
-            </Link>
+            </a>
           </summary>
           <p className="text-[10px] text-[var(--muted)] mb-3">Higher-level menu: Workouts • Yoga Channels • Journeys (chronicle recorded live sessions; substitute matching days into your workouts). <span className="text-[var(--accent)]">Eating Approaches: coming soon</span></p>
 
