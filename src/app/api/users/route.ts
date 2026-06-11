@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import type { $Enums } from "@/generated/prisma/client";
 import { isDemoMode, getDemoEnrollments } from "@/lib/demo-enrollments";
-import { getDemoWorkoutLogCount, getDemoPerformanceCount } from "@/lib/demo-logs";
+import { getDemoWorkoutLogCount, getDemoPerformanceCount, getDemoStrengthScore } from "@/lib/demo-logs";
 
 const ROLES = ["ADMIN", "INSTRUCTOR", "MEMBER", "PROSPECTIVE_INSTRUCTOR"] as const;
 
@@ -30,6 +30,7 @@ export async function GET(request: Request) {
     const logCount = getDemoWorkoutLogCount();
     const perfCount = getDemoPerformanceCount();
     // Multiple demo users (some with phones) so SMS broadcast can target realistic lists
+    const demoStrength = getDemoStrengthScore();
     const demoUsers = [
       {
         id: "demo-user",
@@ -37,12 +38,13 @@ export async function GET(request: Request) {
         name: "Demo Member (Alex)",
         role: "MEMBER" as const,
         status: "active",
-        notes: "Primary demo member. Has phone + daily reminder. Use for testing SMS broadcasts and reminders.",
+        notes: "Primary demo member. Has phone + daily reminder. Use for testing SMS broadcasts and reminders. Strength updates live from logs (0 in fresh review state).",
         createdAt: new Date().toISOString(),
         phone: "(555) 987-6543",
         dailyReminderTime: "07:30",
         subscription: { tier: "first_class", status: "active" },
         counts: { enrollments: enrollCount, performances: perfCount, workoutLogs: logCount },
+        strengthScore: demoStrength,
       },
       {
         id: "demo-user-2",

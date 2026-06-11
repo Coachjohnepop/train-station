@@ -57,7 +57,11 @@ function loadStore(): DemoLogsStore {
   if (fs.existsSync(DEV_FILE)) {
     try {
       const raw = fs.readFileSync(DEV_FILE, "utf8");
-      cache = JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      cache = {
+        workoutLogs: Array.isArray(parsed?.workoutLogs) ? parsed.workoutLogs : [],
+        performances: Array.isArray(parsed?.performances) ? parsed.performances : [],
+      };
     } catch {
       cache = { workoutLogs: [], performances: [] };
     }

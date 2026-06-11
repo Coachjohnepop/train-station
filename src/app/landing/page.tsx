@@ -106,7 +106,7 @@ export default async function LandingPage() {
             <Link href="/member" className="inline-flex h-12 items-center justify-center rounded-full bg-white px-9 text-sm font-semibold text-[#7c3aed] hover:bg-gray-100 transition-all hover:scale-[1.1]">
               Get started as a member
             </Link>
-            <Link href="/join" className="inline-flex h-12 items-center justify-center rounded-full bg-[#7c3aed] px-9 text-sm font-semibold text-white hover:bg-[#6d2dd6] transition-all hover:scale-[1.1]">
+            <Link href="/join/questions" className="inline-flex h-12 items-center justify-center rounded-full bg-[#7c3aed] px-9 text-sm font-semibold text-white hover:bg-[#6d2dd6] transition-all hover:scale-[1.1]">
               Join the site
             </Link>
             <Link href="/admin" className="inline-flex h-12 items-center justify-center rounded-full border border-[#3d2660] px-9 text-sm font-semibold hover:bg-white/5 transition-all hover:scale-[1.1]">

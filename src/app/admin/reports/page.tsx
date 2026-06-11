@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { isDemoMode } from "@/lib/demo-enrollments";
+import { getDemoWorkoutLogCount, getDemoStrengthScore } from "@/lib/demo-logs";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +87,10 @@ async function loadReportData() {
   const completedCount = enrollments.filter((e: any) => e.completed).length;
   const completionRate = enrollments.length > 0 ? Math.round((completedCount / enrollments.length) * 100) : 0;
 
+  // Fresh review / demo member snapshot (0s after user data reset; strength from same logs source as member dashboard)
+  const demoWorkoutCount = isDemo ? getDemoWorkoutLogCount() : 0;
+  const demoStrength = isDemo ? getDemoStrengthScore() : 0;
+
   return {
     isDemo,
     programs,
@@ -97,6 +102,8 @@ async function loadReportData() {
     completedCount,
     completionRate,
     workoutLogs: workoutLogs.slice(0, 20),
+    demoWorkoutCount,
+    demoStrength,
   };
 }
 
@@ -129,6 +136,22 @@ export default async function AdminReportsPage() {
           <div className="text-xs text-[var(--muted)]">Active Enrollments</div>
           <div className="text-3xl font-semibold mt-1">{data.enrollments.length}</div>
         </div>
+      </div>
+
+      {/* New: visible snapshot of the current demo/fresh member state (ties into the 0-logs reset + new dashboard snippet for review by coach/Jeremy on test server) */}
+      <div className="card">
+        <div className="text-xs text-[var(--muted)]">Demo Member Snapshot (fresh review)</div>
+        <div className="mt-1 flex items-baseline gap-4">
+          <div>
+            <span className="text-2xl font-semibold tabular-nums">{data.demoWorkoutCount}</span>
+            <span className="ml-1 text-sm text-[var(--muted)]">workouts logged</span>
+          </div>
+          <div>
+            <span className="text-2xl font-semibold tabular-nums">{data.demoStrength}</span>
+            <span className="ml-1 text-sm text-[var(--muted)]">strength score</span>
+          </div>
+        </div>
+        <p className="text-[10px] text-[var(--muted)] mt-1">Reflects the current prisma/*.dev.json state (user data reset for fresh review while keeping full program/exercise/seed content). The member dashboard shows the same numbers + new "workouts logged" snippet + ranking. Update by logging workouts or enrolling.</p>
       </div>
 
       <section className="card">

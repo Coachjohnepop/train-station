@@ -86,63 +86,102 @@ export default async function MemberDashboardPage() {
               <p className="text-2xl font-bold tabular-nums leading-none">{stats.strengthScore || 0}</p>
               <p className="mt-0.5 text-xs font-medium">Strength Score</p>
               <p className="text-[9px] text-[var(--muted)]">est. bench 6RM (lbs) — see below</p>
+              {stats.strengthScore > 0 ? (
+                <p className="text-[9px] text-accent mt-1">Top 15% of demo athletes — log more to climb the ranks!</p>
+              ) : (
+                <p className="text-[9px] text-accent mt-1">Log lifts to rank vs other demo athletes</p>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Continue training - supports doing workouts + eating + yoga in parallel */}
-        <div className="flex-1">
-          <div className="text-[10px] uppercase tracking-wide text-[var(--muted)] mb-1">Continue (independent per program)</div>
-          {activeContinues && activeContinues.length > 0 ? (
-            <div className="flex flex-col gap-1.5">
-              {activeContinues.map((c: any, idx: number) => (
-                <Link
-                  key={idx}
-                  href={c.url}
-                  className="card block card-accent-frame bg-accent-muted transition hover-accent-border py-1 px-2 text-sm"
-                >
-                  <span className="font-semibold">{c.label}</span> <span className="text-accent">→</span>
-                </Link>
-              ))}
-            </div>
-          ) : (continueUrl && continueLabel ? (
-            <Link href={continueUrl} className="card block card-accent-frame bg-accent-muted transition hover-accent-border py-1.5 px-3 text-sm">
-              <span className="font-semibold">Continue:</span> {continueLabel} <span className="text-accent">→</span>
-            </Link>
-          ) : null)}
-        </div>
+        {/* Continue training - supports doing workouts + eating + yoga in parallel. Hidden for fresh (0-enroll) review until user enrolls via join flow. */}
+        {(activeContinues && activeContinues.length > 0) || (continueUrl && continueLabel) ? (
+          <div className="flex-1">
+            <div className="text-[10px] uppercase tracking-wide text-[var(--muted)] mb-1">Continue (independent per program)</div>
+            {activeContinues && activeContinues.length > 0 ? (
+              <div className="flex flex-col gap-1.5">
+                {activeContinues.map((c: any, idx: number) => (
+                  <Link
+                    key={idx}
+                    href={c.url}
+                    className="card block card-accent-frame bg-accent-muted transition hover-accent-border py-1 px-2 text-sm"
+                  >
+                    <span className="font-semibold">{c.label}</span> <span className="text-accent">→</span>
+                  </Link>
+                ))}
+              </div>
+            ) : (continueUrl && continueLabel ? (
+              <Link href={continueUrl} className="card block card-accent-frame bg-accent-muted transition hover-accent-border py-1.5 px-3 text-sm">
+                <span className="font-semibold">Continue:</span> {continueLabel} <span className="text-accent">→</span>
+              </Link>
+            ) : null)}
+          </div>
+        ) : null}
       </div>
 
       <MemberReminderSettings />
 
-      <p className="text-[10px] text-[var(--muted)] -mt-1 mb-2">
-        Strength Score (power score): no upper limit. Computed from your best logged performances (weight × reps factor via Epley 1RM estimator then ~6RM) on key lifts. Each lift is converted to an estimated "bench press 6-rep max equivalent" using standard strength ratios (squat ~1.5× bench, OHP/military ~0.65×, DB bench ~0.9× total, rows/pulldowns ~0.85-1.1×, triceps extensions ~0.4×). The score is the average of those bench-equivalents across the lifts you have data for (Back Squat, Bench Press, DB Bench, Military/Shoulder Press, Pulldown/Row, Tricep work). Log more volume on these to raise it.
-      </p>
+      {/* Collapsible strength explanation (keeps page shorter for new-user review / reduces doom scroll) */}
+      <details className="group mb-2">
+        <summary className="flex items-center gap-2 cursor-pointer list-none text-[10px] text-[var(--muted)] -mt-1 mb-1 hover:text-[var(--text)]">
+          <span>Strength Score calculation details</span>
+          <span className="text-accent group-open:rotate-90 transition">▶</span>
+        </summary>
+        <p className="text-[10px] text-[var(--muted)]">
+          Strength Score (power score): no upper limit. Computed from your best logged performances (weight × reps factor via Epley 1RM estimator then ~6RM) on key lifts. Each lift is converted to an estimated "bench press 6-rep max equivalent" using standard strength ratios (squat ~1.5× bench, OHP/military ~0.65×, DB bench ~0.9× total, rows/pulldowns ~0.85-1.1×, triceps extensions ~0.4×). The score is the average of those bench-equivalents across the lifts you have data for (Back Squat, Bench Press, DB Bench, Military/Shoulder Press, Pulldown/Row, Tricep work). Log more volume on these to raise it.
+        </p>
+      </details>
+
+      {/* "Down here, you can have workouts logged" + ranking amongst users (from transcript feedback) */}
+      <div className="card py-2 px-3 text-xs mb-2">
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <span className="font-medium">Workouts logged:</span>
+          <span className="tabular-nums font-semibold">{stats.totalWorkouts}</span>
+          <span className="text-[var(--muted)]">total • history populates from console logs</span>
+        </div>
+        <p className="mt-1 text-[10px] text-[var(--muted)]">
+          Your recent sessions and personal bests will list here. Strength score and ranking (vs other demo athletes) update automatically as you log key lifts in workouts.
+        </p>
+        {stats.totalWorkouts === 0 && (
+          <>
+            <p className="mt-1 text-[10px] text-accent">Start with any program preview or enroll to log your first session and see your rank climb.</p>
+            <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[10px]">
+              <Link href="/member/programs" className="text-accent hover:underline">Browse programs &amp; enroll →</Link>
+              <Link href="/member/workout" className="text-accent hover:underline">Open workout logger →</Link>
+            </div>
+          </>
+        )}
+      </div>
 
       <section>
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Programs
-          </h2>
-          <Link href="/member/programs" className="text-xs text-accent hover:underline">
-            View all
-          </Link>
-        </div>
-        <p className="text-[10px] text-[var(--muted)] mb-3">Higher-level menu: Workouts • Yoga Channels • Journeys (chronicle recorded live sessions; substitute matching days into your workouts). <span className="text-[var(--accent)]">Eating Approaches: coming soon</span></p>
+        <details className="group" open>
+          <summary className="flex items-center justify-between mb-2 cursor-pointer list-none">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)] group-open:text-white transition">
+                Programs
+              </h2>
+              <span className="text-xs text-accent group-open:rotate-90 transition">▶</span>
+            </div>
+            <Link href="/member/programs" className="text-xs text-accent hover:underline" onClick={(e) => e.stopPropagation()}>
+              View all
+            </Link>
+          </summary>
+          <p className="text-[10px] text-[var(--muted)] mb-3">Higher-level menu: Workouts • Yoga Channels • Journeys (chronicle recorded live sessions; substitute matching days into your workouts). <span className="text-[var(--accent)]">Eating Approaches: coming soon</span></p>
 
-        {CATEGORY_ORDER.map((cat) => {
-          const progs = groupedPrograms[cat] || [];
-          if (progs.length === 0) return null;
-          return (
-            <div key={cat} className="mb-8">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs uppercase tracking-[1px] font-semibold text-[var(--accent)] bg-[var(--surface-2)] px-2 py-0.5 rounded">
-                  {CATEGORY_LABELS[cat]}
-                </span>
-                <span className="text-[10px] text-[var(--muted)]">({progs.length})</span>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                {progs.map((program: any) => {
+          {CATEGORY_ORDER.map((cat) => {
+            const progs = groupedPrograms[cat] || [];
+            if (progs.length === 0) return null;
+            return (
+              <div key={cat} className="mb-8">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs uppercase tracking-[1px] font-semibold text-[var(--accent)] bg-[var(--surface-2)] px-2 py-0.5 rounded">
+                    {CATEGORY_LABELS[cat]}
+                  </span>
+                  <span className="text-[10px] text-[var(--muted)]">({progs.length})</span>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                  {progs.map((program: any) => {
                   const state = getProgramAccessState(program, access);
                   const locked = state === "upgrade";
                   const img = PROGRAM_IMAGES[program.slug] || "/images/programs/adult.jpg";
@@ -197,37 +236,43 @@ export default async function MemberDashboardPage() {
             </div>
           );
         })}
+        </details>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
-        <Link
-          href="/member/workout"
-          className="card transition hover-accent-border"
-        >
-          <p className="font-medium">Today&apos;s workout</p>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Log sets with past-performance silhouettes.
-          </p>
-        </Link>
-        <Link
-          href="/member/live"
-          className="card transition hover-accent-border"
-        >
-          <p className="font-medium">Live sessions</p>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Book coach-led live training.
-          </p>
-          <span className="mt-2 inline-block text-xs text-accent">
-            Open (preview) →
-          </span>
-        </Link>
-      </section>
+      <details className="group" open>
+        <summary className="flex items-center gap-2 mb-2 cursor-pointer list-none text-sm font-semibold uppercase tracking-wide text-[var(--muted)] group-open:text-white transition">
+          Quick actions <span className="text-xs text-accent group-open:rotate-90 transition">▶</span>
+        </summary>
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
+          <Link
+            href="/member/workout"
+            className="card transition hover-accent-border"
+          >
+            <p className="font-medium">Today&apos;s workout</p>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Log sets with past-performance silhouettes.
+            </p>
+          </Link>
+          <Link
+            href="/member/live"
+            className="card transition hover-accent-border"
+          >
+            <p className="font-medium">Live sessions</p>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Book coach-led live training.
+            </p>
+            <span className="mt-2 inline-block text-xs text-accent">
+              Open (preview) →
+            </span>
+          </Link>
+        </section>
 
-      {!access.isPreview && (
-        <p className="text-center text-xs text-[var(--muted)]">
-          Upgrade to 1st Class for live sessions (Coach tier is on-demand only).
-        </p>
-      )}
+        {!access.isPreview && (
+          <p className="text-center text-xs text-[var(--muted)] mt-2">
+            Upgrade to 1st Class for live sessions (Coach tier is on-demand only).
+          </p>
+        )}
+      </details>
     </div>
   );
 }

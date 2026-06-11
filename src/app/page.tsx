@@ -98,7 +98,7 @@ export default async function HomePage() {
           Built for coaches who care about real progress.{" "}
           <span className="text-[var(--accent)]">The Train Station</span> — memberships, on-demand programs, and live sessions.
           <div className="mt-2">
-            <Link href="/join" className="text-[var(--accent)] hover:underline">View membership &amp; payment options →</Link>
+            <Link href="/join/questions" className="text-[var(--accent)] hover:underline">View membership &amp; payment options →</Link>
           </div>
           <div className="mt-3 text-xs">Greenfield rebuild at <code className="rounded bg-[var(--surface-2)] px-1 py-px">~/projects/train-station</code></div>
         </div>

@@ -17,6 +17,7 @@ type UserRow = {
   createdAt: string;
   subscription: { tier: string; status: string } | null;
   counts: { enrollments: number; performances: number; workoutLogs: number };
+  strengthScore?: number;
 };
 
 const ROLES: Role[] = ["ADMIN", "INSTRUCTOR", "MEMBER", "PROSPECTIVE_INSTRUCTOR"];
@@ -185,6 +186,7 @@ export default function AdminUsersPage() {
               <th className="py-2 pr-4">Phone / SMS</th>
               <th className="py-2 pr-4">Subscription</th>
               <th className="py-2 pr-4">Activity</th>
+              <th className="py-2 pr-4">Strength</th>
               <th className="py-2 pr-4">Created</th>
               <th className="py-2">Actions</th>
             </tr>
@@ -253,6 +255,9 @@ export default function AdminUsersPage() {
                   </td>
                   <td className="py-3 pr-4 text-xs text-[var(--muted)]">
                     {u.counts.workoutLogs} logs · {u.counts.enrollments} programs
+                  </td>
+                  <td className="py-3 pr-4 text-xs font-semibold tabular-nums">
+                    {u.strengthScore ?? "—"}
                   </td>
                   <td className="py-3 pr-4 text-xs text-[var(--muted)]">
                     {new Date(u.createdAt).toLocaleDateString()}

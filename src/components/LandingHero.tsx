@@ -87,7 +87,7 @@ export default function LandingHero() {
               Start Training
             </a>
             <a 
-              href="/join" 
+              href="/join/questions" 
               className="inline-flex h-14 items-center justify-center rounded-full bg-[#7c3aed] px-10 text-sm font-semibold text-white backdrop-blur transition-all hover:bg-[#6d2dd6] hover:scale-[1.1] active:scale-[0.985]"
             >
               Join the site

@@ -64,7 +64,7 @@ export default function SplashCarousel() {
               Enter as Member
             </a>
             <a
-              href="/join"
+              href="/join/questions"
               className="inline-flex items-center justify-center rounded-full bg-[#7c3aed] px-8 py-3 text-sm font-semibold text-white transition-all hover:bg-[#6d2dd6] hover:scale-[1.1]"
             >
               Join the site

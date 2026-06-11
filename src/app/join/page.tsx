@@ -1,6 +1,14 @@
 import Link from "next/link";
 
-export default function JoinPage() {
+export default async function JoinPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ rec?: string }>
+}) {
+  const params = await searchParams;
+  const recParam = (params.rec || "").toLowerCase();
+  const isRecommended = (name: string) => recParam === name.toLowerCase();
+
   return (
     <div className="min-h-screen bg-[#0a0612] text-[#f2ecf9]">
       {/* Simple header */}
@@ -29,13 +37,33 @@ export default function JoinPage() {
         </div>
       </div>
 
+      {/* Middle assessment step (per transcript): questions about current exercise/eating before showing full pricing. Landing "Join the site" already points here; this reinforces on the /join page itself. Now supports ?rec= from the wizard. */}
+      <div className="mx-auto max-w-2xl px-6 -mt-4 mb-8 text-center">
+        <div className="inline-block rounded-full bg-[#7c3aed]/10 px-3 py-1 text-xs font-semibold tracking-widest text-[#7c3aed] mb-2">NOT SURE WHICH PLAN?</div>
+        <p className="text-[#9d8ab8] text-sm">Answer 4 quick questions about your current training frequency, structure, eating habits, and goals. We'll recommend Explorer, Member, or Pro.</p>
+        <div className="mt-3 flex items-center justify-center gap-3">
+          <Link
+            href="/join/questions"
+            className="inline-flex h-10 items-center justify-center rounded-full bg-[#7c3aed] px-5 text-sm font-semibold text-white hover:bg-[#6d2dd6] transition-all"
+          >
+            Take the 1-minute assessment →
+          </Link>
+          <a href="#plans" className="text-sm text-[#9d8ab8] hover:text-white underline">or skip to plans</a>
+        </div>
+      </div>
+
       {/* Pricing overview */}
-      <div className="mx-auto max-w-6xl px-6 pb-16">
+      <div id="plans" className="mx-auto max-w-6xl px-6 pb-16">
         <div className="grid md:grid-cols-3 gap-6">
           {/* Explorer */}
-          <div className="rounded-3xl border border-[#3d2660] bg-[#140a22] p-8 flex flex-col">
+          <div className={`rounded-3xl border ${isRecommended("Explorer") ? "border-[#7c3aed] ring-1 ring-[#7c3aed]/40" : "border-[#3d2660]"} bg-[#140a22] p-8 flex flex-col`}>
             <div>
-              <div className="text-[#7c3aed] text-xs font-semibold tracking-widest">EXPLORER</div>
+              <div className="flex items-center gap-2">
+                <div className="text-[#7c3aed] text-xs font-semibold tracking-widest">EXPLORER</div>
+                {isRecommended("Explorer") && (
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-[#7c3aed] text-white font-semibold tracking-widest">RECOMMENDED</span>
+                )}
+              </div>
               <div className="mt-2 text-4xl font-semibold tracking-tight">Free</div>
               <div className="text-[#9d8ab8] mt-1">No card required</div>
             </div>
@@ -75,10 +103,15 @@ export default function JoinPage() {
           </div>
 
           {/* Member */}
-          <div className="rounded-3xl border border-[#7c3aed] bg-[#140a22] p-8 flex flex-col relative">
+          <div className={`rounded-3xl border ${isRecommended("Member") ? "border-[#7c3aed] ring-2 ring-[#7c3aed]" : "border-[#7c3aed]"} bg-[#140a22] p-8 flex flex-col relative`}>
             <div className="absolute -top-3 right-6 rounded-full bg-[#7c3aed] px-3 py-0.5 text-xs font-semibold tracking-widest">POPULAR</div>
             <div>
-              <div className="text-[#7c3aed] text-xs font-semibold tracking-widest">MEMBER</div>
+              <div className="flex items-center gap-2">
+                <div className="text-[#7c3aed] text-xs font-semibold tracking-widest">MEMBER</div>
+                {isRecommended("Member") && (
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-[#7c3aed] text-white font-semibold tracking-widest">RECOMMENDED</span>
+                )}
+              </div>
               <div className="mt-2 flex items-baseline gap-1">
                 <span className="text-4xl font-semibold tracking-tight">$29</span>
                 <span className="text-[#9d8ab8]">/mo</span>
@@ -122,9 +155,14 @@ export default function JoinPage() {
           </div>
 
           {/* Pro / Annual focused */}
-          <div className="rounded-3xl border border-[#3d2660] bg-[#140a22] p-8 flex flex-col">
+          <div className={`rounded-3xl border ${isRecommended("Pro") ? "border-[#7c3aed] ring-1 ring-[#7c3aed]/40" : "border-[#3d2660]"} bg-[#140a22] p-8 flex flex-col`}>
             <div>
-              <div className="text-[#7c3aed] text-xs font-semibold tracking-widest">PRO</div>
+              <div className="flex items-center gap-2">
+                <div className="text-[#7c3aed] text-xs font-semibold tracking-widest">PRO</div>
+                {isRecommended("Pro") && (
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-[#7c3aed] text-white font-semibold tracking-widest">RECOMMENDED</span>
+                )}
+              </div>
               <div className="mt-2 flex items-baseline gap-1">
                 <span className="text-4xl font-semibold tracking-tight">$15</span>
                 <span className="text-[#9d8ab8]">/mo</span>

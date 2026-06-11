@@ -13,9 +13,10 @@ It also doubles as a **full end-to-end test script**:
 - Dev server is running cleanly (no errors in terminal).
 - You are using a modern browser (Chrome/Firefox recommended).
 - Start fresh (hard refresh pages with Cmd/Ctrl+Shift+R when needed).
-- All data is in demo/seed mode (no real DB required).
-- The demo user starts with some enrollments and progress (Adult W3D3, etc.).
-- Adult is now a **hybrid program** with per-day Gym vs Home workout options (mix environments freely within one enrollment). Equipment inventory is seeded for the demo user.
+- All data is in demo/seed mode (no real DB required; uses committed prisma/seed-data.json + *.dev.json).
+- **Fresh review mode** (current default after reset): empty user data (0 enrollments, 0 logs, 0 equipment, empty settings) for testing the complete new-user path (join → questions assessment + rec → pricing with highlight → enroll → onboard wizard → dashboard). Core programs, exercises, and seed content are fully intact.
+- (For full populated demo: you can restore from .bak files or manually enroll + log via the UI.)
+- Adult is now a **hybrid program** with per-day Gym vs Home workout options (mix environments freely within one enrollment). Equipment inventory can be set in the widget.
 
 **Quick Start**:
 1. Open terminal in `projects/train-station`.
@@ -45,41 +46,65 @@ It also doubles as a **full end-to-end test script**:
 
 ---
 
-## Section 1: Member Dashboard (Core Member Experience)
+## Section 0.5: New User Onboarding Flow (Join → Questions Assessment + Recommendation → Pricing with highlight)
 
-1. Go to http://localhost:3000/member (or from landing).
-2. You should be logged in as **Demo Member (Alex)** (demo@thetrainstation.co).
-3. **Top welcome band** (condensed for browser real-estate):
-   - "Welcome back, Demo Member"
-   - Left: "Currently enrolled" list (clickable program cards showing W#D#).
-   - Middle: Metrics with descriptions:
-     - Day streak (with explanation).
-     - Strength Score (power score) — with long paragraph explanation below the band.
-     - Active programs count.
-   - Right: "Continue (independent per program)" — list of active continues with labels like "Workouts: Adult (W3D3)", "Eating: Muscle Max (W1D2)", "Yoga: Yoga Channel (W1D1)", "Journey: John & Steph (W1D2)".
-4. **Strength Score explanation paragraph** (immediately below metrics):
-   - Should explain Epley 1RM, ratios to bench-6RM, key lifts (Back Squat, Bench Press, Dumbbell Bench Press, military press, pulldowns, triceps), no artificial cap.
-5. **Programs section**:
-   - Grouped by category with headers:
-     - **Workouts**
-     - **Eating Approaches**
-     - **Yoga Channels**
-     - **Journeys**
-   - Each program card: image, name, description, count label (e.g. "28 workouts", "4-week approach", "Channel • flows & sessions", "Recorded sessions • sub into workouts"), Enroll/Unenroll button.
-   - **Adult** (Workouts category) is special: hybrid — each day offers both a full "Gym" version and a "Home" version (limited equipment: dumbbells, bands, bodyweight, stability ball alternatives). You can freely mix within the same enrollment.
-   - Preview mode notice if applicable.
-6. **Quick links** at bottom: "Today's workout", "Live sessions", etc.
-7. **Daily SMS reminder note** (if set).
+(This is the new middle landing + rec feature from recent iteration. Primary path for fresh review / client testing.)
+
+1. From landing, click the prominent **"Join the site"** button (or go directly to /join).
+2. On /join (pricing overview):
+   - See the callout "NOT SURE WHICH PLAN?" with "Take the 1-minute assessment →" button.
+   - Click it (or use header "Skip to pricing" to test the other way).
+3. **Questions page** (/join/questions):
+   - Fill the 4 questions: exercise frequency (select), structured program (radios), eating/nutrition (select), main goal (select).
+   - Click "See my recommendation".
+   - Verify a recommendation card appears (Explorer / Member / Pro) with reason based on simple logic (freq + structure + eating + serious goal).
+4. From the rec screen:
+   - Click "See all membership options" — this should go to /join?rec=XXX and highlight the matching tier card with a "RECOMMENDED" badge + ring/border.
+   - Or click "Start with the recommended (demo)" → goes to /member (fresh 0-state).
+5. Back on /join, confirm the recommended tier is visually emphasized.
 
 **Expected / Verify**:
-- All 4 categories visible and grouped.
-- Independent continues for all program types.
-- Strength score is a number (starts around 162 in demo seed data).
-- Clicking a continue or program card navigates correctly.
-- Enroll/Unenroll buttons work (state updates on refresh or via buttons).
-- Page is dense but readable on browser (lg: breakpoints used).
+- Questions are quick and relevant to current habits (eating + exercise).
+- Rec logic produces sensible suggestion.
+- ?rec param drives highlight on pricing (new integration).
+- "We'll refine the packages later" note is present.
+- Flow feels like a guided middle step before full pricing.
 
-**Test note**: Tests multi-program independence, strength calc (will update later), responsive layout.
+**Test note**: This directly addresses the transcript request for a middle assessment before pricing.
+
+---
+
+## Section 1: Member Dashboard (Core Member Experience) — Fresh Review + Updated Reorg
+
+**Note for this test run (fresh review state)**: With current .dev.json reset (0 enrollments, 0 logs, 0 equipment), "Currently enrolled" and "Continue" blocks are hidden. Metrics show 0s. Use this to test the new-user experience after the join/questions flow. Strength explanation is now in a collapsible <details>. A new "Workouts logged + ranking" snippet appears "down here" (after strength details, before Programs). Programs section is collapsed. Quick actions at bottom are also collapsible.
+
+1. Go to http://localhost:3000/member (or from landing / after going through join flow).
+2. You should be logged in as the demo member (fresh state).
+3. **Top metrics row** (streak | workouts logged total | strength score):
+   - Streak emphasized.
+   - "Workouts logged" card.
+   - Strength Score with conditional rank text ("Log lifts to rank vs other demo athletes" when 0).
+4. **New "Workouts logged + ranking" snippet** (after the collapsible strength details, before Programs):
+   - Shows total + note about history + personal bests populating from logs.
+   - In 0-state: encouraging text + direct links "Browse programs & enroll →" and "Open workout logger →".
+5. **Strength Score calculation** — now inside <details> (collapsible to reduce scroll).
+6. **MemberReminderSettings** (SMS + contact + quick coach message sims) — internally collapsible.
+7. **Programs section** (collapsed <details open> by default):
+   - Grouped by category (Workouts, Yoga Channels, Journeys; Eating coming soon).
+   - Cards with images, Enroll buttons (updated to "Enroll & setup" style).
+   - "View all" link.
+8. **Quick actions** (now in its own collapsible <details> at bottom): Today's workout + Live sessions cards + upgrade note.
+9. Home equipment widget (editable) and other elements still present for when user enrolls.
+
+**Expected / Verify (fresh state)**:
+- No "Currently enrolled" or "Continue" blocks (clean for brand new user).
+- 0 workouts / 0 strength.
+- New snippet + ranking text visible and useful.
+- All major sections (programs, quick actions, strength details) use <details> for reorg / less doom-scroll.
+- Enroll buttons lead to the updated onboard wizard.
+- Responsive on mobile (Tailwind classes + prior landing/Splash polish).
+
+**Test note**: This validates the 3rd priority reorg (collapses, snippet per transcript "Down here, you can have workouts logged" + ranking) + fresh review setup. Later in script, after enrolling/logging, re-visit to see numbers and snippet update.
 
 ---
 

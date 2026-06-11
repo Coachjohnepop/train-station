@@ -148,10 +148,11 @@ export default async function MemberProgramPage({ params, searchParams }: Props)
       {!(cat === "eating" && isCoachView) && (
       <div className="mt-6 space-y-6">
         {program.weeks.map((week: any) => (
-          <section key={week.id}>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-accent">
+          <details key={week.id} className="group" open>
+            <summary className="text-sm font-semibold uppercase tracking-wide text-accent cursor-pointer list-none flex items-center gap-2 hover:text-white transition">
+              <span className="group-open:rotate-90 transition-transform">▶</span>
               Week {week.weekNumber}
-            </h2>
+            </summary>
             <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
               {week.days
                 .sort((a: any, b: any) => a.dayNumber - b.dayNumber)
@@ -277,7 +278,7 @@ export default async function MemberProgramPage({ params, searchParams }: Props)
                   }
                 })}
             </ul>
-          </section>
+          </details>
         ))}
       </div>
       )}
