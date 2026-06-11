@@ -1,108 +1,77 @@
 import Link from "next/link";
-import { listPrograms } from "@/lib/program-data";
-import SplashCarousel from "@/components/SplashCarousel";
-import { PROGRAM_IMAGES } from "@/lib/program-constants";
-
-export const dynamic = "force-dynamic";
+import { cookies } from "next/headers";
+import { MEMBER_COOKIE, MEMBER_NAME_COOKIE } from "@/lib/current-user";
 
 export default async function HomePage() {
-  const programs = await listPrograms();
+  const cookieStore = await cookies();
+  const hasJoined = !!cookieStore.get(MEMBER_COOKIE)?.value;
+  const joinedName = cookieStore.get(MEMBER_NAME_COOKIE)?.value || "Member";
 
-  const programImages = PROGRAM_IMAGES;
-
-  return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
-      {/* Professional Rotating Splash Hero with 4 inspiring workout images */}
-      <SplashCarousel />
-
-      {/* Programs visible on the home splash */}
-      <div className="mx-auto max-w-6xl px-6 py-16">
-        <div className="mb-10 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[3px] text-[var(--accent)]">
-            CHOOSE YOUR TRACK
-          </p>
-          <h2 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
-            Programs built for real results
-          </h2>
-          <p className="mt-4 text-lg text-[var(--muted)]">
-            4-week structured training. Choose the one that matches your goals.
-          </p>
-        </div>
-
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {programs.map((program: any) => (
-            <Link
-              key={program.id}
-              href={`/member/programs/${program.slug}`}
-              className="group relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] transition-all hover:border-[var(--accent)] hover:shadow-2xl"
-            >
-              <div className="relative aspect-[16/10] w-full overflow-hidden">
-                <img
-                  src={programImages[program.slug] || "/images/programs/adult.jpg"}
-                  alt={program.name}
-                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                <div className="absolute bottom-0 left-0 p-5">
-                  <div className="inline rounded bg-[var(--accent)]/90 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-white">
-                    {program.durationWeeks} weeks
-                  </div>
-                  <h3 className="mt-2 text-2xl font-semibold text-white">{program.name}</h3>
-                </div>
-              </div>
-              <div className="p-5">
-                <p className="line-clamp-3 text-sm text-[var(--muted)]">
-                  {program.description}
-                </p>
-                <div className="mt-4 flex items-center text-sm font-medium text-[var(--accent)] group-hover:underline">
-                  View program <span className="ml-1 transition group-hover:translate-x-0.5">→</span>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* Spruced value props */}
-      <div className="mx-auto max-w-6xl px-6 pb-16">
-        <div className="grid gap-4 sm:grid-cols-3">
-          {[
-            {
-              title: "Exercise library",
-              body: "Create each movement once. Reuse in every workout. Clean, searchable, and reusable across programs.",
-              icon: "🏋️",
-            },
-            {
-              title: "Workout builder",
-              body: "Spreadsheet-style rows: sets, reps, rest. Duplicate fast. Full control over schemes and progressions.",
-              icon: "📋",
-            },
-            {
-              title: "Program calendar",
-              body: "Drag workouts onto weeks. Ship complete programs in minutes. Members get day-by-day access.",
-              icon: "📅",
-            },
-          ].map((item) => (
-            <div key={item.title} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 transition hover:border-[var(--accent)]">
-              <div className="text-3xl">{item.icon}</div>
-              <h3 className="mt-4 text-xl font-semibold text-[var(--accent)]">{item.title}</h3>
-              <p className="mt-3 text-[15px] leading-relaxed text-[var(--muted)]">{item.body}</p>
+  if (hasJoined) {
+    // Returning joined user: single prominent "Back to the Program" – no 3 buttons.
+    return (
+      <div className="min-h-screen bg-[#0a0612] text-[#f2ecf9] flex flex-col">
+        <div className="flex-1 flex items-center justify-center px-6">
+          <div className="max-w-xl text-center">
+            <div className="mx-auto mb-8">
+              <img src="/images/logo.png" alt="The Train Station" className="h-20 w-auto mx-auto drop-shadow-2xl" />
             </div>
-          ))}
-        </div>
-      </div>
+            <h1 className="text-6xl font-semibold tracking-[-2px] mb-4">Welcome back, {joinedName.split(" ")[0]}.</h1>
+            <p className="text-xl text-[#9d8ab8] mb-10">Your programs, progress, and workouts are ready.</p>
 
-      {/* Professional footer CTA */}
-      <div className="border-t border-[var(--border)] bg-[var(--surface)] py-10">
-        <div className="mx-auto max-w-4xl px-6 text-center text-sm text-[var(--muted)]">
-          Built for coaches who care about real progress.{" "}
-          <span className="text-[var(--accent)]">The Train Station</span> — memberships, on-demand programs, and live sessions.
-          <div className="mt-2">
-            <Link href="/join/questions" className="text-[var(--accent)] hover:underline">View membership &amp; payment options →</Link>
+            <Link
+              href="/member"
+              className="inline-flex h-14 items-center justify-center rounded-full bg-white px-12 text-base font-semibold transition-all hover:bg-gray-100 hover:scale-[1.02] active:scale-[0.985]"
+            >
+              <span style={{ color: "#7c3aed" }}>Back to the Program</span>
+            </Link>
+
+            <div className="mt-8 text-xs text-[#9d8ab8]/70 tracking-widest">
+              THE TRAIN STATION — YOUR TRAINING HUB
+            </div>
           </div>
-          <div className="mt-3 text-xs">Greenfield rebuild at <code className="rounded bg-[var(--surface-2)] px-1 py-px">~/projects/train-station</code></div>
+        </div>
+
+        <div className="border-t border-[#3d2660] py-6 text-center text-xs text-[#9d8ab8]">
+          <Link href="/admin" className="hover:text-white transition mx-3">Coach / Admin</Link>
+          <span className="mx-1">·</span>
+          <Link href="/join" className="hover:text-white transition mx-3">Join another account</Link>
         </div>
       </div>
+    );
+  }
+
+  // First time / not yet joined: simple focused entry (no heavy 3-button splash)
+  return (
+    <div className="min-h-screen bg-[#0a0612] text-[#f2ecf9] flex flex-col items-center justify-center px-6">
+      <div className="max-w-md text-center">
+        <img src="/images/logo.png" alt="The Train Station" className="h-16 w-auto mx-auto mb-8 drop-shadow-2xl" />
+        <h1 className="text-5xl font-semibold tracking-[-1.5px] mb-3">The Train Station</h1>
+        <p className="text-lg text-[#9d8ab8] mb-8">Structured programs. Real accountability.<br />Results that last.</p>
+
+        <div className="flex flex-col gap-3">
+          <Link
+            href="/join/questions"
+            className="inline-flex h-12 items-center justify-center rounded-full bg-[#7c3aed] px-8 text-sm font-semibold text-white hover:bg-[#6d2dd6] transition-all"
+          >
+            Join the site
+          </Link>
+          <Link
+            href="/member"
+            className="inline-flex h-12 items-center justify-center rounded-full border border-[#3d2660] px-8 text-sm font-semibold hover:bg-white/5 transition-all"
+          >
+            Enter as member (demo)
+          </Link>
+          <Link
+            href="/admin"
+            className="text-xs text-[#9d8ab8] hover:text-white mt-2"
+          >
+            I&apos;m a coach →
+          </Link>
+        </div>
+      </div>
+      <div className="absolute bottom-6 text-[10px] text-[#9d8ab8]/50 tracking-[2px]">4-WEEK PROGRAMS • LOGGING • PROGRESS</div>
     </div>
   );
 }
+

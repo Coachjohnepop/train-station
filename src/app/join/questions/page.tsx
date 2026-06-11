@@ -19,6 +19,9 @@ export default function JoinQuestionsPage() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [recommendation, setRecommendation] = useState<{ name: string; reason: string } | null>(null);
+  const [joinName, setJoinName] = useState("");
+  const [joinEmail, setJoinEmail] = useState("");
+  const [joining, setJoining] = useState(false);
 
   const updateAnswer = (key: keyof Answers, value: string) => {
     setAnswers((prev) => ({ ...prev, [key]: value }));
@@ -55,11 +58,38 @@ export default function JoinQuestionsPage() {
     setSubmitted(true);
   };
 
+  const handleRealJoin = async () => {
+    setJoining(true);
+    try {
+      const res = await fetch("/api/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: joinName || "New Member",
+          email: joinEmail || undefined,
+          plan: recommendation?.name?.toLowerCase(),
+          programSlug: "adult", // default to the core workout program so the site is immediately useful
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.redirectTo) {
+        window.location.href = data.redirectTo;
+      } else {
+        // fallback: still take them to member (cookie may be set or demo)
+        window.location.href = "/member";
+      }
+    } catch {
+      window.location.href = "/member";
+    } finally {
+      setJoining(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0612] text-[#f2ecf9]">
       <div className="border-b border-[#3d2660] bg-[#140a22]">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
+          <Link href="/member" className="flex items-center gap-3">
             <img src="/images/logo.png" alt="The Train Station" className="h-9 w-auto" />
             <span className="font-semibold tracking-tight text-lg">The Train Station</span>
           </Link>
@@ -161,19 +191,39 @@ export default function JoinQuestionsPage() {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link
-                href={`/join${recommendation ? `?rec=${encodeURIComponent(recommendation.name)}` : ''}`}
-                className="flex-1 inline-flex h-12 items-center justify-center rounded-full border border-[#3d2660] text-sm font-semibold hover:bg-white/5 transition-all"
-              >
-                See all membership options
-              </Link>
-              <Link
-                href="/member"
-                className="flex-1 inline-flex h-12 items-center justify-center rounded-full bg-[#7c3aed] text-sm font-semibold text-white hover:bg-[#6d2dd6] transition-all"
-              >
-                Start with the recommended (demo)
-              </Link>
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  placeholder="Your name (optional)"
+                  className="w-full rounded-full border border-[#3d2660] bg-[#140a22] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
+                  value={joinName}
+                  onChange={(e) => setJoinName(e.target.value)}
+                />
+                <input
+                  type="email"
+                  placeholder="Email (optional for demo)"
+                  className="w-full rounded-full border border-[#3d2660] bg-[#140a22] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
+                  value={joinEmail}
+                  onChange={(e) => setJoinEmail(e.target.value)}
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link
+                  href={`/join${recommendation ? `?rec=${encodeURIComponent(recommendation.name)}` : ''}`}
+                  className="flex-1 inline-flex h-12 items-center justify-center rounded-full border border-[#3d2660] text-sm font-semibold hover:bg-white/5 transition-all"
+                >
+                  See all membership options
+                </Link>
+                <button
+                  onClick={handleRealJoin}
+                  disabled={joining}
+                  className="flex-1 inline-flex h-12 items-center justify-center rounded-full bg-[#7c3aed] text-sm font-semibold text-white hover:bg-[#6d2dd6] transition-all disabled:opacity-60"
+                >
+                  {joining ? "Creating your account..." : `Start with the recommended (Back to the Program)`}
+                </button>
+              </div>
             </div>
 
             <p className="text-center text-xs text-[#9d8ab8]">

@@ -152,11 +152,11 @@ export function getDemoLatestPerformanceForExercise(userId: string, exerciseId: 
 }
 
 /** For a given workout's exercise blocks (with their exerciseId), return a map of exerciseId -> past shape or null */
-export function getDemoPastsForWorkoutExercises(exerciseBlocks: Array<{ id: string; exerciseId: string }>): Record<string, any> {
-  const userId = loadSeedIds().userId;
+export function getDemoPastsForWorkoutExercises(exerciseBlocks: Array<{ id: string; exerciseId: string }>, userId?: string): Record<string, any> {
+  const uid = userId || loadSeedIds().userId;
   const pasts: Record<string, any> = {};
   for (const b of exerciseBlocks) {
-    const p = getDemoLatestPerformanceForExercise(userId, b.exerciseId);
+    const p = getDemoLatestPerformanceForExercise(uid, b.exerciseId);
     if (p) {
       pasts[b.id] = {
         setScheme: p.setScheme,
@@ -242,18 +242,18 @@ const BENCH_EQUIV_FACTOR: Record<string, number> = {
  * No upper cap; grows with better/higher volume lifts.
  * Vaguely represents "what bench 6RM your key lifts suggest".
  */
-export function getDemoStrengthScore(): number {
+export function getDemoStrengthScore(userId?: string): number {
   const store = loadStore();
   const exList = loadSeedExercises();
   const idToName: Record<string, string> = Object.fromEntries(
     exList.map((e: any) => [e.id, e.name])
   );
-  const userId = loadSeedIds().userId;
+  const uid = userId || loadSeedIds().userId;
 
   // group perfs by exercise name
   const byLift: Record<string, Array<{w: number, r: number}>> = {};
   for (const p of store.performances) {
-    if (p.userId !== userId) continue;
+    if (p.userId !== uid) continue;
     const name = idToName[p.exerciseId];
     if (!name || !KEY_LIFT_NAMES.includes(name)) continue;
     const w = p.startingWeightLbs ?? 0;

@@ -6,82 +6,100 @@ import { listPrograms } from "@/lib/program-data";
 import { isDemoMode, getDemoEnrollments } from "@/lib/demo-enrollments";
 import { getDemoWorkoutLogCount, getDemoStrengthScore, computeStrengthScoreFromPerfs } from "@/lib/demo-logs";
 import { getDemoUserSettings } from "@/lib/demo-reminders";
+import { getCurrentUser, resolveUserId, getCurrentUserName } from "@/lib/current-user";
 
 export async function getMemberDashboard() {
-  // Mock for quick demo (no DB). Uses real program data from seed export.
   const programs = await listPrograms();
-
   const adult = programs.find((p: any) => p.slug === "adult") || programs.find((p: any) => (p.category || "workout") === "workout") || programs[0];
 
-  // Fake demo member enrolled in Adult with some progress
-  const demoUser = {
-    id: "demo-user",
-    name: "Demo Member",
+  const current = await getCurrentUser();
+  const uid = await resolveUserId("demo-user");
+  const displayName = current?.name || (await getCurrentUserName()) || "Member";
+
+  // User identity for the shell + dashboard (real when cookie + DB, synthetic or demo otherwise)
+  const effectiveUser = current || {
+    id: uid,
+    name: displayName,
     email: DEMO_MEMBER_EMAIL,
   };
 
   let mockEnrollments: any[] = [];
-  if (isDemoMode()) {
-    const demoEnrolls = getDemoEnrollments();
-    mockEnrollments = Object.entries(demoEnrolls).map(([slug, prog]) => {
+  const demoEnrolls = getDemoEnrollments(uid); // now supports per-uid in demo
+  if (Object.keys(demoEnrolls).length > 0) {
+    mockEnrollments = Object.entries(demoEnrolls).map(([slug, prog]: any) => {
       const p = programs.find((pp: any) => pp.slug === slug) || adult;
       return {
-        id: `demo-enroll-${slug}`,
+        id: `enroll-${uid}-${slug}`,
         program: {
-          id: p.id,
-          slug: p.slug,
-          name: p.name,
-          description: p.description,
-          tierSlug: p.tierSlug || "coach",
-          durationWeeks: p.durationWeeks || 4,
+          id: p?.id || slug,
+          slug: p?.slug || slug,
+          name: p?.name || slug,
+          description: p?.description || null,
+          tierSlug: p?.tierSlug || "coach",
+          durationWeeks: p?.durationWeeks || 4,
+          category: p?.category || "workout",
         },
-        currentWeek: prog.currentWeek,
-        currentDay: prog.currentDay,
+        currentWeek: prog.currentWeek || 1,
+        currentDay: prog.currentDay || 1,
       };
     });
-  } else if (adult) {
-    mockEnrollments = [
-      {
-        id: "demo-enroll-adult",
+  } else if (!isDemoMode() && adult) {
+    // Real DB: try to load the joined user's actual enrollments
+    try {
+      const prismaModule = await import("@/lib/prisma");
+      const pr = prismaModule.prisma;
+      const realEnrolls = await pr.programEnrollment.findMany({
+        where: { userId: uid },
+        include: { program: true },
+      });
+      mockEnrollments = realEnrolls.map((e: any) => ({
+        id: e.id,
         program: {
-          id: adult.id,
-          slug: adult.slug,
-          name: adult.name,
-          description: adult.description,
-          tierSlug: adult.tierSlug || "coach",
-          category: adult.category || "workout",
-          durationWeeks: adult.durationWeeks || 4,
+          id: e.program.id,
+          slug: e.program.slug,
+          name: e.program.name,
+          description: e.program.description,
+          tierSlug: e.program.tierSlug || "coach",
+          category: e.program.category || "workout",
+          durationWeeks: e.program.durationWeeks || 4,
         },
-        currentWeek: 2,
-        currentDay: 5,
-      },
-    ];
+        currentWeek: e.currentWeek || 1,
+        currentDay: e.currentDay || 1,
+      }));
+    } catch {
+      // fall back to empty or demo adult preview
+      if (adult) {
+        mockEnrollments = [{
+          id: "preview-adult",
+          program: { id: adult.id, slug: adult.slug, name: adult.name, description: adult.description, tierSlug: adult.tierSlug || "coach", category: adult.category || "workout", durationWeeks: adult.durationWeeks || 4 },
+          currentWeek: 1,
+          currentDay: 1,
+        }];
+      }
+    }
   }
 
-  const totalWorkouts = isDemoMode() ? getDemoWorkoutLogCount() : 12;
+  const totalWorkouts = isDemoMode() ? getDemoWorkoutLogCount(uid) : 12;
 
   let strengthScore = 0;
   if (isDemoMode()) {
-    strengthScore = getDemoStrengthScore();
+    strengthScore = getDemoStrengthScore(uid);
   } else {
     try {
       const prismaModule = await import("@/lib/prisma");
-      const prisma = prismaModule.prisma;
-      const demoUser = await prisma.user.findUnique({ where: { email: DEMO_MEMBER_EMAIL } });
-      if (demoUser) {
-        const perfs = await prisma.exercisePerformance.findMany({
-          where: { userId: demoUser.id },
-          include: { exercise: { select: { name: true } } },
-        });
-        strengthScore = computeStrengthScoreFromPerfs(
-          perfs.map((p: any) => ({
-            exercise: { name: p.exercise?.name },
-            startingWeightLbs: p.startingWeightLbs,
-            repsCompleted: p.repsCompleted,
-            setsCompleted: p.setsCompleted,
-          }))
-        );
-      }
+      const pr = prismaModule.prisma;
+      const perfs = await pr.exercisePerformance.findMany({
+        where: { userId: uid },
+        include: { exercise: { select: { name: true } } },
+      });
+      strengthScore = computeStrengthScoreFromPerfs(
+        perfs.map((p: any) => ({
+          exercise: { name: p.exercise?.name },
+          startingWeightLbs: p.startingWeightLbs,
+          repsCompleted: p.repsCompleted,
+          setsCompleted: p.setsCompleted,
+        }))
+      );
     } catch (e) {
       // ignore, fall to 0
     }
@@ -119,15 +137,27 @@ export async function getMemberDashboard() {
 
   let reminderSettings = { phone: "(555) 987-6543", dailyReminderTime: "07:30" };
   if (isDemoMode()) {
-    const demoSettings = getDemoUserSettings("demo-user");
+    const demoSettings = getDemoUserSettings(uid);
     reminderSettings = {
       phone: demoSettings.phone || "(555) 987-6543",
       dailyReminderTime: demoSettings.dailyReminderTime || "07:30",
     };
+  } else {
+    try {
+      const prismaModule = await import("@/lib/prisma");
+      const pr = prismaModule.prisma;
+      const u = await pr.user.findUnique({ where: { id: uid }, select: { phone: true, dailyReminderTime: true } });
+      if (u) {
+        reminderSettings = {
+          phone: u.phone || reminderSettings.phone,
+          dailyReminderTime: u.dailyReminderTime || reminderSettings.dailyReminderTime,
+        };
+      }
+    } catch {}
   }
 
   return {
-    user: { ...demoUser, dailyReminderTime: reminderSettings.dailyReminderTime as string | null, phone: reminderSettings.phone as string | null },
+    user: { id: effectiveUser.id, name: displayName, email: effectiveUser.email || DEMO_MEMBER_EMAIL, dailyReminderTime: reminderSettings.dailyReminderTime as string | null, phone: reminderSettings.phone as string | null },
     access: getMemberAccess("first_class"),
     enrollments: mockEnrollments,
     programs: programs.map((p: any) => ({

@@ -7,6 +7,7 @@ import {
   createDemoWorkoutLog,
   createDemoExercisePerformance,
 } from "@/lib/demo-logs";
+import { resolveUserId, getCurrentUserId } from "@/lib/current-user";
 
 const logExerciseSchema = z.object({
   workoutExerciseId: z.string().optional(),
@@ -45,13 +46,14 @@ export async function POST(request: Request, { params }: Params) {
   const completed = progress === 100;
   const performedAt = new Date();
 
+  const uid = parsed.data.targetUserId || (await resolveUserId("demo-user"));
+
   if (isDemoMode()) {
     // Demo path: persist to file so button works, silhouettes update, enrollment advances, % is recorded.
-    // Supports instructor coaching a specific member via targetUserId.
-    const targetUserId = parsed.data.targetUserId || "demo-user";
+    // Supports instructor coaching a specific member via targetUserId (from admin) or current joined cookie user.
     const demoLog = createDemoWorkoutLog({
       workoutId,
-      userId: targetUserId,
+      userId: uid,
       performedAt,
       completed,
       progress,
@@ -61,7 +63,7 @@ export async function POST(request: Request, { params }: Params) {
     for (const ex of parsed.data.exercises) {
       const perf = createDemoExercisePerformance({
         exerciseId: ex.exerciseId,
-        userId: targetUserId,
+        userId: uid,
         workoutExerciseId: ex.workoutExerciseId ?? null,
         setScheme: ex.setScheme,
         repPattern: ex.repPattern ?? null,
@@ -79,7 +81,7 @@ export async function POST(request: Request, { params }: Params) {
     // Advance demo enrollment if this log was from a program context (so schedule "Continue" and member view progress)
     if (parsed.data.programSlug) {
       try {
-        advanceDemoEnrollmentForWorkout(parsed.data.programSlug, workoutId);
+        advanceDemoEnrollmentForWorkout(parsed.data.programSlug, workoutId, uid);
       } catch {
         // non-fatal
       }
@@ -96,11 +98,18 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   // --- Real DB path (Supabase/Postgres) ---
-  const user = await prisma.user.findUnique({
-    where: { email: DEMO_MEMBER_EMAIL },
-  });
+  // Prefer cookie current user, fall back to the legacy demo email lookup for admin/demo flows
+  let userId = uid;
+  try {
+    const cookieUid = await getCurrentUserId();
+    if (cookieUid) userId = cookieUid;
+  } catch {}
+  let user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
-    return NextResponse.json({ detail: "Demo member not found" }, { status: 500 });
+    user = await prisma.user.findUnique({ where: { email: DEMO_MEMBER_EMAIL } });
+  }
+  if (!user) {
+    return NextResponse.json({ detail: "User not found" }, { status: 500 });
   }
 
   const workout = await prisma.workout.findUnique({

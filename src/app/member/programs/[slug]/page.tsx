@@ -7,6 +7,7 @@ import { DAY_LABELS } from "@/lib/program-constants";
 import { getProgramBySlug } from "@/lib/program-data";
 import { getMemberDashboard } from "@/lib/member-context";
 import EnrollButton from "@/components/EnrollButton";
+import { resolveUserId } from "@/lib/current-user";
 
 export const dynamic = "force-dynamic";
 
@@ -55,8 +56,9 @@ export default async function MemberProgramPage({ params, searchParams }: Props)
   const curWeek = thisEnroll?.currentWeek || 1;
   const curDay = thisEnroll?.currentDay || 1;
 
-  // Load actually logged workoutIds for this demo user (so specific options show as done)
+  // Load actually logged workoutIds for the current joined user (cookie) so schedule shows completed days.
   const loggedSet = new Set<string>();
+  const uid = await resolveUserId("demo-user");
   const isDemo = process.env.DATABASE_URL?.includes("dummy") ?? true;
   if (isDemo) {
     try {
@@ -64,11 +66,18 @@ export default async function MemberProgramPage({ params, searchParams }: Props)
       if (fs.existsSync(logsPath)) {
         const logsData = JSON.parse(fs.readFileSync(logsPath, "utf8"));
         (logsData.workoutLogs || []).forEach((log: any) => {
-          if (log.userId === "demo-user" && log.workoutId) {
+          if (log.userId === uid && log.workoutId) {
             loggedSet.add(log.workoutId);
           }
         });
       }
+    } catch {}
+  } else {
+    // real DB: query logs for this uid (minimal, for the "done" rings)
+    try {
+      const { prisma } = await import("@/lib/prisma");
+      const logs = await prisma.workoutLog.findMany({ where: { userId: uid }, select: { workoutId: true } });
+      logs.forEach((l: any) => { if (l.workoutId) loggedSet.add(l.workoutId); });
     } catch {}
   }
 

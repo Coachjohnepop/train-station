@@ -2,14 +2,16 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { DEMO_MEMBER_EMAIL } from "@/lib/demo-workout";
 import { isDemoMode, getDemoEnrollments, enrollDemo, unenrollDemo } from "@/lib/demo-enrollments";
+import { resolveUserId } from "@/lib/current-user";
 
 type Params = { params: Promise<{ slug: string }> };
 
 export async function POST(_request: Request, { params }: Params) {
   const { slug } = await params;
+  const uid = await resolveUserId("demo-user");
 
   if (isDemoMode()) {
-    const current = getDemoEnrollments();
+    const current = getDemoEnrollments(uid);
     if (current[slug]) {
       return NextResponse.json({ detail: "Already enrolled" }, { status: 400 });
     }
@@ -20,13 +22,17 @@ export async function POST(_request: Request, { params }: Params) {
     if (!program) {
       return NextResponse.json({ detail: "Program not found" }, { status: 404 });
     }
-    enrollDemo(slug);
-    return NextResponse.json({ success: true, enrollmentId: `demo-enroll-${slug}` });
+    enrollDemo(slug, uid);
+    return NextResponse.json({ success: true, enrollmentId: `enroll-${uid}-${slug}` });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: DEMO_MEMBER_EMAIL },
-  });
+  // Real DB: use cookie user or fallback to legacy demo email
+  let userId = uid;
+  let user = await prisma.user.findUnique({ where: { id: uid } }).catch(() => null);
+  if (!user) {
+    user = await prisma.user.findUnique({ where: { email: DEMO_MEMBER_EMAIL } });
+    if (user) userId = user.id;
+  }
   if (!user) {
     return NextResponse.json({ detail: "User not found" }, { status: 404 });
   }
@@ -39,7 +45,7 @@ export async function POST(_request: Request, { params }: Params) {
   }
 
   const existing = await prisma.programEnrollment.findFirst({
-    where: { userId: user.id, programId: program.id },
+    where: { userId: userId, programId: program.id },
   });
   if (existing) {
     return NextResponse.json({ detail: "Already enrolled" }, { status: 400 });
@@ -47,7 +53,7 @@ export async function POST(_request: Request, { params }: Params) {
 
   const enrollment = await prisma.programEnrollment.create({
     data: {
-      userId: user.id,
+      userId: userId,
       programId: program.id,
       startedAt: new Date(),
       currentWeek: 1,
@@ -60,19 +66,23 @@ export async function POST(_request: Request, { params }: Params) {
 
 export async function DELETE(_request: Request, { params }: Params) {
   const { slug } = await params;
+  const uid = await resolveUserId("demo-user");
 
   if (isDemoMode()) {
-    const current = getDemoEnrollments();
+    const current = getDemoEnrollments(uid);
     if (!current[slug]) {
       return NextResponse.json({ detail: "Not enrolled" }, { status: 400 });
     }
-    unenrollDemo(slug);
+    unenrollDemo(slug, uid);
     return NextResponse.json({ success: true });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: DEMO_MEMBER_EMAIL },
-  });
+  let userId = uid;
+  let user = await prisma.user.findUnique({ where: { id: uid } }).catch(() => null);
+  if (!user) {
+    user = await prisma.user.findUnique({ where: { email: DEMO_MEMBER_EMAIL } });
+    if (user) userId = user.id;
+  }
   if (!user) {
     return NextResponse.json({ detail: "User not found" }, { status: 404 });
   }
@@ -85,7 +95,7 @@ export async function DELETE(_request: Request, { params }: Params) {
   }
 
   await prisma.programEnrollment.deleteMany({
-    where: { userId: user.id, programId: program.id },
+    where: { userId: userId, programId: program.id },
   });
 
   return NextResponse.json({ success: true });

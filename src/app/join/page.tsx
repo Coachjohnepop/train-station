@@ -14,12 +14,12 @@ export default async function JoinPage({
       {/* Simple header */}
       <div className="border-b border-[#3d2660] bg-[#140a22]">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
+          <Link href="/member" className="flex items-center gap-3">
             <img src="/images/logo.png" alt="The Train Station" className="h-9 w-auto" />
             <span className="font-semibold tracking-tight text-lg">The Train Station</span>
           </Link>
           <div className="flex items-center gap-3 text-sm">
-            <Link href="/landing" className="text-[#9d8ab8] hover:text-white transition">Explore programs</Link>
+            <Link href="/member/programs" className="text-[#9d8ab8] hover:text-white transition">Explore programs</Link>
             <Link href="/member" className="text-[#9d8ab8] hover:text-white transition">Enter as member</Link>
           </div>
         </div>
@@ -95,10 +95,10 @@ export default async function JoinPage({
             </div>
 
             <Link
-              href="/member"
-              className="mt-8 inline-flex h-11 items-center justify-center rounded-full border border-[#3d2660] text-sm font-semibold hover:bg-white/5 transition-all hover:scale-[1.05]"
+              href="/join/questions"
+              className="mt-8 inline-flex h-11 items-center justify-center rounded-full border border-[#3d2660] text-sm font-semibold !text-[#7c3aed] hover:bg-white/5 transition-all hover:scale-[1.05]"
             >
-              Enter as member (free now)
+              Enter as member (create account)
             </Link>
           </div>
 
@@ -146,10 +146,10 @@ export default async function JoinPage({
             </div>
 
             <Link
-              href="/member"
+              href="/join/questions"
               className="mt-8 inline-flex h-11 items-center justify-center rounded-full bg-[#7c3aed] text-sm font-semibold text-white hover:bg-[#6d2dd6] transition-all hover:scale-[1.05]"
             >
-              Start 14-day trial (demo)
+              Start 14-day trial (Back to the Program)
             </Link>
             <p className="text-center text-[10px] text-[#9d8ab8] mt-2">Billed monthly or annually. Cancel anytime.</p>
           </div>

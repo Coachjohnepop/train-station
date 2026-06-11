@@ -4,6 +4,7 @@ import { DEMO_MEMBER_EMAIL } from "@/lib/demo-workout";
 import { getDemoPastsForWorkoutExercises } from "@/lib/demo-logs";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { prisma } from "@/lib/prisma";
+import { resolveUserId } from "@/lib/current-user";
 import fs from "fs";
 import path from "path";
 
@@ -50,42 +51,35 @@ export async function getMemberWorkoutById(
   });
 
   // Attach latest past performance (silhouette) for each exercise block.
-  // - Demo mode: from file-backed store (written by /log when button pressed, supports partial % + exact finished exercises).
-  // - Real DB (after Supabase): query latest ExercisePerformance rows for the demo member.
-  // This makes "instructor sees what was partially or fully completed" visible on next load via silhouettes + log history.
+  // Uses current joined user (cookie) when available; falls back to demo-user in legacy demo mode.
+  const uid = await resolveUserId("demo-user");
   const pastByBlockId: Record<string, any> = {};
   try {
     if (isDemoMode()) {
-      const demoPasts = getDemoPastsForWorkoutExercises(exercises);
+      const demoPasts = getDemoPastsForWorkoutExercises(exercises, uid);
       Object.assign(pastByBlockId, demoPasts);
     } else {
-      const demoUser = await prisma.user.findUnique({
-        where: { email: DEMO_MEMBER_EMAIL },
-        select: { id: true },
-      });
-      if (demoUser) {
-        for (const ex of exercises) {
-          const latest = await prisma.exercisePerformance.findFirst({
-            where: { userId: demoUser.id, exerciseId: ex.exerciseId },
-            orderBy: { performedAt: "desc" },
-          });
-          if (latest) {
-            pastByBlockId[ex.id] = {
-              setScheme: latest.setScheme,
-              repPattern: null,
-              reps: null,
-              sets: null,
-              setsCompleted: null,
-              weightTier: latest.weightTier,
-              startingWeightLbs: latest.startingWeightLbs,
-              performedAt: latest.performedAt.toISOString(),
-            };
-          }
+      for (const ex of exercises) {
+        const latest = await prisma.exercisePerformance.findFirst({
+          where: { userId: uid, exerciseId: ex.exerciseId },
+          orderBy: { performedAt: "desc" },
+        });
+        if (latest) {
+          pastByBlockId[ex.id] = {
+            setScheme: latest.setScheme,
+            repPattern: null,
+            reps: null,
+            sets: null,
+            setsCompleted: null,
+            weightTier: latest.weightTier,
+            startingWeightLbs: latest.startingWeightLbs,
+            performedAt: latest.performedAt.toISOString(),
+          };
         }
       }
     }
   } catch (e) {
-    // non-fatal for demo/real; silhouettes just won't show this time
+    // non-fatal; silhouettes just won't show this time
   }
 
   const exercisesWithPast = exercises.map((ex: any) => ({
