@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import MemberHomeEquipment from "@/components/MemberHomeEquipment";
 import { COACH_CALENDLY_URL } from "@/lib/brand";
 
-export default function OnboardingWizard() {
+function OnboardingContent() {
   const searchParams = useSearchParams();
   const programSlug = searchParams.get("program");
 
@@ -199,5 +199,13 @@ export default function OnboardingWizard() {
         We can add the "three boxes" for First Class vs Coach ticket levels next.
       </p>
     </div>
+  );
+}
+
+export default function OnboardingWizard() {
+  return (
+    <Suspense fallback={<div className="max-w-md mx-auto p-6 text-center">Loading onboarding wizard...</div>}>
+      <OnboardingContent />
+    </Suspense>
   );
 }
