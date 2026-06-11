@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdminContact, updateAdminContact } from "@/lib/booking";
+import { COACH_CALENDLY_URL } from "@/lib/brand";
 
 function isDemoMode() {
   const url = process.env.DATABASE_URL ?? "";
@@ -9,7 +10,7 @@ function isDemoMode() {
 let demoContact = { 
   email: "coach@thetrainstation.co", 
   phone: "(555) 123-4567",
-  calendlyUrl: null as string | null
+  calendlyUrl: COACH_CALENDLY_URL
 };
 
 const updateSchema = z.object({

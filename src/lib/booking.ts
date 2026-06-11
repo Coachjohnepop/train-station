@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { isDemoMode } from "./demo-enrollments";
 import { addDemoSmsLog } from "./sms";
+import { COACH_CALENDLY_URL } from "./brand";
 
 let demoUsers: any[] = [
   { id: "demo-user", email: "demo@thetrainstation.co", name: "Demo Member", phone: "(555) 987-6543", dailyReminderTime: "07:30" },
@@ -20,7 +21,7 @@ export async function getAdminContact() {
       id: "demo-contact", 
       email: "coach@thetrainstation.co", 
       phone: "(555) 123-4567",
-      calendlyUrl: "https://calendly.com/jeremy/15min" // TODO: will be replaced by real one via admin
+      calendlyUrl: COACH_CALENDLY_URL
     };
   }
   let contact = await prisma.adminContact.findFirst();

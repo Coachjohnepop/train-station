@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import MemberHomeEquipment from "@/components/MemberHomeEquipment";
+import { COACH_CALENDLY_URL } from "@/lib/brand";
 
 export default function OnboardingWizard() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -18,6 +19,8 @@ export default function OnboardingWizard() {
       })
       .catch(() => {});
   }, []);
+
+  const effectiveCalendly = calendlyUrl || COACH_CALENDLY_URL;
 
   const totalSteps = 4;
 
@@ -149,7 +152,7 @@ export default function OnboardingWizard() {
             </p>
             <div className="pt-4 space-y-3">
               <a
-                href={calendlyUrl || "https://calendly.com/jeremy/15min"}
+                href={effectiveCalendly}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-primary block text-center"

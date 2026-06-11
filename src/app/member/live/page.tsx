@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMemberDashboard } from "@/lib/member-context";
 import { getAdminContact } from "@/lib/booking";
+import { COACH_CALENDLY_URL } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,7 @@ export default async function MemberLivePage() {
   if (!data) notFound();
 
   const contact = await getAdminContact();
-  const calendly = (contact as any).calendlyUrl || "https://calendly.com/jeremy/15min";
+  const calendly = (contact as any).calendlyUrl || COACH_CALENDLY_URL;
   const canLive = data.access.canAccessFeature("live_sessions");
 
   return (
