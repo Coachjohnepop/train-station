@@ -104,7 +104,7 @@ export default async function LandingPage() {
           <p className="text-[#9d8ab8] mb-8 text-lg">Join the platform built for people who want more than another app.</p>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
             <Link href="/member" className="inline-flex h-12 items-center justify-center rounded-full bg-white px-9 text-sm font-semibold hover:bg-gray-100 transition-all hover:scale-[1.1]">
-              <span className="text-[#7c3aed]">Get started as a member</span>
+              <span style={{ color: '#7c3aed' }}>Get started as a member</span>
               Get started as a member
             </Link>
             <Link href="/join/questions" className="inline-flex h-12 items-center justify-center rounded-full bg-[#7c3aed] px-9 text-sm font-semibold text-white hover:bg-[#6d2dd6] transition-all hover:scale-[1.1]">
