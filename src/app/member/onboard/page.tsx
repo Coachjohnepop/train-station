@@ -2,10 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import MemberHomeEquipment from "@/components/MemberHomeEquipment";
 import { COACH_CALENDLY_URL } from "@/lib/brand";
 
 export default function OnboardingWizard() {
+  const searchParams = useSearchParams();
+  const programSlug = searchParams.get("program");
+
   const [currentStep, setCurrentStep] = useState(1);
   const [measurements, setMeasurements] = useState({ weight: "", notes: "" });
   const [completed, setCompleted] = useState(false);
@@ -42,6 +46,24 @@ export default function OnboardingWizard() {
     nextStep();
   };
 
+  const handleFinishSetup = async () => {
+    try {
+      await fetch('/api/onboard/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          measurements,
+          notes: measurements.notes,
+          calendlyOpened: true,
+          programSlug: programSlug || undefined,
+        }),
+      });
+    } catch (e) {
+      console.error('Failed to send onboarding notification', e);
+    }
+    setCompleted(true);
+  };
+
   if (completed) {
     return (
       <div className="max-w-md mx-auto p-6 text-center space-y-6">
@@ -49,6 +71,7 @@ export default function OnboardingWizard() {
         <h1 className="text-2xl font-bold">You're all set!</h1>
         <p className="text-[var(--muted)]">
           Welcome to the team. Your equipment, measurements, and first booking are ready.
+          A notification has been sent to the coach.
           Head to your dashboard to start training.
         </p>
         <Link href="/member" className="btn-primary inline-block">
@@ -165,7 +188,7 @@ export default function OnboardingWizard() {
             </div>
             <div className="flex gap-3 pt-4">
               <button onClick={prevStep} className="btn-ghost flex-1">Back</button>
-              <button onClick={nextStep} className="btn-primary flex-1">Finish setup</button>
+              <button onClick={handleFinishSetup} className="btn-primary flex-1">Finish setup</button>
             </div>
           </>
         )}

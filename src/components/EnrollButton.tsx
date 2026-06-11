@@ -21,7 +21,7 @@ export default function EnrollButton({
       });
       if (res.ok) {
         // After enrolling, send user into the guided onboarding wizard (step 2 from client feedback)
-        router.push('/member/onboard');
+        router.push(`/member/onboard?program=${slug}`);
       } else {
         const err = await res.json().catch(() => ({}));
         alert(err.detail || "Failed to enroll");
@@ -60,7 +60,7 @@ export default function EnrollButton({
           handleUnenroll();
         }}
         disabled={loading}
-        className="text-xs px-2.5 py-0.5 rounded border border-[var(--danger)]/70 text-[var(--danger)] hover:bg-[var(--danger)]/10 hover:border-[var(--danger)] transition disabled:opacity-50"
+        className="text-xs px-3 py-1 rounded border border-[var(--danger)]/70 text-[var(--danger)] hover:bg-[var(--danger)]/10 hover:border-[var(--danger)] transition disabled:opacity-50"
       >
         {loading ? "..." : "Unenroll"}
       </button>
@@ -74,9 +74,10 @@ export default function EnrollButton({
         handleEnroll();
       }}
       disabled={loading}
-      className="text-[10px] px-2.5 py-0.5 rounded bg-accent text-white font-medium hover:brightness-110 transition disabled:opacity-50"
+      className="member-set-btn text-base px-5 py-2 min-w-[140px] bg-accent text-white border-accent font-semibold active:scale-[0.96] hover:border-accent/70"
     >
-      {loading ? "..." : "Enroll & start setup"}
+      <span className="member-set-btn__num text-base">{loading ? "..." : "Start"}</span>
+      <span className="member-set-btn__label text-[10px] tracking-[0.5px]">Enroll & setup</span>
     </button>
   );
 }
