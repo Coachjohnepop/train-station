@@ -46,10 +46,10 @@ export default async function MemberDashboardPage() {
 
       {/* Top stratum: enrolled programs on left, metrics (with descriptions) , continue */}
       <div className="flex flex-col lg:flex-row gap-3 lg:gap-2 lg:items-stretch">
-        {/* Currently enrolled programs - on the left */}
+        {/* Enrolled section on the left (includes SMS reminders now) */}
         {enrollments.length > 0 && (
-          <div className="lg:w-64 lg:flex-shrink-0">
-            <div className="text-[10px] uppercase tracking-wide text-[var(--muted)] mb-1">Current enrolled classes</div>
+          <div className="lg:w-72 lg:flex-shrink-0">
+            <div className="text-sm font-medium mb-2">Enrolled</div>
             <div className="space-y-1">
               {enrollments.map((e) => (
                 <Link
@@ -62,11 +62,15 @@ export default async function MemberDashboardPage() {
                 </Link>
               ))}
             </div>
+            <div className="mt-4">
+              <MemberReminderSettings />
+            </div>
           </div>
         )}
 
         {/* Metrics — streak emphasized at top per client feedback ("your streak should be at the very top") */}
         <div className="flex-shrink-0 lg:w-48">
+          <div className="text-sm font-medium mb-2">Metrics</div>
           <div className="flex flex-col gap-2">
             {/* Streak first + slightly stronger visual */}
             <div className="card flex flex-col items-center text-center py-2.5 px-3 ring-1 ring-accent/30">
@@ -95,7 +99,7 @@ export default async function MemberDashboardPage() {
         {/* Continue training - supports doing workouts + eating + yoga in parallel. */}
         {(activeContinues && activeContinues.length > 0) || (continueUrl && continueLabel) ? (
           <div className="flex-1">
-            <div className="text-[10px] uppercase tracking-wide text-[var(--muted)] mb-1">Continue (independent per program)</div>
+            <div className="text-sm font-medium mb-2">Continue Per Program</div>
             {activeContinues && activeContinues.length > 0 ? (
               <div className="flex flex-col gap-1.5">
                 {activeContinues.map((c: any, idx: number) => (
@@ -116,8 +120,6 @@ export default async function MemberDashboardPage() {
           </div>
         ) : null}
       </div>
-
-      <MemberReminderSettings />
 
       {/* Collapsible strength explanation (keeps page shorter for new-user review / reduces doom scroll) */}
       <details className="group mb-2">
