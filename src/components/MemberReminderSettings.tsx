@@ -12,7 +12,7 @@ export default function MemberReminderSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [isOpen, setIsOpen] = useState(true); // collapsible like home equipment
+  const [isOpen, setIsOpen] = useState(false); // collapsed by default (users set this in signup wizard)
 
   async function load() {
     setLoading(true);
@@ -69,25 +69,25 @@ export default function MemberReminderSettings() {
   }, []);
 
   if (loading) {
-    return <div className="card text-xs p-3 bg-[var(--surface-2)]">Loading SMS settings...</div>;
+    return <div className="card text-xs p-3 bg-[var(--bg)] border border-[var(--accent)]/40">Loading SMS settings...</div>;
   }
 
   return (
-    <div className="card text-xs p-3 bg-[var(--surface-2)] space-y-2">
+    <div className="card text-xs p-3 bg-[var(--bg)] border border-[var(--accent)]/40 space-y-2">
       <div
-        className="font-medium flex items-center justify-between cursor-pointer select-none"
+        className="font-medium flex items-center justify-between cursor-pointer select-none bg-white text-[#7c3aed] px-2 py-1 rounded-md"
         onClick={() => setIsOpen(!isOpen)}
       >
         <span>
           SMS Reminders &amp; Contact
           {settings.dailyReminderTime && (
-            <span className="ml-1 text-[var(--muted)]">
+            <span className="ml-1 text-[#7c3aed]/70">
               — {settings.dailyReminderTime}
               {settings.phone && " • phone set"}
             </span>
           )}
         </span>
-        <span className="text-[var(--muted)]">{isOpen ? "−" : "+"}</span>
+        <span className="text-[#7c3aed]">{isOpen ? "−" : "+"}</span>
         {message && <span className="text-[var(--success)] text-[10px]">{message}</span>}
       </div>
 
@@ -107,13 +107,21 @@ export default function MemberReminderSettings() {
 
           <div>
             <label className="block text-[10px] text-[var(--muted)] mb-0.5">Daily reminder time (24h)</label>
-            <input
-              type="time"
-              value={settings.dailyReminderTime || ""}
-              onChange={(e) => handleChange("dailyReminderTime", e.target.value)}
-              disabled={saving}
-              className="input text-sm w-full"
-            />
+            <div className="relative">
+              <input
+                type="time"
+                value={settings.dailyReminderTime || ""}
+                onChange={(e) => handleChange("dailyReminderTime", e.target.value)}
+                disabled={saving}
+                className="input text-sm w-full pr-9 cursor-pointer hover:border-[#7c3aed] transition-colors"
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[#7c3aed] pointer-events-none">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+              </div>
+            </div>
             <div className="text-[10px] text-[var(--muted)] mt-0.5">
               Reminders will include a direct link to that day&apos;s workout.
             </div>
