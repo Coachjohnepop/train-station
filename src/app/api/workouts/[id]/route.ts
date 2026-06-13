@@ -30,11 +30,20 @@ export async function GET(_request: Request, { params }: Params) {
     const data = loadSeed();
     const w = (data.workouts || []).find((ww: any) => ww.id === id);
     if (!w) {
-      return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
+      // Support newly created workouts (unique IDs from POST in demo)
+      return NextResponse.json({ id, name: "New Workout", description: null, exercises: [] });
     }
     const items = (data.workoutExercises || [])
       .filter((we: any) => we.workoutId === id)
-      .sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+      .sort((a: any, b: any) => {
+        const aEx = (data.exercises || []).find((e: any) => e.id === a.exerciseId);
+        const bEx = (data.exercises || []).find((e: any) => e.id === b.exerciseId);
+        const aIsWarm = /warm/i.test(aEx?.name || "");
+        const bIsWarm = /warm/i.test(bEx?.name || "");
+        if (aIsWarm && !bIsWarm) return -1;
+        if (!aIsWarm && bIsWarm) return 1;
+        return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+      })
       .map((we: any) => {
         const ex = (data.exercises || []).find((e: any) => e.id === we.exerciseId);
         return {

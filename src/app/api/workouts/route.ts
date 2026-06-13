@@ -53,11 +53,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
   }
   if (isDemoMode()) {
-    // Return a stub so redirect works; use a real seed workout id for the builder to load
-    const data = loadSeed();
-    const first = (data.workouts || [])[0];
+    // Return a unique ID for new workout creation so we can support fresh ones with auto warm-ups
+    const newId = `new-w-${Date.now()}`;
     return NextResponse.json(
-      { id: first?.id || "demo-w", name: parsed.data.name.trim(), description: parsed.data.description?.trim() || null },
+      { id: newId, name: parsed.data.name.trim(), description: parsed.data.description?.trim() || null },
       { status: 201 },
     );
   }

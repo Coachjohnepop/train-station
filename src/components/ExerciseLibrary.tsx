@@ -140,6 +140,110 @@ function ExerciseVideoCell({
   );
 }
 
+function ExerciseNameCell({
+  exercise,
+  onSaved,
+}: {
+  exercise: Exercise;
+  onSaved: () => Promise<void>;
+}) {
+  const [draft, setDraft] = useState(exercise.name);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [cellError, setCellError] = useState<string | null>(null);
+
+  async function save() {
+    const trimmed = draft.trim();
+    if (!trimmed) {
+      setCellError("Name is required.");
+      return;
+    }
+    setCellError(null);
+    setSaving(true);
+    const res = await fetch(`/api/exercises/${exercise.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmed }),
+    });
+    setSaving(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setCellError(formatApiError((body as { detail?: unknown }).detail));
+      return;
+    }
+    setEditing(false);
+    await onSaved();
+  }
+
+  if (!editing) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="font-medium">{exercise.name}</span>
+        <button
+          type="button"
+          className="text-xs text-[var(--muted)] hover:text-[var(--text)]"
+          onClick={() => {
+            setDraft(exercise.name);
+            setEditing(true);
+          }}
+        >
+          Edit
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-w-[200px] space-y-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          className="input min-w-0 flex-1 py-1 text-sm"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          aria-label={`Name for ${exercise.name}`}
+        />
+        <button
+          type="button"
+          className="btn-primary shrink-0 px-3 py-1 text-xs"
+          disabled={saving}
+          onClick={() => void save()}
+        >
+          {saving ? "Saving…" : "Save"}
+        </button>
+      </div>
+      <div className="flex items-center gap-3 text-xs">
+        <button
+          type="button"
+          className="text-accent hover:underline"
+          onClick={() => {
+            setDraft(exercise.name);
+            setCellError(null);
+          }}
+        >
+          Revert to original
+        </button>
+        <span className="text-[var(--muted)]">Original: {exercise.name}</span>
+        <button
+          type="button"
+          className="text-[var(--muted)] hover:text-[var(--text)]"
+          onClick={() => {
+            setDraft(exercise.name);
+            setEditing(false);
+            setCellError(null);
+          }}
+        >
+          Cancel
+        </button>
+      </div>
+      {cellError && (
+        <p className="text-xs text-[var(--danger)]" role="alert">
+          {cellError}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function ExerciseLibrary() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [name, setName] = useState("");
@@ -303,7 +407,9 @@ export default function ExerciseLibrary() {
             <tbody>
               {exercises.map((ex) => (
                 <tr key={ex.id}>
-                  <td className="align-top font-medium">{ex.name}</td>
+                  <td className="align-top">
+                    <ExerciseNameCell exercise={ex} onSaved={load} />
+                  </td>
                   <td className="max-w-xs align-top text-sm text-[var(--muted)]">
                     {ex.description ? (
                       <span className="line-clamp-3">{ex.description}</span>
