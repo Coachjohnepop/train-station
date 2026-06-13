@@ -211,17 +211,30 @@ function ExerciseNameCell({
           {saving ? "Saving…" : "Save"}
         </button>
       </div>
-      <button
-        type="button"
-        className="text-xs text-[var(--muted)] hover:text-[var(--text)]"
-        onClick={() => {
-          setDraft(exercise.name);
-          setEditing(false);
-          setCellError(null);
-        }}
-      >
-        Cancel
-      </button>
+      <div className="flex items-center gap-3 text-xs">
+        <button
+          type="button"
+          className="text-accent hover:underline"
+          onClick={() => {
+            setDraft(exercise.name);
+            setCellError(null);
+          }}
+        >
+          Revert to original
+        </button>
+        <span className="text-[var(--muted)]">Original: {exercise.name}</span>
+        <button
+          type="button"
+          className="text-[var(--muted)] hover:text-[var(--text)]"
+          onClick={() => {
+            setDraft(exercise.name);
+            setEditing(false);
+            setCellError(null);
+          }}
+        >
+          Cancel
+        </button>
+      </div>
       {cellError && (
         <p className="text-xs text-[var(--danger)]" role="alert">
           {cellError}
