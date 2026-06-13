@@ -141,6 +141,7 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
       if (warmUps.length === 0) return;
 
       (async () => {
+        // Attempt to persist via API (works for real DB; demo returns fake)
         for (const ex of warmUps) {
           try {
             await saveExerciseConfig(ex.id, {
@@ -155,7 +156,23 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
             // non-fatal
           }
         }
-        await load();
+        // For demo new workouts (where GET doesn't persist the added items), update local state directly
+        // so the warm-ups appear immediately in the UI. Real DB will have them on next load.
+        setWorkout((prev) => {
+          if (!prev) return prev;
+          const newItems = warmUps.map((ex, idx) => ({
+            id: "auto-warm-" + Date.now() + "-" + idx,
+            sortOrder: idx,
+            setScheme: "reps",
+            repPattern: null,
+            reps: "10",
+            sets: 1,
+            weightTier: "light",
+            notes: "Warm up - easy pace",
+            exercise: ex,
+          }));
+          return { ...prev, exercises: newItems };
+        });
       })();
     }
   }, [workout, library, load, saveExerciseConfig]);
