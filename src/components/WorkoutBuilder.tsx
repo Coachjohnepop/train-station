@@ -145,7 +145,7 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
         for (const ex of warmUps) {
           try {
             await saveExerciseConfig(ex.id, {
-              setScheme: "reps",
+              setScheme: "standard",
               repPattern: null,
               reps: "10",
               setCount: 1,
@@ -163,7 +163,7 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
           const newItems = warmUps.map((ex, idx) => ({
             id: "auto-warm-" + Date.now() + "-" + idx,
             sortOrder: idx,
-            setScheme: "reps",
+            setScheme: "standard",
             repPattern: null,
             reps: "10",
             sets: 1,
