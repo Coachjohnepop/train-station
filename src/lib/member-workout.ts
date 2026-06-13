@@ -24,13 +24,21 @@ export async function getMemberWorkoutById(
   const workout = (data.workouts || []).find((w: any) => w.id === workoutId);
   if (!workout) return null;
 
-  const we = (data.workoutExercises || [])
-    .filter((item: any) => item.workoutId === workoutId)
-    .sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0));
-
   const exById: Record<string, any> = Object.fromEntries(
     (data.exercises || []).map((e: any) => [e.id, e])
   );
+
+  const we = (data.workoutExercises || [])
+    .filter((item: any) => item.workoutId === workoutId)
+    .sort((a: any, b: any) => {
+      const aName = (exById[a.exerciseId] || {}).name || "";
+      const bName = (exById[b.exerciseId] || {}).name || "";
+      const aIsWarm = /warm/i.test(aName);
+      const bIsWarm = /warm/i.test(bName);
+      if (aIsWarm && !bIsWarm) return -1;
+      if (!aIsWarm && bIsWarm) return 1;
+      return (a.sortOrder || 0) - (b.sortOrder || 0);
+    });
 
   const exercises = we.map((item: any) => {
     const ex = exById[item.exerciseId] || {};
