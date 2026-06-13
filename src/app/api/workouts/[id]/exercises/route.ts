@@ -43,6 +43,30 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
   }
 
+  if (isDemoMode()) {
+    // Demo: pretend it saved (no persistence for workout items in demo mode).
+    // Importantly, do this BEFORE any Prisma calls so new-w-* IDs and dummy DB don't crash.
+    const data = loadSeed();
+    const ex = (data.exercises || []).find((e: any) => e.id === parsed.data.exerciseId);
+    // Use a simple sortOrder for demo (the client-side synthetic list in builder will control display order for new workouts anyway)
+    const fakeItem = {
+      id: "demo-we-" + Date.now(),
+      workoutId,
+      exerciseId: parsed.data.exerciseId,
+      sortOrder: 0,
+      setScheme: parsed.data.setScheme,
+      repPattern: parsed.data.repPattern ?? null,
+      reps: parsed.data.reps ?? null,
+      weightTier: parsed.data.weightTier,
+      sets: parsed.data.sets,
+      restSec: parsed.data.restSec ?? null,
+      notes: parsed.data.notes ?? null,
+      exercise: ex || { id: parsed.data.exerciseId, name: "Exercise" },
+    };
+    return NextResponse.json(fakeItem, { status: 201 });
+  }
+
+  // Real DB path only
   const maxOrder = await prisma.workoutExercise.aggregate({
     where: { workoutId },
     _max: { sortOrder: true },
@@ -63,27 +87,6 @@ export async function POST(request: Request, { params }: Params) {
   });
   if (!workout) {
     return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
-  }
-
-  if (isDemoMode()) {
-    // Demo: pretend it saved (no persistence for workout items in demo mode)
-    const data = loadSeed();
-    const ex = (data.exercises || []).find((e: any) => e.id === parsed.data.exerciseId);
-    const fakeItem = {
-      id: "demo-we-" + Date.now(),
-      workoutId,
-      exerciseId: parsed.data.exerciseId,
-      sortOrder,
-      setScheme: parsed.data.setScheme,
-      repPattern: parsed.data.repPattern ?? null,
-      reps: parsed.data.reps ?? null,
-      weightTier: parsed.data.weightTier,
-      sets: parsed.data.sets,
-      restSec: parsed.data.restSec ?? null,
-      notes: parsed.data.notes ?? null,
-      exercise: ex || { id: parsed.data.exerciseId, name: "Exercise" },
-    };
-    return NextResponse.json(fakeItem, { status: 201 });
   }
 
   try {
