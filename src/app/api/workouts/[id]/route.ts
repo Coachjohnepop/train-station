@@ -30,7 +30,8 @@ export async function GET(_request: Request, { params }: Params) {
     const data = loadSeed();
     const w = (data.workouts || []).find((ww: any) => ww.id === id);
     if (!w) {
-      return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
+      // Support newly created workouts (unique IDs from POST in demo)
+      return NextResponse.json({ id, name: "New Workout", description: null, exercises: [] });
     }
     const items = (data.workoutExercises || [])
       .filter((we: any) => we.workoutId === id)

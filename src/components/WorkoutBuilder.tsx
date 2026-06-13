@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ExerciseCascadePicker, {
   type WorkoutExerciseConfig,
 } from "@/components/ExerciseCascadePicker";
@@ -45,6 +45,7 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
   const [pickId, setPickId] = useState("");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const autoAddedRef = useRef(false);
 
   const load = useCallback(async () => {
     const [wRes, eRes] = await Promise.all([
@@ -122,6 +123,42 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
     }
     await load();
   }
+
+  // Auto-add standard warm-ups when a brand new workout is created with zero exercises.
+  // This ensures warm-ups are always the first steps for any new workout (per client request).
+  // Runs only once per empty workout load.
+  useEffect(() => {
+    if (
+      workout &&
+      workout.exercises.length === 0 &&
+      library.length > 0 &&
+      !autoAddedRef.current
+    ) {
+      autoAddedRef.current = true;
+      const warmUps = library
+        .filter((e) => /warm|mobility/i.test(e.name))
+        .slice(0, 3);
+      if (warmUps.length === 0) return;
+
+      (async () => {
+        for (const ex of warmUps) {
+          try {
+            await saveExerciseConfig(ex.id, {
+              setScheme: "reps",
+              repPattern: null,
+              reps: "10",
+              setCount: 1,
+              weightTier: "light",
+              notes: "Warm up - easy pace",
+            });
+          } catch {
+            // non-fatal
+          }
+        }
+        await load();
+      })();
+    }
+  }, [workout, library, load, saveExerciseConfig]);
 
   if (!workout) {
     return <p className="text-[var(--muted)]">Loading workout…</p>;
