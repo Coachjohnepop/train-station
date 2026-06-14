@@ -1,4 +1,3 @@
-import ExerciseHowTo from "@/components/ExerciseHowTo";
 import ExerciseLibrary from "@/components/ExerciseLibrary";
 
 export default function ExercisesAdminPage() {
@@ -10,8 +9,7 @@ export default function ExercisesAdminPage() {
         exercise when you add it to a workout.
       </p>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(280px,340px)_1fr]">
-        <ExerciseHowTo />
+      <div className="mt-8">
         <ExerciseLibrary />
       </div>
     </div>

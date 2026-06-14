@@ -285,6 +285,9 @@ export default function ExerciseLibrary() {
   const [detailedUsage, setDetailedUsage] = useState<ExerciseUsage | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
 
+  // Collapsible instructions (collapsed by default to save real estate)
+  const [showInstructions, setShowInstructions] = useState(false);
+
   // Search and categories (P1 from transcript: "search... type in back and boom" + categories "like we did before")
   const [search, setSearch] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -533,6 +536,66 @@ export default function ExerciseLibrary() {
           Add to library
         </button>
       </form>
+
+      {/* Collapsible "Exercise Library" instructions - starts collapsed to save real estate.
+          Large triangle (▶) indicating you can expand the words "Exercise Library".
+          The instructions fold out below when expanded.
+          Placed just above the search layer. */}
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={() => setShowInstructions(!showInstructions)}
+          className="flex items-center gap-2 text-xl font-semibold tracking-tight hover:text-accent"
+        >
+          <span className={`text-3xl leading-none transition-transform ${showInstructions ? 'rotate-90' : ''}`}>▶</span>
+          Exercise Library
+        </button>
+        {showInstructions && (
+          <div className="mt-3 pl-9 text-sm text-[var(--muted)] space-y-3">
+            <p>
+              Each movement has a name, optional description, and optional demo
+              video. Reuse the same exercise in any workout.
+            </p>
+
+            <ol className="space-y-3">
+              <li className="flex gap-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] text-[10px] font-bold">1</span>
+                <div>
+                  <p className="font-medium text-[var(--text)]">Name the movement</p>
+                  <p className="text-xs">e.g. <em>Back Squat</em> — required.</p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] text-[10px] font-bold">2</span>
+                <div>
+                  <p className="font-medium text-[var(--text)]">Description (optional)</p>
+                  <p className="text-xs">A short summary members can read in the library context.</p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] text-[10px] font-bold">3</span>
+                <div>
+                  <p className="font-medium text-[var(--text)]">Add a demo video (optional)</p>
+                  <p className="text-xs">YouTube or other link — members can watch without leaving the workout.</p>
+                </div>
+              </li>
+            </ol>
+
+            <p className="text-xs">
+              <strong className="text-[var(--text)]">Programming lives in workouts:</strong>{" "}
+              set approach, sets or timed duration, weight tier, and coaching notes
+              are set under{" "}
+              <strong className="text-[var(--text)]">Admin → Workouts</strong> when you
+              add each exercise.
+            </p>
+
+            <p className="text-xs">
+              The library table now shows where each exercise is scheduled (programs + specific days).
+              Click “View details” on any row for the full breakdown and direct links.
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* Search + Category filters (P1 from transcript) */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
