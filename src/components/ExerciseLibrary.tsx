@@ -11,6 +11,31 @@ type Exercise = {
   videoUrl: string | null;
 };
 
+type UsageSummary = {
+  programCount: number;
+  workoutCount: number;
+  programs: Array<{ name: string; slug: string }>;
+};
+
+type ExerciseUsage = {
+  exerciseId: string;
+  programCount: number;
+  workoutCount: number;
+  programs: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    workoutCount: number;
+    references: Array<{
+      workoutId: string;
+      workoutName: string;
+      label: string;
+      week: number;
+      day: number;
+    }>;
+  }>;
+};
+
 function FieldLabel({
   htmlFor,
   label,
@@ -245,7 +270,11 @@ function ExerciseNameCell({
 }
 
 export default function ExerciseLibrary() {
+  console.log('%c[DEBUG] ExerciseLibrary loaded with Programs column v2', 'color: limegreen; font-weight: bold');
+  console.log('%c[DEBUG] Current usages state will be logged after fetch', 'color: orange');
+
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [usages, setUsages] = useState<Record<string, UsageSummary>>({});
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -253,19 +282,52 @@ export default function ExerciseLibrary() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+  const [detailedUsage, setDetailedUsage] = useState<ExerciseUsage | null>(null);
+  const [modalLoading, setModalLoading] = useState(false);
+
   const load = useCallback(async () => {
-    const res = await fetch("/api/exercises");
-    if (!res.ok) {
+    setLoading(true);
+    const [exRes, usageRes] = await Promise.all([
+      fetch("/api/exercises"),
+      fetch("/api/exercises/usage"),
+    ]);
+
+    if (!exRes.ok) {
       setLoading(false);
       return;
     }
-    setExercises(await res.json());
+    const exs = await exRes.json();
+    setExercises(exs);
+
+    if (usageRes.ok) {
+      setUsages(await usageRes.json());
+    }
     setLoading(false);
   }, []);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  async function openUsage(ex: Exercise) {
+    setSelectedExercise(ex);
+    setDetailedUsage(null);
+    setModalLoading(true);
+    try {
+      const res = await fetch(`/api/exercises/${ex.id}/usage`);
+      if (res.ok) {
+        setDetailedUsage(await res.json());
+      }
+    } finally {
+      setModalLoading(false);
+    }
+  }
+
+  function closeUsage() {
+    setSelectedExercise(null);
+    setDetailedUsage(null);
+  }
 
   async function handleAdd(e: FormEvent) {
     e.preventDefault();
@@ -401,40 +463,148 @@ export default function ExerciseLibrary() {
                 <th>Name</th>
                 <th>Description</th>
                 <th>Video</th>
+                <th style={{ backgroundColor: '#fef08c', fontWeight: 'bold' }}>Programs (NEW COLUMN)</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {exercises.map((ex) => (
-                <tr key={ex.id}>
-                  <td className="align-top">
-                    <ExerciseNameCell exercise={ex} onSaved={load} />
-                  </td>
-                  <td className="max-w-xs align-top text-sm text-[var(--muted)]">
-                    {ex.description ? (
-                      <span className="line-clamp-3">{ex.description}</span>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className="align-top">
-                    <ExerciseVideoCell exercise={ex} onSaved={load} />
-                  </td>
-                  <td className="align-top">
-                    <button
-                      type="button"
-                      className="text-sm text-[var(--danger)]"
-                      onClick={() => remove(ex.id, ex.name)}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {exercises.map((ex) => {
+                const u = usages[ex.id];
+                return (
+                  <tr key={ex.id}>
+                    <td className="align-top">
+                      <ExerciseNameCell exercise={ex} onSaved={load} />
+                    </td>
+                    <td className="max-w-xs align-top text-sm text-[var(--muted)]">
+                      {ex.description ? (
+                        <span className="line-clamp-3">{ex.description}</span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="align-top">
+                      <ExerciseVideoCell exercise={ex} onSaved={load} />
+                    </td>
+                    <td className="align-top text-xs">
+                      {u && u.programs.length > 0 ? (
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap gap-1">
+                            {u.programs.map((p) => (
+                              <a
+                                key={p.slug}
+                                href={`/admin/programs/${p.slug}`}
+                                className="rounded bg-accent-muted px-1.5 py-0.5 text-[10px] text-accent hover:underline"
+                                title={`View ${p.name} program`}
+                              >
+                                {p.name}
+                              </a>
+                            ))}
+                          </div>
+                          <div className="text-[var(--muted)] text-[10px]">
+                            {u.programCount} program{u.programCount === 1 ? "" : "s"} • {u.workoutCount} workout{u.workoutCount === 1 ? "" : "s"}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => openUsage(ex)}
+                            className="text-accent hover:underline text-[10px]"
+                          >
+                            View full usage →
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[var(--muted)] text-[10px]">Not in any programs</span>
+                      )}
+                    </td>
+                    <td className="align-top">
+                      <button
+                        type="button"
+                        className="text-sm text-[var(--danger)]"
+                        onClick={() => remove(ex.id, ex.name)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
+
+      {/* Usage details modal */}
+      {selectedExercise && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={closeUsage}>
+          <div
+            className="card w-full max-w-2xl max-h-[85vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-xl font-semibold">Where “{selectedExercise.name}” is used</h3>
+                <p className="text-sm text-[var(--muted)] mt-0.5">
+                  This helps when reviewing or cleaning up the library.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeUsage}
+                className="text-[var(--muted)] hover:text-[var(--text)] text-2xl leading-none"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            {modalLoading ? (
+              <p className="mt-6 text-[var(--muted)]">Loading usage…</p>
+            ) : detailedUsage && detailedUsage.programs.length > 0 ? (
+              <div className="mt-6 space-y-6">
+                {detailedUsage.programs.map((prog) => (
+                  <div key={prog.id} className="border border-[var(--border)] rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <a
+                        href={`/admin/programs/${prog.slug}`}
+                        className="font-semibold text-lg hover:underline text-accent"
+                      >
+                        {prog.name}
+                      </a>
+                      <span className="text-xs bg-accent-muted text-accent px-2 py-0.5 rounded">
+                        {prog.workoutCount} workout{prog.workoutCount === 1 ? "" : "s"}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 space-y-1 text-sm">
+                      {prog.references.map((ref, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-[var(--muted)]">
+                          <a
+                            href={`/admin/workouts/${ref.workoutId}`}
+                            className="text-accent hover:underline font-medium"
+                          >
+                            {ref.workoutName}
+                          </a>
+                          <span>·</span>
+                          <span>
+                            W{ref.week} D{ref.day} ({ref.label})
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-6 text-[var(--muted)]">
+                This exercise is not currently scheduled in any program (it may still be in standalone workouts).
+              </p>
+            )}
+
+            <div className="mt-6 pt-4 border-t border-[var(--border)] text-xs text-[var(--muted)]">
+              Tip: Click a program or workout name to jump directly to it in the admin.
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
