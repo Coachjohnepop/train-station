@@ -360,7 +360,11 @@ export default function ExerciseLibrary() {
   }
 
   async function remove(id: string, exerciseName: string) {
-    if (!confirm(`Delete “${exerciseName}” from the library?`)) return;
+    const u = usages[id];
+    const usageNote = u && u.programCount > 0
+      ? ` (used in ${u.programCount} program${u.programCount === 1 ? "" : "s"} / ${u.workoutCount} workout${u.workoutCount === 1 ? "" : "s"} — it will be removed from those workouts)`
+      : "";
+    if (!confirm(`Delete “${exerciseName}” from the library?${usageNote}`)) return;
     await fetch(`/api/exercises/${id}`, { method: "DELETE" });
     setMessage(null);
     await load();

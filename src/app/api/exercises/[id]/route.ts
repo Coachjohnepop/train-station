@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import fs from "fs";
+import path from "path";
 import {
   isDemoMode,
   loadDemoExercises,
   saveDemoExercises,
 } from "@/lib/demo-exercises";
+
+const SEED_FILE = path.join(process.cwd(), "prisma", "seed-data.json");
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -73,6 +77,23 @@ export async function DELETE(_request: Request, { params }: Params) {
     }
     list.splice(idx, 1);
     saveDemoExercises(list);
+
+    // Clean references: remove any workoutExercise entries that pointed to this exercise.
+    // This ensures the exercise truly disappears from scheduled workouts (no more "Unknown" rows).
+    // Matches the transcript complaint where deletes left things behind and editing felt broken.
+    try {
+      const seed = JSON.parse(fs.readFileSync(SEED_FILE, "utf8"));
+      if (seed.workoutExercises) {
+        const before = seed.workoutExercises.length;
+        seed.workoutExercises = seed.workoutExercises.filter((we: any) => we.exerciseId !== id);
+        if (seed.workoutExercises.length !== before) {
+          fs.writeFileSync(SEED_FILE, JSON.stringify(seed, null, 2));
+        }
+      }
+    } catch (e) {
+      console.error("Failed to prune workoutExercises after exercise delete", e);
+    }
+
     return new NextResponse(null, { status: 204 });
   }
   try {
