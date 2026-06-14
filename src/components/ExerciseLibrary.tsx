@@ -270,9 +270,6 @@ function ExerciseNameCell({
 }
 
 export default function ExerciseLibrary() {
-  console.log('%c[DEBUG] ExerciseLibrary loaded with Programs column v2', 'color: limegreen; font-weight: bold');
-  console.log('%c[DEBUG] Current usages state will be logged after fetch', 'color: orange');
-
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [usages, setUsages] = useState<Record<string, UsageSummary>>({});
   const [name, setName] = useState("");
@@ -463,7 +460,7 @@ export default function ExerciseLibrary() {
                 <th>Name</th>
                 <th>Description</th>
                 <th>Video</th>
-                <th style={{ backgroundColor: '#fef08c', fontWeight: 'bold' }}>Programs (NEW COLUMN)</th>
+                <th>Programs</th>
                 <th></th>
               </tr>
             </thead>
