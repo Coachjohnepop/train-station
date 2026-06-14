@@ -521,7 +521,7 @@ export default function ExerciseLibrary() {
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
+              <div className="md:col-span-2">
                 <FieldLabel
                   htmlFor="ex-name"
                   label="Exercise name"
@@ -540,35 +540,20 @@ export default function ExerciseLibrary() {
 
               <div>
                 <FieldLabel
-                  htmlFor="ex-tags"
-                  label="Categories / Tags"
-                  hint="Comma-separated e.g. Legs, Back, Strength."
-                />
-                <input
-                  id="ex-tags"
-                  className="input py-1.5 text-sm"
-                  placeholder="Legs, Back, Core"
-                  value={tags}
-                  onChange={(e) => setTags(e.target.value)}
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <FieldLabel
                   htmlFor="ex-desc"
                   label="Description"
                   hint="Short overview of the movement. Optional."
                 />
                 <textarea
                   id="ex-desc"
-                  className="input py-1.5 text-sm min-h-[60px] resize-y"
+                  className="input py-1.5 text-sm min-h-[80px] resize-y"
                   placeholder="e.g. Barbell squat targeting quads and glutes…"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                 />
               </div>
 
-              <div className="md:col-span-2">
+              <div>
                 <FieldLabel
                   htmlFor="ex-video"
                   label="Demo video link"
@@ -583,6 +568,21 @@ export default function ExerciseLibrary() {
                   placeholder="https://www.youtube.com/watch?v=…"
                   value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <FieldLabel
+                  htmlFor="ex-tags"
+                  label="Categories / Tags"
+                  hint="Comma-separated e.g. Legs, Back, Strength."
+                />
+                <input
+                  id="ex-tags"
+                  className="input py-1.5 text-sm"
+                  placeholder="Legs, Back, Core"
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
                 />
               </div>
             </div>
