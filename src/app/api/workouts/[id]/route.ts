@@ -3,14 +3,16 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import fs from "fs";
 import path from "path";
+import { loadDemoExercises } from "@/lib/demo-exercises";
 
 const SEED_FILE = path.join(process.cwd(), "prisma", "seed-data.json");
-let seedCache: any = null;
+
+// Always re-read the file in demo mode. This ensures that when admin exercise
+// mutations (via saveDemoExercises) write updates back into seed-data.json,
+// subsequent requests (e.g. loading a workout to see the new exercise names)
+// pick up the change in the same dev server process without requiring a restart.
 function loadSeed() {
-  if (!seedCache) {
-    seedCache = JSON.parse(fs.readFileSync(SEED_FILE, "utf8"));
-  }
-  return seedCache;
+  return JSON.parse(fs.readFileSync(SEED_FILE, "utf8"));
 }
 function isDemoMode() {
   const url = process.env.DATABASE_URL ?? "";
@@ -33,11 +35,17 @@ export async function GET(_request: Request, { params }: Params) {
       // Support newly created workouts (unique IDs from POST in demo)
       return NextResponse.json({ id, name: "New Workout", description: null, exercises: [] });
     }
+
+    // Use loadDemoExercises() so that names edited (and saved) via the Exercise Library
+    // are immediately visible here. The library updates exercises.dev.json (and now also
+    // syncs seed-data.json), and this lookup now pulls from the live demo list.
+    const exList = loadDemoExercises();
+
     const items = (data.workoutExercises || [])
       .filter((we: any) => we.workoutId === id)
       .sort((a: any, b: any) => {
-        const aEx = (data.exercises || []).find((e: any) => e.id === a.exerciseId);
-        const bEx = (data.exercises || []).find((e: any) => e.id === b.exerciseId);
+        const aEx = exList.find((e: any) => e.id === a.exerciseId);
+        const bEx = exList.find((e: any) => e.id === b.exerciseId);
         const aIsWarm = /warm/i.test(aEx?.name || "");
         const bIsWarm = /warm/i.test(bEx?.name || "");
         if (aIsWarm && !bIsWarm) return -1;
@@ -45,7 +53,7 @@ export async function GET(_request: Request, { params }: Params) {
         return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
       })
       .map((we: any) => {
-        const ex = (data.exercises || []).find((e: any) => e.id === we.exerciseId);
+        const ex = exList.find((e: any) => e.id === we.exerciseId);
         return {
           id: we.id,
           sortOrder: we.sortOrder,

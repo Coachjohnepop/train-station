@@ -1,14 +1,12 @@
 import fs from "fs";
 import path from "path";
 
-let seedData: any = null;
-
+// Always re-read the file (no in-memory cache) in demo. Ensures that when admin
+// content edits (exercises, later workouts) write back to seed-data.json, the
+// program schedule views pick up the fresh data on the next request.
 function loadSeed() {
-  if (!seedData) {
-    const p = path.join(process.cwd(), "prisma/seed-data.json");
-    seedData = JSON.parse(fs.readFileSync(p, "utf8"));
-  }
-  return seedData;
+  const p = path.join(process.cwd(), "prisma/seed-data.json");
+  return JSON.parse(fs.readFileSync(p, "utf8"));
 }
 
 export async function listPrograms() {

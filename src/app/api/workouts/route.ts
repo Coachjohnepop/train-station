@@ -5,12 +5,11 @@ import fs from "fs";
 import path from "path";
 
 const SEED_FILE = path.join(process.cwd(), "prisma", "seed-data.json");
-let seedCache: any = null;
+
+// Always re-read so that any admin-driven writes back to seed-data.json are visible
+// immediately (consistent with the other demo loaders).
 function loadSeed() {
-  if (!seedCache) {
-    seedCache = JSON.parse(fs.readFileSync(SEED_FILE, "utf8"));
-  }
-  return seedCache;
+  return JSON.parse(fs.readFileSync(SEED_FILE, "utf8"));
 }
 function isDemoMode() {
   const url = process.env.DATABASE_URL ?? "";

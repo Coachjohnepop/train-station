@@ -41,6 +41,21 @@ export function saveDemoExercises(list: any[]) {
   } catch (e) {
     console.error("Failed to persist demo exercises", e);
   }
+
+  // Sync the updated list into seed-data.json's top-level "exercises" array.
+  // This is the key fix for the #1 customer issue:
+  // - Name edits now appear in all workout exercise lists (because many loaders resolve names
+  //   by looking up in seed.exercises at request time).
+  // - Deletes remove the exercise from the canonical snapshot too.
+  // - After local edits, the seed-data.json on disk reflects the coach's changes and can be
+  //   committed (as required by CLAUDE.md / DEPLOY.md) so the next Vercel deploy has the new data.
+  try {
+    const seed = JSON.parse(fs.readFileSync(SEED_FILE, "utf8"));
+    seed.exercises = list.map((e: any) => ({ ...e }));
+    fs.writeFileSync(SEED_FILE, JSON.stringify(seed, null, 2));
+  } catch (e) {
+    console.error("Failed to sync updated exercises into seed-data.json", e);
+  }
 }
 
 export function createDemoExerciseId(): string {

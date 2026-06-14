@@ -30,6 +30,8 @@ See:
 
 This note is here so future steps (or a future session) do not forget the data snapshot step when "we get there."
 
+**June 13 2026 customer (Jeremy) admin review feedback**: The latest recording + transcript is analyzed in `JUN13_CUSTOMER_REVIEW_ACTION_PLAN.md`. Primary pain: exercise name edits and deletes (plus workout exercise remove/edit) made via the admin do not reliably propagate or persist in demo mode because of the split between `exercises.dev.json` / seed-data.json snapshot + limited demo mutation support for workoutExercises. Address P0 items there before further polish or publish. Always commit the json data files after coach content changes.
+
 ---
 
 ## Other quick notes

@@ -5,16 +5,15 @@ import { getDemoPastsForWorkoutExercises } from "@/lib/demo-logs";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { prisma } from "@/lib/prisma";
 import { resolveUserId } from "@/lib/current-user";
+import { loadDemoExercises } from "@/lib/demo-exercises";
 import fs from "fs";
 import path from "path";
 
-let seedData: any = null;
+// Always re-read the file (no in-memory cache) so that when the admin Exercise Library
+// syncs name changes into seed-data.json, member workout loads see them immediately.
 function loadSeed() {
-  if (!seedData) {
-    const p = path.join(process.cwd(), "prisma/seed-data.json");
-    seedData = JSON.parse(fs.readFileSync(p, "utf8"));
-  }
-  return seedData;
+  const p = path.join(process.cwd(), "prisma/seed-data.json");
+  return JSON.parse(fs.readFileSync(p, "utf8"));
 }
 
 export async function getMemberWorkoutById(
@@ -24,8 +23,11 @@ export async function getMemberWorkoutById(
   const workout = (data.workouts || []).find((w: any) => w.id === workoutId);
   if (!workout) return null;
 
+  // Use loadDemoExercises() in demo mode so that name changes performed in the
+  // admin Exercise Library are reflected in member workout views too.
+  const exList = isDemoMode() ? loadDemoExercises() : (data.exercises || []);
   const exById: Record<string, any> = Object.fromEntries(
-    (data.exercises || []).map((e: any) => [e.id, e])
+    exList.map((e: any) => [e.id, e])
   );
 
   const we = (data.workoutExercises || [])

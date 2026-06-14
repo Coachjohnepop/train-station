@@ -3,13 +3,11 @@ import { getMemberWorkoutById } from "@/lib/member-workout";
 import fs from "fs";
 import path from "path";
 
-let seedData: any = null;
+// Always re-read the file (no in-memory cache) so admin-driven updates to the
+// seed snapshot are visible immediately.
 function loadSeed() {
-  if (!seedData) {
-    const p = path.join(process.cwd(), "prisma/seed-data.json");
-    seedData = JSON.parse(fs.readFileSync(p, "utf8"));
-  }
-  return seedData;
+  const p = path.join(process.cwd(), "prisma/seed-data.json");
+  return JSON.parse(fs.readFileSync(p, "utf8"));
 }
 
 export const DEMO_MEMBER_EMAIL = "demo@thetrainstation.co";

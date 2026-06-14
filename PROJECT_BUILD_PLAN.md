@@ -94,4 +94,6 @@ We restart from the post-Calendly state in the baseline. Steps are broken into s
 
 This plan is derived directly from the two transcripts (first launch feedback + part 2 customer feedback), with ~10% extra emphasis on Jeremy's wants (fresh review for his testing, questions/recommendation for new clients, member dashboard experience, coach visibility/tools) over John's (data snapshots, publish mechanics, technical polish).
 
+**June 13, 2026 customer review (newest input)**: See `JUN13_CUSTOMER_REVIEW_ACTION_PLAN.md` (created from the latest screen recording transcript). It is now the highest-priority overlay for coach/admin tooling work — focus on making exercise edits, deletes, and workout content inside program schedules actually reliable and visible in demo/live. Resume the older numbered steps only after the P0 items there (persistence + propagation) are solid.
+
 When you're ready, say "do the 1st step" and we'll start slow from the baseline.
