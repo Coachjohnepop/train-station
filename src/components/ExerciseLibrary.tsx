@@ -291,6 +291,10 @@ export default function ExerciseLibrary() {
   // Collapsible "Add New" form (collapsed by default)
   const [showAddForm, setShowAddForm] = useState(false);
 
+  // Full record edit modal for exercise (including description)
+  const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
+  const [editDraft, setEditDraft] = useState({ name: '', description: '', videoUrl: '', tags: '' });
+
   // Search and categories (P1 from transcript: "search... type in back and boom" + categories "like we did before")
   const [search, setSearch] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -453,6 +457,49 @@ export default function ExerciseLibrary() {
     await load();
   }
 
+  function startEdit(ex: Exercise) {
+    setEditingExercise(ex);
+    setEditDraft({
+      name: ex.name,
+      description: ex.description || '',
+      videoUrl: ex.videoUrl || '',
+      tags: ex.tags || '',
+    });
+    setError(null);
+  }
+
+  function closeEdit() {
+    setEditingExercise(null);
+  }
+
+  async function handleEdit(e: FormEvent) {
+    e.preventDefault();
+    if (!editingExercise) return;
+    setError(null);
+    try {
+      const res = await fetch(`/api/exercises/${editingExercise.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editDraft.name.trim(),
+          description: editDraft.description.trim() || null,
+          videoUrl: editDraft.videoUrl.trim() || null,
+          tags: editDraft.tags.trim() || null,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(formatApiError((body as { detail?: unknown }).detail));
+        return;
+      }
+      setEditingExercise(null);
+      await load();
+      setMessage('Exercise updated.');
+    } catch (e) {
+      setError('Failed to update exercise.');
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Collapsible "Add New to Exercise Library" form - starts collapsed like the directions above.
@@ -467,75 +514,77 @@ export default function ExerciseLibrary() {
           Add New to Exercise Library
         </button>
         {showAddForm && (
-          <form onSubmit={handleAdd} className="card space-y-4 mt-3">
-            <p className="text-sm text-[var(--muted)]">
+          <form onSubmit={handleAdd} className="card p-3 space-y-3 mt-2">
+            <p className="text-xs text-[var(--muted)]">
               Name, description, and demo video. Sets, weight, and workout-specific
               notes are configured under Workouts.
             </p>
 
-            <div>
-              <FieldLabel
-                htmlFor="ex-name"
-                label="Exercise name"
-                required
-                hint="What members see in the workout list."
-              />
-              <input
-                id="ex-name"
-                className="input mt-2"
-                placeholder="e.g. Back Squat"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <FieldLabel
+                  htmlFor="ex-name"
+                  label="Exercise name"
+                  required
+                  hint="What members see in the workout list."
+                />
+                <input
+                  id="ex-name"
+                  className="input py-1.5 text-sm"
+                  placeholder="e.g. Back Squat"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
 
-            <div>
-              <FieldLabel
-                htmlFor="ex-desc"
-                label="Description"
-                hint="Short overview of the movement. Optional."
-              />
-              <textarea
-                id="ex-desc"
-                className="input mt-2 min-h-[80px] resize-y"
-                placeholder="e.g. Barbell squat targeting quads and glutes…"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </div>
+              <div>
+                <FieldLabel
+                  htmlFor="ex-tags"
+                  label="Categories / Tags"
+                  hint="Comma-separated e.g. Legs, Back, Strength."
+                />
+                <input
+                  id="ex-tags"
+                  className="input py-1.5 text-sm"
+                  placeholder="Legs, Back, Core"
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
+                />
+              </div>
 
-            <div>
-              <FieldLabel
-                htmlFor="ex-video"
-                label="Demo video link"
-                hint="Paste any YouTube URL (watch or youtu.be). Optional."
-              />
-              <input
-                id="ex-video"
-                className="input mt-2"
-                type="text"
-                inputMode="url"
-                autoComplete="url"
-                placeholder="https://www.youtube.com/watch?v=…"
-                value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-              />
-            </div>
+              <div className="md:col-span-2">
+                <FieldLabel
+                  htmlFor="ex-desc"
+                  label="Description"
+                  hint="Short overview of the movement. Optional."
+                />
+                <textarea
+                  id="ex-desc"
+                  className="input py-1.5 text-sm min-h-[60px] resize-y"
+                  placeholder="e.g. Barbell squat targeting quads and glutes…"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </div>
 
-            <div>
-              <FieldLabel
-                htmlFor="ex-tags"
-                label="Categories / Tags"
-                hint="Comma-separated e.g. Legs, Back, Strength. Used for filtering and review."
-              />
-              <input
-                id="ex-tags"
-                className="input mt-2"
-                placeholder="Legs, Back, Core"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-              />
+              <div className="md:col-span-2">
+                <FieldLabel
+                  htmlFor="ex-video"
+                  label="Demo video link"
+                  hint="Paste any YouTube URL (watch or youtu.be). Optional."
+                />
+                <input
+                  id="ex-video"
+                  className="input py-1.5 text-sm"
+                  type="text"
+                  inputMode="url"
+                  autoComplete="url"
+                  placeholder="https://www.youtube.com/watch?v=…"
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                />
+              </div>
             </div>
 
             {error && (
@@ -549,7 +598,7 @@ export default function ExerciseLibrary() {
               </p>
             )}
 
-            <button type="submit" className="btn-primary">
+            <button type="submit" className="btn-primary w-full sm:w-auto">
               Add to library
             </button>
           </form>
@@ -772,7 +821,14 @@ export default function ExerciseLibrary() {
                         <span className="text-[var(--muted)] text-[10px]">Not in any programs</span>
                       )}
                     </td>
-                    <td className="align-top">
+                    <td className="align-top flex gap-2">
+                      <button
+                        type="button"
+                        className="text-sm text-accent"
+                        onClick={() => startEdit(ex)}
+                      >
+                        Edit
+                      </button>
                       <button
                         type="button"
                         className="text-sm text-[var(--danger)]"
@@ -788,6 +844,108 @@ export default function ExerciseLibrary() {
           </table>
         )}
       </div>
+
+      {/* Full edit modal for exercise (including description) */}
+      {editingExercise && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={closeEdit}>
+          <div
+            className="card w-full max-w-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-lg font-semibold">Edit Exercise</h3>
+              <button
+                type="button"
+                onClick={closeEdit}
+                className="text-[var(--muted)] hover:text-[var(--text)] text-2xl leading-none"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleEdit} className="space-y-4">
+              <div>
+                <FieldLabel
+                  htmlFor="edit-name"
+                  label="Exercise name"
+                  required
+                  hint="What members see in the workout list."
+                />
+                <input
+                  id="edit-name"
+                  className="input"
+                  value={editDraft.name}
+                  onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div>
+                <FieldLabel
+                  htmlFor="edit-desc"
+                  label="Description"
+                  hint="Short overview of the movement. Optional."
+                />
+                <textarea
+                  id="edit-desc"
+                  className="input min-h-[80px] resize-y"
+                  value={editDraft.description}
+                  onChange={(e) => setEditDraft({ ...editDraft, description: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <FieldLabel
+                  htmlFor="edit-video"
+                  label="Demo video link"
+                  hint="Paste any YouTube URL (watch or youtu.be). Optional."
+                />
+                <input
+                  id="edit-video"
+                  className="input"
+                  type="text"
+                  inputMode="url"
+                  autoComplete="url"
+                  placeholder="https://www.youtube.com/watch?v=…"
+                  value={editDraft.videoUrl}
+                  onChange={(e) => setEditDraft({ ...editDraft, videoUrl: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <FieldLabel
+                  htmlFor="edit-tags"
+                  label="Categories / Tags"
+                  hint="Comma-separated e.g. Legs, Back, Strength."
+                />
+                <input
+                  id="edit-tags"
+                  className="input"
+                  placeholder="Legs, Back, Core"
+                  value={editDraft.tags}
+                  onChange={(e) => setEditDraft({ ...editDraft, tags: e.target.value })}
+                />
+              </div>
+
+              {error && (
+                <p className="text-sm text-[var(--danger)]" role="alert">
+                  {error}
+                </p>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={closeEdit} className="btn-ghost flex-1">
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary flex-1">
+                  Save changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Usage details modal */}
       {selectedExercise && (
