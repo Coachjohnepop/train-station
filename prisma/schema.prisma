@@ -24,6 +24,11 @@ model User {
   name               String?
   phone              String?
   dailyReminderTime  String?             // e.g. "07:30" in 24h format
+  city               String?
+  state              String?
+  heightCm           Int?
+  birthdate          DateTime?
+  goals              String?
   role               Role                @default(MEMBER)
   status             String              @default("active")
   notes              String?
@@ -36,6 +41,8 @@ model User {
   smsLogs            SmsLog[]
   bookings           Booking[]
   homeEquipment      UserEquipment[]
+  weatherLogs        UserWeatherLog[]
+  promptResponses    PromptResponse[]
 }
 
 model SubscriptionTier {
@@ -135,20 +142,22 @@ model WorkoutLog {
 }
 
 model Program {
-  id            String              @id @default(cuid())
-  slug          String              @unique
-  name          String
-  description   String?
-  tierSlug      String              @default("starter")
-  category      String?
-  durationWeeks Int                 @default(4)
-  sortOrder     Int                 @default(0)
-  published     Boolean             @default(true)
-  coverUrl      String?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  weeks         ProgramWeek[]
-  enrollments   ProgramEnrollment[]
+  id                 String              @id @default(cuid())
+  slug               String              @unique
+  name               String
+  description        String?
+  tierSlug           String              @default("starter")
+  category           String?
+  durationWeeks      Int                 @default(4)
+  phaseDurationWeeks Int                 @default(4)
+  totalPhases        Int                 @default(1)
+  sortOrder          Int                 @default(0)
+  published          Boolean             @default(true)
+  coverUrl           String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  weeks              ProgramWeek[]
+  enrollments        ProgramEnrollment[]
 }
 
 model ProgramWeek {
@@ -192,8 +201,10 @@ model ProgramEnrollment {
   startedAt   DateTime @default(now())
   currentWeek Int      @default(1)
   currentDay  Int      @default(1)
+  currentPhase Int     @default(1)
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   program     Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  promptResponses PromptResponse[]
 }
 
 model LiveSession {
@@ -281,4 +292,53 @@ model UserEquipment {
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   equipment   Equipment  @relation(fields: [equipmentId], references: [id])
   @@unique([userId, equipmentId])
+}
+
+model UserWeatherLog {
+  id          String   @id @default(cuid())
+  userId      String
+  city        String?
+  state       String?
+  temperature Float?
+  weatherCode Int?
+  condition   String?
+  windSpeed   Float?
+  observedAt  DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, observedAt])
+}
+
+model EatingApproach {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  category    String?  // "eating"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  prompts     Prompt[]
+}
+
+model Prompt {
+  id          String   @id @default(cuid())
+  approachId  String
+  dayNumber   Int
+  text        String
+  createdAt   DateTime @default(now())
+  approach    EatingApproach @relation(fields: [approachId], references: [id])
+  responses   PromptResponse[]
+}
+
+model PromptResponse {
+  id            String   @id @default(cuid())
+  userId        String
+  promptId      String
+  enrollmentId  String?
+  answer        String?
+  notes         String?
+  completedAt   DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prompt        Prompt   @relation(fields: [promptId], references: [id])
+  enrollment    ProgramEnrollment? @relation(fields: [enrollmentId], references: [id])
 }
