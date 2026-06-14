@@ -585,13 +585,21 @@ export default function ExerciseLibrary() {
             Seed default tags for untagged
           </button>
         </div>
+
+        {filteredExercises.length === 0 && exercises.length > 0 && !loading && (
+          <p className="p-4 text-sm text-[var(--muted)]">
+            No exercises match the current search or selected categories.
+            Try clearing the filters above or click “Seed default tags for untagged” to populate categories from exercise names.
+          </p>
+        )}
+
         {loading ? (
           <p className="mt-4 text-[var(--muted)]">Loading…</p>
         ) : exercises.length === 0 ? (
           <p className="mt-4 text-[var(--muted)]">
             No exercises yet — add one above.
           </p>
-        ) : (
+        ) : filteredExercises.length > 0 && (
           <table className="data mt-4">
             <thead>
               <tr>
