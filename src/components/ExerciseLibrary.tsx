@@ -334,7 +334,12 @@ export default function ExerciseLibrary() {
     })
     .filter((ex) => {
       if (selectedCategories.length === 0) return true;
-      const exTags = (ex.tags || "").toLowerCase().split(/[\s,]+/);
+      // Smart category matching: use explicit tags if present, otherwise fall back
+      // to the same name-based guessing logic as the seeder. This ensures
+      // "Bench Press" (which is semantically Chest) shows up when you click the
+      // "Chest" chip, even if tags haven't been seeded yet.
+      const effective = ex.tags || guessTags(ex.name);
+      const exTags = effective.toLowerCase().split(/[\s,]+/);
       return selectedCategories.some((cat) =>
         exTags.some((t) => t.includes(cat.toLowerCase()))
       );
