@@ -24,6 +24,11 @@ async function main() {
     equipment,
     userEquipment,
     liveSessions,
+    userWeatherLogs,
+    eatingApproaches,
+    prompts,
+    promptResponses,
+    userMeasurements,
   ] = await Promise.all([
     prisma.subscriptionTier.findMany(),
     prisma.exercise.findMany(),
@@ -36,6 +41,11 @@ async function main() {
     prisma.equipment.findMany(),
     prisma.userEquipment.findMany(),
     prisma.liveSession.findMany(),
+    prisma.userWeatherLog.findMany(),
+    prisma.eatingApproach.findMany(),
+    prisma.prompt.findMany(),
+    prisma.promptResponse.findMany(),
+    prisma.userMeasurement.findMany(),
   ]);
 
   const seedData = {
@@ -54,6 +64,11 @@ async function main() {
     equipment,
     userEquipment,
     liveSessions,
+    userWeatherLogs,
+    eatingApproaches,
+    prompts,
+    promptResponses,
+    userMeasurements,
   };
 
   const outPath = path.join(process.cwd(), "prisma", "seed-data.json");
@@ -66,7 +81,7 @@ async function main() {
 
   fs.writeFileSync(outPath, JSON.stringify(seedData, null, 2));
   console.log(
-    `[export-seed] Exported ${exercises.length} exercises, ${workouts.length} workouts, ${programDays.length} program days, ${programDayOptions.length} day options, ${equipment.length} equipment items to ${outPath}`
+    `[export-seed] Exported ${exercises.length} exercises, ${workouts.length} workouts, ${programDays.length} program days, ${programDayOptions.length} day options, ${equipment.length} equipment items, ${eatingApproaches.length} eating approaches, ${prompts.length} prompts, ${userMeasurements.length} measurements to ${outPath}`
   );
   console.log("[export-seed] This is now the base deliverable content.");
 }

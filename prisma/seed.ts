@@ -93,6 +93,11 @@ async function main() {
         await prisma.liveSession.upsert({ where: { id: row.id }, update: row, create: row });
       }
     }
+    if (seedData.userWeatherLogs?.length) {
+      for (const row of seedData.userWeatherLogs) {
+        await prisma.userWeatherLog.upsert({ where: { id: row.id }, update: row, create: row });
+      }
+    }
     console.log(`[seed] Imported ${seedData.exercises?.length || 0} exercises, ${seedData.workouts?.length || 0} workouts, ${seedData.programDays?.length || 0} program days, ${seedData.programDayOptions?.length || 0} day options, ${seedData.equipment?.length || 0} equipment items.`);
   } else {
     console.log("[seed] No prisma/seed-data.json — schedule will be minimal (run export script while sqlite data exists).");
@@ -100,12 +105,14 @@ async function main() {
 
   const demoUser = await prisma.user.upsert({
     where: { email: "demo@thetrainstation.co" },
-    update: { name: "Alex", phone: "(555) 987-6543", dailyReminderTime: "07:30" },
+    update: { name: "Alex", phone: "(555) 987-6543", dailyReminderTime: "07:30", city: "Austin", state: "TX" },
     create: {
       email: "demo@thetrainstation.co",
       name: "Alex",
       phone: "(555) 987-6543",
       dailyReminderTime: "07:30",
+      city: "Austin",
+      state: "TX",
       role: "MEMBER",
     },
   });
@@ -277,10 +284,10 @@ async function main() {
 
   // Seed additional demo users for robust user management in admin
   const usersToSeed = [
-    { email: "admin@thetrainstation.co", name: "Admin User", role: "ADMIN" as const, status: "active" },
-    { email: "instructor@thetrainstation.co", name: "Coach Kim", role: "INSTRUCTOR" as const, status: "active" },
-    { email: "free@thetrainstation.co", name: "Free Member", role: "MEMBER" as const, status: "active" },
-    { email: "prospective@thetrainstation.co", name: "Jane Doe (Applied)", role: "PROSPECTIVE_INSTRUCTOR" as const, status: "pending", notes: "Applied via site form. Experience: 5yrs personal training. Message: Excited to join!" },
+    { email: "admin@thetrainstation.co", name: "Admin User", role: "ADMIN" as const, status: "active", city: "Austin", state: "TX" },
+    { email: "instructor@thetrainstation.co", name: "Coach Kim", role: "INSTRUCTOR" as const, status: "active", city: "Austin", state: "TX" },
+    { email: "free@thetrainstation.co", name: "Free Member", role: "MEMBER" as const, status: "active", city: "Austin", state: "TX" },
+    { email: "prospective@thetrainstation.co", name: "Jane Doe (Applied)", role: "PROSPECTIVE_INSTRUCTOR" as const, status: "pending", notes: "Applied via site form. Experience: 5yrs personal training. Message: Excited to join!", city: "Dallas", state: "TX" },
   ];
 
   for (const u of usersToSeed) {

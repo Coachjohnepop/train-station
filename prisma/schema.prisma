@@ -43,6 +43,7 @@ model User {
   homeEquipment      UserEquipment[]
   weatherLogs        UserWeatherLog[]
   promptResponses    PromptResponse[]
+  measurements       UserMeasurement[]
 }
 
 model SubscriptionTier {
@@ -341,4 +342,15 @@ model PromptResponse {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   prompt        Prompt   @relation(fields: [promptId], references: [id])
   enrollment    ProgramEnrollment? @relation(fields: [enrollmentId], references: [id])
+}
+
+model UserMeasurement {
+  id          String   @id @default(cuid())
+  userId      String
+  weightLbs   Float?
+  notes       String?
+  measuredAt  DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, measuredAt])
 }

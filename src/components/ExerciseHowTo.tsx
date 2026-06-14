@@ -53,6 +53,11 @@ export default function ExerciseHowTo() {
         <strong className="text-[var(--text)]">Admin → Workouts</strong> when you
         add each exercise.
       </p>
+
+      <p className="mt-3 text-xs text-[var(--muted)]">
+        The library table now shows where each exercise is scheduled (programs + specific days).
+        Click “View details” on any row for the full breakdown and direct links.
+      </p>
     </aside>
   );
 }

@@ -75,3 +75,43 @@ export async function resolveUserId(fallback: string = "demo-user"): Promise<str
   const uid = await getCurrentUserId();
   return uid || fallback;
 }
+
+export type UserLocation = {
+  city: string | null;
+  state: string | null;
+};
+
+/**
+ * Gets member's training location from cookies (demo/onboard) or DB (real).
+ * Falls back to demo defaults in demo mode.
+ */
+export async function getCurrentUserLocation(): Promise<UserLocation> {
+  const cookieStore = await cookies();
+  const city = cookieStore.get("ts_city")?.value || null;
+  const state = cookieStore.get("ts_state")?.value || null;
+
+  if (isDemoMode()) {
+    return {
+      city: city || "Austin",
+      state: state || "TX",
+    };
+  }
+
+  const uid = await getCurrentUserId();
+  if (uid) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: uid },
+        select: { city: true, state: true },
+      });
+      if (user) {
+        return {
+          city: user.city || city,
+          state: user.state || state,
+        };
+      }
+    } catch {}
+  }
+
+  return { city, state };
+}

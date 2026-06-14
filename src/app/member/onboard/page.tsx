@@ -12,6 +12,7 @@ function OnboardingContent() {
 
   const [currentStep, setCurrentStep] = useState(1);
   const [measurements, setMeasurements] = useState({ weight: "", notes: "" });
+  const [location, setLocation] = useState({ city: "", state: "" });
   const [completed, setCompleted] = useState(false);
   const [calendlyUrl, setCalendlyUrl] = useState<string | null>(null);
 
@@ -26,7 +27,7 @@ function OnboardingContent() {
 
   const effectiveCalendly = calendlyUrl || COACH_CALENDLY_URL;
 
-  const totalSteps = 4;
+  const totalSteps = 5;
 
   const nextStep = () => {
     if (currentStep < totalSteps) {
@@ -54,12 +55,18 @@ function OnboardingContent() {
         body: JSON.stringify({
           measurements,
           notes: measurements.notes,
+          location,
           calendlyOpened: true,
           programSlug: programSlug || undefined,
         }),
       });
     } catch (e) {
       console.error('Failed to send onboarding notification', e);
+    }
+    // For demo: persist location in cookies so weather can use it immediately
+    if (location.city && location.state) {
+      document.cookie = `ts_city=${encodeURIComponent(location.city)}; path=/; max-age=31536000`;
+      document.cookie = `ts_state=${encodeURIComponent(location.state)}; path=/; max-age=31536000`;
     }
     setCompleted(true);
   };
@@ -168,6 +175,42 @@ function OnboardingContent() {
         )}
 
         {currentStep === 4 && (
+          <>
+            <h2 className="text-lg font-semibold">Where are you training from?</h2>
+            <p className="text-sm text-[var(--muted)]">
+              Your city and state let us show today's weather in your workout console. This helps your coach adjust plans (e.g. suggest outdoor drills on nice days or indoor alternatives on bad weather).
+            </p>
+            <div className="space-y-4 pt-2">
+              <div>
+                <label className="text-xs text-[var(--muted)] block mb-1">City</label>
+                <input
+                  type="text"
+                  value={location.city}
+                  onChange={(e) => setLocation({ ...location, city: e.target.value })}
+                  placeholder="e.g. Austin"
+                  className="input w-full"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-[var(--muted)] block mb-1">State (2-letter code)</label>
+                <input
+                  type="text"
+                  value={location.state}
+                  onChange={(e) => setLocation({ ...location, state: e.target.value.toUpperCase() })}
+                  placeholder="e.g. TX"
+                  maxLength={2}
+                  className="input w-full uppercase"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 pt-4">
+              <button onClick={prevStep} className="btn-ghost flex-1">Back</button>
+              <button onClick={nextStep} className="btn-primary flex-1">Continue</button>
+            </div>
+          </>
+        )}
+
+        {currentStep === 5 && (
           <>
             <h2 className="text-lg font-semibold">Book your first session</h2>
             <p className="text-sm text-[var(--muted)]">

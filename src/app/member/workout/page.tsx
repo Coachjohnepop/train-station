@@ -3,6 +3,8 @@ import MemberWorkoutConsole from "@/components/MemberWorkoutConsole";
 import FloatingVideoPlayer from "@/components/FloatingVideoPlayer";
 import { getDemoMemberWorkout } from "@/lib/demo-workout";
 import { getMemberWorkoutById } from "@/lib/member-workout";
+import { getCurrentUserLocation } from "@/lib/current-user";
+import { getWeatherForLocation, logUserWeather } from "@/lib/weather";
 
 type Props = {
   searchParams: Promise<{ workoutId?: string; program?: string; subJourney?: string; subDay?: string; option?: string; asInstructor?: string; forUser?: string; review?: string }>;
@@ -49,6 +51,17 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
   const backHref = program ? `/member/programs/${program}` : "/member";
   const backLabel = program ? "← Back to program" : "← Dashboard";
 
+  // Location + current weather for the member (from onboarding cookies or DB)
+  // Used to show in console and for instructor context. Also logged for historical reference.
+  const memberLocation = await getCurrentUserLocation();
+  let currentWeather = null;
+  if (memberLocation.city && memberLocation.state) {
+    currentWeather = await getWeatherForLocation(memberLocation.city, memberLocation.state);
+    // Log for the (demo or target) user so instructor has context of conditions during the session
+    const effectiveUser = forUser || "demo-user";
+    await logUserWeather(effectiveUser, memberLocation, currentWeather);
+  }
+
   return (
     <div>
       <Link href={backHref} className="text-xs text-accent hover:underline">
@@ -87,6 +100,30 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
           {option && (
             <div className="px-4 mb-2 text-xs text-[var(--muted)]">Option selected: <strong>{option}</strong> (home or gym version)</div>
           )}
+
+          {/* Weather for the client's training area — visible to member and to instructor in coaching mode.
+              Logged on page load so historical conditions are available for review/adjustments (e.g. snow vs sunny, outdoor recommendations). */}
+          {(currentWeather || memberLocation) && (
+            <div className="mx-4 mb-3 rounded border border-sky-500/30 bg-sky-500/10 p-3 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <div className="font-medium">
+                  Weather in {currentWeather?.city || memberLocation?.city || "your area"}, {currentWeather?.state || memberLocation?.state || ""}
+                  {currentWeather && (
+                    <span className="ml-2 font-normal text-[var(--muted)]">
+                      {currentWeather.temperature}°F • {currentWeather.condition} • {currentWeather.windSpeed} mph wind
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] text-sky-600 shrink-0">📍 client location</span>
+              </div>
+              {asInstructor && currentWeather && (
+                <p className="mt-1 text-[10px] text-[var(--muted)]">
+                  Coach tip: glance here to adjust (e.g. “It’s snowing there — let’s do those walking lunges inside today”).
+                </p>
+              )}
+            </div>
+          )}
+
           <MemberWorkoutConsole
             workout={workout}
             backHref={backHref}

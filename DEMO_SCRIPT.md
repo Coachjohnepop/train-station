@@ -340,6 +340,7 @@ It also doubles as a **full end-to-end test script**:
    - List all (including journey).
    - Click one (especially **Adult**) → Schedule Builder.
    - **Enhanced builder for hybrid**: Each day slot now supports multiple labeled options (e.g. add "Gym" option + "Home" option). Assign different workouts to each label. Labels are free-form (Gym, Home - Minimal, Home - Dumbbells + Bands, etc.).
+   - For each assigned option, note the new direct **"edit →"** link next to the workout selector. Clicking it jumps straight to the WorkoutBuilder for that specific workout's exercises, sets, and notes.
    - For journeys: use the YouTube URL field to set the full 30-40 min video link on days. Use the notes field to describe the session-specific checklist (this is what appears below the player for pure journey days and in the banner for substitutions).
    - Bulk copy week, clear week.
    - Changes immediately affect member program views (days will show the new choice cards).
@@ -352,6 +353,7 @@ It also doubles as a **full end-to-end test script**:
 - Full CRUD on users with all fields.
 - Program schedule builder works for both workout assignment and journey video links.
 - **Hybrid builder**: You can assign multiple options per day with custom labels. Adult (and other workout programs) can now have explicit Gym/Home (or other environment) choices per day slot.
+- **Direct drill-down**: Each assigned option has a clear "edit →" link that takes you straight into the WorkoutBuilder for that exact workout's content. This makes it obvious and fast to manage the actual exercises behind each label.
 - Changes reflect immediately in member views (after refresh) — days show the option cards.
 - Logging data (from Section 3) appears in user counts and admin visibility.
 
@@ -434,6 +436,7 @@ If any step fails, note the exact URL + what you saw vs expected. This document 
 - Test the booking flow from member side end-to-end with SMS.
 - In admin Schedule Builder for Adult, add a third option to a day (e.g. "Home - Minimal") and verify it appears in the member view.
 - View/edit the demo user's home equipment list (inventory) and observe impact on available Home options (when filtering is wired).
+- From a day option in the Adult schedule builder, use the new "edit →" link to jump into the workout, make a change, save, and confirm the schedule view still reflects the assignment correctly.
 
 This script covers 100% of the requested features plus the earlier ones (workouts, eating, yoga, SMS broadcast, live, tiers, substitution, strength score, **hybrid Gym/Home per-day options with equipment inventory**, etc.).
 
