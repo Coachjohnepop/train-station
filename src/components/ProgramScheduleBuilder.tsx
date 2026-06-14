@@ -320,6 +320,15 @@ export default function ProgramScheduleBuilder({
                               <option key={w.id} value={w.id}>{w.name}</option>
                             ))}
                           </select>
+                          {opt.workoutId && (
+                            <Link
+                              href={`/admin/workouts/${opt.workoutId}`}
+                              className="text-xs text-accent hover:underline whitespace-nowrap"
+                              title="Edit the exercises, sets, and notes for this workout"
+                            >
+                              edit →
+                            </Link>
+                          )}
                           <button
                             type="button"
                             className="text-xs text-[var(--danger)] px-1"
