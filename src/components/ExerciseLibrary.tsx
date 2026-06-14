@@ -537,9 +537,9 @@ export default function ExerciseLibrary() {
         </button>
       </form>
 
-      {/* Collapsible "Exercise Library" instructions - starts collapsed to save real estate.
-          Large triangle (▶) indicating you can expand the words "Exercise Library".
-          The instructions fold out below when expanded.
+      {/* Collapsible "Exercise Library Directions" - starts collapsed to save real estate.
+          Large triangle (▶) indicating you can expand.
+          The directions/instructions fold out below when expanded.
           Placed just above the search layer. */}
       <div className="mb-4">
         <button
@@ -548,7 +548,7 @@ export default function ExerciseLibrary() {
           className="flex items-center gap-2 text-xl font-semibold tracking-tight hover:text-accent"
         >
           <span className={`text-3xl leading-none transition-transform ${showInstructions ? 'rotate-90' : ''}`}>▶</span>
-          Exercise Library
+          Exercise Library Directions
         </button>
         {showInstructions && (
           <div className="mt-3 pl-9 text-sm text-[var(--muted)] space-y-3">
