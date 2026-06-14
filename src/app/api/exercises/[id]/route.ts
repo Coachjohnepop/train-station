@@ -15,6 +15,7 @@ const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).optional().nullable(),
   videoUrl: z.string().max(2000).optional().nullable(),
+  tags: z.string().optional().nullable(),
 });
 
 type Params = { params: Promise<{ id: string }> };
@@ -30,6 +31,7 @@ export async function PATCH(request: Request, { params }: Params) {
     name?: string;
     description?: string | null;
     videoUrl?: string | null;
+    tags?: string | null;
   } = {};
 
   if (parsed.data.name !== undefined) data.name = parsed.data.name.trim();
@@ -38,6 +40,9 @@ export async function PATCH(request: Request, { params }: Params) {
   }
   if (parsed.data.videoUrl !== undefined) {
     data.videoUrl = parsed.data.videoUrl?.trim() || null;
+  }
+  if (parsed.data.tags !== undefined) {
+    data.tags = parsed.data.tags?.trim() || null;
   }
 
   if (isDemoMode()) {
@@ -50,6 +55,7 @@ export async function PATCH(request: Request, { params }: Params) {
     if (data.name !== undefined) ex.name = data.name;
     if (data.description !== undefined) ex.description = data.description;
     if (data.videoUrl !== undefined) ex.videoUrl = data.videoUrl;
+    if (data.tags !== undefined) ex.tags = data.tags;
     ex.updatedAt = new Date().toISOString();
     list[idx] = ex;
     saveDemoExercises(list);

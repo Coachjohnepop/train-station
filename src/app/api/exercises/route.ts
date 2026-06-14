@@ -12,6 +12,7 @@ const createSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
   videoUrl: z.string().max(2000).optional(),
+  tags: z.string().optional(),
 });
 
 export async function GET() {
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
   }
-  const { name, description, videoUrl } = parsed.data;
+  const { name, description, videoUrl, tags } = parsed.data;
 
   if (isDemoMode()) {
     const list = loadDemoExercises();
@@ -39,12 +40,12 @@ export async function POST(request: Request) {
       name: name.trim(),
       description: description?.trim() || null,
       videoUrl: videoUrl?.trim() || null,
+      tags: tags?.trim() || null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       defaultSetScheme: null,
       defaultSets: null,
       defaultWeightTier: null,
-      tags: null,
     };
     list.push(exercise);
     saveDemoExercises(list);
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
         name: name.trim(),
         description: description?.trim() || null,
         videoUrl: videoUrl?.trim() || null,
+        tags: tags?.trim() || null,
       },
     });
     return NextResponse.json(exercise, { status: 201 });

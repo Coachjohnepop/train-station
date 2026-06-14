@@ -9,6 +9,7 @@ type Exercise = {
   name: string;
   description: string | null;
   videoUrl: string | null;
+  tags: string | null;
 };
 
 type UsageSummary = {
@@ -275,6 +276,7 @@ export default function ExerciseLibrary() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
+  const [tags, setTags] = useState(""); // for new exercise form
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -282,6 +284,12 @@ export default function ExerciseLibrary() {
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [detailedUsage, setDetailedUsage] = useState<ExerciseUsage | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
+
+  // Search and categories (P1 from transcript: "search... type in back and boom" + categories "like we did before")
+  const [search, setSearch] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+  const COMMON_CATEGORIES = ["Back", "Chest", "Legs", "Shoulders", "Arms", "Core", "Full Body", "Mobility", "Cardio"];
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -307,6 +315,25 @@ export default function ExerciseLibrary() {
     load();
   }, [load]);
 
+  // Compute filtered list for search + category chips (client-side, instant)
+  const filteredExercises = exercises
+    .filter((ex) => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return (
+        ex.name.toLowerCase().includes(q) ||
+        (ex.description || "").toLowerCase().includes(q) ||
+        (ex.tags || "").toLowerCase().includes(q)
+      );
+    })
+    .filter((ex) => {
+      if (selectedCategories.length === 0) return true;
+      const exTags = (ex.tags || "").toLowerCase().split(/[\s,]+/);
+      return selectedCategories.some((cat) =>
+        exTags.some((t) => t.includes(cat.toLowerCase()))
+      );
+    });
+
   async function openUsage(ex: Exercise) {
     setSelectedExercise(ex);
     setDetailedUsage(null);
@@ -326,6 +353,49 @@ export default function ExerciseLibrary() {
     setDetailedUsage(null);
   }
 
+  function toggleCategory(cat: string) {
+    setSelectedCategories(prev =>
+      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+    );
+  }
+
+  // One-time seeder for default categories based on name (P1 from transcript)
+  async function seedDefaultTags() {
+    const untagged = exercises.filter((ex) => !ex.tags);
+    if (untagged.length === 0) {
+      setMessage("All exercises already have tags.");
+      return;
+    }
+    setMessage(`Seeding tags for ${untagged.length} exercises...`);
+    for (const ex of untagged) {
+      const guessed = guessTags(ex.name);
+      try {
+        await fetch(`/api/exercises/${ex.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tags: guessed }),
+        });
+      } catch {}
+    }
+    setMessage(`Seeded default tags for ${untagged.length} exercises.`);
+    await load();
+  }
+
+  function guessTags(name: string): string {
+    const n = name.toLowerCase();
+    const tags: string[] = [];
+    if (/squat|deadlift|lunge|leg|glute|ham|calf/.test(n)) tags.push("Legs");
+    if (/bench|chest|push.?up|fly/.test(n)) tags.push("Chest");
+    if (/row|pull|chin|lat|back/.test(n)) tags.push("Back");
+    if (/shoulder|overhead|shrug|lateral|deltoid|press/.test(n)) tags.push("Shoulders");
+    if (/curl|extension|tricep|bicep/.test(n)) tags.push("Arms");
+    if (/plank|crunch|sit.?up|core|ab|mountain/.test(n)) tags.push("Core");
+    if (/burpee|jump|run|cardio|sprint/.test(n)) tags.push("Cardio");
+    if (/warm|mobility|stretch|foam|dynamic/.test(n)) tags.push("Mobility");
+    if (tags.length === 0) tags.push("Full Body");
+    return tags.join(", ");
+  }
+
   async function handleAdd(e: FormEvent) {
     e.preventDefault();
     setError(null);
@@ -342,6 +412,7 @@ export default function ExerciseLibrary() {
         name: name.trim(),
         description: description.trim() || undefined,
         videoUrl: videoUrl.trim() || undefined,
+        tags: tags.trim() || undefined,
       }),
     });
 
@@ -355,6 +426,7 @@ export default function ExerciseLibrary() {
     setName("");
     setDescription("");
     setVideoUrl("");
+    setTags("");
     setMessage(`Added “${created.name}” to the library.`);
     await load();
   }
@@ -431,6 +503,21 @@ export default function ExerciseLibrary() {
           />
         </div>
 
+        <div>
+          <FieldLabel
+            htmlFor="ex-tags"
+            label="Categories / Tags"
+            hint="Comma-separated e.g. Legs, Back, Strength. Used for filtering and review."
+          />
+          <input
+            id="ex-tags"
+            className="input mt-2"
+            placeholder="Legs, Back, Core"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+          />
+        </div>
+
         {error && (
           <p className="text-sm text-[var(--danger)]" role="alert">
             {error}
@@ -447,10 +534,57 @@ export default function ExerciseLibrary() {
         </button>
       </form>
 
+      {/* Search + Category filters (P1 from transcript) */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <input
+          type="text"
+          placeholder="Search name, description, or tags..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="input flex-1"
+        />
+        <div className="flex flex-wrap gap-1">
+          {COMMON_CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => toggleCategory(cat)}
+              className={`text-xs px-2 py-1 rounded border transition ${
+                selectedCategories.includes(cat)
+                  ? "bg-accent text-white border-accent"
+                  : "bg-[var(--surface)] border-[var(--border)] hover:bg-[var(--surface-2)]"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+          {selectedCategories.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setSelectedCategories([])}
+              className="text-xs px-2 py-1 text-[var(--muted)] hover:text-[var(--text)]"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="table-wrap card">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-          Your library ({loading ? "…" : exercises.length})
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
+            Your library ({loading ? "…" : filteredExercises.length}{" "}
+            {search || selectedCategories.length > 0 ? `of ${exercises.length}` : ""})
+          </h3>
+          <button
+            type="button"
+            onClick={seedDefaultTags}
+            className="text-xs text-accent hover:underline"
+            title="One-time: guess and apply tags like Legs, Back, Core based on exercise names (per transcript request)"
+          >
+            Seed default tags for untagged
+          </button>
+        </div>
         {loading ? (
           <p className="mt-4 text-[var(--muted)]">Loading…</p>
         ) : exercises.length === 0 ? (
@@ -464,13 +598,15 @@ export default function ExerciseLibrary() {
                 <th>Name</th>
                 <th>Description</th>
                 <th>Video</th>
+                <th>Tags</th>
                 <th>Programs</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {exercises.map((ex) => {
+              {filteredExercises.map((ex) => {
                 const u = usages[ex.id];
+                const tagList = (ex.tags || "").split(/[\s,]+/).filter(Boolean);
                 return (
                   <tr key={ex.id}>
                     <td className="align-top">
@@ -485,6 +621,36 @@ export default function ExerciseLibrary() {
                     </td>
                     <td className="align-top">
                       <ExerciseVideoCell exercise={ex} onSaved={load} />
+                    </td>
+                    <td className="align-top">
+                      <div className="flex flex-wrap gap-1 text-[10px] items-center">
+                        {tagList.length > 0 ? (
+                          tagList.map((t, i) => (
+                            <span key={i} className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-[var(--muted)]">
+                              {t}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[var(--muted)]">—</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const current = ex.tags || "";
+                            const newTags = prompt("Edit tags (comma separated):", current);
+                            if (newTags === null) return;
+                            await fetch(`/api/exercises/${ex.id}`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ tags: newTags.trim() || null }),
+                            });
+                            await load();
+                          }}
+                          className="text-[var(--muted)] hover:text-[var(--text)] text-[9px] underline"
+                        >
+                          edit
+                        </button>
+                      </div>
                     </td>
                     <td className="align-top text-xs">
                       {u && u.programs.length > 0 ? (
