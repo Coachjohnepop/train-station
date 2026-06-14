@@ -288,6 +288,9 @@ export default function ExerciseLibrary() {
   // Collapsible instructions (collapsed by default to save real estate)
   const [showInstructions, setShowInstructions] = useState(false);
 
+  // Collapsible "Add New" form (collapsed by default)
+  const [showAddForm, setShowAddForm] = useState(false);
+
   // Search and categories (P1 from transcript: "search... type in back and boom" + categories "like we did before")
   const [search, setSearch] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -447,95 +450,106 @@ export default function ExerciseLibrary() {
 
   return (
     <div className="space-y-6">
-      <form onSubmit={handleAdd} className="card space-y-4">
-        <p className="text-sm font-semibold uppercase tracking-wide text-accent">
-          New exercise
-        </p>
-        <p className="text-sm text-[var(--muted)]">
-          Name, description, and demo video. Sets, weight, and workout-specific
-          notes are configured under Workouts.
-        </p>
-
-        <div>
-          <FieldLabel
-            htmlFor="ex-name"
-            label="Exercise name"
-            required
-            hint="What members see in the workout list."
-          />
-          <input
-            id="ex-name"
-            className="input mt-2"
-            placeholder="e.g. Back Squat"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </div>
-
-        <div>
-          <FieldLabel
-            htmlFor="ex-desc"
-            label="Description"
-            hint="Short overview of the movement. Optional."
-          />
-          <textarea
-            id="ex-desc"
-            className="input mt-2 min-h-[80px] resize-y"
-            placeholder="e.g. Barbell squat targeting quads and glutes…"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </div>
-
-        <div>
-          <FieldLabel
-            htmlFor="ex-video"
-            label="Demo video link"
-            hint="Paste any YouTube URL (watch or youtu.be). Optional."
-          />
-          <input
-            id="ex-video"
-            className="input mt-2"
-            type="text"
-            inputMode="url"
-            autoComplete="url"
-            placeholder="https://www.youtube.com/watch?v=…"
-            value={videoUrl}
-            onChange={(e) => setVideoUrl(e.target.value)}
-          />
-        </div>
-
-        <div>
-          <FieldLabel
-            htmlFor="ex-tags"
-            label="Categories / Tags"
-            hint="Comma-separated e.g. Legs, Back, Strength. Used for filtering and review."
-          />
-          <input
-            id="ex-tags"
-            className="input mt-2"
-            placeholder="Legs, Back, Core"
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-          />
-        </div>
-
-        {error && (
-          <p className="text-sm text-[var(--danger)]" role="alert">
-            {error}
-          </p>
-        )}
-        {message && (
-          <p className="text-sm text-[var(--success)]" role="status">
-            {message}
-          </p>
-        )}
-
-        <button type="submit" className="btn-primary">
-          Add to library
+      {/* Collapsible "Add New to Exercise Library" form - starts collapsed like the directions above.
+          Large triangle indicator. */}
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="flex items-center gap-2 text-xl font-semibold tracking-tight hover:text-accent"
+        >
+          <span className={`text-3xl leading-none transition-transform ${showAddForm ? 'rotate-90' : ''}`}>▶</span>
+          Add New to Exercise Library
         </button>
-      </form>
+        {showAddForm && (
+          <form onSubmit={handleAdd} className="card space-y-4 mt-3">
+            <p className="text-sm text-[var(--muted)]">
+              Name, description, and demo video. Sets, weight, and workout-specific
+              notes are configured under Workouts.
+            </p>
+
+            <div>
+              <FieldLabel
+                htmlFor="ex-name"
+                label="Exercise name"
+                required
+                hint="What members see in the workout list."
+              />
+              <input
+                id="ex-name"
+                className="input mt-2"
+                placeholder="e.g. Back Squat"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <FieldLabel
+                htmlFor="ex-desc"
+                label="Description"
+                hint="Short overview of the movement. Optional."
+              />
+              <textarea
+                id="ex-desc"
+                className="input mt-2 min-h-[80px] resize-y"
+                placeholder="e.g. Barbell squat targeting quads and glutes…"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <FieldLabel
+                htmlFor="ex-video"
+                label="Demo video link"
+                hint="Paste any YouTube URL (watch or youtu.be). Optional."
+              />
+              <input
+                id="ex-video"
+                className="input mt-2"
+                type="text"
+                inputMode="url"
+                autoComplete="url"
+                placeholder="https://www.youtube.com/watch?v=…"
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <FieldLabel
+                htmlFor="ex-tags"
+                label="Categories / Tags"
+                hint="Comma-separated e.g. Legs, Back, Strength. Used for filtering and review."
+              />
+              <input
+                id="ex-tags"
+                className="input mt-2"
+                placeholder="Legs, Back, Core"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+              />
+            </div>
+
+            {error && (
+              <p className="text-sm text-[var(--danger)]" role="alert">
+                {error}
+              </p>
+            )}
+            {message && (
+              <p className="text-sm text-[var(--success)]" role="status">
+                {message}
+              </p>
+            )}
+
+            <button type="submit" className="btn-primary">
+              Add to library
+            </button>
+          </form>
+        )}
+      </div>
 
       {/* Collapsible "Exercise Library Directions" - starts collapsed to save real estate.
           Large triangle (▶) indicating you can expand.
