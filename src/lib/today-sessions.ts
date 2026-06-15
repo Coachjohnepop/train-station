@@ -212,3 +212,16 @@ export async function deleteTodaySession(sessionIdOrDate: string) {
   await writeStore(store);
   return true;
 }
+
+/** Remove sessions on a date assigned to a specific member (leaves other sessions on that day). */
+export async function deleteSessionForUserOnDate(userId: string, sessionDate: string) {
+  await hydrateTodaySessions();
+  const store = readStore();
+  const toDelete = Object.values(store.sessions).filter(
+    (s) => s.sessionDate === sessionDate && s.userIds.includes(userId),
+  );
+  if (toDelete.length === 0) return false;
+  for (const s of toDelete) delete store.sessions[s.id];
+  await writeStore(store);
+  return true;
+}

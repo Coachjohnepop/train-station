@@ -90,21 +90,6 @@
       "replacesSchedule": true,
       "createdAt": "2026-06-15T03:40:07.383Z",
       "createdBy": "seed-beta"
-    },
-    "today-2026-06-16-a2af18c8": {
-      "id": "today-2026-06-16-a2af18c8",
-      "sessionDate": "2026-06-16",
-      "scheduledAt": "2026-06-16T09:00:00.000Z",
-      "title": "Isolation/Core work — John & Steph",
-      "rawSms": "So isolation/Core work — John & Steph Tuesday\n\nWarm up well 5 min bike\n\nJump squats 20\n\nFlat bench Single arm dumbbell chest press\n10,10,10,10 each arm\n\nIncline bench single arm dumbbell chest press\n10,10,10,10 each arm\n\nHIIT cool down 5 mins\n20 sec on 20 sec off",
-      "workoutId": "sms-w-db357c41",
-      "programSlug": "adult",
-      "userIds": [
-        "demo-user-john-steph"
-      ],
-      "replacesSchedule": true,
-      "createdAt": "2026-06-15T03:46:27.161Z",
-      "createdBy": "seed-beta"
     }
   }
 }

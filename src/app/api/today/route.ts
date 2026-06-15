@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   createTodaySessionFromSms,
+  deleteSessionForUserOnDate,
+  deleteTodaySession,
   getSessionForUserOnDate,
   getTodaySessionForUser,
   hydrateTodaySessions,
@@ -65,4 +67,31 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+}
+
+export async function DELETE(request: Request) {
+  await hydrateTodaySessions();
+  const { searchParams } = new URL(request.url);
+  const sessionId = searchParams.get("sessionId");
+  const date = searchParams.get("date");
+  const userId = searchParams.get("userId");
+
+  if (sessionId) {
+    const ok = await deleteTodaySession(sessionId);
+    if (!ok) return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    return NextResponse.json({ deleted: true, sessionId });
+  }
+
+  if (date && userId) {
+    const ok = await deleteSessionForUserOnDate(userId, date);
+    if (!ok) {
+      return NextResponse.json({ error: "No session for member on that date" }, { status: 404 });
+    }
+    return NextResponse.json({ deleted: true, date, userId });
+  }
+
+  return NextResponse.json(
+    { error: "Provide sessionId or both date and userId" },
+    { status: 400 },
+  );
 }
