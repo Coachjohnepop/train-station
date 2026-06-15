@@ -164,6 +164,7 @@ export async function POST(request: Request) {
       threads: threads.map((t) => t.id),
       messages: createdMessages,
       session: sessionResult?.session ?? null,
+      newExerciseIds: sessionResult?.newExerciseIds ?? [],
       alerts: alertResult,
     });
   } catch (e: any) {

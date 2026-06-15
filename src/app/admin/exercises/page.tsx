@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import ExerciseLibrary from "@/components/ExerciseLibrary";
 
 export default function ExercisesAdminPage() {
@@ -10,7 +11,11 @@ export default function ExercisesAdminPage() {
       </p>
 
       <div className="mt-8">
-        <ExerciseLibrary />
+        <Suspense
+          fallback={<p className="text-sm text-[var(--muted)]">Loading exercise library…</p>}
+        >
+          <ExerciseLibrary />
+        </Suspense>
       </div>
     </div>
   );

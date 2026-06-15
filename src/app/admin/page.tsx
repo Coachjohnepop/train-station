@@ -26,7 +26,7 @@ export default async function AdminPage() {
           subtitle={
             today.count > 0
               ? `${today.count} appt${today.count === 1 ? "" : "s"} today`
-              : "Paste SMS · schedule"
+              : "Text upload · schedule"
           }
           statStyle
         />

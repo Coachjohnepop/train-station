@@ -46,7 +46,7 @@ export default async function AdminTodayPage({ searchParams }: Props) {
         <p className="mt-1 text-sm text-[var(--muted)]">
           {dayPlan.assignedCount > 0
             ? `${dayPlan.timeline.length} on schedule · ${dayPlan.assignedCount} student${dayPlan.assignedCount !== 1 ? "s" : ""} with workouts`
-            : `Plan the day — view schedule below, then assign students and paste SMS.`}
+            : `Plan the day — view schedule below, then assign students and use Text Upload.`}
         </p>
       </div>
 

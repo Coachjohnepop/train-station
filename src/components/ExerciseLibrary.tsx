@@ -1,7 +1,9 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { formatApiError } from "@/lib/api-errors";
+import { isNewlyAddedFromTextUpload } from "@/lib/text-upload-exercises";
 import { isYoutubeUrl } from "@/lib/youtube";
 
 type Exercise = {
@@ -270,7 +272,10 @@ function ExerciseNameCell({
   );
 }
 
+type LibraryTab = "all" | "newly-added";
+
 export default function ExerciseLibrary() {
+  const searchParams = useSearchParams();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [usages, setUsages] = useState<Record<string, UsageSummary>>({});
   const [name, setName] = useState("");
@@ -298,8 +303,17 @@ export default function ExerciseLibrary() {
   // Search and categories (P1 from transcript: "search... type in back and boom" + categories "like we did before")
   const [search, setSearch] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [libraryTab, setLibraryTab] = useState<LibraryTab>(
+    searchParams.get("tab") === "newly-added" ? "newly-added" : "all",
+  );
 
   const COMMON_CATEGORIES = ["Back", "Chest", "Legs", "Shoulders", "Arms", "Core", "Full Body", "Mobility", "Cardio"];
+
+  useEffect(() => {
+    if (searchParams.get("tab") === "newly-added") {
+      setLibraryTab("newly-added");
+    }
+  }, [searchParams]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -325,8 +339,14 @@ export default function ExerciseLibrary() {
     load();
   }, [load]);
 
+  const newlyAddedCount = exercises.filter(isNewlyAddedFromTextUpload).length;
+
   // Compute filtered list for search + category chips (client-side, instant)
   const filteredExercises = exercises
+    .filter((ex) => {
+      if (libraryTab === "newly-added") return isNewlyAddedFromTextUpload(ex);
+      return true;
+    })
     .filter((ex) => {
       if (!search) return true;
       const q = search.toLowerCase();
@@ -665,6 +685,36 @@ export default function ExerciseLibrary() {
         )}
       </div>
 
+      <div className="flex flex-wrap gap-2 border-b border-[var(--border)] pb-3">
+        <button
+          type="button"
+          onClick={() => setLibraryTab("all")}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+            libraryTab === "all"
+              ? "bg-accent text-white"
+              : "border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]"
+          }`}
+        >
+          All exercises
+        </button>
+        <button
+          type="button"
+          onClick={() => setLibraryTab("newly-added")}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+            libraryTab === "newly-added"
+              ? "bg-amber-500/20 text-amber-200 ring-1 ring-amber-500/40"
+              : "border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]"
+          }`}
+        >
+          Newly Added{newlyAddedCount > 0 ? ` (${newlyAddedCount})` : ""}
+        </button>
+        {libraryTab === "newly-added" && (
+          <p className="w-full text-xs text-[var(--muted)]">
+            Exercises auto-created from Text Upload — review names, videos, and tags here.
+          </p>
+        )}
+      </div>
+
       {/* Search + Category filters (P1 from transcript) */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <input
@@ -719,8 +769,9 @@ export default function ExerciseLibrary() {
 
         {filteredExercises.length === 0 && exercises.length > 0 && !loading && (
           <p className="p-4 text-sm text-[var(--muted)]">
-            No exercises match the current search or selected categories.
-            Try clearing the filters above or click “Seed default tags for untagged” to populate categories from exercise names.
+            {libraryTab === "newly-added"
+              ? "No newly added exercises yet — they appear here when Text Upload creates movements not already in the library."
+              : "No exercises match the current search or selected categories. Try clearing the filters above or click “Seed default tags for untagged” to populate categories from exercise names."}
           </p>
         )}
 

@@ -86,21 +86,23 @@ function matchExercise(name: string, exercises: any[]): any | null {
   return bestScore >= Math.min(3, keywords.length) ? best : null;
 }
 
-function ensureExercise(name: string, notes?: string) {
+import { NEWLY_ADDED_EXERCISE_TAG } from "@/lib/text-upload-exercises";
+
+function ensureExercise(name: string, notes?: string): { exercise: ReturnType<typeof loadDemoExercises>[number]; created: boolean } {
   const exercises = loadDemoExercises();
   const existing = matchExercise(name, exercises);
-  if (existing) return existing;
+  if (existing) return { exercise: existing, created: false };
 
   const created = {
     id: createDemoExerciseId(),
     name,
-    description: notes || `Created from SMS workout (${new Date().toISOString().slice(0, 10)})`,
-    tags: "sms-import",
+    description: notes || `Created from text upload (${new Date().toISOString().slice(0, 10)})`,
+    tags: NEWLY_ADDED_EXERCISE_TAG,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
   saveDemoExercises([...exercises, created]);
-  return created;
+  return { exercise: created, created: true };
 }
 
 export async function buildWorkoutFromParsedSms(parsed: ParsedSmsWorkout, workoutId?: string) {
@@ -120,8 +122,10 @@ export async function buildWorkoutFromParsedSms(parsed: ParsedSmsWorkout, workou
     createdAt: now,
   });
 
+  const newExerciseIds: string[] = [];
   parsed.exercises.forEach((ex, idx) => {
-    const exercise = ensureExercise(ex.name, ex.notes);
+    const { exercise, created } = ensureExercise(ex.name, ex.notes);
+    if (created) newExerciseIds.push(exercise.id);
     store.workoutExercises.push({
       id: `sms-we-${randomUUID().slice(0, 8)}`,
       workoutId: id,
@@ -136,7 +140,7 @@ export async function buildWorkoutFromParsedSms(parsed: ParsedSmsWorkout, workou
   });
 
   await writeStore(store);
-  return { workoutId: id, exerciseCount: parsed.exercises.length };
+  return { workoutId: id, exerciseCount: parsed.exercises.length, newExerciseIds };
 }
 
 export async function getWorkoutExercisePreview(workoutId: string, limit = 4): Promise<string[]> {

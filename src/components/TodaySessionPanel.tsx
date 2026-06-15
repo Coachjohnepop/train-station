@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CoachMemberPicker, { type CoachMemberOption } from "@/components/CoachMemberPicker";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
@@ -54,6 +55,7 @@ export default function TodaySessionPanel({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageIsError, setMessageIsError] = useState(false);
+  const [newExerciseCount, setNewExerciseCount] = useState(0);
   const [open, setOpen] = useState(defaultOpen);
   const [assignOpen, setAssignOpen] = useState(defaultAssignOpen);
 
@@ -167,12 +169,17 @@ export default function TodaySessionPanel({
           : asInstructor && sendSmsAlert
             ? " · SMS alert queued"
             : "";
+      const created = Array.isArray(data.newExerciseIds) ? data.newExerciseIds.length : 0;
+      setNewExerciseCount(created);
       setMessage(
         `Built "${data.session?.title || "workout"}" for ${saveDate}${names ? ` · ${names}` : ""} (${data.parsed?.exercises?.length || 0} blocks)${smsNote}.`,
       );
       setMessageIsError(false);
       router.refresh();
-      setTimeout(() => setMessage(null), 5000);
+      setTimeout(() => {
+        setMessage(null);
+        setNewExerciseCount(0);
+      }, 12000);
     } catch (e: any) {
       setMessageIsError(true);
       const timedOut = e?.name === "AbortError";
@@ -186,7 +193,7 @@ export default function TodaySessionPanel({
     }
   }
 
-  const panelTitle = asInstructor ? "Paste SMS workout" : "Paste SMS workout for today";
+  const panelTitle = "Text Upload";
   const selectedNames = memberOptions
     .filter((m) => selectedUserIds.includes(m.id))
     .map((m) => m.name);
@@ -205,7 +212,7 @@ export default function TodaySessionPanel({
   const smsFields = (
     <div className="space-y-3">
       <p className="text-xs text-[var(--muted)]">
-        Parsed by our built-in SMS rules (exercises, sets/reps, warm-up blocks) — not a live AI call. Only members you select get this workout on Go to Today.
+        Parsed by our built-in text rules (exercises, sets/reps, warm-up blocks) — not a live AI call. Only members you select get this workout on Go to Today.
       </p>
 
       {lockSessionDate && viewDateLabel && (
@@ -231,7 +238,7 @@ export default function TodaySessionPanel({
 
       <textarea
         className="input h-40 w-full resize-y font-mono text-sm"
-        placeholder="Paste coach SMS workout here..."
+        placeholder="Paste workout text here..."
         value={rawSms}
         onChange={(e) => setRawSms(e.target.value)}
       />
@@ -258,7 +265,17 @@ export default function TodaySessionPanel({
       </div>
 
       {message && (
-        <p className={`text-xs ${messageIsError ? "text-red-400" : "text-[var(--success)]"}`}>{message}</p>
+        <div className="space-y-1">
+          <p className={`text-xs ${messageIsError ? "text-red-400" : "text-[var(--success)]"}`}>{message}</p>
+          {!messageIsError && newExerciseCount > 0 && (
+            <Link
+              href="/admin/exercises?tab=newly-added"
+              className="inline-block text-xs font-medium text-accent hover:underline"
+            >
+              Review {newExerciseCount} newly added exercise{newExerciseCount !== 1 ? "s" : ""} →
+            </Link>
+          )}
+        </div>
       )}
 
       {preview && (

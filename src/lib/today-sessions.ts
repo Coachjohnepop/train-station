@@ -170,7 +170,7 @@ export async function createTodaySessionFromSms(input: {
 }) {
   await hydrateTodaySessions();
   const parsed = parseSmsWorkout(input.rawSms);
-  const { workoutId } = await buildWorkoutFromParsedSms(parsed);
+  const { workoutId, newExerciseIds } = await buildWorkoutFromParsedSms(parsed);
   const userIds = input.userIds?.length ? input.userIds : [];
   const assignKey = userIdsKey(userIds);
 
@@ -195,7 +195,7 @@ export async function createTodaySessionFromSms(input: {
 
   store.sessions[session.id] = session;
   await writeStore(store);
-  return { session, parsed, workoutId };
+  return { session, parsed, workoutId, newExerciseIds };
 }
 
 export async function deleteTodaySession(sessionIdOrDate: string) {

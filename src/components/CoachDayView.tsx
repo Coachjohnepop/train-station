@@ -5,7 +5,7 @@ function typeBadge(type: "sms-workout" | "live-booking") {
   if (type === "sms-workout") {
     return (
       <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-amber-500/20 text-amber-300">
-        SMS workout
+        Text upload
       </span>
     );
   }
@@ -33,7 +33,7 @@ export default function CoachDayView({ day, dateQuery }: { day: CoachDayPlan; da
         <div className="mt-4 space-y-6">
           {!hasTimeline ? (
             <p className="text-sm text-[var(--muted)]">
-              Nothing scheduled yet — assign students above and paste an SMS workout, or add a booking.
+              Nothing scheduled yet — assign students above and use Text Upload, or add a booking.
             </p>
           ) : (
             <ol className="relative space-y-0 border-l border-[var(--border)] ml-3 pl-6">

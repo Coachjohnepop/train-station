@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CHAT_VIDEO_MAX_DURATION_SEC } from "@/lib/chat-video-constants";
 import CoachMemberPicker from "@/components/CoachMemberPicker";
@@ -30,6 +31,7 @@ export default function CoachChatComposer({
   const [sending, setSending] = useState(false);
   const [sendSmsAlert, setSendSmsAlert] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+  const [newExerciseCount, setNewExerciseCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   async function handleVideoPick(file: File | null) {
@@ -108,6 +110,8 @@ export default function CoachChatComposer({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Post failed");
 
+      const created = Array.isArray(data.newExerciseIds) ? data.newExerciseIds.length : 0;
+      setNewExerciseCount(created);
       setMessage(
         `Posted ${data.messages?.length || 0} message(s)${data.alerts?.sent ? ` · SMS sent to ${data.alerts.sent}` : ""}.`,
       );
@@ -179,7 +183,7 @@ export default function CoachChatComposer({
       <details className="group rounded border border-amber-500/30 bg-amber-500/5 p-3">
         <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold">
           <span className="text-accent group-open:rotate-90 transition-transform text-xs">▶</span>
-          Paste SMS workout (optional — overrides schedule)
+          Text Upload (optional — overrides schedule)
         </summary>
         <div className="mt-3 space-y-2">
           <div className="grid gap-2 sm:grid-cols-2 text-xs">
@@ -194,7 +198,7 @@ export default function CoachChatComposer({
           </div>
           <textarea
             className="input h-32 w-full resize-y font-mono text-sm"
-            placeholder="Paste coach SMS workout..."
+            placeholder="Paste workout text..."
             value={rawSms}
             onChange={(e) => setRawSms(e.target.value)}
           />
@@ -238,7 +242,19 @@ export default function CoachChatComposer({
         >
           {sending ? "Posting..." : "Post update"}
         </button>
-        {message && <p className="text-xs text-[var(--success)]">{message}</p>}
+        {message && (
+          <div className="space-y-1">
+            <p className="text-xs text-[var(--success)]">{message}</p>
+            {newExerciseCount > 0 && (
+              <Link
+                href="/admin/exercises?tab=newly-added"
+                className="inline-block text-xs font-medium text-accent hover:underline"
+              >
+                Review {newExerciseCount} newly added exercise{newExerciseCount !== 1 ? "s" : ""} →
+              </Link>
+            )}
+          </div>
+        )}
         {error && <p className="text-xs text-red-400">{error}</p>}
       </div>
     </div>
