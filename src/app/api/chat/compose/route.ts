@@ -51,9 +51,9 @@ export async function POST(request: Request) {
         ? [ensureCohortThread(input.programSlug || "adult", input.programName)]
         : memberIds.map((id) => ensureMemberThread(id));
 
-    let sessionResult: ReturnType<typeof createTodaySessionFromSms> | null = null;
+    let sessionResult: Awaited<ReturnType<typeof createTodaySessionFromSms>> | null = null;
     if (input.rawSms?.trim() && input.sessionDate) {
-      sessionResult = createTodaySessionFromSms({
+      sessionResult = await createTodaySessionFromSms({
         sessionDate: input.sessionDate,
         scheduledAt: resolveScheduledIso(input.sessionDate, input.scheduledTime),
         rawSms: input.rawSms.trim(),

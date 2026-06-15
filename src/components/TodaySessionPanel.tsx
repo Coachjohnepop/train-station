@@ -126,7 +126,7 @@ export default function TodaySessionPanel({
   const inner = (
     <div className="space-y-3">
       <p className="text-xs text-[var(--muted)]">
-        Parsed by our built-in SMS rules (exercises, sets/reps, warm-up blocks) — not a live AI call. Creates checkoff exercises and overrides the schedule for that date.
+        Parsed by our built-in SMS rules (exercises, sets/reps, warm-up blocks) — not a live AI call. Creates checkoff exercises and overrides the schedule for that date. Applies to all members unless a prior session lists specific people.
       </p>
 
       <div className="grid gap-2 sm:grid-cols-2 text-xs">

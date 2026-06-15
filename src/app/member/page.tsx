@@ -22,7 +22,7 @@ export default async function MemberDashboardPage() {
     data;
 
   const uid = await resolveUserId("demo-user");
-  const todaySession = resolveMemberSession(uid);
+  const todaySession = await resolveMemberSession(uid);
   const todaySubtitle = todaySession
     ? `${todaySession.title} — ${new Date(todaySession.scheduledAt).toLocaleString(undefined, {
         weekday: "short",

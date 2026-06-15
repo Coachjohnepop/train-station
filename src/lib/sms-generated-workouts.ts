@@ -1,13 +1,14 @@
-import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import { loadDemoExercises, saveDemoExercises, createDemoExerciseId, isDemoMode } from "@/lib/demo-exercises";
-import type { ParsedSmsExercise, ParsedSmsWorkout } from "@/lib/sms-workout-parser";
+import type { ParsedSmsWorkout } from "@/lib/sms-workout-parser";
 import type { MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import { resolveUserId } from "@/lib/current-user";
 import { getDemoPastsForWorkoutExercises } from "@/lib/demo-logs";
+import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
 
 const WORKOUTS_FILE = path.join(process.cwd(), "prisma", "sms-workouts.dev.json");
+const BLOB_PATH = "demo/sms-workouts.json";
 
 type SmsWorkoutStore = {
   workouts: Array<{ id: string; name: string; description?: string; source: "sms"; createdAt: string }>;
@@ -30,27 +31,33 @@ function emptyStore(): SmsWorkoutStore {
   return { workouts: [], workoutExercises: [] };
 }
 
+function setMemory(store: SmsWorkoutStore) {
+  memoryStore = store;
+}
+
+export async function hydrateSmsWorkouts(): Promise<SmsWorkoutStore> {
+  return hydrateJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: WORKOUTS_FILE,
+    memory: memoryStore,
+    setMemory,
+    fallback: emptyStore,
+  });
+}
+
 function readStore(): SmsWorkoutStore {
   if (memoryStore) return memoryStore;
-  try {
-    if (fs.existsSync(WORKOUTS_FILE)) {
-      memoryStore = JSON.parse(fs.readFileSync(WORKOUTS_FILE, "utf8"));
-      return memoryStore!;
-    }
-  } catch (e) {
-    console.warn("Could not read sms-workouts.dev.json", e);
-  }
-  memoryStore = emptyStore();
+  memoryStore = readLocalJson<SmsWorkoutStore>(WORKOUTS_FILE) || emptyStore();
   return memoryStore;
 }
 
-function writeStore(store: SmsWorkoutStore) {
-  memoryStore = store;
-  try {
-    fs.writeFileSync(WORKOUTS_FILE, JSON.stringify(store, null, 2));
-  } catch (e) {
-    console.warn("Could not persist sms-workouts.dev.json (using in-memory)", e);
-  }
+async function writeStore(store: SmsWorkoutStore) {
+  await persistJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: WORKOUTS_FILE,
+    data: store,
+    setMemory,
+  });
 }
 
 function normalizeName(s: string) {
@@ -96,7 +103,8 @@ function ensureExercise(name: string, notes?: string) {
   return created;
 }
 
-export function buildWorkoutFromParsedSms(parsed: ParsedSmsWorkout, workoutId?: string) {
+export async function buildWorkoutFromParsedSms(parsed: ParsedSmsWorkout, workoutId?: string) {
+  await hydrateSmsWorkouts();
   const store = readStore();
   const id = workoutId || `sms-w-${randomUUID().slice(0, 8)}`;
   const now = new Date().toISOString();
@@ -127,11 +135,12 @@ export function buildWorkoutFromParsedSms(parsed: ParsedSmsWorkout, workoutId?: 
     });
   });
 
-  writeStore(store);
+  await writeStore(store);
   return { workoutId: id, exerciseCount: parsed.exercises.length };
 }
 
 export async function getSmsGeneratedWorkout(workoutId: string, memberName = "Member"): Promise<MemberWorkoutView | null> {
+  await hydrateSmsWorkouts();
   const store = readStore();
   const workout = store.workouts.find((w) => w.id === workoutId);
   if (!workout) return null;

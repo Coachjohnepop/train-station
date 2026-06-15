@@ -8,13 +8,38 @@
       "rawSms": "So isolation/Core work\n\nWarm up well 5 min bike\n\nUpper body warm up\nShoulder mobility warm\nUp with bands \n\nJump squats 20 \n\nFlat bench Single arm dumbbell chest press \n10,10,10,10\nEach arm \n\nIncline bench single arm dumbbell chest press \n10,10,10,10 each arm \n\nSeated single arm dumbbell shoulder press\n10,10,10 each arm \n\nFlat bench single arm dumbbell tricep extensions \n10,10,10,10 each arm \n\nStanding Straight bar cable tricep extensions \n10,10,10 \n\nHIIT cool down \n5 mins \n20 sec on 20 sec off  \n\nStretch well",
       "workoutId": "sms-w-c548168e",
       "programSlug": "adult",
-      "userIds": [
-        "demo-user-john",
-        "demo-user-stephanie"
-      ],
+      "userIds": [],
       "replacesSchedule": true,
       "createdAt": "2026-06-15T02:18:13.050Z",
       "createdBy": "seed-script"
+    },
+    "2026-06-14": {
+      "id": "today-2026-06-14",
+      "sessionDate": "2026-06-14",
+      "scheduledAt": "2026-06-14T10:30:00.000Z",
+      "title": "Coach SMS Workout",
+      "rawSms": "Jump squats 20\n\nFlat bench press\n10,10,10",
+      "workoutId": "sms-w-494f739c",
+      "programSlug": "adult",
+      "userIds": [
+        "demo-user"
+      ],
+      "replacesSchedule": true,
+      "createdAt": "2026-06-15T02:23:23.416Z"
+    },
+    "2026-06-15": {
+      "id": "today-2026-06-15",
+      "sessionDate": "2026-06-15",
+      "scheduledAt": "2026-06-15T14:30:00.000Z",
+      "title": "Isolation/Core work",
+      "rawSms": "So isolation/Core work\n\nJump squats 20\n\nFlat bench press\n10,10,10",
+      "workoutId": "sms-w-b7196962",
+      "programSlug": "adult",
+      "userIds": [
+        "demo-user"
+      ],
+      "replacesSchedule": true,
+      "createdAt": "2026-06-15T02:23:51.530Z"
     }
   }
 }

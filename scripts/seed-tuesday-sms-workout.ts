@@ -38,19 +38,26 @@ HIIT cool down
 
 Stretch well`;
 
-const result = createTodaySessionFromSms({
-  sessionDate: "2026-06-17",
-  scheduledAt: "2026-06-17T10:30:00.000Z",
-  rawSms: SAMPLE_SMS,
-  programSlug: "adult",
-  userIds: ["demo-user-john", "demo-user-stephanie"],
-  replacesSchedule: true,
-  createdBy: "seed-script",
-  title: "Isolation/Core work",
-});
+async function main() {
+  const result = await createTodaySessionFromSms({
+    sessionDate: "2026-06-17",
+    scheduledAt: "2026-06-17T10:30:00.000Z",
+    rawSms: SAMPLE_SMS,
+    programSlug: "adult",
+    userIds: [],
+    replacesSchedule: true,
+    createdBy: "seed-script",
+    title: "Isolation/Core work",
+  });
 
-console.log("Seeded today session:", result.session.id);
-console.log("Workout:", result.workoutId, "with", result.parsed.exercises.length, "exercise blocks:");
-for (const ex of result.parsed.exercises) {
-  console.log(`  - ${ex.name}: ${ex.sets}x ${ex.reps}${ex.notes ? ` (${ex.notes})` : ""}`);
+  console.log("Seeded today session:", result.session.id);
+  console.log("Workout:", result.workoutId, "with", result.parsed.exercises.length, "exercise blocks:");
+  for (const ex of result.parsed.exercises) {
+    console.log(`  - ${ex.name}: ${ex.sets}x ${ex.reps}${ex.notes ? ` (${ex.notes})` : ""}`);
+  }
 }
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

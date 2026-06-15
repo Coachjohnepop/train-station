@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   createTodaySessionFromSms,
   getTodaySessionForUser,
+  hydrateTodaySessions,
   listTodaySessions,
 } from "@/lib/today-sessions";
 import { parseSmsWorkout } from "@/lib/sms-workout-parser";
@@ -20,6 +21,7 @@ const postSchema = z.object({
 });
 
 export async function GET(request: Request) {
+  await hydrateTodaySessions();
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("userId") || (await resolveUserId("demo-user"));
   const date = searchParams.get("date");
@@ -43,7 +45,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
     }
 
-    const result = createTodaySessionFromSms(parsed.data);
+    const result = await createTodaySessionFromSms(parsed.data);
     return NextResponse.json(result);
   } catch (e: any) {
     console.error("POST /api/today failed", e);

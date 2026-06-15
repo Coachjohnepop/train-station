@@ -1,7 +1,7 @@
-import fs from "fs";
 import path from "path";
 import { parseSmsWorkout } from "@/lib/sms-workout-parser";
 import { buildWorkoutFromParsedSms } from "@/lib/sms-generated-workouts";
+import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
 
 export type TodaySession = {
   id: string;
@@ -22,6 +22,7 @@ type TodaySessionStore = {
 };
 
 const DEV_FILE = path.join(process.cwd(), "prisma", "today-sessions.dev.json");
+const BLOB_PATH = "demo/today-sessions.json";
 
 let memoryStore: TodaySessionStore | null = null;
 
@@ -29,28 +30,33 @@ function emptyStore(): TodaySessionStore {
   return { sessions: {} };
 }
 
+function setMemory(store: TodaySessionStore) {
+  memoryStore = store;
+}
+
+export async function hydrateTodaySessions(): Promise<TodaySessionStore> {
+  return hydrateJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    memory: memoryStore,
+    setMemory,
+    fallback: emptyStore,
+  });
+}
+
 function readStore(): TodaySessionStore {
   if (memoryStore) return memoryStore;
-  try {
-    if (fs.existsSync(DEV_FILE)) {
-      memoryStore = JSON.parse(fs.readFileSync(DEV_FILE, "utf8")) as TodaySessionStore;
-      return memoryStore;
-    }
-  } catch (e) {
-    console.warn("Could not read today-sessions.dev.json", e);
-  }
-  memoryStore = emptyStore();
+  memoryStore = readLocalJson<TodaySessionStore>(DEV_FILE) || emptyStore();
   return memoryStore;
 }
 
-function writeStore(store: TodaySessionStore) {
-  memoryStore = store;
-  try {
-    fs.writeFileSync(DEV_FILE, JSON.stringify(store, null, 2));
-  } catch (e) {
-    // Vercel/serverless: filesystem is read-only — in-memory cache still works per instance
-    console.warn("Could not persist today-sessions.dev.json (using in-memory)", e);
-  }
+async function writeStore(store: TodaySessionStore) {
+  await persistJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    data: store,
+    setMemory,
+  });
 }
 
 export function listTodaySessions(): TodaySession[] {
@@ -67,10 +73,12 @@ export function getSessionsForDate(sessionDate: string): TodaySession[] {
   return listTodaySessions().filter((s) => s.sessionDate === sessionDate);
 }
 
+function sessionAppliesToUser(session: TodaySession, userId: string) {
+  return session.userIds.length === 0 || session.userIds.includes(userId);
+}
+
 export function getTodaySessionForUser(userId: string, referenceDate = new Date()): TodaySession | null {
-  const sessions = listTodaySessions().filter(
-    (s) => s.userIds.length === 0 || s.userIds.includes(userId),
-  );
+  const sessions = listTodaySessions().filter((s) => sessionAppliesToUser(s, userId));
   if (sessions.length === 0) return null;
 
   const todayKey = referenceDate.toISOString().slice(0, 10);
@@ -84,7 +92,15 @@ export function getTodaySessionForUser(userId: string, referenceDate = new Date(
   return upcoming[0] ?? sessions[sessions.length - 1];
 }
 
-export function createTodaySessionFromSms(input: {
+export function getUpcomingSessionsForUser(userId: string, referenceDate = new Date()): TodaySession[] {
+  const now = referenceDate.getTime();
+  return listTodaySessions()
+    .filter((s) => sessionAppliesToUser(s, userId))
+    .filter((s) => new Date(s.scheduledAt).getTime() >= now - 12 * 60 * 60 * 1000)
+    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+}
+
+export async function createTodaySessionFromSms(input: {
   sessionDate: string;
   scheduledAt: string;
   rawSms: string;
@@ -94,8 +110,9 @@ export function createTodaySessionFromSms(input: {
   createdBy?: string;
   title?: string;
 }) {
+  await hydrateTodaySessions();
   const parsed = parseSmsWorkout(input.rawSms);
-  const { workoutId } = buildWorkoutFromParsedSms(parsed);
+  const { workoutId } = await buildWorkoutFromParsedSms(parsed);
 
   const session: TodaySession = {
     id: `today-${input.sessionDate}`,
@@ -105,7 +122,7 @@ export function createTodaySessionFromSms(input: {
     rawSms: input.rawSms,
     workoutId,
     programSlug: input.programSlug || "adult",
-    userIds: input.userIds || [],
+    userIds: input.userIds ?? [],
     replacesSchedule: input.replacesSchedule ?? true,
     createdAt: new Date().toISOString(),
     createdBy: input.createdBy,
@@ -113,14 +130,15 @@ export function createTodaySessionFromSms(input: {
 
   const store = readStore();
   store.sessions[input.sessionDate] = session;
-  writeStore(store);
+  await writeStore(store);
   return { session, parsed, workoutId };
 }
 
-export function deleteTodaySession(sessionDate: string) {
+export async function deleteTodaySession(sessionDate: string) {
+  await hydrateTodaySessions();
   const store = readStore();
   if (!store.sessions[sessionDate]) return false;
   delete store.sessions[sessionDate];
-  writeStore(store);
+  await writeStore(store);
   return true;
 }

@@ -16,6 +16,12 @@ function makeSyntheticId(): string {
   return "u_" + randomUUID().replace(/-/g, "").slice(0, 16);
 }
 
+const DEMO_EMAIL_TO_ID: Record<string, string> = {
+  "john@thetrainstation.co": "demo-user-john",
+  "stephanie@thetrainstation.co": "demo-user-stephanie",
+  "demo@thetrainstation.co": "demo-user",
+};
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const parsed = joinSchema.safeParse(body);
@@ -60,8 +66,8 @@ export async function POST(request: Request) {
       }
     }
   } else {
-    // Demo mode: synthetic id so multiple "accounts" can coexist in the .dev.json stores
-    userId = makeSyntheticId();
+    const mapped = email ? DEMO_EMAIL_TO_ID[email.toLowerCase().trim()] : undefined;
+    userId = mapped || makeSyntheticId();
   }
 
   // If a programSlug provided (or default), enroll for this user

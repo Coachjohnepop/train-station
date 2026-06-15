@@ -2,7 +2,7 @@ import Link from "next/link";
 import MemberWorkoutConsole from "@/components/MemberWorkoutConsole";
 import TodaySessionPanel from "@/components/TodaySessionPanel";
 import { getAppointmentsForDate } from "@/lib/today-appointments";
-import { getTodaySessionByDate } from "@/lib/today-sessions";
+import { getTodaySessionByDate, hydrateTodaySessions } from "@/lib/today-sessions";
 import { getSmsGeneratedWorkout } from "@/lib/sms-generated-workouts";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +21,7 @@ function formatDateLabel(dateKey: string) {
 }
 
 export default async function AdminTodayPage({ searchParams }: Props) {
+  await hydrateTodaySessions();
   const sp = await searchParams;
   const todayKey = new Date().toISOString().slice(0, 10);
   const sessionDate = sp.date || todayKey;
@@ -179,7 +180,7 @@ export default async function AdminTodayPage({ searchParams }: Props) {
       <TodaySessionPanel
         asInstructor
         programSlug={session?.programSlug || "adult"}
-        userIds={session?.userIds?.length ? session.userIds : ["demo-user-john", "demo-user-stephanie"]}
+        userIds={session?.userIds ?? []}
         defaultDate={sessionDate}
         defaultTime={session ? new Date(session.scheduledAt).toTimeString().slice(0, 5) : "06:30"}
         collapsible

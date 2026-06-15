@@ -5,7 +5,7 @@ import TodaySessionPanel from "@/components/TodaySessionPanel";
 import { getMemberDashboard } from "@/lib/member-context";
 import { getSmsGeneratedWorkout } from "@/lib/sms-generated-workouts";
 import { resolveUserId } from "@/lib/current-user";
-import { resolveMemberSession } from "@/lib/member-today";
+import { loadMemberUpcomingSessions, memberTodayHref, resolveMemberSession } from "@/lib/member-today";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +28,10 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   if (!dashboard) notFound();
 
   const todayKey = new Date().toISOString().slice(0, 10);
-  const session = resolveMemberSession(uid, sp.date);
+  const [session, upcoming] = await Promise.all([
+    resolveMemberSession(uid, sp.date),
+    loadMemberUpcomingSessions(uid),
+  ]);
   const viewDate = sp.date || session?.sessionDate || todayKey;
   const workout = session ? await getSmsGeneratedWorkout(session.workoutId, dashboard.user.name) : null;
   const hasWorkout = !!workout;
@@ -98,6 +101,32 @@ export default async function MemberTodayPage({ searchParams }: Props) {
           </Link>
         )}
       </div>
+
+      {!asInstructor && upcoming.length > 0 && (
+        <div className="card py-2 px-3 text-sm">
+          <p className="text-xs font-semibold text-accent mb-2">Your coach workouts</p>
+          <ul className="space-y-1">
+            {upcoming.map((s) => (
+              <li key={s.id}>
+                <Link
+                  href={memberTodayHref(s)}
+                  className={`hover:underline ${s.sessionDate === session?.sessionDate ? "text-accent font-medium" : "text-[var(--muted)]"}`}
+                >
+                  {s.title} —{" "}
+                  {new Date(s.scheduledAt).toLocaleString(undefined, {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                  {s.replacesSchedule ? " · overrides schedule" : ""}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {hasWorkout ? (
         <div className="-mx-4">
