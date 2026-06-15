@@ -4,6 +4,7 @@ import TodaySessionPanel from "@/components/TodaySessionPanel";
 import { getAppointmentsForDate } from "@/lib/today-appointments";
 import { getTodaySessionByDate, hydrateTodaySessions } from "@/lib/today-sessions";
 import { getSmsGeneratedWorkout } from "@/lib/sms-generated-workouts";
+import { listDemoMembersForCoach } from "@/lib/sms";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,10 @@ export default async function AdminTodayPage({ searchParams }: Props) {
   const session = getTodaySessionByDate(sessionDate);
   const workout = session ? await getSmsGeneratedWorkout(session.workoutId, "Coach session") : null;
   const hasSmsWorkout = !!workout;
+  const coachMembers = listDemoMembersForCoach().map((m) => ({
+    id: m.id,
+    name: m.name,
+  }));
 
   const scheduledLabel = session
     ? new Date(session.scheduledAt).toLocaleString(undefined, {
@@ -85,6 +90,15 @@ export default async function AdminTodayPage({ searchParams }: Props) {
             <span className="rounded-full bg-amber-500/20 px-2.5 py-1 text-[10px] font-semibold text-amber-300">
               SMS workout
             </span>
+            {session.userIds.length > 0 && (
+              <span className="rounded-full bg-sky-500/20 px-2.5 py-1 text-[10px] font-semibold text-sky-300">
+                Assigned:{" "}
+                {coachMembers
+                  .filter((m) => session.userIds.includes(m.id))
+                  .map((m) => m.name)
+                  .join(", ") || session.userIds.join(", ")}
+              </span>
+            )}
             {session.replacesSchedule && (
               <span className="rounded-full bg-amber-500/20 px-2.5 py-1 text-[10px] font-semibold text-amber-300">
                 Overrides schedule
@@ -180,7 +194,12 @@ export default async function AdminTodayPage({ searchParams }: Props) {
       <TodaySessionPanel
         asInstructor
         programSlug={session?.programSlug || "adult"}
-        userIds={session?.userIds ?? []}
+        memberOptions={coachMembers}
+        defaultUserIds={
+          session?.userIds?.length
+            ? session.userIds
+            : ["demo-user-john", "demo-user-stephanie"]
+        }
         defaultDate={sessionDate}
         defaultTime={session ? new Date(session.scheduledAt).toTimeString().slice(0, 5) : "06:30"}
         collapsible

@@ -44,7 +44,7 @@ async function main() {
     scheduledAt: "2026-06-17T10:30:00.000Z",
     rawSms: SAMPLE_SMS,
     programSlug: "adult",
-    userIds: [],
+    userIds: ["demo-user-john", "demo-user-stephanie"],
     replacesSchedule: true,
     createdBy: "seed-script",
     title: "Isolation/Core work",

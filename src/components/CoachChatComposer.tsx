@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CHAT_VIDEO_MAX_DURATION_SEC } from "@/lib/chat-video-constants";
+import CoachMemberPicker from "@/components/CoachMemberPicker";
 
 type MemberOption = { id: string; name: string; email: string };
 
@@ -23,10 +24,6 @@ export default function CoachChatComposer({ members }: { members: MemberOption[]
   const [sendSmsAlert, setSendSmsAlert] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  function toggleMember(id: string) {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  }
 
   async function handleVideoPick(file: File | null) {
     setError(null);
@@ -75,6 +72,11 @@ export default function CoachChatComposer({ members }: { members: MemberOption[]
   }
 
   async function handlePost() {
+    if (selectedIds.length === 0) {
+      setError("Select at least one member.");
+      return;
+    }
+
     setSending(true);
     setError(null);
     setMessage(null);
@@ -149,21 +151,11 @@ export default function CoachChatComposer({ members }: { members: MemberOption[]
         </label>
       )}
 
-      <div>
-        <span className="text-xs text-[var(--muted)]">Members</span>
-        <div className="mt-1 flex flex-wrap gap-2">
-          {members.map((m) => (
-            <label key={m.id} className="flex items-center gap-1.5 text-xs cursor-pointer">
-              <input
-                type="checkbox"
-                checked={selectedIds.includes(m.id)}
-                onChange={() => toggleMember(m.id)}
-              />
-              {m.name}
-            </label>
-          ))}
-        </div>
-      </div>
+      <CoachMemberPicker
+        members={members.map((m) => ({ id: m.id, name: m.name }))}
+        selectedIds={selectedIds}
+        onChange={setSelectedIds}
+      />
 
       <label className="block text-xs">
         <span className="text-[var(--muted)]">Message (optional)</span>
@@ -229,7 +221,12 @@ export default function CoachChatComposer({ members }: { members: MemberOption[]
       </label>
 
       <div className="flex flex-wrap items-center gap-3">
-        <button type="button" className="btn-primary px-4 py-1.5 text-sm" disabled={sending} onClick={handlePost}>
+        <button
+          type="button"
+          className="btn-primary px-4 py-1.5 text-sm"
+          disabled={sending || selectedIds.length === 0}
+          onClick={handlePost}
+        >
           {sending ? "Posting..." : "Post update"}
         </button>
         {message && <p className="text-xs text-[var(--success)]">{message}</p>}

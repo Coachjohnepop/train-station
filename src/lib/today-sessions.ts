@@ -74,7 +74,7 @@ export function getSessionsForDate(sessionDate: string): TodaySession[] {
 }
 
 function sessionAppliesToUser(session: TodaySession, userId: string) {
-  return session.userIds.length === 0 || session.userIds.includes(userId);
+  return session.userIds.length > 0 && session.userIds.includes(userId);
 }
 
 export function getTodaySessionForUser(userId: string, referenceDate = new Date()): TodaySession | null {
@@ -122,7 +122,7 @@ export async function createTodaySessionFromSms(input: {
     rawSms: input.rawSms,
     workoutId,
     programSlug: input.programSlug || "adult",
-    userIds: input.userIds ?? [],
+    userIds: input.userIds?.length ? input.userIds : [],
     replacesSchedule: input.replacesSchedule ?? true,
     createdAt: new Date().toISOString(),
     createdBy: input.createdBy,

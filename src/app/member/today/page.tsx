@@ -6,6 +6,7 @@ import { getMemberDashboard } from "@/lib/member-context";
 import { getSmsGeneratedWorkout } from "@/lib/sms-generated-workouts";
 import { resolveUserId } from "@/lib/current-user";
 import { loadMemberUpcomingSessions, memberTodayHref, resolveMemberSession } from "@/lib/member-today";
+import { listDemoMembersForCoach } from "@/lib/sms";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const viewDate = sp.date || session?.sessionDate || todayKey;
   const workout = session ? await getSmsGeneratedWorkout(session.workoutId, dashboard.user.name) : null;
   const hasWorkout = !!workout;
+  const coachMembers = listDemoMembersForCoach().map((m) => ({ id: m.id, name: m.name }));
 
   const scheduledLabel = session
     ? new Date(session.scheduledAt).toLocaleString(undefined, {
@@ -173,7 +175,10 @@ export default async function MemberTodayPage({ searchParams }: Props) {
         <TodaySessionPanel
           asInstructor
           programSlug={session?.programSlug || "adult"}
-          userIds={forUser ? [forUser] : session?.userIds?.length ? session.userIds : [uid]}
+          memberOptions={coachMembers}
+          defaultUserIds={
+            forUser ? [forUser] : session?.userIds?.length ? session.userIds : ["demo-user-john", "demo-user-stephanie"]
+          }
           defaultDate={session?.sessionDate || viewDate}
           defaultTime={session ? new Date(session.scheduledAt).toTimeString().slice(0, 5) : "06:30"}
           collapsible

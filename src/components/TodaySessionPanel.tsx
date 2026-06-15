@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import CoachMemberPicker, { type CoachMemberOption } from "@/components/CoachMemberPicker";
 
 type ParsedExercise = {
   name: string;
@@ -11,11 +12,14 @@ type ParsedExercise = {
   section?: string;
 };
 
+const DEFAULT_COACH_MEMBERS = ["demo-user-john", "demo-user-stephanie"];
+
 export default function TodaySessionPanel({
   defaultDate,
   defaultTime = "06:30",
   programSlug = "adult",
-  userIds = [],
+  defaultUserIds,
+  memberOptions = [],
   asInstructor = false,
   collapsible = false,
   defaultOpen = false,
@@ -23,7 +27,8 @@ export default function TodaySessionPanel({
   defaultDate?: string;
   defaultTime?: string;
   programSlug?: string;
-  userIds?: string[];
+  defaultUserIds?: string[];
+  memberOptions?: CoachMemberOption[];
   asInstructor?: boolean;
   collapsible?: boolean;
   defaultOpen?: boolean;
@@ -32,7 +37,11 @@ export default function TodaySessionPanel({
   const [rawSms, setRawSms] = useState("");
   const [sessionDate, setSessionDate] = useState(defaultDate || new Date().toISOString().slice(0, 10));
   const [scheduledTime, setScheduledTime] = useState(defaultTime);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>(
+    defaultUserIds?.length ? defaultUserIds : asInstructor ? DEFAULT_COACH_MEMBERS : [],
+  );
   const [preview, setPreview] = useState<{ title: string; exercises: ParsedExercise[] } | null>(null);
+  const [sendSmsAlert, setSendSmsAlert] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageIsError, setMessageIsError] = useState(false);
@@ -77,6 +86,12 @@ export default function TodaySessionPanel({
 
   async function handleSave() {
     if (!rawSms.trim()) return;
+    if (asInstructor && selectedUserIds.length === 0) {
+      setMessageIsError(true);
+      setMessage("Select at least one member to assign this workout.");
+      return;
+    }
+
     setSaving(true);
     setMessage(null);
     setMessageIsError(false);
@@ -98,9 +113,10 @@ export default function TodaySessionPanel({
           scheduledAt: scheduled.toISOString(),
           rawSms: rawSms.trim(),
           programSlug,
-          userIds,
+          userIds: asInstructor ? selectedUserIds : defaultUserIds?.length ? defaultUserIds : selectedUserIds,
           replacesSchedule: true,
           createdBy: asInstructor ? "coach" : "member",
+          sendSmsAlert: asInstructor ? sendSmsAlert : false,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -110,7 +126,19 @@ export default function TodaySessionPanel({
         setMessage(`Save failed: ${formatApiError(res, data)}`);
         return;
       }
-      setMessage(`Built "${data.session?.title || "workout"}" with ${data.parsed?.exercises?.length || 0} blocks.`);
+      const names = memberOptions
+        .filter((m) => selectedUserIds.includes(m.id))
+        .map((m) => m.name)
+        .join(", ");
+      const smsNote =
+        asInstructor && sendSmsAlert && data.alerts?.sent
+          ? ` · SMS sent to ${data.alerts.sent}`
+          : asInstructor && sendSmsAlert
+            ? " · SMS alert queued"
+            : "";
+      setMessage(
+        `Built "${data.session?.title || "workout"}" with ${data.parsed?.exercises?.length || 0} blocks${names ? ` for ${names}` : ""}${smsNote}.`,
+      );
       setMessageIsError(false);
       router.refresh();
       setTimeout(() => setMessage(null), 5000);
@@ -126,8 +154,16 @@ export default function TodaySessionPanel({
   const inner = (
     <div className="space-y-3">
       <p className="text-xs text-[var(--muted)]">
-        Parsed by our built-in SMS rules (exercises, sets/reps, warm-up blocks) — not a live AI call. Creates checkoff exercises and overrides the schedule for that date. Applies to all members unless a prior session lists specific people.
+        Parsed by our built-in SMS rules (exercises, sets/reps, warm-up blocks) — not a live AI call. Only members you select below get this workout on Go to Today.
       </p>
+
+      {asInstructor && memberOptions.length > 0 && (
+        <CoachMemberPicker
+          members={memberOptions}
+          selectedIds={selectedUserIds}
+          onChange={setSelectedUserIds}
+        />
+      )}
 
       <div className="grid gap-2 sm:grid-cols-2 text-xs">
         <label className="block">
@@ -147,11 +183,23 @@ export default function TodaySessionPanel({
         onChange={(e) => setRawSms(e.target.value)}
       />
 
+      {asInstructor && (
+        <label className="flex items-center gap-2 text-xs cursor-pointer">
+          <input type="checkbox" checked={sendSmsAlert} onChange={(e) => setSendSmsAlert(e.target.checked)} />
+          Send SMS alert to selected members with link to Go to Today
+        </label>
+      )}
+
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={handleParse} disabled={!rawSms.trim()} className="btn-ghost text-sm px-3 py-1">
           Preview parse
         </button>
-        <button type="button" onClick={handleSave} disabled={saving || !rawSms.trim()} className="btn-primary text-sm px-4 py-1">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || !rawSms.trim() || (asInstructor && selectedUserIds.length === 0)}
+          className="btn-primary text-sm px-4 py-1"
+        >
           {saving ? "Building..." : "Build & override schedule"}
         </button>
       </div>

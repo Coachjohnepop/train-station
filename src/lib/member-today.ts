@@ -16,7 +16,7 @@ export async function resolveMemberSession(userId: string, dateParam?: string): 
   if (dateParam) {
     const s = getTodaySessionByDate(dateParam);
     if (!s) return null;
-    if (s.userIds.length > 0 && !s.userIds.includes(userId)) return null;
+    if (!s.userIds.includes(userId)) return null;
     return s;
   }
   return getTodaySessionForUser(userId);
