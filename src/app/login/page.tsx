@@ -30,11 +30,14 @@ function LoginForm() {
           router.push(data.signupUrl);
           return;
         }
-        setError(data.error || "Login failed");
+        const hint =
+          email.trim().toLowerCase().includes("johnsteph") || email.trim().toLowerCase().includes("lemonvoice")
+            ? " For John & Steph, use john@lemonvoice.com and leave the password blank."
+            : "";
+        setError((data.error || "Login failed") + hint);
         return;
       }
-      router.push(data.redirect || "/member");
-      router.refresh();
+      window.location.href = data.redirect || "/member";
     } catch {
       setError("Login failed — try again");
     } finally {

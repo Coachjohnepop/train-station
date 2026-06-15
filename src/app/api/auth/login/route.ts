@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { normalizeAccountEmail } from "@/lib/account-email";
 import { authenticateCredentials, applySessionCookies, isStaffRole } from "@/lib/auth";
 import { isInvitedAccountEmail } from "@/lib/invited-accounts";
 
@@ -8,7 +9,7 @@ export async function POST(request: Request) {
   const password = String(body.password || "");
   const redirect = typeof body.redirect === "string" ? body.redirect : "";
 
-  const normalized = email.trim().toLowerCase();
+  const normalized = normalizeAccountEmail(email);
   if (!isInvitedAccountEmail(normalized)) {
     return NextResponse.json(
       {

@@ -1,11 +1,12 @@
 import fs from "fs";
 import path from "path";
+import { normalizeAccountEmail } from "@/lib/account-email";
 
 const ACCOUNTS_FILE = path.join(process.cwd(), "prisma", "accounts.dev.json");
 
 /** Emails that can sign in and use the full app (coaches + beta members). */
 export function isInvitedAccountEmail(email: string): boolean {
-  const normalized = email.trim().toLowerCase();
+  const normalized = normalizeAccountEmail(email);
   if (!normalized) return false;
 
   try {

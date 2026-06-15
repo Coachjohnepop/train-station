@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import fs from "fs";
 import path from "path";
 import { MEMBER_COOKIE, MEMBER_NAME_COOKIE } from "@/lib/current-user";
+import { normalizeAccountEmail } from "@/lib/account-email";
 import { resolveDemoUser, resolveDemoUserByEmail } from "@/lib/demo-user-directory";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import {
@@ -62,23 +63,30 @@ function passwordAccepted(password: string, storedHash?: string | null): boolean
   return verifyPassword(password, storedHash);
 }
 
+function sessionFromDemoAccount(normalized: string, account: DemoAccount): SessionUser {
+  const user = resolveDemoUser(account.userId);
+  return {
+    id: account.userId,
+    email: normalized,
+    name: user?.name || "Member",
+    role: account.role,
+  };
+}
+
 export async function authenticateCredentials(
   email: string,
   password: string,
 ): Promise<SessionUser | null> {
-  const normalized = email.trim().toLowerCase();
+  const normalized = normalizeAccountEmail(email);
   if (!normalized) return null;
 
+  const demoAccount = loadDemoAccounts()[normalized];
+  if (demoAccount && passwordAccepted(password, demoAccount.passwordHash)) {
+    return sessionFromDemoAccount(normalized, demoAccount);
+  }
+
   if (isDemoMode()) {
-    const account = loadDemoAccounts()[normalized];
-    if (!account || !passwordAccepted(password, account.passwordHash)) return null;
-    const user = resolveDemoUser(account.userId);
-    return {
-      id: account.userId,
-      email: normalized,
-      name: user?.name || "Member",
-      role: account.role,
-    };
+    return null;
   }
 
   try {
