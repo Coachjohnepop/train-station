@@ -34,7 +34,7 @@ export default function CoachMemberPicker({
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-accent">Quick picks</span>
         <button type="button" onClick={selectCouple} className="btn-ghost px-2.5 py-1 text-xs">
-          Chad &amp; Kaite
+          John &amp; Steph
         </button>
         <button type="button" onClick={selectIndividuals} className="btn-ghost px-2.5 py-1 text-xs">
           Chad + Kaite

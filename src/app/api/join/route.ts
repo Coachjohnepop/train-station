@@ -19,7 +19,6 @@ function makeSyntheticId(): string {
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 
 const DEMO_EMAIL_TO_ID: Record<string, string> = {
-  "chadkaite@thetrainstation.co": DEFAULT_DEMO_MEMBER_ID,
   "johnsteph@thetrainstation.co": DEFAULT_DEMO_MEMBER_ID,
   "chad@thetrainstation.co": "demo-user-john",
   "john@thetrainstation.co": "demo-user-john",

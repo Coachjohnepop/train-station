@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 
 const DEMO_MEMBERS = [
-  { id: DEFAULT_DEMO_MEMBER_ID, label: "Chad & Kaite" },
+  { id: DEFAULT_DEMO_MEMBER_ID, label: "John & Steph" },
   { id: "demo-user-john", label: "Chad" },
   { id: "demo-user-stephanie", label: "Kaite" },
   { id: "demo-user", label: "Alex" },

@@ -34,8 +34,8 @@ export async function GET(request: Request) {
     const demoUsers = [
       {
         id: "demo-user-john-steph",
-        email: "chadkaite@thetrainstation.co",
-        name: "Chad & Kaite",
+        email: "johnsteph@thetrainstation.co",
+        name: "John & Steph",
         role: "MEMBER" as const,
         status: "active",
         notes: "Primary demo couple — enrolled in Adult. Default member preview account for Coach Jeremy.",
@@ -120,7 +120,7 @@ export async function GET(request: Request) {
         name: "Coach Jeremy",
         role: "INSTRUCTOR" as const,
         status: "active",
-        notes: "Primary coach — roster: Chad & Kaite, Chad, Kaite, Alex, Jordan.",
+        notes: "Primary coach — roster: John & Steph, Chad, Kaite, Alex, Jordan.",
         createdAt: new Date(Date.now() - 259200000).toISOString(),
         phone: "(555) 123-0001",
         dailyReminderTime: null,

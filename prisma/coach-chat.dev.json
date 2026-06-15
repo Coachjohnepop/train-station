@@ -4,7 +4,7 @@
       "id": "thread-member-demo-user-john-steph",
       "kind": "member",
       "memberId": "demo-user-john-steph",
-      "title": "Chad & Kaite",
+      "title": "John & Steph",
       "createdAt": "2026-06-10T12:00:00.000Z",
       "updatedAt": "2026-06-14T10:00:00.000Z"
     },
@@ -57,7 +57,7 @@
       "authorId": "coach",
       "authorName": "Coach Jeremy",
       "kind": "text",
-      "body": "Welcome Chad & Kaite — I'll post your shared workouts here. Text me back anytime.",
+      "body": "Welcome John & Steph — I'll post your shared workouts here. Text me back anytime.",
       "alertSent": true,
       "createdAt": "2026-06-12T14:00:00.000Z",
       "readByUserIds": ["coach"]
