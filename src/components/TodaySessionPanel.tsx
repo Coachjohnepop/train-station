@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import CoachMemberPicker, { type CoachMemberOption } from "@/components/CoachMemberPicker";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
@@ -25,6 +25,8 @@ export default function TodaySessionPanel({
   collapsible = false,
   defaultOpen = false,
   defaultAssignOpen = true,
+  lockSessionDate,
+  viewDateLabel,
 }: {
   defaultDate?: string;
   defaultTime?: string;
@@ -35,10 +37,14 @@ export default function TodaySessionPanel({
   collapsible?: boolean;
   defaultOpen?: boolean;
   defaultAssignOpen?: boolean;
+  /** When set (coach day view), saves always use this date — matches Prev/Next navigation. */
+  lockSessionDate?: string;
+  viewDateLabel?: string;
 }) {
   const router = useRouter();
+  const effectiveDate = lockSessionDate || defaultDate || new Date().toISOString().slice(0, 10);
   const [rawSms, setRawSms] = useState("");
-  const [sessionDate, setSessionDate] = useState(defaultDate || new Date().toISOString().slice(0, 10));
+  const [sessionDate, setSessionDate] = useState(effectiveDate);
   const [scheduledTime, setScheduledTime] = useState(defaultTime);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>(
     defaultUserIds?.length ? defaultUserIds : asInstructor ? DEFAULT_COACH_MEMBERS : [],
@@ -50,6 +56,16 @@ export default function TodaySessionPanel({
   const [messageIsError, setMessageIsError] = useState(false);
   const [open, setOpen] = useState(defaultOpen);
   const [assignOpen, setAssignOpen] = useState(defaultAssignOpen);
+
+  useEffect(() => {
+    setSessionDate(lockSessionDate || defaultDate || new Date().toISOString().slice(0, 10));
+  }, [lockSessionDate, defaultDate]);
+
+  useEffect(() => {
+    if (defaultUserIds?.length) setSelectedUserIds(defaultUserIds);
+  }, [defaultUserIds?.join(",")]);
+
+  const saveDate = lockSessionDate || sessionDate;
 
   function formatApiError(res: Response, body: any) {
     if (body?.detail?.fieldErrors) {
@@ -100,7 +116,7 @@ export default function TodaySessionPanel({
     setMessage(null);
     setMessageIsError(false);
 
-    const scheduled = new Date(`${sessionDate}T${scheduledTime}:00`);
+    const scheduled = new Date(`${saveDate}T${scheduledTime}:00`);
     if (Number.isNaN(scheduled.getTime())) {
       setSaving(false);
       setMessageIsError(true);
@@ -113,7 +129,7 @@ export default function TodaySessionPanel({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sessionDate,
+          sessionDate: saveDate,
           scheduledAt: scheduled.toISOString(),
           rawSms: rawSms.trim(),
           programSlug,
@@ -141,7 +157,7 @@ export default function TodaySessionPanel({
             ? " · SMS alert queued"
             : "";
       setMessage(
-        `Built "${data.session?.title || "workout"}" with ${data.parsed?.exercises?.length || 0} blocks${names ? ` for ${names}` : ""}${smsNote}.`,
+        `Built "${data.session?.title || "workout"}" for ${saveDate}${names ? ` · ${names}` : ""} (${data.parsed?.exercises?.length || 0} blocks)${smsNote}.`,
       );
       setMessageIsError(false);
       router.refresh();
@@ -175,10 +191,20 @@ export default function TodaySessionPanel({
         Parsed by our built-in SMS rules (exercises, sets/reps, warm-up blocks) — not a live AI call. Only members you select get this workout on Go to Today.
       </p>
 
+      {lockSessionDate && viewDateLabel && (
+        <p className="rounded-md border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">
+          Saving to <strong>{viewDateLabel}</strong> — matches the day you are viewing above.
+        </p>
+      )}
+
       <div className="grid gap-2 sm:grid-cols-2 text-xs">
         <label className="block">
           <span className="text-[var(--muted)]">Session date</span>
-          <input type="date" className="input mt-1 w-full" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} />
+          {lockSessionDate ? (
+            <input type="date" className="input mt-1 w-full opacity-70" value={saveDate} readOnly />
+          ) : (
+            <input type="date" className="input mt-1 w-full" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} />
+          )}
         </label>
         <label className="block">
           <span className="text-[var(--muted)]">Scheduled time</span>

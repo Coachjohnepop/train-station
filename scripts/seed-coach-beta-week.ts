@@ -43,6 +43,26 @@ Core: dead bug 3 x 10 each side`,
   },
   {
     sessionDate: "2026-06-16",
+    scheduledAt: "2026-06-16T09:00:00.000Z",
+    userIds: ["demo-user-john-steph"],
+    title: "Isolation/Core work — John & Steph",
+    rawSms: `So isolation/Core work — John & Steph Tuesday
+
+Warm up well 5 min bike
+
+Jump squats 20
+
+Flat bench Single arm dumbbell chest press
+10,10,10,10 each arm
+
+Incline bench single arm dumbbell chest press
+10,10,10,10 each arm
+
+HIIT cool down 5 mins
+20 sec on 20 sec off`,
+  },
+  {
+    sessionDate: "2026-06-16",
     scheduledAt: "2026-06-16T10:30:00.000Z",
     userIds: ["demo-user-john", "demo-user-stephanie"],
     title: "Upper body push",

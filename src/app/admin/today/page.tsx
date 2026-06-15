@@ -73,11 +73,14 @@ export default async function AdminTodayPage({ searchParams }: Props) {
       <CoachDayView day={dayPlan} dateQuery={sessionDate} />
 
       <TodaySessionPanel
+        key={sessionDate}
         asInstructor
         programSlug="adult"
         memberOptions={coachMembers}
         defaultUserIds={[DEFAULT_DEMO_MEMBER_ID]}
         defaultDate={sessionDate}
+        lockSessionDate={sessionDate}
+        viewDateLabel={formatDateLabel(sessionDate)}
         defaultTime="06:30"
         collapsible
         defaultAssignOpen={false}
