@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifySessionToken, SESSION_COOKIE } from "@/lib/auth-session";
+import { verifySessionTokenEdge, SESSION_COOKIE } from "@/lib/auth-session-edge";
 
 const PUBLIC_PREFIXES = [
   "/login",
@@ -19,7 +19,7 @@ function isPublicPath(pathname: string): boolean {
   return PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (
     pathname.startsWith("/_next") ||
@@ -40,7 +40,7 @@ export function middleware(request: NextRequest) {
   }
 
   const token = request.cookies.get(SESSION_COOKIE)?.value;
-  const session = token ? verifySessionToken(token) : null;
+  const session = token ? await verifySessionTokenEdge(token) : null;
 
   if (!session) {
     const login = new URL("/login", request.url);
