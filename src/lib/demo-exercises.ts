@@ -34,6 +34,12 @@ export function loadDemoExercises(): any[] {
   return [...(cache || [])];
 }
 
+function shouldSyncSeedSnapshot() {
+  // On Vercel, rewriting the full seed-data.json during SMS builds can stall the
+  // serverless function and leave coach "Build" stuck on Building...
+  return isDemoMode() && !process.env.VERCEL;
+}
+
 export function saveDemoExercises(list: any[]) {
   cache = [...list];
   try {
@@ -41,6 +47,8 @@ export function saveDemoExercises(list: any[]) {
   } catch (e) {
     console.error("Failed to persist demo exercises", e);
   }
+
+  if (!shouldSyncSeedSnapshot()) return;
 
   // Sync the updated list into seed-data.json's top-level "exercises" array.
   // This is the key fix for the #1 customer issue:

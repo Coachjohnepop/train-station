@@ -67,6 +67,18 @@ export default function TodaySessionPanel({
 
   const saveDate = lockSessionDate || sessionDate;
 
+  const BUILD_TIMEOUT_MS = 45_000;
+
+  async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), BUILD_TIMEOUT_MS);
+    try {
+      return await fetch(input, { ...init, signal: controller.signal });
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   function formatApiError(res: Response, body: any) {
     if (body?.detail?.fieldErrors) {
       const fields = Object.entries(body.detail.fieldErrors as Record<string, string[]>)
@@ -125,7 +137,7 @@ export default function TodaySessionPanel({
     }
 
     try {
-      const res = await fetch("/api/today", {
+      const res = await fetchWithTimeout("/api/today", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -140,7 +152,6 @@ export default function TodaySessionPanel({
         }),
       });
       const data = await res.json().catch(() => ({}));
-      setSaving(false);
       if (!res.ok) {
         setMessageIsError(true);
         setMessage(`Save failed: ${formatApiError(res, data)}`);
@@ -163,9 +174,15 @@ export default function TodaySessionPanel({
       router.refresh();
       setTimeout(() => setMessage(null), 5000);
     } catch (e: any) {
-      setSaving(false);
       setMessageIsError(true);
-      setMessage(`Save failed: ${e?.message || "network error"}`);
+      const timedOut = e?.name === "AbortError";
+      setMessage(
+        timedOut
+          ? "Build timed out — try again. If it keeps hanging, uncheck Send SMS alert and retry."
+          : `Save failed: ${e?.message || "network error"}`,
+      );
+    } finally {
+      setSaving(false);
     }
   }
 
