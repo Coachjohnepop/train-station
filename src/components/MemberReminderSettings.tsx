@@ -95,10 +95,11 @@ export default function MemberReminderSettings() {
   return (
     <div className="card text-xs p-3 bg-[var(--bg)] border border-[var(--accent)]/40 space-y-2">
       <div
-        className="font-medium flex items-center justify-between cursor-pointer select-none bg-white text-[#7c3aed] px-2 py-1 rounded-md"
+        className="font-medium flex items-center gap-2 cursor-pointer select-none bg-white text-[#7c3aed] px-2 py-1 rounded-md"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span>
+        <span className={`text-xs text-[#7c3aed] transition-transform ${isOpen ? "rotate-90" : ""}`}>▶</span>
+        <span className="flex-1">
           SMS Reminders &amp; Contact
           {settings.dailyReminderTime && (
             <span className="ml-1 text-[#7c3aed]/70">
@@ -110,7 +111,6 @@ export default function MemberReminderSettings() {
         <span className="flex items-center gap-2 text-[#7c3aed]">
           {saving && <span className="text-[10px] text-[var(--muted)]">Saving…</span>}
           {message && <span className="text-[var(--success)] text-[10px]">{message}</span>}
-          <span>{isOpen ? "−" : "+"}</span>
         </span>
       </div>
 

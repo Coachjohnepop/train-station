@@ -77,10 +77,11 @@ export default function MemberHomeEquipment() {
   return (
     <div className="card text-xs p-3 bg-[var(--surface-2)]">
       <div
-        className="font-semibold text-sm mb-1 flex items-center justify-between cursor-pointer select-none"
+        className="font-semibold text-sm mb-1 flex items-center gap-2 cursor-pointer select-none"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span>
+        <span className={`text-xs text-accent transition-transform ${isOpen ? "rotate-90" : ""}`}>▶</span>
+        <span className="flex-1">
           Your Home Equipment
           {hasItems && (
             <span className="ml-1 text-[var(--muted)] font-normal">
@@ -88,8 +89,7 @@ export default function MemberHomeEquipment() {
             </span>
           )}
         </span>
-        <span className="text-[var(--muted)]">{isOpen ? "−" : "+"}</span>
-        {message && <span className="text-[var(--success)] ml-2 text-[10px]">{message}</span>}
+        {message && <span className="text-[var(--success)] text-[10px]">{message}</span>}
       </div>
 
       {isOpen && (

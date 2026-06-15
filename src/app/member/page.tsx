@@ -233,10 +233,10 @@ export default async function MemberDashboardPage() {
         <details className="group">
           <summary className="flex items-center justify-between mb-2 cursor-pointer list-none">
             <div className="flex items-center gap-2">
+              <span className="text-xs text-accent group-open:rotate-90 transition-transform">▶</span>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)] group-open:text-white transition">
                 Programs
               </h2>
-              <span className="text-xs text-accent group-open:rotate-90 transition">▶</span>
             </div>
             <a href="/member/programs" className="text-xs text-accent hover:underline">
               View all
@@ -316,7 +316,8 @@ export default async function MemberDashboardPage() {
 
       <details className="group">
         <summary className="flex items-center gap-2 mb-2 cursor-pointer list-none text-sm font-semibold uppercase tracking-wide text-[var(--muted)] group-open:text-white transition">
-          Quick actions <span className="text-xs text-accent group-open:rotate-90 transition">▶</span>
+          <span className="text-xs text-accent group-open:rotate-90 transition-transform">▶</span>
+          Quick actions
         </summary>
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
           <Link
@@ -346,8 +347,8 @@ export default async function MemberDashboardPage() {
       {/* Collapsible strength explanation moved to bottom */}
       <details className="group mb-2">
         <summary className="flex items-center gap-2 cursor-pointer list-none text-[10px] text-[var(--muted)] -mt-1 mb-1 hover:text-[var(--text)]">
+          <span className="text-accent group-open:rotate-90 transition-transform text-xs">▶</span>
           <span>Strength Score calculation details</span>
-          <span className="text-accent group-open:rotate-90 transition">▶</span>
         </summary>
         <p className="text-[10px] text-[var(--muted)]">
           Strength Score (power score): no upper limit. Computed from your best logged performances (weight × reps factor via Epley 1RM estimator then ~6RM) on key lifts. Each lift is converted to an estimated "bench press 6-rep max equivalent" using standard strength ratios (squat ~1.5× bench, OHP/military ~0.65×, DB bench ~0.9× total, rows/pulldowns ~0.85-1.1×, triceps extensions ~0.4×). The score is the average of those bench-equivalents across the lifts you have data for (Back Squat, Bench Press, DB Bench, Military/Shoulder Press, Pulldown/Row, Tricep work). Log more volume on these to raise it.
