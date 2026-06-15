@@ -121,16 +121,15 @@ export default async function AdminTodayPage({ searchParams }: Props) {
         )}
       </section>
 
-      <section>
-        <h2 className="font-semibold mb-2">Paste SMS workout</h2>
-        <TodaySessionPanel
-          asInstructor
-          programSlug="adult"
-          userIds={["demo-user-john", "demo-user-stephanie"]}
-          defaultDate={sessionDate}
-          defaultTime="06:30"
-        />
-      </section>
+      <TodaySessionPanel
+        asInstructor
+        programSlug="adult"
+        userIds={["demo-user-john", "demo-user-stephanie"]}
+        defaultDate={sessionDate}
+        defaultTime="06:30"
+        collapsible
+        defaultOpen={appointments.every((a) => a.type !== "sms-workout")}
+      />
     </div>
   );
 }

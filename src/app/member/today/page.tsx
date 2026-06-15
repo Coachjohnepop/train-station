@@ -24,6 +24,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
 
   const session = getTodaySessionForUser(uid);
   const workout = session ? await getSmsGeneratedWorkout(session.workoutId, dashboard.user.name) : null;
+  const hasWorkout = !!workout;
 
   const scheduledLabel = session
     ? new Date(session.scheduledAt).toLocaleString(undefined, {
@@ -62,17 +63,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
         )}
       </div>
 
-      {(asInstructor || !session) && (
-        <TodaySessionPanel
-          asInstructor={asInstructor}
-          programSlug={session?.programSlug || "adult"}
-          userIds={forUser ? [forUser] : session?.userIds?.length ? session.userIds : [uid]}
-          defaultDate={session?.sessionDate || "2026-06-17"}
-          defaultTime={session ? new Date(session.scheduledAt).toTimeString().slice(0, 5) : "06:30"}
-        />
-      )}
-
-      {workout ? (
+      {hasWorkout ? (
         <div className="-mx-4">
           {asInstructor && (
             <div className="mx-4 mb-3 rounded border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
@@ -80,8 +71,11 @@ export default async function MemberTodayPage({ searchParams }: Props) {
             </div>
           )}
           {session?.rawSms && (
-            <details className="mx-4 mb-3 text-xs">
-              <summary className="cursor-pointer text-[var(--muted)] hover:text-white">View original SMS text</summary>
+            <details className="mx-4 mb-3 text-xs group">
+              <summary className="flex items-center gap-2 cursor-pointer list-none text-[var(--muted)] hover:text-white">
+                <span className="text-accent group-open:rotate-90 transition-transform">▶</span>
+                View original SMS text
+              </summary>
               <pre className="mt-2 whitespace-pre-wrap rounded border border-[var(--border)] bg-[var(--surface)] p-3 font-mono text-[11px]">
                 {session.rawSms}
               </pre>
@@ -100,7 +94,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
           <div className="card text-sm text-[var(--muted)]">
             <p>
               {session
-                ? "This session is assigned to other members. Switch to John or Stephanie in admin, or paste a new SMS workout above."
+                ? "This session is assigned to other members. Switch to John or Stephanie in admin, or paste a new SMS workout below."
                 : "No parsed workout for today yet."}
             </p>
             <Link href="/member/programs/adult" className="mt-2 inline-block text-accent hover:underline">
@@ -109,6 +103,16 @@ export default async function MemberTodayPage({ searchParams }: Props) {
           </div>
         )
       )}
+
+      <TodaySessionPanel
+        asInstructor={asInstructor}
+        programSlug={session?.programSlug || "adult"}
+        userIds={forUser ? [forUser] : session?.userIds?.length ? session.userIds : [uid]}
+        defaultDate={session?.sessionDate || new Date().toISOString().slice(0, 10)}
+        defaultTime={session ? new Date(session.scheduledAt).toTimeString().slice(0, 5) : "06:30"}
+        collapsible
+        defaultOpen={!hasWorkout}
+      />
     </div>
   );
 }

@@ -23,13 +23,34 @@ type TodaySessionStore = {
 
 const DEV_FILE = path.join(process.cwd(), "prisma", "today-sessions.dev.json");
 
+let memoryStore: TodaySessionStore | null = null;
+
+function emptyStore(): TodaySessionStore {
+  return { sessions: {} };
+}
+
 function readStore(): TodaySessionStore {
-  if (!fs.existsSync(DEV_FILE)) return { sessions: {} };
-  return JSON.parse(fs.readFileSync(DEV_FILE, "utf8"));
+  if (memoryStore) return memoryStore;
+  try {
+    if (fs.existsSync(DEV_FILE)) {
+      memoryStore = JSON.parse(fs.readFileSync(DEV_FILE, "utf8")) as TodaySessionStore;
+      return memoryStore;
+    }
+  } catch (e) {
+    console.warn("Could not read today-sessions.dev.json", e);
+  }
+  memoryStore = emptyStore();
+  return memoryStore;
 }
 
 function writeStore(store: TodaySessionStore) {
-  fs.writeFileSync(DEV_FILE, JSON.stringify(store, null, 2));
+  memoryStore = store;
+  try {
+    fs.writeFileSync(DEV_FILE, JSON.stringify(store, null, 2));
+  } catch (e) {
+    // Vercel/serverless: filesystem is read-only — in-memory cache still works per instance
+    console.warn("Could not persist today-sessions.dev.json (using in-memory)", e);
+  }
 }
 
 export function listTodaySessions(): TodaySession[] {
@@ -38,12 +59,12 @@ export function listTodaySessions(): TodaySession[] {
   );
 }
 
-export function getSessionsForDate(sessionDate: string): TodaySession[] {
-  return listTodaySessions().filter((s) => s.sessionDate === sessionDate);
-}
-
 export function getTodaySessionByDate(sessionDate: string): TodaySession | null {
   return readStore().sessions[sessionDate] ?? null;
+}
+
+export function getSessionsForDate(sessionDate: string): TodaySession[] {
+  return listTodaySessions().filter((s) => s.sessionDate === sessionDate);
 }
 
 export function getTodaySessionForUser(userId: string, referenceDate = new Date()): TodaySession | null {

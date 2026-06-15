@@ -36,11 +36,20 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const parsed = postSchema.safeParse(await request.json());
-  if (!parsed.success) {
-    return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
-  }
+  try {
+    const body = await request.json();
+    const parsed = postSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
+    }
 
-  const result = createTodaySessionFromSms(parsed.data);
-  return NextResponse.json(result);
+    const result = createTodaySessionFromSms(parsed.data);
+    return NextResponse.json(result);
+  } catch (e: any) {
+    console.error("POST /api/today failed", e);
+    return NextResponse.json(
+      { error: e?.message || "Failed to build workout from SMS" },
+      { status: 500 },
+    );
+  }
 }

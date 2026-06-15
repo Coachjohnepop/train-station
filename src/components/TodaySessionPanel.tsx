@@ -17,12 +17,16 @@ export default function TodaySessionPanel({
   programSlug = "adult",
   userIds = [],
   asInstructor = false,
+  collapsible = false,
+  defaultOpen = true,
 }: {
   defaultDate?: string;
   defaultTime?: string;
   programSlug?: string;
   userIds?: string[];
   asInstructor?: boolean;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
 }) {
   const router = useRouter();
   const [rawSms, setRawSms] = useState("");
@@ -31,61 +35,98 @@ export default function TodaySessionPanel({
   const [preview, setPreview] = useState<{ title: string; exercises: ParsedExercise[] } | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [messageIsError, setMessageIsError] = useState(false);
+
+  function formatApiError(res: Response, body: any) {
+    if (body?.detail?.fieldErrors) {
+      const fields = Object.entries(body.detail.fieldErrors as Record<string, string[]>)
+        .map(([k, v]) => `${k}: ${v.join(", ")}`)
+        .join("; ");
+      return fields || res.statusText;
+    }
+    if (typeof body?.detail === "string") return body.detail;
+    if (body?.error) return body.error;
+    return res.statusText || "Unknown error";
+  }
 
   async function handleParse() {
     if (!rawSms.trim()) return;
     setMessage(null);
-    const res = await fetch("/api/today/parse", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rawSms: rawSms.trim() }),
-    });
-    if (!res.ok) {
-      setMessage("Could not parse SMS text.");
-      return;
+    setMessageIsError(false);
+    try {
+      const res = await fetch("/api/today/parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rawSms: rawSms.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessageIsError(true);
+        setMessage(`Parse failed: ${formatApiError(res, data)}`);
+        return;
+      }
+      setPreview(data.workout);
+      setMessage(`Parsed ${data.workout?.exercises?.length || 0} blocks — review below, then Build.`);
+      setMessageIsError(false);
+    } catch (e: any) {
+      setMessageIsError(true);
+      setMessage(`Parse failed: ${e?.message || "network error"}`);
     }
-    const data = await res.json();
-    setPreview(data.workout);
   }
 
   async function handleSave() {
     if (!rawSms.trim()) return;
     setSaving(true);
     setMessage(null);
-    const scheduledAt = new Date(`${sessionDate}T${scheduledTime}:00`).toISOString();
-    const res = await fetch("/api/today", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sessionDate,
-        scheduledAt,
-        rawSms: rawSms.trim(),
-        programSlug,
-        userIds,
-        replacesSchedule: true,
-        createdBy: asInstructor ? "coach" : "member",
-      }),
-    });
-    setSaving(false);
-    if (!res.ok) {
-      setMessage("Failed to save today session.");
+    setMessageIsError(false);
+
+    const scheduled = new Date(`${sessionDate}T${scheduledTime}:00`);
+    if (Number.isNaN(scheduled.getTime())) {
+      setSaving(false);
+      setMessageIsError(true);
+      setMessage("Invalid date or time — check session date and scheduled time.");
       return;
     }
-    setMessage("Today session saved — overrides the scheduled workout for that date.");
-    router.refresh();
-    setTimeout(() => setMessage(null), 4000);
+
+    try {
+      const res = await fetch("/api/today", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionDate,
+          scheduledAt: scheduled.toISOString(),
+          rawSms: rawSms.trim(),
+          programSlug,
+          userIds,
+          replacesSchedule: true,
+          createdBy: asInstructor ? "coach" : "member",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setSaving(false);
+      if (!res.ok) {
+        setMessageIsError(true);
+        setMessage(`Save failed: ${formatApiError(res, data)}`);
+        return;
+      }
+      setMessage(`Built "${data.session?.title || "workout"}" with ${data.parsed?.exercises?.length || 0} blocks.`);
+      setMessageIsError(false);
+      router.refresh();
+      setTimeout(() => setMessage(null), 5000);
+    } catch (e: any) {
+      setSaving(false);
+      setMessageIsError(true);
+      setMessage(`Save failed: ${e?.message || "network error"}`);
+    }
   }
 
-  return (
-    <div className="card border-amber-500/30 bg-amber-500/5 space-y-3">
-      <div>
-        <h2 className="font-semibold text-sm">
-          {asInstructor ? "Coach: paste SMS workout" : "Paste SMS workout for today"}
-        </h2>
-        <p className="text-xs text-[var(--muted)] mt-1">
-          Paste the text from SMS. We parse exercises, sets/reps, and build a checkoff workout that overrides the schedule.
-        </p>
-      </div>
+  const panelTitle = asInstructor ? "Paste SMS workout" : "Paste SMS workout for today";
+
+  const inner = (
+    <div className="space-y-3">
+      <p className="text-xs text-[var(--muted)]">
+        Parsed by our built-in SMS rules (exercises, sets/reps, warm-up blocks) — not a live AI call. Creates checkoff exercises and overrides the schedule for that date.
+      </p>
 
       <div className="grid gap-2 sm:grid-cols-2 text-xs">
         <label className="block">
@@ -114,7 +155,9 @@ export default function TodaySessionPanel({
         </button>
       </div>
 
-      {message && <p className="text-xs text-[var(--success)]">{message}</p>}
+      {message && (
+        <p className={`text-xs ${messageIsError ? "text-red-400" : "text-[var(--success)]"}`}>{message}</p>
+      )}
 
       {preview && (
         <div className="rounded border border-[var(--border)] bg-[var(--surface)] p-3 text-xs">
@@ -130,6 +173,25 @@ export default function TodaySessionPanel({
           </ul>
         </div>
       )}
+    </div>
+  );
+
+  if (collapsible) {
+    return (
+      <details className="group card border-amber-500/30 bg-amber-500/5" open={defaultOpen}>
+        <summary className="flex items-center gap-2 cursor-pointer list-none font-semibold text-sm py-1">
+          <span className="text-accent group-open:rotate-90 transition-transform text-xs">▶</span>
+          {panelTitle}
+        </summary>
+        <div className="mt-3 pt-3 border-t border-amber-500/20">{inner}</div>
+      </details>
+    );
+  }
+
+  return (
+    <div className="card border-amber-500/30 bg-amber-500/5 space-y-3">
+      <h2 className="font-semibold text-sm">{panelTitle}</h2>
+      {inner}
     </div>
   );
 }

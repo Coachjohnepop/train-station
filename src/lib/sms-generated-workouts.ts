@@ -24,15 +24,33 @@ type SmsWorkoutStore = {
   }>;
 };
 
+let memoryStore: SmsWorkoutStore | null = null;
+
+function emptyStore(): SmsWorkoutStore {
+  return { workouts: [], workoutExercises: [] };
+}
+
 function readStore(): SmsWorkoutStore {
-  if (!fs.existsSync(WORKOUTS_FILE)) {
-    return { workouts: [], workoutExercises: [] };
+  if (memoryStore) return memoryStore;
+  try {
+    if (fs.existsSync(WORKOUTS_FILE)) {
+      memoryStore = JSON.parse(fs.readFileSync(WORKOUTS_FILE, "utf8"));
+      return memoryStore!;
+    }
+  } catch (e) {
+    console.warn("Could not read sms-workouts.dev.json", e);
   }
-  return JSON.parse(fs.readFileSync(WORKOUTS_FILE, "utf8"));
+  memoryStore = emptyStore();
+  return memoryStore;
 }
 
 function writeStore(store: SmsWorkoutStore) {
-  fs.writeFileSync(WORKOUTS_FILE, JSON.stringify(store, null, 2));
+  memoryStore = store;
+  try {
+    fs.writeFileSync(WORKOUTS_FILE, JSON.stringify(store, null, 2));
+  } catch (e) {
+    console.warn("Could not persist sms-workouts.dev.json (using in-memory)", e);
+  }
 }
 
 function normalizeName(s: string) {
