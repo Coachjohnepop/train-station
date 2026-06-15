@@ -37,10 +37,10 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
       if (res.ok && data.redirectTo) {
         window.location.href = data.redirectTo;
       } else {
-        window.location.href = "/member";
+        window.location.href = "/signup";
       }
     } catch {
-      window.location.href = "/member";
+      window.location.href = "/signup";
     } finally {
       setJoining(false);
     }
@@ -216,8 +216,8 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
         <div id="inline-signup" className="mx-auto max-w-2xl mt-8 p-8 rounded-3xl border border-[#7c3aed] bg-[#140a22]">
           <div className="text-center mb-6">
             <div className="uppercase tracking-[3px] text-xs font-semibold text-[#7c3aed] mb-2">SIGN UP</div>
-            <h3 className="text-2xl font-semibold tracking-tight">Create your account for {selected}</h3>
-            <p className="text-sm text-[#9d8ab8] mt-1">All access is currently open while we finish billing setup.</p>
+            <h3 className="text-2xl font-semibold tracking-tight">Get notified for {selected}</h3>
+            <p className="text-sm text-[#9d8ab8] mt-1">The app is coming soon — we&apos;ll email you when {selected} access opens.</p>
           </div>
 
           <div className="space-y-4 max-w-md mx-auto">
@@ -241,7 +241,7 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
               disabled={joining}
               className="w-full inline-flex h-12 items-center justify-center rounded-full bg-[#7c3aed] text-sm font-semibold text-white hover:bg-[#6d2dd6] transition-all disabled:opacity-60"
             >
-              {joining ? "Creating your account..." : `Create account with ${selected}`}
+              {joining ? "Saving your spot..." : `Join waitlist for ${selected}`}
             </button>
 
             <button
@@ -260,8 +260,8 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
 
       {/* Note */}
       <div className="mt-10 text-center text-sm text-[#9d8ab8] max-w-md mx-auto">
-        Everything is currently free and fully open while we finish billing and subscription infrastructure. 
-        Selecting a plan above will let you sign up inline.
+        Selecting a plan adds you to the waitlist. Invited coaches and early members can{" "}
+        <Link href="/login" className="text-[#7c3aed] hover:underline">sign in here</Link>.
       </div>
 
       {/* Also link the coach side */}

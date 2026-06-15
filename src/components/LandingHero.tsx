@@ -60,7 +60,7 @@ export default function LandingHero() {
       
       {/* Logo in top-left corner - stylish branding */}
       <div className="absolute top-8 left-8 z-30">
-        <Link href="/member">
+        <Link href="/">
           <img
             src="/images/logo.png"
             alt="The Train Station"
@@ -82,22 +82,22 @@ export default function LandingHero() {
           
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
             <a 
-              href="/member" 
+              href="/signup" 
               className="inline-flex h-14 items-center justify-center rounded-full bg-white px-10 text-sm font-bold !text-[#7c3aed] transition-all hover:bg-white hover:scale-[1.1] active:scale-[0.985]"
             >
-              Enter as a Member
+              Get notified — app coming soon
             </a>
             <a 
-              href="/member/programs" 
+              href="/login" 
               className="inline-flex h-14 items-center justify-center rounded-full border border-white/40 px-10 text-sm font-semibold text-white backdrop-blur transition-all hover:bg-white/10 hover:scale-[1.1] active:scale-[0.985]"
             >
-              Explore the site
+              Member sign in
             </a>
             <a 
-              href="/admin" 
+              href="/login?redirect=/admin" 
               className="inline-flex h-14 items-center justify-center rounded-full border border-white/40 px-10 text-sm font-semibold text-white backdrop-blur transition-all hover:bg-white/10 hover:scale-[1.1] active:scale-[0.985]"
             >
-              For Coaches
+              Coach sign in
             </a>
           </div>
           

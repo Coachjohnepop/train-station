@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { isDemoMode, enrollDemo } from "@/lib/demo-enrollments";
 import { randomUUID } from "crypto";
 import { MEMBER_COOKIE, MEMBER_NAME_COOKIE } from "@/lib/current-user";
+import { isInvitedAccountEmail } from "@/lib/invited-accounts";
+import { addToWaitlist } from "@/lib/waitlist";
 
 const joinSchema = z.object({
   name: z.string().min(1).max(80).optional(),
@@ -35,6 +37,27 @@ export async function POST(request: Request) {
   }
 
   const { name = "New Member", email, plan, programSlug = "adult" } = parsed.data;
+
+  const normalizedEmail = email?.trim().toLowerCase();
+
+  // Real guests → waitlist + coming soon (no app access yet)
+  if (!normalizedEmail || !isInvitedAccountEmail(normalizedEmail)) {
+    if (!normalizedEmail) {
+      return NextResponse.json({ waitlist: true, redirectTo: "/signup" });
+    }
+    const entry = addToWaitlist({
+      email: normalizedEmail,
+      name,
+      plan: plan || null,
+      source: "join-flow",
+    });
+    const params = new URLSearchParams({ email: entry.email, name: entry.name });
+    return NextResponse.json({
+      success: true,
+      waitlist: true,
+      redirectTo: `/coming-soon?${params.toString()}`,
+    });
+  }
 
   let userId: string;
   let userName = name;

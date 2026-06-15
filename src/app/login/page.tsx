@@ -8,7 +8,8 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "";
-  const [email, setEmail] = useState("");
+  const prefillEmail = searchParams.get("email") || "";
+  const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -25,6 +26,10 @@ function LoginForm() {
       });
       const data = await res.json();
       if (!res.ok) {
+        if (data.code === "not_invited" && data.signupUrl) {
+          router.push(data.signupUrl);
+          return;
+        }
         setError(data.error || "Login failed");
         return;
       }
@@ -84,8 +89,8 @@ function LoginForm() {
 
           <p className="text-center text-xs text-[var(--muted)]">
             New here?{" "}
-            <Link href="/join" className="text-accent hover:underline">
-              Join The Train Station
+            <Link href="/signup" className="text-accent hover:underline">
+              Join the waitlist
             </Link>
           </p>
         </form>

@@ -2,7 +2,16 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifySessionToken, SESSION_COOKIE } from "@/lib/auth-session";
 
-const PUBLIC_PREFIXES = ["/login", "/join", "/api/auth", "/api/sms/inbound", "/api/join"];
+const PUBLIC_PREFIXES = [
+  "/login",
+  "/signup",
+  "/coming-soon",
+  "/join",
+  "/api/auth",
+  "/api/signup",
+  "/api/sms/inbound",
+  "/api/join",
+];
 
 function isPublicPath(pathname: string): boolean {
   if (pathname === "/") return true;

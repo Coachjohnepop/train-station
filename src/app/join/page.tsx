@@ -34,7 +34,15 @@ export default async function JoinPage({
           Professional programs, real accountability, and the tools coaches actually use — now available for members.
         </p>
         <div className="mt-6 text-sm text-[#9d8ab8]">
-          All access is currently open while we finish billing setup. Plans launching soon.
+          The full member app is coming soon. Sign up below and we&apos;ll notify you when your spot opens.
+        </div>
+        <div className="mt-4">
+          <Link
+            href="/signup"
+            className="inline-flex h-10 items-center justify-center rounded-full bg-[#7c3aed] px-6 text-sm font-semibold text-white hover:bg-[#6d2dd6] transition"
+          >
+            Join the waitlist →
+          </Link>
         </div>
       </div>
 

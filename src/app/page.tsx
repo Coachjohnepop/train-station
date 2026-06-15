@@ -53,10 +53,10 @@ export default async function HomePage() {
       {/* Classy fixed bottom-right "Join the site" pane/button - visible always on landing until signup */}
       <div className="fixed bottom-6 right-6 z-50">
         <Link
-          href="/join/questions"
+          href="/signup"
           className="group inline-flex items-center gap-2 rounded-2xl border border-[#3d2660] bg-[#0a0612]/90 px-5 py-2.5 text-sm font-semibold text-white shadow-xl backdrop-blur-md transition-all hover:border-[#7c3aed] hover:bg-[#1a1428] hover:shadow-2xl active:scale-[0.985]"
         >
-          Join the site
+          Join the waitlist
           <span className="text-[#7c3aed] transition group-hover:translate-x-0.5">→</span>
         </Link>
       </div>
