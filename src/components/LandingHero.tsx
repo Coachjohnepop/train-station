@@ -85,7 +85,7 @@ export default function LandingHero() {
               href="/signup" 
               className="inline-flex h-14 items-center justify-center rounded-full bg-white px-10 text-sm font-bold !text-[#7c3aed] transition-all hover:bg-white hover:scale-[1.1] active:scale-[0.985]"
             >
-              Get notified — app coming soon
+              PreSign Up Here
             </a>
             <a 
               href="/login" 

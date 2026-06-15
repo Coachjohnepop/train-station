@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
+import BackgroundMusic from "@/components/BackgroundMusic";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
@@ -15,7 +16,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${geist.variable} app-shell-bg`}>
-      <body className="app-shell-bg">{children}</body>
+      <body className="app-shell-bg">
+        {children}
+        <BackgroundMusic />
+      </body>
     </html>
   );
 }
