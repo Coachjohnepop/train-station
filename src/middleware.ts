@@ -4,6 +4,7 @@ import { verifySessionToken, SESSION_COOKIE } from "@/lib/auth-session";
 
 const PUBLIC_PREFIXES = [
   "/login",
+  "/forgot-password",
   "/signup",
   "/coming-soon",
   "/join",
