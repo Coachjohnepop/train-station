@@ -1,5 +1,5 @@
 import { getBookings } from "@/lib/booking";
-import { listTodaySessions } from "@/lib/today-sessions";
+import { getSessionsForDate } from "@/lib/today-sessions";
 import { resolveDemoUser, resolveDemoUserByEmail } from "@/lib/demo-user-directory";
 
 export type TodayAppointment = {
@@ -12,6 +12,7 @@ export type TodayAppointment = {
   memberEmails: string[];
   status?: string;
   durationMin?: number;
+  workoutId?: string;
   coachHref: string;
   memberHref: string;
 };
@@ -31,8 +32,7 @@ function resolveMembersFromIds(userIds: string[]) {
 export async function getAppointmentsForDate(sessionDate: string): Promise<TodayAppointment[]> {
   const appointments: TodayAppointment[] = [];
 
-  const session = listTodaySessions().find((s) => s.sessionDate === sessionDate);
-  if (session) {
+  for (const session of getSessionsForDate(sessionDate)) {
     const members = resolveMembersFromIds(session.userIds);
     appointments.push({
       id: session.id,
@@ -43,6 +43,7 @@ export async function getAppointmentsForDate(sessionDate: string): Promise<Today
       memberIds: members.map((m) => m.id),
       memberEmails: members.map((m) => m.email),
       status: session.replacesSchedule ? "overrides schedule" : "scheduled",
+      workoutId: session.workoutId,
       coachHref: `/member/today?asInstructor=true&date=${sessionDate}`,
       memberHref: `/member/today`,
     });

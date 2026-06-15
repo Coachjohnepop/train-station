@@ -1,6 +1,6 @@
 /**
  * Seeds a week of coach SMS workouts across Jeremy's roster for beta demo.
- * Persists to prisma/*.dev.json (and Vercel Blob on next server write).
+ * Multiple sessions per day stack in time order on the coach day view.
  *
  * Run: npx tsx scripts/seed-coach-beta-week.ts
  */
@@ -62,6 +62,27 @@ Tricep pushdowns
 15,15,15`,
   },
   {
+    sessionDate: "2026-06-16",
+    scheduledAt: "2026-06-16T18:30:00.000Z",
+    userIds: ["demo-user"],
+    title: "Adult strength — Alex",
+    rawSms: `Adult program — Alex Tuesday
+
+Warm up 5 min bike
+
+Goblet squat
+10,10,10
+
+Dumbbell row
+10,10,10 each arm
+
+Push-ups
+12,12,12
+
+Farmer carry
+40 steps x 3`,
+  },
+  {
     sessionDate: "2026-06-17",
     scheduledAt: "2026-06-17T10:30:00.000Z",
     userIds: ["demo-user-john-steph"],
@@ -114,10 +135,10 @@ async function main() {
       title: seed.title,
     });
     console.log(
-      `${seed.sessionDate}: "${result.session.title}" → ${seed.userIds.join(", ")} (${result.parsed.exercises.length} blocks)`,
+      `${seed.sessionDate} ${new Date(seed.scheduledAt).toLocaleTimeString()}: "${result.session.title}" → ${seed.userIds.join(", ")}`,
     );
   }
-  console.log("\nDone — sessions + workouts saved to prisma JSON stores.");
+  console.log("\nDone — sessions stack by time on coach Your day view.");
 }
 
 main().catch((e) => {

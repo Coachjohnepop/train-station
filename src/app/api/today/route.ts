@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   createTodaySessionFromSms,
+  getSessionForUserOnDate,
   getTodaySessionForUser,
   hydrateTodaySessions,
   listTodaySessions,
@@ -32,9 +33,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ sessions: listTodaySessions() });
   }
 
-  const session = date
-    ? listTodaySessions().find((s) => s.sessionDate === date && s.userIds.includes(userId))
-    : getTodaySessionForUser(userId);
+  const session = date ? getSessionForUserOnDate(userId, date) : getTodaySessionForUser(userId);
 
   return NextResponse.json({ session, userId });
 }

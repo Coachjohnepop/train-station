@@ -128,9 +128,9 @@ export default function CoachDayView({ day, dateQuery }: { day: CoachDayPlan; da
         </div>
       </details>
 
-      {day.session && (
+      {day.sessions.length > 0 && (
         <p className="text-[10px] text-[var(--muted)]">
-          Persisted to beta store (Vercel Blob + JSON) · {day.session.id}
+          {day.sessions.length} workout{day.sessions.length !== 1 ? "s" : ""} persisted (Vercel Blob + JSON)
         </p>
       )}
     </div>

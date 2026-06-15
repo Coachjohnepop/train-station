@@ -6,10 +6,10 @@ export type DemoUserEntry = {
 };
 
 export const DEMO_USER_DIRECTORY: DemoUserEntry[] = [
-  { id: "demo-user-john-steph", email: "johnsteph@thetrainstation.co", name: "John & Steph", phone: "(555) 111-2235" },
+  { id: "demo-user-john-steph", email: "chadkaite@thetrainstation.co", name: "Chad & Kaite", phone: "(555) 111-2235" },
   { id: "demo-user", email: "demo@thetrainstation.co", name: "Alex", phone: "(555) 987-6543" },
-  { id: "demo-user-john", email: "john@thetrainstation.co", name: "John", phone: "(555) 111-2233" },
-  { id: "demo-user-stephanie", email: "stephanie@thetrainstation.co", name: "Stephanie", phone: "(555) 111-2234" },
+  { id: "demo-user-john", email: "chad@thetrainstation.co", name: "Chad", phone: "(555) 111-2233" },
+  { id: "demo-user-stephanie", email: "kaite@thetrainstation.co", name: "Kaite", phone: "(555) 111-2234" },
   { id: "demo-user-2", email: "jordan.member@example.com", name: "Jordan Lee", phone: "(555) 222-3344" },
   { id: "demo-user-3", email: "casey.prospective@example.com", name: "Casey Rivera" },
   { id: "demo-coach-jeremy", email: "jeremy@thetrainstation.co", name: "Coach Jeremy", phone: "(555) 123-0001" },

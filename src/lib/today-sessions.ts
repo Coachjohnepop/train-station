@@ -1,4 +1,5 @@
 import path from "path";
+import { randomUUID } from "crypto";
 import { parseSmsWorkout } from "@/lib/sms-workout-parser";
 import { buildWorkoutFromParsedSms } from "@/lib/sms-generated-workouts";
 import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
@@ -23,6 +24,7 @@ type TodaySessionStore = {
 
 const DEV_FILE = path.join(process.cwd(), "prisma", "today-sessions.dev.json");
 const BLOB_PATH = "demo/today-sessions.json";
+const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 let memoryStore: TodaySessionStore | null = null;
 
@@ -34,19 +36,59 @@ function setMemory(store: TodaySessionStore) {
   memoryStore = store;
 }
 
+/** Migrate legacy date-keyed map (one session per day) to id-keyed map (many per day). */
+function normalizeStore(raw: unknown): TodaySessionStore {
+  if (!raw || typeof raw !== "object") return emptyStore();
+  const sessions = (raw as TodaySessionStore).sessions;
+  if (!sessions || typeof sessions !== "object") return emptyStore();
+
+  const keys = Object.keys(sessions);
+  if (keys.length === 0) return emptyStore();
+
+  const first = sessions[keys[0] as keyof typeof sessions] as TodaySession;
+  const legacyDateKeys = keys.every((k) => DATE_KEY_RE.test(k));
+  const legacyMissingIds = first && !first.id;
+
+  if (legacyDateKeys || legacyMissingIds) {
+    const out: Record<string, TodaySession> = {};
+    for (const [key, session] of Object.entries(sessions)) {
+      const s = session as TodaySession;
+      const id = s.id || `today-${key}`;
+      out[id] = { ...s, id };
+    }
+    return { sessions: out };
+  }
+
+  return { sessions: sessions as Record<string, TodaySession> };
+}
+
 export async function hydrateTodaySessions(): Promise<TodaySessionStore> {
-  return hydrateJsonStore({
+  const hydrated = await hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
     memory: memoryStore,
     setMemory,
     fallback: emptyStore,
   });
+  const normalized = normalizeStore(hydrated);
+  const rawSessions = (hydrated as TodaySessionStore)?.sessions ?? {};
+  const needsMigration = Object.keys(rawSessions).some((k) => DATE_KEY_RE.test(k));
+  if (needsMigration) {
+    setMemory(normalized);
+    await persistJsonStore({
+      blobPath: BLOB_PATH,
+      localPath: DEV_FILE,
+      data: normalized,
+      setMemory,
+    });
+  }
+  return normalized;
 }
 
 function readStore(): TodaySessionStore {
   if (memoryStore) return memoryStore;
-  memoryStore = readLocalJson<TodaySessionStore>(DEV_FILE) || emptyStore();
+  const fromDisk = readLocalJson<unknown>(DEV_FILE);
+  memoryStore = normalizeStore(fromDisk);
   return memoryStore;
 }
 
@@ -59,18 +101,32 @@ async function writeStore(store: TodaySessionStore) {
   });
 }
 
+function userIdsKey(userIds: string[]) {
+  return [...userIds].sort().join(",");
+}
+
 export function listTodaySessions(): TodaySession[] {
   return Object.values(readStore().sessions).sort(
     (a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime(),
   );
 }
 
+/** @deprecated Prefer getSessionsForDate — returns earliest session on that date if any exist. */
 export function getTodaySessionByDate(sessionDate: string): TodaySession | null {
-  return readStore().sessions[sessionDate] ?? null;
+  const onDate = getSessionsForDate(sessionDate);
+  return onDate[0] ?? null;
 }
 
 export function getSessionsForDate(sessionDate: string): TodaySession[] {
-  return listTodaySessions().filter((s) => s.sessionDate === sessionDate);
+  return listTodaySessions()
+    .filter((s) => s.sessionDate === sessionDate)
+    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+}
+
+export function getSessionForUserOnDate(userId: string, sessionDate: string): TodaySession | null {
+  return (
+    getSessionsForDate(sessionDate).find((s) => s.userIds.includes(userId)) ?? null
+  );
 }
 
 function sessionAppliesToUser(session: TodaySession, userId: string) {
@@ -82,8 +138,10 @@ export function getTodaySessionForUser(userId: string, referenceDate = new Date(
   if (sessions.length === 0) return null;
 
   const todayKey = referenceDate.toISOString().slice(0, 10);
-  const exact = sessions.find((s) => s.sessionDate === todayKey);
-  if (exact) return exact;
+  const onToday = sessions
+    .filter((s) => s.sessionDate === todayKey)
+    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+  if (onToday.length > 0) return onToday[0];
 
   const now = referenceDate.getTime();
   const upcoming = sessions
@@ -113,32 +171,44 @@ export async function createTodaySessionFromSms(input: {
   await hydrateTodaySessions();
   const parsed = parseSmsWorkout(input.rawSms);
   const { workoutId } = await buildWorkoutFromParsedSms(parsed);
+  const userIds = input.userIds?.length ? input.userIds : [];
+  const assignKey = userIdsKey(userIds);
+
+  const store = readStore();
+  const existing = Object.values(store.sessions).find(
+    (s) => s.sessionDate === input.sessionDate && userIdsKey(s.userIds) === assignKey,
+  );
 
   const session: TodaySession = {
-    id: `today-${input.sessionDate}`,
+    id: existing?.id || `today-${input.sessionDate}-${randomUUID().slice(0, 8)}`,
     sessionDate: input.sessionDate,
     scheduledAt: input.scheduledAt,
     title: input.title || parsed.title,
     rawSms: input.rawSms,
     workoutId,
     programSlug: input.programSlug || "adult",
-    userIds: input.userIds?.length ? input.userIds : [],
+    userIds,
     replacesSchedule: input.replacesSchedule ?? true,
-    createdAt: new Date().toISOString(),
+    createdAt: existing?.createdAt || new Date().toISOString(),
     createdBy: input.createdBy,
   };
 
-  const store = readStore();
-  store.sessions[input.sessionDate] = session;
+  store.sessions[session.id] = session;
   await writeStore(store);
   return { session, parsed, workoutId };
 }
 
-export async function deleteTodaySession(sessionDate: string) {
+export async function deleteTodaySession(sessionIdOrDate: string) {
   await hydrateTodaySessions();
   const store = readStore();
-  if (!store.sessions[sessionDate]) return false;
-  delete store.sessions[sessionDate];
+  if (store.sessions[sessionIdOrDate]) {
+    delete store.sessions[sessionIdOrDate];
+    await writeStore(store);
+    return true;
+  }
+  const onDate = Object.values(store.sessions).filter((s) => s.sessionDate === sessionIdOrDate);
+  if (onDate.length === 0) return false;
+  for (const s of onDate) delete store.sessions[s.id];
   await writeStore(store);
   return true;
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import TodaySessionPanel from "@/components/TodaySessionPanel";
 import CoachDayView from "@/components/CoachDayView";
 import { buildCoachDayPlan } from "@/lib/coach-day";
-import { getTodaySessionByDate, hydrateTodaySessions } from "@/lib/today-sessions";
+import { hydrateTodaySessions } from "@/lib/today-sessions";
 import { hydrateSmsWorkouts } from "@/lib/sms-generated-workouts";
 import { listDemoMembersForCoach } from "@/lib/sms";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
@@ -23,7 +23,6 @@ export default async function AdminTodayPage({ searchParams }: Props) {
   const sp = await searchParams;
   const todayKey = new Date().toISOString().slice(0, 10);
   const sessionDate = sp.date || todayKey;
-  const session = getTodaySessionByDate(sessionDate);
   const dayPlan = await buildCoachDayPlan(sessionDate);
   const coachMembers = listDemoMembersForCoach().map((m) => ({
     id: m.id,
@@ -46,8 +45,8 @@ export default async function AdminTodayPage({ searchParams }: Props) {
         <h1 className="mt-2 text-2xl font-bold">Go to Today</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
           {dayPlan.assignedCount > 0
-            ? `${dayPlan.assignedCount} student${dayPlan.assignedCount !== 1 ? "s" : ""} with workouts · ${formatDateLabel(sessionDate)}`
-            : `Plan the day — assign students, paste SMS, view your schedule for ${formatDateLabel(sessionDate)}.`}
+            ? `${dayPlan.timeline.length} on schedule · ${dayPlan.assignedCount} student${dayPlan.assignedCount !== 1 ? "s" : ""} with workouts`
+            : `Plan the day — view schedule below, then assign students and paste SMS.`}
         </p>
       </div>
 
@@ -67,25 +66,23 @@ export default async function AdminTodayPage({ searchParams }: Props) {
           )}
         </div>
         <span className="text-xs text-[var(--muted)]">
-          {dayPlan.timeline.length} on schedule · {dayPlan.openCount} students open
+          {dayPlan.timeline.length} stacked by time · {dayPlan.openCount} students open
         </span>
       </div>
 
+      <CoachDayView day={dayPlan} dateQuery={sessionDate} />
+
       <TodaySessionPanel
         asInstructor
-        programSlug={session?.programSlug || "adult"}
+        programSlug="adult"
         memberOptions={coachMembers}
-        defaultUserIds={
-          session?.userIds?.length ? session.userIds : [DEFAULT_DEMO_MEMBER_ID]
-        }
+        defaultUserIds={[DEFAULT_DEMO_MEMBER_ID]}
         defaultDate={sessionDate}
-        defaultTime={session ? new Date(session.scheduledAt).toTimeString().slice(0, 5) : "06:30"}
+        defaultTime="06:30"
         collapsible
-        defaultAssignOpen
+        defaultAssignOpen={false}
         defaultOpen={false}
       />
-
-      <CoachDayView day={dayPlan} dateQuery={sessionDate} />
     </div>
   );
 }

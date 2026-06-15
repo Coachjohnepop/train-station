@@ -1,5 +1,5 @@
 import {
-  getTodaySessionByDate,
+  getSessionForUserOnDate,
   getTodaySessionForUser,
   getUpcomingSessionsForUser,
   hydrateTodaySessions,
@@ -14,10 +14,7 @@ export function memberTodayHref(session: TodaySession | null): string {
 export async function resolveMemberSession(userId: string, dateParam?: string): Promise<TodaySession | null> {
   await hydrateTodaySessions();
   if (dateParam) {
-    const s = getTodaySessionByDate(dateParam);
-    if (!s) return null;
-    if (!s.userIds.includes(userId)) return null;
-    return s;
+    return getSessionForUserOnDate(userId, dateParam);
   }
   return getTodaySessionForUser(userId);
 }

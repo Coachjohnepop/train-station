@@ -1,5 +1,5 @@
 import { listMembersForCoach } from "@/lib/demo-coach";
-import { getTodaySessionByDate, listTodaySessions, type TodaySession } from "@/lib/today-sessions";
+import { getSessionsForDate, listTodaySessions, type TodaySession } from "@/lib/today-sessions";
 import { getAppointmentsForDate, type TodayAppointment } from "@/lib/today-appointments";
 import { getWorkoutExercisePreview } from "@/lib/sms-generated-workouts";
 
@@ -29,7 +29,7 @@ export type CoachDayStudentCard = {
 
 export type CoachDayPlan = {
   sessionDate: string;
-  session: TodaySession | null;
+  sessions: TodaySession[];
   timeline: CoachDayTimelineItem[];
   students: CoachDayStudentCard[];
   assignedCount: number;
@@ -41,41 +41,64 @@ function formatTime(iso: string) {
 }
 
 export async function buildCoachDayPlan(sessionDate: string): Promise<CoachDayPlan> {
-  const session = getTodaySessionByDate(sessionDate);
+  const sessions = getSessionsForDate(sessionDate);
   const appointments = await getAppointmentsForDate(sessionDate);
   const roster = listMembersForCoach();
 
-  const preview = session?.workoutId ? await getWorkoutExercisePreview(session.workoutId) : [];
+  const previewByWorkout = new Map<string, string[]>();
+  for (const session of sessions) {
+    if (!previewByWorkout.has(session.workoutId)) {
+      previewByWorkout.set(session.workoutId, await getWorkoutExercisePreview(session.workoutId));
+    }
+  }
 
-  const timeline: CoachDayTimelineItem[] = appointments.map((appt: TodayAppointment) => ({
-    id: appt.id,
-    timeLabel: formatTime(appt.scheduledAt),
-    scheduledAt: appt.scheduledAt,
-    type: appt.type,
-    title: appt.title,
-    memberNames: appt.memberNames,
-    memberIds: appt.memberIds,
-    status: appt.status,
-    exercisePreview: appt.type === "sms-workout" ? preview : [],
-    coachHref: appt.coachHref,
-    checkoffHrefs: appt.memberIds.map((id, i) => ({
-      memberId: id,
-      name: appt.memberNames[i] || id,
-      href: `/member/today?asInstructor=true&forUser=${id}&date=${sessionDate}`,
-    })),
-  }));
+  const timeline: CoachDayTimelineItem[] = await Promise.all(
+    appointments.map(async (appt: TodayAppointment) => {
+      const preview =
+        appt.type === "sms-workout" && appt.workoutId
+          ? previewByWorkout.get(appt.workoutId) || (await getWorkoutExercisePreview(appt.workoutId))
+          : [];
 
-  const assignedIds = new Set(session?.userIds ?? []);
+      return {
+        id: appt.id,
+        timeLabel: formatTime(appt.scheduledAt),
+        scheduledAt: appt.scheduledAt,
+        type: appt.type,
+        title: appt.title,
+        memberNames: appt.memberNames,
+        memberIds: appt.memberIds,
+        status: appt.status,
+        exercisePreview: preview,
+        coachHref: appt.coachHref,
+        checkoffHrefs: appt.memberIds.map((id, i) => ({
+          memberId: id,
+          name: appt.memberNames[i] || id,
+          href: `/member/today?asInstructor=true&forUser=${id}&date=${sessionDate}`,
+        })),
+      };
+    }),
+  );
+
+  timeline.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+
+  const sessionByUser = new Map<string, TodaySession>();
+  for (const session of sessions) {
+    for (const uid of session.userIds) {
+      if (!sessionByUser.has(uid)) sessionByUser.set(uid, session);
+    }
+  }
 
   const students: CoachDayStudentCard[] = roster.map((m) => {
-    const assigned = assignedIds.has(m.id);
+    const session = sessionByUser.get(m.id);
+    const assigned = !!session;
+    const preview = session ? previewByWorkout.get(session.workoutId) || [] : [];
     return {
       id: m.id,
       name: m.name,
       assigned,
-      workoutTitle: assigned ? session?.title : undefined,
-      timeLabel: assigned && session ? formatTime(session.scheduledAt) : undefined,
-      exercisePreview: assigned ? preview : [],
+      workoutTitle: session?.title,
+      timeLabel: session ? formatTime(session.scheduledAt) : undefined,
+      exercisePreview: preview,
       checkoffHref: assigned
         ? `/member/today?asInstructor=true&forUser=${m.id}&date=${sessionDate}`
         : undefined,
@@ -84,7 +107,7 @@ export async function buildCoachDayPlan(sessionDate: string): Promise<CoachDayPl
 
   return {
     sessionDate,
-    session,
+    sessions,
     timeline,
     students,
     assignedCount: students.filter((s) => s.assigned).length,

@@ -2,8 +2,8 @@
 
 export type CoachMemberOption = { id: string; name: string };
 
-const JOHN_STEPH_COUPLE = "demo-user-john-steph";
-const JOHN_STEPHANIE_INDIVIDUALS = ["demo-user-john", "demo-user-stephanie"];
+const COUPLE_ID = "demo-user-john-steph";
+const INDIVIDUALS = ["demo-user-john", "demo-user-stephanie"];
 
 export default function CoachMemberPicker({
   members,
@@ -18,14 +18,14 @@ export default function CoachMemberPicker({
     onChange(selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id]);
   }
 
-  function selectJohnStephCouple() {
-    if (members.some((m) => m.id === JOHN_STEPH_COUPLE)) {
-      onChange([JOHN_STEPH_COUPLE]);
+  function selectCouple() {
+    if (members.some((m) => m.id === COUPLE_ID)) {
+      onChange([COUPLE_ID]);
     }
   }
 
-  function selectJohnStephanieIndividuals() {
-    const ids = JOHN_STEPHANIE_INDIVIDUALS.filter((id) => members.some((m) => m.id === id));
+  function selectIndividuals() {
+    const ids = INDIVIDUALS.filter((id) => members.some((m) => m.id === id));
     onChange(ids.length ? ids : selectedIds);
   }
 
@@ -33,11 +33,11 @@ export default function CoachMemberPicker({
     <div className="space-y-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-accent">Quick picks</span>
-        <button type="button" onClick={selectJohnStephCouple} className="btn-ghost px-2.5 py-1 text-xs">
-          John &amp; Steph
+        <button type="button" onClick={selectCouple} className="btn-ghost px-2.5 py-1 text-xs">
+          Chad &amp; Kaite
         </button>
-        <button type="button" onClick={selectJohnStephanieIndividuals} className="btn-ghost px-2.5 py-1 text-xs">
-          John + Stephanie
+        <button type="button" onClick={selectIndividuals} className="btn-ghost px-2.5 py-1 text-xs">
+          Chad + Kaite
         </button>
         <button
           type="button"
