@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { applyOverrideToDay } from "@/lib/demo-schedule-overrides";
 
 // Always re-read the file (no in-memory cache) in demo. Ensures that when admin
 // content edits (exercises, later workouts) write back to seed-data.json, the
@@ -61,18 +62,20 @@ export async function getProgramBySlug(slug: string) {
       days: (data.programDays || [])
         .filter((d: any) => d.weekId === w.id)
         .sort((a: any, b: any) => a.dayNumber - b.dayNumber)
-        .map((d: any) => ({
-          id: d.id,
-          dayNumber: d.dayNumber,
-          workoutId: d.workoutId,
-          notes: d.notes,
-          videoUrl: d.videoUrl || null,
-          workout: workoutsById[d.workoutId] || null,
-          options: (programDayOptionsByDayId[d.id] || (d.workoutId ? [{ workoutId: d.workoutId, label: "Standard" }] : [])).map((opt: any) => ({
-            ...opt,
-            workout: workoutsById[opt.workoutId] || null,
-          })),
-        })),
+        .map((d: any) =>
+          applyOverrideToDay({
+            id: d.id,
+            dayNumber: d.dayNumber,
+            workoutId: d.workoutId,
+            notes: d.notes,
+            videoUrl: d.videoUrl || null,
+            workout: workoutsById[d.workoutId] || null,
+            options: (programDayOptionsByDayId[d.id] || (d.workoutId ? [{ workoutId: d.workoutId, label: "Standard" }] : [])).map((opt: any) => ({
+              ...opt,
+              workout: workoutsById[opt.workoutId] || null,
+            })),
+          }),
+        ),
     }));
   return {
     ...p,

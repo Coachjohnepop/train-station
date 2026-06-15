@@ -169,6 +169,35 @@ export default async function MemberProgramPage({ params, searchParams }: Props)
                   const label =
                     DAY_LABELS[day.dayNumber - 1] ?? `Day ${day.dayNumber}`;
                   if (isWorkout) {
+                    if (day.smsOverrideActive && day.smsWorkoutText) {
+                      const dayBeforeCurrent = week.weekNumber < curWeek || (week.weekNumber === curWeek && (day.dayNumber || 0) < curDay);
+                      return (
+                        <li key={day.id} className="space-y-1">
+                          <div className="text-[10px] lg:text-xs text-[var(--muted)] truncate pl-1">{label}</div>
+                          <Link
+                            href={`/member/workout?program=${encodeURIComponent(program.slug)}&smsDay=${encodeURIComponent(day.id)}`}
+                            className={`card flex flex-col gap-2 p-2 lg:p-3 transition hover-accent-border text-sm border-amber-400/50 bg-amber-500/10 ${
+                              dayBeforeCurrent ? "ring-2 ring-[var(--success)] ring-offset-1" : ""
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="font-medium text-amber-200">
+                                {day.smsOverrideLabel || "Coach SMS workout"}
+                              </p>
+                              <span className="text-[10px] rounded bg-amber-500/20 px-1.5 py-0.5 text-amber-300">SMS override</span>
+                            </div>
+                            <p className="text-xs text-[var(--muted)] line-clamp-3 whitespace-pre-wrap">
+                              {day.smsWorkoutText}
+                            </p>
+                            {day.replacesLiveSession && (
+                              <p className="text-[10px] text-amber-300/80">In lieu of live session today</p>
+                            )}
+                            <span className="text-xs font-medium text-accent">Open workout →</span>
+                          </Link>
+                        </li>
+                      );
+                    }
+
                     const opts = (day.options && day.options.length > 0)
                       ? day.options
                       : (day.workout ? [{ workoutId: day.workout.id, label: "Standard", workout: day.workout }] : []);

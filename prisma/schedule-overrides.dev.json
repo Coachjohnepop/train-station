@@ -1,0 +1,15 @@
+{
+  "overrides": {
+    "cmpys1gf90004tfrz9vm6qkb1": {
+      "dayId": "cmpys1gf90004tfrz9vm6qkb1",
+      "programSlug": "adult",
+      "weekNumber": 1,
+      "dayNumber": 1,
+      "smsWorkoutText": "Day 1 SMS test\n\nPush-ups 3x10\nRows 3x12",
+      "active": true,
+      "replacesLiveSession": true,
+      "label": "Coach SMS workout",
+      "updatedAt": "2026-06-15T02:08:37.035Z"
+    }
+  }
+}

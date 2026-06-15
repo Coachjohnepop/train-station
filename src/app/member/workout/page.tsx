@@ -1,19 +1,23 @@
 import Link from "next/link";
 import MemberWorkoutConsole from "@/components/MemberWorkoutConsole";
 import FloatingVideoPlayer from "@/components/FloatingVideoPlayer";
+import SmsWorkoutView from "@/components/SmsWorkoutView";
 import { getDemoMemberWorkout } from "@/lib/demo-workout";
 import { getMemberWorkoutById } from "@/lib/member-workout";
 import { getCurrentUserLocation } from "@/lib/current-user";
 import { getWeatherForLocation, logUserWeather } from "@/lib/weather";
+import { getActiveScheduleOverride } from "@/lib/demo-schedule-overrides";
 
 type Props = {
-  searchParams: Promise<{ workoutId?: string; program?: string; subJourney?: string; subDay?: string; option?: string; asInstructor?: string; forUser?: string; review?: string }>;
+  searchParams: Promise<{ workoutId?: string; program?: string; subJourney?: string; subDay?: string; smsDay?: string; option?: string; asInstructor?: string; forUser?: string; review?: string }>;
 };
 
 export const dynamic = "force-dynamic";
 
 export default async function MemberWorkoutPage({ searchParams }: Props) {
-  const { workoutId, program, subJourney, subDay, option, asInstructor, forUser, review } = await searchParams;
+  const { workoutId, program, subJourney, subDay, smsDay, option, asInstructor, forUser, review } = await searchParams;
+
+  const smsOverride = smsDay ? getActiveScheduleOverride(smsDay) : null;
 
   let workout = workoutId
     ? await getMemberWorkoutById(workoutId)
@@ -89,7 +93,14 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
         </>
       )}
 
-      {workout ? (
+      {smsOverride ? (
+        <SmsWorkoutView
+          title={smsOverride.label || `Week ${smsOverride.weekNumber ?? ""} Day ${smsOverride.dayNumber ?? ""}`.trim()}
+          body={smsOverride.smsWorkoutText}
+          programSlug={program || smsOverride.programSlug || "adult"}
+          replacesLiveSession={smsOverride.replacesLiveSession}
+        />
+      ) : workout ? (
         <div className="-mx-4 mt-4">
           {asInstructor && (
             <div className="mx-4 mb-3 rounded border border-amber-500/30 bg-amber-500/10 p-3 text-sm">

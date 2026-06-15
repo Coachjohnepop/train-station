@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import SmsWorkoutOverridePanel from "@/components/SmsWorkoutOverridePanel";
 
 type Contact = { email: string; phone?: string | null; calendlyUrl?: string | null };
 type Availability = { id: string; weekday: number; startHour: number; startMinute: number; endHour: number; endMinute: number; slotDurationMin: number };
@@ -35,15 +36,17 @@ export default function AdminBookingsPage() {
   const [broadcastMsg, setBroadcastMsg] = useState("");
   const [broadcastCategory, setBroadcastCategory] = useState<"general" | "fasted-cardio" | "sleep" | "exercise">("general"); // eating coming soon
   const [broadcasting, setBroadcasting] = useState(false);
+  const [programSummaries, setProgramSummaries] = useState<any[]>([]);
 
   async function loadAll() {
     setLoading(true);
-    const [cRes, aRes, bRes, lRes, rRes] = await Promise.all([
+    const [cRes, aRes, bRes, lRes, rRes, pRes] = await Promise.all([
       fetch("/api/admin/contact"),
       fetch("/api/admin/availability"),
       fetch("/api/bookings"),
       fetch("/api/reminders/logs"),
       fetch("/api/sms/broadcast"),
+      fetch("/api/admin/programs-summary"),
     ]);
     if (cRes.ok) setContact(await cRes.json());
     if (aRes.ok) setAvails(await aRes.json());
@@ -54,6 +57,10 @@ export default function AdminBookingsPage() {
       setRecipients(rdata.recipients || []);
       // default select all that have phone
       setSelectedIds((rdata.recipients || []).filter((r: any) => r.phone).map((r: any) => r.id));
+    }
+    if (pRes.ok) {
+      const pdata = await pRes.json();
+      setProgramSummaries(pdata.programs || []);
     }
     setLoading(false);
   }
@@ -309,6 +316,11 @@ export default function AdminBookingsPage() {
             ))}
           </div>
         )}
+      </section>
+
+      <section className="card">
+        <h2 className="font-semibold mb-2">SMS Workout Override (schedule + text)</h2>
+        <SmsWorkoutOverridePanel programs={programSummaries} recipients={recipients} />
       </section>
 
       {/* SMS Broadcast composer - new capability */}
