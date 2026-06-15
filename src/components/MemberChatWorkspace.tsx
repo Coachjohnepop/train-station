@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import ChatFeed from "@/components/ChatFeed";
-import MemberChatReply from "@/components/MemberChatReply";
+
 import type { ChatMessage, ChatThread } from "@/lib/coach-chat";
 
 export default function MemberChatWorkspace({ initialThreads }: { initialThreads: ChatThread[] }) {
@@ -12,8 +12,6 @@ export default function MemberChatWorkspace({ initialThreads }: { initialThreads
   const [loading, setLoading] = useState(false);
 
   const activeThread = threads.find((t) => t.id === activeId) || null;
-  const showReply = activeThread?.kind === "member";
-
   const loadMessages = useCallback(async (threadId: string) => {
     if (!threadId) return;
     setLoading(true);
@@ -56,7 +54,6 @@ export default function MemberChatWorkspace({ initialThreads }: { initialThreads
         viewerRole="member"
         emptyLabel="Your coach hasn't posted here yet."
       />
-      {showReply && <MemberChatReply />}
     </div>
   );
 }

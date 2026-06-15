@@ -9,8 +9,8 @@ import { PROGRAM_IMAGES } from "@/lib/program-constants";
 import MemberHomeEquipment from '../../components/MemberHomeEquipment';
 import MemberReminderSettings from '../../components/MemberReminderSettings';
 import GoToTodayCard from "@/components/GoToTodayCard";
-import { getTodaySessionForUser } from "@/lib/today-sessions";
 import { resolveUserId } from "@/lib/current-user";
+import { memberTodayHref, resolveMemberSession } from "@/lib/member-today";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ export default async function MemberDashboardPage() {
     data;
 
   const uid = await resolveUserId("demo-user");
-  const todaySession = getTodaySessionForUser(uid);
+  const todaySession = resolveMemberSession(uid);
   const todaySubtitle = todaySession
     ? `${todaySession.title} — ${new Date(todaySession.scheduledAt).toLocaleString(undefined, {
         weekday: "short",
@@ -64,7 +64,7 @@ export default async function MemberDashboardPage() {
         <div className="lg:w-56 lg:flex-shrink-0">
           <div className="text-sm font-medium mb-2">Today</div>
           <GoToTodayCard
-            href="/member/today"
+            href={memberTodayHref(todaySession)}
             appointmentCount={todaySession ? 1 : 0}
             subtitle={todaySubtitle}
             variant="member"

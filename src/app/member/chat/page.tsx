@@ -17,7 +17,7 @@ export default async function MemberChatPage() {
       <div>
         <h1 className="text-2xl font-bold">Coach updates</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Workout overrides, demo videos, and notes from your coach. SMS replies from your phone appear here too.
+          Coach notes and demo videos. Your assigned workouts with checklists are on Go to Today.
         </p>
       </div>
       <MemberChatWorkspace initialThreads={threads} />

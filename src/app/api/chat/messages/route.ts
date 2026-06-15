@@ -23,8 +23,13 @@ export async function GET(request: Request) {
   const readerId = role === "coach" ? COACH_READER_ID : await resolveUserId("demo-user");
   markThreadRead(threadId, readerId);
 
+  let messages = getMessagesForThread(threadId);
+  if (role === "member") {
+    messages = messages.filter((m) => m.kind !== "workout_update");
+  }
+
   return NextResponse.json({
     thread,
-    messages: getMessagesForThread(threadId),
+    messages,
   });
 }
