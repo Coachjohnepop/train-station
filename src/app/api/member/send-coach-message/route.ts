@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { addDemoSmsLog } from "@/lib/sms";
 import { appendMemberSmsToChat } from "@/lib/coach-chat";
+import { resolveUserId } from "@/lib/current-user";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { getDemoUserSettings } from "@/lib/demo-reminders";
 import fs from "fs";
@@ -54,9 +55,10 @@ export async function POST(request: Request) {
   const trimmed = message.trim();
 
   if (isDemoMode()) {
-    const userSettings = getDemoUserSettings("demo-user");
+    const uid = await resolveUserId();
+    const userSettings = getDemoUserSettings(uid);
     const logEntry = {
-      userId: "demo-user",
+      userId: uid,
       phone: userSettings.phone || "(555) 987-6543",
       message: `[Member reply] ${trimmed}`,
       source: "member-reply",
@@ -64,8 +66,8 @@ export async function POST(request: Request) {
     };
 
     const saved = addDemoSmsLog(logEntry);
-    appendMemberSmsToChat({
-      memberId: "demo-user",
+    await appendMemberSmsToChat({
+      memberId: uid,
       body: trimmed,
       phone: logEntry.phone,
     });

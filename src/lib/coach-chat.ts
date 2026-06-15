@@ -1,7 +1,7 @@
-import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
+import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
 
 export type ChatThreadKind = "member" | "cohort";
 
@@ -50,6 +50,7 @@ type ChatStore = {
 };
 
 const DEV_FILE = path.join(process.cwd(), "prisma", "coach-chat.dev.json");
+const BLOB_PATH = "demo/coach-chat.json";
 const COACH_READER_ID = "coach";
 
 let memoryStore: ChatStore | null = null;
@@ -58,27 +59,33 @@ function emptyStore(): ChatStore {
   return { threads: [], messages: [] };
 }
 
+function setMemory(store: ChatStore) {
+  memoryStore = store;
+}
+
+export async function hydrateCoachChat(): Promise<ChatStore> {
+  return hydrateJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    memory: memoryStore,
+    setMemory,
+    fallback: emptyStore,
+  });
+}
+
 function readStore(): ChatStore {
   if (memoryStore) return memoryStore;
-  try {
-    if (fs.existsSync(DEV_FILE)) {
-      memoryStore = JSON.parse(fs.readFileSync(DEV_FILE, "utf8")) as ChatStore;
-      return memoryStore;
-    }
-  } catch (e) {
-    console.warn("Could not read coach-chat.dev.json", e);
-  }
-  memoryStore = emptyStore();
+  memoryStore = readLocalJson<ChatStore>(DEV_FILE) || emptyStore();
   return memoryStore;
 }
 
-function writeStore(store: ChatStore) {
-  memoryStore = store;
-  try {
-    fs.writeFileSync(DEV_FILE, JSON.stringify(store, null, 2));
-  } catch (e) {
-    console.warn("Could not persist coach-chat.dev.json (using in-memory)", e);
-  }
+async function writeStore(store: ChatStore) {
+  await persistJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    data: store,
+    setMemory,
+  });
 }
 
 function touchThread(store: ChatStore, threadId: string) {
@@ -86,7 +93,8 @@ function touchThread(store: ChatStore, threadId: string) {
   if (t) t.updatedAt = new Date().toISOString();
 }
 
-export function ensureMemberThread(memberId: string): ChatThread {
+export async function ensureMemberThread(memberId: string): Promise<ChatThread> {
+  await hydrateCoachChat();
   const store = readStore();
   const existing = store.threads.find((t) => t.kind === "member" && t.memberId === memberId);
   if (existing) return existing;
@@ -101,11 +109,12 @@ export function ensureMemberThread(memberId: string): ChatThread {
     updatedAt: new Date().toISOString(),
   };
   store.threads.push(thread);
-  writeStore(store);
+  await writeStore(store);
   return thread;
 }
 
-export function ensureCohortThread(programSlug: string, programName?: string): ChatThread {
+export async function ensureCohortThread(programSlug: string, programName?: string): Promise<ChatThread> {
+  await hydrateCoachChat();
   const store = readStore();
   const existing = store.threads.find((t) => t.kind === "cohort" && t.programSlug === programSlug);
   if (existing) return existing;
@@ -119,7 +128,7 @@ export function ensureCohortThread(programSlug: string, programName?: string): C
     updatedAt: new Date().toISOString(),
   };
   store.threads.push(thread);
-  writeStore(store);
+  await writeStore(store);
   return thread;
 }
 
@@ -154,9 +163,10 @@ export function getMessagesForThread(threadId: string, limit = 200): ChatMessage
     .slice(-limit);
 }
 
-export function addChatMessage(input: Omit<ChatMessage, "id" | "createdAt" | "readByUserIds"> & {
+export async function addChatMessage(input: Omit<ChatMessage, "id" | "createdAt" | "readByUserIds"> & {
   readByUserIds?: string[];
-}): ChatMessage {
+}): Promise<ChatMessage> {
+  await hydrateCoachChat();
   const store = readStore();
   const message: ChatMessage = {
     ...input,
@@ -166,11 +176,12 @@ export function addChatMessage(input: Omit<ChatMessage, "id" | "createdAt" | "re
   };
   store.messages.push(message);
   touchThread(store, input.threadId);
-  writeStore(store);
+  await writeStore(store);
   return message;
 }
 
-export function markThreadRead(threadId: string, readerId: string) {
+export async function markThreadRead(threadId: string, readerId: string) {
+  await hydrateCoachChat();
   const store = readStore();
   let changed = false;
   for (const m of store.messages) {
@@ -180,7 +191,7 @@ export function markThreadRead(threadId: string, readerId: string) {
       changed = true;
     }
   }
-  if (changed) writeStore(store);
+  if (changed) await writeStore(store);
 }
 
 export function getUnreadCountForMember(memberId: string, programSlugs: string[] = []): number {
@@ -206,13 +217,13 @@ export function getUnreadCountForCoach(): number {
   ).length;
 }
 
-export function appendMemberSmsToChat(params: {
+export async function appendMemberSmsToChat(params: {
   memberId: string;
   body: string;
   phone: string;
   smsLogId?: string;
 }) {
-  const thread = ensureMemberThread(params.memberId);
+  const thread = await ensureMemberThread(params.memberId);
   const user = resolveDemoUser(params.memberId);
   return addChatMessage({
     threadId: thread.id,

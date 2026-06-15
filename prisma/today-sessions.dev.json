@@ -5,43 +5,76 @@
       "sessionDate": "2026-06-17",
       "scheduledAt": "2026-06-17T10:30:00.000Z",
       "title": "Isolation/Core work",
-      "rawSms": "So isolation/Core work\n\nWarm up well 5 min bike\n\nUpper body warm up\nShoulder mobility warm\nUp with bands \n\nJump squats 20 \n\nFlat bench Single arm dumbbell chest press \n10,10,10,10\nEach arm \n\nIncline bench single arm dumbbell chest press \n10,10,10,10 each arm \n\nSeated single arm dumbbell shoulder press\n10,10,10 each arm \n\nFlat bench single arm dumbbell tricep extensions \n10,10,10,10 each arm \n\nStanding Straight bar cable tricep extensions \n10,10,10 \n\nHIIT cool down \n5 mins \n20 sec on 20 sec off  \n\nStretch well",
-      "workoutId": "sms-w-c548168e",
+      "rawSms": "So isolation/Core work\n\nWarm up well 5 min bike\n\nJump squats 20\n\nFlat bench Single arm dumbbell chest press\n10,10,10,10 each arm\n\nIncline bench single arm dumbbell chest press\n10,10,10,10 each arm\n\nHIIT cool down 5 mins\n20 sec on 20 sec off",
+      "workoutId": "sms-w-400929a9",
       "programSlug": "adult",
       "userIds": [
         "demo-user-john-steph"
       ],
       "replacesSchedule": true,
-      "createdAt": "2026-06-15T02:18:13.050Z",
-      "createdBy": "seed-script"
+      "createdAt": "2026-06-15T03:35:36.868Z",
+      "createdBy": "seed-beta"
     },
     "2026-06-14": {
       "id": "today-2026-06-14",
       "sessionDate": "2026-06-14",
-      "scheduledAt": "2026-06-14T10:30:00.000Z",
-      "title": "Coach SMS Workout",
-      "rawSms": "Jump squats 20\n\nFlat bench press\n10,10,10",
-      "workoutId": "sms-w-494f739c",
+      "scheduledAt": "2026-06-14T11:30:00.000Z",
+      "title": "Active recovery",
+      "rawSms": "Active recovery — Sunday reset\n\n5 min easy bike\n\nWalking lunges 20 steps\n\nBand pull-aparts 15,15,15\n\nPlank 3 x 45 sec\n\nStretch hips and shoulders",
+      "workoutId": "sms-w-a6ed34cf",
       "programSlug": "adult",
       "userIds": [
         "demo-user"
       ],
       "replacesSchedule": true,
-      "createdAt": "2026-06-15T02:23:23.416Z"
+      "createdAt": "2026-06-15T03:35:36.861Z",
+      "createdBy": "seed-beta"
     },
     "2026-06-15": {
       "id": "today-2026-06-15",
       "sessionDate": "2026-06-15",
-      "scheduledAt": "2026-06-15T14:30:00.000Z",
+      "scheduledAt": "2026-06-15T11:30:00.000Z",
       "title": "Isolation/Core work",
-      "rawSms": "So isolation/Core work\n\nJump squats 20\n\nFlat bench press\n10,10,10",
-      "workoutId": "sms-w-b7196962",
+      "rawSms": "Isolation/Core work\n\nJump squats 20\n\nFlat bench dumbbell press\n10,10,10\n\nCable row\n12,12,12\n\nCore: dead bug 3 x 10 each side",
+      "workoutId": "sms-w-6829c118",
       "programSlug": "adult",
       "userIds": [
-        "demo-user"
+        "demo-user-john-steph"
       ],
       "replacesSchedule": true,
-      "createdAt": "2026-06-15T02:23:51.530Z"
+      "createdAt": "2026-06-15T03:35:36.863Z",
+      "createdBy": "seed-beta"
+    },
+    "2026-06-16": {
+      "id": "today-2026-06-16",
+      "sessionDate": "2026-06-16",
+      "scheduledAt": "2026-06-16T10:30:00.000Z",
+      "title": "Upper body push",
+      "rawSms": "Upper body push — Tuesday\n\nWarm up 5 min row\n\nJump squats 15\n\nFlat bench dumbbell press\n10,10,10\n\nIncline flyes\n12,12,12\n\nTricep pushdowns\n15,15,15",
+      "workoutId": "sms-w-f6fc729e",
+      "programSlug": "adult",
+      "userIds": [
+        "demo-user-john",
+        "demo-user-stephanie"
+      ],
+      "replacesSchedule": true,
+      "createdAt": "2026-06-15T03:35:36.867Z",
+      "createdBy": "seed-beta"
+    },
+    "2026-06-18": {
+      "id": "today-2026-06-18",
+      "sessionDate": "2026-06-18",
+      "scheduledAt": "2026-06-18T10:30:00.000Z",
+      "title": "Lower body strength",
+      "rawSms": "Lower body strength — Jordan\n\nWarm up 5 min bike\n\nGoblet squat\n10,10,10,10\n\nRomanian deadlift\n10,10,10\n\nWalking lunges\n12,12 each leg",
+      "workoutId": "sms-w-33e6d76e",
+      "programSlug": "adult",
+      "userIds": [
+        "demo-user-2"
+      ],
+      "replacesSchedule": true,
+      "createdAt": "2026-06-15T03:35:36.869Z",
+      "createdBy": "seed-beta"
     }
   }
 }

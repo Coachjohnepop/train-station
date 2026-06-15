@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     message: body,
   });
 
-  appendMemberSmsToChat({
+  await appendMemberSmsToChat({
     memberId: user.id,
     body,
     phone: from,

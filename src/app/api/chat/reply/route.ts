@@ -13,9 +13,9 @@ export async function POST(request: Request) {
 
   const uid = await resolveUserId();
   const user = resolveDemoUser(uid);
-  const thread = ensureMemberThread(uid);
+  const thread = await ensureMemberThread(uid);
 
-  const created = addChatMessage({
+  const created = await addChatMessage({
     threadId: thread.id,
     authorRole: "member",
     authorId: uid,

@@ -39,6 +39,20 @@ let demoBookings: any[] = [
     createdAt: "2026-06-14T12:00:00.000Z",
     userId: "demo-user-stephanie",
   },
+  {
+    id: "demo-bk-jordan-jun16",
+    memberEmail: "jordan.member@example.com",
+    memberPhone: "(555) 222-3344",
+    adminEmail: "jeremy@thetrainstation.co",
+    adminPhone: "(555) 123-4567",
+    scheduledAt: "2026-06-16T18:00:00.000Z",
+    durationMin: 30,
+    zoomUrl: null,
+    status: "confirmed",
+    notes: "Form check — upper body push day",
+    createdAt: "2026-06-14T12:00:00.000Z",
+    userId: "demo-user-2",
+  },
 ];
 
 export type AvailabilitySlot = {

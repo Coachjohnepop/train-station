@@ -139,6 +139,23 @@ export async function buildWorkoutFromParsedSms(parsed: ParsedSmsWorkout, workou
   return { workoutId: id, exerciseCount: parsed.exercises.length };
 }
 
+export async function getWorkoutExercisePreview(workoutId: string, limit = 4): Promise<string[]> {
+  await hydrateSmsWorkouts();
+  const store = readStore();
+  const exercises = loadDemoExercises();
+  const exById = Object.fromEntries(exercises.map((e) => [e.id, e]));
+  return store.workoutExercises
+    .filter((we) => we.workoutId === workoutId)
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .slice(0, limit)
+    .map((item) => {
+      const name = exById[item.exerciseId]?.name || "Exercise";
+      const sets = item.sets ?? 1;
+      const reps = item.reps && item.reps !== "—" ? item.reps : "";
+      return reps ? `${name} · ${sets}×${reps}` : name;
+    });
+}
+
 export async function getSmsGeneratedWorkout(workoutId: string, memberName = "Member"): Promise<MemberWorkoutView | null> {
   await hydrateSmsWorkouts();
   const store = readStore();

@@ -24,6 +24,7 @@ export default function TodaySessionPanel({
   asInstructor = false,
   collapsible = false,
   defaultOpen = false,
+  defaultAssignOpen = true,
 }: {
   defaultDate?: string;
   defaultTime?: string;
@@ -33,6 +34,7 @@ export default function TodaySessionPanel({
   asInstructor?: boolean;
   collapsible?: boolean;
   defaultOpen?: boolean;
+  defaultAssignOpen?: boolean;
 }) {
   const router = useRouter();
   const [rawSms, setRawSms] = useState("");
@@ -47,6 +49,7 @@ export default function TodaySessionPanel({
   const [message, setMessage] = useState<string | null>(null);
   const [messageIsError, setMessageIsError] = useState(false);
   const [open, setOpen] = useState(defaultOpen);
+  const [assignOpen, setAssignOpen] = useState(defaultAssignOpen);
 
   function formatApiError(res: Response, body: any) {
     if (body?.detail?.fieldErrors) {
@@ -234,32 +237,37 @@ export default function TodaySessionPanel({
 
   if (collapsible) {
     return (
-      <div className="card border-amber-500/30 bg-amber-500/5 space-y-4">
+      <div className="card border-amber-500/30 bg-amber-500/5 space-y-3">
         {memberPicker && (
-          <div className="space-y-2">
-            <h2 className="font-semibold text-sm">Assign workout to students</h2>
-            <p className="text-xs text-[var(--muted)]">
-              Choose one or more of your students — only they will see this on Go to Today and receive SMS alerts.
-            </p>
-            {memberPicker}
-          </div>
+          <details
+            className="group"
+            open={assignOpen}
+            onToggle={(e) => setAssignOpen(e.currentTarget.open)}
+          >
+            <summary className="flex flex-wrap items-center gap-2 cursor-pointer list-none font-semibold text-sm py-1">
+              <span className="text-accent group-open:rotate-90 transition-transform text-xs">▶</span>
+              Assign workout to students
+              <span className="text-[10px] font-normal text-sky-300">→ {assigneeSummary}</span>
+            </summary>
+            <div className="mt-3 space-y-2">
+              <p className="text-xs text-[var(--muted)]">
+                Choose one or more students — only they see this on Go to Today and receive SMS alerts.
+              </p>
+              {memberPicker}
+            </div>
+          </details>
         )}
 
         <details
-          className="group"
+          className="group border-t border-amber-500/20 pt-3"
           open={open}
           onToggle={(e) => setOpen(e.currentTarget.open)}
         >
           <summary className="flex flex-wrap items-center gap-2 cursor-pointer list-none font-semibold text-sm py-1">
             <span className="text-accent group-open:rotate-90 transition-transform text-xs">▶</span>
             {panelTitle}
-            {asInstructor && (
-              <span className="text-[10px] font-normal text-sky-300">
-                → {assigneeSummary}
-              </span>
-            )}
           </summary>
-          <div className="mt-3 pt-3 border-t border-amber-500/20">{smsFields}</div>
+          <div className="mt-3">{smsFields}</div>
         </details>
       </div>
     );

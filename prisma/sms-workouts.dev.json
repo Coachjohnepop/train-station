@@ -13,6 +13,55 @@
       "description": "Generated from coach SMS",
       "source": "sms",
       "createdAt": "2026-06-15T02:18:13.047Z"
+    },
+    {
+      "id": "sms-w-494f739c",
+      "name": "Coach SMS Workout",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-06-15T02:23:23.413Z"
+    },
+    {
+      "id": "sms-w-b7196962",
+      "name": "Isolation/Core work",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-06-15T02:23:51.529Z"
+    },
+    {
+      "id": "sms-w-a6ed34cf",
+      "name": "Coach SMS Workout",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-06-15T03:35:36.856Z"
+    },
+    {
+      "id": "sms-w-6829c118",
+      "name": "Isolation/Core work",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-06-15T03:35:36.862Z"
+    },
+    {
+      "id": "sms-w-f6fc729e",
+      "name": "Upper body push — Tuesday",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-06-15T03:35:36.863Z"
+    },
+    {
+      "id": "sms-w-400929a9",
+      "name": "Isolation/Core work",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-06-15T03:35:36.867Z"
+    },
+    {
+      "id": "sms-w-33e6d76e",
+      "name": "Lower body strength — Jordan",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-06-15T03:35:36.868Z"
     }
   ],
   "workoutExercises": [
@@ -244,6 +293,281 @@
       "sets": 1,
       "reps": "—",
       "notes": "Stretch well",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-33f41eb6",
+      "workoutId": "sms-w-494f739c",
+      "exerciseId": "cmpzkkspv002q95rzf6nqlqga",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "20",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-faa78672",
+      "workoutId": "sms-w-494f739c",
+      "exerciseId": "cmpzjajfp000695rz8d6nbnvu",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "10,10,10",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-39d61758",
+      "workoutId": "sms-w-b7196962",
+      "exerciseId": "cmpzkkspv002q95rzf6nqlqga",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "20",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-9386467f",
+      "workoutId": "sms-w-b7196962",
+      "exerciseId": "cmpzjajfp000695rz8d6nbnvu",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "10,10,10",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-5acc536f",
+      "workoutId": "sms-w-a6ed34cf",
+      "exerciseId": "cmpzjajej000095rzilwd9n9k",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "—",
+      "notes": "Active recovery — Sunday reset\n5 min easy bike · Warm-up block",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-67207efe",
+      "workoutId": "sms-w-a6ed34cf",
+      "exerciseId": "ex_d96d14d6b3ef4c889e08f4b375bd806d",
+      "sortOrder": 1,
+      "sets": 1,
+      "reps": "—",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-1be7d262",
+      "workoutId": "sms-w-a6ed34cf",
+      "exerciseId": "cmpzjajej000095rzilwd9n9k",
+      "sortOrder": 2,
+      "sets": 1,
+      "reps": "—",
+      "notes": "Band pull-aparts 15,15,15 · Warm-up block",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-20f0d1a5",
+      "workoutId": "sms-w-a6ed34cf",
+      "exerciseId": "cmpyqegav0006r7rzmqqniuhq",
+      "sortOrder": 3,
+      "sets": 1,
+      "reps": "—",
+      "notes": "Stretch hips and shoulders",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-9df21460",
+      "workoutId": "sms-w-6829c118",
+      "exerciseId": "cmpzkkspv002q95rzf6nqlqga",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "20",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-96cce5c1",
+      "workoutId": "sms-w-6829c118",
+      "exerciseId": "cmpzjajfp000695rz8d6nbnvu",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "10,10,10",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-d454e7e8",
+      "workoutId": "sms-w-6829c118",
+      "exerciseId": "cmpzjajhb000a95rz00t98gwt",
+      "sortOrder": 2,
+      "sets": 3,
+      "reps": "12,12,12",
+      "notes": "Core: dead bug 3 x 10 each side",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-bde6effa",
+      "workoutId": "sms-w-f6fc729e",
+      "exerciseId": "cmpzjajej000095rzilwd9n9k",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "—",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-2c71996f",
+      "workoutId": "sms-w-f6fc729e",
+      "exerciseId": "cmpzkkspv002q95rzf6nqlqga",
+      "sortOrder": 1,
+      "sets": 1,
+      "reps": "15",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-cef41925",
+      "workoutId": "sms-w-f6fc729e",
+      "exerciseId": "cmpzjajfp000695rz8d6nbnvu",
+      "sortOrder": 2,
+      "sets": 3,
+      "reps": "10,10,10",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-f52ee329",
+      "workoutId": "sms-w-f6fc729e",
+      "exerciseId": "ex_309e5a573bed4574a5829f21f6328216",
+      "sortOrder": 3,
+      "sets": 3,
+      "reps": "12,12,12",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-93e3ca46",
+      "workoutId": "sms-w-f6fc729e",
+      "exerciseId": "ex_1149a8365af9494bb64bca60a105fe42",
+      "sortOrder": 4,
+      "sets": 3,
+      "reps": "15,15,15",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-ab9afd68",
+      "workoutId": "sms-w-400929a9",
+      "exerciseId": "cmpzjajej000095rzilwd9n9k",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "—",
+      "notes": "Warm up well 5 min bike · Warm-up block",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-dbb3d50b",
+      "workoutId": "sms-w-400929a9",
+      "exerciseId": "cmpzkkspv002q95rzf6nqlqga",
+      "sortOrder": 1,
+      "sets": 1,
+      "reps": "20",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-0fd470b0",
+      "workoutId": "sms-w-400929a9",
+      "exerciseId": "cmpzjajfp000695rz8d6nbnvu",
+      "sortOrder": 2,
+      "sets": 4,
+      "reps": "10,10,10,10",
+      "notes": "Each arm",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-d936d24a",
+      "workoutId": "sms-w-400929a9",
+      "exerciseId": "cmpzjajgf000895rzkbecuupa",
+      "sortOrder": 3,
+      "sets": 4,
+      "reps": "10,10,10,10",
+      "notes": "Each arm",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-e8683311",
+      "workoutId": "sms-w-400929a9",
+      "exerciseId": "ex_967839c7d89b41bb8e19dcf3d82df4cf",
+      "sortOrder": 4,
+      "sets": 1,
+      "reps": "5 min",
+      "notes": "20s on / 20s off",
+      "setScheme": "timed",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-c53dfac0",
+      "workoutId": "sms-w-33e6d76e",
+      "exerciseId": "cmpzjajej000095rzilwd9n9k",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "—",
+      "notes": "Warm up 5 min bike · Warm-up block",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-c7f00af3",
+      "workoutId": "sms-w-33e6d76e",
+      "exerciseId": "cmpzkksb2001q95rz5xvwyj71",
+      "sortOrder": 1,
+      "sets": 4,
+      "reps": "10,10,10,10",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-23ada256",
+      "workoutId": "sms-w-33e6d76e",
+      "exerciseId": "cmpyqegas0003r7rzz0k0lc86",
+      "sortOrder": 2,
+      "sets": 3,
+      "reps": "10,10,10",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-6e8960e2",
+      "workoutId": "sms-w-33e6d76e",
+      "exerciseId": "ex_d96d14d6b3ef4c889e08f4b375bd806d",
+      "sortOrder": 3,
+      "sets": 1,
+      "reps": "—",
+      "notes": "12,12 each leg",
       "setScheme": "standard",
       "weightTier": "medium"
     }

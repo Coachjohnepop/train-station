@@ -49,8 +49,8 @@ export async function POST(request: Request) {
 
     const threads =
       input.audience === "cohort"
-        ? [ensureCohortThread(input.programSlug || "adult", input.programName)]
-        : memberIds.map((id) => ensureMemberThread(id));
+        ? [await ensureCohortThread(input.programSlug || "adult", input.programName)]
+        : await Promise.all(memberIds.map((id) => ensureMemberThread(id)));
 
     let sessionResult: Awaited<ReturnType<typeof createTodaySessionFromSms>> | null = null;
     if (input.rawSms?.trim() && input.sessionDate) {
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
     for (const thread of threads) {
       if (hasWorkout && sessionResult) {
         createdMessages.push(
-          addChatMessage({
+          await addChatMessage({
             threadId: thread.id,
             authorRole: "coach",
             authorId: COACH_READER_ID,
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
 
       if (hasText) {
         createdMessages.push(
-          addChatMessage({
+          await addChatMessage({
             threadId: thread.id,
             authorRole: "coach",
             authorId: COACH_READER_ID,
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
 
       if (hasVideo && input.mediaUrl) {
         createdMessages.push(
-          addChatMessage({
+          await addChatMessage({
             threadId: thread.id,
             authorRole: "coach",
             authorId: COACH_READER_ID,
@@ -135,7 +135,7 @@ export async function POST(request: Request) {
 
       if (hasYoutube && youtubeId) {
         createdMessages.push(
-          addChatMessage({
+          await addChatMessage({
             threadId: thread.id,
             authorRole: "coach",
             authorId: COACH_READER_ID,

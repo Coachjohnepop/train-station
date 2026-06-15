@@ -1,11 +1,12 @@
 import CoachChatComposer from "@/components/CoachChatComposer";
 import AdminChatWorkspace from "@/components/AdminChatWorkspace";
-import { listThreadsForCoach } from "@/lib/coach-chat";
+import { hydrateCoachChat, listThreadsForCoach } from "@/lib/coach-chat";
 import { listDemoMembersForCoach } from "@/lib/sms";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminChatPage() {
+export default async function AdminChatPage() {
+  await hydrateCoachChat();
   const threads = listThreadsForCoach();
   const members = listDemoMembersForCoach().map((m) => ({
     id: m.id,
