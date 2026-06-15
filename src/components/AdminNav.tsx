@@ -7,6 +7,11 @@ import ChatNavBadge from "@/components/ChatNavBadge";
 const items = [
   { href: "/admin", label: "Overview", match: (p: string) => p === "/admin" },
   {
+    href: "/admin/leads",
+    label: "Leads",
+    match: (p: string) => p.startsWith("/admin/leads"),
+  },
+  {
     href: "/admin/exercises",
     label: "Exercises",
     match: (p: string) => p.startsWith("/admin/exercises"),

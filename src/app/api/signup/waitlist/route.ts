@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isInvitedAccountEmail } from "@/lib/invited-accounts";
 import { addToWaitlist } from "@/lib/waitlist";
+import { notifyNewLead } from "@/lib/lead-notify";
 
 const schema = z.object({
   name: z.string().max(80).optional(),
@@ -29,6 +30,10 @@ export async function POST(request: Request) {
   }
 
   const entry = addToWaitlist({ email: normalized, name, plan, source });
+
+  // Stopgap until durable DB storage is live: email the team so no lead is
+  // lost even if the file-backed store resets. No-ops if Resend isn't configured.
+  await notifyNewLead(entry);
 
   const params = new URLSearchParams({
     email: entry.email,
