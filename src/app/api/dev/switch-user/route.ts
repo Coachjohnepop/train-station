@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { MEMBER_COOKIE, MEMBER_NAME_COOKIE } from "@/lib/current-user";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
+import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 
 const ALLOWED = new Set([
+  DEFAULT_DEMO_MEMBER_ID,
   "demo-user",
   "demo-user-john",
   "demo-user-stephanie",
@@ -11,7 +13,7 @@ const ALLOWED = new Set([
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id") || "demo-user";
+  const id = searchParams.get("id") || DEFAULT_DEMO_MEMBER_ID;
   const redirectTo = searchParams.get("redirect") || "/member";
 
   if (!ALLOWED.has(id)) {

@@ -21,6 +21,9 @@ function loadEnrollmentsStore(): EnrollmentsStore {
     } catch {}
   }
   const initial: EnrollmentsStore = {
+    "demo-user-john-steph": {
+      adult: { currentWeek: 2, currentDay: 5 },
+    },
     "demo-user": {
       adult: { currentWeek: 2, currentDay: 5 },
       "john-steph": { currentWeek: 1, currentDay: 2 },

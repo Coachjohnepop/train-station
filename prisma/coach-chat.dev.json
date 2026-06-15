@@ -1,6 +1,14 @@
 {
   "threads": [
     {
+      "id": "thread-member-demo-user-john-steph",
+      "kind": "member",
+      "memberId": "demo-user-john-steph",
+      "title": "John & Steph",
+      "createdAt": "2026-06-10T12:00:00.000Z",
+      "updatedAt": "2026-06-14T10:00:00.000Z"
+    },
+    {
       "id": "thread-member-demo-user-john",
       "kind": "member",
       "memberId": "demo-user-john",
@@ -17,6 +25,22 @@
       "updatedAt": "2026-06-14T09:00:00.000Z"
     },
     {
+      "id": "thread-member-demo-user",
+      "kind": "member",
+      "memberId": "demo-user",
+      "title": "Alex",
+      "createdAt": "2026-06-10T12:00:00.000Z",
+      "updatedAt": "2026-06-13T10:00:00.000Z"
+    },
+    {
+      "id": "thread-member-demo-user-2",
+      "kind": "member",
+      "memberId": "demo-user-2",
+      "title": "Jordan Lee",
+      "createdAt": "2026-06-10T12:00:00.000Z",
+      "updatedAt": "2026-06-13T10:00:00.000Z"
+    },
+    {
       "id": "thread-cohort-adult",
       "kind": "cohort",
       "programSlug": "adult",
@@ -27,11 +51,23 @@
   ],
   "messages": [
     {
+      "id": "msg-welcome-john-steph",
+      "threadId": "thread-member-demo-user-john-steph",
+      "authorRole": "coach",
+      "authorId": "coach",
+      "authorName": "Coach Jeremy",
+      "kind": "text",
+      "body": "Welcome John & Steph — I'll post your shared workouts here. Text me back anytime.",
+      "alertSent": true,
+      "createdAt": "2026-06-12T14:00:00.000Z",
+      "readByUserIds": ["coach"]
+    },
+    {
       "id": "msg-welcome-john",
       "threadId": "thread-member-demo-user-john",
       "authorRole": "coach",
       "authorId": "coach",
-      "authorName": "Coach",
+      "authorName": "Coach Jeremy",
       "kind": "text",
       "body": "Welcome to coach chat — I'll post workout overrides and demo clips here. Text me back anytime.",
       "alertSent": true,
@@ -43,7 +79,7 @@
       "threadId": "thread-cohort-adult",
       "authorRole": "coach",
       "authorId": "coach",
-      "authorName": "Coach",
+      "authorName": "Coach Jeremy",
       "kind": "workout_update",
       "body": "Isolation/Core work",
       "sessionDate": "2026-06-17",

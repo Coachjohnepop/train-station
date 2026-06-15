@@ -36,7 +36,7 @@ export async function POST(request: Request, { params }: Params) {
     );
   }
 
-  const uid = parsed.data.targetUserId || (await resolveUserId("demo-user"));
+  const uid = parsed.data.targetUserId || (await resolveUserId());
 
   try {
     const result = await createWorkoutLogAndPerformances({

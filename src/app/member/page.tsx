@@ -21,7 +21,7 @@ export default async function MemberDashboardPage() {
   const { access, stats, enrollments, programs, continueUrl, continueLabel, activeContinues } =
     data;
 
-  const uid = await resolveUserId("demo-user");
+  const uid = await resolveUserId();
   const todaySession = await resolveMemberSession(uid);
   const todaySubtitle = todaySession
     ? `${todaySession.title} — ${new Date(todaySession.scheduledAt).toLocaleString(undefined, {

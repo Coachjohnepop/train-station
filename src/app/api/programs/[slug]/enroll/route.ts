@@ -8,7 +8,7 @@ type Params = { params: Promise<{ slug: string }> };
 
 export async function POST(_request: Request, { params }: Params) {
   const { slug } = await params;
-  const uid = await resolveUserId("demo-user");
+  const uid = await resolveUserId();
 
   if (isDemoMode()) {
     const current = getDemoEnrollments(uid);
@@ -66,7 +66,7 @@ export async function POST(_request: Request, { params }: Params) {
 
 export async function DELETE(_request: Request, { params }: Params) {
   const { slug } = await params;
-  const uid = await resolveUserId("demo-user");
+  const uid = await resolveUserId();
 
   if (isDemoMode()) {
     const current = getDemoEnrollments(uid);

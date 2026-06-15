@@ -16,7 +16,7 @@ export default function AdminChatPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Coach chat</h1>
+        <h1 className="text-2xl font-bold">Coach Jeremy — chat</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
           Patreon-style feed — post workouts, short clips, and YouTube demos. Members get an in-app badge and SMS alert.
         </p>

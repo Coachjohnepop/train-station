@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { isDemoMode } from "@/lib/demo-enrollments";
+import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 
 export const MEMBER_COOKIE = "ts_uid";
 export const MEMBER_NAME_COOKIE = "ts_name";
@@ -71,7 +72,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 /**
  * Helper for data layers: resolve the effective user id for data (cookie first, then demo fallback).
  */
-export async function resolveUserId(fallback: string = "demo-user"): Promise<string> {
+export async function resolveUserId(fallback: string = DEFAULT_DEMO_MEMBER_ID): Promise<string> {
   const uid = await getCurrentUserId();
   return uid || fallback;
 }

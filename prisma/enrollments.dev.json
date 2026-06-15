@@ -1,4 +1,10 @@
 {
+  "demo-user-john-steph": {
+    "adult": {
+      "currentWeek": 2,
+      "currentDay": 5
+    }
+  },
   "demo-user": {
     "adult": {
       "currentWeek": 2,
@@ -19,6 +25,12 @@
     "adult": {
       "currentWeek": 2,
       "currentDay": 3
+    }
+  },
+  "demo-user-2": {
+    "adult": {
+      "currentWeek": 1,
+      "currentDay": 1
     }
   }
 }

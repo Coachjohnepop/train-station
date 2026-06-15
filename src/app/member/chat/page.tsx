@@ -6,7 +6,7 @@ import { resolveUserId } from "@/lib/current-user";
 export const dynamic = "force-dynamic";
 
 export default async function MemberChatPage() {
-  const uid = await resolveUserId("demo-user");
+  const uid = await resolveUserId();
   const threads = listThreadsForMember(uid, ["adult"]);
 
   return (

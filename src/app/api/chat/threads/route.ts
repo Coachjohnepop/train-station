@@ -11,6 +11,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ threads: listThreadsForCoach() });
   }
 
-  const uid = await resolveUserId("demo-user");
+  const uid = await resolveUserId();
   return NextResponse.json({ threads: listThreadsForMember(uid, programSlugs) });
 }

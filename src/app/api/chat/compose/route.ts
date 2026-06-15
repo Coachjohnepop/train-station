@@ -8,6 +8,7 @@ import {
 } from "@/lib/coach-chat";
 import { createTodaySessionFromSms } from "@/lib/today-sessions";
 import { sendCoachChatAlert } from "@/lib/sms";
+import { DEFAULT_DEMO_MEMBER_ID, DEMO_COACH } from "@/lib/demo-coach";
 import { youtubeVideoId } from "@/lib/youtube";
 
 const schema = z.object({
@@ -41,10 +42,10 @@ export async function POST(request: Request) {
       input.audience === "cohort"
         ? input.memberIds?.length
           ? input.memberIds
-          : ["demo-user-john", "demo-user-stephanie"]
+          : [DEFAULT_DEMO_MEMBER_ID]
         : input.memberIds?.length
           ? input.memberIds
-          : ["demo-user-john"];
+          : [DEFAULT_DEMO_MEMBER_ID];
 
     const threads =
       input.audience === "cohort"
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
             threadId: thread.id,
             authorRole: "coach",
             authorId: COACH_READER_ID,
-            authorName: "Coach",
+            authorName: DEMO_COACH.displayName,
             kind: "workout_update",
             body: sessionResult.session.title,
             sessionDate: sessionResult.session.sessionDate,
@@ -106,7 +107,7 @@ export async function POST(request: Request) {
             threadId: thread.id,
             authorRole: "coach",
             authorId: COACH_READER_ID,
-            authorName: "Coach",
+            authorName: DEMO_COACH.displayName,
             kind: "text",
             body: input.body!.trim(),
             alertSent: !!input.sendSmsAlert,
@@ -121,7 +122,7 @@ export async function POST(request: Request) {
             threadId: thread.id,
             authorRole: "coach",
             authorId: COACH_READER_ID,
-            authorName: "Coach",
+            authorName: DEMO_COACH.displayName,
             kind: "video_upload",
             body: hasText ? "Coach video" : input.body?.trim() || "Coach video",
             mediaUrl: input.mediaUrl,
@@ -138,7 +139,7 @@ export async function POST(request: Request) {
             threadId: thread.id,
             authorRole: "coach",
             authorId: COACH_READER_ID,
-            authorName: "Coach",
+            authorName: DEMO_COACH.displayName,
             kind: "youtube",
             body: hasText ? "Coach video" : input.body?.trim() || "Coach video",
             mediaUrl: input.youtubeUrl,

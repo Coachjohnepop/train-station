@@ -25,7 +25,7 @@ const postSchema = z.object({
 export async function GET(request: Request) {
   await hydrateTodaySessions();
   const { searchParams } = new URL(request.url);
-  const userId = searchParams.get("userId") || (await resolveUserId("demo-user"));
+  const userId = searchParams.get("userId") || (await resolveUserId());
   const date = searchParams.get("date");
 
   if (searchParams.get("all") === "1") {

@@ -4,7 +4,8 @@ import { addDemoSmsLog } from "./sms";
 import { COACH_CALENDLY_URL } from "./brand";
 
 let demoUsers: any[] = [
-  { id: "demo-user", email: "demo@thetrainstation.co", name: "Demo Member", phone: "(555) 987-6543", dailyReminderTime: "07:30" },
+  { id: "demo-user-john-steph", email: "johnsteph@thetrainstation.co", name: "John & Steph", phone: "(555) 111-2235", dailyReminderTime: "06:30" },
+  { id: "demo-user", email: "demo@thetrainstation.co", name: "Alex", phone: "(555) 987-6543", dailyReminderTime: "07:30" },
   { id: "demo-user-john", email: "john@thetrainstation.co", name: "John", phone: "(555) 111-2233", dailyReminderTime: "06:30" },
   { id: "demo-user-stephanie", email: "stephanie@thetrainstation.co", name: "Stephanie", phone: "(555) 111-2234", dailyReminderTime: "06:30" },
 ];
@@ -14,7 +15,7 @@ let demoBookings: any[] = [
     id: "demo-bk-john-jun17",
     memberEmail: "john@thetrainstation.co",
     memberPhone: "(555) 111-2233",
-    adminEmail: "coach@thetrainstation.co",
+    adminEmail: "jeremy@thetrainstation.co",
     adminPhone: "(555) 123-4567",
     scheduledAt: "2026-06-17T14:00:00.000Z",
     durationMin: 15,
@@ -28,7 +29,7 @@ let demoBookings: any[] = [
     id: "demo-bk-steph-jun17",
     memberEmail: "stephanie@thetrainstation.co",
     memberPhone: "(555) 111-2234",
-    adminEmail: "coach@thetrainstation.co",
+    adminEmail: "jeremy@thetrainstation.co",
     adminPhone: "(555) 123-4567",
     scheduledAt: "2026-06-17T15:30:00.000Z",
     durationMin: 15,
@@ -50,7 +51,7 @@ export async function getAdminContact() {
   if (isDemoMode()) {
     return { 
       id: "demo-contact", 
-      email: "coach@thetrainstation.co", 
+      email: "jeremy@thetrainstation.co", 
       phone: "(555) 123-4567",
       calendlyUrl: COACH_CALENDLY_URL
     };
@@ -60,7 +61,7 @@ export async function getAdminContact() {
     // fallback
     contact = await prisma.adminContact.create({
       data: {
-        email: "coach@thetrainstation.co",
+        email: "jeremy@thetrainstation.co",
         phone: "(555) 123-4567",
       },
     });

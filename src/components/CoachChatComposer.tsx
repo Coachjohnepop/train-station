@@ -4,13 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CHAT_VIDEO_MAX_DURATION_SEC } from "@/lib/chat-video-constants";
 import CoachMemberPicker from "@/components/CoachMemberPicker";
+import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 
 type MemberOption = { id: string; name: string; email: string };
 
 export default function CoachChatComposer({ members }: { members: MemberOption[] }) {
   const router = useRouter();
   const [audience, setAudience] = useState<"member" | "cohort">("member");
-  const [selectedIds, setSelectedIds] = useState<string[]>(["demo-user-john", "demo-user-stephanie"]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([DEFAULT_DEMO_MEMBER_ID]);
   const [programSlug, setProgramSlug] = useState("adult");
   const [body, setBody] = useState("");
   const [rawSms, setRawSms] = useState("");

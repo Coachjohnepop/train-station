@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import CoachMemberPicker, { type CoachMemberOption } from "@/components/CoachMemberPicker";
+import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 
 type ParsedExercise = {
   name: string;
@@ -12,7 +13,7 @@ type ParsedExercise = {
   section?: string;
 };
 
-const DEFAULT_COACH_MEMBERS = ["demo-user-john", "demo-user-stephanie"];
+const DEFAULT_COACH_MEMBERS = [DEFAULT_DEMO_MEMBER_ID];
 
 export default function TodaySessionPanel({
   defaultDate,

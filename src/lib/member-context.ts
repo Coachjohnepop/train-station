@@ -14,7 +14,7 @@ export async function getMemberDashboard() {
   const adult = programs.find((p: any) => p.slug === "adult") || programs.find((p: any) => (p.category || "workout") === "workout") || programs[0];
 
   const current = await getCurrentUser();
-  const uid = await resolveUserId("demo-user");
+  const uid = await resolveUserId();
   const displayName = current?.name || (await getCurrentUserName()) || "Member";
 
   // User identity for the shell + dashboard (real when cookie + DB, synthetic or demo otherwise)

@@ -8,7 +8,7 @@ function isDemoMode() {
   return !url || url.includes("dummy.supabase") || url.includes("dummy");
 }
 
-let demoContact = { email: "coach@thetrainstation.co", phone: "(555) 123-4567" };
+let demoContact = { email: "jeremy@thetrainstation.co", phone: "(555) 123-4567" };
 let demoSlots: any[] = [];
 
 const createSchema = z.object({

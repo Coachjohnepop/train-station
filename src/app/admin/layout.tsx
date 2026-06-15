@@ -20,7 +20,7 @@ export default function AdminLayout({
                 className="h-16 w-auto"
               />
             </Link>
-            <p className="text-sm text-[var(--muted)]">Coach admin</p>
+            <p className="text-sm text-[var(--muted)]">Coach Jeremy</p>
           </div>
           <AdminNav />
         </div>

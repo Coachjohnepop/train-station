@@ -8,7 +8,7 @@ function isDemoMode() {
   return !url || url.includes("dummy.supabase") || url.includes("dummy");
 }
 let demoContact = { 
-  email: "coach@thetrainstation.co", 
+  email: "jeremy@thetrainstation.co",
   phone: "(555) 123-4567",
   calendlyUrl: COACH_CALENDLY_URL
 };

@@ -9,8 +9,7 @@
       "workoutId": "sms-w-c548168e",
       "programSlug": "adult",
       "userIds": [
-        "demo-user-john",
-        "demo-user-stephanie"
+        "demo-user-john-steph"
       ],
       "replacesSchedule": true,
       "createdAt": "2026-06-15T02:18:13.050Z",

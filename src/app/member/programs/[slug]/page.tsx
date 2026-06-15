@@ -58,7 +58,7 @@ export default async function MemberProgramPage({ params, searchParams }: Props)
 
   // Load actually logged workoutIds for the current joined user (cookie) so schedule shows completed days.
   const loggedSet = new Set<string>();
-  const uid = await resolveUserId("demo-user");
+  const uid = await resolveUserId();
   const isDemo = process.env.DATABASE_URL?.includes("dummy") ?? true;
   if (isDemo) {
     try {

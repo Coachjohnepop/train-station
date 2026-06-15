@@ -11,6 +11,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ unread: getUnreadCountForCoach() });
   }
 
-  const uid = await resolveUserId("demo-user");
+  const uid = await resolveUserId();
   return NextResponse.json({ unread: getUnreadCountForMember(uid, programs) });
 }

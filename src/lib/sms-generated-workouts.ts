@@ -168,7 +168,7 @@ export async function getSmsGeneratedWorkout(workoutId: string, memberName = "Me
     };
   });
 
-  const uid = await resolveUserId("demo-user");
+  const uid = await resolveUserId();
   const pastByBlockId: Record<string, any> = {};
   if (isDemoMode()) {
     Object.assign(pastByBlockId, getDemoPastsForWorkoutExercises(blocks, uid));

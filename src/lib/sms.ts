@@ -2,15 +2,17 @@ import twilio from "twilio";
 import { prisma } from "@/lib/prisma";
 import { isDemoMode } from "./demo-enrollments";
 import { DEMO_USER_DIRECTORY, resolveDemoUserByEmail } from "@/lib/demo-user-directory";
+import { listMembersForCoach } from "@/lib/demo-coach";
 
 let demoSmsLogs: any[] = [];
 
 let demoPhoneUsers = [
-  { id: "demo-user", email: "demo@thetrainstation.co", name: "Demo Member (Alex)", phone: "(555) 987-6543", dailyReminderTime: "07:30" },
+  { id: "demo-user-john-steph", email: "johnsteph@thetrainstation.co", name: "John & Steph", phone: "(555) 111-2235", dailyReminderTime: "06:30" },
+  { id: "demo-user", email: "demo@thetrainstation.co", name: "Alex", phone: "(555) 987-6543", dailyReminderTime: "07:30" },
   { id: "demo-user-john", email: "john@thetrainstation.co", name: "John", phone: "(555) 111-2233", dailyReminderTime: "06:30" },
   { id: "demo-user-stephanie", email: "stephanie@thetrainstation.co", name: "Stephanie", phone: "(555) 111-2234", dailyReminderTime: "06:30" },
   { id: "demo-user-2", email: "jordan.member@example.com", name: "Jordan Lee", phone: "(555) 222-3344", dailyReminderTime: "08:00" },
-  { id: "demo-instr", email: "coach.sam@example.com", name: "Sam Coach", phone: "(555) 123-0001", dailyReminderTime: null },
+  { id: "demo-coach-jeremy", email: "jeremy@thetrainstation.co", name: "Coach Jeremy", phone: "(555) 123-0001", dailyReminderTime: null },
 ];
 
 export function getDemoSmsLogs() {
@@ -111,7 +113,7 @@ export function coachAlertMessage(params: { sessionDate?: string; firstName?: st
     ? `${base}/member/today?date=${params.sessionDate}`
     : `${base}/member/chat`;
   const hi = params.firstName ? `Hi ${params.firstName}, ` : "";
-  return `${hi}New update from Coach — open The Train Station: ${link}`;
+  return `${hi}New update from Coach Jeremy — open The Train Station: ${link}`;
 }
 
 export async function sendCoachChatAlert(params: {
@@ -242,9 +244,7 @@ export async function createReminderLogForUser(user: any, message: string) {
 }
 
 export function listDemoMembersForCoach() {
-  return DEMO_USER_DIRECTORY.filter(
-    (u) => u.phone && !u.email.includes("coach") && !u.email.includes("prospective"),
-  );
+  return listMembersForCoach();
 }
 
 export { resolveDemoUserByEmail };

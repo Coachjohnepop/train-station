@@ -5,6 +5,7 @@ import { getAppointmentsForDate } from "@/lib/today-appointments";
 import { getTodaySessionByDate, hydrateTodaySessions } from "@/lib/today-sessions";
 import { getSmsGeneratedWorkout } from "@/lib/sms-generated-workouts";
 import { listDemoMembersForCoach } from "@/lib/sms";
+import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 
 export const dynamic = "force-dynamic";
 
@@ -121,7 +122,7 @@ export default async function AdminTodayPage({ searchParams }: Props) {
             backHref={`/admin/today?date=${sessionDate}`}
             backLabel="← Go to Today"
             programSlug={session.programSlug}
-            instructorName="Coach"
+            instructorName="Coach Jeremy"
           />
         </div>
       )}
@@ -198,7 +199,7 @@ export default async function AdminTodayPage({ searchParams }: Props) {
         defaultUserIds={
           session?.userIds?.length
             ? session.userIds
-            : ["demo-user-john", "demo-user-stephanie"]
+            : [DEFAULT_DEMO_MEMBER_ID]
         }
         defaultDate={sessionDate}
         defaultTime={session ? new Date(session.scheduledAt).toTimeString().slice(0, 5) : "06:30"}

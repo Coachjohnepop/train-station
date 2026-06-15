@@ -7,6 +7,7 @@ import { getSmsGeneratedWorkout } from "@/lib/sms-generated-workouts";
 import { resolveUserId } from "@/lib/current-user";
 import { loadMemberUpcomingSessions, memberTodayHref, resolveMemberSession } from "@/lib/member-today";
 import { listDemoMembersForCoach } from "@/lib/sms";
+import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const sp = await searchParams;
   const asInstructor = !!sp.asInstructor;
   const forUser = sp.forUser;
-  const uid = forUser || (await resolveUserId("demo-user"));
+  const uid = forUser || (await resolveUserId());
 
   const dashboard = await getMemberDashboard();
   if (!dashboard) notFound();
@@ -177,7 +178,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
           programSlug={session?.programSlug || "adult"}
           memberOptions={coachMembers}
           defaultUserIds={
-            forUser ? [forUser] : session?.userIds?.length ? session.userIds : ["demo-user-john", "demo-user-stephanie"]
+            forUser ? [forUser] : session?.userIds?.length ? session.userIds : [DEFAULT_DEMO_MEMBER_ID]
           }
           defaultDate={session?.sessionDate || viewDate}
           defaultTime={session ? new Date(session.scheduledAt).toTimeString().slice(0, 5) : "06:30"}

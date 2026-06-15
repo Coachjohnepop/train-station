@@ -62,7 +62,7 @@ export async function getMemberWorkoutById(
 
   // Attach latest past performance (silhouette) for each exercise block.
   // Uses current joined user (cookie) when available; falls back to demo-user in legacy demo mode.
-  const uid = await resolveUserId("demo-user");
+  const uid = await resolveUserId();
   const pastByBlockId: Record<string, any> = {};
   try {
     if (isDemoMode()) {

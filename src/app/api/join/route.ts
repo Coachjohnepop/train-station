@@ -16,7 +16,10 @@ function makeSyntheticId(): string {
   return "u_" + randomUUID().replace(/-/g, "").slice(0, 16);
 }
 
+import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
+
 const DEMO_EMAIL_TO_ID: Record<string, string> = {
+  "johnsteph@thetrainstation.co": DEFAULT_DEMO_MEMBER_ID,
   "john@thetrainstation.co": "demo-user-john",
   "stephanie@thetrainstation.co": "demo-user-stephanie",
   "demo@thetrainstation.co": "demo-user",

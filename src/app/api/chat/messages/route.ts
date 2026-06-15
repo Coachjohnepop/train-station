@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   }
 
   const role = searchParams.get("role") || "member";
-  const readerId = role === "coach" ? COACH_READER_ID : await resolveUserId("demo-user");
+  const readerId = role === "coach" ? COACH_READER_ID : await resolveUserId();
   markThreadRead(threadId, readerId);
 
   let messages = getMessagesForThread(threadId);
