@@ -233,13 +233,14 @@ export default async function MemberDashboardPage() {
         </summary>
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
           <Link
-            href="/member/workout"
-            className="card transition hover-accent-border"
+            href="/member/today"
+            className="card transition hover-accent-border border-accent/30 bg-accent/5"
           >
-            <p className="font-medium">Today&apos;s workout</p>
+            <p className="font-medium">Go to Today</p>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              Log sets with past-performance silhouettes.
+              Coach SMS workout overrides schedule — paste, check off sets, log session.
             </p>
+            <span className="mt-2 inline-block text-xs text-accent">Open today&apos;s session →</span>
           </Link>
           <Link
             href="/member/live"

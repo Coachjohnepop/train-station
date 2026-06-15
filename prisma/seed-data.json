@@ -1796,6 +1796,46 @@
       "defaultWeightTier": "light",
       "createdAt": "2026-06-08T04:31:22.239Z",
       "updatedAt": "2026-06-08T04:31:22.239Z"
+    },
+    {
+      "id": "ex_b0ec1199c1d5425da93877d3d684f990",
+      "name": "So isolation/Core work",
+      "description": "Created from SMS workout (2026-06-15)",
+      "tags": "sms-import",
+      "createdAt": "2026-06-15T02:18:04.813Z",
+      "updatedAt": "2026-06-15T02:18:04.813Z"
+    },
+    {
+      "id": "ex_8cdc7b709d784cccbbd7ddb3260ff062",
+      "name": "Warm up well 5 min bike",
+      "description": "Created from SMS workout (2026-06-15)",
+      "tags": "sms-import",
+      "createdAt": "2026-06-15T02:18:04.816Z",
+      "updatedAt": "2026-06-15T02:18:04.816Z"
+    },
+    {
+      "id": "ex_fba6bb97ed534562b2d638c964ffbe9f",
+      "name": "Upper body warm up",
+      "description": "Created from SMS workout (2026-06-15)",
+      "tags": "sms-import",
+      "createdAt": "2026-06-15T02:18:04.818Z",
+      "updatedAt": "2026-06-15T02:18:04.818Z"
+    },
+    {
+      "id": "ex_516ddb6929424c8c82e1c634ae0ba8fd",
+      "name": "Shoulder mobility warm",
+      "description": "Created from SMS workout (2026-06-15)",
+      "tags": "sms-import",
+      "createdAt": "2026-06-15T02:18:04.820Z",
+      "updatedAt": "2026-06-15T02:18:04.820Z"
+    },
+    {
+      "id": "ex_967839c7d89b41bb8e19dcf3d82df4cf",
+      "name": "HIIT Cool-down",
+      "description": "20s on / 20s off",
+      "tags": "sms-import",
+      "createdAt": "2026-06-15T02:18:04.823Z",
+      "updatedAt": "2026-06-15T02:18:04.823Z"
     }
   ],
   "workouts": [

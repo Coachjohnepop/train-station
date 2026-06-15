@@ -8,5 +8,17 @@
       "currentWeek": 1,
       "currentDay": 3
     }
+  },
+  "demo-user-john": {
+    "adult": {
+      "currentWeek": 2,
+      "currentDay": 3
+    }
+  },
+  "demo-user-stephanie": {
+    "adult": {
+      "currentWeek": 2,
+      "currentDay": 3
+    }
   }
 }

@@ -9,10 +9,8 @@ export default async function ProgramsAdminPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">Programs</h1>
-      <p className="mt-2 max-w-2xl text-[var(--muted)]">
-        Top-level tracks members choose on {BRAND_NAME}. Workouts, Eating Approaches (cascading daily prompts), Yoga Channels (instructors create their own Patreon-style channels by adding programs with category "yoga"), and Journeys (recorded live sessions with YouTube links that can be substituted into workout days).
-      </p>
+      <h1 className="text-xl font-semibold tracking-tight">Programs</h1>
+      <p className="mt-1 text-xs text-[var(--muted)] max-w-xl">Build workouts here: pick Gym/Home per day, add exercises, set reps, copy weeks. Tight workflow.</p>
 
       <ul className="mt-8 space-y-3">
         {programs.map((program: any) => {

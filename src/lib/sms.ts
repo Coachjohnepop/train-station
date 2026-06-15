@@ -6,6 +6,8 @@ let demoSmsLogs: any[] = [];
 // In-memory demo users with phones (kept in sync with the demo data in /api/users for broadcast targeting)
 let demoPhoneUsers = [
   { id: "demo-user", email: "demo@thetrainstation.co", name: "Demo Member (Alex)", phone: "(555) 987-6543", dailyReminderTime: "07:30" },
+  { id: "demo-user-john", email: "john@thetrainstation.co", name: "John", phone: "(555) 111-2233", dailyReminderTime: "06:30" },
+  { id: "demo-user-stephanie", email: "stephanie@thetrainstation.co", name: "Stephanie", phone: "(555) 111-2234", dailyReminderTime: "06:30" },
   { id: "demo-user-2", email: "jordan.member@example.com", name: "Jordan Lee", phone: "(555) 222-3344", dailyReminderTime: "08:00" },
   { id: "demo-instr", email: "coach.sam@example.com", name: "Sam Coach", phone: "(555) 123-0001", dailyReminderTime: null },
 ];

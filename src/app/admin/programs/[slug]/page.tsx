@@ -51,20 +51,13 @@ export default async function ProgramAdminDetailPage({ params }: Props) {
 
   return (
     <div>
-      <Link
-        href="/admin/programs"
-        className="text-sm text-accent hover:underline"
-      >
-        ← All programs
-      </Link>
-      <h1 className="mt-4 text-2xl font-bold">{program.name}</h1>
-      <p className="mt-2 text-[var(--muted)]">{program.description}</p>
-      <p className="mt-1 text-sm text-[var(--muted)]">
-        {assignedCount} {program.category === "workout" ? "workout" : program.category === "journey" ? "journey session" : "content"} slot{assignedCount === 1 ? "" : "s"} assigned
-      </p>
+      <Link href="/admin/programs" className="text-xs text-accent hover:underline">← Programs</Link>
+      <div className="mt-1 flex items-baseline gap-2">
+        <h1 className="text-xl font-semibold tracking-tight">{program.name}</h1>
+        <span className="text-[10px] text-[var(--muted)]">{assignedCount} slots · {program.durationWeeks} weeks</span>
+      </div>
 
-      <div className="mt-8">
-        <h2 className="mb-4 text-lg font-semibold">Assign workouts to program</h2>
+      <div className="mt-3">
         <ProgramScheduleBuilder
           program={{
             id: program.id,

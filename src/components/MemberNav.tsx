@@ -11,9 +11,9 @@ const items = [
     match: (p: string) => p.startsWith("/member/programs"),
   },
   {
-    href: "/member/workout",
-    label: "Workout",
-    match: (p: string) => p === "/member/workout",
+    href: "/member/today",
+    label: "Today",
+    match: (p: string) => p === "/member/today" || p === "/member/workout",
   },
   {
     href: "/member/live",
