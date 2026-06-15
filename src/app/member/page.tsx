@@ -222,7 +222,7 @@ export default async function MemberDashboardPage() {
           <>
             <p className="mt-1 text-[10px] text-accent">Start with any program preview or enroll to log your first session and see your rank climb.</p>
             <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[10px]">
-              <Link href="/member/programs" className="text-accent hover:underline">Browse programs &amp; enroll →</Link>
+              <Link href="/member/programs" className="text-accent hover:underline">Browse program store →</Link>
               <Link href="/member/workout" className="text-accent hover:underline">Open workout logger →</Link>
             </div>
           </>

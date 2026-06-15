@@ -8,7 +8,7 @@ const items = [
   { href: "/member", label: "Home", match: (p: string) => p === "/member" },
   {
     href: "/member/programs",
-    label: "Programs",
+    label: "Store",
     match: (p: string) => p.startsWith("/member/programs"),
   },
   {
