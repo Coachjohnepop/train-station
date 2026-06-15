@@ -1,9 +1,10 @@
+import twilio from "twilio";
 import { prisma } from "@/lib/prisma";
 import { isDemoMode } from "./demo-enrollments";
+import { DEMO_USER_DIRECTORY, resolveDemoUserByEmail } from "@/lib/demo-user-directory";
 
 let demoSmsLogs: any[] = [];
 
-// In-memory demo users with phones (kept in sync with the demo data in /api/users for broadcast targeting)
 let demoPhoneUsers = [
   { id: "demo-user", email: "demo@thetrainstation.co", name: "Demo Member (Alex)", phone: "(555) 987-6543", dailyReminderTime: "07:30" },
   { id: "demo-user-john", email: "john@thetrainstation.co", name: "John", phone: "(555) 111-2233", dailyReminderTime: "06:30" },
@@ -17,9 +18,31 @@ export function getDemoSmsLogs() {
 }
 
 export function addDemoSmsLog(entry: any) {
-  demoSmsLogs.unshift({ ...entry, sentAt: new Date().toISOString() });
-  if (demoSmsLogs.length > 50) demoSmsLogs.pop();
-  return entry;
+  const withMeta = { ...entry, sentAt: new Date().toISOString() };
+  demoSmsLogs.unshift(withMeta);
+  if (demoSmsLogs.length > 100) demoSmsLogs.pop();
+  return withMeta;
+}
+
+export function normalizePhoneDigits(phone: string): string {
+  return phone.replace(/\D/g, "");
+}
+
+export function phonesMatch(a: string, b: string): boolean {
+  const da = normalizePhoneDigits(a);
+  const db = normalizePhoneDigits(b);
+  if (!da || !db) return false;
+  if (da === db) return true;
+  return da.slice(-10) === db.slice(-10);
+}
+
+export function toE164(phone: string): string {
+  const digits = normalizePhoneDigits(phone);
+  if (!digits) return phone;
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  if (phone.startsWith("+")) return phone;
+  return `+${digits}`;
 }
 
 export async function getUsersWithPhones() {
@@ -40,6 +63,11 @@ export async function getUsersWithPhones() {
   }));
 }
 
+export async function findUserByPhone(inboundPhone: string) {
+  const users = await getUsersWithPhones();
+  return users.find((u) => phonesMatch(u.phone, inboundPhone)) ?? null;
+}
+
 function personalize(message: string, user: { name?: string | null; email: string; phone: string }) {
   const first = (user.name || user.email.split("@")[0]).split(" ")[0];
   return message
@@ -49,31 +77,117 @@ function personalize(message: string, user: { name?: string | null; email: strin
     .replace(/\{phone\}/gi, user.phone);
 }
 
+function twilioConfigured() {
+  return !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM);
+}
+
 async function deliverSms(phone: string, message: string): Promise<boolean> {
-  // Placeholder for real provider (Twilio, etc.). Add envs + npm i twilio when going live.
-  // For now we always "succeed" and just log to console so admin sees what would be sent.
-  const from = process.env.SMS_FROM_PHONE || "TrainStation";
-  if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM) {
+  const to = toE164(phone);
+  if (twilioConfigured()) {
     try {
-      // const twilioClient = (await import("twilio")).default(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-      // await twilioClient.messages.create({ from: process.env.TWILIO_FROM, to: phone, body: message });
-      console.log(`[SMS via Twilio] ${from} -> ${phone}: ${message}`);
+      const client = twilio(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!);
+      await client.messages.create({
+        from: process.env.TWILIO_FROM!,
+        to,
+        body: message,
+      });
+      return true;
     } catch (e) {
-      console.error("Twilio send failed (placeholder)", e);
+      console.error("Twilio send failed", e);
       return false;
     }
-  } else {
-    console.log(`[SMS SIMULATED] ${from} -> ${phone}: ${message}`);
   }
+  console.log(`[SMS SIMULATED — set TWILIO_* envs] -> ${to}: ${message}`);
   return true;
 }
 
-export async function sendSmsBroadcast(params: {
-  userIds?: string[]; // specific ids, or omit + use all with phones
-  filter?: "all" | "members"; // future use
+export function appBaseUrl() {
+  return process.env.NEXT_PUBLIC_APP_URL || "https://www.thetrainstation.co";
+}
+
+export function coachAlertMessage(params: { sessionDate?: string; firstName?: string }) {
+  const base = appBaseUrl();
+  const link = params.sessionDate
+    ? `${base}/member/today?date=${params.sessionDate}`
+    : `${base}/member/chat`;
+  const hi = params.firstName ? `Hi ${params.firstName}, ` : "";
+  return `${hi}New update from Coach — open The Train Station: ${link}`;
+}
+
+export async function sendCoachChatAlert(params: {
+  userIds: string[];
+  sessionDate?: string;
+  customBody?: string;
+}) {
+  const allWithPhones = await getUsersWithPhones();
+  const idSet = new Set(params.userIds);
+  const targets = allWithPhones.filter((u) => idSet.has(u.id) && u.phone);
+
+  const results: any[] = [];
+  for (const u of targets) {
+    const first = (u.name || u.email.split("@")[0]).split(" ")[0];
+    const body =
+      params.customBody ||
+      coachAlertMessage({ sessionDate: params.sessionDate, firstName: first });
+    const personalized = personalize(body, { name: u.name, email: u.email, phone: u.phone });
+    const ok = await deliverSms(u.phone, personalized);
+    if (!ok) continue;
+
+    const logEntry: any = {
+      userId: u.id,
+      phone: u.phone,
+      message: personalized,
+      source: "coach-chat-alert",
+      direction: "outbound",
+    };
+
+    if (isDemoMode()) {
+      const saved = addDemoSmsLog(logEntry);
+      results.push({ userId: u.id, phone: u.phone, message: personalized, sentAt: saved.sentAt });
+    } else {
+      const log = await prisma.smsLog.create({
+        data: { userId: u.id, phone: u.phone, message: personalized },
+      });
+      results.push({ userId: u.id, phone: u.phone, message: personalized, sentAt: log.sentAt, smsLogId: log.id });
+    }
+  }
+
+  return { sent: results.length, logs: results };
+}
+
+export async function logInboundMemberSms(params: {
+  userId: string;
+  phone: string;
   message: string;
-  category?: "fasted-cardio" | "sleep" | "exercise" | "general"; // eating coming soon
-  taskDetails?: any; // e.g. { target: "80g protein", task: "20 pushups" }
+}) {
+  const logEntry = {
+    userId: params.userId,
+    phone: params.phone,
+    message: params.message,
+    source: "member-reply",
+    direction: "inbound",
+  };
+
+  if (isDemoMode()) {
+    return addDemoSmsLog(logEntry);
+  }
+
+  const log = await prisma.smsLog.create({
+    data: {
+      userId: params.userId,
+      phone: params.phone,
+      message: params.message,
+    },
+  });
+  return { ...logEntry, sentAt: log.sentAt.toISOString(), smsLogId: log.id };
+}
+
+export async function sendSmsBroadcast(params: {
+  userIds?: string[];
+  filter?: "all" | "members";
+  message: string;
+  category?: "fasted-cardio" | "sleep" | "exercise" | "general";
+  taskDetails?: any;
 }) {
   const { userIds, message, category = "general", taskDetails } = params;
   const allWithPhones = await getUsersWithPhones();
@@ -97,6 +211,7 @@ export async function sendSmsBroadcast(params: {
       source: "broadcast",
       category,
       taskDetails: taskDetails || null,
+      direction: "outbound",
     };
 
     if (isDemoMode()) {
@@ -108,7 +223,6 @@ export async function sendSmsBroadcast(params: {
           userId: u.id,
           phone: u.phone,
           message: personalized,
-          // if schema supports extra fields, add category etc.
         },
       });
       results.push({ user: u.email, phone: u.phone, message: personalized, sentAt: log.sentAt, category, taskDetails });
@@ -118,12 +232,19 @@ export async function sendSmsBroadcast(params: {
   return { sent: results.length, logs: results };
 }
 
-// Also expose a helper if we want to unify daily reminders later
 export async function createReminderLogForUser(user: any, message: string) {
   if (isDemoMode()) {
-    const saved = addDemoSmsLog({ userId: user.id, phone: user.phone, message, source: "reminder" });
+    const saved = addDemoSmsLog({ userId: user.id, phone: user.phone, message, source: "reminder", direction: "outbound" });
     return { user: user.email, phone: user.phone, message, sentAt: saved.sentAt };
   }
   const log = await prisma.smsLog.create({ data: { userId: user.id, phone: user.phone, message } });
   return { user: user.email, phone: user.phone, message, sentAt: log.sentAt };
 }
+
+export function listDemoMembersForCoach() {
+  return DEMO_USER_DIRECTORY.filter(
+    (u) => u.phone && !u.email.includes("coach") && !u.email.includes("prospective"),
+  );
+}
+
+export { resolveDemoUserByEmail };

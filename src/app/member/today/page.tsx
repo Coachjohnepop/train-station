@@ -3,14 +3,14 @@ import { notFound } from "next/navigation";
 import MemberWorkoutConsole from "@/components/MemberWorkoutConsole";
 import TodaySessionPanel from "@/components/TodaySessionPanel";
 import { getMemberDashboard } from "@/lib/member-context";
-import { getTodaySessionForUser } from "@/lib/today-sessions";
+import { getTodaySessionByDate, getTodaySessionForUser } from "@/lib/today-sessions";
 import { getSmsGeneratedWorkout } from "@/lib/sms-generated-workouts";
 import { resolveUserId } from "@/lib/current-user";
 
 export const dynamic = "force-dynamic";
 
 type Props = {
-  searchParams: Promise<{ asInstructor?: string; forUser?: string }>;
+  searchParams: Promise<{ asInstructor?: string; forUser?: string; date?: string }>;
 };
 
 export default async function MemberTodayPage({ searchParams }: Props) {
@@ -22,7 +22,14 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const dashboard = await getMemberDashboard();
   if (!dashboard) notFound();
 
-  const session = getTodaySessionForUser(uid);
+  const session = sp.date
+    ? (() => {
+        const s = getTodaySessionByDate(sp.date!);
+        if (!s) return null;
+        if (s.userIds.length > 0 && !s.userIds.includes(uid)) return null;
+        return s;
+      })()
+    : getTodaySessionForUser(uid);
   const workout = session ? await getSmsGeneratedWorkout(session.workoutId, dashboard.user.name) : null;
   const hasWorkout = !!workout;
 
@@ -111,7 +118,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
         defaultDate={session?.sessionDate || new Date().toISOString().slice(0, 10)}
         defaultTime={session ? new Date(session.scheduledAt).toTimeString().slice(0, 5) : "06:30"}
         collapsible
-        defaultOpen={!hasWorkout}
+        defaultOpen={false}
       />
     </div>
   );

@@ -46,3 +46,4 @@ dev.db-journal
 prisma/dev.db
 prisma/dev.db-journal
 prisma/exercises.dev.json
+/public/uploads/chat/

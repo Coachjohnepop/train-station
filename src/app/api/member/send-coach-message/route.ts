@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { addDemoSmsLog } from "@/lib/sms";
+import { appendMemberSmsToChat } from "@/lib/coach-chat";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { getDemoUserSettings } from "@/lib/demo-reminders";
 import fs from "fs";
@@ -63,6 +64,11 @@ export async function POST(request: Request) {
     };
 
     const saved = addDemoSmsLog(logEntry);
+    appendMemberSmsToChat({
+      memberId: "demo-user",
+      body: trimmed,
+      phone: logEntry.phone,
+    });
 
     // Process reply for structured categories (eating, cardio, sleep, exercise)
     const processed = processTaskReply(trimmed);

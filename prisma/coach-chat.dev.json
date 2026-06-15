@@ -1,0 +1,58 @@
+{
+  "threads": [
+    {
+      "id": "thread-member-demo-user-john",
+      "kind": "member",
+      "memberId": "demo-user-john",
+      "title": "John",
+      "createdAt": "2026-06-10T12:00:00.000Z",
+      "updatedAt": "2026-06-14T10:00:00.000Z"
+    },
+    {
+      "id": "thread-member-demo-user-stephanie",
+      "kind": "member",
+      "memberId": "demo-user-stephanie",
+      "title": "Stephanie",
+      "createdAt": "2026-06-10T12:00:00.000Z",
+      "updatedAt": "2026-06-14T09:00:00.000Z"
+    },
+    {
+      "id": "thread-cohort-adult",
+      "kind": "cohort",
+      "programSlug": "adult",
+      "title": "Adult program cohort",
+      "createdAt": "2026-06-10T12:00:00.000Z",
+      "updatedAt": "2026-06-14T10:00:00.000Z"
+    }
+  ],
+  "messages": [
+    {
+      "id": "msg-welcome-john",
+      "threadId": "thread-member-demo-user-john",
+      "authorRole": "coach",
+      "authorId": "coach",
+      "authorName": "Coach",
+      "kind": "text",
+      "body": "Welcome to coach chat — I'll post workout overrides and demo clips here. Text me back anytime.",
+      "alertSent": true,
+      "createdAt": "2026-06-12T14:00:00.000Z",
+      "readByUserIds": ["coach"]
+    },
+    {
+      "id": "msg-workout-cohort",
+      "threadId": "thread-cohort-adult",
+      "authorRole": "coach",
+      "authorId": "coach",
+      "authorName": "Coach",
+      "kind": "workout_update",
+      "body": "Isolation/Core work",
+      "sessionDate": "2026-06-17",
+      "todaySessionId": "today-2026-06-17",
+      "workoutId": "sms-workout-2026-06-17",
+      "workoutTitle": "Isolation/Core work",
+      "alertSent": true,
+      "createdAt": "2026-06-14T10:00:00.000Z",
+      "readByUserIds": ["coach"]
+    }
+  ]
+}

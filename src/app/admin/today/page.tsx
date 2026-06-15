@@ -1,6 +1,9 @@
 import Link from "next/link";
+import MemberWorkoutConsole from "@/components/MemberWorkoutConsole";
 import TodaySessionPanel from "@/components/TodaySessionPanel";
 import { getAppointmentsForDate } from "@/lib/today-appointments";
+import { getTodaySessionByDate } from "@/lib/today-sessions";
+import { getSmsGeneratedWorkout } from "@/lib/sms-generated-workouts";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +25,19 @@ export default async function AdminTodayPage({ searchParams }: Props) {
   const todayKey = new Date().toISOString().slice(0, 10);
   const sessionDate = sp.date || todayKey;
   const appointments = await getAppointmentsForDate(sessionDate);
+  const session = getTodaySessionByDate(sessionDate);
+  const workout = session ? await getSmsGeneratedWorkout(session.workoutId, "Coach session") : null;
+  const hasSmsWorkout = !!workout;
+
+  const scheduledLabel = session
+    ? new Date(session.scheduledAt).toLocaleString(undefined, {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null;
 
   const prevDate = new Date(`${sessionDate}T12:00:00`);
   prevDate.setDate(prevDate.getDate() - 1);
@@ -38,7 +54,9 @@ export default async function AdminTodayPage({ searchParams }: Props) {
         </Link>
         <h1 className="mt-2 text-2xl font-bold">Go to Today</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Coach view — appointments, SMS workout overrides, and live sessions for the day.
+          {session
+            ? `SMS workout scheduled — ${scheduledLabel}`
+            : "Coach view — appointments, SMS workout overrides, and live sessions for the day."}
         </p>
       </div>
 
@@ -60,8 +78,45 @@ export default async function AdminTodayPage({ searchParams }: Props) {
         <span className="text-xs text-[var(--muted)]">{appointments.length} appointment{appointments.length !== 1 ? "s" : ""}</span>
       </div>
 
-      <section>
-        <h2 className="font-semibold mb-3">Today&apos;s appointments</h2>
+      {hasSmsWorkout && session && (
+        <div className="-mx-4">
+          <div className="mx-4 mb-3 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-amber-500/20 px-2.5 py-1 text-[10px] font-semibold text-amber-300">
+              SMS workout
+            </span>
+            {session.replacesSchedule && (
+              <span className="rounded-full bg-amber-500/20 px-2.5 py-1 text-[10px] font-semibold text-amber-300">
+                Overrides schedule
+              </span>
+            )}
+          </div>
+          {session.rawSms && (
+            <details className="mx-4 mb-3 text-xs group">
+              <summary className="flex items-center gap-2 cursor-pointer list-none text-[var(--muted)] hover:text-white">
+                <span className="text-accent group-open:rotate-90 transition-transform">▶</span>
+                View original SMS text
+              </summary>
+              <pre className="mt-2 whitespace-pre-wrap rounded border border-[var(--border)] bg-[var(--surface)] p-3 font-mono text-[11px]">
+                {session.rawSms}
+              </pre>
+            </details>
+          )}
+          <MemberWorkoutConsole
+            workout={workout}
+            backHref={`/admin/today?date=${sessionDate}`}
+            backLabel="← Go to Today"
+            programSlug={session.programSlug}
+            instructorName="Coach"
+          />
+        </div>
+      )}
+
+      <details className="group" open={appointments.length > 0}>
+        <summary className="flex items-center gap-2 cursor-pointer list-none font-semibold mb-3">
+          <span className="text-accent group-open:rotate-90 transition-transform text-xs">▶</span>
+          Today&apos;s appointments
+          <span className="text-xs font-normal text-[var(--muted)]">({appointments.length})</span>
+        </summary>
         {appointments.length === 0 ? (
           <div className="card text-sm text-[var(--muted)]">
             No appointments on this date. Paste an SMS workout below or add a booking from Bookings admin.
@@ -119,16 +174,16 @@ export default async function AdminTodayPage({ searchParams }: Props) {
             ))}
           </ul>
         )}
-      </section>
+      </details>
 
       <TodaySessionPanel
         asInstructor
-        programSlug="adult"
-        userIds={["demo-user-john", "demo-user-stephanie"]}
+        programSlug={session?.programSlug || "adult"}
+        userIds={session?.userIds?.length ? session.userIds : ["demo-user-john", "demo-user-stephanie"]}
         defaultDate={sessionDate}
-        defaultTime="06:30"
+        defaultTime={session ? new Date(session.scheduledAt).toTimeString().slice(0, 5) : "06:30"}
         collapsible
-        defaultOpen={appointments.every((a) => a.type !== "sms-workout")}
+        defaultOpen={false}
       />
     </div>
   );

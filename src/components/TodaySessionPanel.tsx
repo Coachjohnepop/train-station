@@ -18,7 +18,7 @@ export default function TodaySessionPanel({
   userIds = [],
   asInstructor = false,
   collapsible = false,
-  defaultOpen = true,
+  defaultOpen = false,
 }: {
   defaultDate?: string;
   defaultTime?: string;
@@ -36,6 +36,7 @@ export default function TodaySessionPanel({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageIsError, setMessageIsError] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
 
   function formatApiError(res: Response, body: any) {
     if (body?.detail?.fieldErrors) {
@@ -178,7 +179,11 @@ export default function TodaySessionPanel({
 
   if (collapsible) {
     return (
-      <details className="group card border-amber-500/30 bg-amber-500/5" open={defaultOpen}>
+      <details
+        className="group card border-amber-500/30 bg-amber-500/5"
+        open={open}
+        onToggle={(e) => setOpen(e.currentTarget.open)}
+      >
         <summary className="flex items-center gap-2 cursor-pointer list-none font-semibold text-sm py-1">
           <span className="text-accent group-open:rotate-90 transition-transform text-xs">▶</span>
           {panelTitle}

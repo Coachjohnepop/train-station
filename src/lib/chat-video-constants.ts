@@ -1,0 +1,2 @@
+export const CHAT_VIDEO_MAX_BYTES = 20 * 1024 * 1024;
+export const CHAT_VIDEO_MAX_DURATION_SEC = 60;

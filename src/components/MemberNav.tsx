@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import ChatNavBadge from "@/components/ChatNavBadge";
 
 const items = [
   { href: "/member", label: "Home", match: (p: string) => p === "/member" },
@@ -14,6 +15,12 @@ const items = [
     href: "/member/today",
     label: "Today",
     match: (p: string) => p === "/member/today" || p === "/member/workout",
+  },
+  {
+    href: "/member/chat",
+    label: "Chat",
+    match: (p: string) => p.startsWith("/member/chat"),
+    badge: true,
   },
   {
     href: "/member/live",
@@ -45,6 +52,7 @@ export default function MemberNav() {
             }`}
           >
             {item.label}
+            {"badge" in item && item.badge ? <ChatNavBadge role="member" /> : null}
           </Link>
         );
       })}
