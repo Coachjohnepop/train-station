@@ -47,15 +47,16 @@ export default function LandingHero() {
           key={index}
           src={image.src}
           alt={image.alt}
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ease-in-out ${
+          className={`absolute inset-0 h-full w-full object-cover brightness-[1.14] contrast-[1.04] saturate-[1.06] transition-opacity duration-1000 ease-in-out ${
             index === imageIndex ? 'opacity-100' : 'opacity-0'
           }`}
         />
       ))}
-      
-      {/* Professional dark gradient overlays for text legibility and depth */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.3)_0%,transparent_60%)]" />
+
+      {/* Darken upper-left for black-background logo; keep the rest of the hero brighter */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_90%_at_0%_0%,rgba(0,0,0,0.82)_0%,rgba(0,0,0,0.45)_32%,transparent_62%)]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/15 to-black/45" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.12)_0%,transparent_68%)]" />
       
       {/* Logo in top-left corner - stylish branding */}
       <div className="absolute top-8 left-8 z-30">

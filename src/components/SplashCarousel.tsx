@@ -27,14 +27,15 @@ export default function SplashCarousel() {
           key={index}
           src={src}
           alt={`Inspiring workout ${index + 1}`}
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ease-in-out ${
+          className={`absolute inset-0 h-full w-full object-cover brightness-[1.14] contrast-[1.04] saturate-[1.06] transition-opacity duration-1000 ease-in-out ${
             index === current ? "opacity-100" : "opacity-0"
           }`}
         />
       ))}
-      {/* Overlay gradient for text readability */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.2)_0%,transparent_70%)]" />
+      {/* Darken upper-left for logo; brighten the rest of the carousel */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_90%_at_0%_0%,rgba(0,0,0,0.78)_0%,rgba(0,0,0,0.4)_32%,transparent_62%)]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/12 to-black/40" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.1)_0%,transparent_70%)]" />
       
       {/* Logo in top-left corner - stylish branding */}
       <div className="absolute top-8 left-8 z-30">
