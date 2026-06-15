@@ -1,17 +1,19 @@
 import CoachChatComposer from "@/components/CoachChatComposer";
 import AdminChatWorkspace from "@/components/AdminChatWorkspace";
 import { hydrateCoachChat, listThreadsForCoach } from "@/lib/coach-chat";
-import { listDemoMembersForCoach } from "@/lib/sms";
+import { listMembersForCoach } from "@/lib/demo-coach";
+import { getMemberCoachingMode } from "@/lib/member-coaching-mode";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminChatPage() {
   await hydrateCoachChat();
   const threads = listThreadsForCoach();
-  const members = listDemoMembersForCoach().map((m) => ({
+  const members = listMembersForCoach().map((m) => ({
     id: m.id,
     name: m.name,
     email: m.email,
+    coachingMode: getMemberCoachingMode(m.id),
   }));
 
   return (
@@ -23,7 +25,7 @@ export default async function AdminChatPage() {
         </p>
       </div>
 
-      <AdminChatWorkspace initialThreads={threads} />
+      <AdminChatWorkspace initialThreads={threads} members={members} />
 
       <details className="group rounded-xl border border-accent/25 bg-accent/5">
         <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 font-semibold text-sm">

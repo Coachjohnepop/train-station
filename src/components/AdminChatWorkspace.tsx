@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ChatFeed from "@/components/ChatFeed";
 import ChatThreadReply from "@/components/ChatThreadReply";
+import CoachMemberChatPicker, { type CoachChatMember } from "@/components/CoachMemberChatPicker";
 import type { ChatMessage, ChatThread } from "@/lib/coach-chat";
 
 function threadPreview(messages: ChatMessage[]) {
@@ -12,14 +13,52 @@ function threadPreview(messages: ChatMessage[]) {
   return text.length > 48 ? `${text.slice(0, 48)}…` : text;
 }
 
-export default function AdminChatWorkspace({ initialThreads }: { initialThreads: ChatThread[] }) {
+function threadForMember(threads: ChatThread[], memberId: string) {
+  return threads.find((t) => t.kind === "member" && t.memberId === memberId);
+}
+
+export default function AdminChatWorkspace({
+  initialThreads,
+  members,
+}: {
+  initialThreads: ChatThread[];
+  members: CoachChatMember[];
+}) {
+  const cohortThreads = useMemo(
+    () => initialThreads.filter((t) => t.kind === "cohort"),
+    [initialThreads],
+  );
+
+  const defaultMember =
+    members.find((m) => m.id === "demo-user-john-steph") || members[0] || null;
+  const defaultThread = defaultMember
+    ? threadForMember(initialThreads, defaultMember.id)
+    : initialThreads.find((t) => t.kind === "member");
+
   const [threads, setThreads] = useState(initialThreads);
-  const [activeId, setActiveId] = useState(initialThreads[0]?.id || "");
+  const [activeMemberId, setActiveMemberId] = useState(defaultMember?.id || "");
+  const [activeId, setActiveId] = useState(defaultThread?.id || "");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [previews, setPreviews] = useState<Record<string, string>>({});
 
-  const activeThread = threads.find((t) => t.id === activeId) || null;
+  const memberRows: CoachChatMember[] = useMemo(
+    () =>
+      members.map((m) => {
+        const thread = threadForMember(threads, m.id);
+        return {
+          ...m,
+          threadId: thread?.id,
+          preview: thread ? previews[thread.id] : "No messages yet",
+        };
+      }),
+    [members, threads, previews],
+  );
+
+  const activeThread =
+    threads.find((t) => t.id === activeId) ||
+    (activeMemberId ? threadForMember(threads, activeMemberId) : null) ||
+    null;
 
   const loadMessages = useCallback(async (threadId: string) => {
     if (!threadId) return;
@@ -36,6 +75,32 @@ export default function AdminChatWorkspace({ initialThreads }: { initialThreads:
       setLoading(false);
     }
   }, []);
+
+  const selectMember = useCallback(
+    async (memberId: string, threadId?: string) => {
+      setActiveMemberId(memberId);
+      let resolvedId = threadId || threadForMember(threads, memberId)?.id;
+
+      if (!resolvedId) {
+        const res = await fetch("/api/chat/threads", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ memberId }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const thread = data.thread as ChatThread;
+          if (thread) {
+            setThreads((prev) => (prev.some((t) => t.id === thread.id) ? prev : [...prev, thread]));
+            resolvedId = thread.id;
+          }
+        }
+      }
+
+      if (resolvedId) setActiveId(resolvedId);
+    },
+    [threads],
+  );
 
   useEffect(() => {
     if (activeId) loadMessages(activeId);
@@ -55,7 +120,11 @@ export default function AdminChatWorkspace({ initialThreads }: { initialThreads:
     if (!res.ok) return;
     const data = await res.json();
     setThreads(data.threads || []);
-    if (!activeId && data.threads?.[0]) setActiveId(data.threads[0].id);
+  }
+
+  function selectCohort(threadId: string) {
+    setActiveMemberId("");
+    setActiveId(threadId);
   }
 
   return (
@@ -63,35 +132,63 @@ export default function AdminChatWorkspace({ initialThreads }: { initialThreads:
       <aside className="border-b border-[var(--border)] lg:border-b-0 lg:border-r">
         <div className="border-b border-[var(--border)] px-4 py-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Inbox</p>
-          <p className="text-[11px] text-[var(--muted)]">Members & cohort feeds</p>
+          <p className="text-[11px] text-[var(--muted)]">Live &amp; asynch members</p>
         </div>
-        <div className="max-h-[480px] overflow-y-auto p-2">
-          {threads.length === 0 ? (
-            <p className="px-2 py-4 text-xs text-[var(--muted)]">Post an update to start a thread.</p>
-          ) : (
-            threads.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setActiveId(t.id)}
-                className={`mb-1 w-full rounded-lg px-3 py-2.5 text-left transition ${
-                  t.id === activeId ? "bg-accent/15 ring-1 ring-accent/40" : "hover:bg-[var(--surface-2)]"
-                }`}
-              >
-                <span className="block truncate font-medium text-sm">{t.title}</span>
-                <span className="mt-0.5 block text-[10px] text-[var(--muted)]">
-                  {t.kind === "cohort" ? "Community" : "Direct"} · {previews[t.id] || "…"}
-                </span>
-              </button>
-            ))
+        <div className="max-h-[420px] overflow-y-auto p-2">
+          <CoachMemberChatPicker
+            members={memberRows}
+            activeMemberId={activeMemberId}
+            onSelect={selectMember}
+            layout="sidebar"
+          />
+          {cohortThreads.length > 0 && (
+            <details className="group mt-3 border-t border-[var(--border)] pt-2" open>
+              <summary className="flex cursor-pointer list-none items-center gap-2 px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                <span className="text-accent group-open:rotate-90 transition-transform">▶</span>
+                Community
+              </summary>
+              <div className="mt-1 px-1">
+                {cohortThreads.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => selectCohort(t.id)}
+                    className={`mb-1 w-full rounded-lg px-3 py-2.5 text-left transition ${
+                      t.id === activeId ? "bg-accent/15 ring-1 ring-accent/40" : "hover:bg-[var(--surface-2)]"
+                    }`}
+                  >
+                    <span className="block truncate text-sm font-medium">{t.title}</span>
+                    <span className="mt-0.5 block text-[10px] text-[var(--muted)]">
+                      Cohort · {previews[t.id] || "…"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </details>
           )}
         </div>
-        <button type="button" onClick={refreshThreads} className="w-full border-t border-[var(--border)] py-2 text-xs text-accent hover:underline">
+        <button
+          type="button"
+          onClick={refreshThreads}
+          className="w-full border-t border-[var(--border)] py-2 text-xs text-accent hover:underline"
+        >
           Refresh inbox
         </button>
       </aside>
 
       <div className="flex min-h-[480px] flex-col">
+        <div className="shrink-0 border-b border-[var(--border)] px-4 py-3">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+            Conversation
+          </p>
+          <CoachMemberChatPicker
+            members={memberRows}
+            activeMemberId={activeMemberId}
+            onSelect={selectMember}
+            layout="header"
+          />
+        </div>
+
         {loading && (
           <p className="shrink-0 border-b border-[var(--border)] px-4 py-2 text-xs text-[var(--muted)]">Loading...</p>
         )}
@@ -100,6 +197,7 @@ export default function AdminChatWorkspace({ initialThreads }: { initialThreads:
           messages={messages}
           viewerRole="coach"
           emptyLabel="No messages in this thread yet."
+          hideHeader
         />
         {activeId && (
           <ChatThreadReply
