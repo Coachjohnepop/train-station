@@ -18,7 +18,7 @@ const items = [
   },
   {
     href: "/member/chat",
-    label: "Chat",
+    label: "Messages",
     match: (p: string) => p.startsWith("/member/chat"),
     badge: true,
   },

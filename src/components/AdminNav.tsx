@@ -33,7 +33,7 @@ const items = [
   },
   {
     href: "/admin/chat",
-    label: "Chat",
+    label: "Messages",
     match: (p: string) => p.startsWith("/admin/chat"),
     badge: true,
   },

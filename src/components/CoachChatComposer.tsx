@@ -8,7 +8,13 @@ import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 
 type MemberOption = { id: string; name: string; email: string };
 
-export default function CoachChatComposer({ members }: { members: MemberOption[] }) {
+export default function CoachChatComposer({
+  members,
+  embedded = false,
+}: {
+  members: MemberOption[];
+  embedded?: boolean;
+}) {
   const router = useRouter();
   const [audience, setAudience] = useState<"member" | "cohort">("member");
   const [selectedIds, setSelectedIds] = useState<string[]>([DEFAULT_DEMO_MEMBER_ID]);
@@ -120,13 +126,15 @@ export default function CoachChatComposer({ members }: { members: MemberOption[]
   }
 
   return (
-    <div className="card border-accent/30 space-y-4">
-      <div>
-        <h2 className="font-semibold">Post coach update</h2>
-        <p className="mt-1 text-xs text-[var(--muted)]">
-          One place to message members, schedule an SMS workout override, attach a short clip or YouTube link, and send an alert.
-        </p>
-      </div>
+    <div className={`space-y-4 ${embedded ? "p-4" : "card border-accent/30"}`}>
+      {!embedded && (
+        <div>
+          <h2 className="font-semibold">Post coach update</h2>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            One place to message members, schedule an SMS workout override, attach a short clip or YouTube link, and send an alert.
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2 text-sm">
         <button

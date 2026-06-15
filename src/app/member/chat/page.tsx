@@ -15,9 +15,9 @@ export default async function MemberChatPage() {
         ← Dashboard
       </Link>
       <div>
-        <h1 className="text-2xl font-bold">Coach updates</h1>
+        <h1 className="text-2xl font-bold">Messages</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Coach notes and demo videos. Your assigned workouts with checklists are on Go to Today.
+          Coach posts, videos, and notes — like a Patreon creator feed. Reply below or text your coach. Workouts with checklists are on Go to Today.
         </p>
       </div>
       <MemberChatWorkspace initialThreads={threads} />
