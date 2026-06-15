@@ -8,47 +8,58 @@ import { useEffect, useRef, useState } from "react";
  * Mounted once in the root layout so it survives client-side navigation —
  * the song keeps playing uninterrupted as visitors move between pages.
  *
- * Browsers block audio-with-sound from autoplaying on load, so playback is
- * armed to begin on the visitor's first interaction (click / tap / scroll /
- * key press). A floating toggle lets them mute it; the muted choice is
- * remembered across full page reloads via localStorage.
+ * Fast-start strategy: browsers block *audible* autoplay until a user gesture,
+ * but they DO allow *muted* autoplay. So we start the track muted and playing
+ * on load (it buffers silently in the background); on the visitor's first
+ * interaction we simply unmute, so sound comes in instantly with no load lag.
+ * A floating toggle turns it on/off, and that choice is remembered across
+ * full page reloads via localStorage.
  */
 
 const SRC = "/background-music.mp3";
-const MUTE_KEY = "ts-bg-music-muted";
+const OFF_KEY = "ts-bg-music-muted"; // "1" = visitor turned music off
 
 export default function BackgroundMusic() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  // Default to playing (un-muted). Hydration starts here; we reconcile with
-  // the stored preference in the effect below to avoid an SSR mismatch.
-  const [muted, setMuted] = useState(false);
+  // `off` = the visitor's on/off choice (not the same as the silent-buffering
+  // mute used purely for fast start). Default on; reconciled with storage below.
+  const [off, setOff] = useState(false);
 
-  // Restore the visitor's prior mute choice.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.localStorage.getItem(MUTE_KEY) === "1") {
-      setMuted(true);
-    }
-  }, []);
-
-  // Arm playback on the first user gesture (required by autoplay policies).
+  // Start muted-and-playing on load so the file buffers immediately, and
+  // restore a prior "off" choice.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    let started = false;
-    const start = () => {
-      if (started) return;
-      started = true;
-      // Respect a stored mute preference, but still "start" so unmuting later
-      // resumes instantly.
-      if (window.localStorage.getItem(MUTE_KEY) !== "1") {
-        audio.play().catch(() => {
-          // If the browser still refuses, the toggle button remains a manual
-          // fallback the visitor can press.
-        });
+    const wasOff = window.localStorage.getItem(OFF_KEY) === "1";
+    if (wasOff) {
+      setOff(true);
+      return; // visitor turned it off before — stay silent.
+    }
+
+    // Buffer + play silently right away (allowed because it's muted).
+    audio.muted = true;
+    audio.play().catch(() => {
+      // If even muted autoplay is blocked, the first-interaction handler and
+      // the toggle button are the fallbacks.
+    });
+  }, []);
+
+  // On the first user gesture, unmute so audible sound starts instantly.
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    let done = false;
+    const onFirstGesture = () => {
+      if (done) return;
+      done = true;
+      if (window.localStorage.getItem(OFF_KEY) !== "1") {
+        audio.muted = false;
+        // Ensure it's actually rolling (covers the blocked-muted-autoplay case).
+        audio.play().catch(() => {});
       }
-      removeListeners();
+      remove();
     };
 
     const events: (keyof DocumentEventMap)[] = [
@@ -57,25 +68,25 @@ export default function BackgroundMusic() {
       "touchstart",
       "scroll",
     ];
-    const removeListeners = () => {
-      events.forEach((e) => window.removeEventListener(e, start));
-    };
+    const remove = () =>
+      events.forEach((e) => window.removeEventListener(e, onFirstGesture));
     events.forEach((e) =>
-      window.addEventListener(e, start, { passive: true, once: false })
+      window.addEventListener(e, onFirstGesture, { passive: true })
     );
 
-    return removeListeners;
+    return remove;
   }, []);
 
   const toggle = () => {
     const audio = audioRef.current;
     if (!audio) return;
-    const next = !muted;
-    setMuted(next);
-    window.localStorage.setItem(MUTE_KEY, next ? "1" : "0");
+    const next = !off;
+    setOff(next);
+    window.localStorage.setItem(OFF_KEY, next ? "1" : "0");
     if (next) {
       audio.pause();
     } else {
+      audio.muted = false;
       audio.play().catch(() => {});
     }
   };
@@ -86,11 +97,11 @@ export default function BackgroundMusic() {
       <button
         type="button"
         onClick={toggle}
-        aria-label={muted ? "Unmute background music" : "Mute background music"}
-        title={muted ? "Play music" : "Mute music"}
+        aria-label={off ? "Unmute background music" : "Mute background music"}
+        title={off ? "Play music" : "Mute music"}
         className="fixed bottom-6 left-6 z-50 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#3d2660] bg-[#0a0612]/90 text-white shadow-xl backdrop-blur-md transition-all hover:border-[#7c3aed] hover:bg-[#1a1428] active:scale-[0.985]"
       >
-        {muted ? <SpeakerOffIcon /> : <SpeakerOnIcon />}
+        {off ? <SpeakerOffIcon /> : <SpeakerOnIcon />}
       </button>
     </>
   );
