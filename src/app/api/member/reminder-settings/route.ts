@@ -1,22 +1,42 @@
 import { NextResponse } from "next/server";
 import { isDemoMode, getDemoUserSettings, updateDemoUserSettings } from "@/lib/demo-reminders";
+import { resolveUserId } from "@/lib/current-user";
 
 export async function GET() {
+  const uid = await resolveUserId();
+
   if (isDemoMode()) {
-    const settings = getDemoUserSettings("demo-user");
+    const settings = getDemoUserSettings(uid);
     return NextResponse.json(settings);
   }
 
   // TODO: real auth + prisma for logged in member
-  return NextResponse.json({ error: "Real DB not implemented yet" }, { status: 501 });
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    const user = await prisma.user.findUnique({
+      where: { id: uid },
+      select: { phone: true, dailyReminderTime: true },
+    });
+    if (user) {
+      return NextResponse.json({
+        phone: user.phone,
+        dailyReminderTime: user.dailyReminderTime,
+      });
+    }
+  } catch {
+    // fall through
+  }
+
+  return NextResponse.json({ phone: null, dailyReminderTime: null });
 }
 
 export async function POST(request: Request) {
   const body = await request.json();
   const { phone, dailyReminderTime } = body;
+  const uid = await resolveUserId();
 
   if (isDemoMode()) {
-    const updated = updateDemoUserSettings("demo-user", {
+    const updated = updateDemoUserSettings(uid, {
       phone: phone ?? undefined,
       dailyReminderTime: dailyReminderTime ?? undefined,
     });
@@ -24,5 +44,18 @@ export async function POST(request: Request) {
   }
 
   // TODO: real path
-  return NextResponse.json({ error: "Real DB not implemented yet" }, { status: 501 });
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    const updated = await prisma.user.update({
+      where: { id: uid },
+      data: {
+        phone: phone ?? null,
+        dailyReminderTime: dailyReminderTime ?? null,
+      },
+      select: { phone: true, dailyReminderTime: true },
+    });
+    return NextResponse.json(updated);
+  } catch {
+    return NextResponse.json({ error: "Failed to save settings" }, { status: 500 });
+  }
 }

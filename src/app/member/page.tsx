@@ -4,13 +4,16 @@ import {
   getProgramAccessState,
 } from "@/lib/access";
 import { getMemberDashboard } from "@/lib/member-context";
+import { getProgramBySlug } from "@/lib/program-data";
 import EnrollButton from "@/components/EnrollButton";
 import { PROGRAM_IMAGES } from "@/lib/program-constants";
 import MemberHomeEquipment from '../../components/MemberHomeEquipment';
 import MemberReminderSettings from '../../components/MemberReminderSettings';
 import GoToTodayCard from "@/components/GoToTodayCard";
+import MemberProgramSchedule from "@/components/MemberProgramSchedule";
 import { resolveUserId } from "@/lib/current-user";
 import { memberTodayHref, resolveMemberSession } from "@/lib/member-today";
+import { loadMemberLoggedWorkoutIds } from "@/lib/member-schedule";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +25,27 @@ export default async function MemberDashboardPage() {
     data;
 
   const uid = await resolveUserId();
-  const todaySession = await resolveMemberSession(uid);
+  const [todaySession, loggedSet] = await Promise.all([
+    resolveMemberSession(uid),
+    loadMemberLoggedWorkoutIds(uid),
+  ]);
+
+  const scheduleEnrollments = enrollments.filter((e) => {
+    const cat = e.program.category || "workout";
+    return cat === "workout" || cat === "journey" || cat === "yoga";
+  });
+  const enrolledProgramsWithSchedule = (
+    await Promise.all(
+      scheduleEnrollments.map(async (enrollment) => {
+        const program = await getProgramBySlug(enrollment.program.slug);
+        if (!program) return null;
+        return { enrollment, program };
+      }),
+    )
+  ).filter(Boolean) as Array<{
+    enrollment: (typeof enrollments)[number];
+    program: NonNullable<Awaited<ReturnType<typeof getProgramBySlug>>>;
+  }>;
   const todaySubtitle = todaySession
     ? `${todaySession.title} — ${new Date(todaySession.scheduledAt).toLocaleString(undefined, {
         weekday: "short",
@@ -146,6 +169,45 @@ export default async function MemberDashboardPage() {
         ) : null}
       </div>
 
+      {enrolledProgramsWithSchedule.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-semibold">Your schedule</h2>
+              <p className="text-[10px] text-[var(--muted)]">
+                This week is always visible. Expand full schedule only when you need other weeks.
+              </p>
+            </div>
+            <Link href="/member/today" className="text-xs text-accent hover:underline whitespace-nowrap">
+              Go to Today →
+            </Link>
+          </div>
+          {enrolledProgramsWithSchedule.map(({ enrollment, program }) => (
+            <div key={enrollment.id} className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Link
+                  href={`/member/programs/${program.slug}`}
+                  className="text-sm font-medium hover:text-accent transition"
+                >
+                  {program.name}
+                </Link>
+                <span className="text-xs text-[var(--muted)]">
+                  W{enrollment.currentWeek}D{enrollment.currentDay}
+                </span>
+              </div>
+              <MemberProgramSchedule
+                program={program}
+                curWeek={enrollment.currentWeek}
+                curDay={enrollment.currentDay}
+                loggedWorkoutIds={[...loggedSet]}
+                idPrefix={`dash-${program.slug}-`}
+                compact
+              />
+            </div>
+          ))}
+        </section>
+      )}
+
       {/* "Down here, you can have workouts logged" + ranking amongst users (from transcript feedback) */}
       <div className="card py-2 px-3 text-xs mb-2">
         <div className="flex flex-wrap items-baseline gap-x-2">
@@ -168,7 +230,7 @@ export default async function MemberDashboardPage() {
       </div>
 
       <section>
-        <details className="group" open>
+        <details className="group">
           <summary className="flex items-center justify-between mb-2 cursor-pointer list-none">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)] group-open:text-white transition">
@@ -252,7 +314,7 @@ export default async function MemberDashboardPage() {
         </details>
       </section>
 
-      <details className="group" open>
+      <details className="group">
         <summary className="flex items-center gap-2 mb-2 cursor-pointer list-none text-sm font-semibold uppercase tracking-wide text-[var(--muted)] group-open:text-white transition">
           Quick actions <span className="text-xs text-accent group-open:rotate-90 transition">▶</span>
         </summary>

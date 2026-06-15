@@ -1,20 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type ReminderSettings = {
-  phone: string | null;
-  dailyReminderTime: string | null;
+  phone: string;
+  dailyReminderTime: string;
 };
 
 export default function MemberReminderSettings() {
-  const [settings, setSettings] = useState<ReminderSettings>({ phone: null, dailyReminderTime: null });
+  const [settings, setSettings] = useState<ReminderSettings>({ phone: "", dailyReminderTime: "" });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [isOpen, setIsOpen] = useState(false); // collapsed by default (users set this in signup wizard)
+  const [isOpen, setIsOpen] = useState(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestSettingsRef = useRef(settings);
 
-  async function load() {
+  useEffect(() => {
+    latestSettingsRef.current = settings;
+  }, [settings]);
+
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/member/reminder-settings");
@@ -23,27 +29,31 @@ export default function MemberReminderSettings() {
         phone: json.phone || "",
         dailyReminderTime: json.dailyReminderTime || "",
       });
-    } catch (e) {
+    } catch {
       setMessage("Failed to load settings");
     }
     setLoading(false);
-  }
+  }, []);
 
-  async function save(newSettings: ReminderSettings) {
+  const save = useCallback(async (nextSettings: ReminderSettings) => {
     setSaving(true);
     setMessage(null);
     try {
       const res = await fetch("/api/member/reminder-settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newSettings),
+        body: JSON.stringify(nextSettings),
       });
       if (res.ok) {
         const json = await res.json();
-        setSettings({
-          phone: json.phone || "",
-          dailyReminderTime: json.dailyReminderTime || "",
-        });
+        // Only apply server response if user hasn't typed ahead of this save.
+        const current = latestSettingsRef.current;
+        if (current.phone === nextSettings.phone && current.dailyReminderTime === nextSettings.dailyReminderTime) {
+          setSettings({
+            phone: json.phone || "",
+            dailyReminderTime: json.dailyReminderTime || "",
+          });
+        }
         setMessage("Saved!");
         setTimeout(() => setMessage(null), 1500);
       } else {
@@ -53,20 +63,30 @@ export default function MemberReminderSettings() {
       setMessage("Failed to save");
     }
     setSaving(false);
-  }
+  }, []);
+
+  const queueSave = useCallback(
+    (nextSettings: ReminderSettings) => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        save(nextSettings);
+      }, 600);
+    },
+    [save],
+  );
 
   function handleChange(field: keyof ReminderSettings, value: string) {
-    const updated = { ...settings, [field]: value };
+    const updated = { ...latestSettingsRef.current, [field]: value };
     setSettings(updated);
-    // Debounce save a bit
-    setTimeout(() => {
-      save(updated);
-    }, 400);
+    queueSave(updated);
   }
 
   useEffect(() => {
     load();
-  }, []);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [load]);
 
   if (loading) {
     return <div className="card text-xs p-3 bg-[var(--bg)] border border-[var(--accent)]/40">Loading SMS settings...</div>;
@@ -87,8 +107,11 @@ export default function MemberReminderSettings() {
             </span>
           )}
         </span>
-        <span className="text-[#7c3aed]">{isOpen ? "−" : "+"}</span>
-        {message && <span className="text-[var(--success)] text-[10px]">{message}</span>}
+        <span className="flex items-center gap-2 text-[#7c3aed]">
+          {saving && <span className="text-[10px] text-[var(--muted)]">Saving…</span>}
+          {message && <span className="text-[var(--success)] text-[10px]">{message}</span>}
+          <span>{isOpen ? "−" : "+"}</span>
+        </span>
       </div>
 
       {isOpen && (
@@ -97,9 +120,16 @@ export default function MemberReminderSettings() {
             <label className="block text-[10px] text-[var(--muted)] mb-0.5">Phone number for SMS</label>
             <input
               type="tel"
-              value={settings.phone || ""}
+              inputMode="tel"
+              autoComplete="tel"
+              value={settings.phone}
               onChange={(e) => handleChange("phone", e.target.value)}
-              disabled={saving}
+              onBlur={() => {
+                if (saveTimerRef.current) {
+                  clearTimeout(saveTimerRef.current);
+                  save(latestSettingsRef.current);
+                }
+              }}
               placeholder="(555) 123-4567"
               className="input text-sm w-full"
             />
@@ -110,9 +140,14 @@ export default function MemberReminderSettings() {
             <div className="relative">
               <input
                 type="time"
-                value={settings.dailyReminderTime || ""}
+                value={settings.dailyReminderTime}
                 onChange={(e) => handleChange("dailyReminderTime", e.target.value)}
-                disabled={saving}
+                onBlur={() => {
+                  if (saveTimerRef.current) {
+                    clearTimeout(saveTimerRef.current);
+                    save(latestSettingsRef.current);
+                  }
+                }}
                 className="input text-sm w-full pr-9 cursor-pointer hover:border-[#7c3aed] transition-colors"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[#7c3aed] pointer-events-none">
@@ -131,12 +166,10 @@ export default function MemberReminderSettings() {
             Instructors can also send broadcast messages. This is low-security demo SMS.
           </div>
 
-          {/* Calendly note per client feedback (booking vs reminders) */}
           <div className="text-[10px] text-[var(--muted)] pt-1 border-t border-[var(--border)]/60">
             To book your onboarding call or live sessions, use the Calendly link in Live sessions or the Book Call page. These SMS settings are for daily workout reminders only.
           </div>
 
-          {/* Simple reply / contact coach */}
           <div className="pt-2 border-t border-[var(--border)] mt-2">
             <label className="block text-[10px] text-[var(--muted)] mb-0.5">Quick message to your coach</label>
             <textarea
@@ -176,35 +209,63 @@ export default function MemberReminderSettings() {
               Send message (simulates reply to SMS)
             </button>
 
-            {/* Quick SMS task reports for new broadcast categories */}
             <div className="mt-3 pt-2 border-t border-[var(--border)]">
               <div className="text-[10px] text-[var(--muted)] mb-1">Quick reports (simulates SMS reply to broadcast):</div>
               <div className="flex flex-wrap gap-1">
-                <button onClick={async () => {
-                  setSaving(true);
-                  await fetch("/api/member/send-coach-message", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: "cardio done 25min fasted" }) });
-                  setMessage("Fasted cardio reported via SMS sim");
-                  setTimeout(() => setMessage(null), 2000);
-                  setSaving(false);
-                }} className="text-[10px] btn-ghost px-1 py-0">Report fasted cardio</button>
+                <button
+                  onClick={async () => {
+                    setSaving(true);
+                    await fetch("/api/member/send-coach-message", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ message: "cardio done 25min fasted" }),
+                    });
+                    setMessage("Fasted cardio reported via SMS sim");
+                    setTimeout(() => setMessage(null), 2000);
+                    setSaving(false);
+                  }}
+                  className="text-[10px] btn-ghost px-1 py-0"
+                >
+                  Report fasted cardio
+                </button>
 
-                <button onClick={async () => {
-                  setSaving(true);
-                  await fetch("/api/member/send-coach-message", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: "slept 7.5 hours" }) });
-                  setMessage("Sleep hours reported via SMS sim");
-                  setTimeout(() => setMessage(null), 2000);
-                  setSaving(false);
-                }} className="text-[10px] btn-ghost px-1 py-0">Report sleep</button>
+                <button
+                  onClick={async () => {
+                    setSaving(true);
+                    await fetch("/api/member/send-coach-message", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ message: "slept 7.5 hours" }),
+                    });
+                    setMessage("Sleep hours reported via SMS sim");
+                    setTimeout(() => setMessage(null), 2000);
+                    setSaving(false);
+                  }}
+                  className="text-[10px] btn-ghost px-1 py-0"
+                >
+                  Report sleep
+                </button>
 
-                <button onClick={async () => {
-                  setSaving(true);
-                  await fetch("/api/member/send-coach-message", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: "done" }) });
-                  setMessage("Exercise/task 'done' reported via SMS sim");
-                  setTimeout(() => setMessage(null), 2000);
-                  setSaving(false);
-                }} className="text-[10px] btn-ghost px-1 py-0">Report 'done' (pushups etc)</button>
+                <button
+                  onClick={async () => {
+                    setSaving(true);
+                    await fetch("/api/member/send-coach-message", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ message: "done" }),
+                    });
+                    setMessage("Exercise/task 'done' reported via SMS sim");
+                    setTimeout(() => setMessage(null), 2000);
+                    setSaving(false);
+                  }}
+                  className="text-[10px] btn-ghost px-1 py-0"
+                >
+                  Report &apos;done&apos; (pushups etc)
+                </button>
               </div>
-              <div className="text-[9px] text-[var(--muted)] mt-1">These simulate student replying to SMS broadcasts for cardio, sleep, quick exercises. (Eating coming soon.)</div>
+              <div className="text-[9px] text-[var(--muted)] mt-1">
+                These simulate student replying to SMS broadcasts for cardio, sleep, quick exercises. (Eating coming soon.)
+              </div>
             </div>
           </div>
         </>
