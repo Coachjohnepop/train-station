@@ -1,0 +1,50 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { verifySessionToken, SESSION_COOKIE } from "@/lib/auth-session";
+
+const PUBLIC_PREFIXES = ["/login", "/join", "/api/auth", "/api/sms/inbound", "/api/join"];
+
+function isPublicPath(pathname: string): boolean {
+  if (pathname === "/") return true;
+  return PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/images") ||
+    pathname.startsWith("/favicon") ||
+    pathname.match(/\.(png|jpg|jpeg|svg|ico|webp)$/)
+  ) {
+    return NextResponse.next();
+  }
+
+  if (isPublicPath(pathname)) {
+    return NextResponse.next();
+  }
+
+  const needsAuth = pathname.startsWith("/member") || pathname.startsWith("/admin");
+  if (!needsAuth) {
+    return NextResponse.next();
+  }
+
+  const token = request.cookies.get(SESSION_COOKIE)?.value;
+  const session = token ? verifySessionToken(token) : null;
+
+  if (!session) {
+    const login = new URL("/login", request.url);
+    login.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(login);
+  }
+
+  if (pathname.startsWith("/admin") && session.role !== "ADMIN" && session.role !== "INSTRUCTOR") {
+    return NextResponse.redirect(new URL("/member", request.url));
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/((?!_next/static|_next/image).*)"],
+};

@@ -60,7 +60,7 @@ export default function AdminNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+            className={`relative rounded-lg px-3 py-1.5 text-sm font-medium transition ${
               active
                 ? "nav-tab-active text-accent"
                 : "text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"

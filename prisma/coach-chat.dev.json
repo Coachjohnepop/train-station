@@ -89,6 +89,31 @@
       "alertSent": true,
       "createdAt": "2026-06-14T10:00:00.000Z",
       "readByUserIds": ["coach"]
+    },
+    {
+      "id": "msg-youtube-cohort",
+      "threadId": "thread-cohort-adult",
+      "authorRole": "coach",
+      "authorId": "coach",
+      "authorName": "Coach Jeremy",
+      "kind": "youtube",
+      "body": "Quick demo on tempo for the flat DB press — save this for your home day.",
+      "mediaUrl": "https://www.youtube.com/watch?v=IODxDxX7oi4",
+      "youtubeId": "IODxDxX7oi4",
+      "alertSent": true,
+      "createdAt": "2026-06-14T11:00:00.000Z",
+      "readByUserIds": ["coach"]
+    },
+    {
+      "id": "msg-member-reply-john-steph",
+      "threadId": "thread-member-demo-user-john-steph",
+      "authorRole": "member",
+      "authorId": "demo-user-john-steph",
+      "authorName": "John & Steph",
+      "kind": "text",
+      "body": "Got it — we'll hit the home workout tonight. Can you post a short clip on grip for the DB rows?",
+      "createdAt": "2026-06-15T08:30:00.000Z",
+      "readByUserIds": []
     }
   ]
 }

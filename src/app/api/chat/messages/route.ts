@@ -25,10 +25,7 @@ export async function GET(request: Request) {
   const readerId = role === "coach" ? COACH_READER_ID : await resolveUserId();
   await markThreadRead(threadId, readerId);
 
-  let messages = getMessagesForThread(threadId);
-  if (role === "member") {
-    messages = messages.filter((m) => m.kind !== "workout_update");
-  }
+  const messages = getMessagesForThread(threadId);
 
   return NextResponse.json({
     thread,

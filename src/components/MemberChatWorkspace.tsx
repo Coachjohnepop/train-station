@@ -21,6 +21,7 @@ export default function MemberChatWorkspace({ initialThreads }: { initialThreads
       if (!res.ok) return;
       const data = await res.json();
       setMessages(data.messages || []);
+      window.dispatchEvent(new CustomEvent("chat-unread-refresh"));
     } finally {
       setLoading(false);
     }

@@ -45,7 +45,7 @@ export default function MemberNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`flex-1 lg:flex-none lg:px-6 rounded-lg py-2 text-center text-xs font-medium transition ${
+            className={`relative flex-1 lg:flex-none lg:px-6 rounded-lg py-2 text-center text-xs font-medium transition ${
               active
                 ? "nav-tab-active text-accent"
                 : "text-[var(--muted)] hover:bg-[var(--surface-2)]"

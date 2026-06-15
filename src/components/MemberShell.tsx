@@ -1,16 +1,19 @@
 import Link from "next/link";
 import DevModeSwitcher from "@/components/DevModeSwitcher";
 import MemberNav from "@/components/MemberNav";
+import LogoutButton from "@/components/LogoutButton";
 import type { MemberAccess } from "@/lib/access";
 
 export default function MemberShell({
   children,
   access,
   memberName,
+  memberEmail,
 }: {
   children: React.ReactNode;
   access: MemberAccess;
   memberName: string;
+  memberEmail?: string;
 }) {
   return (
     <div className="app-shell-bg flex min-h-screen flex-col">
@@ -25,17 +28,18 @@ export default function MemberShell({
                 className="h-14 w-auto"
               />
             </Link>
-            <p className="text-sm text-[var(--muted)]">Hi, {memberName}</p>
+            <div>
+              <p className="text-sm font-medium">Hi, {memberName}</p>
+              {memberEmail && <p className="text-[10px] text-[var(--muted)]">{memberEmail}</p>}
+            </div>
           </div>
           <div className="text-right">
             <span className="badge-accent inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold">
               {access.tierLabel}
             </span>
-            {access.isPreview && (
-              <p className="mt-1 text-[10px] text-[var(--muted)]">
-                Full access preview
-              </p>
-            )}
+            <div className="mt-1">
+              <LogoutButton />
+            </div>
           </div>
         </div>
         <MemberNav />

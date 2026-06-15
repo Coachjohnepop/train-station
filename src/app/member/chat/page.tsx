@@ -1,12 +1,15 @@
 import Link from "next/link";
 import MemberChatWorkspace from "@/components/MemberChatWorkspace";
-import { listThreadsForMember } from "@/lib/coach-chat";
+import { ensureCohortThread, ensureMemberThread, hydrateCoachChat, listThreadsForMember } from "@/lib/coach-chat";
 import { resolveUserId } from "@/lib/current-user";
 
 export const dynamic = "force-dynamic";
 
 export default async function MemberChatPage() {
   const uid = await resolveUserId();
+  await hydrateCoachChat();
+  await ensureMemberThread(uid);
+  await ensureCohortThread("adult", "Adult program cohort");
   const threads = listThreadsForMember(uid, ["adult"]);
 
   return (

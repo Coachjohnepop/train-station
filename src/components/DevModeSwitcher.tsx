@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-
+import type { SessionUser } from "@/lib/auth-session";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 
 const DEMO_MEMBERS = [
@@ -15,16 +14,18 @@ const DEMO_MEMBERS = [
 
 export default function DevModeSwitcher({
   active,
+  staffSession,
 }: {
   active: "member" | "admin";
+  staffSession?: SessionUser | null;
 }) {
-  const pathname = usePathname();
+  const showImpersonation = active === "admin" && staffSession?.role === "ADMIN";
 
   return (
     <div className="app-shell-subbar">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-2 px-4 py-2">
         <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-          Preview
+          {active === "admin" ? "Coach" : "Member"}
         </span>
         <Link
           href="/member"
@@ -34,7 +35,7 @@ export default function DevModeSwitcher({
               : "text-[var(--muted)] hover:text-[var(--text)]"
           }`}
         >
-          Member
+          Member app
         </Link>
         <Link
           href="/admin"
@@ -46,14 +47,14 @@ export default function DevModeSwitcher({
         >
           Coach admin
         </Link>
-        {active === "member" && (
+        {showImpersonation && (
           <>
             <span className="mx-1 text-[10px] text-[var(--muted)]">|</span>
-            <span className="text-[10px] text-[var(--muted)]">View as:</span>
+            <span className="text-[10px] text-[var(--muted)]">Preview as member:</span>
             {DEMO_MEMBERS.map((m) => (
               <a
                 key={m.id}
-                href={`/api/dev/switch-user?id=${m.id}&redirect=${encodeURIComponent(pathname || "/member")}`}
+                href={`/api/dev/switch-user?id=${m.id}&redirect=${encodeURIComponent("/member")}`}
                 className="rounded-full px-2 py-0.5 text-[10px] font-medium text-accent hover:bg-accent/10"
               >
                 {m.label}

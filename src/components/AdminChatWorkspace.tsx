@@ -31,6 +31,7 @@ export default function AdminChatWorkspace({ initialThreads }: { initialThreads:
       const msgs = data.messages || [];
       setMessages(msgs);
       setPreviews((prev) => ({ ...prev, [threadId]: threadPreview(msgs) }));
+      window.dispatchEvent(new CustomEvent("chat-unread-refresh"));
     } finally {
       setLoading(false);
     }

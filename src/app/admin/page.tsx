@@ -1,5 +1,6 @@
 import Link from "next/link";
 import GoToTodayCard from "@/components/GoToTodayCard";
+import AdminMessagesCard from "@/components/AdminMessagesCard";
 import { getCoachTodaySummary } from "@/lib/today-appointments";
 
 // Force dynamic so build succeeds without a live DB (Vercel build will have DATABASE_URL).
@@ -17,7 +18,7 @@ export default async function AdminPage() {
         Build content bottom-up: exercises → workouts → programs.
       </p>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
         <GoToTodayCard
           href="/admin/today"
           appointmentCount={today.count}
@@ -29,6 +30,7 @@ export default async function AdminPage() {
           }
           statStyle
         />
+        <AdminMessagesCard />
         <StatCard label="Exercises" value={exercises} href="/admin/exercises" />
         <StatCard label="Workouts" value={workouts} href="/admin/workouts" />
         <StatCard label="Programs" value={programs} href="/admin/programs" />
