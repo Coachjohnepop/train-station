@@ -30,26 +30,49 @@ export default function CoachMemberPicker({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-medium text-[var(--muted)]">Assign to members</span>
-        <button type="button" onClick={selectJohnStephCouple} className="btn-ghost px-2 py-0.5 text-[10px]">
+        <span className="text-xs font-semibold text-accent">Quick picks</span>
+        <button type="button" onClick={selectJohnStephCouple} className="btn-ghost px-2.5 py-1 text-xs">
           John &amp; Steph
         </button>
-        <button type="button" onClick={selectJohnStephanieIndividuals} className="btn-ghost px-2 py-0.5 text-[10px]">
+        <button type="button" onClick={selectJohnStephanieIndividuals} className="btn-ghost px-2.5 py-1 text-xs">
           John + Stephanie
         </button>
+        <button
+          type="button"
+          onClick={() => onChange(members.map((m) => m.id))}
+          className="btn-ghost px-2.5 py-1 text-xs"
+        >
+          All students
+        </button>
       </div>
-      <div className="flex flex-wrap gap-3">
-        {members.map((m) => (
-          <label key={m.id} className="flex items-center gap-1.5 text-xs cursor-pointer">
-            <input type="checkbox" checked={selectedIds.includes(m.id)} onChange={() => toggle(m.id)} />
-            {m.name}
-          </label>
-        ))}
+      <div className="flex flex-wrap gap-2">
+        {members.map((m) => {
+          const on = selectedIds.includes(m.id);
+          return (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => toggle(m.id)}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition border ${
+                on
+                  ? "border-accent bg-accent/20 text-accent"
+                  : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)] hover:text-white"
+              }`}
+            >
+              {on ? "✓ " : ""}
+              {m.name}
+            </button>
+          );
+        })}
       </div>
-      {selectedIds.length === 0 && (
-        <p className="text-[10px] text-amber-300">Pick at least one member — only they will see this workout.</p>
+      {selectedIds.length > 0 ? (
+        <p className="text-[10px] text-[var(--success)]">
+          {selectedIds.length} student{selectedIds.length !== 1 ? "s" : ""} selected
+        </p>
+      ) : (
+        <p className="text-[10px] text-amber-300">Pick at least one student — only they will see this workout.</p>
       )}
     </div>
   );

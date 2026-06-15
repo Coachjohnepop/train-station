@@ -204,7 +204,7 @@ export default async function AdminTodayPage({ searchParams }: Props) {
         defaultDate={sessionDate}
         defaultTime={session ? new Date(session.scheduledAt).toTimeString().slice(0, 5) : "06:30"}
         collapsible
-        defaultOpen={false}
+        defaultOpen
       />
     </div>
   );

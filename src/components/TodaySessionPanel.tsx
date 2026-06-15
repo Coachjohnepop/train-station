@@ -151,20 +151,26 @@ export default function TodaySessionPanel({
   }
 
   const panelTitle = asInstructor ? "Paste SMS workout" : "Paste SMS workout for today";
+  const selectedNames = memberOptions
+    .filter((m) => selectedUserIds.includes(m.id))
+    .map((m) => m.name);
+  const assigneeSummary =
+    selectedNames.length > 0 ? selectedNames.join(", ") : "no members selected";
 
-  const inner = (
+  const memberPicker =
+    asInstructor && memberOptions.length > 0 ? (
+      <CoachMemberPicker
+        members={memberOptions}
+        selectedIds={selectedUserIds}
+        onChange={setSelectedUserIds}
+      />
+    ) : null;
+
+  const smsFields = (
     <div className="space-y-3">
       <p className="text-xs text-[var(--muted)]">
-        Parsed by our built-in SMS rules (exercises, sets/reps, warm-up blocks) — not a live AI call. Only members you select below get this workout on Go to Today.
+        Parsed by our built-in SMS rules (exercises, sets/reps, warm-up blocks) — not a live AI call. Only members you select get this workout on Go to Today.
       </p>
-
-      {asInstructor && memberOptions.length > 0 && (
-        <CoachMemberPicker
-          members={memberOptions}
-          selectedIds={selectedUserIds}
-          onChange={setSelectedUserIds}
-        />
-      )}
 
       <div className="grid gap-2 sm:grid-cols-2 text-xs">
         <label className="block">
@@ -228,24 +234,47 @@ export default function TodaySessionPanel({
 
   if (collapsible) {
     return (
-      <details
-        className="group card border-amber-500/30 bg-amber-500/5"
-        open={open}
-        onToggle={(e) => setOpen(e.currentTarget.open)}
-      >
-        <summary className="flex items-center gap-2 cursor-pointer list-none font-semibold text-sm py-1">
-          <span className="text-accent group-open:rotate-90 transition-transform text-xs">▶</span>
-          {panelTitle}
-        </summary>
-        <div className="mt-3 pt-3 border-t border-amber-500/20">{inner}</div>
-      </details>
+      <div className="card border-amber-500/30 bg-amber-500/5 space-y-4">
+        {memberPicker && (
+          <div className="space-y-2">
+            <h2 className="font-semibold text-sm">Assign workout to students</h2>
+            <p className="text-xs text-[var(--muted)]">
+              Choose one or more of your students — only they will see this on Go to Today and receive SMS alerts.
+            </p>
+            {memberPicker}
+          </div>
+        )}
+
+        <details
+          className="group"
+          open={open}
+          onToggle={(e) => setOpen(e.currentTarget.open)}
+        >
+          <summary className="flex flex-wrap items-center gap-2 cursor-pointer list-none font-semibold text-sm py-1">
+            <span className="text-accent group-open:rotate-90 transition-transform text-xs">▶</span>
+            {panelTitle}
+            {asInstructor && (
+              <span className="text-[10px] font-normal text-sky-300">
+                → {assigneeSummary}
+              </span>
+            )}
+          </summary>
+          <div className="mt-3 pt-3 border-t border-amber-500/20">{smsFields}</div>
+        </details>
+      </div>
     );
   }
 
   return (
     <div className="card border-amber-500/30 bg-amber-500/5 space-y-3">
+      {memberPicker && (
+        <div className="space-y-2">
+          <h2 className="font-semibold text-sm">Assign workout to students</h2>
+          {memberPicker}
+        </div>
+      )}
       <h2 className="font-semibold text-sm">{panelTitle}</h2>
-      {inner}
+      {smsFields}
     </div>
   );
 }
