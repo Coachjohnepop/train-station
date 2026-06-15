@@ -8,7 +8,7 @@ export async function POST() {
 }
 
 export async function GET(request: Request) {
-  const res = NextResponse.redirect(new URL("/login", request.url));
+  const res = NextResponse.redirect(new URL("/", request.url));
   clearSessionCookies(res);
   return res;
 }

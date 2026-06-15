@@ -12,9 +12,8 @@ export default function LandingWelcomeBack({
   isCoach?: boolean;
   children: ReactNode;
 }) {
-  async function signOut() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/";
+  function signOut() {
+    window.location.href = "/api/auth/logout";
   }
 
   const programHref = isCoach ? "/admin" : "/member";

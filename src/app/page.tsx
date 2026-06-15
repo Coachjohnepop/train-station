@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
-import { MEMBER_COOKIE, MEMBER_NAME_COOKIE } from "@/lib/current-user";
+import { MEMBER_NAME_COOKIE } from "@/lib/current-user";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
 import LandingHero from "@/components/LandingHero";
 import LandingWelcomeBack from "@/components/LandingWelcomeBack";
@@ -9,18 +9,16 @@ import LandingWelcomeBack from "@/components/LandingWelcomeBack";
 export default async function HomePage() {
   const cookieStore = await cookies();
   const session = await getSessionUser();
-  const memberUid = cookieStore.get(MEMBER_COOKIE)?.value;
 
-  if (session || memberUid) {
-    const uid = session?.id || memberUid!;
-    const demoUser = resolveDemoUser(uid);
+  if (session) {
+    const demoUser = resolveDemoUser(session.id);
     const displayName =
-      session?.name ||
+      session.name ||
       demoUser?.name ||
       cookieStore.get(MEMBER_NAME_COOKIE)?.value ||
       "Member";
-    const email = session?.email || demoUser?.email;
-    const isCoach = session ? isStaffRole(session.role) : uid === "demo-coach-jeremy";
+    const email = session.email || demoUser?.email;
+    const isCoach = isStaffRole(session.role);
 
     return (
       <LandingWelcomeBack email={email} isCoach={isCoach}>
