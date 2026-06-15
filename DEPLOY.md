@@ -1,6 +1,47 @@
 # Deploy The Train Station (GitHub + Vercel)
 
-**Current plan (per your note):** Deploy the working demo in ~10 hours. This gets a stable public URL where the member dashboard (including the SMS settings and home equipment widgets), workout logging with green per-set checks, coach live progress buttons, review grids, schedules, etc. all load reliably without dev server churn.
+## Preview vs production (current workflow — June 2026)
+
+**Production (`main` → https://www.thetrainstation.co)** is frozen at a known-good fallback while we iterate on new features in preview.
+
+| Branch | Deploys to | Use for |
+|--------|------------|---------|
+| `main` | **Production** only | Stable releases — merge from `preview` when Jeremy/John sign off |
+| `preview` | **Vercel Preview URL** (per push) | New features: coach chat, SMS alerts, Go to Today tweaks, etc. |
+
+**Prod fallback tag:** `prod-fallback-2026-06-14` → commit `64807c9` (Go to Today, chat v1, SMS paste, compact dashboard CTA). Roll back prod to this tag if a bad deploy lands on `main`.
+
+### Day-to-day (agents + John)
+
+1. `git checkout preview` — do all feature work here.
+2. `git push origin preview` — Vercel builds a **Preview** deployment (check GitHub PR or Vercel dashboard for the `*.vercel.app` URL).
+3. Test on the preview URL with Jeremy before merging.
+4. When stable: `git checkout main && git merge preview && git push origin main` — that promote goes to production.
+5. **Do not** push experimental commits directly to `main` until the preview pass is done.
+
+### Prod troubleshooting (chat + SMS — fallback build)
+
+Verified on live prod (Jun 2026):
+
+- `/admin/chat`, `/member/chat`, `/api/chat/*` — routes up (200).
+- SMS **parse** (`POST /api/today/parse`) — works (rule-based, not AI).
+- Coach **paste + Build** on `/admin/today` — works; data lives in demo JSON + in-memory on Vercel (new posts may reset on cold start until real DB).
+
+**Needs Vercel env vars for full behavior on any environment:**
+
+| Variable | Purpose |
+|----------|---------|
+| `NEXT_PUBLIC_APP_URL` | SMS deep links (`https://www.thetrainstation.co`) |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | Real outbound SMS + inbound webhook at `/api/sms/inbound` |
+| `BLOB_READ_WRITE_TOKEN` | Short (≤60s) chat video uploads on Vercel |
+
+Without Twilio, SMS is **simulated** (logged to console / demo logs). Without Blob, use **YouTube links** for video in chat.
+
+**Demo data files to commit with chat/SMS features:** `prisma/coach-chat.dev.json`, `prisma/today-sessions.dev.json`, `prisma/sms-workouts.dev.json`.
+
+---
+
+**Earlier plan (per your note):** Deploy the working demo in ~10 hours. This gets a stable public URL where the member dashboard (including the SMS settings and home equipment widgets), workout logging with green per-set checks, coach live progress buttons, review grids, schedules, etc. all load reliably without dev server churn.
 
 You handle logins in the browsers / CLIs when prompted. I (the agent) will run the terminal commands, edit configs, and test.
 
@@ -22,7 +63,7 @@ No real database is required for the launch/demo. All the `isDemoMode()` checks 
 5. Visit the new `https://your-project.vercel.app` URL.
 6. The /member dashboard should show the equipment and SMS widgets loading instantly (no more spinners from restarts). Test logging sets on a workout — the buttons should turn green with ✓ and persist in review/schedule views. Coach impersonation banner + live checkoff should also work.
 
-After this, every push to main auto-deploys.
+After this, every push to **main** auto-deploys **production**. Pushes to **preview** (and other branches) auto-deploy **Preview** URLs only.
 
 The widgets will stay up because there are no Turbopack recompiles, no port 3000/3002 fights, and the fs reads for demo data are instantaneous.
 

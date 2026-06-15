@@ -34,6 +34,11 @@ This note is here so future steps (or a future session) do not forget the data s
 
 ---
 
+## Deploy branches (June 2026)
+- **Production:** `main` only — currently tagged `prod-fallback-2026-06-14` (`64807c9`). Do not push WIP features to `main`.
+- **Preview:** `preview` branch — all new work (chat, SMS, Go to Today, etc.). Push → Vercel Preview URL → merge to `main` when stable.
+- See `DEPLOY.md` top section for full workflow + chat/SMS env vars.
+
 ## Other quick notes
 - Current focus (as of latest): Set logging + green checks in MemberWorkoutConsole are working again after simplifying (removed per-click coach live save complexity that was interfering with local state → visual). Schedule green rings for done sessions, hybrid options, John & Steph floating player, equipment/SMS dashboard widgets, etc. all rely on the data files above being present on publish.
 - More testing (per DEMO_SCRIPT.md) then publish is the plan. Publishing with the full data committed will make the live experience match what you've been validating locally and reduce flakiness.
