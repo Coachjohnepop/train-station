@@ -62,10 +62,10 @@ export async function POST(request: Request) {
       phone: userSettings.phone || "(555) 987-6543",
       message: `[Member reply] ${trimmed}`,
       source: "member-reply",
-      direction: "inbound",
+      direction: "inbound" as const,
     };
 
-    const saved = addDemoSmsLog(logEntry);
+    const saved = await addDemoSmsLog(logEntry);
     await appendMemberSmsToChat({
       memberId: uid,
       body: trimmed,

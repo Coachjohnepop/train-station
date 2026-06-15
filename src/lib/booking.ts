@@ -312,7 +312,7 @@ export async function sendDailyReminders() {
     if (!du) return [];
     const link = `/member/workout?program=adult`;
     const message = `Good morning! Time for your Day 5 activities in Adult. Start here: ${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}${link}`;
-    const entry = addDemoSmsLog({ userId: du.id, phone: du.phone, message, source: "reminder" });
+    const entry = await addDemoSmsLog({ userId: du.id, phone: du.phone, message, source: "reminder" });
     return [{ user: du.email, phone: du.phone, message, sentAt: entry.sentAt }];
   }
 

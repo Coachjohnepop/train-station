@@ -5,7 +5,8 @@ import { getDemoSmsLogs, addDemoSmsLog } from "@/lib/sms";
 
 export async function GET() {
   if (isDemoMode()) {
-    return NextResponse.json(getDemoSmsLogs().slice(0, 30));
+    const logs = await getDemoSmsLogs();
+    return NextResponse.json(logs.slice(0, 30));
   }
   const logs = await prisma.smsLog.findMany({
     orderBy: { sentAt: "desc" },
@@ -19,6 +20,6 @@ export async function GET() {
 export async function POST(request: Request) {
   if (!isDemoMode()) return NextResponse.json({ ok: false }, { status: 400 });
   const body = await request.json();
-  addDemoSmsLog(body);
+  await addDemoSmsLog(body);
   return NextResponse.json({ ok: true });
 }

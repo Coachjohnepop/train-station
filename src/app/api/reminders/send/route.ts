@@ -7,7 +7,7 @@ export async function POST() {
   // In real app this would be protected + called by cron/scheduler
   if (isDemoMode()) {
     // simulate for demo users that have reminder set (set via booking interview)
-    const entry = addDemoSmsLog({
+    const entry = await addDemoSmsLog({
       userId: "demo-user",
       phone: "(555) 987-6543",
       message: "Good morning! Time for your Day 5 activities in Adult. Start here: http://localhost:3000/member/workout?program=adult",

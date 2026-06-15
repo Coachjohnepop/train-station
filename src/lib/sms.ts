@@ -1,10 +1,32 @@
+import path from "path";
 import twilio from "twilio";
 import { prisma } from "@/lib/prisma";
 import { isDemoMode } from "./demo-enrollments";
 import { DEMO_USER_DIRECTORY, resolveDemoUserByEmail } from "@/lib/demo-user-directory";
 import { listMembersForCoach } from "@/lib/demo-coach";
+import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
 
-let demoSmsLogs: any[] = [];
+export type DemoSmsLogEntry = {
+  userId?: string;
+  phone: string;
+  message: string;
+  source: string;
+  direction?: "inbound" | "outbound";
+  category?: string;
+  taskDetails?: unknown;
+  sentAt: string;
+  smsLogId?: string;
+};
+
+type SmsLogStore = {
+  logs: DemoSmsLogEntry[];
+};
+
+const DEV_FILE = path.join(process.cwd(), "prisma", "sms-logs.dev.json");
+const BLOB_PATH = "demo/sms-logs.json";
+const MAX_LOGS = 200;
+
+let memoryStore: SmsLogStore | null = null;
 
 let demoPhoneUsers = [
   { id: "demo-user-john-steph", email: "john@lemonvoice.com", name: "John & Steph", phone: "(555) 111-2235", dailyReminderTime: "06:30" },
@@ -15,14 +37,69 @@ let demoPhoneUsers = [
   { id: "demo-coach-jeremy", email: "jeremy@thetrainstation.co", name: "Coach Jeremy", phone: "(555) 123-0001", dailyReminderTime: null },
 ];
 
-export function getDemoSmsLogs() {
-  return [...demoSmsLogs];
+function emptyStore(): SmsLogStore {
+  return { logs: [] };
 }
 
-export function addDemoSmsLog(entry: any) {
-  const withMeta = { ...entry, sentAt: new Date().toISOString() };
-  demoSmsLogs.unshift(withMeta);
-  if (demoSmsLogs.length > 100) demoSmsLogs.pop();
+function setMemory(store: SmsLogStore) {
+  memoryStore = store;
+}
+
+function normalizeStore(raw: unknown): SmsLogStore {
+  if (Array.isArray(raw)) {
+    return { logs: raw as DemoSmsLogEntry[] };
+  }
+  if (raw && typeof raw === "object" && Array.isArray((raw as SmsLogStore).logs)) {
+    return { logs: (raw as SmsLogStore).logs };
+  }
+  return emptyStore();
+}
+
+export async function hydrateSmsLogs(): Promise<SmsLogStore> {
+  const hydrated = await hydrateJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    memory: memoryStore,
+    setMemory,
+    fallback: emptyStore,
+  });
+  const normalized = normalizeStore(hydrated);
+  if (!memoryStore || normalized.logs !== (hydrated as SmsLogStore).logs) {
+    setMemory(normalized);
+  }
+  return normalized;
+}
+
+function readStore(): SmsLogStore {
+  if (memoryStore) return memoryStore;
+  memoryStore = normalizeStore(readLocalJson<unknown>(DEV_FILE));
+  return memoryStore;
+}
+
+async function writeStore(store: SmsLogStore) {
+  await persistJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    data: store,
+    setMemory,
+  });
+}
+
+export async function getDemoSmsLogs(): Promise<DemoSmsLogEntry[]> {
+  await hydrateSmsLogs();
+  return [...readStore().logs];
+}
+
+export async function addDemoSmsLog(entry: Omit<DemoSmsLogEntry, "sentAt"> & { sentAt?: string }) {
+  await hydrateSmsLogs();
+  const store = readStore();
+  const withMeta: DemoSmsLogEntry = {
+    ...entry,
+    sentAt: entry.sentAt || new Date().toISOString(),
+  };
+  store.logs.unshift(withMeta);
+  if (store.logs.length > MAX_LOGS) store.logs.length = MAX_LOGS;
+  await writeStore(store);
   return withMeta;
 }
 
@@ -116,6 +193,43 @@ export function coachAlertMessage(params: { sessionDate?: string; firstName?: st
   return `${hi}New update from Coach Jeremy — open The Train Station: ${link}`;
 }
 
+function coachReplySmsBody(message: string, firstName?: string) {
+  const base = appBaseUrl();
+  const link = `${base}/member/chat`;
+  const hi = firstName ? `Hi ${firstName}, ` : "";
+  const preview = message.length > 140 ? `${message.slice(0, 137)}…` : message;
+  return `${hi}Coach Jeremy: ${preview} — Reply: ${link}`;
+}
+
+export async function sendCoachReplySms(params: { memberId: string; message: string }) {
+  const allWithPhones = await getUsersWithPhones();
+  const user = allWithPhones.find((u) => u.id === params.memberId && u.phone);
+  if (!user) return { sent: 0 };
+
+  const first = (user.name || user.email.split("@")[0]).split(" ")[0];
+  const body = coachReplySmsBody(params.message, first);
+  const ok = await deliverSms(user.phone, body);
+  if (!ok) return { sent: 0 };
+
+  const logEntry = {
+    userId: user.id,
+    phone: user.phone,
+    message: body,
+    source: "coach-reply",
+    direction: "outbound" as const,
+  };
+
+  if (isDemoMode()) {
+    const saved = await addDemoSmsLog(logEntry);
+    return { sent: 1, phone: user.phone, sentAt: saved.sentAt };
+  }
+
+  const log = await prisma.smsLog.create({
+    data: { userId: user.id, phone: user.phone, message: body },
+  });
+  return { sent: 1, phone: user.phone, sentAt: log.sentAt.toISOString(), smsLogId: log.id };
+}
+
 export async function sendCoachChatAlert(params: {
   userIds: string[];
   sessionDate?: string;
@@ -144,7 +258,7 @@ export async function sendCoachChatAlert(params: {
     };
 
     if (isDemoMode()) {
-      const saved = addDemoSmsLog(logEntry);
+      const saved = await addDemoSmsLog(logEntry);
       results.push({ userId: u.id, phone: u.phone, message: personalized, sentAt: saved.sentAt });
     } else {
       const log = await prisma.smsLog.create({
@@ -167,7 +281,7 @@ export async function logInboundMemberSms(params: {
     phone: params.phone,
     message: params.message,
     source: "member-reply",
-    direction: "inbound",
+    direction: "inbound" as const,
   };
 
   if (isDemoMode()) {
@@ -217,7 +331,7 @@ export async function sendSmsBroadcast(params: {
     };
 
     if (isDemoMode()) {
-      const saved = addDemoSmsLog(logEntry);
+      const saved = await addDemoSmsLog(logEntry);
       results.push({ user: u.email, phone: u.phone, message: personalized, sentAt: saved.sentAt, category, taskDetails });
     } else {
       const log = await prisma.smsLog.create({
@@ -236,7 +350,13 @@ export async function sendSmsBroadcast(params: {
 
 export async function createReminderLogForUser(user: any, message: string) {
   if (isDemoMode()) {
-    const saved = addDemoSmsLog({ userId: user.id, phone: user.phone, message, source: "reminder", direction: "outbound" });
+    const saved = await addDemoSmsLog({
+      userId: user.id,
+      phone: user.phone,
+      message,
+      source: "reminder",
+      direction: "outbound",
+    });
     return { user: user.email, phone: user.phone, message, sentAt: saved.sentAt };
   }
   const log = await prisma.smsLog.create({ data: { userId: user.id, phone: user.phone, message } });

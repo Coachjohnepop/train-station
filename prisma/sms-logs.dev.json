@@ -1,0 +1,20 @@
+{
+  "logs": [
+    {
+      "userId": "demo-user-john-steph",
+      "phone": "(555) 111-2235",
+      "message": "Hi John, Coach Jeremy: Great work today — keep it up! — Reply: https://www.thetrainstation.co/member/chat",
+      "source": "coach-reply",
+      "direction": "outbound",
+      "sentAt": "2026-06-15T17:37:00.608Z"
+    },
+    {
+      "userId": "demo-user",
+      "phone": "(555) 987-6543",
+      "message": "test inbound persist",
+      "source": "member-reply",
+      "direction": "inbound",
+      "sentAt": "2026-06-15T17:36:41.154Z"
+    }
+  ]
+}

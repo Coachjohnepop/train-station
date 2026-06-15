@@ -3,12 +3,14 @@ import { addChatMessage, COACH_READER_ID, ensureMemberThread, getThread } from "
 import { resolveUserId } from "@/lib/current-user";
 import { DEMO_COACH } from "@/lib/demo-coach";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
+import { sendCoachReplySms } from "@/lib/sms";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const message = typeof body.message === "string" ? body.message.trim() : "";
   const role = body.role === "coach" ? "coach" : "member";
   const threadId = typeof body.threadId === "string" ? body.threadId : "";
+  const sendSms = body.sendSms !== false;
 
   if (message.length < 1) {
     return NextResponse.json({ error: "Message is required" }, { status: 400 });
@@ -33,7 +35,12 @@ export async function POST(request: Request) {
       readByUserIds: [COACH_READER_ID],
     });
 
-    return NextResponse.json({ ok: true, message: created });
+    let smsResult = { sent: 0 };
+    if (sendSms && thread.kind === "member" && thread.memberId) {
+      smsResult = await sendCoachReplySms({ memberId: thread.memberId, message });
+    }
+
+    return NextResponse.json({ ok: true, message: created, sms: smsResult });
   }
 
   const uid = await resolveUserId();
