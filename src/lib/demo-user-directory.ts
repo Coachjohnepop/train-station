@@ -6,7 +6,7 @@ export type DemoUserEntry = {
 };
 
 export const DEMO_USER_DIRECTORY: DemoUserEntry[] = [
-  { id: "demo-user-john-steph", email: "johnsteph@thetrainstation.co", name: "John & Steph", phone: "(555) 111-2235" },
+  { id: "demo-user-john-steph", email: "john@lemonvoice.com", name: "John & Steph", phone: "(555) 111-2235" },
   { id: "demo-user", email: "demo@thetrainstation.co", name: "Alex", phone: "(555) 987-6543" },
   { id: "demo-user-john", email: "chad@thetrainstation.co", name: "Chad", phone: "(555) 111-2233" },
   { id: "demo-user-stephanie", email: "kaite@thetrainstation.co", name: "Kaite", phone: "(555) 111-2234" },

@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     const demoUsers = [
       {
         id: "demo-user-john-steph",
-        email: "johnsteph@thetrainstation.co",
+        email: "john@lemonvoice.com",
         name: "John & Steph",
         role: "MEMBER" as const,
         status: "active",
