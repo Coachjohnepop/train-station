@@ -67,14 +67,14 @@ function LoginForm() {
           </div>
 
           <div>
-            <label className="block text-xs text-[var(--muted)] mb-1">Password</label>
+            <label className="block text-xs text-[var(--muted)] mb-1">Password (optional for now)</label>
             <input
               type="password"
               autoComplete="current-password"
-              required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="input"
+              placeholder="Leave blank"
             />
           </div>
 
@@ -91,7 +91,7 @@ function LoginForm() {
         </form>
 
         <p className="mt-6 text-center text-[10px] text-[var(--muted)]">
-          Coaches: use your @thetrainstation.co email. Ask Jeremy if you need your initial password reset.
+          For now, just enter your email and leave password blank. We&apos;ll add real passwords later.
         </p>
       </div>
     </div>

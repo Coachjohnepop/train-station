@@ -1,32 +1,26 @@
 {
   "jeremy@thetrainstation.co": {
     "userId": "demo-coach-jeremy",
-    "role": "ADMIN",
-    "passwordHash": "a6965bf8c15931f2c7d046431a6a3a04:f817e4b789a6ae5bbeb0f8052697d647ad77b1a72de9d9e13d4a5d1630b87829b134b9f135146e93106ecc5edea17062757e56fde7c534074a28d798e5316f29"
+    "role": "ADMIN"
   },
   "johnsteph@thetrainstation.co": {
     "userId": "demo-user-john-steph",
-    "role": "MEMBER",
-    "passwordHash": "26e70f15187bfb3ee2cf52ae0aa50c90:466b15d094ee38b56e60b27523ed96245364e3b7f867fcd3c443869bec2bf464e2408ce6196ab2f63baa2d1baeb5cf4ddf353af785b65942b59cdae42e897cd6"
+    "role": "MEMBER"
   },
   "demo@thetrainstation.co": {
     "userId": "demo-user",
-    "role": "MEMBER",
-    "passwordHash": "81844b86b698a551c3dbb7d52c95f6b3:8afc0d0c39c919383ce74b3039f3fe64e882f1095a958118c1cac3f6df6d8b24488ea0cb6dde98deb29bc71211ab85852bb7ce6ffc8257936dd7c391eea21d3d"
+    "role": "MEMBER"
   },
   "chad@thetrainstation.co": {
     "userId": "demo-user-john",
-    "role": "MEMBER",
-    "passwordHash": "b1b68e50a806229ee3ea283209f6b053:6583ab508e95c00da508eb9b10a3744e6635013f3eb5aa0e43991610e48a7bab28e64c942005a2c1b4c7b20ce530059d5ce4abda9020c40627b6f259d22096da"
+    "role": "MEMBER"
   },
   "kaite@thetrainstation.co": {
     "userId": "demo-user-stephanie",
-    "role": "MEMBER",
-    "passwordHash": "95146a657ef5d4eed2e90233bab1bca0:4a6fc19e546f2d6389591f1112ed46a2e26cfdc0117d70fe9ac0b97ca9d8268bef28d9c4b8027e7d7a1f739a982ab0f8599f6793bfde4449c50fb7a0ff888cb3"
+    "role": "MEMBER"
   },
   "jordan.member@example.com": {
     "userId": "demo-user-2",
-    "role": "MEMBER",
-    "passwordHash": "dc2b19fcc4c09764738e07f0722f074a:50c9edc8b62bcf3b12e87ca95eac8b9c1992790ae71c6d8a83a78f5216702b80da03617df8fb361038ba839c46f05df6663964d23e21cdcdfd926495b1eed5ba"
+    "role": "MEMBER"
   }
 }

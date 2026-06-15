@@ -22,7 +22,7 @@ export { SESSION_COOKIE, verifySessionToken, isStaffRole, resolveDemoUserByEmail
 type DemoAccount = {
   userId: string;
   role: UserRole;
-  passwordHash: string;
+  passwordHash?: string;
 };
 
 const ACCOUNTS_FILE = path.join(process.cwd(), "prisma", "accounts.dev.json");
@@ -56,16 +56,22 @@ function loadDemoAccounts(): Record<string, DemoAccount> {
   return {};
 }
 
+function passwordAccepted(password: string, storedHash?: string | null): boolean {
+  if (!storedHash) return true; // blank password OK when no hash is set
+  if (!password) return false;
+  return verifyPassword(password, storedHash);
+}
+
 export async function authenticateCredentials(
   email: string,
   password: string,
 ): Promise<SessionUser | null> {
   const normalized = email.trim().toLowerCase();
-  if (!normalized || !password) return null;
+  if (!normalized) return null;
 
   if (isDemoMode()) {
     const account = loadDemoAccounts()[normalized];
-    if (!account || !verifyPassword(password, account.passwordHash)) return null;
+    if (!account || !passwordAccepted(password, account.passwordHash)) return null;
     const user = resolveDemoUser(account.userId);
     return {
       id: account.userId,
@@ -78,7 +84,7 @@ export async function authenticateCredentials(
   try {
     const { prisma } = await import("@/lib/prisma");
     const user = await prisma.user.findUnique({ where: { email: normalized } });
-    if (!user?.passwordHash || !verifyPassword(password, user.passwordHash)) return null;
+    if (!user || !passwordAccepted(password, user.passwordHash)) return null;
     return {
       id: user.id,
       email: user.email,
