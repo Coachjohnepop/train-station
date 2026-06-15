@@ -59,15 +59,18 @@ export default async function MemberDashboardPage() {
         </p>
       </section>
 
-      <GoToTodayCard
-        href="/member/today"
-        appointmentCount={todaySession ? 1 : 0}
-        subtitle={todaySubtitle}
-        variant="member"
-      />
-
-      {/* Top stratum: enrolled programs on left, metrics (with descriptions) , continue */}
+      {/* Top stratum: today, enrolled, metrics, continue */}
       <div className="flex flex-col lg:flex-row gap-3 lg:gap-2 lg:items-stretch">
+        <div className="lg:w-56 lg:flex-shrink-0">
+          <div className="text-sm font-medium mb-2">Today</div>
+          <GoToTodayCard
+            href="/member/today"
+            appointmentCount={todaySession ? 1 : 0}
+            subtitle={todaySubtitle}
+            variant="member"
+            compact
+          />
+        </div>
         {/* Enrolled section on the left (includes SMS reminders now) */}
         {enrollments.length > 0 && (
           <div className="lg:w-72 lg:flex-shrink-0">

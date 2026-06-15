@@ -17,20 +17,18 @@ export default async function AdminPage() {
         Build content bottom-up: exercises → workouts → programs.
       </p>
 
-      <div className="mt-6">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <GoToTodayCard
           href="/admin/today"
           appointmentCount={today.count}
           variant="coach"
           subtitle={
             today.count > 0
-              ? `${today.count} appointment${today.count === 1 ? "" : "s"} scheduled today — SMS workouts and live sessions.`
-              : "View today's schedule, paste SMS workouts, and coach checkoffs."
+              ? `${today.count} appt${today.count === 1 ? "" : "s"} today`
+              : "Paste SMS · schedule"
           }
+          statStyle
         />
-      </div>
-
-      <div className="mt-8 grid gap-4 sm:grid-cols-4">
         <StatCard label="Exercises" value={exercises} href="/admin/exercises" />
         <StatCard label="Workouts" value={workouts} href="/admin/workouts" />
         <StatCard label="Programs" value={programs} href="/admin/programs" />
