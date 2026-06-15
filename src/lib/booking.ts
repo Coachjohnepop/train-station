@@ -5,9 +5,40 @@ import { COACH_CALENDLY_URL } from "./brand";
 
 let demoUsers: any[] = [
   { id: "demo-user", email: "demo@thetrainstation.co", name: "Demo Member", phone: "(555) 987-6543", dailyReminderTime: "07:30" },
+  { id: "demo-user-john", email: "john@thetrainstation.co", name: "John", phone: "(555) 111-2233", dailyReminderTime: "06:30" },
+  { id: "demo-user-stephanie", email: "stephanie@thetrainstation.co", name: "Stephanie", phone: "(555) 111-2234", dailyReminderTime: "06:30" },
 ];
 
-let demoBookings: any[] = [];
+let demoBookings: any[] = [
+  {
+    id: "demo-bk-john-jun17",
+    memberEmail: "john@thetrainstation.co",
+    memberPhone: "(555) 111-2233",
+    adminEmail: "coach@thetrainstation.co",
+    adminPhone: "(555) 123-4567",
+    scheduledAt: "2026-06-17T14:00:00.000Z",
+    durationMin: 15,
+    zoomUrl: null,
+    status: "confirmed",
+    notes: "Live check-in — post SMS workout",
+    createdAt: "2026-06-14T12:00:00.000Z",
+    userId: "demo-user-john",
+  },
+  {
+    id: "demo-bk-steph-jun17",
+    memberEmail: "stephanie@thetrainstation.co",
+    memberPhone: "(555) 111-2234",
+    adminEmail: "coach@thetrainstation.co",
+    adminPhone: "(555) 123-4567",
+    scheduledAt: "2026-06-17T15:30:00.000Z",
+    durationMin: 15,
+    zoomUrl: null,
+    status: "confirmed",
+    notes: "Live check-in — post SMS workout",
+    createdAt: "2026-06-14T12:00:00.000Z",
+    userId: "demo-user-stephanie",
+  },
+];
 
 export type AvailabilitySlot = {
   start: Date;
@@ -208,12 +239,13 @@ export async function getBookings() {
   });
 }
 
-export async function updateBookingStatus(id: string, status: string, zoomUrl?: string) {
+export async function updateBookingStatus(id: string, status: string, zoomUrl?: string, notes?: string) {
   if (isDemoMode()) {
     const b = demoBookings.find((bk: any) => bk.id === id);
     if (b) {
       b.status = status;
-      if (zoomUrl) b.zoomUrl = zoomUrl;
+      if (zoomUrl !== undefined) b.zoomUrl = zoomUrl;
+      if (notes !== undefined) b.notes = notes;
     }
     return b || { id, status, zoomUrl: zoomUrl || null };
   }

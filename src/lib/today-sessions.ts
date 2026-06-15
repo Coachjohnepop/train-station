@@ -38,6 +38,10 @@ export function listTodaySessions(): TodaySession[] {
   );
 }
 
+export function getSessionsForDate(sessionDate: string): TodaySession[] {
+  return listTodaySessions().filter((s) => s.sessionDate === sessionDate);
+}
+
 export function getTodaySessionByDate(sessionDate: string): TodaySession | null {
   return readStore().sessions[sessionDate] ?? null;
 }

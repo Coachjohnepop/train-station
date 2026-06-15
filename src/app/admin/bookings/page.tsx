@@ -323,7 +323,7 @@ export default function AdminBookingsPage() {
         <p className="text-xs text-[var(--muted)] mb-2">
           Paste SMS text to build a full checkoff workout that overrides the schedule. Best for John, Stephanie, or any member on a specific date/time.
         </p>
-        <a href="/member/today?asInstructor=true" className="btn-primary text-sm inline-flex px-4 py-1 mb-4">
+        <a href="/admin/today" className="btn-primary text-sm inline-flex px-4 py-1 mb-4">
           Open Go to Today (coach) →
         </a>
         <h3 className="font-semibold mb-2 text-sm">Legacy: per-day schedule override</h3>

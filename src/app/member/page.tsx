@@ -8,6 +8,9 @@ import EnrollButton from "@/components/EnrollButton";
 import { PROGRAM_IMAGES } from "@/lib/program-constants";
 import MemberHomeEquipment from '../../components/MemberHomeEquipment';
 import MemberReminderSettings from '../../components/MemberReminderSettings';
+import GoToTodayCard from "@/components/GoToTodayCard";
+import { getTodaySessionForUser } from "@/lib/today-sessions";
+import { resolveUserId } from "@/lib/current-user";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +20,18 @@ export default async function MemberDashboardPage() {
 
   const { access, stats, enrollments, programs, continueUrl, continueLabel, activeContinues } =
     data;
+
+  const uid = await resolveUserId("demo-user");
+  const todaySession = getTodaySessionForUser(uid);
+  const todaySubtitle = todaySession
+    ? `${todaySession.title} — ${new Date(todaySession.scheduledAt).toLocaleString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })}`
+    : undefined;
 
   const enrolledSlugs = new Set(enrollments.map((e) => e.program.slug));
 
@@ -43,6 +58,13 @@ export default async function MemberDashboardPage() {
           Your training hub — everything is open while we finish billing setup.
         </p>
       </section>
+
+      <GoToTodayCard
+        href="/member/today"
+        appointmentCount={todaySession ? 1 : 0}
+        subtitle={todaySubtitle}
+        variant="member"
+      />
 
       {/* Top stratum: enrolled programs on left, metrics (with descriptions) , continue */}
       <div className="flex flex-col lg:flex-row gap-3 lg:gap-2 lg:items-stretch">
@@ -232,16 +254,6 @@ export default async function MemberDashboardPage() {
           Quick actions <span className="text-xs text-accent group-open:rotate-90 transition">▶</span>
         </summary>
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
-          <Link
-            href="/member/today"
-            className="card transition hover-accent-border border-accent/30 bg-accent/5"
-          >
-            <p className="font-medium">Go to Today</p>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              Coach SMS workout overrides schedule — paste, check off sets, log session.
-            </p>
-            <span className="mt-2 inline-block text-xs text-accent">Open today&apos;s session →</span>
-          </Link>
           <Link
             href="/member/live"
             className="card transition hover-accent-border"

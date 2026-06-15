@@ -1,4 +1,6 @@
 import Link from "next/link";
+import GoToTodayCard from "@/components/GoToTodayCard";
+import { getCoachTodaySummary } from "@/lib/today-appointments";
 
 // Force dynamic so build succeeds without a live DB (Vercel build will have DATABASE_URL).
 export const dynamic = "force-dynamic";
@@ -6,6 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   // stub counts for demo (no DB)
   const [exercises, workouts, programs, users] = [101, 31, 5, 5];
+  const today = await getCoachTodaySummary();
 
   return (
     <div>
@@ -13,6 +16,20 @@ export default async function AdminPage() {
       <p className="mt-2 text-[var(--muted)]">
         Build content bottom-up: exercises → workouts → programs.
       </p>
+
+      <div className="mt-6">
+        <GoToTodayCard
+          href="/admin/today"
+          appointmentCount={today.count}
+          variant="coach"
+          subtitle={
+            today.count > 0
+              ? `${today.count} appointment${today.count === 1 ? "" : "s"} scheduled today — SMS workouts and live sessions.`
+              : "View today's schedule, paste SMS workouts, and coach checkoffs."
+          }
+        />
+      </div>
+
       <div className="mt-8 grid gap-4 sm:grid-cols-4">
         <StatCard label="Exercises" value={exercises} href="/admin/exercises" />
         <StatCard label="Workouts" value={workouts} href="/admin/workouts" />

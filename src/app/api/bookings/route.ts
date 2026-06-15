@@ -8,7 +8,6 @@ function isDemoMode() {
   return !url || url.includes("dummy.supabase") || url.includes("dummy");
 }
 
-let demoBookings: any[] = [];
 let demoContact = { email: "coach@thetrainstation.co", phone: "(555) 123-4567" };
 let demoSlots: any[] = [];
 
@@ -46,10 +45,6 @@ export async function GET(request: Request) {
     const slots = await getAvailableSlots();
     return NextResponse.json(slots);
   }
-  if (isDemoMode()) {
-    return NextResponse.json(demoBookings);
-  }
-  // admin: list bookings
   const bookings = await getBookings();
   return NextResponse.json(bookings);
 }
@@ -73,11 +68,6 @@ export async function POST(request: Request) {
     // zoomUrl left for admin to fill
   });
 
-  if (isDemoMode()) {
-    // ensure in the local list for GET
-    demoBookings.unshift(booking);
-  }
-
   return NextResponse.json(booking, { status: 201 });
 }
 
@@ -98,26 +88,18 @@ export async function PATCH(request: Request) {
   const { id, ...data } = parsed.data;
 
   if (isDemoMode()) {
-    const idx = demoBookings.findIndex((b: any) => b.id === id);
-    if (idx >= 0) {
-      demoBookings[idx] = {
-        ...demoBookings[idx],
-        status: data.status || demoBookings[idx].status,
-        zoomUrl: data.zoomUrl !== undefined ? data.zoomUrl : demoBookings[idx].zoomUrl,
-        notes: data.notes !== undefined ? data.notes : demoBookings[idx].notes,
-      };
-      // If setting reminder during interview, update/create user
-      if (data.reminderTime || data.memberPhone) {
-        const b = demoBookings[idx];
-        await (await import("@/lib/booking")).setUserReminder(
-          b.memberEmail,
-          data.memberPhone || b.memberPhone,
-          data.reminderTime || "08:00"
-        );
-      }
-      return NextResponse.json(demoBookings[idx]);
+    const bookings = await getBookings();
+    const b = bookings.find((bk: any) => bk.id === id);
+    if (!b) return NextResponse.json({ detail: "Not found (demo)" }, { status: 404 });
+    const updated = await updateBookingStatus(id, data.status || b.status, data.zoomUrl);
+    if (data.reminderTime || data.memberPhone) {
+      await (await import("@/lib/booking")).setUserReminder(
+        b.memberEmail,
+        data.memberPhone || b.memberPhone,
+        data.reminderTime || "08:00"
+      );
     }
-    return NextResponse.json({ detail: "Not found (demo)" }, { status: 404 });
+    return NextResponse.json(updated);
   }
 
   const updated = await updateBookingStatus(id, data.status || "pending", data.zoomUrl);
