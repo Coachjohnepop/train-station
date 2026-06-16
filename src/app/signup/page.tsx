@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -13,6 +13,30 @@ function SignupForm() {
   const [email, setEmail] = useState(prefillEmail);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Remember previously entered values across visits (cached in localStorage),
+  // so a returning visitor doesn't have to retype. A ?email= URL param wins.
+  useEffect(() => {
+    try {
+      const savedName = localStorage.getItem("ts-signup-name");
+      if (savedName) setName(savedName);
+      if (!prefillEmail) {
+        const savedEmail = localStorage.getItem("ts-signup-email");
+        if (savedEmail) setEmail(savedEmail);
+      }
+    } catch {
+      /* localStorage unavailable — ignore */
+    }
+  }, [prefillEmail]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("ts-signup-name", name);
+      localStorage.setItem("ts-signup-email", email);
+    } catch {
+      /* ignore */
+    }
+  }, [name, email]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,6 +109,8 @@ function SignupForm() {
               <label className="block text-xs text-[#9d8ab8] mb-1">Name</label>
               <input
                 type="text"
+                name="name"
+                autoComplete="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your name"
@@ -96,6 +122,8 @@ function SignupForm() {
               <label className="block text-xs text-[#9d8ab8] mb-1">Email</label>
               <input
                 type="email"
+                name="email"
+                autoComplete="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
