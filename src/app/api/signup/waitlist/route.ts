@@ -63,5 +63,11 @@ export async function POST(request: Request) {
   return NextResponse.json({
     success: true,
     redirectTo: `/coming-soon?${params.toString()}`,
+    _debug: {
+      blobReserved: !!process.env.BLOB_READ_WRITE_TOKEN,
+      tsBlob: !!process.env.TS_BLOB_TOKEN,
+      dbDummy: (process.env.DATABASE_URL || "").includes("dummy"),
+      hasDb: !!process.env.DATABASE_URL,
+    },
   });
 }
