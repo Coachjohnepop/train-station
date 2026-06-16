@@ -13,6 +13,7 @@ export const DEMO_USER_DIRECTORY: DemoUserEntry[] = [
   { id: "demo-user-2", email: "jordan.member@example.com", name: "Jordan Lee", phone: "(555) 222-3344" },
   { id: "demo-user-3", email: "casey.prospective@example.com", name: "Casey Rivera" },
   { id: "demo-coach-jeremy", email: "jeremy@thetrainstation.co", name: "Coach Jeremy", phone: "(555) 123-0001" },
+  { id: "demo-coach-john", email: "john@thetrainstation.co", name: "Coach John", phone: "(916) 980-7777" },
 ];
 
 export function resolveDemoUser(userId: string): DemoUserEntry | undefined {

@@ -3,6 +3,10 @@
     "userId": "demo-coach-jeremy",
     "role": "ADMIN"
   },
+  "john@thetrainstation.co": {
+    "userId": "demo-coach-john",
+    "role": "ADMIN"
+  },
   "john@lemonvoice.com": {
     "userId": "demo-user-john-steph",
     "role": "MEMBER"
