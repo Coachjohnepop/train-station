@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ChatNavBadge from "@/components/ChatNavBadge";
+import LeadsNavBadge from "@/components/LeadsNavBadge";
 
 const items = [
   { href: "/admin", label: "Overview", match: (p: string) => p === "/admin" },
@@ -10,6 +11,7 @@ const items = [
     href: "/admin/leads",
     label: "Leads",
     match: (p: string) => p.startsWith("/admin/leads"),
+    leadsBadge: true,
   },
   {
     href: "/admin/exercises",
@@ -73,6 +75,7 @@ export default function AdminNav() {
           >
             {item.label}
             {"badge" in item && item.badge ? <ChatNavBadge role="coach" /> : null}
+            {"leadsBadge" in item && item.leadsBadge ? <LeadsNavBadge /> : null}
           </Link>
         );
       })}
