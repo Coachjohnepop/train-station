@@ -1,1 +1,10 @@
-{"demo-user": {"phone": "", "dailyReminderTime": ""}}
+{
+  "demo-user": {
+    "phone": "",
+    "dailyReminderTime": ""
+  },
+  "demo-user-john-steph": {
+    "phone": "(512) 555-1234",
+    "dailyReminderTime": "08:00"
+  }
+}

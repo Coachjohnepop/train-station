@@ -88,6 +88,13 @@ Do these first. One slice per commit/preview. Success = he can change a name or 
 
 **Recommended starting point**: Begin with P0 items 1-2 (exercise name propagation + delete). These were the dominant theme in the 3-page transcript and the direct cause of "it's all for fun and games from my end. I have no way to edit or do anything."
 
+After the core persistence fixes, the next client-facing slice was the tight Programs builder (directly implementing Jeremy's quoted workflow for building with Gym/Home + inline exercises + sets/reps + copy week).
+
+A dedicated, short, feedback-oriented test script for Jeremy now lives at:
+`JEREMY_PROGRAMS_TEST_SCRIPT.md`
+
+Use that script (not the old big one) for the Programs round of review. It includes explicit "does this match the words I said?" prompts.
+
 This plan directly maps every major complaint he voiced to a focused, testable engineering step while respecting the existing project principles (small increments, data snapshots matter, demo mode for the current site, preview-driven review).
 
 File created: `JUN13_CUSTOMER_REVIEW_ACTION_PLAN.md` (at project root). Reference it alongside PROJECT_BUILD_PLAN.md, CLAUDE.md, and DEMO_SCRIPT.md.

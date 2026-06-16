@@ -1836,6 +1836,30 @@
       "tags": "sms-import",
       "createdAt": "2026-06-15T02:18:04.823Z",
       "updatedAt": "2026-06-15T02:18:04.823Z"
+    },
+    {
+      "id": "ex_d96d14d6b3ef4c889e08f4b375bd806d",
+      "name": "Walking lunges 20 steps",
+      "description": "Created from SMS workout (2026-06-15)",
+      "tags": "sms-import",
+      "createdAt": "2026-06-15T03:35:36.858Z",
+      "updatedAt": "2026-06-15T03:35:36.858Z"
+    },
+    {
+      "id": "ex_309e5a573bed4574a5829f21f6328216",
+      "name": "Incline flyes",
+      "description": "Created from SMS workout (2026-06-15)",
+      "tags": "sms-import",
+      "createdAt": "2026-06-15T03:35:36.863Z",
+      "updatedAt": "2026-06-15T03:35:36.863Z"
+    },
+    {
+      "id": "ex_1149a8365af9494bb64bca60a105fe42",
+      "name": "Tricep pushdowns",
+      "description": "Created from SMS workout (2026-06-15)",
+      "tags": "sms-import",
+      "createdAt": "2026-06-15T03:35:36.865Z",
+      "updatedAt": "2026-06-15T03:35:36.865Z"
     }
   ],
   "workouts": [

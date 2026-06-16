@@ -27,6 +27,7 @@ export async function writeBlobJson(blobPath: string, data: unknown): Promise<vo
       access: "public",
       contentType: "application/json",
       addRandomSuffix: false,
+      allowOverwrite: true,
       token: BLOB_TOKEN,
     });
   } catch (e) {

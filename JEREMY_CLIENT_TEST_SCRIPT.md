@@ -1,5 +1,14 @@
 # Jeremy / Client Test Script — The Train Station (Fresh Review + New Features)
 
+**Note (June 2026 Programs builder round)**: The previous big script below covers the join/questions/onboard/dashboard work. 
+
+For the new tight Programs flow, use one of these:
+
+- **Super short version (recommended first, ~5-7 min)**: [JEREMY_PROGRAMS_QUICK_TEST.md](./JEREMY_PROGRAMS_QUICK_TEST.md) — highlights the goods (gym/home, pick exercises in the compact strip, live sets/reps, swap/delete/add, copy week).
+- Full detailed version if you want deeper coverage: [JEREMY_PROGRAMS_TEST_SCRIPT.md](./JEREMY_PROGRAMS_TEST_SCRIPT.md)
+
+Send the quick one to Jeremy for the initial review of the new builder.
+
 **Purpose**: Quick, focused end-to-end test of the **new user journey** and recent updates (questions assessment before pricing, recommendation driving pricing highlight, fresh dashboard with "workouts logged" snippet + ranking, onboard wizard, collapses, admin visibility). 
 
 Designed for the current **fresh review state** (0 enrollments, 0 logs, empty equipment/settings in the demo data). This is exactly what a brand-new member sees after the reset.
