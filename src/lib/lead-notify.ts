@@ -25,6 +25,7 @@ const RECIPIENTS = (process.env.LEAD_NOTIFY_EMAIL || "")
 type Lead = {
   email: string;
   name?: string | null;
+  phone?: string | null;
   plan?: string | null;
   source?: string | null;
   createdAt?: string;
@@ -56,6 +57,7 @@ export async function notifyNewLead(lead: Lead): Promise<void> {
           `New pre-sign-up from the landing page\n\n` +
           `Name:    ${lead.name || "Guest"}\n` +
           `Email:   ${lead.email}\n` +
+          `Phone:   ${lead.phone || "—"}\n` +
           `Interest: ${lead.plan || "—"}\n` +
           `Source:  ${lead.source || "—"}\n` +
           `When:    ${lead.createdAt || new Date().toISOString()}\n`,

@@ -1,12 +1,18 @@
-import fs from "fs";
-import os from "os";
 import path from "path";
 import { randomUUID } from "crypto";
+import {
+  hydrateJsonStore,
+  persistJsonStore,
+  readLocalJson,
+} from "@/lib/demo-json-blob";
 
 export type WaitlistEntry = {
   id: string;
   email: string;
-  name: string;
+  name: string; // combined display name (first + last), kept for convenience
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
   plan?: string | null;
   source?: string | null;
   createdAt: string;
@@ -16,76 +22,95 @@ type WaitlistStore = {
   entries: WaitlistEntry[];
 };
 
-// Repo file: writable in local dev, READ-ONLY on Vercel's serverless FS.
+// Persisted via the shared demo store: local JSON in dev, Vercel Blob in prod
+// (durable + shared across serverless instances) when BLOB_READ_WRITE_TOKEN is
+// set. This is the same mechanism chat/SMS/today use, so leads survive and are
+// visible to the admin dashboard.
 const DEV_FILE = path.join(process.cwd(), "prisma", "waitlist.dev.json");
-// Tmp file: the only writable location on Vercel (per-instance, ephemeral).
-const TMP_FILE = path.join(os.tmpdir(), "waitlist.dev.json");
+const BLOB_PATH = "demo/waitlist.json";
 
-function loadStore(): WaitlistStore {
-  // Prefer the tmp copy (holds the most recent writes on serverless), then
-  // fall back to the committed repo file.
-  for (const file of [TMP_FILE, DEV_FILE]) {
-    try {
-      if (fs.existsSync(file)) {
-        return JSON.parse(fs.readFileSync(file, "utf8")) as WaitlistStore;
-      }
-    } catch {
-      /* try next */
-    }
-  }
+let memoryStore: WaitlistStore | null = null;
+
+function emptyStore(): WaitlistStore {
   return { entries: [] };
 }
 
-function saveStore(store: WaitlistStore) {
-  const json = JSON.stringify(store, null, 2);
-  // Try the repo file first (local dev); on a read-only FS (Vercel) fall back
-  // to tmp. Never throw — a failed write must not break the signup flow. The
-  // email notifier is the durable capture until the DB-backed store lands.
-  try {
-    fs.writeFileSync(DEV_FILE, json);
-    return;
-  } catch {
-    /* read-only FS — fall through to tmp */
-  }
-  try {
-    fs.writeFileSync(TMP_FILE, json);
-  } catch (err) {
-    console.error("[waitlist] could not persist entry:", err);
-  }
+function setMemory(store: WaitlistStore) {
+  memoryStore = store;
 }
 
-export function addToWaitlist(input: {
+async function hydrate(): Promise<WaitlistStore> {
+  return hydrateJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    memory: memoryStore,
+    setMemory,
+    fallback: emptyStore,
+  });
+}
+
+function readStore(): WaitlistStore {
+  if (memoryStore) return memoryStore;
+  memoryStore = readLocalJson<WaitlistStore>(DEV_FILE) || emptyStore();
+  return memoryStore;
+}
+
+async function writeStore(store: WaitlistStore) {
+  await persistJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    data: store,
+    setMemory,
+  });
+}
+
+export async function addToWaitlist(input: {
   email: string;
-  name?: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
   plan?: string | null;
   source?: string | null;
-}): WaitlistEntry {
+}): Promise<WaitlistEntry> {
   const email = input.email.trim().toLowerCase();
-  const store = loadStore();
+  const firstName = input.firstName?.trim() || null;
+  const lastName = input.lastName?.trim() || null;
+  const phone = input.phone?.trim() || null;
+  const name = [firstName, lastName].filter(Boolean).join(" ") || "Guest";
+
+  await hydrate();
+  const store = readStore();
   const existing = store.entries.find((e) => e.email === email);
 
   if (existing) {
-    if (input.name && !existing.name) existing.name = input.name;
+    if (firstName) existing.firstName = firstName;
+    if (lastName) existing.lastName = lastName;
+    if (phone) existing.phone = phone;
+    if (name !== "Guest") existing.name = name;
     if (input.plan) existing.plan = input.plan;
     if (input.source) existing.source = input.source;
-    saveStore(store);
+    await writeStore(store);
     return existing;
   }
 
   const entry: WaitlistEntry = {
     id: randomUUID(),
     email,
-    name: input.name?.trim() || "Guest",
+    name,
+    firstName,
+    lastName,
+    phone,
     plan: input.plan || null,
     source: input.source || null,
     createdAt: new Date().toISOString(),
   };
 
   store.entries.unshift(entry);
-  saveStore(store);
+  await writeStore(store);
   return entry;
 }
 
-export function listWaitlist(): WaitlistEntry[] {
-  return loadStore().entries;
+export async function listWaitlist(): Promise<WaitlistEntry[]> {
+  await hydrate();
+  return readStore().entries;
 }

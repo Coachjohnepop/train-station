@@ -14,8 +14,8 @@ function formatDate(iso: string): string {
   });
 }
 
-export default function AdminLeadsPage() {
-  const leads = listWaitlist();
+export default async function AdminLeadsPage() {
+  const leads = await listWaitlist();
 
   return (
     <div className="space-y-6">
@@ -48,6 +48,7 @@ export default function AdminLeadsPage() {
               <tr className="border-b border-[var(--border)] text-left text-[10px] uppercase tracking-[2px] text-[var(--muted)]">
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Email</th>
+                <th className="px-4 py-3 font-medium">Phone</th>
                 <th className="px-4 py-3 font-medium">Interest</th>
                 <th className="px-4 py-3 font-medium">Source</th>
                 <th className="px-4 py-3 font-medium">Date</th>
@@ -67,6 +68,15 @@ export default function AdminLeadsPage() {
                     >
                       {lead.email}
                     </a>
+                  </td>
+                  <td className="px-4 py-3 text-[var(--muted)]">
+                    {lead.phone ? (
+                      <a href={`tel:${lead.phone}`} className="hover:underline">
+                        {lead.phone}
+                      </a>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="px-4 py-3 text-[var(--muted)]">
                     {lead.plan || "—"}

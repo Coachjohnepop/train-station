@@ -5,8 +5,12 @@ import { addToWaitlist } from "@/lib/waitlist";
 import { notifyNewLead } from "@/lib/lead-notify";
 
 const schema = z.object({
-  name: z.string().max(80).optional(),
   email: z.string().email(),
+  firstName: z.string().max(60).optional(),
+  lastName: z.string().max(60).optional(),
+  phone: z.string().max(30).optional(),
+  // Accepted for backward compatibility (older clients sent a single name).
+  name: z.string().max(120).optional(),
   plan: z.string().max(40).optional(),
   source: z.string().max(80).optional(),
 });
@@ -18,8 +22,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Please enter a valid email." }, { status: 400 });
   }
 
-  const { name, email, plan, source } = parsed.data;
+  const { email, firstName, lastName, phone, name, plan, source } = parsed.data;
   const normalized = email.trim().toLowerCase();
+
+  // Split a legacy single name into first/last if first/last weren't sent.
+  let first = firstName;
+  let last = lastName;
+  if (!first && !last && name) {
+    const parts = name.trim().split(/\s+/);
+    first = parts.shift();
+    last = parts.join(" ") || undefined;
+  }
 
   if (isInvitedAccountEmail(normalized)) {
     return NextResponse.json({
@@ -29,7 +42,14 @@ export async function POST(request: Request) {
     });
   }
 
-  const entry = addToWaitlist({ email: normalized, name, plan, source });
+  const entry = await addToWaitlist({
+    email: normalized,
+    firstName: first,
+    lastName: last,
+    phone,
+    plan,
+    source,
+  });
 
   // Stopgap until durable DB storage is live: email the team so no lead is
   // lost even if the file-backed store resets. No-ops if Resend isn't configured.

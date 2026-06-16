@@ -9,8 +9,10 @@ function SignupForm() {
   const searchParams = useSearchParams();
   const plan = searchParams.get("plan") || "";
   const prefillEmail = searchParams.get("email") || "";
-  const [name, setName] = useState("");
   const [email, setEmail] = useState(prefillEmail);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,12 +20,16 @@ function SignupForm() {
   // so a returning visitor doesn't have to retype. A ?email= URL param wins.
   useEffect(() => {
     try {
-      const savedName = localStorage.getItem("ts-signup-name");
-      if (savedName) setName(savedName);
       if (!prefillEmail) {
         const savedEmail = localStorage.getItem("ts-signup-email");
         if (savedEmail) setEmail(savedEmail);
       }
+      const savedFirst = localStorage.getItem("ts-signup-first");
+      if (savedFirst) setFirstName(savedFirst);
+      const savedLast = localStorage.getItem("ts-signup-last");
+      if (savedLast) setLastName(savedLast);
+      const savedPhone = localStorage.getItem("ts-signup-phone");
+      if (savedPhone) setPhone(savedPhone);
     } catch {
       /* localStorage unavailable — ignore */
     }
@@ -31,12 +37,14 @@ function SignupForm() {
 
   useEffect(() => {
     try {
-      localStorage.setItem("ts-signup-name", name);
       localStorage.setItem("ts-signup-email", email);
+      localStorage.setItem("ts-signup-first", firstName);
+      localStorage.setItem("ts-signup-last", lastName);
+      localStorage.setItem("ts-signup-phone", phone);
     } catch {
       /* ignore */
     }
-  }, [name, email]);
+  }, [email, firstName, lastName, phone]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,8 +56,10 @@ function SignupForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: name.trim() || undefined,
           email: email.trim(),
+          firstName: firstName.trim() || undefined,
+          lastName: lastName.trim() || undefined,
+          phone: phone.trim() || undefined,
           plan: plan || undefined,
           source: "signup-page",
         }),
@@ -106,19 +116,6 @@ function SignupForm() {
             )}
 
             <div>
-              <label className="block text-xs text-[#9d8ab8] mb-1">Name</label>
-              <input
-                type="text"
-                name="name"
-                autoComplete="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
-                className="w-full rounded-full border border-[#3d2660] bg-[#0a0612] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
-              />
-            </div>
-
-            <div>
               <label className="block text-xs text-[#9d8ab8] mb-1">Email</label>
               <input
                 type="email"
@@ -128,6 +125,50 @@ function SignupForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                className="w-full rounded-full border border-[#3d2660] bg-[#0a0612] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-xs text-[#9d8ab8] mb-1">First name</label>
+                <input
+                  type="text"
+                  name="given-name"
+                  autoComplete="given-name"
+                  required
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="First"
+                  className="w-full rounded-full border border-[#3d2660] bg-[#0a0612] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs text-[#9d8ab8] mb-1">Last name</label>
+                <input
+                  type="text"
+                  name="family-name"
+                  autoComplete="family-name"
+                  required
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Last"
+                  className="w-full rounded-full border border-[#3d2660] bg-[#0a0612] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-[#9d8ab8] mb-1">
+                Phone <span className="text-[#6b5b86]">(optional)</span>
+              </label>
+              <input
+                type="tel"
+                name="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="(555) 123-4567"
                 className="w-full rounded-full border border-[#3d2660] bg-[#0a0612] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
               />
             </div>
