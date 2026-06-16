@@ -13,22 +13,40 @@ export default function MemberChatWorkspace({ initialThreads }: { initialThreads
 
   const activeThread = threads.find((t) => t.id === activeId) || null;
 
-  const loadMessages = useCallback(async (threadId: string) => {
-    if (!threadId) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/chat/messages?threadId=${encodeURIComponent(threadId)}&role=member`);
-      if (!res.ok) return;
-      const data = await res.json();
-      setMessages(data.messages || []);
-      window.dispatchEvent(new CustomEvent("chat-unread-refresh"));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const loadMessages = useCallback(
+    async (threadId: string, opts?: { quiet?: boolean }) => {
+      if (!threadId) return;
+      if (!opts?.quiet) setLoading(true);
+      try {
+        const res = await fetch(
+          `/api/chat/messages?threadId=${encodeURIComponent(threadId)}&role=member`,
+          { cache: "no-store" }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const next: ChatMessage[] = data.messages || [];
+        setMessages((prev) =>
+          prev.length === next.length && prev[prev.length - 1]?.id === next[next.length - 1]?.id
+            ? prev
+            : next
+        );
+        window.dispatchEvent(new CustomEvent("chat-unread-refresh"));
+      } finally {
+        if (!opts?.quiet) setLoading(false);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     if (activeId) loadMessages(activeId);
+  }, [activeId, loadMessages]);
+
+  // Poll for new messages so incoming coach replies appear live.
+  useEffect(() => {
+    if (!activeId) return;
+    const id = setInterval(() => loadMessages(activeId, { quiet: true }), 6000);
+    return () => clearInterval(id);
   }, [activeId, loadMessages]);
 
   const directThread = threads.find((t) => t.kind === "member");

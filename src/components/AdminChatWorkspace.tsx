@@ -60,19 +60,26 @@ export default function AdminChatWorkspace({
     (activeMemberId ? threadForMember(threads, activeMemberId) : null) ||
     null;
 
-  const loadMessages = useCallback(async (threadId: string) => {
+  const loadMessages = useCallback(async (threadId: string, opts?: { quiet?: boolean }) => {
     if (!threadId) return;
-    setLoading(true);
+    if (!opts?.quiet) setLoading(true);
     try {
-      const res = await fetch(`/api/chat/messages?threadId=${encodeURIComponent(threadId)}&role=coach`);
+      const res = await fetch(
+        `/api/chat/messages?threadId=${encodeURIComponent(threadId)}&role=coach`,
+        { cache: "no-store" }
+      );
       if (!res.ok) return;
       const data = await res.json();
-      const msgs = data.messages || [];
-      setMessages(msgs);
+      const msgs: ChatMessage[] = data.messages || [];
+      setMessages((prev) =>
+        prev.length === msgs.length && prev[prev.length - 1]?.id === msgs[msgs.length - 1]?.id
+          ? prev
+          : msgs
+      );
       setPreviews((prev) => ({ ...prev, [threadId]: threadPreview(msgs) }));
       window.dispatchEvent(new CustomEvent("chat-unread-refresh"));
     } finally {
-      setLoading(false);
+      if (!opts?.quiet) setLoading(false);
     }
   }, []);
 
@@ -104,6 +111,13 @@ export default function AdminChatWorkspace({
 
   useEffect(() => {
     if (activeId) loadMessages(activeId);
+  }, [activeId, loadMessages]);
+
+  // Poll so incoming member messages appear live (quiet refresh, no spinner).
+  useEffect(() => {
+    if (!activeId) return;
+    const id = setInterval(() => loadMessages(activeId, { quiet: true }), 6000);
+    return () => clearInterval(id);
   }, [activeId, loadMessages]);
 
   useEffect(() => {
