@@ -45,9 +45,11 @@ export async function POST(request: Request) {
     if (!normalizedEmail) {
       return NextResponse.json({ waitlist: true, redirectTo: "/signup" });
     }
-    const entry = addToWaitlist({
+    const nameParts = (name || "").trim().split(/\s+/).filter(Boolean);
+    const entry = await addToWaitlist({
       email: normalizedEmail,
-      name,
+      firstName: nameParts.shift(),
+      lastName: nameParts.join(" ") || undefined,
       plan: plan || null,
       source: "join-flow",
     });
