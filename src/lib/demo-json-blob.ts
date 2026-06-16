@@ -2,10 +2,16 @@ import fs from "fs";
 import path from "path";
 import { head, put } from "@vercel/blob";
 
+// BLOB_READ_WRITE_TOKEN is a Vercel-reserved name tied to the Blob integration;
+// on this project it isn't injected into the function runtime, so we also accept
+// a plain TS_BLOB_TOKEN and pass it explicitly to the SDK.
+const BLOB_TOKEN =
+  process.env.BLOB_READ_WRITE_TOKEN || process.env.TS_BLOB_TOKEN;
+
 export async function readBlobJson<T>(blobPath: string): Promise<T | null> {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
+  if (!BLOB_TOKEN) return null;
   try {
-    const meta = await head(blobPath);
+    const meta = await head(blobPath, { token: BLOB_TOKEN });
     const res = await fetch(meta.url, { cache: "no-store" });
     if (!res.ok) return null;
     return (await res.json()) as T;
@@ -15,12 +21,13 @@ export async function readBlobJson<T>(blobPath: string): Promise<T | null> {
 }
 
 export async function writeBlobJson(blobPath: string, data: unknown): Promise<void> {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return;
+  if (!BLOB_TOKEN) return;
   try {
     await put(blobPath, JSON.stringify(data, null, 2), {
       access: "public",
       contentType: "application/json",
       addRandomSuffix: false,
+      token: BLOB_TOKEN,
     });
   } catch (e) {
     console.warn(`Could not persist blob ${blobPath}`, e);
