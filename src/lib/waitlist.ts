@@ -1,9 +1,10 @@
 import path from "path";
 import { randomUUID } from "crypto";
 import {
-  hydrateJsonStore,
-  persistJsonStore,
+  readBlobJson,
+  writeBlobJson,
   readLocalJson,
+  writeLocalJson,
 } from "@/lib/demo-json-blob";
 
 export type WaitlistEntry = {
@@ -22,46 +23,21 @@ type WaitlistStore = {
   entries: WaitlistEntry[];
 };
 
-// Persisted via the shared demo store: local JSON in dev, Vercel Blob in prod
-// (durable + shared across serverless instances) when BLOB_READ_WRITE_TOKEN is
-// set. This is the same mechanism chat/SMS/today use, so leads survive and are
-// visible to the admin dashboard.
 const DEV_FILE = path.join(process.cwd(), "prisma", "waitlist.dev.json");
 const BLOB_PATH = "demo/waitlist.json";
 
-let memoryStore: WaitlistStore | null = null;
-
-function emptyStore(): WaitlistStore {
-  return { entries: [] };
+// Always read fresh — NO in-memory cache. On Vercel the read/write instances
+// differ, so any cached copy goes stale and the admin dashboard shows nothing.
+// Blob is the source of truth in prod; local JSON is the source in dev.
+async function readStore(): Promise<WaitlistStore> {
+  const fromBlob = await readBlobJson<WaitlistStore>(BLOB_PATH);
+  if (fromBlob && Array.isArray(fromBlob.entries)) return fromBlob;
+  return readLocalJson<WaitlistStore>(DEV_FILE) || { entries: [] };
 }
 
-function setMemory(store: WaitlistStore) {
-  memoryStore = store;
-}
-
-async function hydrate(): Promise<WaitlistStore> {
-  return hydrateJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    memory: memoryStore,
-    setMemory,
-    fallback: emptyStore,
-  });
-}
-
-function readStore(): WaitlistStore {
-  if (memoryStore) return memoryStore;
-  memoryStore = readLocalJson<WaitlistStore>(DEV_FILE) || emptyStore();
-  return memoryStore;
-}
-
-async function writeStore(store: WaitlistStore) {
-  await persistJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    data: store,
-    setMemory,
-  });
+async function writeStore(store: WaitlistStore): Promise<void> {
+  writeLocalJson(DEV_FILE, store); // dev (no-ops/caught on read-only prod FS)
+  await writeBlobJson(BLOB_PATH, store); // prod: durable + shared across instances
 }
 
 export async function addToWaitlist(input: {
@@ -78,8 +54,7 @@ export async function addToWaitlist(input: {
   const phone = input.phone?.trim() || null;
   const name = [firstName, lastName].filter(Boolean).join(" ") || "Guest";
 
-  await hydrate();
-  const store = readStore();
+  const store = await readStore();
   const existing = store.entries.find((e) => e.email === email);
 
   if (existing) {
@@ -111,6 +86,5 @@ export async function addToWaitlist(input: {
 }
 
 export async function listWaitlist(): Promise<WaitlistEntry[]> {
-  await hydrate();
-  return readStore().entries;
+  return (await readStore()).entries;
 }
