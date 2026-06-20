@@ -42,9 +42,13 @@ export function welcomeVideoUrlFromConfig(stored: string | null | undefined) {
   ]);
 }
 
+const FREE_CHASTISE_FALLBACK_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+
 export function freeChastiseVideoUrlFromConfig(stored: string | null | undefined) {
-  return resolveLandingVideoUrl(stored, [
-    "NEXT_PUBLIC_FREE_CHASTISE_VIDEO_URL",
-    "NEXT_PUBLIC_FREE_CHASTISE_VIDEO_YT",
-  ]);
+  return (
+    resolveLandingVideoUrl(stored, [
+      "NEXT_PUBLIC_FREE_CHASTISE_VIDEO_URL",
+      "NEXT_PUBLIC_FREE_CHASTISE_VIDEO_YT",
+    ]) ?? FREE_CHASTISE_FALLBACK_URL
+  );
 }
