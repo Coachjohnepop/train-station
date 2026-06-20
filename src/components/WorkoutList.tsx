@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import TextUploadPanel from "@/components/TextUploadPanel";
 
 type WorkoutRow = {
   id: string;
@@ -37,7 +38,9 @@ export default function WorkoutList() {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
+      <TextUploadPanel mode="workout" onBuilt={() => load()} />
+
       <form onSubmit={handleCreate} className="card flex flex-wrap gap-3">
         <input
           className="input max-w-md flex-1"

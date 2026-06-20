@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import TextUploadPanel from "@/components/TextUploadPanel";
 import { DAY_LABELS } from "@/lib/program-constants";
 
 type WorkoutOption = { id: string; name: string };
@@ -554,6 +555,17 @@ export default function ProgramScheduleBuilder({
       {message && (
         <div className="text-[10px] text-[var(--success)]">{message}</div>
       )}
+
+      <TextUploadPanel
+        mode="program-week"
+        programSlug={program.slug}
+        weekOptions={weeks.map((w) => w.weekNumber)}
+        onBuilt={async () => {
+          await sync();
+          setMessage("Week schedule updated from text upload.");
+          setTimeout(() => setMessage(null), 3000);
+        }}
+      />
 
       {weeks.map((week) => (
         <div key={week.id} className="border border-[var(--border)] rounded-md p-2">

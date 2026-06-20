@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatApiError } from "@/lib/api-errors";
+import TextUploadPanel from "@/components/TextUploadPanel";
 import { isNewlyAddedFromTextUpload } from "@/lib/text-upload-exercises";
 import { isYoutubeUrl } from "@/lib/youtube";
 
@@ -522,6 +523,8 @@ export default function ExerciseLibrary() {
 
   return (
     <div className="space-y-6">
+      <TextUploadPanel mode="exercises" onBuilt={() => load()} />
+
       {/* Collapsible "Add New to Exercise Library" form - starts collapsed like the directions above.
           Large triangle indicator. */}
       <div className="mb-4">
