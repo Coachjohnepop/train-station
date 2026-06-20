@@ -5,7 +5,7 @@ import { head, put } from "@vercel/blob";
 // BLOB_READ_WRITE_TOKEN is a Vercel-reserved name tied to the Blob integration;
 // on this project it isn't injected into the function runtime, so we also accept
 // a plain TS_BLOB_TOKEN and pass it explicitly to the SDK.
-const BLOB_TOKEN =
+export const BLOB_TOKEN =
   process.env.BLOB_READ_WRITE_TOKEN || process.env.TS_BLOB_TOKEN;
 
 export async function readBlobJson<T>(blobPath: string): Promise<T | null> {

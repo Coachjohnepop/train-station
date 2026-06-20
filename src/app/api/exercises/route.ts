@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import {
   isDemoMode,
+  hydrateDemoExercises,
   loadDemoExercises,
   saveDemoExercises,
   createDemoExerciseId,
@@ -17,6 +18,7 @@ const createSchema = z.object({
 
 export async function GET() {
   if (isDemoMode()) {
+    await hydrateDemoExercises();
     const exercises = loadDemoExercises();
     return NextResponse.json(exercises);
   }
@@ -34,6 +36,7 @@ export async function POST(request: Request) {
   const { name, description, videoUrl, tags } = parsed.data;
 
   if (isDemoMode()) {
+    await hydrateDemoExercises();
     const list = loadDemoExercises();
     const exercise = {
       id: createDemoExerciseId(),
@@ -48,7 +51,7 @@ export async function POST(request: Request) {
       defaultWeightTier: null,
     };
     list.push(exercise);
-    saveDemoExercises(list);
+    await saveDemoExercises(list);
     return NextResponse.json(exercise, { status: 201 });
   }
 

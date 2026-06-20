@@ -1,5 +1,5 @@
-import fs from "fs";
 import path from "path";
+import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
 
 export type ScheduleDayOverride = {
   dayId: string;
@@ -18,27 +18,45 @@ type OverrideStore = {
 };
 
 const DEV_FILE = path.join(process.cwd(), "prisma", "schedule-overrides.dev.json");
+const BLOB_PATH = "demo/schedule-overrides.json";
+
+let memoryStore: OverrideStore | null = null;
 
 function emptyStore(): OverrideStore {
   return { overrides: {} };
 }
 
+function setMemory(store: OverrideStore) {
+  memoryStore = store;
+}
+
+export async function hydrateScheduleOverrides(): Promise<OverrideStore> {
+  return hydrateJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    memory: memoryStore,
+    setMemory,
+    fallback: emptyStore,
+  });
+}
+
 function readStore(): OverrideStore {
-  try {
-    if (fs.existsSync(DEV_FILE)) {
-      return JSON.parse(fs.readFileSync(DEV_FILE, "utf8")) as OverrideStore;
-    }
-  } catch {
-    /* fall through */
-  }
-  return emptyStore();
+  if (memoryStore) return memoryStore;
+  memoryStore = readLocalJson<OverrideStore>(DEV_FILE) || emptyStore();
+  return memoryStore;
 }
 
-function writeStore(store: OverrideStore) {
-  fs.writeFileSync(DEV_FILE, JSON.stringify(store, null, 2));
+async function writeStore(store: OverrideStore) {
+  await persistJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    data: store,
+    setMemory,
+  });
 }
 
-export function getAllScheduleOverrides(): ScheduleDayOverride[] {
+export async function getAllScheduleOverrides(): Promise<ScheduleDayOverride[]> {
+  await hydrateScheduleOverrides();
   const store = readStore();
   return Object.values(store.overrides).sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
@@ -56,7 +74,10 @@ export function getActiveScheduleOverride(dayId: string): ScheduleDayOverride | 
   return o;
 }
 
-export function saveScheduleOverride(input: Omit<ScheduleDayOverride, "updatedAt"> & { updatedAt?: string }) {
+export async function saveScheduleOverride(
+  input: Omit<ScheduleDayOverride, "updatedAt"> & { updatedAt?: string },
+) {
+  await hydrateScheduleOverrides();
   const store = readStore();
   const entry: ScheduleDayOverride = {
     ...input,
@@ -64,15 +85,16 @@ export function saveScheduleOverride(input: Omit<ScheduleDayOverride, "updatedAt
     updatedAt: input.updatedAt ?? new Date().toISOString(),
   };
   store.overrides[input.dayId] = entry;
-  writeStore(store);
+  await writeStore(store);
   return entry;
 }
 
-export function clearScheduleOverride(dayId: string) {
+export async function clearScheduleOverride(dayId: string) {
+  await hydrateScheduleOverrides();
   const store = readStore();
   if (!store.overrides[dayId]) return false;
   delete store.overrides[dayId];
-  writeStore(store);
+  await writeStore(store);
   return true;
 }
 

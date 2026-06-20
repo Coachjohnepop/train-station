@@ -5,8 +5,7 @@ import { getProgramBySlug } from "@/lib/program-data";
 import { syncProgramSchedule } from "@/lib/program-schedule";
 import { prisma } from "@/lib/prisma";
 import { isDemoMode } from "@/lib/demo-enrollments";
-import fs from "fs";
-import path from "path";
+import { getDemoSeed } from "@/lib/demo-seed-store";
 
 export const dynamic = "force-dynamic";
 
@@ -24,8 +23,7 @@ export default async function ProgramAdminDetailPage({ params }: Props) {
     // In pure demo mode (DATABASE_URL contains "dummy") we load everything from seed-data.json.
     // No real Prisma connection is possible/necessary.
     try {
-      const seedPath = path.join(process.cwd(), "prisma/seed-data.json");
-      const seed = JSON.parse(fs.readFileSync(seedPath, "utf8"));
+      const seed = await getDemoSeed();
       workouts = (seed.workouts || []).map((w: any) => ({ id: w.id, name: w.name }));
     } catch {
       workouts = [];

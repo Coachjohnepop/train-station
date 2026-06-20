@@ -2,17 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { assignWorkoutToDay } from "@/lib/program-schedule";
 import { prisma } from "@/lib/prisma";
-import fs from "fs";
-import path from "path";
+import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
 
-const SEED_FILE = path.join(process.cwd(), "prisma", "seed-data.json");
-let seedCache: any = null;
-function loadSeed() {
-  if (!seedCache) {
-    seedCache = JSON.parse(fs.readFileSync(SEED_FILE, "utf8"));
-  }
-  return seedCache;
-}
 function isDemoMode() {
   const url = process.env.DATABASE_URL ?? "";
   return !url || url.includes("dummy.supabase") || url.includes("dummy");
@@ -27,6 +18,35 @@ const patchSchema = z.object({
 
 type Params = { params: Promise<{ dayId: string }> };
 
+function resolveDayResponse(data: Record<string, unknown>, dayId: string) {
+  const day = (data.programDays as any[] | undefined)?.find((d) => d.id === dayId);
+  if (!day) return null;
+
+  const workoutsById: Record<string, any> = Object.fromEntries(
+    ((data.workouts as any[]) || []).map((w) => [w.id, w]),
+  );
+
+  const options = ((data.programDayOptions as any[]) || [])
+    .filter((o) => o.dayId === dayId)
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    .map((o) => ({
+      workoutId: o.workoutId,
+      label: o.label,
+      workout: workoutsById[o.workoutId] || null,
+    }));
+
+  return {
+    ...day,
+    workout: day.workoutId ? workoutsById[day.workoutId] || null : null,
+    options:
+      options.length > 0
+        ? options
+        : day.workoutId
+          ? [{ workoutId: day.workoutId, label: "Standard", workout: workoutsById[day.workoutId] || null }]
+          : [],
+  };
+}
+
 export async function PATCH(request: Request, { params }: Params) {
   const { dayId } = await params;
   const parsed = patchSchema.safeParse(await request.json());
@@ -35,43 +55,90 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   if (isDemoMode()) {
-    const data = loadSeed();
-    const day = (data.programDays || []).find((d: any) => d.id === dayId);
-    if (!day) {
+    let notFound = false;
+    await mutateDemoSeed((data) => {
+      const days = (data.programDays as any[]) || [];
+      const dayIdx = days.findIndex((d) => d.id === dayId);
+      if (dayIdx === -1) {
+        notFound = true;
+        return;
+      }
+
+      const day = { ...days[dayIdx] };
+      const workouts = (data.workouts as any[]) || [];
+
+      if (parsed.data.options !== undefined) {
+        if (!data.programDayOptions) data.programDayOptions = [];
+        data.programDayOptions = (data.programDayOptions as any[]).filter(
+          (o) => o.dayId !== dayId,
+        );
+        parsed.data.options.forEach((opt, idx) => {
+          const workout = workouts.find((w) => w.id === opt.workoutId);
+          if (!workout) {
+            notFound = true;
+            return;
+          }
+          (data.programDayOptions as any[]).push({
+            id: `pdo-${dayId}-${idx}-${Date.now()}`,
+            dayId,
+            workoutId: opt.workoutId,
+            label: opt.label,
+            sortOrder: idx,
+          });
+        });
+        if (notFound) return;
+
+        if (parsed.data.options.length > 0) {
+          day.workoutId = parsed.data.options[0].workoutId;
+        } else {
+          day.workoutId = null;
+        }
+      } else if (parsed.data.workoutId !== undefined) {
+        if (parsed.data.workoutId) {
+          const workout = workouts.find((w) => w.id === parsed.data.workoutId);
+          if (!workout) {
+            notFound = true;
+            return;
+          }
+          day.workoutId = parsed.data.workoutId;
+          if (!data.programDayOptions) data.programDayOptions = [];
+          data.programDayOptions = (data.programDayOptions as any[]).filter(
+            (o) => o.dayId !== dayId,
+          );
+          (data.programDayOptions as any[]).push({
+            id: `pdo-${dayId}-0-${Date.now()}`,
+            dayId,
+            workoutId: parsed.data.workoutId,
+            label: "Standard",
+            sortOrder: 0,
+          });
+        } else {
+          day.workoutId = null;
+          if (data.programDayOptions) {
+            data.programDayOptions = (data.programDayOptions as any[]).filter(
+              (o) => o.dayId !== dayId,
+            );
+          }
+        }
+      }
+
+      if (parsed.data.videoUrl !== undefined) day.videoUrl = parsed.data.videoUrl;
+      if (parsed.data.notes !== undefined) day.notes = parsed.data.notes;
+
+      days[dayIdx] = day;
+      data.programDays = days;
+    });
+
+    if (notFound) {
+      return NextResponse.json({ detail: "Day or workout not found" }, { status: 404 });
+    }
+
+    const data = await getDemoSeed();
+    const response = resolveDayResponse(data, dayId);
+    if (!response) {
       return NextResponse.json({ detail: "Day not found" }, { status: 404 });
     }
-    const update: any = { ...day };
-    if (parsed.data.options !== undefined) {
-      update.options = parsed.data.options;
-      // For backward, set first option as primary workoutId if present
-      if (parsed.data.options.length > 0) {
-        const first = parsed.data.options[0];
-        const workout = (data.workouts || []).find((w: any) => w.id === first.workoutId);
-        update.workoutId = first.workoutId;
-        update.workout = workout || null;
-      } else {
-        update.workoutId = null;
-        update.workout = null;
-      }
-    } else if (parsed.data.workoutId !== undefined) {
-      if (parsed.data.workoutId) {
-        const workout = (data.workouts || []).find((w: any) => w.id === parsed.data.workoutId);
-        if (!workout) {
-          return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
-        }
-        update.workoutId = parsed.data.workoutId;
-        update.workout = workout;
-        // clear options or keep if legacy
-        if (update.options === undefined) update.options = [{ workoutId: parsed.data.workoutId, label: "Standard" }];
-      } else {
-        update.workoutId = null;
-        update.workout = null;
-        update.options = [];
-      }
-    }
-    if (parsed.data.videoUrl !== undefined) update.videoUrl = parsed.data.videoUrl;
-    if (parsed.data.notes !== undefined) update.notes = parsed.data.notes;
-    return NextResponse.json(update);
+    return NextResponse.json(response);
   }
 
   try {
@@ -97,7 +164,6 @@ export async function PATCH(request: Request, { params }: Params) {
       return NextResponse.json(day);
     }
 
-    // fallback if only workoutId was the old path
     const day = await assignWorkoutToDay(dayId, parsed.data.workoutId ?? null);
     return NextResponse.json(day);
   } catch {

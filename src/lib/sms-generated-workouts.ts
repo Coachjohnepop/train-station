@@ -1,6 +1,6 @@
 import path from "path";
 import { randomUUID } from "crypto";
-import { loadDemoExercises, saveDemoExercises, createDemoExerciseId, isDemoMode } from "@/lib/demo-exercises";
+import { hydrateDemoExercises, loadDemoExercises, saveDemoExercises, createDemoExerciseId, isDemoMode } from "@/lib/demo-exercises";
 import type { ParsedSmsWorkout } from "@/lib/sms-workout-parser";
 import type { MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import { resolveUserId } from "@/lib/current-user";
@@ -88,7 +88,8 @@ function matchExercise(name: string, exercises: any[]): any | null {
 
 import { NEWLY_ADDED_EXERCISE_TAG } from "@/lib/text-upload-exercises";
 
-function ensureExercise(name: string, notes?: string): { exercise: ReturnType<typeof loadDemoExercises>[number]; created: boolean } {
+async function ensureExercise(name: string, notes?: string): Promise<{ exercise: ReturnType<typeof loadDemoExercises>[number]; created: boolean }> {
+  await hydrateDemoExercises();
   const exercises = loadDemoExercises();
   const existing = matchExercise(name, exercises);
   if (existing) return { exercise: existing, created: false };
@@ -101,7 +102,7 @@ function ensureExercise(name: string, notes?: string): { exercise: ReturnType<ty
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  saveDemoExercises([...exercises, created]);
+  await saveDemoExercises([...exercises, created]);
   return { exercise: created, created: true };
 }
 
@@ -123,8 +124,8 @@ export async function buildWorkoutFromParsedSms(parsed: ParsedSmsWorkout, workou
   });
 
   const newExerciseIds: string[] = [];
-  parsed.exercises.forEach((ex, idx) => {
-    const { exercise, created } = ensureExercise(ex.name, ex.notes);
+  for (const [idx, ex] of parsed.exercises.entries()) {
+    const { exercise, created } = await ensureExercise(ex.name, ex.notes);
     if (created) newExerciseIds.push(exercise.id);
     store.workoutExercises.push({
       id: `sms-we-${randomUUID().slice(0, 8)}`,
@@ -137,7 +138,7 @@ export async function buildWorkoutFromParsedSms(parsed: ParsedSmsWorkout, workou
       setScheme: ex.setScheme || "standard",
       weightTier: "medium",
     });
-  });
+  }
 
   await writeStore(store);
   return { workoutId: id, exerciseCount: parsed.exercises.length, newExerciseIds };

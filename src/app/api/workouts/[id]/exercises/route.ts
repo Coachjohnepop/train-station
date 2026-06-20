@@ -2,16 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { workoutPrescriptionSchema } from "@/lib/exercise-schema";
-import fs from "fs";
-import path from "path";
-
-const SEED_FILE = path.join(process.cwd(), "prisma", "seed-data.json");
-
-// Always re-read the file (no in-memory cache) so that mutations from the builder
-// (remove / edit setup) are immediately visible on re-fetch, consistent with other demo loaders.
-function loadSeed() {
-  return JSON.parse(fs.readFileSync(SEED_FILE, "utf8"));
-}
+import { hydrateDemoExercises, loadDemoExercises } from "@/lib/demo-exercises";
+import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
 
 function isDemoMode() {
   const url = process.env.DATABASE_URL ?? "";
@@ -44,41 +36,42 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   if (isDemoMode()) {
-    // Demo: actually persist the new workoutExercise into the seed snapshot.
-    // This makes Remove/Edit setup work for real seeded workouts when drilled from Programs.
-    const data = loadSeed();
-    if (!data.workoutExercises) data.workoutExercises = [];
+    await hydrateDemoExercises();
+    const exList = loadDemoExercises();
+    const ex = exList.find((e: any) => e.id === parsed.data.exerciseId);
 
-    const ex = (data.exercises || []).find((e: any) => e.id === parsed.data.exerciseId);
+    let newItem: Record<string, unknown> | null = null;
+    await mutateDemoSeed((data) => {
+      if (!data.workoutExercises) data.workoutExercises = [];
 
-    // Compute next sortOrder for this workout (simple, matches real path roughly)
-    const existingForWorkout = data.workoutExercises.filter((we: any) => we.workoutId === workoutId);
-    const sortOrder = existingForWorkout.length > 0
-      ? Math.max(...existingForWorkout.map((we: any) => we.sortOrder ?? 0)) + 1
-      : 0;
+      const existingForWorkout = data.workoutExercises.filter(
+        (we: any) => we.workoutId === workoutId,
+      );
+      const sortOrder =
+        existingForWorkout.length > 0
+          ? Math.max(...existingForWorkout.map((we: any) => we.sortOrder ?? 0)) + 1
+          : 0;
 
-    const newItem = {
-      id: "demo-we-" + Date.now(),
-      workoutId,
-      exerciseId: parsed.data.exerciseId,
-      sortOrder,
-      setScheme: parsed.data.setScheme,
-      repPattern: parsed.data.repPattern ?? null,
-      reps: parsed.data.reps ?? null,
-      weightTier: parsed.data.weightTier,
-      sets: parsed.data.sets,
-      restSec: parsed.data.restSec ?? null,
-      notes: parsed.data.notes ?? null,
-      exercise: ex || { id: parsed.data.exerciseId, name: "Exercise" },
-    };
-
-    data.workoutExercises.push(newItem);
-    fs.writeFileSync(SEED_FILE, JSON.stringify(data, null, 2));
+      newItem = {
+        id: "demo-we-" + Date.now(),
+        workoutId,
+        exerciseId: parsed.data.exerciseId,
+        sortOrder,
+        setScheme: parsed.data.setScheme,
+        repPattern: parsed.data.repPattern ?? null,
+        reps: parsed.data.reps ?? null,
+        weightTier: parsed.data.weightTier,
+        sets: parsed.data.sets,
+        restSec: parsed.data.restSec ?? null,
+        notes: parsed.data.notes ?? null,
+        exercise: ex || { id: parsed.data.exerciseId, name: "Exercise" },
+      };
+      data.workoutExercises.push(newItem);
+    });
 
     return NextResponse.json(newItem, { status: 201 });
   }
 
-  // Real DB path only
   const maxOrder = await prisma.workoutExercise.aggregate({
     where: { workoutId },
     _max: { sortOrder: true },
@@ -134,34 +127,44 @@ export async function PATCH(request: Request, { params }: Params) {
   }
   const { itemId, ...data } = parsed.data;
   if (isDemoMode()) {
-    const seedData = loadSeed();
-    if (!seedData.workoutExercises) seedData.workoutExercises = [];
+    await hydrateDemoExercises();
+    const exList = loadDemoExercises();
 
-    const weIdx = seedData.workoutExercises.findIndex((we: any) => we.id === itemId);
-    if (weIdx === -1) {
-      return NextResponse.json({ detail: "Item not found" }, { status: 404 });
+    let updated: Record<string, unknown> | null = null;
+    try {
+      await mutateDemoSeed((seedData) => {
+        if (!seedData.workoutExercises) seedData.workoutExercises = [];
+
+        const weIdx = seedData.workoutExercises.findIndex((we: any) => we.id === itemId);
+        if (weIdx === -1) {
+          throw new Error("NOT_FOUND");
+        }
+
+        const we = { ...seedData.workoutExercises[weIdx] } as any;
+
+        if (data.setScheme !== undefined) we.setScheme = data.setScheme;
+        if (data.repPattern !== undefined) we.repPattern = data.repPattern;
+        if (data.reps !== undefined) we.reps = data.reps;
+        if (data.weightTier !== undefined) we.weightTier = data.weightTier;
+        if (data.sets !== undefined) we.sets = data.sets;
+        if (data.restSec !== undefined) we.restSec = data.restSec;
+        if (data.notes !== undefined) we.notes = data.notes;
+        if (data.sortOrder !== undefined) we.sortOrder = data.sortOrder;
+
+        const ex = exList.find((e: any) => e.id === we.exerciseId);
+        we.exercise = ex || { id: we.exerciseId, name: "Exercise" };
+
+        seedData.workoutExercises[weIdx] = we;
+        updated = we;
+      });
+    } catch (e) {
+      if (e instanceof Error && e.message === "NOT_FOUND") {
+        return NextResponse.json({ detail: "Item not found" }, { status: 404 });
+      }
+      throw e;
     }
 
-    const we = { ...seedData.workoutExercises[weIdx] };
-
-    // Apply only provided fields (mirrors real Prisma update)
-    if (data.setScheme !== undefined) we.setScheme = data.setScheme;
-    if (data.repPattern !== undefined) we.repPattern = data.repPattern;
-    if (data.reps !== undefined) we.reps = data.reps;
-    if (data.weightTier !== undefined) we.weightTier = data.weightTier;
-    if (data.sets !== undefined) we.sets = data.sets;
-    if (data.restSec !== undefined) we.restSec = data.restSec;
-    if (data.notes !== undefined) we.notes = data.notes;
-    if (data.sortOrder !== undefined) we.sortOrder = data.sortOrder;
-
-    // Always attach fresh exercise (so name edits from library are reflected)
-    const ex = (seedData.exercises || []).find((e: any) => e.id === we.exerciseId);
-    we.exercise = ex || { id: we.exerciseId, name: "Exercise" };
-
-    seedData.workoutExercises[weIdx] = we;
-    fs.writeFileSync(SEED_FILE, JSON.stringify(seedData, null, 2));
-
-    return NextResponse.json(we);
+    return NextResponse.json(updated);
   }
   try {
     const item = await prisma.workoutExercise.update({
@@ -197,16 +200,17 @@ export async function DELETE(request: Request, { params }: Params) {
   }
 
   if (isDemoMode()) {
-    const seedData = loadSeed();
-    if (!seedData.workoutExercises) seedData.workoutExercises = [];
-
-    const before = seedData.workoutExercises.length;
-    seedData.workoutExercises = seedData.workoutExercises.filter(
-      (we: any) => !(we.id === itemId && we.workoutId === workoutId)
-    );
-
-    if (seedData.workoutExercises.length !== before) {
-      fs.writeFileSync(SEED_FILE, JSON.stringify(seedData, null, 2));
+    let removed = false;
+    await mutateDemoSeed((seedData) => {
+      if (!seedData.workoutExercises) seedData.workoutExercises = [];
+      const before = seedData.workoutExercises.length;
+      seedData.workoutExercises = seedData.workoutExercises.filter(
+        (we: any) => !(we.id === itemId && we.workoutId === workoutId),
+      );
+      removed = seedData.workoutExercises.length !== before;
+    });
+    if (!removed) {
+      return NextResponse.json({ detail: "Item not found" }, { status: 404 });
     }
     return new NextResponse(null, { status: 204 });
   }

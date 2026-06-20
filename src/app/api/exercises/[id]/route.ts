@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import fs from "fs";
-import path from "path";
 import {
   isDemoMode,
+  hydrateDemoExercises,
   loadDemoExercises,
   saveDemoExercises,
 } from "@/lib/demo-exercises";
-
-const SEED_FILE = path.join(process.cwd(), "prisma", "seed-data.json");
+import { mutateDemoSeed } from "@/lib/demo-seed-store";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -46,6 +44,7 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   if (isDemoMode()) {
+    await hydrateDemoExercises();
     const list = loadDemoExercises();
     const idx = list.findIndex((e: any) => e.id === id);
     if (idx === -1) {
@@ -58,7 +57,7 @@ export async function PATCH(request: Request, { params }: Params) {
     if (data.tags !== undefined) ex.tags = data.tags;
     ex.updatedAt = new Date().toISOString();
     list[idx] = ex;
-    saveDemoExercises(list);
+    await saveDemoExercises(list);
     return NextResponse.json(ex);
   }
 
@@ -76,29 +75,22 @@ export async function PATCH(request: Request, { params }: Params) {
 export async function DELETE(_request: Request, { params }: Params) {
   const { id } = await params;
   if (isDemoMode()) {
+    await hydrateDemoExercises();
     const list = loadDemoExercises();
     const idx = list.findIndex((e: any) => e.id === id);
     if (idx === -1) {
       return NextResponse.json({ detail: "Exercise not found" }, { status: 404 });
     }
     list.splice(idx, 1);
-    saveDemoExercises(list);
+    await saveDemoExercises(list);
 
-    // Clean references: remove any workoutExercise entries that pointed to this exercise.
-    // This ensures the exercise truly disappears from scheduled workouts (no more "Unknown" rows).
-    // Matches the transcript complaint where deletes left things behind and editing felt broken.
-    try {
-      const seed = JSON.parse(fs.readFileSync(SEED_FILE, "utf8"));
+    await mutateDemoSeed((seed) => {
       if (seed.workoutExercises) {
-        const before = seed.workoutExercises.length;
-        seed.workoutExercises = seed.workoutExercises.filter((we: any) => we.exerciseId !== id);
-        if (seed.workoutExercises.length !== before) {
-          fs.writeFileSync(SEED_FILE, JSON.stringify(seed, null, 2));
-        }
+        seed.workoutExercises = seed.workoutExercises.filter(
+          (we: any) => we.exerciseId !== id,
+        );
       }
-    } catch (e) {
-      console.error("Failed to prune workoutExercises after exercise delete", e);
-    }
+    });
 
     return new NextResponse(null, { status: 204 });
   }

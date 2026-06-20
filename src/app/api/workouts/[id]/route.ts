@@ -1,19 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import fs from "fs";
-import path from "path";
-import { loadDemoExercises } from "@/lib/demo-exercises";
+import { hydrateDemoExercises, loadDemoExercises } from "@/lib/demo-exercises";
+import { getDemoSeed } from "@/lib/demo-seed-store";
 
-const SEED_FILE = path.join(process.cwd(), "prisma", "seed-data.json");
-
-// Always re-read the file in demo mode. This ensures that when admin exercise
-// mutations (via saveDemoExercises) write updates back into seed-data.json,
-// subsequent requests (e.g. loading a workout to see the new exercise names)
-// pick up the change in the same dev server process without requiring a restart.
-function loadSeed() {
-  return JSON.parse(fs.readFileSync(SEED_FILE, "utf8"));
-}
 function isDemoMode() {
   const url = process.env.DATABASE_URL ?? "";
   return !url || url.includes("dummy.supabase") || url.includes("dummy");
@@ -29,16 +19,13 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
   if (isDemoMode()) {
-    const data = loadSeed();
+    const data = await getDemoSeed();
+    await hydrateDemoExercises();
     const w = (data.workouts || []).find((ww: any) => ww.id === id);
     if (!w) {
-      // Support newly created workouts (unique IDs from POST in demo)
       return NextResponse.json({ id, name: "New Workout", description: null, exercises: [] });
     }
 
-    // Use loadDemoExercises() so that names edited (and saved) via the Exercise Library
-    // are immediately visible here. The library updates exercises.dev.json (and now also
-    // syncs seed-data.json), and this lookup now pulls from the live demo list.
     const exList = loadDemoExercises();
 
     const items = (data.workoutExercises || [])

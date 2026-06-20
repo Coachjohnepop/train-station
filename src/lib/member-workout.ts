@@ -5,21 +5,16 @@ import { getDemoPastsForWorkoutExercises } from "@/lib/demo-logs";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { prisma } from "@/lib/prisma";
 import { resolveUserId } from "@/lib/current-user";
-import { loadDemoExercises } from "@/lib/demo-exercises";
-import fs from "fs";
-import path from "path";
-
-// Always re-read the file (no in-memory cache) so that when the admin Exercise Library
-// syncs name changes into seed-data.json, member workout loads see them immediately.
-function loadSeed() {
-  const p = path.join(process.cwd(), "prisma/seed-data.json");
-  return JSON.parse(fs.readFileSync(p, "utf8"));
-}
+import { hydrateDemoExercises, loadDemoExercises } from "@/lib/demo-exercises";
+import { getDemoSeed } from "@/lib/demo-seed-store";
 
 export async function getMemberWorkoutById(
   workoutId: string,
 ): Promise<MemberWorkoutView | null> {
-  const data = loadSeed();
+  const data = (await getDemoSeed()) as any;
+  if (isDemoMode()) {
+    await hydrateDemoExercises();
+  }
   const workout = (data.workouts || []).find((w: any) => w.id === workoutId);
   if (!workout) return null;
 

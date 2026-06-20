@@ -21,7 +21,7 @@ const saveSchema = z.object({
 });
 
 export async function GET() {
-  return NextResponse.json({ overrides: getAllScheduleOverrides() });
+  return NextResponse.json({ overrides: await getAllScheduleOverrides() });
 }
 
 export async function POST(request: Request) {
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   }
 
   const { sendSms, userIds, ...overrideInput } = parsed.data;
-  const saved = saveScheduleOverride(overrideInput);
+  const saved = await saveScheduleOverride(overrideInput);
 
   let smsResult: { sent: number } | null = null;
   if (sendSms) {
@@ -64,7 +64,7 @@ export async function DELETE(request: Request) {
   if (!dayId) {
     return NextResponse.json({ detail: "dayId required" }, { status: 400 });
   }
-  const cleared = clearScheduleOverride(dayId);
+  const cleared = await clearScheduleOverride(dayId);
   if (!cleared) {
     return NextResponse.json({ detail: "Override not found" }, { status: 404 });
   }

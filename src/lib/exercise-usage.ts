@@ -1,10 +1,4 @@
-import fs from "fs";
-import path from "path";
-
-function loadSeed() {
-  const p = path.join(process.cwd(), "prisma/seed-data.json");
-  return JSON.parse(fs.readFileSync(p, "utf8"));
-}
+import { getDemoSeed } from "@/lib/demo-seed-store";
 
 export type ExerciseProgramUsage = {
   id: string;
@@ -31,8 +25,8 @@ export type ExerciseUsage = {
  * Returns detailed usage for a single exercise.
  * Shows exactly which programs, workouts, and specific day slots (with Gym/Home labels) use it.
  */
-export function getExerciseUsage(exerciseId: string): ExerciseUsage {
-  const data = loadSeed();
+export async function getExerciseUsage(exerciseId: string): Promise<ExerciseUsage> {
+  const data = (await getDemoSeed()) as any;
 
   const wes = (data.workoutExercises || []).filter(
     (we: any) => we.exerciseId === exerciseId
@@ -108,8 +102,8 @@ export function getExerciseUsage(exerciseId: string): ExerciseUsage {
 /**
  * Returns a lightweight summary map for every exercise (great for the library table).
  */
-export function getAllExerciseUsages(): Record<string, { programCount: number; workoutCount: number; programs: Array<{ name: string; slug: string }> }> {
-  const data = loadSeed();
+export async function getAllExerciseUsages(): Promise<Record<string, { programCount: number; workoutCount: number; programs: Array<{ name: string; slug: string }> }>> {
+  const data = (await getDemoSeed()) as any;
   const result: Record<string, any> = {};
 
   const allWes = data.workoutExercises || [];

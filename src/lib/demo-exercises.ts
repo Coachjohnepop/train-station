@@ -1,20 +1,40 @@
 import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
+import {
+  hydrateJsonStore,
+  persistJsonStore,
+  readLocalJson,
+} from "@/lib/demo-json-blob";
+import { mutateDemoSeed, readDemoSeedSync } from "@/lib/demo-seed-store";
 
 const DEV_FILE = path.join(process.cwd(), "prisma", "exercises.dev.json");
-const SEED_FILE = path.join(process.cwd(), "prisma", "seed-data.json");
+const BLOB_PATH = "demo/exercises.json";
 
 let cache: any[] | null = null;
 
 function loadSeedExercises(): any[] {
-  const seed = JSON.parse(fs.readFileSync(SEED_FILE, "utf8"));
+  const seed = readDemoSeedSync();
   return (seed.exercises || []).map((e: any) => ({ ...e }));
+}
+
+function setMemory(list: any[]) {
+  cache = list;
 }
 
 export function isDemoMode(): boolean {
   const url = process.env.DATABASE_URL ?? "";
   return !url || url.includes("dummy.supabase") || url.includes("dummy");
+}
+
+export async function hydrateDemoExercises(): Promise<any[]> {
+  return hydrateJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    memory: cache,
+    setMemory,
+    fallback: loadSeedExercises,
+  });
 }
 
 export function loadDemoExercises(): any[] {
@@ -27,43 +47,32 @@ export function loadDemoExercises(): any[] {
     }
   } else {
     cache = loadSeedExercises();
-    try {
-      fs.writeFileSync(DEV_FILE, JSON.stringify(cache, null, 2));
-    } catch {}
   }
   return [...(cache || [])];
 }
 
-function shouldSyncSeedSnapshot() {
-  // On Vercel, rewriting the full seed-data.json during SMS builds can stall the
-  // serverless function and leave coach "Build" stuck on Building...
-  return isDemoMode() && !process.env.VERCEL;
+async function syncExercisesIntoSeed(list: any[]) {
+  await mutateDemoSeed((seed) => {
+    seed.exercises = list.map((e: any) => ({ ...e }));
+    const byId = Object.fromEntries(list.map((e: any) => [e.id, e]));
+    for (const we of seed.workoutExercises || []) {
+      const ex = byId[(we as any).exerciseId];
+      if (ex && (we as any).exercise) {
+        (we as any).exercise = { ...ex };
+      }
+    }
+  });
 }
 
-export function saveDemoExercises(list: any[]) {
+export async function saveDemoExercises(list: any[]): Promise<void> {
   cache = [...list];
-  try {
-    fs.writeFileSync(DEV_FILE, JSON.stringify(cache, null, 2));
-  } catch (e) {
-    console.error("Failed to persist demo exercises", e);
-  }
-
-  if (!shouldSyncSeedSnapshot()) return;
-
-  // Sync the updated list into seed-data.json's top-level "exercises" array.
-  // This is the key fix for the #1 customer issue:
-  // - Name edits now appear in all workout exercise lists (because many loaders resolve names
-  //   by looking up in seed.exercises at request time).
-  // - Deletes remove the exercise from the canonical snapshot too.
-  // - After local edits, the seed-data.json on disk reflects the coach's changes and can be
-  //   committed (as required by CLAUDE.md / DEPLOY.md) so the next Vercel deploy has the new data.
-  try {
-    const seed = JSON.parse(fs.readFileSync(SEED_FILE, "utf8"));
-    seed.exercises = list.map((e: any) => ({ ...e }));
-    fs.writeFileSync(SEED_FILE, JSON.stringify(seed, null, 2));
-  } catch (e) {
-    console.error("Failed to sync updated exercises into seed-data.json", e);
-  }
+  await persistJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    data: cache,
+    setMemory,
+  });
+  await syncExercisesIntoSeed(list);
 }
 
 export function createDemoExerciseId(): string {

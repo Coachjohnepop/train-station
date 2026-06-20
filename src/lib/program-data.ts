@@ -1,17 +1,9 @@
-import fs from "fs";
-import path from "path";
-import { applyOverrideToDay } from "@/lib/demo-schedule-overrides";
-
-// Always re-read the file (no in-memory cache) in demo. Ensures that when admin
-// content edits (exercises, later workouts) write back to seed-data.json, the
-// program schedule views pick up the fresh data on the next request.
-function loadSeed() {
-  const p = path.join(process.cwd(), "prisma/seed-data.json");
-  return JSON.parse(fs.readFileSync(p, "utf8"));
-}
+import { applyOverrideToDay, hydrateScheduleOverrides } from "@/lib/demo-schedule-overrides";
+import { getDemoSeed } from "@/lib/demo-seed-store";
 
 export async function listPrograms() {
-  const data = loadSeed();
+  await hydrateScheduleOverrides();
+  const data = await getDemoSeed();
   const programDayOptionsByDayId = (data.programDayOptions || []).reduce((acc: any, o: any) => {
     if (!acc[o.dayId]) acc[o.dayId] = [];
     acc[o.dayId].push({ workoutId: o.workoutId, label: o.label });
@@ -42,7 +34,8 @@ export async function listPrograms() {
 }
 
 export async function getProgramBySlug(slug: string) {
-  const data = loadSeed();
+  await hydrateScheduleOverrides();
+  const data = await getDemoSeed();
   const p = (data.programs || []).find((pr: any) => pr.slug === slug);
   if (!p) return null;
   const workoutsById: Record<string, any> = Object.fromEntries(
@@ -78,7 +71,7 @@ export async function getProgramBySlug(slug: string) {
         ),
     }));
   return {
-    ...p,
+    ...(p as any),
     weeks,
     _count: { enrollments: 1 },
   };

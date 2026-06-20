@@ -1,16 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import fs from "fs";
-import path from "path";
+import { getDemoSeed } from "@/lib/demo-seed-store";
 
-const SEED_FILE = path.join(process.cwd(), "prisma", "seed-data.json");
-
-// Always re-read so that any admin-driven writes back to seed-data.json are visible
-// immediately (consistent with the other demo loaders).
-function loadSeed() {
-  return JSON.parse(fs.readFileSync(SEED_FILE, "utf8"));
-}
 function isDemoMode() {
   const url = process.env.DATABASE_URL ?? "";
   return !url || url.includes("dummy.supabase") || url.includes("dummy");
@@ -23,7 +15,7 @@ const createSchema = z.object({
 
 export async function GET() {
   if (isDemoMode()) {
-    const data = loadSeed();
+    const data = await getDemoSeed();
     const workouts = (data.workouts || []).map((w: any) => {
       const exCount = (data.workoutExercises || []).filter(
         (we: any) => we.workoutId === w.id,
@@ -52,7 +44,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
   }
   if (isDemoMode()) {
-    // Return a unique ID for new workout creation so we can support fresh ones with auto warm-ups
     const newId = `new-w-${Date.now()}`;
     return NextResponse.json(
       { id: newId, name: parsed.data.name.trim(), description: parsed.data.description?.trim() || null },
