@@ -45,10 +45,6 @@ export default function LandingWelcomeBack({
 
       <div className="flex-1 flex items-center justify-center px-6">
         <div className="max-w-xl text-center">
-          <div className="mx-auto mb-8">
-            <img src="/images/logo.png" alt="The Train Station" className="h-20 w-auto mx-auto drop-shadow-2xl" />
-          </div>
-
           {children}
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">

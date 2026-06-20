@@ -15,9 +15,8 @@ export default async function JoinPage({
       {/* Simple header */}
       <div className="border-b border-[#3d2660] bg-[#140a22]">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
-          <Link href="/member" className="flex items-center gap-3">
-            <img src="/images/logo.png" alt="The Train Station" className="h-9 w-auto" />
-            <span className="font-semibold tracking-tight text-lg">The Train Station</span>
+          <Link href="/member" className="font-semibold tracking-tight text-lg hover:text-[var(--accent)]">
+            The Train Station
           </Link>
           <div className="flex items-center gap-3 text-sm">
             <Link href="/member/programs" className="text-[#9d8ab8] hover:text-white transition">Explore programs</Link>

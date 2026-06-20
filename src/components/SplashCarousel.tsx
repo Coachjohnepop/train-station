@@ -32,21 +32,8 @@ export default function SplashCarousel() {
           }`}
         />
       ))}
-      {/* Darken upper-left for logo; brighten the rest of the carousel */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_90%_at_0%_0%,rgba(0,0,0,0.78)_0%,rgba(0,0,0,0.4)_32%,transparent_62%)]" />
       <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/12 to-black/40" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.1)_0%,transparent_70%)]" />
-      
-      {/* Logo in top-left corner - stylish branding */}
-      <div className="absolute top-8 left-8 z-30">
-        <Link href="/member">
-          <img
-            src="/images/logo.png"
-            alt="The Train Station"
-            className="h-24 w-auto drop-shadow-2xl"
-          />
-        </Link>
-      </div>
 
       {/* Hero content */}
       <div className="relative z-10 flex h-full items-center justify-center px-6 text-center">

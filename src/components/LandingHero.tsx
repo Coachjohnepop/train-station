@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 
 const images = [
   { src: "/images/splash/black-guy.jpg", alt: "Fit Black guy powering through a workout" },
@@ -53,21 +52,8 @@ export default function LandingHero() {
         />
       ))}
 
-      {/* Darken upper-left for black-background logo; keep the rest of the hero brighter */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_90%_at_0%_0%,rgba(0,0,0,0.82)_0%,rgba(0,0,0,0.45)_32%,transparent_62%)]" />
       <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/15 to-black/45" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.12)_0%,transparent_68%)]" />
-      
-      {/* Logo in top-left corner - stylish branding */}
-      <div className="absolute top-8 left-8 z-30">
-        <Link href="/">
-          <img
-            src="/images/logo.png"
-            alt="The Train Station"
-            className="h-[11.25rem] w-auto drop-shadow-2xl"
-          />
-        </Link>
-      </div>
 
       {/* Centered hero content - clean, professional, inspiring */}
       <div className="relative z-10 flex h-full items-center justify-center px-6">

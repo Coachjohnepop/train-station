@@ -21,12 +21,8 @@ export default function MemberShell({
       <header className="app-shell-header">
         <div className="mx-auto flex w-full max-w-lg md:max-w-3xl lg:max-w-6xl xl:max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <Link href="/member">
-              <img
-                src="/images/logo-icon.png"
-                alt="The Train Station"
-                className="h-14 w-auto"
-              />
+            <Link href="/member" className="text-sm font-semibold tracking-tight text-[var(--foreground)] hover:text-[var(--accent)]">
+              The Train Station
             </Link>
             <div>
               <p className="text-sm font-medium">Hi, {memberName}</p>

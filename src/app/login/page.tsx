@@ -69,7 +69,7 @@ function LoginForm() {
     <div className="app-shell-bg flex min-h-screen flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <img src="/images/logo.png" alt="The Train Station" className="mx-auto h-16 w-auto" />
+          <p className="text-sm font-semibold tracking-tight text-[var(--accent)]">The Train Station</p>
           <h1 className="mt-4 text-2xl font-bold">Sign in</h1>
           <p className="mt-2 text-sm text-[var(--muted)]">
             Members and coaches — your messages, workouts, and schedule stay tied to your account.

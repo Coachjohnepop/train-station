@@ -88,9 +88,8 @@ function SignupForm() {
     <div className="min-h-screen bg-[#0a0612] text-[#f2ecf9] flex flex-col">
       <div className="border-b border-[#3d2660] bg-[#140a22]">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <img src="/images/logo.png" alt="The Train Station" className="h-9 w-auto" />
-            <span className="font-semibold tracking-tight text-lg">The Train Station</span>
+          <Link href="/" className="font-semibold tracking-tight text-lg hover:text-[var(--accent)]">
+            The Train Station
           </Link>
           <Link href="/login" className="text-sm text-[#9d8ab8] hover:text-white transition">
             Already have access? Sign in

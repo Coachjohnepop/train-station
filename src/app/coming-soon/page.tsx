@@ -14,7 +14,7 @@ function ComingSoonContent({
     <div className="min-h-screen bg-[#0a0612] text-[#f2ecf9] flex flex-col">
       <div className="flex-1 flex items-center justify-center px-6 py-16">
         <div className="max-w-lg text-center">
-          <img src="/images/logo.png" alt="The Train Station" className="h-16 w-auto mx-auto mb-8" />
+          <p className="text-sm font-semibold tracking-tight text-[#7c3aed] mb-8">The Train Station</p>
 
           <div className="inline-block rounded-full bg-[#7c3aed]/15 px-4 py-1 text-xs font-semibold tracking-widest text-[#7c3aed] mb-4">
             COMING SOON

@@ -18,12 +18,8 @@ export default async function AdminLayout({
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <Link href="/admin">
-                <img
-                  src="/images/logo-icon.png"
-                  alt="The Train Station"
-                  className="h-16 w-auto"
-                />
+              <Link href="/admin" className="text-sm font-semibold tracking-tight text-[var(--foreground)] hover:text-[var(--accent)]">
+                The Train Station
               </Link>
               <div>
                 <p className="text-sm font-medium">{session?.name || "Coach"}</p>
