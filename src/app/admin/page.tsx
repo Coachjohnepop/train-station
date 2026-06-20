@@ -2,6 +2,7 @@ import Link from "next/link";
 import GoToTodayCard from "@/components/GoToTodayCard";
 import AdminMessagesCard from "@/components/AdminMessagesCard";
 import { getCoachTodaySummary } from "@/lib/today-appointments";
+import { getResolvedLandingVideos } from "@/lib/landing-media-server";
 
 // Force dynamic so build succeeds without a live DB (Vercel build will have DATABASE_URL).
 export const dynamic = "force-dynamic";
@@ -10,6 +11,9 @@ export default async function AdminPage() {
   // stub counts for demo (no DB)
   const [exercises, workouts, programs, users] = [101, 31, 5, 5];
   const today = await getCoachTodaySummary();
+  const landingVideos = await getResolvedLandingVideos();
+  const landingReady =
+    Boolean(landingVideos.welcomeVideoUrl) && Boolean(landingVideos.freeChastiseVideoUrl);
 
   return (
     <div>
@@ -31,6 +35,25 @@ export default async function AdminPage() {
           statStyle
         />
         <AdminMessagesCard />
+        <Link
+          href="/admin/landing"
+          className={`card flex flex-col justify-between transition hover:border-[#7c3aed]/50 ${
+            landingReady ? "border-emerald-500/30" : "border-amber-500/40"
+          }`}
+        >
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#7c3aed]">
+              Landing videos
+            </p>
+            <p className="mt-2 text-2xl font-bold">
+              {landingReady ? "Ready" : "Needs URLs"}
+            </p>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Welcome + free-ticket YouTube links
+            </p>
+          </div>
+          <span className="mt-4 text-sm font-medium text-[#7c3aed]">Edit videos →</span>
+        </Link>
         <StatCard label="Exercises" value={exercises} href="/admin/exercises" />
         <StatCard label="Workouts" value={workouts} href="/admin/workouts" />
         <StatCard label="Programs" value={programs} href="/admin/programs" />

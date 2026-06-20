@@ -1,18 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { FREE_CHASTISE_VIDEO_YOUTUBE_ID, youtubeEmbedUrl } from "@/lib/landing-media";
+import { landingVideoEmbedSrc } from "@/lib/landing-media";
 
 export default function FreeTicketModal({
   open,
   onClose,
   onUpgrade,
+  freeChastiseVideoUrl = null,
 }: {
   open: boolean;
   onClose: () => void;
   onUpgrade: () => void;
+  freeChastiseVideoUrl?: string | null;
 }) {
   if (!open) return null;
+
+  const embedSrc = landingVideoEmbedSrc(freeChastiseVideoUrl, true);
 
   return (
     <div
@@ -36,13 +40,25 @@ export default function FreeTicketModal({
         </p>
 
         <div className="mt-4 aspect-video overflow-hidden rounded-xl bg-black ring-1 ring-amber-500/20">
-          <iframe
-            className="h-full w-full"
-            src={youtubeEmbedUrl(FREE_CHASTISE_VIDEO_YOUTUBE_ID, true)}
-            title="Coach message — you picked free"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
+          {embedSrc ? (
+            <iframe
+              className="h-full w-full"
+              src={embedSrc}
+              title="Coach message — you picked free"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center p-4 text-center text-xs text-[#9d8ab8]">
+              <p>Coach video coming soon.</p>
+              <p className="mt-2 text-[#7c3aed]">
+                <Link href="/admin/landing" className="underline">
+                  Admin → Landing videos
+                </Link>{" "}
+                to paste your YouTube link.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="mt-4 flex flex-col gap-2">

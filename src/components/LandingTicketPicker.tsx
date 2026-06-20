@@ -5,7 +5,11 @@ import { useState } from "react";
 import FreeTicketModal from "@/components/FreeTicketModal";
 import { TICKET_TIERS, type TicketTierId } from "@/lib/landing-tickets";
 
-export default function LandingTicketPicker() {
+export default function LandingTicketPicker({
+  freeChastiseVideoUrl = null,
+}: {
+  freeChastiseVideoUrl?: string | null;
+}) {
   const [freeModalOpen, setFreeModalOpen] = useState(false);
   const [highlightPaid, setHighlightPaid] = useState(false);
 
@@ -89,6 +93,7 @@ export default function LandingTicketPicker() {
 
       <FreeTicketModal
         open={freeModalOpen}
+        freeChastiseVideoUrl={freeChastiseVideoUrl}
         onClose={() => setFreeModalOpen(false)}
         onUpgrade={() => {
           setHighlightPaid(true);

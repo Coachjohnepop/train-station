@@ -1,18 +1,22 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useId, useState } from "react";
-import { WELCOME_VIDEO_YOUTUBE_ID, youtubeEmbedUrl } from "@/lib/landing-media";
+import { landingVideoEmbedSrc } from "@/lib/landing-media";
 
 export default function WelcomeVideoPopover({
   children,
   className = "",
+  welcomeVideoUrl = null,
 }: {
   children: React.ReactNode;
   className?: string;
+  welcomeVideoUrl?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [isTouch, setIsTouch] = useState(false);
   const titleId = useId();
+  const embedSrc = landingVideoEmbedSrc(welcomeVideoUrl, true);
 
   useEffect(() => {
     setIsTouch(window.matchMedia("(hover: none)").matches);
@@ -20,6 +24,29 @@ export default function WelcomeVideoPopover({
 
   const show = useCallback(() => setOpen(true), []);
   const hide = useCallback(() => setOpen(false), []);
+
+  const videoBody = embedSrc ? (
+    <div className="aspect-video overflow-hidden rounded-xl bg-black">
+      <iframe
+        className="h-full w-full"
+        src={embedSrc}
+        title="Welcome video"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    </div>
+  ) : (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center text-xs text-white/70">
+      <p>Welcome video not set yet.</p>
+      <p className="mt-2">
+        Coach: add your YouTube link in{" "}
+        <Link href="/admin/landing" className="text-[#c4b5fd] underline">
+          Admin → Landing videos
+        </Link>
+        .
+      </p>
+    </div>
+  );
 
   return (
     <>
@@ -47,15 +74,7 @@ export default function WelcomeVideoPopover({
             <p id={titleId} className="mb-2 text-center text-xs font-semibold tracking-wide text-white/90">
               Welcome to The Train Station
             </p>
-            <div className="aspect-video overflow-hidden rounded-xl bg-black">
-              <iframe
-                className="h-full w-full"
-                src={youtubeEmbedUrl(WELCOME_VIDEO_YOUTUBE_ID, true)}
-                title="Welcome video"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
+            {videoBody}
             <p className="mt-2 text-center text-[10px] text-white/50">Hover away to close · tap Enter on mobile</p>
           </div>
         )}
@@ -85,15 +104,7 @@ export default function WelcomeVideoPopover({
                 Close
               </button>
             </div>
-            <div className="aspect-video overflow-hidden rounded-xl bg-black">
-              <iframe
-                className="h-full w-full"
-                src={youtubeEmbedUrl(WELCOME_VIDEO_YOUTUBE_ID, true)}
-                title="Welcome video"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
+            {videoBody}
           </div>
         </div>
       )}

@@ -6,10 +6,12 @@ import { resolveDemoUser } from "@/lib/demo-user-directory";
 import LandingConversion from "@/components/LandingConversion";
 import LandingWelcomeBack from "@/components/LandingWelcomeBack";
 import WelcomeVideoPopover from "@/components/WelcomeVideoPopover";
+import { getResolvedLandingVideos } from "@/lib/landing-media-server";
 
 export default async function HomePage() {
   const cookieStore = await cookies();
   const session = await getSessionUser();
+  const landingVideos = await getResolvedLandingVideos();
 
   if (session) {
     const demoUser = resolveDemoUser(session.id);
@@ -27,7 +29,10 @@ export default async function HomePage() {
           <h1 className="text-5xl sm:text-6xl font-semibold tracking-[-2px]">
             Welcome back, {displayName}.
           </h1>
-          <WelcomeVideoPopover className="scale-90 sm:scale-100">
+          <WelcomeVideoPopover
+            className="scale-90 sm:scale-100"
+            welcomeVideoUrl={landingVideos.welcomeVideoUrl}
+          >
             Welcome — watch intro
           </WelcomeVideoPopover>
         </div>
@@ -38,7 +43,10 @@ export default async function HomePage() {
 
   return (
     <>
-      <LandingConversion />
+      <LandingConversion
+        welcomeVideoUrl={landingVideos.welcomeVideoUrl}
+        freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
+      />
 
       <div className="fixed bottom-6 right-6 z-50">
         <Link

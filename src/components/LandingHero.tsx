@@ -17,7 +17,11 @@ const phrases = [
   <>Train with<br />Commitment.</>,
 ];
 
-export default function LandingHero() {
+export default function LandingHero({
+  welcomeVideoUrl = null,
+}: {
+  welcomeVideoUrl?: string | null;
+}) {
   const [tick, setTick] = useState(0);
 
   // Rotation: text changes "as fast" (every half image) but offset by 1/2 of the image scroll.
@@ -72,7 +76,7 @@ export default function LandingHero() {
           </p>
           
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
-            <WelcomeVideoPopover>Enter the site</WelcomeVideoPopover>
+            <WelcomeVideoPopover welcomeVideoUrl={welcomeVideoUrl}>Enter the site</WelcomeVideoPopover>
             <button
               type="button"
               onClick={scrollToTickets}
