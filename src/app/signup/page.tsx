@@ -8,6 +8,7 @@ function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const plan = searchParams.get("plan") || "";
+  const interest = searchParams.get("interest") || "";
   const prefillEmail = searchParams.get("email") || "";
   const [email, setEmail] = useState(prefillEmail);
   const [firstName, setFirstName] = useState("");
@@ -60,8 +61,8 @@ function SignupForm() {
           firstName: firstName.trim() || undefined,
           lastName: lastName.trim() || undefined,
           phone: phone.trim() || undefined,
-          plan: plan || undefined,
-          source: "signup-page",
+          plan: plan || interest || undefined,
+          source: interest ? `interest:${interest}` : "signup-page",
         }),
       });
       const data = await res.json();
@@ -172,9 +173,10 @@ function SignupForm() {
               />
             </div>
 
-            {plan && (
+            {(plan || interest) && (
               <p className="text-xs text-[#7c3aed]">
-                Interested in: <span className="font-semibold">{plan}</span>
+                Interested in:{" "}
+                <span className="font-semibold capitalize">{plan || interest.replace(/-/g, " ")}</span>
               </p>
             )}
 

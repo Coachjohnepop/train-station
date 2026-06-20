@@ -3,8 +3,9 @@ import { cookies } from "next/headers";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { MEMBER_NAME_COOKIE } from "@/lib/current-user";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
-import LandingHero from "@/components/LandingHero";
+import LandingConversion from "@/components/LandingConversion";
 import LandingWelcomeBack from "@/components/LandingWelcomeBack";
+import WelcomeVideoPopover from "@/components/WelcomeVideoPopover";
 
 export default async function HomePage() {
   const cookieStore = await cookies();
@@ -22,7 +23,14 @@ export default async function HomePage() {
 
     return (
       <LandingWelcomeBack email={email} isCoach={isCoach}>
-        <h1 className="text-6xl font-semibold tracking-[-2px] mb-4">Welcome back, {displayName}.</h1>
+        <div className="mb-4 flex flex-col items-center gap-3">
+          <h1 className="text-5xl sm:text-6xl font-semibold tracking-[-2px]">
+            Welcome back, {displayName}.
+          </h1>
+          <WelcomeVideoPopover className="scale-90 sm:scale-100">
+            Welcome — watch intro
+          </WelcomeVideoPopover>
+        </div>
         <p className="text-xl text-[#9d8ab8]">Your programs, progress, and workouts are ready.</p>
       </LandingWelcomeBack>
     );
@@ -30,7 +38,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <LandingHero />
+      <LandingConversion />
 
       <div className="fixed bottom-6 right-6 z-50">
         <Link

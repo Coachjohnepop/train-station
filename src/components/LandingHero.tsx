@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
+import WelcomeVideoPopover from "@/components/WelcomeVideoPopover";
 
 const images = [
   { src: "/images/splash/black-guy.jpg", alt: "Fit Black guy powering through a workout" },
@@ -39,8 +40,12 @@ export default function LandingHero() {
   const imageIndex = Math.floor(tick / IMAGE_TICKS) % images.length;
   const textIndex = Math.floor(tick / TEXT_TICKS) % phrases.length;
 
+  function scrollToTickets() {
+    document.getElementById("tickets")?.scrollIntoView({ behavior: "smooth" });
+  }
+
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-black">
+    <div className="relative min-h-[100svh] w-full overflow-hidden bg-black">
       {images.map((image, index) => (
         <img
           key={index}
@@ -66,22 +71,24 @@ export default function LandingHero() {
             Professional-grade programs. Real accountability.<br />Results that actually last.
           </p>
           
-          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
-            <a 
-              href="/signup" 
-              className="inline-flex h-14 items-center justify-center rounded-full bg-white px-10 text-sm font-bold !text-[#7c3aed] transition-all hover:bg-white hover:scale-[1.1] active:scale-[0.985]"
+          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
+            <WelcomeVideoPopover>Enter the site</WelcomeVideoPopover>
+            <button
+              type="button"
+              onClick={scrollToTickets}
+              className="inline-flex h-14 items-center justify-center rounded-full bg-white px-10 text-sm font-bold !text-[#7c3aed] transition-all hover:bg-white/95 hover:scale-[1.05] active:scale-[0.985]"
             >
-              PreSign Up Here
-            </a>
-            <a 
-              href="/login" 
-              className="inline-flex h-14 items-center justify-center rounded-full border border-white/40 px-10 text-sm font-semibold text-white backdrop-blur transition-all hover:bg-white/10 hover:scale-[1.1] active:scale-[0.985]"
+              Pick your ticket ↓
+            </button>
+            <a
+              href="/login"
+              className="inline-flex h-12 items-center justify-center rounded-full border border-white/40 px-8 text-sm font-semibold text-white backdrop-blur transition-all hover:bg-white/10 active:scale-[0.985]"
             >
               Member sign in
             </a>
-            <a 
-              href="/login?redirect=/admin" 
-              className="inline-flex h-14 items-center justify-center rounded-full border border-white/40 px-10 text-sm font-semibold text-white backdrop-blur transition-all hover:bg-white/10 hover:scale-[1.1] active:scale-[0.985]"
+            <a
+              href="/login?redirect=/admin"
+              className="inline-flex h-12 items-center justify-center rounded-full border border-white/30 px-8 text-sm font-semibold text-white/90 backdrop-blur transition-all hover:bg-white/10 active:scale-[0.985]"
             >
               Coach sign in
             </a>

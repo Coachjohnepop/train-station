@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ComingSoonPrograms from "@/components/ComingSoonPrograms";
 import PricingWithInlineSignup from "@/components/PricingWithInlineSignup";
 
 export default async function JoinPage({
@@ -64,6 +65,8 @@ export default async function JoinPage({
       <div id="plans" className="mx-auto max-w-6xl px-6 pb-16">
         <PricingWithInlineSignup recParam={recParam} />
       </div>
+
+      <ComingSoonPrograms compact />
 
       {/* Footer CTA */}
       <div className="border-t border-[#3d2660] py-10 bg-[#140a22]">
