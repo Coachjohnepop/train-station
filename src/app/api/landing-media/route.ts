@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getLandingMedia } from "@/lib/landing-media-store";
+
+export const dynamic = "force-dynamic";
 import {
   freeChastiseVideoUrlFromConfig,
   welcomeVideoUrlFromConfig,

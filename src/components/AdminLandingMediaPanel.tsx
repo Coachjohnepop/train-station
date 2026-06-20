@@ -1,46 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { saveLandingVideosAction } from "@/app/admin/landing/actions";
 import { landingVideoEmbedSrc } from "@/lib/landing-media";
 import { isYoutubeUrl } from "@/lib/youtube";
 
-type LandingMediaState = {
-  welcomeVideoUrl: string | null;
-  freeChastiseVideoUrl: string | null;
-  storedWelcomeVideoUrl: string | null;
-  storedFreeChastiseVideoUrl: string | null;
-  updatedAt: string;
-  hasWelcome: boolean;
-  hasFreeChastise: boolean;
-};
-
-export default function AdminLandingMediaPanel() {
-  const [welcomeUrl, setWelcomeUrl] = useState("");
-  const [freeUrl, setFreeUrl] = useState("");
-  const [loading, setLoading] = useState(true);
+export default function AdminLandingMediaPanel({
+  initialWelcomeUrl = "",
+  initialFreeUrl = "",
+}: {
+  initialWelcomeUrl?: string;
+  initialFreeUrl?: string;
+}) {
+  const [welcomeUrl, setWelcomeUrl] = useState(initialWelcomeUrl);
+  const [freeUrl, setFreeUrl] = useState(initialFreeUrl);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState(false);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/admin/landing-media");
-      const data = (await res.json()) as LandingMediaState & { error?: string };
-      if (!res.ok) throw new Error(data.error || "Could not load landing videos.");
-      setWelcomeUrl(data.storedWelcomeVideoUrl || "");
-      setFreeUrl(data.storedFreeChastiseVideoUrl || "");
-    } catch (e: unknown) {
-      setError(true);
-      setMessage(e instanceof Error ? e.message : "Load failed");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void load();
-  }, []);
 
   async function handleSave() {
     setSaving(true);
@@ -63,35 +39,29 @@ export default function AdminLandingMediaPanel() {
       return;
     }
 
-    try {
-      const res = await fetch("/api/admin/landing-media", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          welcomeVideoUrl: welcome || null,
-          freeChastiseVideoUrl: free || null,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Save failed");
-      setWelcomeUrl(data.storedWelcomeVideoUrl || "");
-      setFreeUrl(data.storedFreeChastiseVideoUrl || "");
+    const result = await saveLandingVideosAction({
+      welcomeVideoUrl: welcome || null,
+      freeChastiseVideoUrl: free || null,
+    });
+
+    if ("error" in result && result.error) {
+      setError(true);
+      setMessage(result.error);
+    } else if ("ok" in result && result.ok) {
+      setWelcomeUrl(result.storedWelcomeVideoUrl || "");
+      setFreeUrl(result.storedFreeChastiseVideoUrl || "");
       setMessage("Saved — live on the public landing page now.");
       setError(false);
-    } catch (e: unknown) {
+    } else {
       setError(true);
-      setMessage(e instanceof Error ? e.message : "Save failed");
-    } finally {
-      setSaving(false);
+      setMessage("Save failed");
     }
+
+    setSaving(false);
   }
 
   const welcomePreview = landingVideoEmbedSrc(welcomeUrl || null);
   const freePreview = landingVideoEmbedSrc(freeUrl || null);
-
-  if (loading) {
-    return <p className="text-sm text-[var(--muted)]">Loading landing videos…</p>;
-  }
 
   return (
     <div className="space-y-8">
@@ -109,8 +79,8 @@ export default function AdminLandingMediaPanel() {
           </li>
         </ul>
         <p className="mt-3 text-xs text-[#9d8ab8]">
-          Upload your clip to YouTube (public or unlisted), then paste the link here. You can swap
-          either video anytime — no redeploy needed.
+          Upload your clip to YouTube (public or unlisted), paste the link here, and save. You can
+          change either video anytime.
         </p>
       </div>
 

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
 import { getLandingMedia, saveLandingMedia } from "@/lib/landing-media-store";
 import {
   freeChastiseVideoUrlFromConfig,
