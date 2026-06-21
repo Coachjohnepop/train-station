@@ -1,3 +1,5 @@
+import { LAST_EMAIL_COOKIE } from "@/lib/remembered-email";
+
 const STORAGE_KEY = "ts-email-history";
 const COOKIE_KEY = "ts_email_hist";
 const MAX_ENTRIES = 12;
@@ -28,9 +30,25 @@ function writeCookie(entries: string[]) {
   if (typeof document === "undefined") return;
   try {
     const payload = encodeURIComponent(JSON.stringify(entries.slice(0, MAX_ENTRIES)));
-    document.cookie = `${COOKIE_KEY}=${payload}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${COOKIE_KEY}=${payload}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax${secure}`;
+    if (entries[0]) {
+      document.cookie = `${LAST_EMAIL_COOKIE}=${encodeURIComponent(entries[0])}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax${secure}`;
+    }
   } catch {
     /* ignore */
+  }
+}
+
+function readLastEmailCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  try {
+    const match = document.cookie.match(new RegExp(`(?:^|; )${LAST_EMAIL_COOKIE}=([^;]*)`));
+    if (!match) return null;
+    const email = decodeURIComponent(match[1]).trim().toLowerCase();
+    return isValidEmail(email) ? email : null;
+  } catch {
+    return null;
   }
 }
 
@@ -90,7 +108,7 @@ export function loadEmailHistory(): string[] {
 }
 
 export function getLastEmail(): string | null {
-  return loadEmailHistory()[0] || null;
+  return loadEmailHistory()[0] || readLastEmailCookie() || null;
 }
 
 export function rememberEmail(raw: string): void {

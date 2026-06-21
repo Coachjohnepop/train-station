@@ -15,6 +15,21 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (prefillEmail) return;
+    let cancelled = false;
+    fetch("/api/auth/remembered-email", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { email?: string | null } | null) => {
+        if (cancelled || !data?.email) return;
+        setEmail((prev) => (prev.trim() ? prev : data.email!));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [prefillEmail]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);

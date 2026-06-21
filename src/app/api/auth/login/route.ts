@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth";
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import { isInvitedAccountEmail } from "@/lib/invited-accounts";
+import { applyRememberedEmailCookie } from "@/lib/remembered-email";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
     redirect: destination,
   });
   applySessionCookies(res, user);
+  applyRememberedEmailCookie(res, user.email);
 
   if (!isStaffRole(user.role)) {
     const profile = await getMemberProfile(user.id);
