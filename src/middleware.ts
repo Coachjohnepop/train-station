@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { verifySessionTokenEdge, SESSION_COOKIE } from "@/lib/auth-session-edge";
 
 const NEEDS_ONBOARD_COOKIE = "ts_needs_onboard";
+const SIGNUP_PLAN_COOKIE = "ts_signup_plan";
 
 const PUBLIC_PREFIXES = [
   "/login",
@@ -61,7 +62,9 @@ export async function middleware(request: NextRequest) {
     request.cookies.get(NEEDS_ONBOARD_COOKIE)?.value === "1"
   ) {
     const onboard = new URL("/member/onboard", request.url);
-    const plan = request.nextUrl.searchParams.get("plan");
+    const plan =
+      request.nextUrl.searchParams.get("plan") ||
+      request.cookies.get(SIGNUP_PLAN_COOKIE)?.value;
     if (plan) onboard.searchParams.set("plan", plan);
     return NextResponse.redirect(onboard);
   }

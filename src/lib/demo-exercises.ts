@@ -41,18 +41,16 @@ export function loadDemoExercises(): any[] {
   if (cache) return [...cache];
   if (fs.existsSync(DEV_FILE)) {
     try {
-      cache = JSON.parse(fs.readFileSync(DEV_FILE, "utf8"));
+      return [...JSON.parse(fs.readFileSync(DEV_FILE, "utf8"))];
     } catch {
-      cache = loadSeedExercises();
+      return [...loadSeedExercises()];
     }
-  } else {
-    cache = loadSeedExercises();
   }
-  return [...(cache || [])];
+  return [...loadSeedExercises()];
 }
 
-async function syncExercisesIntoSeed(list: any[]) {
-  await mutateDemoSeed((seed) => {
+async function syncExercisesIntoSeed(list: any[]): Promise<boolean> {
+  const { blobSaved } = await mutateDemoSeed((seed) => {
     seed.exercises = list.map((e: any) => ({ ...e }));
     const byId = Object.fromEntries(list.map((e: any) => [e.id, e]));
     for (const we of seed.workoutExercises || []) {
@@ -62,18 +60,22 @@ async function syncExercisesIntoSeed(list: any[]) {
       }
     }
   });
+  return blobSaved;
 }
 
-export async function saveDemoExercises(list: any[]): Promise<{ blobSaved: boolean }> {
+export async function saveDemoExercises(list: any[]): Promise<{
+  exercisesBlobSaved: boolean;
+  seedBlobSaved: boolean;
+}> {
   cache = [...list];
-  const { blobSaved } = await persistJsonStore({
+  const { blobSaved: exercisesBlobSaved } = await persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
     data: cache,
     setMemory,
   });
-  await syncExercisesIntoSeed(list);
-  return { blobSaved };
+  const seedBlobSaved = await syncExercisesIntoSeed(list);
+  return { exercisesBlobSaved, seedBlobSaved };
 }
 
 export function createDemoExerciseId(): string {

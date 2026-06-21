@@ -56,6 +56,9 @@ export function writeLocalJson(localPath: string, data: unknown): void {
   }
 }
 
+const blobCheckedAt = new Map<string, number>();
+const BLOB_REFRESH_MS = 8_000;
+
 export async function hydrateJsonStore<T>(opts: {
   blobPath: string;
   localPath: string;
@@ -63,11 +66,24 @@ export async function hydrateJsonStore<T>(opts: {
   setMemory: (v: T) => void;
   fallback: () => T;
 }): Promise<T> {
+  const now = Date.now();
+  const lastCheck = blobCheckedAt.get(opts.blobPath) ?? 0;
+  const shouldRefreshBlob = BLOB_TOKEN && now - lastCheck >= BLOB_REFRESH_MS;
+
+  if (shouldRefreshBlob) {
+    blobCheckedAt.set(opts.blobPath, now);
+    const fromBlob = await readBlobJson<T>(opts.blobPath);
+    if (fromBlob) {
+      opts.setMemory(fromBlob);
+      return fromBlob;
+    }
+  }
+
   // Prefer instance memory so read-after-write on the same warm lambda stays consistent.
-  // Cold instances (memory null) load from Blob so other instances' writes are visible.
   if (opts.memory) return opts.memory;
 
   const fromBlob = await readBlobJson<T>(opts.blobPath);
+  blobCheckedAt.set(opts.blobPath, Date.now());
   if (fromBlob) {
     opts.setMemory(fromBlob);
     return fromBlob;

@@ -486,8 +486,13 @@ export default function ExerciseLibrary() {
       ? ` (used in ${u.programCount} program${u.programCount === 1 ? "" : "s"} / ${u.workoutCount} workout${u.workoutCount === 1 ? "" : "s"} — it will be removed from those workouts)`
       : "";
     if (!confirm(`Delete “${exerciseName}” from the library?${usageNote}`)) return;
-    await fetch(`/api/exercises/${id}`, { method: "DELETE" });
-    setMessage(null);
+    const res = await fetch(`/api/exercises/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(formatApiError((body as { detail?: unknown }).detail) || "Delete failed — try again.");
+      return;
+    }
+    setMessage(`Deleted “${exerciseName}”.`);
     await load();
   }
 

@@ -10,6 +10,7 @@ import { ensureMemberProfile } from "@/lib/member-profiles-store";
 import { notifyNewLead } from "@/lib/lead-notify";
 import { normalizeSignupPlan } from "@/lib/signup-plans";
 import { addToWaitlist } from "@/lib/waitlist";
+import { enrollDemo } from "@/lib/demo-enrollments";
 
 const schema = z.object({
   email: z.string().email(),
@@ -44,6 +45,8 @@ export async function POST(request: Request) {
       phone: phone || account.phone,
     });
 
+    enrollDemo("adult", account.userId);
+
     const normalizedEmail = email.trim().toLowerCase();
     await addToWaitlist({
       email: normalizedEmail,
@@ -74,7 +77,7 @@ export async function POST(request: Request) {
       user: { email: sessionUser.email, name: sessionUser.name, role: sessionUser.role },
     });
     applySessionCookies(res, sessionUser);
-    applyNewMemberOnboardingCookie(res);
+    applyNewMemberOnboardingCookie(res, plan);
     return res;
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Registration failed";

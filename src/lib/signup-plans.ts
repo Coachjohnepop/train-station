@@ -1,3 +1,5 @@
+import type { MemberTier } from "@/lib/access";
+
 export const SIGNUP_PLANS = ["explorer", "member", "pro"] as const;
 export type SignupPlan = (typeof SIGNUP_PLANS)[number];
 
@@ -21,4 +23,9 @@ export function signupPlanLabel(plan: SignupPlan): string {
 
 export function isSignupPlan(value: string): value is SignupPlan {
   return (SIGNUP_PLANS as readonly string[]).includes(value);
+}
+
+export function signupPlanToMemberTier(plan: SignupPlan): MemberTier {
+  if (plan === "pro") return "first_class";
+  return "coach";
 }

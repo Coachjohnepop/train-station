@@ -60,12 +60,10 @@ export function computeScheduleProgress(
   program.weeks.forEach((w) => {
     (w.days || []).forEach((d) => {
       if (isWorkout && !hasAssignedWorkout(d)) return;
-      const dayBeforeCurrent =
-        w.weekNumber < curWeek || (w.weekNumber === curWeek && (d.dayNumber || 0) < curDay);
       const hasLoggedOption =
         (d.options || []).some((o) => loggedSet.has(o.workoutId)) ||
         (d.workoutId && loggedSet.has(d.workoutId));
-      if (dayBeforeCurrent || hasLoggedOption) completedCount++;
+      if (hasLoggedOption) completedCount++;
     });
   });
 

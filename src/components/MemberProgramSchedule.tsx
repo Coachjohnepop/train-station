@@ -40,10 +40,6 @@ type Props = {
   compact?: boolean;
 };
 
-function dayIsBeforeCurrent(weekNumber: number, dayNumber: number, curWeek: number, curDay: number) {
-  return weekNumber < curWeek || (weekNumber === curWeek && dayNumber < curDay);
-}
-
 function DayCards({
   program,
   week,
@@ -80,7 +76,6 @@ function DayCards({
 
           if (isWorkout) {
             if (day.smsOverrideActive && day.smsWorkoutText) {
-              const dayBeforeCurrent = dayIsBeforeCurrent(week.weekNumber, day.dayNumber, curWeek, curDay);
               return (
                 <li key={day.id} id={anchorId} className={`space-y-1 scroll-mt-24 ${isCurrentDay ? "ring-2 ring-accent/50 rounded-lg p-0.5" : ""}`}>
                   <div className="text-[10px] lg:text-xs text-[var(--muted)] truncate pl-1">
@@ -89,9 +84,7 @@ function DayCards({
                   </div>
                   <Link
                     href={`/member/workout?program=${encodeURIComponent(program.slug)}&smsDay=${encodeURIComponent(day.id)}`}
-                    className={`card flex flex-col gap-2 p-2 lg:p-3 transition hover-accent-border text-sm border-amber-400/50 bg-amber-500/10 ${
-                      dayBeforeCurrent ? "ring-2 ring-[var(--success)] ring-offset-1" : ""
-                    }`}
+                    className="card flex flex-col gap-2 p-2 lg:p-3 transition hover-accent-border text-sm border-amber-400/50 bg-amber-500/10"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-medium text-amber-200">{day.smsOverrideLabel || "Coach SMS workout"}</p>
@@ -115,11 +108,10 @@ function DayCards({
 
             if (opts.length === 0) return null;
 
-            const dayBeforeCurrent = dayIsBeforeCurrent(week.weekNumber, day.dayNumber, curWeek, curDay);
             const hasLoggedOption =
               opts.some((o) => loggedSet.has(o.workoutId)) ||
               (day.workoutId && loggedSet.has(day.workoutId));
-            const dayDone = dayBeforeCurrent || hasLoggedOption;
+            const dayDone = hasLoggedOption;
 
             return (
               <li key={day.id} id={anchorId} className={`space-y-1 scroll-mt-24 ${isCurrentDay ? "ring-2 ring-accent/50 rounded-lg p-0.5" : ""}`}>
@@ -134,8 +126,10 @@ function DayCards({
                   const wid = opt.workoutId || w.id;
                   const isThisSessionDone = loggedSet.has(wid);
                   const isHome = /home/i.test(opt.label || "");
+                  const weekDayLabel = `W${week.weekNumber} · D${day.dayNumber}`;
                   const displayName =
-                    (opts.length > 1 ? `${opt.label}: ` : "") + w.name.replace(/ \(Home\)| \(Gym\)/i, "");
+                    (opts.length > 1 ? `${opt.label}: ` : "") +
+                    w.name.replace(/ \(Home\)| \(Gym\)/i, "").replace(/^Day \d+\s*/i, `${weekDayLabel} · `);
 
                   return (
                     <Link

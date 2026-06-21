@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import MemberHomeEquipment from "@/components/MemberHomeEquipment";
 import { landingVideoEmbedSrc } from "@/lib/landing-media";
 import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
@@ -23,12 +23,36 @@ export default function OnboardingWizard({
   welcomeVideoUrl?: string | null;
   calendlyUrl?: string | null;
 }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const plan = normalizeSignupPlan(searchParams.get("plan"));
   const programSlug = searchParams.get("program");
 
+  const totalSteps = 6;
+  const stepStorageKey = `ts-onboard-step:${plan}`;
   const [currentStep, setCurrentStep] = useState(1);
+  const [stepReady, setStepReady] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(stepStorageKey);
+      if (saved) {
+        const n = Number.parseInt(saved, 10);
+        if (n >= 1 && n <= totalSteps) setCurrentStep(n);
+      }
+    } catch {
+      // ignore private browsing / storage blocks
+    }
+    setStepReady(true);
+  }, [stepStorageKey, totalSteps]);
+
+  useEffect(() => {
+    if (!stepReady) return;
+    try {
+      sessionStorage.setItem(stepStorageKey, String(currentStep));
+    } catch {
+      // ignore
+    }
+  }, [currentStep, stepReady, stepStorageKey]);
   const [measurements, setMeasurements] = useState({ weight: "", notes: "" });
   const [location, setLocation] = useState({ city: "", state: "" });
   const [sms, setSms] = useState({ phone: "", dailyReminderTime: "07:30" });
@@ -36,7 +60,6 @@ export default function OnboardingWizard({
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const totalSteps = 6;
   const effectiveCalendly = calendlyUrl || COACH_CALENDLY_URL;
   const welcomeEmbed = landingVideoEmbedSrc(welcomeVideoUrl);
 
@@ -88,8 +111,12 @@ export default function OnboardingWizard({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not finish setup");
-      router.push(data.redirectTo || "/member");
-      router.refresh();
+      try {
+        sessionStorage.removeItem(stepStorageKey);
+      } catch {
+        // ignore
+      }
+      window.location.href = data.redirectTo || "/member";
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Finish failed");
     } finally {
@@ -288,8 +315,11 @@ export default function OnboardingWizard({
               onClick={() => setCalendlyOpened(true)}
               className="btn-primary block text-center"
             >
-              Open Calendly
+              Book on Calendly
             </a>
+            <p className="text-[11px] text-[var(--muted)]">
+              Opens in a new tab — come back here when you&apos;re done, or skip and book later from your dashboard.
+            </p>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={prevStep} className="btn-ghost flex-1">
                 Back

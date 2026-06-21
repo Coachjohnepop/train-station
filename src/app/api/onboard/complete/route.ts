@@ -6,6 +6,7 @@ import {
 } from "@/lib/auth";
 import { ensureMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
 import { isDemoMode, updateDemoUserSettings } from "@/lib/demo-reminders";
+import { enrollDemo } from "@/lib/demo-enrollments";
 import { notifyNewLead } from "@/lib/lead-notify";
 
 const schema = z.object({
@@ -71,6 +72,7 @@ export async function POST(request: Request) {
   });
 
   if (isDemoMode()) {
+    enrollDemo("adult", session.id);
     updateDemoUserSettings(session.id, {
       phone: phone || undefined,
       dailyReminderTime: dailyReminderTime || undefined,

@@ -32,7 +32,7 @@ export function getMemberAccess(tier: MemberTier = "first_class"): MemberAccess 
   return {
     tier,
     isPreview,
-    tierLabel: tier === "first_class" ? "1st Class" : "Coach",
+    tierLabel: tier === "first_class" ? "1st Class" : "Coach Class",
     canAccessProgram(program) {
       if (isPreview) return true;
       if (program.tierSlug === "coach" || program.tierSlug === "starter") return true;

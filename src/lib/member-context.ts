@@ -1,6 +1,8 @@
 import 'server-only';
 
 import { getMemberAccess, type MemberAccess } from "@/lib/access";
+import { getMemberProfile } from "@/lib/member-profiles-store";
+import { signupPlanToMemberTier } from "@/lib/signup-plans";
 import { DEMO_MEMBER_EMAIL } from "@/lib/demo-workout";
 import { listPrograms } from "@/lib/program-data";
 import { isDemoMode } from "@/lib/demo-enrollments";
@@ -155,9 +157,12 @@ export async function getMemberDashboard() {
     } catch {}
   }
 
+  const profile = uid ? await getMemberProfile(uid) : null;
+  const accessTier = signupPlanToMemberTier(profile?.plan ?? "explorer");
+
   return {
     user: { id: effectiveUser.id, name: displayName, email: effectiveUser.email || DEMO_MEMBER_EMAIL, dailyReminderTime: reminderSettings.dailyReminderTime as string | null, phone: reminderSettings.phone as string | null },
-    access: getMemberAccess("first_class"),
+    access: getMemberAccess(accessTier),
     enrollments: mockEnrollments,
     programs: programs.map((p: any) => ({
       id: p.id,

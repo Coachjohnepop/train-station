@@ -69,16 +69,11 @@ export function isDemoMode() {
   return !url || url.includes("dummy.supabase") || url.includes("dummy");
 }
 
-/** Returns enrollments for a specific user id (falls back to demo-user bucket for legacy callers and new joined users in demo) */
+/** Returns enrollments for a specific user id (empty map for new users until enrolled). */
 export function getDemoEnrollments(userId?: string) {
   const uid = userId || "demo-user";
   const store = loadEnrollmentsStore();
-  let data = store[uid] || {};
-  if (Object.keys(data).length === 0 && uid !== "demo-user") {
-    // new joined user in demo mode inherits the default demo state so member dashboard + schedule feels alive immediately
-    data = store["demo-user"] || {};
-  }
-  return data;
+  return store[uid] || {};
 }
 
 export function enrollDemo(slug: string, userId?: string) {
@@ -137,11 +132,15 @@ export function advanceDemoEnrollmentForWorkout(slug: string, workoutId: string,
   }
 
   const weeks = (seed.programWeeks || []).filter((w: any) => w.programId === prog.id);
+  const dayOptions = seed.programDayOptions || [];
   const days = (seed.programDays || []).filter((d: any) => {
     const wk = weeks.find((w: any) => w.id === d.weekId);
     if (!wk) return false;
-    // Support hybrid options: primary workoutId or in options
-    return d.workoutId === workoutId || (d.options || []).some((o: any) => o.workoutId === workoutId);
+    const opts = dayOptions.filter((o: any) => o.programDayId === d.id);
+    return (
+      d.workoutId === workoutId ||
+      opts.some((o: any) => o.workoutId === workoutId)
+    );
   });
 
   const matching = days[0]; // assume unique

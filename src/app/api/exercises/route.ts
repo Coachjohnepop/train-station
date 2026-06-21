@@ -52,8 +52,8 @@ export async function POST(request: Request) {
       defaultWeightTier: null,
     };
     list.push(exercise);
-    const { blobSaved } = await saveDemoExercises(list);
-    if (process.env.VERCEL && BLOB_TOKEN && !blobSaved) {
+    const { exercisesBlobSaved, seedBlobSaved } = await saveDemoExercises(list);
+    if (process.env.VERCEL && BLOB_TOKEN && (!exercisesBlobSaved || !seedBlobSaved)) {
       return NextResponse.json(
         { detail: "Exercise created but cloud save failed — retry in a moment." },
         { status: 503 },

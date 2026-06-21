@@ -58,8 +58,8 @@ export async function PATCH(request: Request, { params }: Params) {
     if (data.tags !== undefined) ex.tags = data.tags;
     ex.updatedAt = new Date().toISOString();
     list[idx] = ex;
-    const { blobSaved } = await saveDemoExercises(list);
-    if (process.env.VERCEL && BLOB_TOKEN && !blobSaved) {
+    const { exercisesBlobSaved, seedBlobSaved } = await saveDemoExercises(list);
+    if (process.env.VERCEL && BLOB_TOKEN && (!exercisesBlobSaved || !seedBlobSaved)) {
       return NextResponse.json(
         { detail: "Update applied but cloud save failed — retry in a moment." },
         { status: 503 },
@@ -89,15 +89,26 @@ export async function DELETE(_request: Request, { params }: Params) {
       return NextResponse.json({ detail: "Exercise not found" }, { status: 404 });
     }
     list.splice(idx, 1);
-    await saveDemoExercises(list);
+    const { exercisesBlobSaved, seedBlobSaved } = await saveDemoExercises(list);
 
-    await mutateDemoSeed((seed) => {
+    const { blobSaved: workoutRefsBlobSaved } = await mutateDemoSeed((seed) => {
       if (seed.workoutExercises) {
         seed.workoutExercises = seed.workoutExercises.filter(
           (we: any) => we.exerciseId !== id,
         );
       }
     });
+
+    if (
+      process.env.VERCEL &&
+      BLOB_TOKEN &&
+      (!exercisesBlobSaved || !seedBlobSaved || !workoutRefsBlobSaved)
+    ) {
+      return NextResponse.json(
+        { detail: "Delete applied but cloud save failed — retry in a moment." },
+        { status: 503 },
+      );
+    }
 
     return new NextResponse(null, { status: 204 });
   }

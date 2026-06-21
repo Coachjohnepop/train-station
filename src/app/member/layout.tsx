@@ -9,9 +9,9 @@ export default async function MemberLayout({
 }) {
   const [dashboard, session] = await Promise.all([getMemberDashboard(), getSessionUser()]);
   const access = dashboard?.access ?? {
-    tier: "first_class" as const,
+    tier: "coach" as const,
     isPreview: true,
-    tierLabel: "1st Class",
+    tierLabel: "Coach Class",
     canAccessProgram: () => true,
     canAccessFeature: () => true,
   };

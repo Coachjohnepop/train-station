@@ -29,6 +29,7 @@ type DemoAccount = {
 
 const SESSION_DAYS = 30;
 export const NEEDS_ONBOARD_COOKIE = "ts_needs_onboard";
+export const SIGNUP_PLAN_COOKIE = "ts_signup_plan";
 
 export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString("hex");
@@ -140,21 +141,28 @@ export function clearSessionCookies(
   res.cookies.set(MEMBER_COOKIE, "", clear);
   res.cookies.set(MEMBER_NAME_COOKIE, "", clear);
   res.cookies.set(NEEDS_ONBOARD_COOKIE, "", clear);
+  res.cookies.set(SIGNUP_PLAN_COOKIE, "", clear);
 }
 
 export function applyNewMemberOnboardingCookie(
   res: { cookies: { set: (name: string, value: string, opts?: object) => void } },
+  plan?: string,
 ) {
-  res.cookies.set(NEEDS_ONBOARD_COOKIE, "1", {
+  const cookieOpts = {
     path: "/",
     maxAge: SESSION_DAYS * 24 * 60 * 60,
-    sameSite: "lax",
+    sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
-  });
+  };
+  res.cookies.set(NEEDS_ONBOARD_COOKIE, "1", cookieOpts);
+  if (plan) {
+    res.cookies.set(SIGNUP_PLAN_COOKIE, plan, cookieOpts);
+  }
 }
 
 export function clearNewMemberOnboardingCookie(
   res: { cookies: { set: (name: string, value: string, opts?: object) => void } },
 ) {
   res.cookies.set(NEEDS_ONBOARD_COOKIE, "", { path: "/", maxAge: 0 });
+  res.cookies.set(SIGNUP_PLAN_COOKIE, "", { path: "/", maxAge: 0 });
 }
