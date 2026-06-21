@@ -1,77 +1,124 @@
-import { NextResponse } from 'next/server';
-import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import {
+  clearNewMemberOnboardingCookie,
+  getSessionUser,
+} from "@/lib/auth";
+import { ensureMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
+import { isDemoMode, updateDemoUserSettings } from "@/lib/demo-reminders";
+import { notifyNewLead } from "@/lib/lead-notify";
+
+const schema = z.object({
+  measurements: z
+    .object({
+      weight: z.string().optional(),
+      notes: z.string().optional(),
+    })
+    .optional(),
+  notes: z.string().optional(),
+  location: z
+    .object({
+      city: z.string().optional(),
+      state: z.string().optional(),
+    })
+    .optional(),
+  phone: z.string().optional(),
+  dailyReminderTime: z.string().optional(),
+  calendlyOpened: z.boolean().optional(),
+  programSlug: z.string().optional(),
+  plan: z.string().optional(),
+});
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const { measurements, notes, location, calendlyOpened, programSlug } = body;
+  const session = await getSessionUser();
+  if (!session || session.role !== "MEMBER") {
+    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+  }
 
-  const coachEmail = 'jeremy@thetrainstation.co';
-  const subject = 'New member completed onboarding wizard';
-  const message = `
-A member has completed the new onboarding wizard for program: ${programSlug || 'general'}.
+  const body = schema.safeParse(await request.json().catch(() => ({})));
+  if (!body.success) {
+    return NextResponse.json({ detail: body.error.flatten() }, { status: 400 });
+  }
 
-Measurements:
-- Weight: ${measurements?.weight || 'not provided'} lbs
-- Notes: ${notes || 'none'}
+  const {
+    measurements,
+    notes,
+    location,
+    phone,
+    dailyReminderTime,
+    calendlyOpened,
+    programSlug,
+    plan,
+  } = body.data;
 
-Location (for weather in workouts):
-- City: ${location?.city || 'not provided'}
-- State: ${location?.state || 'not provided'}
+  await ensureMemberProfile({
+    userId: session.id,
+    email: session.email,
+    plan: plan || "explorer",
+    phone: phone || null,
+  });
 
-Calendly booking: ${calendlyOpened ? 'opened' : 'not opened'}
+  const completedAt = new Date().toISOString();
+  const profile = await updateMemberProfile(session.id, {
+    phone: phone || null,
+    dailyReminderTime: dailyReminderTime || null,
+    weightLbs: measurements?.weight || null,
+    notes: measurements?.notes || notes || null,
+    city: location?.city || null,
+    state: location?.state || null,
+    onboardingComplete: true,
+    completedAt,
+  });
 
-Home equipment: updated via wizard.
-
-Please follow up to confirm their first session and assign any coach-specific details.
-
-Member email (demo): demo@thetrainstation.co
-`;
-
-  const isDemo = !process.env.DATABASE_URL || process.env.DATABASE_URL.includes('dummy');
-
-  if (isDemo) {
-    console.log(`\n[EMAIL SIMULATED]`);
-    console.log(`To: ${coachEmail}`);
-    console.log(`Subject: ${subject}`);
-    console.log(message);
-    console.log(`[END EMAIL SIM]\n`);
-
-    // Demo: location is persisted via cookies in the wizard for immediate weather use
-    if (location?.city && location?.state) {
-      console.log(`[DEMO LOCATION SET] ${location.city}, ${location.state} (cookies)`);
-    }
-
-    return NextResponse.json({ 
-      success: true, 
-      simulated: true,
-      sentTo: coachEmail 
+  if (isDemoMode()) {
+    updateDemoUserSettings(session.id, {
+      phone: phone || undefined,
+      dailyReminderTime: dailyReminderTime || undefined,
     });
   }
 
-  // Real mode: persist location to the demo user (or the current user if we had uid)
-  // In a full app the join/onboard would have a userId cookie or session by now.
-  try {
-    if (location?.city || location?.state) {
-      const targetUser = await prisma.user.findUnique({ where: { email: "demo@thetrainstation.co" } });
-      if (targetUser) {
-        await prisma.user.update({
-          where: { id: targetUser.id },
-          data: {
-            city: location.city || targetUser.city,
-            state: location.state || targetUser.state,
-          },
-        });
-      }
-    }
-  } catch (e) {
-    console.error("Failed to persist location to user", e);
+  const coachEmail = "jeremy@thetrainstation.co";
+  const subject = "New member completed onboarding";
+  const message = `
+${session.name} <${session.email}> finished setup.
+
+Ticket plan: ${profile.plan}
+Program context: ${programSlug || "general"}
+
+Measurements:
+- Weight: ${measurements?.weight || "not provided"} lbs
+- Notes: ${measurements?.notes || notes || "none"}
+
+Location: ${location?.city || "—"}, ${location?.state || "—"}
+SMS phone: ${phone || "not set"}
+Daily reminder: ${dailyReminderTime || "not set"}
+Calendly opened: ${calendlyOpened ? "yes" : "no"}
+`;
+
+  if (isDemoMode()) {
+    console.log(`\n[ONBOARD COMPLETE] To: ${coachEmail}\nSubject: ${subject}\n${message}\n`);
   }
 
-  // TODO: wire real email (Resend, SendGrid, etc.)
-  // For production you would do:
-  // await sendEmail({ to: coachEmail, subject, text: message });
-  return NextResponse.json({ 
-    success: true, 
-    message: 'Email queued (production mode not fully wired yet)' 
+  await notifyNewLead({
+    email: session.email,
+    name: session.name,
+    phone: phone || null,
+    plan: profile.plan,
+    source: "onboard-complete",
+    createdAt: completedAt,
   });
+
+  const res = NextResponse.json({
+    success: true,
+    redirectTo: "/member",
+    profile,
+  });
+  clearNewMemberOnboardingCookie(res);
+
+  if (location?.city && location?.state) {
+    res.cookies.set("ts_city", location.city, { path: "/", maxAge: 365 * 24 * 60 * 60 });
+    res.cookies.set("ts_state", location.state.toUpperCase(), { path: "/", maxAge: 365 * 24 * 60 * 60 });
+  }
+
+  return res;
 }

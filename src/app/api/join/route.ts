@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   const normalizedEmail = email?.trim().toLowerCase();
 
   // Real guests → waitlist + coming soon (no app access yet)
-  if (!normalizedEmail || !isInvitedAccountEmail(normalizedEmail)) {
+  if (!normalizedEmail || !(await isInvitedAccountEmail(normalizedEmail))) {
     if (!normalizedEmail) {
       return NextResponse.json({ waitlist: true, redirectTo: "/signup" });
     }

@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     last = parts.join(" ") || undefined;
   }
 
-  if (isInvitedAccountEmail(normalized)) {
+  if (await isInvitedAccountEmail(normalized)) {
     return NextResponse.json({
       invited: true,
       redirectTo: `/login?email=${encodeURIComponent(normalized)}`,

@@ -2,10 +2,9 @@ import "server-only";
 
 import { scryptSync, timingSafeEqual, randomBytes } from "crypto";
 import { cookies } from "next/headers";
-import fs from "fs";
-import path from "path";
 import { MEMBER_COOKIE, MEMBER_NAME_COOKIE } from "@/lib/current-user";
 import { normalizeAccountEmail } from "@/lib/account-email";
+import { getAllSignInAccounts } from "@/lib/member-accounts-store";
 import { resolveDemoUser, resolveDemoUserByEmail } from "@/lib/demo-user-directory";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import {
@@ -24,10 +23,12 @@ type DemoAccount = {
   userId: string;
   role: UserRole;
   passwordHash?: string;
+  name?: string;
+  phone?: string;
 };
 
-const ACCOUNTS_FILE = path.join(process.cwd(), "prisma", "accounts.dev.json");
 const SESSION_DAYS = 30;
+export const NEEDS_ONBOARD_COOKIE = "ts_needs_onboard";
 
 export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString("hex");
@@ -46,15 +47,8 @@ export function verifyPassword(password: string, stored: string): boolean {
   }
 }
 
-function loadDemoAccounts(): Record<string, DemoAccount> {
-  try {
-    if (fs.existsSync(ACCOUNTS_FILE)) {
-      return JSON.parse(fs.readFileSync(ACCOUNTS_FILE, "utf8"));
-    }
-  } catch {
-    /* ignore */
-  }
-  return {};
+async function loadDemoAccounts(): Promise<Record<string, DemoAccount>> {
+  return getAllSignInAccounts();
 }
 
 function passwordAccepted(password: string, storedHash?: string | null): boolean {
@@ -68,7 +62,7 @@ function sessionFromDemoAccount(normalized: string, account: DemoAccount): Sessi
   return {
     id: account.userId,
     email: normalized,
-    name: user?.name || "Member",
+    name: account.name || user?.name || "Member",
     role: account.role,
   };
 }
@@ -80,7 +74,7 @@ export async function authenticateCredentials(
   const normalized = normalizeAccountEmail(email);
   if (!normalized) return null;
 
-  const demoAccount = loadDemoAccounts()[normalized];
+  const demoAccount = (await loadDemoAccounts())[normalized];
   if (demoAccount && passwordAccepted(password, demoAccount.passwordHash)) {
     return sessionFromDemoAccount(normalized, demoAccount);
   }
@@ -145,4 +139,22 @@ export function clearSessionCookies(
   res.cookies.set(SESSION_COOKIE, "", clear);
   res.cookies.set(MEMBER_COOKIE, "", clear);
   res.cookies.set(MEMBER_NAME_COOKIE, "", clear);
+  res.cookies.set(NEEDS_ONBOARD_COOKIE, "", clear);
+}
+
+export function applyNewMemberOnboardingCookie(
+  res: { cookies: { set: (name: string, value: string, opts?: object) => void } },
+) {
+  res.cookies.set(NEEDS_ONBOARD_COOKIE, "1", {
+    path: "/",
+    maxAge: SESSION_DAYS * 24 * 60 * 60,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+}
+
+export function clearNewMemberOnboardingCookie(
+  res: { cookies: { set: (name: string, value: string, opts?: object) => void } },
+) {
+  res.cookies.set(NEEDS_ONBOARD_COOKIE, "", { path: "/", maxAge: 0 });
 }

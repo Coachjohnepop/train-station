@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 
 function SignupForm() {
   const router = useRouter();
@@ -10,6 +11,8 @@ function SignupForm() {
   const plan = searchParams.get("plan") || "";
   const interest = searchParams.get("interest") || "";
   const prefillEmail = searchParams.get("email") || "";
+  const isWaitlistOnly = Boolean(interest && !plan);
+
   const [email, setEmail] = useState(prefillEmail);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -17,8 +20,8 @@ function SignupForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Remember previously entered values across visits (cached in localStorage),
-  // so a returning visitor doesn't have to retype. A ?email= URL param wins.
+  const ticketPlan = normalizeSignupPlan(plan || "explorer");
+
   useEffect(() => {
     try {
       if (!prefillEmail) {
@@ -32,7 +35,7 @@ function SignupForm() {
       const savedPhone = localStorage.getItem("ts-signup-phone");
       if (savedPhone) setPhone(savedPhone);
     } catch {
-      /* localStorage unavailable — ignore */
+      /* ignore */
     }
   }, [prefillEmail]);
 
@@ -53,31 +56,57 @@ function SignupForm() {
     setError(null);
 
     try {
-      const res = await fetch("/api/signup/waitlist", {
+      if (isWaitlistOnly) {
+        const res = await fetch("/api/signup/waitlist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: email.trim(),
+            firstName: firstName.trim() || undefined,
+            lastName: lastName.trim() || undefined,
+            phone: phone.trim() || undefined,
+            plan: interest || undefined,
+            source: `interest:${interest}`,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.error || "Something went wrong — try again.");
+          return;
+        }
+        if (data.invited && data.redirectTo) {
+          router.push(data.redirectTo);
+          return;
+        }
+        router.push(data.redirectTo || "/coming-soon");
+        return;
+      }
+
+      const res = await fetch("/api/signup/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: email.trim(),
-          firstName: firstName.trim() || undefined,
-          lastName: lastName.trim() || undefined,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
           phone: phone.trim() || undefined,
-          plan: plan || interest || undefined,
-          source: interest ? `interest:${interest}` : "signup-page",
+          plan: ticketPlan,
         }),
       });
       const data = await res.json();
+
+      if (res.status === 409) {
+        setError(data.error || "Account exists — sign in instead.");
+        return;
+      }
 
       if (!res.ok) {
         setError(data.error || "Something went wrong — try again.");
         return;
       }
 
-      if (data.invited && data.redirectTo) {
-        router.push(data.redirectTo);
-        return;
-      }
-
-      router.push(data.redirectTo || "/coming-soon");
+      router.push(data.redirectTo || `/member/onboard?plan=${ticketPlan}`);
+      router.refresh();
     } catch {
       setError("Something went wrong — try again.");
     } finally {
@@ -93,7 +122,7 @@ function SignupForm() {
             The Train Station
           </Link>
           <Link href="/login" className="text-sm text-[#9d8ab8] hover:text-white transition">
-            Already have access? Sign in
+            Already have an account? Sign in
           </Link>
         </div>
       </div>
@@ -102,17 +131,28 @@ function SignupForm() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <div className="uppercase tracking-[3px] text-xs font-semibold text-[#7c3aed] mb-3">
-              Early access
+              {isWaitlistOnly ? "Coming soon" : "Get started"}
             </div>
-            <h1 className="text-4xl font-semibold tracking-tight">Join the waitlist</h1>
+            <h1 className="text-4xl font-semibold tracking-tight">
+              {isWaitlistOnly ? "Join the waitlist" : "Create your account"}
+            </h1>
             <p className="mt-3 text-[#9d8ab8] text-sm leading-relaxed">
-              We&apos;re putting the finishing touches on the member app. Drop your email and we&apos;ll let you know the moment it&apos;s ready.
+              {isWaitlistOnly
+                ? "We'll notify you when this program track launches."
+                : "Next you'll set up texts, book your coach, and open your training dashboard."}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="rounded-3xl border border-[#3d2660] bg-[#140a22] p-8 space-y-4">
             {error && (
-              <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p>
+              <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                {error}{" "}
+                {error.includes("exists") && (
+                  <Link href={`/login?email=${encodeURIComponent(email)}`} className="underline">
+                    Sign in
+                  </Link>
+                )}
+              </p>
             )}
 
             <div>
@@ -160,7 +200,7 @@ function SignupForm() {
 
             <div>
               <label className="block text-xs text-[#9d8ab8] mb-1">
-                Phone <span className="text-[#6b5b86]">(optional)</span>
+                Phone <span className="text-[#6b5b86]">(optional — used for workout texts)</span>
               </label>
               <input
                 type="tel"
@@ -173,10 +213,16 @@ function SignupForm() {
               />
             </div>
 
-            {(plan || interest) && (
+            {isWaitlistOnly && (
               <p className="text-xs text-[#7c3aed]">
-                Interested in:{" "}
-                <span className="font-semibold capitalize">{plan || interest.replace(/-/g, " ")}</span>
+                Program interest:{" "}
+                <span className="font-semibold capitalize">{interest.replace(/-/g, " ")}</span>
+              </p>
+            )}
+
+            {!isWaitlistOnly && (plan || ticketPlan) && (
+              <p className="text-xs text-[#7c3aed]">
+                Ticket: <span className="font-semibold">{signupPlanLabel(ticketPlan)}</span>
               </p>
             )}
 
@@ -185,12 +231,18 @@ function SignupForm() {
               disabled={loading}
               className="w-full inline-flex h-12 items-center justify-center rounded-full bg-[#7c3aed] text-sm font-semibold text-white hover:bg-[#6d2dd6] transition-all disabled:opacity-60"
             >
-              {loading ? "Joining waitlist…" : "Notify me when it launches"}
+              {loading
+                ? isWaitlistOnly
+                  ? "Joining waitlist…"
+                  : "Creating account…"
+                : isWaitlistOnly
+                  ? "Notify me when it launches"
+                  : "Continue to setup →"}
             </button>
           </form>
 
           <p className="mt-6 text-center text-xs text-[#9d8ab8]">
-            Coaches and invited beta members can{" "}
+            Coaches can{" "}
             <Link href="/login" className="text-[#7c3aed] hover:underline">
               sign in here
             </Link>

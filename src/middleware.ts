@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifySessionTokenEdge, SESSION_COOKIE } from "@/lib/auth-session-edge";
 
+const NEEDS_ONBOARD_COOKIE = "ts_needs_onboard";
+
 const PUBLIC_PREFIXES = [
   "/login",
   "/forgot-password",
@@ -50,6 +52,18 @@ export async function middleware(request: NextRequest) {
 
   if (pathname.startsWith("/admin") && session.role !== "ADMIN" && session.role !== "INSTRUCTOR") {
     return NextResponse.redirect(new URL("/member", request.url));
+  }
+
+  if (
+    session.role === "MEMBER" &&
+    pathname.startsWith("/member") &&
+    !pathname.startsWith("/member/onboard") &&
+    request.cookies.get(NEEDS_ONBOARD_COOKIE)?.value === "1"
+  ) {
+    const onboard = new URL("/member/onboard", request.url);
+    const plan = request.nextUrl.searchParams.get("plan");
+    if (plan) onboard.searchParams.set("plan", plan);
+    return NextResponse.redirect(onboard);
   }
 
   return NextResponse.next();

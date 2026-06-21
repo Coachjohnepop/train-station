@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { normalizeAccountEmail } from "@/lib/account-email";
-import { authenticateCredentials, applySessionCookies, isStaffRole } from "@/lib/auth";
+import {
+  applyNewMemberOnboardingCookie,
+  applySessionCookies,
+  authenticateCredentials,
+  isStaffRole,
+} from "@/lib/auth";
+import { getMemberProfile } from "@/lib/member-profiles-store";
 import { isInvitedAccountEmail } from "@/lib/invited-accounts";
 
 export async function POST(request: Request) {
@@ -10,10 +16,10 @@ export async function POST(request: Request) {
   const redirect = typeof body.redirect === "string" ? body.redirect : "";
 
   const normalized = normalizeAccountEmail(email);
-  if (!isInvitedAccountEmail(normalized)) {
+  if (!(await isInvitedAccountEmail(normalized))) {
     return NextResponse.json(
       {
-        error: "The app is coming soon for new members. Join the waitlist and we'll email you when your spot opens.",
+        error: "No account found. Create one from the home page ticket picker.",
         code: "not_invited",
         signupUrl: `/signup?email=${encodeURIComponent(normalized)}`,
       },
@@ -27,13 +33,40 @@ export async function POST(request: Request) {
   }
 
   let destination = isStaffRole(user.role) ? "/admin" : "/member";
+
+  if (!isStaffRole(user.role)) {
+    const profile = await getMemberProfile(user.id);
+    const needsOnboard =
+      (profile && !profile.onboardingComplete) ||
+      (!profile && user.id.startsWith("member-"));
+    if (needsOnboard) {
+      const plan = profile?.plan || "explorer";
+      destination = `/member/onboard?plan=${encodeURIComponent(plan)}`;
+    }
+  }
+
   if (redirect && redirect.startsWith("/") && !redirect.startsWith("//")) {
     if (isStaffRole(user.role) && redirect.startsWith("/admin")) destination = redirect;
     else if (!isStaffRole(user.role) && redirect.startsWith("/member")) destination = redirect;
     else if (redirect.startsWith("/member/chat")) destination = redirect;
   }
 
-  const res = NextResponse.json({ ok: true, user: { email: user.email, name: user.name, role: user.role }, redirect: destination });
+  const res = NextResponse.json({
+    ok: true,
+    user: { email: user.email, name: user.name, role: user.role },
+    redirect: destination,
+  });
   applySessionCookies(res, user);
+
+  if (!isStaffRole(user.role)) {
+    const profile = await getMemberProfile(user.id);
+    const needsOnboard =
+      (profile && !profile.onboardingComplete) ||
+      (!profile && user.id.startsWith("member-"));
+    if (needsOnboard) {
+      applyNewMemberOnboardingCookie(res);
+    }
+  }
+
   return res;
 }

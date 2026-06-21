@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
 import { isDemoMode, getDemoUserSettings, updateDemoUserSettings } from "@/lib/demo-reminders";
 import { resolveUserId } from "@/lib/current-user";
+import { getMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
 
 export async function GET() {
   const uid = await resolveUserId();
 
   if (isDemoMode()) {
+    const profile = await getMemberProfile(uid);
+    if (profile) {
+      return NextResponse.json({
+        phone: profile.phone,
+        dailyReminderTime: profile.dailyReminderTime,
+      });
+    }
     const settings = getDemoUserSettings(uid);
     return NextResponse.json(settings);
   }
@@ -36,6 +44,17 @@ export async function POST(request: Request) {
   const uid = await resolveUserId();
 
   if (isDemoMode()) {
+    const profile = await getMemberProfile(uid);
+    if (profile) {
+      const updated = await updateMemberProfile(uid, {
+        phone: phone ?? null,
+        dailyReminderTime: dailyReminderTime ?? null,
+      });
+      return NextResponse.json({
+        phone: updated.phone,
+        dailyReminderTime: updated.dailyReminderTime,
+      });
+    }
     const updated = updateDemoUserSettings(uid, {
       phone: phone ?? undefined,
       dailyReminderTime: dailyReminderTime ?? undefined,
