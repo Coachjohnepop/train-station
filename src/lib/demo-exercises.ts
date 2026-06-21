@@ -27,13 +27,14 @@ export function isDemoMode(): boolean {
   return !url || url.includes("dummy.supabase") || url.includes("dummy");
 }
 
-export async function hydrateDemoExercises(): Promise<any[]> {
+export async function hydrateDemoExercises(opts?: { preferFresh?: boolean }): Promise<any[]> {
   return hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
     memory: cache,
     setMemory,
     fallback: loadSeedExercises,
+    preferFresh: opts?.preferFresh,
   });
 }
 

@@ -24,8 +24,8 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
   if (isDemoMode()) {
-    const data = await getDemoSeed();
-    await hydrateDemoExercises();
+    const data = await getDemoSeed({ preferFresh: true });
+    await hydrateDemoExercises({ preferFresh: true });
     const exList = loadDemoExercises();
     const workoutExercises = (data.workoutExercises || []) as any[];
     const w = findDemoWorkoutRecord((data.workouts || []) as any[], id, workoutExercises);

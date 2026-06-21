@@ -26,7 +26,7 @@ export type ExerciseUsage = {
  * Shows exactly which programs, workouts, and specific day slots (with Gym/Home labels) use it.
  */
 export async function getExerciseUsage(exerciseId: string): Promise<ExerciseUsage> {
-  const data = (await getDemoSeed()) as any;
+  const data = (await getDemoSeed({ preferFresh: true })) as any;
 
   const wes = (data.workoutExercises || []).filter(
     (we: any) => we.exerciseId === exerciseId
@@ -103,7 +103,7 @@ export async function getExerciseUsage(exerciseId: string): Promise<ExerciseUsag
  * Returns a lightweight summary map for every exercise (great for the library table).
  */
 export async function getAllExerciseUsages(): Promise<Record<string, { programCount: number; workoutCount: number; programs: Array<{ name: string; slug: string }> }>> {
-  const data = (await getDemoSeed()) as any;
+  const data = (await getDemoSeed({ preferFresh: true })) as any;
   const result: Record<string, any> = {};
 
   const allWes = data.workoutExercises || [];

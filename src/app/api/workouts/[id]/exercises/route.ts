@@ -39,7 +39,7 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   if (isDemoMode()) {
-    await hydrateDemoExercises();
+    await hydrateDemoExercises({ preferFresh: true });
     const exList = loadDemoExercises();
     const ex = exList.find((e: any) => e.id === parsed.data.exerciseId);
 
@@ -139,7 +139,7 @@ export async function PATCH(request: Request, { params }: Params) {
   }
   const { itemId, ...data } = parsed.data;
   if (isDemoMode()) {
-    await hydrateDemoExercises();
+    await hydrateDemoExercises({ preferFresh: true });
     const exList = loadDemoExercises();
 
     let updated: Record<string, unknown> | null = null;

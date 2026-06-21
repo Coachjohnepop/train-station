@@ -38,13 +38,14 @@ function setMemory(data: DemoSeedData) {
   memorySeed = data;
 }
 
-export async function hydrateDemoSeed(): Promise<DemoSeedData> {
+export async function hydrateDemoSeed(opts?: { preferFresh?: boolean }): Promise<DemoSeedData> {
   return hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: SEED_FILE,
     memory: memorySeed,
     setMemory,
     fallback: loadBundledSeed,
+    preferFresh: opts?.preferFresh,
   });
 }
 
@@ -54,8 +55,8 @@ export function readDemoSeedSync(): DemoSeedData {
   return readLocalJson<DemoSeedData>(SEED_FILE) || loadBundledSeed();
 }
 
-export async function getDemoSeed(): Promise<DemoSeedData> {
-  return hydrateDemoSeed();
+export async function getDemoSeed(opts?: { preferFresh?: boolean }): Promise<DemoSeedData> {
+  return hydrateDemoSeed(opts);
 }
 
 export async function persistDemoSeed(data: DemoSeedData): Promise<{ blobSaved: boolean }> {
@@ -70,7 +71,7 @@ export async function persistDemoSeed(data: DemoSeedData): Promise<{ blobSaved: 
 export async function mutateDemoSeed(
   mutator: (data: DemoSeedData) => void,
 ): Promise<{ data: DemoSeedData; blobSaved: boolean }> {
-  const data = structuredClone(await hydrateDemoSeed()) as DemoSeedData;
+  const data = structuredClone(await hydrateDemoSeed({ preferFresh: true })) as DemoSeedData;
   mutator(data);
   const { blobSaved } = await persistDemoSeed(data);
   return { data, blobSaved };

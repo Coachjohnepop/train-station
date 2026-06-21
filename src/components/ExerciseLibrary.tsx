@@ -67,7 +67,7 @@ function ExerciseVideoCell({
   onSaved,
 }: {
   exercise: Exercise;
-  onSaved: () => Promise<void>;
+  onSaved: (updated: Exercise) => void;
 }) {
   const [draft, setDraft] = useState(exercise.videoUrl ?? "");
   const [editing, setEditing] = useState(!exercise.videoUrl);
@@ -105,8 +105,9 @@ function ExerciseVideoCell({
       setCellError(formatApiError((body as { detail?: unknown }).detail));
       return;
     }
+    const updated = (await res.json()) as Exercise;
     setEditing(false);
-    await onSaved();
+    onSaved(updated);
   }
 
   if (exercise.videoUrl && !editing) {
@@ -185,7 +186,7 @@ function ExerciseNameCell({
   onSaved,
 }: {
   exercise: Exercise;
-  onSaved: () => Promise<void>;
+  onSaved: (updated: Exercise) => void;
 }) {
   const [draft, setDraft] = useState(exercise.name);
   const [editing, setEditing] = useState(false);
@@ -211,8 +212,9 @@ function ExerciseNameCell({
       setCellError(formatApiError((body as { detail?: unknown }).detail));
       return;
     }
+    const updated = (await res.json()) as Exercise;
     setEditing(false);
-    await onSaved();
+    onSaved(updated);
   }
 
   if (!editing) {
@@ -329,11 +331,15 @@ export default function ExerciseLibrary() {
     if (q !== null) setSearch(q);
   }, [searchParams]);
 
+  const applyExerciseUpdate = useCallback((updated: Exercise) => {
+    setExercises((prev) => prev.map((e) => (e.id === updated.id ? { ...e, ...updated } : e)));
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     const [exRes, usageRes] = await Promise.all([
-      fetch("/api/exercises"),
-      fetch("/api/exercises/usage"),
+      fetch("/api/exercises", { cache: "no-store" }),
+      fetch("/api/exercises/usage", { cache: "no-store" }),
     ]);
 
     if (!exRes.ok) {
@@ -531,9 +537,11 @@ export default function ExerciseLibrary() {
         setError(formatApiError((body as { detail?: unknown }).detail));
         return;
       }
+      const updated = (await res.json()) as Exercise;
+      applyExerciseUpdate(updated);
       setEditingExercise(null);
-      await load();
       setMessage('Exercise updated.');
+      void load();
     } catch (e) {
       setError('Failed to update exercise.');
     }
@@ -839,7 +847,7 @@ export default function ExerciseLibrary() {
                 return (
                   <tr key={ex.id}>
                     <td className="align-top">
-                      <ExerciseNameCell exercise={ex} onSaved={load} />
+                      <ExerciseNameCell exercise={ex} onSaved={applyExerciseUpdate} />
                     </td>
                     <td className="max-w-xs align-top text-sm text-[var(--muted)]">
                       {ex.description ? (
@@ -849,7 +857,7 @@ export default function ExerciseLibrary() {
                       )}
                     </td>
                     <td className="align-top">
-                      <ExerciseVideoCell exercise={ex} onSaved={load} />
+                      <ExerciseVideoCell exercise={ex} onSaved={applyExerciseUpdate} />
                     </td>
                     <td className="align-top">
                       <div className="flex flex-wrap gap-1 text-[10px] items-center">
@@ -868,12 +876,14 @@ export default function ExerciseLibrary() {
                             const current = ex.tags || "";
                             const newTags = prompt("Edit tags (comma separated):", current);
                             if (newTags === null) return;
-                            await fetch(`/api/exercises/${ex.id}`, {
+                            const tagRes = await fetch(`/api/exercises/${ex.id}`, {
                               method: "PATCH",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({ tags: newTags.trim() || null }),
                             });
-                            await load();
+                            if (tagRes.ok) {
+                              applyExerciseUpdate((await tagRes.json()) as Exercise);
+                            }
                           }}
                           className="text-[var(--muted)] hover:text-[var(--text)] text-[9px] underline"
                         >

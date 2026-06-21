@@ -45,7 +45,7 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   if (isDemoMode()) {
-    await hydrateDemoExercises();
+    await hydrateDemoExercises({ preferFresh: true });
     const list = loadDemoExercises();
     const idx = list.findIndex((e: any) => e.id === id);
     if (idx === -1) {
@@ -82,7 +82,7 @@ export async function PATCH(request: Request, { params }: Params) {
 export async function DELETE(_request: Request, { params }: Params) {
   const { id } = await params;
   if (isDemoMode()) {
-    await hydrateDemoExercises();
+    await hydrateDemoExercises({ preferFresh: true });
     const list = loadDemoExercises();
     const idx = list.findIndex((e: any) => e.id === id);
     if (idx === -1) {

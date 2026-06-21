@@ -19,7 +19,7 @@ const createSchema = z.object({
 
 export async function GET() {
   if (isDemoMode()) {
-    await hydrateDemoExercises();
+    await hydrateDemoExercises({ preferFresh: true });
     const exercises = loadDemoExercises();
     return NextResponse.json(exercises);
   }
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   const { name, description, videoUrl, tags } = parsed.data;
 
   if (isDemoMode()) {
-    await hydrateDemoExercises();
+    await hydrateDemoExercises({ preferFresh: true });
     const list = loadDemoExercises();
     const exercise = {
       id: createDemoExerciseId(),
