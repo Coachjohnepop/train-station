@@ -9,6 +9,7 @@ import { registerMember } from "@/lib/member-accounts-store";
 import { ensureMemberProfile } from "@/lib/member-profiles-store";
 import { notifyNewLead } from "@/lib/lead-notify";
 import { normalizeSignupPlan } from "@/lib/signup-plans";
+import { addToWaitlist } from "@/lib/waitlist";
 
 const schema = z.object({
   email: z.string().email(),
@@ -43,8 +44,17 @@ export async function POST(request: Request) {
       phone: phone || account.phone,
     });
 
+    const normalizedEmail = email.trim().toLowerCase();
+    await addToWaitlist({
+      email: normalizedEmail,
+      firstName,
+      lastName,
+      phone: phone || null,
+      plan,
+      source: "signup-register",
+    });
     await notifyNewLead({
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       name: account.name,
       phone: phone || null,
       plan,
