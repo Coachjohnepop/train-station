@@ -40,7 +40,7 @@
 3. Glance at all three tickets side by side on your phone — Free, Coach Class, 1st Class.
 
 **Main test — Coach Class (paid path)**:
-4. Tap **Coach Class** ($29/mo) → **Select**.
+4. Tap **Coach Class** ($25/mo) → **Select**.
 5. You should land on signup with heading **Create your account** (not “Join the waitlist”).
 6. Confirm the ticket line says **Coach Class** and the button says **Continue to setup →**.
 

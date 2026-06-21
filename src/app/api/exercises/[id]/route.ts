@@ -8,6 +8,7 @@ import {
   saveDemoExercises,
 } from "@/lib/demo-exercises";
 import { mutateDemoSeed } from "@/lib/demo-seed-store";
+import { BLOB_TOKEN } from "@/lib/demo-json-blob";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -57,7 +58,13 @@ export async function PATCH(request: Request, { params }: Params) {
     if (data.tags !== undefined) ex.tags = data.tags;
     ex.updatedAt = new Date().toISOString();
     list[idx] = ex;
-    await saveDemoExercises(list);
+    const { blobSaved } = await saveDemoExercises(list);
+    if (process.env.VERCEL && BLOB_TOKEN && !blobSaved) {
+      return NextResponse.json(
+        { detail: "Update applied but cloud save failed — retry in a moment." },
+        { status: 503 },
+      );
+    }
     return NextResponse.json(ex);
   }
 

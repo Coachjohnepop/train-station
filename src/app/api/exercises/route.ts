@@ -8,6 +8,7 @@ import {
   saveDemoExercises,
   createDemoExerciseId,
 } from "@/lib/demo-exercises";
+import { BLOB_TOKEN } from "@/lib/demo-json-blob";
 
 const createSchema = z.object({
   name: z.string().min(1).max(200),
@@ -51,7 +52,13 @@ export async function POST(request: Request) {
       defaultWeightTier: null,
     };
     list.push(exercise);
-    await saveDemoExercises(list);
+    const { blobSaved } = await saveDemoExercises(list);
+    if (process.env.VERCEL && BLOB_TOKEN && !blobSaved) {
+      return NextResponse.json(
+        { detail: "Exercise created but cloud save failed — retry in a moment." },
+        { status: 503 },
+      );
+    }
     return NextResponse.json(exercise, { status: 201 });
   }
 

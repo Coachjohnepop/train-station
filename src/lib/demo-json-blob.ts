@@ -20,8 +20,8 @@ export async function readBlobJson<T>(blobPath: string): Promise<T | null> {
   }
 }
 
-export async function writeBlobJson(blobPath: string, data: unknown): Promise<void> {
-  if (!BLOB_TOKEN) return;
+export async function writeBlobJson(blobPath: string, data: unknown): Promise<boolean> {
+  if (!BLOB_TOKEN) return false;
   try {
     await put(blobPath, JSON.stringify(data, null, 2), {
       access: "public",
@@ -30,8 +30,10 @@ export async function writeBlobJson(blobPath: string, data: unknown): Promise<vo
       allowOverwrite: true,
       token: BLOB_TOKEN,
     });
+    return true;
   } catch (e) {
     console.warn(`Could not persist blob ${blobPath}`, e);
+    return false;
   }
 }
 
@@ -61,12 +63,16 @@ export async function hydrateJsonStore<T>(opts: {
   setMemory: (v: T) => void;
   fallback: () => T;
 }): Promise<T> {
-  if (opts.memory) return opts.memory;
-
-  const fromBlob = await readBlobJson<T>(opts.blobPath);
-  if (fromBlob) {
-    opts.setMemory(fromBlob);
-    return fromBlob;
+  // When Blob is configured, always read remote state so serverless instances
+  // don't serve stale in-memory data from before another instance wrote.
+  if (BLOB_TOKEN) {
+    const fromBlob = await readBlobJson<T>(opts.blobPath);
+    if (fromBlob) {
+      opts.setMemory(fromBlob);
+      return fromBlob;
+    }
+  } else if (opts.memory) {
+    return opts.memory;
   }
 
   const fromDisk = readLocalJson<T>(opts.localPath);
@@ -86,8 +92,9 @@ export async function persistJsonStore<T>(opts: {
   localPath: string;
   data: T;
   setMemory: (v: T) => void;
-}): Promise<void> {
+}): Promise<{ blobSaved: boolean }> {
   opts.setMemory(opts.data);
   writeLocalJson(opts.localPath, opts.data);
-  await writeBlobJson(opts.blobPath, opts.data);
+  const blobSaved = await writeBlobJson(opts.blobPath, opts.data);
+  return { blobSaved };
 }

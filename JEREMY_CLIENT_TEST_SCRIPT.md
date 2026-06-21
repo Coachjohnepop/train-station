@@ -50,7 +50,7 @@ Use ONLY this preview as the base for all testing and comparisons going forward:
 
 **Verify**:
 - Clean, on-brand dark UI.
-- The three pricing cards (Explorer free, Member $29 popular, Pro annual) are visible but you are guided to the quiz first.
+- The three pricing cards (Explorer free, Coach Class $25/mo, 1st Class $50/mo) are visible but you are guided to the quiz first.
 - "Back to your program" takes you to the personal dashboard (starting-over / fresh review state in current data).
 
 ---

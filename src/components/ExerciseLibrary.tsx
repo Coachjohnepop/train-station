@@ -313,7 +313,7 @@ export default function ExerciseLibrary() {
   const [editDraft, setEditDraft] = useState({ name: '', description: '', videoUrl: '', tags: '' });
 
   // Search and categories (P1 from transcript: "search... type in back and boom" + categories "like we did before")
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => searchParams.get("q") || "");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [libraryTab, setLibraryTab] = useState<LibraryTab>(
     searchParams.get("tab") === "newly-added" ? "newly-added" : "all",
@@ -325,6 +325,8 @@ export default function ExerciseLibrary() {
     if (searchParams.get("tab") === "newly-added") {
       setLibraryTab("newly-added");
     }
+    const q = searchParams.get("q");
+    if (q !== null) setSearch(q);
   }, [searchParams]);
 
   const load = useCallback(async () => {
@@ -532,8 +534,62 @@ export default function ExerciseLibrary() {
     }
   }
 
+  const searchBar = (
+    <div className="sticky top-0 z-10 -mx-1 rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 p-3 backdrop-blur-sm">
+      <label htmlFor="exercise-search" className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+        Search exercises
+      </label>
+      <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <input
+          id="exercise-search"
+          type="search"
+          placeholder="Type a name — e.g. bench, squat, row…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="input flex-1 text-base"
+          autoComplete="off"
+        />
+        <div className="flex flex-wrap gap-1">
+          {COMMON_CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => toggleCategory(cat)}
+              className={`text-xs px-2 py-1 rounded border transition ${
+                selectedCategories.includes(cat)
+                  ? "bg-accent text-white border-accent"
+                  : "bg-[var(--surface)] border-[var(--border)] hover:bg-[var(--surface-2)]"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+          {(search || selectedCategories.length > 0) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setSelectedCategories([]);
+              }}
+              className="text-xs px-2 py-1 text-[var(--muted)] hover:text-[var(--text)]"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+      <p className="mt-2 text-[10px] text-[var(--muted)]">
+        {loading
+          ? "Loading library…"
+          : `${filteredExercises.length} shown${search || selectedCategories.length > 0 ? ` of ${exercises.length}` : ""}`}
+      </p>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
+      {searchBar}
+
       <TextUploadPanel mode="exercises" onBuilt={() => load()} />
 
       {/* Collapsible "Add New to Exercise Library" form - starts collapsed like the directions above.
@@ -727,42 +783,6 @@ export default function ExerciseLibrary() {
             Exercises auto-created from Text Upload — review names, videos, and tags here.
           </p>
         )}
-      </div>
-
-      {/* Search + Category filters (P1 from transcript) */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <input
-          type="text"
-          placeholder="Search name, description, or tags..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="input flex-1"
-        />
-        <div className="flex flex-wrap gap-1">
-          {COMMON_CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => toggleCategory(cat)}
-              className={`text-xs px-2 py-1 rounded border transition ${
-                selectedCategories.includes(cat)
-                  ? "bg-accent text-white border-accent"
-                  : "bg-[var(--surface)] border-[var(--border)] hover:bg-[var(--surface-2)]"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-          {selectedCategories.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setSelectedCategories([])}
-              className="text-xs px-2 py-1 text-[var(--muted)] hover:text-[var(--text)]"
-            >
-              Clear
-            </button>
-          )}
-        </div>
       </div>
 
       <div className="table-wrap card">

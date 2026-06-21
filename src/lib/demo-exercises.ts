@@ -64,15 +64,16 @@ async function syncExercisesIntoSeed(list: any[]) {
   });
 }
 
-export async function saveDemoExercises(list: any[]): Promise<void> {
+export async function saveDemoExercises(list: any[]): Promise<{ blobSaved: boolean }> {
   cache = [...list];
-  await persistJsonStore({
+  const { blobSaved } = await persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
     data: cache,
     setMemory,
   });
   await syncExercisesIntoSeed(list);
+  return { blobSaved };
 }
 
 export function createDemoExerciseId(): string {
