@@ -171,6 +171,25 @@ export function getThread(threadId: string): ChatThread | null {
   return readStore().threads.find((t) => t.id === threadId) ?? null;
 }
 
+/** Hydrate from Blob, then find or create thread by canonical id (serverless-safe). */
+export async function resolveThreadById(threadId: string): Promise<ChatThread | null> {
+  await hydrateCoachChat();
+  const existing = getThread(threadId);
+  if (existing) return existing;
+
+  const memberMatch = threadId.match(/^thread-member-(.+)$/);
+  if (memberMatch?.[1]) {
+    return ensureMemberThread(memberMatch[1]);
+  }
+
+  const cohortMatch = threadId.match(/^thread-cohort-(.+)$/);
+  if (cohortMatch?.[1]) {
+    return ensureCohortThread(cohortMatch[1]);
+  }
+
+  return null;
+}
+
 export function getMessagesForThread(threadId: string, limit = 200): ChatMessage[] {
   return readStore()
     .messages.filter((m) => m.threadId === threadId)

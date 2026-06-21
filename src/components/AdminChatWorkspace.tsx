@@ -153,32 +153,48 @@ export default function AdminChatWorkspace({
     [threads],
   );
 
+  // Ensure a real thread exists when a member is selected (e.g. after chat reset).
   useEffect(() => {
-    if (activeId) loadMessages(activeId);
-  }, [activeId, loadMessages]);
+    if (!activeMemberId) return;
+    if (threadForMember(threads, activeMemberId)) return;
+    void selectMember(activeMemberId);
+  }, [activeMemberId, threads, selectMember]);
+
+  useEffect(() => {
+    const resolved = activeMemberId ? threadForMember(threads, activeMemberId) : null;
+    if (resolved && resolved.id !== activeId) {
+      setActiveId(resolved.id);
+    }
+  }, [activeMemberId, threads, activeId]);
+
+  const replyThreadId = activeThread?.id || activeId;
+
+  useEffect(() => {
+    if (replyThreadId) loadMessages(replyThreadId);
+  }, [replyThreadId, loadMessages]);
 
   useEffect(() => {
     void refreshUnread();
   }, [refreshUnread]);
 
   useEffect(() => {
-    if (!activeId) return;
+    if (!replyThreadId) return;
     const id = setInterval(() => {
-      loadMessages(activeId, { quiet: true });
+      loadMessages(replyThreadId, { quiet: true });
       void refreshUnread();
     }, 6000);
     return () => clearInterval(id);
-  }, [activeId, loadMessages, refreshUnread]);
+  }, [replyThreadId, loadMessages, refreshUnread]);
 
   useEffect(() => {
     function onPosted() {
       refreshThreads();
-      if (activeId) loadMessages(activeId);
+      if (replyThreadId) loadMessages(replyThreadId);
       void refreshUnread();
     }
     window.addEventListener("coach-chat-posted", onPosted);
     return () => window.removeEventListener("coach-chat-posted", onPosted);
-  }, [activeId, loadMessages, refreshUnread]);
+  }, [replyThreadId, loadMessages, refreshUnread]);
 
   async function refreshThreads() {
     const res = await fetch("/api/chat/threads?role=coach");
@@ -349,12 +365,12 @@ export default function AdminChatWorkspace({
             emptyLabel="No messages in this thread yet."
             hideHeader
           />
-          {activeId && (
+          {replyThreadId && activeMemberId && (
             <ChatThreadReply
-              threadId={activeId}
+              threadId={replyThreadId}
               role="coach"
               placeholder="Quick reply…"
-              onSent={() => loadMessages(activeId)}
+              onSent={() => loadMessages(replyThreadId)}
             />
           )}
         </div>

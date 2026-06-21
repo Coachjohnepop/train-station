@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { addChatMessage, COACH_READER_ID, ensureMemberThread, getThread } from "@/lib/coach-chat";
+import {
+  addChatMessage,
+  COACH_READER_ID,
+  ensureMemberThread,
+  hydrateCoachChat,
+  resolveThreadById,
+} from "@/lib/coach-chat";
 import { resolveUserId } from "@/lib/current-user";
 import { DEMO_COACH } from "@/lib/demo-coach";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
@@ -16,11 +22,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Message is required" }, { status: 400 });
   }
 
+  await hydrateCoachChat();
+
   if (role === "coach") {
     if (!threadId) {
       return NextResponse.json({ error: "threadId is required for coach replies" }, { status: 400 });
     }
-    const thread = getThread(threadId);
+    const thread = await resolveThreadById(threadId);
     if (!thread) {
       return NextResponse.json({ error: "Thread not found" }, { status: 404 });
     }
@@ -45,7 +53,7 @@ export async function POST(request: Request) {
 
   const uid = await resolveUserId();
   const user = resolveDemoUser(uid);
-  const thread = threadId ? getThread(threadId) : null;
+  const thread = threadId ? await resolveThreadById(threadId) : null;
   const target =
     thread && (thread.kind === "member" ? thread.memberId === uid : true)
       ? thread
