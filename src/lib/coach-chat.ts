@@ -221,15 +221,18 @@ export function getUnreadCountForMember(memberId: string, programSlugs: string[]
 }
 
 export function getUnreadCountForCoach(): number {
-  const memberThreadIds = readStore()
-    .threads.filter((t) => t.kind === "member")
-    .map((t) => t.id);
-  return readStore().messages.filter(
-    (m) =>
-      memberThreadIds.includes(m.threadId) &&
-      m.authorRole === "member" &&
-      !m.readByUserIds.includes(COACH_READER_ID),
-  ).length;
+  return Object.values(getUnreadCountsByThreadForCoach()).reduce((n, c) => n + c, 0);
+}
+
+/** Per-thread unread member messages (for inbox badges). */
+export function getUnreadCountsByThreadForCoach(): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const m of readStore().messages) {
+    if (m.authorRole !== "member") continue;
+    if (m.readByUserIds.includes(COACH_READER_ID)) continue;
+    counts[m.threadId] = (counts[m.threadId] || 0) + 1;
+  }
+  return counts;
 }
 
 export async function appendMemberSmsToChat(params: {

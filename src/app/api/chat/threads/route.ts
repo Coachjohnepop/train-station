@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   ensureMemberThread,
+  getUnreadCountsByThreadForCoach,
   hydrateCoachChat,
   listThreadsForCoach,
   listThreadsForMember,
@@ -27,7 +28,10 @@ export async function GET(request: Request) {
   await hydrateCoachChat();
 
   if (role === "coach") {
-    return NextResponse.json({ threads: listThreadsForCoach() });
+    return NextResponse.json({
+      threads: listThreadsForCoach(),
+      unreadByThread: getUnreadCountsByThreadForCoach(),
+    });
   }
 
   const uid = await resolveUserId();

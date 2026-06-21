@@ -42,8 +42,13 @@ export default function ChatThreadReply({
     }
   }
 
+  const barClass =
+    role === "coach"
+      ? "border-t border-violet-500/30 bg-violet-950/30"
+      : "border-t border-[var(--border)] bg-[var(--surface)]";
+
   return (
-    <div className="border-t border-[var(--border)] bg-[var(--surface)] px-3 py-3">
+    <div className={`${barClass} px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]`}>
       <div className="flex items-end gap-2">
         <textarea
           className="input min-h-[44px] max-h-28 flex-1 resize-y text-sm"
@@ -60,7 +65,11 @@ export default function ChatThreadReply({
         />
         <button
           type="button"
-          className="btn-primary shrink-0 px-4 py-2 text-sm"
+          className={`shrink-0 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition disabled:opacity-40 ${
+            role === "coach"
+              ? "bg-violet-600 hover:bg-violet-500"
+              : "btn-primary"
+          }`}
           disabled={sending || !message.trim()}
           onClick={handleSend}
         >

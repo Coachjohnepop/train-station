@@ -21,7 +21,7 @@ export default async function AdminChatPage() {
       <div>
         <h1 className="text-2xl font-bold">Messages</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Patreon-style creator inbox — post updates to members, reply in threads, send clips and workout overrides.
+          Color-coded inbox — green Live, blue Asynch, violet Community. On phone, use Inbox / Chat tabs.
         </p>
       </div>
 
