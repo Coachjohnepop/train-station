@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { formatApiError } from "@/lib/api-errors";
 import TextUploadPanel from "@/components/TextUploadPanel";
 import { isNewlyAddedFromTextUpload } from "@/lib/text-upload-exercises";
-import { isYoutubeUrl } from "@/lib/youtube";
+import { isYoutubeUrl, normalizeYoutubeWatchUrl } from "@/lib/youtube";
 
 type Exercise = {
   id: string;
@@ -81,12 +81,23 @@ function ExerciseVideoCell({
 
   async function save() {
     const trimmed = draft.trim();
+    let videoUrl: string | null = null;
+    if (trimmed) {
+      const normalized = normalizeYoutubeWatchUrl(trimmed);
+      if (normalized) videoUrl = normalized;
+      else if (/youtu(\.be|be\.com)/i.test(trimmed)) {
+        setCellError("Couldn't read that YouTube link — try Share → Copy link from the YouTube app.");
+        return;
+      } else {
+        videoUrl = trimmed;
+      }
+    }
     setCellError(null);
     setSaving(true);
     const res = await fetch(`/api/exercises/${exercise.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ videoUrl: trimmed || null }),
+      body: JSON.stringify({ videoUrl }),
     });
     setSaving(false);
     if (!res.ok) {
@@ -133,7 +144,7 @@ function ExerciseVideoCell({
         <input
           className="input min-w-0 flex-1 py-1.5 text-sm"
           type="url"
-          placeholder="https://youtube.com/watch?v=…"
+          placeholder="https://youtube.com/watch?v=… or youtu.be/…"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           aria-label={`Video link for ${exercise.name}`}

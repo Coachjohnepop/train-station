@@ -24,11 +24,11 @@ export function getProgramListPrice(program: CatalogProgram): {
   }
 
   if (program.tierSlug === "first_class") {
-    return { cents: 2900, label: "Preview — $0", futureLabel: "$29/mo membership" };
+    return { cents: 5000, label: "Preview — $0", futureLabel: "$50/mo membership" };
   }
 
   // Starter / coach-tier programs included with membership
-  return { cents: 0, label: "Included", futureLabel: "Included with Member plan" };
+  return { cents: 0, label: "Included", futureLabel: "Included with Coach Class" };
 }
 
 export function formatMoney(cents: number): string {

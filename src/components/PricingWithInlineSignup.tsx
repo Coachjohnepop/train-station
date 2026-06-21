@@ -108,7 +108,7 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
           <div className="absolute -top-3 right-6 rounded-full bg-[#7c3aed] px-3 py-0.5 text-xs font-semibold tracking-widest">POPULAR</div>
           <div>
             <div className="flex items-center gap-2">
-              <div className="text-[#7c3aed] text-xs font-semibold tracking-widest">MEMBER</div>
+              <div className="text-[#7c3aed] text-xs font-semibold tracking-widest">COACH CLASS</div>
               {isRecommended("Member") && (
                 <span className="text-[10px] px-2 py-0.5 rounded bg-[#7c3aed] text-white font-semibold tracking-widest">RECOMMENDED</span>
               )}
@@ -117,17 +117,15 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
               )}
             </div>
             <div className="mt-2 flex items-baseline gap-1">
-              <span className="text-4xl font-semibold tracking-tight">$29</span>
+              <span className="text-4xl font-semibold tracking-tight">$25</span>
               <span className="text-[#9d8ab8]">/mo</span>
             </div>
-            <div className="text-[#9d8ab8] mt-1">or $290/year (save 17%)</div>
           </div>
           <ul className="mt-8 space-y-3 text-[15px] flex-1">
-            <li className="flex gap-2">✓ Full access to all programs &amp; yoga channels</li>
-            <li className="flex gap-2">✓ Complete set logging, pasts, silhouettes &amp; streaks</li>
-            <li className="flex gap-2">✓ SMS reminders &amp; home equipment tracker</li>
-            <li className="flex gap-2">✓ Live session replays &amp; community</li>
-            <li className="flex gap-2">✓ Priority support from coaches</li>
+            <li className="flex gap-2">✓ All programs — 4-week blocks</li>
+            <li className="flex gap-2">✓ 15-min coach Zoom</li>
+            <li className="flex gap-2">✓ SMS accountability texts</li>
+            <li className="flex gap-2">✓ Set logging, streaks &amp; home equipment</li>
           </ul>
 
           <div className="mt-6 pt-4 border-t border-[#3d2660]">
@@ -153,7 +151,7 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
           >
             Select this plan
           </button>
-          <p className="text-center text-[10px] text-[#9d8ab8] mt-2">Billed monthly or annually. Cancel anytime.</p>
+          <p className="text-center text-[10px] text-[#9d8ab8] mt-2">Billed monthly. Cancel anytime.</p>
         </div>
 
         {/* Pro */}
@@ -163,7 +161,7 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
         >
           <div>
             <div className="flex items-center gap-2">
-              <div className="text-[#7c3aed] text-xs font-semibold tracking-widest">PRO</div>
+              <div className="text-[#7c3aed] text-xs font-semibold tracking-widest">1ST CLASS</div>
               {isRecommended("Pro") && (
                 <span className="text-[10px] px-2 py-0.5 rounded bg-[#7c3aed] text-white font-semibold tracking-widest">RECOMMENDED</span>
               )}
@@ -172,17 +170,14 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
               )}
             </div>
             <div className="mt-2 flex items-baseline gap-1">
-              <span className="text-4xl font-semibold tracking-tight">$15</span>
+              <span className="text-4xl font-semibold tracking-tight">$50</span>
               <span className="text-[#9d8ab8]">/mo</span>
             </div>
-            <div className="text-[#9d8ab8] mt-1">billed annually ($180/year)</div>
           </div>
           <ul className="mt-8 space-y-3 text-[15px] flex-1">
-            <li className="flex gap-2">✓ Everything in Member</li>
-            <li className="flex gap-2">✓ Unlimited coach check-ins &amp; form reviews</li>
-            <li className="flex gap-2">✓ Early access to new programs &amp; challenges</li>
-            <li className="flex gap-2">✓ Personalized progress reports</li>
-            <li className="flex gap-2">✓ Best value for committed athletes</li>
+            <li className="flex gap-2">✓ Everything in Coach Class</li>
+            <li className="flex gap-2">✓ Live Zoom with John &amp; Steph</li>
+            <li className="flex gap-2">✓ 20-min Zoom with Coach Byrd</li>
           </ul>
 
           <div className="mt-6 pt-4 border-t border-[#3d2660]">

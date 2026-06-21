@@ -42,3 +42,10 @@ export function youtubeEmbedUrl(url: string): string | null {
 export function isYoutubeUrl(url: string): boolean {
   return youtubeVideoId(url) !== null;
 }
+
+/** Canonical watch URL for storage (accepts youtu.be, shorts, embed, etc.). */
+export function normalizeYoutubeWatchUrl(url: string): string | null {
+  const id = youtubeVideoId(url);
+  if (!id) return null;
+  return `https://www.youtube.com/watch?v=${id}`;
+}
