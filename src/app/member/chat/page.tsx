@@ -23,7 +23,7 @@ export default async function MemberChatPage() {
           Coach posts, videos, and notes — like a Patreon creator feed. Reply below or text your coach. Workouts with checklists are on Go to Today.
         </p>
       </div>
-      <MemberChatWorkspace initialThreads={threads} />
+      <MemberChatWorkspace initialThreads={threads} memberId={uid} />
     </div>
   );
 }

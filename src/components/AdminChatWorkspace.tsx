@@ -107,11 +107,16 @@ export default function AdminChatWorkspace({
       if (!res.ok) return;
       const data = await res.json();
       const msgs: ChatMessage[] = data.messages || [];
-      setMessages((prev) =>
-        prev.length === msgs.length && prev[prev.length - 1]?.id === msgs[msgs.length - 1]?.id
+      setMessages((prev) => {
+        if (prev.length !== msgs.length) return msgs;
+        return prev.every(
+          (m, i) =>
+            m.id === msgs[i]?.id &&
+            JSON.stringify(m.reactions ?? []) === JSON.stringify(msgs[i]?.reactions ?? []),
+        )
           ? prev
-          : msgs,
-      );
+          : msgs;
+      });
       setPreviews((prev) => ({ ...prev, [threadId]: threadPreview(msgs) }));
       window.dispatchEvent(new CustomEvent("chat-unread-refresh"));
     } finally {
@@ -188,8 +193,8 @@ export default function AdminChatWorkspace({
 
   useEffect(() => {
     function onPosted() {
-      refreshThreads();
-      if (replyThreadId) loadMessages(replyThreadId);
+      void refreshThreads();
+      if (replyThreadId) void loadMessages(replyThreadId);
       void refreshUnread();
     }
     window.addEventListener("coach-chat-posted", onPosted);
@@ -362,8 +367,12 @@ export default function AdminChatWorkspace({
             thread={activeThread}
             messages={messages}
             viewerRole="coach"
+            viewerId="coach"
             emptyLabel="No messages in this thread yet."
             hideHeader
+            onReactionChange={(updated) =>
+              setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))
+            }
           />
           {replyThreadId && activeMemberId && (
             <ChatThreadReply

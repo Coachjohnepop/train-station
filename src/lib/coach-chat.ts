@@ -23,6 +23,12 @@ export type ChatThread = {
   updatedAt: string;
 };
 
+export type ChatReaction = {
+  emoji: string;
+  userId: string;
+  createdAt: string;
+};
+
 export type ChatMessage = {
   id: string;
   threadId: string;
@@ -42,6 +48,7 @@ export type ChatMessage = {
   alertSent?: boolean;
   createdAt: string;
   readByUserIds: string[];
+  reactions?: ChatReaction[];
 };
 
 type ChatStore = {
@@ -63,13 +70,14 @@ function setMemory(store: ChatStore) {
   memoryStore = store;
 }
 
-export async function hydrateCoachChat(): Promise<ChatStore> {
+export async function hydrateCoachChat(opts?: { preferFresh?: boolean }): Promise<ChatStore> {
   return hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
     memory: memoryStore,
     setMemory,
     fallback: emptyStore,
+    preferFresh: opts?.preferFresh,
   });
 }
 
@@ -210,6 +218,24 @@ export async function addChatMessage(input: Omit<ChatMessage, "id" | "createdAt"
   };
   store.messages.push(message);
   touchThread(store, input.threadId);
+  await writeStore(store);
+  return message;
+}
+
+export async function toggleMessageReaction(messageId: string, userId: string, emoji: string) {
+  await hydrateCoachChat();
+  const store = readStore();
+  const message = store.messages.find((m) => m.id === messageId);
+  if (!message) return null;
+
+  const reactions = message.reactions ?? [];
+  const idx = reactions.findIndex((r) => r.userId === userId && r.emoji === emoji);
+  if (idx >= 0) {
+    reactions.splice(idx, 1);
+  } else {
+    reactions.push({ emoji, userId, createdAt: new Date().toISOString() });
+  }
+  message.reactions = reactions;
   await writeStore(store);
   return message;
 }

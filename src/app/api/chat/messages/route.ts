@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import {
   getMessagesForThread,
-  getThread,
   markThreadRead,
   COACH_READER_ID,
   hydrateCoachChat,
+  resolveThreadById,
 } from "@/lib/coach-chat";
 import { resolveUserId } from "@/lib/current-user";
 
@@ -15,8 +15,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "threadId required" }, { status: 400 });
   }
 
-  await hydrateCoachChat();
-  const thread = getThread(threadId);
+  await hydrateCoachChat({ preferFresh: true });
+  const thread = await resolveThreadById(threadId);
   if (!thread) {
     return NextResponse.json({ error: "Thread not found" }, { status: 404 });
   }

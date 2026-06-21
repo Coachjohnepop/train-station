@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { youtubeEmbedUrl } from "@/lib/youtube";
-import type { ChatMessage, ChatThread } from "@/lib/coach-chat";
+import type { ChatMessage, ChatReaction, ChatThread } from "@/lib/coach-chat";
 import { bubbleColorsForMessage, messageKindLabel } from "@/lib/chat-colors";
+
+const QUICK_REACTIONS = ["✅", "👍", "❤️", "🙌", "💪", "🔥"] as const;
 
 function formatWhen(iso: string) {
   const d = new Date(iso);
@@ -139,7 +141,123 @@ function TextBubble({
   );
 }
 
-function MessageBubble({ message, viewerRole }: { message: ChatMessage; viewerRole: "coach" | "member" }) {
+function reactionGroups(reactions: ChatReaction[] = []) {
+  const groups = new Map<string, number>();
+  for (const r of reactions) {
+    groups.set(r.emoji, (groups.get(r.emoji) || 0) + 1);
+  }
+  return groups;
+}
+
+function MessageReactions({
+  message,
+  viewerRole,
+  viewerId,
+  onToggle,
+}: {
+  message: ChatMessage;
+  viewerRole: "coach" | "member";
+  viewerId: string;
+  onToggle: (messageId: string, emoji: string) => void;
+}) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const reactions = message.reactions ?? [];
+  const groups = reactionGroups(reactions);
+  const mine = (emoji: string) => reactions.some((r) => r.emoji === emoji && r.userId === viewerId);
+
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1 px-0.5">
+      {viewerRole === "coach" && (
+        <>
+          <button
+            type="button"
+            onClick={() => onToggle(message.id, "✅")}
+            className={`rounded-full px-2 py-0.5 text-[11px] transition ${
+              mine("✅")
+                ? "bg-emerald-500/25 ring-1 ring-emerald-400/50"
+                : "bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)]"
+            }`}
+            title="Mark handled"
+          >
+            ✓ Done
+          </button>
+          <button
+            type="button"
+            onClick={() => onToggle(message.id, "👍")}
+            className={`rounded-full px-2 py-0.5 text-[11px] transition ${
+              mine("👍")
+                ? "bg-violet-500/25 ring-1 ring-violet-400/50"
+                : "bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)]"
+            }`}
+            title="Like"
+          >
+            👍
+          </button>
+        </>
+      )}
+
+      {Array.from(groups.entries())
+        .filter(([emoji]) => !(viewerRole === "coach" && (emoji === "✅" || emoji === "👍")))
+        .map(([emoji, count]) => (
+        <button
+          key={emoji}
+          type="button"
+          onClick={() => onToggle(message.id, emoji)}
+          className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] transition ${
+            mine(emoji)
+              ? "bg-violet-500/25 ring-1 ring-violet-400/50"
+              : "bg-[var(--surface-2)] hover:bg-[var(--surface-3)]"
+          }`}
+        >
+          <span>{emoji}</span>
+          {count > 1 && <span className="text-[10px] text-[var(--muted)]">{count}</span>}
+        </button>
+      ))}
+
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setPickerOpen((v) => !v)}
+          className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[11px] text-[var(--muted)] hover:bg-[var(--surface-3)]"
+          aria-label="Add reaction"
+        >
+          {viewerRole === "coach" ? "✓ 👍 +" : "+"}
+        </button>
+        {pickerOpen && (
+          <div className="absolute bottom-full left-0 z-10 mb-1 flex gap-0.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-1 shadow-lg">
+            {QUICK_REACTIONS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => {
+                  onToggle(message.id, emoji);
+                  setPickerOpen(false);
+                }}
+                className={`rounded-full px-1.5 py-0.5 text-sm transition hover:bg-[var(--surface-2)] ${
+                  mine(emoji) ? "bg-violet-500/20" : ""
+                }`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MessageBubble({
+  message,
+  viewerRole,
+  viewerId,
+  onToggleReaction,
+}: {
+  message: ChatMessage;
+  viewerRole: "coach" | "member";
+  viewerId: string;
+  onToggleReaction?: (messageId: string, emoji: string) => void;
+}) {
   const outgoing = isOutgoing(message.authorRole, viewerRole);
   const label = message.kind === "member_sms" ? "via SMS" : null;
   const isRich =
@@ -172,12 +290,30 @@ function MessageBubble({ message, viewerRole }: { message: ChatMessage; viewerRo
         )}
 
         <MessageMeta message={message} outgoing={outgoing} label={outgoing ? label : null} />
+        {onToggleReaction && message.authorRole !== "system" && (
+          <MessageReactions
+            message={message}
+            viewerRole={viewerRole}
+            viewerId={viewerId}
+            onToggle={onToggleReaction}
+          />
+        )}
       </div>
     </div>
   );
 }
 
-function FeedItem({ message, viewerRole }: { message: ChatMessage; viewerRole: "coach" | "member" }) {
+function FeedItem({
+  message,
+  viewerRole,
+  viewerId,
+  onToggleReaction,
+}: {
+  message: ChatMessage;
+  viewerRole: "coach" | "member";
+  viewerId: string;
+  onToggleReaction?: (messageId: string, emoji: string) => void;
+}) {
   if (message.authorRole === "system") {
     return (
       <div className="flex justify-center py-1">
@@ -187,25 +323,47 @@ function FeedItem({ message, viewerRole }: { message: ChatMessage; viewerRole: "
       </div>
     );
   }
-  return <MessageBubble message={message} viewerRole={viewerRole} />;
+  return (
+    <MessageBubble
+      message={message}
+      viewerRole={viewerRole}
+      viewerId={viewerId}
+      onToggleReaction={onToggleReaction}
+    />
+  );
 }
 
 export default function ChatFeed({
   thread,
   messages,
   viewerRole,
+  viewerId = viewerRole === "coach" ? "coach" : "member",
   emptyLabel = "No messages yet.",
   hideHeader = false,
   headerAccent,
+  onReactionChange,
 }: {
   thread: ChatThread | null;
   messages: ChatMessage[];
   viewerRole: "coach" | "member";
+  viewerId?: string;
   emptyLabel?: string;
   hideHeader?: boolean;
   headerAccent?: string;
+  onReactionChange?: (message: ChatMessage) => void;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  async function toggleReaction(messageId: string, emoji: string) {
+    const res = await fetch("/api/chat/reactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messageId, emoji, role: viewerRole }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.message) onReactionChange?.(data.message);
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -250,7 +408,13 @@ export default function ChatFeed({
         ) : (
           <div className="space-y-2">
             {messages.map((m) => (
-              <FeedItem key={m.id} message={m} viewerRole={viewerRole} />
+              <FeedItem
+                key={m.id}
+                message={m}
+                viewerRole={viewerRole}
+                viewerId={viewerId}
+                onToggleReaction={toggleReaction}
+              />
             ))}
           </div>
         )}

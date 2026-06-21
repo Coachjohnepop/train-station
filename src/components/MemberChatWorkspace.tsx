@@ -5,7 +5,13 @@ import ChatFeed from "@/components/ChatFeed";
 import ChatThreadReply from "@/components/ChatThreadReply";
 import type { ChatMessage, ChatThread } from "@/lib/coach-chat";
 
-export default function MemberChatWorkspace({ initialThreads }: { initialThreads: ChatThread[] }) {
+export default function MemberChatWorkspace({
+  initialThreads,
+  memberId,
+}: {
+  initialThreads: ChatThread[];
+  memberId: string;
+}) {
   const [threads, setThreads] = useState(initialThreads);
   const [activeId, setActiveId] = useState(initialThreads[0]?.id || "");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -25,11 +31,16 @@ export default function MemberChatWorkspace({ initialThreads }: { initialThreads
         if (!res.ok) return;
         const data = await res.json();
         const next: ChatMessage[] = data.messages || [];
-        setMessages((prev) =>
-          prev.length === next.length && prev[prev.length - 1]?.id === next[next.length - 1]?.id
+        setMessages((prev) => {
+          if (prev.length !== next.length) return next;
+          return prev.every(
+            (m, i) =>
+              m.id === next[i]?.id &&
+              JSON.stringify(m.reactions ?? []) === JSON.stringify(next[i]?.reactions ?? []),
+          )
             ? prev
-            : next
-        );
+            : next;
+        });
         window.dispatchEvent(new CustomEvent("chat-unread-refresh"));
       } finally {
         if (!opts?.quiet) setLoading(false);
@@ -81,7 +92,11 @@ export default function MemberChatWorkspace({ initialThreads }: { initialThreads
           thread={activeThread}
           messages={messages}
           viewerRole="member"
+          viewerId={memberId}
           emptyLabel="No posts from your coach yet."
+          onReactionChange={(updated) =>
+            setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))
+          }
         />
         {replyThreadId && (
           <ChatThreadReply

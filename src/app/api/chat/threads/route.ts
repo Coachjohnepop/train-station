@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   const role = searchParams.get("role") || "member";
   const programSlugs = searchParams.get("programs")?.split(",").filter(Boolean) || ["adult"];
 
-  await hydrateCoachChat();
+  await hydrateCoachChat({ preferFresh: true });
 
   if (role === "coach") {
     return NextResponse.json({
