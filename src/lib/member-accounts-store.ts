@@ -87,6 +87,24 @@ export async function getAccountByEmail(email: string): Promise<StoredMemberAcco
   return registered[normalized] || null;
 }
 
+/** Self-registered members (ticket signup), excluding seeded coach/demo accounts. */
+export async function listSelfRegisteredAccounts(): Promise<
+  Array<{ email: string; account: StoredMemberAccount }>
+> {
+  const seedEmails = new Set(
+    Object.keys(loadSeedAccounts())
+      .map((e) => normalizeAccountEmail(e))
+      .filter(Boolean) as string[],
+  );
+  const registered = await getRegisteredStore();
+  return Object.entries(registered)
+    .map(([email, account]) => ({
+      email: normalizeAccountEmail(email) || email,
+      account,
+    }))
+    .filter(({ email }) => !seedEmails.has(email));
+}
+
 export type RegisterMemberInput = {
   email: string;
   firstName: string;

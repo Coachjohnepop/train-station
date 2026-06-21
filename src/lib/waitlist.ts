@@ -88,3 +88,41 @@ export async function addToWaitlist(input: {
 export async function listWaitlist(): Promise<WaitlistEntry[]> {
   return (await readStore()).entries;
 }
+
+/** Waitlist + ticket signups (registered members) for Admin → Leads. */
+export async function listLeads(): Promise<WaitlistEntry[]> {
+  const { listSelfRegisteredAccounts } = await import("@/lib/member-accounts-store");
+  const { getMemberProfile } = await import("@/lib/member-profiles-store");
+
+  const byEmail = new Map<string, WaitlistEntry>();
+  for (const entry of (await readStore()).entries) {
+    byEmail.set(entry.email.toLowerCase(), entry);
+  }
+
+  const registered = await listSelfRegisteredAccounts();
+  for (const { email, account } of registered) {
+    const key = email.toLowerCase();
+    if (byEmail.has(key)) continue;
+
+    const profile = await getMemberProfile(account.userId);
+    const nameParts = (account.name || "").trim().split(/\s+/);
+    const firstName = nameParts.shift() || null;
+    const lastName = nameParts.join(" ") || null;
+
+    byEmail.set(key, {
+      id: account.userId,
+      email: key,
+      name: account.name || "Member",
+      firstName,
+      lastName,
+      phone: account.phone ?? profile?.phone ?? null,
+      plan: profile?.plan ?? null,
+      source: "signup-register",
+      createdAt: account.createdAt,
+    });
+  }
+
+  return [...byEmail.values()].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+}

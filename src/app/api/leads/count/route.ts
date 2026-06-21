@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listWaitlist } from "@/lib/waitlist";
+import { listLeads } from "@/lib/waitlist";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ total: 0, new: 0 });
   }
 
-  const leads = await listWaitlist();
+  const leads = await listLeads();
   const total = leads.length;
 
   const since = request.nextUrl.searchParams.get("since");

@@ -1,4 +1,4 @@
-import { listWaitlist } from "@/lib/waitlist";
+import { listLeads } from "@/lib/waitlist";
 import LeadsSeenMarker from "@/components/LeadsSeenMarker";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ function formatDate(iso: string): string {
 }
 
 export default async function AdminLeadsPage() {
-  const leads = await listWaitlist();
+  const leads = await listLeads();
 
   return (
     <div className="space-y-6">
