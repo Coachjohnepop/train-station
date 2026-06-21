@@ -5,6 +5,7 @@ import ChatFeed from "@/components/ChatFeed";
 import ChatThreadReply from "@/components/ChatThreadReply";
 import CoachMemberChatPicker, { type CoachChatMember } from "@/components/CoachMemberChatPicker";
 import type { ChatMessage, ChatThread } from "@/lib/coach-chat";
+import { applyChatMessageLoad } from "@/lib/chat-message-merge";
 import {
   CHAT_COHORT_COLORS,
   CHAT_MODE_COLORS,
@@ -96,7 +97,7 @@ export default function AdminChatWorkspace({
       ? CHAT_COHORT_COLORS.section
       : CHAT_MODE_COLORS[activeMode as MemberCoachingMode].section;
 
-  const loadMessages = useCallback(async (threadId: string, opts?: { quiet?: boolean }) => {
+  const loadMessages = useCallback(async (threadId: string, opts?: { quiet?: boolean; replace?: boolean }) => {
     if (!threadId) return;
     if (!opts?.quiet) setLoading(true);
     try {
@@ -108,16 +109,10 @@ export default function AdminChatWorkspace({
       const data = await res.json();
       const msgs: ChatMessage[] = data.messages || [];
       setMessages((prev) => {
-        if (prev.length !== msgs.length) return msgs;
-        return prev.every(
-          (m, i) =>
-            m.id === msgs[i]?.id &&
-            JSON.stringify(m.reactions ?? []) === JSON.stringify(msgs[i]?.reactions ?? []),
-        )
-          ? prev
-          : msgs;
+        const next = applyChatMessageLoad(prev, msgs, { replace: opts?.replace });
+        setPreviews((p) => ({ ...p, [threadId]: threadPreview(next) }));
+        return next;
       });
-      setPreviews((prev) => ({ ...prev, [threadId]: threadPreview(msgs) }));
       window.dispatchEvent(new CustomEvent("chat-unread-refresh"));
     } finally {
       if (!opts?.quiet) setLoading(false);
@@ -173,9 +168,14 @@ export default function AdminChatWorkspace({
   }, [activeMemberId, threads, activeId]);
 
   const replyThreadId = activeThread?.id || activeId;
+  const visibleMessages = useMemo(
+    () => messages.filter((m) => m.threadId === replyThreadId),
+    [messages, replyThreadId],
+  );
 
   useEffect(() => {
-    if (replyThreadId) loadMessages(replyThreadId);
+    if (!replyThreadId) return;
+    void loadMessages(replyThreadId, { replace: true });
   }, [replyThreadId, loadMessages]);
 
   useEffect(() => {
@@ -358,14 +358,14 @@ export default function AdminChatWorkspace({
             </div>
           </div>
 
-          {loading && (
+          {loading && visibleMessages.length === 0 && (
             <p className="shrink-0 border-b border-[var(--border)] px-4 py-2 text-xs text-[var(--muted)]">
               Loading…
             </p>
           )}
           <ChatFeed
             thread={activeThread}
-            messages={messages}
+            messages={visibleMessages}
             viewerRole="coach"
             viewerId="coach"
             emptyLabel="No messages in this thread yet."
@@ -380,12 +380,15 @@ export default function AdminChatWorkspace({
               role="coach"
               placeholder="Quick reply…"
               onSent={(message) => {
-                if (message) {
-                  setMessages((prev) =>
-                    prev.some((m) => m.id === message.id) ? prev : [...prev, message],
+                if (!message) return;
+                setMessages((prev) => {
+                  if (prev.some((m) => m.id === message.id)) return prev;
+                  const next = [...prev, message].sort(
+                    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
                   );
-                }
-                void loadMessages(replyThreadId);
+                  setPreviews((p) => ({ ...p, [replyThreadId]: threadPreview(next) }));
+                  return next;
+                });
               }}
             />
           )}

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import ChatFeed from "@/components/ChatFeed";
 import ChatThreadReply from "@/components/ChatThreadReply";
 import type { ChatMessage, ChatThread } from "@/lib/coach-chat";
+import { applyChatMessageLoad } from "@/lib/chat-message-merge";
 import { DEMO_COACH } from "@/lib/demo-coach";
 
 function orderThreads(threads: ChatThread[]) {
@@ -43,9 +44,13 @@ export default function MemberChatWorkspace({
   const orderedThreads = useMemo(() => orderThreads(threads), [threads]);
   const activeThread = threads.find((t) => t.id === activeId) || null;
   const feedThread = displayThread(activeThread);
+  const visibleMessages = useMemo(
+    () => messages.filter((m) => m.threadId === activeId),
+    [messages, activeId],
+  );
 
   const loadMessages = useCallback(
-    async (threadId: string, opts?: { quiet?: boolean }) => {
+    async (threadId: string, opts?: { quiet?: boolean; replace?: boolean }) => {
       if (!threadId) return;
       if (!opts?.quiet) setLoading(true);
       try {
@@ -55,17 +60,8 @@ export default function MemberChatWorkspace({
         );
         if (!res.ok) return;
         const data = await res.json();
-        const next: ChatMessage[] = data.messages || [];
-        setMessages((prev) => {
-          if (prev.length !== next.length) return next;
-          return prev.every(
-            (m, i) =>
-              m.id === next[i]?.id &&
-              JSON.stringify(m.reactions ?? []) === JSON.stringify(next[i]?.reactions ?? []),
-          )
-            ? prev
-            : next;
-        });
+        const incoming: ChatMessage[] = data.messages || [];
+        setMessages((prev) => applyChatMessageLoad(prev, incoming, { replace: opts?.replace }));
         window.dispatchEvent(new CustomEvent("chat-unread-refresh"));
       } finally {
         if (!opts?.quiet) setLoading(false);
@@ -79,22 +75,18 @@ export default function MemberChatWorkspace({
   }, [initialThreads]);
 
   useEffect(() => {
-    if (activeId) loadMessages(activeId);
+    if (!activeId) return;
+    void loadMessages(activeId, { replace: true });
   }, [activeId, loadMessages]);
 
   useEffect(() => {
     if (!activeId) return;
-    const id = setInterval(() => loadMessages(activeId, { quiet: true }), 4000);
+    const id = setInterval(() => loadMessages(activeId, { quiet: true }), 5000);
     return () => clearInterval(id);
   }, [activeId, loadMessages]);
 
   const directThread = threads.find((t) => t.kind === "member");
   const replyThreadId = directThread?.id || activeId;
-
-  function appendMessage(message?: ChatMessage) {
-    if (!message || message.threadId !== activeId) return;
-    setMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]));
-  }
 
   return (
     <div className="space-y-4">
@@ -118,12 +110,12 @@ export default function MemberChatWorkspace({
       )}
 
       <div className="flex min-h-[520px] flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
-        {loading && (
+        {loading && visibleMessages.length === 0 && (
           <p className="shrink-0 border-b border-[var(--border)] px-4 py-2 text-xs text-[var(--muted)]">Loading...</p>
         )}
         <ChatFeed
           thread={feedThread}
-          messages={messages}
+          messages={visibleMessages}
           viewerRole="member"
           viewerId={memberId}
           emptyLabel="No posts from your coach yet."
@@ -136,9 +128,13 @@ export default function MemberChatWorkspace({
             threadId={replyThreadId}
             role="member"
             onSent={(message) => {
-              appendMessage(message);
-              if (activeId) void loadMessages(activeId);
-              if (replyThreadId !== activeId) void loadMessages(replyThreadId);
+              if (!message) return;
+              setMessages((prev) => {
+                if (prev.some((m) => m.id === message.id)) return prev;
+                return [...prev, message].sort(
+                  (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+                );
+              });
             }}
           />
         )}
