@@ -4,11 +4,16 @@ import {
   clearNewMemberOnboardingCookie,
   getSessionUser,
 } from "@/lib/auth";
-import { ensureMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
+import {
+  ensureMemberProfile,
+  getMemberProfile,
+  updateMemberProfile,
+} from "@/lib/member-profiles-store";
 import { isDemoMode, updateDemoUserSettings } from "@/lib/demo-reminders";
 import { enrollDemo } from "@/lib/demo-enrollments";
 import { notifyNewLead } from "@/lib/lead-notify";
-import { memberProgramStartPath } from "@/lib/member-destinations";
+import { syncMemberGateCookies } from "@/lib/auth";
+import { memberPostOnboardPath } from "@/lib/member-destinations";
 import { sendMemberWelcomeEmail } from "@/lib/member-welcome";
 import { sendWelcomeSms } from "@/lib/sms";
 
@@ -147,12 +152,17 @@ Calendly opened: ${calendlyOpened ? "yes" : "no"}
     await updateMemberProfile(session.id, welcomePatch);
   }
 
+  const latestProfile = Object.keys(welcomePatch).length > 0
+    ? await getMemberProfile(session.id)
+    : profile;
+
   const res = NextResponse.json({
     success: true,
-    redirectTo: memberProgramStartPath(enrolledSlug),
-    profile,
+    redirectTo: memberPostOnboardPath(latestProfile, session.id, enrolledSlug),
+    profile: latestProfile,
   });
   clearNewMemberOnboardingCookie(res);
+  syncMemberGateCookies(res, { userId: session.id, profile: latestProfile });
 
   if (location?.city && location?.state) {
     res.cookies.set("ts_city", location.city, { path: "/", maxAge: 365 * 24 * 60 * 60 });

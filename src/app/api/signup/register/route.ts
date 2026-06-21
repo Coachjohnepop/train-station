@@ -4,7 +4,10 @@ import {
   applyNewMemberOnboardingCookie,
   applySessionCookies,
   authenticateCredentials,
+  syncMemberGateCookies,
 } from "@/lib/auth";
+import { memberCheckoutPath } from "@/lib/member-gates";
+import { stripeConfiguredForPlan } from "@/lib/stripe";
 import { registerMember } from "@/lib/member-accounts-store";
 import { ensureMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
 import { notifyNewLead } from "@/lib/lead-notify";
@@ -39,7 +42,7 @@ export async function POST(request: Request) {
       plan,
     });
 
-    await ensureMemberProfile({
+    const profile = await ensureMemberProfile({
       userId: account.userId,
       email: email.trim().toLowerCase(),
       plan,
@@ -83,14 +86,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Account created but sign-in failed." }, { status: 500 });
     }
 
-    const redirectTo = `/member/onboard?plan=${encodeURIComponent(plan)}`;
+    const needsCheckout = stripeConfiguredForPlan(plan);
+    const redirectTo = needsCheckout
+      ? memberCheckoutPath(plan)
+      : `/member/onboard?plan=${encodeURIComponent(plan)}`;
     const res = NextResponse.json({
       ok: true,
       redirectTo,
       user: { email: sessionUser.email, name: sessionUser.name, role: sessionUser.role },
     });
     applySessionCookies(res, sessionUser);
-    applyNewMemberOnboardingCookie(res, plan);
+    if (needsCheckout) {
+      syncMemberGateCookies(res, { userId: account.userId, profile });
+    } else {
+      applyNewMemberOnboardingCookie(res, plan);
+      syncMemberGateCookies(res, { userId: account.userId, profile });
+    }
     return res;
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Registration failed";

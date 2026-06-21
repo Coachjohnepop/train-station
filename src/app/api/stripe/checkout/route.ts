@@ -1,0 +1,102 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { getSessionUser, syncMemberGateCookies } from "@/lib/auth";
+import { ensureMemberProfile, getMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
+import { memberCheckoutPath } from "@/lib/member-gates";
+import { normalizeSignupPlan } from "@/lib/signup-plans";
+import { createSignupCheckoutSession, stripeConfiguredForPlan } from "@/lib/stripe";
+
+const schema = z.object({
+  plan: z.string().max(40).optional(),
+});
+
+export async function POST(request: Request) {
+  const session = await getSessionUser();
+  if (!session || session.role !== "MEMBER") {
+    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+  }
+
+  const parsed = schema.safeParse(await request.json().catch(() => ({})));
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  }
+
+  const profile = await getMemberProfile(session.id);
+  const plan = normalizeSignupPlan(parsed.data.plan || profile?.plan || "explorer");
+
+  if (!stripeConfiguredForPlan(plan)) {
+    return NextResponse.json(
+      {
+        error: "Payments are not configured for this plan yet.",
+        redirectTo: `/member/onboard?plan=${encodeURIComponent(plan)}`,
+      },
+      { status: 503 },
+    );
+  }
+
+  await ensureMemberProfile({
+    userId: session.id,
+    email: session.email,
+    plan,
+    phone: profile?.phone,
+  });
+
+  const checkout = await createSignupCheckoutSession({
+    userId: session.id,
+    email: session.email,
+    name: session.name,
+    plan,
+  });
+
+  if ("error" in checkout) {
+    return NextResponse.json({ error: checkout.error }, { status: 503 });
+  }
+
+  await updateMemberProfile(session.id, {
+    plan,
+    paymentStatus: "pending",
+    stripeCheckoutSessionId: checkout.sessionId,
+  });
+
+  const res = NextResponse.json({ ok: true, url: checkout.url });
+  syncMemberGateCookies(res, {
+    userId: session.id,
+    profile: await getMemberProfile(session.id),
+  });
+  return res;
+}
+
+export async function GET(request: Request) {
+  const session = await getSessionUser();
+  if (!session || session.role !== "MEMBER") {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  const profile = await getMemberProfile(session.id);
+  const plan = normalizeSignupPlan(
+    new URL(request.url).searchParams.get("plan") || profile?.plan || "explorer",
+  );
+
+  if (!stripeConfiguredForPlan(plan)) {
+    return NextResponse.redirect(new URL(`/member/onboard?plan=${encodeURIComponent(plan)}`, request.url));
+  }
+
+  const checkout = await createSignupCheckoutSession({
+    userId: session.id,
+    email: session.email,
+    name: session.name,
+    plan,
+  });
+
+  if ("error" in checkout) {
+    return NextResponse.redirect(new URL(memberCheckoutPath(plan), request.url));
+  }
+
+  await updateMemberProfile(session.id, {
+    plan,
+    paymentStatus: "pending",
+    stripeCheckoutSessionId: checkout.sessionId,
+  });
+
+  return NextResponse.redirect(checkout.url);
+}

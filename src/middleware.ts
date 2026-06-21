@@ -4,6 +4,8 @@ import { verifySessionTokenEdge, SESSION_COOKIE } from "@/lib/auth-session-edge"
 
 const NEEDS_ONBOARD_COOKIE = "ts_needs_onboard";
 const SIGNUP_PLAN_COOKIE = "ts_signup_plan";
+const NEEDS_PAYMENT_COOKIE = "ts_needs_payment";
+const PENDING_APPROVAL_COOKIE = "ts_pending_approval";
 
 const PUBLIC_PREFIXES = [
   "/login",
@@ -15,6 +17,7 @@ const PUBLIC_PREFIXES = [
   "/api/signup",
   "/api/sms/inbound",
   "/api/join",
+  "/api/stripe",
 ];
 
 function isPublicPath(pathname: string): boolean {
@@ -55,18 +58,35 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/member", request.url));
   }
 
-  if (
-    session.role === "MEMBER" &&
-    pathname.startsWith("/member") &&
-    !pathname.startsWith("/member/onboard") &&
-    request.cookies.get(NEEDS_ONBOARD_COOKIE)?.value === "1"
-  ) {
-    const onboard = new URL("/member/onboard", request.url);
+  if (session.role === "MEMBER" && pathname.startsWith("/member")) {
     const plan =
       request.nextUrl.searchParams.get("plan") ||
       request.cookies.get(SIGNUP_PLAN_COOKIE)?.value;
-    if (plan) onboard.searchParams.set("plan", plan);
-    return NextResponse.redirect(onboard);
+
+    if (
+      !pathname.startsWith("/member/checkout") &&
+      request.cookies.get(NEEDS_PAYMENT_COOKIE)?.value === "1"
+    ) {
+      const checkout = new URL("/member/checkout", request.url);
+      if (plan) checkout.searchParams.set("plan", plan);
+      return NextResponse.redirect(checkout);
+    }
+
+    if (
+      !pathname.startsWith("/member/onboard") &&
+      request.cookies.get(NEEDS_ONBOARD_COOKIE)?.value === "1"
+    ) {
+      const onboard = new URL("/member/onboard", request.url);
+      if (plan) onboard.searchParams.set("plan", plan);
+      return NextResponse.redirect(onboard);
+    }
+
+    if (
+      !pathname.startsWith("/member/pending") &&
+      request.cookies.get(PENDING_APPROVAL_COOKIE)?.value === "1"
+    ) {
+      return NextResponse.redirect(new URL("/member/pending", request.url));
+    }
   }
 
   return NextResponse.next();

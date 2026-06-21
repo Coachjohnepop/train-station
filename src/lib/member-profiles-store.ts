@@ -2,6 +2,14 @@ import "server-only";
 
 import path from "path";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import {
+  defaultApprovalStatus,
+  defaultPaymentStatus,
+  normalizeApprovalStatus,
+  normalizePaymentStatus,
+  type ApprovalStatus,
+  type PaymentStatus,
+} from "@/lib/member-gates";
 import { normalizeSignupPlan, type SignupPlan } from "@/lib/signup-plans";
 
 export type MemberProfile = {
@@ -16,6 +24,13 @@ export type MemberProfile = {
   state: string | null;
   onboardingComplete: boolean;
   completedAt: string | null;
+  approvalStatus: ApprovalStatus;
+  approvedAt: string | null;
+  paymentStatus: PaymentStatus;
+  paidAt: string | null;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  stripeCheckoutSessionId: string | null;
   welcomeSignupEmailSentAt: string | null;
   welcomeCompleteEmailSentAt: string | null;
   welcomeSmsSentAt: string | null;
@@ -42,6 +57,13 @@ function emptyProfile(userId: string, email: string, plan: SignupPlan): MemberPr
     state: null,
     onboardingComplete: false,
     completedAt: null,
+    approvalStatus: defaultApprovalStatus(),
+    approvedAt: null,
+    paymentStatus: defaultPaymentStatus(plan),
+    paidAt: null,
+    stripeCustomerId: null,
+    stripeSubscriptionId: null,
+    stripeCheckoutSessionId: null,
     welcomeSignupEmailSentAt: null,
     welcomeCompleteEmailSentAt: null,
     welcomeSmsSentAt: null,
@@ -53,10 +75,11 @@ function normalizeProfile(raw: unknown, userId: string): MemberProfile | null {
   if (!raw || typeof raw !== "object") return null;
   const data = raw as Partial<MemberProfile>;
   if (!data.email) return null;
+  const plan = normalizeSignupPlan(data.plan);
   return {
     userId,
     email: data.email,
-    plan: normalizeSignupPlan(data.plan),
+    plan,
     phone: data.phone ?? null,
     dailyReminderTime: data.dailyReminderTime ?? null,
     weightLbs: data.weightLbs ?? null,
@@ -65,6 +88,13 @@ function normalizeProfile(raw: unknown, userId: string): MemberProfile | null {
     state: data.state ?? null,
     onboardingComplete: Boolean(data.onboardingComplete),
     completedAt: data.completedAt ?? null,
+    approvalStatus: normalizeApprovalStatus(data.approvalStatus),
+    approvedAt: data.approvedAt ?? null,
+    paymentStatus: normalizePaymentStatus(data.paymentStatus, plan),
+    paidAt: data.paidAt ?? null,
+    stripeCustomerId: data.stripeCustomerId ?? null,
+    stripeSubscriptionId: data.stripeSubscriptionId ?? null,
+    stripeCheckoutSessionId: data.stripeCheckoutSessionId ?? null,
     welcomeSignupEmailSentAt: data.welcomeSignupEmailSentAt ?? null,
     welcomeCompleteEmailSentAt: data.welcomeCompleteEmailSentAt ?? null,
     welcomeSmsSentAt: data.welcomeSmsSentAt ?? null,
@@ -90,6 +120,14 @@ export async function getMemberProfile(userId: string): Promise<MemberProfile | 
   const store = await getStore();
   const profile = store[userId];
   return profile ? normalizeProfile(profile, userId) : null;
+}
+
+export async function listMemberProfiles(): Promise<MemberProfile[]> {
+  const store = await getStore();
+  return Object.entries(store)
+    .map(([userId, raw]) => normalizeProfile(raw, userId))
+    .filter((p): p is MemberProfile => Boolean(p))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
 export async function ensureMemberProfile(input: {
@@ -163,6 +201,13 @@ export async function updateMemberProfile(
       | "welcomeSignupEmailSentAt"
       | "welcomeCompleteEmailSentAt"
       | "welcomeSmsSentAt"
+      | "approvalStatus"
+      | "approvedAt"
+      | "paymentStatus"
+      | "paidAt"
+      | "stripeCustomerId"
+      | "stripeSubscriptionId"
+      | "stripeCheckoutSessionId"
     >
   >,
 ): Promise<MemberProfile> {

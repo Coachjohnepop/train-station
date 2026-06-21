@@ -15,6 +15,11 @@ import {
   type SessionUser,
   type UserRole,
 } from "@/lib/auth-session";
+import type { MemberProfile } from "@/lib/member-profiles-store";
+import {
+  memberNeedsApproval,
+  memberNeedsPayment,
+} from "@/lib/member-gates";
 
 export type { SessionUser, UserRole };
 export { SESSION_COOKIE, verifySessionToken, isStaffRole, resolveDemoUserByEmail };
@@ -30,6 +35,8 @@ type DemoAccount = {
 const SESSION_DAYS = 30;
 export const NEEDS_ONBOARD_COOKIE = "ts_needs_onboard";
 export const SIGNUP_PLAN_COOKIE = "ts_signup_plan";
+export const NEEDS_PAYMENT_COOKIE = "ts_needs_payment";
+export const PENDING_APPROVAL_COOKIE = "ts_pending_approval";
 
 export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString("hex");
@@ -142,6 +149,8 @@ export function clearSessionCookies(
   res.cookies.set(MEMBER_NAME_COOKIE, "", clear);
   res.cookies.set(NEEDS_ONBOARD_COOKIE, "", clear);
   res.cookies.set(SIGNUP_PLAN_COOKIE, "", clear);
+  res.cookies.set(NEEDS_PAYMENT_COOKIE, "", clear);
+  res.cookies.set(PENDING_APPROVAL_COOKIE, "", clear);
 }
 
 export function applyNewMemberOnboardingCookie(
@@ -165,4 +174,38 @@ export function clearNewMemberOnboardingCookie(
 ) {
   res.cookies.set(NEEDS_ONBOARD_COOKIE, "", { path: "/", maxAge: 0 });
   res.cookies.set(SIGNUP_PLAN_COOKIE, "", { path: "/", maxAge: 0 });
+}
+
+type CookieWriter = {
+  cookies: { set: (name: string, value: string, opts?: object) => void };
+};
+
+function gateCookieOptions() {
+  return {
+    path: "/",
+    maxAge: SESSION_DAYS * 24 * 60 * 60,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+  };
+}
+
+/** Keep payment + approval gate cookies aligned with the member profile. */
+export function syncMemberGateCookies(
+  res: CookieWriter,
+  input: { userId: string; profile: MemberProfile | null },
+) {
+  const clear = { path: "/", maxAge: 0 };
+  const opts = gateCookieOptions();
+
+  if (memberNeedsPayment(input.profile, input.userId)) {
+    res.cookies.set(NEEDS_PAYMENT_COOKIE, "1", opts);
+  } else {
+    res.cookies.set(NEEDS_PAYMENT_COOKIE, "", clear);
+  }
+
+  if (memberNeedsApproval(input.profile, input.userId)) {
+    res.cookies.set(PENDING_APPROVAL_COOKIE, "1", opts);
+  } else {
+    res.cookies.set(PENDING_APPROVAL_COOKIE, "", clear);
+  }
 }

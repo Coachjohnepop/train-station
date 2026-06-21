@@ -5,7 +5,15 @@ import {
   applySessionCookies,
   authenticateCredentials,
   isStaffRole,
+  syncMemberGateCookies,
 } from "@/lib/auth";
+import {
+  memberCheckoutPath,
+  MEMBER_PENDING_PATH,
+  memberNeedsApproval,
+  memberNeedsPayment,
+} from "@/lib/member-gates";
+import { memberOnboardPath } from "@/lib/member-destinations";
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import { isInvitedAccountEmail } from "@/lib/invited-accounts";
 import { applyRememberedEmailCookie } from "@/lib/remembered-email";
@@ -37,12 +45,18 @@ export async function POST(request: Request) {
 
   if (!isStaffRole(user.role)) {
     const profile = await getMemberProfile(user.id);
+    const plan = profile?.plan || "explorer";
     const needsOnboard =
       (profile && !profile.onboardingComplete) ||
       (!profile && user.id.startsWith("member-"));
-    if (needsOnboard) {
-      const plan = profile?.plan || "explorer";
-      destination = `/member/onboard?plan=${encodeURIComponent(plan)}`;
+
+    if (memberNeedsPayment(profile, user.id)) {
+      destination = memberCheckoutPath(plan);
+    } else if (needsOnboard) {
+      destination = memberOnboardPath();
+      if (plan) destination = `/member/onboard?plan=${encodeURIComponent(plan)}`;
+    } else if (memberNeedsApproval(profile, user.id)) {
+      destination = MEMBER_PENDING_PATH;
     }
   }
 
@@ -66,8 +80,9 @@ export async function POST(request: Request) {
       (profile && !profile.onboardingComplete) ||
       (!profile && user.id.startsWith("member-"));
     if (needsOnboard) {
-      applyNewMemberOnboardingCookie(res);
+      applyNewMemberOnboardingCookie(res, profile?.plan);
     }
+    syncMemberGateCookies(res, { userId: user.id, profile });
   }
 
   return res;
