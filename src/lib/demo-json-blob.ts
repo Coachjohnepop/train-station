@@ -63,16 +63,14 @@ export async function hydrateJsonStore<T>(opts: {
   setMemory: (v: T) => void;
   fallback: () => T;
 }): Promise<T> {
-  // When Blob is configured, always read remote state so serverless instances
-  // don't serve stale in-memory data from before another instance wrote.
-  if (BLOB_TOKEN) {
-    const fromBlob = await readBlobJson<T>(opts.blobPath);
-    if (fromBlob) {
-      opts.setMemory(fromBlob);
-      return fromBlob;
-    }
-  } else if (opts.memory) {
-    return opts.memory;
+  // Prefer instance memory so read-after-write on the same warm lambda stays consistent.
+  // Cold instances (memory null) load from Blob so other instances' writes are visible.
+  if (opts.memory) return opts.memory;
+
+  const fromBlob = await readBlobJson<T>(opts.blobPath);
+  if (fromBlob) {
+    opts.setMemory(fromBlob);
+    return fromBlob;
   }
 
   const fromDisk = readLocalJson<T>(opts.localPath);
