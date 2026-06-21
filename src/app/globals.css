@@ -124,6 +124,14 @@ a {
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
+/* Native wheel-style time selects (iOS scroll picker) */
+.time-scroll-select {
+  -webkit-appearance: menulist;
+  appearance: menulist;
+  min-height: 3rem;
+  font-size: 1rem;
+}
+
 .card {
   background: var(--surface);
   border: 1px solid var(--border);

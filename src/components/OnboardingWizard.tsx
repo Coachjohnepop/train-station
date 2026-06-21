@@ -6,6 +6,7 @@ import MemberHomeEquipment from "@/components/MemberHomeEquipment";
 import { landingVideoEmbedSrc } from "@/lib/landing-media";
 import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 import { COACH_CALENDLY_URL } from "@/lib/brand";
+import TimeScrollPicker from "@/components/TimeScrollPicker";
 
 async function saveProgress(body: Record<string, unknown>) {
   await fetch("/api/member/onboard-progress", {
@@ -256,12 +257,10 @@ export default function OnboardingWizard({
                 />
               </div>
               <div>
-                <label className="text-xs text-[var(--muted)] block mb-1">Reminder time</label>
-                <input
-                  type="time"
+                <label className="text-xs text-[var(--muted)] block mb-2">Reminder time</label>
+                <TimeScrollPicker
                   value={sms.dailyReminderTime}
-                  onChange={(e) => setSms({ ...sms, dailyReminderTime: e.target.value })}
-                  className="input w-full"
+                  onChange={(dailyReminderTime) => setSms({ ...sms, dailyReminderTime })}
                 />
               </div>
             </div>
