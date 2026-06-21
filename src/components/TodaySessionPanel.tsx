@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CoachMemberPicker, { type CoachMemberOption } from "@/components/CoachMemberPicker";
+import TimeScrollPicker from "@/components/TimeScrollPicker";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 
 type ParsedExercise = {
@@ -232,7 +233,11 @@ export default function TodaySessionPanel({
         </label>
         <label className="block">
           <span className="text-[var(--muted)]">Scheduled time</span>
-          <input type="time" className="input mt-1 w-full" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} />
+          <TimeScrollPicker
+            className="mt-2"
+            value={scheduledTime}
+            onChange={setScheduledTime}
+          />
         </label>
       </div>
 

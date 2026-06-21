@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CHAT_VIDEO_MAX_DURATION_SEC } from "@/lib/chat-video-constants";
 import CoachMemberPicker from "@/components/CoachMemberPicker";
+import TimeScrollPicker from "@/components/TimeScrollPicker";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 
 type MemberOption = { id: string; name: string; email: string };
@@ -193,7 +194,11 @@ export default function CoachChatComposer({
             </label>
             <label className="block">
               <span className="text-[var(--muted)]">Scheduled time</span>
-              <input type="time" className="input mt-1 w-full" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} />
+              <TimeScrollPicker
+                className="mt-2"
+                value={scheduledTime}
+                onChange={setScheduledTime}
+              />
             </label>
           </div>
           <textarea

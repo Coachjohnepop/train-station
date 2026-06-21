@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import TimeScrollPicker from "@/components/TimeScrollPicker";
 
 type Role = "ADMIN" | "INSTRUCTOR" | "MEMBER" | "PROSPECTIVE_INSTRUCTOR";
 
@@ -365,28 +366,24 @@ export default function AdminUsersPage() {
                 />
               </label>
 
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block">
-                  <span className="text-xs text-[var(--muted)]">Phone (for SMS)</span>
-                  <input
-                    type="tel"
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className="input mt-1 w-full"
-                    placeholder="(555) 123-4567"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-xs text-[var(--muted)]">Daily SMS Reminder</span>
-                  <input
-                    type="text"
-                    value={form.dailyReminderTime}
-                    onChange={(e) => setForm({ ...form, dailyReminderTime: e.target.value })}
-                    className="input mt-1 w-full"
-                    placeholder="07:30"
-                  />
-                </label>
-              </div>
+              <label className="block">
+                <span className="text-xs text-[var(--muted)]">Phone (for SMS)</span>
+                <input
+                  type="tel"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  className="input mt-1 w-full"
+                  placeholder="(555) 123-4567"
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs text-[var(--muted)]">Daily SMS Reminder</span>
+                <TimeScrollPicker
+                  className="mt-2"
+                  value={form.dailyReminderTime || "07:30"}
+                  onChange={(dailyReminderTime) => setForm({ ...form, dailyReminderTime })}
+                />
+              </label>
 
               {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
 

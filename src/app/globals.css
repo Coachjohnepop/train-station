@@ -124,12 +124,18 @@ a {
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
-/* Native wheel-style time selects (iOS scroll picker) */
-.time-scroll-select {
-  -webkit-appearance: menulist;
-  appearance: menulist;
-  min-height: 3rem;
-  font-size: 1rem;
+/* Scroll-snap time wheels (mobile-friendly) */
+.time-wheel-column {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 .card {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import SmsWorkoutOverridePanel from "@/components/SmsWorkoutOverridePanel";
+import TimeScrollPicker from "@/components/TimeScrollPicker";
 
 type Contact = { email: string; phone?: string | null; calendlyUrl?: string | null };
 type Availability = { id: string; weekday: number; startHour: number; startMinute: number; endHour: number; endMinute: number; slotDurationMin: number };
@@ -299,15 +300,16 @@ export default function AdminBookingsPage() {
                     defaultValue={b.notes || ""}
                     onBlur={(e) => updateBooking(b, { notes: e.target.value || undefined })}
                   />
-                  <input
-                    className="input text-xs w-24"
-                    placeholder="Remind time e.g. 07:30"
-                    defaultValue={b.user?.dailyReminderTime || ""}
-                    onBlur={(e) => {
-                      if (e.target.value) updateBooking(b, { reminderTime: e.target.value, memberPhone: b.memberPhone || undefined });
-                    }}
-                    title="Set daily reminder time (HH:MM) - told during the interview call. SMS will link to that day's workout."
-                  />
+                  <div className="w-36 shrink-0" title="Daily reminder time — set during interview call">
+                    <TimeScrollPicker
+                      compact
+                      placeholder="Remind time"
+                      value={b.user?.dailyReminderTime || ""}
+                      onChange={(reminderTime) =>
+                        updateBooking(b, { reminderTime, memberPhone: b.memberPhone || undefined })
+                      }
+                    />
+                  </div>
                 </div>
                 <div className="text-[10px] text-[var(--muted)] mt-1">
                   Admin: {b.adminEmail} {b.adminPhone && `• ${b.adminPhone}`} • Booked {new Date(b.createdAt).toLocaleDateString()}
