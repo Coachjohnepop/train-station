@@ -11,12 +11,12 @@ type EquipmentItem = {
   notes?: string;
 };
 
-export default function MemberHomeEquipment() {
+export default function MemberHomeEquipment({ defaultOpen = false }: { defaultOpen?: boolean }) {
   const [items, setItems] = useState<EquipmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [isOpen, setIsOpen] = useState(false); // default collapsed per client feedback for cleaner dashboard
+  const [isOpen, setIsOpen] = useState(defaultOpen);
 
   async function load() {
     setLoading(true);
@@ -33,11 +33,17 @@ export default function MemberHomeEquipment() {
   async function save(updated: EquipmentItem[]) {
     setSaving(true);
     setMessage(null);
+    const payload = updated.map((item) => ({
+      equipmentId: item.id,
+      hasAtHome: item.hasAtHome,
+      quantity: item.quantity ?? 1,
+      notes: item.notes,
+    }));
     try {
       const res = await fetch("/api/equipment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ equipment: updated }),
+        body: JSON.stringify({ equipment: payload }),
       });
       if (res.ok) {
         const json = await res.json();
@@ -46,9 +52,11 @@ export default function MemberHomeEquipment() {
         setTimeout(() => setMessage(null), 1500);
       } else {
         setMessage("Failed to save");
+        await load();
       }
     } catch {
       setMessage("Failed to save");
+      await load();
     }
     setSaving(false);
   }
@@ -58,8 +66,7 @@ export default function MemberHomeEquipment() {
       item.id === id ? { ...item, hasAtHome: !item.hasAtHome } : item
     );
     setItems(updated);
-    // Auto-save on toggle for nice UX
-    save(updated);
+    void save(updated);
   }
 
   useEffect(() => {

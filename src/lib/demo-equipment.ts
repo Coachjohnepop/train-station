@@ -1,7 +1,10 @@
 import fs from "fs";
 import path from "path";
+import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
 
 const DEV_FILE = path.join(process.cwd(), "prisma", "user-equipment.dev.json");
+const BLOB_PATH = "demo/user-equipment.json";
+const SEED_PATH = path.join(process.cwd(), "prisma", "seed-data.json");
 
 export type DemoUserEquipment = {
   equipmentId: string;
@@ -12,53 +15,63 @@ export type DemoUserEquipment = {
 
 type EquipmentStore = Record<string, DemoUserEquipment[]>;
 
-function loadEquipmentStore(): EquipmentStore {
-  if (fs.existsSync(DEV_FILE)) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(DEV_FILE, "utf8"));
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        return parsed as EquipmentStore;
-      }
-      // legacy: single array -> under demo-user
-      if (Array.isArray(parsed)) {
-        return { "demo-user": parsed as DemoUserEquipment[] };
-      }
-    } catch {}
+let memoryStore: EquipmentStore | null = null;
+
+const DEMO_USER_DEFAULTS: DemoUserEquipment[] = [
+  { equipmentId: "eq-bodyweightonly", hasAtHome: true, quantity: 1 },
+  { equipmentId: "eq-dumbbellspair", hasAtHome: true, quantity: 1, notes: "Adjustable 5-25lb" },
+  { equipmentId: "eq-resistancebands", hasAtHome: true, quantity: 3 },
+];
+
+function seedStoreFromDisk(): EquipmentStore {
+  const fromDisk = readLocalJson<EquipmentStore>(DEV_FILE);
+  if (fromDisk && typeof fromDisk === "object" && !Array.isArray(fromDisk)) {
+    return fromDisk;
   }
-  const initial: DemoUserEquipment[] = [
-    { equipmentId: "eq-bodyweightonly", hasAtHome: true, quantity: 1 },
-    { equipmentId: "eq-dumbbellspair", hasAtHome: true, quantity: 1, notes: "Adjustable 5-25lb" },
-    { equipmentId: "eq-resistancebands", hasAtHome: true, quantity: 3 },
-  ];
-  const store: EquipmentStore = { "demo-user": initial };
-  try {
-    fs.writeFileSync(DEV_FILE, JSON.stringify(store, null, 2));
-  } catch {}
-  return store;
-}
-
-function saveEquipmentStore(store: EquipmentStore) {
-  try {
-    fs.writeFileSync(DEV_FILE, JSON.stringify(store, null, 2));
-  } catch {}
-}
-
-function getUserEquipment(userId: string): DemoUserEquipment[] {
-  const store = loadEquipmentStore();
-  const uid = userId || "demo-user";
-  let list = store[uid];
-  if (!list || list.length === 0) {
-    // fallback to demo-user defaults for new joined users in demo mode
-    list = store["demo-user"] || [];
+  if (Array.isArray(fromDisk)) {
+    return { "demo-user": fromDisk as DemoUserEquipment[] };
   }
-  return list || [];
+  return { "demo-user": DEMO_USER_DEFAULTS };
 }
 
-function setUserEquipment(userId: string, list: DemoUserEquipment[]) {
-  const store = loadEquipmentStore();
+async function loadEquipmentStore(): Promise<EquipmentStore> {
+  const hydrated = await hydrateJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    memory: memoryStore,
+    setMemory: (v) => {
+      memoryStore = v as EquipmentStore;
+    },
+    fallback: seedStoreFromDisk,
+  });
+  memoryStore = hydrated as EquipmentStore;
+  return memoryStore;
+}
+
+async function saveEquipmentStore(store: EquipmentStore): Promise<void> {
+  await persistJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    data: store,
+    setMemory: (v) => {
+      memoryStore = v as EquipmentStore;
+    },
+  });
+}
+
+function shouldUseDemoDefaults(userId: string): boolean {
+  return userId === "demo-user" || userId.startsWith("demo-user-");
+}
+
+async function getUserEquipment(userId: string): Promise<DemoUserEquipment[]> {
+  const store = await loadEquipmentStore();
   const uid = userId || "demo-user";
-  store[uid] = list;
-  saveEquipmentStore(store);
+  const list = store[uid];
+  if (list && list.length > 0) return list;
+  if (shouldUseDemoDefaults(uid)) {
+    return store["demo-user"]?.length ? store["demo-user"] : DEMO_USER_DEFAULTS;
+  }
+  return [];
 }
 
 export function isDemoMode() {
@@ -66,29 +79,33 @@ export function isDemoMode() {
   return !url || url.includes("dummy.supabase") || url.includes("dummy");
 }
 
-export function getDemoUserEquipment(userId?: string): DemoUserEquipment[] {
+export async function getDemoUserEquipment(userId?: string): Promise<DemoUserEquipment[]> {
   return getUserEquipment(userId || "demo-user");
 }
 
-export function setDemoUserEquipment(equipmentList: DemoUserEquipment[], userId?: string) {
-  setUserEquipment(userId || "demo-user", equipmentList);
+export async function setDemoUserEquipment(equipmentList: DemoUserEquipment[], userId?: string) {
+  const store = await loadEquipmentStore();
+  const uid = userId || "demo-user";
+  store[uid] = equipmentList;
+  await saveEquipmentStore(store);
 }
 
-// Helper to get all equipment with user's hasAtHome status (merged with seed)
-const SEED_PATH = path.join(process.cwd(), "prisma", "seed-data.json");
-
-export function getAllEquipmentWithUserStatus(userId?: string) {
-  let seedEquipment: any[] = [];
+function loadSeedEquipment(): Array<{ id: string; name: string; category?: string; description?: string }> {
   try {
     const seed = JSON.parse(fs.readFileSync(SEED_PATH, "utf8"));
-    seedEquipment = seed.equipment || [];
-  } catch {}
+    return seed.equipment || [];
+  } catch {
+    return [];
+  }
+}
 
+export async function getAllEquipmentWithUserStatus(userId?: string) {
+  const seedEquipment = loadSeedEquipment();
   const uid = userId || "demo-user";
-  const userEq = getUserEquipment(uid);
-  const userMap = new Map(userEq.map(u => [u.equipmentId, u]));
+  const userEq = await getUserEquipment(uid);
+  const userMap = new Map(userEq.map((u) => [u.equipmentId, u]));
 
-  return seedEquipment.map((eq: any) => {
+  return seedEquipment.map((eq) => {
     const userItem = userMap.get(eq.id);
     return {
       ...eq,
@@ -97,4 +114,28 @@ export function getAllEquipmentWithUserStatus(userId?: string) {
       notes: userItem?.notes ?? eq.description ?? "",
     };
   });
+}
+
+/** Normalize client payload (uses `id` or `equipmentId`). */
+export function normalizeEquipmentUpdates(
+  updates: Array<{
+    id?: string;
+    equipmentId?: string;
+    hasAtHome?: boolean;
+    quantity?: number;
+    notes?: string;
+  }>,
+): DemoUserEquipment[] {
+  const out: DemoUserEquipment[] = [];
+  for (const u of updates) {
+    const equipmentId = u.equipmentId || u.id;
+    if (!equipmentId) continue;
+    out.push({
+      equipmentId,
+      hasAtHome: !!u.hasAtHome,
+      quantity: u.quantity ?? 1,
+      notes: u.notes,
+    });
+  }
+  return out;
 }

@@ -146,7 +146,7 @@ export default function OnboardingWizard({
             <p className="text-sm text-[var(--muted)]">
               Check what you have at home so we can show realistic workout options.
             </p>
-            <MemberHomeEquipment />
+            <MemberHomeEquipment defaultOpen />
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={prevStep} className="btn-ghost flex-1">
                 Back
