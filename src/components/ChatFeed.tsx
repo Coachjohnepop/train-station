@@ -16,155 +16,162 @@ function formatWhen(iso: string) {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-function Avatar({ name, role }: { name: string; role: "coach" | "member" }) {
-  const initial = (name || "?").charAt(0).toUpperCase();
+function isOutgoing(authorRole: ChatMessage["authorRole"], viewerRole: "coach" | "member") {
+  return authorRole === viewerRole;
+}
+
+function bubbleShell(outgoing: boolean, className = "") {
+  return `overflow-hidden text-sm text-left ${
+    outgoing
+      ? "rounded-2xl rounded-br-md bg-accent/25 text-[var(--foreground)]"
+      : "rounded-2xl rounded-bl-md bg-[var(--surface-2)] text-[var(--foreground)]"
+  } ${className}`;
+}
+
+function MessageMeta({
+  message,
+  outgoing,
+  label,
+}: {
+  message: ChatMessage;
+  outgoing: boolean;
+  label?: string | null;
+}) {
   return (
-    <div
-      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
-        role === "coach" ? "bg-accent/25 text-accent ring-1 ring-accent/40" : "bg-[var(--surface-2)] text-[var(--muted)]"
-      }`}
-    >
-      {initial}
+    <p className={`mt-0.5 px-0.5 text-[10px] text-[var(--muted)] ${outgoing ? "text-right" : "text-left"}`}>
+      {formatWhen(message.createdAt)}
+      {label ? ` · ${label}` : ""}
+    </p>
+  );
+}
+
+function WorkoutUpdateBubble({
+  message,
+  viewerRole,
+  outgoing,
+}: {
+  message: ChatMessage;
+  viewerRole: "coach" | "member";
+  outgoing: boolean;
+}) {
+  return (
+    <div className={bubbleShell(outgoing, "border border-amber-500/30 px-3 py-2.5")}>
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-400/90">Workout update</p>
+      <p className="mt-1 font-medium">{message.workoutTitle || message.body}</p>
+      {message.sessionDate && (
+        <p className="mt-1 text-xs text-[var(--muted)]">
+          Scheduled for{" "}
+          {new Date(`${message.sessionDate}T12:00:00`).toLocaleDateString(undefined, {
+            weekday: "long",
+            month: "short",
+            day: "numeric",
+          })}
+        </p>
+      )}
+      <Link
+        href={
+          viewerRole === "coach"
+            ? `/admin/today?date=${message.sessionDate}`
+            : `/member/today?date=${message.sessionDate}`
+        }
+        className="mt-2 inline-block text-xs text-accent hover:underline"
+      >
+        Open Go to Today →
+      </Link>
     </div>
   );
 }
 
-function CoachPostCard({ message, viewerRole }: { message: ChatMessage; viewerRole: "coach" | "member" }) {
-  if (message.kind === "workout_update") {
-    return (
-      <article className="overflow-hidden rounded-xl border border-amber-500/35 bg-[var(--surface)] shadow-sm">
-        <div className="flex items-center gap-3 border-b border-[var(--border)] px-4 py-3">
-          <Avatar name={message.authorName} role="coach" />
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold text-sm">{message.authorName}</p>
-            <p className="text-[11px] text-[var(--muted)]">{formatWhen(message.createdAt)} · Workout update</p>
-          </div>
-        </div>
-        <div className="space-y-3 px-4 py-4">
-          <p className="font-semibold">{message.workoutTitle || message.body}</p>
-          {message.sessionDate && (
-            <p className="text-xs text-[var(--muted)]">
-              Scheduled for{" "}
-              {new Date(`${message.sessionDate}T12:00:00`).toLocaleDateString(undefined, {
-                weekday: "long",
-                month: "short",
-                day: "numeric",
-              })}
-            </p>
-          )}
-          <Link
-            href={
-              viewerRole === "coach"
-                ? `/admin/today?date=${message.sessionDate}`
-                : `/member/today?date=${message.sessionDate}`
-            }
-            className="inline-flex items-center gap-1 text-sm text-accent hover:underline"
-          >
-            Open Go to Today →
-          </Link>
-        </div>
-      </article>
-    );
-  }
-
-  if (message.kind === "youtube" && message.mediaUrl) {
-    const embed = youtubeEmbedUrl(message.mediaUrl);
-    return (
-      <article className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
-        <div className="flex items-center gap-3 border-b border-[var(--border)] px-4 py-3">
-          <Avatar name={message.authorName} role="coach" />
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold text-sm">{message.authorName}</p>
-            <p className="text-[11px] text-[var(--muted)]">{formatWhen(message.createdAt)}</p>
-          </div>
-        </div>
-        {message.body && <p className="px-4 pt-4 text-sm whitespace-pre-wrap">{message.body}</p>}
-        {embed && (
-          <div className="mt-3 aspect-video w-full bg-black">
-            <iframe
-              src={embed}
-              title="Coach video"
-              className="h-full w-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-        )}
-      </article>
-    );
-  }
-
-  if (message.kind === "video_upload" && message.mediaUrl) {
-    return (
-      <article className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
-        <div className="flex items-center gap-3 border-b border-[var(--border)] px-4 py-3">
-          <Avatar name={message.authorName} role="coach" />
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold text-sm">{message.authorName}</p>
-            <p className="text-[11px] text-[var(--muted)]">
-              {formatWhen(message.createdAt)}
-              {message.videoDurationSec ? ` · ${message.videoDurationSec}s clip` : ""}
-            </p>
-          </div>
-        </div>
-        {message.body && <p className="px-4 pt-4 text-sm whitespace-pre-wrap">{message.body}</p>}
-        <video src={message.mediaUrl} controls playsInline className="mt-3 w-full bg-black" />
-      </article>
-    );
-  }
+function MediaBubble({
+  message,
+  outgoing,
+}: {
+  message: ChatMessage;
+  outgoing: boolean;
+}) {
+  const isYoutube = message.kind === "youtube" && message.mediaUrl;
+  const embed = isYoutube ? youtubeEmbedUrl(message.mediaUrl!) : null;
+  const isVideo = message.kind === "video_upload" && message.mediaUrl;
 
   return (
-    <article className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
-      <div className="flex items-center gap-3 border-b border-[var(--border)] px-4 py-3">
-        <Avatar name={message.authorName} role="coach" />
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold text-sm">{message.authorName}</p>
-          <p className="text-[11px] text-[var(--muted)]">{formatWhen(message.createdAt)}</p>
+    <div className={bubbleShell(outgoing, "max-w-full")}>
+      {message.body && <p className="px-3 pt-2.5 pb-1 whitespace-pre-wrap">{message.body}</p>}
+      {embed && (
+        <div className="aspect-video w-full bg-black">
+          <iframe
+            src={embed}
+            title="Coach video"
+            className="h-full w-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
         </div>
-      </div>
-      {message.body && (
-        <p className="px-4 py-4 text-sm leading-relaxed whitespace-pre-wrap">{message.body}</p>
       )}
-    </article>
+      {isVideo && (
+        <video src={message.mediaUrl} controls playsInline className="w-full bg-black" />
+      )}
+      {isVideo && message.videoDurationSec ? (
+        <p className="px-3 py-1.5 text-[10px] text-[var(--muted)]">{message.videoDurationSec}s clip</p>
+      ) : null}
+    </div>
   );
 }
 
-function MemberReplyBubble({ message, viewerRole }: { message: ChatMessage; viewerRole: "coach" | "member" }) {
-  const isOwn = viewerRole === "member";
+function TextBubble({ message, outgoing }: { message: ChatMessage; outgoing: boolean }) {
+  return (
+    <div className={bubbleShell(outgoing, "px-3 py-2 whitespace-pre-wrap leading-relaxed")}>
+      {message.body}
+    </div>
+  );
+}
+
+function MessageBubble({ message, viewerRole }: { message: ChatMessage; viewerRole: "coach" | "member" }) {
+  const outgoing = isOutgoing(message.authorRole, viewerRole);
   const label = message.kind === "member_sms" ? "via SMS" : null;
+  const isRich =
+    message.kind === "workout_update" ||
+    message.kind === "youtube" ||
+    message.kind === "video_upload";
 
   return (
-    <div className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[min(85%,28rem)] ${isOwn ? "text-right" : "text-left"}`}>
-        <div
-          className={`inline-block rounded-2xl px-4 py-2.5 text-sm text-left ${
-            isOwn
-              ? "rounded-br-md bg-accent/20 border border-accent/30"
-              : "rounded-bl-md bg-emerald-500/10 border border-emerald-500/25"
-          }`}
-        >
-          {!isOwn && (
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
-              {message.authorName}
-              {label ? ` · ${label}` : ""}
-            </p>
-          )}
-          <p className="whitespace-pre-wrap">{message.body}</p>
-        </div>
-        <p className={`mt-1 text-[10px] text-[var(--muted)] ${isOwn ? "pr-1" : "pl-1"}`}>
-          {formatWhen(message.createdAt)}
-          {isOwn && label ? ` · ${label}` : ""}
-        </p>
+    <div className={`flex w-full ${outgoing ? "justify-end" : "justify-start"}`}>
+      <div
+        className={`flex max-w-[min(78%,22rem)] flex-col ${outgoing ? "items-end" : "items-start"} ${
+          isRich ? "max-w-[min(88%,28rem)]" : ""
+        }`}
+      >
+        {!outgoing && (
+          <p className="mb-0.5 px-0.5 text-[10px] font-medium text-[var(--muted)]">
+            {message.authorName}
+            {label ? ` · ${label}` : ""}
+          </p>
+        )}
+
+        {message.kind === "workout_update" ? (
+          <WorkoutUpdateBubble message={message} viewerRole={viewerRole} outgoing={outgoing} />
+        ) : message.kind === "youtube" || message.kind === "video_upload" ? (
+          <MediaBubble message={message} outgoing={outgoing} />
+        ) : (
+          <TextBubble message={message} outgoing={outgoing} />
+        )}
+
+        <MessageMeta message={message} outgoing={outgoing} label={outgoing ? label : null} />
       </div>
     </div>
   );
 }
 
 function FeedItem({ message, viewerRole }: { message: ChatMessage; viewerRole: "coach" | "member" }) {
-  if (message.authorRole === "coach") {
-    return <CoachPostCard message={message} viewerRole={viewerRole} />;
+  if (message.authorRole === "system") {
+    return (
+      <div className="flex justify-center py-1">
+        <p className="rounded-full bg-[var(--surface-2)] px-3 py-1 text-[10px] text-[var(--muted)]">
+          {message.body}
+        </p>
+      </div>
+    );
   }
-  return <MemberReplyBubble message={message} viewerRole={viewerRole} />;
+  return <MessageBubble message={message} viewerRole={viewerRole} />;
 }
 
 export default function ChatFeed({
@@ -193,26 +200,26 @@ export default function ChatFeed({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {!hideHeader && (
-        <div className="shrink-0 border-b border-[var(--border)] px-4 py-3">
-          <h2 className="font-semibold">{thread.title}</h2>
-          <p className="text-xs text-[var(--muted)]">
+        <div className="shrink-0 border-b border-[var(--border)] px-4 py-2.5">
+          <h2 className="text-sm font-semibold">{thread.title}</h2>
+          <p className="text-[11px] text-[var(--muted)]">
             {thread.kind === "cohort" ? "Community feed" : "Direct messages with your coach"}
           </p>
         </div>
       )}
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
         {messages.length === 0 ? (
-          <div className="flex h-full min-h-[200px] flex-col items-center justify-center text-center">
+          <div className="flex h-full min-h-[160px] flex-col items-center justify-center text-center">
             <p className="text-sm text-[var(--muted)]">{emptyLabel}</p>
             {viewerRole === "member" && (
               <p className="mt-2 max-w-xs text-xs text-[var(--muted)]">
-                Coach posts, videos, and notes will show up here — like a Patreon creator feed.
+                Coach posts, videos, and notes will show up here.
               </p>
             )}
           </div>
         ) : (
-          <div className="space-y-5">
+          <div className="space-y-1.5">
             {messages.map((m) => (
               <FeedItem key={m.id} message={m} viewerRole={viewerRole} />
             ))}
