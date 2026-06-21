@@ -16,6 +16,9 @@ export type MemberProfile = {
   state: string | null;
   onboardingComplete: boolean;
   completedAt: string | null;
+  welcomeSignupEmailSentAt: string | null;
+  welcomeCompleteEmailSentAt: string | null;
+  welcomeSmsSentAt: string | null;
   updatedAt: string;
 };
 
@@ -39,6 +42,9 @@ function emptyProfile(userId: string, email: string, plan: SignupPlan): MemberPr
     state: null,
     onboardingComplete: false,
     completedAt: null,
+    welcomeSignupEmailSentAt: null,
+    welcomeCompleteEmailSentAt: null,
+    welcomeSmsSentAt: null,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -59,6 +65,9 @@ function normalizeProfile(raw: unknown, userId: string): MemberProfile | null {
     state: data.state ?? null,
     onboardingComplete: Boolean(data.onboardingComplete),
     completedAt: data.completedAt ?? null,
+    welcomeSignupEmailSentAt: data.welcomeSignupEmailSentAt ?? null,
+    welcomeCompleteEmailSentAt: data.welcomeCompleteEmailSentAt ?? null,
+    welcomeSmsSentAt: data.welcomeSmsSentAt ?? null,
     updatedAt: data.updatedAt || new Date().toISOString(),
   };
 }
@@ -151,6 +160,9 @@ export async function updateMemberProfile(
       | "onboardingComplete"
       | "completedAt"
       | "plan"
+      | "welcomeSignupEmailSentAt"
+      | "welcomeCompleteEmailSentAt"
+      | "welcomeSmsSentAt"
     >
   >,
 ): Promise<MemberProfile> {

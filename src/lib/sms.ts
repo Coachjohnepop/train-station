@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { isDemoMode } from "./demo-enrollments";
 import { DEMO_USER_DIRECTORY, resolveDemoUserByEmail } from "@/lib/demo-user-directory";
 import { listMembersForCoach } from "@/lib/demo-coach";
+import { COACH_CALENDLY_URL } from "@/lib/brand";
+import { memberProgramStartPath } from "@/lib/member-destinations";
 import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
 
 export type DemoSmsLogEntry = {
@@ -199,6 +201,50 @@ function coachReplySmsBody(message: string, firstName?: string) {
   const hi = firstName ? `Hi ${firstName}, ` : "";
   const preview = message.length > 140 ? `${message.slice(0, 137)}…` : message;
   return `${hi}Coach Jeremy: ${preview} — Reply: ${link}`;
+}
+
+function welcomeSmsBody(params: { firstName: string; programSlug?: string }) {
+  const base = appBaseUrl();
+  const slug = params.programSlug || "adult";
+  const start = `${base}${memberProgramStartPath(slug)}`;
+  return (
+    `Hi ${params.firstName}, welcome to The Train Station! Coach Jeremy here. ` +
+    `Your setup is done — start Day 1: ${start} ` +
+    `Book your intro call: ${COACH_CALENDLY_URL}`
+  );
+}
+
+export async function sendWelcomeSms(params: {
+  userId: string;
+  phone: string;
+  name: string;
+  programSlug?: string;
+}) {
+  const phone = params.phone?.trim();
+  if (!phone) return { sent: 0, reason: "no_phone" as const };
+
+  const first = (params.name || "there").trim().split(/\s+/)[0] || "there";
+  const body = welcomeSmsBody({ firstName: first, programSlug: params.programSlug });
+  const ok = await deliverSms(phone, body);
+  if (!ok) return { sent: 0, reason: "delivery_failed" as const };
+
+  const logEntry = {
+    userId: params.userId,
+    phone,
+    message: body,
+    source: "welcome",
+    direction: "outbound" as const,
+  };
+
+  if (isDemoMode()) {
+    const saved = await addDemoSmsLog(logEntry);
+    return { sent: 1, phone, sentAt: saved.sentAt };
+  }
+
+  const log = await prisma.smsLog.create({
+    data: { userId: params.userId, phone, message: body },
+  });
+  return { sent: 1, phone, sentAt: log.sentAt.toISOString(), smsLogId: log.id };
 }
 
 export async function sendCoachReplySms(params: { memberId: string; message: string }) {

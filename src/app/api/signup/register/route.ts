@@ -6,8 +6,9 @@ import {
   authenticateCredentials,
 } from "@/lib/auth";
 import { registerMember } from "@/lib/member-accounts-store";
-import { ensureMemberProfile } from "@/lib/member-profiles-store";
+import { ensureMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
 import { notifyNewLead } from "@/lib/lead-notify";
+import { sendMemberWelcomeEmail } from "@/lib/member-welcome";
 import { normalizeSignupPlan } from "@/lib/signup-plans";
 import { addToWaitlist } from "@/lib/waitlist";
 import { enrollDemo } from "@/lib/demo-enrollments";
@@ -64,6 +65,18 @@ export async function POST(request: Request) {
       source: "signup-register",
       createdAt: account.createdAt,
     });
+
+    const welcomeSent = await sendMemberWelcomeEmail({
+      email: normalizedEmail,
+      name: account.name,
+      plan,
+      stage: "signup",
+    });
+    if (welcomeSent) {
+      await updateMemberProfile(account.userId, {
+        welcomeSignupEmailSentAt: new Date().toISOString(),
+      });
+    }
 
     const sessionUser = await authenticateCredentials(email, "");
     if (!sessionUser) {
