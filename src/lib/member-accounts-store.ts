@@ -113,6 +113,40 @@ export type RegisterMemberInput = {
   plan: string;
 };
 
+/** Remove all self-registered members (keeps seeded coach/demo accounts). */
+export async function clearSelfRegisteredAccounts(): Promise<{
+  removedEmails: string[];
+  removedUserIds: string[];
+}> {
+  const seedEmails = new Set(
+    Object.keys(loadSeedAccounts())
+      .map((e) => normalizeAccountEmail(e))
+      .filter(Boolean) as string[],
+  );
+  const store = await getRegisteredStore();
+  const removedEmails: string[] = [];
+  const removedUserIds: string[] = [];
+
+  for (const [email, account] of Object.entries(store)) {
+    const normalized = normalizeAccountEmail(email) || email;
+    if (seedEmails.has(normalized)) continue;
+    removedEmails.push(normalized);
+    removedUserIds.push(account.userId);
+    delete store[email];
+  }
+
+  await persistJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    data: store,
+    setMemory: (v) => {
+      memoryStore = v;
+    },
+  });
+
+  return { removedEmails, removedUserIds };
+}
+
 export async function registerMember(input: RegisterMemberInput): Promise<StoredMemberAccount> {
   const normalized = normalizeAccountEmail(input.email);
   if (!normalized) throw new Error("Invalid email.");

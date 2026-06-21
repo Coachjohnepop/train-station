@@ -89,6 +89,10 @@ export async function listWaitlist(): Promise<WaitlistEntry[]> {
   return (await readStore()).entries;
 }
 
+export async function clearWaitlist(): Promise<void> {
+  await writeStore({ entries: [] });
+}
+
 /** Waitlist + ticket signups (registered members) for Admin → Leads. */
 export async function listLeads(): Promise<WaitlistEntry[]> {
   const { listSelfRegisteredAccounts } = await import("@/lib/member-accounts-store");

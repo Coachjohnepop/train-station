@@ -114,6 +114,29 @@ export async function ensureMemberProfile(input: {
   return profile;
 }
 
+export async function removeMemberProfiles(userIds: string[]): Promise<number> {
+  if (userIds.length === 0) return 0;
+  const store = await getStore();
+  let removed = 0;
+  for (const id of userIds) {
+    if (store[id]) {
+      delete store[id];
+      removed++;
+    }
+  }
+  if (removed > 0) {
+    await persistJsonStore({
+      blobPath: BLOB_PATH,
+      localPath: DEV_FILE,
+      data: store,
+      setMemory: (v) => {
+        memoryStore = v as ProfileStore;
+      },
+    });
+  }
+  return removed;
+}
+
 export async function updateMemberProfile(
   userId: string,
   patch: Partial<
