@@ -20,8 +20,8 @@ export default function EnrollButton({
         method: "POST",
       });
       if (res.ok) {
-        // After enrolling, send user into the guided onboarding wizard (step 2 from client feedback)
-        router.push(`/member/onboard?program=${slug}`);
+        const data = await res.json().catch(() => ({}));
+        router.push(typeof data.redirectTo === "string" ? data.redirectTo : `/member/programs/${slug}`);
       } else {
         const err = await res.json().catch(() => ({}));
         alert(err.detail || "Failed to enroll");
@@ -77,7 +77,7 @@ export default function EnrollButton({
       className="member-set-btn text-base px-5 py-2 min-w-[140px] bg-accent text-white border-accent font-semibold active:scale-[0.96] hover:border-accent/70"
     >
       <span className="member-set-btn__num text-base">{loading ? "..." : "Start"}</span>
-      <span className="member-set-btn__label text-[10px] tracking-[0.5px]">Enroll & setup</span>
+      <span className="member-set-btn__label text-[10px] tracking-[0.5px]">Start program</span>
     </button>
   );
 }

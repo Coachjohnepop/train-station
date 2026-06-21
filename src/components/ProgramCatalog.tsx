@@ -79,12 +79,16 @@ export default function ProgramCatalog({ programs, enrolledSlugs }: Props) {
     setMessage(null);
     const enrolled: string[] = [];
     const failed: string[] = [];
+    let redirectTo: string | null = null;
 
     for (const program of cartItems) {
       try {
         const res = await fetch(`/api/programs/${program.slug}/enroll`, { method: "POST" });
-        if (res.ok) enrolled.push(program.slug);
-        else failed.push(program.name);
+        if (res.ok) {
+          enrolled.push(program.slug);
+          const data = await res.json().catch(() => ({}));
+          if (typeof data.redirectTo === "string") redirectTo = data.redirectTo;
+        } else failed.push(program.name);
       } catch {
         failed.push(program.name);
       }
@@ -93,7 +97,8 @@ export default function ProgramCatalog({ programs, enrolledSlugs }: Props) {
     if (enrolled.length > 0) {
       persistCart(cartSlugs.filter((s) => !enrolled.includes(s)));
       if (failed.length === 0) {
-        router.push(`/member/onboard?program=${enrolled[0]}`);
+        const slug = enrolled[0]!;
+        router.push(redirectTo || `/member/workout?program=${encodeURIComponent(slug)}`);
         router.refresh();
         return;
       }

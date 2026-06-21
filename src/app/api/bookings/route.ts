@@ -35,7 +35,6 @@ export async function GET(request: Request) {
             demoSlots.push({
               start: start.toISOString(),
               end: end.toISOString(),
-              label: start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
             });
           }
         }
@@ -43,7 +42,12 @@ export async function GET(request: Request) {
       return NextResponse.json(demoSlots);
     }
     const slots = await getAvailableSlots();
-    return NextResponse.json(slots);
+    return NextResponse.json(
+      slots.map((s) => ({
+        start: s.start.toISOString(),
+        end: s.end.toISOString(),
+      })),
+    );
   }
   const bookings = await getBookings();
   return NextResponse.json(bookings);

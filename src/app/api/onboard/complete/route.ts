@@ -8,6 +8,7 @@ import { ensureMemberProfile, updateMemberProfile } from "@/lib/member-profiles-
 import { isDemoMode, updateDemoUserSettings } from "@/lib/demo-reminders";
 import { enrollDemo } from "@/lib/demo-enrollments";
 import { notifyNewLead } from "@/lib/lead-notify";
+import { memberProgramStartPath } from "@/lib/member-destinations";
 
 const schema = z.object({
   measurements: z
@@ -71,8 +72,10 @@ export async function POST(request: Request) {
     completedAt,
   });
 
+  const enrolledSlug = programSlug || "adult";
+
   if (isDemoMode()) {
-    enrollDemo("adult", session.id);
+    enrollDemo(enrolledSlug, session.id);
     updateDemoUserSettings(session.id, {
       phone: phone || undefined,
       dailyReminderTime: dailyReminderTime || undefined,
@@ -112,7 +115,7 @@ Calendly opened: ${calendlyOpened ? "yes" : "no"}
 
   const res = NextResponse.json({
     success: true,
-    redirectTo: "/member",
+    redirectTo: memberProgramStartPath(enrolledSlug),
     profile,
   });
   clearNewMemberOnboardingCookie(res);

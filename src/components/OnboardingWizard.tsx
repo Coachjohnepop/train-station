@@ -330,7 +330,11 @@ export default function OnboardingWizard({
                 disabled={finishing}
                 className="btn-primary flex-1"
               >
-                {finishing ? "Finishing…" : "Finish & go to dashboard"}
+                {finishing
+                  ? "Finishing…"
+                  : programSlug
+                    ? "Finish & start Day 1"
+                    : "Finish & go to dashboard"}
               </button>
             </div>
           </>

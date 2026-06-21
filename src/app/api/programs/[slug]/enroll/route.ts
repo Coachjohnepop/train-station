@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { DEMO_MEMBER_EMAIL } from "@/lib/demo-workout";
 import { isDemoMode, getDemoEnrollments, enrollDemo, unenrollDemo } from "@/lib/demo-enrollments";
 import { resolveUserId } from "@/lib/current-user";
+import { resolvePostEnrollRedirect } from "@/lib/member-destinations";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -23,7 +24,8 @@ export async function POST(_request: Request, { params }: Params) {
       return NextResponse.json({ detail: "Program not found" }, { status: 404 });
     }
     enrollDemo(slug, uid);
-    return NextResponse.json({ success: true, enrollmentId: `enroll-${uid}-${slug}` });
+    const redirectTo = await resolvePostEnrollRedirect(uid, slug);
+    return NextResponse.json({ success: true, enrollmentId: `enroll-${uid}-${slug}`, redirectTo });
   }
 
   // Real DB: use cookie user or fallback to legacy demo email
@@ -61,7 +63,8 @@ export async function POST(_request: Request, { params }: Params) {
     },
   });
 
-  return NextResponse.json({ success: true, enrollmentId: enrollment.id });
+  const redirectTo = await resolvePostEnrollRedirect(userId, slug);
+  return NextResponse.json({ success: true, enrollmentId: enrollment.id, redirectTo });
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
