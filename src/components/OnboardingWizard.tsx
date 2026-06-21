@@ -277,9 +277,9 @@ export default function OnboardingWizard({
 
         {currentStep === 6 && (
           <>
-            <h2 className="text-lg font-semibold">Book your first session</h2>
+            <h2 className="text-lg font-semibold">Book your first session with your trainer, Jeremy</h2>
             <p className="text-sm text-[var(--muted)]">
-              Pick a time with your coach on Calendly. You can also do this later from your dashboard.
+              Pick a time on Calendly. You can also do this later from your dashboard.
             </p>
             <a
               href={effectiveCalendly}
