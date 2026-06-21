@@ -73,6 +73,21 @@ export async function hydrateCoachChat(): Promise<ChatStore> {
   });
 }
 
+export async function clearCoachChat(): Promise<{ threadsRemoved: number; messagesRemoved: number }> {
+  await hydrateCoachChat();
+  const store = readStore();
+  const threadsRemoved = store.threads.length;
+  const messagesRemoved = store.messages.length;
+  const empty = emptyStore();
+  await persistJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    data: empty,
+    setMemory,
+  });
+  return { threadsRemoved, messagesRemoved };
+}
+
 function readStore(): ChatStore {
   if (memoryStore) return memoryStore;
   memoryStore = readLocalJson<ChatStore>(DEV_FILE) || emptyStore();
