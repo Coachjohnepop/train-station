@@ -302,7 +302,6 @@ export default function AdminBookingsPage() {
                   />
                   <div className="w-36 shrink-0" title="Daily reminder time — set during interview call">
                     <TimeScrollPicker
-                      compact
                       placeholder="Remind time"
                       value={b.user?.dailyReminderTime || ""}
                       onChange={(reminderTime) =>

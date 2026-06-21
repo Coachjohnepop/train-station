@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import EmailInput, { rememberEmail } from "@/components/EmailInput";
 
 function LoginForm() {
   const router = useRouter();
@@ -13,26 +14,6 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  // Remember the email across visits (never the password). A ?email= URL param
-  // wins over the cached value.
-  useEffect(() => {
-    if (prefillEmail) return;
-    try {
-      const saved = localStorage.getItem("ts-login-email");
-      if (saved) setEmail(saved);
-    } catch {
-      /* ignore */
-    }
-  }, [prefillEmail]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("ts-login-email", email);
-    } catch {
-      /* ignore */
-    }
-  }, [email]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -57,6 +38,7 @@ function LoginForm() {
         setError((data.error || "Login failed") + hint);
         return;
       }
+      rememberEmail(email);
       window.location.href = data.redirect || "/member";
     } catch {
       setError("Login failed — try again");
@@ -83,14 +65,12 @@ function LoginForm() {
 
           <div>
             <label className="block text-xs text-[var(--muted)] mb-1">Email</label>
-            <input
-              type="email"
-              autoComplete="email"
+            <EmailInput
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input"
+              onChange={setEmail}
               placeholder="you@thetrainstation.co"
+              prefillFromHistory={!prefillEmail}
             />
           </div>
 

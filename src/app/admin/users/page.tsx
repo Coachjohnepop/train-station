@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
+import EmailInput from "@/components/EmailInput";
 
 type Role = "ADMIN" | "INSTRUCTOR" | "MEMBER" | "PROSPECTIVE_INSTRUCTOR";
 
@@ -304,11 +305,10 @@ export default function AdminUsersPage() {
               {!editing && (
                 <label className="block">
                   <span className="text-xs text-[var(--muted)]">Email</span>
-                  <input
-                    type="email"
+                  <EmailInput
                     required
                     value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    onChange={(email) => setForm({ ...form, email })}
                     className="input mt-1 w-full"
                   />
                 </label>

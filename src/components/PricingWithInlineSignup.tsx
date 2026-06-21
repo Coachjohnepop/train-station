@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import EmailInput, { rememberEmail } from "@/components/EmailInput";
 
 export default function PricingWithInlineSignup({ recParam }: { recParam?: string }) {
   const [selected, setSelected] = useState<string | null>(null);
@@ -34,6 +35,7 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
         }),
       });
       const data = await res.json().catch(() => ({}));
+      if (email.trim()) rememberEmail(email);
       if (res.ok && data.redirectTo) {
         window.location.href = data.redirectTo;
       } else {
@@ -223,12 +225,11 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
-            <input
-              type="email"
+            <EmailInput
+              variant="signup"
               placeholder="Email (optional for demo)"
-              className="w-full rounded-full border border-[#3d2660] bg-[#0a0612] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={setEmail}
             />
 
             <button

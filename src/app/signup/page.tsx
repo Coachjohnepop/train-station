@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
+import EmailInput, { rememberEmail } from "@/components/EmailInput";
 
 function SignupForm() {
   const router = useRouter();
@@ -24,10 +25,6 @@ function SignupForm() {
 
   useEffect(() => {
     try {
-      if (!prefillEmail) {
-        const savedEmail = localStorage.getItem("ts-signup-email");
-        if (savedEmail) setEmail(savedEmail);
-      }
       const savedFirst = localStorage.getItem("ts-signup-first");
       if (savedFirst) setFirstName(savedFirst);
       const savedLast = localStorage.getItem("ts-signup-last");
@@ -41,7 +38,6 @@ function SignupForm() {
 
   useEffect(() => {
     try {
-      localStorage.setItem("ts-signup-email", email);
       localStorage.setItem("ts-signup-first", firstName);
       localStorage.setItem("ts-signup-last", lastName);
       localStorage.setItem("ts-signup-phone", phone);
@@ -74,6 +70,7 @@ function SignupForm() {
           setError(data.error || "Something went wrong — try again.");
           return;
         }
+        rememberEmail(email);
         if (data.invited && data.redirectTo) {
           router.push(data.redirectTo);
           return;
@@ -105,6 +102,7 @@ function SignupForm() {
         return;
       }
 
+      rememberEmail(email);
       router.push(data.redirectTo || `/member/onboard?plan=${ticketPlan}`);
       router.refresh();
     } catch {
@@ -157,15 +155,13 @@ function SignupForm() {
 
             <div>
               <label className="block text-xs text-[#9d8ab8] mb-1">Email</label>
-              <input
-                type="email"
-                name="email"
-                autoComplete="email"
+              <EmailInput
+                variant="signup"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={setEmail}
                 placeholder="you@example.com"
-                className="w-full rounded-full border border-[#3d2660] bg-[#0a0612] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
+                prefillFromHistory={!prefillEmail}
               />
             </div>
 

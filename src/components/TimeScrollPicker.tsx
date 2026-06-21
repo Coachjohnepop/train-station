@@ -185,78 +185,69 @@ export default function TimeScrollPicker({
   onChange,
   id,
   className = "",
-  compact = false,
   placeholder = "Set time",
 }: {
   value: string;
   onChange: (next: string) => void;
   id?: string;
   className?: string;
-  /** Tap-to-open sheet — for tight admin rows */
-  compact?: boolean;
   placeholder?: string;
+  /** @deprecated All pickers are tap-to-open; kept for call-site compat */
+  compact?: boolean;
 }) {
   const uid = useId();
   const panelId = id || uid;
   const normalized = normalizeTimeValue(value || "07:30");
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(normalized);
+  const hasValue = Boolean(value?.trim());
 
   useEffect(() => {
     if (open) setDraft(normalized);
   }, [open, normalized]);
 
-  if (compact) {
-    const hasValue = Boolean(value?.trim());
-    return (
-      <div className={className}>
-        <button
-          type="button"
-          id={panelId}
-          onClick={() => setOpen(true)}
-          className="input flex w-full min-h-[44px] items-center justify-between gap-2 px-3 py-2 text-left text-sm font-medium"
-        >
-          <span>{hasValue ? formatTime12h(normalized) : placeholder}</span>
-          <span className="text-[10px] text-[var(--muted)]">▾</span>
-        </button>
+  return (
+    <div className={className}>
+      <button
+        type="button"
+        id={panelId}
+        onClick={() => setOpen(true)}
+        className="input flex w-full min-h-[44px] items-center justify-between gap-2 px-3 py-2 text-left text-sm font-medium"
+      >
+        <span>{hasValue ? formatTime12h(normalized) : placeholder}</span>
+        <span className="text-[10px] text-[var(--muted)]">▾</span>
+      </button>
 
-        {open && (
-          <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55 p-0 sm:items-center sm:p-4">
+      {open && (
+        <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55 p-0 sm:items-center sm:p-4">
+          <button
+            type="button"
+            aria-label="Close time picker"
+            className="absolute inset-0"
+            onClick={() => setOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-labelledby={`${panelId}-title`}
+            className="relative z-10 w-full max-w-md rounded-t-2xl border border-[var(--border)] bg-[var(--surface)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl sm:rounded-2xl"
+          >
+            <p id={`${panelId}-title`} className="mb-3 text-center text-sm font-semibold">
+              Choose time
+            </p>
+            <TimeWheels value={draft} onChange={setDraft} />
             <button
               type="button"
-              aria-label="Close time picker"
-              className="absolute inset-0"
-              onClick={() => setOpen(false)}
-            />
-            <div
-              role="dialog"
-              aria-labelledby={`${panelId}-title`}
-              className="relative z-10 w-full max-w-md rounded-t-2xl border border-[var(--border)] bg-[var(--surface)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl sm:rounded-2xl"
+              className="btn-primary mt-4 w-full py-3 text-sm font-semibold"
+              onClick={() => {
+                onChange(draft);
+                setOpen(false);
+              }}
             >
-              <p id={`${panelId}-title`} className="mb-3 text-center text-sm font-semibold">
-                Choose time
-              </p>
-              <TimeWheels value={draft} onChange={setDraft} />
-              <button
-                type="button"
-                className="btn-primary mt-4 w-full py-3 text-sm font-semibold"
-                onClick={() => {
-                  onChange(draft);
-                  setOpen(false);
-                }}
-              >
-                Done
-              </button>
-            </div>
+              Done
+            </button>
           </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div id={panelId} className={className}>
-      <TimeWheels value={normalized} onChange={onChange} />
+        </div>
+      )}
     </div>
   );
 }
