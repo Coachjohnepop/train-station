@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hydrateDemoExercises, loadDemoExercises } from "@/lib/demo-exercises";
-import { getDemoSeed } from "@/lib/demo-seed-store";
+import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
+import { BLOB_TOKEN } from "@/lib/demo-json-blob";
+import {
+  buildDemoWorkoutExerciseItems,
+  findDemoWorkoutRecord,
+} from "@/lib/demo-workout-items";
 
 function isDemoMode() {
   const url = process.env.DATABASE_URL ?? "";
@@ -21,38 +26,13 @@ export async function GET(_request: Request, { params }: Params) {
   if (isDemoMode()) {
     const data = await getDemoSeed();
     await hydrateDemoExercises();
-    const w = (data.workouts || []).find((ww: any) => ww.id === id);
-    if (!w) {
-      return NextResponse.json({ id, name: "New Workout", description: null, exercises: [] });
-    }
-
     const exList = loadDemoExercises();
-
-    const items = (data.workoutExercises || [])
-      .filter((we: any) => we.workoutId === id)
-      .sort((a: any, b: any) => {
-        const aEx = exList.find((e: any) => e.id === a.exerciseId);
-        const bEx = exList.find((e: any) => e.id === b.exerciseId);
-        const aIsWarm = /warm/i.test(aEx?.name || "");
-        const bIsWarm = /warm/i.test(bEx?.name || "");
-        if (aIsWarm && !bIsWarm) return -1;
-        if (!aIsWarm && bIsWarm) return 1;
-        return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
-      })
-      .map((we: any) => {
-        const ex = exList.find((e: any) => e.id === we.exerciseId);
-        return {
-          id: we.id,
-          sortOrder: we.sortOrder,
-          setScheme: we.setScheme,
-          repPattern: we.repPattern,
-          reps: we.reps,
-          sets: we.sets,
-          weightTier: we.weightTier,
-          notes: we.notes,
-          exercise: ex || { id: we.exerciseId, name: "Unknown" },
-        };
-      });
+    const workoutExercises = (data.workoutExercises || []) as any[];
+    const w = findDemoWorkoutRecord((data.workouts || []) as any[], id, workoutExercises);
+    if (!w) {
+      return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
+    }
+    const items = buildDemoWorkoutExerciseItems(id, workoutExercises, exList);
     return NextResponse.json({ ...w, exercises: items });
   }
   const workout = await prisma.workout.findUnique({
@@ -76,6 +56,39 @@ export async function PATCH(request: Request, { params }: Params) {
   if (!parsed.success) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
   }
+
+  if (isDemoMode()) {
+    let updated: Record<string, unknown> | null = null;
+    let notFound = false;
+    const { blobSaved } = await mutateDemoSeed((data) => {
+      const workouts = (data.workouts || []) as any[];
+      const idx = workouts.findIndex((w) => w.id === id);
+      if (idx === -1) {
+        notFound = true;
+        return;
+      }
+      const w = { ...workouts[idx] };
+      if (parsed.data.name !== undefined) w.name = parsed.data.name.trim();
+      if (parsed.data.description !== undefined) {
+        w.description = parsed.data.description?.trim() || null;
+      }
+      w.updatedAt = new Date().toISOString();
+      workouts[idx] = w;
+      data.workouts = workouts;
+      updated = w;
+    });
+    if (notFound) {
+      return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
+    }
+    if (process.env.VERCEL && BLOB_TOKEN && !blobSaved) {
+      return NextResponse.json(
+        { detail: "Update applied but cloud save failed — retry in a moment." },
+        { status: 503 },
+      );
+    }
+    return NextResponse.json(updated);
+  }
+
   try {
     const workout = await prisma.workout.update({
       where: { id },

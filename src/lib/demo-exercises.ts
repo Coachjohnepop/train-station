@@ -57,7 +57,7 @@ async function syncExercisesIntoSeed(list: any[]) {
     const byId = Object.fromEntries(list.map((e: any) => [e.id, e]));
     for (const we of seed.workoutExercises || []) {
       const ex = byId[(we as any).exerciseId];
-      if (ex && (we as any).exercise) {
+      if (ex) {
         (we as any).exercise = { ...ex };
       }
     }

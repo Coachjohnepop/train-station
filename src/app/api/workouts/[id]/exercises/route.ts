@@ -3,7 +3,9 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { workoutPrescriptionSchema } from "@/lib/exercise-schema";
 import { hydrateDemoExercises, loadDemoExercises } from "@/lib/demo-exercises";
-import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
+import { BLOB_TOKEN } from "@/lib/demo-json-blob";
+import { mutateDemoSeed } from "@/lib/demo-seed-store";
+import { ensureDemoWorkoutInSeed, resolveDemoExercise } from "@/lib/demo-workout-items";
 
 function isDemoMode() {
   const url = process.env.DATABASE_URL ?? "";
@@ -16,6 +18,7 @@ const addSchema = workoutPrescriptionSchema.extend({
 
 const updateItemSchema = z.object({
   itemId: z.string().min(1),
+  exerciseId: z.string().min(1).optional(),
   setScheme: workoutPrescriptionSchema.shape.setScheme.optional(),
   repPattern: workoutPrescriptionSchema.shape.repPattern.optional().nullable(),
   reps: workoutPrescriptionSchema.shape.reps.optional().nullable(),
@@ -41,7 +44,9 @@ export async function POST(request: Request, { params }: Params) {
     const ex = exList.find((e: any) => e.id === parsed.data.exerciseId);
 
     let newItem: Record<string, unknown> | null = null;
-    await mutateDemoSeed((data) => {
+    const { blobSaved } = await mutateDemoSeed((data) => {
+      if (!data.workouts) data.workouts = [];
+      data.workouts = ensureDemoWorkoutInSeed(data.workouts as any[], workoutId);
       if (!data.workoutExercises) data.workoutExercises = [];
 
       const existingForWorkout = data.workoutExercises.filter(
@@ -52,6 +57,7 @@ export async function POST(request: Request, { params }: Params) {
           ? Math.max(...existingForWorkout.map((we: any) => we.sortOrder ?? 0)) + 1
           : 0;
 
+      const exercise = resolveDemoExercise(parsed.data.exerciseId, exList);
       newItem = {
         id: "demo-we-" + Date.now(),
         workoutId,
@@ -64,10 +70,16 @@ export async function POST(request: Request, { params }: Params) {
         sets: parsed.data.sets,
         restSec: parsed.data.restSec ?? null,
         notes: parsed.data.notes ?? null,
-        exercise: ex || { id: parsed.data.exerciseId, name: "Exercise" },
+        exercise,
       };
       data.workoutExercises.push(newItem);
     });
+    if (process.env.VERCEL && BLOB_TOKEN && !blobSaved) {
+      return NextResponse.json(
+        { detail: "Exercise added but cloud save failed — retry in a moment." },
+        { status: 503 },
+      );
+    }
 
     return NextResponse.json(newItem, { status: 201 });
   }
@@ -131,37 +143,49 @@ export async function PATCH(request: Request, { params }: Params) {
     const exList = loadDemoExercises();
 
     let updated: Record<string, unknown> | null = null;
-    try {
-      await mutateDemoSeed((seedData) => {
-        if (!seedData.workoutExercises) seedData.workoutExercises = [];
+    let notFound = false;
+    const { blobSaved } = await mutateDemoSeed((seedData) => {
+      if (!seedData.workoutExercises) seedData.workoutExercises = [];
 
-        const weIdx = seedData.workoutExercises.findIndex((we: any) => we.id === itemId);
-        if (weIdx === -1) {
-          throw new Error("NOT_FOUND");
-        }
-
-        const we = { ...seedData.workoutExercises[weIdx] } as any;
-
-        if (data.setScheme !== undefined) we.setScheme = data.setScheme;
-        if (data.repPattern !== undefined) we.repPattern = data.repPattern;
-        if (data.reps !== undefined) we.reps = data.reps;
-        if (data.weightTier !== undefined) we.weightTier = data.weightTier;
-        if (data.sets !== undefined) we.sets = data.sets;
-        if (data.restSec !== undefined) we.restSec = data.restSec;
-        if (data.notes !== undefined) we.notes = data.notes;
-        if (data.sortOrder !== undefined) we.sortOrder = data.sortOrder;
-
-        const ex = exList.find((e: any) => e.id === we.exerciseId);
-        we.exercise = ex || { id: we.exerciseId, name: "Exercise" };
-
-        seedData.workoutExercises[weIdx] = we;
-        updated = we;
-      });
-    } catch (e) {
-      if (e instanceof Error && e.message === "NOT_FOUND") {
-        return NextResponse.json({ detail: "Item not found" }, { status: 404 });
+      const weIdx = seedData.workoutExercises.findIndex((we: any) => we.id === itemId);
+      if (weIdx === -1) {
+        notFound = true;
+        return;
       }
-      throw e;
+
+      const we = { ...seedData.workoutExercises[weIdx] } as any;
+
+      if (data.exerciseId !== undefined) {
+        const ex = exList.find((e: any) => e.id === data.exerciseId);
+        if (!ex) {
+          notFound = true;
+          return;
+        }
+        we.exerciseId = data.exerciseId;
+      }
+      if (data.setScheme !== undefined) we.setScheme = data.setScheme;
+      if (data.repPattern !== undefined) we.repPattern = data.repPattern;
+      if (data.reps !== undefined) we.reps = data.reps;
+      if (data.weightTier !== undefined) we.weightTier = data.weightTier;
+      if (data.sets !== undefined) we.sets = data.sets;
+      if (data.restSec !== undefined) we.restSec = data.restSec;
+      if (data.notes !== undefined) we.notes = data.notes;
+      if (data.sortOrder !== undefined) we.sortOrder = data.sortOrder;
+
+      we.exercise = resolveDemoExercise(we.exerciseId, exList);
+
+      seedData.workoutExercises[weIdx] = we;
+      updated = we;
+    });
+
+    if (notFound) {
+      return NextResponse.json({ detail: "Item not found" }, { status: 404 });
+    }
+    if (process.env.VERCEL && BLOB_TOKEN && !blobSaved) {
+      return NextResponse.json(
+        { detail: "Update applied but cloud save failed — retry in a moment." },
+        { status: 503 },
+      );
     }
 
     return NextResponse.json(updated);
@@ -201,7 +225,7 @@ export async function DELETE(request: Request, { params }: Params) {
 
   if (isDemoMode()) {
     let removed = false;
-    await mutateDemoSeed((seedData) => {
+    const { blobSaved } = await mutateDemoSeed((seedData) => {
       if (!seedData.workoutExercises) seedData.workoutExercises = [];
       const before = seedData.workoutExercises.length;
       seedData.workoutExercises = seedData.workoutExercises.filter(
@@ -211,6 +235,12 @@ export async function DELETE(request: Request, { params }: Params) {
     });
     if (!removed) {
       return NextResponse.json({ detail: "Item not found" }, { status: 404 });
+    }
+    if (process.env.VERCEL && BLOB_TOKEN && !blobSaved) {
+      return NextResponse.json(
+        { detail: "Remove applied but cloud save failed — retry in a moment." },
+        { status: 503 },
+      );
     }
     return new NextResponse(null, { status: 204 });
   }

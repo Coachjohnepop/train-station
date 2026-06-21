@@ -7,6 +7,10 @@ import { prisma } from "@/lib/prisma";
 import { resolveUserId } from "@/lib/current-user";
 import { hydrateDemoExercises, loadDemoExercises } from "@/lib/demo-exercises";
 import { getDemoSeed } from "@/lib/demo-seed-store";
+import {
+  buildDemoWorkoutExerciseItems,
+  findDemoWorkoutRecord,
+} from "@/lib/demo-workout-items";
 
 export async function getMemberWorkoutById(
   workoutId: string,
@@ -15,7 +19,8 @@ export async function getMemberWorkoutById(
   if (isDemoMode()) {
     await hydrateDemoExercises();
   }
-  const workout = (data.workouts || []).find((w: any) => w.id === workoutId);
+  const workoutExercises = (data.workoutExercises || []) as any[];
+  const workout = findDemoWorkoutRecord((data.workouts || []) as any[], workoutId, workoutExercises);
   if (!workout) return null;
 
   // Use loadDemoExercises() in demo mode so that name changes performed in the
@@ -25,24 +30,29 @@ export async function getMemberWorkoutById(
     exList.map((e: any) => [e.id, e])
   );
 
-  const we = (data.workoutExercises || [])
-    .filter((item: any) => item.workoutId === workoutId)
-    .sort((a: any, b: any) => {
-      const aName = (exById[a.exerciseId] || {}).name || "";
-      const bName = (exById[b.exerciseId] || {}).name || "";
-      const aIsWarm = /warm/i.test(aName);
-      const bIsWarm = /warm/i.test(bName);
-      if (aIsWarm && !bIsWarm) return -1;
-      if (!aIsWarm && bIsWarm) return 1;
-      return (a.sortOrder || 0) - (b.sortOrder || 0);
-    });
+  const items = isDemoMode()
+    ? buildDemoWorkoutExerciseItems(workoutId, workoutExercises, exList)
+    : workoutExercises
+        .filter((item: any) => item.workoutId === workoutId)
+        .sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0))
+        .map((item: any) => ({
+          id: item.id,
+          exerciseId: item.exerciseId,
+          exercise: exById[item.exerciseId] || {},
+          setScheme: item.setScheme,
+          repPattern: item.repPattern,
+          reps: item.reps,
+          sets: item.sets,
+          weightTier: item.weightTier,
+          notes: item.notes,
+        }));
 
-  const exercises = we.map((item: any) => {
-    const ex = exById[item.exerciseId] || {};
+  const exercises = items.map((item: any) => {
+    const ex = item.exercise?.id ? item.exercise : exById[item.exerciseId] || {};
     const rx = normalizePrescription(item);
     return {
       id: item.id,
-      exerciseId: item.exerciseId,
+      exerciseId: item.exerciseId || ex.id,
       name: ex.name || "Exercise",
       description: item.notes ?? ex.description,
       videoUrl: ex.videoUrl,
@@ -94,7 +104,7 @@ export async function getMemberWorkoutById(
 
   return {
     workoutId: workout.id,
-    workoutName: workout.name,
+    workoutName: workout.name || "Workout",
     memberName: "Demo Member",
     exercises: exercisesWithPast,
   };

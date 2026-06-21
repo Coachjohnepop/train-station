@@ -3,6 +3,14 @@
     {
       "userId": "demo-user-john-steph",
       "phone": "(555) 111-2235",
+      "message": "Hi John, Coach Jeremy: UI test from coach — hello John &amp; Steph — Reply: https://www.thetrainstation.co/member/chat",
+      "source": "coach-reply",
+      "direction": "outbound",
+      "sentAt": "2026-06-16T14:00:17.820Z"
+    },
+    {
+      "userId": "demo-user-john-steph",
+      "phone": "(555) 111-2235",
       "message": "Hi John, Coach Jeremy: Great work today — keep it up! — Reply: https://www.thetrainstation.co/member/chat",
       "source": "coach-reply",
       "direction": "outbound",

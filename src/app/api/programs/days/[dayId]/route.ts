@@ -3,6 +3,8 @@ import { z } from "zod";
 import { assignWorkoutToDay } from "@/lib/program-schedule";
 import { prisma } from "@/lib/prisma";
 import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
+import { BLOB_TOKEN } from "@/lib/demo-json-blob";
+import { ensureDemoWorkoutInSeed } from "@/lib/demo-workout-items";
 
 function isDemoMode() {
   const url = process.env.DATABASE_URL ?? "";
@@ -56,7 +58,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
   if (isDemoMode()) {
     let notFound = false;
-    await mutateDemoSeed((data) => {
+    const { blobSaved } = await mutateDemoSeed((data) => {
       const days = (data.programDays as any[]) || [];
       const dayIdx = days.findIndex((d) => d.id === dayId);
       if (dayIdx === -1) {
@@ -65,7 +67,7 @@ export async function PATCH(request: Request, { params }: Params) {
       }
 
       const day = { ...days[dayIdx] };
-      const workouts = (data.workouts as any[]) || [];
+      let workouts = (data.workouts as any[]) || [];
 
       if (parsed.data.options !== undefined) {
         if (!data.programDayOptions) data.programDayOptions = [];
@@ -73,11 +75,11 @@ export async function PATCH(request: Request, { params }: Params) {
           (o) => o.dayId !== dayId,
         );
         parsed.data.options.forEach((opt, idx) => {
-          const workout = workouts.find((w) => w.id === opt.workoutId);
-          if (!workout) {
-            notFound = true;
-            return;
-          }
+          workouts = ensureDemoWorkoutInSeed(
+            workouts,
+            opt.workoutId,
+            opt.label || "Workout",
+          );
           (data.programDayOptions as any[]).push({
             id: `pdo-${dayId}-${idx}-${Date.now()}`,
             dayId,
@@ -93,13 +95,10 @@ export async function PATCH(request: Request, { params }: Params) {
         } else {
           day.workoutId = null;
         }
+        data.workouts = workouts;
       } else if (parsed.data.workoutId !== undefined) {
         if (parsed.data.workoutId) {
-          const workout = workouts.find((w) => w.id === parsed.data.workoutId);
-          if (!workout) {
-            notFound = true;
-            return;
-          }
+          data.workouts = ensureDemoWorkoutInSeed(workouts, parsed.data.workoutId);
           day.workoutId = parsed.data.workoutId;
           if (!data.programDayOptions) data.programDayOptions = [];
           data.programDayOptions = (data.programDayOptions as any[]).filter(
@@ -131,6 +130,12 @@ export async function PATCH(request: Request, { params }: Params) {
 
     if (notFound) {
       return NextResponse.json({ detail: "Day or workout not found" }, { status: 404 });
+    }
+    if (process.env.VERCEL && BLOB_TOKEN && !blobSaved) {
+      return NextResponse.json(
+        { detail: "Day updated but cloud save failed — retry in a moment." },
+        { status: 503 },
+      );
     }
 
     const data = await getDemoSeed();

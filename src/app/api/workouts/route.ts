@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getDemoSeed } from "@/lib/demo-seed-store";
+import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
+import { BLOB_TOKEN } from "@/lib/demo-json-blob";
 
 function isDemoMode() {
   const url = process.env.DATABASE_URL ?? "";
@@ -44,11 +45,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
   }
   if (isDemoMode()) {
-    const newId = `new-w-${Date.now()}`;
-    return NextResponse.json(
-      { id: newId, name: parsed.data.name.trim(), description: parsed.data.description?.trim() || null },
-      { status: 201 },
-    );
+    const now = new Date().toISOString();
+    const workout = {
+      id: `new-w-${Date.now()}`,
+      name: parsed.data.name.trim(),
+      description: parsed.data.description?.trim() || null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const { blobSaved } = await mutateDemoSeed((data) => {
+      if (!data.workouts) data.workouts = [];
+      (data.workouts as any[]).push(workout);
+    });
+    if (process.env.VERCEL && BLOB_TOKEN && !blobSaved) {
+      return NextResponse.json(
+        { detail: "Workout created but cloud save failed — retry in a moment." },
+        { status: 503 },
+      );
+    }
+    return NextResponse.json(workout, { status: 201 });
   }
   const workout = await prisma.workout.create({
     data: {

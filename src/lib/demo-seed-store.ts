@@ -58,8 +58,8 @@ export async function getDemoSeed(): Promise<DemoSeedData> {
   return hydrateDemoSeed();
 }
 
-export async function persistDemoSeed(data: DemoSeedData): Promise<void> {
-  await persistJsonStore({
+export async function persistDemoSeed(data: DemoSeedData): Promise<{ blobSaved: boolean }> {
+  return persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: SEED_FILE,
     data,
@@ -69,9 +69,9 @@ export async function persistDemoSeed(data: DemoSeedData): Promise<void> {
 
 export async function mutateDemoSeed(
   mutator: (data: DemoSeedData) => void,
-): Promise<DemoSeedData> {
+): Promise<{ data: DemoSeedData; blobSaved: boolean }> {
   const data = structuredClone(await hydrateDemoSeed()) as DemoSeedData;
   mutator(data);
-  await persistDemoSeed(data);
-  return data;
+  const { blobSaved } = await persistDemoSeed(data);
+  return { data, blobSaved };
 }

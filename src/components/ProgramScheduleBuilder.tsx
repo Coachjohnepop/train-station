@@ -253,33 +253,27 @@ export default function ProgramScheduleBuilder({
     }
   }
 
-  async function exchangeExercise(itemId: string, newExerciseId: string, newName: string) {
+  async function exchangeExercise(itemId: string, newExerciseId: string, _newName: string) {
     if (!focused) return;
     setSaving(focused.dayId);
+    const current = focusedExercises.find((e) => e.id === itemId);
     const res = await fetch(`/api/workouts/${focused.workoutId}/exercises`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itemId, /* exercise swap not in schema; we do via delete+add for safety in compact */ }),
+      body: JSON.stringify({
+        itemId,
+        exerciseId: newExerciseId,
+        reps: current?.reps || "8-10",
+        sets: current?.sets || 3,
+      }),
     });
-    // Since the update schema doesn't change exerciseId, do a remove + re-add with same prescription values
-    const current = focusedExercises.find((e) => e.id === itemId);
-    if (current) {
-      await fetch(`/api/workouts/${focused.workoutId}/exercises?itemId=${encodeURIComponent(itemId)}`, { method: "DELETE" });
-      await fetch(`/api/workouts/${focused.workoutId}/exercises`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          exerciseId: newExerciseId,
-          setScheme: "standard",
-          reps: current.reps || "8-10",
-          sets: current.sets || 3,
-          weightTier: "medium",
-          repPattern: null,
-          notes: null,
-        }),
-      });
-    }
     setSaving(null);
+    if (!res.ok) {
+      setMessage("Swap failed — try again.");
+      setTimeout(() => setMessage(null), 1400);
+      await loadFocused(focused);
+      return;
+    }
     await loadFocused(focused);
   }
 

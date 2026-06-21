@@ -260,6 +260,79 @@ async function testPersistence() {
   if (persisted?.description === newDesc) pass("Exercise PATCH persists on re-fetch");
   else fail("Exercise PATCH persists", `got: ${persisted?.description}`);
 
+  const workoutName = `QA Workout ${MARKER}`;
+  ({ res, body } = await req("/api/workouts", {
+    method: "POST",
+    json: { name: workoutName, description: "workout persistence probe" },
+  }));
+  const workoutId = body?.id;
+  if (!res.ok || !workoutId) {
+    fail("Create workout", `${res.status} ${JSON.stringify(body)?.slice(0, 120)}`);
+  } else {
+    pass("Create workout persists", workoutId);
+
+    ({ res, body } = await req(`/api/workouts/${workoutId}/exercises`, {
+      method: "POST",
+      json: {
+        exerciseId,
+        setScheme: "standard",
+        reps: "8-10",
+        sets: 3,
+        weightTier: "medium",
+      },
+    }));
+    const workoutItemId = body?.id;
+    if (!res.ok || !workoutItemId) {
+      fail("Add exercise to workout", `${res.status}`);
+    } else {
+      pass("Add exercise to workout", workoutItemId);
+
+      ({ res, body } = await req(`/api/workouts/${workoutId}/exercises`, {
+        method: "PATCH",
+        json: { itemId: workoutItemId, sets: 4, reps: "12" },
+      }));
+      if (res.ok && body?.sets === 4 && body?.reps === "12") pass("PATCH workout exercise prescription");
+      else fail("PATCH workout exercise", `${res.status}`);
+
+      let wItem = null;
+      for (let i = 0; i < 5; i++) {
+        ({ body } = await req(`/api/workouts/${workoutId}`));
+        wItem = body?.exercises?.find((e) => e.id === workoutItemId);
+        if (wItem?.sets === 4 && wItem?.reps === "12") break;
+        await new Promise((r) => setTimeout(r, 600));
+      }
+      if (wItem?.sets === 4 && wItem?.reps === "12") pass("Workout exercise PATCH persists on re-fetch");
+      else fail("Workout exercise re-fetch", `sets=${wItem?.sets} reps=${wItem?.reps}`);
+
+      const renamed = `${testName} RENAMED`;
+      await req(`/api/exercises/${exerciseId}`, {
+        method: "PATCH",
+        json: { name: renamed },
+      });
+      let propagated = null;
+      for (let i = 0; i < 5; i++) {
+        ({ body } = await req(`/api/workouts/${workoutId}`));
+        propagated = body?.exercises?.find((e) => e.id === workoutItemId);
+        if (propagated?.exercise?.name === renamed) break;
+        await new Promise((r) => setTimeout(r, 600));
+      }
+      if (propagated?.exercise?.name === renamed) pass("Library rename propagates to workout view");
+      else fail("Name propagation", `got: ${propagated?.exercise?.name}`);
+
+      const del = await req(
+        `/api/workouts/${workoutId}/exercises?itemId=${encodeURIComponent(workoutItemId)}`,
+        { method: "DELETE" },
+      );
+      if (del.res.status === 204) pass("DELETE workout exercise");
+      else fail("DELETE workout exercise", String(del.res.status));
+
+      ({ body } = await req(`/api/workouts/${workoutId}`));
+      const stillThere = body?.exercises?.some((e) => e.id === workoutItemId);
+      if (!stillThere) pass("Workout exercise delete persists on re-fetch");
+      else fail("Workout exercise delete re-fetch", "item still present");
+    }
+  }
+
   const { body: summary } = await req("/api/admin/programs-summary");
   const adult = summary?.programs?.find((p) => p.slug === "adult");
   const dayId = adult?.weeks?.[0]?.days?.[0]?.id;
