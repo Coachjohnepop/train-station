@@ -7,7 +7,7 @@ import { getMemberCoachingMode } from "@/lib/member-coaching-mode";
 export const dynamic = "force-dynamic";
 
 export default async function AdminChatPage() {
-  await hydrateCoachChat();
+  await hydrateCoachChat({ preferFresh: true });
   const threads = listThreadsForCoach();
   const members = listMembersForCoach().map((m) => ({
     id: m.id,

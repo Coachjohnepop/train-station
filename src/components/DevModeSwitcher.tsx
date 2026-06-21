@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { SessionUser } from "@/lib/auth-session";
+import { isStaffRole } from "@/lib/auth-session";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 
 const DEMO_MEMBERS = [
@@ -19,7 +20,7 @@ export default function DevModeSwitcher({
   active: "member" | "admin";
   staffSession?: SessionUser | null;
 }) {
-  const showImpersonation = active === "admin" && staffSession?.role === "ADMIN";
+  const showImpersonation = staffSession && isStaffRole(staffSession.role);
 
   return (
     <div className="app-shell-subbar">
@@ -50,11 +51,13 @@ export default function DevModeSwitcher({
         {showImpersonation && (
           <>
             <span className="mx-1 text-[10px] text-[var(--muted)]">|</span>
-            <span className="text-[10px] text-[var(--muted)]">Preview as member:</span>
+            <span className="text-[10px] text-[var(--muted)]">
+              {active === "member" ? "Viewing as — switch to:" : "Preview as member:"}
+            </span>
             {DEMO_MEMBERS.map((m) => (
               <a
                 key={m.id}
-                href={`/api/dev/switch-user?id=${m.id}&redirect=${encodeURIComponent("/member")}`}
+                href={`/api/dev/switch-user?id=${m.id}&redirect=${encodeURIComponent(active === "member" ? "/member/chat" : "/member")}`}
                 className="rounded-full px-2 py-0.5 text-[10px] font-medium text-accent hover:bg-accent/10"
               >
                 {m.label}

@@ -117,7 +117,7 @@ function touchThread(store: ChatStore, threadId: string) {
 }
 
 export async function ensureMemberThread(memberId: string): Promise<ChatThread> {
-  await hydrateCoachChat();
+  await hydrateCoachChat({ preferFresh: true });
   const store = readStore();
   const existing = store.threads.find((t) => t.kind === "member" && t.memberId === memberId);
   if (existing) return existing;
@@ -137,7 +137,7 @@ export async function ensureMemberThread(memberId: string): Promise<ChatThread> 
 }
 
 export async function ensureCohortThread(programSlug: string, programName?: string): Promise<ChatThread> {
-  await hydrateCoachChat();
+  await hydrateCoachChat({ preferFresh: true });
   const store = readStore();
   const existing = store.threads.find((t) => t.kind === "cohort" && t.programSlug === programSlug);
   if (existing) return existing;
@@ -163,16 +163,16 @@ export function listThreadsForCoach(): ChatThread[] {
 
 export function listThreadsForMember(memberId: string, programSlugs: string[] = []): ChatThread[] {
   const store = readStore();
-  const threads: ChatThread[] = [];
+  const direct: ChatThread[] = [];
+  const cohorts: ChatThread[] = [];
   const memberThread = store.threads.find((t) => t.kind === "member" && t.memberId === memberId);
-  if (memberThread) threads.push(memberThread);
+  if (memberThread) direct.push(memberThread);
   for (const slug of programSlugs) {
     const cohort = store.threads.find((t) => t.kind === "cohort" && t.programSlug === slug);
-    if (cohort) threads.push(cohort);
+    if (cohort) cohorts.push(cohort);
   }
-  return threads.sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-  );
+  cohorts.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  return [...direct, ...cohorts];
 }
 
 export function getThread(threadId: string): ChatThread | null {
@@ -181,7 +181,7 @@ export function getThread(threadId: string): ChatThread | null {
 
 /** Hydrate from Blob, then find or create thread by canonical id (serverless-safe). */
 export async function resolveThreadById(threadId: string): Promise<ChatThread | null> {
-  await hydrateCoachChat();
+  await hydrateCoachChat({ preferFresh: true });
   const existing = getThread(threadId);
   if (existing) return existing;
 
@@ -208,7 +208,7 @@ export function getMessagesForThread(threadId: string, limit = 200): ChatMessage
 export async function addChatMessage(input: Omit<ChatMessage, "id" | "createdAt" | "readByUserIds"> & {
   readByUserIds?: string[];
 }): Promise<ChatMessage> {
-  await hydrateCoachChat();
+  await hydrateCoachChat({ preferFresh: true });
   const store = readStore();
   const message: ChatMessage = {
     ...input,
@@ -223,7 +223,7 @@ export async function addChatMessage(input: Omit<ChatMessage, "id" | "createdAt"
 }
 
 export async function toggleMessageReaction(messageId: string, userId: string, emoji: string) {
-  await hydrateCoachChat();
+  await hydrateCoachChat({ preferFresh: true });
   const store = readStore();
   const message = store.messages.find((m) => m.id === messageId);
   if (!message) return null;
@@ -241,7 +241,7 @@ export async function toggleMessageReaction(messageId: string, userId: string, e
 }
 
 export async function markThreadRead(threadId: string, readerId: string) {
-  await hydrateCoachChat();
+  await hydrateCoachChat({ preferFresh: true });
   const store = readStore();
   let changed = false;
   for (const m of store.messages) {

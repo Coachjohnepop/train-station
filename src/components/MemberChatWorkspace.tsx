@@ -1,9 +1,29 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ChatFeed from "@/components/ChatFeed";
 import ChatThreadReply from "@/components/ChatThreadReply";
 import type { ChatMessage, ChatThread } from "@/lib/coach-chat";
+import { DEMO_COACH } from "@/lib/demo-coach";
+
+function orderThreads(threads: ChatThread[]) {
+  const direct = threads.filter((t) => t.kind === "member");
+  const cohorts = threads.filter((t) => t.kind !== "member");
+  return [...direct, ...cohorts];
+}
+
+function threadLabel(thread: ChatThread) {
+  if (thread.kind === "cohort") return `${thread.title} · Community`;
+  return DEMO_COACH.displayName;
+}
+
+function displayThread(thread: ChatThread | null): ChatThread | null {
+  if (!thread) return null;
+  if (thread.kind === "member") {
+    return { ...thread, title: DEMO_COACH.displayName };
+  }
+  return thread;
+}
 
 export default function MemberChatWorkspace({
   initialThreads,
@@ -12,12 +32,17 @@ export default function MemberChatWorkspace({
   initialThreads: ChatThread[];
   memberId: string;
 }) {
-  const [threads, setThreads] = useState(initialThreads);
-  const [activeId, setActiveId] = useState(initialThreads[0]?.id || "");
+  const orderedInitial = useMemo(() => orderThreads(initialThreads), [initialThreads]);
+  const defaultDirect = orderedInitial.find((t) => t.kind === "member");
+
+  const [threads, setThreads] = useState(orderedInitial);
+  const [activeId, setActiveId] = useState(defaultDirect?.id || orderedInitial[0]?.id || "");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const orderedThreads = useMemo(() => orderThreads(threads), [threads]);
   const activeThread = threads.find((t) => t.id === activeId) || null;
+  const feedThread = displayThread(activeThread);
 
   const loadMessages = useCallback(
     async (threadId: string, opts?: { quiet?: boolean }) => {
@@ -26,7 +51,7 @@ export default function MemberChatWorkspace({
       try {
         const res = await fetch(
           `/api/chat/messages?threadId=${encodeURIComponent(threadId)}&role=member`,
-          { cache: "no-store" }
+          { cache: "no-store" },
         );
         if (!res.ok) return;
         const data = await res.json();
@@ -46,28 +71,36 @@ export default function MemberChatWorkspace({
         if (!opts?.quiet) setLoading(false);
       }
     },
-    []
+    [],
   );
+
+  useEffect(() => {
+    setThreads(orderThreads(initialThreads));
+  }, [initialThreads]);
 
   useEffect(() => {
     if (activeId) loadMessages(activeId);
   }, [activeId, loadMessages]);
 
-  // Poll for new messages so incoming coach replies appear live.
   useEffect(() => {
     if (!activeId) return;
-    const id = setInterval(() => loadMessages(activeId, { quiet: true }), 6000);
+    const id = setInterval(() => loadMessages(activeId, { quiet: true }), 4000);
     return () => clearInterval(id);
   }, [activeId, loadMessages]);
 
   const directThread = threads.find((t) => t.kind === "member");
   const replyThreadId = directThread?.id || activeId;
 
+  function appendMessage(message?: ChatMessage) {
+    if (!message || message.threadId !== activeId) return;
+    setMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]));
+  }
+
   return (
     <div className="space-y-4">
-      {threads.length > 1 && (
+      {orderedThreads.length > 1 && (
         <div className="flex flex-wrap gap-2">
-          {threads.map((t) => (
+          {orderedThreads.map((t) => (
             <button
               key={t.id}
               type="button"
@@ -78,7 +111,7 @@ export default function MemberChatWorkspace({
                   : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"
               }`}
             >
-              {t.kind === "cohort" ? `${t.title} · Community` : t.title}
+              {threadLabel(t)}
             </button>
           ))}
         </div>
@@ -89,7 +122,7 @@ export default function MemberChatWorkspace({
           <p className="shrink-0 border-b border-[var(--border)] px-4 py-2 text-xs text-[var(--muted)]">Loading...</p>
         )}
         <ChatFeed
-          thread={activeThread}
+          thread={feedThread}
           messages={messages}
           viewerRole="member"
           viewerId={memberId}
@@ -102,9 +135,10 @@ export default function MemberChatWorkspace({
           <ChatThreadReply
             threadId={replyThreadId}
             role="member"
-            onSent={() => {
-              if (activeId) loadMessages(activeId);
-              if (replyThreadId !== activeId) loadMessages(replyThreadId);
+            onSent={(message) => {
+              appendMessage(message);
+              if (activeId) void loadMessages(activeId);
+              if (replyThreadId !== activeId) void loadMessages(replyThreadId);
             }}
           />
         )}

@@ -379,7 +379,14 @@ export default function AdminChatWorkspace({
               threadId={replyThreadId}
               role="coach"
               placeholder="Quick reply…"
-              onSent={() => loadMessages(replyThreadId)}
+              onSent={(message) => {
+                if (message) {
+                  setMessages((prev) =>
+                    prev.some((m) => m.id === message.id) ? prev : [...prev, message],
+                  );
+                }
+                void loadMessages(replyThreadId);
+              }}
             />
           )}
         </div>

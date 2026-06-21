@@ -22,8 +22,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Message is required" }, { status: 400 });
   }
 
-  await hydrateCoachChat();
-
   if (role === "coach") {
     if (!threadId) {
       return NextResponse.json({ error: "threadId is required for coach replies" }, { status: 400 });

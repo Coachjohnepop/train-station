@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { ChatMessage } from "@/lib/coach-chat";
 
 export default function ChatThreadReply({
   threadId,
@@ -11,7 +12,7 @@ export default function ChatThreadReply({
   threadId: string;
   role: "coach" | "member";
   placeholder?: string;
-  onSent?: () => void;
+  onSent?: (message?: ChatMessage) => void;
 }) {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -34,7 +35,7 @@ export default function ChatThreadReply({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Send failed");
       setMessage("");
-      onSent?.();
+      onSent?.(data.message as ChatMessage | undefined);
     } catch (e: any) {
       setError(e?.message || "Send failed");
     } finally {
