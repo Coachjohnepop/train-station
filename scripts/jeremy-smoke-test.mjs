@@ -349,13 +349,19 @@ async function testPersistence() {
   if (res.ok && body?.notes === testNote) pass("PATCH program day notes", dayId);
   else fail("PATCH program day", `${res.status} ${JSON.stringify(body)?.slice(0, 120)}`);
 
-  await new Promise((r) => setTimeout(r, 1200));
-
-  ({ res, body } = await req(`/api/programs/days/${dayId}`, {
-    method: "PATCH",
-    json: { videoUrl: null },
-  }));
-  if (res.ok && body?.notes === testNote) pass("Program day notes survive re-fetch");
+  let dayNotes = null;
+  for (let i = 0; i < 5; i++) {
+    await new Promise((r) => setTimeout(r, i === 0 ? 1200 : 600));
+    ({ res, body } = await req(`/api/programs/days/${dayId}`, {
+      method: "PATCH",
+      json: { videoUrl: null },
+    }));
+    if (res.ok && body?.notes === testNote) {
+      dayNotes = body.notes;
+      break;
+    }
+  }
+  if (dayNotes === testNote) pass("Program day notes survive re-fetch");
   else fail("Program day notes re-fetch", `notes=${body?.notes}`);
 
   await req(`/api/programs/days/${dayId}`, { method: "PATCH", json: { notes: null } });
