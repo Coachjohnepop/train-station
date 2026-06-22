@@ -4,24 +4,32 @@ Copy/paste:
 
 ---
 
-Hey Jeremy — **step 2** is live on preview. This is the program entry fix you asked for.
+Hey Jeremy — **step 2 is live** on the real site:
 
-**Admin → Programs → Adult Strength (or any program)**
+**https://www.thetrainstation.co**
+
+**Admin → Programs → Adult Strength**
 
 **Build Week 1**
 1. Click **Mon** (or **+Gym** on any day)
-2. Use **+ pills** at the bottom to add exercises — tweak sets/reps right there
-3. Or use **Pick workout…** to attach an existing workout from your library
-4. Repeat Tue–Sun (+ **+Home** if you need a home track)
+2. Add exercises with the **+ pills** at the bottom — tweak sets/reps there
+3. Or **Pick workout…** to attach a workout you already built
+4. Do Tue–Sun; use **+Home** when you need a home version
 
 **Copy the week**
-- Week 2 → **Copy to this week** (clones each day’s Gym/Home workouts — Week 2 edits won’t change Week 1)
-- Week 1 → **Copy to all remaining** (fills weeks 2, 3, 4…)
+- Week 2 → **Copy to this week** (each day gets its own copy — editing Week 2 won’t mess up Week 1)
+- Week 1 → **Copy to all remaining** (fills the rest of the program)
 
-**Pass:** Week 2 Monday has the same exercises as Week 1, but change reps on Week 2 only → Week 1 stays the same.
+**Pass:** Week 2 matches Week 1, but change reps on Week 2 Monday only → Week 1 Monday stays the same.
 
-**Fail:** copy week wipes Gym/Home, or editing Week 2 changes Week 1 → text me.
+**Fail:** Gym/Home vanish on copy, or Week 2 edits change Week 1 → text me.
 
-Preview URL: (John will send the latest `*.vercel.app` link)
+Step 3 next: clean up program names (drop junk, Military Prep, Mom & Dads, etc.).
 
 ---
+
+## John — automated check
+
+```bash
+BASE_URL=https://www.thetrainstation.co npm run test:s2
+```
