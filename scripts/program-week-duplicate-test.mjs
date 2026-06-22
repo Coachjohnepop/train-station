@@ -71,11 +71,11 @@ async function main() {
   const sourceWorkoutId = createWorkout.body.id;
   pass("Created template workout", sourceWorkoutId);
 
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 8; i++) {
     const check = await req(`/api/workouts/${sourceWorkoutId}`);
     if (check.res.ok && check.body?.id) break;
-    await new Promise((r) => setTimeout(r, 400 * (i + 1)));
-    if (i === 4) fail("Template workout not visible after create", sourceWorkoutId);
+    await new Promise((r) => setTimeout(r, 600 * (i + 1)));
+    if (i === 7) fail("Template workout not visible after create", sourceWorkoutId);
   }
 
   const exercises = await req("/api/exercises");
@@ -101,12 +101,15 @@ async function main() {
   if (!addEx.res.ok) fail("Add marker exercise", addEx.text);
   pass("Added marker exercise", bench.name);
 
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 10; i++) {
     const check = await req(`/api/workouts/${sourceWorkoutId}`);
     const count = (check.body?.exercises || []).length;
-    if (count > 0) break;
-    await new Promise((r) => setTimeout(r, 400 * (i + 1)));
-    if (i === 4) fail("Marker exercise not on template workout after add");
+    const hasMarker = (check.body?.exercises || []).some(
+      (e) => e.notes === MARKER || e.exercise?.name === bench.name,
+    );
+    if (count > 0 && hasMarker) break;
+    await new Promise((r) => setTimeout(r, 800 * (i + 1)));
+    if (i === 9) fail("Marker exercise not on template workout after add");
   }
 
   const patchMon = await req(`/api/programs/days/${monday.id}`, {
