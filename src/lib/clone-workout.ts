@@ -32,10 +32,12 @@ export async function cloneWorkout(
     await hydrateDemoExercises({ preferFresh: true });
     const exList = loadDemoExercises();
 
-    const created: { workout: ClonedWorkout | null } = { workout: null };
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const created: { workout: ClonedWorkout | null } = { workout: null };
 
-    let blobSaved = false;
-    const result = await mutateDemoSeed((data) => {
+      let blobSaved = false;
+      try {
+        const result = await mutateDemoSeed((data) => {
       const workouts = (data.workouts as any[]) || [];
       const source = workouts.find((w) => w.id === sourceWorkoutId);
       if (!source) {
@@ -72,24 +74,36 @@ export async function cloneWorkout(
         });
       }
       data.workoutExercises = workoutExercises;
-      created.workout = {
-        id: workout.id,
-        name: workout.name,
-        description: workout.description,
-      };
-    });
-    blobSaved = result.blobSaved;
+          created.workout = {
+            id: workout.id,
+            name: workout.name,
+            description: workout.description,
+          };
+        }, { preferFresh: true });
+        blobSaved = result.blobSaved;
 
-    if (!created.workout) {
-      throw new Error("CLONE_FAILED");
+        if (!created.workout) {
+          throw new Error("CLONE_FAILED");
+        }
+
+        return {
+          id: created.workout.id,
+          name: created.workout.name,
+          description: created.workout.description,
+          blobSaved,
+        };
+      } catch (error) {
+        if (
+          !(error instanceof Error && error.message === "WORKOUT_NOT_FOUND") ||
+          attempt >= 3
+        ) {
+          throw error;
+        }
+        await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+      }
     }
 
-    return {
-      id: created.workout.id,
-      name: created.workout.name,
-      description: created.workout.description,
-      blobSaved,
-    };
+    throw new Error("WORKOUT_NOT_FOUND");
   }
 
   const source = await prisma.workout.findUnique({
