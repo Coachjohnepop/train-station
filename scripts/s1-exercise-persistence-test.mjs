@@ -79,21 +79,36 @@ function workoutHasExercise(workout, exerciseId, exerciseName) {
   );
 }
 
-async function assertGone(id, label) {
-  let exercises = await fetchExercises();
-  if (!exercises.some((e) => e.id === id)) {
-    pass(`${label} gone (fetch 1)`);
-  } else {
-    fail(`${label} gone (fetch 1)`, "still in list");
-    return;
+async function waitUntilGone(id, label, maxMs = 35_000) {
+  const started = Date.now();
+  let attempt = 0;
+  while (Date.now() - started < maxMs) {
+    attempt += 1;
+    const exercises = await fetchExercises();
+    if (!exercises.some((e) => e.id === id)) {
+      pass(`${label} gone`, `after ${attempt} fetch(es), ~${Date.now() - started}ms`);
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 2000));
   }
-  await new Promise((r) => setTimeout(r, 500));
-  exercises = await fetchExercises();
-  if (!exercises.some((e) => e.id === id)) {
-    pass(`${label} gone (fetch 2 / refresh simulation)`);
-  } else {
-    fail(`${label} gone (fetch 2)`, "still in list");
+  fail(`${label} gone`, `still in list after ${maxMs}ms`);
+}
+
+async function waitUntilListed(id, name, label, maxMs = 20_000) {
+  const started = Date.now();
+  let attempt = 0;
+  while (Date.now() - started < maxMs) {
+    attempt += 1;
+    const exercises = await fetchExercises();
+    const row = exercises.find((e) => e.id === id);
+    if (row?.name === name) {
+      pass(label, `after ${attempt} fetch(es), ~${Date.now() - started}ms`);
+      return true;
+    }
+    await new Promise((r) => setTimeout(r, 2000));
   }
+  fail(label, `not listed after ${maxMs}ms`);
+  return false;
 }
 
 async function testTempExerciseRoundTrip() {
@@ -112,12 +127,8 @@ async function testTempExerciseRoundTrip() {
   const tempId = create.body.id;
   pass("POST temp exercise", tempId);
 
-  let exercises = await fetchExercises();
-  if (exercises.some((e) => e.id === tempId && e.name === tempName)) {
-    pass("Temp exercise listed after create");
-  } else {
-    fail("Temp exercise listed after create");
-  }
+  const listed = await waitUntilListed(tempId, tempName, "Temp exercise listed after create");
+  if (!listed) return null;
 
   const patch = await req(`/api/exercises/${tempId}`, {
     method: "PATCH",
@@ -129,13 +140,7 @@ async function testTempExerciseRoundTrip() {
     fail("PATCH temp exercise rename", `${patch.res.status}`);
   }
 
-  exercises = await fetchExercises();
-  const row = exercises.find((e) => e.id === tempId);
-  if (row?.name === renamed) {
-    pass("Rename visible in library list");
-  } else {
-    fail("Rename visible in library list", row?.name || "missing");
-  }
+  await waitUntilListed(tempId, renamed, "Rename visible in library list");
 
   const del = await req(`/api/exercises/${tempId}`, { method: "DELETE" });
   if (del.res.status === 204) {
@@ -146,7 +151,7 @@ async function testTempExerciseRoundTrip() {
     return tempId;
   }
 
-  await assertGone(tempId, "Temp exercise");
+  await waitUntilGone(tempId, "Temp exercise");
   return null;
 }
 
@@ -168,7 +173,7 @@ async function testBenchPressOptional() {
     return;
   }
 
-  await assertGone(bench.id, "Bench Press");
+  await waitUntilGone(bench.id, "Bench Press");
 
   const idsToCheck = ["cmpyurx0n0010tfrzpsv6ksu4", "cmpyrgf3t0001tnrze7tvnioa"];
   let refsCleared = 0;

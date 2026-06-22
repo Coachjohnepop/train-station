@@ -11,7 +11,7 @@ Hey Jeremy — quick test on the **live site** when you have 2 minutes:
 1. Sign in → **Admin** → **Exercises**
 2. Search for something you don’t need (QA junk, old test name, whatever — **not** something you’re using in a program)
 3. Tap **Delete** → confirm
-4. **Pull down to refresh** the page (or close the tab and open Exercises again)
+4. **Refresh** the page — wait up to ~10 seconds and refresh once more if needed (cloud save can take a beat)
 5. ✅ **Pass:** it’s still gone  
    ❌ **Fail:** it came back — text me
 
