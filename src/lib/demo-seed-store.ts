@@ -86,6 +86,16 @@ function mergeSeedArray<T extends { id?: string }>(base: T[], overlay: T[]): T[]
   return [...byId.values()];
 }
 
+function mergeProgramDayOptions(
+  base: Array<{ id?: string; dayId?: string }>,
+  overlay: Array<{ id?: string; dayId?: string }>,
+): Array<{ id?: string; dayId?: string }> {
+  const overlayDayIds = new Set(overlay.map((o) => o.dayId).filter(Boolean));
+  if (overlayDayIds.size === 0) return base;
+  const keptBase = base.filter((o) => !o.dayId || !overlayDayIds.has(o.dayId));
+  return mergeSeedArray(keptBase, overlay);
+}
+
 function mergeDemoSeed(base: DemoSeedData, overlay: DemoSeedData): DemoSeedData {
   return {
     ...base,
@@ -101,9 +111,9 @@ function mergeDemoSeed(base: DemoSeedData, overlay: DemoSeedData): DemoSeedData 
       (base.programDays as Array<{ id?: string }>) || [],
       (overlay.programDays as Array<{ id?: string }>) || [],
     ),
-    programDayOptions: mergeSeedArray(
-      (base.programDayOptions as Array<{ id?: string }>) || [],
-      (overlay.programDayOptions as Array<{ id?: string }>) || [],
+    programDayOptions: mergeProgramDayOptions(
+      (base.programDayOptions as Array<{ id?: string; dayId?: string }>) || [],
+      (overlay.programDayOptions as Array<{ id?: string; dayId?: string }>) || [],
     ),
   };
 }
@@ -118,6 +128,14 @@ export async function mutateDemoSeed(
   const data =
     local && BLOB_TOKEN ? mergeDemoSeed(fresh, structuredClone(local) as DemoSeedData) : fresh;
   mutator(data);
-  const { blobSaved } = await persistDemoSeed(data);
-  return { data, blobSaved };
+
+  // Re-merge latest blob before write so concurrent workout/clone writes are not clobbered.
+  let toPersist = data;
+  if (BLOB_TOKEN) {
+    const latest = structuredClone(await hydrateDemoSeed({ preferFresh: true })) as DemoSeedData;
+    toPersist = mergeDemoSeed(latest, data);
+  }
+
+  const { blobSaved } = await persistDemoSeed(toPersist);
+  return { data: toPersist, blobSaved };
 }
