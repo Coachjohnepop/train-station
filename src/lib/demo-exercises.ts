@@ -50,16 +50,29 @@ export function loadDemoExercises(): any[] {
   return [...loadSeedExercises()];
 }
 
+function applyExerciseListToSeed(seed: Record<string, any>, list: any[]) {
+  const exerciseIds = new Set(list.map((e: any) => e.id));
+  const byId = Object.fromEntries(list.map((e: any) => [e.id, e]));
+
+  seed.exercises = list.map((e: any) => ({ ...e }));
+
+  if (!seed.workoutExercises) return;
+
+  seed.workoutExercises = seed.workoutExercises.filter((we: any) =>
+    exerciseIds.has(we.exerciseId),
+  );
+
+  for (const we of seed.workoutExercises) {
+    const ex = byId[we.exerciseId];
+    if (ex) {
+      we.exercise = { ...ex };
+    }
+  }
+}
+
 async function syncExercisesIntoSeed(list: any[]): Promise<boolean> {
   const { blobSaved } = await mutateDemoSeed((seed) => {
-    seed.exercises = list.map((e: any) => ({ ...e }));
-    const byId = Object.fromEntries(list.map((e: any) => [e.id, e]));
-    for (const we of seed.workoutExercises || []) {
-      const ex = byId[(we as any).exerciseId];
-      if (ex) {
-        (we as any).exercise = { ...ex };
-      }
-    }
+    applyExerciseListToSeed(seed, list);
   });
   return blobSaved;
 }

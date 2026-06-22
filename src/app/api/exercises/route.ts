@@ -8,7 +8,10 @@ import {
   saveDemoExercises,
   createDemoExerciseId,
 } from "@/lib/demo-exercises";
-import { BLOB_TOKEN } from "@/lib/demo-json-blob";
+import {
+  demoPersistenceError,
+  demoPersistenceWarning,
+} from "@/lib/demo-persistence";
 
 const createSchema = z.object({
   name: z.string().min(1).max(200),
@@ -52,14 +55,15 @@ export async function POST(request: Request) {
       defaultWeightTier: null,
     };
     list.push(exercise);
-    const { exercisesBlobSaved, seedBlobSaved } = await saveDemoExercises(list);
-    if (process.env.VERCEL && BLOB_TOKEN && (!exercisesBlobSaved || !seedBlobSaved)) {
-      return NextResponse.json(
-        { detail: "Exercise created but cloud save failed — retry in a moment." },
-        { status: 503 },
-      );
-    }
-    return NextResponse.json(exercise, { status: 201 });
+    const saveResult = await saveDemoExercises(list);
+    const persistenceFailure = demoPersistenceError(saveResult, "Exercise create");
+    if (persistenceFailure) return persistenceFailure;
+
+    const warning = demoPersistenceWarning(saveResult);
+    return NextResponse.json(
+      warning ? { ...exercise, _persistenceWarning: warning } : exercise,
+      { status: 201 },
+    );
   }
 
   try {

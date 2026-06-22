@@ -1,3 +1,4 @@
+import { hydrateDemoExercises } from "@/lib/demo-exercises";
 import { getDemoSeed } from "@/lib/demo-seed-store";
 
 export type ExerciseProgramUsage = {
@@ -103,16 +104,20 @@ export async function getExerciseUsage(exerciseId: string): Promise<ExerciseUsag
  * Returns a lightweight summary map for every exercise (great for the library table).
  */
 export async function getAllExerciseUsages(): Promise<Record<string, { programCount: number; workoutCount: number; programs: Array<{ name: string; slug: string }> }>> {
-  const data = (await getDemoSeed({ preferFresh: true })) as any;
+  const [data, exercises] = await Promise.all([
+    getDemoSeed({ preferFresh: true }),
+    hydrateDemoExercises({ preferFresh: true }),
+  ]);
+  const seed = data as any;
   const result: Record<string, any> = {};
 
-  const allWes = data.workoutExercises || [];
-  const dayOptions = data.programDayOptions || [];
-  const programDays = data.programDays || [];
-  const programWeeks = data.programWeeks || [];
-  const programs = data.programs || [];
+  const allWes = seed.workoutExercises || [];
+  const dayOptions = seed.programDayOptions || [];
+  const programDays = seed.programDays || [];
+  const programWeeks = seed.programWeeks || [];
+  const programs = seed.programs || [];
   const workoutsById: Record<string, any> = Object.fromEntries(
-    (data.workouts || []).map((w: any) => [w.id, w])
+    (seed.workouts || []).map((w: any) => [w.id, w]),
   );
 
   // Precompute workout -> programs map for speed (name + slug for linking)
@@ -132,7 +137,7 @@ export async function getAllExerciseUsages(): Promise<Record<string, { programCo
     }
   }
 
-  for (const ex of data.exercises || []) {
+  for (const ex of exercises) {
     const wesForEx = allWes.filter((we: any) => we.exerciseId === ex.id);
     const wids = new Set<string>(wesForEx.map((we: any) => we.workoutId));
 

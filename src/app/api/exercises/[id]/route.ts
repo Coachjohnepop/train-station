@@ -7,8 +7,10 @@ import {
   loadDemoExercises,
   saveDemoExercises,
 } from "@/lib/demo-exercises";
-import { mutateDemoSeed } from "@/lib/demo-seed-store";
-import { BLOB_TOKEN } from "@/lib/demo-json-blob";
+import {
+  demoPersistenceError,
+  demoPersistenceWarning,
+} from "@/lib/demo-persistence";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -58,14 +60,12 @@ export async function PATCH(request: Request, { params }: Params) {
     if (data.tags !== undefined) ex.tags = data.tags;
     ex.updatedAt = new Date().toISOString();
     list[idx] = ex;
-    const { exercisesBlobSaved, seedBlobSaved } = await saveDemoExercises(list);
-    if (process.env.VERCEL && BLOB_TOKEN && (!exercisesBlobSaved || !seedBlobSaved)) {
-      return NextResponse.json(
-        { detail: "Update applied but cloud save failed — retry in a moment." },
-        { status: 503 },
-      );
-    }
-    return NextResponse.json(ex);
+    const saveResult = await saveDemoExercises(list);
+    const persistenceFailure = demoPersistenceError(saveResult, "Exercise update");
+    if (persistenceFailure) return persistenceFailure;
+
+    const warning = demoPersistenceWarning(saveResult);
+    return NextResponse.json(warning ? { ...ex, _persistenceWarning: warning } : ex);
   }
 
   try {
@@ -89,28 +89,16 @@ export async function DELETE(_request: Request, { params }: Params) {
       return NextResponse.json({ detail: "Exercise not found" }, { status: 404 });
     }
     list.splice(idx, 1);
-    const { exercisesBlobSaved, seedBlobSaved } = await saveDemoExercises(list);
+    const saveResult = await saveDemoExercises(list);
+    const persistenceFailure = demoPersistenceError(saveResult, "Exercise delete");
+    if (persistenceFailure) return persistenceFailure;
 
-    const { blobSaved: workoutRefsBlobSaved } = await mutateDemoSeed((seed) => {
-      if (seed.workoutExercises) {
-        seed.workoutExercises = seed.workoutExercises.filter(
-          (we: any) => we.exerciseId !== id,
-        );
-      }
-    });
-
-    if (
-      process.env.VERCEL &&
-      BLOB_TOKEN &&
-      (!exercisesBlobSaved || !seedBlobSaved || !workoutRefsBlobSaved)
-    ) {
-      return NextResponse.json(
-        { detail: "Delete applied but cloud save failed — retry in a moment." },
-        { status: 503 },
-      );
+    const warning = demoPersistenceWarning(saveResult);
+    const response = new NextResponse(null, { status: 204 });
+    if (warning) {
+      response.headers.set("X-Persistence-Warning", warning);
     }
-
-    return new NextResponse(null, { status: 204 });
+    return response;
   }
   try {
     await prisma.exercise.delete({ where: { id } });

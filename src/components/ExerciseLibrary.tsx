@@ -288,6 +288,14 @@ function ExerciseNameCell({
 
 type LibraryTab = "all" | "newly-added";
 
+type PersistenceStatus = {
+  demoMode: boolean;
+  durable?: boolean;
+  blobConfigured?: boolean;
+  onVercel?: boolean;
+  message: string;
+};
+
 export default function ExerciseLibrary() {
   const searchParams = useSearchParams();
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -320,6 +328,7 @@ export default function ExerciseLibrary() {
   const [libraryTab, setLibraryTab] = useState<LibraryTab>(
     searchParams.get("tab") === "newly-added" ? "newly-added" : "all",
   );
+  const [persistenceStatus, setPersistenceStatus] = useState<PersistenceStatus | null>(null);
 
   const COMMON_CATEGORIES = ["Back", "Chest", "Legs", "Shoulders", "Arms", "Core", "Full Body", "Mobility", "Cardio"];
 
@@ -358,6 +367,15 @@ export default function ExerciseLibrary() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    fetch("/api/admin/demo-persistence", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setPersistenceStatus(data as PersistenceStatus);
+      })
+      .catch(() => {});
+  }, []);
 
   const newlyAddedCount = exercises.filter(isNewlyAddedFromTextUpload).length;
 
@@ -477,12 +495,17 @@ export default function ExerciseLibrary() {
       return;
     }
 
-    const created = (await res.json()) as Exercise;
+    const created = (await res.json()) as Exercise & { _persistenceWarning?: string };
     setName("");
     setDescription("");
     setVideoUrl("");
     setTags("");
-    setMessage(`Added “${created.name}” to the library.`);
+    const warning = created._persistenceWarning;
+    setMessage(
+      warning
+        ? `Added “${created.name}” to the library. ${warning}`
+        : `Added “${created.name}” to the library.`,
+    );
     await load();
   }
 
@@ -498,7 +521,18 @@ export default function ExerciseLibrary() {
       setError(formatApiError((body as { detail?: unknown }).detail) || "Delete failed — try again.");
       return;
     }
-    setMessage(`Deleted “${exerciseName}”.`);
+    const warning = res.headers.get("X-Persistence-Warning");
+    setExercises((prev) => prev.filter((e) => e.id !== id));
+    setUsages((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setMessage(
+      warning
+        ? `Deleted “${exerciseName}”. ${warning}`
+        : `Deleted “${exerciseName}”.`,
+    );
     await load();
   }
 
@@ -537,10 +571,14 @@ export default function ExerciseLibrary() {
         setError(formatApiError((body as { detail?: unknown }).detail));
         return;
       }
-      const updated = (await res.json()) as Exercise;
+      const updated = (await res.json()) as Exercise & { _persistenceWarning?: string };
       applyExerciseUpdate(updated);
       setEditingExercise(null);
-      setMessage('Exercise updated.');
+      setMessage(
+        updated._persistenceWarning
+          ? `Exercise updated. ${updated._persistenceWarning}`
+          : "Exercise updated.",
+      );
       void load();
     } catch (e) {
       setError('Failed to update exercise.');
@@ -601,6 +639,25 @@ export default function ExerciseLibrary() {
 
   return (
     <div className="space-y-6">
+      {persistenceStatus?.demoMode && (
+        <div
+          className={`rounded-xl border px-4 py-3 text-sm ${
+            persistenceStatus.durable
+              ? "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)]"
+              : "border-amber-500/40 bg-amber-500/10 text-amber-100"
+          }`}
+          role="status"
+        >
+          <p className="font-medium text-[var(--text)]">How exercise edits are saved</p>
+          <p className="mt-1">{persistenceStatus.message}</p>
+          <p className="mt-2 text-xs text-[var(--muted)]">
+            Deletes and renames update workouts and programs automatically. For a permanent
+            live snapshot, run <code className="rounded bg-[var(--surface)] px-1">npm run db:export-seed</code>{" "}
+            and commit <code className="rounded bg-[var(--surface)] px-1">prisma/seed-data.json</code>.
+          </p>
+        </div>
+      )}
+
       {searchBar}
 
       <TextUploadPanel mode="exercises" onBuilt={() => load()} />
