@@ -652,8 +652,9 @@ export default function ExerciseLibrary() {
           <p className="mt-1">{persistenceStatus.message}</p>
           <p className="mt-2 text-xs text-[var(--muted)]">
             Deletes and renames update workouts and programs automatically. For a permanent
-            live snapshot, run <code className="rounded bg-[var(--surface)] px-1">npm run db:export-seed</code>{" "}
-            and commit <code className="rounded bg-[var(--surface)] px-1">prisma/seed-data.json</code>.
+            live snapshot, use <strong>Export seed snapshot</strong> on Programs (or{" "}
+            <code className="rounded bg-[var(--surface)] px-1">npm run db:export-seed</code>) and commit{" "}
+            <code className="rounded bg-[var(--surface)] px-1">prisma/seed-data.json</code>.
           </p>
         </div>
       )}

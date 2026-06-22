@@ -15,7 +15,9 @@
     "db:studio": "prisma studio",
     "test:s1": "node scripts/s1-exercise-persistence-test.mjs",
     "test:s2": "node scripts/s2-program-builder-test.mjs",
-    "test:s3": "node scripts/s3-catalog-cleanup-test.mjs"
+    "test:s3": "node scripts/s3-catalog-cleanup-test.mjs",
+    "test:s4": "node scripts/s4-bulk-entry-test.mjs",
+    "test:s3-s4": "node scripts/test-s3-s4.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",

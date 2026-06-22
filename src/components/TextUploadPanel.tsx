@@ -26,7 +26,8 @@ HIIT cool down 5 mins`,
   "program-week": `Day 1 Gym: Day 1 Upper Body Workout (Gym)
 Day 1 Home: Day 1 Upper Body Workout (Home)
 Day 2 Gym: Day 2 Lower Body Workout (Gym)
-2 Home: Day 2 Lower Body Workout (Home)`,
+Day 2 Home: Day 2 Lower Body Workout (Home)
+Day 3 Gym: Day 3 Workout (Gym)`,
 };
 
 const HINTS: Record<TextUploadMode, string> = {

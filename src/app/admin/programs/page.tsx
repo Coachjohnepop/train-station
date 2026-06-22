@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BRAND_NAME } from "@/lib/brand";
+import ExportSeedButton from "@/components/ExportSeedButton";
 import { listPrograms } from "@/lib/program-data";
 import { filterAdminCatalogPrograms } from "@/lib/programs";
 
@@ -10,8 +10,15 @@ export default async function ProgramsAdminPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold tracking-tight">Programs</h1>
-      <p className="mt-1 text-xs text-[var(--muted)] max-w-xl">Build workouts here: pick Gym/Home per day, add exercises, set reps, copy weeks. Tight workflow.</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Programs</h1>
+          <p className="mt-1 text-xs text-[var(--muted)] max-w-xl">
+            Build workouts here: pick Gym/Home per day, add exercises, set reps, copy weeks. Paste a full week via Text Upload.
+          </p>
+        </div>
+        <ExportSeedButton />
+      </div>
 
       <ul className="mt-8 space-y-3">
         {programs.map((program: any) => {

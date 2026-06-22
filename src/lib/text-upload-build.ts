@@ -10,6 +10,7 @@ import { parseExerciseList, type ParsedExerciseLine } from "@/lib/exercise-list-
 import { parseProgramWeekText, type ParsedWeekDaySlot } from "@/lib/program-week-parser";
 import { parseSmsWorkout, type ParsedSmsWorkout } from "@/lib/sms-workout-parser";
 import { NEWLY_ADDED_EXERCISE_TAG } from "@/lib/text-upload-exercises";
+import { normalizeProgramSlug } from "@/lib/programs";
 
 function normalizeName(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -186,7 +187,10 @@ export async function buildProgramWeekFromText(
   }
 
   const seed = await getDemoSeed();
-  const program = (seed.programs as any[])?.find((p) => p.slug === programSlug);
+  const targetSlug = normalizeProgramSlug(programSlug);
+  const program = (seed.programs as any[])?.find(
+    (p) => p.slug === programSlug || normalizeProgramSlug(p.slug) === targetSlug,
+  );
   if (!program) throw new Error(`Program "${programSlug}" not found`);
 
   const week = (seed.programWeeks as any[])?.find(

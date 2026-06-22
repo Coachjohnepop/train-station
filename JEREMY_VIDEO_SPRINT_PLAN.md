@@ -133,9 +133,9 @@ persist  builder  catalog  bulk    pay     member  landing
 **Goal:** Fast path to load August’s content without hand-clicking every exercise.
 
 ### Scope
-- [ ] Verify **Text Upload** on program week still works end-to-end after S2
-- [ ] Admin **Export seed snapshot** button → downloads / commits-ready JSON
-- [ ] Document 10-minute “load a week from text” recipe for Jeremy
+- [x] Verify **Text Upload** on program week still works end-to-end after S2
+- [x] Admin **Export seed snapshot** button → downloads / commits-ready JSON
+- [x] Document 10-minute “load a week from text” recipe for Jeremy
 - [ ] Optional: import from structured paste (week template)
 
 ### Acceptance
