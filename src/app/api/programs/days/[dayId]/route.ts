@@ -4,6 +4,7 @@ import { assignWorkoutToDay } from "@/lib/program-schedule";
 import { prisma } from "@/lib/prisma";
 import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
 import { BLOB_TOKEN } from "@/lib/demo-json-blob";
+import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { ensureDemoWorkoutInSeed } from "@/lib/demo-workout-items";
 
 function isDemoMode() {
@@ -63,6 +64,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
   if (isDemoMode()) {
     let notFound = false;
+    let expectedWorkoutIds: string[] = [];
     const { blobSaved } = await mutateDemoSeed((data) => {
       const days = (data.programDays as any[]) || [];
       const dayIdx = days.findIndex((d) => d.id === dayId);
@@ -75,6 +77,7 @@ export async function PATCH(request: Request, { params }: Params) {
       let workouts = (data.workouts as any[]) || [];
 
       if (parsed.data.options !== undefined) {
+        expectedWorkoutIds = parsed.data.options.map((opt) => opt.workoutId);
         if (!data.programDayOptions) data.programDayOptions = [];
         data.programDayOptions = (data.programDayOptions as any[]).filter(
           (o) => o.dayId !== dayId,
@@ -136,19 +139,40 @@ export async function PATCH(request: Request, { params }: Params) {
 
       days[dayIdx] = day;
       data.programDays = days;
-    });
+    }, { preferFresh: true });
 
     if (notFound) {
       return NextResponse.json({ detail: "Day or workout not found" }, { status: 404 });
     }
-    if (process.env.VERCEL && BLOB_TOKEN && !blobSaved) {
-      return NextResponse.json(
-        { detail: "Day updated but cloud save failed — retry in a moment." },
-        { status: 503 },
-      );
+    try {
+      requireBlobPersisted(blobSaved, "Program day update");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Program day update failed";
+      return NextResponse.json({ detail: msg }, { status: 503 });
     }
 
-    const data = await getDemoSeed();
+    if (expectedWorkoutIds.length > 0) {
+      for (let attempt = 0; attempt < 4; attempt++) {
+        const seed = await getDemoSeed({ preferFresh: Boolean(BLOB_TOKEN) });
+        const day = ((seed.programDays as any[]) || []).find((d) => d.id === dayId);
+        const optionIds = ((seed.programDayOptions as any[]) || [])
+          .filter((o) => o.dayId === dayId)
+          .map((o) => o.workoutId);
+        const matches =
+          day?.workoutId === expectedWorkoutIds[0] &&
+          expectedWorkoutIds.every((id) => optionIds.includes(id));
+        if (matches) break;
+        if (attempt >= 3) {
+          return NextResponse.json(
+            { detail: "Day updated but cloud save failed — retry in a moment." },
+            { status: 503 },
+          );
+        }
+        await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+      }
+    }
+
+    const data = await getDemoSeed({ preferFresh: Boolean(BLOB_TOKEN) });
     const response = resolveDayResponse(data, dayId);
     if (!response) {
       return NextResponse.json({ detail: "Day not found" }, { status: 404 });

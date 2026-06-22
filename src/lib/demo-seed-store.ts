@@ -129,11 +129,22 @@ export async function mutateDemoSeed(
     local && BLOB_TOKEN ? mergeDemoSeed(fresh, structuredClone(local) as DemoSeedData) : fresh;
   mutator(data);
 
-  // Re-merge latest blob before write so concurrent workout/clone writes are not clobbered.
+  // Re-merge latest workouts/exercises before write so concurrent clone/create writes survive,
+  // but keep program-day mutations from this request intact.
   let toPersist = data;
   if (BLOB_TOKEN) {
     const latest = structuredClone(await hydrateDemoSeed({ preferFresh: true })) as DemoSeedData;
-    toPersist = mergeDemoSeed(latest, data);
+    toPersist = {
+      ...data,
+      workouts: mergeSeedArray(
+        (latest.workouts as Array<{ id?: string }>) || [],
+        (data.workouts as Array<{ id?: string }>) || [],
+      ),
+      workoutExercises: mergeSeedArray(
+        (latest.workoutExercises as Array<{ id?: string }>) || [],
+        (data.workoutExercises as Array<{ id?: string }>) || [],
+      ),
+    };
   }
 
   const { blobSaved } = await persistDemoSeed(toPersist);
