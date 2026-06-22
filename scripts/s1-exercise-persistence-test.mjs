@@ -2,19 +2,23 @@
 /**
  * Sprint 1 — exercise delete/rename persistence smoke test.
  *
+ * By default uses a disposable temp exercise (safe for preview/prod).
+ * Set S1_TEST_BENCH=1 to also run Jeremy's Bench Press scenario.
+ *
  * Usage:
  *   node scripts/s1-exercise-persistence-test.mjs
  *   BASE_URL=https://train-station-….vercel.app node scripts/s1-exercise-persistence-test.mjs
- *   BASE_URL=http://localhost:3000 node scripts/s1-exercise-persistence-test.mjs
+ *   S1_TEST_BENCH=1 node scripts/s1-exercise-persistence-test.mjs
  */
 
 const BASE =
   process.env.BASE_URL ||
   "https://train-station-hdk40cvr9-johnepop-s-projects.vercel.app";
 
+const TEST_BENCH = process.env.S1_TEST_BENCH === "1";
 const BENCH_NAME = "Bench Press";
 const BENCH_ID = "cmpyqegat0004r7rz0klfamt0";
-const RENAME_MARKER = `S1-RENAME-${Date.now()}`;
+const MARKER = Date.now();
 
 const results = [];
 
@@ -62,9 +66,7 @@ async function fetchExercises() {
 }
 
 function findExactBench(exercises) {
-  return exercises.find(
-    (e) => e.name === BENCH_NAME || e.id === BENCH_ID,
-  );
+  return exercises.find((e) => e.name === BENCH_NAME || e.id === BENCH_ID);
 }
 
 function workoutHasExercise(workout, exerciseId, exerciseName) {
@@ -77,185 +79,136 @@ function workoutHasExercise(workout, exerciseId, exerciseName) {
   );
 }
 
-async function main() {
-  console.log(`\nS1 exercise persistence test\nBASE: ${BASE}\n`);
-
-  // 1. Persistence status banner API
-  {
-    const { res, body } = await req("/api/admin/demo-persistence");
-    if (!res.ok) {
-      fail("Demo persistence endpoint", `${res.status}`);
-    } else if (body?.demoMode !== undefined && body?.message) {
-      pass(
-        "Demo persistence endpoint",
-        body.durable
-          ? "durable saves configured"
-          : `ephemeral — ${body.message.slice(0, 72)}…`,
-      );
-    } else {
-      fail("Demo persistence endpoint", "unexpected payload");
-    }
-  }
-
-  // 2. Baseline: bench exists + usage refs
+async function assertGone(id, label) {
   let exercises = await fetchExercises();
-  let bench = findExactBench(exercises);
-  let workoutIds = [];
-
-  if (bench) {
-    pass("Bench Press in library (baseline)", bench.id);
-    const { res, body } = await req(bust("/api/exercises/usage"));
-    if (!res.ok) {
-      fail("Exercise usage API", `${res.status}`);
-    } else {
-      const usage = body[bench.id];
-      workoutIds = usage
-        ? [...new Set(usage.programs?.flatMap((p) => p.references?.map((r) => r.workoutId) || []) || [])]
-        : [];
-      if (workoutIds.length > 0) {
-        pass("Bench used in workouts (baseline)", `${workoutIds.length} workout(s)`);
-      } else {
-        pass("Bench usage lookup", "no program refs (may still be in workouts)");
-      }
-    }
+  if (!exercises.some((e) => e.id === id)) {
+    pass(`${label} gone (fetch 1)`);
   } else {
-    pass("Bench Press already absent", "skipping delete — testing rename only");
+    fail(`${label} gone (fetch 1)`, "still in list");
+    return;
   }
-
-  // 3. Delete bench press
-  if (bench) {
-    const { res, body } = await req(`/api/exercises/${bench.id}`, { method: "DELETE" });
-    if (res.status === 204) {
-      const warn = res.headers.get("X-Persistence-Warning");
-      pass("DELETE Bench Press", warn ? `204 (${warn})` : "204");
-    } else {
-      fail("DELETE Bench Press", `${res.status} ${JSON.stringify(body)}`);
-    }
-
-    exercises = await fetchExercises();
-    if (!findExactBench(exercises)) {
-      pass("Bench gone after delete (fetch 1)");
-    } else {
-      fail("Bench gone after delete (fetch 1)", "still in list");
-    }
-
-    await new Promise((r) => setTimeout(r, 500));
-    exercises = await fetchExercises();
-    if (!findExactBench(exercises)) {
-      pass("Bench gone after delete (fetch 2 / refresh simulation)");
-    } else {
-      fail("Bench gone after delete (fetch 2)", "still in list");
-    }
-
-    const idsToCheck =
-      workoutIds.length > 0
-        ? workoutIds
-        : ["cmpyurx0n0010tfrzpsv6ksu4", "cmpyrgf3t0001tnrze7tvnioa"];
-
-    let refsCleared = 0;
-    for (const wid of idsToCheck) {
-      const { res, body } = await req(bust(`/api/workouts/${wid}`));
-      if (!res.ok) continue;
-      if (!workoutHasExercise(body, bench.id, BENCH_NAME)) {
-        refsCleared += 1;
-      } else {
-        fail(`Workout ${wid} cleared bench ref`, "bench still present");
-      }
-    }
-    if (refsCleared > 0) {
-      pass("Workout views cleared bench references", `${refsCleared} workout(s)`);
-    }
-  }
-
-  // 4. Rename propagation
+  await new Promise((r) => setTimeout(r, 500));
   exercises = await fetchExercises();
-  const renameTarget =
-    exercises.find((e) => /squat/i.test(e.name)) ||
-    exercises.find((e) => e.name && e.name !== BENCH_NAME);
-
-  if (!renameTarget) {
-    fail("Rename propagation", "no suitable exercise found");
+  if (!exercises.some((e) => e.id === id)) {
+    pass(`${label} gone (fetch 2 / refresh simulation)`);
   } else {
-    const originalName = renameTarget.name;
-    const renamed = `${originalName} ${RENAME_MARKER}`;
-
-    const patch = await req(`/api/exercises/${renameTarget.id}`, {
-      method: "PATCH",
-      json: { name: renamed },
-    });
-    if (!patch.res.ok) {
-      fail("PATCH exercise rename", `${patch.res.status} ${JSON.stringify(patch.body)}`);
-    } else if (patch.body?.name === renamed) {
-      pass("PATCH exercise rename", renameTarget.id);
-    } else {
-      fail("PATCH exercise rename", "response name mismatch");
-    }
-
-    const { res: usageRes, body: usageBody } = await req(bust("/api/exercises/usage"));
-    if (usageRes.ok && usageBody[renameTarget.id]) {
-      pass("Usage API sees renamed exercise", renameTarget.id);
-    }
-
-    const usage = usageRes.ok ? usageBody[renameTarget.id] : null;
-    const renameWorkoutIds = usage
-      ? [...new Set(usage.programs?.flatMap((p) => p.references?.map((r) => r.workoutId) || []) || [])]
-      : [];
-
-    let renameHits = 0;
-    for (const wid of renameWorkoutIds.slice(0, 3)) {
-      const { res, body } = await req(bust(`/api/workouts/${wid}`));
-      if (!res.ok) continue;
-      const items = body.exercises || [];
-      const hit = items.find((item) => item.exercise?.id === renameTarget.id);
-      if (hit?.exercise?.name === renamed) {
-        renameHits += 1;
-        pass(`Workout ${wid} shows renamed exercise`, renamed.slice(0, 48));
-      } else if (hit) {
-        fail(`Workout ${wid} rename propagation`, `got "${hit.exercise?.name}"`);
-      }
-    }
-    if (renameWorkoutIds.length === 0) {
-      pass("Rename propagation check", "exercise not in scheduled workouts (name patch OK)");
-    } else if (renameHits === 0 && renameWorkoutIds.length > 0) {
-      fail("Rename in workout views", "no workouts reflected new name");
-    }
-
-    const restore = await req(`/api/exercises/${renameTarget.id}`, {
-      method: "PATCH",
-      json: { name: originalName },
-    });
-    if (restore.res.ok && restore.body?.name === originalName) {
-      pass("Restored renamed exercise", originalName);
-    } else {
-      fail("Restored renamed exercise", `${restore.res.status}`);
-    }
+    fail(`${label} gone (fetch 2)`, "still in list");
   }
+}
 
-  // 5. Temp exercise create → delete (isolated round-trip)
-  const tempName = `S1-TEMP-${Date.now()}`;
+async function testTempExerciseRoundTrip() {
+  const tempName = `S1-TEMP-${MARKER}`;
+  const renamed = `${tempName}-RENAMED`;
+
   const create = await req("/api/exercises", {
     method: "POST",
     json: { name: tempName, tags: "QA" },
   });
   if (!create.res.ok) {
     fail("POST temp exercise", `${create.res.status}`);
+    return null;
+  }
+
+  const tempId = create.body.id;
+  pass("POST temp exercise", tempId);
+
+  let exercises = await fetchExercises();
+  if (exercises.some((e) => e.id === tempId && e.name === tempName)) {
+    pass("Temp exercise listed after create");
   } else {
-    const tempId = create.body.id;
-    pass("POST temp exercise", tempId);
+    fail("Temp exercise listed after create");
+  }
 
-    const del = await req(`/api/exercises/${tempId}`, { method: "DELETE" });
-    if (del.res.status !== 204) {
-      fail("DELETE temp exercise", `${del.res.status}`);
-    } else {
-      pass("DELETE temp exercise", "204");
-    }
+  const patch = await req(`/api/exercises/${tempId}`, {
+    method: "PATCH",
+    json: { name: renamed },
+  });
+  if (patch.res.ok && patch.body?.name === renamed) {
+    pass("PATCH temp exercise rename", renamed);
+  } else {
+    fail("PATCH temp exercise rename", `${patch.res.status}`);
+  }
 
-    exercises = await fetchExercises();
-    if (!exercises.some((e) => e.id === tempId)) {
-      pass("Temp exercise gone after delete");
-    } else {
-      fail("Temp exercise gone after delete", "still listed");
-    }
+  exercises = await fetchExercises();
+  const row = exercises.find((e) => e.id === tempId);
+  if (row?.name === renamed) {
+    pass("Rename visible in library list");
+  } else {
+    fail("Rename visible in library list", row?.name || "missing");
+  }
+
+  const del = await req(`/api/exercises/${tempId}`, { method: "DELETE" });
+  if (del.res.status === 204) {
+    const warn = del.res.headers.get("X-Persistence-Warning");
+    pass("DELETE temp exercise", warn ? `204 (${warn})` : "204");
+  } else {
+    fail("DELETE temp exercise", `${del.res.status}`);
+    return tempId;
+  }
+
+  await assertGone(tempId, "Temp exercise");
+  return null;
+}
+
+async function testBenchPressOptional() {
+  const exercises = await fetchExercises();
+  const bench = findExactBench(exercises);
+  if (!bench) {
+    pass("Bench Press optional test", "not in library — skipped");
+    return;
+  }
+
+  pass("Bench Press in library (optional)", bench.id);
+
+  const { res, body } = await req(`/api/exercises/${bench.id}`, { method: "DELETE" });
+  if (res.status === 204) {
+    pass("DELETE Bench Press (optional)", res.headers.get?.("X-Persistence-Warning") || "204");
+  } else {
+    fail("DELETE Bench Press (optional)", `${res.status} ${JSON.stringify(body)}`);
+    return;
+  }
+
+  await assertGone(bench.id, "Bench Press");
+
+  const idsToCheck = ["cmpyurx0n0010tfrzpsv6ksu4", "cmpyrgf3t0001tnrze7tvnioa"];
+  let refsCleared = 0;
+  for (const wid of idsToCheck) {
+    const { res: wRes, body: workout } = await req(bust(`/api/workouts/${wid}`));
+    if (!wRes.ok) continue;
+    if (!workoutHasExercise(workout, bench.id, BENCH_NAME)) refsCleared += 1;
+    else fail(`Workout ${wid} cleared bench ref`, "bench still present");
+  }
+  if (refsCleared > 0) {
+    pass("Workout views cleared bench references", `${refsCleared} workout(s)`);
+  }
+}
+
+async function main() {
+  console.log(`\nS1 exercise persistence test\nBASE: ${BASE}`);
+  console.log(
+    TEST_BENCH
+      ? "Mode: temp exercise + optional Bench Press delete\n"
+      : "Mode: temp exercise only (set S1_TEST_BENCH=1 to test Bench Press)\n",
+  );
+
+  const { res, body } = await req("/api/admin/demo-persistence");
+  if (!res.ok) {
+    fail("Demo persistence endpoint", `${res.status}`);
+  } else if (body?.demoMode !== undefined && body?.message) {
+    pass(
+      "Demo persistence endpoint",
+      body.durable ? "durable saves configured" : `ephemeral — ${body.message.slice(0, 72)}…`,
+    );
+  } else {
+    fail("Demo persistence endpoint", "unexpected payload");
+  }
+
+  await testTempExerciseRoundTrip();
+
+  if (TEST_BENCH) {
+    await testBenchPressOptional();
+  } else {
+    pass("Bench Press left alone", "Jeremy can delete any exercise in admin UI");
   }
 
   const failed = results.filter((r) => !r.ok);
