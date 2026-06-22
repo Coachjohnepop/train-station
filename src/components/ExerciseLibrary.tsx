@@ -533,7 +533,7 @@ export default function ExerciseLibrary() {
         ? `Deleted “${exerciseName}”. ${warning}`
         : `Deleted “${exerciseName}”.`,
     );
-    await load();
+    // List already updated locally; skip immediate reload so a stale blob read cannot resurrect the row.
   }
 
   function startEdit(ex: Exercise) {
@@ -579,7 +579,6 @@ export default function ExerciseLibrary() {
           ? `Exercise updated. ${updated._persistenceWarning}`
           : "Exercise updated.",
       );
-      void load();
     } catch (e) {
       setError('Failed to update exercise.');
     }

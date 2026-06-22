@@ -6,7 +6,7 @@ import {
   persistJsonStore,
   readLocalJson,
 } from "@/lib/demo-json-blob";
-import { mutateDemoSeed, readDemoSeedSync } from "@/lib/demo-seed-store";
+import { hydrateDemoSeed, mutateDemoSeed, readDemoSeedSync } from "@/lib/demo-seed-store";
 
 const DEV_FILE = path.join(process.cwd(), "prisma", "exercises.dev.json");
 const BLOB_PATH = "demo/exercises.json";
@@ -22,13 +22,25 @@ function setMemory(list: any[]) {
   cache = list;
 }
 
+/** Union seed + exercises.json catalogs (exercises.json wins on same id). */
+function mergeExerciseCatalogs(primary: any[], secondary: any[]): any[] {
+  const byId = new Map<string, any>();
+  for (const ex of secondary) {
+    if (ex?.id) byId.set(ex.id, { ...ex });
+  }
+  for (const ex of primary) {
+    if (ex?.id) byId.set(ex.id, { ...ex });
+  }
+  return [...byId.values()];
+}
+
 export function isDemoMode(): boolean {
   const url = process.env.DATABASE_URL ?? "";
   return !url || url.includes("dummy.supabase") || url.includes("dummy");
 }
 
 export async function hydrateDemoExercises(opts?: { preferFresh?: boolean }): Promise<any[]> {
-  return hydrateJsonStore({
+  const fromCatalog = await hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
     memory: cache,
@@ -36,6 +48,11 @@ export async function hydrateDemoExercises(opts?: { preferFresh?: boolean }): Pr
     fallback: loadSeedExercises,
     preferFresh: opts?.preferFresh,
   });
+
+  await hydrateDemoSeed({ preferFresh: opts?.preferFresh });
+  const merged = mergeExerciseCatalogs(fromCatalog, loadSeedExercises());
+  setMemory(merged);
+  return merged;
 }
 
 export function loadDemoExercises(): any[] {
@@ -71,9 +88,12 @@ function applyExerciseListToSeed(seed: Record<string, any>, list: any[]) {
 }
 
 async function syncExercisesIntoSeed(list: any[]): Promise<boolean> {
-  const { blobSaved } = await mutateDemoSeed((seed) => {
-    applyExerciseListToSeed(seed, list);
-  });
+  const { blobSaved } = await mutateDemoSeed(
+    (seed) => {
+      applyExerciseListToSeed(seed, list);
+    },
+    { preferFresh: false },
+  );
   return blobSaved;
 }
 

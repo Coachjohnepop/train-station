@@ -24,7 +24,9 @@ export async function GET() {
   if (isDemoMode()) {
     await hydrateDemoExercises({ preferFresh: true });
     const exercises = loadDemoExercises();
-    return NextResponse.json(exercises);
+    return NextResponse.json(exercises, {
+      headers: { "Cache-Control": "no-store" },
+    });
   }
   const exercises = await prisma.exercise.findMany({
     orderBy: { name: "asc" },
@@ -40,7 +42,7 @@ export async function POST(request: Request) {
   const { name, description, videoUrl, tags } = parsed.data;
 
   if (isDemoMode()) {
-    await hydrateDemoExercises({ preferFresh: true });
+    await hydrateDemoExercises();
     const list = loadDemoExercises();
     const exercise = {
       id: createDemoExerciseId(),

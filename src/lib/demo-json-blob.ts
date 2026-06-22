@@ -121,5 +121,7 @@ export async function persistJsonStore<T>(opts: {
   opts.setMemory(opts.data);
   writeLocalJson(opts.localPath, opts.data);
   const blobSaved = await writeBlobJson(opts.blobPath, opts.data);
+  // Force the next preferFresh read to pull this write (not a stale cached head).
+  blobCheckedAt.delete(opts.blobPath);
   return { blobSaved };
 }

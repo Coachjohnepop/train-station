@@ -70,8 +70,11 @@ export async function persistDemoSeed(data: DemoSeedData): Promise<{ blobSaved: 
 
 export async function mutateDemoSeed(
   mutator: (data: DemoSeedData) => void,
+  opts?: { preferFresh?: boolean },
 ): Promise<{ data: DemoSeedData; blobSaved: boolean }> {
-  const data = structuredClone(await hydrateDemoSeed({ preferFresh: true })) as DemoSeedData;
+  const data = structuredClone(
+    await hydrateDemoSeed({ preferFresh: opts?.preferFresh ?? false }),
+  ) as DemoSeedData;
   mutator(data);
   const { blobSaved } = await persistDemoSeed(data);
   return { data, blobSaved };

@@ -47,11 +47,14 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   if (isDemoMode()) {
-    await hydrateDemoExercises({ preferFresh: true });
+    await hydrateDemoExercises();
     const list = loadDemoExercises();
     const idx = list.findIndex((e: any) => e.id === id);
     if (idx === -1) {
-      return NextResponse.json({ detail: "Exercise not found" }, { status: 404 });
+      return NextResponse.json(
+        { detail: "Exercise not found — refresh the page and try again." },
+        { status: 404 },
+      );
     }
     const ex = { ...list[idx] };
     if (data.name !== undefined) ex.name = data.name;
@@ -82,11 +85,14 @@ export async function PATCH(request: Request, { params }: Params) {
 export async function DELETE(_request: Request, { params }: Params) {
   const { id } = await params;
   if (isDemoMode()) {
-    await hydrateDemoExercises({ preferFresh: true });
+    await hydrateDemoExercises();
     const list = loadDemoExercises();
     const idx = list.findIndex((e: any) => e.id === id);
     if (idx === -1) {
-      return NextResponse.json({ detail: "Exercise not found" }, { status: 404 });
+      return NextResponse.json(
+        { detail: "Exercise not found — refresh the page and try again." },
+        { status: 404 },
+      );
     }
     list.splice(idx, 1);
     const saveResult = await saveDemoExercises(list);
