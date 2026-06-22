@@ -35,9 +35,19 @@ export async function cloneWorkout(
     const exList = loadDemoExercises();
 
     for (let attempt = 0; attempt < 6; attempt++) {
-      const created: { workout: ClonedWorkout | null; sourceItemCount: number } = {
+      const preSeed = await getDemoSeed({ preferFresh: Boolean(BLOB_TOKEN) });
+      const preWorkouts = (preSeed.workouts as any[]) || [];
+      const preItems = (preSeed.workoutExercises as any[]) || [];
+      if (!preWorkouts.some((w) => w.id === sourceWorkoutId)) {
+        if (attempt >= 5) throw new Error("WORKOUT_NOT_FOUND");
+        await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+        continue;
+      }
+      const expectedSourceCount = preItems.filter((we) => we.workoutId === sourceWorkoutId).length;
+
+      const created: { workout: ClonedWorkout | null; copiedItemCount: number } = {
         workout: null,
-        sourceItemCount: 0,
+        copiedItemCount: 0,
       };
 
       let blobSaved = false;
@@ -47,6 +57,12 @@ export async function cloneWorkout(
           const source = workouts.find((w) => w.id === sourceWorkoutId);
           if (!source) {
             throw new Error("WORKOUT_NOT_FOUND");
+          }
+
+          const workoutExercises = (data.workoutExercises as any[]) || [];
+          const sourceItems = workoutExercises.filter((we) => we.workoutId === sourceWorkoutId);
+          if (sourceItems.length < expectedSourceCount) {
+            throw new Error("STALE_SOURCE");
           }
 
           const now = new Date().toISOString();
@@ -60,9 +76,6 @@ export async function cloneWorkout(
           workouts.push(workout);
           data.workouts = workouts;
 
-          const workoutExercises = (data.workoutExercises as any[]) || [];
-          const sourceItems = workoutExercises.filter((we) => we.workoutId === sourceWorkoutId);
-          created.sourceItemCount = sourceItems.length;
           for (const we of sourceItems) {
             workoutExercises.push({
               id: newDemoWorkoutExerciseId(),
@@ -80,6 +93,7 @@ export async function cloneWorkout(
             });
           }
           data.workoutExercises = workoutExercises;
+          created.copiedItemCount = sourceItems.length;
           created.workout = {
             id: workout.id,
             name: workout.name,
@@ -102,7 +116,8 @@ export async function cloneWorkout(
 
         if (
           cloneExists &&
-          (created.sourceItemCount === 0 || cloneItemCount >= created.sourceItemCount)
+          cloneItemCount >= expectedSourceCount &&
+          cloneItemCount >= created.copiedItemCount
         ) {
           return {
             id: created.workout.id,
@@ -115,6 +130,7 @@ export async function cloneWorkout(
         if (
           error instanceof Error &&
           (error.message === "WORKOUT_NOT_FOUND" ||
+            error.message === "STALE_SOURCE" ||
             error.message.includes("could not be saved to cloud storage"))
         ) {
           if (attempt >= 5) throw error;
