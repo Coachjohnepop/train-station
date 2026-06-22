@@ -147,12 +147,12 @@ Show Jeremy (or note for yourself):
 
 ## Part D — Commission split (John)
 
-Tiered partner commission is configured separately. See **`STRIPE_COMMISSION_SETUP.md`**.
+Tiered partner commission is configured separately. See **`STRIPE_COMMISSION_SETUP.md`** and the full coach walkthrough **`PAYMENT_ADMIN_DEMO_SCRIPT.md`**.
 
 Quick path:
 
 1. Jeremy enables **Stripe Connect** on the business account
-2. John: **Admin → Commission** → **Connect my Stripe account**
+2. **Admin → Commission** → add partners (shares = 100%) → **Connect** per row
 3. After MRR exists: **Preview payout** → **Run payout now** (monthly)
 
 ---
