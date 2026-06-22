@@ -7,7 +7,9 @@ import {
   createAdminManagedUser,
   listAdminManagedUsers,
 } from "@/lib/admin-managed-users";
+import { isDemoSeedUserHidden } from "@/lib/demo-hidden-users";
 import { isDemoMode, getDemoEnrollments } from "@/lib/demo-enrollments";
+import { upsertSignInAccount } from "@/lib/member-accounts-store";
 import { getDemoWorkoutLogCount, getDemoPerformanceCount, getDemoStrengthScore } from "@/lib/demo-logs";
 
 const ROLES = ["ADMIN", "INSTRUCTOR", "MEMBER", "PROSPECTIVE_INSTRUCTOR"] as const;
@@ -26,6 +28,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q")?.toLowerCase() || "";
   const role = searchParams.get("role") as $Enums.Role | null;
+  const includeHidden = searchParams.get("includeHidden") === "true";
 
   if (isDemoMode()) {
     // Demo: surface the demo member so instructor/admin can observe logs, the progress % from bottom "log workout complete",
@@ -133,19 +136,28 @@ export async function GET(request: Request) {
         counts: { enrollments: 0, performances: 0, workoutLogs: 0 },
       },
     ];
-    const managed = await listAdminManagedUsers();
+    const managed = await listAdminManagedUsers({ includeHidden });
     const seen = new Set(demoUsers.map((u) => String(u.email).toLowerCase()));
     for (const user of managed) {
       if (!seen.has(user.email.toLowerCase())) {
         demoUsers.push(adminManagedUserToRow(user));
       }
     }
-    return NextResponse.json(demoUsers);
+
+    const annotated = await Promise.all(
+      demoUsers.map(async (u) => ({
+        ...u,
+        hidden: Boolean(u.hidden) || (await isDemoSeedUserHidden(String(u.id))),
+      })),
+    );
+    const visible = includeHidden ? annotated : annotated.filter((u) => !u.hidden);
+    return NextResponse.json(visible);
   }
 
   const users = await prisma.user.findMany({
     where: {
       AND: [
+        includeHidden ? {} : { hidden: false },
         q
           ? {
               OR: [
@@ -180,6 +192,8 @@ export async function GET(request: Request) {
       notes: u.notes,
       phone: u.phone || null,
       dailyReminderTime: u.dailyReminderTime || null,
+      hidden: u.hidden,
+      hiddenAt: u.hiddenAt,
       createdAt: u.createdAt,
       subscription: u.subscriptions[0]
         ? {
@@ -218,6 +232,14 @@ export async function POST(request: Request) {
   try {
     const user = await prisma.user.create({
       data: parsed.data,
+    });
+    await upsertSignInAccount({
+      email: user.email,
+      userId: user.id,
+      role: user.role as "ADMIN" | "INSTRUCTOR" | "MEMBER" | "PROSPECTIVE_INSTRUCTOR",
+      name: user.name || user.email.split("@")[0],
+      phone: user.phone,
+      createdAt: user.createdAt.toISOString(),
     });
     return NextResponse.json(user, { status: 201 });
   } catch (e: unknown) {

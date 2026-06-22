@@ -20,6 +20,8 @@ type UserRow = {
   subscription: { tier: string; status: string } | null;
   counts: { enrollments: number; performances: number; workoutLogs: number };
   strengthScore?: number;
+  hidden?: boolean;
+  hiddenAt?: string | null;
 };
 
 const ROLES: Role[] = ["ADMIN", "INSTRUCTOR", "MEMBER", "PROSPECTIVE_INSTRUCTOR"];
@@ -30,6 +32,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState<Role | "">("");
+  const [showHidden, setShowHidden] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<UserRow | null>(null);
   const [form, setForm] = useState({
@@ -49,6 +52,7 @@ export default function AdminUsersPage() {
     const params = new URLSearchParams();
     if (q) params.set("q", q);
     if (roleFilter) params.set("role", roleFilter);
+    if (showHidden) params.set("includeHidden", "true");
     const res = await fetch(`/api/users?${params.toString()}`);
     const data = await res.json();
     setUsers(data);
@@ -57,7 +61,7 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     loadUsers();
-  }, [q, roleFilter]);
+  }, [q, roleFilter, showHidden]);
 
   function openCreate() {
     setEditing(null);
@@ -128,13 +132,33 @@ export default function AdminUsersPage() {
     setSaving(false);
   }
 
-  async function deleteUser(id: string, email: string) {
-    if (!confirm(`Delete user ${email}? This cannot be undone.`)) return;
+  async function hideUser(id: string, email: string) {
+    if (
+      !confirm(
+        `Hide ${email}?\n\nThe account stays in the database (payments, enrollments, Stripe refs intact) but is removed from the default list and cannot sign in.`,
+      )
+    ) {
+      return;
+    }
     const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
     if (res.ok) {
       await loadUsers();
     } else {
-      alert("Failed to delete");
+      alert("Failed to hide user");
+    }
+  }
+
+  async function restoreUser(id: string, email: string) {
+    if (!confirm(`Restore ${email} so they can sign in again?`)) return;
+    const res = await fetch(`/api/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hidden: false }),
+    });
+    if (res.ok) {
+      await loadUsers();
+    } else {
+      alert("Failed to restore user");
     }
   }
 
@@ -144,7 +168,7 @@ export default function AdminUsersPage() {
         <div>
           <h1 className="text-2xl font-bold">Users</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Manage all accounts: admins, instructors, members (free/paid via subscription), and prospective instructors.
+            Manage all accounts. Use <strong>Hide</strong> for test accounts — data is kept for Stripe and enrollments; nothing is permanently deleted.
           </p>
         </div>
         <button onClick={openCreate} className="btn-primary">
@@ -182,6 +206,15 @@ export default function AdminUsersPage() {
         >
           Clear
         </button>
+        <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
+          <input
+            type="checkbox"
+            checked={showHidden}
+            onChange={(e) => setShowHidden(e.target.checked)}
+            className="rounded border-[var(--border)]"
+          />
+          Show hidden
+        </label>
       </div>
 
       {/* Table */}
@@ -215,7 +248,12 @@ export default function AdminUsersPage() {
               </tr>
             ) : (
               users.map((u) => (
-                <tr key={u.id} className="border-b border-[var(--border)] last:border-0">
+                <tr
+                  key={u.id}
+                  className={`border-b border-[var(--border)] last:border-0 ${
+                    u.hidden ? "opacity-50" : ""
+                  }`}
+                >
                   <td className="py-3 pr-4">
                     <div className="font-medium">{u.name || "—"}</div>
                     <div className="text-xs text-[var(--muted)]">{u.email}</div>
@@ -233,14 +271,16 @@ export default function AdminUsersPage() {
                   <td className="py-3 pr-4">
                     <span
                       className={`rounded px-2 py-0.5 text-xs font-medium ${
-                        u.status === "active"
+                        u.hidden
+                          ? "bg-[var(--muted)]/20 text-[var(--muted)]"
+                          : u.status === "active"
                           ? "bg-[var(--success)]/15 text-[var(--success)]"
                           : u.status === "pending"
                           ? "bg-amber-500/15 text-amber-600"
                           : "bg-[var(--danger)]/15 text-[var(--danger)]"
                       }`}
                     >
-                      {u.status}
+                      {u.hidden ? "hidden" : u.status}
                     </span>
                   </td>
                   <td className="py-3 pr-4 text-xs">
@@ -287,12 +327,21 @@ export default function AdminUsersPage() {
                           Coach Workout
                         </Link>
                       )} {/* Eating (diet) coming soon - removed from coach drills */}
-                      <button
-                        onClick={() => deleteUser(u.id, u.email)}
-                        className="rounded border border-[var(--danger)]/40 px-2 py-1 text-[var(--danger)] hover:bg-[var(--danger)]/10"
-                      >
-                        Delete
-                      </button>
+                      {u.hidden ? (
+                        <button
+                          onClick={() => restoreUser(u.id, u.email)}
+                          className="rounded border border-[var(--success)]/40 px-2 py-1 text-[var(--success)] hover:bg-[var(--success)]/10"
+                        >
+                          Restore
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => hideUser(u.id, u.email)}
+                          className="rounded border border-[var(--danger)]/40 px-2 py-1 text-[var(--danger)] hover:bg-[var(--danger)]/10"
+                        >
+                          Hide
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

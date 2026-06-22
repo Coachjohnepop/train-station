@@ -12,6 +12,7 @@ export type StoredMemberAccount = {
   name: string;
   phone?: string | null;
   passwordHash?: string | null;
+  hidden?: boolean;
   createdAt: string;
 };
 
@@ -76,8 +77,12 @@ export async function getAllSignInAccounts(): Promise<
 export async function canSignInWithEmail(email: string): Promise<boolean> {
   const normalized = normalizeAccountEmail(email);
   if (!normalized) return false;
-  const accounts = await getAllSignInAccounts();
-  return Boolean(accounts[normalized]);
+  const registered = await getRegisteredStore();
+  const account = registered[normalized];
+  if (account) return !account.hidden;
+
+  const seed = loadSeedAccounts();
+  return Boolean(seed[normalized]);
 }
 
 export async function getAccountByEmail(email: string): Promise<StoredMemberAccount | null> {
@@ -180,6 +185,24 @@ export async function upsertSignInAccount(input: {
   });
 
   return account;
+}
+
+export async function setSignInAccountHidden(email: string, hidden: boolean): Promise<boolean> {
+  const normalized = normalizeAccountEmail(email);
+  if (!normalized) return false;
+  const store = await getRegisteredStore();
+  const account = store[normalized];
+  if (!account) return false;
+  store[normalized] = { ...account, hidden };
+  await persistJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    data: store,
+    setMemory: (v) => {
+      memoryStore = v;
+    },
+  });
+  return true;
 }
 
 export async function removeSignInAccount(email: string): Promise<boolean> {

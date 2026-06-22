@@ -32,6 +32,8 @@ model User {
   role               Role                @default(MEMBER)
   passwordHash       String?
   status             String              @default("active")
+  hidden             Boolean             @default(false)
+  hiddenAt           DateTime?
   notes              String?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @default(now()) @updatedAt

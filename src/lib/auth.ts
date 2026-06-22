@@ -94,7 +94,7 @@ export async function authenticateCredentials(
   try {
     const { prisma } = await import("@/lib/prisma");
     const user = await prisma.user.findUnique({ where: { email: normalized } });
-    if (!user || !passwordAccepted(password, user.passwordHash)) return null;
+    if (!user || user.hidden || !passwordAccepted(password, user.passwordHash)) return null;
     return {
       id: user.id,
       email: user.email,

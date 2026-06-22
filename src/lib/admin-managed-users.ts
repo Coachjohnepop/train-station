@@ -8,6 +8,7 @@ import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
 import {
   getAllSignInAccounts,
   removeSignInAccount,
+  setSignInAccountHidden,
   upsertSignInAccount,
 } from "@/lib/member-accounts-store";
 
@@ -20,6 +21,8 @@ export type AdminManagedUser = {
   notes: string | null;
   phone: string | null;
   dailyReminderTime: string | null;
+  hidden: boolean;
+  hiddenAt: string | null;
   createdAt: string;
 };
 
@@ -55,9 +58,13 @@ async function persistStore(store: ManagedUsersStore): Promise<void> {
   });
 }
 
-export async function listAdminManagedUsers(): Promise<AdminManagedUser[]> {
+export async function listAdminManagedUsers(options?: {
+  includeHidden?: boolean;
+}): Promise<AdminManagedUser[]> {
   const store = await getStore();
-  return Object.values(store).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return Object.values(store)
+    .filter((u) => options?.includeHidden || !(u.hidden ?? false))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export async function getAdminManagedUser(id: string): Promise<AdminManagedUser | null> {
@@ -94,6 +101,8 @@ export async function createAdminManagedUser(input: {
     notes: input.notes ?? null,
     phone: input.phone ?? null,
     dailyReminderTime: input.dailyReminderTime ?? null,
+    hidden: false,
+    hiddenAt: null,
     createdAt,
   };
 
@@ -170,15 +179,36 @@ export async function updateAdminManagedUser(
   return updated;
 }
 
-export async function deleteAdminManagedUser(id: string): Promise<boolean> {
+/** Soft-hide: keeps row + sign-in record for Stripe/enrollment refs; blocks login. */
+export async function hideAdminManagedUser(id: string): Promise<boolean> {
   const store = await getStore();
   const entry = Object.entries(store).find(([, u]) => u.id === id);
   if (!entry) return false;
-  const [email] = entry;
-  delete store[email];
+  const [email, user] = entry;
+  if (user.hidden) return true;
+
+  const hiddenAt = new Date().toISOString();
+  store[email] = { ...user, hidden: true, hiddenAt };
   await persistStore(store);
-  await removeSignInAccount(email);
+  await setSignInAccountHidden(email, true);
   return true;
+}
+
+export async function unhideAdminManagedUser(id: string): Promise<boolean> {
+  const store = await getStore();
+  const entry = Object.entries(store).find(([, u]) => u.id === id);
+  if (!entry) return false;
+  const [email, user] = entry;
+
+  store[email] = { ...user, hidden: false, hiddenAt: null };
+  await persistStore(store);
+  await setSignInAccountHidden(email, false);
+  return true;
+}
+
+/** @deprecated Prefer hideAdminManagedUser — hard delete breaks payment/enrollment refs. */
+export async function deleteAdminManagedUser(id: string): Promise<boolean> {
+  return hideAdminManagedUser(id);
 }
 
 export function adminManagedUserToRow(user: AdminManagedUser) {
@@ -191,6 +221,8 @@ export function adminManagedUserToRow(user: AdminManagedUser) {
     notes: user.notes,
     phone: user.phone,
     dailyReminderTime: user.dailyReminderTime,
+    hidden: user.hidden ?? false,
+    hiddenAt: user.hiddenAt ?? null,
     createdAt: user.createdAt,
     subscription: null,
     counts: { enrollments: 0, performances: 0, workoutLogs: 0 },
