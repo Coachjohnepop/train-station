@@ -147,7 +147,55 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   try {
-    const dataUpdate: any = {};
+    if (parsed.data.options !== undefined) {
+      for (const opt of parsed.data.options) {
+        const workout = await prisma.workout.findUnique({ where: { id: opt.workoutId } });
+        if (!workout) {
+          return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
+        }
+      }
+
+      const day = await prisma.$transaction(async (tx) => {
+        await tx.programDayOption.deleteMany({ where: { dayId } });
+        if (parsed.data.options!.length > 0) {
+          await tx.programDayOption.createMany({
+            data: parsed.data.options!.map((opt, idx) => ({
+              dayId,
+              workoutId: opt.workoutId,
+              label: opt.label,
+              sortOrder: idx,
+            })),
+          });
+        }
+
+        return tx.programDay.update({
+          where: { id: dayId },
+          data: {
+            workoutId: parsed.data.options!.length > 0 ? parsed.data.options![0].workoutId : null,
+            ...(parsed.data.videoUrl !== undefined ? { videoUrl: parsed.data.videoUrl } : {}),
+            ...(parsed.data.notes !== undefined ? { notes: parsed.data.notes } : {}),
+          },
+          include: {
+            workout: true,
+            options: {
+              orderBy: { sortOrder: "asc" },
+              include: { workout: true },
+            },
+          },
+        });
+      });
+
+      return NextResponse.json({
+        ...day,
+        options: day.options.map((opt) => ({
+          workoutId: opt.workoutId,
+          label: opt.label,
+          workout: opt.workout,
+        })),
+      });
+    }
+
+    const dataUpdate: Record<string, unknown> = {};
     if (parsed.data.workoutId !== undefined) {
       if (parsed.data.workoutId) {
         const workout = await prisma.workout.findUnique({ where: { id: parsed.data.workoutId } });
@@ -164,9 +212,19 @@ export async function PATCH(request: Request, { params }: Params) {
       const day = await prisma.programDay.update({
         where: { id: dayId },
         data: dataUpdate,
-        include: { workout: true },
+        include: {
+          workout: true,
+          options: { orderBy: { sortOrder: "asc" }, include: { workout: true } },
+        },
       });
-      return NextResponse.json(day);
+      return NextResponse.json({
+        ...day,
+        options: day.options.map((opt) => ({
+          workoutId: opt.workoutId,
+          label: opt.label,
+          workout: opt.workout,
+        })),
+      });
     }
 
     const day = await assignWorkoutToDay(dayId, parsed.data.workoutId ?? null);

@@ -77,6 +77,7 @@ export default function ProgramScheduleBuilder({
   const [library, setLibrary] = useState<LibraryEx[]>([]);
   const [pickerSearch, setPickerSearch] = useState("");
   const [loadingFocused, setLoadingFocused] = useState(false);
+  const [workoutPreviews, setWorkoutPreviews] = useState<Record<string, string[]>>({});
 
   // Load exercise library once (for picker)
   useEffect(() => {
@@ -95,11 +96,43 @@ export default function ProgramScheduleBuilder({
     }
   }, [program.slug]);
 
+  function getDayOptions(day: ProgramDay): DayOption[] {
+    if (day.options && day.options.length > 0) return day.options;
+    if (day.workoutId) return [{ workoutId: day.workoutId, label: "Gym" }];
+    return [];
+  }
+
+  const loadWorkoutPreview = useCallback(async (workoutId: string) => {
+    if (!workoutId) return;
+    const res = await fetch(`/api/workouts/${workoutId}`, { cache: "no-store" });
+    if (!res.ok) return;
+    const workout = await res.json();
+    const names = (workout.exercises || [])
+      .slice(0, 3)
+      .map((item: { exercise?: { name?: string } }) => item.exercise?.name)
+      .filter(Boolean) as string[];
+    setWorkoutPreviews((prev) => ({ ...prev, [workoutId]: names }));
+  }, []);
+
   useEffect(() => {
     if (program.weeks.length < program.durationWeeks) {
       sync();
     }
   }, [program.durationWeeks, program.weeks.length, sync]);
+
+  useEffect(() => {
+    const ids = new Set<string>();
+    for (const week of program.weeks) {
+      for (const day of week.days) {
+        for (const opt of getDayOptions(day)) {
+          if (opt.workoutId) ids.add(opt.workoutId);
+        }
+      }
+    }
+    for (const id of ids) {
+      if (!workoutPreviews[id]) void loadWorkoutPreview(id);
+    }
+  }, [program.weeks, loadWorkoutPreview]);
 
   // Load exercises for the focused option's workout (compact editor data)
   const loadFocused = useCallback(async (f: FocusedOption) => {
@@ -133,9 +166,7 @@ export default function ProgramScheduleBuilder({
     const day = week.days.find((d) => d.id === dayId);
     if (!day) return null;
 
-    const currentOpts = day.options && day.options.length > 0
-      ? [...day.options]
-      : (day.workoutId ? [{ workoutId: day.workoutId, label: "Gym" }] : []);
+    const currentOpts = [...getDayOptions(day)];
 
     let target = currentOpts[optIdx];
     if (target && target.workoutId) return target.workoutId;
@@ -201,6 +232,38 @@ export default function ProgramScheduleBuilder({
     setFocused(f);
     setPickerSearch("");
     await loadFocused(f);
+    void loadWorkoutPreview(effectiveWorkoutId);
+  }
+
+  async function openDayBuilder(day: ProgramDay, week: ProgramWeek) {
+    const opts = getDayOptions(day);
+    if (opts.length === 0) {
+      await addOptionToDay(day.id, "Gym");
+      return;
+    }
+    const gymIdx = opts.findIndex((opt) => /gym/i.test(opt.label));
+    const idx = gymIdx >= 0 ? gymIdx : 0;
+    await focusOption(day.id, idx, opts[idx].workoutId || null, opts[idx].label || "Gym");
+  }
+
+  async function assignLibraryWorkout(
+    dayId: string,
+    optIdx: number,
+    workoutId: string,
+    label: string,
+  ) {
+    const week = program.weeks.find((w) => w.days.some((d) => d.id === dayId));
+    if (!week) return;
+    const day = week.days.find((d) => d.id === dayId);
+    if (!day) return;
+
+    const currentOpts = [...getDayOptions(day)];
+    while (currentOpts.length <= optIdx) {
+      currentOpts.push({ workoutId: "", label: "Gym" });
+    }
+    currentOpts[optIdx] = { ...currentOpts[optIdx], workoutId, label: currentOpts[optIdx].label || label };
+    await setDayOptions(dayId, currentOpts);
+    await focusOption(dayId, optIdx, workoutId, currentOpts[optIdx].label || label);
   }
 
   // Quick add with adult-simple defaults (easy changes to sets/reps happen right after in the list)
@@ -231,6 +294,7 @@ export default function ProgramScheduleBuilder({
       return;
     }
     await loadFocused(focused);
+    void loadWorkoutPreview(focused.workoutId);
     setMessage("Added. Tweak sets/reps below.");
     setTimeout(() => setMessage(null), 1200);
   }
@@ -463,14 +527,13 @@ export default function ProgramScheduleBuilder({
     setTimeout(() => setMessage(null), 2000);
   }
 
-  function addOptionToDay(dayId: string, defaultLabel = "Home") {
+  async function addOptionToDay(dayId: string, defaultLabel = "Gym") {
     const week = program.weeks.find((w) => w.days.some((d) => d.id === dayId));
     if (!week) return;
     const day = week.days.find((d) => d.id === dayId);
     if (!day) return;
-    const currentOpts = day.options || (day.workoutId ? [{ workoutId: day.workoutId, label: "Gym" }] : []);
-    const newOpts = [...currentOpts, { workoutId: "", label: defaultLabel }];
-    setDayOptions(dayId, newOpts);
+    const currentOpts = getDayOptions(day);
+    await focusOption(dayId, currentOpts.length, null, defaultLabel);
   }
 
   function updateDayOption(dayId: string, idx: number, field: "workoutId" | "label", value: string) {
@@ -478,10 +541,11 @@ export default function ProgramScheduleBuilder({
     if (!week) return;
     const day = week.days.find((d) => d.id === dayId);
     if (!day) return;
-    const currentOpts = [...(day.options || (day.workoutId ? [{ workoutId: day.workoutId, label: "Gym" }] : []))];
+    const currentOpts = [...getDayOptions(day)];
     if (!currentOpts[idx]) return;
     currentOpts[idx] = { ...currentOpts[idx], [field]: value };
     setDayOptions(dayId, currentOpts);
+    if (field === "workoutId" && value) void loadWorkoutPreview(value);
   }
 
   function removeDayOption(dayId: string, idx: number) {
@@ -499,15 +563,69 @@ export default function ProgramScheduleBuilder({
     const toWeek = program.weeks.find((w) => w.weekNumber === toWeekNumber);
     if (!fromWeek || !toWeek) return;
 
-    setMessage(null);
-    for (const day of toWeek.days) {
-      const fromDay = fromWeek.days.find((d) => d.dayNumber === day.dayNumber);
-      if (fromDay) {
-        await assignWorkout(day.id, fromDay.workoutId);
+    setSaving("copy-week");
+    setMessage(`Copying week ${fromWeekNumber} → week ${toWeekNumber}…`);
+
+    for (const toDay of [...toWeek.days].sort((a, b) => a.dayNumber - b.dayNumber)) {
+      const fromDay = fromWeek.days.find((d) => d.dayNumber === toDay.dayNumber);
+      if (!fromDay) continue;
+
+      const fromOpts = getDayOptions(fromDay);
+      if (fromOpts.length === 0) {
+        await setDayOptions(toDay.id, []);
+        continue;
+      }
+
+      const clonedOpts: DayOption[] = [];
+      for (const opt of fromOpts) {
+        if (!opt.workoutId) {
+          clonedOpts.push({ workoutId: "", label: opt.label });
+          continue;
+        }
+
+        const dayLabel = DAY_LABELS[toDay.dayNumber - 1] ?? `Day${toDay.dayNumber}`;
+        const cloneRes = await fetch(`/api/workouts/${opt.workoutId}/clone`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: `${program.name} · W${toWeekNumber} ${dayLabel} ${opt.label}`,
+          }),
+        });
+
+        if (!cloneRes.ok) {
+          setMessage("Copy failed — try again.");
+          setSaving(null);
+          return;
+        }
+
+        const cloned = await cloneRes.json();
+        clonedOpts.push({ workoutId: cloned.id, label: opt.label });
+        setAllWorkouts((prev) => {
+          if (prev.some((w) => w.id === cloned.id)) return prev;
+          return [...prev, { id: cloned.id, name: cloned.name }];
+        });
+        void loadWorkoutPreview(cloned.id);
+      }
+
+      await setDayOptions(toDay.id, clonedOpts);
+      if (fromDay.videoUrl) {
+        await setVideo(toDay.id, fromDay.videoUrl);
       }
     }
-    setMessage("Week copied.");
-    setTimeout(() => setMessage(null), 2000);
+
+    await sync();
+    setSaving(null);
+    setMessage(`Week ${toWeekNumber} copied — each day has its own workout copy.`);
+    setTimeout(() => setMessage(null), 3500);
+  }
+
+  async function copyWeekToRemaining(fromWeekNumber: number) {
+    const later = [...program.weeks]
+      .filter((w) => w.weekNumber > fromWeekNumber)
+      .sort((a, b) => a.weekNumber - b.weekNumber);
+    for (const week of later) {
+      await copyWeek(fromWeekNumber, week.weekNumber);
+    }
   }
 
   async function clearWeek(weekNumber: number) {
@@ -538,7 +656,7 @@ export default function ProgramScheduleBuilder({
       {/* Ultra-tight header — no wasted real estate */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="text-[var(--muted)]">
-          Under Programs: pick <span className="font-medium text-foreground">Gym or Home</span> → pick exercises → tweak sets/reps inline → copy weeks. Live.
+          Click a <span className="font-medium text-foreground">day (Mon…)</span> or <span className="font-medium text-foreground">+Gym</span> → add exercises → copy week (independent copies). Live.
         </div>
         <div className="flex items-center gap-2">
           <Link href="/admin/workouts" className="btn-ghost text-[10px] px-2 py-0.5">Workouts list</Link>
@@ -576,6 +694,16 @@ export default function ProgramScheduleBuilder({
                   Copy to this week
                 </button>
               )}
+              {week.weekNumber === 1 && program.durationWeeks > 1 && (
+                <button
+                  type="button"
+                  className="btn-ghost text-[10px] px-1.5 py-px"
+                  onClick={() => copyWeekToRemaining(1)}
+                  disabled={!!saving}
+                >
+                  Copy to all remaining
+                </button>
+              )}
               <button
                 type="button"
                 className="btn-ghost text-[10px] px-1.5 py-px text-[var(--danger)]"
@@ -591,13 +719,19 @@ export default function ProgramScheduleBuilder({
           <div className="space-y-px">
             {[...week.days].sort((a, b) => a.dayNumber - b.dayNumber).map((day) => {
               const dayName = DAY_LABELS[day.dayNumber - 1] ?? `D${day.dayNumber}`;
-              const opts = (day.options && day.options.length > 0)
-                ? day.options
-                : (day.workoutId ? [{ workoutId: day.workoutId, label: "Standard" }] : []);
+              const opts = getDayOptions(day);
 
               return (
                 <div key={day.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-[var(--border)]/60 pt-1 first:border-0 first:pt-0 text-[11px]">
-                  <div className="w-9 shrink-0 font-medium text-[var(--muted)]">{dayName}</div>
+                  <button
+                    type="button"
+                    className="w-9 shrink-0 text-left font-semibold text-accent hover:underline"
+                    title={`Open ${dayName} workout builder`}
+                    onClick={() => void openDayBuilder(day, week)}
+                    disabled={!!saving}
+                  >
+                    {dayName}
+                  </button>
 
                   {/* Options (Gym/Home etc) — very compact */}
                   <div className="flex-1 min-w-[260px] flex flex-wrap items-center gap-1.5">
@@ -607,9 +741,8 @@ export default function ProgramScheduleBuilder({
 
                     {opts.map((opt, idx) => {
                       const isFocused = focused && focused.dayId === day.id && focused.optIdx === idx;
-                      const wName = (opt.workoutId && allWorkouts.find((w) => w.id === opt.workoutId)?.name) || (opt.workoutId ? "…" : "—");
                       return (
-                        <div key={idx} className={`inline-flex items-center gap-1 rounded border px-1 py-px ${isFocused ? "border-accent" : "border-[var(--border)]"}`}>
+                        <div key={idx} className={`inline-flex flex-wrap items-center gap-1 rounded border px-1 py-px ${isFocused ? "border-accent" : "border-[var(--border)]"}`}>
                           <input
                             className="bg-transparent w-14 text-[10px] focus:outline-none"
                             value={opt.label}
@@ -617,15 +750,43 @@ export default function ProgramScheduleBuilder({
                             placeholder="Label"
                             disabled={saving === day.id}
                           />
-                          <button
-                            type="button"
-                            className="text-accent hover:underline max-w-[108px] truncate"
-                            title={wName}
-                            onClick={() => focusOption(day.id, idx, opt.workoutId || null, opt.label || "Gym")}
+                          <select
+                            className="max-w-[150px] truncate border-0 bg-transparent text-[10px] focus:outline-none"
+                            value={opt.workoutId || ""}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === "__build__") {
+                                void focusOption(day.id, idx, opt.workoutId || null, opt.label || "Gym");
+                                return;
+                              }
+                              if (value) {
+                                void assignLibraryWorkout(day.id, idx, value, opt.label || "Gym");
+                              }
+                            }}
+                            disabled={saving === day.id}
+                            title="Assign an existing workout"
                           >
-                            {opt.workoutId ? wName : "build…"}
-                          </button>
-
+                            <option value="">{opt.workoutId ? "Change workout…" : "Pick workout…"}</option>
+                            {allWorkouts.map((w) => (
+                              <option key={w.id} value={w.id}>
+                                {w.name.length > 36 ? `${w.name.slice(0, 34)}…` : w.name}
+                              </option>
+                            ))}
+                            <option value="__build__">+ Build exercises here</option>
+                          </select>
+                          {opt.workoutId && workoutPreviews[opt.workoutId]?.length > 0 && (
+                            <span className="max-w-[180px] truncate text-[9px] text-[var(--muted)]" title={workoutPreviews[opt.workoutId].join(" · ")}>
+                              {workoutPreviews[opt.workoutId].join(" · ")}
+                            </span>
+                          )}
+                          {opt.workoutId && (
+                            <Link
+                              href={`/admin/workouts/${opt.workoutId}`}
+                              className="text-[10px] text-accent hover:underline"
+                            >
+                              Edit →
+                            </Link>
+                          )}
                           <button
                             type="button"
                             className="text-[10px] px-0.5 text-accent"
@@ -651,8 +812,8 @@ export default function ProgramScheduleBuilder({
                     })}
 
                     {/* Add option buttons — tiny */}
-                    <button type="button" className="btn-ghost text-[10px] px-1 py-px" onClick={() => addOptionToDay(day.id, "Gym")} disabled={saving === day.id}>+Gym</button>
-                    <button type="button" className="btn-ghost text-[10px] px-1 py-px" onClick={() => addOptionToDay(day.id, "Home")} disabled={saving === day.id}>+Home</button>
+                    <button type="button" className="btn-ghost text-[10px] px-1 py-px" onClick={() => void addOptionToDay(day.id, "Gym")} disabled={saving === day.id}>+Gym</button>
+                    <button type="button" className="btn-ghost text-[10px] px-1 py-px" onClick={() => void addOptionToDay(day.id, "Home")} disabled={saving === day.id}>+Home</button>
                   </div>
 
                   {/* Optional video / notes kept tiny and to the side */}

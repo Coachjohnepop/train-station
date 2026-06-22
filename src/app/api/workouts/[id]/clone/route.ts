@@ -1,0 +1,38 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { BLOB_TOKEN } from "@/lib/demo-json-blob";
+import { cloneWorkout, isDemoMode } from "@/lib/clone-workout";
+
+const bodySchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+});
+
+type Params = { params: Promise<{ id: string }> };
+
+export async function POST(request: Request, { params }: Params) {
+  const { id: sourceWorkoutId } = await params;
+  const parsed = bodySchema.safeParse(await request.json().catch(() => ({})));
+  if (!parsed.success) {
+    return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
+  }
+
+  try {
+    const cloned = await cloneWorkout(sourceWorkoutId, parsed.data.name);
+    if (isDemoMode() && process.env.VERCEL && BLOB_TOKEN && cloned.blobSaved === false) {
+      return NextResponse.json(
+        { detail: "Workout cloned but cloud save failed — retry in a moment." },
+        { status: 503 },
+      );
+    }
+    return NextResponse.json(
+      { id: cloned.id, name: cloned.name, description: cloned.description },
+      { status: 201 },
+    );
+  } catch (error) {
+    if (error instanceof Error && error.message === "WORKOUT_NOT_FOUND") {
+      return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
+    }
+    console.error("POST /api/workouts/[id]/clone", error);
+    return NextResponse.json({ detail: "Clone failed" }, { status: 500 });
+  }
+}

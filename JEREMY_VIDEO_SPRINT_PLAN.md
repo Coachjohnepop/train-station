@@ -71,12 +71,12 @@ persist  builder  catalog  bulk    pay     member  landing
 **Goal:** Jeremy can build a full week, copy it forward, and edit sets/reps per week without shared-workout bugs.
 
 ### Scope
-- [ ] **Click day → build:** Mon row gets obvious CTA (`+ Gym` / `+ Home` opens editor immediately; optional: click “Mon” label)
-- [ ] **Assign whole workout:** picker to attach an existing workout library item to a day option (not only exercise-by-exercise)
-- [ ] **Copy week — real clone:** `Copy to this week` duplicates each day’s Gym/Home **options** AND **clones workouts** (new workout IDs, copied exercises + sets/reps) so Week 2 edits don’t mutate Week 1
-- [ ] **Copy to remaining weeks** (stretch): one action after Week 1 is set
-- [ ] Persist `options` array on **production Prisma path** (not demo-only)
-- [ ] Inline on day row: first 3 exercise names + “Edit →” link to workout
+- [x] **Click day → build:** Mon row gets obvious CTA (`+ Gym` / `+ Home` opens editor immediately; click “Mon” label)
+- [x] **Assign whole workout:** picker to attach an existing workout library item to a day option (not only exercise-by-exercise)
+- [x] **Copy week — real clone:** `Copy to this week` duplicates each day’s Gym/Home **options** AND **clones workouts** (new workout IDs, copied exercises + sets/reps) so Week 2 edits don’t mutate Week 1
+- [x] **Copy to remaining weeks** (stretch): one action after Week 1 is set
+- [x] Persist `options` array on **production Prisma path** (not demo-only)
+- [x] Inline on day row: first 3 exercise names + “Edit →” link to workout
 
 ### Key files
 - `src/components/ProgramScheduleBuilder.tsx`
