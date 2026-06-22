@@ -188,8 +188,10 @@ async function main() {
     process.exit(1);
   }
 
-  const originalSets = targetItem.sets ?? 3;
-  const newSets = originalSets === 5 ? 4 : 5;
+  const sourceSetsBefore = sourceWorkout.exercises[0]?.sets ?? 3;
+  const clonedSetsBefore = targetItem.sets ?? 3;
+  const newSets = clonedSetsBefore === 4 ? 3 : 4;
+
   const patch = await req(`/api/workouts/${clonedId}/exercises`, {
     method: "PATCH",
     json: { itemId: targetItem.id, sets: newSets, reps: targetItem.reps || "8-10" },
@@ -200,27 +202,34 @@ async function main() {
   }
   pass("Patch week 2 sets/reps only", `sets → ${newSets}`);
 
-  await new Promise((r) => setTimeout(r, 3000));
+  let clonedItem = null;
+  const patchDeadline = Date.now() + 35_000;
+  while (Date.now() < patchDeadline) {
+    const clonedAfter = await req(bust(`/api/workouts/${clonedId}`));
+    if (clonedAfter.res.ok) {
+      clonedItem = clonedAfter.body.exercises?.[0];
+      if (clonedItem?.sets === newSets) break;
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+  }
 
   const sourceAfter = await req(bust(`/api/workouts/${sourceWorkoutId}`));
-  const clonedAfter = await req(bust(`/api/workouts/${clonedId}`));
-  if (!sourceAfter.res.ok || !clonedAfter.res.ok) {
-    fail("Reload workouts after patch");
+  if (!sourceAfter.res.ok) {
+    fail("Reload week 1 workout after patch");
     process.exit(1);
   }
 
   const sourceItem = sourceAfter.body.exercises?.[0];
-  const clonedItem = clonedAfter.body.exercises?.[0];
   if (clonedItem?.sets === newSets) {
     pass("Week 2 workout updated");
   } else {
     fail("Week 2 workout updated", `got sets ${clonedItem?.sets}`);
   }
 
-  if (sourceItem?.sets !== newSets) {
+  if (sourceItem?.sets === sourceSetsBefore) {
     pass("Week 1 workout unchanged after week 2 edit", `W1 sets still ${sourceItem?.sets ?? "?"}`);
   } else {
-    fail("Week 1 workout unchanged after week 2 edit", "shared workout bug");
+    fail("Week 1 workout unchanged after week 2 edit", `W1 sets changed ${sourceSetsBefore} → ${sourceItem?.sets}`);
   }
 
   const failed = results.filter((r) => !r.ok);
