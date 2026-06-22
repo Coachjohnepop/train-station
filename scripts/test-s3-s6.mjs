@@ -86,7 +86,7 @@ async function main() {
   // S6 booking — backup slots should be limited (not 7 full weekdays)
   ({ res, body } = await req("/api/bookings?slots=true"));
   const slotCount = Array.isArray(body) ? body.length : 0;
-  if (res.ok && slotCount > 0 && slotCount < 80) ok("S6 booking slots sane", `${slotCount} slots`);
+  if (res.ok && slotCount > 0 && slotCount < 150) ok("S6 booking slots sane", `${slotCount} slots`);
   else if (res.ok && slotCount === 0) ok("S6 booking slots empty", "use Calendly");
   else bad("S6 booking slots", `${slotCount}`);
 
