@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { workoutPrescriptionSchema } from "@/lib/exercise-schema";
 import { hydrateDemoExercises, loadDemoExercises } from "@/lib/demo-exercises";
 import { BLOB_TOKEN } from "@/lib/demo-json-blob";
-import { mutateDemoSeed } from "@/lib/demo-seed-store";
+import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
+import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { ensureDemoWorkoutInSeed, resolveDemoExercise } from "@/lib/demo-workout-items";
 
 function isDemoMode() {
@@ -44,44 +45,58 @@ export async function POST(request: Request, { params }: Params) {
     const ex = exList.find((e: any) => e.id === parsed.data.exerciseId);
 
     let newItem: Record<string, unknown> | null = null;
-    const { blobSaved } = await mutateDemoSeed((data) => {
-      if (!data.workouts) data.workouts = [];
-      data.workouts = ensureDemoWorkoutInSeed(data.workouts as any[], workoutId);
-      if (!data.workoutExercises) data.workoutExercises = [];
+    try {
+      for (let attempt = 0; attempt < 4; attempt++) {
+        newItem = null;
+        const { blobSaved } = await mutateDemoSeed((data) => {
+          if (!data.workouts) data.workouts = [];
+          data.workouts = ensureDemoWorkoutInSeed(data.workouts as any[], workoutId);
+          if (!data.workoutExercises) data.workoutExercises = [];
 
-      const existingForWorkout = data.workoutExercises.filter(
-        (we: any) => we.workoutId === workoutId,
-      );
-      const sortOrder =
-        existingForWorkout.length > 0
-          ? Math.max(...existingForWorkout.map((we: any) => we.sortOrder ?? 0)) + 1
-          : 0;
+          const existingForWorkout = data.workoutExercises.filter(
+            (we: any) => we.workoutId === workoutId,
+          );
+          const sortOrder =
+            existingForWorkout.length > 0
+              ? Math.max(...existingForWorkout.map((we: any) => we.sortOrder ?? 0)) + 1
+              : 0;
 
-      const exercise = resolveDemoExercise(parsed.data.exerciseId, exList);
-      newItem = {
-        id: "demo-we-" + Date.now(),
-        workoutId,
-        exerciseId: parsed.data.exerciseId,
-        sortOrder,
-        setScheme: parsed.data.setScheme,
-        repPattern: parsed.data.repPattern ?? null,
-        reps: parsed.data.reps ?? null,
-        weightTier: parsed.data.weightTier,
-        sets: parsed.data.sets,
-        restSec: parsed.data.restSec ?? null,
-        notes: parsed.data.notes ?? null,
-        exercise,
-      };
-      data.workoutExercises.push(newItem);
-    });
-    if (process.env.VERCEL && BLOB_TOKEN && !blobSaved) {
+          const exercise = resolveDemoExercise(parsed.data.exerciseId, exList);
+          newItem = {
+            id: "demo-we-" + Date.now(),
+            workoutId,
+            exerciseId: parsed.data.exerciseId,
+            sortOrder,
+            setScheme: parsed.data.setScheme,
+            repPattern: parsed.data.repPattern ?? null,
+            reps: parsed.data.reps ?? null,
+            weightTier: parsed.data.weightTier,
+            sets: parsed.data.sets,
+            restSec: parsed.data.restSec ?? null,
+            notes: parsed.data.notes ?? null,
+            exercise,
+          };
+          data.workoutExercises.push(newItem);
+        });
+        requireBlobPersisted(blobSaved, "Exercise add");
+
+        const seed = await getDemoSeed({ preferFresh: Boolean(BLOB_TOKEN) });
+        const persisted = ((seed.workoutExercises as any[]) || []).some(
+          (we) => we.id === newItem?.id && we.workoutId === workoutId,
+        );
+        if (persisted) {
+          return NextResponse.json(newItem, { status: 201 });
+        }
+        await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+      }
       return NextResponse.json(
         { detail: "Exercise added but cloud save failed — retry in a moment." },
         { status: 503 },
       );
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Exercise add failed";
+      return NextResponse.json({ detail: msg }, { status: 503 });
     }
-
-    return NextResponse.json(newItem, { status: 201 });
   }
 
   const maxOrder = await prisma.workoutExercise.aggregate({

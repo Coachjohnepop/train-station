@@ -32,6 +32,16 @@ export async function POST(request: Request, { params }: Params) {
     if (error instanceof Error && error.message === "WORKOUT_NOT_FOUND") {
       return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
     }
+    if (
+      error instanceof Error &&
+      (error.message === "CLONE_VERIFY_FAILED" ||
+        error.message.includes("could not be saved to cloud storage"))
+    ) {
+      return NextResponse.json(
+        { detail: "Workout cloned but cloud save failed — retry in a moment." },
+        { status: 503 },
+      );
+    }
     console.error("POST /api/workouts/[id]/clone", error);
     return NextResponse.json({ detail: "Clone failed" }, { status: 500 });
   }
