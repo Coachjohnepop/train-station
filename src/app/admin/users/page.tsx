@@ -116,7 +116,14 @@ export default function AdminUsersPage() {
       await loadUsers();
     } else {
       const data = await res.json().catch(() => ({}));
-      setError(data.detail || "Failed to save");
+      const detail = data.detail;
+      setError(
+        typeof detail === "string"
+          ? detail
+          : detail
+            ? JSON.stringify(detail)
+            : "Failed to save",
+      );
     }
     setSaving(false);
   }
@@ -300,6 +307,12 @@ export default function AdminUsersPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
             <h3 className="text-lg font-semibold">{editing ? "Edit User" : "Create User"}</h3>
+            {!editing && (
+              <p className="mt-1 text-xs text-[var(--muted)]">
+                New admins can sign in at /login with their email — leave password blank on first
+                login (demo mode).
+              </p>
+            )}
 
             <form onSubmit={saveUser} className="mt-4 space-y-4">
               {!editing && (

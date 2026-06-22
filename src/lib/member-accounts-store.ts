@@ -147,6 +147,58 @@ export async function clearSelfRegisteredAccounts(): Promise<{
   return { removedEmails, removedUserIds };
 }
 
+export async function upsertSignInAccount(input: {
+  email: string;
+  userId: string;
+  role: UserRole;
+  name: string;
+  phone?: string | null;
+  passwordHash?: string | null;
+  createdAt?: string;
+}): Promise<StoredMemberAccount> {
+  const normalized = normalizeAccountEmail(input.email);
+  if (!normalized) throw new Error("Invalid email.");
+
+  const account: StoredMemberAccount = {
+    userId: input.userId,
+    role: input.role,
+    name: input.name,
+    phone: input.phone ?? null,
+    passwordHash: input.passwordHash ?? null,
+    createdAt: input.createdAt || new Date().toISOString(),
+  };
+
+  const store = await getRegisteredStore();
+  store[normalized] = account;
+  await persistJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    data: store,
+    setMemory: (v) => {
+      memoryStore = v;
+    },
+  });
+
+  return account;
+}
+
+export async function removeSignInAccount(email: string): Promise<boolean> {
+  const normalized = normalizeAccountEmail(email);
+  if (!normalized) return false;
+  const store = await getRegisteredStore();
+  if (!store[normalized]) return false;
+  delete store[normalized];
+  await persistJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    data: store,
+    setMemory: (v) => {
+      memoryStore = v;
+    },
+  });
+  return true;
+}
+
 export async function registerMember(input: RegisterMemberInput): Promise<StoredMemberAccount> {
   const normalized = normalizeAccountEmail(input.email);
   if (!normalized) throw new Error("Invalid email.");

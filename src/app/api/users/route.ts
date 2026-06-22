@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import type { $Enums } from "@/generated/prisma/client";
+import {
+  adminManagedUserToRow,
+  createAdminManagedUser,
+  listAdminManagedUsers,
+} from "@/lib/admin-managed-users";
 import { isDemoMode, getDemoEnrollments } from "@/lib/demo-enrollments";
 import { getDemoWorkoutLogCount, getDemoPerformanceCount, getDemoStrengthScore } from "@/lib/demo-logs";
 
@@ -31,7 +36,7 @@ export async function GET(request: Request) {
     const perfCount = getDemoPerformanceCount();
     // Multiple demo users (some with phones) so SMS broadcast can target realistic lists
     const demoStrength = getDemoStrengthScore();
-    const demoUsers = [
+    const demoUsers: Array<Record<string, unknown>> = [
       {
         id: "demo-user-john-steph",
         email: "john@lemonvoice.com",
@@ -128,6 +133,13 @@ export async function GET(request: Request) {
         counts: { enrollments: 0, performances: 0, workoutLogs: 0 },
       },
     ];
+    const managed = await listAdminManagedUsers();
+    const seen = new Set(demoUsers.map((u) => String(u.email).toLowerCase()));
+    for (const user of managed) {
+      if (!seen.has(user.email.toLowerCase())) {
+        demoUsers.push(adminManagedUserToRow(user));
+      }
+    }
     return NextResponse.json(demoUsers);
   }
 
@@ -183,7 +195,24 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const parsed = createUserSchema.safeParse(await request.json());
   if (!parsed.success) {
-    return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
+    const fieldErrors = parsed.error.flatten().fieldErrors;
+    const first =
+      fieldErrors.email?.[0] ||
+      fieldErrors.name?.[0] ||
+      fieldErrors.role?.[0] ||
+      "Invalid user data.";
+    return NextResponse.json({ detail: first, errors: fieldErrors }, { status: 400 });
+  }
+
+  if (isDemoMode()) {
+    try {
+      const user = await createAdminManagedUser(parsed.data);
+      return NextResponse.json(adminManagedUserToRow(user), { status: 201 });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to create user";
+      const status = message.includes("already exists") ? 409 : 500;
+      return NextResponse.json({ detail: message }, { status });
+    }
   }
 
   try {
@@ -191,8 +220,9 @@ export async function POST(request: Request) {
       data: parsed.data,
     });
     return NextResponse.json(user, { status: 201 });
-  } catch (e: any) {
-    if (e.code === "P2002") {
+  } catch (e: unknown) {
+    const code = typeof e === "object" && e && "code" in e ? String((e as { code: string }).code) : "";
+    if (code === "P2002") {
       return NextResponse.json({ detail: "Email already exists" }, { status: 409 });
     }
     return NextResponse.json({ detail: "Failed to create user" }, { status: 500 });
