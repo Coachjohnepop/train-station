@@ -3,12 +3,12 @@ import MemberChatWorkspace from "@/components/MemberChatWorkspace";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { ensureCohortThread, ensureMemberThread, hydrateCoachChat, listThreadsForMember } from "@/lib/coach-chat";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
-import { resolveUserId } from "@/lib/current-user";
+import { resolveMemberUserId } from "@/lib/current-user";
 
 export const dynamic = "force-dynamic";
 
 export default async function MemberChatPage() {
-  const [uid, session] = await Promise.all([resolveUserId(), getSessionUser()]);
+  const [uid, session] = await Promise.all([resolveMemberUserId(), getSessionUser()]);
   await hydrateCoachChat({ preferFresh: true });
   await ensureMemberThread(uid);
   await ensureCohortThread("adult", "Adult program cohort");
@@ -31,8 +31,8 @@ export default async function MemberChatPage() {
 
       {staffViewingSelf && (
         <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-          You&apos;re signed in as <strong>Coach Jeremy</strong> — member messages won&apos;t match the coach inbox.
-          Use <strong>John &amp; Steph</strong> in the bar above to preview the member thread you messaged from admin.
+          You&apos;re signed in as <strong>{session?.name || "Coach"}</strong> — this is not a member inbox.
+          Tap <strong>Chad</strong> (or the member you messaged) in the bar above, then open Messages again.
         </div>
       )}
 

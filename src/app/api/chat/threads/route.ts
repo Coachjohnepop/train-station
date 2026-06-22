@@ -6,7 +6,7 @@ import {
   listThreadsForCoach,
   listThreadsForMember,
 } from "@/lib/coach-chat";
-import { resolveUserId } from "@/lib/current-user";
+import { resolveMemberUserId } from "@/lib/current-user";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
@@ -34,6 +34,9 @@ export async function GET(request: Request) {
     });
   }
 
-  const uid = await resolveUserId();
-  return NextResponse.json({ threads: listThreadsForMember(uid, programSlugs) });
+  const uid = await resolveMemberUserId();
+  return NextResponse.json(
+    { threads: listThreadsForMember(uid, programSlugs) },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

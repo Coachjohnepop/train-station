@@ -6,7 +6,7 @@ import {
   hydrateCoachChat,
   resolveThreadById,
 } from "@/lib/coach-chat";
-import { resolveUserId } from "@/lib/current-user";
+import { resolveMemberUserId } from "@/lib/current-user";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -22,13 +22,13 @@ export async function GET(request: Request) {
   }
 
   const role = searchParams.get("role") || "member";
-  const readerId = role === "coach" ? COACH_READER_ID : await resolveUserId();
+  const readerId = role === "coach" ? COACH_READER_ID : await resolveMemberUserId();
   await markThreadRead(threadId, readerId);
 
   const messages = getMessagesForThread(threadId);
 
-  return NextResponse.json({
-    thread,
-    messages,
-  });
+  return NextResponse.json(
+    { thread, messages },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

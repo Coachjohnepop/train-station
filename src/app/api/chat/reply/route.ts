@@ -6,8 +6,9 @@ import {
   hydrateCoachChat,
   resolveThreadById,
 } from "@/lib/coach-chat";
-import { resolveUserId } from "@/lib/current-user";
-import { DEMO_COACH } from "@/lib/demo-coach";
+import { getSessionUser } from "@/lib/auth";
+import { resolveMemberUserId } from "@/lib/current-user";
+import { coachDisplayName } from "@/lib/demo-coach";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { sendCoachReplySms } from "@/lib/sms";
 
@@ -26,20 +27,27 @@ export async function POST(request: Request) {
     if (!threadId) {
       return NextResponse.json({ error: "threadId is required for coach replies" }, { status: 400 });
     }
-    const thread = await resolveThreadById(threadId);
+    const thread = await resolveThreadById(threadId, { preferFresh: false });
     if (!thread) {
       return NextResponse.json({ error: "Thread not found" }, { status: 404 });
     }
 
-    const created = await addChatMessage({
-      threadId: thread.id,
-      authorRole: "coach",
-      authorId: COACH_READER_ID,
-      authorName: DEMO_COACH.displayName,
-      kind: "text",
-      body: message,
-      readByUserIds: [COACH_READER_ID],
-    });
+    const coachSession = await getSessionUser();
+    let created;
+    try {
+      created = await addChatMessage({
+        threadId: thread.id,
+        authorRole: "coach",
+        authorId: COACH_READER_ID,
+        authorName: coachDisplayName(coachSession),
+        kind: "text",
+        body: message,
+        readByUserIds: [COACH_READER_ID],
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Send failed";
+      return NextResponse.json({ error: msg }, { status: 503 });
+    }
 
     let smsResult = { sent: 0 };
     if (sendSms && thread.kind === "member" && thread.memberId) {
@@ -49,7 +57,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, message: created, sms: smsResult });
   }
 
-  const uid = await resolveUserId();
+  const uid = await resolveMemberUserId();
   const user = resolveDemoUser(uid);
   const thread = threadId ? await resolveThreadById(threadId) : null;
   const target =

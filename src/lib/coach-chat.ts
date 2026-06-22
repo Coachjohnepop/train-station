@@ -1,7 +1,7 @@
 import path from "path";
 import { randomUUID } from "crypto";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
-import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
+import { BLOB_TOKEN, hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
 
 export type ChatThreadKind = "member" | "cohort";
 
@@ -102,13 +102,18 @@ function readStore(): ChatStore {
   return memoryStore;
 }
 
-async function writeStore(store: ChatStore) {
-  await persistJsonStore({
+async function writeStore(store: ChatStore): Promise<{ blobSaved: boolean }> {
+  return persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
     data: store,
     setMemory,
   });
+}
+
+/** Memory-first — use before writes so we don't overwrite with a stale Blob snapshot. */
+async function hydrateForWrite(): Promise<ChatStore> {
+  return hydrateCoachChat();
 }
 
 function touchThread(store: ChatStore, threadId: string) {
@@ -117,7 +122,7 @@ function touchThread(store: ChatStore, threadId: string) {
 }
 
 export async function ensureMemberThread(memberId: string): Promise<ChatThread> {
-  await hydrateCoachChat({ preferFresh: true });
+  await hydrateForWrite();
   const store = readStore();
   const existing = store.threads.find((t) => t.kind === "member" && t.memberId === memberId);
   if (existing) return existing;
@@ -137,7 +142,7 @@ export async function ensureMemberThread(memberId: string): Promise<ChatThread> 
 }
 
 export async function ensureCohortThread(programSlug: string, programName?: string): Promise<ChatThread> {
-  await hydrateCoachChat({ preferFresh: true });
+  await hydrateForWrite();
   const store = readStore();
   const existing = store.threads.find((t) => t.kind === "cohort" && t.programSlug === programSlug);
   if (existing) return existing;
@@ -180,8 +185,11 @@ export function getThread(threadId: string): ChatThread | null {
 }
 
 /** Hydrate from Blob, then find or create thread by canonical id (serverless-safe). */
-export async function resolveThreadById(threadId: string): Promise<ChatThread | null> {
-  await hydrateCoachChat({ preferFresh: true });
+export async function resolveThreadById(
+  threadId: string,
+  opts?: { preferFresh?: boolean },
+): Promise<ChatThread | null> {
+  await hydrateCoachChat({ preferFresh: opts?.preferFresh });
   const existing = getThread(threadId);
   if (existing) return existing;
 
@@ -208,7 +216,7 @@ export function getMessagesForThread(threadId: string, limit = 200): ChatMessage
 export async function addChatMessage(input: Omit<ChatMessage, "id" | "createdAt" | "readByUserIds"> & {
   readByUserIds?: string[];
 }): Promise<ChatMessage> {
-  await hydrateCoachChat({ preferFresh: true });
+  await hydrateForWrite();
   const store = readStore();
   const message: ChatMessage = {
     ...input,
@@ -218,12 +226,15 @@ export async function addChatMessage(input: Omit<ChatMessage, "id" | "createdAt"
   };
   store.messages.push(message);
   touchThread(store, input.threadId);
-  await writeStore(store);
+  const { blobSaved } = await writeStore(store);
+  if (process.env.VERCEL && BLOB_TOKEN && !blobSaved) {
+    throw new Error("Chat message could not be saved to cloud storage — retry in a moment.");
+  }
   return message;
 }
 
 export async function toggleMessageReaction(messageId: string, userId: string, emoji: string) {
-  await hydrateCoachChat({ preferFresh: true });
+  await hydrateForWrite();
   const store = readStore();
   const message = store.messages.find((m) => m.id === messageId);
   if (!message) return null;
@@ -241,7 +252,7 @@ export async function toggleMessageReaction(messageId: string, userId: string, e
 }
 
 export async function markThreadRead(threadId: string, readerId: string) {
-  await hydrateCoachChat({ preferFresh: true });
+  await hydrateForWrite();
   const store = readStore();
   let changed = false;
   for (const m of store.messages) {

@@ -20,9 +20,14 @@ export const JEREMY_MEMBER_IDS = [
   "demo-user-2",
 ] as const;
 
-export function listMembersForCoach(coachId: string = DEMO_COACH.id): DemoUserEntry[] {
-  if (coachId !== DEMO_COACH.id) return [];
+export function listMembersForCoach(_coachId?: string): DemoUserEntry[] {
   return JEREMY_MEMBER_IDS.map((id) => resolveDemoUser(id)).filter((u): u is DemoUserEntry => !!u);
+}
+
+export function coachDisplayName(session?: { name?: string | null } | null): string {
+  const name = session?.name?.trim();
+  if (name) return name.startsWith("Coach") ? name : `Coach ${name.split(" ")[0]}`;
+  return DEMO_COACH.displayName;
 }
 
 export function isMemberOfCoachJeremy(userId: string): boolean {

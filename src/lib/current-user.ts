@@ -1,4 +1,6 @@
 import { cookies } from "next/headers";
+import { getSessionUser } from "@/lib/auth";
+import { isStaffRole } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
@@ -75,6 +77,17 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 export async function resolveUserId(fallback: string = DEFAULT_DEMO_MEMBER_ID): Promise<string> {
   const uid = await getCurrentUserId();
   return uid || fallback;
+}
+
+/** Member-area routes: logged-in members use session id (not a stale coach cookie). */
+export async function resolveMemberUserId(
+  fallback: string = DEFAULT_DEMO_MEMBER_ID,
+): Promise<string> {
+  const session = await getSessionUser();
+  if (session && !isStaffRole(session.role)) {
+    return session.id;
+  }
+  return resolveUserId(fallback);
 }
 
 export type UserLocation = {
