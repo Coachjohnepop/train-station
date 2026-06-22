@@ -5,8 +5,7 @@ import {
   getSessionUser,
   syncMemberGateCookies,
 } from "@/lib/auth";
-import { getMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
-import { stripeAutoApproveOnPay } from "@/lib/member-gates";
+import { markMemberPaid, attachPaidMemberCookies } from "@/lib/mark-member-paid";
 import { getStripe } from "@/lib/stripe";
 
 const schema = z.object({
@@ -40,26 +39,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Payment is not complete yet." }, { status: 409 });
   }
 
-  const paidAt = new Date().toISOString();
-  const profile = await getMemberProfile(sessionUser.id);
-  const patch: Parameters<typeof updateMemberProfile>[1] = {
-    paymentStatus: "paid",
-    paidAt,
-    stripeCustomerId:
-      typeof checkout.customer === "string" ? checkout.customer : profile?.stripeCustomerId ?? null,
+  const updated = await markMemberPaid({
+    userId: sessionUser.id,
+    method: "stripe",
+    stripeCustomerId: typeof checkout.customer === "string" ? checkout.customer : null,
     stripeSubscriptionId:
-      typeof checkout.subscription === "string"
-        ? checkout.subscription
-        : profile?.stripeSubscriptionId ?? null,
+      typeof checkout.subscription === "string" ? checkout.subscription : null,
     stripeCheckoutSessionId: checkout.id,
-  };
+  });
 
-  if (stripeAutoApproveOnPay() && profile?.approvalStatus === "pending") {
-    patch.approvalStatus = "approved";
-    patch.approvedAt = paidAt;
+  if (!updated) {
+    return NextResponse.json({ error: "Member profile not found." }, { status: 404 });
   }
 
-  const updated = await updateMemberProfile(sessionUser.id, patch);
   const plan = updated.plan;
 
   const res = NextResponse.json({
@@ -67,6 +59,7 @@ export async function POST(request: Request) {
     redirectTo: `/member/onboard?plan=${encodeURIComponent(plan)}`,
   });
   syncMemberGateCookies(res, { userId: sessionUser.id, profile: updated });
+  attachPaidMemberCookies(res, sessionUser.id, updated);
   applyNewMemberOnboardingCookie(res, plan);
   return res;
 }

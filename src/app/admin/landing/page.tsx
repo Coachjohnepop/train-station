@@ -8,15 +8,18 @@ export default async function AdminLandingPage() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="text-2xl font-bold">Landing videos</h1>
+      <h1 className="text-2xl font-bold">Landing media & payments</h1>
       <p className="mt-2 text-[var(--muted)]">
-        Jeremy — paste your YouTube links here. They power the public home page welcome popover and
-        the free-ticket modal.
+        Jeremy — paste YouTube links for the home page, and your Venmo QR for members who pay
+        outside Stripe.
       </p>
       <div className="mt-8">
         <AdminLandingMediaPanel
           initialWelcomeUrl={config.welcomeVideoUrl ?? ""}
           initialFreeUrl={config.freeChastiseVideoUrl ?? ""}
+          initialVenmoQrUrl={config.venmoQrUrl ?? ""}
+          initialVenmoHandle={config.venmoHandle ?? ""}
+          initialVenmoInstructions={config.venmoInstructions ?? ""}
         />
       </div>
     </div>

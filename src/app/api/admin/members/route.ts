@@ -33,6 +33,8 @@ export async function GET() {
       planLabel: signupPlanLabel(profile?.plan ?? "explorer"),
       approvalStatus: profile?.approvalStatus ?? "approved",
       paymentStatus: profile?.paymentStatus ?? "none",
+      paymentMethod: profile?.paymentMethod ?? null,
+      paymentNote: profile?.paymentNote ?? null,
       onboardingComplete: profile?.onboardingComplete ?? false,
       paidAt: profile?.paidAt ?? null,
       approvedAt: profile?.approvedAt ?? null,

@@ -1,36 +1,9 @@
 import { NextResponse } from "next/server";
-import { syncMemberGateCookies } from "@/lib/auth";
-import { getMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
-import { stripeAutoApproveOnPay } from "@/lib/member-gates";
+import { updateMemberProfile } from "@/lib/member-profiles-store";
+import { markMemberPaid } from "@/lib/mark-member-paid";
 import { getStripe } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
-
-async function markMemberPaid(input: {
-  userId: string;
-  stripeCustomerId?: string | null;
-  stripeSubscriptionId?: string | null;
-  stripeCheckoutSessionId?: string | null;
-}) {
-  const profile = await getMemberProfile(input.userId);
-  if (!profile) return null;
-
-  const paidAt = new Date().toISOString();
-  const patch: Parameters<typeof updateMemberProfile>[1] = {
-    paymentStatus: "paid",
-    paidAt,
-    stripeCustomerId: input.stripeCustomerId ?? profile.stripeCustomerId,
-    stripeSubscriptionId: input.stripeSubscriptionId ?? profile.stripeSubscriptionId,
-    stripeCheckoutSessionId: input.stripeCheckoutSessionId ?? profile.stripeCheckoutSessionId,
-  };
-
-  if (stripeAutoApproveOnPay() && profile.approvalStatus === "pending") {
-    patch.approvalStatus = "approved";
-    patch.approvedAt = paidAt;
-  }
-
-  return updateMemberProfile(input.userId, patch);
-}
 
 export async function POST(request: Request) {
   const stripe = getStripe();
@@ -60,6 +33,7 @@ export async function POST(request: Request) {
       if (userId) {
         await markMemberPaid({
           userId,
+          method: "stripe",
           stripeCustomerId: typeof session.customer === "string" ? session.customer : null,
           stripeSubscriptionId:
             typeof session.subscription === "string" ? session.subscription : null,
@@ -77,6 +51,7 @@ export async function POST(request: Request) {
         if (userId) {
           await markMemberPaid({
             userId,
+            method: "stripe",
             stripeCustomerId: typeof invoice.customer === "string" ? invoice.customer : null,
             stripeSubscriptionId: sub.id,
           });

@@ -5,6 +5,9 @@ import { isYoutubeUrl } from "@/lib/youtube";
 export type LandingMediaConfig = {
   welcomeVideoUrl: string | null;
   freeChastiseVideoUrl: string | null;
+  venmoQrUrl: string | null;
+  venmoHandle: string | null;
+  venmoInstructions: string | null;
   updatedAt: string;
 };
 
@@ -17,25 +20,40 @@ function emptyConfig(): LandingMediaConfig {
   return {
     welcomeVideoUrl: null,
     freeChastiseVideoUrl: null,
+    venmoQrUrl: null,
+    venmoHandle: null,
+    venmoInstructions: null,
     updatedAt: new Date().toISOString(),
   };
+}
+
+function normalizeUrl(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  return trimmed || null;
 }
 
 function normalize(raw: unknown): LandingMediaConfig {
   if (!raw || typeof raw !== "object") return emptyConfig();
   const data = raw as Partial<LandingMediaConfig>;
   return {
-    welcomeVideoUrl:
-      typeof data.welcomeVideoUrl === "string" && data.welcomeVideoUrl.trim()
-        ? data.welcomeVideoUrl.trim()
-        : null,
-    freeChastiseVideoUrl:
-      typeof data.freeChastiseVideoUrl === "string" && data.freeChastiseVideoUrl.trim()
-        ? data.freeChastiseVideoUrl.trim()
-        : null,
+    welcomeVideoUrl: normalizeUrl(data.welcomeVideoUrl),
+    freeChastiseVideoUrl: normalizeUrl(data.freeChastiseVideoUrl),
+    venmoQrUrl: normalizeUrl(data.venmoQrUrl),
+    venmoHandle: normalizeUrl(data.venmoHandle),
+    venmoInstructions: normalizeUrl(data.venmoInstructions),
     updatedAt:
       typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
   };
+}
+
+function isHttpUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 export async function getLandingMedia(): Promise<LandingMediaConfig> {
@@ -54,7 +72,16 @@ export async function getLandingMedia(): Promise<LandingMediaConfig> {
 }
 
 export async function saveLandingMedia(
-  patch: Partial<Pick<LandingMediaConfig, "welcomeVideoUrl" | "freeChastiseVideoUrl">>,
+  patch: Partial<
+    Pick<
+      LandingMediaConfig,
+      | "welcomeVideoUrl"
+      | "freeChastiseVideoUrl"
+      | "venmoQrUrl"
+      | "venmoHandle"
+      | "venmoInstructions"
+    >
+  >,
 ): Promise<LandingMediaConfig> {
   const current = await getLandingMedia();
   const next: LandingMediaConfig = {
@@ -76,6 +103,22 @@ export async function saveLandingMedia(
       throw new Error("Free-ticket video must be a valid YouTube URL.");
     }
     next.freeChastiseVideoUrl = url;
+  }
+
+  if (patch.venmoQrUrl !== undefined) {
+    const url = patch.venmoQrUrl?.trim() || null;
+    if (url && !isHttpUrl(url)) {
+      throw new Error("Venmo QR must be a valid image URL (https://…).");
+    }
+    next.venmoQrUrl = url;
+  }
+
+  if (patch.venmoHandle !== undefined) {
+    next.venmoHandle = patch.venmoHandle?.trim() || null;
+  }
+
+  if (patch.venmoInstructions !== undefined) {
+    next.venmoInstructions = patch.venmoInstructions?.trim() || null;
   }
 
   await persistJsonStore({

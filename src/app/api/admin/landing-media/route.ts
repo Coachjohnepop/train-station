@@ -12,6 +12,9 @@ import {
 const patchSchema = z.object({
   welcomeVideoUrl: z.string().max(500).nullable().optional(),
   freeChastiseVideoUrl: z.string().max(500).nullable().optional(),
+  venmoQrUrl: z.string().max(500).nullable().optional(),
+  venmoHandle: z.string().max(80).nullable().optional(),
+  venmoInstructions: z.string().max(500).nullable().optional(),
 });
 
 function formatResponse(config: Awaited<ReturnType<typeof getLandingMedia>>) {
@@ -20,6 +23,10 @@ function formatResponse(config: Awaited<ReturnType<typeof getLandingMedia>>) {
     freeChastiseVideoUrl: freeChastiseVideoUrlFromConfig(config.freeChastiseVideoUrl),
     storedWelcomeVideoUrl: config.welcomeVideoUrl,
     storedFreeChastiseVideoUrl: config.freeChastiseVideoUrl,
+    venmoQrUrl: config.venmoQrUrl,
+    venmoHandle: config.venmoHandle,
+    venmoInstructions: config.venmoInstructions,
+    hasVenmoQr: Boolean(config.venmoQrUrl?.trim()),
     updatedAt: config.updatedAt,
     hasWelcome: Boolean(welcomeVideoUrlFromConfig(config.welcomeVideoUrl)),
     hasFreeChastise: Boolean(freeChastiseVideoUrlFromConfig(config.freeChastiseVideoUrl)),

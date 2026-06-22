@@ -123,7 +123,7 @@ export default function ProgramCatalog({ programs, enrolledSlugs }: Props) {
         <div>
           <h1 className="text-2xl font-bold">Program store</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Browse programs like a shop — add what you want, then check out. Stripe payments plug in next; enrollment is free during preview.
+            Browse programs — Adult and included plans unlock with your Coach Class or 1st Class membership.
           </p>
         </div>
         {cartItems.length > 0 && (
@@ -144,7 +144,7 @@ export default function ProgramCatalog({ programs, enrolledSlugs }: Props) {
       <div className="mt-4 flex flex-wrap gap-2 text-[10px] text-[var(--muted)]">
         <span className="rounded-full bg-[var(--surface-2)] px-2 py-1">1. Add programs to cart</span>
         <span className="rounded-full bg-[var(--surface-2)] px-2 py-1">2. Review your plan</span>
-        <span className="rounded-full bg-[var(--surface-2)] px-2 py-1">3. Enroll (Stripe soon)</span>
+        <span className="rounded-full bg-[var(--surface-2)] px-2 py-1">3. Start program</span>
       </div>
 
       {CATEGORY_ORDER.map((cat) => {

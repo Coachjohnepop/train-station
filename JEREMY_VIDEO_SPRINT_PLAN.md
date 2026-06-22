@@ -149,8 +149,9 @@ persist  builder  catalog  bulk    pay     member  landing
 **Goal:** Money for the three things Jeremy cares about today.
 
 ### Scope
-- [ ] Stripe checkout: **Adult Strength program** enrollment
-- [ ] Stripe: **1st Class ($25)** and **Coach ticket ($50)** from landing
+- [x] Stripe checkout: **Coach Class ($25)** and **1st Class ($50)** from landing tickets
+- [x] Adult Strength included with paid membership (no separate SKU yet)
+- [x] Venmo QR on checkout + admin **Mark paid** for Venmo/manual
 - [x] Hide or soft-disable checkout for non-priority programs (yoga, etc.) — “Join waitlist” only
 - [x] De-prioritize **Leads** admin nav (hide or collapse) — Jeremy doesn’t use it
 - [x] Free ticket: change copy — no “follow-up” implication; optional lead capture off

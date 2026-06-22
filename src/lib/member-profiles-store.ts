@@ -12,6 +12,8 @@ import {
 } from "@/lib/member-gates";
 import { normalizeSignupPlan, type SignupPlan } from "@/lib/signup-plans";
 
+export type PaymentMethod = "stripe" | "venmo" | "manual" | "other";
+
 export type MemberProfile = {
   userId: string;
   email: string;
@@ -28,6 +30,8 @@ export type MemberProfile = {
   approvedAt: string | null;
   paymentStatus: PaymentStatus;
   paidAt: string | null;
+  paymentMethod: PaymentMethod | null;
+  paymentNote: string | null;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   stripeCheckoutSessionId: string | null;
@@ -61,6 +65,8 @@ function emptyProfile(userId: string, email: string, plan: SignupPlan): MemberPr
     approvedAt: null,
     paymentStatus: defaultPaymentStatus(plan),
     paidAt: null,
+    paymentMethod: null,
+    paymentNote: null,
     stripeCustomerId: null,
     stripeSubscriptionId: null,
     stripeCheckoutSessionId: null,
@@ -69,6 +75,12 @@ function emptyProfile(userId: string, email: string, plan: SignupPlan): MemberPr
     welcomeSmsSentAt: null,
     updatedAt: new Date().toISOString(),
   };
+}
+
+function normalizePaymentMethod(raw: unknown): PaymentMethod | null {
+  const v = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  if (v === "stripe" || v === "venmo" || v === "manual" || v === "other") return v;
+  return null;
 }
 
 function normalizeProfile(raw: unknown, userId: string): MemberProfile | null {
@@ -92,6 +104,8 @@ function normalizeProfile(raw: unknown, userId: string): MemberProfile | null {
     approvedAt: data.approvedAt ?? null,
     paymentStatus: normalizePaymentStatus(data.paymentStatus, plan),
     paidAt: data.paidAt ?? null,
+    paymentMethod: normalizePaymentMethod(data.paymentMethod),
+    paymentNote: typeof data.paymentNote === "string" ? data.paymentNote : null,
     stripeCustomerId: data.stripeCustomerId ?? null,
     stripeSubscriptionId: data.stripeSubscriptionId ?? null,
     stripeCheckoutSessionId: data.stripeCheckoutSessionId ?? null,
@@ -205,6 +219,8 @@ export async function updateMemberProfile(
       | "approvedAt"
       | "paymentStatus"
       | "paidAt"
+      | "paymentMethod"
+      | "paymentNote"
       | "stripeCustomerId"
       | "stripeSubscriptionId"
       | "stripeCheckoutSessionId"
