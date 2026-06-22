@@ -20,6 +20,7 @@ export default async function MemberProgramsPage() {
         category: p.category,
         tierSlug: p.tierSlug,
         workoutCount: p.workoutCount,
+        catalogStatus: p.catalogStatus,
       }))}
       enrolledSlugs={enrolledSlugs}
     />

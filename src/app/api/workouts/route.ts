@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
 import { BLOB_TOKEN } from "@/lib/demo-json-blob";
+import { filterVisibleWorkouts } from "@/lib/programs";
 
 function isDemoMode() {
   const url = process.env.DATABASE_URL ?? "";
@@ -27,7 +28,9 @@ export async function GET() {
       };
     });
     return NextResponse.json(
-      workouts.sort((a: any, b: any) => (b.updatedAt || "").localeCompare(a.updatedAt || "")),
+      filterVisibleWorkouts(workouts).sort((a: any, b: any) =>
+        (b.updatedAt || "").localeCompare(a.updatedAt || ""),
+      ),
     );
   }
   const workouts = await prisma.workout.findMany({
@@ -36,7 +39,7 @@ export async function GET() {
       _count: { select: { exercises: true } },
     },
   });
-  return NextResponse.json(workouts);
+  return NextResponse.json(filterVisibleWorkouts(workouts));
 }
 
 export async function POST(request: Request) {

@@ -32,20 +32,23 @@ async function main() {
   });
 
   for (const track of TOP_LEVEL_PROGRAMS) {
+    const published = track.catalogStatus === "live";
     await prisma.program.upsert({
       where: { slug: track.slug },
       update: {
         name: track.name,
         description: track.description,
         sortOrder: track.sortOrder,
-        published: true,
+        category: track.category,
+        published,
       },
       create: {
         slug: track.slug,
         name: track.name,
         description: track.description,
         sortOrder: track.sortOrder,
-        published: true,
+        category: track.category,
+        published,
         tierSlug: "coach",
         durationWeeks: 4,
       },

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { listPrograms, getProgramBySlug } from "@/lib/program-data";
+import { filterAdminCatalogPrograms } from "@/lib/programs";
 
 export async function GET() {
-  const programs = await listPrograms();
+  const programs = filterAdminCatalogPrograms(await listPrograms());
   const workoutPrograms = await Promise.all(
     programs
       .filter((p: any) => (p.category || "workout") === "workout")

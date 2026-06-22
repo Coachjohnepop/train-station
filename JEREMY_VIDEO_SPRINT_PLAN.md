@@ -111,10 +111,10 @@ persist  builder  catalog  bulk    pay     member  landing
 | **Remove test junk** | QA Workout, QA Smoke, fragmented “Day one upper home” names |
 
 ### Scope
-- [ ] Update `TOP_LEVEL_PROGRAMS`, `seed-data.json`, admin + member catalog
+- [x] Update `TOP_LEVEL_PROGRAMS`, `seed-data.json`, admin + member catalog
 - [ ] Rename exercises: “Bench Press” → delete; use “Flat Bench Barbell Chest Press” etc.
-- [ ] Admin workouts list: hide or delete QA-* entries
-- [ ] Landing `COMING_SOON_PROGRAMS`: add Military Prep label; align names with member catalog
+- [x] Admin workouts list: hide or delete QA-* entries
+- [x] Landing `COMING_SOON_PROGRAMS`: adolescent + glute/yoga/nutrition/stretching; align names with member catalog
 
 ### Key files
 - `prisma/seed-data.json`

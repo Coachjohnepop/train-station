@@ -9,6 +9,7 @@ export type CatalogProgram = {
   tierSlug?: string;
   workoutCount?: number;
   durationWeeks?: number;
+  catalogStatus?: "live" | "coming_soon" | "hidden";
 };
 
 /** Display pricing for catalog / cart. Stripe will replace preview totals later. */
@@ -19,7 +20,7 @@ export function getProgramListPrice(program: CatalogProgram): {
 } {
   const cat = program.category || "workout";
 
-  if (cat === "eating") {
+  if (program.catalogStatus === "coming_soon" || cat === "eating") {
     return { cents: 0, label: "Coming soon", futureLabel: "$19/mo add-on" };
   }
 

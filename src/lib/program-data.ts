@@ -1,5 +1,6 @@
 import { applyOverrideToDay, hydrateScheduleOverrides } from "@/lib/demo-schedule-overrides";
 import { getDemoSeed } from "@/lib/demo-seed-store";
+import { applyCatalogMetadata, normalizeProgramSlug } from "@/lib/programs";
 
 export async function listPrograms() {
   await hydrateScheduleOverrides();
@@ -24,11 +25,11 @@ export async function listPrograms() {
           options: programDayOptionsByDayId[d.id] || (d.workoutId ? [{ workoutId: d.workoutId, label: "Standard" }] : []),
         })),
       }));
-    return {
+    return applyCatalogMetadata({
       ...p,
       _count: { weeks: weeks.length, enrollments: 1 },
       weeks,
-    };
+    });
   });
   return progs.sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0));
 }
@@ -36,7 +37,10 @@ export async function listPrograms() {
 export async function getProgramBySlug(slug: string) {
   await hydrateScheduleOverrides();
   const data = await getDemoSeed();
-  const p = (data.programs || []).find((pr: any) => pr.slug === slug);
+  const target = normalizeProgramSlug(slug);
+  const p = (data.programs || []).find(
+    (pr: any) => pr.slug === slug || normalizeProgramSlug(pr.slug) === target,
+  );
   if (!p) return null;
   const workoutsById: Record<string, any> = Object.fromEntries(
     (data.workouts || []).map((w: any) => [w.id, w])
@@ -70,9 +74,9 @@ export async function getProgramBySlug(slug: string) {
           }),
         ),
     }));
-  return {
+  return applyCatalogMetadata({
     ...(p as any),
     weeks,
     _count: { enrollments: 1 },
-  };
+  });
 }

@@ -5,6 +5,7 @@ import { getMemberProfile } from "@/lib/member-profiles-store";
 import { signupPlanToMemberTier } from "@/lib/signup-plans";
 import { DEMO_MEMBER_EMAIL } from "@/lib/demo-workout";
 import { listPrograms } from "@/lib/program-data";
+import { filterMemberCatalogPrograms } from "@/lib/programs";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { getUserEnrollments, getUserEnrollmentsAsArray } from "@/lib/data/user-data";
 import { getDemoWorkoutLogCount, getDemoStrengthScore, computeStrengthScoreFromPerfs } from "@/lib/demo-logs";
@@ -12,7 +13,7 @@ import { getDemoUserSettings } from "@/lib/demo-reminders";
 import { getCurrentUser, resolveUserId, getCurrentUserName } from "@/lib/current-user";
 
 export async function getMemberDashboard() {
-  const programs = await listPrograms();
+  const programs = filterMemberCatalogPrograms(await listPrograms());
   const adult = programs.find((p: any) => p.slug === "adult") || programs.find((p: any) => (p.category || "workout") === "workout") || programs[0];
 
   const current = await getCurrentUser();
@@ -172,6 +173,7 @@ export async function getMemberDashboard() {
       tierSlug: p.tierSlug || "coach",
       category: p.category || "workout",
       sortOrder: p.sortOrder || 0,
+      catalogStatus: p.catalogStatus || "live",
       workoutCount: p.weeks?.reduce((n: number, w: any) => n + (w.days?.length || 0), 0) || 0,
     })),
     stats: {

@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { BRAND_NAME } from "@/lib/brand";
 import { listPrograms } from "@/lib/program-data";
+import { filterAdminCatalogPrograms } from "@/lib/programs";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProgramsAdminPage() {
-  const programs = await listPrograms();
+  const programs = filterAdminCatalogPrograms(await listPrograms());
 
   return (
     <div>
@@ -41,8 +42,12 @@ export default async function ProgramsAdminPage() {
                     {assigned} / {totalSlots} slots assigned
                   </p>
                   <p>{program._count.enrollments} members enrolled</p>
-                  <p className={program.published ? "text-[var(--success)]" : ""}>
-                    {program.published ? "Published" : "Draft"}
+                  <p className={program.catalogStatus === "live" ? "text-[var(--success)]" : ""}>
+                    {program.catalogStatus === "live"
+                      ? "Live"
+                      : program.catalogStatus === "coming_soon"
+                        ? "Coming soon"
+                        : "Draft"}
                   </p>
                 </div>
               </Link>

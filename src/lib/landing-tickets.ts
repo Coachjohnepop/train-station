@@ -54,6 +54,12 @@ export const TICKET_TIERS: TicketTier[] = [
 
 export const COMING_SOON_PROGRAMS = [
   {
+    slug: "youth-sports",
+    name: "Adolescent Training",
+    emoji: "🏃",
+    blurb: "Age-appropriate athletic development for adolescent athletes.",
+  },
+  {
     slug: "stretching",
     name: "Stretching",
     emoji: "🧘",
@@ -76,17 +82,5 @@ export const COMING_SOON_PROGRAMS = [
     name: "Glute Building",
     emoji: "🍑",
     blurb: "Progressive glute specialization program.",
-  },
-  {
-    slug: "mobility",
-    name: "Mobility",
-    emoji: "🔄",
-    blurb: "Joint prep for lifters and athletes.",
-  },
-  {
-    slug: "combat-conditioning",
-    name: "Combat Conditioning",
-    emoji: "🥊",
-    blurb: "Fight-ready conditioning blocks.",
   },
 ] as const;

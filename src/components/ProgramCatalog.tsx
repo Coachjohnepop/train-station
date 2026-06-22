@@ -169,6 +169,7 @@ export default function ProgramCatalog({ programs, enrolledSlugs }: Props) {
                 const price = getProgramListPrice(program);
                 const isEnrolled = enrolledSet.has(program.slug);
                 const inCart = cartSlugs.includes(program.slug);
+                const comingSoon = program.catalogStatus === "coming_soon";
                 const countLabel =
                   cat === "workout"
                     ? `${program.workoutCount || 0} sessions`
@@ -192,6 +193,11 @@ export default function ProgramCatalog({ programs, enrolledSlugs }: Props) {
                         <div className="absolute left-3 top-3 rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur">
                           {price.label}
                         </div>
+                        {comingSoon && !isEnrolled && (
+                          <div className="absolute right-3 top-3 rounded-full bg-amber-500/80 px-2 py-0.5 text-[10px] font-semibold text-black">
+                            Coming soon
+                          </div>
+                        )}
                         {isEnrolled && (
                           <div className="absolute right-3 top-3 rounded-full bg-[var(--success)] px-2 py-0.5 text-[10px] font-semibold text-white">
                             Enrolled
@@ -220,7 +226,7 @@ export default function ProgramCatalog({ programs, enrolledSlugs }: Props) {
 
                         {isEnrolled ? (
                           <span className="ml-auto text-xs font-medium text-[var(--success)]">In your plan ✓</span>
-                        ) : eatingSoon ? (
+                        ) : eatingSoon || comingSoon ? (
                           <button
                             type="button"
                             disabled
