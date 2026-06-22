@@ -49,6 +49,21 @@ export function demoPersistenceError(
   return null;
 }
 
+/** Throws when a demo JSON blob write failed on Vercel (chat, accounts, etc.). */
+export function requireBlobPersisted(blobSaved: boolean, action: string): void {
+  if (isVercelRuntime() && !blobSaved) {
+    throw new Error(
+      blobConfigured()
+        ? `${action} could not be saved to cloud storage — retry in a moment.`
+        : `${action} could not be saved — set TS_BLOB_TOKEN on Vercel for durable demo storage.`,
+    );
+  }
+}
+
+function blobConfigured(): boolean {
+  return isDemoBlobConfigured();
+}
+
 export function demoPersistenceWarning(result: DemoSaveResult): string | null {
   if (isVercelRuntime() && !isDemoBlobConfigured()) {
     return "Saved for this session only. Set TS_BLOB_TOKEN on Vercel for permanent saves.";

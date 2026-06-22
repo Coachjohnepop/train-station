@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     if (!threadId) {
       return NextResponse.json({ error: "threadId is required for coach replies" }, { status: 400 });
     }
-    const thread = await resolveThreadById(threadId, { preferFresh: false });
+    const thread = await resolveThreadById(threadId, { preferFresh: true });
     if (!thread) {
       return NextResponse.json({ error: "Thread not found" }, { status: 404 });
     }

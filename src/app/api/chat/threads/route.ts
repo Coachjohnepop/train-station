@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "memberId required" }, { status: 400 });
   }
 
-  await hydrateCoachChat();
+  await hydrateCoachChat({ preferFresh: true });
   const thread = await ensureMemberThread(memberId);
   return NextResponse.json({ thread });
 }

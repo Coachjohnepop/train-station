@@ -2,6 +2,7 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { BLOB_TOKEN, hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
+import { requireBlobPersisted } from "@/lib/demo-persistence";
 
 export type ChatThreadKind = "member" | "cohort";
 
@@ -70,6 +71,27 @@ function setMemory(store: ChatStore) {
   memoryStore = store;
 }
 
+/** Union blob + instance state so serverless writes never clobber other instances. */
+function mergeChatStores(base: ChatStore, overlay: ChatStore): ChatStore {
+  const threadsById = new Map<string, ChatThread>();
+  for (const t of base.threads) threadsById.set(t.id, t);
+  for (const t of overlay.threads) {
+    const existing = threadsById.get(t.id);
+    if (!existing || new Date(t.updatedAt).getTime() >= new Date(existing.updatedAt).getTime()) {
+      threadsById.set(t.id, t);
+    }
+  }
+
+  const messagesById = new Map<string, ChatMessage>();
+  for (const m of base.messages) messagesById.set(m.id, m);
+  for (const m of overlay.messages) messagesById.set(m.id, m);
+
+  return {
+    threads: [...threadsById.values()],
+    messages: [...messagesById.values()],
+  };
+}
+
 export async function hydrateCoachChat(opts?: { preferFresh?: boolean }): Promise<ChatStore> {
   return hydrateJsonStore({
     blobPath: BLOB_PATH,
@@ -87,12 +109,13 @@ export async function clearCoachChat(): Promise<{ threadsRemoved: number; messag
   const threadsRemoved = store.threads.length;
   const messagesRemoved = store.messages.length;
   const empty = emptyStore();
-  await persistJsonStore({
+  const { blobSaved } = await persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
     data: empty,
     setMemory,
   });
+  requireBlobPersisted(blobSaved, "Chat reset");
   return { threadsRemoved, messagesRemoved };
 }
 
@@ -111,9 +134,22 @@ async function writeStore(store: ChatStore): Promise<{ blobSaved: boolean }> {
   });
 }
 
-/** Memory-first — use before writes so we don't overwrite with a stale Blob snapshot. */
+/**
+ * Load latest Blob (when configured), merge with warm-instance memory, then write.
+ * Prevents a stale lambda from overwriting threads/messages another instance saved.
+ */
 async function hydrateForWrite(): Promise<ChatStore> {
-  return hydrateCoachChat();
+  const local = memoryStore;
+  const fresh = await hydrateCoachChat({ preferFresh: Boolean(BLOB_TOKEN) });
+  if (!local || !BLOB_TOKEN) return fresh;
+  const merged = mergeChatStores(fresh, local);
+  setMemory(merged);
+  return merged;
+}
+
+async function persistStore(store: ChatStore, action: string): Promise<void> {
+  const { blobSaved } = await writeStore(store);
+  requireBlobPersisted(blobSaved, action);
 }
 
 function touchThread(store: ChatStore, threadId: string) {
@@ -137,7 +173,7 @@ export async function ensureMemberThread(memberId: string): Promise<ChatThread> 
     updatedAt: new Date().toISOString(),
   };
   store.threads.push(thread);
-  await writeStore(store);
+  await persistStore(store, "Chat thread");
   return thread;
 }
 
@@ -156,7 +192,7 @@ export async function ensureCohortThread(programSlug: string, programName?: stri
     updatedAt: new Date().toISOString(),
   };
   store.threads.push(thread);
-  await writeStore(store);
+  await persistStore(store, "Chat thread");
   return thread;
 }
 
@@ -226,10 +262,7 @@ export async function addChatMessage(input: Omit<ChatMessage, "id" | "createdAt"
   };
   store.messages.push(message);
   touchThread(store, input.threadId);
-  const { blobSaved } = await writeStore(store);
-  if (process.env.VERCEL && BLOB_TOKEN && !blobSaved) {
-    throw new Error("Chat message could not be saved to cloud storage — retry in a moment.");
-  }
+  await persistStore(store, "Chat message");
   return message;
 }
 
@@ -247,7 +280,7 @@ export async function toggleMessageReaction(messageId: string, userId: string, e
     reactions.push({ emoji, userId, createdAt: new Date().toISOString() });
   }
   message.reactions = reactions;
-  await writeStore(store);
+  await persistStore(store, "Chat reaction");
   return message;
 }
 
@@ -262,7 +295,7 @@ export async function markThreadRead(threadId: string, readerId: string) {
       changed = true;
     }
   }
-  if (changed) await writeStore(store);
+  if (changed) await persistStore(store, "Chat read state");
 }
 
 export function getUnreadCountForMember(memberId: string, programSlugs: string[] = []): number {
