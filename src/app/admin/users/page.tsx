@@ -32,7 +32,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState<Role | "">("");
-  const [showHidden, setShowHidden] = useState(false);
+  const [showHidden, setShowHidden] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<UserRow | null>(null);
   const [form, setForm] = useState({
@@ -52,7 +52,7 @@ export default function AdminUsersPage() {
     const params = new URLSearchParams();
     if (q) params.set("q", q);
     if (roleFilter) params.set("role", roleFilter);
-    if (showHidden) params.set("includeHidden", "true");
+    if (!showHidden) params.set("includeHidden", "false");
     const res = await fetch(`/api/users?${params.toString()}`);
     const data = await res.json();
     setUsers(data);

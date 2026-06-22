@@ -8,6 +8,8 @@ import {
 } from "@/lib/admin-managed-users";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { updateDemoUserSettings } from "@/lib/demo-reminders";
+import { resolveDemoUser } from "@/lib/demo-user-directory";
+import { getAllSignInAccounts } from "@/lib/member-accounts-store";
 import { hideUserById, unhideUserById } from "@/lib/user-visibility";
 
 const ROLES = ["ADMIN", "INSTRUCTOR", "MEMBER", "PROSPECTIVE_INSTRUCTOR"] as const;
@@ -29,10 +31,22 @@ export async function GET(_req: Request, { params }: Params) {
 
   if (isDemoMode()) {
     const managed = await getAdminManagedUser(id);
-    if (!managed) {
-      return NextResponse.json({ detail: "User not found" }, { status: 404 });
+    if (managed) return NextResponse.json(adminManagedUserToRow(managed));
+
+    const directory = resolveDemoUser(id);
+    if (directory) {
+      const accounts = await getAllSignInAccounts();
+      const account = accounts[directory.email];
+      return NextResponse.json({
+        id: directory.id,
+        email: directory.email,
+        name: directory.name,
+        role: account?.role ?? "MEMBER",
+        phone: directory.phone ?? null,
+      });
     }
-    return NextResponse.json(adminManagedUserToRow(managed));
+
+    return NextResponse.json({ detail: "User not found" }, { status: 404 });
   }
 
   const user = await prisma.user.findUnique({

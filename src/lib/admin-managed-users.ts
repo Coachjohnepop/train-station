@@ -86,7 +86,7 @@ export async function createAdminManagedUser(input: {
 
   const accounts = await getAllSignInAccounts();
   if (accounts[normalized]) {
-    throw new Error("Email already exists");
+    throw new Error("Email already exists — find the account in Users and Edit it.");
   }
 
   const store = await getStore();

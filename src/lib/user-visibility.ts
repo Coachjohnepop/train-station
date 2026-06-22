@@ -29,6 +29,7 @@ export async function hideUserById(id: string): Promise<HideUserResult> {
       "demo-user-2",
       "demo-user-3",
       "demo-coach-jeremy",
+      "demo-coach-john",
     ]);
     if (seedIds.has(id)) {
       await hideDemoSeedUser(id);
