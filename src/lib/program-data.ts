@@ -66,6 +66,11 @@ export async function getProgramBySlug(slug: string) {
             workoutId: d.workoutId,
             notes: d.notes,
             videoUrl: d.videoUrl || null,
+            calendarDate: d.calendarDate ?? null,
+            defaultSets: d.defaultSets ?? null,
+            defaultReps: d.defaultReps ?? null,
+            defaultRestSec: d.defaultRestSec ?? null,
+            publishedAt: d.publishedAt ?? null,
             workout: workoutsById[d.workoutId] || null,
             options: (programDayOptionsByDayId[d.id] || (d.workoutId ? [{ workoutId: d.workoutId, label: "Standard" }] : [])).map((opt: any) => ({
               ...opt,
@@ -76,6 +81,7 @@ export async function getProgramBySlug(slug: string) {
     }));
   return applyCatalogMetadata({
     ...(p as any),
+    startDate: (p as any).startDate ?? null,
     weeks,
     _count: { enrollments: 1 },
   });

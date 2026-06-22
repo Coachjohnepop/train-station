@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import ProgramScheduleBuilder from "@/components/ProgramScheduleBuilder";
+import ProgramCalendarBuilder from "@/components/ProgramCalendarBuilder";
 import { getProgramBySlug } from "@/lib/program-data";
 import { syncProgramSchedule } from "@/lib/program-schedule";
 import { prisma } from "@/lib/prisma";
@@ -42,26 +42,24 @@ export default async function ProgramAdminDetailPage({ params }: Props) {
     });
   }
 
-  const assignedCount = program.weeks.reduce(
-    (n: number, w: any) => n + w.days.filter((d: any) => d.workoutId).length,
-    0,
-  );
-
   return (
     <div>
       <Link href="/admin/programs" className="text-xs text-accent hover:underline">← Programs</Link>
       <div className="mt-1 flex items-baseline gap-2">
         <h1 className="text-xl font-semibold tracking-tight">{program.name}</h1>
-        <span className="text-[10px] text-[var(--muted)]">{assignedCount} slots · {program.durationWeeks} weeks</span>
+        <span className="text-[10px] text-[var(--muted)]">
+          {program.durationWeeks} weeks · calendar starts Monday
+        </span>
       </div>
 
       <div className="mt-3">
-        <ProgramScheduleBuilder
+        <ProgramCalendarBuilder
           program={{
             id: program.id,
             slug: program.slug,
             name: program.name,
             durationWeeks: program.durationWeeks,
+            startDate: (program as { startDate?: string | null }).startDate ?? null,
             weeks: program.weeks,
           }}
           workouts={workouts}

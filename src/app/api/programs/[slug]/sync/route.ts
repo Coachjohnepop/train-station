@@ -44,6 +44,11 @@ export async function POST(_request: Request, { params }: Params) {
               workoutId: d.workoutId,
               notes: d.notes,
               videoUrl: d.videoUrl || null,
+              calendarDate: d.calendarDate ?? null,
+              defaultSets: d.defaultSets ?? null,
+              defaultReps: d.defaultReps ?? null,
+              defaultRestSec: d.defaultRestSec ?? null,
+              publishedAt: d.publishedAt ?? null,
               workout: d.workoutId ? workoutsById[d.workoutId] || null : null,
               options:
                 dayOpts.length > 0
@@ -56,6 +61,7 @@ export async function POST(_request: Request, { params }: Params) {
       }));
     return NextResponse.json({
       ...prog,
+      startDate: prog.startDate ?? null,
       weeks,
     });
   }

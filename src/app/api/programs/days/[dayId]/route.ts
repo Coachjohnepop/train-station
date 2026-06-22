@@ -15,6 +15,11 @@ const patchSchema = z.object({
   workoutId: z.string().nullable().optional(),
   videoUrl: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
+  calendarDate: z.string().nullable().optional(),
+  defaultSets: z.number().int().min(1).max(20).optional(),
+  defaultReps: z.string().max(40).optional(),
+  defaultRestSec: z.number().int().min(0).max(600).optional(),
+  publishedAt: z.string().nullable().optional(),
   options: z.array(z.object({ workoutId: z.string(), label: z.string() })).optional(),
 });
 
@@ -123,6 +128,11 @@ export async function PATCH(request: Request, { params }: Params) {
 
       if (parsed.data.videoUrl !== undefined) day.videoUrl = parsed.data.videoUrl;
       if (parsed.data.notes !== undefined) day.notes = parsed.data.notes;
+      if (parsed.data.calendarDate !== undefined) day.calendarDate = parsed.data.calendarDate;
+      if (parsed.data.defaultSets !== undefined) day.defaultSets = parsed.data.defaultSets;
+      if (parsed.data.defaultReps !== undefined) day.defaultReps = parsed.data.defaultReps;
+      if (parsed.data.defaultRestSec !== undefined) day.defaultRestSec = parsed.data.defaultRestSec;
+      if (parsed.data.publishedAt !== undefined) day.publishedAt = parsed.data.publishedAt;
 
       days[dayIdx] = day;
       data.programDays = days;
@@ -207,6 +217,7 @@ export async function PATCH(request: Request, { params }: Params) {
     }
     if (parsed.data.videoUrl !== undefined) dataUpdate.videoUrl = parsed.data.videoUrl;
     if (parsed.data.notes !== undefined) dataUpdate.notes = parsed.data.notes;
+    // Day prescription + calendar fields are stored in demo seed JSON; Prisma columns TBD.
 
     if (Object.keys(dataUpdate).length > 0) {
       const day = await prisma.programDay.update({
