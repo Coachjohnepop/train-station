@@ -93,7 +93,8 @@ function mergeChatStores(base: ChatStore, overlay: ChatStore): ChatStore {
 }
 
 export async function hydrateCoachChat(opts?: { preferFresh?: boolean }): Promise<ChatStore> {
-  return hydrateJsonStore({
+  const local = memoryStore;
+  const fresh = await hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
     memory: memoryStore,
@@ -101,6 +102,12 @@ export async function hydrateCoachChat(opts?: { preferFresh?: boolean }): Promis
     fallback: emptyStore,
     preferFresh: opts?.preferFresh,
   });
+  if (opts?.preferFresh && local && BLOB_TOKEN) {
+    const merged = mergeChatStores(fresh, local);
+    setMemory(merged);
+    return merged;
+  }
+  return fresh;
 }
 
 export async function clearCoachChat(): Promise<{ threadsRemoved: number; messagesRemoved: number }> {
@@ -252,18 +259,31 @@ export function getMessagesForThread(threadId: string, limit = 200): ChatMessage
 export async function addChatMessage(input: Omit<ChatMessage, "id" | "createdAt" | "readByUserIds"> & {
   readByUserIds?: string[];
 }): Promise<ChatMessage> {
-  await hydrateForWrite();
-  const store = readStore();
   const message: ChatMessage = {
     ...input,
     id: randomUUID(),
     createdAt: new Date().toISOString(),
     readByUserIds: input.readByUserIds ?? (input.authorRole === "coach" ? [COACH_READER_ID] : []),
   };
-  store.messages.push(message);
-  touchThread(store, input.threadId);
-  await persistStore(store, "Chat message");
-  return message;
+
+  for (let attempt = 0; attempt < 4; attempt++) {
+    await hydrateForWrite();
+    const store = readStore();
+    if (!store.messages.some((m) => m.id === message.id)) {
+      store.messages.push(message);
+      touchThread(store, input.threadId);
+    }
+    await persistStore(store, "Chat message");
+
+    await hydrateCoachChat({ preferFresh: Boolean(BLOB_TOKEN) });
+    if (readStore().messages.some((m) => m.id === message.id)) {
+      return message;
+    }
+
+    await new Promise((r) => setTimeout(r, 150 * (attempt + 1)));
+  }
+
+  throw new Error("Chat message could not be saved to cloud storage — retry in a moment.");
 }
 
 export async function toggleMessageReaction(messageId: string, userId: string, emoji: string) {
