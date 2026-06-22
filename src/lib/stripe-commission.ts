@@ -1,0 +1,117 @@
+import "server-only";
+
+import { getStripe } from "@/lib/stripe";
+
+export type CommissionTierConfig = {
+  tier1CapCents: number;
+  tier1Rate: number;
+  tier2Rate: number;
+};
+
+export type CommissionBreakdown = {
+  mrrCents: number;
+  tier1BaseCents: number;
+  tier1CommissionCents: number;
+  tier2BaseCents: number;
+  tier2CommissionCents: number;
+  totalCommissionCents: number;
+  config: CommissionTierConfig;
+};
+
+export function commissionConfigFromEnv(): CommissionTierConfig {
+  const capDollars = Number(process.env.STRIPE_COMMISSION_TIER1_CAP_DOLLARS ?? "5000");
+  const tier1CapCents =
+    Number(process.env.STRIPE_COMMISSION_TIER1_CAP_CENTS) ||
+    Math.round((Number.isFinite(capDollars) ? capDollars : 5000) * 100);
+
+  const tier1Rate = Number(process.env.STRIPE_COMMISSION_TIER1_RATE ?? "0.05");
+  const tier2Rate = Number(process.env.STRIPE_COMMISSION_TIER2_RATE ?? "0.30");
+
+  return {
+    tier1CapCents,
+    tier1Rate: Number.isFinite(tier1Rate) ? tier1Rate : 0.05,
+    tier2Rate: Number.isFinite(tier2Rate) ? tier2Rate : 0.3,
+  };
+}
+
+export function isCommissionEnabled(): boolean {
+  return process.env.STRIPE_COMMISSION_ENABLED !== "false";
+}
+
+export function tieredCommissionFromMrr(
+  mrrCents: number,
+  config: CommissionTierConfig = commissionConfigFromEnv(),
+): CommissionBreakdown {
+  const safeMrr = Math.max(0, Math.round(mrrCents));
+  const tier1BaseCents = Math.min(safeMrr, config.tier1CapCents);
+  const tier2BaseCents = Math.max(0, safeMrr - config.tier1CapCents);
+  const tier1CommissionCents = Math.round(tier1BaseCents * config.tier1Rate);
+  const tier2CommissionCents = Math.round(tier2BaseCents * config.tier2Rate);
+
+  return {
+    mrrCents: safeMrr,
+    tier1BaseCents,
+    tier1CommissionCents,
+    tier2BaseCents,
+    tier2CommissionCents,
+    totalCommissionCents: tier1CommissionCents + tier2CommissionCents,
+    config,
+  };
+}
+
+function monthlyAmountCents(price: import("stripe").Stripe.Price, quantity: number): number {
+  const unit = price.unit_amount ?? 0;
+  const qty = quantity || 1;
+  const interval = price.recurring?.interval;
+  if (interval === "year") return Math.round((unit * qty) / 12);
+  if (interval === "week") return Math.round(((unit * qty) / 7) * 30);
+  if (interval === "day") return Math.round(unit * qty * 30);
+  return unit * qty;
+}
+
+export async function fetchActiveMrrCents(): Promise<{
+  mrrCents: number;
+  activeSubscriptions: number;
+}> {
+  const stripe = getStripe();
+  if (!stripe) return { mrrCents: 0, activeSubscriptions: 0 };
+
+  let mrrCents = 0;
+  let activeSubscriptions = 0;
+
+  for await (const sub of stripe.subscriptions.list({
+    status: "active",
+    limit: 100,
+    expand: ["data.items.data.price"],
+  })) {
+    activeSubscriptions++;
+    for (const item of sub.items.data) {
+      const price = item.price;
+      if (!price || typeof price === "string") continue;
+      if (!price.recurring) continue;
+      mrrCents += monthlyAmountCents(price, item.quantity ?? 1);
+    }
+  }
+
+  return { mrrCents, activeSubscriptions };
+}
+
+export function formatUsdFromCents(cents: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
+}
+
+export function currentCommissionPeriod(): string {
+  const now = new Date();
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+export function previousCommissionPeriod(): string {
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}

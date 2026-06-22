@@ -145,7 +145,19 @@ Show Jeremy (or note for yourself):
 
 ---
 
-## Part D — Go live checklist
+## Part D — Commission split (John)
+
+Tiered partner commission is configured separately. See **`STRIPE_COMMISSION_SETUP.md`**.
+
+Quick path:
+
+1. Jeremy enables **Stripe Connect** on the business account
+2. John: **Admin → Commission** → **Connect my Stripe account**
+3. After MRR exists: **Preview payout** → **Run payout now** (monthly)
+
+---
+
+## Part E — Go live checklist
 
 When ready for real money:
 

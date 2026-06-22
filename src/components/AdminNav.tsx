@@ -45,6 +45,11 @@ const items = [
     match: (p: string) => p.startsWith("/admin/members"),
   },
   {
+    href: "/admin/commission",
+    label: "Commission",
+    match: (p: string) => p.startsWith("/admin/commission"),
+  },
+  {
     href: "/admin/today",
     label: "Today",
     match: (p: string) => p.startsWith("/admin/today"),
