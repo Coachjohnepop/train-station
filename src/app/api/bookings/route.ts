@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createBooking, getBookings, getAdminContact, updateBookingStatus, getAvailableSlots } from "@/lib/booking";
+import {
+  createBooking,
+  getBookings,
+  getAdminContact,
+  updateBookingStatus,
+  getAvailableSlots,
+} from "@/lib/booking";
 import { prisma } from "@/lib/prisma";
 
 function isDemoMode() {
@@ -9,7 +15,6 @@ function isDemoMode() {
 }
 
 let demoContact = { email: "jeremy@thetrainstation.co", phone: "(555) 123-4567" };
-let demoSlots: any[] = [];
 
 const createSchema = z.object({
   memberEmail: z.string().email(),
@@ -21,26 +26,6 @@ const createSchema = z.object({
 export async function GET(request: Request) {
   const url = new URL(request.url);
   if (url.searchParams.get("slots") === "true") {
-    if (isDemoMode()) {
-      // generate simple slots for demo
-      if (demoSlots.length === 0) {
-        const base = new Date();
-        for (let d = 1; d <= 7; d++) {
-          const day = new Date(base.getTime() + d * 86400000);
-          if (day.getDay() === 0 || day.getDay() === 6) continue;
-          for (let h = 9; h < 17; h++) {
-            const start = new Date(day);
-            start.setHours(h, 0, 0, 0);
-            const end = new Date(start.getTime() + 15 * 60000);
-            demoSlots.push({
-              start: start.toISOString(),
-              end: end.toISOString(),
-            });
-          }
-        }
-      }
-      return NextResponse.json(demoSlots);
-    }
     const slots = await getAvailableSlots();
     return NextResponse.json(
       slots.map((s) => ({

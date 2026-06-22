@@ -310,7 +310,8 @@ export async function sendDailyReminders() {
   if (isDemoMode()) {
     const du = demoUsers.find((u: any) => u.dailyReminderTime && u.phone);
     if (!du) return [];
-    const link = `/member/workout?program=adult`;
+    const { memberProgramWorkoutPath } = await import("@/lib/member-program-workout");
+    const link = await memberProgramWorkoutPath("adult", du.id);
     const message = `Good morning! Time for your Day 5 activities in Adult. Start here: ${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}${link}`;
     const entry = await addDemoSmsLog({ userId: du.id, phone: du.phone, message, source: "reminder" });
     return [{ user: du.email, phone: du.phone, message, sentAt: entry.sentAt }];

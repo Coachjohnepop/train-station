@@ -30,13 +30,12 @@ export default function FreeTicketModal({
         className="w-full max-w-md rounded-2xl border border-amber-500/30 bg-[#140a22] p-4 sm:p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400">Nice try</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400">Explorer ticket</p>
         <h2 id="free-ticket-title" className="mt-1 text-xl font-semibold text-white">
-          You clicked <span className="text-amber-300">FREE</span>?
+          Start small — <span className="text-amber-300">no strings</span>
         </h2>
         <p className="mt-2 text-sm text-[#9d8ab8] leading-relaxed">
-          That button is not a test… but if you&apos;re serious about starting small, we&apos;ll still let you on the train.
-          Watch the coach — then pick your real ticket if you want the full ride.
+          Explorer is real access to starter programs. No homework, no follow-up calls required — upgrade when you want Coach Class or 1st Class.
         </p>
 
         <div className="mt-4 aspect-video overflow-hidden rounded-xl bg-black ring-1 ring-amber-500/20">

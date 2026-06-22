@@ -4,12 +4,20 @@ import { DEMO_MEMBER_EMAIL } from "@/lib/demo-workout";
 import { isDemoMode, getDemoEnrollments, enrollDemo, unenrollDemo } from "@/lib/demo-enrollments";
 import { resolveUserId } from "@/lib/current-user";
 import { resolvePostEnrollRedirect } from "@/lib/member-destinations";
+import { getCatalogStatus } from "@/lib/programs";
 
 type Params = { params: Promise<{ slug: string }> };
 
 export async function POST(_request: Request, { params }: Params) {
   const { slug } = await params;
   const uid = await resolveUserId();
+
+  if (getCatalogStatus(slug) === "coming_soon") {
+    return NextResponse.json({ detail: "This program is coming soon" }, { status: 403 });
+  }
+  if (getCatalogStatus(slug) === "hidden") {
+    return NextResponse.json({ detail: "Program not found" }, { status: 404 });
+  }
 
   if (isDemoMode()) {
     const current = getDemoEnrollments(uid);

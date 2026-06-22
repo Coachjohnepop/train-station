@@ -151,9 +151,9 @@ persist  builder  catalog  bulk    pay     member  landing
 ### Scope
 - [ ] Stripe checkout: **Adult Strength program** enrollment
 - [ ] Stripe: **1st Class ($25)** and **Coach ticket ($50)** from landing
-- [ ] Hide or soft-disable checkout for non-priority programs (yoga, etc.) — “Join waitlist” only
-- [ ] De-prioritize **Leads** admin nav (hide or collapse) — Jeremy doesn’t use it
-- [ ] Free ticket: change copy — no “follow-up” implication; optional lead capture off
+- [x] Hide or soft-disable checkout for non-priority programs (yoga, etc.) — “Join waitlist” only
+- [x] De-prioritize **Leads** admin nav (hide or collapse) — Jeremy doesn’t use it
+- [x] Free ticket: change copy — no “follow-up” implication; optional lead capture off
 
 ### Key files
 - `src/lib/stripe.ts`, `src/components/PricingWithInlineSignup.tsx`
@@ -171,9 +171,9 @@ persist  builder  catalog  bulk    pay     member  landing
 **Goal:** Katie’s phone flow matches what Jeremy expects.
 
 ### Scope
-- [ ] **Preview workout:** Adult enroll → day view shows real exercises (not empty “Preview: Upper Body Power” shell)
-- [ ] **Book call:** Calendly embed or link respects Jeremy’s actual calendar (not “all times every day”)
-- [ ] Wire admin availability → member slot list in demo mode (or hide manual picker when Calendly is primary)
+- [x] **Preview workout:** Adult enroll → day view shows real exercises (not empty “Preview: Upper Body Power” shell)
+- [x] **Book call:** Calendly primary; backup slots use admin availability (not fake every-hour grid)
+- [x] Wire admin availability → member slot list in demo mode (or hide manual picker when Calendly is primary)
 - [ ] Store section: leave placeholder; no scope creep
 
 ### Key files

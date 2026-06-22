@@ -173,22 +173,7 @@ function DayCards({
                   );
                 })}
 
-                {!compact && program.slug === "adult" && (
-                  <div className={`text-[9px] mt-0.5 pl-1 ${dayDone ? "ring-1 ring-[var(--success)] p-1 rounded bg-[var(--success)]/5" : ""}`}>
-                    {dayDone ? (
-                      <span className="text-[var(--success)] font-medium">
-                        ✓ John &amp; Steph recording followed
-                      </span>
-                    ) : (
-                      <Link
-                        href={`/member/workout?program=${program.slug}&subJourney=john-steph&subDay=${day.dayNumber}`}
-                        className="text-accent hover:underline"
-                      >
-                        or John &amp; Steph recording (day {day.dayNumber}) →
-                      </Link>
-                    )}
-                  </div>
-                )}
+
               </li>
             );
           }

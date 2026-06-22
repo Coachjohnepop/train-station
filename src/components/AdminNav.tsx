@@ -5,14 +5,20 @@ import { usePathname } from "next/navigation";
 import ChatNavBadge from "@/components/ChatNavBadge";
 import LeadsNavBadge from "@/components/LeadsNavBadge";
 
+const SHOW_LEADS = process.env.NEXT_PUBLIC_SHOW_ADMIN_LEADS === "true";
+
 const items = [
   { href: "/admin", label: "Overview", match: (p: string) => p === "/admin" },
-  {
-    href: "/admin/leads",
-    label: "Leads",
-    match: (p: string) => p.startsWith("/admin/leads"),
-    leadsBadge: true,
-  },
+  ...(SHOW_LEADS
+    ? [
+        {
+          href: "/admin/leads",
+          label: "Leads",
+          match: (p: string) => p.startsWith("/admin/leads"),
+          leadsBadge: true,
+        },
+      ]
+    : []),
   {
     href: "/admin/exercises",
     label: "Exercises",

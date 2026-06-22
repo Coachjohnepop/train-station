@@ -89,7 +89,7 @@ export default function MemberBookPage() {
       <h1 className="mt-3 text-2xl font-bold">Book your onboarding call</h1>
       <p className="mt-2 text-sm text-[var(--muted)]">
         15-minute intro with Coach Jeremy on Zoom.{" "}
-        <strong className="text-[var(--foreground)]">Use Calendly</strong> to pick a time — that&apos;s the fastest way.
+        <strong className="text-[var(--foreground)]">Book on Calendly</strong> — it shows his real open times (not our backup list below).
       </p>
 
       <div className="mt-6 card space-y-3">
@@ -116,13 +116,13 @@ export default function MemberBookPage() {
         open={showRequestForm}
         onToggle={(e) => setShowRequestForm((e.target as HTMLDetailsElement).open)}
       >
-        <summary className="cursor-pointer list-none font-semibold">
+        <summary className="cursor-pointer list-none font-semibold text-[var(--muted)]">
           <span className="inline-block transition-transform group-open:rotate-90">▶</span>{" "}
-          Or request a time here (coach confirms manually)
+          Backup: request a time (only if Calendly won&apos;t load)
         </summary>
         <div className="mt-4 space-y-4">
           <p className="text-xs text-[var(--muted)]">
-            Pick a slot below if you prefer not to use Calendly. Jeremy will confirm and send Zoom details.
+            These slots follow coach availability in admin — not every hour every day. Jeremy confirms manually and sends Zoom details.
           </p>
           <div>
             <label className="block text-sm font-medium">Your email</label>

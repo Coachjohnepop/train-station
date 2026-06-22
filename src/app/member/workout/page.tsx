@@ -4,7 +4,8 @@ import FloatingVideoPlayer from "@/components/FloatingVideoPlayer";
 import SmsWorkoutView from "@/components/SmsWorkoutView";
 import { getDemoMemberWorkout } from "@/lib/demo-workout";
 import { getMemberWorkoutById } from "@/lib/member-workout";
-import { getCurrentUserLocation } from "@/lib/current-user";
+import { resolveMemberProgramWorkout } from "@/lib/member-program-workout";
+import { getCurrentUserLocation, resolveUserId } from "@/lib/current-user";
 import { getWeatherForLocation, logUserWeather } from "@/lib/weather";
 import { getActiveScheduleOverride } from "@/lib/demo-schedule-overrides";
 
@@ -19,21 +20,19 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
 
   const smsOverride = smsDay ? getActiveScheduleOverride(smsDay) : null;
 
-  let workout = workoutId
-    ? await getMemberWorkoutById(workoutId)
-    : await getDemoMemberWorkout();
+  let workout = workoutId ? await getMemberWorkoutById(workoutId) : null;
 
-  // Support reminder links: /member/workout?program=adult  -> resolve today's workout from enrollment
+  // /member/workout?program=adult → current enrollment week/day (not generic preview shell)
   if (!workout && program) {
-    // In real: look up user's current enrollment for program, find the ProgramDay for currentWeek/currentDay, get its workoutId
-    // For demo: use the first workout in the program or a known one
-    const { listPrograms } = await import("@/lib/program-data");
-    const progs = await listPrograms();
-    const prog = progs.find((p: any) => p.slug === program);
-    if (prog && prog.weeks?.[0]?.days?.[0]?.workoutId) {
-      const demoWorkoutId = prog.weeks[0].days[0].workoutId; // fallback to day 1 for demo
-      workout = await getMemberWorkoutById(demoWorkoutId);
+    const uid = await resolveUserId();
+    const resolved = await resolveMemberProgramWorkout(program, uid);
+    if (resolved) {
+      workout = await getMemberWorkoutById(resolved.workoutId);
     }
+  }
+
+  if (!workout && !workoutId && !program) {
+    workout = await getDemoMemberWorkout();
   }
 
   // Substitution support: if subJourney & subDay, load the journey day video for following along (sub into this workout)

@@ -29,5 +29,6 @@ export async function resolvePostEnrollRedirect(
   if (!profile?.onboardingComplete) {
     return memberOnboardPath(programSlug);
   }
-  return memberProgramStartPath(programSlug);
+  const { memberProgramWorkoutPath } = await import("@/lib/member-program-workout");
+  return memberProgramWorkoutPath(programSlug, userId);
 }
