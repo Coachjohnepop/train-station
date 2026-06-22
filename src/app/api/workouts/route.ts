@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
 import { BLOB_TOKEN } from "@/lib/demo-json-blob";
+import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { filterVisibleWorkouts } from "@/lib/programs";
 
 function isDemoMode() {
@@ -48,25 +49,38 @@ export async function POST(request: Request) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
   }
   if (isDemoMode()) {
-    const now = new Date().toISOString();
-    const workout = {
-      id: `new-w-${Date.now()}`,
-      name: parsed.data.name.trim(),
-      description: parsed.data.description?.trim() || null,
-      createdAt: now,
-      updatedAt: now,
-    };
-    const { blobSaved } = await mutateDemoSeed((data) => {
-      if (!data.workouts) data.workouts = [];
-      (data.workouts as any[]).push(workout);
-    });
-    if (process.env.VERCEL && BLOB_TOKEN && !blobSaved) {
+    try {
+      const now = new Date().toISOString();
+      const workout = {
+        id: `new-w-${Date.now()}`,
+        name: parsed.data.name.trim(),
+        description: parsed.data.description?.trim() || null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      for (let attempt = 0; attempt < 4; attempt++) {
+        const { blobSaved } = await mutateDemoSeed((data) => {
+          if (!data.workouts) data.workouts = [];
+          const list = data.workouts as any[];
+          if (!list.some((w) => w.id === workout.id)) list.push(workout);
+          data.workouts = list;
+        });
+        requireBlobPersisted(blobSaved, "Workout create");
+
+        const seed = await getDemoSeed({ preferFresh: Boolean(BLOB_TOKEN) });
+        if ((seed.workouts as any[])?.some((w) => w.id === workout.id)) {
+          return NextResponse.json(workout, { status: 201 });
+        }
+        await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+      }
       return NextResponse.json(
         { detail: "Workout created but cloud save failed — retry in a moment." },
         { status: 503 },
       );
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Workout create failed";
+      return NextResponse.json({ detail: msg }, { status: 503 });
     }
-    return NextResponse.json(workout, { status: 201 });
   }
   const workout = await prisma.workout.create({
     data: {

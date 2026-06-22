@@ -132,14 +132,19 @@ async function main() {
 
   let copied = 0;
   for (const day of days.slice(1)) {
-    const clone = await req(`/api/workouts/${sourceWorkoutId}/clone`, {
-      method: "POST",
-      json: {
-        name: `${MARKER} ${DAY_NAMES[day.dayNumber - 1]} Gym`,
-      },
-    });
-    if (!clone.res.ok || !clone.body?.id) {
-      fail(`Clone for day ${day.dayNumber}`, clone.text);
+    let clone = null;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      clone = await req(`/api/workouts/${sourceWorkoutId}/clone`, {
+        method: "POST",
+        json: {
+          name: `${MARKER} ${DAY_NAMES[day.dayNumber - 1]} Gym`,
+        },
+      });
+      if (clone.res.ok && clone.body?.id) break;
+      await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+    }
+    if (!clone?.res.ok || !clone?.body?.id) {
+      fail(`Clone for day ${day.dayNumber}`, clone?.text || "no response");
     }
 
     const home = (day.options || []).find((o) => /^home$/i.test(o.label) && o.workoutId);
@@ -158,10 +163,15 @@ async function main() {
     });
     if (!patch.res.ok) fail(`Assign day ${day.dayNumber}`, patch.text);
 
-    const verify = await req(`/api/workouts/${clone.body.id}`);
-    const markerHit = (verify.body?.exercises || []).some(
-      (e) => e.notes === MARKER || e.exercise?.name === bench.name,
-    );
+    let markerHit = false;
+    for (let i = 0; i < 8; i++) {
+      const verify = await req(`/api/workouts/${clone.body.id}`);
+      markerHit = (verify.body?.exercises || []).some(
+        (e) => e.notes === MARKER || e.exercise?.name === bench.name,
+      );
+      if (markerHit) break;
+      await new Promise((r) => setTimeout(r, 600 * (i + 1)));
+    }
     if (!markerHit) fail(`Day ${day.dayNumber} missing marker exercise`);
     copied++;
     pass(`Day ${DAY_NAMES[day.dayNumber - 1]} duplicated`, clone.body.id);
