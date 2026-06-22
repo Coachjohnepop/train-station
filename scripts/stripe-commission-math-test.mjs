@@ -24,4 +24,25 @@ for (const c of cases) {
   }
 }
 
+function splitTotal(totalCents, shares) {
+  const sum = shares.reduce((s, p) => s + p.share, 0);
+  let allocated = 0;
+  return shares.map((p, i) => {
+    const isLast = i === shares.length - 1;
+    const amount = isLast
+      ? totalCents - allocated
+      : Math.round((totalCents * p.share) / sum);
+    allocated += amount;
+    return amount;
+  });
+}
+
+const split = splitTotal(1150_00, [{ share: 60 }, { share: 40 }]);
+if (split[0] === 690_00 && split[1] === 460_00) {
+  console.log("OK split 60/40 on $1150");
+} else {
+  ok = false;
+  console.log(`FAIL split: ${split.map((c) => c / 100).join(", ")}`);
+}
+
 process.exit(ok ? 0 : 1);

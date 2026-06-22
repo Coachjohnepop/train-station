@@ -42,21 +42,22 @@ Main API keys stay in Vercel as today:
 
 ---
 
-## Step 2 — John: Connect your Stripe Express account
+## Step 2 — Add payout partners (Admin → Commission)
 
-1. Sign in to **Admin → Commission** on thetrainstation.co
-2. Click **Connect my Stripe account**
-3. Complete Stripe’s Express flow (legal name, DOB, bank for payouts)
-4. Return to Commission — status should show **Onboarding: Complete** and **Payouts: Enabled**
+1. **Admin → Commission** → **Add partner** (name, email, share %)
+2. Enabled partner shares must **total 100%** (e.g. John 60%, future dev 40%)
+3. Each partner clicks **Connect** on their row → Stripe Express onboarding (bank + identity)
+4. Status **Ready** when onboarding + payouts are enabled
 
-Optional env (set before first click if you want a fixed email):
+Optional env seeds the first partner if the list is empty:
 
 ```bash
 STRIPE_COMMISSION_PARTNER_EMAIL=john@yourdomain.com
 STRIPE_COMMISSION_PARTNER_NAME="John Popham"
+STRIPE_CONNECT_PARTNER_ACCOUNT_ID=acct_…   # optional override
 ```
 
-After onboarding, the linked account id is stored in blob config (or override with `STRIPE_CONNECT_PARTNER_ACCOUNT_ID=acct_…`).
+Partner roster is stored in blob (`commission-partners.json`) — add/remove/edit anytime without redeploy.
 
 ---
 

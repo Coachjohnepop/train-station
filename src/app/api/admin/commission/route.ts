@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
+import { splitCommissionAmongPartners } from "@/lib/commission-partner-splits";
+import { listCommissionPartners, sumEnabledSharePercents } from "@/lib/commission-partners-store";
 import { listCommissionPayouts } from "@/lib/commission-ledger-store";
 import {
   commissionConfigFromEnv,
@@ -9,7 +11,7 @@ import {
   previousCommissionPeriod,
   tieredCommissionFromMrr,
 } from "@/lib/stripe-commission";
-import { getConnectPartnerStatus } from "@/lib/stripe-connect";
+import { listConnectPartnerStatuses } from "@/lib/stripe-connect";
 
 export const dynamic = "force-dynamic";
 
@@ -23,14 +25,25 @@ export async function GET() {
   const session = await requireStaff();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [mrr, payouts, partner] = await Promise.all([
+  const [mrr, payouts, partners, connectStatuses] = await Promise.all([
     fetchActiveMrrCents(),
     listCommissionPayouts(),
-    getConnectPartnerStatus(),
+    listCommissionPartners(),
+    listConnectPartnerStatuses(),
   ]);
 
   const breakdown = tieredCommissionFromMrr(mrr.mrrCents);
   const config = commissionConfigFromEnv();
+  const shareTotal = sumEnabledSharePercents(partners);
+  const projectedSplits = splitCommissionAmongPartners(
+    breakdown.totalCommissionCents,
+    partners,
+  ).map((line) => ({
+    ...line,
+    amountLabel: formatUsdFromCents(line.amountCents),
+  }));
+
+  const connectById = new Map(connectStatuses.map((s) => [s.partnerId, s]));
 
   return NextResponse.json({
     enabled: isCommissionEnabled(),
@@ -47,7 +60,13 @@ export async function GET() {
       tier1RatePercent: Math.round(config.tier1Rate * 100),
       tier2RatePercent: Math.round(config.tier2Rate * 100),
     },
-    partner,
+    partners: partners.map((p) => ({
+      ...p,
+      connect: connectById.get(p.id) ?? null,
+    })),
+    shareTotal,
+    shareValid: shareTotal === 100,
+    projectedSplits,
     payouts,
   });
 }
