@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import ExerciseCascadePicker, {
   type WorkoutExerciseConfig,
 } from "@/components/ExerciseCascadePicker";
@@ -39,68 +39,109 @@ type Workout = {
   exercises: WorkoutItem[];
 };
 
+function isWorkoutPayload(data: unknown): data is Workout {
+  return (
+    !!data &&
+    typeof data === "object" &&
+    "id" in data &&
+    "name" in data &&
+    Array.isArray((data as Workout).exercises)
+  );
+}
+
 export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [library, setLibrary] = useState<Exercise[]>([]);
   const [pickId, setPickId] = useState("");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const autoAddedRef = useRef(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [savingName, setSavingName] = useState(false);
 
   const load = useCallback(async () => {
-    const [wRes, eRes] = await Promise.all([
-      fetch(`/api/workouts/${workoutId}`),
-      fetch("/api/exercises"),
-    ]);
-    setWorkout(await wRes.json());
-    setLibrary(await eRes.json());
+    setLoadError(null);
+    const maxAttempts = workoutId.startsWith("new-w-") ? 4 : 1;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const [wRes, eRes] = await Promise.all([
+        fetch(`/api/workouts/${workoutId}`, { cache: "no-store" }),
+        fetch("/api/exercises", { cache: "no-store" }),
+      ]);
+
+      if (eRes.ok) {
+        setLibrary(await eRes.json());
+      }
+
+      const body = await wRes.json().catch(() => null);
+      if (wRes.ok && isWorkoutPayload(body)) {
+        setWorkout(body);
+        setLoading(false);
+        return;
+      }
+
+      const detail =
+        formatApiErrorDetail((body as { detail?: unknown } | null)?.detail) ||
+        (wRes.status === 404 ? "Workout not found — it may still be saving." : "Could not load workout.");
+
+      if (attempt < maxAttempts - 1 && wRes.status === 404) {
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+        continue;
+      }
+
+      setWorkout(null);
+      setLoadError(detail);
+      setLoading(false);
+      return;
+    }
   }, [workoutId]);
 
   useEffect(() => {
-    load();
+    setLoading(true);
+    void load();
   }, [load]);
 
-  const pickedExercise = library.find((e) => e.id === pickId);
-  const editingItem = workout?.exercises.find((i) => i.id === editingItemId);
+  const saveExerciseConfig = useCallback(
+    async (
+      exerciseId: string,
+      config: WorkoutExerciseConfig,
+      itemId?: string,
+    ) => {
+      setSaveError(null);
+      const payload = {
+        setScheme: config.setScheme,
+        repPattern: config.repPattern,
+        reps: config.reps,
+        sets: config.setCount,
+        weightTier: config.weightTier,
+        notes: config.notes,
+      };
 
-  async function saveExerciseConfig(
-    exerciseId: string,
-    config: WorkoutExerciseConfig,
-    itemId?: string,
-  ) {
-    setSaveError(null);
-    const payload = {
-      setScheme: config.setScheme,
-      repPattern: config.repPattern,
-      reps: config.reps,
-      sets: config.setCount,
-      weightTier: config.weightTier,
-      notes: config.notes,
-    };
+      const res = await fetch(`/api/workouts/${workoutId}/exercises`, {
+        method: itemId ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          itemId ? { itemId, ...payload } : { exerciseId, ...payload },
+        ),
+      });
 
-    const res = await fetch(`/api/workouts/${workoutId}/exercises`, {
-      method: itemId ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(
-        itemId ? { itemId, ...payload } : { exerciseId, ...payload },
-      ),
-    });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as {
+          detail?: unknown;
+        } | null;
+        setSaveError(formatApiErrorDetail(body?.detail));
+        return;
+      }
 
-    if (!res.ok) {
-      const body = (await res.json().catch(() => null)) as {
-        detail?: unknown;
-      } | null;
-      setSaveError(formatApiErrorDetail(body?.detail));
-      return;
-    }
-
-    if (itemId) {
-      setEditingItemId(null);
-    } else {
-      setPickId("");
-    }
-    await load();
-  }
+      if (itemId) {
+        setEditingItemId(null);
+      } else {
+        setPickId("");
+      }
+      await load();
+    },
+    [workoutId, load],
+  );
 
   async function removeItem(itemId: string) {
     setSaveError(null);
@@ -124,122 +165,115 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
     await load();
   }
 
-  // Auto-add standard warm-ups when a brand new workout is created with zero exercises.
-  // This ensures warm-ups are always the first steps for any new workout (per client request).
-  // Runs only once per empty workout load.
-  useEffect(() => {
-    if (
-      workout &&
-      workout.exercises.length === 0 &&
-      library.length > 0 &&
-      !autoAddedRef.current
-    ) {
-      autoAddedRef.current = true;
-      const warmUps = library
-        .filter((e) => /warm|mobility/i.test(e.name))
-        .slice(0, 3);
-      if (warmUps.length === 0) return;
-
-      (async () => {
-        // Attempt to persist via API (works for real DB; demo returns fake)
-        for (const ex of warmUps) {
-          try {
-            await saveExerciseConfig(ex.id, {
-              setScheme: "standard",
-              repPattern: null,
-              reps: "10",
-              setCount: 1,
-              weightTier: "light",
-              notes: "Warm up - easy pace",
-            });
-          } catch {
-            // non-fatal
-          }
-        }
-        // For demo new workouts (where GET doesn't persist the added items), update local state directly
-        // so the warm-ups appear immediately in the UI. Real DB will have them on next load.
-        setWorkout((prev) => {
-          if (!prev) return prev;
-          const newItems = warmUps.map((ex, idx) => ({
-            id: "auto-warm-" + Date.now() + "-" + idx,
-            sortOrder: idx,
-            setScheme: "standard",
-            repPattern: null,
-            reps: "10",
-            sets: 1,
-            weightTier: "light",
-            notes: "Warm up - easy pace",
-            exercise: ex,
-          }));
-          return { ...prev, exercises: newItems };
-        });
-      })();
+  async function saveWorkoutName(name: string) {
+    const trimmed = name.trim();
+    if (!trimmed || !workout || trimmed === workout.name) return;
+    setSavingName(true);
+    setSaveError(null);
+    try {
+      const res = await fetch(`/api/workouts/${workoutId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as {
+          detail?: unknown;
+        } | null;
+        setSaveError(formatApiErrorDetail(body?.detail));
+        return;
+      }
+      const updated = await res.json();
+      setWorkout((prev) => (prev ? { ...prev, name: updated.name ?? trimmed } : prev));
+    } finally {
+      setSavingName(false);
     }
-  }, [workout, library, load, saveExerciseConfig]);
+  }
 
-  if (!workout) {
+  const pickedExercise = library.find((e) => e.id === pickId);
+  const editingItem = workout?.exercises.find((i) => i.id === editingItemId);
+
+  if (loading) {
     return <p className="text-[var(--muted)]">Loading workout…</p>;
   }
 
+  if (loadError || !workout) {
+    return (
+      <div className="space-y-4">
+        <Link href="/admin/workouts" className="text-sm text-accent hover:underline">
+          ← All workouts
+        </Link>
+        <div className="card border-[var(--danger)]/40">
+          <p className="font-semibold text-[var(--danger)]">Could not open this workout</p>
+          <p className="mt-2 text-sm text-[var(--muted)]">{loadError}</p>
+          <button type="button" className="btn-primary mt-4" onClick={() => void load()}>
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div>
+    <div className="space-y-6">
       <Link href="/admin/workouts" className="text-sm text-accent hover:underline">
         ← All workouts
       </Link>
-      <h1 className="mt-4 text-2xl font-bold">{workout.name}</h1>
-      <p className="mt-2 text-sm text-[var(--muted)]">
-        Pick a movement from the library (name + video only), then configure it
-        here: approach (standard, drop sets, rest pause…), reps or pattern,
-        set count, weight tier, and coaching notes.
-      </p>
 
-      <div className="card mt-6">
-        <label className="text-sm font-medium">Add exercise from library</label>
-        <select
-          className="input mt-2"
-          value={pickId}
-          onChange={(e) => {
-            setPickId(e.target.value);
-            setEditingItemId(null);
-            setSaveError(null);
+      <div>
+        <input
+          className="w-full max-w-xl border-0 bg-transparent p-0 text-2xl font-bold outline-none focus:ring-0"
+          defaultValue={workout.name}
+          aria-label="Workout name"
+          disabled={savingName}
+          onBlur={(e) => void saveWorkoutName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              (e.target as HTMLInputElement).blur();
+            }
           }}
-        >
-          <option value="">Select exercise…</option>
-          {library.map((ex) => (
-            <option key={ex.id} value={ex.id}>
-              {ex.name}
-              {ex.videoUrl ? " · has video" : ""}
-            </option>
-          ))}
-        </select>
-        <Link
-          href="/admin/exercises"
-          className="mt-2 inline-block text-sm text-accent hover:underline"
-        >
-          + New exercise in library
-        </Link>
+        />
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          {workout.exercises.length} exercise{workout.exercises.length === 1 ? "" : "s"} · tap name to rename
+        </p>
       </div>
 
-      {saveError && (
-        <p className="mt-4 rounded-lg border border-[var(--danger)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--danger)]">
-          {saveError}
-        </p>
-      )}
+      <div className="card space-y-3">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="min-w-[12rem] flex-1 text-sm">
+            <span className="font-medium">Add from library</span>
+            <select
+              className="input mt-1.5"
+              value={pickId}
+              onChange={(e) => {
+                setPickId(e.target.value);
+                setEditingItemId(null);
+                setSaveError(null);
+              }}
+            >
+              <option value="">Select exercise…</option>
+              {library.map((ex) => (
+                <option key={ex.id} value={ex.id}>
+                  {ex.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Link href="/admin/exercises" className="btn-ghost shrink-0 text-sm">
+            + New in library
+          </Link>
+        </div>
 
-      {pickedExercise && !editingItemId && (
-        <div className="mt-4">
+        {pickedExercise && !editingItemId && (
           <ExerciseCascadePicker
             exerciseName={pickedExercise.name}
-            onConfirm={(config) =>
-              saveExerciseConfig(pickedExercise.id, config)
-            }
+            onConfirm={(config) => saveExerciseConfig(pickedExercise.id, config)}
             onCancel={() => setPickId("")}
           />
-        </div>
-      )}
+        )}
 
-      {editingItem && (
-        <div className="mt-4">
+        {editingItem && (
           <ExerciseCascadePicker
             exerciseName={editingItem.exercise.name}
             initialScheme={editingItem.setScheme}
@@ -250,42 +284,36 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
             initialNotes={editingItem.notes}
             confirmLabel="Save changes"
             onConfirm={(config) =>
-              saveExerciseConfig(
-                editingItem.exercise.id,
-                config,
-                editingItem.id,
-              )
+              saveExerciseConfig(editingItem.exercise.id, config, editingItem.id)
             }
             onCancel={() => setEditingItemId(null)}
           />
-        </div>
+        )}
+      </div>
+
+      {saveError && (
+        <p className="rounded-lg border border-[var(--danger)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--danger)]">
+          {saveError}
+        </p>
       )}
 
-      <ul className="mt-8 space-y-3">
+      <ul className="space-y-2">
         {workout.exercises.map((item, index) => (
           <li
             key={item.id}
-            className="card flex flex-wrap items-start justify-between gap-4"
+            className="card flex flex-wrap items-center justify-between gap-3 py-3"
           >
             <div className="min-w-0 flex-1">
-              <span className="text-xs text-[var(--muted)]">#{index + 1}</span>
-              <p className="font-semibold">{item.exercise.name}</p>
-              {item.exercise.videoUrl && (
-                <p className="mt-0.5 text-xs text-accent">Demo video in library</p>
-              )}
-              <p className="mt-2 text-sm text-accent-deep">
-                {approachLabel(
-                  normalizePrescription(item).approach,
-                )}
+              <p className="font-medium">
+                <span className="mr-2 text-xs text-[var(--muted)]">{index + 1}.</span>
+                {item.exercise.name}
               </p>
-              <p className="text-sm text-[var(--muted)]">
-                {formatPrescriptionSummary(item)} ·{" "}
-                {weightTierLabel(item.weightTier)}
+              <p className="mt-0.5 text-sm text-[var(--muted)]">
+                {approachLabel(normalizePrescription(item).approach)} ·{" "}
+                {formatPrescriptionSummary(item)} · {weightTierLabel(item.weightTier)}
               </p>
               {item.notes && (
-                <p className="mt-2 line-clamp-2 text-sm text-[var(--muted)]">
-                  {item.notes}
-                </p>
+                <p className="mt-1 line-clamp-1 text-xs text-[var(--muted)]">{item.notes}</p>
               )}
             </div>
             <div className="flex shrink-0 gap-2">
@@ -297,7 +325,7 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
                   setEditingItemId(item.id);
                 }}
               >
-                Edit setup
+                Edit
               </button>
               <button
                 type="button"
@@ -310,8 +338,8 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
           </li>
         ))}
         {workout.exercises.length === 0 && !pickId && (
-          <p className="text-[var(--muted)]">
-            No exercises yet. Select one above to configure this workout.
+          <p className="text-sm text-[var(--muted)]">
+            No exercises yet — pick one from the library above.
           </p>
         )}
       </ul>

@@ -4,12 +4,10 @@ export default function WorkoutsAdminPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold">Workouts</h1>
-      <p className="mt-2 max-w-2xl text-[var(--muted)]">
-        Name the workout, then add exercises from the library. For each
-        movement you&apos;ll set approach, sets or timed duration, weight tier,
-        and coaching notes — all in one cascade on the workout page.
+      <p className="mt-2 max-w-xl text-sm text-[var(--muted)]">
+        Create a workout, add movements from your library, and set reps, sets, and weight tier on one screen.
       </p>
-      <div className="mt-8">
+      <div className="mt-6">
         <WorkoutList />
       </div>
     </div>

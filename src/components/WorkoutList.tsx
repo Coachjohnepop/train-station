@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import TextUploadPanel from "@/components/TextUploadPanel";
+import { formatApiErrorDetail } from "@/lib/api-errors";
 
 type WorkoutRow = {
   id: string;
@@ -14,6 +15,7 @@ type WorkoutRow = {
 export default function WorkoutList() {
   const [workouts, setWorkouts] = useState<WorkoutRow[]>([]);
   const [name, setName] = useState("");
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/workouts");
@@ -27,20 +29,25 @@ export default function WorkoutList() {
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
+    setCreateError(null);
     const res = await fetch("/api/workouts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
     });
     const workout = await res.json();
+    if (!res.ok || !workout?.id) {
+      setCreateError(
+        formatApiErrorDetail(workout?.detail) || "Could not create workout — try again.",
+      );
+      return;
+    }
     setName("");
     window.location.href = `/admin/workouts/${workout.id}`;
   }
 
   return (
     <div className="space-y-6">
-      <TextUploadPanel mode="workout" onBuilt={() => load()} />
-
       <form onSubmit={handleCreate} className="card flex flex-wrap gap-3">
         <input
           className="input max-w-md flex-1"
@@ -50,11 +57,16 @@ export default function WorkoutList() {
           required
         />
         <button type="submit" className="btn-primary">
-          Create & edit
+          Create workout
         </button>
       </form>
+      {createError && (
+        <p className="text-sm text-[var(--danger)]">{createError}</p>
+      )}
 
-      <ul className="mt-6 space-y-2">
+      <TextUploadPanel mode="workout" onBuilt={() => load()} collapsible defaultOpen={false} />
+
+      <ul className="space-y-2">
         {workouts.map((w) => (
           <li key={w.id}>
             <Link
