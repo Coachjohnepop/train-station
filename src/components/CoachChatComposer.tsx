@@ -235,7 +235,7 @@ export default function CoachChatComposer({
 
       <label className="flex items-center gap-2 text-xs cursor-pointer">
         <input type="checkbox" checked={sendSmsAlert} onChange={(e) => setSendSmsAlert(e.target.checked)} />
-        Send SMS alert with link to Go to Today / chat
+        Also text member&apos;s phone (message preview + link to Messages)
       </label>
 
       <div className="flex flex-wrap items-center gap-3">

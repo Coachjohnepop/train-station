@@ -7,7 +7,7 @@ import {
   COACH_READER_ID,
 } from "@/lib/coach-chat";
 import { createTodaySessionFromSms } from "@/lib/today-sessions";
-import { sendCoachChatAlert } from "@/lib/sms";
+import { sendCoachChatAlert, sendCoachReplySms } from "@/lib/sms";
 import { getSessionUser } from "@/lib/auth";
 import { coachDisplayName, DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 import { youtubeVideoId } from "@/lib/youtube";
@@ -156,10 +156,26 @@ export async function POST(request: Request) {
 
     let alertResult = { sent: 0, logs: [] as any[] };
     if (input.sendSmsAlert !== false) {
-      alertResult = await sendCoachChatAlert({
-        userIds: memberIds,
-        sessionDate: sessionResult?.session.sessionDate,
-      });
+      if (hasText && input.audience !== "cohort") {
+        const smsLogs: any[] = [];
+        for (const memberId of memberIds) {
+          const result = await sendCoachReplySms({
+            memberId,
+            message: input.body!.trim(),
+            coachName: authorName,
+          });
+          if (result.sent > 0) {
+            smsLogs.push({ userId: memberId, phone: result.phone, sentAt: result.sentAt, simulated: result.simulated });
+          }
+        }
+        alertResult = { sent: smsLogs.length, logs: smsLogs };
+      } else {
+        alertResult = await sendCoachChatAlert({
+          userIds: memberIds,
+          sessionDate: sessionResult?.session.sessionDate,
+          coachName: authorName,
+        });
+      }
     }
 
     return NextResponse.json({

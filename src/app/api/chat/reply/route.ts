@@ -49,12 +49,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: msg }, { status: 503 });
     }
 
-    let smsResult = { sent: 0 };
+    let smsResult = { sent: 0 } as Awaited<ReturnType<typeof sendCoachReplySms>>;
     if (sendSms && thread.kind === "member" && thread.memberId) {
-      smsResult = await sendCoachReplySms({ memberId: thread.memberId, message });
+      smsResult = await sendCoachReplySms({
+        memberId: thread.memberId,
+        message,
+        coachName: coachDisplayName(coachSession),
+      });
     }
 
-    return NextResponse.json({ ok: true, message: created, sms: smsResult });
+    return NextResponse.json({
+      ok: true,
+      message: created,
+      sms: smsResult,
+      twilioLive: smsResult.sent > 0 && !smsResult.simulated,
+    });
   }
 
   const uid = await resolveMemberUserId();

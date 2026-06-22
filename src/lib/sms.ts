@@ -2,8 +2,11 @@ import path from "path";
 import twilio from "twilio";
 import { prisma } from "@/lib/prisma";
 import { isDemoMode } from "./demo-enrollments";
-import { DEMO_USER_DIRECTORY, resolveDemoUserByEmail } from "@/lib/demo-user-directory";
+import { DEMO_USER_DIRECTORY, resolveDemoUser, resolveDemoUserByEmail } from "@/lib/demo-user-directory";
 import { listMembersForCoach } from "@/lib/demo-coach";
+import { getDemoUserSettings } from "@/lib/demo-reminders";
+import { listMemberProfiles } from "@/lib/member-profiles-store";
+import { getAllSignInAccounts } from "@/lib/member-accounts-store";
 import { COACH_CALENDLY_URL } from "@/lib/brand";
 import { memberProgramStartPath } from "@/lib/member-destinations";
 import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
@@ -128,7 +131,7 @@ export function toE164(phone: string): string {
 
 export async function getUsersWithPhones() {
   if (isDemoMode()) {
-    return demoPhoneUsers.filter((u) => !!u.phone).map((u) => ({ ...u }));
+    return buildDemoPhoneUsers();
   }
   const users = await prisma.user.findMany({
     where: { phone: { not: null } },
@@ -158,8 +161,90 @@ function personalize(message: string, user: { name?: string | null; email: strin
     .replace(/\{phone\}/gi, user.phone);
 }
 
-function twilioConfigured() {
+export function twilioConfigured() {
   return !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM);
+}
+
+export type CoachSmsResult = {
+  sent: number;
+  phone?: string;
+  sentAt?: string;
+  simulated?: boolean;
+  reason?: "no_phone" | "delivery_failed";
+};
+
+async function buildDemoPhoneUsers(): Promise<
+  Array<{
+    id: string;
+    email: string;
+    name: string | null;
+    phone: string;
+    dailyReminderTime: string | null;
+  }>
+> {
+  const byId = new Map<
+    string,
+    { id: string; email: string; name: string | null; phone: string | null; dailyReminderTime: string | null }
+  >();
+
+  for (const u of demoPhoneUsers) {
+    byId.set(u.id, { ...u, name: u.name, phone: u.phone });
+  }
+
+  for (const entry of DEMO_USER_DIRECTORY) {
+    const current = byId.get(entry.id);
+    byId.set(entry.id, {
+      id: entry.id,
+      email: entry.email,
+      name: entry.name,
+      phone: current?.phone ?? entry.phone ?? null,
+      dailyReminderTime: current?.dailyReminderTime ?? null,
+    });
+  }
+
+  for (const member of listMembersForCoach()) {
+    const settings = getDemoUserSettings(member.id);
+    const current = byId.get(member.id);
+    byId.set(member.id, {
+      id: member.id,
+      email: member.email,
+      name: member.name,
+      phone: settings.phone || current?.phone || member.phone || null,
+      dailyReminderTime: settings.dailyReminderTime ?? current?.dailyReminderTime ?? null,
+    });
+  }
+
+  try {
+    const profiles = await listMemberProfiles();
+    for (const profile of profiles) {
+      const current = byId.get(profile.userId);
+      const directory = resolveDemoUser(profile.userId);
+      byId.set(profile.userId, {
+        id: profile.userId,
+        email: directory?.email || current?.email || "",
+        name: directory?.name || current?.name || "Member",
+        phone: profile.phone || current?.phone || directory?.phone || null,
+        dailyReminderTime: current?.dailyReminderTime ?? profile.dailyReminderTime ?? null,
+      });
+    }
+  } catch {}
+
+  try {
+    const accounts = await getAllSignInAccounts();
+    for (const [email, account] of Object.entries(accounts)) {
+      const current = byId.get(account.userId);
+      const directory = resolveDemoUser(account.userId) || resolveDemoUserByEmail(email);
+      byId.set(account.userId, {
+        id: account.userId,
+        email: directory?.email || email,
+        name: account.name || directory?.name || current?.name || "Member",
+        phone: account.phone || current?.phone || directory?.phone || null,
+        dailyReminderTime: current?.dailyReminderTime ?? null,
+      });
+    }
+  } catch {}
+
+  return [...byId.values()].filter((u): u is typeof u & { phone: string } => Boolean(u.phone?.trim()));
 }
 
 async function deliverSms(phone: string, message: string): Promise<boolean> {
@@ -186,21 +271,27 @@ export function appBaseUrl() {
   return process.env.NEXT_PUBLIC_APP_URL || "https://www.thetrainstation.co";
 }
 
-export function coachAlertMessage(params: { sessionDate?: string; firstName?: string }) {
+export function coachAlertMessage(params: {
+  sessionDate?: string;
+  firstName?: string;
+  coachName?: string;
+}) {
   const base = appBaseUrl();
   const link = params.sessionDate
     ? `${base}/member/today?date=${params.sessionDate}`
     : `${base}/member/chat`;
   const hi = params.firstName ? `Hi ${params.firstName}, ` : "";
-  return `${hi}New update from Coach Jeremy — open The Train Station: ${link}`;
+  const coach = params.coachName || "your coach";
+  return `${hi}New update from ${coach} — open The Train Station: ${link}`;
 }
 
-function coachReplySmsBody(message: string, firstName?: string) {
+function coachReplySmsBody(message: string, firstName?: string, coachName?: string) {
   const base = appBaseUrl();
   const link = `${base}/member/chat`;
   const hi = firstName ? `Hi ${firstName}, ` : "";
+  const coach = coachName || "Your coach";
   const preview = message.length > 140 ? `${message.slice(0, 137)}…` : message;
-  return `${hi}Coach Jeremy: ${preview} — Reply: ${link}`;
+  return `${hi}${coach}: ${preview} — Reply: ${link}`;
 }
 
 function welcomeSmsBody(params: { firstName: string; programSlug?: string }) {
@@ -247,15 +338,20 @@ export async function sendWelcomeSms(params: {
   return { sent: 1, phone, sentAt: log.sentAt.toISOString(), smsLogId: log.id };
 }
 
-export async function sendCoachReplySms(params: { memberId: string; message: string }) {
+export async function sendCoachReplySms(params: {
+  memberId: string;
+  message: string;
+  coachName?: string;
+}): Promise<CoachSmsResult> {
   const allWithPhones = await getUsersWithPhones();
   const user = allWithPhones.find((u) => u.id === params.memberId && u.phone);
-  if (!user) return { sent: 0 };
+  if (!user) return { sent: 0, reason: "no_phone" };
 
   const first = (user.name || user.email.split("@")[0]).split(" ")[0];
-  const body = coachReplySmsBody(params.message, first);
+  const body = coachReplySmsBody(params.message, first, params.coachName);
+  const simulated = !twilioConfigured();
   const ok = await deliverSms(user.phone, body);
-  if (!ok) return { sent: 0 };
+  if (!ok) return { sent: 0, reason: "delivery_failed" };
 
   const logEntry = {
     userId: user.id,
@@ -267,19 +363,25 @@ export async function sendCoachReplySms(params: { memberId: string; message: str
 
   if (isDemoMode()) {
     const saved = await addDemoSmsLog(logEntry);
-    return { sent: 1, phone: user.phone, sentAt: saved.sentAt };
+    return { sent: 1, phone: user.phone, sentAt: saved.sentAt, simulated };
   }
 
   const log = await prisma.smsLog.create({
     data: { userId: user.id, phone: user.phone, message: body },
   });
-  return { sent: 1, phone: user.phone, sentAt: log.sentAt.toISOString(), smsLogId: log.id };
+  return {
+    sent: 1,
+    phone: user.phone,
+    sentAt: log.sentAt.toISOString(),
+    simulated,
+  };
 }
 
 export async function sendCoachChatAlert(params: {
   userIds: string[];
   sessionDate?: string;
   customBody?: string;
+  coachName?: string;
 }) {
   const allWithPhones = await getUsersWithPhones();
   const idSet = new Set(params.userIds);
@@ -290,7 +392,11 @@ export async function sendCoachChatAlert(params: {
     const first = (u.name || u.email.split("@")[0]).split(" ")[0];
     const body =
       params.customBody ||
-      coachAlertMessage({ sessionDate: params.sessionDate, firstName: first });
+      coachAlertMessage({
+        sessionDate: params.sessionDate,
+        firstName: first,
+        coachName: params.coachName,
+      });
     const personalized = personalize(body, { name: u.name, email: u.email, phone: u.phone });
     const ok = await deliverSms(u.phone, personalized);
     if (!ok) continue;
