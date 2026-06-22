@@ -39,7 +39,8 @@ function setMemory(data: DemoSeedData) {
 }
 
 export async function hydrateDemoSeed(opts?: { preferFresh?: boolean }): Promise<DemoSeedData> {
-  return hydrateJsonStore({
+  const local = memorySeed;
+  const fresh = await hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: SEED_FILE,
     memory: memorySeed,
@@ -47,6 +48,12 @@ export async function hydrateDemoSeed(opts?: { preferFresh?: boolean }): Promise
     fallback: loadBundledSeed,
     preferFresh: opts?.preferFresh,
   });
+  if (opts?.preferFresh && local && BLOB_TOKEN) {
+    const merged = mergeDemoSeed(fresh, local);
+    setMemory(merged);
+    return merged;
+  }
+  return fresh;
 }
 
 /** Sync read — call hydrateDemoSeed() first in serverless so Blob state is loaded. */

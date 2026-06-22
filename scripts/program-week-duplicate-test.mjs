@@ -101,6 +101,14 @@ async function main() {
   if (!addEx.res.ok) fail("Add marker exercise", addEx.text);
   pass("Added marker exercise", bench.name);
 
+  for (let i = 0; i < 5; i++) {
+    const check = await req(`/api/workouts/${sourceWorkoutId}`);
+    const count = (check.body?.exercises || []).length;
+    if (count > 0) break;
+    await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+    if (i === 4) fail("Marker exercise not on template workout after add");
+  }
+
   const patchMon = await req(`/api/programs/days/${monday.id}`, {
     method: "PATCH",
     json: {
