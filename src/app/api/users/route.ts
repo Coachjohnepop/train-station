@@ -6,6 +6,7 @@ import { adminManagedUserToRow, createAdminManagedUser } from "@/lib/admin-manag
 import { listDemoUsersForAdmin } from "@/lib/demo-users-admin";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { upsertSignInAccount } from "@/lib/member-accounts-store";
+import { annotateAdminUsersForSession } from "@/lib/users-admin-session";
 
 const ROLES = ["ADMIN", "INSTRUCTOR", "MEMBER", "PROSPECTIVE_INSTRUCTOR"] as const;
 
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
       users = users.filter((u) => u.role === role);
     }
 
-    return NextResponse.json(users);
+    return NextResponse.json(await annotateAdminUsersForSession(users));
   }
 
   const users = await prisma.user.findMany({
@@ -70,28 +71,28 @@ export async function GET(request: Request) {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json(
-    users.map((u) => ({
-      id: u.id,
-      email: u.email,
-      name: u.name,
-      role: u.role,
-      status: u.status,
-      notes: u.notes,
-      phone: u.phone || null,
-      dailyReminderTime: u.dailyReminderTime || null,
-      hidden: u.hidden,
-      hiddenAt: u.hiddenAt,
-      createdAt: u.createdAt,
-      subscription: u.subscriptions[0]
-        ? {
-            tier: u.subscriptions[0].tier.slug,
-            status: u.subscriptions[0].status,
-          }
-        : null,
-      counts: u._count,
-    }))
-  );
+  const rows = users.map((u) => ({
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    role: u.role,
+    status: u.status,
+    notes: u.notes,
+    phone: u.phone || null,
+    dailyReminderTime: u.dailyReminderTime || null,
+    hidden: u.hidden,
+    hiddenAt: u.hiddenAt,
+    createdAt: u.createdAt,
+    subscription: u.subscriptions[0]
+      ? {
+          tier: u.subscriptions[0].tier.slug,
+          status: u.subscriptions[0].status,
+        }
+      : null,
+    counts: u._count,
+  }));
+
+  return NextResponse.json(await annotateAdminUsersForSession(rows));
 }
 
 export async function POST(request: Request) {

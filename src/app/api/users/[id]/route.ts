@@ -6,11 +6,15 @@ import {
   getAdminManagedUser,
   updateAdminManagedUser,
 } from "@/lib/admin-managed-users";
+
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { updateDemoUserSettings } from "@/lib/demo-reminders";
+import { findDemoUserRow } from "@/lib/demo-users-admin";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { getAllSignInAccounts } from "@/lib/member-accounts-store";
+import { applySelfProfileUpdate } from "@/lib/user-self-update";
 import { hideUserById, unhideUserById } from "@/lib/user-visibility";
+import { getAdminSession, isSelfUserId, pickSelfProfilePatch } from "@/lib/users-admin-session";
 
 const ROLES = ["ADMIN", "INSTRUCTOR", "MEMBER", "PROSPECTIVE_INSTRUCTOR"] as const;
 
@@ -22,6 +26,7 @@ const updateUserSchema = z.object({
   phone: z.string().optional().nullable(),
   dailyReminderTime: z.string().optional().nullable(),
   hidden: z.boolean().optional(),
+  password: z.string().min(8).optional(),
 });
 
 type Params = { params: Promise<{ id: string }> };
@@ -66,6 +71,56 @@ export async function PATCH(request: Request, { params }: Params) {
   const parsed = updateUserSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const session = await getAdminSession();
+  const isSelf = Boolean(session && (await isSelfUserId(session, id)));
+
+  if (isSelf && parsed.data.hidden === true) {
+    return NextResponse.json(
+      { detail: "You cannot hide your own account while logged in." },
+      { status: 403 },
+    );
+  }
+
+  if (isSelf) {
+    const selfPatch = pickSelfProfilePatch(parsed.data);
+    const hasAdminFields =
+      parsed.data.role !== undefined ||
+      parsed.data.status !== undefined ||
+      parsed.data.notes !== undefined ||
+      parsed.data.hidden !== undefined;
+
+    if (hasAdminFields && Object.keys(selfPatch).length === 0) {
+      return NextResponse.json(
+        { detail: "You can only update your profile (name, phone, reminder, password) on your own row." },
+        { status: 403 },
+      );
+    }
+
+    if (Object.keys(selfPatch).length > 0) {
+      const result = await applySelfProfileUpdate(session!, id, selfPatch);
+      if (!result.ok) {
+        return NextResponse.json({ detail: result.detail }, { status: 400 });
+      }
+      if (isDemoMode()) {
+        const row = await findDemoUserRow(session!.id, session!.email);
+        if (row) return NextResponse.json({ ...row, isSelf: true });
+      } else {
+        try {
+          const user = await prisma.user.findUnique({ where: { id } });
+          if (user) return NextResponse.json({ ...user, isSelf: true });
+        } catch {}
+      }
+      return NextResponse.json({ id, ok: true, isSelf: true });
+    }
+
+    if (hasAdminFields) {
+      return NextResponse.json(
+        { detail: "You can only update your profile (name, phone, reminder, password) on your own row." },
+        { status: 403 },
+      );
+    }
   }
 
   if (parsed.data.hidden !== undefined) {
@@ -131,6 +186,14 @@ export async function PATCH(request: Request, { params }: Params) {
 
 export async function DELETE(_req: Request, { params }: Params) {
   const { id } = await params;
+
+  const session = await getAdminSession();
+  if (session && (await isSelfUserId(session, id))) {
+    return NextResponse.json(
+      { detail: "You cannot hide your own account while logged in." },
+      { status: 403 },
+    );
+  }
 
   const result = await hideUserById(id);
   if (!result.ok) {

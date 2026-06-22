@@ -164,16 +164,21 @@ export async function upsertSignInAccount(input: {
   const normalized = normalizeAccountEmail(input.email);
   if (!normalized) throw new Error("Invalid email.");
 
+  const store = await getRegisteredStore();
+  const existing = store[normalized];
   const account: StoredMemberAccount = {
     userId: input.userId,
     role: input.role,
     name: input.name,
-    phone: input.phone ?? null,
-    passwordHash: input.passwordHash ?? null,
-    createdAt: input.createdAt || new Date().toISOString(),
+    phone: input.phone !== undefined ? (input.phone ?? null) : (existing?.phone ?? null),
+    passwordHash:
+      input.passwordHash !== undefined
+        ? (input.passwordHash ?? null)
+        : (existing?.passwordHash ?? null),
+    hidden: existing?.hidden,
+    createdAt: input.createdAt || existing?.createdAt || new Date().toISOString(),
   };
 
-  const store = await getRegisteredStore();
   store[normalized] = account;
   await persistJsonStore({
     blobPath: BLOB_PATH,

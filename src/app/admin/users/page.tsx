@@ -22,6 +22,7 @@ type UserRow = {
   strengthScore?: number;
   hidden?: boolean;
   hiddenAt?: string | null;
+  isSelf?: boolean;
 };
 
 const ROLES: Role[] = ["ADMIN", "INSTRUCTOR", "MEMBER", "PROSPECTIVE_INSTRUCTOR"];
@@ -43,6 +44,7 @@ export default function AdminUsersPage() {
     notes: "",
     phone: "",
     dailyReminderTime: "",
+    password: "",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -65,7 +67,16 @@ export default function AdminUsersPage() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ email: "", name: "", role: "MEMBER", status: "active", notes: "", phone: "", dailyReminderTime: "" });
+    setForm({
+      email: "",
+      name: "",
+      role: "MEMBER",
+      status: "active",
+      notes: "",
+      phone: "",
+      dailyReminderTime: "",
+      password: "",
+    });
     setError("");
     setModalOpen(true);
   }
@@ -80,6 +91,7 @@ export default function AdminUsersPage() {
       notes: u.notes || "",
       phone: u.phone || "",
       dailyReminderTime: u.dailyReminderTime || "",
+      password: "",
     });
     setError("");
     setModalOpen(true);
@@ -90,14 +102,24 @@ export default function AdminUsersPage() {
     setSaving(true);
     setError("");
 
-    const payload: any = {
-      name: form.name || undefined,
-      role: form.role,
-      status: form.status,
-      notes: form.notes || null,
-      phone: form.phone || null,
-      dailyReminderTime: form.dailyReminderTime || null,
-    };
+    const payload: Record<string, unknown> = editing?.isSelf
+      ? {
+          name: form.name || undefined,
+          phone: form.phone || null,
+          dailyReminderTime: form.dailyReminderTime || null,
+        }
+      : {
+          name: form.name || undefined,
+          role: form.role,
+          status: form.status,
+          notes: form.notes || null,
+          phone: form.phone || null,
+          dailyReminderTime: form.dailyReminderTime || null,
+        };
+
+    if (editing?.isSelf && form.password.trim()) {
+      payload.password = form.password.trim();
+    }
 
     let res: Response;
     if (editing) {
@@ -251,11 +273,18 @@ export default function AdminUsersPage() {
                 <tr
                   key={u.id}
                   className={`border-b border-[var(--border)] last:border-0 ${
-                    u.hidden ? "opacity-50" : ""
-                  }`}
+                    u.hidden && !u.isSelf ? "opacity-50" : ""
+                  } ${u.isSelf ? "bg-accent/5" : ""}`}
                 >
                   <td className="py-3 pr-4">
-                    <div className="font-medium">{u.name || "—"}</div>
+                    <div className="font-medium">
+                      {u.name || "—"}
+                      {u.isSelf && (
+                        <span className="ml-2 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] font-semibold text-accent">
+                          You
+                        </span>
+                      )}
+                    </div>
                     <div className="text-xs text-[var(--muted)]">{u.email}</div>
                     {u.notes && (
                       <div className="mt-1 line-clamp-1 text-[10px] text-amber-600/80" title={u.notes}>
@@ -327,21 +356,22 @@ export default function AdminUsersPage() {
                           Coach Workout
                         </Link>
                       )} {/* Eating (diet) coming soon - removed from coach drills */}
-                      {u.hidden ? (
-                        <button
-                          onClick={() => restoreUser(u.id, u.email)}
-                          className="rounded border border-[var(--success)]/40 px-2 py-1 text-[var(--success)] hover:bg-[var(--success)]/10"
-                        >
-                          Restore
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => hideUser(u.id, u.email)}
-                          className="rounded border border-[var(--danger)]/40 px-2 py-1 text-[var(--danger)] hover:bg-[var(--danger)]/10"
-                        >
-                          Hide
-                        </button>
-                      )}
+                      {!u.isSelf &&
+                        (u.hidden ? (
+                          <button
+                            onClick={() => restoreUser(u.id, u.email)}
+                            className="rounded border border-[var(--success)]/40 px-2 py-1 text-[var(--success)] hover:bg-[var(--success)]/10"
+                          >
+                            Restore
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => hideUser(u.id, u.email)}
+                            className="rounded border border-[var(--danger)]/40 px-2 py-1 text-[var(--danger)] hover:bg-[var(--danger)]/10"
+                          >
+                            Hide
+                          </button>
+                        ))}
                     </div>
                   </td>
                 </tr>
@@ -355,7 +385,14 @@ export default function AdminUsersPage() {
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-            <h3 className="text-lg font-semibold">{editing ? "Edit User" : "Create User"}</h3>
+            <h3 className="text-lg font-semibold">
+              {editing ? (editing.isSelf ? "Edit your profile" : "Edit User") : "Create User"}
+            </h3>
+            {editing?.isSelf && (
+              <p className="mt-1 text-xs text-[var(--muted)]">
+                Role and status are locked on your own row. Update name, phone, reminder, or password.
+              </p>
+            )}
             {!editing && (
               <p className="mt-1 text-xs text-[var(--muted)]">
                 New admins can sign in at /login with their email — leave password blank on first
@@ -386,47 +423,51 @@ export default function AdminUsersPage() {
                 />
               </label>
 
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block">
-                  <span className="text-xs text-[var(--muted)]">Role</span>
-                  <select
-                    value={form.role}
-                    onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
-                    className="input mt-1 w-full"
-                  >
-                    {ROLES.map((r) => (
-                      <option key={r} value={r}>
-                        {r.replace("_", " ")}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              {!editing?.isSelf && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="block">
+                      <span className="text-xs text-[var(--muted)]">Role</span>
+                      <select
+                        value={form.role}
+                        onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
+                        className="input mt-1 w-full"
+                      >
+                        {ROLES.map((r) => (
+                          <option key={r} value={r}>
+                            {r.replace("_", " ")}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
 
-                <label className="block">
-                  <span className="text-xs text-[var(--muted)]">Status</span>
-                  <select
-                    value={form.status}
-                    onChange={(e) => setForm({ ...form, status: e.target.value })}
-                    className="input mt-1 w-full"
-                  >
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
+                    <label className="block">
+                      <span className="text-xs text-[var(--muted)]">Status</span>
+                      <select
+                        value={form.status}
+                        onChange={(e) => setForm({ ...form, status: e.target.value })}
+                        className="input mt-1 w-full"
+                      >
+                        {STATUSES.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
 
-              <label className="block">
-                <span className="text-xs text-[var(--muted)]">Admin Notes (visible only here)</span>
-                <textarea
-                  value={form.notes}
-                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  className="input mt-1 h-20 w-full resize-y"
-                  placeholder="e.g. Approved after interview. Background check passed."
-                />
-              </label>
+                  <label className="block">
+                    <span className="text-xs text-[var(--muted)]">Admin Notes (visible only here)</span>
+                    <textarea
+                      value={form.notes}
+                      onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                      className="input mt-1 h-20 w-full resize-y"
+                      placeholder="e.g. Approved after interview. Background check passed."
+                    />
+                  </label>
+                </>
+              )}
 
               <label className="block">
                 <span className="text-xs text-[var(--muted)]">Phone (for SMS)</span>
@@ -446,6 +487,20 @@ export default function AdminUsersPage() {
                   onChange={(dailyReminderTime) => setForm({ ...form, dailyReminderTime })}
                 />
               </label>
+
+              {editing?.isSelf && (
+                <label className="block">
+                  <span className="text-xs text-[var(--muted)]">New password (optional)</span>
+                  <input
+                    type="password"
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    className="input mt-1 w-full"
+                    placeholder="Min 8 characters"
+                    autoComplete="new-password"
+                  />
+                </label>
+              )}
 
               {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
 

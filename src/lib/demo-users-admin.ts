@@ -127,3 +127,16 @@ export async function listDemoUsersForAdmin(options?: {
 
   return includeHidden ? sorted : sorted.filter((u) => !u.hidden);
 }
+
+export async function findDemoUserRow(
+  id: string,
+  email: string,
+): Promise<DemoUserRow | null> {
+  const all = await listDemoUsersForAdmin({ includeHidden: true });
+  const normalized = email.toLowerCase();
+  return (
+    all.find(
+      (u) => u.id === id || String(u.email || "").toLowerCase() === normalized,
+    ) ?? null
+  );
+}
