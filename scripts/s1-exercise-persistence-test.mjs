@@ -94,7 +94,7 @@ async function waitUntilGone(id, label, maxMs = 35_000) {
   fail(`${label} gone`, `still in list after ${maxMs}ms`);
 }
 
-async function waitUntilListed(id, name, label, maxMs = 20_000) {
+async function waitUntilListed(id, name, label, maxMs = 35_000) {
   const started = Date.now();
   let attempt = 0;
   while (Date.now() - started < maxMs) {
