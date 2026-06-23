@@ -44,8 +44,9 @@ function setMemory(data: DemoSeedData) {
 }
 
 export async function hydrateDemoSeed(opts?: { preferFresh?: boolean }): Promise<DemoSeedData> {
-  const local = memorySeed;
-  const fresh = await hydrateJsonStore({
+  // preferFresh must return blob/disk as-is — never overlay stale instance memory
+  // (on Vercel, warm lambdas kept old programDayOptions and masked coach edits).
+  return hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: SEED_FILE,
     memory: memorySeed,
@@ -53,12 +54,6 @@ export async function hydrateDemoSeed(opts?: { preferFresh?: boolean }): Promise
     fallback: loadBundledSeed,
     preferFresh: opts?.preferFresh,
   });
-  if (opts?.preferFresh && local && isBlobConfigured()) {
-    const merged = mergeDemoSeed(fresh, local);
-    setMemory(merged);
-    return merged;
-  }
-  return fresh;
 }
 
 /** Sync read — call hydrateDemoSeed() first in serverless so Blob state is loaded. */

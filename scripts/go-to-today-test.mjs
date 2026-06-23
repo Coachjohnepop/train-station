@@ -92,11 +92,16 @@ async function testMember(member) {
         fail(`${member.label} workout link missing date`, loc);
       } else if (loc.includes("/member/workout")) {
         const workoutPage = await req(loc);
-        if (workoutPage.text.includes("June 23") || workoutPage.text.includes("Jun 23")) {
-          pass(`${member.label} workout page shows date`);
-        } else {
-          fail(`${member.label} workout page missing date`);
-        }
+        const [, y, m, d] = TODAY.match(/^(\d{4})-(\d{2})-(\d{2})$/) || [];
+        const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+        const shortMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        const mi = m ? parseInt(m, 10) - 1 : -1;
+        const hasDate =
+          workoutPage.text.includes(TODAY) ||
+          (mi >= 0 && workoutPage.text.includes(`${monthNames[mi]} ${parseInt(d || "0", 10)}`)) ||
+          (mi >= 0 && workoutPage.text.includes(`${shortMonths[mi]} ${parseInt(d || "0", 10)}`));
+        if (hasDate) pass(`${member.label} workout page shows date`);
+        else fail(`${member.label} workout page missing date`);
       }
     } else {
       fail(`${member.label} /member/today redirect`, loc || String(todayPage.res.status));
@@ -242,16 +247,31 @@ async function testCalendarMath() {
     }
   }
   if (!todayDay) {
-    const startMonday = new Date();
-    const day = startMonday.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    startMonday.setDate(startMonday.getDate() + diff);
-    const computed = new Date(startMonday);
-    computed.setDate(computed.getDate() + (1 - 1) * 7 + (2 - 1));
-    const iso = computed.toISOString().slice(0, 10);
-    pass("Calendar today in API", `no explicit calendarDate for ${TODAY}; computed week1 from anchor`);
+    pass("Calendar today in API", `no explicit calendarDate for ${TODAY}; using anchor math`);
   } else {
     pass("Calendar today in API", `W${todayDay.week}D${todayDay.day} workout=${todayDay.workoutId || "none"}`);
+  }
+
+  // Admin Member view URL must match Chad redirect workoutId (when no SMS)
+  const gymOpt = sync.body?.weeks
+    ?.flatMap((w) => w.days || [])
+    .find((d) => d.calendarDate === TODAY)
+    ?.options?.find((o) => /gym/i.test(o.label || ""));
+  if (gymOpt?.workoutId) {
+    cookies = "";
+    await req("/api/auth/login", {
+      method: "POST",
+      json: { email: "chad@thetrainstation.co", password: "", redirect: "/member" },
+    });
+    const todayPage = await req("/member/today");
+    const loc = todayPage.location || "";
+    if (loc.includes(gymOpt.workoutId)) {
+      pass("Chad Go to Today matches calendar gym workout", gymOpt.workoutId);
+    } else if (loc.includes(`/member/today?date=${TODAY}`)) {
+      pass("Chad Go to Today is SMS override for today");
+    } else {
+      fail("Chad Go to Today vs calendar gym workout", `calendar=${gymOpt.workoutId} redirect=${loc}`);
+    }
   }
 }
 

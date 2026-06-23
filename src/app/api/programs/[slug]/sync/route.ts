@@ -13,7 +13,7 @@ type Params = { params: Promise<{ slug: string }> };
 export async function POST(_request: Request, { params }: Params) {
   const { slug } = await params;
   if (isDemoMode()) {
-    const data = await getDemoSeed();
+    const data = await getDemoSeed({ preferFresh: true });
     const prog = (data.programs || []).find((p: any) => p.slug === slug);
     if (!prog) {
       return NextResponse.json({ detail: "Program not found" }, { status: 404 });
