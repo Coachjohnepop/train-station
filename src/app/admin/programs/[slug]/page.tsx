@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ExportSeedButton from "@/components/ExportSeedButton";
 import ProgramCalendarBuilder from "@/components/ProgramCalendarBuilder";
 import { getProgramBySlug } from "@/lib/program-data";
 import { syncProgramSchedule } from "@/lib/program-schedule";
@@ -45,12 +46,20 @@ export default async function ProgramAdminDetailPage({ params }: Props) {
   return (
     <div>
       <Link href="/admin/programs" className="text-xs text-accent hover:underline">← Programs</Link>
-      <div className="mt-1 flex items-baseline gap-2">
-        <h1 className="text-xl font-semibold tracking-tight">{program.name}</h1>
-        <span className="text-[10px] text-[var(--muted)]">
-          {program.durationWeeks} weeks · calendar starts Monday
-        </span>
+      <div className="mt-1 flex flex-wrap items-baseline justify-between gap-2">
+        <div className="flex items-baseline gap-2">
+          <h1 className="text-xl font-semibold tracking-tight">{program.name}</h1>
+          <span className="text-[10px] text-[var(--muted)]">
+            {program.durationWeeks} weeks · calendar starts Monday
+          </span>
+        </div>
+        <ExportSeedButton className="text-xs" />
       </div>
+      <p className="mt-1 text-[10px] text-[var(--muted)]">
+        When content is final, export seed snapshot and commit{" "}
+        <code className="rounded bg-[var(--surface-2)] px-1">prisma/seed-data.json</code> so it
+        ships with the next deploy.
+      </p>
 
       <div className="mt-3">
         <ProgramCalendarBuilder

@@ -36,6 +36,7 @@ type ProgramDay = {
   defaultReps?: string | null;
   defaultRestSec?: number | null;
   publishedAt?: string | null;
+  videoUrl?: string | null;
   options?: DayOption[];
 };
 
@@ -422,6 +423,111 @@ export default function ProgramCalendarBuilder({
     await setDayOptions(dayId, opts);
   }
 
+  async function copyWeek(
+    fromWeekNumber: number,
+    toWeekNumber: number,
+    opts?: { manageSaving?: boolean },
+  ) {
+    const manageSaving = opts?.manageSaving !== false;
+    const fromWeek = program.weeks.find((w) => w.weekNumber === fromWeekNumber);
+    const toWeek = program.weeks.find((w) => w.weekNumber === toWeekNumber);
+    if (!fromWeek || !toWeek) return false;
+
+    if (manageSaving) {
+      setSaving(true);
+      setMessage(`Copying week ${fromWeekNumber} → week ${toWeekNumber}…`);
+    }
+
+    try {
+      for (const toDay of [...toWeek.days].sort((a, b) => a.dayNumber - b.dayNumber)) {
+        const fromDay = fromWeek.days.find((d) => d.dayNumber === toDay.dayNumber);
+        if (!fromDay) continue;
+
+        const fromOpts = getDayOptions(fromDay).filter((o) => o.workoutId);
+        const toCal =
+          toDay.calendarDate ||
+          calendarDateForProgramDay(startMonday, toWeekNumber, toDay.dayNumber);
+
+        if (fromOpts.length === 0) {
+          await patchDay(toDay.id, { options: [], calendarDate: toCal });
+          continue;
+        }
+
+        const clonedOpts: DayOption[] = [];
+        for (const opt of fromOpts) {
+          const dayLabel = DAY_LABELS[toDay.dayNumber - 1] ?? `Day${toDay.dayNumber}`;
+          const cloneRes = await fetch(`/api/workouts/${opt.workoutId}/clone`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: `${program.name} · W${toWeekNumber} ${dayLabel} ${opt.label}`,
+            }),
+          });
+          if (!cloneRes.ok) {
+            if (manageSaving) setMessage("Copy failed — try again.");
+            return false;
+          }
+          const cloned = await cloneRes.json();
+          clonedOpts.push({ workoutId: cloned.id, label: opt.label });
+          setAllWorkouts((prev) =>
+            prev.some((w) => w.id === cloned.id) ? prev : [...prev, { id: cloned.id, name: cloned.name }],
+          );
+        }
+
+        await patchDay(toDay.id, {
+          options: clonedOpts,
+          defaultSets: fromDay.defaultSets ?? null,
+          defaultReps: fromDay.defaultReps ?? null,
+          defaultRestSec: fromDay.defaultRestSec ?? null,
+          publishedAt: fromDay.publishedAt ?? null,
+          calendarDate: toCal,
+          videoUrl: fromDay.videoUrl ?? null,
+        });
+      }
+
+      return true;
+    } catch {
+      if (manageSaving) setMessage("Copy failed — try again.");
+      return false;
+    } finally {
+      if (manageSaving) setSaving(false);
+    }
+  }
+
+  async function copyWeekToThisWeek() {
+    if (activeWeek <= 1) return;
+    const ok = await copyWeek(activeWeek - 1, activeWeek);
+    if (ok) {
+      await sync();
+      setMessage(`Week ${activeWeek} copied — each day has its own workout copy.`);
+      setTimeout(() => setMessage(null), 3500);
+    }
+  }
+
+  async function copyWeekToRemaining(fromWeekNumber: number) {
+    const later = [...program.weeks]
+      .filter((w) => w.weekNumber > fromWeekNumber)
+      .sort((a, b) => a.weekNumber - b.weekNumber);
+    if (later.length === 0) return;
+
+    setSaving(true);
+    setMessage(`Copying week ${fromWeekNumber} to weeks ${later.map((w) => w.weekNumber).join(", ")}…`);
+    try {
+      for (const week of later) {
+        const ok = await copyWeek(fromWeekNumber, week.weekNumber, { manageSaving: false });
+        if (!ok) {
+          setMessage("Copy failed — try again.");
+          return;
+        }
+      }
+      await sync();
+      setMessage(`Week ${fromWeekNumber} copied to all remaining weeks.`);
+      setTimeout(() => setMessage(null), 3500);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function duplicateToTargets() {
     if (!focus) return;
     const sourceDay = program.weeks.flatMap((w) => w.days).find((d) => d.id === focus.dayId);
@@ -531,7 +637,7 @@ export default function ProgramCalendarBuilder({
 
       {activeWeekData && (
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-          <div className="mb-3 flex items-baseline justify-between">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="font-semibold">
               Week {activeWeekData.weekNumber}
               <span className="ml-2 text-sm font-normal text-[var(--muted)]">
@@ -540,6 +646,28 @@ export default function ProgramCalendarBuilder({
                 )}
               </span>
             </h2>
+            <div className="flex flex-wrap gap-2">
+              {activeWeekData.weekNumber > 1 && (
+                <button
+                  type="button"
+                  className="btn-ghost text-xs"
+                  disabled={saving}
+                  onClick={() => void copyWeekToThisWeek()}
+                >
+                  Copy from week {activeWeekData.weekNumber - 1}
+                </button>
+              )}
+              {activeWeekData.weekNumber === 1 && program.durationWeeks > 1 && (
+                <button
+                  type="button"
+                  className="btn-ghost text-xs"
+                  disabled={saving}
+                  onClick={() => void copyWeekToRemaining(1)}
+                >
+                  Copy to all remaining weeks
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">

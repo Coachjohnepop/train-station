@@ -17,8 +17,10 @@ Hey Jeremy — **step 2 is live** on the real site:
 4. Do Tue–Sun; use **+Home** when you need a home version
 
 **Copy the week**
-- Week 2 → **Copy to this week** (each day gets its own copy — editing Week 2 won’t mess up Week 1)
-- Week 1 → **Copy to all remaining** (fills the rest of the program)
+- Week 2 → **Copy from week 1** (top of the week card — each day gets its own copy)
+- Week 1 → **Copy to all remaining weeks** (fills weeks 3–4+)
+
+Full step-by-step: `JEREMY_CALENDAR_BUILDER_TEST.md`
 
 **Pass:** Week 2 matches Week 1, but change reps on Week 2 Monday only → Week 1 Monday stays the same.
 
