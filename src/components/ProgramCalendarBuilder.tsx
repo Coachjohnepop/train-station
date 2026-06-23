@@ -96,6 +96,11 @@ export default function ProgramCalendarBuilder({
   const [showDuplicate, setShowDuplicate] = useState(false);
   const [duplicateTargets, setDuplicateTargets] = useState<Set<string>>(new Set());
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [selectedSlotIdx, setSelectedSlotIdx] = useState<number | null>(null);
+  const [checkedSlots, setCheckedSlots] = useState<Set<number>>(() => new Set());
+  const [editorSets, setEditorSets] = useState(DEFAULT_DAY_PRESCRIPTION.defaultSets);
+  const [editorReps, setEditorReps] = useState(DEFAULT_DAY_PRESCRIPTION.defaultReps);
+  const [editorRest, setEditorRest] = useState(DEFAULT_DAY_PRESCRIPTION.defaultRestSec);
 
   const startMonday = useMemo(
     () => resolveProgramStartMonday(program.startDate),
@@ -238,12 +243,30 @@ export default function ProgramCalendarBuilder({
     }
   }
 
-  const loadSlots = useCallback(async (workoutId: string) => {
+  function syncEditorFromSlot(slot: SlotItem | null, rx: DayPrescription) {
+    if (slot) {
+      setEditorSets(slot.sets ?? rx.defaultSets);
+      setEditorReps(slot.reps ?? rx.defaultReps);
+      setEditorRest(slot.restSec ?? rx.defaultRestSec);
+    } else {
+      setEditorSets(rx.defaultSets);
+      setEditorReps(rx.defaultReps);
+      setEditorRest(rx.defaultRestSec);
+    }
+  }
+
+  function selectSlot(idx: number, grid: (SlotItem | null)[], rx: DayPrescription) {
+    setSelectedSlotIdx(idx);
+    syncEditorFromSlot(grid[idx], rx);
+  }
+
+  const loadSlots = useCallback(async (workoutId: string, rx?: DayPrescription) => {
     setLoadingSlots(true);
     try {
       const res = await fetch(`/api/workouts/${workoutId}`, { cache: "no-store" });
       if (!res.ok) {
         setSlots(Array(DAY_SLOT_COUNT).fill(null));
+        setSelectedSlotIdx(null);
         return;
       }
       const w = await res.json();
@@ -262,6 +285,11 @@ export default function ProgramCalendarBuilder({
         if (idx < DAY_SLOT_COUNT) grid[idx] = { ...item, sortOrder: idx };
       });
       setSlots(grid);
+      const defaults = rx ?? DEFAULT_DAY_PRESCRIPTION;
+      const firstFilled = grid.findIndex((s) => s !== null);
+      const firstEmpty = grid.findIndex((s) => s === null);
+      const pick = firstFilled >= 0 ? firstFilled : firstEmpty >= 0 ? firstEmpty : 0;
+      selectSlot(pick, grid, defaults);
     } finally {
       setLoadingSlots(false);
     }
@@ -288,6 +316,7 @@ export default function ProgramCalendarBuilder({
 
     const rx = readDayPrescription(day);
     setPrescription(rx);
+    setCheckedSlots(new Set());
     setFocus({
       dayId: day.id,
       optIdx,
@@ -299,7 +328,119 @@ export default function ProgramCalendarBuilder({
     setExpandedDays((prev) => new Set(prev).add(day.id));
 
     await seedWarmups(workoutId, rx);
-    await loadSlots(workoutId);
+    await loadSlots(workoutId, rx);
+  }
+
+  async function patchExerciseItem(
+    itemId: string,
+    data: { sets?: number; reps?: string; restSec?: number },
+  ) {
+    if (!focus) return false;
+    const res = await fetch(`/api/workouts/${focus.workoutId}/exercises`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ itemId, ...data }),
+    });
+    return res.ok;
+  }
+
+  async function saveSelectedSlot() {
+    if (!focus || selectedSlotIdx === null) return;
+    const slot = slots[selectedSlotIdx];
+
+    setSaving(true);
+    try {
+      if (!slot) {
+        await patchDay(focus.dayId, {
+          defaultSets: editorSets,
+          defaultReps: editorReps,
+          defaultRestSec: editorRest,
+        });
+        setPrescription({
+          defaultSets: editorSets,
+          defaultReps: editorReps,
+          defaultRestSec: editorRest,
+        });
+        return;
+      }
+
+      const ok = await patchExerciseItem(slot.id, {
+        sets: editorSets,
+        reps: editorReps,
+        restSec: editorRest,
+      });
+      if (ok) {
+        setSlots((prev) => {
+          const next = [...prev];
+          const current = next[selectedSlotIdx];
+          if (current) {
+            next[selectedSlotIdx] = {
+              ...current,
+              sets: editorSets,
+              reps: editorReps,
+              restSec: editorRest,
+            };
+          }
+          return next;
+        });
+      } else {
+        setMessage("Could not save exercise.");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function toggleSlotChecked(idx: number, checked: boolean) {
+    setCheckedSlots((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(idx);
+      else next.delete(idx);
+      return next;
+    });
+  }
+
+  async function applyToChecked() {
+    if (!focus || checkedSlots.size === 0) return;
+    setSaving(true);
+    try {
+      await patchDay(focus.dayId, {
+        defaultSets: editorSets,
+        defaultReps: editorReps,
+        defaultRestSec: editorRest,
+      });
+      setPrescription({
+        defaultSets: editorSets,
+        defaultReps: editorReps,
+        defaultRestSec: editorRest,
+      });
+
+      let applied = 0;
+      for (const idx of checkedSlots) {
+        const slot = slots[idx];
+        if (!slot) continue;
+        const ok = await patchExerciseItem(slot.id, {
+          sets: editorSets,
+          reps: editorReps,
+          restSec: editorRest,
+        });
+        if (ok) applied++;
+      }
+
+      await loadSlots(focus.workoutId, {
+        defaultSets: editorSets,
+        defaultReps: editorReps,
+        defaultRestSec: editorRest,
+      });
+      setMessage(
+        applied > 0 ? `Applied to ${applied} checked exercise(s).` : "Nothing to apply.",
+      );
+      setTimeout(() => setMessage(null), 2000);
+    } catch {
+      setMessage("Save failed.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function selectDay(day: ProgramDay, week: ProgramWeek) {
@@ -318,10 +459,10 @@ export default function ProgramCalendarBuilder({
         exerciseId,
         setScheme: "standard",
         repPattern: null,
-        reps: prescription.defaultReps,
-        sets: prescription.defaultSets,
+        reps: editorReps,
+        sets: editorSets,
         weightTier: "medium",
-        restSec: prescription.defaultRestSec,
+        restSec: editorRest,
         notes: null,
       }),
     });
@@ -338,7 +479,7 @@ export default function ProgramCalendarBuilder({
         body: JSON.stringify({ itemId: created.id, sortOrder: slotIndex }),
       });
     }
-    await loadSlots(focus.workoutId);
+    await loadSlots(focus.workoutId, prescription);
   }
 
   async function removeSlot(itemId: string) {
@@ -349,7 +490,15 @@ export default function ProgramCalendarBuilder({
       { method: "DELETE" },
     );
     setSaving(false);
-    await loadSlots(focus.workoutId);
+    const idx = slots.findIndex((s) => s?.id === itemId);
+    if (idx >= 0) {
+      setCheckedSlots((prev) => {
+        const next = new Set(prev);
+        next.delete(idx);
+        return next;
+      });
+    }
+    await loadSlots(focus.workoutId, prescription);
   }
 
   async function swapSlot(itemId: string, newExerciseId: string) {
@@ -366,39 +515,7 @@ export default function ProgramCalendarBuilder({
         restSec: slot?.restSec || prescription.defaultRestSec,
       }),
     });
-    await loadSlots(focus.workoutId);
-  }
-
-  async function applyPrescriptionToDay() {
-    if (!focus) return;
-    setSaving(true);
-    try {
-      await patchDay(focus.dayId, {
-        defaultSets: prescription.defaultSets,
-        defaultReps: prescription.defaultReps,
-        defaultRestSec: prescription.defaultRestSec,
-      });
-      for (const slot of slots) {
-        if (!slot) continue;
-        await fetch(`/api/workouts/${focus.workoutId}/exercises`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            itemId: slot.id,
-            sets: prescription.defaultSets,
-            reps: prescription.defaultReps,
-            restSec: prescription.defaultRestSec,
-          }),
-        });
-      }
-      await loadSlots(focus.workoutId);
-      setMessage("Day prescription applied to all exercises.");
-      setTimeout(() => setMessage(null), 2000);
-    } catch {
-      setMessage("Save failed.");
-    } finally {
-      setSaving(false);
-    }
+    await loadSlots(focus.workoutId, prescription);
   }
 
   async function publishDay() {
@@ -601,15 +718,13 @@ export default function ProgramCalendarBuilder({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-        <p className="text-[var(--muted)]">
-          Week view anchored to real dates — always starts Monday. Today sessions unchanged.
-        </p>
-        <div className="flex gap-2">
-          <Link href="/admin/exercises" className="btn-ghost text-xs">
-            Exercise library
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--muted)]">
+        <span>Mon-anchored calendar · Today/SMS unchanged</span>
+        <div className="flex gap-1">
+          <Link href="/admin/exercises" className="btn-ghost px-2 py-0.5 text-[10px]">
+            Library
           </Link>
-          <button type="button" className="btn-ghost text-xs" onClick={() => void sync()}>
+          <button type="button" className="btn-ghost px-2 py-0.5 text-[10px]" onClick={() => void sync()}>
             Refresh
           </button>
         </div>
@@ -718,44 +833,46 @@ export default function ProgramCalendarBuilder({
       )}
 
       {focus && focusDay && (
-        <div className="space-y-4 rounded-xl border border-accent/25 bg-[var(--surface)] p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-semibold">
+        <div className="space-y-2 rounded-lg border border-accent/25 bg-[var(--surface)] p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold">
                 {DAY_LABELS[focus.dayNumber - 1]}{" "}
-                {formatShortDate(
-                  focusDay.calendarDate ||
-                    calendarDateForProgramDay(startMonday, focus.weekNumber, focus.dayNumber),
-                )}
+                <span className="font-normal text-[var(--muted)]">
+                  {formatShortDate(
+                    focusDay.calendarDate ||
+                      calendarDateForProgramDay(startMonday, focus.weekNumber, focus.dayNumber),
+                  )}
+                </span>
+                <span className="ml-1 text-xs text-violet-300">· {focus.label}</span>
               </h3>
-              <p className="text-sm text-[var(--muted)]">Workout editor — sets/reps/rest apply at day level</p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex shrink-0 gap-1.5">
               <button
                 type="button"
-                className="btn-primary text-sm"
+                className="btn-primary px-2 py-1 text-xs"
                 disabled={saving}
                 onClick={() => void publishDay()}
               >
-                Finish &amp; publish
+                Publish
               </button>
               <button
                 type="button"
-                className="btn-ghost text-sm"
+                className="btn-ghost px-2 py-1 text-xs"
                 disabled={saving}
                 onClick={() => setShowDuplicate(true)}
               >
-                Duplicate to other days…
+                Duplicate…
               </button>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1">
             {getDayOptions(focusDay).map((opt, idx) => (
               <button
                 key={idx}
                 type="button"
-                className={`rounded-full px-3 py-1 text-xs font-medium ${
+                className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
                   focus.optIdx === idx
                     ? "bg-violet-600/30 text-violet-100 ring-1 ring-violet-400/50"
                     : "bg-[var(--surface-2)] text-[var(--muted)]"
@@ -767,119 +884,151 @@ export default function ProgramCalendarBuilder({
             ))}
             <button
               type="button"
-              className="rounded-full px-3 py-1 text-xs text-accent hover:bg-accent/10"
+              className="rounded-full px-2 py-0.5 text-[10px] text-accent hover:bg-accent/10"
               onClick={() => void addCustomOption(focus.dayId)}
             >
-              + Add setting
+              + setting
             </button>
           </div>
 
-          <div className="flex flex-wrap items-end gap-3 rounded-lg bg-[var(--surface-2)] p-3">
-            <label className="text-xs">
+          <div className="flex flex-wrap items-end gap-2 rounded-md bg-[var(--surface-2)] px-2 py-1.5">
+            <p className="mr-1 max-w-[140px] truncate text-[10px] text-[var(--muted)]">
+              {selectedSlotIdx !== null && slots[selectedSlotIdx]
+                ? slots[selectedSlotIdx]!.name
+                : "Select exercise"}
+            </p>
+            <label className="text-[10px]">
               Sets
               <input
                 type="number"
-                className="input mt-1 w-16"
-                value={prescription.defaultSets}
-                onChange={(e) =>
-                  setPrescription((p) => ({
-                    ...p,
-                    defaultSets: parseInt(e.target.value, 10) || 1,
-                  }))
-                }
+                min={1}
+                max={20}
+                className="input mt-0.5 h-7 w-12 px-1 text-xs"
+                value={editorSets}
+                disabled={selectedSlotIdx === null}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10);
+                  if (!Number.isNaN(v)) setEditorSets(Math.max(1, v));
+                }}
+                onBlur={() => void saveSelectedSlot()}
               />
             </label>
-            <label className="text-xs">
+            <label className="text-[10px]">
               Reps
               <input
-                className="input mt-1 w-20"
-                value={prescription.defaultReps}
-                onChange={(e) => setPrescription((p) => ({ ...p, defaultReps: e.target.value }))}
+                className="input mt-0.5 h-7 w-14 px-1 text-xs"
+                value={editorReps}
+                disabled={selectedSlotIdx === null}
+                onChange={(e) => setEditorReps(e.target.value)}
+                onBlur={() => void saveSelectedSlot()}
               />
             </label>
-            <label className="text-xs">
-              Rest (sec)
+            <label className="text-[10px]">
+              Rest
               <input
                 type="number"
-                className="input mt-1 w-20"
-                value={prescription.defaultRestSec}
-                onChange={(e) =>
-                  setPrescription((p) => ({
-                    ...p,
-                    defaultRestSec: parseInt(e.target.value, 10) || 0,
-                  }))
-                }
+                min={0}
+                max={600}
+                className="input mt-0.5 h-7 w-12 px-1 text-xs"
+                value={editorRest}
+                disabled={selectedSlotIdx === null}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10);
+                  if (!Number.isNaN(v)) setEditorRest(Math.max(0, v));
+                }}
+                onBlur={() => void saveSelectedSlot()}
               />
             </label>
             <button
               type="button"
-              className="btn-ghost text-xs"
-              disabled={saving}
-              onClick={() => void applyPrescriptionToDay()}
+              className="btn-ghost h-7 px-2 text-[10px]"
+              disabled={saving || checkedSlots.size === 0}
+              onClick={() => void applyToChecked()}
             >
-              Apply to all exercises
+              Apply to checked ({checkedSlots.size})
             </button>
           </div>
 
           {loadingSlots ? (
-            <p className="text-sm text-[var(--muted)]">Loading exercises…</p>
+            <p className="text-xs text-[var(--muted)]">Loading…</p>
           ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {slots.map((slot, idx) => (
-                <div
-                  key={idx}
-                  className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3"
-                >
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
-                    Slot {idx + 1}
-                  </p>
-                  {slot ? (
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">{slot.name}</p>
-                      <p className="text-xs text-[var(--muted)]">
-                        {slot.sets ?? prescription.defaultSets} × {slot.reps ?? prescription.defaultReps}
-                        {slot.restSec != null ? ` · ${slot.restSec}s rest` : ""}
-                      </p>
-                      <SearchableExerciseSelect
-                        library={library}
-                        value=""
-                        placeholder="Substitute…"
-                        disabled={saving}
-                        onChange={(id) => void swapSlot(slot.id, id)}
-                      />
-                      <button
-                        type="button"
-                        className="text-xs text-[var(--danger)]"
-                        onClick={() => void removeSlot(slot.id)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ) : (
-                    <SearchableExerciseSelect
-                      library={library}
-                      value=""
-                      placeholder="Search library…"
-                      disabled={saving}
-                      onChange={(id) => void assignSlot(idx, id)}
-                    />
-                  )}
-                </div>
-              ))}
+            <div className="space-y-1">
+              {slots.map((slot, idx) => {
+                const isSelected = selectedSlotIdx === idx;
+                const isChecked = checkedSlots.has(idx);
+                return (
+                  <div
+                    key={idx}
+                    className={`flex items-center gap-2 rounded-md border px-2 py-1.5 transition ${
+                      isSelected
+                        ? "border-accent bg-accent/10"
+                        : "border-[var(--border)] bg-[var(--surface-2)] hover:border-accent/30"
+                    }`}
+                  >
+                    {slot ? (
+                      <>
+                        <input
+                          type="checkbox"
+                          className="h-3.5 w-3.5 shrink-0"
+                          checked={isChecked}
+                          onChange={(e) => toggleSlotChecked(idx, e.target.checked)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 text-left"
+                          onClick={() => selectSlot(idx, slots, prescription)}
+                        >
+                          <span className="block truncate text-xs font-medium">{slot.name}</span>
+                          <span className="text-[10px] text-[var(--muted)]">
+                            {slot.sets ?? editorSets} × {slot.reps ?? editorReps}
+                            {slot.restSec != null ? ` · ${slot.restSec}s` : ""}
+                          </span>
+                        </button>
+                        <div className="w-28 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <SearchableExerciseSelect
+                            library={library}
+                            value=""
+                            placeholder="Swap"
+                            disabled={saving}
+                            onChange={(id) => void swapSlot(slot.id, id)}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="shrink-0 text-[10px] text-[var(--danger)]"
+                          onClick={() => void removeSlot(slot.id)}
+                        >
+                          ×
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="w-3.5 shrink-0" />
+                        <div
+                          className="min-w-0 flex-1"
+                          onClick={() => selectSlot(idx, slots, prescription)}
+                        >
+                          <SearchableExerciseSelect
+                            library={library}
+                            value=""
+                            placeholder={`+ exercise ${idx + 1}`}
+                            disabled={saving}
+                            onChange={(id) => void assignSlot(idx, id)}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
-
-          <p className="text-xs text-[var(--muted)]">
-            New days auto-add Upper body warm up and Shoulder mobility warm. Add up to 9 exercises per
-            setting; use Duplicate to fill the rest of the month.
-          </p>
         </div>
       )}
 
       {!focus && (
-        <p className="text-sm text-[var(--muted)]">
-          Click a day square above to open the workout editor. Gym and Home settings are created automatically.
-        </p>
+        <p className="text-xs text-[var(--muted)]">Click a day to edit.</p>
       )}
 
       {showDuplicate && focus && (
