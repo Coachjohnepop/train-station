@@ -123,12 +123,10 @@ export async function mutateDemoSeed(
   opts?: { preferFresh?: boolean },
 ): Promise<{ data: DemoSeedData; blobSaved: boolean }> {
   const preferFresh = opts?.preferFresh ?? isBlobConfigured();
-  const local = memorySeed;
-  const fresh = structuredClone(await hydrateDemoSeed({ preferFresh })) as DemoSeedData;
-  const data =
-    local && isBlobConfigured()
-      ? mergeDemoSeed(fresh, structuredClone(local) as DemoSeedData)
-      : fresh;
+  // Always mutate from latest blob/disk — not stale lambda memory overlay.
+  const data = structuredClone(
+    await hydrateDemoSeed({ preferFresh: preferFresh || isBlobConfigured() }),
+  ) as DemoSeedData;
   mutator(data);
 
   // Re-merge latest workouts/exercises before write so concurrent clone/create writes survive,

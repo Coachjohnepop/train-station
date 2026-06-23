@@ -65,7 +65,7 @@ export async function PATCH(request: Request, { params }: Params) {
   if (isDemoMode()) {
     let notFound = false;
     let expectedWorkoutIds: string[] = [];
-    const { blobSaved } = await mutateDemoSeed((data) => {
+    const { blobSaved, data: persistedData } = await mutateDemoSeed((data) => {
       const days = (data.programDays as any[]) || [];
       const dayIdx = days.findIndex((d) => d.id === dayId);
       if (dayIdx === -1) {
@@ -151,28 +151,38 @@ export async function PATCH(request: Request, { params }: Params) {
       return NextResponse.json({ detail: msg }, { status: 503 });
     }
 
-    if (expectedWorkoutIds.length > 0) {
-      for (let attempt = 0; attempt < 4; attempt++) {
-        const seed = await getDemoSeed({ preferFresh: Boolean(BLOB_TOKEN) });
-        const day = ((seed.programDays as any[]) || []).find((d) => d.id === dayId);
-        const optionIds = ((seed.programDayOptions as any[]) || [])
-          .filter((o) => o.dayId === dayId)
-          .map((o) => o.workoutId);
-        const matches =
-          day?.workoutId === expectedWorkoutIds[0] &&
-          expectedWorkoutIds.every((id) => optionIds.includes(id));
-        if (matches) break;
-        if (attempt >= 3) {
-          return NextResponse.json(
-            { detail: "Day updated but cloud save failed — retry in a moment." },
-            { status: 503 },
-          );
+    const verifyFromSeed = (seed: Record<string, unknown>) => {
+      const day = ((seed.programDays as any[]) || []).find((d) => d.id === dayId);
+      const optionIds = ((seed.programDayOptions as any[]) || [])
+        .filter((o) => o.dayId === dayId)
+        .map((o) => o.workoutId);
+      return (
+        day?.workoutId === expectedWorkoutIds[0] &&
+        expectedWorkoutIds.every((id) => optionIds.includes(id))
+      );
+    };
+
+    let responseSeed: Record<string, unknown> = persistedData as Record<string, unknown>;
+    if (expectedWorkoutIds.length > 0 && !verifyFromSeed(responseSeed)) {
+      let verified = false;
+      for (let attempt = 0; attempt < 8; attempt++) {
+        const seed = await getDemoSeed({ preferFresh: true });
+        if (verifyFromSeed(seed as Record<string, unknown>)) {
+          responseSeed = seed as Record<string, unknown>;
+          verified = true;
+          break;
         }
-        await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+        await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+      }
+      if (!verified) {
+        return NextResponse.json(
+          { detail: "Day updated but cloud save failed — retry in a moment." },
+          { status: 503 },
+        );
       }
     }
 
-    const data = await getDemoSeed({ preferFresh: Boolean(BLOB_TOKEN) });
+    const data = responseSeed;
     const response = resolveDayResponse(data, dayId);
     if (!response) {
       return NextResponse.json({ detail: "Day not found" }, { status: 404 });

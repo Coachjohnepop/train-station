@@ -253,7 +253,7 @@ async function testCalendarMath() {
   }
 
   // Admin Member view URL must match Chad redirect workoutId (when no SMS)
-  const gymOpt = sync.body?.weeks
+  const gymOpt = body?.weeks
     ?.flatMap((w) => w.days || [])
     .find((d) => d.calendarDate === TODAY)
     ?.options?.find((o) => /gym/i.test(o.label || ""));
