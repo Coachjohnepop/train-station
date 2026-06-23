@@ -11,6 +11,7 @@ import { getUserEnrollments, getUserEnrollmentsAsArray } from "@/lib/data/user-d
 import { getDemoWorkoutLogCount, getDemoStrengthScore, computeStrengthScoreFromPerfs } from "@/lib/demo-logs";
 import { getDemoUserSettings } from "@/lib/demo-reminders";
 import { getCurrentUser, resolveUserId, getCurrentUserName } from "@/lib/current-user";
+import { resolveDemoUser } from "@/lib/demo-user-directory";
 
 export async function getMemberDashboard() {
   const programs = filterMemberCatalogPrograms(await listPrograms());
@@ -20,11 +21,11 @@ export async function getMemberDashboard() {
   const uid = await resolveUserId();
   const displayName = current?.name || (await getCurrentUserName()) || "Member";
 
-  // User identity for the shell + dashboard (real when cookie + DB, synthetic or demo otherwise)
-  const effectiveUser = current || {
+  const demoEntry = resolveDemoUser(uid);
+  const effectiveUser = {
     id: uid,
     name: displayName,
-    email: DEMO_MEMBER_EMAIL,
+    email: current?.email || demoEntry?.email || DEMO_MEMBER_EMAIL,
   };
 
   let mockEnrollments: any[] = [];

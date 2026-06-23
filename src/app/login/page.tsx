@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import EmailInput, { rememberEmail } from "@/components/EmailInput";
+import { getLastEmail } from "@/lib/email-history";
 
 function LoginForm() {
   const router = useRouter();
@@ -18,11 +19,15 @@ function LoginForm() {
   useEffect(() => {
     if (prefillEmail) return;
     let cancelled = false;
+    const localLast = getLastEmail();
+    if (localLast) setEmail(localLast);
+
     fetch("/api/auth/remembered-email", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data: { email?: string | null } | null) => {
         if (cancelled || !data?.email) return;
-        setEmail((prev) => (prev.trim() ? prev : data.email!));
+        setEmail(data.email!);
+        rememberEmail(data.email!);
       })
       .catch(() => {});
     return () => {
@@ -85,7 +90,7 @@ function LoginForm() {
               value={email}
               onChange={setEmail}
               placeholder="you@thetrainstation.co"
-              prefillFromHistory={!prefillEmail}
+              prefillFromHistory={false}
             />
           </div>
 
