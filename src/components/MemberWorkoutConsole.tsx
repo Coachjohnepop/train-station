@@ -86,7 +86,7 @@ export default function MemberWorkoutConsole({
   const [coachLive, setCoachLive] = useState(false);
   const [partnerLive, setPartnerLive] = useState(false);
 
-  const LIVE_POLL_MS = 600;
+  const LIVE_POLL_MS = 200;
   const liveSyncEnabled = !!liveSyncUserId && !reviewMode;
   const lastAppliedRevision = useRef(0);
   const lastAppliedRemoteAt = useRef<string | null>(null);
@@ -184,10 +184,10 @@ export default function MemberWorkoutConsole({
       });
       if (!res.ok) return;
       const data = await res.json();
+      if (data.session) applyRemoteSession(data.session);
       const rev = data.session?.revision;
       if (typeof rev === "number") {
         lastPushedRevision.current = rev;
-        lastAppliedRevision.current = Math.max(lastAppliedRevision.current, rev);
       }
     });
 
@@ -199,6 +199,7 @@ export default function MemberWorkoutConsole({
     instructorName,
     workout.workoutId,
     serializeCompletedSets,
+    applyRemoteSession,
   ]);
 
   const queueLiveSave = useCallback(
@@ -249,35 +250,57 @@ export default function MemberWorkoutConsole({
     queueLiveSave,
   ]);
 
-  // Both sides poll for partner checkoffs (~600ms when tab is visible).
+  // Live push via SSE (in-memory hot cache) + fast poll fallback for other instances.
   useEffect(() => {
     if (!liveSyncEnabled) return;
 
-    const load = async () => {
+    const q = new URLSearchParams({ userId: liveSyncUserId! });
+    if (liveSessionDate) q.set("date", liveSessionDate);
+    const query = q.toString();
+
+    const poll = async () => {
       if (document.visibilityState === "hidden") return;
       try {
-        const q = new URLSearchParams({ userId: liveSyncUserId! });
-        if (liveSessionDate) q.set("date", liveSessionDate);
         const res = await fetch(
-          `/api/workouts/${workout.workoutId}/live-session?${q.toString()}`,
+          `/api/workouts/${workout.workoutId}/live-session?${query}`,
           { cache: "no-store" },
         );
         if (!res.ok) return;
         const data = await res.json();
         if (data.session) applyRemoteSession(data.session);
       } catch {
-        // ignore
+        /* ignore */
       }
     };
 
-    void load();
-    const id = setInterval(load, LIVE_POLL_MS);
+    void poll();
+
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource(
+        `/api/workouts/${workout.workoutId}/live-session/stream?${query}`,
+      );
+      es.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data) as { session?: Parameters<typeof applyRemoteSession>[0] };
+          if (data.session) applyRemoteSession(data.session);
+        } catch {
+          /* ignore */
+        }
+      };
+    } catch {
+      /* EventSource unavailable */
+    }
+
+    const pollId = setInterval(poll, LIVE_POLL_MS);
     const onVisible = () => {
-      if (document.visibilityState === "visible") void load();
+      if (document.visibilityState === "visible") void poll();
     };
     document.addEventListener("visibilitychange", onVisible);
+
     return () => {
-      clearInterval(id);
+      es?.close();
+      clearInterval(pollId);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [
@@ -481,7 +504,7 @@ export default function MemberWorkoutConsole({
       </p>
       {coachLive && !instructorName && (
         <p className="mt-2 text-xs font-medium text-[var(--success)]">
-          Coach is marking your workout live — updates appear in under a second.
+          Coach is marking your workout live — updates appear almost instantly.
         </p>
       )}
       {partnerLive && instructorName && (

@@ -1,6 +1,7 @@
 import path from "path";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
 import { localTodayIso } from "@/lib/program-calendar";
+import { getHotLiveSession, setHotLiveSession } from "@/lib/live-session-hot";
 
 export type LiveWorkoutSession = {
   userId: string;
@@ -59,6 +60,7 @@ function mergeCompletedSets(
 }
 
 function mergeFinishedExercises(existing: string[], incoming: string[]): string[] {
+  if (incoming.length < existing.length) return incoming;
   return Array.from(new Set([...existing, ...incoming]));
 }
 
@@ -73,14 +75,32 @@ async function loadStore(preferFresh = false): Promise<LiveSessionStore> {
   });
 }
 
+async function persistSessionToBlob(session: LiveWorkoutSession): Promise<boolean> {
+  const key = liveSessionKey(session.userId, session.workoutId, session.sessionDate);
+  const store = await loadStore(true);
+  store.sessions[key] = session;
+  const { blobSaved } = await persistJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    data: store,
+    setMemory,
+  });
+  return blobSaved;
+}
+
 export async function getLiveWorkoutSession(input: {
   userId: string;
   workoutId: string;
   sessionDate?: string;
 }): Promise<LiveWorkoutSession | null> {
-  const store = await loadStore(true);
   const key = liveSessionKey(input.userId, input.workoutId, input.sessionDate);
-  return store.sessions[key] ?? null;
+  const hot = getHotLiveSession(key);
+  if (hot) return hot;
+
+  const store = await loadStore(true);
+  const session = store.sessions[key] ?? null;
+  if (session) setHotLiveSession(key, session);
+  return session;
 }
 
 export async function upsertLiveWorkoutSession(input: {
@@ -93,10 +113,14 @@ export async function upsertLiveWorkoutSession(input: {
   activeId?: string;
   updatedBy: "coach" | "member";
 }): Promise<{ session: LiveWorkoutSession; blobSaved: boolean }> {
-  const store = await loadStore(true);
   const sessionDate = normalizeLiveSessionDate(input.sessionDate);
   const key = liveSessionKey(input.userId, input.workoutId, sessionDate);
-  const existing = store.sessions[key];
+  let existing = getHotLiveSession(key);
+  if (!existing) {
+    const store = await loadStore(true);
+    existing = store.sessions[key] ?? null;
+    if (existing) setHotLiveSession(key, existing);
+  }
   const session: LiveWorkoutSession = {
     userId: input.userId,
     workoutId: input.workoutId,
@@ -112,14 +136,14 @@ export async function upsertLiveWorkoutSession(input: {
     updatedBy: input.updatedBy,
     revision: (existing?.revision ?? 0) + 1,
   };
-  store.sessions[key] = session;
-  const { blobSaved } = await persistJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    data: store,
-    setMemory,
+
+  setHotLiveSession(key, session);
+
+  void persistSessionToBlob(session).catch((err) => {
+    console.warn("live session blob persist failed", err);
   });
-  return { session, blobSaved };
+
+  return { session, blobSaved: true };
 }
 
 export async function clearLiveWorkoutSession(input: {
@@ -127,8 +151,10 @@ export async function clearLiveWorkoutSession(input: {
   workoutId: string;
   sessionDate?: string;
 }): Promise<void> {
-  const store = await loadStore(true);
   const key = liveSessionKey(input.userId, input.workoutId, input.sessionDate);
+  setHotLiveSession(key, null);
+
+  const store = await loadStore(true);
   if (!store.sessions[key]) return;
   delete store.sessions[key];
   await persistJsonStore({
