@@ -127,6 +127,28 @@ export function normalizeDayOptions(options: DayOptionLike[]): DayOptionLike[] {
 
 export const DAY_SLOT_COUNT = 9;
 
+/** Two ~30-minute blocks when building a session (5 slots + 4 slots). */
+export const DAY_TIME_BLOCK_MINUTES = 30;
+export const DAY_TIME_BLOCK_COUNT = 2;
+
+export function slotsPerTimeColumn(): number {
+  return Math.ceil(DAY_SLOT_COUNT / DAY_TIME_BLOCK_COUNT);
+}
+
+export function slotIndicesForTimeColumn(column: number): number[] {
+  const perCol = slotsPerTimeColumn();
+  const start = column * perCol;
+  return Array.from(
+    { length: Math.min(perCol, DAY_SLOT_COUNT - start) },
+    (_, i) => start + i,
+  );
+}
+
+export function timeBlockLabel(column: number): string {
+  const start = column * DAY_TIME_BLOCK_MINUTES;
+  return `${start}–${start + DAY_TIME_BLOCK_MINUTES} min`;
+}
+
 export const WARMUP_EXERCISE_NAMES = [
   "Upper body warm up",
   "Shoulder mobility warm",

@@ -15,7 +15,10 @@ import {
   formatShortDate,
   normalizeDayOptions,
   resolveProgramStartMonday,
+  slotIndicesForTimeColumn,
+  timeBlockLabel,
   toIsoDate,
+  DAY_TIME_BLOCK_COUNT,
   WARMUP_EXERCISE_NAMES,
 } from "@/lib/program-calendar";
 import {
@@ -735,6 +738,75 @@ export default function ProgramCalendarBuilder({
 
   const monthDayCells = daysInMonth(duplicateMonth.year, duplicateMonth.month);
 
+  function renderExerciseSlot(idx: number) {
+    const slot = slots[idx];
+    const isSelected = selectedSlotIdx === idx;
+    const isChecked = checkedSlots.has(idx);
+
+    return (
+      <div
+        key={idx}
+        className={`flex items-center gap-1.5 rounded-md border px-2 py-1 transition ${
+          isSelected
+            ? "border-accent bg-accent/10"
+            : "border-[var(--border)] bg-[var(--surface-2)] hover:border-accent/30"
+        }`}
+      >
+        {slot ? (
+          <>
+            <input
+              type="checkbox"
+              className="h-3.5 w-3.5 shrink-0"
+              checked={isChecked}
+              onChange={(e) => toggleSlotChecked(idx, e.target.checked)}
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              type="button"
+              className="min-w-0 flex-1 text-left"
+              onClick={() => selectSlot(idx, slots, prescription)}
+            >
+              <span className="block truncate text-xs font-medium">{slot.name}</span>
+              <span className="text-[10px] text-[var(--muted)]">
+                {slot.sets ?? editorSets} × {slot.reps ?? editorReps}
+                {slot.restSec != null ? ` · ${slot.restSec}s` : ""}
+              </span>
+            </button>
+            <div className="w-24 shrink-0" onClick={(e) => e.stopPropagation()}>
+              <SearchableExerciseSelect
+                library={library}
+                value=""
+                placeholder="Swap"
+                disabled={saving}
+                onChange={(id) => void swapSlot(slot.id, id)}
+              />
+            </div>
+            <button
+              type="button"
+              className="shrink-0 text-[10px] text-[var(--danger)]"
+              onClick={() => void removeSlot(slot.id)}
+            >
+              ×
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="w-3.5 shrink-0" />
+            <div className="min-w-0 flex-1" onClick={() => selectSlot(idx, slots, prescription)}>
+              <SearchableExerciseSelect
+                library={library}
+                value=""
+                placeholder={`+ slot ${idx + 1}`}
+                disabled={saving}
+                onChange={(id) => void assignSlot(idx, id)}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--muted)]">
@@ -971,76 +1043,15 @@ export default function ProgramCalendarBuilder({
           {loadingSlots ? (
             <p className="text-xs text-[var(--muted)]">Loading…</p>
           ) : (
-            <div className="space-y-1">
-              {slots.map((slot, idx) => {
-                const isSelected = selectedSlotIdx === idx;
-                const isChecked = checkedSlots.has(idx);
-                return (
-                  <div
-                    key={idx}
-                    className={`flex items-center gap-2 rounded-md border px-2 py-1.5 transition ${
-                      isSelected
-                        ? "border-accent bg-accent/10"
-                        : "border-[var(--border)] bg-[var(--surface-2)] hover:border-accent/30"
-                    }`}
-                  >
-                    {slot ? (
-                      <>
-                        <input
-                          type="checkbox"
-                          className="h-3.5 w-3.5 shrink-0"
-                          checked={isChecked}
-                          onChange={(e) => toggleSlotChecked(idx, e.target.checked)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <button
-                          type="button"
-                          className="min-w-0 flex-1 text-left"
-                          onClick={() => selectSlot(idx, slots, prescription)}
-                        >
-                          <span className="block truncate text-xs font-medium">{slot.name}</span>
-                          <span className="text-[10px] text-[var(--muted)]">
-                            {slot.sets ?? editorSets} × {slot.reps ?? editorReps}
-                            {slot.restSec != null ? ` · ${slot.restSec}s` : ""}
-                          </span>
-                        </button>
-                        <div className="w-28 shrink-0" onClick={(e) => e.stopPropagation()}>
-                          <SearchableExerciseSelect
-                            library={library}
-                            value=""
-                            placeholder="Swap"
-                            disabled={saving}
-                            onChange={(id) => void swapSlot(slot.id, id)}
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          className="shrink-0 text-[10px] text-[var(--danger)]"
-                          onClick={() => void removeSlot(slot.id)}
-                        >
-                          ×
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <span className="w-3.5 shrink-0" />
-                        <div
-                          className="min-w-0 flex-1"
-                          onClick={() => selectSlot(idx, slots, prescription)}
-                        >
-                          <SearchableExerciseSelect
-                            library={library}
-                            value=""
-                            placeholder={`+ exercise ${idx + 1}`}
-                            disabled={saving}
-                            onChange={(id) => void assignSlot(idx, id)}
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {Array.from({ length: DAY_TIME_BLOCK_COUNT }, (_, col) => (
+                <div key={col} className="space-y-1">
+                  <p className="border-b border-[var(--border)] pb-1 text-[10px] font-semibold uppercase tracking-wide text-accent/80">
+                    {timeBlockLabel(col)}
+                  </p>
+                  {slotIndicesForTimeColumn(col).map((idx) => renderExerciseSlot(idx))}
+                </div>
+              ))}
             </div>
           )}
         </div>
