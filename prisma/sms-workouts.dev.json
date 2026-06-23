@@ -153,6 +153,13 @@
       "description": "Generated from coach SMS",
       "source": "sms",
       "createdAt": "2026-06-15T03:46:27.165Z"
+    },
+    {
+      "id": "sms-w-9756afcd",
+      "name": "Coach SMS Workout",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-06-23T12:18:05.728Z"
     }
   ],
   "workoutExercises": [
@@ -1265,6 +1272,61 @@
       "reps": "—",
       "notes": "12,12 each leg",
       "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-e04dfcf3",
+      "workoutId": "sms-w-9756afcd",
+      "exerciseId": "cmpzjajej000095rzilwd9n9k",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "—",
+      "notes": "QA QA-SMOKE-1782217081903\nSo isolation/Core work\nWarm up well 5 min bike · Warm-up block",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-1baf3230",
+      "workoutId": "sms-w-9756afcd",
+      "exerciseId": "cmpzkkspv002q95rzf6nqlqga",
+      "sortOrder": 1,
+      "sets": 1,
+      "reps": "20",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-b3598bd0",
+      "workoutId": "sms-w-9756afcd",
+      "exerciseId": "cmpzjajfp000695rz8d6nbnvu",
+      "sortOrder": 2,
+      "sets": 4,
+      "reps": "10,10,10,10",
+      "notes": "Each arm",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-32dd8b14",
+      "workoutId": "sms-w-9756afcd",
+      "exerciseId": "cmpzjajgf000895rzkbecuupa",
+      "sortOrder": 3,
+      "sets": 4,
+      "reps": "10,10,10,10",
+      "notes": "Each arm",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-7991686b",
+      "workoutId": "sms-w-9756afcd",
+      "exerciseId": "ex_967839c7d89b41bb8e19dcf3d82df4cf",
+      "sortOrder": 4,
+      "sets": 1,
+      "reps": "5 min",
+      "notes": "30s on / 30s off",
+      "setScheme": "timed",
       "weightTier": "medium"
     }
   ]

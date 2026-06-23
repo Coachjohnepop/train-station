@@ -90,6 +90,20 @@
       "replacesSchedule": true,
       "createdAt": "2026-06-15T03:40:07.383Z",
       "createdBy": "seed-beta"
+    },
+    "today-2026-06-20-d2ac010c": {
+      "id": "today-2026-06-20-d2ac010c",
+      "sessionDate": "2026-06-20",
+      "scheduledAt": "2026-06-20T11:00:00.000Z",
+      "title": "Coach SMS Workout",
+      "rawSms": "QA QA-SMOKE-1782217081903\nSo isolation/Core work\n\nWarm up well 5 min bike\n\nJump squats 20\n\nFlat bench Single arm dumbbell chest press\n10,10,10,10 each arm\n\nIncline bench single arm dumbbell chest press\n10,10,10,10 each arm\n\nHIIT cool down 5 mins\n30 sec on 30 sec off",
+      "workoutId": "sms-w-9756afcd",
+      "programSlug": "adult",
+      "userIds": [
+        "demo-user-john-steph"
+      ],
+      "replacesSchedule": true,
+      "createdAt": "2026-06-23T12:18:05.729Z"
     }
   }
 }
