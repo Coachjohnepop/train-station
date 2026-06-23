@@ -45,11 +45,17 @@ function gymWorkoutId(day) {
   return gym?.workoutId || day.workoutId || null;
 }
 
-async function waitForExercises(workoutId, min = 1) {
+async function waitForExercises(workoutId, min = 1, hasMarker = null) {
   for (let i = 0; i < 12; i++) {
     const g = await req(`/api/workouts/${workoutId}`);
-    if (g.res.ok && (g.body?.exercises?.length || 0) >= min) return g.body;
-    await new Promise((r) => setTimeout(r, 600 * (i + 1)));
+    const count = g.body?.exercises?.length || 0;
+    const markerOk =
+      !hasMarker ||
+      (g.body?.exercises || []).some(
+        (e) => e.notes === hasMarker.notes || e.exercise?.name === hasMarker.benchName,
+      );
+    if (g.res.ok && count >= min && markerOk) return g.body;
+    await new Promise((r) => setTimeout(r, 800 * (i + 1)));
   }
   return null;
 }
@@ -142,9 +148,16 @@ async function main() {
     pass(`Source ${DAY_NAMES[day.dayNumber - 1]}`, clone.body.id);
   }
 
+  const resyncFrom = await req(`/api/programs/${PROGRAM_SLUG}/sync`, { method: "POST" });
+  if (!resyncFrom.res.ok) fail("Re-sync after seeding source week");
+  const fromWeekFresh = (resyncFrom.body.weeks || []).find((w) => w.weekNumber === FROM_WEEK);
+  const fromDaysFresh = [...(fromWeekFresh?.days || [])].sort((a, b) => a.dayNumber - b.dayNumber);
+  const toWeekFresh = (resyncFrom.body.weeks || []).find((w) => w.weekNumber === TO_WEEK);
+  const toDaysFresh = [...(toWeekFresh?.days || [])].sort((a, b) => a.dayNumber - b.dayNumber);
+
   const clonedToIds = new Map();
-  for (const toDay of toDays) {
-    const fromDay = fromDays.find((d) => d.dayNumber === toDay.dayNumber);
+  for (const toDay of toDaysFresh) {
+    const fromDay = fromDaysFresh.find((d) => d.dayNumber === toDay.dayNumber);
     const sourceWorkoutId = gymWorkoutId(fromDay);
     if (!sourceWorkoutId) fail(`Source day ${toDay.dayNumber} missing gym`);
 
@@ -161,10 +174,11 @@ async function main() {
     }
     if (!clone?.res.ok || !clone?.body?.id) fail(`Clone to day ${toDay.dayNumber}`, clone?.text);
 
-    const body = await waitForExercises(clone.body.id, 1);
-    if (!body?.exercises?.some((e) => e.notes === MARKER || e.exercise?.name === bench.name)) {
-      fail(`Clone day ${toDay.dayNumber} missing marker`);
-    }
+    const body = await waitForExercises(clone.body.id, 1, {
+      notes: MARKER,
+      benchName: bench.name,
+    });
+    if (!body) fail(`Clone day ${toDay.dayNumber} missing marker`);
 
     const patch = await req(`/api/programs/days/${toDay.id}`, {
       method: "PATCH",
@@ -188,7 +202,7 @@ async function main() {
   pass("All target workouts are independent copies");
 
   const toMonId = clonedToIds.get(1);
-  const fromMonId = gymWorkoutId(fromDays[0]);
+  const fromMonId = gymWorkoutId(fromDaysFresh[0]);
   const toMon = await waitForExercises(toMonId, 1);
   const item = toMon?.exercises?.[0];
   if (!item?.id) fail("Patch target Monday sets");
