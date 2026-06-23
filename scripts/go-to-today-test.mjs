@@ -284,6 +284,9 @@ async function main() {
   console.log(`Go to Today test @ ${BASE}`);
   console.log(`Expect calendar today: ${TODAY}\n`);
 
+  // Clear Chad SMS for today so program-calendar alignment is testable
+  await req(`/api/today?date=${TODAY}&userId=demo-user-john`, { method: "DELETE" }).catch(() => {});
+
   await testCalendarMath();
   await testCoachUpdatePropagates();
   await testSmsTodayWinsOverProgram();

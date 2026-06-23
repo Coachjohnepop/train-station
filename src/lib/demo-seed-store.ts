@@ -90,14 +90,11 @@ export async function persistDemoSeed(data: DemoSeedData): Promise<{ blobSaved: 
   });
 
   if (isBlobConfigured() && blobSaved && expected) {
-    for (let attempt = 0; attempt < 5; attempt++) {
+    for (let attempt = 0; attempt < 4; attempt++) {
       const readback = await readBlobJson<DemoSeedData>(BLOB_PATH);
       if (readback && seedProgramSnapshot(readback) === expected) break;
-      if (attempt >= 4) {
-        return { blobSaved: false };
-      }
-      blobSaved = await writeBlobJson(BLOB_PATH, data);
-      await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+      await writeBlobJson(BLOB_PATH, data);
+      await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
     }
   }
 
