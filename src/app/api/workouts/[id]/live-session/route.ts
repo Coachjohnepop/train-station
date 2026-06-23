@@ -4,6 +4,7 @@ import { resolveUserId } from "@/lib/current-user";
 import {
   clearLiveWorkoutSession,
   getLiveWorkoutSession,
+  normalizeLiveSessionDate,
   upsertLiveWorkoutSession,
 } from "@/lib/live-workout-session";
 
@@ -24,7 +25,7 @@ export async function GET(request: Request, { params }: Params) {
   const { id: workoutId } = await params;
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("userId") || (await resolveUserId());
-  const sessionDate = searchParams.get("date") || undefined;
+  const sessionDate = normalizeLiveSessionDate(searchParams.get("date") || undefined);
 
   const session = await getLiveWorkoutSession({
     userId,

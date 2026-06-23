@@ -1,17 +1,24 @@
 import path from "path";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import { localTodayIso } from "@/lib/program-calendar";
 
 export type LiveWorkoutSession = {
   userId: string;
   workoutId: string;
-  sessionDate?: string;
+  sessionDate: string;
   completedSets: Record<string, number[]>;
   finishedExercises: string[];
   weights: Record<string, string>;
   activeId?: string;
   updatedAt: string;
   updatedBy: "coach" | "member";
+  revision: number;
 };
+
+/** Always scope live sync to a calendar day so coach/member keys match. */
+export function normalizeLiveSessionDate(sessionDate?: string): string {
+  return sessionDate?.trim() || localTodayIso();
+}
 
 type LiveSessionStore = {
   sessions: Record<string, LiveWorkoutSession>;
@@ -35,7 +42,8 @@ export function liveSessionKey(
   workoutId: string,
   sessionDate?: string,
 ): string {
-  return sessionDate ? `${userId}:${workoutId}:${sessionDate}` : `${userId}:${workoutId}`;
+  const date = normalizeLiveSessionDate(sessionDate);
+  return `${userId}:${workoutId}:${date}`;
 }
 
 async function loadStore(preferFresh = false): Promise<LiveSessionStore> {
@@ -70,17 +78,20 @@ export async function upsertLiveWorkoutSession(input: {
   updatedBy: "coach" | "member";
 }): Promise<{ session: LiveWorkoutSession; blobSaved: boolean }> {
   const store = await loadStore(true);
-  const key = liveSessionKey(input.userId, input.workoutId, input.sessionDate);
+  const sessionDate = normalizeLiveSessionDate(input.sessionDate);
+  const key = liveSessionKey(input.userId, input.workoutId, sessionDate);
+  const existing = store.sessions[key];
   const session: LiveWorkoutSession = {
     userId: input.userId,
     workoutId: input.workoutId,
-    sessionDate: input.sessionDate,
+    sessionDate,
     completedSets: input.completedSets,
     finishedExercises: input.finishedExercises,
     weights: input.weights,
     activeId: input.activeId,
     updatedAt: new Date().toISOString(),
     updatedBy: input.updatedBy,
+    revision: (existing?.revision ?? 0) + 1,
   };
   store.sessions[key] = session;
   const { blobSaved } = await persistJsonStore({
