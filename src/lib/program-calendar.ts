@@ -80,14 +80,40 @@ export function programDayIndexFromDate(
 
 export const DEFAULT_DAY_OPTIONS = ["Gym", "Home"] as const;
 
+export const DAY_OFF_LABEL = "Day Off";
+export const FASTED_CARDIO_LABEL = "Fasted cardio";
+export const DEFAULT_FASTED_CARDIO_MINUTES = 30;
+
 export type DayOptionLike = { workoutId: string; label: string };
 
-function isGymLabel(label: string): boolean {
+export function isGymLabel(label: string): boolean {
   return /^gym$/i.test(label.trim());
 }
 
-function isHomeLabel(label: string): boolean {
+export function isHomeLabel(label: string): boolean {
   return /^home$/i.test(label.trim());
+}
+
+export function isDayOffLabel(label: string): boolean {
+  return /^day\s*off$/i.test(label.trim());
+}
+
+export function isFastedCardioLabel(label: string): boolean {
+  return /^fasted\s*cardio$/i.test(label.trim());
+}
+
+export function isWorkoutDayLabel(label: string): boolean {
+  return isGymLabel(label) || isHomeLabel(label) || /^setting\s+\d+$/i.test(label.trim());
+}
+
+export function fastedCardioReps(minutes: number): string {
+  return `${minutes} min`;
+}
+
+export function parseFastedCardioMinutes(reps: string | null | undefined): number {
+  if (!reps) return DEFAULT_FASTED_CARDIO_MINUTES;
+  const m = reps.match(/(\d+)\s*min/i);
+  return m ? Math.max(5, parseInt(m[1], 10)) : DEFAULT_FASTED_CARDIO_MINUTES;
 }
 
 function pickPreferredOption(
@@ -106,6 +132,8 @@ export function normalizeDayOptions(options: DayOptionLike[]): DayOptionLike[] {
 
   let gym: DayOptionLike | null = null;
   let home: DayOptionLike | null = null;
+  let dayOff: DayOptionLike | null = null;
+  let fastedCardio: DayOptionLike | null = null;
   const customs: DayOptionLike[] = [];
 
   for (const opt of options) {
@@ -113,14 +141,24 @@ export function normalizeDayOptions(options: DayOptionLike[]): DayOptionLike[] {
       gym = pickPreferredOption(gym, opt);
     } else if (isHomeLabel(opt.label)) {
       home = pickPreferredOption(home, opt);
+    } else if (isDayOffLabel(opt.label)) {
+      dayOff = pickPreferredOption(dayOff, opt);
+    } else if (isFastedCardioLabel(opt.label)) {
+      fastedCardio = pickPreferredOption(fastedCardio, opt);
     } else {
       customs.push(opt);
     }
   }
 
+  if (dayOff) return [{ ...dayOff, label: DAY_OFF_LABEL }];
+  if (fastedCardio && !gym && !home) {
+    return [{ ...fastedCardio, label: FASTED_CARDIO_LABEL }];
+  }
+
   const result: DayOptionLike[] = [];
   if (gym) result.push({ ...gym, label: "Gym" });
   if (home) result.push({ ...home, label: "Home" });
+  if (fastedCardio) result.push({ ...fastedCardio, label: FASTED_CARDIO_LABEL });
   result.push(...customs);
   return result;
 }

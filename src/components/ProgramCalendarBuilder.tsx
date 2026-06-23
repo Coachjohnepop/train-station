@@ -13,7 +13,15 @@ import {
   DEFAULT_DAY_OPTIONS,
   formatMonthYear,
   formatShortDate,
+  DAY_OFF_LABEL,
+  DEFAULT_FASTED_CARDIO_MINUTES,
+  FASTED_CARDIO_LABEL,
+  fastedCardioReps,
+  isDayOffLabel,
+  isFastedCardioLabel,
+  isWorkoutDayLabel,
   normalizeDayOptions,
+  parseFastedCardioMinutes,
   resolveProgramStartMonday,
   slotIndicesForTimeColumn,
   timeBlockLabel,
@@ -82,6 +90,14 @@ function getDayOptions(day: ProgramDay): DayOption[] {
   return [];
 }
 
+function dayKindLabel(day: ProgramDay): string {
+  const opts = getDayOptions(day);
+  if (opts.some((o) => isDayOffLabel(o.label))) return "Day off";
+  if (opts.some((o) => isFastedCardioLabel(o.label))) return "Fasted cardio";
+  if (opts.length === 0) return "Empty";
+  return `${opts.length} setting${opts.length === 1 ? "" : "s"}`;
+}
+
 function dayOptionsNeedCleanup(day: ProgramDay): boolean {
   if (!day.options?.length) return false;
   const normalized = normalizeDayOptions(day.options);
@@ -117,6 +133,7 @@ export default function ProgramCalendarBuilder({
   const [editorSets, setEditorSets] = useState(DEFAULT_DAY_PRESCRIPTION.defaultSets);
   const [editorReps, setEditorReps] = useState(DEFAULT_DAY_PRESCRIPTION.defaultReps);
   const [editorRest, setEditorRest] = useState(DEFAULT_DAY_PRESCRIPTION.defaultRestSec);
+  const [fastedCardioMinutes, setFastedCardioMinutes] = useState(DEFAULT_FASTED_CARDIO_MINUTES);
 
   const startMonday = useMemo(
     () => resolveProgramStartMonday(program.startDate),
@@ -306,6 +323,9 @@ export default function ProgramCalendarBuilder({
       const firstEmpty = grid.findIndex((s) => s === null);
       const pick = firstFilled >= 0 ? firstFilled : firstEmpty >= 0 ? firstEmpty : 0;
       selectSlot(pick, grid, defaults);
+      if (firstFilled >= 0 && grid[firstFilled] && /fasted cardio/i.test(grid[firstFilled].name)) {
+        setFastedCardioMinutes(parseFastedCardioMinutes(grid[firstFilled].reps));
+      }
     } finally {
       setLoadingSlots(false);
     }
@@ -333,24 +353,169 @@ export default function ProgramCalendarBuilder({
       ];
     }
 
-    const workoutId = await ensureWorkoutForOption(day.id, optIdx, opts[optIdx]?.label || label);
-    if (!workoutId) return;
-
+    const optLabel = opts[optIdx]?.label || label;
     const rx = readDayPrescription(day);
     setPrescription(rx);
     setCheckedSlots(new Set());
+    setExpandedDays((prev) => new Set(prev).add(day.id));
+
+    if (isDayOffLabel(optLabel)) {
+      setFocus({
+        dayId: day.id,
+        optIdx,
+        workoutId: "",
+        label: DAY_OFF_LABEL,
+        weekNumber: week.weekNumber,
+        dayNumber: day.dayNumber,
+      });
+      setSlots(Array(DAY_SLOT_COUNT).fill(null));
+      setSelectedSlotIdx(null);
+      return;
+    }
+
+    const workoutId = await ensureWorkoutForOption(day.id, optIdx, optLabel);
+    if (!workoutId) return;
+
     setFocus({
       dayId: day.id,
       optIdx,
       workoutId,
-      label: opts[optIdx]?.label || label,
+      label: optLabel,
       weekNumber: week.weekNumber,
       dayNumber: day.dayNumber,
     });
-    setExpandedDays((prev) => new Set(prev).add(day.id));
 
-    await seedWarmups(workoutId, rx);
+    if (isWorkoutDayLabel(optLabel)) {
+      await seedWarmups(workoutId, rx);
+    }
     await loadSlots(workoutId, rx);
+  }
+
+  async function clearWorkoutExercises(workoutId: string) {
+    const res = await fetch(`/api/workouts/${workoutId}`, { cache: "no-store" });
+    if (!res.ok) return;
+    const w = await res.json();
+    for (const item of w.exercises || []) {
+      await fetch(
+        `/api/workouts/${workoutId}/exercises?itemId=${encodeURIComponent(item.id)}`,
+        { method: "DELETE" },
+      );
+    }
+  }
+
+  async function applyDayOff() {
+    if (!focus || !focusDay || !activeWeekData) return;
+    setSaving(true);
+    try {
+      await patchDay(focus.dayId, {
+        options: [{ workoutId: "", label: DAY_OFF_LABEL }],
+        notes: "Rest day",
+      });
+      setFocus({
+        ...focus,
+        optIdx: 0,
+        workoutId: "",
+        label: DAY_OFF_LABEL,
+      });
+      setSlots(Array(DAY_SLOT_COUNT).fill(null));
+      setCheckedSlots(new Set());
+      setSelectedSlotIdx(null);
+      setMessage("Day Off — rest day.");
+      setTimeout(() => setMessage(null), 2000);
+    } catch {
+      setMessage("Could not save day off.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function applyFastedCardio(minutes: number) {
+    if (!focus || !focusDay || !activeWeekData) return;
+    const cardioEx = library.find((e) => /^fasted cardio$/i.test(e.name));
+    if (!cardioEx) {
+      setMessage("Add “Fasted Cardio” to the exercise library first.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const week = program.weeks.find((w) => w.days.some((d) => d.id === focus.dayId));
+      const day = week?.days.find((d) => d.id === focus.dayId);
+      const cal =
+        day?.calendarDate ||
+        calendarDateForProgramDay(startMonday, focus.weekNumber, focus.dayNumber);
+      const suggestedName = `${program.name} · ${formatShortDate(cal)} ${FASTED_CARDIO_LABEL}`;
+
+      let workoutId =
+        getDayOptions(day || focusDay).find((o) => isFastedCardioLabel(o.label))?.workoutId || "";
+
+      if (!workoutId) {
+        const createRes = await fetch("/api/workouts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: suggestedName }),
+        });
+        if (!createRes.ok) {
+          setMessage("Could not create fasted cardio workout.");
+          return;
+        }
+        const created = await createRes.json();
+        workoutId = created.id as string;
+        setAllWorkouts((prev) =>
+          prev.some((w) => w.id === workoutId) ? prev : [...prev, { id: workoutId, name: created.name }],
+        );
+      }
+
+      await patchDay(focus.dayId, {
+        options: [{ workoutId, label: FASTED_CARDIO_LABEL }],
+        notes: `${minutes} minutes fasted cardio`,
+        calendarDate: cal,
+      });
+
+      await clearWorkoutExercises(workoutId);
+
+      const addRes = await fetch(`/api/workouts/${workoutId}/exercises`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          exerciseId: cardioEx.id,
+          setScheme: "standard",
+          repPattern: null,
+          reps: fastedCardioReps(minutes),
+          sets: 1,
+          weightTier: "light",
+          restSec: 0,
+          notes: `${minutes} min fasted cardio`,
+        }),
+      });
+      if (!addRes.ok) {
+        setMessage("Could not add fasted cardio.");
+        return;
+      }
+      const created = await addRes.json();
+      if (created.id) {
+        await fetch(`/api/workouts/${workoutId}/exercises`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ itemId: created.id, sortOrder: 0 }),
+        });
+      }
+
+      setFastedCardioMinutes(minutes);
+      setFocus({
+        ...focus,
+        optIdx: 0,
+        workoutId,
+        label: FASTED_CARDIO_LABEL,
+      });
+      await loadSlots(workoutId, prescription);
+      setMessage(`${minutes} min fasted cardio set.`);
+      setTimeout(() => setMessage(null), 2000);
+    } catch {
+      setMessage("Could not save fasted cardio.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function patchExerciseItem(
@@ -911,9 +1076,7 @@ export default function ProgramCalendarBuilder({
                       <span className="text-[10px] text-[var(--muted)]">{isExpanded ? "▼" : "▶"}</span>
                     </button>
                     <p className="mt-1 text-[10px] text-[var(--muted)]">
-                      {opts.length === 0
-                        ? "Empty"
-                        : `${opts.length} setting${opts.length === 1 ? "" : "s"}`}
+                      {dayKindLabel(day)}
                       {published && <span className="ml-1 text-emerald-400">· Published</span>}
                     </p>
                   </div>
@@ -982,12 +1145,58 @@ export default function ProgramCalendarBuilder({
             </button>
           </div>
 
-          <div className="flex flex-wrap items-end gap-2 rounded-md bg-[var(--surface-2)] px-2 py-1.5">
-            <p className="mr-1 max-w-[140px] truncate text-[10px] text-[var(--muted)]">
-              {selectedSlotIdx !== null && slots[selectedSlotIdx]
-                ? slots[selectedSlotIdx]!.name
-                : "Select exercise"}
+          <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1.5">
+            <span className="text-[10px] font-medium text-[var(--muted)]">Quick</span>
+            <button
+              type="button"
+              className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] hover:bg-[var(--surface)]"
+              disabled={saving}
+              onClick={() => void applyDayOff()}
+            >
+              Day Off
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] hover:bg-[var(--surface)]"
+              disabled={saving}
+              onClick={() => void applyFastedCardio(fastedCardioMinutes)}
+            >
+              {fastedCardioMinutes} min fasted cardio
+            </button>
+            <label className="flex items-center gap-1 text-[10px] text-[var(--muted)]">
+              <input
+                type="number"
+                min={5}
+                max={120}
+                step={5}
+                className="input h-6 w-11 px-1 text-center text-[10px]"
+                value={fastedCardioMinutes}
+                disabled={saving}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10);
+                  if (!Number.isNaN(v)) setFastedCardioMinutes(Math.max(5, Math.min(120, v)));
+                }}
+              />
+              min
+            </label>
+          </div>
+
+          {isDayOffLabel(focus.label) ? (
+            <p className="rounded-md bg-[var(--surface-2)] px-3 py-4 text-center text-sm text-[var(--muted)]">
+              Rest day — no workout. Use <strong>Gym</strong> / <strong>Home</strong> or Quick above to
+              switch.
             </p>
+          ) : (
+          <>
+          <div className="flex flex-wrap items-end gap-2 rounded-md bg-[var(--surface-2)] px-2 py-1.5">
+            <p className="mr-1 max-w-[160px] truncate text-[10px] text-[var(--muted)]">
+              {isFastedCardioLabel(focus.label)
+                ? "Fasted cardio"
+                : selectedSlotIdx !== null && slots[selectedSlotIdx]
+                  ? slots[selectedSlotIdx]!.name
+                  : "Select exercise"}
+            </p>
+            {!isFastedCardioLabel(focus.label) && (
             <label className="text-[10px]">
               Sets
               <input
@@ -1004,16 +1213,33 @@ export default function ProgramCalendarBuilder({
                 onBlur={() => void saveSelectedSlot()}
               />
             </label>
+            )}
             <label className="text-[10px]">
-              Reps
+              {isFastedCardioLabel(focus.label) ? "Minutes" : "Reps"}
               <input
                 className="input mt-0.5 h-7 w-14 px-1 text-xs"
-                value={editorReps}
-                disabled={selectedSlotIdx === null}
-                onChange={(e) => setEditorReps(e.target.value)}
-                onBlur={() => void saveSelectedSlot()}
+                value={
+                  isFastedCardioLabel(focus.label) ? String(fastedCardioMinutes) : editorReps
+                }
+                disabled={selectedSlotIdx === null && !isFastedCardioLabel(focus.label)}
+                onChange={(e) => {
+                  if (isFastedCardioLabel(focus.label)) {
+                    const v = parseInt(e.target.value, 10);
+                    if (!Number.isNaN(v)) setFastedCardioMinutes(Math.max(5, Math.min(120, v)));
+                  } else {
+                    setEditorReps(e.target.value);
+                  }
+                }}
+                onBlur={() => {
+                  if (isFastedCardioLabel(focus.label)) {
+                    void applyFastedCardio(fastedCardioMinutes);
+                  } else {
+                    void saveSelectedSlot();
+                  }
+                }}
               />
             </label>
+            {!isFastedCardioLabel(focus.label) && (
             <label className="text-[10px]">
               Rest
               <input
@@ -1030,6 +1256,8 @@ export default function ProgramCalendarBuilder({
                 onBlur={() => void saveSelectedSlot()}
               />
             </label>
+            )}
+            {!isFastedCardioLabel(focus.label) && (
             <button
               type="button"
               className="btn-ghost h-7 px-2 text-[10px]"
@@ -1038,10 +1266,21 @@ export default function ProgramCalendarBuilder({
             >
               Apply to checked ({checkedSlots.size})
             </button>
+            )}
           </div>
 
           {loadingSlots ? (
             <p className="text-xs text-[var(--muted)]">Loading…</p>
+          ) : isFastedCardioLabel(focus.label) ? (
+            <div className="space-y-1">
+              {slots[0] ? (
+                renderExerciseSlot(0)
+              ) : (
+                <p className="text-xs text-[var(--muted)]">
+                  Tap <strong>Fasted cardio</strong> in Quick to assign minutes.
+                </p>
+              )}
+            </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {Array.from({ length: DAY_TIME_BLOCK_COUNT }, (_, col) => (
@@ -1053,6 +1292,8 @@ export default function ProgramCalendarBuilder({
                 </div>
               ))}
             </div>
+          )}
+          </>
           )}
         </div>
       )}
