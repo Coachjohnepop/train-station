@@ -181,6 +181,13 @@
       "description": "Generated from coach SMS",
       "source": "sms",
       "createdAt": "2026-06-23T14:15:06.642Z"
+    },
+    {
+      "id": "sms-w-36497522",
+      "name": "Coach SMS Workout",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-06-23T14:19:36.869Z"
     }
   ],
   "workoutExercises": [
@@ -1408,6 +1415,28 @@
     {
       "id": "sms-we-94fcdee1",
       "workoutId": "sms-w-9a18fbcc",
+      "exerciseId": "cmpzkksb2001q95rz5xvwyj71",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "10,10,10",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-372f35f4",
+      "workoutId": "sms-w-36497522",
+      "exerciseId": "cmpzjajej000095rzilwd9n9k",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "—",
+      "notes": "QA SMS priority · Warm-up block",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-98c16d6f",
+      "workoutId": "sms-w-36497522",
       "exerciseId": "cmpzkksb2001q95rz5xvwyj71",
       "sortOrder": 1,
       "sets": 3,

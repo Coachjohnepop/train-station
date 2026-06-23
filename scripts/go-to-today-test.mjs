@@ -145,6 +145,8 @@ async function testSmsTodayWinsOverProgram() {
   }
   pass("Coach SMS assigned for Chad today");
 
+  await new Promise((r) => setTimeout(r, 1500));
+
   cookies = "";
   const login = await req("/api/auth/login", {
     method: "POST",
@@ -208,6 +210,9 @@ async function testCoachUpdatePropagates() {
     return;
   }
   pass("Coach patched today's gym workout", alt.id);
+
+  // Allow Vercel blob propagation before member read
+  await new Promise((r) => setTimeout(r, 2000));
 
   cookies = "";
   const login = await req("/api/auth/login", {

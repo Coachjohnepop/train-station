@@ -4,7 +4,9 @@ import {
   hydrateJsonStore,
   isBlobConfigured,
   persistJsonStore,
+  readBlobJson,
   readLocalJson,
+  writeBlobJson,
 } from "@/lib/demo-json-blob";
 
 const SEED_FILE = path.join(process.cwd(), "prisma", "seed-data.json");
@@ -66,13 +68,40 @@ export async function getDemoSeed(opts?: { preferFresh?: boolean }): Promise<Dem
   return hydrateDemoSeed(opts);
 }
 
+function seedProgramSnapshot(seed: DemoSeedData): string {
+  const days = ((seed.programDays as Array<{ id?: string; workoutId?: string | null }>) || [])
+    .map((d) => `${d.id}:${d.workoutId ?? ""}`)
+    .sort()
+    .join("|");
+  const opts = ((seed.programDayOptions as Array<{ dayId?: string; workoutId?: string }>) || [])
+    .map((o) => `${o.dayId}:${o.workoutId}`)
+    .sort()
+    .join("|");
+  return `${days}#${opts}`;
+}
+
 export async function persistDemoSeed(data: DemoSeedData): Promise<{ blobSaved: boolean }> {
-  return persistJsonStore({
+  const expected = seedProgramSnapshot(data);
+  let { blobSaved } = await persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: SEED_FILE,
     data,
     setMemory,
   });
+
+  if (isBlobConfigured() && blobSaved && expected) {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const readback = await readBlobJson<DemoSeedData>(BLOB_PATH);
+      if (readback && seedProgramSnapshot(readback) === expected) break;
+      if (attempt >= 4) {
+        return { blobSaved: false };
+      }
+      blobSaved = await writeBlobJson(BLOB_PATH, data);
+      await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+    }
+  }
+
+  return { blobSaved };
 }
 
 function mergeSeedArray<T extends { id?: string }>(base: T[], overlay: T[]): T[] {
@@ -130,10 +159,11 @@ export async function mutateDemoSeed(
   mutator(data);
 
   // Re-merge latest workouts/exercises before write so concurrent clone/create writes survive,
-  // but keep program-day mutations from this request intact.
+  // but keep program-day mutations from this request intact. Read blob directly — do not
+  // re-hydrate into memory (that was masking fresh program-day writes on Vercel).
   let toPersist = data;
   if (isBlobConfigured()) {
-    const latest = structuredClone(await hydrateDemoSeed({ preferFresh: true })) as DemoSeedData;
+    const latest = ((await readBlobJson<DemoSeedData>(BLOB_PATH)) || data) as DemoSeedData;
     toPersist = {
       ...data,
       workouts: mergeSeedArray(
