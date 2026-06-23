@@ -676,6 +676,16 @@ export default function ProgramCalendarBuilder({
     });
   }
 
+  function selectAllFilledSlots() {
+    const filled = new Set<number>();
+    slots.forEach((slot, idx) => {
+      if (slot) filled.add(idx);
+    });
+    setCheckedSlots(filled);
+  }
+
+  const filledSlotCount = slots.filter((s) => s !== null).length;
+
   async function applyToChecked() {
     if (!focus || checkedSlots.size === 0) return;
     setSaving(true);
@@ -1508,6 +1518,14 @@ export default function ProgramCalendarBuilder({
                       onBlur={() => void saveSelectedSlot()}
                     />
                   </label>
+                  <button
+                    type="button"
+                    className="btn-ghost h-7 px-2 text-[10px]"
+                    disabled={saving || filledSlotCount === 0}
+                    onClick={() => selectAllFilledSlots()}
+                  >
+                    Select all ({filledSlotCount})
+                  </button>
                   <button
                     type="button"
                     className="btn-ghost h-7 px-2 text-[10px]"

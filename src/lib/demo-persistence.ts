@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { BLOB_TOKEN } from "@/lib/demo-json-blob";
+import { BLOB_TOKEN, probeBlobWrite } from "@/lib/demo-json-blob";
 
 export type DemoSaveResult = {
   exercisesBlobSaved: boolean;
@@ -26,6 +26,29 @@ export function demoPersistenceStatus() {
       : blobConfigured
         ? "Changes save to cloud storage and survive redeploy."
         : "Cloud storage is not configured — edits may disappear after redeploy. Set TS_BLOB_TOKEN on Vercel, or run npm run db:export-seed and commit seed-data.json.",
+  };
+}
+
+export async function demoPersistenceHealth() {
+  const base = demoPersistenceStatus();
+  if (!base.onVercel || !base.blobConfigured) {
+    return { ...base, blobWritable: !base.onVercel, blobIssue: null as string | null };
+  }
+  const probe = await probeBlobWrite();
+  if (probe.ok) {
+    return {
+      ...base,
+      blobWritable: true,
+      blobIssue: null,
+      message: "Cloud storage is writable — admin edits will persist across redeploys.",
+    };
+  }
+  return {
+    ...base,
+    durable: false,
+    blobWritable: false,
+    blobIssue: probe.reason,
+    message: probe.message,
   };
 }
 

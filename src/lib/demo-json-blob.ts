@@ -20,6 +20,51 @@ export async function readBlobJson<T>(blobPath: string): Promise<T | null> {
   }
 }
 
+export type BlobWriteFailure = {
+  ok: false;
+  reason: "no_token" | "suspended" | "error";
+  message: string;
+};
+
+export async function probeBlobWrite(): Promise<
+  { ok: true } | BlobWriteFailure
+> {
+  if (!BLOB_TOKEN) {
+    return {
+      ok: false,
+      reason: "no_token",
+      message: "Set TS_BLOB_TOKEN or BLOB_READ_WRITE_TOKEN on Vercel.",
+    };
+  }
+  const probePath = "demo/_write-probe.json";
+  const payload = JSON.stringify({ probe: Date.now() });
+  try {
+    await put(probePath, payload, {
+      access: "public",
+      contentType: "application/json",
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      token: BLOB_TOKEN,
+    });
+    return { ok: true };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    if (/suspended/i.test(message)) {
+      return {
+        ok: false,
+        reason: "suspended",
+        message:
+          "Vercel Blob store is suspended — reactivate it in Vercel → Storage → Blob, or create a new store and update TS_BLOB_TOKEN.",
+      };
+    }
+    return {
+      ok: false,
+      reason: "error",
+      message: message || "Blob write failed.",
+    };
+  }
+}
+
 export async function writeBlobJson(blobPath: string, data: unknown): Promise<boolean> {
   if (!BLOB_TOKEN) return false;
   try {
@@ -32,7 +77,12 @@ export async function writeBlobJson(blobPath: string, data: unknown): Promise<bo
     });
     return true;
   } catch (e) {
-    console.warn(`Could not persist blob ${blobPath}`, e);
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/suspended/i.test(msg)) {
+      console.warn(`Vercel Blob store suspended — cannot persist ${blobPath}`);
+    } else {
+      console.warn(`Could not persist blob ${blobPath}`, e);
+    }
     return false;
   }
 }
