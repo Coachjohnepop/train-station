@@ -23,6 +23,7 @@ type UserRow = {
   hidden?: boolean;
   hiddenAt?: string | null;
   isSelf?: boolean;
+  source?: "seed" | "sign-in" | "managed";
 };
 
 const ROLES: Role[] = ["ADMIN", "INSTRUCTOR", "MEMBER", "PROSPECTIVE_INSTRUCTOR"];
@@ -190,7 +191,7 @@ export default function AdminUsersPage() {
         <div>
           <h1 className="text-2xl font-bold">Users</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Manage all accounts. Use <strong>Hide</strong> for test accounts — data is kept for Stripe and enrollments; nothing is permanently deleted.
+            Manage all accounts. <strong>Test account</strong> rows are seeded demos (Katie, Alex, Chad, etc.) — edit phone and reminder; changes persist after refresh. Ticket signups appear here too. Use <strong>Hide</strong> to tuck away test rows without deleting data.
           </p>
         </div>
         <button onClick={openCreate} className="btn-primary">
@@ -282,6 +283,11 @@ export default function AdminUsersPage() {
                       {u.isSelf && (
                         <span className="ml-2 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] font-semibold text-accent">
                           You
+                        </span>
+                      )}
+                      {u.source === "seed" && (
+                        <span className="ml-2 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600">
+                          Test account
                         </span>
                       )}
                     </div>

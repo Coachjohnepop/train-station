@@ -187,6 +187,7 @@ export default function ProgramCalendarBuilder({
   const [editorReps, setEditorReps] = useState(DEFAULT_DAY_PRESCRIPTION.defaultReps);
   const [editorRest, setEditorRest] = useState(DEFAULT_DAY_PRESCRIPTION.defaultRestSec);
   const [fastedCardioMinutes, setFastedCardioMinutes] = useState(DEFAULT_FASTED_CARDIO_MINUTES);
+  const [workoutPreviews, setWorkoutPreviews] = useState<Record<string, string[]>>({});
 
   const startMonday = useMemo(
     () => resolveProgramStartMonday(program.startDate),
@@ -217,6 +218,41 @@ export default function ProgramCalendarBuilder({
   useEffect(() => {
     if (program.weeks.length < program.durationWeeks) void sync();
   }, [program.durationWeeks, program.weeks.length, sync]);
+
+  const loadWorkoutPreview = useCallback(async (workoutId: string) => {
+    if (!workoutId) return;
+    const res = await fetch(`/api/workouts/${workoutId}`, { cache: "no-store" });
+    if (!res.ok) return;
+    const workout = await res.json();
+    const names = (workout.exercises || [])
+      .slice(0, 3)
+      .map((item: { exercise?: { name?: string } }) => item.exercise?.name)
+      .filter(Boolean) as string[];
+    setWorkoutPreviews((prev) => ({ ...prev, [workoutId]: names }));
+  }, []);
+
+  useEffect(() => {
+    const ids = new Set<string>();
+    for (const week of program.weeks) {
+      for (const day of week.days) {
+        for (const opt of getDayOptions(day)) {
+          if (opt.workoutId) ids.add(opt.workoutId);
+        }
+      }
+    }
+    for (const id of ids) {
+      if (!workoutPreviews[id]) void loadWorkoutPreview(id);
+    }
+    // workoutPreviews intentionally omitted — only fetch IDs not yet cached
+  }, [program.weeks, loadWorkoutPreview]);
+
+  function previewForDay(day: ProgramDay): string | null {
+    for (const opt of getDayOptions(day)) {
+      const names = opt.workoutId ? workoutPreviews[opt.workoutId] : undefined;
+      if (names?.length) return names.join(" · ");
+    }
+    return null;
+  }
 
   async function patchDay(dayId: string, patch: Record<string, unknown>) {
     const res = await fetch(`/api/programs/days/${dayId}`, {
@@ -371,6 +407,11 @@ export default function ProgramCalendarBuilder({
         return;
       }
       const w = await res.json();
+      const previewNames = (w.exercises || [])
+        .slice(0, 3)
+        .map((it: { exercise?: { name?: string } }) => it.exercise?.name)
+        .filter(Boolean) as string[];
+      setWorkoutPreviews((prev) => ({ ...prev, [workoutId]: previewNames }));
       const items: SlotItem[] = (w.exercises || []).map((it: any) => ({
         id: it.id,
         exerciseId: it.exercise?.id || it.exerciseId,
@@ -1258,6 +1299,7 @@ export default function ProgramCalendarBuilder({
                 const isSelected = focus?.dayId === day.id;
                 const isExpanded = expandedDays.has(day.id);
                 const published = !!day.publishedAt;
+                const dayPreview = previewForDay(day);
 
                 return (
                   <button
@@ -1288,6 +1330,14 @@ export default function ProgramCalendarBuilder({
                         <span className="font-bold text-emerald-200"> · Published</span>
                       )}
                     </p>
+                    {dayPreview && (
+                      <p
+                        className={`mt-0.5 truncate text-[9px] ${dayGridTextClass(isSelected, published, "meta")}`}
+                        title={dayPreview}
+                      >
+                        {dayPreview}
+                      </p>
+                    )}
                   </button>
                 );
               })}
@@ -1335,7 +1385,31 @@ export default function ProgramCalendarBuilder({
                 )}
               </h3>
             </div>
-            <div className="flex shrink-0 gap-1.5">
+            <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+              {focus.workoutId && (
+                <>
+                  {workoutPreviews[focus.workoutId]?.length > 0 && (
+                    <span
+                      className="max-w-[200px] truncate text-[10px] text-[var(--muted)]"
+                      title={workoutPreviews[focus.workoutId].join(" · ")}
+                    >
+                      {workoutPreviews[focus.workoutId].join(" · ")}
+                    </span>
+                  )}
+                  <Link
+                    href={`/admin/workouts/${focus.workoutId}`}
+                    className="text-[10px] text-accent hover:underline"
+                  >
+                    Edit workout →
+                  </Link>
+                  <Link
+                    href={`/member/programs/${program.slug}`}
+                    className="text-[10px] text-[var(--muted)] hover:text-accent hover:underline"
+                  >
+                    Member view
+                  </Link>
+                </>
+              )}
               <button
                 type="button"
                 className={

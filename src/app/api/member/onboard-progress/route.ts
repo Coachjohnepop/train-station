@@ -47,7 +47,7 @@ export async function PATCH(request: Request) {
   });
 
   if (isDemoMode() && (patch.phone !== undefined || patch.dailyReminderTime !== undefined)) {
-    updateDemoUserSettings(session.id, {
+    await updateDemoUserSettings(session.id, {
       phone: patch.phone ?? undefined,
       dailyReminderTime: patch.dailyReminderTime ?? undefined,
     });

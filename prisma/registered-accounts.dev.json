@@ -1,0 +1,10 @@
+{
+  "kaite@thetrainstation.co": {
+    "userId": "demo-user-stephanie",
+    "role": "MEMBER",
+    "name": "Katie",
+    "phone": "(555) 999-0001",
+    "passwordHash": null,
+    "createdAt": "2026-06-23T12:31:55.555Z"
+  }
+}

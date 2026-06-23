@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import FreeTicketModal from "@/components/FreeTicketModal";
+import TrainStationBrand from "@/components/TrainStationBrand";
 import { TICKET_TIERS, type TicketTierId } from "@/lib/landing-tickets";
 
 export default function LandingTicketPicker({
@@ -30,6 +31,7 @@ export default function LandingTicketPicker({
   return (
     <section id="tickets" className="scroll-mt-4 bg-[#0a0612] px-3 py-10 sm:px-6 sm:py-14">
       <div className="mx-auto max-w-4xl text-center">
+        <TrainStationBrand variant="compact" className="mb-6" />
         <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#7c3aed]">Pick your ticket</p>
         <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
           Three ways aboard

@@ -54,10 +54,10 @@ export const TICKET_TIERS: TicketTier[] = [
 
 export const COMING_SOON_PROGRAMS = [
   {
-    slug: "youth-sports",
-    name: "Adolescent Training",
-    emoji: "🏃",
-    blurb: "Age-appropriate athletic development for adolescent athletes.",
+    slug: "military-prep",
+    name: "Military Preparation",
+    emoji: "🎖️",
+    blurb: "Conditioning and resilience work to prepare for military service.",
   },
   {
     slug: "stretching",

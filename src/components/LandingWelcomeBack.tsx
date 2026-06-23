@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import TrainStationBrand from "@/components/TrainStationBrand";
 
 export default function LandingWelcomeBack({
   email,
@@ -22,8 +23,8 @@ export default function LandingWelcomeBack({
     <div className="min-h-screen bg-[#0a0612] text-[#f2ecf9] flex flex-col">
       <header className="border-b border-[#3d2660]/60 px-6 py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-          <Link href="/" className="text-sm text-[#9d8ab8] hover:text-white transition">
-            The Train Station
+          <Link href="/" className="transition hover:opacity-90">
+            <TrainStationBrand variant="header" />
           </Link>
           <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-sm">
             <Link href="/login" className="text-[#9d8ab8] hover:text-white transition">

@@ -83,7 +83,7 @@ export async function POST(request: Request) {
 
   if (isDemoMode()) {
     enrollDemo(enrolledSlug, session.id);
-    updateDemoUserSettings(session.id, {
+    await updateDemoUserSettings(session.id, {
       phone: phone || undefined,
       dailyReminderTime: dailyReminderTime || undefined,
     });

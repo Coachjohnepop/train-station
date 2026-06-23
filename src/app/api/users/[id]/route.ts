@@ -8,10 +8,11 @@ import {
 } from "@/lib/admin-managed-users";
 
 import { isDemoMode } from "@/lib/demo-enrollments";
+import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { updateDemoUserSettings } from "@/lib/demo-reminders";
 import { findDemoUserRow } from "@/lib/demo-users-admin";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
-import { getAllSignInAccounts } from "@/lib/member-accounts-store";
+import { getAllSignInAccounts, upsertSignInAccount } from "@/lib/member-accounts-store";
 import { applySelfProfileUpdate } from "@/lib/user-self-update";
 import { hideUserById, unhideUserById } from "@/lib/user-visibility";
 import { getAdminSession, isSelfUserId, pickSelfProfilePatch } from "@/lib/users-admin-session";
@@ -152,10 +153,41 @@ export async function PATCH(request: Request, { params }: Params) {
     }
 
     if (parsed.data.phone !== undefined || parsed.data.dailyReminderTime !== undefined) {
-      updateDemoUserSettings(id, {
+      const { blobSaved } = await updateDemoUserSettings(id, {
         phone: parsed.data.phone ?? null,
         dailyReminderTime: parsed.data.dailyReminderTime ?? null,
       });
+
+      const directory = resolveDemoUser(id);
+      const accounts = await getAllSignInAccounts();
+      let email = directory?.email;
+      if (!email) {
+        for (const [rawEmail, account] of Object.entries(accounts)) {
+          if (account.userId === id) {
+            email = rawEmail;
+            break;
+          }
+        }
+      }
+      if (email && accounts[email]) {
+        await upsertSignInAccount({
+          email,
+          userId: id,
+          role: accounts[email].role,
+          name: accounts[email].name || directory?.name || email.split("@")[0],
+          phone: parsed.data.phone ?? null,
+        });
+      }
+
+      try {
+        requireBlobPersisted(blobSaved, "User phone/reminder update");
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "User phone/reminder update failed";
+        return NextResponse.json({ detail: msg }, { status: 503 });
+      }
+
+      const row = await findDemoUserRow(id, email || "");
+      if (row) return NextResponse.json(row);
       return NextResponse.json({
         id,
         phone: parsed.data.phone ?? null,

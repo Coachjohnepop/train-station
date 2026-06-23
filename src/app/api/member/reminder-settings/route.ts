@@ -55,7 +55,7 @@ export async function POST(request: Request) {
         dailyReminderTime: updated.dailyReminderTime,
       });
     }
-    const updated = updateDemoUserSettings(uid, {
+    const { settings: updated } = await updateDemoUserSettings(uid, {
       phone: phone ?? undefined,
       dailyReminderTime: dailyReminderTime ?? undefined,
     });

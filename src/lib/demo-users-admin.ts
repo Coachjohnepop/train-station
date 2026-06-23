@@ -9,12 +9,14 @@ import {
   getDemoStrengthScore,
   getDemoWorkoutLogCount,
 } from "@/lib/demo-logs";
-import { getDemoUserSettings } from "@/lib/demo-reminders";
+import { getDemoUserSettings, hydrateDemoUserSettings } from "@/lib/demo-reminders";
 import { resolveDemoUser, resolveDemoUserByEmail } from "@/lib/demo-user-directory";
 import { DEMO_USER_DIRECTORY } from "@/lib/demo-user-directory";
 import { getAccountByEmail, getAllSignInAccounts } from "@/lib/member-accounts-store";
 
 type DemoUserRow = Record<string, unknown>;
+
+const SEED_DEMO_IDS = new Set(DEMO_USER_DIRECTORY.map((u) => u.id));
 
 const SEED_NOTES: Record<string, string> = {
   "demo-user-john-steph":
@@ -60,6 +62,8 @@ export async function listDemoUsersForAdmin(options?: {
 }): Promise<DemoUserRow[]> {
   if (!isDemoMode()) return [];
 
+  await hydrateDemoUserSettings();
+
   const includeHidden = options?.includeHidden ?? true;
   const accounts = await getAllSignInAccounts();
   const managed = await listAdminManagedUsers({ includeHidden: true });
@@ -87,7 +91,7 @@ export async function listDemoUsersForAdmin(options?: {
 
     const managedUser = managedByEmail.get(key);
     if (managedUser) {
-      rows.push(adminManagedUserToRow(managedUser));
+      rows.push({ ...adminManagedUserToRow(managedUser), source: "managed" });
       continue;
     }
 
@@ -117,7 +121,7 @@ export async function listDemoUsersForAdmin(options?: {
         workoutLogs: counts.workoutLogs,
       },
       strengthScore: counts.strengthScore,
-      source: "sign-in",
+      source: SEED_DEMO_IDS.has(account.userId) ? "seed" : "sign-in",
     });
   }
 

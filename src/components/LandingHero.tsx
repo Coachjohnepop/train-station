@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import TrainStationBrand from "@/components/TrainStationBrand";
 import WelcomeVideoPopover from "@/components/WelcomeVideoPopover";
 
 const images = [
@@ -67,6 +68,7 @@ export default function LandingHero({
       {/* Centered hero content - clean, professional, inspiring */}
       <div className="relative z-10 flex h-full items-center justify-center px-6">
         <div className="max-w-5xl text-center">
+          <TrainStationBrand variant="hero" className="mb-8" />
           <h1 className="mb-6 text-6xl font-semibold tracking-[-2.5px] text-white sm:text-7xl md:text-8xl leading-[0.9]">
             {phrases[textIndex]}
           </h1>

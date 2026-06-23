@@ -31,7 +31,7 @@ export async function applySelfProfileUpdate(
     const email = directory?.email ?? session.email;
 
     if (patch.phone !== undefined || patch.dailyReminderTime !== undefined) {
-      updateDemoUserSettings(userId, {
+      await updateDemoUserSettings(userId, {
         phone: patch.phone ?? null,
         dailyReminderTime: patch.dailyReminderTime ?? null,
       });
