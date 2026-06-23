@@ -12229,7 +12229,8 @@
       "weekId": "cmpys1gen0003tfrzifnpsnxe",
       "dayNumber": 2,
       "workoutId": "cmpzkks91001l95rzheuz6vkw",
-      "notes": null
+      "notes": null,
+      "calendarDate": "2026-06-23"
     },
     {
       "id": "cmpys1gfu0006tfrzxypdwbu8",
@@ -13036,20 +13037,6 @@
   ],
   "programDayOptions": [
     {
-      "id": "pdo-1780893433317yvtnv09v55s",
-      "dayId": "cmpys1gfk0005tfrz6x7rs3e3",
-      "workoutId": "cmpzkks91001l95rzheuz6vkw",
-      "label": "Gym",
-      "sortOrder": 0
-    },
-    {
-      "id": "pdo-17808934333175wvp09asctc",
-      "dayId": "cmpys1gfk0005tfrz6x7rs3e3",
-      "workoutId": "womq4prcte",
-      "label": "Home",
-      "sortOrder": 0
-    },
-    {
       "id": "pdo-1780893433317lba7m4lhkzh",
       "dayId": "cmpys1gfu0006tfrzxypdwbu8",
       "workoutId": "cmpzkksjf002a95rzjvmo70ms",
@@ -13419,6 +13406,20 @@
       "workoutId": "new-w-1782218533238",
       "label": "Gym",
       "sortOrder": 0
+    },
+    {
+      "id": "pdo-cmpys1gfk0005tfrz6x7rs3e3-0-1782220398158",
+      "dayId": "cmpys1gfk0005tfrz6x7rs3e3",
+      "workoutId": "cmpzkks91001l95rzheuz6vkw",
+      "label": "Gym",
+      "sortOrder": 0
+    },
+    {
+      "id": "pdo-cmpys1gfk0005tfrz6x7rs3e3-1-1782220398158",
+      "dayId": "cmpys1gfk0005tfrz6x7rs3e3",
+      "workoutId": "womq4prcte",
+      "label": "Home",
+      "sortOrder": 1
     }
   ],
   "equipment": [

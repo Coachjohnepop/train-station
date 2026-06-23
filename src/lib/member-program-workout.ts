@@ -13,7 +13,7 @@ export type ResolvedProgramWorkout = {
   workoutName?: string;
 };
 
-function dayWorkoutOptions(day: {
+export function dayWorkoutOptions(day: {
   workoutId?: string | null;
   workout?: { id: string; name?: string } | null;
   options?: Array<{ workoutId: string; label?: string; workout?: { id: string; name?: string } | null }>;

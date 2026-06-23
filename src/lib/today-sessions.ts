@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { parseSmsWorkout } from "@/lib/sms-workout-parser";
 import { buildWorkoutFromParsedSms } from "@/lib/sms-generated-workouts";
 import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
+import { localTodayIso } from "@/lib/program-calendar";
 
 export type TodaySession = {
   id: string;
@@ -62,13 +63,16 @@ function normalizeStore(raw: unknown): TodaySessionStore {
   return { sessions: sessions as Record<string, TodaySession> };
 }
 
-export async function hydrateTodaySessions(): Promise<TodaySessionStore> {
+export async function hydrateTodaySessions(opts?: {
+  preferFresh?: boolean;
+}): Promise<TodaySessionStore> {
   const hydrated = await hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
     memory: memoryStore,
     setMemory,
     fallback: emptyStore,
+    preferFresh: opts?.preferFresh,
   });
   const normalized = normalizeStore(hydrated);
   const rawSessions = (hydrated as TodaySessionStore)?.sessions ?? {};
@@ -134,20 +138,8 @@ function sessionAppliesToUser(session: TodaySession, userId: string) {
 }
 
 export function getTodaySessionForUser(userId: string, referenceDate = new Date()): TodaySession | null {
-  const sessions = listTodaySessions().filter((s) => sessionAppliesToUser(s, userId));
-  if (sessions.length === 0) return null;
-
-  const todayKey = referenceDate.toISOString().slice(0, 10);
-  const onToday = sessions
-    .filter((s) => s.sessionDate === todayKey)
-    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
-  if (onToday.length > 0) return onToday[0];
-
-  const now = referenceDate.getTime();
-  const upcoming = sessions
-    .filter((s) => new Date(s.scheduledAt).getTime() >= now - 12 * 60 * 60 * 1000)
-    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
-  return upcoming[0] ?? sessions[sessions.length - 1];
+  const todayKey = localTodayIso(referenceDate);
+  return getSessionForUserOnDate(userId, todayKey);
 }
 
 export function getUpcomingSessionsForUser(userId: string, referenceDate = new Date()): TodaySession[] {

@@ -78,16 +78,61 @@ export function programDayIndexFromDate(
   return { weekNumber, dayNumber };
 }
 
+/** Local calendar date YYYY-MM-DD (not UTC). */
+export function localTodayIso(reference = new Date()): string {
+  return toIsoDate(reference);
+}
+
 /** Today's week/day on the program calendar (local date), or null if before anchor. */
-export function todayProgramDayIndex(startDate?: string | null): {
+export function todayProgramDayIndex(startDate?: string | null, reference = new Date()): {
   weekNumber: number;
   dayNumber: number;
   iso: string;
 } | null {
-  const iso = toIsoDate(new Date());
+  const iso = localTodayIso(reference);
   const idx = programDayIndexFromDate(resolveProgramStartMonday(startDate), iso);
   if (!idx) return null;
   return { ...idx, iso };
+}
+
+type ProgramDayLike = {
+  id: string;
+  dayNumber: number;
+  calendarDate?: string | null;
+  workoutId?: string | null;
+  options?: Array<{ workoutId: string; label?: string }>;
+  smsOverrideActive?: boolean;
+  smsOverrideLabel?: string | null;
+};
+
+type ProgramWeekLike = {
+  weekNumber: number;
+  days: ProgramDayLike[];
+};
+
+type ProgramCalendarLike = {
+  startDate?: string | null;
+  weeks: ProgramWeekLike[];
+};
+
+/** Find the program day that matches a calendar ISO date (stored calendarDate first, then anchor math). */
+export function findProgramDayForCalendarDate(
+  program: ProgramCalendarLike,
+  isoDate: string,
+): { weekNumber: number; dayNumber: number; day: ProgramDayLike } | null {
+  for (const week of program.weeks) {
+    for (const day of week.days) {
+      if (day.calendarDate === isoDate) {
+        return { weekNumber: week.weekNumber, dayNumber: day.dayNumber, day };
+      }
+    }
+  }
+  const idx = programDayIndexFromDate(resolveProgramStartMonday(program.startDate), isoDate);
+  if (!idx) return null;
+  const week = program.weeks.find((w) => w.weekNumber === idx.weekNumber);
+  const day = week?.days.find((d) => d.dayNumber === idx.dayNumber);
+  if (!week || !day) return null;
+  return { weekNumber: week.weekNumber, dayNumber: day.dayNumber, day };
 }
 
 export const DEFAULT_DAY_OPTIONS = ["Gym", "Home"] as const;

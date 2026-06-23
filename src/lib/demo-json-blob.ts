@@ -144,15 +144,22 @@ export async function hydrateJsonStore<T>(opts: {
   memory: T | null;
   setMemory: (v: T) => void;
   fallback: () => T;
-  /** Skip in-memory cache — use on read paths so serverless instances see latest Blob writes. */
+  /** Skip in-memory cache — use on read paths so serverless instances see latest Blob/disk writes. */
   preferFresh?: boolean;
 }): Promise<T> {
-  if (opts.preferFresh && isBlobConfigured()) {
-    const fromBlob = await readBlobJson<T>(opts.blobPath);
-    blobCheckedAt.set(opts.blobPath, Date.now());
-    if (fromBlob) {
-      opts.setMemory(fromBlob);
-      return fromBlob;
+  if (opts.preferFresh) {
+    if (isBlobConfigured()) {
+      const fromBlob = await readBlobJson<T>(opts.blobPath);
+      blobCheckedAt.set(opts.blobPath, Date.now());
+      if (fromBlob) {
+        opts.setMemory(fromBlob);
+        return fromBlob;
+      }
+    }
+    const fromDisk = readLocalJson<T>(opts.localPath);
+    if (fromDisk) {
+      opts.setMemory(fromDisk);
+      return fromDisk;
     }
   }
 

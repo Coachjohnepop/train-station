@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { DAY_LABELS } from "@/lib/program-constants";
-import { todayProgramDayIndex } from "@/lib/program-calendar";
+import { findProgramDayForCalendarDate, localTodayIso } from "@/lib/program-calendar";
 import ScheduleJumpLink from "@/components/ScheduleJumpLink";
 
 type Program = {
@@ -235,11 +235,12 @@ export default function MemberProgramSchedule({
   const cat = (program.category || "workout") as string;
   const isWorkout = cat === "workout";
   const isJourney = cat === "journey";
-  const todayOnCalendar = todayProgramDayIndex(program.startDate);
+  const todayIso = localTodayIso();
+  const todayOnCalendar = findProgramDayForCalendarDate(program, todayIso);
   const calendarWeek = todayOnCalendar?.weekNumber ?? curWeek;
   const calendarDay = todayOnCalendar?.dayNumber ?? curDay;
-  const withinProgram =
-    !program.durationWeeks || !todayOnCalendar || calendarWeek <= program.durationWeeks;
+  const withinProgram = Boolean(todayOnCalendar) &&
+    (!program.durationWeeks || calendarWeek <= program.durationWeeks);
   const displayWeek = program.weeks.find((w) => w.weekNumber === calendarWeek);
   const fullScheduleId = `${idPrefix}full-schedule`;
   const weekDetailsId = (weekNumber: number) => `${idPrefix}week-${weekNumber}`;

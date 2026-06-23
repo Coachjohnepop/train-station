@@ -15,7 +15,7 @@ import {
 export async function getMemberWorkoutById(
   workoutId: string,
 ): Promise<MemberWorkoutView | null> {
-  const data = (await getDemoSeed()) as any;
+  const data = (await getDemoSeed({ preferFresh: true })) as any;
   if (isDemoMode()) {
     await hydrateDemoExercises();
   }

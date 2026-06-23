@@ -12,7 +12,8 @@ import MemberReminderSettings from '../../components/MemberReminderSettings';
 import GoToTodayCard from "@/components/GoToTodayCard";
 import MemberProgramSchedule from "@/components/MemberProgramSchedule";
 import { resolveUserId } from "@/lib/current-user";
-import { memberTodayHref, resolveMemberSession } from "@/lib/member-today";
+import { resolveMemberSession } from "@/lib/member-today";
+import { resolveMemberGoToToday } from "@/lib/go-to-today";
 import { loadMemberLoggedWorkoutIds } from "@/lib/member-schedule";
 
 export const dynamic = "force-dynamic";
@@ -25,10 +26,12 @@ export default async function MemberDashboardPage() {
     data;
 
   const uid = await resolveUserId();
-  const [todaySession, loggedSet] = await Promise.all([
+  const [todaySession, loggedSet, goToToday] = await Promise.all([
     resolveMemberSession(uid),
     loadMemberLoggedWorkoutIds(uid),
+    resolveMemberGoToToday(uid),
   ]);
+  const goToTodayHref = goToToday.href;
 
   const scheduleEnrollments = enrollments.filter((e) => {
     const cat = e.program.category || "workout";
@@ -46,15 +49,16 @@ export default async function MemberDashboardPage() {
     enrollment: (typeof enrollments)[number];
     program: NonNullable<Awaited<ReturnType<typeof getProgramBySlug>>>;
   }>;
-  const todaySubtitle = todaySession
-    ? `${todaySession.title} — ${new Date(todaySession.scheduledAt).toLocaleString(undefined, {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      })}`
-    : undefined;
+  const todaySubtitle =
+    goToToday.kind === "sms" && todaySession
+      ? `${todaySession.title} — ${new Date(todaySession.scheduledAt).toLocaleString(undefined, {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        })}`
+      : goToToday.subtitle || goToToday.title;
 
   const enrolledSlugs = new Set(enrollments.map((e) => e.program.slug));
 
@@ -87,8 +91,8 @@ export default async function MemberDashboardPage() {
         <div className="lg:w-56 lg:flex-shrink-0">
           <div className="text-sm font-medium mb-2">Today</div>
           <GoToTodayCard
-            href={memberTodayHref(todaySession)}
-            appointmentCount={todaySession ? 1 : 0}
+            href={goToTodayHref}
+            appointmentCount={goToToday.kind === "sms" && todaySession ? 1 : 0}
             subtitle={todaySubtitle}
             variant="member"
             compact
@@ -178,7 +182,7 @@ export default async function MemberDashboardPage() {
                 This week is always visible. Expand full schedule only when you need other weeks.
               </p>
             </div>
-            <Link href="/member/today" className="text-xs text-accent hover:underline whitespace-nowrap">
+            <Link href={goToTodayHref} className="text-xs text-accent hover:underline whitespace-nowrap">
               Go to Today →
             </Link>
           </div>

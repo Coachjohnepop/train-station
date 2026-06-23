@@ -2,9 +2,13 @@ import { applyOverrideToDay, hydrateScheduleOverrides } from "@/lib/demo-schedul
 import { getDemoSeed } from "@/lib/demo-seed-store";
 import { applyCatalogMetadata, normalizeProgramSlug } from "@/lib/programs";
 
+function freshSeedOpts() {
+  return { preferFresh: true as const };
+}
+
 export async function listPrograms() {
   await hydrateScheduleOverrides();
-  const data = await getDemoSeed();
+  const data = await getDemoSeed(freshSeedOpts());
   const programDayOptionsByDayId = (data.programDayOptions || []).reduce((acc: any, o: any) => {
     if (!acc[o.dayId]) acc[o.dayId] = [];
     acc[o.dayId].push({ workoutId: o.workoutId, label: o.label });
@@ -36,7 +40,7 @@ export async function listPrograms() {
 
 export async function getProgramBySlug(slug: string) {
   await hydrateScheduleOverrides();
-  const data = await getDemoSeed();
+  const data = await getDemoSeed(freshSeedOpts());
   const target = normalizeProgramSlug(slug);
   const p = (data.programs || []).find(
     (pr: any) => pr.slug === slug || normalizeProgramSlug(pr.slug) === target,

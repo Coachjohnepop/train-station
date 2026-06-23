@@ -28,7 +28,8 @@ import {
   resolveProgramStartMonday,
   slotIndicesForTimeColumn,
   timeBlockLabel,
-  todayProgramDayIndex,
+  findProgramDayForCalendarDate,
+  localTodayIso,
   toIsoDate,
   totalSlotsFromColumnCounts,
   DAY_TIME_BLOCK_COUNT,
@@ -168,10 +169,12 @@ export default function ProgramCalendarBuilder({
   const [program, setProgram] = useState(initial);
   const [allWorkouts, setAllWorkouts] = useState(initialWorkouts);
   const [library, setLibrary] = useState<LibraryExercise[]>([]);
-  const calendarToday = useMemo(
-    () => todayProgramDayIndex(program.startDate),
-    [program.startDate],
-  );
+  const calendarToday = useMemo(() => {
+    const iso = localTodayIso();
+    const match = findProgramDayForCalendarDate(program, iso);
+    if (!match) return null;
+    return { weekNumber: match.weekNumber, dayNumber: match.dayNumber, iso };
+  }, [program]);
   const [activeWeek, setActiveWeek] = useState(() => calendarToday?.weekNumber ?? 1);
   const [focus, setFocus] = useState<Focus | null>(null);
   const [columnSlotCounts, setColumnSlotCounts] = useState<number[]>([...DEFAULT_COLUMN_SLOT_COUNTS]);
@@ -790,27 +793,28 @@ export default function ProgramCalendarBuilder({
   }
 
   async function goToCalendarToday() {
-    const idx = todayProgramDayIndex(program.startDate);
-    if (!idx) {
+    const iso = localTodayIso();
+    const match = findProgramDayForCalendarDate(program, iso);
+    if (!match) {
       setMessage("Today is before this program calendar starts.");
       setTimeout(() => setMessage(null), 2500);
       return;
     }
-    if (idx.weekNumber > program.durationWeeks) {
+    if (match.weekNumber > program.durationWeeks) {
       setMessage("Today is past this program's last week.");
       setTimeout(() => setMessage(null), 2500);
       return;
     }
-    const week = weeks.find((w) => w.weekNumber === idx.weekNumber);
-    const day = week?.days.find((d) => d.dayNumber === idx.dayNumber);
+    const week = weeks.find((w) => w.weekNumber === match.weekNumber);
+    const day = week?.days.find((d) => d.dayNumber === match.dayNumber);
     if (!week || !day) {
       setMessage("Could not find today's day on the schedule.");
       setTimeout(() => setMessage(null), 2500);
       return;
     }
-    setActiveWeek(idx.weekNumber);
+    setActiveWeek(match.weekNumber);
     await selectDay(day, week);
-    setMessage(`Jumped to today — ${formatShortDate(idx.iso)}.`);
+    setMessage(`Jumped to today — ${formatShortDate(iso)}.`);
     setTimeout(() => setMessage(null), 2000);
   }
 

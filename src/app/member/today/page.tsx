@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import MemberWorkoutConsole from "@/components/MemberWorkoutConsole";
 import TodaySessionPanel from "@/components/TodaySessionPanel";
 import { getMemberDashboard } from "@/lib/member-context";
 import { getSmsGeneratedWorkout } from "@/lib/sms-generated-workouts";
 import { resolveUserId } from "@/lib/current-user";
+import { resolveMemberGoToToday } from "@/lib/go-to-today";
+import { localTodayIso, toIsoDate } from "@/lib/program-calendar";
 import { loadMemberUpcomingSessions, memberTodayHref, resolveMemberSession } from "@/lib/member-today";
 import { listDemoMembersForCoach } from "@/lib/sms";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
@@ -29,10 +31,16 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const dashboard = await getMemberDashboard();
   if (!dashboard) notFound();
 
-  const todayKey = new Date().toISOString().slice(0, 10);
-  const [session, upcoming] = await Promise.all([
+  if (!sp.date && !asInstructor) {
+    const target = await resolveMemberGoToToday(uid);
+    if (target.kind === "program") redirect(target.href);
+  }
+
+  const todayKey = localTodayIso();
+  const [session, upcoming, programToday] = await Promise.all([
     resolveMemberSession(uid, sp.date),
     loadMemberUpcomingSessions(uid),
+    resolveMemberGoToToday(uid),
   ]);
   const viewDate = sp.date || session?.sessionDate || todayKey;
   const workout = session ? await getSmsGeneratedWorkout(session.workoutId, dashboard.user.name) : null;
@@ -56,8 +64,8 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   prevDate.setDate(prevDate.getDate() - 1);
   const nextDate = new Date(`${viewDate}T12:00:00`);
   nextDate.setDate(nextDate.getDate() + 1);
-  const prevKey = prevDate.toISOString().slice(0, 10);
-  const nextKey = nextDate.toISOString().slice(0, 10);
+  const prevKey = toIsoDate(prevDate);
+  const nextKey = toIsoDate(nextDate);
   const dateQuery = (d: string) => {
     const q = new URLSearchParams();
     if (asInstructor) q.set("asInstructor", "true");
@@ -165,8 +173,11 @@ export default async function MemberTodayPage({ searchParams }: Props) {
                 ? "Workout is still building — ask your coach to repost, or try another date with Prev/Next."
                 : "No coach workout assigned for you on this date."}
             </p>
-            <Link href="/member/programs/adult" className="mt-2 inline-block text-accent hover:underline">
-              View program schedule instead →
+            <Link
+              href={programToday.kind === "program" ? programToday.href : "/member/programs/adult"}
+              className="mt-2 inline-block text-accent hover:underline"
+            >
+              Open today&apos;s program workout →
             </Link>
           </div>
         )

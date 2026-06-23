@@ -26,7 +26,7 @@ const postSchema = z.object({
 });
 
 export async function GET(request: Request) {
-  await hydrateTodaySessions();
+  await hydrateTodaySessions({ preferFresh: true });
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("userId") || (await resolveUserId());
   const date = searchParams.get("date");
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  await hydrateTodaySessions();
+  await hydrateTodaySessions({ preferFresh: true });
   const { searchParams } = new URL(request.url);
   const sessionId = searchParams.get("sessionId");
   const date = searchParams.get("date");
