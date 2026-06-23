@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import { put } from "@vercel/blob";
-import { BLOB_TOKEN } from "@/lib/demo-json-blob";
+import { blobSdkOptions, isBlobConfigured } from "@/lib/demo-json-blob";
 import { CHAT_VIDEO_MAX_BYTES, CHAT_VIDEO_MAX_DURATION_SEC } from "@/lib/chat-video-constants";
 
 export { CHAT_VIDEO_MAX_BYTES, CHAT_VIDEO_MAX_DURATION_SEC };
@@ -43,13 +43,12 @@ export async function storeChatVideo(
     mimeType === "video/webm" ? "webm" : mimeType === "video/quicktime" ? "mov" : "mp4";
   const filename = `${randomUUID()}.${ext}`;
 
-  if (BLOB_TOKEN) {
+  if (isBlobConfigured()) {
     const blob = await put(`chat/${filename}`, buffer, {
-      access: "public",
+      ...blobSdkOptions(),
       contentType: mimeType,
       addRandomSuffix: false,
       allowOverwrite: true,
-      token: BLOB_TOKEN,
     });
     return { url: blob.url, durationSec };
   }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { BLOB_TOKEN, probeBlobWrite } from "@/lib/demo-json-blob";
+import { isBlobConfigured, probeBlobWrite, useBlobOidc } from "@/lib/demo-json-blob";
 
 export type DemoSaveResult = {
   exercisesBlobSaved: boolean;
@@ -11,7 +11,7 @@ export function isVercelRuntime(): boolean {
 }
 
 export function isDemoBlobConfigured(): boolean {
-  return Boolean(BLOB_TOKEN);
+  return isBlobConfigured();
 }
 
 export function demoPersistenceStatus() {
@@ -20,12 +20,15 @@ export function demoPersistenceStatus() {
   return {
     onVercel,
     blobConfigured,
+    blobAuth: useBlobOidc() ? "oidc" : blobConfigured ? "token" : "none",
     durable: !onVercel || blobConfigured,
     message: !onVercel
       ? "Changes save to local prisma/*.dev.json and seed-data.json."
       : blobConfigured
-        ? "Changes save to cloud storage and survive redeploy."
-        : "Cloud storage is not configured — edits may disappear after redeploy. Set TS_BLOB_TOKEN on Vercel, or run npm run db:export-seed and commit seed-data.json.",
+        ? useBlobOidc()
+          ? "Changes save via OIDC to the connected Blob store."
+          : "Changes save to cloud storage and survive redeploy."
+        : "Cloud storage is not configured — connect the Blob store (BLOB_STORE_ID) or set TS_BLOB_TOKEN on Vercel, or run npm run db:export-seed and commit seed-data.json.",
   };
 }
 

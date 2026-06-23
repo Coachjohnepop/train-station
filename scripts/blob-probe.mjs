@@ -11,28 +11,18 @@ dotenv.config({ path: ".env.vercel.prod" });
 dotenv.config({ path: ".env.local" });
 dotenv.config({ path: ".env" });
 
-const tokens = [
-  ["BLOB_READ_WRITE_TOKEN", process.env.BLOB_READ_WRITE_TOKEN],
-  ["TS_BLOB_TOKEN", process.env.TS_BLOB_TOKEN],
-].filter(([, v]) => v);
-
-if (!tokens.length) {
-  console.error("NO_TOKEN — set BLOB_READ_WRITE_TOKEN or TS_BLOB_TOKEN");
-  process.exit(1);
-}
-
-async function probeToken(name, token) {
+async function probeMode(name, options) {
   const path = `demo/persistence-probe-${name}.json`;
-  const body = JSON.stringify({ probe: Date.now(), token: name });
+  const body = JSON.stringify({ probe: Date.now(), mode: name });
   try {
     await put(path, body, {
       access: "public",
       contentType: "application/json",
       addRandomSuffix: false,
       allowOverwrite: true,
-      token,
+      ...options,
     });
-    const meta = await head(path, { token });
+    const meta = await head(path, options);
     const res = await fetch(meta.url, { cache: "no-store" });
     if (!res.ok) throw new Error(`fetch ${res.status}`);
     console.log(`✅ ${name} — write OK`);
@@ -43,9 +33,31 @@ async function probeToken(name, token) {
   }
 }
 
+const storeId = process.env.BLOB_STORE_ID?.startsWith("store_")
+  ? process.env.BLOB_STORE_ID
+  : process.env.BLOB_STORE_ID
+    ? `store_${process.env.BLOB_STORE_ID}`
+    : null;
+
 let anyOk = false;
-for (const [name, token] of tokens) {
-  if (await probeToken(name, token)) anyOk = true;
+if (storeId && process.env.VERCEL_OIDC_TOKEN) {
+  anyOk =
+    (await probeMode("OIDC", {
+      storeId,
+      oidcToken: process.env.VERCEL_OIDC_TOKEN,
+    })) || anyOk;
+}
+
+for (const [name, token] of [
+  ["BLOB_READ_WRITE_TOKEN", process.env.BLOB_READ_WRITE_TOKEN],
+  ["TS_BLOB_TOKEN", process.env.TS_BLOB_TOKEN],
+].filter(([, v]) => v)) {
+  if (await probeMode(name, { token })) anyOk = true;
+}
+
+if (!anyOk && !storeId && !process.env.BLOB_READ_WRITE_TOKEN && !process.env.TS_BLOB_TOKEN) {
+  console.error("NO_CREDENTIALS — set BLOB_STORE_ID+VERCEL_OIDC_TOKEN or a read-write token");
+  process.exit(1);
 }
 
 if (fs.existsSync("prisma/seed-data.json")) {

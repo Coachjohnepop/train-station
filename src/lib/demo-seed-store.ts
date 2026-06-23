@@ -1,6 +1,11 @@
 import fs from "fs";
 import path from "path";
-import { BLOB_TOKEN, hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
+import {
+  hydrateJsonStore,
+  isBlobConfigured,
+  persistJsonStore,
+  readLocalJson,
+} from "@/lib/demo-json-blob";
 
 const SEED_FILE = path.join(process.cwd(), "prisma", "seed-data.json");
 const BLOB_PATH = "demo/seed-data.json";
@@ -48,7 +53,7 @@ export async function hydrateDemoSeed(opts?: { preferFresh?: boolean }): Promise
     fallback: loadBundledSeed,
     preferFresh: opts?.preferFresh,
   });
-  if (opts?.preferFresh && local && BLOB_TOKEN) {
+  if (opts?.preferFresh && local && isBlobConfigured()) {
     const merged = mergeDemoSeed(fresh, local);
     setMemory(merged);
     return merged;
@@ -122,17 +127,19 @@ export async function mutateDemoSeed(
   mutator: (data: DemoSeedData) => void,
   opts?: { preferFresh?: boolean },
 ): Promise<{ data: DemoSeedData; blobSaved: boolean }> {
-  const preferFresh = opts?.preferFresh ?? Boolean(BLOB_TOKEN);
+  const preferFresh = opts?.preferFresh ?? isBlobConfigured();
   const local = memorySeed;
   const fresh = structuredClone(await hydrateDemoSeed({ preferFresh })) as DemoSeedData;
   const data =
-    local && BLOB_TOKEN ? mergeDemoSeed(fresh, structuredClone(local) as DemoSeedData) : fresh;
+    local && isBlobConfigured()
+      ? mergeDemoSeed(fresh, structuredClone(local) as DemoSeedData)
+      : fresh;
   mutator(data);
 
   // Re-merge latest workouts/exercises before write so concurrent clone/create writes survive,
   // but keep program-day mutations from this request intact.
   let toPersist = data;
-  if (BLOB_TOKEN) {
+  if (isBlobConfigured()) {
     const latest = structuredClone(await hydrateDemoSeed({ preferFresh: true })) as DemoSeedData;
     toPersist = {
       ...data,

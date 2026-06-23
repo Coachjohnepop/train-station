@@ -1,17 +1,47 @@
 import fs from "fs";
 import path from "path";
-import { head, put } from "@vercel/blob";
+import { head, put, type PutCommandOptions } from "@vercel/blob";
 
-// BLOB_READ_WRITE_TOKEN is a Vercel-reserved name tied to the Blob integration;
-// on this project it isn't injected into the function runtime, so we also accept
-// a plain TS_BLOB_TOKEN and pass it explicitly to the SDK.
+// Static read-write token — used locally or when OIDC is unavailable.
+// On Vercel, prefer OIDC (VERCEL_OIDC_TOKEN + BLOB_STORE_ID) after plan upgrades
+// because legacy static tokens can remain tied to a suspended billing state.
 export const BLOB_TOKEN =
   process.env.BLOB_READ_WRITE_TOKEN || process.env.TS_BLOB_TOKEN;
 
+export function blobStoreId(): string | undefined {
+  const raw = process.env.BLOB_STORE_ID?.trim();
+  if (!raw) return undefined;
+  return raw.startsWith("store_") ? raw : `store_${raw}`;
+}
+
+export function useBlobOidc(): boolean {
+  return Boolean(
+    process.env.VERCEL && blobStoreId() && process.env.VERCEL_OIDC_TOKEN,
+  );
+}
+
+export function isBlobConfigured(): boolean {
+  return useBlobOidc() || Boolean(BLOB_TOKEN);
+}
+
+/** SDK options: OIDC on Vercel when connected, else static token, else env auto-resolve. */
+export function blobSdkOptions(): PutCommandOptions {
+  const access = "public" as const;
+  const storeId = blobStoreId();
+  const oidcToken = process.env.VERCEL_OIDC_TOKEN;
+  if (process.env.VERCEL && storeId && oidcToken) {
+    return { access, storeId, oidcToken };
+  }
+  if (BLOB_TOKEN) {
+    return { access, token: BLOB_TOKEN };
+  }
+  return { access };
+}
+
 export async function readBlobJson<T>(blobPath: string): Promise<T | null> {
-  if (!BLOB_TOKEN) return null;
+  if (!isBlobConfigured()) return null;
   try {
-    const meta = await head(blobPath, { token: BLOB_TOKEN });
+    const meta = await head(blobPath, blobSdkOptions());
     const res = await fetch(meta.url, { cache: "no-store" });
     if (!res.ok) return null;
     return (await res.json()) as T;
@@ -29,22 +59,22 @@ export type BlobWriteFailure = {
 export async function probeBlobWrite(): Promise<
   { ok: true } | BlobWriteFailure
 > {
-  if (!BLOB_TOKEN) {
+  if (!isBlobConfigured()) {
     return {
       ok: false,
       reason: "no_token",
-      message: "Set TS_BLOB_TOKEN or BLOB_READ_WRITE_TOKEN on Vercel.",
+      message:
+        "Connect the Blob store to this project (BLOB_STORE_ID + OIDC on Vercel) or set TS_BLOB_TOKEN.",
     };
   }
   const probePath = "demo/_write-probe.json";
   const payload = JSON.stringify({ probe: Date.now() });
   try {
     await put(probePath, payload, {
-      access: "public",
+      ...blobSdkOptions(),
       contentType: "application/json",
       addRandomSuffix: false,
       allowOverwrite: true,
-      token: BLOB_TOKEN,
     });
     return { ok: true };
   } catch (e) {
@@ -54,7 +84,7 @@ export async function probeBlobWrite(): Promise<
         ok: false,
         reason: "suspended",
         message:
-          "Vercel Blob store is suspended — reactivate it in Vercel → Storage → Blob, or create a new store and update TS_BLOB_TOKEN.",
+          "Vercel Blob store is suspended — reactivate it in Vercel → Storage → Blob, or connect the store to this project for OIDC auth.",
       };
     }
     return {
@@ -66,14 +96,13 @@ export async function probeBlobWrite(): Promise<
 }
 
 export async function writeBlobJson(blobPath: string, data: unknown): Promise<boolean> {
-  if (!BLOB_TOKEN) return false;
+  if (!isBlobConfigured()) return false;
   try {
     await put(blobPath, JSON.stringify(data, null, 2), {
-      access: "public",
+      ...blobSdkOptions(),
       contentType: "application/json",
       addRandomSuffix: false,
       allowOverwrite: true,
-      token: BLOB_TOKEN,
     });
     return true;
   } catch (e) {
@@ -118,7 +147,7 @@ export async function hydrateJsonStore<T>(opts: {
   /** Skip in-memory cache — use on read paths so serverless instances see latest Blob writes. */
   preferFresh?: boolean;
 }): Promise<T> {
-  if (opts.preferFresh && BLOB_TOKEN) {
+  if (opts.preferFresh && isBlobConfigured()) {
     const fromBlob = await readBlobJson<T>(opts.blobPath);
     blobCheckedAt.set(opts.blobPath, Date.now());
     if (fromBlob) {
@@ -129,7 +158,7 @@ export async function hydrateJsonStore<T>(opts: {
 
   const now = Date.now();
   const lastCheck = blobCheckedAt.get(opts.blobPath) ?? 0;
-  const shouldRefreshBlob = BLOB_TOKEN && now - lastCheck >= BLOB_REFRESH_MS;
+  const shouldRefreshBlob = isBlobConfigured() && now - lastCheck >= BLOB_REFRESH_MS;
 
   if (shouldRefreshBlob) {
     blobCheckedAt.set(opts.blobPath, now);
