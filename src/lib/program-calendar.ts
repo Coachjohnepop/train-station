@@ -169,17 +169,37 @@ export const DAY_SLOT_COUNT = 9;
 export const DAY_TIME_BLOCK_MINUTES = 30;
 export const DAY_TIME_BLOCK_COUNT = 2;
 
-export function slotsPerTimeColumn(): number {
-  return Math.ceil(DAY_SLOT_COUNT / DAY_TIME_BLOCK_COUNT);
+export const DEFAULT_COLUMN_SLOT_COUNTS: readonly number[] = [5, 4];
+
+export function totalSlotsFromColumnCounts(counts: readonly number[]): number {
+  return counts.reduce((sum, n) => sum + n, 0);
 }
 
-export function slotIndicesForTimeColumn(column: number): number[] {
-  const perCol = slotsPerTimeColumn();
-  const start = column * perCol;
-  return Array.from(
-    { length: Math.min(perCol, DAY_SLOT_COUNT - start) },
-    (_, i) => start + i,
-  );
+export function columnStartIndex(column: number, counts: readonly number[]): number {
+  let start = 0;
+  for (let c = 0; c < column; c++) start += counts[c] ?? 0;
+  return start;
+}
+
+export function slotIndicesForTimeColumn(
+  column: number,
+  counts: readonly number[] = DEFAULT_COLUMN_SLOT_COUNTS,
+): number[] {
+  const start = columnStartIndex(column, counts);
+  const len = counts[column] ?? 0;
+  return Array.from({ length: len }, (_, i) => start + i);
+}
+
+/** Grow column counts so every exercise fits, keeping the 0–30 / 30–60 split. */
+export function columnSlotCountsForExerciseCount(exerciseCount: number): number[] {
+  const counts = [...DEFAULT_COLUMN_SLOT_COUNTS];
+  let total = totalSlotsFromColumnCounts(counts);
+  while (total < exerciseCount) {
+    const growCol = counts[0] <= counts[1] ? 0 : 1;
+    counts[growCol]++;
+    total++;
+  }
+  return counts;
 }
 
 export function timeBlockLabel(column: number): string {

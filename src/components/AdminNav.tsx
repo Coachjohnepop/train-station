@@ -9,6 +9,21 @@ const SHOW_LEADS = process.env.NEXT_PUBLIC_SHOW_ADMIN_LEADS === "true";
 
 const items = [
   { href: "/admin", label: "Overview", match: (p: string) => p === "/admin" },
+  {
+    href: "/admin/programs",
+    label: "Programs",
+    match: (p: string) => p.startsWith("/admin/programs"),
+  },
+  {
+    href: "/admin/workouts",
+    label: "Workouts",
+    match: (p: string) => p.startsWith("/admin/workouts"),
+  },
+  {
+    href: "/admin/exercises",
+    label: "Exercises",
+    match: (p: string) => p.startsWith("/admin/exercises"),
+  },
   ...(SHOW_LEADS
     ? [
         {
@@ -19,21 +34,6 @@ const items = [
         },
       ]
     : []),
-  {
-    href: "/admin/exercises",
-    label: "Exercises",
-    match: (p: string) => p.startsWith("/admin/exercises"),
-  },
-  {
-    href: "/admin/workouts",
-    label: "Workouts",
-    match: (p: string) => p.startsWith("/admin/workouts"),
-  },
-  {
-    href: "/admin/programs",
-    label: "Programs",
-    match: (p: string) => p.startsWith("/admin/programs"),
-  },
   {
     href: "/admin/users",
     label: "Users",

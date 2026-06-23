@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import SearchableExerciseSelect, {
   type LibraryExercise,
 } from "@/components/SearchableExerciseSelect";
 import { DAY_LABELS } from "@/lib/program-constants";
 import {
   calendarDateForProgramDay,
-  DAY_SLOT_COUNT,
+  columnSlotCountsForExerciseCount,
   daysInMonth,
+  DEFAULT_COLUMN_SLOT_COUNTS,
   DEFAULT_DAY_OPTIONS,
   formatMonthYear,
   formatShortDate,
@@ -19,6 +20,8 @@ import {
   fastedCardioReps,
   isDayOffLabel,
   isFastedCardioLabel,
+  isGymLabel,
+  isHomeLabel,
   isWorkoutDayLabel,
   normalizeDayOptions,
   parseFastedCardioMinutes,
@@ -26,6 +29,7 @@ import {
   slotIndicesForTimeColumn,
   timeBlockLabel,
   toIsoDate,
+  totalSlotsFromColumnCounts,
   DAY_TIME_BLOCK_COUNT,
   WARMUP_EXERCISE_NAMES,
 } from "@/lib/program-calendar";
@@ -94,8 +98,53 @@ function dayKindLabel(day: ProgramDay): string {
   const opts = getDayOptions(day);
   if (opts.some((o) => isDayOffLabel(o.label))) return "Day off";
   if (opts.some((o) => isFastedCardioLabel(o.label))) return "Fasted cardio";
+  if (opts.some((o) => isGymLabel(o.label)) && opts.some((o) => isHomeLabel(o.label))) {
+    return "Gym · Home";
+  }
+  if (opts.some((o) => isGymLabel(o.label))) return "Gym workout";
+  if (opts.some((o) => isHomeLabel(o.label))) return "Home workout";
   if (opts.length === 0) return "Empty";
   return `${opts.length} setting${opts.length === 1 ? "" : "s"}`;
+}
+
+/** Custom settings only — Gym/Home are always in the bean row. */
+function customSettingOptions(day: ProgramDay): DayOption[] {
+  return getDayOptions(day).filter(
+    (o) =>
+      !isGymLabel(o.label) &&
+      !isHomeLabel(o.label) &&
+      !isDayOffLabel(o.label) &&
+      !isFastedCardioLabel(o.label),
+  );
+}
+
+function beanButtonClass(active: boolean): string {
+  return active
+    ? "rounded-full border border-emerald-400 bg-emerald-500/25 px-2.5 py-1 text-[10px] font-bold text-emerald-100 ring-1 ring-emerald-400/60"
+    : "rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 text-[10px] font-medium text-[var(--muted)] hover:border-emerald-400/40 hover:text-[var(--text)]";
+}
+
+function dayGridCardClasses(isSelected: boolean, published: boolean): string {
+  const highlighted = isSelected || published;
+  const parts = ["w-full rounded-lg p-2 text-left transition"];
+  if (highlighted) {
+    parts.push(
+      published
+        ? "border-4 border-emerald-400 bg-emerald-500/25 shadow-[0_0_12px_rgba(74,222,154,0.25)]"
+        : "border-2 border-emerald-400 bg-emerald-500/20 shadow-sm",
+    );
+  } else {
+    parts.push("border border-[var(--border)] bg-[var(--surface-2)] hover:border-emerald-400/30");
+  }
+  return parts.join(" ");
+}
+
+function dayGridTextClass(isSelected: boolean, published: boolean, variant: "title" | "meta"): string {
+  const highlighted = isSelected || published;
+  if (variant === "title") {
+    return highlighted ? "text-emerald-50 font-bold" : "text-[var(--text)] font-bold";
+  }
+  return highlighted ? "text-emerald-100/80" : "text-[var(--muted)]";
 }
 
 function dayOptionsNeedCleanup(day: ProgramDay): boolean {
@@ -120,8 +169,12 @@ export default function ProgramCalendarBuilder({
   const [library, setLibrary] = useState<LibraryExercise[]>([]);
   const [activeWeek, setActiveWeek] = useState(1);
   const [focus, setFocus] = useState<Focus | null>(null);
-  const [slots, setSlots] = useState<(SlotItem | null)[]>(Array(DAY_SLOT_COUNT).fill(null));
+  const [columnSlotCounts, setColumnSlotCounts] = useState<number[]>([...DEFAULT_COLUMN_SLOT_COUNTS]);
+  const [slots, setSlots] = useState<(SlotItem | null)[]>(
+    Array(totalSlotsFromColumnCounts(DEFAULT_COLUMN_SLOT_COUNTS)).fill(null),
+  );
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+  const editorRef = useRef<HTMLDivElement>(null);
   const [prescription, setPrescription] = useState<DayPrescription>(DEFAULT_DAY_PRESCRIPTION);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -192,26 +245,41 @@ export default function ProgramCalendarBuilder({
     return updated;
   }
 
-  async function setDayOptions(dayId: string, options: DayOption[]) {
-    setSaving(true);
+  async function setDayOptions(dayId: string, options: DayOption[], opts?: { silent?: boolean }) {
+    const silent = opts?.silent === true;
+    if (!silent) setSaving(true);
     try {
       await patchDay(dayId, { options: normalizeDayOptions(options) as DayOption[] });
-      setMessage("Saved.");
-      setTimeout(() => setMessage(null), 1500);
+      if (!silent) {
+        setMessage("Saved.");
+        setTimeout(() => setMessage(null), 1500);
+      }
     } catch {
-      setMessage("Could not save — try again.");
+      if (!silent) setMessage("Could not save — try again.");
     } finally {
-      setSaving(false);
+      if (!silent) setSaving(false);
     }
+  }
+
+  function scrollToEditor() {
+    requestAnimationFrame(() => {
+      editorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }
+
+  function resetSlotGrid() {
+    setColumnSlotCounts([...DEFAULT_COLUMN_SLOT_COUNTS]);
+    setSlots(Array(totalSlotsFromColumnCounts(DEFAULT_COLUMN_SLOT_COUNTS)).fill(null));
   }
 
   async function ensureWorkoutForOption(
     dayId: string,
     optIdx: number,
     label: string,
+    dayOverride?: ProgramDay,
   ): Promise<string | null> {
     const week = program.weeks.find((w) => w.days.some((d) => d.id === dayId));
-    const day = week?.days.find((d) => d.id === dayId);
+    const day = dayOverride ?? week?.days.find((d) => d.id === dayId);
     if (!week || !day) return null;
 
     const opts = [...getDayOptions(day)];
@@ -235,7 +303,7 @@ export default function ProgramCalendarBuilder({
     }
     opts[optIdx] = { workoutId: created.id, label: opts[optIdx].label || label };
 
-    await setDayOptions(dayId, opts);
+    await setDayOptions(dayId, opts, { silent: true });
     setAllWorkouts((prev) =>
       prev.some((w) => w.id === created.id) ? prev : [...prev, { id: created.id, name: created.name }],
     );
@@ -298,7 +366,7 @@ export default function ProgramCalendarBuilder({
     try {
       const res = await fetch(`/api/workouts/${workoutId}`, { cache: "no-store" });
       if (!res.ok) {
-        setSlots(Array(DAY_SLOT_COUNT).fill(null));
+        resetSlotGrid();
         setSelectedSlotIdx(null);
         return;
       }
@@ -313,10 +381,13 @@ export default function ProgramCalendarBuilder({
         sortOrder: it.sortOrder ?? 0,
       }));
       items.sort((a, b) => a.sortOrder - b.sortOrder);
-      const grid: (SlotItem | null)[] = Array(DAY_SLOT_COUNT).fill(null);
+      const counts = columnSlotCountsForExerciseCount(items.length);
+      const total = totalSlotsFromColumnCounts(counts);
+      const grid: (SlotItem | null)[] = Array(total).fill(null);
       items.forEach((item, idx) => {
-        if (idx < DAY_SLOT_COUNT) grid[idx] = { ...item, sortOrder: idx };
+        if (idx < total) grid[idx] = { ...item, sortOrder: idx };
       });
+      setColumnSlotCounts(counts);
       setSlots(grid);
       const defaults = rx ?? DEFAULT_DAY_PRESCRIPTION;
       const firstFilled = grid.findIndex((s) => s !== null);
@@ -332,29 +403,10 @@ export default function ProgramCalendarBuilder({
   }, []);
 
   async function openDayOption(day: ProgramDay, week: ProgramWeek, optIdx: number, label: string) {
-    if (dayOptionsNeedCleanup(day)) {
-      const cleaned = normalizeDayOptions(day.options || []) as DayOption[];
-      await patchDay(day.id, { options: cleaned });
-      day = { ...day, options: cleaned };
-    }
-
     let opts = getDayOptions(day);
-    if (opts.length === 0) {
-      await setDayOptions(day.id, [
-        { workoutId: "", label: "Gym" },
-        { workoutId: "", label: "Home" },
-      ]);
-      const refreshed = program.weeks
-        .find((w) => w.id === week.id)
-        ?.days.find((d) => d.id === day.id);
-      opts = refreshed ? getDayOptions(refreshed) : [
-        { workoutId: "", label: "Gym" },
-        { workoutId: "", label: "Home" },
-      ];
-    }
-
     const optLabel = opts[optIdx]?.label || label;
     const rx = readDayPrescription(day);
+
     setPrescription(rx);
     setCheckedSlots(new Set());
     setExpandedDays((prev) => new Set(prev).add(day.id));
@@ -368,27 +420,64 @@ export default function ProgramCalendarBuilder({
         weekNumber: week.weekNumber,
         dayNumber: day.dayNumber,
       });
-      setSlots(Array(DAY_SLOT_COUNT).fill(null));
+      resetSlotGrid();
       setSelectedSlotIdx(null);
+      scrollToEditor();
       return;
     }
 
-    const workoutId = await ensureWorkoutForOption(day.id, optIdx, optLabel);
-    if (!workoutId) return;
-
+    const existingWorkoutId = opts[optIdx]?.workoutId || "";
     setFocus({
       dayId: day.id,
       optIdx,
-      workoutId,
+      workoutId: existingWorkoutId,
       label: optLabel,
       weekNumber: week.weekNumber,
       dayNumber: day.dayNumber,
     });
+    scrollToEditor();
 
-    if (isWorkoutDayLabel(optLabel)) {
-      await seedWarmups(workoutId, rx);
+    if (existingWorkoutId) {
+      void loadSlots(existingWorkoutId, rx);
+    } else {
+      resetSlotGrid();
+      setSelectedSlotIdx(0);
+      syncEditorFromSlot(null, rx);
     }
-    await loadSlots(workoutId, rx);
+
+    if (dayOptionsNeedCleanup(day)) {
+      const cleaned = normalizeDayOptions(day.options || []) as DayOption[];
+      void patchDay(day.id, { options: cleaned }).then(() => {
+        day = { ...day, options: cleaned };
+      });
+    }
+
+    if (opts.length === 0) {
+      void setDayOptions(
+        day.id,
+        [
+          { workoutId: "", label: "Gym" },
+          { workoutId: "", label: "Home" },
+        ],
+        { silent: true },
+      );
+      opts = [
+        { workoutId: "", label: "Gym" },
+        { workoutId: "", label: "Home" },
+      ];
+    }
+
+    const workoutId = await ensureWorkoutForOption(day.id, optIdx, optLabel, day);
+    if (!workoutId) return;
+
+    setFocus((prev) =>
+      prev?.dayId === day.id && prev.optIdx === optIdx ? { ...prev, workoutId } : prev,
+    );
+
+    void loadSlots(workoutId, rx);
+    if (isWorkoutDayLabel(optLabel)) {
+      void seedWarmups(workoutId, rx).then(() => loadSlots(workoutId, rx));
+    }
   }
 
   async function clearWorkoutExercises(workoutId: string) {
@@ -417,7 +506,7 @@ export default function ProgramCalendarBuilder({
         workoutId: "",
         label: DAY_OFF_LABEL,
       });
-      setSlots(Array(DAY_SLOT_COUNT).fill(null));
+      resetSlotGrid();
       setCheckedSlots(new Set());
       setSelectedSlotIdx(null);
       setMessage("Day Off — rest day.");
@@ -631,9 +720,115 @@ export default function ProgramCalendarBuilder({
   }
 
   async function selectDay(day: ProgramDay, week: ProgramWeek) {
-    setExpandedDays((prev) => new Set(prev).add(day.id));
-    const gymIdx = getDayOptions(day).findIndex((o) => /gym/i.test(o.label));
+    const opts = getDayOptions(day);
+    if (opts.length === 1 && opts.some((o) => isFastedCardioLabel(o.label))) {
+      await openDayOption(day, week, 0, FASTED_CARDIO_LABEL);
+      return;
+    }
+    if (opts.some((o) => isDayOffLabel(o.label))) {
+      await openDayOption(day, week, 0, DAY_OFF_LABEL);
+      return;
+    }
+    const gymIdx = opts.findIndex((o) => isGymLabel(o.label));
     await openDayOption(day, week, gymIdx >= 0 ? gymIdx : 0, "Gym");
+  }
+
+  function mergeDayFromPatch(day: ProgramDay, patch: Record<string, unknown>, updated: any): ProgramDay {
+    return {
+      ...day,
+      ...patch,
+      options: (updated.options as DayOption[] | undefined) ?? (patch.options as DayOption[] | undefined) ?? day.options,
+      workoutId: (updated.workoutId as string | null | undefined) ?? day.workoutId,
+    };
+  }
+
+  async function ensureGymHomeOptions(day: ProgramDay): Promise<ProgramDay> {
+    const stored = getDayOptions(day);
+    const gym = stored.find((o) => isGymLabel(o.label));
+    const home = stored.find((o) => isHomeLabel(o.label));
+    const workoutOpts: DayOption[] = [
+      { workoutId: gym?.workoutId || "", label: "Gym" },
+      { workoutId: home?.workoutId || "", label: "Home" },
+    ];
+    const needsPatch =
+      !gym ||
+      !home ||
+      stored.some((o) => isDayOffLabel(o.label)) ||
+      stored.some((o) => isFastedCardioLabel(o.label));
+    if (!needsPatch) return { ...day, options: workoutOpts };
+    const updated = await patchDay(day.id, { options: workoutOpts, notes: null });
+    return mergeDayFromPatch(day, { options: workoutOpts, notes: null }, updated);
+  }
+
+  async function selectDayMode(
+    mode: "day-off" | "fasted-cardio" | "gym" | "home" | DayOption,
+  ) {
+    if (!focus || !focusDay || !activeWeekData) return;
+
+    if (mode === "day-off") {
+      await applyDayOff();
+      return;
+    }
+    if (mode === "fasted-cardio") {
+      await applyFastedCardio(fastedCardioMinutes);
+      return;
+    }
+    if (mode === "gym" || mode === "home") {
+      const label = mode === "gym" ? "Gym" : "Home";
+      const refreshed = await ensureGymHomeOptions(focusDay);
+      const optIdx = mode === "home" ? 1 : 0;
+      await openDayOption(refreshed, activeWeekData, optIdx, label);
+      return;
+    }
+
+    const stored = getDayOptions(focusDay);
+    const idx = stored.findIndex((o) => o.label === mode.label);
+    await openDayOption(focusDay, activeWeekData, idx >= 0 ? idx : 0, mode.label);
+  }
+
+  async function shiftSortOrdersFrom(insertAt: number) {
+    if (!focus) return;
+    for (let i = slots.length - 1; i >= insertAt; i--) {
+      const slot = slots[i];
+      if (!slot) continue;
+      await fetch(`/api/workouts/${focus.workoutId}/exercises`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId: slot.id, sortOrder: i + 1 }),
+      });
+    }
+  }
+
+  async function addSlotBelow(column: number) {
+    if (!focus) return;
+    const counts = [...columnSlotCounts];
+    const indices = slotIndicesForTimeColumn(column, counts);
+    const lastIdx = indices[indices.length - 1];
+    const lastSlot = slots[lastIdx];
+
+    if (!lastSlot) {
+      selectSlot(lastIdx, slots, prescription);
+      return;
+    }
+
+    const insertAt = lastIdx + 1;
+    counts[column]++;
+    setColumnSlotCounts(counts);
+
+    const newSlots = [...slots];
+    newSlots.splice(insertAt, 0, null);
+    setSlots(newSlots);
+    setCheckedSlots((prev) => {
+      const next = new Set<number>();
+      prev.forEach((i) => next.add(i >= insertAt ? i + 1 : i));
+      return next;
+    });
+    selectSlot(insertAt, newSlots, prescription);
+
+    await shiftSortOrdersFrom(insertAt);
+    setSlots((prev) =>
+      prev.map((s, i) => (s && i > insertAt ? { ...s, sortOrder: i } : s)),
+    );
   }
 
   async function assignSlot(slotIndex: number, exerciseId: string) {
@@ -912,9 +1107,11 @@ export default function ProgramCalendarBuilder({
       <div
         key={idx}
         className={`flex items-center gap-1.5 rounded-md border px-2 py-1 transition ${
-          isSelected
-            ? "border-accent bg-accent/10"
-            : "border-[var(--border)] bg-[var(--surface-2)] hover:border-accent/30"
+          isChecked
+            ? "border-emerald-400 bg-emerald-500/20"
+            : isSelected
+              ? "border-accent bg-accent/10"
+              : "border-[var(--border)] bg-[var(--surface-2)] hover:border-accent/30"
         }`}
       >
         {slot ? (
@@ -1050,36 +1247,38 @@ export default function ProgramCalendarBuilder({
                   calendarDateForProgramDay(startMonday, activeWeekData.weekNumber, day.dayNumber);
                 const isSelected = focus?.dayId === day.id;
                 const isExpanded = expandedDays.has(day.id);
-                const opts = getDayOptions(day);
                 const published = !!day.publishedAt;
 
                 return (
-                  <div
+                  <button
                     key={day.id}
-                    className={`rounded-lg border p-2 transition ${
-                      isSelected
-                        ? "border-accent bg-accent/10"
-                        : "border-[var(--border)] hover:border-accent/40"
-                    }`}
+                    type="button"
+                    className={dayGridCardClasses(isSelected, published)}
+                    onClick={() => void selectDay(day, activeWeekData)}
                   >
-                    <button
-                      type="button"
-                      className="flex w-full items-center justify-between text-left"
-                      onClick={() => void selectDay(day, activeWeekData)}
-                    >
-                      <div>
-                        <p className="text-xs font-bold text-accent">
+                    <div className="flex items-start justify-between gap-1">
+                      <div className="min-w-0">
+                        <p className={`text-xs leading-none ${dayGridTextClass(isSelected, published, "title")}`}>
                           {DAY_LABELS[day.dayNumber - 1]}
                         </p>
-                        <p className="text-[10px] text-[var(--muted)]">{formatShortDate(cal)}</p>
+                        <p className={`mt-0.5 text-[10px] ${dayGridTextClass(isSelected, published, "meta")}`}>
+                          {formatShortDate(cal)}
+                        </p>
                       </div>
-                      <span className="text-[10px] text-[var(--muted)]">{isExpanded ? "▼" : "▶"}</span>
-                    </button>
-                    <p className="mt-1 text-[10px] text-[var(--muted)]">
+                      <span
+                        className={`shrink-0 text-xs font-bold leading-none ${dayGridTextClass(isSelected, published, "title")}`}
+                        aria-hidden
+                      >
+                        {isExpanded ? "▼" : "▶"}
+                      </span>
+                    </div>
+                    <p className={`mt-1 text-[10px] ${dayGridTextClass(isSelected, published, "meta")}`}>
                       {dayKindLabel(day)}
-                      {published && <span className="ml-1 text-emerald-400">· Published</span>}
+                      {published && (
+                        <span className="font-bold text-emerald-200"> · Published</span>
+                      )}
                     </p>
-                  </div>
+                  </button>
                 );
               })}
           </div>
@@ -1087,7 +1286,27 @@ export default function ProgramCalendarBuilder({
       )}
 
       {focus && focusDay && (
-        <div className="space-y-2 rounded-lg border border-accent/25 bg-[var(--surface)] p-3">
+        <div
+          ref={editorRef}
+          className={`space-y-2 rounded-lg border p-3 scroll-mt-4 ${
+            focusDay.publishedAt
+              ? "border-2 border-emerald-500/60 bg-emerald-950/25"
+              : "border-accent/25 bg-[var(--surface)]"
+          }`}
+        >
+          {focusDay.publishedAt && (
+            <div className="flex items-center gap-2.5 rounded-md border-2 border-emerald-500/50 bg-emerald-950/50 px-3 py-2">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-base font-extrabold text-emerald-950">
+                ✓
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-extrabold tracking-wide text-emerald-300">Published — complete</p>
+                <p className="text-[10px] text-emerald-400/90">
+                  This day is finished. You can still view or duplicate it.
+                </p>
+              </div>
+            </div>
+          )}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="min-w-0">
               <h3 className="text-sm font-semibold">
@@ -1099,16 +1318,25 @@ export default function ProgramCalendarBuilder({
                   )}
                 </span>
                 <span className="ml-1 text-xs text-violet-300">· {focus.label}</span>
+                {focusDay.publishedAt && (
+                  <span className="ml-1.5 inline-flex items-center rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 ring-1 ring-emerald-400/40">
+                    ✓ Published
+                  </span>
+                )}
               </h3>
             </div>
             <div className="flex shrink-0 gap-1.5">
               <button
                 type="button"
-                className="btn-primary px-2 py-1 text-xs"
-                disabled={saving}
+                className={
+                  focusDay.publishedAt
+                    ? "cursor-default rounded-md border-2 border-emerald-500/60 bg-emerald-950/40 px-2 py-1 text-xs font-extrabold text-emerald-300"
+                    : "btn-primary px-2 py-1 text-xs"
+                }
+                disabled={saving || !!focusDay.publishedAt}
                 onClick={() => void publishDay()}
               >
-                Publish
+                {focusDay.publishedAt ? "✓ Published" : "Publish"}
               </button>
               <button
                 type="button"
@@ -1121,47 +1349,22 @@ export default function ProgramCalendarBuilder({
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-1">
-            {getDayOptions(focusDay).map((opt, idx) => (
-              <button
-                key={idx}
-                type="button"
-                className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                  focus.optIdx === idx
-                    ? "bg-violet-600/30 text-violet-100 ring-1 ring-violet-400/50"
-                    : "bg-[var(--surface-2)] text-[var(--muted)]"
-                }`}
-                onClick={() => void openDayOption(focusDay, activeWeekData!, idx, opt.label)}
-              >
-                {opt.label}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
-              className="rounded-full px-2 py-0.5 text-[10px] text-accent hover:bg-accent/10"
-              onClick={() => void addCustomOption(focus.dayId)}
-            >
-              + setting
-            </button>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1.5">
-            <span className="text-[10px] font-medium text-[var(--muted)]">Quick</span>
-            <button
-              type="button"
-              className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] hover:bg-[var(--surface)]"
+              className={beanButtonClass(isDayOffLabel(focus.label))}
               disabled={saving}
-              onClick={() => void applyDayOff()}
+              onClick={() => void selectDayMode("day-off")}
             >
               Day Off
             </button>
             <button
               type="button"
-              className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] hover:bg-[var(--surface)]"
+              className={beanButtonClass(isFastedCardioLabel(focus.label))}
               disabled={saving}
-              onClick={() => void applyFastedCardio(fastedCardioMinutes)}
+              onClick={() => void selectDayMode("fasted-cardio")}
             >
-              {fastedCardioMinutes} min fasted cardio
+              Fasted cardio
             </button>
             <label className="flex items-center gap-1 text-[10px] text-[var(--muted)]">
               <input
@@ -1176,125 +1379,175 @@ export default function ProgramCalendarBuilder({
                   const v = parseInt(e.target.value, 10);
                   if (!Number.isNaN(v)) setFastedCardioMinutes(Math.max(5, Math.min(120, v)));
                 }}
+                onBlur={() => {
+                  if (isFastedCardioLabel(focus.label)) void applyFastedCardio(fastedCardioMinutes);
+                }}
               />
               min
             </label>
+            <button
+              type="button"
+              className={beanButtonClass(isGymLabel(focus.label))}
+              disabled={saving}
+              onClick={() => void selectDayMode("gym")}
+            >
+              Gym Workout
+            </button>
+            <button
+              type="button"
+              className={beanButtonClass(isHomeLabel(focus.label))}
+              disabled={saving}
+              onClick={() => void selectDayMode("home")}
+            >
+              Home Workout
+            </button>
+            {customSettingOptions(focusDay).map((opt) => (
+              <button
+                key={opt.label}
+                type="button"
+                className={beanButtonClass(focus.label === opt.label)}
+                disabled={saving}
+                onClick={() => void selectDayMode(opt)}
+              >
+                {opt.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              className="rounded-full border border-dashed border-[var(--border)] px-2.5 py-1 text-[10px] font-medium text-accent hover:border-accent/50 hover:bg-accent/10"
+              disabled={saving}
+              onClick={() => void addCustomOption(focus.dayId)}
+            >
+              + Add More
+            </button>
           </div>
 
           {isDayOffLabel(focus.label) ? (
-            <p className="rounded-md bg-[var(--surface-2)] px-3 py-4 text-center text-sm text-[var(--muted)]">
-              Rest day — no workout. Use <strong>Gym</strong> / <strong>Home</strong> or Quick above to
-              switch.
-            </p>
-          ) : (
-          <>
-          <div className="flex flex-wrap items-end gap-2 rounded-md bg-[var(--surface-2)] px-2 py-1.5">
-            <p className="mr-1 max-w-[160px] truncate text-[10px] text-[var(--muted)]">
-              {isFastedCardioLabel(focus.label)
-                ? "Fasted cardio"
-                : selectedSlotIdx !== null && slots[selectedSlotIdx]
-                  ? slots[selectedSlotIdx]!.name
-                  : "Select exercise"}
-            </p>
-            {!isFastedCardioLabel(focus.label) && (
-            <label className="text-[10px]">
-              Sets
-              <input
-                type="number"
-                min={1}
-                max={20}
-                className="input mt-0.5 h-7 w-12 px-1 text-xs"
-                value={editorSets}
-                disabled={selectedSlotIdx === null}
-                onChange={(e) => {
-                  const v = parseInt(e.target.value, 10);
-                  if (!Number.isNaN(v)) setEditorSets(Math.max(1, v));
-                }}
-                onBlur={() => void saveSelectedSlot()}
-              />
-            </label>
-            )}
-            <label className="text-[10px]">
-              {isFastedCardioLabel(focus.label) ? "Minutes" : "Reps"}
-              <input
-                className="input mt-0.5 h-7 w-14 px-1 text-xs"
-                value={
-                  isFastedCardioLabel(focus.label) ? String(fastedCardioMinutes) : editorReps
-                }
-                disabled={selectedSlotIdx === null && !isFastedCardioLabel(focus.label)}
-                onChange={(e) => {
-                  if (isFastedCardioLabel(focus.label)) {
-                    const v = parseInt(e.target.value, 10);
-                    if (!Number.isNaN(v)) setFastedCardioMinutes(Math.max(5, Math.min(120, v)));
-                  } else {
-                    setEditorReps(e.target.value);
-                  }
-                }}
-                onBlur={() => {
-                  if (isFastedCardioLabel(focus.label)) {
-                    void applyFastedCardio(fastedCardioMinutes);
-                  } else {
-                    void saveSelectedSlot();
-                  }
-                }}
-              />
-            </label>
-            {!isFastedCardioLabel(focus.label) && (
-            <label className="text-[10px]">
-              Rest
-              <input
-                type="number"
-                min={0}
-                max={600}
-                className="input mt-0.5 h-7 w-12 px-1 text-xs"
-                value={editorRest}
-                disabled={selectedSlotIdx === null}
-                onChange={(e) => {
-                  const v = parseInt(e.target.value, 10);
-                  if (!Number.isNaN(v)) setEditorRest(Math.max(0, v));
-                }}
-                onBlur={() => void saveSelectedSlot()}
-              />
-            </label>
-            )}
-            {!isFastedCardioLabel(focus.label) && (
-            <button
-              type="button"
-              className="btn-ghost h-7 px-2 text-[10px]"
-              disabled={saving || checkedSlots.size === 0}
-              onClick={() => void applyToChecked()}
-            >
-              Apply to checked ({checkedSlots.size})
-            </button>
-            )}
-          </div>
-
-          {loadingSlots ? (
-            <p className="text-xs text-[var(--muted)]">Loading…</p>
-          ) : isFastedCardioLabel(focus.label) ? (
-            <div className="space-y-1">
-              {slots[0] ? (
-                renderExerciseSlot(0)
-              ) : (
-                <p className="text-xs text-[var(--muted)]">
-                  Tap <strong>Fasted cardio</strong> in Quick to assign minutes.
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {Array.from({ length: DAY_TIME_BLOCK_COUNT }, (_, col) => (
-                <div key={col} className="space-y-1">
-                  <p className="border-b border-[var(--border)] pb-1 text-[10px] font-semibold uppercase tracking-wide text-accent/80">
-                    {timeBlockLabel(col)}
-                  </p>
-                  {slotIndicesForTimeColumn(col).map((idx) => renderExerciseSlot(idx))}
+              <p className="rounded-md bg-[var(--surface-2)] px-3 py-4 text-center text-sm text-[var(--muted)]">
+                Rest day — no workout. Tap <strong>Gym Workout</strong> or <strong>Home Workout</strong>{" "}
+                above.
+              </p>
+            ) : isFastedCardioLabel(focus.label) ? (
+              <div className="space-y-1 px-2 py-2">
+                <div className="flex flex-wrap items-end gap-2 rounded-md bg-[var(--surface)] px-2 py-1.5">
+                  <p className="mr-1 text-[10px] text-[var(--muted)]">Fasted cardio</p>
+                  <label className="text-[10px]">
+                    Minutes
+                    <input
+                      className="input mt-0.5 h-7 w-14 px-1 text-xs"
+                      value={String(fastedCardioMinutes)}
+                      disabled={saving}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value, 10);
+                        if (!Number.isNaN(v)) setFastedCardioMinutes(Math.max(5, Math.min(120, v)));
+                      }}
+                      onBlur={() => void applyFastedCardio(fastedCardioMinutes)}
+                    />
+                  </label>
                 </div>
-              ))}
-            </div>
-          )}
-          </>
-          )}
+                {loadingSlots ? (
+                  <p className="text-xs text-[var(--muted)]">Loading…</p>
+                ) : slots[0] ? (
+                  renderExerciseSlot(0)
+                ) : (
+                  <p className="text-xs text-[var(--muted)]">
+                    Tap <strong>Fasted cardio</strong> above to assign minutes.
+                  </p>
+                )}
+              </div>
+            ) : isGymLabel(focus.label) || isHomeLabel(focus.label) || isWorkoutDayLabel(focus.label) ? (
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-end gap-2 rounded-md bg-[var(--surface)] px-2 py-1.5">
+                  <p className="mr-1 max-w-[160px] truncate text-[10px] font-semibold text-violet-200">
+                    {focus.label} workout
+                  </p>
+                  <p className="mr-1 max-w-[120px] truncate text-[10px] text-[var(--muted)]">
+                    {selectedSlotIdx !== null && slots[selectedSlotIdx]
+                      ? slots[selectedSlotIdx]!.name
+                      : "Select exercise"}
+                  </p>
+                  <label className="text-[10px]">
+                    Sets
+                    <input
+                      type="number"
+                      min={1}
+                      max={20}
+                      className="input mt-0.5 h-7 w-12 px-1 text-xs"
+                      value={editorSets}
+                      disabled={selectedSlotIdx === null}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value, 10);
+                        if (!Number.isNaN(v)) setEditorSets(Math.max(1, v));
+                      }}
+                      onBlur={() => void saveSelectedSlot()}
+                    />
+                  </label>
+                  <label className="text-[10px]">
+                    Reps
+                    <input
+                      className="input mt-0.5 h-7 w-14 px-1 text-xs"
+                      value={editorReps}
+                      disabled={selectedSlotIdx === null}
+                      onChange={(e) => setEditorReps(e.target.value)}
+                      onBlur={() => void saveSelectedSlot()}
+                    />
+                  </label>
+                  <label className="text-[10px]">
+                    Rest
+                    <input
+                      type="number"
+                      min={0}
+                      max={600}
+                      className="input mt-0.5 h-7 w-12 px-1 text-xs"
+                      value={editorRest}
+                      disabled={selectedSlotIdx === null}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value, 10);
+                        if (!Number.isNaN(v)) setEditorRest(Math.max(0, v));
+                      }}
+                      onBlur={() => void saveSelectedSlot()}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="btn-ghost h-7 px-2 text-[10px]"
+                    disabled={saving || checkedSlots.size === 0}
+                    onClick={() => void applyToChecked()}
+                  >
+                    Apply to checked ({checkedSlots.size})
+                  </button>
+                </div>
+
+                {loadingSlots ? (
+                  <p className="text-xs text-[var(--muted)]">Loading…</p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {Array.from({ length: DAY_TIME_BLOCK_COUNT }, (_, col) => (
+                      <div key={col} className="space-y-1">
+                        <p className="border-b border-[var(--border)] pb-1 text-[10px] font-semibold uppercase tracking-wide text-accent/80">
+                          {timeBlockLabel(col)}
+                        </p>
+                        {slotIndicesForTimeColumn(col, columnSlotCounts).map((idx) =>
+                          renderExerciseSlot(idx),
+                        )}
+                        <button
+                          type="button"
+                          className="w-full rounded-md border border-dashed border-[var(--border)] px-2 py-1 text-[10px] text-[var(--muted)] transition hover:border-accent/50 hover:text-accent"
+                          disabled={saving}
+                          onClick={() => void addSlotBelow(col)}
+                        >
+                          + Add below
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="rounded-md bg-[var(--surface-2)] px-3 py-4 text-center text-sm text-[var(--muted)]">
+                Tap <strong>Gym Workout</strong> or <strong>Home Workout</strong> above to build this day.
+              </p>
+            )}
         </div>
       )}
 
