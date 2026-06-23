@@ -80,6 +80,7 @@ export function memberWorkoutHref(input: {
   workoutId?: string;
   option?: string;
   smsDayId?: string;
+  calendarDate?: string;
 }): string {
   const slug = normalizeProgramSlug(input.programSlug);
   const params = new URLSearchParams({ program: slug });
@@ -89,6 +90,7 @@ export function memberWorkoutHref(input: {
     params.set("workoutId", input.workoutId);
   }
   if (input.option) params.set("option", input.option);
+  if (input.calendarDate) params.set("date", input.calendarDate);
   return `/member/workout?${params.toString()}`;
 }
 
@@ -133,11 +135,17 @@ export async function resolveMemberGoToToday(
     if (!resolved) continue;
 
     const href = resolved.smsOverride
-      ? memberWorkoutHref({ programSlug: slug, smsDayId: resolved.dayId, option: resolved.option })
+      ? memberWorkoutHref({
+          programSlug: slug,
+          smsDayId: resolved.dayId,
+          option: resolved.option,
+          calendarDate,
+        })
       : memberWorkoutHref({
           programSlug: slug,
           workoutId: resolved.workoutId,
           option: resolved.option,
+          calendarDate,
         });
 
     return {

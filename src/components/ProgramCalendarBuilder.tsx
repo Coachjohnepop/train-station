@@ -1451,7 +1451,20 @@ export default function ProgramCalendarBuilder({
                     Edit workout →
                   </Link>
                   <Link
-                    href={`/member/programs/${program.slug}`}
+                    href={(() => {
+                      const cal =
+                        focusDay?.calendarDate ||
+                        calendarDateForProgramDay(startMonday, focus.weekNumber, focus.dayNumber);
+                      const params = new URLSearchParams({
+                        program: program.slug,
+                        workoutId: focus.workoutId,
+                        date: cal,
+                      });
+                      if (focus.label) params.set("option", focus.label);
+                      return `/member/workout?${params.toString()}`;
+                    })()}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="text-[10px] text-[var(--muted)] hover:text-accent hover:underline"
                   >
                     Member view

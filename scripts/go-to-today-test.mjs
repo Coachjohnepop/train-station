@@ -88,6 +88,16 @@ async function testMember(member) {
       fail(`${member.label} /member/today redirect`, `stale June 16: ${loc}`);
     } else if (loc.includes("/member/workout") || loc.includes(`/member/today?date=${TODAY}`)) {
       pass(`${member.label} /member/today redirect`, loc);
+      if (loc.includes("/member/workout") && !loc.includes(`date=${TODAY}`)) {
+        fail(`${member.label} workout link missing date`, loc);
+      } else if (loc.includes("/member/workout")) {
+        const workoutPage = await req(loc);
+        if (workoutPage.text.includes("June 23") || workoutPage.text.includes("Jun 23")) {
+          pass(`${member.label} workout page shows date`);
+        } else {
+          fail(`${member.label} workout page missing date`);
+        }
+      }
     } else {
       fail(`${member.label} /member/today redirect`, loc || String(todayPage.res.status));
     }

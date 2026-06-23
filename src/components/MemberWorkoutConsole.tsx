@@ -50,6 +50,8 @@ export default function MemberWorkoutConsole({
   targetUserId,
   instructorName,
   reviewMode = false,
+  calendarDateLabel,
+  scheduleLabel,
 }: {
   workout: MemberWorkoutView;
   backHref?: string;
@@ -58,6 +60,10 @@ export default function MemberWorkoutConsole({
   targetUserId?: string;
   instructorName?: string;
   reviewMode?: boolean;
+  /** e.g. "Tuesday, June 23, 2026" */
+  calendarDateLabel?: string;
+  /** e.g. "Week 1 · Tue" */
+  scheduleLabel?: string;
 }) {
   const [weights, setWeights] = useState<Record<string, string>>({});
   const [activeId, setActiveId] = useState(workout.exercises[0]?.id ?? "");
@@ -231,9 +237,17 @@ export default function MemberWorkoutConsole({
   return (
     <div className="mx-auto w-full max-w-md md:max-w-2xl lg:max-w-2xl xl:max-w-2xl px-4 py-6 md:px-6">
       <p className="text-xs font-semibold uppercase tracking-widest text-accent">
-        Today&apos;s workout
+        {calendarDateLabel ? "Scheduled workout" : "Today\u2019s workout"}
       </p>
-      <h1 className="mt-1 text-2xl font-bold">{workout.workoutName}</h1>
+      {calendarDateLabel && (
+        <p className="mt-1 text-sm font-medium text-white">{calendarDateLabel}</p>
+      )}
+      {scheduleLabel && (
+        <p className="mt-0.5 text-xs text-[var(--muted)]">{scheduleLabel}</p>
+      )}
+      <h1 className={`${calendarDateLabel ? "mt-2" : "mt-1"} text-2xl font-bold`}>
+        {workout.workoutName}
+      </h1>
       <p className="mt-1 text-sm text-[var(--muted)]">
         Hi {workout.memberName} — follow each exercise. Your last session appears
         as a faint silhouette behind the active card.

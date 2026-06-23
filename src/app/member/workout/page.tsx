@@ -8,15 +8,38 @@ import { resolveMemberProgramWorkout } from "@/lib/member-program-workout";
 import { getCurrentUserLocation, resolveUserId } from "@/lib/current-user";
 import { getWeatherForLocation, logUserWeather } from "@/lib/weather";
 import { getActiveScheduleOverride } from "@/lib/demo-schedule-overrides";
+import { resolveMemberWorkoutContext } from "@/lib/member-workout-context";
 
 type Props = {
-  searchParams: Promise<{ workoutId?: string; program?: string; subJourney?: string; subDay?: string; smsDay?: string; option?: string; asInstructor?: string; forUser?: string; review?: string }>;
+  searchParams: Promise<{
+    workoutId?: string;
+    program?: string;
+    subJourney?: string;
+    subDay?: string;
+    smsDay?: string;
+    option?: string;
+    date?: string;
+    asInstructor?: string;
+    forUser?: string;
+    review?: string;
+  }>;
 };
 
 export const dynamic = "force-dynamic";
 
 export default async function MemberWorkoutPage({ searchParams }: Props) {
-  const { workoutId, program, subJourney, subDay, smsDay, option, asInstructor, forUser, review } = await searchParams;
+  const {
+    workoutId,
+    program,
+    subJourney,
+    subDay,
+    smsDay,
+    option,
+    date,
+    asInstructor,
+    forUser,
+    review,
+  } = await searchParams;
 
   const smsOverride = smsDay ? getActiveScheduleOverride(smsDay) : null;
 
@@ -50,6 +73,10 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
       }
     }
   }
+
+  const workoutContext = program
+    ? await resolveMemberWorkoutContext({ programSlug: program, dateParam: date })
+    : null;
 
   const backHref = program ? `/member/programs/${program}` : "/member";
   const backLabel = program ? "← Back to program" : "← Dashboard";
@@ -107,6 +134,14 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
               Progress and logs will be attributed to them. {forUser && `(User: ${forUser})`}
             </div>
           )}
+          {workoutContext && (
+            <div className="mx-4 mb-2 rounded border border-accent/30 bg-accent/10 px-3 py-2 text-sm">
+              <p className="font-medium">{workoutContext.calendarDateLabel}</p>
+              {workoutContext.scheduleLabel && (
+                <p className="text-xs text-[var(--muted)]">{workoutContext.scheduleLabel}</p>
+              )}
+            </div>
+          )}
           {option && (
             <div className="px-4 mb-2 text-xs text-[var(--muted)]">Option selected: <strong>{option}</strong> (home or gym version)</div>
           )}
@@ -142,6 +177,8 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
             targetUserId={asInstructor ? undefined : undefined}  // main member path uses cookie uid via resolveUserId in logging + pasts; instructor mode falls back to demo snapshot
             instructorName={asInstructor ? "Instructor" : undefined}
             reviewMode={!!review}
+            calendarDateLabel={workoutContext?.calendarDateLabel}
+            scheduleLabel={workoutContext?.scheduleLabel}
           />
 
           {/* Eating report visible to coach while doing the live workout coaching (coming soon - temporarily disabled) */}

@@ -160,6 +160,13 @@
       "description": "Generated from coach SMS",
       "source": "sms",
       "createdAt": "2026-06-23T12:18:05.728Z"
+    },
+    {
+      "id": "sms-w-56671bc6",
+      "name": "Coach SMS Workout",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-06-23T13:32:29.959Z"
     }
   ],
   "workoutExercises": [
@@ -1327,6 +1334,28 @@
       "reps": "5 min",
       "notes": "30s on / 30s off",
       "setScheme": "timed",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-0d633bb5",
+      "workoutId": "sms-w-56671bc6",
+      "exerciseId": "cmpzjajej000095rzilwd9n9k",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "—",
+      "notes": "QA SMS priority · Warm-up block",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-f0829912",
+      "workoutId": "sms-w-56671bc6",
+      "exerciseId": "cmpzkksb2001q95rz5xvwyj71",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "10,10,10",
+      "notes": null,
+      "setScheme": "standard",
       "weightTier": "medium"
     }
   ]

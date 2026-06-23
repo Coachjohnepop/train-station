@@ -23,7 +23,7 @@ export default async function ProgramAdminDetailPage({ params }: Props) {
     // In pure demo mode (DATABASE_URL contains "dummy") we load everything from seed-data.json.
     // No real Prisma connection is possible/necessary.
     try {
-      const seed = await getDemoSeed();
+      const seed = await getDemoSeed({ preferFresh: true });
       workouts = (seed.workouts || []).map((w: any) => ({ id: w.id, name: w.name }));
     } catch {
       workouts = [];

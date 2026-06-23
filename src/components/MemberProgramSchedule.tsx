@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { DAY_LABELS } from "@/lib/program-constants";
-import { findProgramDayForCalendarDate, localTodayIso } from "@/lib/program-calendar";
+import {
+  calendarDateForProgramDay,
+  findProgramDayForCalendarDate,
+  localTodayIso,
+  resolveProgramStartMonday,
+} from "@/lib/program-calendar";
 import ScheduleJumpLink from "@/components/ScheduleJumpLink";
 
 type Program = {
@@ -14,6 +19,7 @@ type Program = {
     days: Array<{
       id: string;
       dayNumber: number;
+      calendarDate?: string | null;
       workoutId?: string;
       notes?: string | null;
       videoUrl?: string | null;
@@ -42,6 +48,16 @@ type Props = {
   showFullSchedule?: boolean;
   compact?: boolean;
 };
+
+function dayCalendarIso(
+  program: Program,
+  weekNumber: number,
+  day: Program["weeks"][number]["days"][number],
+): string {
+  if (day.calendarDate) return day.calendarDate;
+  const startMonday = resolveProgramStartMonday(program.startDate);
+  return calendarDateForProgramDay(startMonday, weekNumber, day.dayNumber);
+}
 
 function DayCards({
   program,
@@ -130,6 +146,7 @@ function DayCards({
                   const isThisSessionDone = loggedSet.has(wid);
                   const isHome = /home/i.test(opt.label || "");
                   const weekDayLabel = `W${week.weekNumber} · D${day.dayNumber}`;
+                  const calIso = dayCalendarIso(program, week.weekNumber, day);
                   const displayName =
                     (opts.length > 1 ? `${opt.label}: ` : "") +
                     w.name.replace(/ \(Home\)| \(Gym\)/i, "").replace(/^Day \d+\s*/i, `${weekDayLabel} · `);
@@ -137,7 +154,7 @@ function DayCards({
                   return (
                     <Link
                       key={idx}
-                      href={`/member/workout?workoutId=${encodeURIComponent(wid)}&program=${encodeURIComponent(program.slug)}${opt.label ? `&option=${encodeURIComponent(opt.label)}` : ""}${isThisSessionDone ? "&review=true" : ""}`}
+                      href={`/member/workout?workoutId=${encodeURIComponent(wid)}&program=${encodeURIComponent(program.slug)}&date=${encodeURIComponent(calIso)}${opt.label ? `&option=${encodeURIComponent(opt.label)}` : ""}${isThisSessionDone ? "&review=true" : ""}`}
                       className={`card flex flex-col lg:flex-row items-start lg:items-center justify-between gap-1 lg:gap-3 p-2 lg:p-3 transition hover-accent-border text-sm ${
                         isThisSessionDone
                           ? "ring-2 ring-[var(--success)] ring-offset-1 bg-[var(--success)]/5"

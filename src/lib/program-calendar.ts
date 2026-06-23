@@ -47,6 +47,16 @@ export function formatShortDate(iso: string): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+export function formatLongDate(iso: string): string {
+  const d = parseIsoDate(iso);
+  return d.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export function formatMonthYear(iso: string): string {
   const d = parseIsoDate(iso);
   return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
