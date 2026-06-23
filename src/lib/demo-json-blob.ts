@@ -42,7 +42,10 @@ export async function readBlobJson<T>(blobPath: string): Promise<T | null> {
   if (!isBlobConfigured()) return null;
   try {
     const meta = await head(blobPath, blobSdkOptions());
-    const res = await fetch(meta.url, { cache: "no-store" });
+    // Bust CDN edge cache so preferFresh reads see the latest blob write.
+    const bust = `_ts=${Date.now()}`;
+    const url = meta.url.includes("?") ? `${meta.url}&${bust}` : `${meta.url}?${bust}`;
+    const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) return null;
     return (await res.json()) as T;
   } catch {

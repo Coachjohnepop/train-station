@@ -160,7 +160,7 @@ export async function createTodaySessionFromSms(input: {
   createdBy?: string;
   title?: string;
 }) {
-  await hydrateTodaySessions();
+  await hydrateTodaySessions({ preferFresh: true });
   const parsed = parseSmsWorkout(input.rawSms);
   const { workoutId, newExerciseIds } = await buildWorkoutFromParsedSms(parsed);
   const userIds = input.userIds?.length ? input.userIds : [];
@@ -191,7 +191,7 @@ export async function createTodaySessionFromSms(input: {
 }
 
 export async function deleteTodaySession(sessionIdOrDate: string) {
-  await hydrateTodaySessions();
+  await hydrateTodaySessions({ preferFresh: true });
   const store = readStore();
   if (store.sessions[sessionIdOrDate]) {
     delete store.sessions[sessionIdOrDate];
@@ -207,7 +207,7 @@ export async function deleteTodaySession(sessionIdOrDate: string) {
 
 /** Remove sessions on a date assigned to a specific member (leaves other sessions on that day). */
 export async function deleteSessionForUserOnDate(userId: string, sessionDate: string) {
-  await hydrateTodaySessions();
+  await hydrateTodaySessions({ preferFresh: true });
   const store = readStore();
   const toDelete = Object.values(store.sessions).filter(
     (s) => s.sessionDate === sessionDate && s.userIds.includes(userId),
