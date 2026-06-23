@@ -80,6 +80,51 @@ export function programDayIndexFromDate(
 
 export const DEFAULT_DAY_OPTIONS = ["Gym", "Home"] as const;
 
+export type DayOptionLike = { workoutId: string; label: string };
+
+function isGymLabel(label: string): boolean {
+  return /^gym$/i.test(label.trim());
+}
+
+function isHomeLabel(label: string): boolean {
+  return /^home$/i.test(label.trim());
+}
+
+function pickPreferredOption(
+  current: DayOptionLike | null,
+  next: DayOptionLike,
+): DayOptionLike {
+  if (!current) return next;
+  if (next.workoutId && !current.workoutId) return next;
+  if (current.workoutId && !next.workoutId) return current;
+  return next;
+}
+
+/** Collapse duplicate Gym/Home pills from legacy seed data — keep one of each + custom settings. */
+export function normalizeDayOptions(options: DayOptionLike[]): DayOptionLike[] {
+  if (options.length === 0) return options;
+
+  let gym: DayOptionLike | null = null;
+  let home: DayOptionLike | null = null;
+  const customs: DayOptionLike[] = [];
+
+  for (const opt of options) {
+    if (isGymLabel(opt.label)) {
+      gym = pickPreferredOption(gym, opt);
+    } else if (isHomeLabel(opt.label)) {
+      home = pickPreferredOption(home, opt);
+    } else {
+      customs.push(opt);
+    }
+  }
+
+  const result: DayOptionLike[] = [];
+  if (gym) result.push({ ...gym, label: "Gym" });
+  if (home) result.push({ ...home, label: "Home" });
+  result.push(...customs);
+  return result;
+}
+
 export const DAY_SLOT_COUNT = 9;
 
 export const WARMUP_EXERCISE_NAMES = [

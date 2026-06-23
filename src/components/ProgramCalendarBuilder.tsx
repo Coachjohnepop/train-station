@@ -13,6 +13,7 @@ import {
   DEFAULT_DAY_OPTIONS,
   formatMonthYear,
   formatShortDate,
+  normalizeDayOptions,
   resolveProgramStartMonday,
   toIsoDate,
   WARMUP_EXERCISE_NAMES,
@@ -71,9 +72,21 @@ type Focus = {
 };
 
 function getDayOptions(day: ProgramDay): DayOption[] {
-  if (day.options && day.options.length > 0) return day.options;
+  if (day.options && day.options.length > 0) {
+    return normalizeDayOptions(day.options) as DayOption[];
+  }
   if (day.workoutId) return [{ workoutId: day.workoutId, label: "Gym" }];
   return [];
+}
+
+function dayOptionsNeedCleanup(day: ProgramDay): boolean {
+  if (!day.options?.length) return false;
+  const normalized = normalizeDayOptions(day.options);
+  if (normalized.length !== day.options.length) return true;
+  return day.options.some(
+    (opt, idx) =>
+      opt.label !== normalized[idx]?.label || opt.workoutId !== normalized[idx]?.workoutId,
+  );
 }
 
 export default function ProgramCalendarBuilder({
@@ -162,7 +175,7 @@ export default function ProgramCalendarBuilder({
   async function setDayOptions(dayId: string, options: DayOption[]) {
     setSaving(true);
     try {
-      await patchDay(dayId, { options });
+      await patchDay(dayId, { options: normalizeDayOptions(options) as DayOption[] });
       setMessage("Saved.");
       setTimeout(() => setMessage(null), 1500);
     } catch {
@@ -296,6 +309,12 @@ export default function ProgramCalendarBuilder({
   }, []);
 
   async function openDayOption(day: ProgramDay, week: ProgramWeek, optIdx: number, label: string) {
+    if (dayOptionsNeedCleanup(day)) {
+      const cleaned = normalizeDayOptions(day.options || []) as DayOption[];
+      await patchDay(day.id, { options: cleaned });
+      day = { ...day, options: cleaned };
+    }
+
     let opts = getDayOptions(day);
     if (opts.length === 0) {
       await setDayOptions(day.id, [
