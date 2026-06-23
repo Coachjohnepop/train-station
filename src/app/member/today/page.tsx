@@ -5,6 +5,7 @@ import TodaySessionPanel from "@/components/TodaySessionPanel";
 import { getMemberDashboard } from "@/lib/member-context";
 import { getSmsGeneratedWorkout } from "@/lib/sms-generated-workouts";
 import { resolveUserId } from "@/lib/current-user";
+import { resolveTargetUserId } from "@/lib/resolve-target-user";
 import { resolveMemberGoToToday } from "@/lib/go-to-today";
 import { localTodayIso, toIsoDate } from "@/lib/program-calendar";
 import { loadMemberUpcomingSessions, memberTodayHref, resolveMemberSession } from "@/lib/member-today";
@@ -26,7 +27,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const sp = await searchParams;
   const asInstructor = !!sp.asInstructor;
   const forUser = sp.forUser;
-  const uid = forUser || (await resolveUserId());
+  const uid = resolveTargetUserId(forUser, await resolveUserId());
 
   const dashboard = await getMemberDashboard();
   if (!dashboard) notFound();
@@ -162,7 +163,10 @@ export default async function MemberTodayPage({ searchParams }: Props) {
             backHref={sp.date ? `/member/today?date=${sp.date}` : "/member/today"}
             backLabel="← Go to Today"
             programSlug={session?.programSlug || "adult"}
+            targetUserId={uid}
             instructorName={asInstructor ? "Coach" : undefined}
+            liveSyncUserId={uid}
+            liveSessionDate={viewDate}
           />
         </div>
       ) : (

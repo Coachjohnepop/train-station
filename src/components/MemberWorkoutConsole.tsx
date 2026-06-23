@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   approachLabel,
@@ -52,6 +52,8 @@ export default function MemberWorkoutConsole({
   reviewMode = false,
   calendarDateLabel,
   scheduleLabel,
+  liveSyncUserId,
+  liveSessionDate,
 }: {
   workout: MemberWorkoutView;
   backHref?: string;
@@ -64,6 +66,9 @@ export default function MemberWorkoutConsole({
   calendarDateLabel?: string;
   /** e.g. "Week 1 · Tue" */
   scheduleLabel?: string;
+  /** Member id for live coach ↔ member checkoff sync */
+  liveSyncUserId?: string;
+  liveSessionDate?: string;
 }) {
   const [weights, setWeights] = useState<Record<string, string>>({});
   const [activeId, setActiveId] = useState(workout.exercises[0]?.id ?? "");
@@ -78,6 +83,165 @@ export default function MemberWorkoutConsole({
   );
   const [isLogging, setIsLogging] = useState(false);
   const [logResult, setLogResult] = useState<null | { performedAt: string; count: number; progress?: number }>(null);
+  const [coachLive, setCoachLive] = useState(false);
+
+  const liveSyncEnabled = !!liveSyncUserId && !reviewMode;
+  const lastAppliedRemoteAt = useRef<string | null>(null);
+  const applyingRemote = useRef(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const serializeCompletedSets = useCallback(
+    (sets: Record<string, Set<number>>) => {
+      const out: Record<string, number[]> = {};
+      for (const [blockId, nums] of Object.entries(sets)) {
+        out[blockId] = Array.from(nums).sort((a, b) => a - b);
+      }
+      return out;
+    },
+    [],
+  );
+
+  const applyRemoteSession = useCallback(
+    (session: {
+      completedSets: Record<string, number[]>;
+      finishedExercises: string[];
+      weights?: Record<string, string>;
+      activeId?: string;
+      updatedAt: string;
+      updatedBy: "coach" | "member";
+    }) => {
+      if (
+        lastAppliedRemoteAt.current &&
+        session.updatedAt <= lastAppliedRemoteAt.current
+      ) {
+        return;
+      }
+      applyingRemote.current = true;
+      const sets: Record<string, Set<number>> = {};
+      for (const [blockId, nums] of Object.entries(session.completedSets)) {
+        sets[blockId] = new Set(nums);
+      }
+      setCompletedSets(sets);
+      setFinishedExercises(new Set(session.finishedExercises));
+      if (session.weights) setWeights(session.weights);
+      if (session.activeId) setActiveId(session.activeId);
+      lastAppliedRemoteAt.current = session.updatedAt;
+      setCoachLive(session.updatedBy === "coach");
+      applyingRemote.current = false;
+    },
+    [],
+  );
+
+  const persistLiveSession = useCallback(async () => {
+    if (!liveSyncEnabled || !liveSyncUserId || applyingRemote.current) return;
+    const payload = {
+      userId: liveSyncUserId,
+      sessionDate: liveSessionDate,
+      completedSets: serializeCompletedSets(completedSets),
+      finishedExercises: Array.from(finishedExercises),
+      weights,
+      activeId,
+      updatedBy: instructorName ? ("coach" as const) : ("member" as const),
+    };
+    try {
+      const res = await fetch(`/api/workouts/${workout.workoutId}/live-session`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.session?.updatedAt) {
+          lastAppliedRemoteAt.current = data.session.updatedAt;
+        }
+      }
+    } catch {
+      // non-fatal — member poll will retry
+    }
+  }, [
+    liveSyncEnabled,
+    liveSyncUserId,
+    liveSessionDate,
+    completedSets,
+    finishedExercises,
+    weights,
+    activeId,
+    instructorName,
+    workout.workoutId,
+    serializeCompletedSets,
+  ]);
+
+  const clearLiveSession = useCallback(async () => {
+    if (!liveSyncUserId) return;
+    try {
+      await fetch(`/api/workouts/${workout.workoutId}/live-session`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: liveSyncUserId,
+          sessionDate: liveSessionDate,
+          clear: true,
+          completedSets: {},
+          finishedExercises: [],
+          updatedBy: instructorName ? "coach" : "member",
+        }),
+      });
+    } catch {
+      // ignore
+    }
+  }, [liveSyncUserId, liveSessionDate, workout.workoutId, instructorName]);
+
+  // Push local checkoffs to shared store (coach → member sync source).
+  useEffect(() => {
+    if (!liveSyncEnabled) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      void persistLiveSession();
+    }, instructorName ? 200 : 400);
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+  }, [
+    liveSyncEnabled,
+    completedSets,
+    finishedExercises,
+    weights,
+    activeId,
+    instructorName,
+    persistLiveSession,
+  ]);
+
+  // Member view: poll for coach checkoffs every 2s.
+  useEffect(() => {
+    if (!liveSyncEnabled || instructorName) return;
+
+    const load = async () => {
+      try {
+        const q = new URLSearchParams({ userId: liveSyncUserId! });
+        if (liveSessionDate) q.set("date", liveSessionDate);
+        const res = await fetch(
+          `/api/workouts/${workout.workoutId}/live-session?${q.toString()}`,
+          { cache: "no-store" },
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.session) applyRemoteSession(data.session);
+      } catch {
+        // ignore
+      }
+    };
+
+    void load();
+    const id = setInterval(load, 2000);
+    return () => clearInterval(id);
+  }, [
+    liveSyncEnabled,
+    instructorName,
+    liveSyncUserId,
+    liveSessionDate,
+    workout.workoutId,
+    applyRemoteSession,
+  ]);
 
   // Seed local completedSets from past when opening in (pure) review mode.
   // This makes the "log your sets" buttons pre-render with green checks (✓ on --success)
@@ -221,6 +385,7 @@ export default function MemberWorkoutConsole({
       }
 
       const data = await res.json();
+      await clearLiveSession();
       setLogResult({ 
         performedAt: data.performedAt, 
         count: data.performances || idsToLog.length,
@@ -232,7 +397,7 @@ export default function MemberWorkoutConsole({
     } finally {
       setIsLogging(false);
     }
-  }, [finishedExercises, workout, weights, completedSets, activeId, programSlug, targetUserId]);
+  }, [finishedExercises, workout, weights, completedSets, activeId, programSlug, targetUserId, clearLiveSession]);
 
   return (
     <div className="mx-auto w-full max-w-md md:max-w-2xl lg:max-w-2xl xl:max-w-2xl px-4 py-6 md:px-6">
@@ -252,6 +417,11 @@ export default function MemberWorkoutConsole({
         Hi {workout.memberName} — follow each exercise. Your last session appears
         as a faint silhouette behind the active card.
       </p>
+      {coachLive && !instructorName && (
+        <p className="mt-2 text-xs font-medium text-[var(--success)]">
+          Coach is marking your workout live — updates appear here automatically.
+        </p>
+      )}
 
       <div className="mt-3 flex items-center gap-2 text-xs">
         <div className="flex-1 h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden">

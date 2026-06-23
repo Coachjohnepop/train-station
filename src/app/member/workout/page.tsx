@@ -9,6 +9,7 @@ import { getCurrentUserLocation, resolveUserId } from "@/lib/current-user";
 import { getWeatherForLocation, logUserWeather } from "@/lib/weather";
 import { getActiveScheduleOverride } from "@/lib/demo-schedule-overrides";
 import { resolveMemberWorkoutContext } from "@/lib/member-workout-context";
+import { resolveTargetUserId } from "@/lib/resolve-target-user";
 
 type Props = {
   searchParams: Promise<{
@@ -77,6 +78,8 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
   const workoutContext = program
     ? await resolveMemberWorkoutContext({ programSlug: program, dateParam: date })
     : null;
+
+  const memberUserId = resolveTargetUserId(forUser, await resolveUserId());
 
   const backHref = program ? `/member/programs/${program}` : "/member";
   const backLabel = program ? "← Back to program" : "← Dashboard";
@@ -174,11 +177,13 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
             backHref={backHref}
             backLabel={backLabel}
             programSlug={program}
-            targetUserId={asInstructor ? undefined : undefined}  // main member path uses cookie uid via resolveUserId in logging + pasts; instructor mode falls back to demo snapshot
+            targetUserId={memberUserId}
             instructorName={asInstructor ? "Instructor" : undefined}
             reviewMode={!!review}
             calendarDateLabel={workoutContext?.calendarDateLabel}
             scheduleLabel={workoutContext?.scheduleLabel}
+            liveSyncUserId={memberUserId}
+            liveSessionDate={date}
           />
 
           {/* Eating report visible to coach while doing the live workout coaching (coming soon - temporarily disabled) */}
