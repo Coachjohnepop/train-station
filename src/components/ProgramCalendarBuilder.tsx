@@ -28,6 +28,7 @@ import {
   resolveProgramStartMonday,
   slotIndicesForTimeColumn,
   timeBlockLabel,
+  todayProgramDayIndex,
   toIsoDate,
   totalSlotsFromColumnCounts,
   DAY_TIME_BLOCK_COUNT,
@@ -167,7 +168,11 @@ export default function ProgramCalendarBuilder({
   const [program, setProgram] = useState(initial);
   const [allWorkouts, setAllWorkouts] = useState(initialWorkouts);
   const [library, setLibrary] = useState<LibraryExercise[]>([]);
-  const [activeWeek, setActiveWeek] = useState(1);
+  const calendarToday = useMemo(
+    () => todayProgramDayIndex(program.startDate),
+    [program.startDate],
+  );
+  const [activeWeek, setActiveWeek] = useState(() => calendarToday?.weekNumber ?? 1);
   const [focus, setFocus] = useState<Focus | null>(null);
   const [columnSlotCounts, setColumnSlotCounts] = useState<number[]>([...DEFAULT_COLUMN_SLOT_COUNTS]);
   const [slots, setSlots] = useState<(SlotItem | null)[]>(
@@ -784,6 +789,31 @@ export default function ProgramCalendarBuilder({
     await openDayOption(day, week, gymIdx >= 0 ? gymIdx : 0, "Gym");
   }
 
+  async function goToCalendarToday() {
+    const idx = todayProgramDayIndex(program.startDate);
+    if (!idx) {
+      setMessage("Today is before this program calendar starts.");
+      setTimeout(() => setMessage(null), 2500);
+      return;
+    }
+    if (idx.weekNumber > program.durationWeeks) {
+      setMessage("Today is past this program's last week.");
+      setTimeout(() => setMessage(null), 2500);
+      return;
+    }
+    const week = weeks.find((w) => w.weekNumber === idx.weekNumber);
+    const day = week?.days.find((d) => d.dayNumber === idx.dayNumber);
+    if (!week || !day) {
+      setMessage("Could not find today's day on the schedule.");
+      setTimeout(() => setMessage(null), 2500);
+      return;
+    }
+    setActiveWeek(idx.weekNumber);
+    await selectDay(day, week);
+    setMessage(`Jumped to today — ${formatShortDate(idx.iso)}.`);
+    setTimeout(() => setMessage(null), 2000);
+  }
+
   function mergeDayFromPatch(day: ProgramDay, patch: Record<string, unknown>, updated: any): ProgramDay {
     return {
       ...day,
@@ -1252,6 +1282,15 @@ export default function ProgramCalendarBuilder({
             Week {w.weekNumber}
           </button>
         ))}
+        {calendarToday && calendarToday.weekNumber <= program.durationWeeks && (
+          <button
+            type="button"
+            className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent hover:bg-accent/20"
+            onClick={() => void goToCalendarToday()}
+          >
+            Today ({formatShortDate(calendarToday.iso)})
+          </button>
+        )}
       </div>
 
       {activeWeekData && (
@@ -1300,12 +1339,17 @@ export default function ProgramCalendarBuilder({
                 const isExpanded = expandedDays.has(day.id);
                 const published = !!day.publishedAt;
                 const dayPreview = previewForDay(day);
+                const isCalendarToday = cal === toIsoDate(new Date());
 
                 return (
                   <button
                     key={day.id}
                     type="button"
-                    className={dayGridCardClasses(isSelected, published)}
+                    className={`${dayGridCardClasses(isSelected, published)} ${
+                      isCalendarToday && !isSelected && !published
+                        ? "ring-1 ring-sky-400/50"
+                        : ""
+                    }`}
                     onClick={() => void selectDay(day, activeWeekData)}
                   >
                     <div className="flex items-start justify-between gap-1">

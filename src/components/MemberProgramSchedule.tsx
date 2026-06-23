@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { DAY_LABELS } from "@/lib/program-constants";
+import { todayProgramDayIndex } from "@/lib/program-calendar";
 import ScheduleJumpLink from "@/components/ScheduleJumpLink";
 
 type Program = {
   slug: string;
   name?: string;
+  startDate?: string | null;
+  durationWeeks?: number;
   weeks: Array<{
     id: string;
     weekNumber: number;
@@ -43,8 +46,8 @@ type Props = {
 function DayCards({
   program,
   week,
-  curWeek,
-  curDay,
+  calendarWeek,
+  calendarDay,
   loggedSet,
   isWorkout,
   isJourney,
@@ -53,8 +56,8 @@ function DayCards({
 }: {
   program: Program;
   week: Program["weeks"][number];
-  curWeek: number;
-  curDay: number;
+  calendarWeek: number;
+  calendarDay: number;
   loggedSet: Set<string>;
   isWorkout: boolean;
   isJourney: boolean;
@@ -71,7 +74,7 @@ function DayCards({
         .sort((a, b) => a.dayNumber - b.dayNumber)
         .map((day) => {
           const label = DAY_LABELS[day.dayNumber - 1] ?? `Day ${day.dayNumber}`;
-          const isCurrentDay = week.weekNumber === curWeek && day.dayNumber === curDay;
+          const isCurrentDay = week.weekNumber === calendarWeek && day.dayNumber === calendarDay;
           const anchorId = `w${week.weekNumber}-d${day.dayNumber}`;
 
           if (isWorkout) {
@@ -232,39 +235,53 @@ export default function MemberProgramSchedule({
   const cat = (program.category || "workout") as string;
   const isWorkout = cat === "workout";
   const isJourney = cat === "journey";
-  const currentWeek = program.weeks.find((w) => w.weekNumber === curWeek);
+  const todayOnCalendar = todayProgramDayIndex(program.startDate);
+  const calendarWeek = todayOnCalendar?.weekNumber ?? curWeek;
+  const calendarDay = todayOnCalendar?.dayNumber ?? curDay;
+  const withinProgram =
+    !program.durationWeeks || !todayOnCalendar || calendarWeek <= program.durationWeeks;
+  const displayWeek = program.weeks.find((w) => w.weekNumber === calendarWeek);
   const fullScheduleId = `${idPrefix}full-schedule`;
   const weekDetailsId = (weekNumber: number) => `${idPrefix}week-${weekNumber}`;
 
   return (
     <div className="space-y-4">
-      {showThisWeek && currentWeek && (
+      {showThisWeek && displayWeek && (
         <section className="card p-3">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-sm font-semibold">This week</h2>
-              <span className="text-xs text-[var(--muted)]">
-                Week {curWeek} · Day {curDay} ({DAY_LABELS[curDay - 1] ?? `Day ${curDay}`})
-              </span>
+              {withinProgram && todayOnCalendar ? (
+                <span className="text-xs text-[var(--muted)]">
+                  Calendar · Week {calendarWeek} · {DAY_LABELS[calendarDay - 1] ?? `Day ${calendarDay}`}
+                  <span className="mx-1">·</span>
+                  Your progress W{curWeek}D{curDay}
+                </span>
+              ) : (
+                <span className="text-xs text-[var(--muted)]">
+                  Your progress · Week {curWeek} · Day {curDay} (
+                  {DAY_LABELS[curDay - 1] ?? `Day ${curDay}`})
+                </span>
+              )}
             </div>
-            {showFullSchedule && (
+            {showFullSchedule && withinProgram && todayOnCalendar && (
               <ScheduleJumpLink
-                week={curWeek}
-                day={curDay}
+                week={calendarWeek}
+                day={calendarDay}
                 fullScheduleId={fullScheduleId}
-                weekDetailsId={weekDetailsId(curWeek)}
+                weekDetailsId={weekDetailsId(calendarWeek)}
                 label="Jump to today"
               />
             )}
           </div>
           <p className="text-[10px] text-[var(--muted)] mb-2">
-            Your current week at a glance. Expand the full schedule below when you need past or future days.
+            This week follows the program calendar. Expand the full schedule below when you need other weeks.
           </p>
           <DayCards
             program={program}
-            week={currentWeek}
-            curWeek={curWeek}
-            curDay={curDay}
+            week={displayWeek}
+            calendarWeek={calendarWeek}
+            calendarDay={calendarDay}
             loggedSet={loggedSet}
             isWorkout={isWorkout}
             isJourney={isJourney}
@@ -285,26 +302,30 @@ export default function MemberProgramSchedule({
           </summary>
           <div className="space-y-4 pl-1">
             {program.weeks.map((week) => {
-              const isCurrentWeek = week.weekNumber === curWeek;
+              const isCalendarWeek = week.weekNumber === calendarWeek;
+              const isProgressWeek = week.weekNumber === curWeek;
               return (
                 <details
                   key={week.id}
                   id={weekDetailsId(week.weekNumber)}
                   className="group/week"
-                  open={isCurrentWeek}
+                  open={isCalendarWeek}
                 >
                   <summary className="text-sm font-semibold uppercase tracking-wide text-accent cursor-pointer list-none flex items-center gap-2 hover:text-white transition">
                     <span className="group-open/week:rotate-90 transition-transform text-xs">▶</span>
                     Week {week.weekNumber}
-                    {isCurrentWeek && (
-                      <span className="text-[10px] normal-case font-normal text-accent/80">(current)</span>
+                    {isCalendarWeek && (
+                      <span className="text-[10px] normal-case font-normal text-accent/80">(this week)</span>
+                    )}
+                    {!isCalendarWeek && isProgressWeek && (
+                      <span className="text-[10px] normal-case font-normal text-[var(--muted)]">(your progress)</span>
                     )}
                   </summary>
                   <DayCards
                     program={program}
                     week={week}
-                    curWeek={curWeek}
-                    curDay={curDay}
+                    calendarWeek={calendarWeek}
+                    calendarDay={calendarDay}
                     loggedSet={loggedSet}
                     isWorkout={isWorkout}
                     isJourney={isJourney}

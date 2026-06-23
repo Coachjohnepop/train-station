@@ -78,6 +78,18 @@ export function programDayIndexFromDate(
   return { weekNumber, dayNumber };
 }
 
+/** Today's week/day on the program calendar (local date), or null if before anchor. */
+export function todayProgramDayIndex(startDate?: string | null): {
+  weekNumber: number;
+  dayNumber: number;
+  iso: string;
+} | null {
+  const iso = toIsoDate(new Date());
+  const idx = programDayIndexFromDate(resolveProgramStartMonday(startDate), iso);
+  if (!idx) return null;
+  return { ...idx, iso };
+}
+
 export const DEFAULT_DAY_OPTIONS = ["Gym", "Home"] as const;
 
 export const DAY_OFF_LABEL = "Day Off";
