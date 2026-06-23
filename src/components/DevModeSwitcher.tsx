@@ -57,7 +57,7 @@ export default function DevModeSwitcher({
             {DEMO_MEMBERS.map((m) => (
               <a
                 key={m.id}
-                href={`/api/dev/switch-user?id=${m.id}&redirect=${encodeURIComponent(active === "member" ? "/member/chat" : "/member")}`}
+                href={`/api/dev/switch-user?id=${m.id}&redirect=${encodeURIComponent(active === "member" ? "/member/today" : "/member")}`}
                 className="rounded-full px-2 py-0.5 text-[10px] font-medium text-accent hover:bg-accent/10"
               >
                 {m.label}

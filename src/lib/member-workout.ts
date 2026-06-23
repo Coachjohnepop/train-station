@@ -14,6 +14,7 @@ import {
 
 export async function getMemberWorkoutById(
   workoutId: string,
+  opts?: { userId?: string; memberName?: string },
 ): Promise<MemberWorkoutView | null> {
   const data = (await getDemoSeed({ preferFresh: true })) as any;
   if (isDemoMode()) {
@@ -67,7 +68,7 @@ export async function getMemberWorkoutById(
 
   // Attach latest past performance (silhouette) for each exercise block.
   // Uses current joined user (cookie) when available; falls back to demo-user in legacy demo mode.
-  const uid = await resolveUserId();
+  const uid = opts?.userId || (await resolveUserId());
   const pastByBlockId: Record<string, any> = {};
   try {
     if (isDemoMode()) {
@@ -105,7 +106,7 @@ export async function getMemberWorkoutById(
   return {
     workoutId: workout.id,
     workoutName: workout.name || "Workout",
-    memberName: "Demo Member",
+    memberName: opts?.memberName || "Demo Member",
     exercises: exercisesWithPast,
   };
 }

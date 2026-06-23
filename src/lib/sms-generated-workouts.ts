@@ -161,7 +161,11 @@ export async function getWorkoutExercisePreview(workoutId: string, limit = 4): P
     });
 }
 
-export async function getSmsGeneratedWorkout(workoutId: string, memberName = "Member"): Promise<MemberWorkoutView | null> {
+export async function getSmsGeneratedWorkout(
+  workoutId: string,
+  memberName = "Member",
+  userId?: string,
+): Promise<MemberWorkoutView | null> {
   await hydrateSmsWorkouts();
   const store = readStore();
   const workout = store.workouts.find((w) => w.id === workoutId);
@@ -190,7 +194,7 @@ export async function getSmsGeneratedWorkout(workoutId: string, memberName = "Me
     };
   });
 
-  const uid = await resolveUserId();
+  const uid = userId || (await resolveUserId());
   const pastByBlockId: Record<string, any> = {};
   if (isDemoMode()) {
     Object.assign(pastByBlockId, getDemoPastsForWorkoutExercises(blocks, uid));

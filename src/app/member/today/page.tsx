@@ -1,16 +1,17 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import MemberWorkoutConsole from "@/components/MemberWorkoutConsole";
 import TodaySessionPanel from "@/components/TodaySessionPanel";
+import TodayPageLiveRefresh from "@/components/TodayPageLiveRefresh";
 import { getMemberDashboard } from "@/lib/member-context";
-import { getSmsGeneratedWorkout } from "@/lib/sms-generated-workouts";
+import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { resolveUserId } from "@/lib/current-user";
 import { resolveTargetUserId } from "@/lib/resolve-target-user";
-import { resolveMemberGoToToday } from "@/lib/go-to-today";
 import { localTodayIso, toIsoDate } from "@/lib/program-calendar";
-import { loadMemberUpcomingSessions, memberTodayHref, resolveMemberSession } from "@/lib/member-today";
+import { loadMemberUpcomingSessions, memberTodayHref } from "@/lib/member-today";
+import { resolveTodayPageWorkout } from "@/lib/member-today-workout";
 import { listDemoMembersForCoach } from "@/lib/sms";
-import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
+import { resolveDemoUser } from "@/lib/demo-user-directory";
 
 export const dynamic = "force-dynamic";
 
@@ -25,26 +26,26 @@ function formatDateLabel(dateKey: string) {
 
 export default async function MemberTodayPage({ searchParams }: Props) {
   const sp = await searchParams;
-  const asInstructor = !!sp.asInstructor;
-  const forUser = sp.forUser;
-  const uid = resolveTargetUserId(forUser, await resolveUserId());
-
-  const dashboard = await getMemberDashboard();
+  const [dashboard, authSession] = await Promise.all([
+    getMemberDashboard(),
+    getSessionUser(),
+  ]);
   if (!dashboard) notFound();
 
-  if (!sp.date && !asInstructor) {
-    const target = await resolveMemberGoToToday(uid);
-    if (target.kind === "program") redirect(target.href);
-  }
+  const staffCoach = authSession && isStaffRole(authSession.role);
+  const asInstructor = !!sp.asInstructor || staffCoach;
+  const forUser = sp.forUser;
+  const uid = resolveTargetUserId(forUser, await resolveUserId());
+  const memberName = resolveDemoUser(uid)?.name || dashboard.user.name;
 
   const todayKey = localTodayIso();
-  const [session, upcoming, programToday] = await Promise.all([
-    resolveMemberSession(uid, sp.date),
+  const viewDate = sp.date || todayKey;
+  const [todayWorkout, upcoming] = await Promise.all([
+    resolveTodayPageWorkout(uid, viewDate, memberName),
     loadMemberUpcomingSessions(uid),
-    resolveMemberGoToToday(uid),
   ]);
-  const viewDate = sp.date || session?.sessionDate || todayKey;
-  const workout = session ? await getSmsGeneratedWorkout(session.workoutId, dashboard.user.name) : null;
+
+  const { session, workout, programSlug, source, scheduleLabel } = todayWorkout;
   const hasWorkout = !!workout;
   const coachMembers = listDemoMembersForCoach().map((m) => ({ id: m.id, name: m.name }));
 
@@ -75,8 +76,23 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     return `?${q.toString()}`;
   };
 
+  const subtitle = session
+    ? isUpcoming
+      ? `Coach workout scheduled — ${scheduledLabel}`
+      : `Today's coach workout — ${scheduledLabel}`
+    : source === "program"
+      ? `Program schedule — ${scheduleLabel}`
+      : "No coach SMS workout yet — your program workout shows below when enrolled, or ask your coach to assign one.";
+
   return (
     <div className="space-y-4">
+      <TodayPageLiveRefresh
+        userId={uid}
+        viewDate={viewDate}
+        sessionId={session?.id}
+        workoutId={session?.workoutId || workout?.workoutId}
+      />
+
       <Link href="/member" className="text-xs text-accent hover:underline">
         ← Dashboard
       </Link>
@@ -84,17 +100,21 @@ export default async function MemberTodayPage({ searchParams }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Go to Today</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            {session
-              ? isUpcoming
-                ? `Coach workout scheduled — ${scheduledLabel}`
-                : `Today's coach workout — ${scheduledLabel}`
-              : "No coach workout for this date yet. Check your program schedule or ask your coach."}
-          </p>
+          <p className="mt-1 text-sm text-[var(--muted)]">{subtitle}</p>
+          {asInstructor && (
+            <p className="mt-1 text-xs text-amber-300">
+              Coaching {memberName} — checkoffs sync live to their screen.
+            </p>
+          )}
         </div>
         {session?.replacesSchedule && (
           <span className="rounded-full bg-amber-500/20 px-2.5 py-1 text-[10px] font-semibold text-amber-300">
             Overrides schedule
+          </span>
+        )}
+        {source === "program" && !session && (
+          <span className="rounded-full bg-accent/20 px-2.5 py-1 text-[10px] font-semibold text-accent">
+            Program day
           </span>
         )}
       </div>
@@ -114,9 +134,11 @@ export default async function MemberTodayPage({ searchParams }: Props) {
         )}
       </div>
 
-      {!asInstructor && upcoming.length > 0 && (
+      {upcoming.length > 0 && (
         <div className="card py-2 px-3 text-sm">
-          <p className="text-xs font-semibold text-accent mb-2">Your coach workouts</p>
+          <p className="text-xs font-semibold text-accent mb-2">
+            {asInstructor ? `${memberName}'s coach workouts` : "Your coach workouts"}
+          </p>
           <ul className="space-y-1">
             {upcoming.map((s) => (
               <li key={s.id}>
@@ -144,7 +166,8 @@ export default async function MemberTodayPage({ searchParams }: Props) {
         <div className="-mx-4">
           {asInstructor && (
             <div className="mx-4 mb-3 rounded border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
-              <strong>Coach mode</strong> — checking off on behalf of the member. {forUser && `(User: ${forUser})`}
+              <strong>Coach mode</strong> — checking off on behalf of {memberName}.
+              {source === "sms" && session?.rawSms && " Republish via Text Upload below to update this workout for them."}
             </div>
           )}
           {asInstructor && session?.rawSms && (
@@ -162,43 +185,43 @@ export default async function MemberTodayPage({ searchParams }: Props) {
             workout={workout}
             backHref={sp.date ? `/member/today?date=${sp.date}` : "/member/today"}
             backLabel="← Go to Today"
-            programSlug={session?.programSlug || "adult"}
+            programSlug={programSlug}
             targetUserId={uid}
             instructorName={asInstructor ? "Coach" : undefined}
             liveSyncUserId={uid}
             liveSessionDate={viewDate}
+            scheduleLabel={scheduleLabel}
+            calendarDateLabel={formatDateLabel(viewDate)}
           />
         </div>
       ) : (
-        !asInstructor && (
-          <div className="card text-sm text-[var(--muted)]">
-            <p>
-              {session
-                ? "Workout is still building — ask your coach to repost, or try another date with Prev/Next."
-                : "No coach workout assigned for you on this date."}
+        <div className="card text-sm text-[var(--muted)]">
+          <p>
+            {session
+              ? "Workout is still building — paste SMS in Text Upload below, or try another date."
+              : `No workout assigned for ${memberName} on this date yet.`}
+          </p>
+          {asInstructor && (
+            <p className="mt-2 text-xs text-amber-200">
+              Use <strong>Assign workout to students</strong> and <strong>Text Upload</strong> below — once built, it appears here for you and {memberName}.
             </p>
-            <Link
-              href={programToday.kind === "program" ? programToday.href : "/member/programs/adult"}
-              className="mt-2 inline-block text-accent hover:underline"
-            >
-              Open today&apos;s program workout →
-            </Link>
-          </div>
-        )
+          )}
+        </div>
       )}
 
       {asInstructor && (
         <TodaySessionPanel
           asInstructor
-          programSlug={session?.programSlug || "adult"}
+          programSlug={programSlug}
           memberOptions={coachMembers}
-          defaultUserIds={
-            forUser ? [forUser] : session?.userIds?.length ? session.userIds : [DEFAULT_DEMO_MEMBER_ID]
-          }
-          defaultDate={session?.sessionDate || viewDate}
+          defaultUserIds={[uid]}
+          defaultDate={viewDate}
+          lockSessionDate={viewDate}
+          viewDateLabel={formatDateLabel(viewDate)}
           defaultTime={session ? new Date(session.scheduledAt).toTimeString().slice(0, 5) : "06:30"}
           collapsible
-          defaultOpen={false}
+          defaultAssignOpen={!session}
+          defaultOpen={!hasWorkout}
         />
       )}
     </div>
