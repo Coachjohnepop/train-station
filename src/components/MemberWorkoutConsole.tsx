@@ -92,6 +92,8 @@ export default function MemberWorkoutConsole({
   const lastAppliedRemoteAt = useRef<string | null>(null);
   const applyingRemote = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveChain = useRef(Promise.resolve());
+  const lastPushedRevision = useRef(0);
   const stateRef = useRef({
     completedSets,
     finishedExercises,
@@ -160,9 +162,10 @@ export default function MemberWorkoutConsole({
     [instructorName],
   );
 
-  const persistLiveSession = useCallback(
-    async (immediate = false) => {
-      if (!liveSyncEnabled || !liveSyncUserId || applyingRemote.current) return;
+  const flushLiveSave = useCallback(() => {
+    if (!liveSyncEnabled || !liveSyncUserId) return;
+
+    saveChain.current = saveChain.current.catch(() => {}).then(async () => {
       const snap = stateRef.current;
       const payload = {
         userId: liveSyncUserId,
@@ -173,48 +176,41 @@ export default function MemberWorkoutConsole({
         activeId: snap.activeId,
         updatedBy: instructorName ? ("coach" as const) : ("member" as const),
       };
-      try {
-        const res = await fetch(`/api/workouts/${workout.workoutId}/live-session`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-          cache: "no-store",
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.session?.revision) {
-            lastAppliedRevision.current = Math.max(
-              lastAppliedRevision.current,
-              data.session.revision,
-            );
-          }
-        }
-      } catch {
-        if (immediate) {
-          setTimeout(() => void persistLiveSession(true), 300);
-        }
+      const res = await fetch(`/api/workouts/${workout.workoutId}/live-session`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const rev = data.session?.revision;
+      if (typeof rev === "number") {
+        lastPushedRevision.current = rev;
+        lastAppliedRevision.current = Math.max(lastAppliedRevision.current, rev);
       }
-    },
-    [
-      liveSyncEnabled,
-      liveSyncUserId,
-      liveSessionDate,
-      instructorName,
-      workout.workoutId,
-      serializeCompletedSets,
-    ],
-  );
+    });
+
+    return saveChain.current;
+  }, [
+    liveSyncEnabled,
+    liveSyncUserId,
+    liveSessionDate,
+    instructorName,
+    workout.workoutId,
+    serializeCompletedSets,
+  ]);
 
   const queueLiveSave = useCallback(
     (immediate = false) => {
       if (!liveSyncEnabled) return;
       if (saveTimer.current) clearTimeout(saveTimer.current);
-      const delay = immediate ? 0 : instructorName ? 50 : 150;
+      const delay = immediate ? 0 : instructorName ? 30 : 100;
       saveTimer.current = setTimeout(() => {
-        void persistLiveSession(immediate);
+        void flushLiveSave();
       }, delay);
     },
-    [liveSyncEnabled, instructorName, persistLiveSession],
+    [liveSyncEnabled, instructorName, flushLiveSave],
   );
 
   const clearLiveSession = useCallback(async () => {
@@ -377,10 +373,9 @@ export default function MemberWorkoutConsole({
   );
 
   // Auto-finish exercise when all its sets are marked done via the "log your sets" buttons.
-  // This makes the set progress buttons feel complete without requiring an extra click on "Exercise finished"
-  // for exercises where the user has marked every set.
   useEffect(() => {
     if (reviewMode && !instructorName) return;
+    let autoFinished = false;
     workout.exercises.forEach((block) => {
       if (finishedExercises.has(block.id)) return;
       const doneForBlock = completedSets[block.id] ?? new Set<number>();
@@ -389,10 +384,12 @@ export default function MemberWorkoutConsole({
         ? doneForBlock.has(1)
         : doneForBlock.size >= block.setCount;
       if (allSetsDoneForBlock) {
+        autoFinished = true;
         markExerciseFinished(block.id);
       }
     });
-  }, [completedSets, finishedExercises, workout.exercises, reviewMode, markExerciseFinished, instructorName]);
+    if (autoFinished) queueLiveSave(true);
+  }, [completedSets, finishedExercises, workout.exercises, reviewMode, markExerciseFinished, instructorName, queueLiveSave]);
 
   const handleLogComplete = useCallback(async () => {
     // Collect all exercises that were explicitly finished OR have per-set progress marked.

@@ -46,6 +46,22 @@ export function liveSessionKey(
   return `${userId}:${workoutId}:${date}`;
 }
 
+function mergeCompletedSets(
+  existing: Record<string, number[]>,
+  incoming: Record<string, number[]>,
+): Record<string, number[]> {
+  const out = { ...existing };
+  for (const [blockId, nums] of Object.entries(incoming)) {
+    const merged = new Set([...(out[blockId] ?? []), ...nums]);
+    out[blockId] = Array.from(merged).sort((a, b) => a - b);
+  }
+  return out;
+}
+
+function mergeFinishedExercises(existing: string[], incoming: string[]): string[] {
+  return Array.from(new Set([...existing, ...incoming]));
+}
+
 async function loadStore(preferFresh = false): Promise<LiveSessionStore> {
   return hydrateJsonStore({
     blobPath: BLOB_PATH,
@@ -85,10 +101,13 @@ export async function upsertLiveWorkoutSession(input: {
     userId: input.userId,
     workoutId: input.workoutId,
     sessionDate,
-    completedSets: input.completedSets,
-    finishedExercises: input.finishedExercises,
-    weights: input.weights,
-    activeId: input.activeId,
+    completedSets: mergeCompletedSets(existing?.completedSets ?? {}, input.completedSets),
+    finishedExercises: mergeFinishedExercises(
+      existing?.finishedExercises ?? [],
+      input.finishedExercises,
+    ),
+    weights: { ...(existing?.weights ?? {}), ...input.weights },
+    activeId: input.activeId ?? existing?.activeId,
     updatedAt: new Date().toISOString(),
     updatedBy: input.updatedBy,
     revision: (existing?.revision ?? 0) + 1,
