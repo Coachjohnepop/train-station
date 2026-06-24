@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { addDemoSmsLog } from "@/lib/sms";
 import { appendMemberSmsToChat } from "@/lib/coach-chat";
+import { notifyCoachOfMemberReply } from "@/lib/message-hub";
+import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { resolveUserId } from "@/lib/current-user";
+import { requireMember } from "@/lib/api-auth";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { getDemoUserSettings } from "@/lib/demo-reminders";
 import fs from "fs";
@@ -45,6 +48,9 @@ function processTaskReply(message: string) {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireMember();
+  if (!auth.ok) return auth.response;
+
   const body = await request.json();
   const { message } = body;
 
@@ -70,6 +76,13 @@ export async function POST(request: Request) {
       memberId: uid,
       body: trimmed,
       phone: logEntry.phone,
+    });
+
+    const member = resolveDemoUser(uid);
+    await notifyCoachOfMemberReply({
+      memberName: member?.name || "Member",
+      memberEmail: member?.email || userSettings.phone || "member",
+      message: trimmed,
     });
 
     // Process reply for structured categories (eating, cardio, sleep, exercise)

@@ -10,6 +10,12 @@ import { getAllSignInAccounts } from "@/lib/member-accounts-store";
 import { COACH_CALENDLY_URL } from "@/lib/brand";
 import { memberProgramStartPath } from "@/lib/member-destinations";
 import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
+import {
+  getHubRecipients,
+  hubMemberChatUrl,
+  messageHubActive,
+  sendHubNotification,
+} from "@/lib/message-hub";
 
 export type DemoSmsLogEntry = {
   userId?: string;
@@ -343,6 +349,27 @@ export async function sendCoachReplySms(params: {
   message: string;
   coachName?: string;
 }): Promise<CoachSmsResult> {
+  if (messageHubActive()) {
+    const recipients = await getHubRecipients();
+    const recipient = recipients.find((u) => u.id === params.memberId);
+    if (!recipient) return { sent: 0, reason: "no_phone" };
+
+    const result = await sendHubNotification({
+      recipient,
+      message: params.message,
+      source: "coach-reply",
+      coachName: params.coachName,
+      deepLink: hubMemberChatUrl(),
+    });
+
+    return {
+      sent: 1,
+      phone: recipient.phone || recipient.email,
+      sentAt: result.sentAt,
+      simulated: !result.emailed,
+    };
+  }
+
   const allWithPhones = await getUsersWithPhones();
   const user = allWithPhones.find((u) => u.id === params.memberId && u.phone);
   if (!user) return { sent: 0, reason: "no_phone" };
@@ -383,8 +410,51 @@ export async function sendCoachChatAlert(params: {
   customBody?: string;
   coachName?: string;
 }) {
-  const allWithPhones = await getUsersWithPhones();
   const idSet = new Set(params.userIds);
+
+  if (messageHubActive()) {
+    const recipients = await getHubRecipients().then((list) =>
+      list.filter((u) => idSet.has(u.id)),
+    );
+    const deepLink = hubMemberChatUrl(params.sessionDate);
+    const results: any[] = [];
+
+    for (const recipient of recipients) {
+      const first = recipient.name.split(" ")[0];
+      const body =
+        params.customBody ||
+        coachAlertMessage({
+          sessionDate: params.sessionDate,
+          firstName: first,
+          coachName: params.coachName,
+        });
+      const personalized = personalize(body, {
+        name: recipient.name,
+        email: recipient.email,
+        phone: recipient.phone || "",
+      });
+
+      const delivered = await sendHubNotification({
+        recipient,
+        message: personalized,
+        source: "coach-chat-alert",
+        coachName: params.coachName,
+        deepLink,
+      });
+
+      results.push({
+        userId: recipient.id,
+        phone: recipient.phone || recipient.email,
+        message: personalized,
+        sentAt: delivered.sentAt,
+        emailed: delivered.emailed,
+      });
+    }
+
+    return { sent: results.length, logs: results };
+  }
+
+  const allWithPhones = await getUsersWithPhones();
   const targets = allWithPhones.filter((u) => idSet.has(u.id) && u.phone);
 
   const results: any[] = [];
@@ -458,6 +528,27 @@ export async function sendSmsBroadcast(params: {
   taskDetails?: any;
 }) {
   const { userIds, message, category = "general", taskDetails } = params;
+
+  if (messageHubActive()) {
+    const { sendHubBroadcast } = await import("@/lib/message-hub");
+    const result = await sendHubBroadcast({
+      userIds,
+      message,
+      category,
+    });
+    return {
+      sent: result.sent,
+      logs: result.logs.map((l) => ({
+        user: l.email,
+        phone: l.phone,
+        message: l.message,
+        sentAt: l.sentAt,
+        category,
+        taskDetails: taskDetails || null,
+      })),
+    };
+  }
+
   const allWithPhones = await getUsersWithPhones();
   let targets = allWithPhones;
   if (userIds && userIds.length > 0) {

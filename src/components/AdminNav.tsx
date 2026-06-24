@@ -66,6 +66,11 @@ const items = [
     badge: true,
   },
   {
+    href: "/admin/sms-hub",
+    label: "SMS Hub",
+    match: (p: string) => p.startsWith("/admin/sms-hub"),
+  },
+  {
     href: "/admin/bookings",
     label: "Bookings",
     match: (p: string) => p.startsWith("/admin/bookings"),

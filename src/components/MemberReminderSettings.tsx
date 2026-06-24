@@ -90,7 +90,7 @@ export default function MemberReminderSettings() {
   }, [load]);
 
   if (loading) {
-    return <div className="card text-xs p-3 bg-[var(--bg)] border border-[var(--accent)]/40">Loading SMS settings...</div>;
+    return <div className="card text-xs p-3 bg-[var(--bg)] border border-[var(--accent)]/40">Loading alert settings...</div>;
   }
 
   return (
@@ -101,11 +101,10 @@ export default function MemberReminderSettings() {
       >
         <span className={`text-xs text-[#7c3aed] transition-transform ${isOpen ? "rotate-90" : ""}`}>▶</span>
         <span className="flex-1">
-          SMS Reminders &amp; Contact
+          Coach alerts &amp; messages
           {settings.dailyReminderTime && (
             <span className="ml-1 text-[#7c3aed]/70">
-              — {settings.dailyReminderTime}
-              {settings.phone && " • phone set"}
+              — reminder {settings.dailyReminderTime}
             </span>
           )}
         </span>
@@ -117,8 +116,18 @@ export default function MemberReminderSettings() {
 
       {isOpen && (
         <>
+          <p className="text-[10px] text-[var(--muted)]">
+            Alerts go to your account email and{" "}
+            <a href="/member/chat" className="text-accent hover:underline">
+              in-app Messages
+            </a>
+            . Your coach never sees your phone number.
+          </p>
+
           <div>
-            <label className="block text-[10px] text-[var(--muted)] mb-0.5">Phone number for SMS</label>
+            <label className="block text-[10px] text-[var(--muted)] mb-0.5">
+              Mobile (optional — only if we add carrier texts later)
+            </label>
             <input
               type="tel"
               inputMode="tel"
@@ -131,7 +140,7 @@ export default function MemberReminderSettings() {
                   save(latestSettingsRef.current);
                 }
               }}
-              placeholder="(555) 123-4567"
+              placeholder="Optional"
               className="input text-sm w-full"
             />
           </div>
@@ -145,16 +154,12 @@ export default function MemberReminderSettings() {
               }}
             />
             <div className="text-[10px] text-[var(--muted)] mt-1.5">
-              Tap hour, minute, or AM/PM to scroll. Reminders include a direct link to that day&apos;s workout.
+              We&apos;ll email you at reminder time with a link to that day&apos;s workout (no paid text number needed).
             </div>
           </div>
 
-          <div className="text-[10px] text-[var(--muted)]">
-            Instructors can also send broadcast messages. This is low-security demo SMS.
-          </div>
-
           <div className="text-[10px] text-[var(--muted)] pt-1 border-t border-[var(--border)]/60">
-            To book your onboarding call or live sessions, use the Calendly link in Live sessions or the Book Call page. These SMS settings are for daily workout reminders only.
+            Book onboarding or live sessions via Calendly on the Book Call page.
           </div>
 
           <div className="pt-2 border-t border-[var(--border)] mt-2">
@@ -181,7 +186,7 @@ export default function MemberReminderSettings() {
                     body: JSON.stringify({ message: ta.value.trim() }),
                   });
                   if (res.ok) {
-                    setMessage("Message sent to coach (simulated inbound)");
+                    setMessage("Sent to your coach in the hub");
                     ta.value = "";
                     setTimeout(() => setMessage(null), 2000);
                   } else {
@@ -193,11 +198,11 @@ export default function MemberReminderSettings() {
                 setSaving(false);
               }}
             >
-              Send message (simulates reply to SMS)
+              Send to coach (in-app hub)
             </button>
 
             <div className="mt-3 pt-2 border-t border-[var(--border)]">
-              <div className="text-[10px] text-[var(--muted)] mb-1">Quick reports (simulates SMS reply to broadcast):</div>
+              <div className="text-[10px] text-[var(--muted)] mb-1">Quick reports (coach sees these in SMS Hub / Messages):</div>
               <div className="flex flex-wrap gap-1">
                 <button
                   onClick={async () => {

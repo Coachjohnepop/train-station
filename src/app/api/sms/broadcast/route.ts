@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { sendSmsBroadcast, getUsersWithPhones } from "@/lib/sms";
+import { requireStaff } from "@/lib/api-auth";
 import { z } from "zod";
 
 const broadcastSchema = z.object({
@@ -11,12 +12,17 @@ const broadcastSchema = z.object({
 });
 
 export async function GET() {
-  // Convenience: list possible recipients (users that have a phone)
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
+
   const users = await getUsersWithPhones();
   return NextResponse.json({ recipients: users });
 }
 
 export async function POST(request: Request) {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
+
   const body = await request.json();
   const parsed = broadcastSchema.safeParse(body);
   if (!parsed.success) {
