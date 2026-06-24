@@ -11,6 +11,7 @@ const PENDING_APPROVAL_COOKIE = "ts_pending_approval";
 const PUBLIC_PAGE_PREFIXES = [
   "/login",
   "/forgot-password",
+  "/reset-password",
   "/signup",
   "/coming-soon",
   "/join",

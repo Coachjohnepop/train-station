@@ -51,11 +51,7 @@ function LoginForm() {
           router.push(data.signupUrl);
           return;
         }
-        const hint =
-          email.trim().toLowerCase().includes("johnsteph") || email.trim().toLowerCase().includes("lemonvoice")
-            ? " For John & Steph, use john@lemonvoice.com and leave the password blank."
-            : "";
-        setError((data.error || "Login failed") + hint);
+        setError(data.error || "Login failed");
         return;
       }
       rememberEmail(email);
@@ -95,14 +91,14 @@ function LoginForm() {
           </div>
 
           <div>
-            <label className="block text-xs text-[var(--muted)] mb-1">Password (optional for now)</label>
+            <label className="block text-xs text-[var(--muted)] mb-1">Password</label>
             <input
               type="password"
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="input"
-              placeholder="Leave blank"
+              placeholder="Set via forgot password if needed"
             />
           </div>
 
@@ -125,7 +121,11 @@ function LoginForm() {
         </form>
 
         <p className="mt-6 text-center text-[10px] text-[var(--muted)]">
-          For now, just enter your email and leave password blank. We&apos;ll add real passwords later.
+          First time or forgot your password?{" "}
+          <Link href="/forgot-password" className="text-accent hover:underline">
+            Reset it here
+          </Link>{" "}
+          — we&apos;ll email you a link.
         </p>
       </div>
     </div>
