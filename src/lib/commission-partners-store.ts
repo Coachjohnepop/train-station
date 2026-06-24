@@ -9,7 +9,7 @@ export type CommissionPartner = {
   name: string;
   email: string;
   stripeAccountId: string | null;
-  /** Share of the tiered commission pool (enabled partners should sum to 100). */
+  /** Flat mode: % of gross MRR. Tiered mode: % of the commission pool (enabled partners sum to 100). */
   sharePercent: number;
   enabled: boolean;
   notes: string | null;
@@ -100,21 +100,56 @@ async function readLegacyPartner(): Promise<Partial<CommissionPartner> | null> {
   };
 }
 
-function seedFromEnv(): CommissionPartner | null {
+function seedPartnersFromEnv(): CommissionPartner[] {
+  const raw = process.env.STRIPE_COMMISSION_SEED_JSON?.trim();
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return [];
+      const now = new Date().toISOString();
+      const partners: CommissionPartner[] = [];
+      for (const entry of parsed) {
+        if (!entry || typeof entry !== "object") continue;
+        const data = entry as Record<string, unknown>;
+        const email = typeof data.email === "string" ? data.email.trim().toLowerCase() : "";
+        const name = typeof data.name === "string" ? data.name.trim() : "";
+        if (!email || !name) continue;
+        const share = Number(data.sharePercent);
+        partners.push({
+          id: randomUUID(),
+          name,
+          email,
+          stripeAccountId:
+            typeof data.stripeAccountId === "string" ? data.stripeAccountId.trim() : null,
+          sharePercent: Number.isFinite(share) ? Math.max(0, Math.min(100, share)) : 0,
+          enabled: data.enabled !== false,
+          notes: typeof data.notes === "string" ? data.notes : null,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+      return partners;
+    } catch {
+      return [];
+    }
+  }
+
   const email = process.env.STRIPE_COMMISSION_PARTNER_EMAIL?.trim();
-  if (!email) return null;
+  if (!email) return [];
   const now = new Date().toISOString();
-  return {
-    id: randomUUID(),
-    name: process.env.STRIPE_COMMISSION_PARTNER_NAME?.trim() || "Partner",
-    email: email.toLowerCase(),
-    stripeAccountId: process.env.STRIPE_CONNECT_PARTNER_ACCOUNT_ID?.trim() || null,
-    sharePercent: 100,
-    enabled: true,
-    notes: null,
-    createdAt: now,
-    updatedAt: now,
-  };
+  return [
+    {
+      id: randomUUID(),
+      name: process.env.STRIPE_COMMISSION_PARTNER_NAME?.trim() || "Partner",
+      email: email.toLowerCase(),
+      stripeAccountId: process.env.STRIPE_CONNECT_PARTNER_ACCOUNT_ID?.trim() || null,
+      sharePercent: 100,
+      enabled: true,
+      notes: null,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
 }
 
 async function ensureMigratedStore(): Promise<PartnersStore> {
@@ -150,9 +185,9 @@ async function ensureMigratedStore(): Promise<PartnersStore> {
         updatedAt: now,
       };
     } else {
-      const seeded = seedFromEnv();
-      if (seeded) {
-        store = { partners: [seeded], updatedAt: now };
+      const seeded = seedPartnersFromEnv();
+      if (seeded.length > 0) {
+        store = { partners: seeded, updatedAt: now };
       }
     }
 
@@ -287,4 +322,32 @@ export function sumEnabledSharePercents(partners: CommissionPartner[]): number {
   return partners
     .filter((p) => p.enabled && p.sharePercent > 0)
     .reduce((sum, p) => sum + p.sharePercent, 0);
+}
+
+export function validatePartnerShares(
+  partners: CommissionPartner[],
+  mode: "flat" | "tiered",
+): { shareTotal: number; shareValid: boolean; message: string | null } {
+  const shareTotal = sumEnabledSharePercents(partners);
+  if (shareTotal <= 0) {
+    return { shareTotal, shareValid: false, message: "Add at least one enabled partner with a share." };
+  }
+  if (mode === "flat") {
+    if (shareTotal > 100) {
+      return {
+        shareTotal,
+        shareValid: false,
+        message: `Partner shares cannot exceed 100% of revenue (currently ${shareTotal}%).`,
+      };
+    }
+    return { shareTotal, shareValid: true, message: null };
+  }
+  if (shareTotal !== 100) {
+    return {
+      shareTotal,
+      shareValid: false,
+      message: `Enabled partner shares must total 100% (currently ${shareTotal}%).`,
+    };
+  }
+  return { shareTotal, shareValid: true, message: null };
 }

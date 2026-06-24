@@ -1,18 +1,16 @@
-# Stripe commission split — John + Jeremy
+# Stripe revenue split — John + Jeremy + Company
 
-**Model:** All member subscriptions bill on **Jeremy’s Train Station Stripe account**. John receives a **monthly commission transfer** via **Stripe Connect Express**, tiered on total MRR.
+**Model (flat mode, default):** All member subscriptions bill on **Jeremy’s Train Station Stripe account**. Each month:
 
-| MRR band | Partner rate | Example on $8,000 MRR |
-|----------|--------------|------------------------|
-| First **$5,000** | **5%** | $250 |
-| Above **$5,000** | **30%** | $900 on the top $3,000 |
-| **Total** | | **$1,150 / month** |
+| Feed | Share of gross MRR | How it moves |
+|------|-------------------|--------------|
+| **John** | **5%** | Stripe Connect transfer |
+| **Jeremy** | **20%** | Stripe Connect transfer (personal Express) |
+| **Company** | **75%** | Stays on the platform Stripe account |
 
-Formula (monthly):
+Example on **$1,000 MRR**: John $50, Jeremy $200, Company $750 (retained).
 
-```
-commission = min(MRR, $5000) × 5% + max(0, MRR − $5000) × 30%
-```
+Until a separate company bank exists, the **company feed** and Jeremy’s business balance both live on the same Stripe account — Connect transfers still separate John’s 5% and Jeremy’s personal 20% for clean accounting.
 
 ---
 
@@ -20,67 +18,82 @@ commission = min(MRR, $5000) × 5% + max(0, MRR − $5000) × 30%
 
 | Person | Task |
 |--------|------|
-| **Jeremy** | Owns the main Stripe account (products, prices, live keys in Vercel). Enables **Connect** in Stripe Dashboard. |
-| **John** | Completes **Connect Express onboarding** in Admin → Commission (bank + identity for payouts). |
-
-Jeremy does **not** need John’s Stripe login. John does **not** need Jeremy’s secret keys after Connect is linked.
-
----
-
-## Step 1 — Jeremy: enable Connect on the business account
-
-1. [dashboard.stripe.com](https://dashboard.stripe.com) → **Connect** → **Get started**
-2. Choose **Platform or marketplace** (Train Station hosts members; partner gets a share)
-3. Complete platform profile (Train Station / The Train Station LLC)
-4. Keep **Test mode** on until both of you have verified a test payout
-
-Main API keys stay in Vercel as today:
-
-- `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET`
-- `STRIPE_PRICE_MEMBER` / `STRIPE_PRICE_PRO`
+| **Jeremy or any admin** | Stripe Dashboard: products, prices, webhook, **Connect**, coupons/promo codes |
+| **John** | Vercel env vars, deploy, Admin → Commission partners + Connect onboarding |
+| **John + Jeremy** | Each completes **Connect Express** for their payout row |
 
 ---
 
-## Step 2 — Add payout partners (Admin → Commission)
+## Step 1 — Stripe Dashboard (test mode first)
 
-1. **Admin → Commission** → **Add partner** (name, email, share %)
-2. Enabled partner shares must **total 100%** (e.g. John 60%, future dev 40%)
-3. Each partner clicks **Connect** on their row → Stripe Express onboarding (bank + identity)
-4. Status **Ready** when onboarding + payouts are enabled
+1. [dashboard.stripe.com](https://dashboard.stripe.com) → toggle **Test mode**
+2. **Product catalog** → Coach Class **$25/mo**, 1st Class **$50/mo** → copy `price_…` IDs
+3. **Developers → API keys** → `sk_test_…`
+4. **Developers → Webhooks** → `https://www.thetrainstation.co/api/stripe/webhook`  
+   Events: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`  
+   → copy `whsec_…`
+5. **Connect → Get started** (platform/marketplace)
+6. **Products → Coupons** (optional) → create referral discount → **Promotion codes** → copy `promo_…`
 
-Optional env seeds the first partner if the list is empty:
+---
+
+## Step 2 — Vercel env (Production + Preview)
 
 ```bash
-STRIPE_COMMISSION_PARTNER_EMAIL=john@yourdomain.com
-STRIPE_COMMISSION_PARTNER_NAME="John Popham"
-STRIPE_CONNECT_PARTNER_ACCOUNT_ID=acct_…   # optional override
-```
+STRIPE_SECRET_KEY=sk_test_…
+STRIPE_WEBHOOK_SECRET=whsec_…
+STRIPE_PRICE_MEMBER=price_…
+STRIPE_PRICE_PRO=price_…
+STRIPE_AUTO_APPROVE=true
 
-Partner roster is stored in blob (`commission-partners.json`) — add/remove/edit anytime without redeploy.
-
----
-
-## Step 3 — Commission env vars (Vercel)
-
-```bash
-# Tiered rates (defaults shown)
-STRIPE_COMMISSION_TIER1_CAP_DOLLARS=5000
-STRIPE_COMMISSION_TIER1_RATE=0.05
-STRIPE_COMMISSION_TIER2_RATE=0.30
 STRIPE_COMMISSION_ENABLED=true
+STRIPE_COMMISSION_MODE=flat
+STRIPE_COMPANY_FEED_LABEL=The Train Station LLC
 
-# Optional: automated monthly payout (Vercel Cron)
-STRIPE_COMMISSION_CRON_SECRET=long-random-string
+# Optional — auto-seed partners on first Commission load:
+STRIPE_COMMISSION_SEED_JSON=[{"name":"John Popham","email":"john@thetrainstation.co","sharePercent":5},{"name":"Jeremy Byrd","email":"jeremy@thetrainstation.co","sharePercent":20}]
+
+# Referral discounts
+STRIPE_REFERRAL_DISCOUNTS_ENABLED=true
 ```
+
+Redeploy after saving.
 
 ---
 
-## Step 4 — Monthly payout
+## Step 3 — Admin → Commission
 
-**Manual (v1):** Admin → Commission → **Run payout now** (after month-end, when balance has settled).
+1. **Add partners** (if not seeded): John **5%**, Jeremy **20%** — shares must total **≤ 100%**
+2. Each partner → **Connect** → Stripe Express onboarding (bank + identity)
+3. **Revenue feeds** card shows all three: John, Jeremy, Company (75% retained)
+4. After test signups: **Preview payout** → **Run payout now**
 
-**Automated:** Call once per month (e.g. 3rd of the month):
+---
+
+## Step 4 — Referral discounts
+
+1. Create coupon + promotion code in Stripe Dashboard (test mode)
+2. Admin → Commission → **Referral discounts** → add code (e.g. `FRIEND10`) with `promo_…` id
+3. Share signup link: `https://www.thetrainstation.co/signup?plan=member&ref=FRIEND10`
+4. Or member enters code on `/member/checkout` before **Pay with Stripe**
+
+Checkout also enables `allow_promotion_codes` so members can type any active Stripe promo on the Stripe page.
+
+---
+
+## Step 5 — Test walkthrough
+
+1. Coach Class signup → Stripe test card `4242 4242 4242 4242`
+2. Admin → Members → **paid** / **Stripe**
+3. Admin → Commission → MRR shows subscription; feeds show 5% / 20% / 75%
+4. John + Jeremy Connect **Ready** → Preview payout → Run payout (test transfers)
+5. Stripe → Webhooks → last delivery **200**
+
+Full member script: **`STRIPE_DEMO_SCRIPT.md`**
+
+---
+
+## Monthly payout automation (optional)
 
 ```bash
 curl -X POST "https://www.thetrainstation.co/api/stripe/commission/payout" \
@@ -89,54 +102,18 @@ curl -X POST "https://www.thetrainstation.co/api/stripe/commission/payout" \
   -d '{"period":"2026-06"}'
 ```
 
-Vercel Cron example (`vercel.json`):
-
-```json
-{
-  "crons": [{
-    "path": "/api/stripe/commission/payout?secret=YOUR_CRON_SECRET",
-    "schedule": "0 14 3 * *"
-  }]
-}
-```
-
-Each period is **idempotent** — the same `YYYY-MM` cannot be paid twice.
-
-**Note:** Payout uses the **active MRR snapshot at run time**. For strict accounting, run the job on the 1st–3rd after month close (or extend later to store end-of-month snapshots).
-
 ---
 
-## Test mode walkthrough
+## Legacy tiered mode
 
-1. Jeremy: Connect enabled, test products live, keys in Vercel preview
-2. John: Admin → Commission → Connect (test Express account)
-3. Create 2–3 test Coach Class signups → MRR ~$50–$75
-4. Commission → **Preview payout** → verify math
-5. **Run payout now** → check Stripe → **Transfers** (test)
-6. John: **Open partner Stripe dashboard** from Commission page → see test balance
+Set `STRIPE_COMMISSION_MODE=tiered` for the old model (5% on first $5k MRR + 30% above, partners split that pool at 100%).
 
 ---
 
 ## Go live checklist
 
-- [ ] Jeremy: Connect enabled in **Live** mode
-- [ ] Live subscription products + Vercel live keys
-- [ ] John: Live Connect onboarding complete (payouts enabled)
-- [ ] One real subscription + small test transfer (or first real monthly payout)
-- [ ] Agree on payout calendar (e.g. 3rd business day each month)
-
----
-
-## FAQ
-
-**Why not split on every checkout?**  
-Stripe’s built-in `application_fee_percent` is flat per subscription. Your deal is **tiered on total MRR**, so we calculate monthly and transfer once.
-
-**What if MRR drops below $5,000?**  
-Next month’s commission recalculates on the lower MRR — more in tier 1, less in tier 2.
-
-**Can rates change later?**  
-Update env vars (`STRIPE_COMMISSION_TIER1_RATE`, etc.) and document the effective date. Past ledger rows keep historical amounts.
-
-**Tax / 1099?**  
-Stripe Connect Express issues tax forms for connected accounts when thresholds apply — confirm with your accountant.
+- [ ] Stripe **Live** mode: new products, prices, keys, webhook secret
+- [ ] Live Connect onboarding for John + Jeremy
+- [ ] One real $25 signup (refund after verify if desired)
+- [ ] Referral promo codes recreated in Live mode
+- [ ] Agree on payout calendar (e.g. 3rd of each month)

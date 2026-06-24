@@ -12,6 +12,7 @@ function SignupForm() {
   const plan = searchParams.get("plan") || "";
   const interest = searchParams.get("interest") || "";
   const prefillEmail = searchParams.get("email") || "";
+  const referralCode = searchParams.get("ref") || searchParams.get("referral") || "";
   const isWaitlistOnly = Boolean(interest && !plan);
 
   const [email, setEmail] = useState(prefillEmail);
@@ -104,6 +105,7 @@ function SignupForm() {
           phone: phone.trim() || undefined,
           plan: ticketPlan,
           password: password || undefined,
+          referralCode: referralCode.trim() || undefined,
         }),
       });
       const data = await res.json();
@@ -267,6 +269,12 @@ function SignupForm() {
             {!isWaitlistOnly && (plan || ticketPlan) && (
               <p className="text-xs text-[#7c3aed]">
                 Ticket: <span className="font-semibold">{signupPlanLabel(ticketPlan)}</span>
+              </p>
+            )}
+
+            {!isWaitlistOnly && referralCode.trim() && (
+              <p className="text-xs text-emerald-300">
+                Referral code: <span className="font-semibold">{referralCode.trim().toUpperCase()}</span>
               </p>
             )}
 

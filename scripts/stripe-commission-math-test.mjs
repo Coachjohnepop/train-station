@@ -45,4 +45,27 @@ if (split[0] === 690_00 && split[1] === 460_00) {
   console.log(`FAIL split: ${split.map((c) => c / 100).join(", ")}`);
 }
 
+function flatRevenueSplit(mrrCents, shares) {
+  const totalShare = shares.reduce((s, p) => s + p.share, 0);
+  const partnerTotal = Math.round((mrrCents * totalShare) / 100);
+  let allocated = 0;
+  const lines = shares.map((p, i) => {
+    const isLast = i === shares.length - 1;
+    const amount = isLast ? partnerTotal - allocated : Math.round((mrrCents * p.share) / 100);
+    allocated += amount;
+    return amount;
+  });
+  return { lines, company: mrrCents - partnerTotal, partnerTotal };
+}
+
+const flat = flatRevenueSplit(1000_00, [{ share: 5 }, { share: 20 }]);
+if (flat.lines[0] === 50_00 && flat.lines[1] === 200_00 && flat.company === 750_00) {
+  console.log("OK flat split 5/20/75 on $1000 MRR");
+} else {
+  ok = false;
+  console.log(
+    `FAIL flat split: john=${flat.lines[0] / 100} jeremy=${flat.lines[1] / 100} company=${flat.company / 100}`,
+  );
+}
+
 process.exit(ok ? 0 : 1);

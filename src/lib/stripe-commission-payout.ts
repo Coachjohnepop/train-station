@@ -1,10 +1,13 @@
 import "server-only";
 
 import { randomUUID } from "crypto";
-import { splitCommissionAmongPartners } from "@/lib/commission-partner-splits";
+import {
+  splitCommissionAmongPartners,
+  splitRevenueAmongPartners,
+} from "@/lib/commission-partner-splits";
 import {
   listEnabledCommissionPartners,
-  sumEnabledSharePercents,
+  validatePartnerShares,
 } from "@/lib/commission-partners-store";
 import {
   getCommissionPayoutForPeriod,
@@ -13,8 +16,10 @@ import {
   type PartnerPayoutLine,
 } from "@/lib/commission-ledger-store";
 import {
+  commissionSplitMode,
   fetchActiveMrrCents,
   isCommissionEnabled,
+  revenueSplitFromMrr,
   tieredCommissionFromMrr,
 } from "@/lib/stripe-commission";
 import { getStripe } from "@/lib/stripe";
@@ -50,11 +55,10 @@ export async function runCommissionPayout(input?: {
     return { error: "No enabled commission partners. Add partners in Admin → Commission." };
   }
 
-  const shareTotal = sumEnabledSharePercents(partners);
-  if (shareTotal !== 100) {
-    return {
-      error: `Enabled partner shares must total 100% (currently ${shareTotal}%). Adjust shares in Commission admin.`,
-    };
+  const mode = commissionSplitMode();
+  const shareCheck = validatePartnerShares(partners, mode);
+  if (!shareCheck.shareValid) {
+    return { error: shareCheck.message || "Invalid partner share configuration." };
   }
 
   const readyPartners = partners.filter((p) => p.stripeAccountId);
@@ -69,14 +73,39 @@ export async function runCommissionPayout(input?: {
   }
 
   const { mrrCents } = await fetchActiveMrrCents();
-  const breakdown = tieredCommissionFromMrr(mrrCents);
-  const amount = breakdown.totalCommissionCents;
+  let amount = 0;
+  let recordMrrCents = mrrCents;
+  let tierFields = {
+    tier1BaseCents: 0,
+    tier1CommissionCents: 0,
+    tier2BaseCents: 0,
+    tier2CommissionCents: 0,
+  };
+
+  if (mode === "flat") {
+    const flat = revenueSplitFromMrr(mrrCents, shareCheck.shareTotal);
+    amount = flat.totalPartnerPayoutCents;
+    recordMrrCents = flat.mrrCents;
+  } else {
+    const tiered = tieredCommissionFromMrr(mrrCents);
+    amount = tiered.totalCommissionCents;
+    recordMrrCents = tiered.mrrCents;
+    tierFields = {
+      tier1BaseCents: tiered.tier1BaseCents,
+      tier1CommissionCents: tiered.tier1CommissionCents,
+      tier2BaseCents: tiered.tier2BaseCents,
+      tier2CommissionCents: tiered.tier2CommissionCents,
+    };
+  }
 
   if (amount <= 0) {
     return { error: "Commission amount is zero — no active MRR to pay against." };
   }
 
-  const splitLines = splitCommissionAmongPartners(amount, partners);
+  const splitLines =
+    mode === "flat"
+      ? splitRevenueAmongPartners(mrrCents, partners)
+      : splitCommissionAmongPartners(amount, partners);
   const partnerById = new Map(partners.map((p) => [p.id, p]));
 
   const basePartnerLines: PartnerPayoutLine[] = splitLines.map((line) => {
@@ -100,11 +129,8 @@ export async function runCommissionPayout(input?: {
   const baseRecord: CommissionPayoutRecord = {
     id: existing?.id || randomUUID(),
     period,
-    mrrCents: breakdown.mrrCents,
-    tier1BaseCents: breakdown.tier1BaseCents,
-    tier1CommissionCents: breakdown.tier1CommissionCents,
-    tier2BaseCents: breakdown.tier2BaseCents,
-    tier2CommissionCents: breakdown.tier2CommissionCents,
+    mrrCents: recordMrrCents,
+    ...tierFields,
     totalCommissionCents: amount,
     transferId: null,
     partnerLines: basePartnerLines,
@@ -142,7 +168,7 @@ export async function runCommissionPayout(input?: {
         metadata: {
           period,
           partner_id: partner.id,
-          mrr_cents: String(breakdown.mrrCents),
+          mrr_cents: String(recordMrrCents),
           share_percent: String(line.sharePercent),
         },
       });

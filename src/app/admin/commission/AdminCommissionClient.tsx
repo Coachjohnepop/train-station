@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import AdminReferralCodesPanel from "@/app/admin/commission/AdminReferralCodesPanel";
 
 type ConnectStatus = {
   partnerId: string;
@@ -24,9 +25,17 @@ type Partner = {
 
 type CommissionResponse = {
   enabled: boolean;
+  mode: "flat" | "tiered";
   periodSuggested: string;
   shareTotal: number;
   shareValid: boolean;
+  shareMessage: string | null;
+  companyFeed: {
+    sharePercent: number;
+    amountCents: number;
+    amountLabel: string;
+    label: string;
+  } | null;
   mrr: { cents: number; label: string; activeSubscriptions: number };
   commission: {
     totalCommissionCents: number;
@@ -253,10 +262,18 @@ export default function AdminCommissionClient() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Commission admin</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Manage payout partners, share splits, and monthly Stripe Connect transfers. Tiered pool:{" "}
-          {data?.commission.tier1RatePercent ?? 5}% on first{" "}
-          {data?.commission.tier1CapLabel ?? "$5,000"} MRR, then{" "}
-          {data?.commission.tier2RatePercent ?? 30}% above.
+          {data?.mode === "tiered" ? (
+            <>
+              Tiered commission pool: {data?.commission.tier1RatePercent ?? 5}% on first{" "}
+              {data?.commission.tier1CapLabel ?? "$5,000"} MRR, then{" "}
+              {data?.commission.tier2RatePercent ?? 30}% above — partners split that pool.
+            </>
+          ) : (
+            <>
+              Flat revenue split: each partner&apos;s share is a % of gross MRR. The remainder stays
+              on the platform Stripe account (company feed).
+            </>
+          )}
         </p>
       </div>
 
@@ -287,7 +304,13 @@ export default function AdminCommissionClient() {
                 }`}
               >
                 Shares: {data.shareTotal}%
-                {!data.shareValid ? " — must equal 100%" : ""}
+                {data.mode === "flat"
+                  ? !data.shareValid
+                    ? " — max 100% of revenue"
+                    : ` — company keeps ${Math.max(0, 100 - data.shareTotal)}%`
+                  : !data.shareValid
+                    ? " — must equal 100%"
+                    : ""}
               </span>
             </div>
 
@@ -425,7 +448,7 @@ export default function AdminCommissionClient() {
 
           <div className="card space-y-4 p-5">
             <h2 className="text-sm font-semibold uppercase tracking-[2px] text-accent">
-              MRR & commission pool
+              {data.mode === "flat" ? "MRR & revenue feeds" : "MRR & commission pool"}
             </h2>
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
@@ -437,27 +460,62 @@ export default function AdminCommissionClient() {
               </div>
               <div className="text-right">
                 <div className="text-xs uppercase tracking-[2px] text-[var(--muted)]">
-                  Total commission pool
+                  {data.mode === "flat" ? "Partner payouts (Connect)" : "Total commission pool"}
                 </div>
                 <div className="text-2xl font-semibold text-emerald-300">
                   {data.commission.totalLabel}
                 </div>
               </div>
             </div>
-            <div className="flex h-3 overflow-hidden rounded-full bg-[var(--surface-2)]">
-              <div className="bg-emerald-500/70" style={{ width: `${tier1Pct}%` }} />
-              <div className="bg-violet-500/70" style={{ width: `${100 - tier1Pct}%` }} />
-            </div>
+            {data.mode === "flat" && data.companyFeed ? (
+              <div className="grid gap-3 sm:grid-cols-3">
+                {data.projectedSplits.map((split) => (
+                  <div
+                    key={split.partnerId}
+                    className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3"
+                  >
+                    <div className="text-[10px] uppercase tracking-[2px] text-[var(--muted)]">
+                      {split.partnerName}
+                    </div>
+                    <div className="mt-1 text-lg font-semibold">{split.amountLabel}</div>
+                    <div className="text-xs text-[var(--muted)]">{split.sharePercent}% of MRR</div>
+                  </div>
+                ))}
+                <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-3">
+                  <div className="text-[10px] uppercase tracking-[2px] text-sky-200/80">
+                    {data.companyFeed.label}
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-sky-100">
+                    {data.companyFeed.amountLabel}
+                  </div>
+                  <div className="text-xs text-sky-200/70">
+                    {data.companyFeed.sharePercent}% retained on platform
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-3 overflow-hidden rounded-full bg-[var(--surface-2)]">
+                <div className="bg-emerald-500/70" style={{ width: `${tier1Pct}%` }} />
+                <div className="bg-violet-500/70" style={{ width: `${100 - tier1Pct}%` }} />
+              </div>
+            )}
+            {data.shareMessage && !data.shareValid && (
+              <p className="text-sm text-amber-400">{data.shareMessage}</p>
+            )}
           </div>
+
+          <AdminReferralCodesPanel />
 
           <div className="card space-y-3 p-5">
             <h2 className="text-sm font-semibold uppercase tracking-[2px] text-accent">
               Monthly payout
             </h2>
             <p className="text-sm text-[var(--muted)]">
-              Transfers each enabled partner their share for period{" "}
-              <strong className="text-white">{data.periodSuggested}</strong>. All enabled shares
-              must total 100%; each partner needs Connect onboarding complete.
+              Transfers each Connect-linked partner their share for period{" "}
+              <strong className="text-white">{data.periodSuggested}</strong>.
+              {data.mode === "flat"
+                ? " Company share stays on the platform account — no transfer needed."
+                : " Enabled partner shares must total 100% of the commission pool."}
             </p>
             <div className="flex flex-wrap gap-2">
               <button

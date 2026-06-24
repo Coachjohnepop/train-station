@@ -12,6 +12,7 @@ import { registerMember } from "@/lib/member-accounts-store";
 import { ensureMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
 import { notifyNewLead } from "@/lib/lead-notify";
 import { sendMemberWelcomeEmail } from "@/lib/member-welcome";
+import { resolveReferralDiscount } from "@/lib/referral-discounts";
 import { normalizeSignupPlan } from "@/lib/signup-plans";
 import { addToWaitlist } from "@/lib/waitlist";
 import { enrollDemo } from "@/lib/demo-enrollments";
@@ -24,6 +25,7 @@ const schema = z.object({
   phone: z.string().max(30).optional(),
   plan: z.string().max(40).optional(),
   password: z.string().max(128).optional(),
+  referralCode: z.string().max(40).optional(),
 });
 
 export async function POST(request: Request) {
@@ -32,8 +34,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Please fill in email and name." }, { status: 400 });
   }
 
-  const { email, firstName, lastName, phone, plan: rawPlan, password } = parsed.data;
+  const { email, firstName, lastName, phone, plan: rawPlan, password, referralCode } =
+    parsed.data;
   const plan = normalizeSignupPlan(rawPlan);
+  const referral = referralCode ? await resolveReferralDiscount(referralCode) : null;
 
   if (requireSignupPassword()) {
     if (!password || password.length < 8) {
@@ -60,6 +64,13 @@ export async function POST(request: Request) {
       plan,
       phone: phone || account.phone,
     });
+
+    if (referral?.referralCode) {
+      await updateMemberProfile(account.userId, {
+        referralCode: referral.referralCode,
+        referredByUserId: referral.ownerUserId,
+      });
+    }
 
     enrollDemo("adult", account.userId);
 

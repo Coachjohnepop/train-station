@@ -4,10 +4,12 @@ import { getSessionUser, syncMemberGateCookies } from "@/lib/auth";
 import { ensureMemberProfile, getMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
 import { memberCheckoutPath } from "@/lib/member-gates";
 import { normalizeSignupPlan } from "@/lib/signup-plans";
+import { resolveReferralDiscount } from "@/lib/referral-discounts";
 import { createSignupCheckoutSession, stripeConfiguredForPlan } from "@/lib/stripe";
 
 const schema = z.object({
   plan: z.string().max(40).optional(),
+  referralCode: z.string().max(40).optional(),
 });
 
 export async function POST(request: Request) {
@@ -41,11 +43,16 @@ export async function POST(request: Request) {
     phone: profile?.phone,
   });
 
+  const referralInput = parsed.data.referralCode?.trim() || profile?.referralCode || null;
+  const referral = referralInput ? await resolveReferralDiscount(referralInput) : null;
+
   const checkout = await createSignupCheckoutSession({
     userId: session.id,
     email: session.email,
     name: session.name,
     plan,
+    referralCode: referral?.referralCode ?? null,
+    discount: referral?.discount ?? null,
   });
 
   if ("error" in checkout) {
@@ -56,6 +63,12 @@ export async function POST(request: Request) {
     plan,
     paymentStatus: "pending",
     stripeCheckoutSessionId: checkout.sessionId,
+    ...(referral?.referralCode
+      ? {
+          referralCode: referral.referralCode,
+          referredByUserId: referral.ownerUserId,
+        }
+      : {}),
   });
 
   const res = NextResponse.json({ ok: true, url: checkout.url });
@@ -81,11 +94,16 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(`/member/onboard?plan=${encodeURIComponent(plan)}`, request.url));
   }
 
+  const referralInput = profile?.referralCode || null;
+  const referral = referralInput ? await resolveReferralDiscount(referralInput) : null;
+
   const checkout = await createSignupCheckoutSession({
     userId: session.id,
     email: session.email,
     name: session.name,
     plan,
+    referralCode: referral?.referralCode ?? null,
+    discount: referral?.discount ?? null,
   });
 
   if ("error" in checkout) {
@@ -96,6 +114,12 @@ export async function GET(request: Request) {
     plan,
     paymentStatus: "pending",
     stripeCheckoutSessionId: checkout.sessionId,
+    ...(referral?.referralCode
+      ? {
+          referralCode: referral.referralCode,
+          referredByUserId: referral.ownerUserId,
+        }
+      : {}),
   });
 
   return NextResponse.redirect(checkout.url);

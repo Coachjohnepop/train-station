@@ -32,6 +32,9 @@ function MemberCheckoutInner() {
   const [error, setError] = useState<string | null>(null);
   const [payments, setPayments] = useState<PaymentsPublic | null>(null);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
+  const [referralCode, setReferralCode] = useState(
+    () => searchParams.get("ref") || searchParams.get("referral") || "",
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -72,7 +75,10 @@ function MemberCheckoutInner() {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({
+          plan,
+          referralCode: referralCode.trim() || undefined,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.url) {
@@ -116,14 +122,32 @@ function MemberCheckoutInner() {
         {error && <p className="text-sm text-amber-400">{error}</p>}
 
         {stripeReady && (
-          <button
-            type="button"
-            onClick={() => void startCheckout()}
-            disabled={loading}
-            className="btn-primary w-full"
-          >
-            {loading ? "Opening Stripe…" : "Pay with Stripe"}
-          </button>
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium uppercase tracking-[2px] text-[var(--muted)]">
+                Referral or promo code
+              </label>
+              <input
+                className="input w-full"
+                placeholder="Optional — e.g. FRIEND10"
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value)}
+                autoCapitalize="characters"
+              />
+              <p className="mt-1 text-[11px] text-[var(--muted)]">
+                Applied at Stripe checkout when configured. You can also enter a code on the Stripe
+                page.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void startCheckout()}
+              disabled={loading}
+              className="btn-primary w-full"
+            >
+              {loading ? "Opening Stripe…" : "Pay with Stripe"}
+            </button>
+          </div>
         )}
 
         {!paymentsLoading && !stripeReady && !venmoReady && (

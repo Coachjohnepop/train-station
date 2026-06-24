@@ -4,8 +4,9 @@ import { getSessionUser, isStaffRole } from "@/lib/auth";
 import {
   createCommissionPartner,
   listCommissionPartners,
-  sumEnabledSharePercents,
+  validatePartnerShares,
 } from "@/lib/commission-partners-store";
+import { commissionSplitMode } from "@/lib/stripe-commission";
 import { listConnectPartnerStatuses } from "@/lib/stripe-connect";
 
 export const dynamic = "force-dynamic";
@@ -33,13 +34,15 @@ export async function GET() {
   ]);
   const statusById = new Map(statuses.map((s) => [s.partnerId, s]));
 
+  const shareCheck = validatePartnerShares(partners, commissionSplitMode());
   return NextResponse.json({
     partners: partners.map((p) => ({
       ...p,
       connect: statusById.get(p.id) ?? null,
     })),
-    shareTotal: sumEnabledSharePercents(partners),
-    shareValid: sumEnabledSharePercents(partners) === 100,
+    shareTotal: shareCheck.shareTotal,
+    shareValid: shareCheck.shareValid,
+    shareMessage: shareCheck.message,
   });
 }
 

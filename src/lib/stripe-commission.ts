@@ -2,10 +2,21 @@ import "server-only";
 
 import { getStripe } from "@/lib/stripe";
 
+export type CommissionSplitMode = "flat" | "tiered";
+
 export type CommissionTierConfig = {
   tier1CapCents: number;
   tier1Rate: number;
   tier2Rate: number;
+};
+
+export type RevenueSplitBreakdown = {
+  mrrCents: number;
+  partnerShareTotalPercent: number;
+  companyRetainedPercent: number;
+  companyRetainedCents: number;
+  totalPartnerPayoutCents: number;
+  mode: CommissionSplitMode;
 };
 
 export type CommissionBreakdown = {
@@ -17,6 +28,12 @@ export type CommissionBreakdown = {
   totalCommissionCents: number;
   config: CommissionTierConfig;
 };
+
+export function commissionSplitMode(): CommissionSplitMode {
+  const raw = process.env.STRIPE_COMMISSION_MODE?.trim().toLowerCase();
+  if (raw === "tiered") return "tiered";
+  return "flat";
+}
 
 export function commissionConfigFromEnv(): CommissionTierConfig {
   const capDollars = Number(process.env.STRIPE_COMMISSION_TIER1_CAP_DOLLARS ?? "5000");
@@ -36,6 +53,27 @@ export function commissionConfigFromEnv(): CommissionTierConfig {
 
 export function isCommissionEnabled(): boolean {
   return process.env.STRIPE_COMMISSION_ENABLED !== "false";
+}
+
+/** Flat mode: partner sharePercents are % of gross MRR; remainder stays on the platform account. */
+export function revenueSplitFromMrr(
+  mrrCents: number,
+  partnerShareTotalPercent: number,
+): RevenueSplitBreakdown {
+  const safeMrr = Math.max(0, Math.round(mrrCents));
+  const shareTotal = Math.max(0, Math.min(100, partnerShareTotalPercent));
+  const companyRetainedPercent = Math.max(0, 100 - shareTotal);
+  const totalPartnerPayoutCents = Math.round((safeMrr * shareTotal) / 100);
+  const companyRetainedCents = safeMrr - totalPartnerPayoutCents;
+
+  return {
+    mrrCents: safeMrr,
+    partnerShareTotalPercent: shareTotal,
+    companyRetainedPercent,
+    companyRetainedCents: Math.max(0, companyRetainedCents),
+    totalPartnerPayoutCents,
+    mode: "flat",
+  };
 }
 
 export function tieredCommissionFromMrr(

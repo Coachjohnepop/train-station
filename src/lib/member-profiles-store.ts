@@ -35,6 +35,8 @@ export type MemberProfile = {
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   stripeCheckoutSessionId: string | null;
+  referralCode: string | null;
+  referredByUserId: string | null;
   welcomeSignupEmailSentAt: string | null;
   welcomeCompleteEmailSentAt: string | null;
   welcomeSmsSentAt: string | null;
@@ -70,6 +72,8 @@ function emptyProfile(userId: string, email: string, plan: SignupPlan): MemberPr
     stripeCustomerId: null,
     stripeSubscriptionId: null,
     stripeCheckoutSessionId: null,
+    referralCode: null,
+    referredByUserId: null,
     welcomeSignupEmailSentAt: null,
     welcomeCompleteEmailSentAt: null,
     welcomeSmsSentAt: null,
@@ -109,6 +113,14 @@ function normalizeProfile(raw: unknown, userId: string): MemberProfile | null {
     stripeCustomerId: data.stripeCustomerId ?? null,
     stripeSubscriptionId: data.stripeSubscriptionId ?? null,
     stripeCheckoutSessionId: data.stripeCheckoutSessionId ?? null,
+    referralCode:
+      typeof data.referralCode === "string" && data.referralCode.trim()
+        ? data.referralCode.trim().toUpperCase()
+        : null,
+    referredByUserId:
+      typeof data.referredByUserId === "string" && data.referredByUserId.trim()
+        ? data.referredByUserId.trim()
+        : null,
     welcomeSignupEmailSentAt: data.welcomeSignupEmailSentAt ?? null,
     welcomeCompleteEmailSentAt: data.welcomeCompleteEmailSentAt ?? null,
     welcomeSmsSentAt: data.welcomeSmsSentAt ?? null,
@@ -224,6 +236,8 @@ export async function updateMemberProfile(
       | "stripeCustomerId"
       | "stripeSubscriptionId"
       | "stripeCheckoutSessionId"
+      | "referralCode"
+      | "referredByUserId"
     >
   >,
 ): Promise<MemberProfile> {
