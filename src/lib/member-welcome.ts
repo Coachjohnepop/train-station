@@ -4,11 +4,7 @@ import { BRAND_NAME, COACH_CALENDLY_URL } from "@/lib/brand";
 import { memberProgramStartPath } from "@/lib/member-destinations";
 import { signupPlanLabel, type SignupPlan } from "@/lib/signup-plans";
 import { appBaseUrl } from "@/lib/sms";
-
-const FROM =
-  process.env.MEMBER_WELCOME_FROM ||
-  process.env.LEAD_NOTIFY_FROM ||
-  "The Train Station <onboarding@resend.dev>";
+import { sendResendEmail, transactionalSubject } from "@/lib/resend-mail";
 
 type WelcomeEmailInput = {
   email: string;
@@ -23,33 +19,6 @@ function firstName(name: string, email: string) {
   return n || "there";
 }
 
-async function sendResendToMember(to: string, subject: string, text: string): Promise<boolean> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.log(`[WELCOME EMAIL — not configured] To: ${to}\nSubject: ${subject}\n${text}\n`);
-    return false;
-  }
-
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ from: FROM, to: [to], subject, text }),
-    });
-    if (!res.ok) {
-      console.error(`[WELCOME EMAIL] Resend failed: ${res.status} ${await res.text()}`);
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.error("[WELCOME EMAIL] send error:", err);
-    return false;
-  }
-}
-
 export async function sendMemberWelcomeEmail(input: WelcomeEmailInput): Promise<boolean> {
   const base = appBaseUrl();
   const hi = firstName(input.name, input.email);
@@ -59,15 +28,19 @@ export async function sendMemberWelcomeEmail(input: WelcomeEmailInput): Promise<
 
   if (input.stage === "signup") {
     const onboardUrl = `${base}/member/onboard?plan=${encodeURIComponent(String(input.plan || "explorer"))}`;
-    const subject = `Welcome to ${BRAND_NAME} — finish your setup`;
     const text =
       `Hi ${hi},\n\n` +
       `Thanks for joining ${BRAND_NAME} (${planLabel}).\n\n` +
-      `Next step: complete your 2-minute setup so we can tailor workouts and daily texts:\n` +
-      `${onboardUrl}\n\n` +
-      `— Coach Jeremy\n` +
-      `${base}`;
-    return sendResendToMember(input.email, subject, text);
+      `Next step: complete your 2-minute setup so we can tailor workouts and coach messages.\n\n` +
+      `— Coach Jeremy`;
+    return sendResendEmail({
+      to: input.email,
+      subject: transactionalSubject("welcome"),
+      text,
+      ctaUrl: onboardUrl,
+      ctaLabel: "Finish setup",
+      tags: [{ name: "category", value: "welcome-signup" }],
+    });
   }
 
   const programSlug = input.programSlug || "adult";
@@ -87,5 +60,12 @@ export async function sendMemberWelcomeEmail(input: WelcomeEmailInput): Promise<
     `— Coach Jeremy\n` +
     `${base}`;
 
-  return sendResendToMember(input.email, subject, text);
+  return sendResendEmail({
+    to: input.email,
+    subject: transactionalSubject("welcome"),
+    text,
+    ctaUrl: startUrl,
+    ctaLabel: "Start Day 1",
+    tags: [{ name: "category", value: "welcome-complete" }],
+  });
 }

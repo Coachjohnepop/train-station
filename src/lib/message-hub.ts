@@ -14,11 +14,7 @@ import { isDemoMode } from "@/lib/demo-enrollments";
 import { getDemoUserSettings } from "@/lib/demo-reminders";
 import { prisma } from "@/lib/prisma";
 
-const FROM =
-  process.env.MESSAGE_HUB_FROM ||
-  process.env.MEMBER_WELCOME_FROM ||
-  process.env.LEAD_NOTIFY_FROM ||
-  `${BRAND_NAME} <onboarding@resend.dev>`;
+import { sendResendEmail, transactionalSubject } from "@/lib/resend-mail";
 
 export type HubRecipient = {
   id: string;
@@ -63,36 +59,16 @@ async function sendHubEmail(params: {
   to: string;
   subject: string;
   text: string;
+  ctaUrl?: string;
 }): Promise<boolean> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.log(`[MESSAGE HUB — email not configured]\nTo: ${params.to}\n${params.text}\n`);
-    return false;
-  }
-
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: FROM,
-        to: [params.to],
-        subject: params.subject,
-        text: params.text,
-      }),
-    });
-    if (!res.ok) {
-      console.error("[MESSAGE HUB] Resend failed:", res.status, await res.text());
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.error("[MESSAGE HUB] email send failed", err);
-    return false;
-  }
+  return sendResendEmail({
+    to: params.to,
+    subject: params.subject,
+    text: params.text,
+    ctaUrl: params.ctaUrl,
+    ctaLabel: params.ctaUrl ? "Open in The Train Station" : undefined,
+    tags: [{ name: "category", value: "message-hub" }],
+  });
 }
 
 export async function getHubRecipients(): Promise<HubRecipient[]> {
@@ -218,15 +194,20 @@ export async function sendHubNotification(params: {
   const preview =
     params.message.length > 280 ? `${params.message.slice(0, 277)}…` : params.message;
 
-  const subject = params.subject || `New message from ${coach} — ${BRAND_NAME}`;
+  const subject = params.subject || transactionalSubject("hub");
   const text =
     `Hi ${first},\n\n` +
     `${coach} sent you an update:\n\n` +
     `${preview}\n\n` +
-    `Open in The Train Station (no reply-by-text needed — your coach never sees your phone number):\n${link}\n\n` +
+    `Open in The Train Station to read and reply. Your coach never sees your phone number.\n\n` +
     `— ${BRAND_NAME}`;
 
-  const emailed = await sendHubEmail({ to: params.recipient.email, subject, text });
+  const emailed = await sendHubEmail({
+    to: params.recipient.email,
+    subject,
+    text,
+    ctaUrl: link,
+  });
 
   const { sentAt } = await logHubMessage({
     userId: params.recipient.id,
@@ -304,6 +285,7 @@ export async function notifyCoachOfMemberReply(params: {
     text:
       `${params.memberName} (${params.memberEmail}) sent a message:\n\n` +
       `${preview}\n\n` +
-      `Reply in the hub (your phone stays private):\n${link}\n`,
+      `Reply in the hub — your phone stays private.`,
+    ctaUrl: link,
   });
 }

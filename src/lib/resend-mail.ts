@@ -1,0 +1,138 @@
+import "server-only";
+
+import { BRAND_NAME } from "@/lib/brand";
+
+export type ResendEmailInput = {
+  to: string | string[];
+  subject: string;
+  text: string;
+  html?: string;
+  ctaUrl?: string;
+  ctaLabel?: string;
+  replyTo?: string;
+  tags?: Array<{ name: string; value: string }>;
+};
+
+function appHost(): string {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_APP_URL || "https://www.thetrainstation.co").hostname;
+  } catch {
+    return "thetrainstation.co";
+  }
+}
+
+/** Single verified sender — must match a domain verified at resend.com/domains */
+export function resendFromAddress(): string {
+  return (
+    process.env.RESEND_FROM?.trim() ||
+    process.env.PASSWORD_RESET_FROM?.trim() ||
+    process.env.MESSAGE_HUB_FROM?.trim() ||
+    process.env.MEMBER_WELCOME_FROM?.trim() ||
+    `${BRAND_NAME} <notifications@send.${appHost()}>`
+  );
+}
+
+export function resendReplyTo(): string {
+  return (
+    process.env.RESEND_REPLY_TO?.trim() ||
+    process.env.COACH_NOTIFY_EMAIL?.trim() ||
+    "jeremy@thetrainstation.co"
+  );
+}
+
+export function resendFromDomain(): string | null {
+  const match = resendFromAddress().match(/<([^>]+)>/);
+  const addr = match?.[1] || resendFromAddress();
+  const domain = addr.split("@")[1]?.toLowerCase();
+  return domain || null;
+}
+
+export function resendFromLooksMisconfigured(): boolean {
+  const domain = resendFromDomain();
+  if (!domain) return true;
+  const host = appHost().toLowerCase();
+  if (domain === "resend.dev" || domain.endsWith(".resend.dev")) return true;
+  if (domain.includes("buyecodelight")) return true;
+  if (!host.endsWith(domain) && !domain.endsWith(host)) return true;
+  return false;
+}
+
+function wrapHtml(bodyText: string, ctaUrl?: string, ctaLabel?: string): string {
+  const paragraphs = bodyText
+    .split(/\n\n+/)
+    .map((p) => `<p style="margin:0 0 16px;line-height:1.5;color:#1a1a1a;">${p.replace(/\n/g, "<br/>")}</p>`)
+    .join("");
+
+  const cta =
+    ctaUrl && ctaLabel
+      ? `<p style="margin:24px 0;"><a href="${ctaUrl}" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;padding:12px 20px;border-radius:999px;font-weight:600;">${ctaLabel}</a></p>`
+      : "";
+
+  return `<!DOCTYPE html><html><body style="font-family:system-ui,-apple-system,sans-serif;background:#f6f4fa;padding:24px;">
+<div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;padding:28px;border:1px solid #e8e0f0;">
+<p style="margin:0 0 20px;font-weight:700;color:#7c3aed;">${BRAND_NAME}</p>
+${paragraphs}
+${cta}
+<p style="margin:24px 0 0;font-size:12px;color:#6b7280;">Questions? Reply to this email or message your coach in the app.</p>
+</div></body></html>`;
+}
+
+export async function sendResendEmail(input: ResendEmailInput): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) {
+    console.log(`[RESEND — not configured] To: ${input.to}\nSubject: ${input.subject}\n${input.text}\n`);
+    return false;
+  }
+
+  if (process.env.NODE_ENV === "production" && resendFromLooksMisconfigured()) {
+    console.warn(
+      `[RESEND] FROM domain may hurt deliverability (${resendFromDomain()}). ` +
+        `Verify send.${appHost()} at resend.com/domains and set RESEND_FROM.`,
+    );
+  }
+
+  const to = Array.isArray(input.to) ? input.to : [input.to];
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: resendFromAddress(),
+        to,
+        reply_to: input.replyTo || resendReplyTo(),
+        subject: input.subject,
+        text: input.text,
+        html: input.html || wrapHtml(input.text, input.ctaUrl, input.ctaLabel),
+        tags: input.tags,
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      console.error("[RESEND] send failed:", res.status, body);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[RESEND] send failed", err);
+    return false;
+  }
+}
+
+export function transactionalSubject(kind: string): string {
+  const prefix = BRAND_NAME;
+  switch (kind) {
+    case "password-reset":
+      return `${prefix} — set your password`;
+    case "hub":
+      return `${prefix} — message from your coach`;
+    case "welcome":
+      return `Welcome to ${prefix}`;
+    default:
+      return prefix;
+  }
+}

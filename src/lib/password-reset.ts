@@ -7,55 +7,32 @@ import { hashPassword } from "@/lib/password";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { appBaseUrl } from "@/lib/sms";
 import { BRAND_NAME } from "@/lib/brand";
+import { sendResendEmail, transactionalSubject } from "@/lib/resend-mail";
 import {
   issuePasswordResetToken,
   lookupPasswordResetToken,
   revokePasswordResetToken,
 } from "@/lib/password-reset-store";
 
-const FROM =
-  process.env.PASSWORD_RESET_FROM ||
-  process.env.MEMBER_WELCOME_FROM ||
-  process.env.LEAD_NOTIFY_FROM ||
-  `${BRAND_NAME} <onboarding@resend.dev>`;
-
 export const RESET_SUCCESS_MESSAGE =
-  "If that email is on file, we sent a link to reset your password. Check your inbox (and spam).";
+  "If that email is on file, we sent a link to set your password. Check your inbox (and spam folder).";
 
 async function sendResetEmail(to: string, resetUrl: string): Promise<boolean> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const subject = `${BRAND_NAME} — reset your password`;
   const text =
     `Hi,\n\n` +
-    `Someone requested a password reset for your ${BRAND_NAME} account.\n\n` +
-    `Set a new password here (link expires in 1 hour):\n${resetUrl}\n\n` +
+    `Use the button or link below to set your ${BRAND_NAME} password (expires in 1 hour).\n\n` +
+    `${resetUrl}\n\n` +
     `If you didn't request this, you can ignore this email.\n\n` +
     `— ${BRAND_NAME}`;
 
-  if (!apiKey) {
-    console.log(`[PASSWORD RESET — not configured] To: ${to}\n${text}\n`);
-    return false;
-  }
-
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ from: FROM, to: [to], subject, text }),
-    });
-    if (!res.ok) {
-      const body = await res.text();
-      console.error("[PASSWORD RESET] Resend failed:", res.status, body);
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.error("[PASSWORD RESET] send failed", err);
-    return false;
-  }
+  return sendResendEmail({
+    to,
+    subject: transactionalSubject("password-reset"),
+    text,
+    ctaUrl: resetUrl,
+    ctaLabel: "Set your password",
+    tags: [{ name: "category", value: "password-reset" }],
+  });
 }
 
 export async function setAccountPassword(
