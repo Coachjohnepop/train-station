@@ -32,5 +32,12 @@ if (spf && dkim) {
   console.log("\n✓ Core records found. Click Verify in Resend dashboard, then set Vercel:");
   console.log('  RESEND_FROM="The Train Station <notifications@' + subdomain + '>"');
 } else {
-  console.log("\n✗ Add domain at https://resend.com/domains → copy records → Porkbun DNS for", subdomain);
+  console.log("\n✗ Missing records. In Resend (resend.com/domains) open", subdomain);
+  console.log("  Copy the 3 records into Porkbun → thetrainstation.co → DNS:");
+  console.log("    MX   host: send              priority 10");
+  console.log("    TXT  host: send              (SPF — v=spf1 include:amazonses.com ~all)");
+  console.log("    TXT  host: resend._domainkey  (DKIM — unique per domain, copy from Resend)");
+  console.log("  Optional DMARC: TXT host _dmarc.send  v=DMARC1; p=none;");
+  console.log("  Then Verify DNS in Resend and run: vercel env add RESEND_FROM production");
+  console.log('    value: The Train Station <notifications@' + subdomain + ">");
 }
