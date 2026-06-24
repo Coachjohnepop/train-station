@@ -3,6 +3,7 @@ import "server-only";
 import type { MemberProfile } from "@/lib/member-profiles-store";
 import type { SignupPlan } from "@/lib/signup-plans";
 import { isSignupPlan } from "@/lib/signup-plans";
+import { isSecurityEnforced, stripeRequiredInProduction } from "@/lib/security-config";
 
 export type ApprovalStatus = "pending" | "approved" | "rejected";
 export type PaymentStatus = "none" | "pending" | "paid" | "failed";
@@ -37,7 +38,10 @@ export function defaultApprovalStatus(): ApprovalStatus {
 
 export function defaultPaymentStatus(plan: SignupPlan): PaymentStatus {
   if (!isPaidSignupPlan(plan)) return "none";
-  if (!isStripePaymentsEnabled()) return "paid";
+  if (!isStripePaymentsEnabled()) {
+    if (stripeRequiredInProduction() || isSecurityEnforced()) return "pending";
+    return "paid";
+  }
   return "pending";
 }
 
@@ -52,7 +56,7 @@ export function normalizePaymentStatus(raw: unknown, plan?: SignupPlan): Payment
   const v = typeof raw === "string" ? raw.trim().toLowerCase() : "";
   if (v === "paid" || v === "pending" || v === "failed" || v === "none") return v;
   if (!plan || !isPaidSignupPlan(plan)) return "none";
-  // Legacy paid-plan profiles without stored payment status keep access.
+  if (isSecurityEnforced()) return "pending";
   return "paid";
 }
 
@@ -61,7 +65,9 @@ export function memberNeedsPayment(
   userId: string,
 ): boolean {
   if (!isSelfRegisteredMember(userId)) return false;
-  if (!isStripePaymentsEnabled()) return false;
+  if (!isStripePaymentsEnabled()) {
+    if (!stripeRequiredInProduction()) return false;
+  }
   const plan = profile?.plan ?? "explorer";
   if (!isPaidSignupPlan(plan)) return false;
   return (profile?.paymentStatus ?? "pending") !== "paid";

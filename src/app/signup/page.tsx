@@ -18,6 +18,8 @@ function SignupForm() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +81,19 @@ function SignupForm() {
         return;
       }
 
+      if (password || confirmPassword) {
+        if (password.length < 8) {
+          setError("Password must be at least 8 characters.");
+          setLoading(false);
+          return;
+        }
+        if (password !== confirmPassword) {
+          setError("Passwords do not match.");
+          setLoading(false);
+          return;
+        }
+      }
+
       const res = await fetch("/api/signup/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -88,6 +103,7 @@ function SignupForm() {
           lastName: lastName.trim(),
           phone: phone.trim() || undefined,
           plan: ticketPlan,
+          password: password || undefined,
         }),
       });
       const data = await res.json();
@@ -193,6 +209,38 @@ function SignupForm() {
                 />
               </div>
             </div>
+
+            {!isWaitlistOnly && (
+              <>
+                <div>
+                  <label className="block text-xs text-[#9d8ab8] mb-1">
+                    Password{" "}
+                    <span className="text-[#6b5b86]">(required in production — min 8 characters)</span>
+                  </label>
+                  <input
+                    type="password"
+                    name="new-password"
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full rounded-full border border-[#3d2660] bg-[#0a0612] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-[#9d8ab8] mb-1">Confirm password</label>
+                  <input
+                    type="password"
+                    name="confirm-password"
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full rounded-full border border-[#3d2660] bg-[#0a0612] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
+                  />
+                </div>
+              </>
+            )}
 
             <div>
               <label className="block text-xs text-[#9d8ab8] mb-1">

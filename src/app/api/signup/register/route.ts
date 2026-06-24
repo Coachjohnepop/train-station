@@ -15,6 +15,7 @@ import { sendMemberWelcomeEmail } from "@/lib/member-welcome";
 import { normalizeSignupPlan } from "@/lib/signup-plans";
 import { addToWaitlist } from "@/lib/waitlist";
 import { enrollDemo } from "@/lib/demo-enrollments";
+import { requireSignupPassword } from "@/lib/security-config";
 
 const schema = z.object({
   email: z.string().email(),
@@ -22,6 +23,7 @@ const schema = z.object({
   lastName: z.string().min(1).max(60),
   phone: z.string().max(30).optional(),
   plan: z.string().max(40).optional(),
+  password: z.string().max(128).optional(),
 });
 
 export async function POST(request: Request) {
@@ -30,8 +32,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Please fill in email and name." }, { status: 400 });
   }
 
-  const { email, firstName, lastName, phone, plan: rawPlan } = parsed.data;
+  const { email, firstName, lastName, phone, plan: rawPlan, password } = parsed.data;
   const plan = normalizeSignupPlan(rawPlan);
+
+  if (requireSignupPassword()) {
+    if (!password || password.length < 8) {
+      return NextResponse.json(
+        { error: "Choose a password with at least 8 characters." },
+        { status: 400 },
+      );
+    }
+  }
 
   try {
     const account = await registerMember({
@@ -40,6 +51,7 @@ export async function POST(request: Request) {
       lastName,
       phone,
       plan,
+      password,
     });
 
     const profile = await ensureMemberProfile({
@@ -81,7 +93,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const sessionUser = await authenticateCredentials(email, "");
+    const sessionUser = await authenticateCredentials(email, password || "");
     if (!sessionUser) {
       return NextResponse.json({ error: "Account created but sign-in failed." }, { status: 500 });
     }

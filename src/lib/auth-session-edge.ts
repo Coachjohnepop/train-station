@@ -3,6 +3,8 @@
  * Must stay algorithm-compatible with auth-session.ts on the server.
  */
 
+import { resolveSessionSecret } from "@/lib/session-secret";
+
 export const SESSION_COOKIE = "ts_session";
 
 export type UserRole = "ADMIN" | "INSTRUCTOR" | "MEMBER" | "PROSPECTIVE_INSTRUCTOR";
@@ -16,7 +18,7 @@ export type SessionPayload = {
 };
 
 function sessionSecret(): string {
-  return process.env.SESSION_SECRET || "train-station-dev-session-secret-change-me";
+  return resolveSessionSecret();
 }
 
 function base64UrlToBytes(b64url: string): Uint8Array {

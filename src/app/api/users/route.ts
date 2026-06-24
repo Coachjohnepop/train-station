@@ -7,6 +7,7 @@ import { listDemoUsersForAdmin } from "@/lib/demo-users-admin";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { upsertSignInAccount } from "@/lib/member-accounts-store";
 import { annotateAdminUsersForSession } from "@/lib/users-admin-session";
+import { requireStaff } from "@/lib/api-auth";
 
 const ROLES = ["ADMIN", "INSTRUCTOR", "MEMBER", "PROSPECTIVE_INSTRUCTOR"] as const;
 
@@ -21,6 +22,9 @@ const createUserSchema = z.object({
 });
 
 export async function GET(request: Request) {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
+
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q")?.toLowerCase() || "";
   const role = searchParams.get("role") as $Enums.Role | null;
@@ -96,6 +100,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
+
   const parsed = createUserSchema.safeParse(await request.json());
   if (!parsed.success) {
     const fieldErrors = parsed.error.flatten().fieldErrors;

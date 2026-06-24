@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "crypto";
+import { resolveSessionSecret } from "@/lib/session-secret";
 
 export const SESSION_COOKIE = "ts_session";
 
@@ -14,7 +15,7 @@ export type SessionUser = {
 type SessionPayload = SessionUser & { exp: number };
 
 function sessionSecret(): string {
-  return process.env.SESSION_SECRET || "train-station-dev-session-secret-change-me";
+  return resolveSessionSecret();
 }
 
 function signPayload(payload: SessionPayload): string {

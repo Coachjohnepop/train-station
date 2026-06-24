@@ -5,6 +5,7 @@ import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
 import { BLOB_TOKEN } from "@/lib/demo-json-blob";
 import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { filterVisibleWorkouts } from "@/lib/programs";
+import { requireStaff } from "@/lib/api-auth";
 
 function isDemoMode() {
   const url = process.env.DATABASE_URL ?? "";
@@ -44,6 +45,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
+
   const parsed = createSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });

@@ -7,22 +7,36 @@ const SIGNUP_PLAN_COOKIE = "ts_signup_plan";
 const NEEDS_PAYMENT_COOKIE = "ts_needs_payment";
 const PENDING_APPROVAL_COOKIE = "ts_pending_approval";
 
-const PUBLIC_PREFIXES = [
+/** Public pages — no session required. */
+const PUBLIC_PAGE_PREFIXES = [
   "/login",
   "/forgot-password",
   "/signup",
   "/coming-soon",
   "/join",
-  "/api/auth",
-  "/api/signup",
-  "/api/sms/inbound",
-  "/api/join",
-  "/api/stripe",
 ];
 
-function isPublicPath(pathname: string): boolean {
+/** Public API routes — webhooks, auth, signup only. Everything else requires a session. */
+const PUBLIC_API_PREFIXES = [
+  "/api/auth",
+  "/api/signup",
+  "/api/join",
+  "/api/stripe/webhook",
+  "/api/sms/inbound",
+];
+
+function isPublicPage(pathname: string): boolean {
   if (pathname === "/") return true;
-  return PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  return PUBLIC_PAGE_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+function isPublicApi(pathname: string): boolean {
+  return PUBLIC_API_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+async function sessionFromRequest(request: NextRequest) {
+  const token = request.cookies.get(SESSION_COOKIE)?.value;
+  return token ? await verifySessionTokenEdge(token) : null;
 }
 
 export async function middleware(request: NextRequest) {
@@ -36,7 +50,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (isPublicPath(pathname)) {
+  // Lock down API routes: anonymous callers get 401 unless explicitly public.
+  if (pathname.startsWith("/api/")) {
+    if (isPublicApi(pathname)) {
+      return NextResponse.next();
+    }
+
+    const session = await sessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+    }
+
+    return NextResponse.next();
+  }
+
+  if (isPublicPage(pathname)) {
     return NextResponse.next();
   }
 
@@ -45,9 +73,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = request.cookies.get(SESSION_COOKIE)?.value;
-  const session = token ? await verifySessionTokenEdge(token) : null;
-
+  const session = await sessionFromRequest(request);
   if (!session) {
     const login = new URL("/login", request.url);
     login.searchParams.set("redirect", pathname);

@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth";
 import { markMemberPaid, attachPaidMemberCookies } from "@/lib/mark-member-paid";
 import { getStripe } from "@/lib/stripe";
+import { verifyPaidCheckoutSession } from "@/lib/stripe-payment-verify";
 
 const schema = z.object({
   sessionId: z.string().min(1),
@@ -35,8 +36,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Checkout session does not match this account." }, { status: 403 });
   }
 
-  if (checkout.payment_status !== "paid" && checkout.status !== "complete") {
-    return NextResponse.json({ error: "Payment is not complete yet." }, { status: 409 });
+  const verified = await verifyPaidCheckoutSession(stripe, checkout);
+  if (!verified.ok) {
+    return NextResponse.json({ error: verified.reason }, { status: 409 });
   }
 
   const updated = await markMemberPaid({

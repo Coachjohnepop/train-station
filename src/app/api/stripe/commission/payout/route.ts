@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { runCommissionPayout } from "@/lib/stripe-commission-payout";
 import { previousCommissionPeriod } from "@/lib/stripe-commission";
+import { isSecurityEnforced } from "@/lib/security-config";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ function cronAuthorized(request: Request): boolean {
   if (!secret) return false;
   const header = request.headers.get("authorization");
   if (header === `Bearer ${secret}`) return true;
+  if (isSecurityEnforced()) return false;
   const url = new URL(request.url);
   return url.searchParams.get("secret") === secret;
 }

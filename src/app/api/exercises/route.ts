@@ -12,6 +12,7 @@ import {
   demoPersistenceError,
   demoPersistenceWarning,
 } from "@/lib/demo-persistence";
+import { requireStaff } from "@/lib/api-auth";
 
 const createSchema = z.object({
   name: z.string().min(1).max(200),
@@ -35,6 +36,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
+
   const parsed = createSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });

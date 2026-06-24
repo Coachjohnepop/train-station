@@ -16,6 +16,7 @@ import { getAllSignInAccounts, upsertSignInAccount } from "@/lib/member-accounts
 import { applySelfProfileUpdate } from "@/lib/user-self-update";
 import { hideUserById, unhideUserById } from "@/lib/user-visibility";
 import { getAdminSession, isSelfUserId, pickSelfProfilePatch } from "@/lib/users-admin-session";
+import { assertUserScope, requireSession, requireStaff } from "@/lib/api-auth";
 
 const ROLES = ["ADMIN", "INSTRUCTOR", "MEMBER", "PROSPECTIVE_INSTRUCTOR"] as const;
 
@@ -33,7 +34,15 @@ const updateUserSchema = z.object({
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_req: Request, { params }: Params) {
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+
   const { id } = await params;
+  const scope = assertUserScope(auth.session, id);
+  if (scope) {
+    const staff = await requireStaff();
+    if (!staff.ok) return staff.response;
+  }
 
   if (isDemoMode()) {
     const managed = await getAdminManagedUser(id);
@@ -68,14 +77,17 @@ export async function GET(_req: Request, { params }: Params) {
 }
 
 export async function PATCH(request: Request, { params }: Params) {
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+
   const { id } = await params;
   const parsed = updateUserSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
   }
 
-  const session = await getAdminSession();
-  const isSelf = Boolean(session && (await isSelfUserId(session, id)));
+  const session = auth.session;
+  const isSelf = await isSelfUserId(session, id);
 
   if (isSelf && parsed.data.hidden === true) {
     return NextResponse.json(
@@ -122,6 +134,11 @@ export async function PATCH(request: Request, { params }: Params) {
         { status: 403 },
       );
     }
+  }
+
+  if (!isSelf) {
+    const staff = await requireStaff();
+    if (!staff.ok) return staff.response;
   }
 
   if (parsed.data.hidden !== undefined) {
@@ -217,9 +234,12 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
+  const staff = await requireStaff();
+  if (!staff.ok) return staff.response;
+
   const { id } = await params;
 
-  const session = await getAdminSession();
+  const session = staff.session;
   if (session && (await isSelfUserId(session, id))) {
     return NextResponse.json(
       { detail: "You cannot hide your own account while logged in." },

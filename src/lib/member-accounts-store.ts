@@ -5,6 +5,7 @@ import { randomUUID } from "crypto";
 import type { UserRole } from "@/lib/auth-session";
 import { normalizeAccountEmail } from "@/lib/account-email";
 import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
+import { hashPassword } from "@/lib/password";
 
 export type StoredMemberAccount = {
   userId: string;
@@ -116,6 +117,7 @@ export type RegisterMemberInput = {
   lastName: string;
   phone?: string;
   plan: string;
+  password?: string;
 };
 
 /** Remove all self-registered members (keeps seeded coach/demo accounts). */
@@ -242,6 +244,7 @@ export async function registerMember(input: RegisterMemberInput): Promise<Stored
     role: "MEMBER",
     name,
     phone: input.phone?.trim() || null,
+    passwordHash: input.password ? hashPassword(input.password) : null,
     createdAt: new Date().toISOString(),
   };
 

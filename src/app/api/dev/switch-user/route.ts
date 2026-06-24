@@ -3,6 +3,7 @@ import { MEMBER_COOKIE, MEMBER_NAME_COOKIE } from "@/lib/current-user";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 import { applyRememberedEmailCookie } from "@/lib/remembered-email";
+import { allowDevUserSwitcher } from "@/lib/security-config";
 
 const ALLOWED = new Set([
   DEFAULT_DEMO_MEMBER_ID,
@@ -13,6 +14,10 @@ const ALLOWED = new Set([
 ]);
 
 export async function GET(request: Request) {
+  if (!allowDevUserSwitcher()) {
+    return NextResponse.json({ error: "Not available." }, { status: 404 });
+  }
+
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id") || DEFAULT_DEMO_MEMBER_ID;
   const redirectTo = searchParams.get("redirect") || "/member";

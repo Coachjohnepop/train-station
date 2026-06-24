@@ -32,9 +32,17 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
+  const method = parsed.data.method ?? "manual";
+  if (method === "stripe") {
+    return NextResponse.json(
+      { error: "Stripe payments must be confirmed via webhook or checkout return." },
+      { status: 400 },
+    );
+  }
+
   const updated = await markMemberPaid({
     userId,
-    method: parsed.data.method ?? "manual",
+    method,
     note: parsed.data.note ?? null,
   });
 

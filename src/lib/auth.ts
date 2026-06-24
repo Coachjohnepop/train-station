@@ -1,7 +1,7 @@
 import "server-only";
 
-import { scryptSync, timingSafeEqual, randomBytes } from "crypto";
 import { cookies } from "next/headers";
+import { hashPassword, verifyPassword } from "@/lib/password";
 import { MEMBER_COOKIE, MEMBER_NAME_COOKIE } from "@/lib/current-user";
 import { normalizeAccountEmail } from "@/lib/account-email";
 import { getAllSignInAccounts } from "@/lib/member-accounts-store";
@@ -20,6 +20,7 @@ import {
   memberNeedsApproval,
   memberNeedsPayment,
 } from "@/lib/member-gates";
+import { allowBlankPasswordLogin } from "@/lib/security-config";
 
 export type { SessionUser, UserRole };
 export { SESSION_COOKIE, verifySessionToken, isStaffRole, resolveDemoUserByEmail };
@@ -38,29 +39,16 @@ export const SIGNUP_PLAN_COOKIE = "ts_signup_plan";
 export const NEEDS_PAYMENT_COOKIE = "ts_needs_payment";
 export const PENDING_APPROVAL_COOKIE = "ts_pending_approval";
 
-export function hashPassword(password: string): string {
-  const salt = randomBytes(16).toString("hex");
-  const hash = scryptSync(password, salt, 64).toString("hex");
-  return `${salt}:${hash}`;
-}
-
-export function verifyPassword(password: string, stored: string): boolean {
-  const [salt, hash] = stored.split(":");
-  if (!salt || !hash) return false;
-  const test = scryptSync(password, salt, 64).toString("hex");
-  try {
-    return timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(test, "hex"));
-  } catch {
-    return false;
-  }
-}
+export { hashPassword, verifyPassword };
 
 async function loadDemoAccounts(): Promise<Record<string, DemoAccount>> {
   return getAllSignInAccounts();
 }
 
 function passwordAccepted(password: string, storedHash?: string | null): boolean {
-  if (!storedHash) return true; // blank password OK when no hash is set
+  if (!storedHash) {
+    return allowBlankPasswordLogin();
+  }
   if (!password) return false;
   return verifyPassword(password, storedHash);
 }

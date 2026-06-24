@@ -12,6 +12,7 @@ import {
 import { parseSmsWorkout } from "@/lib/sms-workout-parser";
 import { resolveUserId } from "@/lib/current-user";
 import { sendCoachChatAlert } from "@/lib/sms";
+import { assertUserScope, requireMemberAccess, requireStaff } from "@/lib/api-auth";
 
 const postSchema = z.object({
   sessionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -26,14 +27,22 @@ const postSchema = z.object({
 });
 
 export async function GET(request: Request) {
+  const auth = await requireMemberAccess();
+  if (!auth.ok) return auth.response;
+
   await hydrateTodaySessions({ preferFresh: true });
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("userId") || (await resolveUserId());
   const date = searchParams.get("date");
 
   if (searchParams.get("all") === "1") {
+    const staff = await requireStaff();
+    if (!staff.ok) return staff.response;
     return NextResponse.json({ sessions: listTodaySessions() });
   }
+
+  const scope = assertUserScope(auth.session, userId);
+  if (scope) return scope;
 
   const session = date ? getSessionForUserOnDate(userId, date) : getTodaySessionForUser(userId);
 
@@ -41,6 +50,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
+
   try {
     const body = await request.json();
     const parsed = postSchema.safeParse(body);
@@ -70,6 +82,9 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
+
   await hydrateTodaySessions({ preferFresh: true });
   const { searchParams } = new URL(request.url);
   const sessionId = searchParams.get("sessionId");
