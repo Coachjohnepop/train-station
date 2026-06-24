@@ -48,25 +48,44 @@ async function saveStore(store: ResetStore): Promise<{ blobSaved: boolean }> {
   });
 }
 
+async function upsertTokenForEmail(
+  email: string,
+  key: string,
+  entry: StoredResetToken,
+): Promise<boolean> {
+  // Retry if a concurrent reset for another address overwrote blob between read and write.
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const latest = await getStore({ preferFresh: true });
+    const next: ResetStore = { ...latest };
+
+    for (const [existingKey, existing] of Object.entries(next)) {
+      if (existing.email === email) {
+        delete next[existingKey];
+      }
+    }
+
+    next[key] = entry;
+    const { blobSaved } = await saveStore(next);
+    if (!blobSaved) return false;
+
+    const verify = await getStore({ preferFresh: true });
+    if (verify[key]?.email === email) return true;
+  }
+
+  return false;
+}
+
 export async function issuePasswordResetToken(email: string): Promise<string> {
   const token = randomBytes(32).toString("hex");
   const key = hashToken(token);
   const now = Date.now();
-  const store = await getStore({ preferFresh: true });
-
-  for (const [existingKey, entry] of Object.entries(store)) {
-    if (entry.email === email) {
-      delete store[existingKey];
-    }
-  }
-
-  store[key] = {
+  const entry: StoredResetToken = {
     email,
     createdAt: new Date(now).toISOString(),
     expiresAt: new Date(now + TOKEN_TTL_MS).toISOString(),
   };
 
-  const { blobSaved } = await saveStore(store);
+  const blobSaved = await upsertTokenForEmail(email, key, entry);
   if (!blobSaved) {
     console.error("[password-reset] token store did not persist to blob — reset links may fail across instances");
   }
@@ -80,15 +99,20 @@ export async function lookupPasswordResetToken(
   const entry = store[hashToken(token)];
   if (!entry) return null;
   if (new Date(entry.expiresAt).getTime() < Date.now()) {
-    delete store[hashToken(token)];
-    await saveStore(store);
+    const key = hashToken(token);
+    const next = { ...store };
+    delete next[key];
+    await saveStore(next);
     return null;
   }
   return entry;
 }
 
 export async function revokePasswordResetToken(token: string): Promise<void> {
+  const key = hashToken(token);
   const store = await getStore({ preferFresh: true });
-  delete store[hashToken(token)];
-  await saveStore(store);
+  if (!store[key]) return;
+  const next = { ...store };
+  delete next[key];
+  await saveStore(next);
 }
