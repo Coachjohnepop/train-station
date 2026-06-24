@@ -47,6 +47,8 @@ Do this in **Stripe Test mode** first. Toggle **Test mode** on in the Stripe Das
 3. Select events (minimum):
    - `checkout.session.completed`
    - `invoice.paid`
+   - `invoice.payment_failed`
+   - `customer.subscription.updated`
    - `customer.subscription.deleted`
 4. Create → reveal **Signing secret** (`whsec_…`)
 

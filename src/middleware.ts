@@ -22,6 +22,7 @@ const PUBLIC_API_PREFIXES = [
   "/api/auth",
   "/api/signup",
   "/api/join",
+  "/api/payments/public",
   "/api/stripe/webhook",
   "/api/sms/inbound",
 ];
