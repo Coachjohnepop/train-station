@@ -38,7 +38,7 @@ function loadSeedAccounts(): Record<string, SeedAccount> {
   return seed || {};
 }
 
-async function getRegisteredStore(): Promise<RegisteredAccountsStore> {
+async function getRegisteredStore(opts?: { preferFresh?: boolean }): Promise<RegisteredAccountsStore> {
   const hydrated = await hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
@@ -47,6 +47,7 @@ async function getRegisteredStore(): Promise<RegisteredAccountsStore> {
       memoryStore = v;
     },
     fallback: () => ({}),
+    preferFresh: opts?.preferFresh,
   });
   memoryStore = hydrated;
   return hydrated;
@@ -56,7 +57,7 @@ export async function getAllSignInAccounts(): Promise<
   Record<string, { userId: string; role: UserRole; passwordHash?: string; name?: string; phone?: string }>
 > {
   const seed = loadSeedAccounts();
-  const registered = await getRegisteredStore();
+  const registered = await getRegisteredStore({ preferFresh: true });
   const merged: Record<
     string,
     { userId: string; role: UserRole; passwordHash?: string; name?: string; phone?: string }
@@ -166,7 +167,7 @@ export async function upsertSignInAccount(input: {
   const normalized = normalizeAccountEmail(input.email);
   if (!normalized) throw new Error("Invalid email.");
 
-  const store = await getRegisteredStore();
+  const store = await getRegisteredStore({ preferFresh: true });
   const existing = store[normalized];
   const account: StoredMemberAccount = {
     userId: input.userId,
