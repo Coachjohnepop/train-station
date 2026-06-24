@@ -22,7 +22,7 @@ function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-async function getStore(): Promise<ResetStore> {
+async function getStore(opts?: { preferFresh?: boolean }): Promise<ResetStore> {
   const hydrated = await hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
@@ -31,6 +31,7 @@ async function getStore(): Promise<ResetStore> {
       memoryStore = v;
     },
     fallback: () => ({}),
+    preferFresh: opts?.preferFresh,
   });
   memoryStore = hydrated;
   return hydrated;
@@ -51,7 +52,7 @@ export async function issuePasswordResetToken(email: string): Promise<string> {
   const token = randomBytes(32).toString("hex");
   const key = hashToken(token);
   const now = Date.now();
-  const store = await getStore();
+  const store = await getStore({ preferFresh: true });
 
   for (const [existingKey, entry] of Object.entries(store)) {
     if (entry.email === email) {
@@ -65,14 +66,17 @@ export async function issuePasswordResetToken(email: string): Promise<string> {
     expiresAt: new Date(now + TOKEN_TTL_MS).toISOString(),
   };
 
-  await saveStore(store);
+  const { blobSaved } = await saveStore(store);
+  if (!blobSaved) {
+    console.error("[password-reset] token store did not persist to blob — reset links may fail across instances");
+  }
   return token;
 }
 
 export async function lookupPasswordResetToken(
   token: string,
 ): Promise<StoredResetToken | null> {
-  const store = await getStore();
+  const store = await getStore({ preferFresh: true });
   const entry = store[hashToken(token)];
   if (!entry) return null;
   if (new Date(entry.expiresAt).getTime() < Date.now()) {
@@ -84,7 +88,7 @@ export async function lookupPasswordResetToken(
 }
 
 export async function revokePasswordResetToken(token: string): Promise<void> {
-  const store = await getStore();
+  const store = await getStore({ preferFresh: true });
   delete store[hashToken(token)];
   await saveStore(store);
 }
