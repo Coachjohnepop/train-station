@@ -37,8 +37,8 @@ async function getStore(opts?: { preferFresh?: boolean }): Promise<ResetStore> {
   return hydrated;
 }
 
-async function saveStore(store: ResetStore): Promise<void> {
-  await persistJsonStore({
+async function saveStore(store: ResetStore): Promise<{ blobSaved: boolean }> {
+  return persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
     data: store,
