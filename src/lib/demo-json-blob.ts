@@ -49,8 +49,30 @@ export function blobSdkOptionVariants(): PutCommandOptions[] {
   return variants;
 }
 
+function publicBlobFetchUrl(blobPath: string): string | null {
+  const host = process.env.BLOB_PUBLIC_HOST?.trim();
+  if (!host) return null;
+  const base = host.startsWith("http") ? host.replace(/\/$/, "") : `https://${host.replace(/\/$/, "")}`;
+  return `${base}/${blobPath}`;
+}
+
+async function readBlobJsonViaPublicUrl<T>(blobPath: string): Promise<T | null> {
+  const url = publicBlobFetchUrl(blobPath);
+  if (!url) return null;
+  try {
+    const bust = `_ts=${Date.now()}`;
+    const res = await fetch(`${url}?${bust}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
 export async function readBlobJson<T>(blobPath: string): Promise<T | null> {
-  if (!isBlobConfigured()) return null;
+  if (!isBlobConfigured()) {
+    return readBlobJsonViaPublicUrl<T>(blobPath);
+  }
   for (const opts of blobSdkOptionVariants()) {
     try {
       const meta = await head(blobPath, opts);
@@ -63,7 +85,7 @@ export async function readBlobJson<T>(blobPath: string): Promise<T | null> {
       continue;
     }
   }
-  return null;
+  return readBlobJsonViaPublicUrl<T>(blobPath);
 }
 
 export type BlobWriteFailure = {
