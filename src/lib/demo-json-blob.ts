@@ -26,31 +26,44 @@ export function isBlobConfigured(): boolean {
 
 /** SDK options: OIDC on Vercel when connected, else static token, else env auto-resolve. */
 export function blobSdkOptions(): PutCommandOptions {
+  return blobSdkOptionVariants()[0] ?? { access: "public" };
+}
+
+/** Try OIDC first, then static token — avoids reset/login reads failing when OIDC is flaky. */
+export function blobSdkOptionVariants(): PutCommandOptions[] {
   const access = "public" as const;
+  const variants: PutCommandOptions[] = [];
   const storeId = blobStoreId();
   const oidcToken = process.env.VERCEL_OIDC_TOKEN;
   if (process.env.VERCEL && storeId && oidcToken) {
-    return { access, storeId, oidcToken };
+    variants.push({ access, storeId, oidcToken });
   }
   if (BLOB_TOKEN) {
-    return { access, token: BLOB_TOKEN };
+    const tokenOpt = { access, token: BLOB_TOKEN };
+    const duplicate = variants.some(
+      (v) => "token" in v && (v as { token?: string }).token === BLOB_TOKEN,
+    );
+    if (!duplicate) variants.push(tokenOpt);
   }
-  return { access };
+  if (variants.length === 0) variants.push({ access });
+  return variants;
 }
 
 export async function readBlobJson<T>(blobPath: string): Promise<T | null> {
   if (!isBlobConfigured()) return null;
-  try {
-    const meta = await head(blobPath, blobSdkOptions());
-    // Bust CDN edge cache so preferFresh reads see the latest blob write.
-    const bust = `_ts=${Date.now()}`;
-    const url = meta.url.includes("?") ? `${meta.url}&${bust}` : `${meta.url}?${bust}`;
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) return null;
-    return (await res.json()) as T;
-  } catch {
-    return null;
+  for (const opts of blobSdkOptionVariants()) {
+    try {
+      const meta = await head(blobPath, opts);
+      const bust = `_ts=${Date.now()}`;
+      const url = meta.url.includes("?") ? `${meta.url}&${bust}` : `${meta.url}?${bust}`;
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) continue;
+      return (await res.json()) as T;
+    } catch {
+      continue;
+    }
   }
+  return null;
 }
 
 export type BlobWriteFailure = {
@@ -100,23 +113,27 @@ export async function probeBlobWrite(): Promise<
 
 export async function writeBlobJson(blobPath: string, data: unknown): Promise<boolean> {
   if (!isBlobConfigured()) return false;
-  try {
-    await put(blobPath, JSON.stringify(data, null, 2), {
-      ...blobSdkOptions(),
-      contentType: "application/json",
-      addRandomSuffix: false,
-      allowOverwrite: true,
-    });
-    return true;
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    if (/suspended/i.test(msg)) {
-      console.warn(`Vercel Blob store suspended — cannot persist ${blobPath}`);
-    } else {
-      console.warn(`Could not persist blob ${blobPath}`, e);
+  let lastError: unknown;
+  for (const opts of blobSdkOptionVariants()) {
+    try {
+      await put(blobPath, JSON.stringify(data, null, 2), {
+        ...opts,
+        contentType: "application/json",
+        addRandomSuffix: false,
+        allowOverwrite: true,
+      });
+      return true;
+    } catch (e) {
+      lastError = e;
     }
-    return false;
   }
+  const msg = lastError instanceof Error ? lastError.message : String(lastError);
+  if (/suspended/i.test(msg)) {
+    console.warn(`Vercel Blob store suspended — cannot persist ${blobPath}`);
+  } else {
+    console.warn(`Could not persist blob ${blobPath}`, lastError);
+  }
+  return false;
 }
 
 export function readLocalJson<T>(localPath: string): T | null {

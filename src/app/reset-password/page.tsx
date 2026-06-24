@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import PasswordInput from "@/components/PasswordInput";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -75,36 +76,37 @@ function ResetPasswordForm() {
   return (
     <form onSubmit={handleSubmit} className="card space-y-4">
       {error && (
-        <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-          {error}
-        </p>
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200 space-y-2">
+          <p>{error}</p>
+          {error.includes("invalid or has expired") && (
+            <p>
+              <Link href="/forgot-password" className="text-accent hover:underline">
+                Request a fresh reset link
+              </Link>
+            </p>
+          )}
+        </div>
       )}
 
       <div>
         <label className="block text-xs text-[var(--muted)] mb-1">New password</label>
-        <input
-          type="password"
-          autoComplete="new-password"
-          required
-          minLength={8}
+        <PasswordInput
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="input"
+          onChange={setPassword}
           placeholder="At least 8 characters"
+          minLength={8}
+          required
         />
       </div>
 
       <div>
         <label className="block text-xs text-[var(--muted)] mb-1">Confirm password</label>
-        <input
-          type="password"
-          autoComplete="new-password"
-          required
-          minLength={8}
+        <PasswordInput
           value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          className="input"
+          onChange={setConfirmPassword}
           placeholder="Repeat password"
+          minLength={8}
+          required
         />
       </div>
 
