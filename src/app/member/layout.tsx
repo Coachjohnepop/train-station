@@ -34,7 +34,7 @@ export default async function MemberLayout({
     : session?.email || dashboard?.user.email || viewedMember?.email;
 
   return (
-    <MemberShell access={access} memberName={name} memberEmail={email} staffSession={session}>
+    <MemberShell access={access} memberName={name} memberEmail={email}>
       {children}
     </MemberShell>
   );

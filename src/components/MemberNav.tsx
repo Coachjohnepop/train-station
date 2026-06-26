@@ -32,6 +32,11 @@ const items = [
     label: "Book Call",
     match: (p: string) => p.startsWith("/member/book"),
   },
+  {
+    href: "/member/account",
+    label: "Account",
+    match: (p: string) => p.startsWith("/member/account"),
+  },
 ];
 
 export default function MemberNav() {

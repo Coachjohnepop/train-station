@@ -46,6 +46,29 @@ export async function stripeConfiguredForPlan(plan: SignupPlan): Promise<boolean
   return false;
 }
 
+export async function createBillingPortalSession(input: {
+  customerId: string;
+  returnPath?: string;
+}): Promise<{ url: string } | { error: string }> {
+  const stripe = getStripe();
+  if (!stripe) return { error: "Stripe is not configured." };
+
+  const base = appBaseUrl();
+  const returnUrl = `${base}${input.returnPath || "/member/account"}`;
+
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer: input.customerId,
+      return_url: returnUrl,
+    });
+    if (!session.url) return { error: "Stripe did not return a portal URL." };
+    return { url: session.url };
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Billing portal unavailable.";
+    return { error: message };
+  }
+}
+
 export function appBaseUrl(): string {
   const fromEnv =
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
