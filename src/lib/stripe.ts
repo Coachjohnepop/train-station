@@ -6,9 +6,9 @@ import type { CheckoutDiscount } from "@/lib/referral-discounts";
 import { referralDiscountsEnabled } from "@/lib/referral-discounts";
 import {
   getOfferDefinition,
-  stripePriceIdForOffer,
   type CustomTrainingParameters,
 } from "@/lib/product-offers";
+import { resolveStripePriceId } from "@/lib/pricing-catalog";
 import type { SignupPlan } from "@/lib/signup-plans";
 import { signupPlanLabel } from "@/lib/signup-plans";
 import { isStripePaymentsEnabled, isPaidSignupPlan } from "@/lib/member-gates";
@@ -30,18 +30,17 @@ export function getStripe(): StripeClient | null {
   return stripeClient;
 }
 
-/** @deprecated Use stripePriceIdForOffer */
-export function stripePriceIdForPlan(plan: SignupPlan): string | null {
-  return stripePriceIdForOffer(plan);
+export async function stripePriceIdForPlan(plan: SignupPlan): Promise<string | null> {
+  return resolveStripePriceId(plan);
 }
 
-export function stripeConfiguredForPlan(plan: SignupPlan): boolean {
+export async function stripeConfiguredForPlan(plan: SignupPlan): Promise<boolean> {
   if (!isPaidSignupPlan(plan)) return true;
   if (!isStripePaymentsEnabled()) return false;
   const offer = getOfferDefinition(plan);
   if (!offer) return false;
   if (offer.checkoutMode === "subscription" || offer.checkoutMode === "one_time") {
-    return Boolean(stripePriceIdForOffer(plan));
+    return Boolean(await resolveStripePriceId(plan));
   }
   if (offer.checkoutMode === "custom_offer") return true;
   return false;
@@ -148,7 +147,7 @@ export async function createSignupCheckoutSession(input: {
     const sku = input.merchandiseSkuId
       ? await getMerchandiseSku(input.merchandiseSkuId)
       : null;
-    const priceId = sku?.stripePriceId || stripePriceIdForOffer("merchandise");
+    const priceId = sku?.stripePriceId || (await resolveStripePriceId("merchandise"));
     if (!priceId || !sku) {
       return { error: "Merchandise item is not configured for checkout yet." };
     }
@@ -170,7 +169,7 @@ export async function createSignupCheckoutSession(input: {
   }
 
   if (offer.checkoutMode === "one_time") {
-    const priceId = stripePriceIdForOffer(input.plan);
+    const priceId = await resolveStripePriceId(input.plan);
     if (!priceId) {
       return { error: `Stripe price is not configured for ${signupPlanLabel(input.plan)}.` };
     }
@@ -190,7 +189,7 @@ export async function createSignupCheckoutSession(input: {
   }
 
   if (offer.checkoutMode === "subscription") {
-    const priceId = stripePriceIdForOffer(input.plan);
+    const priceId = await resolveStripePriceId(input.plan);
     if (!priceId) {
       return { error: `Stripe price is not configured for ${signupPlanLabel(input.plan)}.` };
     }

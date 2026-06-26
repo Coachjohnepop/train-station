@@ -23,6 +23,7 @@ const PUBLIC_API_PREFIXES = [
   "/api/signup",
   "/api/join",
   "/api/payments/public",
+  "/api/pricing/public",
   "/api/stripe/webhook",
   "/api/sms/inbound",
 ];
@@ -90,6 +91,7 @@ export async function middleware(request: NextRequest) {
     pathname === "/admin/platform" ||
     pathname.startsWith("/admin/platform/") ||
     pathname.startsWith("/admin/commission") ||
+    pathname.startsWith("/admin/pricing") ||
     pathname.startsWith("/admin/offers") ||
     pathname.startsWith("/admin/users") ||
     pathname.startsWith("/admin/reports");

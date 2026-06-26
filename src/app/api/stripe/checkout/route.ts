@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   const profile = await getMemberProfile(session.id);
   const plan = normalizeSignupPlan(parsed.data.plan || profile?.plan || "explorer");
 
-  if (!stripeConfiguredForPlan(plan)) {
+  if (!(await stripeConfiguredForPlan(plan))) {
     return NextResponse.json(
       {
         error: "Payments are not configured for this plan yet.",
@@ -97,7 +97,7 @@ export async function GET(request: Request) {
     new URL(request.url).searchParams.get("plan") || profile?.plan || "explorer",
   );
 
-  if (!stripeConfiguredForPlan(plan)) {
+  if (!(await stripeConfiguredForPlan(plan))) {
     return NextResponse.redirect(new URL(`/member/onboard?plan=${encodeURIComponent(plan)}`, request.url));
   }
 

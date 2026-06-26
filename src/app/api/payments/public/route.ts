@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { listMerchandiseSkus } from "@/lib/merchandise-store";
 import { getLandingMedia } from "@/lib/landing-media-store";
 import { isStripePaymentsEnabled } from "@/lib/member-gates";
-import { MEMBERSHIP_OFFERS, SERVICE_OFFERS, stripePriceIdForOffer } from "@/lib/product-offers";
+import { getEffectiveMembershipOffers } from "@/lib/pricing-catalog";
+import { SERVICE_OFFERS } from "@/lib/product-offers";
 
 export const dynamic = "force-dynamic";
 
@@ -11,16 +12,19 @@ export async function GET() {
   const stripeEnabled = isStripePaymentsEnabled();
   const merchandise = await listMerchandiseSkus();
 
-  const memberships = MEMBERSHIP_OFFERS.filter((o) => o.checkoutMode !== "free").map((offer) => ({
-    plan: offer.id,
-    label: offer.label,
-    priceLabel: offer.priceNote ? `${offer.priceLabel}${offer.priceNote}` : offer.priceLabel,
-    checkoutMode: offer.checkoutMode,
-    stripeReady:
-      stripeEnabled &&
-      (offer.checkoutMode === "subscription" || offer.checkoutMode === "one_time") &&
-      Boolean(stripePriceIdForOffer(offer.id)),
-  }));
+  const effectiveOffers = await getEffectiveMembershipOffers();
+  const memberships = effectiveOffers
+    .filter((o) => o.checkoutMode !== "free")
+    .map((offer) => ({
+      plan: offer.id,
+      label: offer.label,
+      priceLabel: offer.priceDisplay,
+      checkoutMode: offer.checkoutMode,
+      stripeReady:
+        stripeEnabled &&
+        (offer.checkoutMode === "subscription" || offer.checkoutMode === "one_time") &&
+        Boolean(offer.stripePriceId),
+    }));
 
   return NextResponse.json({
     stripeEnabled,

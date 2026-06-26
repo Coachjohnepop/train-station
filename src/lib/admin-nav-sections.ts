@@ -80,6 +80,11 @@ export const PLATFORM_NAV_ITEMS: AdminNavItem[] = [
     match: (p) => p.startsWith("/admin/commission"),
   },
   {
+    href: "/admin/pricing",
+    label: "Pricing",
+    match: (p) => p.startsWith("/admin/pricing"),
+  },
+  {
     href: "/admin/offers",
     label: "Offers",
     match: (p) => p.startsWith("/admin/offers"),
@@ -99,6 +104,7 @@ export const PLATFORM_NAV_ITEMS: AdminNavItem[] = [
 const PLATFORM_PATH_PREFIXES = [
   "/admin/platform",
   "/admin/commission",
+  "/admin/pricing",
   "/admin/offers",
   "/admin/users",
   "/admin/reports",

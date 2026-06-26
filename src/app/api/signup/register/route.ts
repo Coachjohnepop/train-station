@@ -117,7 +117,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Account created but sign-in failed." }, { status: 500 });
     }
 
-    const needsCheckout = !quoteRequest && stripeConfiguredForPlan(plan);
+    const needsCheckout = !quoteRequest && (await stripeConfiguredForPlan(plan));
     const redirectTo = quoteRequest
       ? `/member/quote-received?plan=${encodeURIComponent(plan)}`
       : needsCheckout

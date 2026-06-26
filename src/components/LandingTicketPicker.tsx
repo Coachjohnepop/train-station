@@ -1,10 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import FreeTicketModal from "@/components/FreeTicketModal";
 import TrainStationBrand from "@/components/TrainStationBrand";
-import { TICKET_TIERS, type TicketTierId } from "@/lib/landing-tickets";
+import {
+  TICKET_TIERS,
+  mergeTicketPrices,
+  type TicketTier,
+  type TicketTierId,
+} from "@/lib/landing-tickets";
 
 export default function LandingTicketPicker({
   freeChastiseVideoUrl = null,
@@ -13,13 +18,32 @@ export default function LandingTicketPicker({
 }) {
   const [freeModalOpen, setFreeModalOpen] = useState(false);
   const [highlightPaid, setHighlightPaid] = useState(false);
+  const [tiers, setTiers] = useState<TicketTier[]>(TICKET_TIERS);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/pricing/public");
+        if (!res.ok) return;
+        const body = await res.json();
+        if (cancelled || !Array.isArray(body.tickets)) return;
+        setTiers(mergeTicketPrices(body.tickets));
+      } catch {
+        // Keep static fallback tiers.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function handleTicketClick(tierId: TicketTierId) {
     if (tierId === "free") {
       setFreeModalOpen(true);
       return;
     }
-    const tier = TICKET_TIERS.find((t) => t.id === tierId);
+    const tier = tiers.find((t) => t.id === tierId);
     if (!tier) return;
     window.location.href = `/signup?plan=${encodeURIComponent(tier.signupPlan)}`;
   }
@@ -46,7 +70,7 @@ export default function LandingTicketPicker({
           highlightPaid ? "ring-2 ring-[#7c3aed]/40 rounded-2xl p-2" : ""
         }`}
       >
-        {TICKET_TIERS.map((tier) => (
+        {tiers.map((tier) => (
           <button
             key={tier.id}
             type="button"

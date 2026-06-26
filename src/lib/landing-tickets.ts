@@ -42,4 +42,25 @@ export const TICKET_TIERS: TicketTier[] = MEMBERSHIP_OFFERS.filter((o) =>
   perks: offer.perks || [],
 }));
 
+export type PublicTicketPrice = {
+  plan: string;
+  title: string;
+  price: string;
+  priceNote?: string;
+};
+
+export function mergeTicketPrices(apiTickets: PublicTicketPrice[]): TicketTier[] {
+  const byPlan = new Map(apiTickets.map((t) => [t.plan, t]));
+  return TICKET_TIERS.map((tier) => {
+    const live = byPlan.get(tier.signupPlan);
+    if (!live) return tier;
+    return {
+      ...tier,
+      title: live.title || tier.title,
+      price: live.price || tier.price,
+      priceNote: live.priceNote ?? tier.priceNote,
+    };
+  });
+}
+
 export { COMING_SOON_PROGRAMS };

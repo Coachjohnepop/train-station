@@ -16,6 +16,12 @@ const cards = [
     cta: "Open payments →",
   },
   {
+    href: "/admin/pricing",
+    title: "Membership pricing",
+    description: "Coach / Business / 1st Class prices — update the site and sync new Stripe prices.",
+    cta: "Edit pricing →",
+  },
+  {
     href: "/admin/users",
     title: "Users & roles",
     description: "Staff accounts, instructors, demo members, and role assignments.",
