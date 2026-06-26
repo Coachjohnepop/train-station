@@ -54,6 +54,8 @@ export async function POST(request: Request) {
       await markMemberPaid({
         userId,
         method: "stripe",
+        plan: session.metadata?.plan ?? null,
+        customOfferId: session.metadata?.customOfferId ?? null,
         stripeCustomerId: typeof session.customer === "string" ? session.customer : null,
         stripeSubscriptionId: subscriptionId ?? null,
         stripeCheckoutSessionId: session.id,

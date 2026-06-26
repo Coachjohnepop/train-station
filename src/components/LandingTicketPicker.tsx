@@ -34,7 +34,7 @@ export default function LandingTicketPicker({
         <TrainStationBrand variant="compact" className="mb-6" />
         <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#7c3aed]">Pick your ticket</p>
         <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-          Three ways aboard
+          Membership tickets
         </h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-[#9d8ab8]">
           Tap a ticket on your phone — side by side, no guessing. We&apos;ll guide you through setup after you choose.
@@ -42,7 +42,7 @@ export default function LandingTicketPicker({
       </div>
 
       <div
-        className={`mx-auto mt-8 grid max-w-4xl grid-cols-3 gap-2 sm:gap-4 transition-all ${
+        className={`mx-auto mt-8 grid max-w-5xl grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 sm:gap-3 transition-all ${
           highlightPaid ? "ring-2 ring-[#7c3aed]/40 rounded-2xl p-2" : ""
         }`}
       >

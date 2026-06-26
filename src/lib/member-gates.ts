@@ -2,6 +2,7 @@ import "server-only";
 
 import type { MemberProfile } from "@/lib/member-profiles-store";
 import type { SignupPlan } from "@/lib/signup-plans";
+import { isPaidOffer } from "@/lib/product-offers";
 import { isSignupPlan } from "@/lib/signup-plans";
 import { isSecurityEnforced, stripeRequiredInProduction } from "@/lib/security-config";
 
@@ -24,7 +25,7 @@ export function stripeAutoApproveOnPay(): boolean {
 }
 
 export function isPaidSignupPlan(plan: SignupPlan): boolean {
-  return plan === "member" || plan === "pro";
+  return isPaidOffer(plan);
 }
 
 /** Self-registered via ticket signup (blob store), not seeded demo/coach accounts. */

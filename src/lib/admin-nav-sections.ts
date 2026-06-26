@@ -80,6 +80,11 @@ export const PLATFORM_NAV_ITEMS: AdminNavItem[] = [
     match: (p) => p.startsWith("/admin/commission"),
   },
   {
+    href: "/admin/offers",
+    label: "Offers",
+    match: (p) => p.startsWith("/admin/offers"),
+  },
+  {
     href: "/admin/users",
     label: "Users",
     match: (p) => p.startsWith("/admin/users"),
@@ -91,7 +96,13 @@ export const PLATFORM_NAV_ITEMS: AdminNavItem[] = [
   },
 ];
 
-const PLATFORM_PATH_PREFIXES = ["/admin/platform", "/admin/commission", "/admin/users", "/admin/reports"];
+const PLATFORM_PATH_PREFIXES = [
+  "/admin/platform",
+  "/admin/commission",
+  "/admin/offers",
+  "/admin/users",
+  "/admin/reports",
+];
 
 export function isPlatformAdminPath(pathname: string): boolean {
   return PLATFORM_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));

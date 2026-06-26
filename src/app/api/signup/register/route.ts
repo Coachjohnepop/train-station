@@ -12,8 +12,9 @@ import { registerMember } from "@/lib/member-accounts-store";
 import { ensureMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
 import { notifyNewLead } from "@/lib/lead-notify";
 import { sendMemberWelcomeEmail } from "@/lib/member-welcome";
+import { isQuoteOffer } from "@/lib/product-offers";
 import { resolveReferralDiscount } from "@/lib/referral-discounts";
-import { normalizeSignupPlan } from "@/lib/signup-plans";
+import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 import { addToWaitlist } from "@/lib/waitlist";
 import { enrollDemo } from "@/lib/demo-enrollments";
 import { requireSignupPassword } from "@/lib/security-config";
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
   const { email, firstName, lastName, phone, plan: rawPlan, password, referralCode } =
     parsed.data;
   const plan = normalizeSignupPlan(rawPlan);
+  const quoteRequest = isQuoteOffer(plan);
   const referral = referralCode ? await resolveReferralDiscount(referralCode) : null;
 
   if (requireSignupPassword()) {
@@ -88,9 +90,15 @@ export async function POST(request: Request) {
       name: account.name,
       phone: phone || null,
       plan,
-      source: "signup-register",
+      source: quoteRequest ? `quote:${plan}` : "signup-register",
       createdAt: account.createdAt,
     });
+
+    if (quoteRequest) {
+      await updateMemberProfile(account.userId, {
+        paymentNote: `${signupPlanLabel(plan)} — quote requested`,
+      });
+    }
 
     const welcomeSent = await sendMemberWelcomeEmail({
       email: normalizedEmail,
@@ -109,10 +117,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Account created but sign-in failed." }, { status: 500 });
     }
 
-    const needsCheckout = stripeConfiguredForPlan(plan);
-    const redirectTo = needsCheckout
-      ? memberCheckoutPath(plan)
-      : `/member/onboard?plan=${encodeURIComponent(plan)}`;
+    const needsCheckout = !quoteRequest && stripeConfiguredForPlan(plan);
+    const redirectTo = quoteRequest
+      ? `/member/quote-received?plan=${encodeURIComponent(plan)}`
+      : needsCheckout
+        ? memberCheckoutPath(plan)
+        : `/member/onboard?plan=${encodeURIComponent(plan)}`;
     const res = NextResponse.json({
       ok: true,
       redirectTo,

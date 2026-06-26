@@ -4,6 +4,12 @@ export const dynamic = "force-dynamic";
 
 const cards = [
   {
+    href: "/admin/offers",
+    title: "Offers & merchandise",
+    description: "Custom training packages, merch SKUs, and coach-set pricing.",
+    cta: "Manage offers →",
+  },
+  {
     href: "/admin/commission",
     title: "Payments & commission",
     description: "Stripe payouts, partner splits, referral discounts, Connect onboarding.",

@@ -7,8 +7,19 @@ import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 
 type PaymentsPublic = {
   stripeEnabled: boolean;
-  coachClass: { plan: string; priceLabel: string; stripeReady: boolean };
-  firstClass: { plan: string; priceLabel: string; stripeReady: boolean };
+  memberships: Array<{
+    plan: string;
+    label: string;
+    priceLabel: string;
+    checkoutMode: string;
+    stripeReady: boolean;
+  }>;
+  merchandise: Array<{
+    id: string;
+    name: string;
+    priceLabel: string;
+    stripeReady: boolean;
+  }>;
   venmo: {
     qrUrl: string | null;
     handle: string | null;
@@ -19,14 +30,15 @@ type PaymentsPublic = {
 
 function planPriceLabel(plan: string, payments: PaymentsPublic | null): string {
   if (!payments) return "";
-  if (plan === "pro") return payments.firstClass.priceLabel;
-  if (plan === "member") return payments.coachClass.priceLabel;
-  return "";
+  const match = payments.memberships?.find((m) => m.plan === plan);
+  return match?.priceLabel || "";
 }
 
 function MemberCheckoutInner() {
   const searchParams = useSearchParams();
   const plan = normalizeSignupPlan(searchParams.get("plan") || "member");
+  const customOfferId = searchParams.get("offerId") || "";
+  const merchandiseSkuId = searchParams.get("sku") || "";
   const canceled = searchParams.get("canceled") === "1";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,13 +63,15 @@ function MemberCheckoutInner() {
     };
   }, []);
 
+  const membershipOffer = payments?.memberships?.find((m) => m.plan === plan);
+  const merchOffer = payments?.merchandise?.find((m) => m.id === merchandiseSkuId);
   const stripeReady =
     payments?.stripeEnabled &&
-    (plan === "pro"
-      ? payments.firstClass.stripeReady
-      : plan === "member"
-        ? payments.coachClass.stripeReady
-        : false);
+    (plan === "custom_training"
+      ? Boolean(customOfferId)
+      : plan === "merchandise"
+        ? Boolean(merchOffer?.stripeReady)
+        : Boolean(membershipOffer?.stripeReady));
 
   const venmoReady = Boolean(payments?.venmo?.hasQr);
   const priceLabel = planPriceLabel(plan, payments);
@@ -78,6 +92,8 @@ function MemberCheckoutInner() {
         body: JSON.stringify({
           plan,
           referralCode: referralCode.trim() || undefined,
+          customOfferId: customOfferId || undefined,
+          merchandiseSkuId: merchandiseSkuId || undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));

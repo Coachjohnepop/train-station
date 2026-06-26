@@ -37,6 +37,12 @@ export type MemberProfile = {
   stripeCheckoutSessionId: string | null;
   referralCode: string | null;
   referredByUserId: string | null;
+  intensiveSessionsTotal: number | null;
+  intensiveSessionsRemaining: number | null;
+  intensiveWindowDays: number | null;
+  intensiveStartsAt: string | null;
+  intensiveExpiresAt: string | null;
+  customTrainingOfferId: string | null;
   welcomeSignupEmailSentAt: string | null;
   welcomeCompleteEmailSentAt: string | null;
   welcomeSmsSentAt: string | null;
@@ -74,6 +80,12 @@ function emptyProfile(userId: string, email: string, plan: SignupPlan): MemberPr
     stripeCheckoutSessionId: null,
     referralCode: null,
     referredByUserId: null,
+    intensiveSessionsTotal: null,
+    intensiveSessionsRemaining: null,
+    intensiveWindowDays: null,
+    intensiveStartsAt: null,
+    intensiveExpiresAt: null,
+    customTrainingOfferId: null,
     welcomeSignupEmailSentAt: null,
     welcomeCompleteEmailSentAt: null,
     welcomeSmsSentAt: null,
@@ -120,6 +132,20 @@ function normalizeProfile(raw: unknown, userId: string): MemberProfile | null {
     referredByUserId:
       typeof data.referredByUserId === "string" && data.referredByUserId.trim()
         ? data.referredByUserId.trim()
+        : null,
+    intensiveSessionsTotal:
+      typeof data.intensiveSessionsTotal === "number" ? data.intensiveSessionsTotal : null,
+    intensiveSessionsRemaining:
+      typeof data.intensiveSessionsRemaining === "number"
+        ? data.intensiveSessionsRemaining
+        : null,
+    intensiveWindowDays:
+      typeof data.intensiveWindowDays === "number" ? data.intensiveWindowDays : null,
+    intensiveStartsAt: data.intensiveStartsAt ?? null,
+    intensiveExpiresAt: data.intensiveExpiresAt ?? null,
+    customTrainingOfferId:
+      typeof data.customTrainingOfferId === "string" && data.customTrainingOfferId.trim()
+        ? data.customTrainingOfferId.trim()
         : null,
     welcomeSignupEmailSentAt: data.welcomeSignupEmailSentAt ?? null,
     welcomeCompleteEmailSentAt: data.welcomeCompleteEmailSentAt ?? null,
@@ -238,6 +264,12 @@ export async function updateMemberProfile(
       | "stripeCheckoutSessionId"
       | "referralCode"
       | "referredByUserId"
+      | "intensiveSessionsTotal"
+      | "intensiveSessionsRemaining"
+      | "intensiveWindowDays"
+      | "intensiveStartsAt"
+      | "intensiveExpiresAt"
+      | "customTrainingOfferId"
     >
   >,
 ): Promise<MemberProfile> {

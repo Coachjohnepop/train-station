@@ -10,6 +10,9 @@ import { createSignupCheckoutSession, stripeConfiguredForPlan } from "@/lib/stri
 const schema = z.object({
   plan: z.string().max(40).optional(),
   referralCode: z.string().max(40).optional(),
+  customOfferId: z.string().max(80).optional(),
+  merchandiseSkuId: z.string().max(80).optional(),
+  quantity: z.number().int().min(1).max(99).optional(),
 });
 
 export async function POST(request: Request) {
@@ -53,6 +56,9 @@ export async function POST(request: Request) {
     plan,
     referralCode: referral?.referralCode ?? null,
     discount: referral?.discount ?? null,
+    customOfferId: parsed.data.customOfferId,
+    merchandiseSkuId: parsed.data.merchandiseSkuId,
+    quantity: parsed.data.quantity,
   });
 
   if ("error" in checkout) {
@@ -63,6 +69,7 @@ export async function POST(request: Request) {
     plan,
     paymentStatus: "pending",
     stripeCheckoutSessionId: checkout.sessionId,
+    ...(parsed.data.customOfferId ? { customTrainingOfferId: parsed.data.customOfferId } : {}),
     ...(referral?.referralCode
       ? {
           referralCode: referral.referralCode,

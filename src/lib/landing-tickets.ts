@@ -1,4 +1,11 @@
-export type TicketTierId = "free" | "coach-class" | "first-class";
+import { COMING_SOON_PROGRAMS, MEMBERSHIP_OFFERS } from "@/lib/product-offers";
+
+export type TicketTierId =
+  | "free"
+  | "coach-class"
+  | "business-class"
+  | "first-class"
+  | "first-class-1on1";
 
 export type TicketTier = {
   id: TicketTierId;
@@ -12,75 +19,34 @@ export type TicketTier = {
   perks: string[];
 };
 
-export const TICKET_TIERS: TicketTier[] = [
-  {
-    id: "free",
-    title: "Free",
-    subtitle: "Explorer",
-    price: "$0",
-    priceNote: "starter access",
-    accent: "from-zinc-500/20 to-zinc-800/40 border-zinc-500/40",
-    signupPlan: "explorer",
-    joinRec: "explorer",
-    perks: ["Starter programs", "Basic logging"],
-  },
-  {
-    id: "coach-class",
-    title: "Coach Class",
-    subtitle: "Ticket",
-    price: "$25",
-    priceNote: "/mo",
-    accent: "from-[#7c3aed]/25 to-[#4c1d95]/30 border-[#7c3aed]/50",
-    signupPlan: "member",
-    joinRec: "member",
-    perks: ["All programs — 4-week blocks", "15-min coach Zoom", "SMS accountability texts"],
-  },
-  {
-    id: "first-class",
-    title: "1st Class",
-    subtitle: "Ticket",
-    price: "$50",
-    priceNote: "/mo",
-    accent: "from-amber-500/20 to-[#7c3aed]/20 border-amber-400/40",
-    signupPlan: "pro",
-    joinRec: "pro",
-    perks: [
-      "Everything in Coach Class",
-      "Live Zoom with John & Steph",
-      "20-min Zoom with Coach Byrd",
-    ],
-  },
-];
+const accentByPlan: Record<string, string> = {
+  explorer: "from-zinc-500/20 to-zinc-800/40 border-zinc-500/40",
+  member: "from-[#7c3aed]/25 to-[#4c1d95]/30 border-[#7c3aed]/50",
+  business: "from-sky-500/20 to-[#4c1d95]/25 border-sky-400/40",
+  pro: "from-amber-500/20 to-[#7c3aed]/20 border-amber-400/40",
+  first_class_1on1: "from-rose-500/20 to-amber-500/20 border-rose-400/40",
+};
 
-export const COMING_SOON_PROGRAMS = [
-  {
-    slug: "military-prep",
-    name: "Military Preparation",
-    emoji: "🎖️",
-    blurb: "Conditioning and resilience work to prepare for military service.",
-  },
-  {
-    slug: "stretching",
-    name: "Stretching",
-    emoji: "🧘",
-    blurb: "Daily mobility flows — coming soon.",
-  },
-  {
-    slug: "nutrition",
-    name: "Nutrition",
-    emoji: "🥗",
-    blurb: "Habits, macros, and coach-guided eating.",
-  },
-  {
-    slug: "yoga",
-    name: "Yoga",
-    emoji: "🕉️",
-    blurb: "Recovery, breath, and flexibility tracks.",
-  },
-  {
-    slug: "glute-building",
-    name: "Glute Building",
-    emoji: "🍑",
-    blurb: "Progressive glute specialization program.",
-  },
-] as const;
+const ticketIdByPlan: Record<string, TicketTierId> = {
+  explorer: "free",
+  member: "coach-class",
+  business: "business-class",
+  pro: "first-class",
+  first_class_1on1: "first-class-1on1",
+};
+
+export const TICKET_TIERS: TicketTier[] = MEMBERSHIP_OFFERS.filter((o) =>
+  ["explorer", "member", "business", "pro", "first_class_1on1"].includes(o.id),
+).map((offer) => ({
+  id: ticketIdByPlan[offer.id] || "free",
+  title: offer.id === "explorer" ? "Free" : offer.shortLabel,
+  subtitle: offer.id === "explorer" ? "Explorer" : "Ticket",
+  price: offer.priceLabel,
+  priceNote: offer.priceNote,
+  accent: accentByPlan[offer.id] || accentByPlan.member,
+  signupPlan: offer.id,
+  joinRec: offer.id,
+  perks: offer.perks || [],
+}));
+
+export { COMING_SOON_PROGRAMS };

@@ -1,6 +1,7 @@
 "use client";
 
 import LandingHero from "@/components/LandingHero";
+import LandingServicesSection from "@/components/LandingServicesSection";
 import LandingTicketPicker from "@/components/LandingTicketPicker";
 import ComingSoonPrograms from "@/components/ComingSoonPrograms";
 
@@ -16,6 +17,7 @@ export default function LandingConversion({
     <div className="min-h-screen bg-black">
       <LandingHero welcomeVideoUrl={welcomeVideoUrl} />
       <LandingTicketPicker freeChastiseVideoUrl={freeChastiseVideoUrl} />
+      <LandingServicesSection />
       <ComingSoonPrograms />
     </div>
   );

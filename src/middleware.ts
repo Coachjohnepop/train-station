@@ -90,6 +90,7 @@ export async function middleware(request: NextRequest) {
     pathname === "/admin/platform" ||
     pathname.startsWith("/admin/platform/") ||
     pathname.startsWith("/admin/commission") ||
+    pathname.startsWith("/admin/offers") ||
     pathname.startsWith("/admin/users") ||
     pathname.startsWith("/admin/reports");
   if (platformAdminOnly && session.role !== "ADMIN") {

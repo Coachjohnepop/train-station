@@ -44,6 +44,8 @@ export async function POST(request: Request) {
   const updated = await markMemberPaid({
     userId: sessionUser.id,
     method: "stripe",
+    plan: checkout.metadata?.plan ?? null,
+    customOfferId: checkout.metadata?.customOfferId ?? null,
     stripeCustomerId: typeof checkout.customer === "string" ? checkout.customer : null,
     stripeSubscriptionId:
       typeof checkout.subscription === "string" ? checkout.subscription : null,
