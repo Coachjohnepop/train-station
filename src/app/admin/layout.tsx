@@ -1,8 +1,9 @@
 import Link from "next/link";
-import AdminNav from "@/components/AdminNav";
+import AdminAreaNav from "@/components/AdminAreaNav";
 import DevModeSwitcher from "@/components/DevModeSwitcher";
 import LogoutButton from "@/components/LogoutButton";
 import { getSessionUser } from "@/lib/auth";
+
 
 export default async function AdminLayout({
   children,
@@ -10,6 +11,11 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const session = await getSessionUser();
+  const showPlatform = session?.role === "ADMIN";
+  const areaLabel =
+    showPlatform && session
+      ? "Staff"
+      : "Coach";
 
   return (
     <div className="app-shell-bg flex min-h-screen flex-col">
@@ -23,13 +29,16 @@ export default async function AdminLayout({
               </Link>
               <div>
                 <p className="text-sm font-medium">{session?.name || "Coach"}</p>
-                <p className="text-[10px] text-[var(--muted)]">{session?.email}</p>
+                <p className="text-[10px] text-[var(--muted)]">
+                  {areaLabel}
+                  {session?.email ? ` · ${session.email}` : ""}
+                </p>
               </div>
             </div>
             <LogoutButton />
           </div>
           <div className="overflow-x-auto pb-1">
-            <AdminNav />
+            <AdminAreaNav showPlatform={showPlatform} />
           </div>
         </div>
       </header>

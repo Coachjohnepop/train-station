@@ -86,6 +86,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/member", request.url));
   }
 
+  const platformAdminOnly =
+    pathname === "/admin/platform" ||
+    pathname.startsWith("/admin/platform/") ||
+    pathname.startsWith("/admin/commission") ||
+    pathname.startsWith("/admin/users") ||
+    pathname.startsWith("/admin/reports");
+  if (platformAdminOnly && session.role !== "ADMIN") {
+    return NextResponse.redirect(new URL("/admin", request.url));
+  }
+
   if (session.role === "MEMBER" && pathname.startsWith("/member")) {
     const plan =
       request.nextUrl.searchParams.get("plan") ||

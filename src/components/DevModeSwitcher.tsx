@@ -26,7 +26,7 @@ export default function DevModeSwitcher({
     <div className="app-shell-subbar">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-2 px-4 py-2">
         <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-          {active === "admin" ? "Coach" : "Member"}
+          View
         </span>
         <Link
           href="/member"
@@ -46,7 +46,7 @@ export default function DevModeSwitcher({
               : "text-[var(--muted)] hover:text-[var(--text)]"
           }`}
         >
-          Coach admin
+          Staff admin
         </Link>
         {showImpersonation && (
           <>
