@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
-/* Prince-inspired: deep purple night + violet accents */
-:root {
+/* Prince-inspired purple family + per-tier metal trim (explorer / coach / business / 1st) */
+:root,
+[data-membership-tier="explorer"] {
   --bg: #0a0612;
   --surface: #140a22;
   --surface-2: #1f1035;
@@ -13,11 +14,86 @@
   --accent-deep: #5b21b6;
   --accent-hover: #a78bfa;
   --accent-glow: rgba(124, 58, 237, 0.28);
+  --tier-trim: #c4b5fd;
+  --tier-trim-strong: #7c3aed;
+  --tier-trim-glow: rgba(124, 58, 237, 0.32);
+  --tier-trim-soft: rgba(196, 181, 253, 0.18);
   --success: #4ade9a;
   --danger: #f07178;
-  /* legacy alias used by components */
   --brass: var(--accent);
   --brass-hover: var(--accent-hover);
+}
+
+/* Coach Class — violet-indigo (purple-adjacent) */
+[data-membership-tier="member"] {
+  --accent: #6d28d9;
+  --accent-light: #c4b5fd;
+  --accent-deep: #4c1d95;
+  --accent-hover: #8b5cf6;
+  --accent-glow: rgba(109, 40, 217, 0.3);
+  --tier-trim: #a78bfa;
+  --tier-trim-strong: #7c3aed;
+  --tier-trim-glow: rgba(139, 92, 246, 0.34);
+  --tier-trim-soft: rgba(167, 139, 250, 0.2);
+  --border: color-mix(in srgb, #7c3aed 38%, #2e1a4a);
+}
+
+/* Business Class — bold silver trim on purple */
+[data-membership-tier="business"] {
+  --accent: #7c3aed;
+  --accent-light: #ddd6fe;
+  --accent-deep: #5b21b6;
+  --accent-hover: #a78bfa;
+  --accent-glow: rgba(192, 200, 212, 0.28);
+  --tier-trim: #b8bcc6;
+  --tier-trim-strong: #e8ebf2;
+  --tier-trim-glow: rgba(232, 235, 242, 0.42);
+  --tier-trim-soft: rgba(184, 188, 198, 0.22);
+  --border: color-mix(in srgb, #c0c5ce 42%, #3d2660);
+}
+
+/* 1st Class — gold trim on purple */
+[data-membership-tier="pro"] {
+  --accent: #7c3aed;
+  --accent-light: #fde68a;
+  --accent-deep: #5b21b6;
+  --accent-hover: #c4a24a;
+  --accent-glow: rgba(212, 175, 55, 0.32);
+  --tier-trim: #d4af37;
+  --tier-trim-strong: #f0c75e;
+  --tier-trim-glow: rgba(240, 199, 94, 0.4);
+  --tier-trim-soft: rgba(212, 175, 55, 0.2);
+  --border: color-mix(in srgb, #d4af37 36%, #3d2660);
+}
+
+/* Light mode — shared lift; trim metals stay visible */
+[data-theme-mode="light"] {
+  --bg: #f4effb;
+  --surface: #ffffff;
+  --surface-2: #ebe4f7;
+  --text: #1a1028;
+  --muted: #6b5b80;
+  --accent-glow: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+[data-theme-mode="light"][data-membership-tier="explorer"] {
+  --border: #d8c9f0;
+}
+
+[data-theme-mode="light"][data-membership-tier="member"] {
+  --border: color-mix(in srgb, #7c3aed 28%, #d8c9f0);
+}
+
+[data-theme-mode="light"][data-membership-tier="business"] {
+  --border: color-mix(in srgb, #9ca3af 45%, #d8c9f0);
+  --tier-trim-strong: #6b7280;
+  --tier-trim: #9ca3af;
+}
+
+[data-theme-mode="light"][data-membership-tier="pro"] {
+  --border: color-mix(in srgb, #d4af37 40%, #e8dcf8);
+  --tier-trim-strong: #b8860b;
+  --tier-trim: #c9a227;
 }
 
 html {
@@ -39,24 +115,45 @@ body {
   background-image:
     radial-gradient(
       ellipse 90% 50% at 50% -12%,
-      rgba(91, 33, 182, 0.42),
+      color-mix(in srgb, var(--accent-deep) 42%, transparent),
       transparent 58%
     ),
     radial-gradient(
       ellipse 55% 35% at 0% 80%,
-      rgba(76, 29, 149, 0.22),
+      color-mix(in srgb, var(--accent-deep) 22%, transparent),
       transparent
     ),
     radial-gradient(
       ellipse 50% 30% at 100% 40%,
-      rgba(124, 58, 237, 0.14),
+      color-mix(in srgb, var(--accent) 14%, transparent),
+      transparent
+    ),
+    radial-gradient(
+      ellipse 40% 22% at 88% 8%,
+      var(--tier-trim-soft),
       transparent
     );
   background-attachment: fixed;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+[data-theme-mode="light"] .app-shell-bg {
+  background-image:
+    radial-gradient(
+      ellipse 90% 50% at 50% -12%,
+      color-mix(in srgb, var(--accent) 12%, transparent),
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 45% 30% at 100% 20%,
+      var(--tier-trim-soft),
+      transparent
+    );
 }
 
 .app-shell-header {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid color-mix(in srgb, var(--tier-trim-strong) 55%, var(--border));
+  box-shadow: inset 0 3px 0 var(--tier-trim-strong);
   background: color-mix(in srgb, var(--bg) 72%, var(--surface));
   backdrop-filter: blur(10px);
 }
@@ -88,7 +185,27 @@ a {
 
 .btn-primary:hover {
   filter: brightness(1.08);
-  box-shadow: 0 0 24px var(--accent-glow);
+  box-shadow: 0 0 24px var(--accent-glow), 0 0 12px var(--tier-trim-glow);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1.25rem;
+  border-radius: 9999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--tier-trim-strong) 45%, var(--border));
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-secondary:hover {
+  border-color: var(--tier-trim-strong);
+  background: color-mix(in srgb, var(--tier-trim-soft) 50%, var(--surface-2));
 }
 
 .btn-ghost {
@@ -140,9 +257,20 @@ a {
 
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--tier-trim) 22%, var(--border));
   border-radius: 14px;
   padding: 1.25rem;
+  box-shadow: inset 0 1px 0 var(--tier-trim-soft);
+}
+
+[data-membership-tier="business"] .card {
+  border-width: 1px;
+  border-color: color-mix(in srgb, var(--tier-trim-strong) 48%, var(--border));
+}
+
+[data-membership-tier="pro"] .card {
+  border-color: color-mix(in srgb, var(--tier-trim-strong) 52%, var(--border));
+  box-shadow: inset 0 2px 0 var(--tier-trim-soft), 0 0 0 1px color-mix(in srgb, var(--tier-trim) 15%, transparent);
 }
 
 .table-wrap {
@@ -419,9 +547,99 @@ table.data th {
 }
 
 .badge-accent {
-  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tier-trim-strong) 55%, var(--border));
+  background: color-mix(in srgb, var(--tier-trim-soft) 65%, transparent);
   color: var(--accent-light);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tier-trim) 25%, transparent);
+}
+
+.theme-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--tier-trim) 35%, var(--border));
+  background: color-mix(in srgb, var(--surface-2) 80%, transparent);
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.theme-mode-toggle:hover {
+  border-color: var(--tier-trim-strong);
+  color: var(--text);
+}
+
+.theme-mode-toggle__label {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Landing membership tickets */
+.ticket-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.ticket-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--ticket-trim), transparent);
+  opacity: 0.9;
+}
+
+.ticket-card--free {
+  --ticket-trim: #a1a1aa;
+  --ticket-bg-from: rgba(113, 113, 122, 0.2);
+  --ticket-bg-to: rgba(39, 39, 42, 0.4);
+  --ticket-border: rgba(161, 161, 170, 0.4);
+}
+
+.ticket-card--coach-class {
+  --ticket-trim: #a78bfa;
+  --ticket-bg-from: rgba(124, 58, 237, 0.25);
+  --ticket-bg-to: rgba(76, 29, 149, 0.3);
+  --ticket-border: rgba(124, 58, 237, 0.5);
+}
+
+.ticket-card--business-class {
+  --ticket-trim: #e8ebf2;
+  --ticket-bg-from: rgba(124, 58, 237, 0.18);
+  --ticket-bg-to: rgba(55, 48, 80, 0.35);
+  --ticket-border: rgba(232, 235, 242, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(192, 197, 206, 0.25);
+}
+
+.ticket-card--first-class {
+  --ticket-trim: #f0c75e;
+  --ticket-bg-from: rgba(212, 175, 55, 0.22);
+  --ticket-bg-to: rgba(127, 78, 34, 0.28);
+  --ticket-border: rgba(240, 199, 94, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.2);
+}
+
+.ticket-card--free,
+.ticket-card--coach-class,
+.ticket-card--business-class,
+.ticket-card--first-class {
+  background: linear-gradient(to bottom, var(--ticket-bg-from), var(--ticket-bg-to)) !important;
+  border-color: var(--ticket-border) !important;
+}
+
+[data-theme-mode="light"] .ticket-card--business-class {
+  --ticket-trim: #6b7280;
+  --ticket-border: rgba(107, 114, 128, 0.45);
+}
+
+[data-theme-mode="light"] .ticket-card--first-class {
+  --ticket-trim: #b8860b;
+  --ticket-border: rgba(184, 134, 11, 0.45);
 }
 
 .step-badge-active {

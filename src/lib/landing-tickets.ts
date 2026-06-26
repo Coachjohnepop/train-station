@@ -1,3 +1,4 @@
+import { ticketCardClass } from "@/lib/membership-theme";
 import { COMING_SOON_PROGRAMS, MEMBERSHIP_OFFERS } from "@/lib/product-offers";
 
 export type TicketTierId = "free" | "coach-class" | "business-class" | "first-class";
@@ -8,17 +9,10 @@ export type TicketTier = {
   subtitle: string;
   price: string;
   priceNote?: string;
-  accent: string;
+  themeClass: string;
   signupPlan: string;
   joinRec: string;
   perks: string[];
-};
-
-const accentByPlan: Record<string, string> = {
-  explorer: "from-zinc-500/20 to-zinc-800/40 border-zinc-500/40",
-  member: "from-[#7c3aed]/25 to-[#4c1d95]/30 border-[#7c3aed]/50",
-  business: "from-sky-500/20 to-[#4c1d95]/25 border-sky-400/40",
-  pro: "from-amber-500/20 to-rose-500/20 border-amber-400/40",
 };
 
 const ticketIdByPlan: Record<string, TicketTierId> = {
@@ -36,7 +30,7 @@ export const TICKET_TIERS: TicketTier[] = MEMBERSHIP_OFFERS.filter((o) =>
   subtitle: offer.id === "explorer" ? "Explorer" : "Ticket",
   price: offer.priceLabel,
   priceNote: offer.priceNote,
-  accent: accentByPlan[offer.id] || accentByPlan.member,
+  themeClass: ticketCardClass(ticketIdByPlan[offer.id] || "free"),
   signupPlan: offer.id,
   joinRec: offer.id,
   perks: offer.perks || [],

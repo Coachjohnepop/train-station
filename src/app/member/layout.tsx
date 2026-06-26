@@ -4,6 +4,8 @@ import { getSessionUser } from "@/lib/auth";
 import { isStaffRole } from "@/lib/auth-session";
 import { getCurrentUserId } from "@/lib/current-user";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
+import { getMemberProfile } from "@/lib/member-profiles-store";
+import { membershipThemeTierFromPlan } from "@/lib/membership-theme";
 
 export default async function MemberLayout({
   children,
@@ -33,8 +35,18 @@ export default async function MemberLayout({
     ? viewedMember.email
     : session?.email || dashboard?.user.email || viewedMember?.email;
 
+  const profileUserId =
+    cookieUid || (session?.role === "MEMBER" ? session.id : null);
+  const profile = profileUserId ? await getMemberProfile(profileUserId) : null;
+  const membershipTier = membershipThemeTierFromPlan(profile?.plan);
+
   return (
-    <MemberShell access={access} memberName={name} memberEmail={email}>
+    <MemberShell
+      access={access}
+      memberName={name}
+      memberEmail={email}
+      membershipTier={membershipTier}
+    >
       {children}
     </MemberShell>
   );

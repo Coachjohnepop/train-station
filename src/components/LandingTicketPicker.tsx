@@ -53,21 +53,21 @@ export default function LandingTicketPicker({
   }
 
   return (
-    <section id="tickets" className="scroll-mt-4 bg-[#0a0612] px-3 py-10 sm:px-6 sm:py-14">
+    <section id="tickets" className="scroll-mt-4 bg-[var(--bg)] px-3 py-10 sm:px-6 sm:py-14">
       <div className="mx-auto max-w-4xl text-center">
         <TrainStationBrand variant="compact" className="mb-6" />
-        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#7c3aed]">Pick your ticket</p>
-        <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--accent)]">Pick your ticket</p>
+        <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text)] sm:text-3xl">
           Membership tickets
         </h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-[#9d8ab8]">
+        <p className="mx-auto mt-2 max-w-md text-sm text-[var(--muted)]">
           Tap a ticket on your phone — side by side, no guessing. We&apos;ll guide you through setup after you choose.
         </p>
       </div>
 
       <div
         className={`mx-auto mt-8 grid max-w-4xl grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 transition-all ${
-          highlightPaid ? "ring-2 ring-[#7c3aed]/40 rounded-2xl p-2" : ""
+          highlightPaid ? "ring-2 ring-[var(--tier-trim-strong)]/40 rounded-2xl p-2" : ""
         }`}
       >
         {tiers.map((tier) => (
@@ -75,8 +75,8 @@ export default function LandingTicketPicker({
             key={tier.id}
             type="button"
             onClick={() => handleTicketClick(tier.id)}
-            className={`group relative flex min-h-[200px] flex-col rounded-xl border bg-gradient-to-b p-2.5 text-left shadow-lg transition-all active:scale-[0.97] sm:min-h-[240px] sm:rounded-2xl sm:p-4 ${tier.accent} ${
-              tier.id !== "free" && highlightPaid ? "scale-[1.02] shadow-[#7c3aed]/20" : "hover:scale-[1.02]"
+            className={`group relative flex min-h-[200px] flex-col rounded-xl border p-2.5 text-left shadow-lg transition-all active:scale-[0.97] sm:min-h-[240px] sm:rounded-2xl sm:p-4 ${tier.themeClass} ${
+              tier.id !== "free" && highlightPaid ? "scale-[1.02] shadow-[var(--tier-trim-glow)]" : "hover:scale-[1.02]"
             }`}
           >
             <div className="pointer-events-none absolute right-2 top-2 h-3 w-3 rounded-full border border-dashed border-white/20 sm:right-3 sm:top-3 sm:h-4 sm:w-4" />
@@ -107,12 +107,12 @@ export default function LandingTicketPicker({
       <div className="mx-auto mt-6 flex max-w-md flex-col items-center gap-2 sm:flex-row sm:justify-center">
         <Link
           href="/join/questions"
-          className="text-sm font-medium text-[#7c3aed] hover:text-[#a78bfa] hover:underline"
+          className="text-sm font-medium text-[var(--accent)] hover:text-[var(--accent-hover)] hover:underline"
         >
           Not sure? 1-minute assessment →
         </Link>
         <span className="hidden text-[#3d2660] sm:inline">·</span>
-        <Link href="/login" className="text-sm text-[#9d8ab8] hover:text-white">
+        <Link href="/login" className="text-sm text-[var(--muted)] hover:text-[var(--text)]">
           Already have access? Sign in
         </Link>
       </div>
