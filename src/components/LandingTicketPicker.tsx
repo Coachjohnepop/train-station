@@ -54,7 +54,7 @@ export default function LandingTicketPicker({
   }
 
   return (
-    <section id="tickets" className="scroll-mt-4 bg-[var(--bg)] px-3 py-10 sm:px-6 sm:py-14">
+    <section id="tickets" className="scroll-mt-20 bg-[var(--bg)] px-3 py-10 sm:px-6 sm:py-14">
       <div className="mx-auto max-w-4xl text-center">
         <TrainStationBrand variant="compact" className="mb-6" />
         <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--accent)]">Pick your ticket</p>
@@ -74,6 +74,7 @@ export default function LandingTicketPicker({
         {tiers.map((tier) => (
           <button
             key={tier.id}
+            id={`ticket-${tier.id}`}
             type="button"
             onClick={() => handleTicketClick(tier.id)}
             className={`group relative flex min-h-[200px] flex-col rounded-xl border text-left shadow-lg transition-all active:scale-[0.97] sm:min-h-[280px] sm:rounded-2xl ${tier.themeClass} ${

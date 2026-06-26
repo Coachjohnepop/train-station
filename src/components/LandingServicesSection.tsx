@@ -16,7 +16,7 @@ export default function LandingServicesSection() {
   }
 
   return (
-    <section className="bg-[#0a0612] px-3 py-10 sm:px-6 sm:py-12">
+    <section id="services" className="scroll-mt-20 bg-[var(--bg)] px-3 py-10 sm:px-6 sm:py-12">
       <div className="mx-auto max-w-4xl text-center">
         <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#7c3aed]">
           Services &amp; extras

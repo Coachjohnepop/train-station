@@ -7,7 +7,7 @@ export default function ComingSoonPrograms({ compact = false }: { compact?: bool
   return (
     <section
       id="coming-soon-programs"
-      className={`border-t border-[#3d2660]/60 bg-[#140a22] ${compact ? "py-8 px-4" : "px-4 py-12 sm:px-6 sm:py-16"}`}
+      className={`scroll-mt-20 border-t border-[var(--border)] bg-[var(--surface)] ${compact ? "py-8 px-4" : "px-4 py-12 sm:px-6 sm:py-16"}`}
     >
       <div className="mx-auto max-w-5xl">
         <div className="text-center">

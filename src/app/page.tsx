@@ -3,9 +3,13 @@ import { cookies } from "next/headers";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { MEMBER_NAME_COOKIE } from "@/lib/current-user";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
+import ComingSoonPrograms from "@/components/ComingSoonPrograms";
 import LandingConversion from "@/components/LandingConversion";
-import LandingWelcomeBack from "@/components/LandingWelcomeBack";
-import WelcomeVideoPopover from "@/components/WelcomeVideoPopover";
+import LandingNav from "@/components/LandingNav";
+import LandingServicesSection from "@/components/LandingServicesSection";
+import LandingTicketPicker from "@/components/LandingTicketPicker";
+import LandingWelcomeBanner from "@/components/LandingWelcomeBanner";
+import ThemeAttributesSync from "@/components/ThemeAttributesSync";
 import { getResolvedLandingVideos } from "@/lib/landing-media-server";
 
 export default async function HomePage() {
@@ -24,20 +28,19 @@ export default async function HomePage() {
     const isCoach = isStaffRole(session.role);
 
     return (
-      <LandingWelcomeBack email={email} isCoach={isCoach}>
-        <div className="mb-4 flex flex-col items-center gap-3">
-          <h1 className="text-5xl sm:text-6xl font-semibold tracking-[-2px]">
-            Welcome back, {displayName}.
-          </h1>
-          <WelcomeVideoPopover
-            className="scale-90 sm:scale-100"
-            welcomeVideoUrl={landingVideos.welcomeVideoUrl}
-          >
-            Welcome — watch intro
-          </WelcomeVideoPopover>
-        </div>
-        <p className="text-xl text-[#9d8ab8]">Your programs, progress, and workouts are ready.</p>
-      </LandingWelcomeBack>
+      <div className="min-h-screen app-shell-bg">
+        <ThemeAttributesSync membershipTier="explorer" />
+        <LandingNav variant="welcome" />
+        <LandingWelcomeBanner
+          displayName={displayName}
+          email={email}
+          isCoach={isCoach}
+          welcomeVideoUrl={landingVideos.welcomeVideoUrl}
+        />
+        <LandingTicketPicker freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl} />
+        <LandingServicesSection />
+        <ComingSoonPrograms />
+      </div>
     );
   }
 
@@ -48,13 +51,13 @@ export default async function HomePage() {
         freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
       />
 
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-6 right-6 z-30 flex flex-col items-end gap-2">
         <Link
-          href="/signup"
-          className="group inline-flex items-center gap-2 rounded-2xl border border-[#3d2660] bg-[#0a0612]/90 px-5 py-2.5 text-sm font-semibold text-white shadow-xl backdrop-blur-md transition-all hover:border-[#7c3aed] hover:bg-[#1a1428] hover:shadow-2xl active:scale-[0.985]"
+          href="#tickets"
+          className="group inline-flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_90%,transparent)] px-5 py-2.5 text-sm font-semibold text-[var(--text)] shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:shadow-2xl active:scale-[0.985]"
         >
-          Join the waitlist
-          <span className="text-[#7c3aed] transition group-hover:translate-x-0.5">→</span>
+          View memberships
+          <span className="text-[var(--accent)] transition group-hover:translate-x-0.5">→</span>
         </Link>
       </div>
     </>
