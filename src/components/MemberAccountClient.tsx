@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import MembershipSeatArt from "@/components/MembershipSeatArt";
+import { paymentBillingSummary } from "@/lib/membership-theme";
+import type { SignupPlan } from "@/lib/signup-plans";
 
 type MembershipData = {
   plan: string;
@@ -61,15 +64,24 @@ export default function MemberAccountClient({ membership }: { membership: Member
       })
     : null;
 
+  const paidPlan = membership.plan !== "explorer";
+
   return (
     <div className="space-y-4">
-      <div className="card space-y-3">
+      <div className={`${paidPlan ? "card payment-seat-card" : "card"} space-y-3`}>
+        {paidPlan && <MembershipSeatArt plan={membership.plan as SignupPlan} className="w-full" />}
+        <div className={paidPlan ? "payment-seat-card__body space-y-3 !pt-0" : "space-y-3"}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Current plan</p>
             <h2 className="text-xl font-semibold">{membership.planLabel}</h2>
             {membership.priceDisplay && (
               <p className="mt-1 text-sm text-[var(--muted)]">{membership.priceDisplay}</p>
+            )}
+            {paidPlan && (
+              <p className="mt-2 text-xs text-[var(--muted)]">
+                {paymentBillingSummary(membership.plan as SignupPlan, membership.priceDisplay)}
+              </p>
             )}
           </div>
           <span
@@ -118,6 +130,7 @@ export default function MemberAccountClient({ membership }: { membership: Member
             </code>
           </p>
         )}
+        </div>
       </div>
 
       <div className="card space-y-3">

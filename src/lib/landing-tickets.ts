@@ -1,4 +1,4 @@
-import { ticketCardClass } from "@/lib/membership-theme";
+import { seatArtForTicketId, ticketCardClass } from "@/lib/membership-theme";
 import { COMING_SOON_PROGRAMS, MEMBERSHIP_OFFERS } from "@/lib/product-offers";
 
 export type TicketTierId = "free" | "coach-class" | "business-class" | "first-class";
@@ -10,6 +10,7 @@ export type TicketTier = {
   price: string;
   priceNote?: string;
   themeClass: string;
+  seatArtSrc: string | null;
   signupPlan: string;
   joinRec: string;
   perks: string[];
@@ -31,6 +32,7 @@ export const TICKET_TIERS: TicketTier[] = MEMBERSHIP_OFFERS.filter((o) =>
   price: offer.priceLabel,
   priceNote: offer.priceNote,
   themeClass: ticketCardClass(ticketIdByPlan[offer.id] || "free"),
+  seatArtSrc: seatArtForTicketId(ticketIdByPlan[offer.id] || "free"),
   signupPlan: offer.id,
   joinRec: offer.id,
   perks: offer.perks || [],

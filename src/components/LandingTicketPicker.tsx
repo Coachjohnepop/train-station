@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import FreeTicketModal from "@/components/FreeTicketModal";
+import MembershipSeatArt from "@/components/MembershipSeatArt";
 import TrainStationBrand from "@/components/TrainStationBrand";
 import {
   TICKET_TIERS,
@@ -75,31 +76,38 @@ export default function LandingTicketPicker({
             key={tier.id}
             type="button"
             onClick={() => handleTicketClick(tier.id)}
-            className={`group relative flex min-h-[200px] flex-col rounded-xl border p-2.5 text-left shadow-lg transition-all active:scale-[0.97] sm:min-h-[240px] sm:rounded-2xl sm:p-4 ${tier.themeClass} ${
+            className={`group relative flex min-h-[200px] flex-col rounded-xl border text-left shadow-lg transition-all active:scale-[0.97] sm:min-h-[280px] sm:rounded-2xl ${tier.themeClass} ${
               tier.id !== "free" && highlightPaid ? "scale-[1.02] shadow-[var(--tier-trim-glow)]" : "hover:scale-[1.02]"
             }`}
           >
-            <div className="pointer-events-none absolute right-2 top-2 h-3 w-3 rounded-full border border-dashed border-white/20 sm:right-3 sm:top-3 sm:h-4 sm:w-4" />
-            <div className="text-[9px] font-bold uppercase tracking-widest text-white/50 sm:text-[10px]">
-              {tier.subtitle}
+            {tier.seatArtSrc ? (
+              <MembershipSeatArt ticketId={tier.id} className="ticket-card__art" />
+            ) : (
+              <div className="ticket-card__art bg-gradient-to-br from-zinc-700/40 to-zinc-900/60" />
+            )}
+            <div className="ticket-card__body relative">
+              <div className="pointer-events-none absolute right-0 top-0 h-3 w-3 rounded-full border border-dashed border-white/20 sm:h-4 sm:w-4" />
+              <div className="text-[9px] font-bold uppercase tracking-widest text-white/50 sm:text-[10px]">
+                {tier.subtitle}
+              </div>
+              <div className="mt-1 text-sm font-bold leading-tight text-white sm:text-lg">{tier.title}</div>
+              <div className="mt-2 flex items-baseline gap-0.5">
+                <span className="text-xl font-semibold text-white sm:text-3xl">{tier.price}</span>
+                {tier.priceNote && (
+                  <span className="text-[10px] text-white/60 sm:text-xs">{tier.priceNote}</span>
+                )}
+              </div>
+              <ul className="mt-2 flex-1 space-y-0.5">
+                {tier.perks.slice(0, 3).map((p) => (
+                  <li key={p} className="text-[9px] leading-snug text-white/75 sm:text-xs">
+                    · {p}
+                  </li>
+                ))}
+              </ul>
+              <span className="mt-2 inline-block text-[10px] font-semibold text-[#c4b5fd] group-hover:text-white sm:text-xs">
+                {tier.id === "free" ? "Tap if you dare →" : "Select →"}
+              </span>
             </div>
-            <div className="mt-1 text-sm font-bold leading-tight text-white sm:text-lg">{tier.title}</div>
-            <div className="mt-2 flex items-baseline gap-0.5">
-              <span className="text-xl font-semibold text-white sm:text-3xl">{tier.price}</span>
-              {tier.priceNote && (
-                <span className="text-[10px] text-white/60 sm:text-xs">{tier.priceNote}</span>
-              )}
-            </div>
-            <ul className="mt-3 flex-1 space-y-1">
-              {tier.perks.map((p) => (
-                <li key={p} className="text-[9px] leading-snug text-white/75 sm:text-xs">
-                  · {p}
-                </li>
-              ))}
-            </ul>
-            <span className="mt-3 inline-block text-[10px] font-semibold text-[#c4b5fd] group-hover:text-white sm:text-xs">
-              {tier.id === "free" ? "Tap if you dare →" : "Select →"}
-            </span>
           </button>
         ))}
       </div>
