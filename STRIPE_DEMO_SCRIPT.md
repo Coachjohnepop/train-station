@@ -9,7 +9,8 @@
 | Landing ticket | Internal plan | Price | Stripe env var |
 |----------------|---------------|-------|----------------|
 | Coach Class | `member` | $25/mo | `STRIPE_PRICE_MEMBER` |
-| 1st Class | `pro` | $50/mo | `STRIPE_PRICE_PRO` |
+| Business Class | `business` | $50/mo | `STRIPE_PRICE_BUSINESS` |
+| 1st Class | `pro` | $850 one-time (8×1hr / 30 days + full access) | `STRIPE_PRICE_PRO` |
 
 Adult Strength and other included programs unlock **after** membership is paid — no separate Stripe product yet.
 
@@ -61,7 +62,8 @@ In the Train Station Vercel project → **Settings** → **Environment Variables
 | `STRIPE_SECRET_KEY` | `sk_test_…` or `sk_live_…` | Required for checkout |
 | `STRIPE_WEBHOOK_SECRET` | `whsec_…` | Required for auto mark-paid |
 | `STRIPE_PRICE_MEMBER` | `price_…` | Coach Class $25/mo |
-| `STRIPE_PRICE_PRO` | `price_…` | 1st Class $50/mo |
+| `STRIPE_PRICE_BUSINESS` | `price_…` | Business Class $50/mo |
+| `STRIPE_PRICE_PRO` | `price_…` | 1st Class $850 one-time |
 | `STRIPE_AUTO_APPROVE` | `true` | Optional — auto-approve member after pay |
 
 Redeploy after saving (or wait for the deploy from the latest `main` push).

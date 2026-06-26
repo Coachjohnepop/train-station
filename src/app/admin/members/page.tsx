@@ -57,12 +57,7 @@ function paymentMethodLabel(method: string | null): string {
 }
 
 function isPaidPlan(plan: string): boolean {
-  return (
-    plan === "member" ||
-    plan === "pro" ||
-    plan === "business" ||
-    plan === "first_class_1on1"
-  );
+  return plan === "member" || plan === "pro" || plan === "business";
 }
 
 export default function AdminMembersPage() {

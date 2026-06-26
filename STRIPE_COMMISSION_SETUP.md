@@ -27,7 +27,7 @@ Until a separate company bank exists, the **company feed** and Jeremy’s busine
 ## Step 1 — Stripe Dashboard (test mode first)
 
 1. [dashboard.stripe.com](https://dashboard.stripe.com) → toggle **Test mode**
-2. **Product catalog** → Coach Class **$25/mo**, 1st Class **$50/mo** → copy `price_…` IDs
+2. **Product catalog** → Coach Class **$25/mo**, Business Class **$50/mo**, 1st Class **$850 one-time** → copy `price_…` IDs
 3. **Developers → API keys** → `sk_test_…`
 4. **Developers → Webhooks** → `https://www.thetrainstation.co/api/stripe/webhook`  
    Events: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`  

@@ -42,7 +42,7 @@ export default function LandingTicketPicker({
       </div>
 
       <div
-        className={`mx-auto mt-8 grid max-w-5xl grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 sm:gap-3 transition-all ${
+        className={`mx-auto mt-8 grid max-w-4xl grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 transition-all ${
           highlightPaid ? "ring-2 ring-[#7c3aed]/40 rounded-2xl p-2" : ""
         }`}
       >

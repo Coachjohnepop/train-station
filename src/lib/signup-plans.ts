@@ -1,13 +1,7 @@
 import type { MemberTier } from "@/lib/access";
 import { SERVICE_OFFER_IDS } from "@/lib/product-offers";
 
-export const MEMBERSHIP_PLANS = [
-  "explorer",
-  "member",
-  "pro",
-  "business",
-  "first_class_1on1",
-] as const;
+export const MEMBERSHIP_PLANS = ["explorer", "member", "pro", "business"] as const;
 
 export type MembershipPlan = (typeof MEMBERSHIP_PLANS)[number];
 
@@ -17,16 +11,17 @@ export type SignupPlan = (typeof SIGNUP_PLANS)[number];
 export function normalizeSignupPlan(raw: string | null | undefined): SignupPlan {
   const v = (raw || "").trim().toLowerCase().replace(/-/g, "_");
   if (v === "member" || v === "coach_class") return "member";
-  if (v === "pro" || v === "first_class") return "pro";
-  if (v === "business" || v === "business_class") return "business";
   if (
+    v === "pro" ||
+    v === "first_class" ||
     v === "first_class_1on1" ||
     v === "first_class_1_on_1" ||
     v === "1on1" ||
     v === "intensive"
   ) {
-    return "first_class_1on1";
+    return "pro";
   }
+  if (v === "business" || v === "business_class") return "business";
   if (v === "team_consultation" || v === "team_consult") return "team_consultation";
   if (v === "speaking_fee" || v === "speaking") return "speaking_fee";
   if (v === "custom_training" || v === "custom") return "custom_training";
@@ -43,8 +38,6 @@ export function signupPlanLabel(plan: SignupPlan): string {
       return "1st Class";
     case "business":
       return "Business Class";
-    case "first_class_1on1":
-      return "1st Class 1-on-1 Intensive";
     case "team_consultation":
       return "Team Consultation Program";
     case "speaking_fee":
@@ -63,7 +56,7 @@ export function isSignupPlan(value: string): value is SignupPlan {
 }
 
 export function signupPlanToMemberTier(plan: SignupPlan): MemberTier {
-  if (plan === "pro" || plan === "business" || plan === "first_class_1on1") {
+  if (plan === "pro" || plan === "business") {
     return "first_class";
   }
   return "coach";

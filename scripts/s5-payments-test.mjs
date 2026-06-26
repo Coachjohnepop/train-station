@@ -62,11 +62,13 @@ async function main() {
     bad("payments/public exposes stripeEnabled");
   }
 
-  if (body?.coachClass?.priceLabel === "$25/mo") ok("Coach Class price label");
-  else bad("Coach Class price label", body?.coachClass?.priceLabel);
+  const coach = body?.memberships?.find((m) => m.plan === "member");
+  const first = body?.memberships?.find((m) => m.plan === "pro");
+  if (coach?.priceLabel?.includes("$25")) ok("Coach Class price label");
+  else bad("Coach Class price label", coach?.priceLabel);
 
-  if (body?.firstClass?.priceLabel === "$50/mo") ok("1st Class price label");
-  else bad("1st Class price label", body?.firstClass?.priceLabel);
+  if (first?.priceLabel?.includes("$850")) ok("1st Class price label");
+  else bad("1st Class price label", first?.priceLabel);
 
   if (body?.venmo && typeof body.venmo.hasQr === "boolean") ok("venmo block in payments/public");
   else bad("venmo block in payments/public");

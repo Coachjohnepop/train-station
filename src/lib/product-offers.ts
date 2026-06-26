@@ -98,36 +98,20 @@ export const MEMBERSHIP_OFFERS: ProductOfferDefinition[] = [
     label: "1st Class",
     shortLabel: "1st Class",
     category: "membership",
-    checkoutMode: "subscription",
-    priceLabel: "$50",
-    priceNote: "/mo",
-    description: "Everything in Coach Class plus live sessions with John, Steph, and Coach Byrd.",
-    stripePriceEnv: "STRIPE_PRICE_PRO",
-    accessTier: "first_class",
-    perks: [
-      "Everything in Coach Class",
-      "Live Zoom with John & Steph",
-      "20-min Zoom with Coach Byrd",
-    ],
-  },
-  {
-    id: "first_class_1on1",
-    label: "1st Class 1-on-1 Intensive",
-    shortLabel: "1-on-1 Intensive",
-    category: "package",
     checkoutMode: "one_time",
     priceLabel: "$850",
     priceNote: "one-time",
     description:
       "Eight 1-hour private sessions with Coach Byrd within a 30-day window, plus full 1st Class site access.",
-    stripePriceEnv: "STRIPE_PRICE_FIRST_CLASS_1ON1",
+    stripePriceEnv: "STRIPE_PRICE_PRO",
     defaultPriceCents: 85_000,
     accessTier: "first_class",
     intensivePackage: { sessionsTotal: 8, windowDays: 30 },
     perks: [
-      "8 × 1-hour 1-on-1 sessions",
+      "8 × 1-hour 1-on-1 sessions with Coach Byrd",
       "Use within 30 days",
       "Full 1st Class member access",
+      "Live Zoom with John & Steph",
     ],
   },
 ];
@@ -187,7 +171,13 @@ export function getOfferDefinition(id: string | null | undefined): ProductOfferD
 export function stripePriceIdForOffer(id: string): string | null {
   const offer = getOfferDefinition(id);
   if (!offer?.stripePriceEnv) return null;
-  return process.env[offer.stripePriceEnv]?.trim() || null;
+  const primary = process.env[offer.stripePriceEnv]?.trim();
+  if (primary) return primary;
+  // Legacy env name before 1st Class merged into single $850 package
+  if (id === "pro") {
+    return process.env.STRIPE_PRICE_FIRST_CLASS_1ON1?.trim() || null;
+  }
+  return null;
 }
 
 export function isQuoteOffer(id: string): boolean {

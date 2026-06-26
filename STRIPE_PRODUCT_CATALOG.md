@@ -2,52 +2,37 @@
 
 Create these in **Stripe Dashboard → Product catalog** (test mode first). Copy each **Price ID** (`price_…`) into Vercel.
 
-## Membership subscriptions (recurring monthly)
+## Membership
 
-| Product | Price | Vercel env var |
-|---------|-------|----------------|
-| Coach Class | $25/mo | `STRIPE_PRICE_MEMBER` |
-| Business Class | $50/mo | `STRIPE_PRICE_BUSINESS` |
-| 1st Class | $50/mo | `STRIPE_PRICE_PRO` |
+| Product | Stripe type | Price | Vercel env var |
+|---------|-------------|-------|----------------|
+| Coach Class | Recurring monthly | $25 | `STRIPE_PRICE_MEMBER` |
+| Business Class | Recurring monthly | $50 | `STRIPE_PRICE_BUSINESS` |
+| **1st Class** | **One-time** | **$850** | `STRIPE_PRICE_PRO` |
 
-## One-time packages
+**1st Class includes:** 8 × 1-hour private sessions with Coach Byrd (use within 30 days) + full 1st Class site access.
 
-| Product | Price | Vercel env var |
-|---------|-------|----------------|
-| 1st Class 1-on-1 Intensive | $850.00 (8 × 1hr sessions / 30 days + full site access) | `STRIPE_PRICE_FIRST_CLASS_1ON1` |
+Legacy alias: `STRIPE_PRICE_FIRST_CLASS_1ON1` still works if already set.
 
 ## Merchandise (per unit)
 
-Create one Stripe product per SKU (e.g. T-shirt, hat). Either:
-
-- Set `stripePriceId` per item in **Admin → Platform → Offers**, or
-- Use a default price: `STRIPE_PRICE_MERCH_DEFAULT`
-
-Checkout supports quantity 1–99.
+One Stripe product per SKU — set `stripePriceId` per item in **Admin → Platform → Offers**, or use `STRIPE_PRICE_MERCH_DEFAULT`.
 
 ## Custom pricing (no fixed Stripe product)
 
 | Offer | How it works |
 |-------|----------------|
-| **Team Consultation** | Quote flow → lead in Admin; send custom Stripe Invoice or Payment Link when priced |
+| **Team Consultation** | Quote flow → lead in Admin; custom Invoice when priced |
 | **Speaking Fee** | Same quote flow |
-| **Custom Priced Training** | Coach builds offer in **Admin → Offers** → member pays via dynamic Checkout `price_data` |
+| **Custom Priced Training** | **Admin → Offers** → coach sets parameters + price → checkout link |
 
-## Quick Stripe steps per product
-
-1. **Add product** → name + description
-2. **Pricing** → Recurring (memberships) or One-time (intensive, merch)
-3. Copy **price_…** → matching Vercel env var
-4. Redeploy
-
-## Full Vercel env block
+## Vercel env block
 
 ```bash
 STRIPE_PRICE_MEMBER=price_…
-STRIPE_PRICE_PRO=price_…
 STRIPE_PRICE_BUSINESS=price_…
-STRIPE_PRICE_FIRST_CLASS_1ON1=price_…
-STRIPE_PRICE_MERCH_DEFAULT=price_…   # optional default merch price
+STRIPE_PRICE_PRO=price_…              # 1st Class $850 one-time
+STRIPE_PRICE_MERCH_DEFAULT=price_…    # optional
 ```
 
 See also: `STRIPE_DEMO_SCRIPT.md`, `STRIPE_COMMISSION_SETUP.md`
