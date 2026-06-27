@@ -5,6 +5,7 @@ import { getStripe } from "@/lib/stripe";
 import {
   checkoutCustomerId,
   persistCheckoutPaymentMethod,
+  promoteCustomerFromInvoice,
 } from "@/lib/stripe-payment-method-persist";
 import { claimStripeWebhookEvent } from "@/lib/stripe-webhook-events";
 import {
@@ -75,6 +76,8 @@ export async function POST(request: Request) {
 
       const sub = await stripe.subscriptions.retrieve(subscriptionRef);
       if (!isSubscriptionActive(sub)) break;
+
+      await promoteCustomerFromInvoice(invoice);
 
       const userId = sub.metadata?.userId;
       if (userId) {

@@ -34,7 +34,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Stripe is not configured." }, { status: 503 });
   }
 
-  const checkout = await stripe.checkout.sessions.retrieve(parsed.data.sessionId);
+  const checkout = await stripe.checkout.sessions.retrieve(parsed.data.sessionId, {
+    expand: ["subscription", "payment_intent"],
+  });
   const userId = checkout.metadata?.userId || checkout.client_reference_id;
   if (!userId || userId !== sessionUser.id) {
     return NextResponse.json({ error: "Checkout session does not match this account." }, { status: 403 });

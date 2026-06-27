@@ -8,7 +8,7 @@ import {
   getOfferDefinition,
   type CustomTrainingParameters,
 } from "@/lib/product-offers";
-import { updateMemberProfile } from "@/lib/member-profiles-store";
+import { getMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
 import { resolveStripePriceId } from "@/lib/pricing-catalog";
 import type { SignupPlan } from "@/lib/signup-plans";
 import { signupPlanLabel } from "@/lib/signup-plans";
@@ -18,6 +18,7 @@ import {
   customerHasSavedPaymentMethod,
   ensureStripeCustomer,
 } from "@/lib/stripe-customer";
+import { promoteCustomerPaymentMethodsForCheckout } from "@/lib/stripe-payment-method-persist";
 
 type StripeClient = import("stripe").default;
 
@@ -147,7 +148,16 @@ async function checkoutCustomerFields(input: {
     };
   }
 
-  const hasSavedCard = await customerHasSavedPaymentMethod(customerId);
+  const profile = await getMemberProfile(input.userId);
+  await promoteCustomerPaymentMethodsForCheckout(
+    customerId,
+    profile?.stripeSubscriptionId,
+  );
+
+  const hasSavedCard = await customerHasSavedPaymentMethod(
+    customerId,
+    profile?.stripeSubscriptionId,
+  );
   return {
     customerId,
     hasSavedCard,
@@ -157,7 +167,7 @@ async function checkoutCustomerFields(input: {
       saved_payment_method_options: {
         payment_method_save: "enabled",
         payment_method_remove: "enabled",
-        allow_redisplay_filters: ["always", "limited"],
+        allow_redisplay_filters: ["always", "limited", "unspecified"],
       },
     },
   };

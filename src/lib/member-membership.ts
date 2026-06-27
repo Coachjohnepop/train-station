@@ -5,6 +5,7 @@ import { isPaidSignupPlan, isStripePaymentsEnabled } from "@/lib/member-gates";
 import { getEffectiveMembershipOffer } from "@/lib/pricing-catalog";
 import { getOfferDefinition } from "@/lib/product-offers";
 import { customerHasSavedPaymentMethod } from "@/lib/stripe-customer";
+import { promoteCustomerPaymentMethodsForCheckout } from "@/lib/stripe-payment-method-persist";
 import {
   signupPlanLabel,
   type MembershipPlan,
@@ -64,6 +65,13 @@ export async function getMemberMembershipSnapshot(
 
   const isSubscription = offer?.checkoutMode === "subscription";
   const stripeReady = isStripePaymentsEnabled();
+  if (profile.stripeCustomerId) {
+    await promoteCustomerPaymentMethodsForCheckout(
+      profile.stripeCustomerId,
+      profile.stripeSubscriptionId,
+    );
+  }
+
   const hasSavedPaymentMethod = profile.stripeCustomerId
     ? await customerHasSavedPaymentMethod(
         profile.stripeCustomerId,

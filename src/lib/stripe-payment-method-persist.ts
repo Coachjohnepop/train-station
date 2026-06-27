@@ -11,9 +11,46 @@ function sessionCustomerId(session: Stripe.Checkout.Session): string | null {
   return null;
 }
 
+async function paymentMethodIdFromSubscription(
+  stripe: Stripe,
+  subscriptionId: string,
+): Promise<string | null> {
+  const sub = await stripe.subscriptions.retrieve(subscriptionId, {
+    expand: ["default_payment_method", "latest_invoice.payment_intent.payment_method"],
+  });
+
+  const dpm = sub.default_payment_method;
+  if (typeof dpm === "string") return dpm;
+  if (dpm && typeof dpm === "object") return dpm.id;
+
+  const latestInvoice = sub.latest_invoice;
+  if (latestInvoice && typeof latestInvoice === "object") {
+    const pi = (latestInvoice as Stripe.Invoice & {
+      payment_intent?: string | Stripe.PaymentIntent | null;
+    }).payment_intent;
+    if (pi && typeof pi === "object") {
+      const pm = pi.payment_method;
+      if (typeof pm === "string") return pm;
+      if (pm && typeof pm === "object") return pm.id;
+    }
+  }
+
+  return null;
+}
+
+async function newestCustomerCardId(stripe: Stripe, customerId: string): Promise<string | null> {
+  const methods = await stripe.paymentMethods.list({
+    customer: customerId,
+    type: "card",
+    limit: 10,
+  });
+  return methods.data[0]?.id ?? null;
+}
+
 async function paymentMethodIdFromCheckout(
   stripe: Stripe,
   session: Stripe.Checkout.Session,
+  customerId: string,
 ): Promise<string | null> {
   const subscriptionId =
     typeof session.subscription === "string"
@@ -21,12 +58,8 @@ async function paymentMethodIdFromCheckout(
       : session.subscription?.id ?? null;
 
   if (subscriptionId) {
-    const sub = await stripe.subscriptions.retrieve(subscriptionId, {
-      expand: ["default_payment_method"],
-    });
-    const dpm = sub.default_payment_method;
-    if (typeof dpm === "string") return dpm;
-    if (dpm && typeof dpm === "object") return dpm.id;
+    const fromSub = await paymentMethodIdFromSubscription(stripe, subscriptionId);
+    if (fromSub) return fromSub;
   }
 
   const paymentIntentId =
@@ -43,7 +76,68 @@ async function paymentMethodIdFromCheckout(
     if (pm && typeof pm === "object") return pm.id;
   }
 
-  return null;
+  return newestCustomerCardId(stripe, customerId);
+}
+
+/**
+ * Subscription checkouts save cards with allow_redisplay=limited unless the member
+ * checks "save for future use". Promote attached cards so embedded Checkout prefills them.
+ */
+export async function promoteCustomerPaymentMethodsForCheckout(
+  customerId: string,
+  subscriptionId?: string | null,
+): Promise<void> {
+  const stripe = getStripe();
+  if (!stripe) return;
+
+  let preferredId: string | null = null;
+  if (subscriptionId) {
+    preferredId = await paymentMethodIdFromSubscription(stripe, subscriptionId);
+  }
+
+  const methods = await stripe.paymentMethods.list({
+    customer: customerId,
+    type: "card",
+    limit: 20,
+  });
+
+  if (!preferredId && methods.data.length > 0) {
+    preferredId = methods.data[0].id;
+  }
+
+  for (const pm of methods.data) {
+    if (pm.allow_redisplay === "always") continue;
+    try {
+      await stripe.paymentMethods.update(pm.id, { allow_redisplay: "always" });
+    } catch (e: unknown) {
+      console.error("[stripe] payment method allow_redisplay promote failed:", pm.id, e);
+    }
+  }
+
+  if (!preferredId) return;
+
+  try {
+    const customer = await stripe.customers.retrieve(customerId, {
+      expand: ["invoice_settings.default_payment_method"],
+    });
+    if ("deleted" in customer && customer.deleted) return;
+
+    const existingDefault = customer.invoice_settings?.default_payment_method;
+    const existingId =
+      typeof existingDefault === "string"
+        ? existingDefault
+        : existingDefault && typeof existingDefault === "object"
+          ? existingDefault.id
+          : null;
+
+    if (existingId !== preferredId) {
+      await stripe.customers.update(customerId, {
+        invoice_settings: { default_payment_method: preferredId },
+      });
+    }
+  } catch (e: unknown) {
+    console.error("[stripe] customer default payment method promote failed:", e);
+  }
 }
 
 /** Attach checkout PM to customer and allow prefilling on future embedded checkouts. */
@@ -56,28 +150,38 @@ export async function persistCheckoutPaymentMethod(
   const customerId = sessionCustomerId(session);
   if (!customerId) return;
 
-  const paymentMethodId = await paymentMethodIdFromCheckout(stripe, session);
-  if (!paymentMethodId) return;
+  const subscriptionId =
+    typeof session.subscription === "string"
+      ? session.subscription
+      : session.subscription?.id ?? null;
 
-  try {
-    const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
-    if (!pm.customer) {
-      await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
-    } else if (pm.customer !== customerId) {
-      return;
+  let paymentMethodId = await paymentMethodIdFromCheckout(stripe, session, customerId);
+
+  if (!paymentMethodId) {
+    // Subscription first invoice can lag behind checkout.session.completed — retry briefly.
+    for (let attempt = 0; attempt < 3 && !paymentMethodId; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+      paymentMethodId = await paymentMethodIdFromCheckout(stripe, session, customerId);
     }
-  } catch (e: unknown) {
-    console.error("[stripe] payment method attach failed:", e);
-    return;
   }
 
-  try {
-    await stripe.paymentMethods.update(paymentMethodId, {
-      allow_redisplay: "always",
-    });
-  } catch (e: unknown) {
-    console.error("[stripe] payment method allow_redisplay update failed:", e);
+  if (paymentMethodId) {
+    try {
+      const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+      if (!pm.customer) {
+        await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
+      } else if (pm.customer !== customerId) {
+        return;
+      }
+    } catch (e: unknown) {
+      console.error("[stripe] payment method attach failed:", e);
+      paymentMethodId = null;
+    }
   }
+
+  await promoteCustomerPaymentMethodsForCheckout(customerId, subscriptionId);
+
+  if (!paymentMethodId) return;
 
   try {
     await stripe.customers.update(customerId, {
@@ -86,6 +190,44 @@ export async function persistCheckoutPaymentMethod(
   } catch (e: unknown) {
     console.error("[stripe] customer default payment method update failed:", e);
   }
+}
+
+export async function promoteCustomerFromInvoice(
+  invoice: Stripe.Invoice,
+): Promise<void> {
+  const stripe = getStripe();
+  if (!stripe) return;
+
+  const customerId =
+    typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id ?? null;
+  if (!customerId) return;
+
+  const subscriptionRef = (invoice as { subscription?: string | null }).subscription;
+  const subscriptionId = typeof subscriptionRef === "string" ? subscriptionRef : null;
+
+  let paymentMethodId: string | null = null;
+  const piRef = (invoice as { payment_intent?: string | Stripe.PaymentIntent | null }).payment_intent;
+  if (typeof piRef === "string") {
+    const pi = await stripe.paymentIntents.retrieve(piRef, { expand: ["payment_method"] });
+    const pm = pi.payment_method;
+    paymentMethodId = typeof pm === "string" ? pm : pm && typeof pm === "object" ? pm.id : null;
+  } else if (piRef && typeof piRef === "object") {
+    const pm = piRef.payment_method;
+    paymentMethodId = typeof pm === "string" ? pm : pm && typeof pm === "object" ? pm.id : null;
+  }
+
+  if (paymentMethodId) {
+    try {
+      const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+      if (!pm.customer) {
+        await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
+      }
+    } catch (e: unknown) {
+      console.error("[stripe] invoice payment method attach failed:", e);
+    }
+  }
+
+  await promoteCustomerPaymentMethodsForCheckout(customerId, subscriptionId);
 }
 
 export function checkoutCustomerId(session: Stripe.Checkout.Session): string | null {

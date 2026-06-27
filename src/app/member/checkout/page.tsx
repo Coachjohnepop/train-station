@@ -204,8 +204,8 @@ function MemberCheckoutInner() {
                 </button>
                 <p className="text-center text-[11px] text-[var(--muted)]">
                   {hasSavedCard
-                    ? "Your saved card on file with Stripe may be available for one-tap checkout."
-                    : "Card details are stored securely by Stripe — we never see or store your full card number."}
+                    ? "Your saved card should appear in checkout — pick it for a faster second purchase."
+                    : "After your first payment, check “save for future purchases” in checkout to reuse your card next time."}
                 </p>
               </div>
             )}
