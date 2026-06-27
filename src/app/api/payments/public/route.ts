@@ -3,6 +3,7 @@ import { listMerchandiseSkus } from "@/lib/merchandise-store";
 import { getLandingMedia } from "@/lib/landing-media-store";
 import { isStripePaymentsEnabled } from "@/lib/member-gates";
 import { getEffectiveMembershipOffers, resolveStripePriceId } from "@/lib/pricing-catalog";
+import { diagnoseMembershipStripePrices } from "@/lib/stripe-price-diagnostics";
 import { isStripeTestMode } from "@/lib/stripe-price-ids";
 import { SERVICE_OFFERS } from "@/lib/product-offers";
 
@@ -28,11 +29,17 @@ export async function GET() {
     }));
 
   const memberPriceId = await resolveStripePriceId("member");
+  const stripeDiag = isStripeTestMode() ? await diagnoseMembershipStripePrices() : null;
 
   return NextResponse.json({
     stripeEnabled,
     ...(isStripeTestMode()
-      ? { stripeTestMode: true, memberPriceId, memberPriceLen: memberPriceId?.length ?? 0 }
+      ? {
+          stripeTestMode: true,
+          memberPriceId,
+          memberPriceLen: memberPriceId?.length ?? 0,
+          stripeDiag,
+        }
       : {}),
     memberships,
     services: SERVICE_OFFERS.map((o) => ({
