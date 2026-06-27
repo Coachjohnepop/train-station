@@ -158,12 +158,6 @@ function MemberCheckoutInner() {
     }
   }
 
-  useEffect(() => {
-    if (paymentsLoading || canceled || !stripeReady || venmoReady || error || checkoutOpen) return;
-    void startCheckout();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paymentsLoading, canceled, stripeReady, venmoReady]);
-
   const showMembershipCard = isPaidOffer(plan);
   const publishableKey = payments?.stripePublishableKey || "";
 
@@ -199,8 +193,8 @@ function MemberCheckoutInner() {
                       : loading
                         ? "Preparing checkout…"
                         : checkoutOpen
-                          ? "Checkout open"
-                          : "Continue to secure checkout"}
+                          ? "Payment window open"
+                          : "Proceed to payment"}
                 </button>
                 <p className="text-center text-[11px] text-[var(--muted)]">
                   {hasSavedCard
@@ -234,9 +228,14 @@ function MemberCheckoutInner() {
                 </p>
               </div>
             )}
-            <Link href="/" className="block text-center text-xs text-[var(--muted)] hover:text-accent">
-              Back to home
-            </Link>
+            <div className="flex flex-col items-center gap-2 text-xs text-[var(--muted)]">
+              <Link href="/#tickets" className="hover:text-accent">
+                Compare train seats
+              </Link>
+              <Link href="/" className="hover:text-accent">
+                Back to home
+              </Link>
+            </div>
           </MembershipPaymentCard>
         ) : (
           <div className="card space-y-5 p-6">
@@ -256,7 +255,7 @@ function MemberCheckoutInner() {
                   ? "Confirming payment…"
                   : loading
                     ? "Preparing checkout…"
-                    : "Continue to secure checkout"}
+                    : "Proceed to payment"}
               </button>
             )}
           </div>

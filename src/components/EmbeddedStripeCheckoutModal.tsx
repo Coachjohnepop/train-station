@@ -78,20 +78,20 @@ export default function EmbeddedStripeCheckoutModal({
 
   return (
     <div
-      className="fixed inset-0 z-[110] flex items-end justify-center bg-black/80 p-2 backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-[110] flex items-end justify-center bg-black/70 p-2 backdrop-blur-sm sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="stripe-checkout-title"
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl"
+        className="flex max-h-[min(78vh,640px)] w-full max-w-[min(100%,22rem)] flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl sm:max-w-sm"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-[var(--border)] px-4 py-3">
+        <div className="flex shrink-0 items-center justify-between border-b border-[var(--border)] px-3 py-2.5">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent">Secure checkout</p>
-            <h2 id="stripe-checkout-title" className="text-base font-semibold">
+            <h2 id="stripe-checkout-title" className="text-sm font-semibold">
               Complete payment
             </h2>
           </div>
@@ -105,16 +105,16 @@ export default function EmbeddedStripeCheckoutModal({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
           {mounting && (
-            <p className="py-8 text-center text-sm text-[var(--muted)]">Loading secure payment form…</p>
+            <p className="py-6 text-center text-xs text-[var(--muted)]">Loading payment form…</p>
           )}
           {mountError && (
-            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
               {mountError}
             </p>
           )}
-          <div ref={containerRef} className="min-h-[420px]" />
+          <div ref={containerRef} className="min-h-[300px] sm:min-h-[340px]" />
         </div>
       </div>
     </div>
