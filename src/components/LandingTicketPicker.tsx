@@ -11,17 +11,22 @@ import {
   type TicketTier,
   type TicketTierId,
 } from "@/lib/landing-tickets";
+import { usePurchaseAuth } from "@/hooks/usePurchaseAuth";
+import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 
 export default function LandingTicketPicker({
   freeChastiseVideoUrl = null,
   welcomeVideoUrl = null,
+  purchaseAuth: purchaseAuthProp,
 }: {
   freeChastiseVideoUrl?: string | null;
   welcomeVideoUrl?: string | null;
+  purchaseAuth?: PurchaseAuth;
 }) {
   const [freeModalOpen, setFreeModalOpen] = useState(false);
   const [highlightPaid, setHighlightPaid] = useState(false);
   const [tiers, setTiers] = useState<TicketTier[]>(TICKET_TIERS);
+  const purchaseAuth = usePurchaseAuth(purchaseAuthProp);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,7 +53,7 @@ export default function LandingTicketPicker({
     }
     const tier = tiers.find((t) => t.id === tierId);
     if (!tier) return;
-    window.location.href = `/signup?plan=${encodeURIComponent(tier.signupPlan)}`;
+    window.location.href = purchaseHref(tier.signupPlan, purchaseAuth);
   }
 
   function scrollToTickets() {
@@ -135,6 +140,7 @@ export default function LandingTicketPicker({
         open={freeModalOpen}
         freeChastiseVideoUrl={freeChastiseVideoUrl}
         welcomeVideoUrl={welcomeVideoUrl}
+        purchaseAuth={purchaseAuth}
         onClose={() => setFreeModalOpen(false)}
         onUpgrade={() => {
           setHighlightPaid(true);

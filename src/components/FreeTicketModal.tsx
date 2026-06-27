@@ -6,6 +6,7 @@ import { setBackgroundMusicOverlay } from "@/lib/background-music-control";
 import { isIosDevice } from "@/lib/ios-device";
 import { landingVideoEmbedSrc } from "@/lib/landing-media";
 import { postYoutubeEmbedCommand } from "@/lib/youtube-embed-control";
+import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 
 const RICKROLL_MS = 10_000;
 const FADE_MS = 1_500;
@@ -17,12 +18,14 @@ export default function FreeTicketModal({
   onUpgrade,
   freeChastiseVideoUrl = null,
   welcomeVideoUrl = null,
+  purchaseAuth = { signedIn: false },
 }: {
   open: boolean;
   onClose: () => void;
   onUpgrade: () => void;
   freeChastiseVideoUrl?: string | null;
   welcomeVideoUrl?: string | null;
+  purchaseAuth?: PurchaseAuth;
 }) {
   const [needsTapToPlay] = useState(() => isIosDevice());
   const [playbackStarted, setPlaybackStarted] = useState(false);
@@ -201,7 +204,7 @@ export default function FreeTicketModal({
             Show me Coach Class &amp; 1st Class →
           </button>
           <Link
-            href="/signup?plan=explorer"
+            href={purchaseHref("explorer", purchaseAuth)}
             className="inline-flex h-11 items-center justify-center rounded-full border border-[#3d2660] text-sm font-semibold text-[#9d8ab8] hover:text-white hover:border-[#7c3aed]/40 transition"
             onClick={onClose}
           >

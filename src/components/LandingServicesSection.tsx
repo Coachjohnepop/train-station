@@ -1,18 +1,19 @@
 "use client";
 
+import { usePurchaseAuth } from "@/hooks/usePurchaseAuth";
+import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 import { SERVICE_OFFERS } from "@/lib/product-offers";
 
-export default function LandingServicesSection() {
+export default function LandingServicesSection({
+  purchaseAuth: purchaseAuthProp,
+}: {
+  purchaseAuth?: PurchaseAuth;
+}) {
+  const purchaseAuth = usePurchaseAuth(purchaseAuthProp);
+
   function openOffer(plan: string) {
-    if (plan === "merchandise") {
-      window.location.href = "/signup?plan=merchandise";
-      return;
-    }
-    if (plan === "custom_training") {
-      window.location.href = "/login?redirect=%2Fmember%2Fcheckout%3Fplan%3Dcustom_training";
-      return;
-    }
-    window.location.href = `/signup?plan=${encodeURIComponent(plan)}&quote=1`;
+    const quote = plan !== "merchandise" && plan !== "custom_training";
+    window.location.href = purchaseHref(plan, purchaseAuth, { quote });
   }
 
   return (

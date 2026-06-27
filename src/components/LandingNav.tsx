@@ -5,14 +5,22 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import ThemeModeToggle from "@/components/ThemeModeToggle";
 import TrainStationBrand from "@/components/TrainStationBrand";
+import { usePurchaseAuth } from "@/hooks/usePurchaseAuth";
 import {
   LANDING_NAV_SECTIONS,
   buildMembershipNavItems,
   landingNavHref,
   type LandingMembershipNavItem,
 } from "@/lib/landing-nav";
+import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 
-export default function LandingNav({ variant = "public" }: { variant?: "public" | "welcome" }) {
+export default function LandingNav({
+  variant = "public",
+  purchaseAuth: purchaseAuthProp,
+}: {
+  variant?: "public" | "welcome";
+  purchaseAuth?: PurchaseAuth;
+}) {
   const pathname = usePathname();
   const onHomePage = pathname === "/";
   const [membershipsOpen, setMembershipsOpen] = useState(false);
@@ -20,6 +28,7 @@ export default function LandingNav({ variant = "public" }: { variant?: "public" 
   const [memberships, setMemberships] = useState<LandingMembershipNavItem[]>(() =>
     buildMembershipNavItems(null),
   );
+  const purchaseAuth = usePurchaseAuth(purchaseAuthProp);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,6 +61,19 @@ export default function LandingNav({ variant = "public" }: { variant?: "public" 
     el?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  function membershipAction(tier: LandingMembershipNavItem) {
+    if (purchaseAuth.signedIn) {
+      closeMenus();
+      window.location.href = purchaseHref(tier.signupPlan, purchaseAuth);
+      return;
+    }
+    if (onHomePage && tier.href.startsWith("#")) {
+      scrollToHash(tier.href);
+      return;
+    }
+    closeMenus();
+  }
+
   return (
     <header className="landing-nav sticky top-0 z-40 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_82%,transparent)] backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
@@ -82,11 +104,15 @@ export default function LandingNav({ variant = "public" }: { variant?: "public" 
                 {memberships.map((tier) => (
                   <Link
                     key={tier.id}
-                    href={landingNavHref(tier.href, onHomePage)}
+                    href={
+                      purchaseAuth.signedIn
+                        ? purchaseHref(tier.signupPlan, purchaseAuth)
+                        : landingNavHref(tier.href, onHomePage)
+                    }
                     onClick={(e) => {
-                      if (onHomePage && tier.href.startsWith("#")) {
+                      if (purchaseAuth.signedIn || (onHomePage && tier.href.startsWith("#"))) {
                         e.preventDefault();
-                        scrollToHash(tier.href);
+                        membershipAction(tier);
                       }
                     }}
                     className="flex items-center justify-between gap-3 px-3 py-2 text-sm transition hover:bg-[var(--surface-2)]"
@@ -177,11 +203,15 @@ export default function LandingNav({ variant = "public" }: { variant?: "public" 
             {memberships.map((tier) => (
               <Link
                 key={tier.id}
-                href={landingNavHref(tier.href, onHomePage)}
+                href={
+                  purchaseAuth.signedIn
+                    ? purchaseHref(tier.signupPlan, purchaseAuth)
+                    : landingNavHref(tier.href, onHomePage)
+                }
                 onClick={(e) => {
-                  if (onHomePage && tier.href.startsWith("#")) {
+                  if (purchaseAuth.signedIn || (onHomePage && tier.href.startsWith("#"))) {
                     e.preventDefault();
-                    scrollToHash(tier.href);
+                    membershipAction(tier);
                   } else {
                     closeMenus();
                   }

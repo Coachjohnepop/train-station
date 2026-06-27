@@ -30,7 +30,10 @@ export default async function HomePage() {
     return (
       <div className="min-h-screen app-shell-bg">
         <ThemeAttributesSync membershipTier="explorer" />
-        <LandingNav variant="welcome" />
+        <LandingNav
+          variant="welcome"
+          purchaseAuth={{ signedIn: true, role: session.role }}
+        />
         <LandingWelcomeBanner
           displayName={displayName}
           email={email}
@@ -40,8 +43,9 @@ export default async function HomePage() {
         <LandingTicketPicker
           freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
           welcomeVideoUrl={landingVideos.welcomeVideoUrl}
+          purchaseAuth={{ signedIn: true, role: session.role }}
         />
-        <LandingServicesSection />
+        <LandingServicesSection purchaseAuth={{ signedIn: true, role: session.role }} />
         <ComingSoonPrograms />
       </div>
     );

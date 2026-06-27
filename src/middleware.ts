@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifySessionTokenEdge, SESSION_COOKIE } from "@/lib/auth-session-edge";
+import { isStaffRole } from "@/lib/auth-session";
+import { purchaseHref } from "@/lib/member-purchase-path";
 
 const NEEDS_ONBOARD_COOKIE = "ts_needs_onboard";
 const SIGNUP_PLAN_COOKIE = "ts_signup_plan";
@@ -64,6 +66,24 @@ export async function middleware(request: NextRequest) {
       return NextResponse.json({ error: "Sign in required." }, { status: 401 });
     }
 
+    return NextResponse.next();
+  }
+
+  if (pathname === "/signup" || pathname.startsWith("/signup/")) {
+    const session = await sessionFromRequest(request);
+    if (session) {
+      const plan = request.nextUrl.searchParams.get("plan");
+      const interest = request.nextUrl.searchParams.get("interest");
+      const isWaitlistOnly = Boolean(interest && !plan);
+      if (!isWaitlistOnly) {
+        const href = purchaseHref(plan || "explorer", { signedIn: true, role: session.role }, {
+          quote: request.nextUrl.searchParams.get("quote") === "1",
+        });
+        if (session.role === "MEMBER" || isStaffRole(session.role)) {
+          return NextResponse.redirect(new URL(href, request.url));
+        }
+      }
+    }
     return NextResponse.next();
   }
 
