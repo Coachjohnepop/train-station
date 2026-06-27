@@ -126,7 +126,12 @@ function SignupForm() {
       }
 
       if (!res.ok) {
-        setError(data.error || "Something went wrong — try again.");
+        const msg = data.error || "Something went wrong — try again.";
+        if (msg.includes("sign-in failed")) {
+          setError(`${msg} Try signing in — your account may already exist.`);
+          return;
+        }
+        setError(msg);
         return;
       }
 
@@ -186,7 +191,7 @@ function SignupForm() {
             {error && (
               <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
                 {error}{" "}
-                {error.includes("exists") && (
+                {(error.includes("exists") || error.includes("sign-in failed")) && (
                   <Link href={`/login?email=${encodeURIComponent(email)}`} className="underline">
                     Sign in
                   </Link>

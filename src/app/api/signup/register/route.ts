@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   applyNewMemberOnboardingCookie,
   applySessionCookies,
-  authenticateCredentials,
+  sessionFromStoredAccount,
   syncMemberGateCookies,
 } from "@/lib/auth";
 import { memberCheckoutPath } from "@/lib/member-gates";
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const sessionUser = await authenticateCredentials(email, password || "");
+    const sessionUser = sessionFromStoredAccount(email, account, password || "");
     if (!sessionUser) {
       return NextResponse.json({ error: "Account created but sign-in failed." }, { status: 500 });
     }

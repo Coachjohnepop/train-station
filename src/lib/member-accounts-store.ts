@@ -57,7 +57,8 @@ export async function getAllSignInAccounts(): Promise<
   Record<string, { userId: string; role: UserRole; passwordHash?: string; name?: string; phone?: string }>
 > {
   const seed = loadSeedAccounts();
-  const registered = await getRegisteredStore({ preferFresh: true });
+  // Memory-first — preferFresh here caused read-after-write races right after signup.
+  const registered = await getRegisteredStore();
   const merged: Record<
     string,
     { userId: string; role: UserRole; passwordHash?: string; name?: string; phone?: string }

@@ -63,6 +63,27 @@ function sessionFromDemoAccount(normalized: string, account: DemoAccount): Sessi
   };
 }
 
+/** Sign in from an account record already in hand (avoids blob re-read after register). */
+export function sessionFromStoredAccount(
+  email: string,
+  account: {
+    userId: string;
+    role: UserRole;
+    name?: string | null;
+    passwordHash?: string | null;
+  },
+  password: string,
+): SessionUser | null {
+  const normalized = normalizeAccountEmail(email);
+  if (!normalized || !passwordAccepted(password, account.passwordHash ?? null)) return null;
+  return sessionFromDemoAccount(normalized, {
+    userId: account.userId,
+    role: account.role,
+    name: account.name ?? undefined,
+    passwordHash: account.passwordHash ?? undefined,
+  });
+}
+
 export async function authenticateCredentials(
   email: string,
   password: string,
