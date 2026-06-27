@@ -40,6 +40,8 @@ import {
   readDayPrescription,
   type DayPrescription,
 } from "@/lib/program-day-prescription";
+import ProgramContentReadinessBanner from "@/components/ProgramContentReadinessBanner";
+import type { CoachContentAlert } from "@/lib/coach-content-alerts";
 
 type WorkoutOption = { id: string; name: string };
 
@@ -162,9 +164,11 @@ function dayOptionsNeedCleanup(day: ProgramDay): boolean {
 export default function ProgramCalendarBuilder({
   program: initial,
   workouts: initialWorkouts,
+  contentAlert = null,
 }: {
   program: Program;
   workouts: WorkoutOption[];
+  contentAlert?: CoachContentAlert | null;
 }) {
   const [program, setProgram] = useState(initial);
   const [allWorkouts, setAllWorkouts] = useState(initialWorkouts);
@@ -206,6 +210,17 @@ export default function ProgramCalendarBuilder({
     () => [...program.weeks].sort((a, b) => a.weekNumber - b.weekNumber),
     [program.weeks],
   );
+
+  const attentionWeeks = useMemo(() => {
+    if (!contentAlert) return new Set<number>();
+    const { readiness } = contentAlert;
+    const weeks = new Set<number>();
+    if (!readiness.currentWeekComplete) weeks.add(readiness.anchorWeek);
+    if (readiness.nextWeek && !readiness.nextWeekComplete) {
+      weeks.add(readiness.nextWeek.weekNumber);
+    }
+    return weeks;
+  }, [contentAlert]);
 
   const activeWeekData = weeks.find((w) => w.weekNumber === activeWeek) || weeks[0];
 
@@ -1270,6 +1285,25 @@ export default function ProgramCalendarBuilder({
 
       {message && <p className="text-sm text-[var(--success)]">{message}</p>}
 
+      {contentAlert && (
+        <ProgramContentReadinessBanner
+          alert={contentAlert}
+          onJumpToWeek={(weekNumber) => setActiveWeek(weekNumber)}
+          onCopyPrevWeek={async (toWeek, fromWeek) => {
+            const ok = await copyWeek(fromWeek, toWeek);
+            if (ok) {
+              await sync();
+              setActiveWeek(toWeek);
+              setMessage(`Week ${fromWeek} copied to week ${toWeek}.`);
+              setTimeout(() => setMessage(null), 3500);
+            }
+          }}
+          onCopyWeek1Remaining={async () => {
+            await copyWeekToRemaining(1);
+          }}
+        />
+      )}
+
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-[var(--muted)]">Jump to week</span>
         {weeks.map((w) => (
@@ -1279,11 +1313,14 @@ export default function ProgramCalendarBuilder({
             className={`rounded-full px-3 py-1 text-xs font-medium ${
               activeWeek === w.weekNumber
                 ? "bg-accent/20 text-accent ring-1 ring-accent/40"
-                : "bg-[var(--surface-2)] text-[var(--muted)]"
+                : attentionWeeks.has(w.weekNumber)
+                  ? "bg-amber-500/15 text-amber-200 ring-1 ring-amber-500/50"
+                  : "bg-[var(--surface-2)] text-[var(--muted)]"
             }`}
             onClick={() => setActiveWeek(w.weekNumber)}
           >
             Week {w.weekNumber}
+            {attentionWeeks.has(w.weekNumber) && !contentAlert?.readiness.isCurrentWithClients ? " ⚠" : ""}
           </button>
         ))}
         {calendarToday && calendarToday.weekNumber <= program.durationWeeks && (

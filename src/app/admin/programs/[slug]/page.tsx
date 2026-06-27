@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ProgramAdminClient from "@/components/ProgramAdminClient";
+import { loadProgramContentAlert } from "@/lib/coach-content-alerts";
 import { getProgramBySlug } from "@/lib/program-data";
 import { syncProgramSchedule } from "@/lib/program-schedule";
 import { prisma } from "@/lib/prisma";
@@ -42,10 +43,13 @@ export default async function ProgramAdminDetailPage({ params }: Props) {
     });
   }
 
+  const contentAlert = await loadProgramContentAlert(slug);
+
   return (
     <div>
       <Link href="/admin/programs" className="text-xs text-accent hover:underline">← Programs</Link>
       <ProgramAdminClient
+        contentAlert={contentAlert}
         program={{
           id: program.id,
           slug: program.slug,

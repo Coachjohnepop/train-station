@@ -1,6 +1,8 @@
 import Link from "next/link";
+import CoachContentAlertsPanel from "@/components/CoachContentAlertsPanel";
 import GoToTodayCard from "@/components/GoToTodayCard";
 import AdminMessagesCard from "@/components/AdminMessagesCard";
+import { loadCoachContentAlerts } from "@/lib/coach-content-alerts";
 import { getCoachTodaySummary } from "@/lib/today-appointments";
 import { getResolvedLandingVideos } from "@/lib/landing-media-server";
 
@@ -10,8 +12,11 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   // stub counts for demo (no DB)
   const [exercises, workouts, programs, users] = [101, 31, 5, 5];
-  const today = await getCoachTodaySummary();
-  const landingVideos = await getResolvedLandingVideos();
+  const [today, landingVideos, contentAlerts] = await Promise.all([
+    getCoachTodaySummary(),
+    getResolvedLandingVideos(),
+    loadCoachContentAlerts(),
+  ]);
   const landingReady =
     Boolean(landingVideos.welcomeVideoUrl) && Boolean(landingVideos.freeChastiseVideoUrl);
 
@@ -21,6 +26,10 @@ export default async function AdminPage() {
       <p className="mt-2 text-[var(--muted)]">
         Build content bottom-up: exercises → workouts → programs.
       </p>
+
+      <div className="mt-6">
+        <CoachContentAlertsPanel alerts={contentAlerts} />
+      </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
         <GoToTodayCard

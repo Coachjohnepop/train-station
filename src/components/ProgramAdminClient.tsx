@@ -4,6 +4,7 @@ import { useState } from "react";
 import ExportSeedButton from "@/components/ExportSeedButton";
 import ProgramCalendarBuilder from "@/components/ProgramCalendarBuilder";
 import ProgramNameEditor from "@/components/ProgramNameEditor";
+import type { CoachContentAlert } from "@/lib/coach-content-alerts";
 
 type WorkoutOption = { id: string; name: string };
 
@@ -32,9 +33,11 @@ type Program = {
 export default function ProgramAdminClient({
   program: initial,
   workouts,
+  contentAlert = null,
 }: {
   program: Program;
   workouts: WorkoutOption[];
+  contentAlert?: CoachContentAlert | null;
 }) {
   const [programName, setProgramName] = useState(initial.name);
 
@@ -63,6 +66,7 @@ export default function ProgramAdminClient({
         <ProgramCalendarBuilder
           program={{ ...initial, name: programName }}
           workouts={workouts}
+          contentAlert={contentAlert}
         />
       </div>
     </>

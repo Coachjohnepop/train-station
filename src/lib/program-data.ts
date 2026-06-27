@@ -24,10 +24,17 @@ export async function listPrograms() {
         days: (data.programDays || [])
           .filter((d: any) => d.weekId === w.id)
           .sort((a: any, b: any) => a.dayNumber - b.dayNumber)
-          .map((d: any) => ({
-          workoutId: d.workoutId,
-          options: programDayOptionsByDayId[d.id] || (d.workoutId ? [{ workoutId: d.workoutId, label: "Standard" }] : []),
-        })),
+          .map((d: any) =>
+            applyOverrideToDay({
+              id: d.id,
+              dayNumber: d.dayNumber,
+              workoutId: d.workoutId,
+              publishedAt: d.publishedAt ?? null,
+              options:
+                programDayOptionsByDayId[d.id] ||
+                (d.workoutId ? [{ workoutId: d.workoutId, label: "Standard" }] : []),
+            }),
+          ),
       }));
     return applyCatalogMetadata({
       ...p,

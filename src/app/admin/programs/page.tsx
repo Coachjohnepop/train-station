@@ -1,5 +1,7 @@
 import Link from "next/link";
 import ExportSeedButton from "@/components/ExportSeedButton";
+import { getEnrollmentStatsByProgramSlug } from "@/lib/coach-content-alerts";
+import { assessProgramReadiness } from "@/lib/program-readiness";
 import { listPrograms } from "@/lib/program-data";
 import { filterAdminCatalogPrograms } from "@/lib/programs";
 
@@ -7,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ProgramsAdminPage() {
   const programs = filterAdminCatalogPrograms(await listPrograms());
+  const enrollmentStats = getEnrollmentStatsByProgramSlug();
 
   return (
     <div>
@@ -27,6 +30,34 @@ export default async function ProgramsAdminPage() {
             0
           );
           const totalSlots = program.weeks.length * 7;
+          const enroll = enrollmentStats[program.slug] ?? { memberCount: 0, maxWeek: 1 };
+          const readiness =
+            (program.category || "workout") === "workout"
+              ? assessProgramReadiness(
+                  {
+                    slug: program.slug,
+                    name: program.name,
+                    durationWeeks: program.durationWeeks,
+                    startDate: program.startDate ?? null,
+                    weeks: program.weeks,
+                  },
+                  enroll.maxWeek,
+                )
+              : null;
+          const readinessLabel = readiness
+            ? readiness.isCurrentWithClients
+              ? "Current"
+              : !readiness.currentWeekComplete
+                ? `W${readiness.anchorWeek} needs work`
+                : `W${readiness.nextWeek?.weekNumber} needs work`
+            : null;
+          const readinessClass = readiness
+            ? readiness.isCurrentWithClients
+              ? "text-[var(--success)]"
+              : readiness.alertLevel === "critical"
+                ? "text-red-400"
+                : "text-amber-300"
+            : "";
           return (
             <li key={program.id}>
               <Link
@@ -48,7 +79,10 @@ export default async function ProgramsAdminPage() {
                   <p>
                     {assigned} / {totalSlots} slots assigned
                   </p>
-                  <p>{program._count.enrollments} members enrolled</p>
+                  <p>{enroll.memberCount || program._count.enrollments} members enrolled</p>
+                  {readinessLabel && (
+                    <p className={readinessClass}>{readinessLabel}</p>
+                  )}
                   <p className={program.catalogStatus === "live" ? "text-[var(--success)]" : ""}>
                     {program.catalogStatus === "live"
                       ? "Live"
