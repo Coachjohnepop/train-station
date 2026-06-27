@@ -1,6 +1,11 @@
 import "server-only";
 
 import { BRAND_NAME, COACH_CALENDLY_URL } from "@/lib/brand";
+import { getAccountByUserId } from "@/lib/member-accounts-store";
+import {
+  getMemberProfile,
+  updateMemberProfile,
+} from "@/lib/member-profiles-store";
 import { memberProgramStartPath } from "@/lib/member-destinations";
 import { signupPlanLabel, type SignupPlan } from "@/lib/signup-plans";
 import { appBaseUrl } from "@/lib/sms";
@@ -68,4 +73,24 @@ export async function sendMemberWelcomeEmail(input: WelcomeEmailInput): Promise<
     ctaLabel: "Start Day 1",
     tags: [{ name: "category", value: "welcome-complete" }],
   });
+}
+
+/** Send the signup welcome email once — after payment for paid plans. */
+export async function sendWelcomeSignupIfNeeded(userId: string): Promise<boolean> {
+  const profile = await getMemberProfile(userId);
+  if (!profile?.email || profile.welcomeSignupEmailSentAt) return false;
+
+  const accountRow = await getAccountByUserId(userId);
+  const sent = await sendMemberWelcomeEmail({
+    email: profile.email,
+    name: accountRow?.account.name || profile.email,
+    plan: profile.plan,
+    stage: "signup",
+  });
+  if (sent) {
+    await updateMemberProfile(userId, {
+      welcomeSignupEmailSentAt: new Date().toISOString(),
+    });
+  }
+  return sent;
 }

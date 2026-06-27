@@ -9,6 +9,7 @@ import {
   updateMemberProfile,
   type PaymentMethod,
 } from "@/lib/member-profiles-store";
+import { sendWelcomeSignupIfNeeded } from "@/lib/member-welcome";
 import { normalizeSignupPlan } from "@/lib/signup-plans";
 import type { NextResponse } from "next/server";
 
@@ -56,6 +57,8 @@ export async function markMemberPaid(input: {
       /* offer may already be updated */
     }
   }
+
+  await sendWelcomeSignupIfNeeded(input.userId);
 
   return updated;
 }

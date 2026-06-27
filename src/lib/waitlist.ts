@@ -93,6 +93,16 @@ export async function clearWaitlist(): Promise<void> {
   await writeStore({ entries: [] });
 }
 
+export async function removeWaitlistByEmail(email: string): Promise<boolean> {
+  const normalized = email.trim().toLowerCase();
+  const store = await readStore();
+  const before = store.entries.length;
+  store.entries = store.entries.filter((e) => e.email.toLowerCase() !== normalized);
+  if (store.entries.length === before) return false;
+  await writeStore(store);
+  return true;
+}
+
 /** Waitlist + ticket signups (registered members) for Admin → Leads. */
 export async function listLeads(): Promise<WaitlistEntry[]> {
   const { listSelfRegisteredAccounts } = await import("@/lib/member-accounts-store");

@@ -213,6 +213,49 @@ export async function setSignInAccountHidden(email: string, hidden: boolean): Pr
   return true;
 }
 
+export async function getAccountByUserId(
+  userId: string,
+): Promise<{ email: string; account: StoredMemberAccount } | null> {
+  const store = await getRegisteredStore();
+  for (const [email, account] of Object.entries(store)) {
+    if (account.userId === userId) {
+      return { email: normalizeAccountEmail(email) || email, account };
+    }
+  }
+  return null;
+}
+
+/** Remove one self-registered member (never seeded coach/demo accounts). */
+export async function removeSelfRegisteredMemberByEmail(
+  email: string,
+): Promise<{ email: string; userId: string } | null> {
+  const normalized = normalizeAccountEmail(email);
+  if (!normalized) return null;
+
+  const seedEmails = new Set(
+    Object.keys(loadSeedAccounts())
+      .map((e) => normalizeAccountEmail(e))
+      .filter(Boolean) as string[],
+  );
+  if (seedEmails.has(normalized)) return null;
+
+  const store = await getRegisteredStore();
+  const account = store[normalized];
+  if (!account) return null;
+
+  delete store[normalized];
+  await persistJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    data: store,
+    setMemory: (v) => {
+      memoryStore = v;
+    },
+  });
+
+  return { email: normalized, userId: account.userId };
+}
+
 export async function removeSignInAccount(email: string): Promise<boolean> {
   const normalized = normalizeAccountEmail(email);
   if (!normalized) return false;

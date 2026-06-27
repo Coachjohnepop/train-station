@@ -100,24 +100,28 @@ export async function POST(request: Request) {
       });
     }
 
-    const welcomeSent = await sendMemberWelcomeEmail({
-      email: normalizedEmail,
-      name: account.name,
-      plan,
-      stage: "signup",
-    });
-    if (welcomeSent) {
-      await updateMemberProfile(account.userId, {
-        welcomeSignupEmailSentAt: new Date().toISOString(),
-      });
-    }
-
     const sessionUser = await authenticateCredentials(email, password || "");
     if (!sessionUser) {
       return NextResponse.json({ error: "Account created but sign-in failed." }, { status: 500 });
     }
 
     const needsCheckout = !quoteRequest && (await stripeConfiguredForPlan(plan));
+
+    // Paid plans: welcome email fires after Stripe payment (markMemberPaid).
+    // Free/quote paths: only send once signup fully succeeded.
+    if (!needsCheckout) {
+      const welcomeSent = await sendMemberWelcomeEmail({
+        email: normalizedEmail,
+        name: account.name,
+        plan,
+        stage: "signup",
+      });
+      if (welcomeSent) {
+        await updateMemberProfile(account.userId, {
+          welcomeSignupEmailSentAt: new Date().toISOString(),
+        });
+      }
+    }
     const redirectTo = quoteRequest
       ? `/member/quote-received?plan=${encodeURIComponent(plan)}`
       : needsCheckout
