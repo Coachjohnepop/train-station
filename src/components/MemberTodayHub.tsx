@@ -91,9 +91,9 @@ export default async function MemberTodayHub({ dashboard, loggedWorkoutIds }: Pr
       {enrolledProgramsWithSchedule.length > 0 && (
         <section className="space-y-4">
           <div>
-            <h2 className="text-sm font-semibold">Your 3-week window</h2>
+            <h2 className="text-sm font-semibold">Your 10-day window</h2>
             <p className="text-[10px] text-[var(--muted)]">
-              Past, present, and upcoming sessions for your enrolled program — not the full catalog.
+              Recent sessions, today, and the week ahead — not the full program catalog.
             </p>
           </div>
           {enrolledProgramsWithSchedule.map(({ enrollment, program }) => (

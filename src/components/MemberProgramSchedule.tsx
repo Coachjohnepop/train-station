@@ -3,10 +3,12 @@ import { DAY_LABELS } from "@/lib/program-constants";
 import {
   calendarDateForProgramDay,
   findProgramDayForCalendarDate,
+  formatShortDate,
   localTodayIso,
   resolveProgramStartMonday,
-  rollingProgramWeekNumbers,
-  rollingWeekSectionLabel,
+  rollingDaySectionLabel,
+  rollingProgramCalendarDays,
+  type RollingCalendarDayPhase,
 } from "@/lib/program-calendar";
 import ScheduleJumpLink from "@/components/ScheduleJumpLink";
 
@@ -49,10 +51,18 @@ type Props = {
   showThisWeek?: boolean;
   /** Coaches only — members see a rolling window instead. */
   showFullSchedule?: boolean;
-  /** Member rolling window size (default 3: last week, this week, next week). */
-  rollingWeeks?: number;
+  /** Member rolling calendar window (default 10 days: 3 back, today, 6 ahead). */
+  rollingDays?: number;
   compact?: boolean;
 };
+
+type DayEntry = {
+  weekNumber: number;
+  day: Program["weeks"][number]["days"][number];
+  iso: string;
+};
+
+const ROLLING_PHASES: RollingCalendarDayPhase[] = ["past", "today", "future"];
 
 function dayCalendarIso(
   program: Program,
@@ -67,6 +77,7 @@ function dayCalendarIso(
 function DayCards({
   program,
   week,
+  entries,
   calendarWeek,
   calendarDay,
   loggedSet,
@@ -76,7 +87,8 @@ function DayCards({
   compact,
 }: {
   program: Program;
-  week: Program["weeks"][number];
+  week?: Program["weeks"][number];
+  entries?: DayEntry[];
   calendarWeek: number;
   calendarDay: number;
   loggedSet: Set<string>;
@@ -86,17 +98,27 @@ function DayCards({
   compact?: boolean;
 }) {
   const gridClass = compact
-    ? "mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4 md:grid-cols-7"
-    : "mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7";
+    ? "mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-5"
+    : "mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5";
+
+  const list: DayEntry[] =
+    entries ??
+    (week
+      ? week.days
+          .sort((a, b) => a.dayNumber - b.dayNumber)
+          .map((day) => ({
+            weekNumber: week.weekNumber,
+            day,
+            iso: dayCalendarIso(program, week.weekNumber, day),
+          }))
+      : []);
 
   return (
     <ul className={gridClass}>
-      {week.days
-        .sort((a, b) => a.dayNumber - b.dayNumber)
-        .map((day) => {
+      {list.map(({ weekNumber, day, iso }) => {
           const label = DAY_LABELS[day.dayNumber - 1] ?? `Day ${day.dayNumber}`;
-          const isCurrentDay = week.weekNumber === calendarWeek && day.dayNumber === calendarDay;
-          const anchorId = `w${week.weekNumber}-d${day.dayNumber}`;
+          const isCurrentDay = iso === localTodayIso();
+          const anchorId = `w${weekNumber}-d${day.dayNumber}`;
 
           if (isWorkout) {
             if (day.smsOverrideActive && day.smsWorkoutText) {
@@ -150,8 +172,8 @@ function DayCards({
                   const wid = opt.workoutId || w.id;
                   const isThisSessionDone = loggedSet.has(wid);
                   const isHome = /home/i.test(opt.label || "");
-                  const weekDayLabel = `W${week.weekNumber} · D${day.dayNumber}`;
-                  const calIso = dayCalendarIso(program, week.weekNumber, day);
+                  const weekDayLabel = `W${weekNumber} · D${day.dayNumber}`;
+                  const calIso = iso;
                   const displayName =
                     (opts.length > 1 ? `${opt.label}: ` : "") +
                     w.name.replace(/ \(Home\)| \(Gym\)/i, "").replace(/^Day \d+\s*/i, `${weekDayLabel} · `);
@@ -236,7 +258,7 @@ function DayCards({
               </Link>
             </li>
           );
-        })}
+      })}
     </ul>
   );
 }
@@ -249,7 +271,7 @@ export default function MemberProgramSchedule({
   idPrefix = "",
   showThisWeek = true,
   showFullSchedule = false,
-  rollingWeeks = 3,
+  rollingDays = 10,
   compact = false,
 }: Props) {
   const loggedSet = new Set(loggedWorkoutIds);
@@ -265,50 +287,59 @@ export default function MemberProgramSchedule({
   const displayWeek = program.weeks.find((w) => w.weekNumber === calendarWeek);
   const fullScheduleId = `${idPrefix}full-schedule`;
   const weekDetailsId = (weekNumber: number) => `${idPrefix}week-${weekNumber}`;
-  const availableWeekNumbers = program.weeks.map((w) => w.weekNumber);
-  const rollingWeekNumbers = rollingProgramWeekNumbers(calendarWeek, availableWeekNumbers, rollingWeeks);
+  const rollingCalendarDays = rollingProgramCalendarDays(program, todayIso, rollingDays);
+  const rollingByPhase = Object.fromEntries(
+    ROLLING_PHASES.map((phase) => [
+      phase,
+      rollingCalendarDays.filter((d) => d.phase === phase),
+    ]),
+  ) as Record<RollingCalendarDayPhase, typeof rollingCalendarDays>;
 
   if (!showFullSchedule) {
     return (
       <div className="space-y-3">
         <p className="text-[10px] text-[var(--muted)]">
-          Rolling {rollingWeeks}-week view — what you did, where you are, and what&apos;s ahead. Your coach sees the full program.
+          Rolling {rollingDays}-day view — recent sessions, today, and the week ahead. Your coach sees the full program.
         </p>
-        {rollingWeekNumbers.map((weekNumber) => {
-          const week = program.weeks.find((w) => w.weekNumber === weekNumber);
-          if (!week) return null;
-          const sectionLabel = rollingWeekSectionLabel(weekNumber, calendarWeek);
-          const isCurrentWeek = weekNumber === calendarWeek;
+        {ROLLING_PHASES.map((phase) => {
+          const days = rollingByPhase[phase];
+          if (!days.length) return null;
+          const rangeLabel =
+            days.length === 1
+              ? formatShortDate(days[0].iso)
+              : `${formatShortDate(days[0].iso)} – ${formatShortDate(days[days.length - 1].iso)}`;
           return (
-            <section key={week.id} id={weekDetailsId(weekNumber)} className="card p-3 scroll-mt-24">
+            <section
+              key={phase}
+              id={phase === "today" ? weekDetailsId(calendarWeek) : `${idPrefix}${phase}`}
+              className="card p-3 scroll-mt-24"
+            >
               <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-sm font-semibold">{sectionLabel}</h2>
+                  <h2 className="text-sm font-semibold">{rollingDaySectionLabel(phase)}</h2>
                   <span className="text-xs text-[var(--muted)]">
-                    Week {weekNumber}
-                    {isCurrentWeek && withinProgram && todayOnCalendar && (
+                    {rangeLabel}
+                    {phase === "today" && withinProgram && todayOnCalendar && (
                       <>
-                        <span className="mx-1">·</span>
-                        {DAY_LABELS[calendarDay - 1] ?? `Day ${calendarDay}`}
                         <span className="mx-1">·</span>
                         progress W{curWeek}D{curDay}
                       </>
                     )}
                   </span>
                 </div>
-                {isCurrentWeek && withinProgram && todayOnCalendar && (
-                  <ScheduleJumpLink
-                    week={calendarWeek}
-                    day={calendarDay}
-                    fullScheduleId={weekDetailsId(calendarWeek)}
-                    weekDetailsId={weekDetailsId(calendarWeek)}
-                    label="Jump to today"
-                  />
+                {phase === "today" && withinProgram && todayOnCalendar && (
+                  <Link href="/member/today" className="text-xs text-accent hover:underline">
+                    Open today →
+                  </Link>
                 )}
               </div>
               <DayCards
                 program={program}
-                week={week}
+                entries={days.map((d) => ({
+                  weekNumber: d.weekNumber,
+                  day: d.day as Program["weeks"][number]["days"][number],
+                  iso: d.iso,
+                }))}
                 calendarWeek={calendarWeek}
                 calendarDay={calendarDay}
                 loggedSet={loggedSet}

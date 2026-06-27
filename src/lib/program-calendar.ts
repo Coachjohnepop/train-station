@@ -171,6 +171,53 @@ export function rollingWeekSectionLabel(weekNumber: number, centerWeek: number):
   return "Where you are";
 }
 
+export type RollingCalendarDayPhase = "past" | "today" | "future";
+
+export type RollingCalendarDay<T = ProgramDayLike> = {
+  iso: string;
+  weekNumber: number;
+  dayNumber: number;
+  day: T;
+  phase: RollingCalendarDayPhase;
+};
+
+/** Calendar days in a rolling member window (default 10: 3 back, today, 6 ahead). */
+export function rollingProgramCalendarDays(
+  program: ProgramCalendarLike,
+  centerIso: string,
+  windowDays = 10,
+  daysBefore = 3,
+): RollingCalendarDay[] {
+  const center = parseIsoDate(centerIso);
+  const daysAfter = Math.max(0, windowDays - 1 - daysBefore);
+  const out: RollingCalendarDay[] = [];
+
+  for (let offset = -daysBefore; offset <= daysAfter; offset++) {
+    const d = new Date(center.getFullYear(), center.getMonth(), center.getDate());
+    d.setDate(d.getDate() + offset);
+    const iso = toIsoDate(d);
+    const match = findProgramDayForCalendarDate(program, iso);
+    if (!match) continue;
+    const phase: RollingCalendarDayPhase =
+      offset < 0 ? "past" : offset === 0 ? "today" : "future";
+    out.push({
+      iso,
+      weekNumber: match.weekNumber,
+      dayNumber: match.dayNumber,
+      day: match.day,
+      phase,
+    });
+  }
+
+  return out;
+}
+
+export function rollingDaySectionLabel(phase: RollingCalendarDayPhase): string {
+  if (phase === "past") return "What you did";
+  if (phase === "future") return "What's ahead";
+  return "Where you are";
+}
+
 /** Find the program day that matches a calendar ISO date (stored calendarDate first, then anchor math). */
 export function findProgramDayForCalendarDate(
   program: ProgramCalendarLike,
