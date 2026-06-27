@@ -8,6 +8,7 @@ import {
   readEmailHistoryFromRequestCookies,
 } from "@/lib/email-history-cookies";
 import { isInvitedAccountEmail } from "@/lib/invited-accounts";
+import { getAllSignInAccounts } from "@/lib/member-accounts-store";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -34,7 +35,18 @@ export async function POST(request: Request) {
 
   const user = await authenticateCredentials(email, password);
   if (!user) {
-    const res = NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    const accounts = await getAllSignInAccounts({ preferFresh: true });
+    const account = accounts[normalized];
+    const noPasswordSet = Boolean(account && !account.passwordHash);
+    const res = NextResponse.json(
+      {
+        error: noPasswordSet
+          ? "No password set for this account yet — use Forgot password to create one."
+          : "Invalid email or password",
+        code: noPasswordSet ? "no_password" : "invalid_credentials",
+      },
+      { status: 401 },
+    );
     applyEmailHistoryCookies(res, email, existingHistory);
     return res;
   }

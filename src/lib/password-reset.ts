@@ -33,7 +33,7 @@ async function resolveSignInAccount(email: string): Promise<SignInAccountRef | n
   const normalized = normalizeAccountEmail(email);
   if (!normalized) return null;
 
-  const accounts = await getAllSignInAccounts();
+  const accounts = await getAllSignInAccounts({ preferFresh: true });
   const stored = accounts[normalized];
   if (stored) {
     return {

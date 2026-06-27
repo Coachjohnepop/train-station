@@ -76,6 +76,7 @@ function LoginForm() {
           return;
         }
         setError(data.error || "Login failed");
+        if (data.code === "no_password") setShowPasswordForm(true);
         return;
       }
       rememberEmail(email);
@@ -150,7 +151,16 @@ function LoginForm() {
             </p>
           )}
           {error && (
-            <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p>
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200 space-y-2">
+              <p>{error}</p>
+              {error.includes("Forgot password") && (
+                <p>
+                  <Link href="/forgot-password" className="text-accent hover:underline">
+                    Reset your password →
+                  </Link>
+                </p>
+              )}
+            </div>
           )}
 
           <div>

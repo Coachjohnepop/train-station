@@ -41,8 +41,8 @@ export const PENDING_APPROVAL_COOKIE = "ts_pending_approval";
 
 export { hashPassword, verifyPassword };
 
-async function loadDemoAccounts(): Promise<Record<string, DemoAccount>> {
-  return getAllSignInAccounts();
+async function loadDemoAccounts(opts?: { preferFresh?: boolean }): Promise<Record<string, DemoAccount>> {
+  return getAllSignInAccounts(opts);
 }
 
 function passwordAccepted(password: string, storedHash?: string | null): boolean {
@@ -119,7 +119,7 @@ export async function authenticateCredentials(
   const normalized = normalizeAccountEmail(email);
   if (!normalized) return null;
 
-  const demoAccount = (await loadDemoAccounts())[normalized];
+  const demoAccount = (await getAllSignInAccounts({ preferFresh: true }))[normalized];
   if (demoAccount && passwordAccepted(password, demoAccount.passwordHash)) {
     return sessionFromDemoAccount(normalized, demoAccount);
   }
