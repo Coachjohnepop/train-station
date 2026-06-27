@@ -249,7 +249,8 @@ export async function persistJsonStore<T>(opts: {
   opts.setMemory(opts.data);
   writeLocalJson(opts.localPath, opts.data);
   const blobSaved = await writeBlobJson(opts.blobPath, opts.data);
-  // Force the next preferFresh read to pull this write (not a stale cached head).
-  blobCheckedAt.delete(opts.blobPath);
+  // Mark blob as fresh so the next hydrate on this instance prefers in-memory data
+  // (avoids read-after-write races where CDN/blob head lags behind a just-written profile).
+  blobCheckedAt.set(opts.blobPath, Date.now());
   return { blobSaved };
 }

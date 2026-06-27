@@ -154,7 +154,7 @@ function normalizeProfile(raw: unknown, userId: string): MemberProfile | null {
   };
 }
 
-async function getStore(): Promise<ProfileStore> {
+async function getStore(opts?: { preferFresh?: boolean }): Promise<ProfileStore> {
   const hydrated = await hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
@@ -163,6 +163,7 @@ async function getStore(): Promise<ProfileStore> {
       memoryStore = v as ProfileStore;
     },
     fallback: () => ({}),
+    preferFresh: opts?.preferFresh,
   });
   memoryStore = hydrated as ProfileStore;
   return memoryStore;
@@ -273,25 +274,37 @@ export async function updateMemberProfile(
     >
   >,
 ): Promise<MemberProfile> {
-  const store = await getStore();
-  const current = store[userId];
-  if (!current) throw new Error("Profile not found");
+  // Retry: blob CDN can briefly lag behind a profile we just wrote during signup.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const store =
+      memoryStore?.[userId] != null ? memoryStore : await getStore();
+    const current = store[userId];
+    if (!current) {
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 150 * (attempt + 1)));
+        continue;
+      }
+      throw new Error("Profile not found");
+    }
 
-  const next: MemberProfile = {
-    ...normalizeProfile(current, userId)!,
-    ...patch,
-    updatedAt: new Date().toISOString(),
-  };
+    const next: MemberProfile = {
+      ...normalizeProfile(current, userId)!,
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    };
 
-  store[userId] = next;
-  await persistJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    data: store,
-    setMemory: (v) => {
-      memoryStore = v as ProfileStore;
-    },
-  });
+    store[userId] = next;
+    await persistJsonStore({
+      blobPath: BLOB_PATH,
+      localPath: DEV_FILE,
+      data: store,
+      setMemory: (v) => {
+        memoryStore = v as ProfileStore;
+      },
+    });
 
-  return next;
+    return next;
+  }
+
+  throw new Error("Profile not found");
 }
