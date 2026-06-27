@@ -78,13 +78,6 @@ export default function LandingHero() {
               onClick={scrollToTickets}
               className="inline-flex h-14 items-center justify-center rounded-full bg-[#7c3aed] px-10 text-sm font-bold text-white shadow-lg shadow-[#7c3aed]/30 transition-all hover:bg-[#6d2dd6] hover:scale-[1.05] active:scale-[0.98]"
             >
-              Enter the site
-            </button>
-            <button
-              type="button"
-              onClick={scrollToTickets}
-              className="inline-flex h-14 items-center justify-center rounded-full bg-white px-10 text-sm font-bold !text-[#7c3aed] transition-all hover:bg-white/95 hover:scale-[1.05] active:scale-[0.985]"
-            >
               Pick your ticket ↓
             </button>
             <a

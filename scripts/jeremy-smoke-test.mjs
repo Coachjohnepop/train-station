@@ -99,7 +99,7 @@ async function testLanding() {
   console.log("\n=== 1. Landing conversion ===");
   const { text } = await req("/");
   const checks = [
-    ["Enter the site", /Enter the site/],
+    ["Pick your ticket", /Pick your ticket/],
     ["Pick your ticket", /Pick your ticket/],
     ["Three ways aboard", /Three ways aboard/],
     ["Coming soon section", /Programs coming soon|On the manifest/],
