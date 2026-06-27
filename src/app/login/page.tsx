@@ -21,10 +21,17 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showPasswordForm, setShowPasswordForm] = useState(passwordUpdated);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [quickAuthAvailable, setQuickAuthAvailable] = useState(false);
   const [quickAuthResolved, setQuickAuthResolved] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (!passwordUpdated) return;
+    setPassword("");
+    setError(null);
+    setShowPasswordForm(false);
+  }, [passwordUpdated]);
 
   useFormAutofillSync(formRef, ["username", "password"], (values) => {
     if (values.username) setEmail(values.username);
@@ -75,7 +82,12 @@ function LoginForm() {
           router.push(data.signupUrl);
           return;
         }
-        setError(data.error || "Login failed");
+        const baseError = data.error || "Login failed";
+        setError(
+          passwordUpdated && data.code === "invalid_credentials"
+            ? `${baseError} — if you just reset your password, type it manually; your browser may still be filling the old one.`
+            : baseError,
+        );
         if (data.code === "no_password") setShowPasswordForm(true);
         return;
       }
@@ -100,6 +112,14 @@ function LoginForm() {
             Members and coaches — your messages, workouts, and schedule stay tied to your account.
           </p>
         </div>
+
+        {passwordUpdated && (
+          <p className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+            Password reset complete — sign in with your new password. Quick sign-in (PIN / Face ID)
+            still works if you already set it up on this device. Your browser or keychain may ask to
+            update the saved login.
+          </p>
+        )}
 
         {!showPasswordForm && email.trim() && (
           <>
@@ -132,6 +152,13 @@ function LoginForm() {
           <p className="card text-center text-sm text-[var(--muted)]">Checking quick sign-in…</p>
         )}
 
+        {quickAuthResolved && !quickAuthAvailable && email.trim() && !showPasswordForm && (
+          <p className="mb-3 text-center text-xs text-[var(--muted)]">
+            No PIN on this device for {email.trim().toLowerCase()} yet — sign in with password once,
+            then set up quick sign-in from your dashboard.
+          </p>
+        )}
+
         {showPasswordForm && quickAuthAvailable && (
           <button
             type="button"
@@ -144,12 +171,6 @@ function LoginForm() {
 
         {(showPasswordForm || (quickAuthResolved && !quickAuthAvailable) || !email.trim()) && (
         <form ref={formRef} onSubmit={handleSubmit} autoComplete="on" className="card space-y-4">
-          {passwordUpdated && (
-            <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
-              Password reset complete — sign in with your new password. Your browser or keychain may ask to
-              update the saved login for this site.
-            </p>
-          )}
           {error && (
             <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200 space-y-2">
               <p>{error}</p>
@@ -186,11 +207,11 @@ function LoginForm() {
             <PasswordInput
               id="login-password"
               name="password"
-              purpose="current"
+              purpose={passwordUpdated ? "new" : "current"}
               required
               value={password}
               onChange={setPassword}
-              placeholder="Set via forgot password if needed"
+              placeholder={passwordUpdated ? "Type your new password" : "Set via forgot password if needed"}
             />
           </div>
 
