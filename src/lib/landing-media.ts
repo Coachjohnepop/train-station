@@ -6,9 +6,16 @@ function envFallback(key: string): string | null {
   return raw || null;
 }
 
+export type LandingVideoEmbedOptions = {
+  autoplay?: boolean;
+  /** false = audible autoplay (works on mobile right after a tap). */
+  mute?: boolean;
+};
+
 export function landingVideoEmbedSrc(
   videoUrl: string | null | undefined,
   autoplay = false,
+  options: LandingVideoEmbedOptions = {},
 ): string | null {
   if (!videoUrl?.trim()) return null;
   const trimmed = videoUrl.trim();
@@ -17,9 +24,16 @@ export function landingVideoEmbedSrc(
     base = `https://www.youtube-nocookie.com/embed/${trimmed}?rel=0&playsinline=1&modestbranding=1`;
   }
   if (!base) return null;
-  if (!autoplay) return base;
+
   const u = new URL(base);
-  u.searchParams.set("autoplay", "1");
+  u.searchParams.set("enablejsapi", "1");
+  u.searchParams.set("playsinline", "1");
+
+  const shouldAutoplay = autoplay || options.autoplay;
+  if (shouldAutoplay) {
+    u.searchParams.set("autoplay", "1");
+    u.searchParams.set("mute", options.mute === true ? "1" : "0");
+  }
   return u.toString();
 }
 

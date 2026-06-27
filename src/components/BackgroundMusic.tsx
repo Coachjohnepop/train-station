@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { BG_MUSIC_OVERLAY_EVENT } from "@/lib/background-music-control";
 
 /**
  * Site-wide background music.
@@ -21,6 +22,7 @@ const OFF_KEY = "ts-bg-music-muted"; // "1" = visitor turned music off
 
 export default function BackgroundMusic() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const overlayPauseRef = useRef(false);
   // `off` = the visitor's on/off choice (not the same as the silent-buffering
   // mute used purely for fast start). Default on; reconciled with storage below.
   const [off, setOff] = useState(false);
@@ -76,6 +78,26 @@ export default function BackgroundMusic() {
 
     return remove;
   }, []);
+
+  // Video overlays (free-ticket prank, etc.) duck the site music.
+  useEffect(() => {
+    const onOverlay = (e: Event) => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      const active = Boolean((e as CustomEvent<{ active?: boolean }>).detail?.active);
+      overlayPauseRef.current = active;
+      if (active) {
+        audio.pause();
+        return;
+      }
+      if (!off && window.localStorage.getItem(OFF_KEY) !== "1") {
+        audio.muted = false;
+        audio.play().catch(() => {});
+      }
+    };
+    window.addEventListener(BG_MUSIC_OVERLAY_EVENT, onOverlay);
+    return () => window.removeEventListener(BG_MUSIC_OVERLAY_EVENT, onOverlay);
+  }, [off]);
 
   const toggle = () => {
     const audio = audioRef.current;

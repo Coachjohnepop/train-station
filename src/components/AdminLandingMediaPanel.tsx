@@ -102,8 +102,9 @@ export default function AdminLandingMediaPanel({
             <span className="text-[#c4b5fd]">Watch intro</span> and member onboarding.
           </li>
           <li>
-            <strong className="text-white">Free-ticket video</strong> — when someone taps the{" "}
-            <span className="text-[#c4b5fd]">Free</span> ticket on the landing page.
+            <strong className="text-white">Free-ticket video</strong> — plays first when someone taps{" "}
+            <span className="text-[#c4b5fd]">Free</span> (10s, then fades to Welcome video). Site music
+            mutes automatically.
           </li>
           <li>
             <strong className="text-white">Venmo QR</strong> — member checkout page as an alternative
@@ -129,7 +130,7 @@ export default function AdminLandingMediaPanel({
       <VideoField
         id="free"
         label="Free-ticket video"
-        hint="Playful “you clicked FREE?” message before they continue to free signup."
+        hint="Prank clip (e.g. Rick Roll) — plays 10 seconds, then crossfades to Welcome video."
         value={freeUrl}
         onChange={setFreeUrl}
         previewSrc={freePreview}

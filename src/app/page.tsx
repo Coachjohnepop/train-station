@@ -37,7 +37,10 @@ export default async function HomePage() {
           isCoach={isCoach}
           welcomeVideoUrl={landingVideos.welcomeVideoUrl}
         />
-        <LandingTicketPicker freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl} />
+        <LandingTicketPicker
+          freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
+          welcomeVideoUrl={landingVideos.welcomeVideoUrl}
+        />
         <LandingServicesSection />
         <ComingSoonPrograms />
       </div>
@@ -46,7 +49,10 @@ export default async function HomePage() {
 
   return (
     <>
-      <LandingConversion freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl} />
+      <LandingConversion
+        freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
+        welcomeVideoUrl={landingVideos.welcomeVideoUrl}
+      />
 
       <div className="fixed bottom-6 right-6 z-30 flex flex-col items-end gap-2">
         <Link

@@ -14,8 +14,10 @@ import {
 
 export default function LandingTicketPicker({
   freeChastiseVideoUrl = null,
+  welcomeVideoUrl = null,
 }: {
   freeChastiseVideoUrl?: string | null;
+  welcomeVideoUrl?: string | null;
 }) {
   const [freeModalOpen, setFreeModalOpen] = useState(false);
   const [highlightPaid, setHighlightPaid] = useState(false);
@@ -129,6 +131,7 @@ export default function LandingTicketPicker({
       <FreeTicketModal
         open={freeModalOpen}
         freeChastiseVideoUrl={freeChastiseVideoUrl}
+        welcomeVideoUrl={welcomeVideoUrl}
         onClose={() => setFreeModalOpen(false)}
         onUpgrade={() => {
           setHighlightPaid(true);
