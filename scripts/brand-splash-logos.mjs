@@ -1,7 +1,14 @@
 #!/usr/bin/env node
 /**
  * Overlay The Train Station circular logo onto hero splash photos (chest placement).
+ *
+ * Disabled by default — flat overlays did not blend naturally on clothing.
+ * Hero splashes use *.pre-brand.jpg (no logo). Pass --apply to run anyway.
  */
+if (!process.argv.includes("--apply")) {
+  console.log("brand-splash-logos: skipped (splash images are logo-free; pass --apply to overlay)");
+  process.exit(0);
+}
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";
