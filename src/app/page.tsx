@@ -46,10 +46,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <LandingConversion
-        welcomeVideoUrl={landingVideos.welcomeVideoUrl}
-        freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
-      />
+      <LandingConversion freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl} />
 
       <div className="fixed bottom-6 right-6 z-30 flex flex-col items-end gap-2">
         <Link

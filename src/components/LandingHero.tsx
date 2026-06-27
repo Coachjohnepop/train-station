@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import TrainStationBrand from "@/components/TrainStationBrand";
-import WelcomeVideoPopover from "@/components/WelcomeVideoPopover";
 
 const images = [
   { src: "/images/splash/black-guy.jpg", alt: "Fit Black guy powering through a workout" },
@@ -18,11 +17,7 @@ const phrases = [
   <>Train with<br />Commitment.</>,
 ];
 
-export default function LandingHero({
-  welcomeVideoUrl = null,
-}: {
-  welcomeVideoUrl?: string | null;
-}) {
+export default function LandingHero() {
   const [tick, setTick] = useState(0);
 
   // Rotation: text changes "as fast" (every half image) but offset by 1/2 of the image scroll.
@@ -78,7 +73,13 @@ export default function LandingHero({
           </p>
           
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
-            <WelcomeVideoPopover welcomeVideoUrl={welcomeVideoUrl}>Enter the site</WelcomeVideoPopover>
+            <button
+              type="button"
+              onClick={scrollToTickets}
+              className="inline-flex h-14 items-center justify-center rounded-full bg-[#7c3aed] px-10 text-sm font-bold text-white shadow-lg shadow-[#7c3aed]/30 transition-all hover:bg-[#6d2dd6] hover:scale-[1.05] active:scale-[0.98]"
+            >
+              Enter the site
+            </button>
             <button
               type="button"
               onClick={scrollToTickets}

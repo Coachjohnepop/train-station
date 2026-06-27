@@ -98,9 +98,8 @@ export default function AdminLandingMediaPanel({
         <p className="font-semibold text-white">Where these show up</p>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-[#9d8ab8]">
           <li>
-            <strong className="text-white">Welcome video</strong> — public home page,{" "}
-            <span className="text-[#c4b5fd]">Enter the site</span> button (hover on desktop, tap on
-            phone). Also logged-in “Welcome — watch intro”.
+            <strong className="text-white">Welcome video</strong> — logged-in home{" "}
+            <span className="text-[#c4b5fd]">Watch intro</span> and member onboarding.
           </li>
           <li>
             <strong className="text-white">Free-ticket video</strong> — when someone taps the{" "}
@@ -124,7 +123,7 @@ export default function AdminLandingMediaPanel({
         value={welcomeUrl}
         onChange={setWelcomeUrl}
         previewSrc={welcomePreview}
-        where="Home → Enter the site"
+        where="Signed-in home → Watch intro · member onboarding"
       />
 
       <VideoField

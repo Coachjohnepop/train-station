@@ -9,17 +9,15 @@ import ThemeAttributesSync from "@/components/ThemeAttributesSync";
 
 /** Public landing: hero + mobile ticket picker + coming-soon programs. */
 export default function LandingConversion({
-  welcomeVideoUrl = null,
   freeChastiseVideoUrl = null,
 }: {
-  welcomeVideoUrl?: string | null;
   freeChastiseVideoUrl?: string | null;
 }) {
   return (
     <div className="relative min-h-screen app-shell-bg">
       <ThemeAttributesSync membershipTier="explorer" />
       <LandingNav />
-      <LandingHero welcomeVideoUrl={welcomeVideoUrl} />
+      <LandingHero />
       <LandingTicketPicker freeChastiseVideoUrl={freeChastiseVideoUrl} />
       <LandingServicesSection />
       <ComingSoonPrograms />
