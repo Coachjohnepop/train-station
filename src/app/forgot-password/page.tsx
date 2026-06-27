@@ -80,19 +80,31 @@ export default function ForgotPasswordPage() {
               className={`space-y-2 rounded-lg border px-3 py-2 text-sm ${
                 emailed
                   ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
-                  : "border-amber-500/30 bg-amber-500/10 text-amber-100"
+                  : message.includes("couldn't send")
+                    ? "border-amber-500/30 bg-amber-500/10 text-amber-100"
+                    : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--foreground)]"
               }`}
             >
               <p>{message}</p>
               {emailed && email.toLowerCase().includes("@yahoo.") && (
-                <p className="text-xs opacity-90">
+                <p className="text-xs text-[var(--muted)]">
                   Yahoo often filters new senders — check Spam, Bulk, or the Archive folder too.
                 </p>
               )}
               {!emailed && message.includes("couldn't send") && (
-                <p className="text-xs opacity-90">
+                <p className="text-xs text-[var(--muted)]">
                   Our email provider may need a moment — wait a minute and try again, or sign in with your
                   password if you remember it.
+                </p>
+              )}
+              {!emailed && !message.includes("couldn't send") && (
+                <p className="text-xs text-[var(--muted)]">
+                  If nothing arrives in a few minutes, that address may not be registered yet — try another
+                  email, or{" "}
+                  <Link href="/signup" className="text-accent hover:underline">
+                    pick a ticket on the home page
+                  </Link>{" "}
+                  to create an account.
                 </p>
               )}
             </div>
@@ -109,8 +121,8 @@ export default function ForgotPasswordPage() {
             />
           </div>
 
-          <button type="submit" disabled={loading || Boolean(message)} className="btn-primary w-full">
-            {loading ? "Sending…" : message ? "Email sent" : "Send reset link"}
+          <button type="submit" disabled={loading} className="btn-primary w-full">
+            {loading ? "Sending…" : emailed ? "Send again" : message ? "Try again" : "Send reset link"}
           </button>
         </form>
 

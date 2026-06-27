@@ -101,16 +101,30 @@ function LoginForm() {
         </div>
 
         {!showPasswordForm && email.trim() && (
-          <QuickAuthLogin
-            email={email}
-            redirect={redirect}
-            onUsePassword={() => setShowPasswordForm(true)}
-            onAvailabilityChange={setQuickAuthAvailable}
-            onStatusResolved={(enabled) => {
-              setQuickAuthResolved(true);
-              setQuickAuthAvailable(enabled);
-            }}
-          />
+          <>
+            <QuickAuthLogin
+              email={email}
+              redirect={redirect}
+              onUsePassword={() => setShowPasswordForm(true)}
+              onAvailabilityChange={setQuickAuthAvailable}
+              onStatusResolved={(enabled) => {
+                setQuickAuthResolved(true);
+                setQuickAuthAvailable(enabled);
+              }}
+            />
+            {quickAuthResolved && quickAuthAvailable && (
+              <p className="mt-3 text-center text-[10px] text-[var(--muted)]">
+                PIN or Face ID not working?{" "}
+                <button
+                  type="button"
+                  className="text-accent hover:underline"
+                  onClick={() => setShowPasswordForm(true)}
+                >
+                  Sign in with password
+                </button>
+              </p>
+            )}
+          </>
         )}
 
         {!showPasswordForm && email.trim() && !quickAuthResolved && (

@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { startAuthentication } from "@simplewebauthn/browser";
 import PinPad from "@/components/PinPad";
 import {
+  clearQuickAuthMeta,
   platformAuthenticatorAvailable,
-  readQuickAuthMeta,
   useQuickAuthDeviceId,
   writeQuickAuthMeta,
 } from "@/lib/quick-auth-client";
@@ -33,7 +33,7 @@ export default function QuickAuthLogin({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusResolved, setStatusResolved] = useState(false);
-  const [autoBiometricAttempted, setAutoBiometricAttempted] = useState(false);
+  const PIN_SUBMIT_DELAY_MS = 500;
 
   const signInWithBiometrics = useCallback(async () => {
     if (!ready) return;
@@ -106,18 +106,10 @@ export default function QuickAuthLogin({
 
     let cancelled = false;
     setStatusResolved(false);
-    setAutoBiometricAttempted(false);
     setPinEnabled(false);
     setWebauthnEnabled(false);
     setError(null);
     setPin("");
-
-    const local = readQuickAuthMeta();
-    if (local?.email === email.trim().toLowerCase()) {
-      setPinEnabled(local.pin);
-      setWebauthnEnabled(local.webauthn);
-      if (local.pin || local.webauthn) onAvailabilityChange?.(true);
-    }
 
     void platformAuthenticatorAvailable().then((ok) => {
       if (!cancelled) setBiometricReady(ok);
@@ -136,7 +128,10 @@ export default function QuickAuthLogin({
         onAvailabilityChange?.(enabled);
         onStatusResolved?.(enabled);
         setStatusResolved(true);
-        if (!enabled) return;
+        if (!enabled) {
+          clearQuickAuthMeta();
+          return;
+        }
         setPinEnabled(Boolean(data?.pin));
         setWebauthnEnabled(Boolean(data?.webauthn));
         writeQuickAuthMeta({
@@ -151,6 +146,7 @@ export default function QuickAuthLogin({
         onAvailabilityChange?.(false);
         onStatusResolved?.(false);
         setStatusResolved(true);
+        clearQuickAuthMeta();
       });
 
     return () => {
@@ -159,31 +155,13 @@ export default function QuickAuthLogin({
   }, [email, deviceId, ready, onAvailabilityChange, onStatusResolved]);
 
   useEffect(() => {
-    if (
-      !statusResolved ||
-      autoBiometricAttempted ||
-      loading ||
-      !webauthnEnabled ||
-      pinEnabled ||
-      !biometricReady
-    ) {
-      return;
-    }
-    setAutoBiometricAttempted(true);
-    void signInWithBiometrics();
-  }, [
-    statusResolved,
-    autoBiometricAttempted,
-    loading,
-    webauthnEnabled,
-    pinEnabled,
-    biometricReady,
-    signInWithBiometrics,
-  ]);
-
-  useEffect(() => {
     if (!pinEnabled || pin.length < 4 || loading || !ready) return;
-    void submitPin(pin);
+
+    const timer = window.setTimeout(() => {
+      void submitPin(pin);
+    }, PIN_SUBMIT_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
   }, [pin, pinEnabled, loading, ready, submitPin]);
 
   if (!ready || !statusResolved || (!pinEnabled && !webauthnEnabled)) return null;
@@ -204,7 +182,12 @@ export default function QuickAuthLogin({
       )}
 
       {pinEnabled && (
-        <PinPad value={pin} onChange={setPin} disabled={loading} />
+        <>
+          <PinPad value={pin} onChange={setPin} disabled={loading} />
+          <p className="text-center text-[10px] text-[var(--muted)]">
+            Enter your 4–6 digit PIN — we&apos;ll verify after you pause typing.
+          </p>
+        </>
       )}
 
       {webauthnEnabled && biometricReady && (
