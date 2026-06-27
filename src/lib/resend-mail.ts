@@ -11,31 +11,47 @@ export type ResendEmailInput = {
   ctaLabel?: string;
   replyTo?: string;
   tags?: Array<{ name: string; value: string }>;
+  headers?: Record<string, string>;
 };
 
-function appHost(): string {
+function siteHostname(): string {
+  const fromEnv =
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    process.env.VERCEL_URL?.trim() ||
+    "https://www.thetrainstation.co";
   try {
-    return new URL(process.env.NEXT_PUBLIC_APP_URL || "https://www.thetrainstation.co").hostname;
+    return new URL(fromEnv.startsWith("http") ? fromEnv : `https://${fromEnv}`).hostname
+      .toLowerCase()
+      .replace(/^www\./, "");
   } catch {
     return "thetrainstation.co";
   }
 }
 
+/** Verified Resend sending subdomain — never prefix with www. */
+export function resendSendingDomain(): string {
+  const configured = process.env.RESEND_SEND_DOMAIN?.trim();
+  if (configured) return configured.replace(/^www\./, "");
+  return `send.${siteHostname()}`;
+}
+
 /** Single verified sender — must match a domain verified at resend.com/domains */
 export function resendFromAddress(): string {
-  return (
+  const explicit =
     process.env.RESEND_FROM?.trim() ||
     process.env.PASSWORD_RESET_FROM?.trim() ||
     process.env.MESSAGE_HUB_FROM?.trim() ||
-    process.env.MEMBER_WELCOME_FROM?.trim() ||
-    `${BRAND_NAME} <notifications@send.${appHost()}>`
-  );
+    process.env.MEMBER_WELCOME_FROM?.trim();
+  if (explicit) return explicit;
+
+  const domain = resendSendingDomain();
+  return `${BRAND_NAME} <accounts@${domain}>`;
 }
 
 export function resendReplyTo(): string {
   return (
     process.env.RESEND_REPLY_TO?.trim() ||
-    process.env.COACH_NOTIFY_EMAIL?.trim() ||
+    process.env.COACH_NOTIFY_EMAIL?.trim()?.split(",")[0]?.trim() ||
     "jeremy@thetrainstation.co"
   );
 }
@@ -50,10 +66,11 @@ export function resendFromDomain(): string | null {
 export function resendFromLooksMisconfigured(): boolean {
   const domain = resendFromDomain();
   if (!domain) return true;
-  const host = appHost().toLowerCase();
   if (domain === "resend.dev" || domain.endsWith(".resend.dev")) return true;
   if (domain.includes("buyecodelight")) return true;
-  if (!host.endsWith(domain) && !domain.endsWith(host)) return true;
+  if (domain.includes("www.")) return true;
+  const expected = resendSendingDomain().toLowerCase();
+  if (domain !== expected) return true;
   return false;
 }
 
@@ -68,12 +85,15 @@ function wrapHtml(bodyText: string, ctaUrl?: string, ctaLabel?: string): string 
       ? `<p style="margin:24px 0;"><a href="${ctaUrl}" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;padding:12px 20px;border-radius:999px;font-weight:600;">${ctaLabel}</a></p>`
       : "";
 
+  const site = siteHostname();
+
   return `<!DOCTYPE html><html><body style="font-family:system-ui,-apple-system,sans-serif;background:#f6f4fa;padding:24px;">
 <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;padding:28px;border:1px solid #e8e0f0;">
 <p style="margin:0 0 20px;font-weight:700;color:#7c3aed;">${BRAND_NAME}</p>
 ${paragraphs}
 ${cta}
 <p style="margin:24px 0 0;font-size:12px;color:#6b7280;">Questions? Reply to this email or message your coach in the app.</p>
+<p style="margin:12px 0 0;font-size:11px;color:#9ca3af;">${BRAND_NAME} · ${site}</p>
 </div></body></html>`;
 }
 
@@ -87,11 +107,15 @@ export async function sendResendEmail(input: ResendEmailInput): Promise<boolean>
   if (process.env.NODE_ENV === "production" && resendFromLooksMisconfigured()) {
     console.warn(
       `[RESEND] FROM domain may hurt deliverability (${resendFromDomain()}). ` +
-        `Verify send.${appHost()} at resend.com/domains and set RESEND_FROM.`,
+        `Expected ${resendSendingDomain()}. Verify at resend.com/domains and set RESEND_FROM.`,
     );
   }
 
   const to = Array.isArray(input.to) ? input.to : [input.to];
+  const headers: Record<string, string> = {
+    "X-Entity-Ref-ID": `ts-${Date.now()}`,
+    ...input.headers,
+  };
 
   try {
     const res = await fetch("https://api.resend.com/emails", {
@@ -108,6 +132,7 @@ export async function sendResendEmail(input: ResendEmailInput): Promise<boolean>
         text: input.text,
         html: input.html || wrapHtml(input.text, input.ctaUrl, input.ctaLabel),
         tags: input.tags,
+        headers,
       }),
     });
 
@@ -124,15 +149,14 @@ export async function sendResendEmail(input: ResendEmailInput): Promise<boolean>
 }
 
 export function transactionalSubject(kind: string): string {
-  const prefix = BRAND_NAME;
   switch (kind) {
     case "password-reset":
-      return `${prefix} — set your password`;
+      return `Reset your ${BRAND_NAME} password`;
     case "hub":
-      return `${prefix} — message from your coach`;
+      return `${BRAND_NAME} message from your coach`;
     case "welcome":
-      return `Welcome to ${prefix}`;
+      return `Welcome to ${BRAND_NAME}`;
     default:
-      return prefix;
+      return BRAND_NAME;
   }
 }

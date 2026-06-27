@@ -1,6 +1,7 @@
 import "server-only";
 
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import {
   applyNewMemberOnboardingCookie,
   applySessionCookies,
@@ -9,6 +10,10 @@ import {
   type SessionUser,
 } from "@/lib/auth";
 import {
+  applyEmailHistoryCookies,
+  readEmailHistoryFromRequestCookies,
+} from "@/lib/email-history-cookies";
+import {
   memberCheckoutPath,
   MEMBER_PENDING_PATH,
   memberNeedsApproval,
@@ -16,7 +21,7 @@ import {
 } from "@/lib/member-gates";
 import { memberOnboardPath, memberTodayPath } from "@/lib/member-destinations";
 import { getMemberProfile } from "@/lib/member-profiles-store";
-import { applyRememberedEmailCookie } from "@/lib/remembered-email";
+
 
 export async function resolveLoginDestination(
   user: SessionUser,
@@ -62,7 +67,12 @@ export async function buildLoginResponse(
     redirect: destination,
   });
   applySessionCookies(res, user);
-  applyRememberedEmailCookie(res, user.email);
+  const cookieStore = await cookies();
+  applyEmailHistoryCookies(
+    res,
+    user.email,
+    readEmailHistoryFromRequestCookies((name) => cookieStore.get(name)),
+  );
 
   if (!isStaffRole(user.role)) {
     const profile = await getMemberProfile(user.id);

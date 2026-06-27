@@ -4,7 +4,10 @@ import { clearSessionCookies, getSessionUser } from "@/lib/auth";
 import { isStaffRole } from "@/lib/auth-session";
 import { MEMBER_COOKIE } from "@/lib/current-user";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
-import { applyRememberedEmailCookie } from "@/lib/remembered-email";
+import {
+  applyEmailHistoryCookies,
+  readEmailHistoryFromRequestCookies,
+} from "@/lib/email-history-cookies";
 
 async function emailToRememberOnLogout(): Promise<string | null> {
   const user = await getSessionUser();
@@ -18,10 +21,23 @@ async function emailToRememberOnLogout(): Promise<string | null> {
   return user?.email || viewed?.email || null;
 }
 
+async function rememberEmailOnLogout(
+  res: NextResponse,
+  email: string | null,
+) {
+  if (!email) return;
+  const cookieStore = await cookies();
+  applyEmailHistoryCookies(
+    res,
+    email,
+    readEmailHistoryFromRequestCookies((name) => cookieStore.get(name)),
+  );
+}
+
 export async function POST() {
   const email = await emailToRememberOnLogout();
   const res = NextResponse.json({ ok: true });
-  if (email) applyRememberedEmailCookie(res, email);
+  await rememberEmailOnLogout(res, email);
   clearSessionCookies(res);
   return res;
 }
@@ -29,7 +45,7 @@ export async function POST() {
 export async function GET(request: Request) {
   const email = await emailToRememberOnLogout();
   const res = NextResponse.redirect(new URL("/", request.url));
-  if (email) applyRememberedEmailCookie(res, email);
+  await rememberEmailOnLogout(res, email);
   clearSessionCookies(res);
   return res;
 }

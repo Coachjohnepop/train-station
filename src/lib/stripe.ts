@@ -74,6 +74,21 @@ export async function createBillingPortalSession(input: {
   }
 }
 
+export function getStripePublishableKey(): string | null {
+  return process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() || null;
+}
+
+function embeddedCheckoutFields(base: string): Pick<
+  import("stripe").Stripe.Checkout.SessionCreateParams,
+  "ui_mode" | "return_url" | "redirect_on_completion"
+> {
+  return {
+    ui_mode: "embedded_page",
+    return_url: `${base}/member/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+    redirect_on_completion: "if_required",
+  };
+}
+
 export function appBaseUrl(): string {
   const fromEnv =
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
@@ -91,11 +106,13 @@ export function appBaseUrl(): string {
 async function createCheckoutSession(
   stripe: StripeClient,
   sessionParams: import("stripe").Stripe.Checkout.SessionCreateParams,
-): Promise<{ url: string; sessionId: string } | { error: string }> {
+): Promise<{ clientSecret: string; sessionId: string } | { error: string }> {
   try {
     const session = await stripe.checkout.sessions.create(sessionParams);
-    if (!session.url) return { error: "Stripe did not return a checkout URL." };
-    return { url: session.url, sessionId: session.id };
+    if (!session.client_secret) {
+      return { error: "Stripe did not return a checkout client secret." };
+    }
+    return { clientSecret: session.client_secret, sessionId: session.id };
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Stripe checkout failed.";
     console.error("[stripe] checkout.sessions.create failed:", message);
@@ -161,7 +178,7 @@ export async function createSignupCheckoutSession(input: {
   merchandiseSkuId?: string | null;
   quantity?: number;
 }): Promise<
-  { url: string; sessionId: string; hasSavedCard: boolean } | { error: string }
+  { clientSecret: string; sessionId: string; hasSavedCard: boolean } | { error: string }
 > {
   const stripe = getStripe();
   if (!stripe) return { error: "Stripe is not configured." };
@@ -201,6 +218,7 @@ export async function createSignupCheckoutSession(input: {
 
     const sessionParams: import("stripe").Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
+      ...embeddedCheckoutFields(base),
       ...customer.fields,
       client_reference_id: input.userId,
       metadata,
@@ -217,8 +235,6 @@ export async function createSignupCheckoutSession(input: {
           quantity: 1,
         },
       ],
-      success_url: `${base}/member/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${base}/member/checkout?plan=custom_training&offerId=${encodeURIComponent(customOffer.id)}&canceled=1`,
     };
     applyReferralDiscounts(sessionParams, input.discount);
     const session = await createCheckoutSession(stripe, sessionParams);
@@ -244,12 +260,11 @@ export async function createSignupCheckoutSession(input: {
     const qty = Math.max(1, Math.min(99, input.quantity ?? 1));
     const sessionParams: import("stripe").Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
+      ...embeddedCheckoutFields(base),
       ...customer.fields,
       client_reference_id: input.userId,
       metadata,
       line_items: [{ price: priceId, quantity: qty }],
-      success_url: `${base}/member/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${base}/member/checkout?plan=merchandise&sku=${encodeURIComponent(sku.id)}&canceled=1`,
     };
     applyReferralDiscounts(sessionParams, input.discount);
     const session = await createCheckoutSession(stripe, sessionParams);
@@ -264,12 +279,11 @@ export async function createSignupCheckoutSession(input: {
     }
     const sessionParams: import("stripe").Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
+      ...embeddedCheckoutFields(base),
       ...customer.fields,
       client_reference_id: input.userId,
       metadata,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${base}/member/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${base}/member/checkout?plan=${encodeURIComponent(input.plan)}&canceled=1`,
     };
     applyReferralDiscounts(sessionParams, input.discount);
     const session = await createCheckoutSession(stripe, sessionParams);
@@ -284,12 +298,11 @@ export async function createSignupCheckoutSession(input: {
     }
     const sessionParams: import("stripe").Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
+      ...embeddedCheckoutFields(base),
       ...customer.fields,
       client_reference_id: input.userId,
       metadata,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${base}/member/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${base}/member/checkout?plan=${encodeURIComponent(input.plan)}&canceled=1`,
       subscription_data: {
         metadata: {
           userId: input.userId,

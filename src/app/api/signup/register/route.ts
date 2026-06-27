@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { z } from "zod";
+import {
+  applyEmailHistoryCookies,
+  readEmailHistoryFromRequestCookies,
+} from "@/lib/email-history-cookies";
 import {
   applyNewMemberOnboardingCookie,
   applySessionCookies,
@@ -133,6 +138,12 @@ export async function POST(request: Request) {
       user: { email: sessionUser.email, name: sessionUser.name, role: sessionUser.role },
     });
     applySessionCookies(res, sessionUser);
+    const cookieStore = await cookies();
+    applyEmailHistoryCookies(
+      res,
+      normalizedEmail,
+      readEmailHistoryFromRequestCookies((name) => cookieStore.get(name)),
+    );
     if (needsCheckout) {
       syncMemberGateCookies(res, { userId: account.userId, profile });
     } else {

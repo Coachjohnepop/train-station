@@ -119,7 +119,8 @@ export async function POST(request: Request) {
 
     const res = NextResponse.json({
       ok: true,
-      url: checkout.url,
+      clientSecret: checkout.clientSecret,
+      sessionId: checkout.sessionId,
       hasSavedCard: checkout.hasSavedCard,
     });
     syncMemberGateCookies(res, {
@@ -141,52 +142,16 @@ export async function GET(request: Request) {
   }
 
   const existingProfile = await getMemberProfile(session.id);
+  const url = new URL(request.url);
   const plan = normalizeSignupPlan(
-    new URL(request.url).searchParams.get("plan") || existingProfile?.plan || "explorer",
+    url.searchParams.get("plan") || existingProfile?.plan || "explorer",
   );
 
-  if (!(await stripeConfiguredForPlan(plan))) {
-    return NextResponse.redirect(new URL(`/member/onboard?plan=${encodeURIComponent(plan)}`, request.url));
+  const redirect = new URL(memberCheckoutPath(plan), request.url);
+  for (const key of ["offerId", "sku", "canceled"]) {
+    const value = url.searchParams.get(key);
+    if (value) redirect.searchParams.set(key, value);
   }
 
-  await ensureMemberProfile({
-    userId: session.id,
-    email: session.email,
-    plan,
-    phone: existingProfile?.phone,
-  });
-
-  const referralInput = existingProfile?.referralCode || null;
-  const referral = referralInput ? await resolveReferralDiscount(referralInput) : null;
-
-  const checkout = await createSignupCheckoutSession({
-    userId: session.id,
-    email: session.email,
-    name: session.name,
-    plan,
-    referralCode: referral?.referralCode ?? null,
-    discount: referral?.discount ?? null,
-  });
-
-  if ("error" in checkout) {
-    return NextResponse.redirect(new URL(memberCheckoutPath(plan), request.url));
-  }
-
-  try {
-    await updateMemberProfile(session.id, {
-      plan,
-      paymentStatus: "pending",
-      stripeCheckoutSessionId: checkout.sessionId,
-      ...(referral?.referralCode
-        ? {
-            referralCode: referral.referralCode,
-            referredByUserId: referral.ownerUserId,
-          }
-        : {}),
-    });
-  } catch (e: unknown) {
-    console.error("[stripe/checkout] GET profile update failed", e);
-  }
-
-  return NextResponse.redirect(checkout.url);
+  return NextResponse.redirect(redirect);
 }

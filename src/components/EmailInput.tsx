@@ -43,8 +43,30 @@ export default function EmailInput({
   const prefilled = useRef(false);
 
   useEffect(() => {
-    setHistory(filterEmailHistory(""));
-  }, []);
+    const local = filterEmailHistory("");
+    setHistory(local);
+
+    fetch("/api/auth/remembered-email", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { email?: string | null; emails?: string[] } | null) => {
+        if (!data) return;
+        const serverEmails = Array.isArray(data.emails)
+          ? data.emails.filter((entry): entry is string => typeof entry === "string")
+          : [];
+        if (serverEmails.length > 0) {
+          const merged = [...serverEmails];
+          for (const entry of local) {
+            if (!merged.includes(entry)) merged.push(entry);
+          }
+          setHistory(merged.slice(0, 12));
+        }
+        if (prefillFromHistory && !prefilled.current && !value.trim() && data.email) {
+          prefilled.current = true;
+          onChange(data.email);
+        }
+      })
+      .catch(() => {});
+  }, [prefillFromHistory, value, onChange]);
 
   useEffect(() => {
     if (!prefillFromHistory || prefilled.current || value.trim()) return;

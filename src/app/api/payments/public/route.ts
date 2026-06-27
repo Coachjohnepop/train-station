@@ -4,6 +4,7 @@ import { getLandingMedia } from "@/lib/landing-media-store";
 import { isStripePaymentsEnabled } from "@/lib/member-gates";
 import { getEffectiveMembershipOffers, resolveStripePriceId } from "@/lib/pricing-catalog";
 import { diagnoseMembershipStripePrices } from "@/lib/stripe-price-diagnostics";
+import { getStripePublishableKey } from "@/lib/stripe";
 import { isStripeTestMode } from "@/lib/stripe-price-ids";
 import { SERVICE_OFFERS } from "@/lib/product-offers";
 
@@ -33,6 +34,7 @@ export async function GET() {
 
   return NextResponse.json({
     stripeEnabled,
+    stripePublishableKey: stripeEnabled ? getStripePublishableKey() : null,
     ...(isStripeTestMode()
       ? {
           stripeTestMode: true,

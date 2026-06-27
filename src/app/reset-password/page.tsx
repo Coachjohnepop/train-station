@@ -1,16 +1,19 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { normalizeAccountEmail } from "@/lib/account-email";
 import { lookupPasswordResetToken } from "@/lib/password-reset-store";
 import ResetPasswordForm from "./ResetPasswordForm";
 
 export default async function ResetPasswordPage({
   searchParams,
 }: {
-  searchParams: Promise<{ token?: string }>;
+  searchParams: Promise<{ token?: string; email?: string }>;
 }) {
-  const { token: rawToken } = await searchParams;
+  const { token: rawToken, email: rawEmail } = await searchParams;
   const token = rawToken?.trim() || "";
-  const accountEmail = token ? (await lookupPasswordResetToken(token))?.email ?? null : null;
+  const tokenEntry = token ? await lookupPasswordResetToken(token) : null;
+  const accountEmail =
+    tokenEntry?.email ?? (rawEmail ? normalizeAccountEmail(rawEmail) || null : null);
 
   return (
     <div className="app-shell-bg flex min-h-screen flex-col items-center justify-center px-4 py-12">
@@ -18,6 +21,11 @@ export default async function ResetPasswordPage({
         <div className="mb-8 text-center">
           <p className="text-sm font-semibold tracking-tight text-[var(--accent)]">The Train Station</p>
           <h1 className="mt-4 text-2xl font-bold">Set a new password</h1>
+          {accountEmail ? (
+            <p className="mt-2 text-sm text-white">
+              For <span className="font-medium text-accent">{accountEmail}</span>
+            </p>
+          ) : null}
           <p className="mt-2 text-sm text-[var(--muted)]">
             Choose a password you&apos;ll use to sign in from now on.
           </p>

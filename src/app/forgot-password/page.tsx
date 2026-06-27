@@ -1,14 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import EmailInput from "@/components/EmailInput";
+import EmailInput, { rememberEmail } from "@/components/EmailInput";
+import { getLastEmail } from "@/lib/email-history";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const localLast = getLastEmail();
+    if (localLast) setEmail(localLast);
+
+    fetch("/api/auth/remembered-email", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { email?: string | null } | null) => {
+        if (data?.email) {
+          setEmail(data.email);
+          rememberEmail(data.email);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,6 +43,7 @@ export default function ForgotPasswordPage() {
         setError(data.error || "Something went wrong — try again.");
         return;
       }
+      rememberEmail(email);
       setMessage(
         data.message ||
           "If that email is on file, we sent a link to reset your password. Check your inbox (and spam).",
@@ -56,9 +73,14 @@ export default function ForgotPasswordPage() {
             </p>
           )}
           {message && (
-            <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
-              {message}
-            </p>
+            <div className="space-y-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+              <p>{message}</p>
+              {email.toLowerCase().includes("@yahoo.") && (
+                <p className="text-xs text-emerald-200/90">
+                  Yahoo often filters new senders — check Spam, Bulk, or the Archive folder too.
+                </p>
+              )}
+            </div>
           )}
 
           <div>
