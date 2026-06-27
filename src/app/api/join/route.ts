@@ -134,7 +134,7 @@ export async function POST(request: Request) {
     success: true,
     userId,
     name: userName,
-    redirectTo: "/member",
+    redirectTo: "/member/today",
   });
 
   // httpOnly uid for server-only use

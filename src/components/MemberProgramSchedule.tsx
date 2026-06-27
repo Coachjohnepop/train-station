@@ -5,6 +5,8 @@ import {
   findProgramDayForCalendarDate,
   localTodayIso,
   resolveProgramStartMonday,
+  rollingProgramWeekNumbers,
+  rollingWeekSectionLabel,
 } from "@/lib/program-calendar";
 import ScheduleJumpLink from "@/components/ScheduleJumpLink";
 
@@ -45,7 +47,10 @@ type Props = {
   loggedWorkoutIds: string[];
   idPrefix?: string;
   showThisWeek?: boolean;
+  /** Coaches only — members see a rolling window instead. */
   showFullSchedule?: boolean;
+  /** Member rolling window size (default 3: last week, this week, next week). */
+  rollingWeeks?: number;
   compact?: boolean;
 };
 
@@ -154,7 +159,7 @@ function DayCards({
                   return (
                     <Link
                       key={idx}
-                      href={`/member/workout?workoutId=${encodeURIComponent(wid)}&program=${encodeURIComponent(program.slug)}&date=${encodeURIComponent(calIso)}${opt.label ? `&option=${encodeURIComponent(opt.label)}` : ""}${isThisSessionDone ? "&review=true" : ""}`}
+                      href={`/member/today?date=${encodeURIComponent(calIso)}`}
                       className={`card flex flex-col lg:flex-row items-start lg:items-center justify-between gap-1 lg:gap-3 p-2 lg:p-3 transition hover-accent-border text-sm ${
                         isThisSessionDone
                           ? "ring-2 ring-[var(--success)] ring-offset-1 bg-[var(--success)]/5"
@@ -192,8 +197,6 @@ function DayCards({
                     </Link>
                   );
                 })}
-
-
               </li>
             );
           }
@@ -245,7 +248,8 @@ export default function MemberProgramSchedule({
   loggedWorkoutIds,
   idPrefix = "",
   showThisWeek = true,
-  showFullSchedule = true,
+  showFullSchedule = false,
+  rollingWeeks = 3,
   compact = false,
 }: Props) {
   const loggedSet = new Set(loggedWorkoutIds);
@@ -261,6 +265,64 @@ export default function MemberProgramSchedule({
   const displayWeek = program.weeks.find((w) => w.weekNumber === calendarWeek);
   const fullScheduleId = `${idPrefix}full-schedule`;
   const weekDetailsId = (weekNumber: number) => `${idPrefix}week-${weekNumber}`;
+  const availableWeekNumbers = program.weeks.map((w) => w.weekNumber);
+  const rollingWeekNumbers = rollingProgramWeekNumbers(calendarWeek, availableWeekNumbers, rollingWeeks);
+
+  if (!showFullSchedule) {
+    return (
+      <div className="space-y-3">
+        <p className="text-[10px] text-[var(--muted)]">
+          Rolling {rollingWeeks}-week view — what you did, where you are, and what&apos;s ahead. Your coach sees the full program.
+        </p>
+        {rollingWeekNumbers.map((weekNumber) => {
+          const week = program.weeks.find((w) => w.weekNumber === weekNumber);
+          if (!week) return null;
+          const sectionLabel = rollingWeekSectionLabel(weekNumber, calendarWeek);
+          const isCurrentWeek = weekNumber === calendarWeek;
+          return (
+            <section key={week.id} id={weekDetailsId(weekNumber)} className="card p-3 scroll-mt-24">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-sm font-semibold">{sectionLabel}</h2>
+                  <span className="text-xs text-[var(--muted)]">
+                    Week {weekNumber}
+                    {isCurrentWeek && withinProgram && todayOnCalendar && (
+                      <>
+                        <span className="mx-1">·</span>
+                        {DAY_LABELS[calendarDay - 1] ?? `Day ${calendarDay}`}
+                        <span className="mx-1">·</span>
+                        progress W{curWeek}D{curDay}
+                      </>
+                    )}
+                  </span>
+                </div>
+                {isCurrentWeek && withinProgram && todayOnCalendar && (
+                  <ScheduleJumpLink
+                    week={calendarWeek}
+                    day={calendarDay}
+                    fullScheduleId={weekDetailsId(calendarWeek)}
+                    weekDetailsId={weekDetailsId(calendarWeek)}
+                    label="Jump to today"
+                  />
+                )}
+              </div>
+              <DayCards
+                program={program}
+                week={week}
+                calendarWeek={calendarWeek}
+                calendarDay={calendarDay}
+                loggedSet={loggedSet}
+                isWorkout={isWorkout}
+                isJourney={isJourney}
+                cat={cat}
+                compact={compact}
+              />
+            </section>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -282,7 +344,7 @@ export default function MemberProgramSchedule({
                 </span>
               )}
             </div>
-            {showFullSchedule && withinProgram && todayOnCalendar && (
+            {withinProgram && todayOnCalendar && (
               <ScheduleJumpLink
                 week={calendarWeek}
                 day={calendarDay}
@@ -292,9 +354,6 @@ export default function MemberProgramSchedule({
               />
             )}
           </div>
-          <p className="text-[10px] text-[var(--muted)] mb-2">
-            This week follows the program calendar. Expand the full schedule below when you need other weeks.
-          </p>
           <DayCards
             program={program}
             week={displayWeek}
@@ -309,53 +368,51 @@ export default function MemberProgramSchedule({
         </section>
       )}
 
-      {showFullSchedule && (
-        <details id={fullScheduleId} className="group">
-          <summary className="flex items-center gap-2 cursor-pointer list-none text-sm font-semibold uppercase tracking-wide text-[var(--muted)] group-open:text-white transition mb-2">
-            <span className="text-xs text-accent group-open:rotate-90 transition-transform">▶</span>
-            Full program schedule
-            <span className="text-[10px] normal-case font-normal text-[var(--muted)]">
-              ({program.weeks.length} weeks)
-            </span>
-          </summary>
-          <div className="space-y-4 pl-1">
-            {program.weeks.map((week) => {
-              const isCalendarWeek = week.weekNumber === calendarWeek;
-              const isProgressWeek = week.weekNumber === curWeek;
-              return (
-                <details
-                  key={week.id}
-                  id={weekDetailsId(week.weekNumber)}
-                  className="group/week"
-                  open={isCalendarWeek}
-                >
-                  <summary className="text-sm font-semibold uppercase tracking-wide text-accent cursor-pointer list-none flex items-center gap-2 hover:text-white transition">
-                    <span className="group-open/week:rotate-90 transition-transform text-xs">▶</span>
-                    Week {week.weekNumber}
-                    {isCalendarWeek && (
-                      <span className="text-[10px] normal-case font-normal text-accent/80">(this week)</span>
-                    )}
-                    {!isCalendarWeek && isProgressWeek && (
-                      <span className="text-[10px] normal-case font-normal text-[var(--muted)]">(your progress)</span>
-                    )}
-                  </summary>
-                  <DayCards
-                    program={program}
-                    week={week}
-                    calendarWeek={calendarWeek}
-                    calendarDay={calendarDay}
-                    loggedSet={loggedSet}
-                    isWorkout={isWorkout}
-                    isJourney={isJourney}
-                    cat={cat}
-                    compact={false}
-                  />
-                </details>
-              );
-            })}
-          </div>
-        </details>
-      )}
+      <details id={fullScheduleId} className="group">
+        <summary className="flex items-center gap-2 cursor-pointer list-none text-sm font-semibold uppercase tracking-wide text-[var(--muted)] group-open:text-white transition mb-2">
+          <span className="text-xs text-accent group-open:rotate-90 transition-transform">▶</span>
+          Full program schedule
+          <span className="text-[10px] normal-case font-normal text-[var(--muted)]">
+            ({program.weeks.length} weeks)
+          </span>
+        </summary>
+        <div className="space-y-4 pl-1">
+          {program.weeks.map((week) => {
+            const isCalendarWeek = week.weekNumber === calendarWeek;
+            const isProgressWeek = week.weekNumber === curWeek;
+            return (
+              <details
+                key={week.id}
+                id={weekDetailsId(week.weekNumber)}
+                className="group/week"
+                open={isCalendarWeek}
+              >
+                <summary className="text-sm font-semibold uppercase tracking-wide text-accent cursor-pointer list-none flex items-center gap-2 hover:text-white transition">
+                  <span className="group-open/week:rotate-90 transition-transform text-xs">▶</span>
+                  Week {week.weekNumber}
+                  {isCalendarWeek && (
+                    <span className="text-[10px] normal-case font-normal text-accent/80">(this week)</span>
+                  )}
+                  {!isCalendarWeek && isProgressWeek && (
+                    <span className="text-[10px] normal-case font-normal text-[var(--muted)]">(your progress)</span>
+                  )}
+                </summary>
+                <DayCards
+                  program={program}
+                  week={week}
+                  calendarWeek={calendarWeek}
+                  calendarDay={calendarDay}
+                  loggedSet={loggedSet}
+                  isWorkout={isWorkout}
+                  isJourney={isJourney}
+                  cat={cat}
+                  compact={false}
+                />
+              </details>
+            );
+          })}
+        </div>
+      </details>
     </div>
   );
 }

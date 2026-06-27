@@ -47,7 +47,7 @@ export default async function MemberJourneyPage({ searchParams }: Props) {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <Link href={`/member/programs/${slug}`} className="text-xs text-accent hover:underline">
+      <Link href="/member/today" className="text-xs text-accent hover:underline">
         ← Back to {program.name}
       </Link>
 
@@ -119,7 +119,7 @@ export default async function MemberJourneyPage({ searchParams }: Props) {
             </button>
           </form>
 
-          <Link href={`/member/programs/${slug}`} className="text-sm text-accent hover:underline self-center">
+          <Link href="/member/today" className="text-sm text-accent hover:underline self-center">
             View full schedule
           </Link>
         </div>

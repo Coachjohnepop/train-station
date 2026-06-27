@@ -22,7 +22,7 @@ export default async function MemberPromptsPage({ searchParams }: Props) {
   if (cat === "eating") {
     return (
       <div className="max-w-2xl mx-auto">
-        <Link href={`/member/programs/${slug}`} className="text-xs text-accent hover:underline">
+        <Link href="/member/today" className="text-xs text-accent hover:underline">
           ← Back to {program.name}
         </Link>
         <h1 className="mt-3 text-2xl font-bold">Eating Approaches — Coming Soon</h1>
@@ -50,7 +50,7 @@ export default async function MemberPromptsPage({ searchParams }: Props) {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <Link href={`/member/programs/${slug}`} className="text-xs text-accent hover:underline">
+      <Link href="/member/today" className="text-xs text-accent hover:underline">
         ← Back to {program.name}
       </Link>
 
@@ -94,7 +94,7 @@ export default async function MemberPromptsPage({ searchParams }: Props) {
 
         <div className="mt-6 flex gap-3">
           <PromptLogger programSlug={slug} day={dayNum} isCoachView={isCoachView} />
-          <Link href={`/member/programs/${slug}`} className="btn-ghost">Back to schedule</Link>
+          <Link href="/member/today" className="btn-ghost">Back to Today</Link>
         </div>
         <p className="mt-3 text-[10px] text-[var(--muted)]">Responses are private to the member. Instructors see aggregate adherence for coaching.</p>
       </div>

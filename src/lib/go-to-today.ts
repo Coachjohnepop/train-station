@@ -159,9 +159,9 @@ export async function resolveMemberGoToToday(
     };
   }
 
-  const fallbackSlug = enrollmentSlugsForUser(userId)[0] || "adult";
+  const fallbackSlug = enrollmentSlugsForUser(userId)[0];
   return {
-    href: `/member/programs/${normalizeProgramSlug(fallbackSlug)}`,
+    href: "/member/today",
     kind: "empty",
     title: "No workout on today's calendar",
     subtitle: formatShortDate(calendarDate),

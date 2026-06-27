@@ -65,17 +65,8 @@ export async function resolveMemberProgramWorkout(
 }
 
 export async function memberProgramWorkoutPath(
-  programSlug: string,
-  userId?: string,
+  _programSlug?: string,
+  _userId?: string,
 ): Promise<string> {
-  const resolved = await resolveMemberProgramWorkout(programSlug, userId);
-  if (!resolved) {
-    return `/member/programs/${normalizeProgramSlug(programSlug)}`;
-  }
-  const params = new URLSearchParams({
-    program: normalizeProgramSlug(programSlug),
-    workoutId: resolved.workoutId,
-  });
-  if (resolved.option) params.set("option", resolved.option);
-  return `/member/workout?${params.toString()}`;
+  return "/member/today";
 }

@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getProgramAccessState } from "@/lib/access";
 import { getProgramBySlug } from "@/lib/program-data";
 import { getMemberDashboard } from "@/lib/member-context";
-import EnrollButton from "@/components/EnrollButton";
 import MemberProgramSchedule from "@/components/MemberProgramSchedule";
 import { resolveUserId } from "@/lib/current-user";
 import { loadMemberLoggedWorkoutIds, computeScheduleProgress } from "@/lib/member-schedule";
@@ -27,6 +26,10 @@ export default async function MemberProgramPage({ params, searchParams }: Props)
   if (!dashboard || !programRecord) notFound();
 
   const isEnrolled = dashboard.enrollments.some((e) => e.program.slug === slug);
+
+  if (!isEnrolled && !isCoachView) {
+    redirect("/member/today");
+  }
 
   const accessState = getProgramAccessState(programRecord, dashboard.access);
   if (accessState === "upgrade" && !dashboard.access.isPreview) {
@@ -53,14 +56,13 @@ export default async function MemberProgramPage({ params, searchParams }: Props)
 
   return (
     <div>
-      <Link href="/member/programs" className="text-xs text-accent hover:underline">
-        ← Programs
+      <Link href="/member/today" className="text-xs text-accent hover:underline">
+        ← Go to Today
       </Link>
       <h1 className="mt-3 text-2xl font-bold">{program.name}</h1>
       <p className="mt-2 text-sm text-[var(--muted)]">{program.description}</p>
       <p className="mt-1 text-xs text-[var(--muted)]">
-        {program.durationWeeks}-week plan ·{" "}
-        <span className="text-[var(--success)]">Full access</span>
+        {program.durationWeeks}-week plan · enrolled program
       </p>
       {totalAssigned > 0 && (
         <div className="mt-2">
@@ -105,15 +107,6 @@ export default async function MemberProgramPage({ params, searchParams }: Props)
         </div>
       )}
 
-      {!isEnrolled && (
-        <div className="mt-6 card border-accent bg-accent-muted">
-          <p className="font-medium mb-3">
-            Enroll for free to unlock progress tracking, silhouettes, and your personal schedule.
-          </p>
-          <EnrollButton slug={slug} isEnrolled={false} />
-        </div>
-      )}
-
       {!(cat === "eating" && isCoachView) && (
         <div className="mt-6">
           <MemberProgramSchedule
@@ -122,6 +115,7 @@ export default async function MemberProgramPage({ params, searchParams }: Props)
             curDay={curDay}
             loggedWorkoutIds={[...loggedSet]}
             idPrefix={`${slug}-`}
+            showFullSchedule={isCoachView}
           />
         </div>
       )}

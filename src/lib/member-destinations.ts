@@ -1,9 +1,14 @@
 import type { MemberProfile } from "@/lib/member-profiles-store";
 import { MEMBER_PENDING_PATH, memberNeedsApproval } from "@/lib/member-gates";
 
+/** Primary member hub after signup — today's workout, coach comms, enrolled program. */
+export function memberTodayPath(): string {
+  return "/member/today";
+}
+
 /** Where to send a member after enroll or onboarding for a given program. */
-export function memberProgramStartPath(programSlug: string): string {
-  return `/member/workout?program=${encodeURIComponent(programSlug)}`;
+export function memberProgramStartPath(_programSlug?: string): string {
+  return memberTodayPath();
 }
 
 export function memberPostOnboardPath(
@@ -29,6 +34,7 @@ export async function resolvePostEnrollRedirect(
   if (!profile?.onboardingComplete) {
     return memberOnboardPath(programSlug);
   }
-  const { memberProgramWorkoutPath } = await import("@/lib/member-program-workout");
-  return memberProgramWorkoutPath(programSlug, userId);
+  void programSlug;
+  void userId;
+  return memberTodayPath();
 }

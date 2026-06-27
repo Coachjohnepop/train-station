@@ -19,8 +19,8 @@ export default async function MemberChatPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/member" className="text-xs text-accent hover:underline">
-        ← Dashboard
+      <Link href="/member/today" className="text-xs text-accent hover:underline">
+        ← Today
       </Link>
       <div>
         <h1 className="text-2xl font-bold">Messages</h1>

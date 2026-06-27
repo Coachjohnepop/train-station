@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import MemberWorkoutConsole from "@/components/MemberWorkoutConsole";
+import MemberTodayHub from "@/components/MemberTodayHub";
 import TodaySessionPanel from "@/components/TodaySessionPanel";
 import TodayPageLiveRefresh from "@/components/TodayPageLiveRefresh";
 import { getMemberDashboard } from "@/lib/member-context";
+import { loadMemberLoggedWorkoutIds } from "@/lib/member-schedule";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { resolveUserId } from "@/lib/current-user";
 import { resolveTargetUserId } from "@/lib/resolve-target-user";
@@ -40,9 +42,10 @@ export default async function MemberTodayPage({ searchParams }: Props) {
 
   const todayKey = localTodayIso();
   const viewDate = sp.date || todayKey;
-  const [todayWorkout, upcoming] = await Promise.all([
+  const [todayWorkout, upcoming, loggedSet] = await Promise.all([
     resolveTodayPageWorkout(uid, viewDate, memberName),
     loadMemberUpcomingSessions(uid),
+    loadMemberLoggedWorkoutIds(uid),
   ]);
 
   const { session, workout, programSlug, source, scheduleLabel } = todayWorkout;
@@ -93,13 +96,9 @@ export default async function MemberTodayPage({ searchParams }: Props) {
         workoutId={session?.workoutId || workout?.workoutId}
       />
 
-      <Link href="/member" className="text-xs text-accent hover:underline">
-        ← Dashboard
-      </Link>
-
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Go to Today</h1>
+          <h1 className="text-2xl font-bold">Today</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">{subtitle}</p>
           {asInstructor && (
             <p className="mt-1 text-xs text-amber-300">
@@ -207,6 +206,10 @@ export default async function MemberTodayPage({ searchParams }: Props) {
             </p>
           )}
         </div>
+      )}
+
+      {!asInstructor && (
+        <MemberTodayHub dashboard={dashboard} loggedWorkoutIds={[...loggedSet]} />
       )}
 
       {asInstructor && (

@@ -81,7 +81,7 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
 
   const memberUserId = resolveTargetUserId(forUser, await resolveUserId());
 
-  const backHref = program ? `/member/programs/${program}` : "/member";
+  const backHref = "/member/today";
   const backLabel = program ? "← Back to program" : "← Dashboard";
 
   // Location + current weather for the member (from onboarding cookies or DB)

@@ -13,7 +13,7 @@ import {
   memberNeedsApproval,
   memberNeedsPayment,
 } from "@/lib/member-gates";
-import { memberOnboardPath } from "@/lib/member-destinations";
+import { memberOnboardPath, memberTodayPath } from "@/lib/member-destinations";
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import { isInvitedAccountEmail } from "@/lib/invited-accounts";
 import { applyRememberedEmailCookie } from "@/lib/remembered-email";
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
   }
 
-  let destination = isStaffRole(user.role) ? "/admin" : "/member";
+  let destination = isStaffRole(user.role) ? "/admin" : memberTodayPath();
 
   if (!isStaffRole(user.role)) {
     const profile = await getMemberProfile(user.id);

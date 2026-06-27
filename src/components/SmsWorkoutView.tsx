@@ -46,7 +46,7 @@ export default function SmsWorkoutView({
         >
           {done ? "✓ Marked complete" : "Mark workout complete"}
         </button>
-        <a href={`/member/programs/${programSlug}`} className="text-xs text-accent hover:underline">
+        <a href="/member/today" className="text-xs text-accent hover:underline">
           Back to program schedule →
         </a>
       </div>

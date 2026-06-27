@@ -123,9 +123,10 @@ export async function getMemberDashboard() {
           const prog = programs.find((pp: any) => pp.slug === enr.program.slug) || enr.program;
           const cat = prog.category || "workout";
           const labelBase = cat === "yoga" ? "Yoga" : cat === "journey" ? "Journey" : "Workouts";
-          const contUrl = cat === "journey" 
-            ? `/member/journey?program=${enr.program.slug}` 
-            : `/member/programs/${enr.program.slug}`;
+          const contUrl =
+            cat === "journey"
+              ? `/member/journey?program=${enr.program.slug}`
+              : "/member/today";
           return {
             url: contUrl,
             label: `${labelBase}: ${prog.name} (W${enr.currentWeek}D${enr.currentDay})`,

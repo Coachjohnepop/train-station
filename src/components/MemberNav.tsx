@@ -5,27 +5,20 @@ import { usePathname } from "next/navigation";
 import ChatNavBadge from "@/components/ChatNavBadge";
 
 const items = [
-  { href: "/member", label: "Home", match: (p: string) => p === "/member" },
-  {
-    href: "/member/programs",
-    label: "Store",
-    match: (p: string) => p.startsWith("/member/programs"),
-  },
   {
     href: "/member/today",
     label: "Today",
-    match: (p: string) => p === "/member/today" || p === "/member/workout",
+    match: (p: string) =>
+      p === "/member/today" ||
+      p === "/member/workout" ||
+      p === "/member" ||
+      p.startsWith("/member/programs"),
   },
   {
     href: "/member/chat",
     label: "Messages",
     match: (p: string) => p.startsWith("/member/chat"),
     badge: true,
-  },
-  {
-    href: "/member/live",
-    label: "Live",
-    match: (p: string) => p === "/member/live",
   },
   {
     href: "/member/book",

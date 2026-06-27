@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id") || DEFAULT_DEMO_MEMBER_ID;
-  const redirectTo = searchParams.get("redirect") || "/member";
+  const redirectTo = searchParams.get("redirect") || "/member/today";
 
   if (!ALLOWED.has(id)) {
     return NextResponse.json({ error: "Unknown demo user" }, { status: 400 });

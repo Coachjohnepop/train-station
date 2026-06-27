@@ -125,6 +125,52 @@ type ProgramCalendarLike = {
   weeks: ProgramWeekLike[];
 };
 
+/** Week numbers for a rolling member window centered on the calendar week (default: past + now + ahead). */
+export function rollingProgramWeekNumbers(
+  centerWeek: number,
+  availableWeeks: number[],
+  windowSize = 3,
+): number[] {
+  if (availableWeeks.length === 0) return [];
+  const sorted = [...new Set(availableWeeks)].sort((a, b) => a - b);
+  const minWeek = sorted[0];
+  const maxWeek = sorted[sorted.length - 1];
+  const half = Math.floor(windowSize / 2);
+  let start = centerWeek - half;
+  let end = centerWeek + (windowSize - half - 1);
+  if (start < minWeek) {
+    end += minWeek - start;
+    start = minWeek;
+  }
+  if (end > maxWeek) {
+    start -= end - maxWeek;
+    end = maxWeek;
+  }
+  start = Math.max(minWeek, start);
+  end = Math.min(maxWeek, end);
+  const picked: number[] = [];
+  for (let w = start; w <= end && picked.length < windowSize; w++) {
+    if (sorted.includes(w)) picked.push(w);
+  }
+  while (picked.length < windowSize && picked[0] > minWeek) {
+    const prev = picked[0] - 1;
+    if (sorted.includes(prev)) picked.unshift(prev);
+    else break;
+  }
+  while (picked.length < windowSize && picked[picked.length - 1] < maxWeek) {
+    const next = picked[picked.length - 1] + 1;
+    if (sorted.includes(next)) picked.push(next);
+    else break;
+  }
+  return picked;
+}
+
+export function rollingWeekSectionLabel(weekNumber: number, centerWeek: number): string {
+  if (weekNumber < centerWeek) return "What you did";
+  if (weekNumber > centerWeek) return "What's ahead";
+  return "Where you are";
+}
+
 /** Find the program day that matches a calendar ISO date (stored calendarDate first, then anchor math). */
 export function findProgramDayForCalendarDate(
   program: ProgramCalendarLike,

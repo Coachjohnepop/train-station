@@ -21,7 +21,7 @@ export default function EnrollButton({
       });
       if (res.ok) {
         const data = await res.json().catch(() => ({}));
-        router.push(typeof data.redirectTo === "string" ? data.redirectTo : `/member/programs/${slug}`);
+        router.push(typeof data.redirectTo === "string" ? data.redirectTo : "/member/today");
       } else {
         const err = await res.json().catch(() => ({}));
         alert(err.detail || "Failed to enroll");
