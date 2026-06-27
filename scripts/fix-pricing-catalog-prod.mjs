@@ -1,21 +1,18 @@
 #!/usr/bin/env node
 /**
- * Sync demo/pricing-catalog.json blob with STRIPE_PRICE_* env vars.
- * Usage: vercel env run --environment=production -- node scripts/fix-pricing-catalog-prod.mjs
+ * Sync demo/pricing-catalog.json blob with canonical Stripe price IDs.
+ * Usage: node scripts/fix-pricing-catalog-prod.mjs
  */
 import dotenv from "dotenv";
 import { head, put } from "@vercel/blob";
+import { STRIPE_PRICE_IDS, STRIPE_PRICE_LABELS } from "./stripe-price-ids.mjs";
 
-dotenv.config({ path: ".env.vercel.prod" });
-dotenv.config({ path: ".env.local" });
+if (process.env.VERCEL !== "1") {
+  dotenv.config({ path: ".env.vercel.prod" });
+  dotenv.config({ path: ".env.local" });
+}
 
 const BLOB_PATH = "demo/pricing-catalog.json";
-
-const PLANS = [
-  { planId: "member", env: "STRIPE_PRICE_MEMBER", label: "Coach Class", priceCents: 2500 },
-  { planId: "business", env: "STRIPE_PRICE_BUSINESS", label: "Business Class", priceCents: 5000 },
-  { planId: "pro", env: "STRIPE_PRICE_PRO", label: "1st Class", priceCents: 85000 },
-];
 
 const token = process.env.BLOB_READ_WRITE_TOKEN || process.env.TS_BLOB_TOKEN;
 if (!token) {
@@ -35,23 +32,19 @@ try {
 }
 
 const now = new Date().toISOString();
-for (const plan of PLANS) {
-  const stripePriceId = process.env[plan.env]?.trim();
-  if (!stripePriceId) {
-    console.warn(`Skip ${plan.planId}: ${plan.env} unset`);
-    continue;
-  }
-  const current = existing.plans?.[plan.planId];
-  existing.plans[plan.planId] = {
-    planId: plan.planId,
-    label: current?.label || plan.label,
-    priceCents: current?.priceCents ?? plan.priceCents,
+for (const [planId, stripePriceId] of Object.entries(STRIPE_PRICE_IDS)) {
+  const meta = STRIPE_PRICE_LABELS[planId];
+  const current = existing.plans?.[planId];
+  existing.plans[planId] = {
+    planId,
+    label: current?.label || meta.label,
+    priceCents: current?.priceCents ?? meta.priceCents,
     stripePriceId,
     stripeProductId: current?.stripeProductId ?? null,
     enabled: current?.enabled !== false,
     updatedAt: now,
   };
-  console.log(`${plan.planId}: ${stripePriceId}`);
+  console.log(`${planId}: ${stripePriceId}`);
 }
 
 existing.updatedAt = now;

@@ -61,15 +61,20 @@ export function joinPriceDisplay(priceLabel: string, priceNote?: string): string
   return `${priceLabel} ${priceNote}`;
 }
 
-export async function resolveStripePriceId(planId: string): Promise<string | null> {
-  const envId = envStripePriceId(planId);
-  if (envId) return envId;
+function pickStripePriceId(envId: string | null, catalogId: string | null): string | null {
+  if (!envId) return catalogId;
+  if (!catalogId) return envId;
+  if (envId === catalogId) return envId;
+  // Truncated env typos have shown up in Vercel — prefer the longer, complete ID.
+  return envId.length >= catalogId.length ? envId : catalogId;
+}
 
+export async function resolveStripePriceId(planId: string): Promise<string | null> {
   const record = PAID_PLANS.includes(planId as MembershipPlan)
     ? await getPricingPlanRecord(planId as MembershipPlan)
     : null;
-  if (record?.enabled && record.stripePriceId) return record.stripePriceId;
-  return null;
+  const catalogId = record?.enabled && record.stripePriceId ? record.stripePriceId : null;
+  return pickStripePriceId(envStripePriceId(planId), catalogId);
 }
 
 async function buildEffectiveOffer(
@@ -79,7 +84,10 @@ async function buildEffectiveOffer(
     base.id !== "explorer" ? await getPricingPlanRecord(base.id as MembershipPlan) : null;
   const priceCents = record?.priceCents ?? defaultPriceCents(base);
   const display = formatPriceDisplay(priceCents, base.checkoutMode);
-  const stripePriceId = envStripePriceId(base.id) || record?.stripePriceId || null;
+  const stripePriceId = pickStripePriceId(
+    envStripePriceId(base.id),
+    record?.stripePriceId || null,
+  );
 
   return {
     ...base,
