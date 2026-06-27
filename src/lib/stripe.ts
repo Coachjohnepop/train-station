@@ -107,9 +107,8 @@ function applyReferralDiscounts(
     sessionParams.discounts = [{ promotion_code: discount.promotionCode }];
   } else if (discount?.coupon) {
     sessionParams.discounts = [{ coupon: discount.coupon }];
-  } else {
-    sessionParams.allow_promotion_codes = true;
   }
+  // Promo code entry on Stripe Checkout disabled for now — re-enable when we ship referrals.
 }
 
 export async function createSignupCheckoutSession(input: {

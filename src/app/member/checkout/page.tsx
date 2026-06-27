@@ -46,10 +46,6 @@ function MemberCheckoutInner() {
   const [error, setError] = useState<string | null>(null);
   const [payments, setPayments] = useState<PaymentsPublic | null>(null);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
-  const [referralCode, setReferralCode] = useState(
-    () => searchParams.get("ref") || searchParams.get("referral") || "",
-  );
-
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -93,7 +89,6 @@ function MemberCheckoutInner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           plan,
-          referralCode: referralCode.trim() || undefined,
           customOfferId: customOfferId || undefined,
           merchandiseSkuId: merchandiseSkuId || undefined,
         }),
@@ -132,18 +127,6 @@ function MemberCheckoutInner() {
           {error && <p className="text-sm text-amber-400">{error}</p>}
           {stripeReady && (
             <div className="space-y-3">
-              <div>
-                <label className="mb-1 block text-xs font-medium uppercase tracking-[2px] text-[var(--muted)]">
-                  Referral or promo code
-                </label>
-                <input
-                  className="input w-full"
-                  placeholder="Optional — e.g. FRIEND10"
-                  value={referralCode}
-                  onChange={(e) => setReferralCode(e.target.value)}
-                  autoCapitalize="characters"
-                />
-              </div>
               <button
                 type="button"
                 onClick={() => void startCheckout()}
