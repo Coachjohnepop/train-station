@@ -10,11 +10,11 @@ import { removeMemberByEmail } from "./remove-member-email.mjs";
 const DEFAULT_EMAIL = "john+test@lemonvoice.com";
 
 async function main() {
-  // Only run on Vercel production deploys (CI=1 is set on Vercel, not in local .env pulls).
+  // Only run on real Vercel production builds (git SHA is set on CI, empty in local env pulls).
   if (
     process.env.VERCEL !== "1" ||
     process.env.VERCEL_ENV !== "production" ||
-    process.env.CI !== "1"
+    !process.env.VERCEL_GIT_COMMIT_SHA?.trim()
   ) {
     console.log("[demo-reset] skip — not a Vercel production build");
     return;
@@ -42,7 +42,8 @@ async function main() {
     console.log(`[demo-reset] cleared ${email}: ${parts.join(", ")}`);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    console.warn(`[demo-reset] failed (build continues): ${message}`);
+    console.error(`[demo-reset] FAILED: ${message}`);
+    process.exit(1);
   }
 }
 

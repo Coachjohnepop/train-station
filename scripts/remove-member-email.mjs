@@ -1,9 +1,12 @@
 import dotenv from "dotenv";
 import { head, put } from "@vercel/blob";
 
-dotenv.config({ path: ".env.vercel.prod" });
-dotenv.config({ path: ".env.local" });
-dotenv.config({ path: ".env" });
+// On Vercel, env vars are injected — avoid local .env files overriding them.
+if (process.env.VERCEL !== "1") {
+  dotenv.config({ path: ".env.vercel.prod" });
+  dotenv.config({ path: ".env.local" });
+  dotenv.config({ path: ".env" });
+}
 
 const ACCOUNTS_PATH = "demo/registered-accounts.json";
 const PROFILES_PATH = "demo/member-profiles.json";
