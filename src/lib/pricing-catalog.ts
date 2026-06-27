@@ -62,11 +62,14 @@ export function joinPriceDisplay(priceLabel: string, priceNote?: string): string
 }
 
 export async function resolveStripePriceId(planId: string): Promise<string | null> {
+  const envId = envStripePriceId(planId);
+  if (envId) return envId;
+
   const record = PAID_PLANS.includes(planId as MembershipPlan)
     ? await getPricingPlanRecord(planId as MembershipPlan)
     : null;
   if (record?.enabled && record.stripePriceId) return record.stripePriceId;
-  return envStripePriceId(planId);
+  return null;
 }
 
 async function buildEffectiveOffer(
@@ -76,7 +79,7 @@ async function buildEffectiveOffer(
     base.id !== "explorer" ? await getPricingPlanRecord(base.id as MembershipPlan) : null;
   const priceCents = record?.priceCents ?? defaultPriceCents(base);
   const display = formatPriceDisplay(priceCents, base.checkoutMode);
-  const stripePriceId = record?.stripePriceId || envStripePriceId(base.id);
+  const stripePriceId = envStripePriceId(base.id) || record?.stripePriceId || null;
 
   return {
     ...base,
@@ -168,14 +171,15 @@ export async function importStripePriceIdsFromEnv(): Promise<void> {
     const envId = envStripePriceId(planId);
     if (!envId) continue;
     const existing = await getPricingPlanRecord(planId);
-    if (existing?.stripePriceId) continue;
+    if (existing?.stripePriceId === envId) continue;
     const base = getOfferDefinition(planId);
     if (!base) continue;
     await upsertPricingPlanRecord(planId, {
-      label: base.label,
-      priceCents: defaultPriceCents(base),
+      label: existing?.label || base.label,
+      priceCents: existing?.priceCents ?? defaultPriceCents(base),
       stripePriceId: envId,
-      enabled: true,
+      stripeProductId: existing?.stripeProductId ?? null,
+      enabled: existing?.enabled ?? true,
     });
   }
 }
