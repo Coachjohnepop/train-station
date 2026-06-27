@@ -3,7 +3,7 @@ import { verifyRegistrationResponse } from "@simplewebauthn/server";
 import { cookies } from "next/headers";
 import { getSessionUser } from "@/lib/auth";
 import { resolveQuickAuthDeviceId } from "@/lib/quick-auth-device-cookie";
-import { webAuthnOrigin, webAuthnRpId } from "@/lib/quick-auth-rp";
+import { webAuthnOriginFromRequest, webAuthnRpId } from "@/lib/quick-auth-rp";
 import { getDeviceQuickAuth, upsertDeviceQuickAuth } from "@/lib/quick-auth-store";
 
 export async function POST(request: Request) {
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     verification = await verifyRegistrationResponse({
       response: attestation,
       expectedChallenge,
-      expectedOrigin: webAuthnOrigin(),
+      expectedOrigin: webAuthnOriginFromRequest(request),
       expectedRPID: webAuthnRpId(),
       requireUserVerification: true,
     });

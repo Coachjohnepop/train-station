@@ -6,7 +6,7 @@ import { resolveUserByEmail } from "@/lib/auth";
 import { buildLoginResponse } from "@/lib/complete-login";
 import { isInvitedAccountEmail } from "@/lib/invited-accounts";
 import { resolveQuickAuthDeviceId } from "@/lib/quick-auth-device-cookie";
-import { webAuthnOrigin, webAuthnRpId } from "@/lib/quick-auth-rp";
+import { webAuthnOriginFromRequest, webAuthnRpId } from "@/lib/quick-auth-rp";
 import { getDeviceQuickAuth, upsertDeviceQuickAuth } from "@/lib/quick-auth-store";
 
 export async function POST(request: Request) {
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     verification = await verifyAuthenticationResponse({
       response: assertion,
       expectedChallenge,
-      expectedOrigin: webAuthnOrigin(),
+      expectedOrigin: webAuthnOriginFromRequest(request),
       expectedRPID: webAuthnRpId(),
       credential: {
         id: entry.webauthn.credentialId,

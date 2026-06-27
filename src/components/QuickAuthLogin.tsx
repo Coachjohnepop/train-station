@@ -15,6 +15,7 @@ type QuickAuthLoginProps = {
   redirect: string;
   onUsePassword: () => void;
   onAvailabilityChange?: (enabled: boolean) => void;
+  onStatusResolved?: (enabled: boolean) => void;
 };
 
 export default function QuickAuthLogin({
@@ -22,6 +23,7 @@ export default function QuickAuthLogin({
   redirect,
   onUsePassword,
   onAvailabilityChange,
+  onStatusResolved,
 }: QuickAuthLoginProps) {
   const { deviceId, ready } = useQuickAuthDeviceId();
   const [pin, setPin] = useState("");
@@ -30,89 +32,10 @@ export default function QuickAuthLogin({
   const [biometricReady, setBiometricReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [statusResolved, setStatusResolved] = useState(false);
+  const [autoBiometricAttempted, setAutoBiometricAttempted] = useState(false);
 
-  useEffect(() => {
-    onAvailabilityChange?.(false);
-  }, [email, onAvailabilityChange]);
-
-  const submitPin = useCallback(
-    async (pinValue: string) => {
-      if (!ready || pinValue.length < 4) return;
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch("/api/auth/quick-auth/pin-login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify({ email, pin: pinValue, deviceId, redirect }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          setError(data.error || "Incorrect PIN.");
-          setPin("");
-          return;
-        }
-        window.location.href = data.redirect || "/member";
-      } catch {
-        setError("Sign-in failed — try again.");
-        setPin("");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [ready, email, deviceId, redirect],
-  );
-
-  useEffect(() => {
-    if (!ready) return;
-
-    let cancelled = false;
-    const local = readQuickAuthMeta();
-    if (local?.email === email.trim().toLowerCase()) {
-      setPinEnabled(local.pin);
-      setWebauthnEnabled(local.webauthn);
-      if (local.pin || local.webauthn) onAvailabilityChange?.(true);
-    }
-
-    void platformAuthenticatorAvailable().then((ok) => {
-      if (!cancelled) setBiometricReady(ok);
-    });
-
-    void fetch("/api/auth/quick-auth/status", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({ email, deviceId }),
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { pin?: boolean; webauthn?: boolean; enabled?: boolean } | null) => {
-        if (cancelled) return;
-        const enabled = Boolean(data?.enabled);
-        onAvailabilityChange?.(enabled);
-        if (!enabled) return;
-        setPinEnabled(Boolean(data?.pin));
-        setWebauthnEnabled(Boolean(data?.webauthn));
-        writeQuickAuthMeta({
-          email: email.trim().toLowerCase(),
-          pin: Boolean(data?.pin),
-          webauthn: Boolean(data?.webauthn),
-          updatedAt: new Date().toISOString(),
-        });
-      })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, [email, deviceId, ready, onAvailabilityChange]);
-
-  useEffect(() => {
-    if (!pinEnabled || pin.length < 4 || loading || !ready) return;
-    void submitPin(pin);
-  }, [pin, pinEnabled, loading, ready, submitPin]);
-
-  async function signInWithBiometrics() {
+  const signInWithBiometrics = useCallback(async () => {
     if (!ready) return;
     setLoading(true);
     setError(null);
@@ -147,9 +70,123 @@ export default function QuickAuthLogin({
     } finally {
       setLoading(false);
     }
-  }
+  }, [ready, email, deviceId, redirect]);
 
-  if (!ready || (!pinEnabled && !webauthnEnabled)) return null;
+  const submitPin = useCallback(
+    async (pinValue: string) => {
+      if (!ready || pinValue.length < 4) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/auth/quick-auth/pin-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ email, pin: pinValue, deviceId, redirect }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError(data.error || "Incorrect PIN.");
+          setPin("");
+          return;
+        }
+        window.location.href = data.redirect || "/member";
+      } catch {
+        setError("Sign-in failed — try again.");
+        setPin("");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [ready, email, deviceId, redirect],
+  );
+
+  useEffect(() => {
+    if (!ready) return;
+
+    let cancelled = false;
+    setStatusResolved(false);
+    setAutoBiometricAttempted(false);
+    setPinEnabled(false);
+    setWebauthnEnabled(false);
+    setError(null);
+    setPin("");
+
+    const local = readQuickAuthMeta();
+    if (local?.email === email.trim().toLowerCase()) {
+      setPinEnabled(local.pin);
+      setWebauthnEnabled(local.webauthn);
+      if (local.pin || local.webauthn) onAvailabilityChange?.(true);
+    }
+
+    void platformAuthenticatorAvailable().then((ok) => {
+      if (!cancelled) setBiometricReady(ok);
+    });
+
+    void fetch("/api/auth/quick-auth/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ email, deviceId }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { pin?: boolean; webauthn?: boolean; enabled?: boolean } | null) => {
+        if (cancelled) return;
+        const enabled = Boolean(data?.enabled);
+        onAvailabilityChange?.(enabled);
+        onStatusResolved?.(enabled);
+        setStatusResolved(true);
+        if (!enabled) return;
+        setPinEnabled(Boolean(data?.pin));
+        setWebauthnEnabled(Boolean(data?.webauthn));
+        writeQuickAuthMeta({
+          email: email.trim().toLowerCase(),
+          pin: Boolean(data?.pin),
+          webauthn: Boolean(data?.webauthn),
+          updatedAt: new Date().toISOString(),
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        onAvailabilityChange?.(false);
+        onStatusResolved?.(false);
+        setStatusResolved(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [email, deviceId, ready, onAvailabilityChange, onStatusResolved]);
+
+  useEffect(() => {
+    if (
+      !statusResolved ||
+      autoBiometricAttempted ||
+      loading ||
+      !webauthnEnabled ||
+      pinEnabled ||
+      !biometricReady
+    ) {
+      return;
+    }
+    setAutoBiometricAttempted(true);
+    void signInWithBiometrics();
+  }, [
+    statusResolved,
+    autoBiometricAttempted,
+    loading,
+    webauthnEnabled,
+    pinEnabled,
+    biometricReady,
+    signInWithBiometrics,
+  ]);
+
+  useEffect(() => {
+    if (!pinEnabled || pin.length < 4 || loading || !ready) return;
+    void submitPin(pin);
+  }, [pin, pinEnabled, loading, ready, submitPin]);
+
+  if (!ready || !statusResolved || (!pinEnabled && !webauthnEnabled)) return null;
 
   return (
     <div className="card space-y-4">

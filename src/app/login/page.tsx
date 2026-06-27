@@ -23,6 +23,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(passwordUpdated);
   const [quickAuthAvailable, setQuickAuthAvailable] = useState(false);
+  const [quickAuthResolved, setQuickAuthResolved] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   useFormAutofillSync(formRef, ["username", "password"], (values) => {
@@ -33,6 +34,11 @@ function LoginForm() {
   useEffect(() => {
     void ensureDeviceId();
   }, []);
+
+  useEffect(() => {
+    setQuickAuthResolved(false);
+    setQuickAuthAvailable(false);
+  }, [email]);
 
   useEffect(() => {
     if (prefillEmail) return;
@@ -100,7 +106,15 @@ function LoginForm() {
             redirect={redirect}
             onUsePassword={() => setShowPasswordForm(true)}
             onAvailabilityChange={setQuickAuthAvailable}
+            onStatusResolved={(enabled) => {
+              setQuickAuthResolved(true);
+              setQuickAuthAvailable(enabled);
+            }}
           />
+        )}
+
+        {!showPasswordForm && email.trim() && !quickAuthResolved && (
+          <p className="card text-center text-sm text-[var(--muted)]">Checking quick sign-in…</p>
         )}
 
         {showPasswordForm && quickAuthAvailable && (
@@ -113,7 +127,7 @@ function LoginForm() {
           </button>
         )}
 
-        {(showPasswordForm || !quickAuthAvailable || !email.trim()) && (
+        {(showPasswordForm || (quickAuthResolved && !quickAuthAvailable) || !email.trim()) && (
         <form ref={formRef} onSubmit={handleSubmit} autoComplete="on" className="card space-y-4">
           {passwordUpdated && (
             <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">

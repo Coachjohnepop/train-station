@@ -21,11 +21,14 @@ export async function readQuickAuthDeviceCookie(): Promise<string | null> {
   return normalizeDeviceId(cookieStore.get(DEVICE_ID_COOKIE)?.value);
 }
 
-/** Prefer explicit body value; fall back to the device cookie (private-browser safe). */
+/**
+ * Prefer the httpOnly device cookie so PIN / biometrics stay tied to this browser
+ * even when local storage was cleared and the client sends a fresh UUID.
+ */
 export async function resolveQuickAuthDeviceId(bodyDeviceId: unknown): Promise<string | null> {
-  const fromBody = normalizeDeviceId(bodyDeviceId);
-  if (fromBody) return fromBody;
-  return readQuickAuthDeviceCookie();
+  const fromCookie = await readQuickAuthDeviceCookie();
+  if (fromCookie) return fromCookie;
+  return normalizeDeviceId(bodyDeviceId);
 }
 
 export async function ensureQuickAuthDeviceId(

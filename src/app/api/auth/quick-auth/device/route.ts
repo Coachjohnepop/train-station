@@ -28,11 +28,11 @@ export async function POST(request: Request) {
   const requested = normalizeDeviceId(body.deviceId);
   const existing = await readQuickAuthDeviceCookie();
 
-  const deviceId = requested || existing || (await ensureQuickAuthDeviceId()).deviceId;
+  const deviceId = existing || requested || (await ensureQuickAuthDeviceId()).deviceId;
   const created = !existing && !requested;
 
   const res = NextResponse.json({ deviceId, created });
-  if (!existing || existing !== deviceId) {
+  if (!existing) {
     attachDeviceCookie(res, deviceId);
   }
   return res;
