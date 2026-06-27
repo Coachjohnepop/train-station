@@ -8,6 +8,8 @@ import PasswordInput from "@/components/PasswordInput";
 import { offerSavePassword, offerSavePasswordFromForm } from "@/lib/browser-credentials";
 import { useFormAutofillSync } from "@/hooks/useFormAutofillSync";
 import { getLastEmail } from "@/lib/email-history";
+import QuickAuthLogin from "@/components/QuickAuthLogin";
+import { ensureDeviceId } from "@/lib/quick-auth-client";
 
 function LoginForm() {
   const router = useRouter();
@@ -18,12 +20,18 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [quickAuthAvailable, setQuickAuthAvailable] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   useFormAutofillSync(formRef, ["username", "password"], (values) => {
     if (values.username) setEmail(values.username);
     if (values.password) setPassword(values.password);
   });
+
+  useEffect(() => {
+    void ensureDeviceId();
+  }, []);
 
   useEffect(() => {
     if (prefillEmail) return;
@@ -85,6 +93,26 @@ function LoginForm() {
           </p>
         </div>
 
+        {!showPasswordForm && email.trim() && (
+          <QuickAuthLogin
+            email={email}
+            redirect={redirect}
+            onUsePassword={() => setShowPasswordForm(true)}
+            onAvailabilityChange={setQuickAuthAvailable}
+          />
+        )}
+
+        {showPasswordForm && quickAuthAvailable && (
+          <button
+            type="button"
+            className="mb-3 w-full text-center text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
+            onClick={() => setShowPasswordForm(false)}
+          >
+            Back to quick sign-in
+          </button>
+        )}
+
+        {(showPasswordForm || !quickAuthAvailable || !email.trim()) && (
         <form ref={formRef} onSubmit={handleSubmit} autoComplete="on" className="card space-y-4">
           {error && (
             <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p>
@@ -138,6 +166,7 @@ function LoginForm() {
             </Link>
           </p>
         </form>
+        )}
 
         <p className="mt-6 text-center text-[10px] text-[var(--muted)]">
           First time or forgot your password?{" "}

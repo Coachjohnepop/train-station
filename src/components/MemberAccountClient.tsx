@@ -5,6 +5,7 @@ import { useState } from "react";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
 import { paymentBillingSummary } from "@/lib/membership-theme";
 import type { SignupPlan } from "@/lib/signup-plans";
+import QuickAuthSettings from "@/components/QuickAuthSettings";
 
 type MembershipData = {
   plan: string;
@@ -26,7 +27,13 @@ type MembershipData = {
   } | null;
 };
 
-export default function MemberAccountClient({ membership }: { membership: MembershipData }) {
+export default function MemberAccountClient({
+  membership,
+  email,
+}: {
+  membership: MembershipData;
+  email: string;
+}) {
   const [billingBusy, setBillingBusy] = useState(false);
   const [billingError, setBillingError] = useState("");
 
@@ -132,6 +139,8 @@ export default function MemberAccountClient({ membership }: { membership: Member
         )}
         </div>
       </div>
+
+      <QuickAuthSettings email={email} />
 
       <div className="card space-y-3">
         <h3 className="font-semibold">Manage membership</h3>

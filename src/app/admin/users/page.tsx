@@ -6,6 +6,7 @@ import TimeScrollPicker from "@/components/TimeScrollPicker";
 import EmailInput from "@/components/EmailInput";
 import PasswordInput from "@/components/PasswordInput";
 import FormUsernameBridge from "@/components/FormUsernameBridge";
+import AdminUserQuickAuthControls from "@/components/AdminUserQuickAuthControls";
 
 type Role = "ADMIN" | "INSTRUCTOR" | "MEMBER" | "PROSPECTIVE_INSTRUCTOR";
 
@@ -516,6 +517,10 @@ export default function AdminUsersPage() {
               )}
 
               {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
+
+              {editing && (
+                <AdminUserQuickAuthControls userId={editing.id} userEmail={editing.email} />
+              )}
 
               <div className="flex justify-end gap-2 pt-2">
                 <button

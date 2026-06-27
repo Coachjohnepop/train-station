@@ -84,6 +84,34 @@ export function sessionFromStoredAccount(
   });
 }
 
+export async function resolveUserByEmail(email: string): Promise<SessionUser | null> {
+  const normalized = normalizeAccountEmail(email);
+  if (!normalized) return null;
+
+  const demoAccount = (await loadDemoAccounts())[normalized];
+  if (demoAccount) {
+    return sessionFromDemoAccount(normalized, demoAccount);
+  }
+
+  if (isDemoMode()) {
+    return null;
+  }
+
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    const user = await prisma.user.findUnique({ where: { email: normalized } });
+    if (!user || user.hidden) return null;
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name || "Member",
+      role: user.role as UserRole,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function authenticateCredentials(
   email: string,
   password: string,

@@ -29,7 +29,7 @@ export default async function MemberAccountPage() {
           Your plan, payment status, and billing tools.
         </p>
       </section>
-      <MemberAccountClient membership={membership} />
+      <MemberAccountClient membership={membership} email={session.email} />
     </div>
   );
 }

@@ -2,6 +2,8 @@ import Link from "next/link";
 import CoachContentAlertsPanel from "@/components/CoachContentAlertsPanel";
 import GoToTodayCard from "@/components/GoToTodayCard";
 import AdminMessagesCard from "@/components/AdminMessagesCard";
+import QuickAuthSettings from "@/components/QuickAuthSettings";
+import { getSessionUser } from "@/lib/auth";
 import { loadCoachContentAlerts } from "@/lib/coach-content-alerts";
 import { getCoachTodaySummary } from "@/lib/today-appointments";
 import { getResolvedLandingVideos } from "@/lib/landing-media-server";
@@ -10,6 +12,7 @@ import { getResolvedLandingVideos } from "@/lib/landing-media-server";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
+  const session = await getSessionUser();
   // stub counts for demo (no DB)
   const [exercises, workouts, programs, users] = [101, 31, 5, 5];
   const [today, landingVideos, contentAlerts] = await Promise.all([
@@ -102,6 +105,12 @@ export default async function AdminPage() {
         </div>
         <p className="mt-2 text-[10px] text-[var(--muted)]">Eating Approaches: coming soon.</p>
       </div>
+
+      {session?.email && (
+        <div className="mt-10">
+          <QuickAuthSettings email={session.email} />
+        </div>
+      )}
     </div>
   );
 }
