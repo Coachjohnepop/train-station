@@ -4,6 +4,7 @@ import { getMemberProfile, type MemberProfile } from "@/lib/member-profiles-stor
 import { isPaidSignupPlan, isStripePaymentsEnabled } from "@/lib/member-gates";
 import { getEffectiveMembershipOffer } from "@/lib/pricing-catalog";
 import { getOfferDefinition } from "@/lib/product-offers";
+import { customerHasSavedPaymentMethod } from "@/lib/stripe-customer";
 import {
   signupPlanLabel,
   type MembershipPlan,
@@ -26,6 +27,8 @@ export type MemberMembershipSnapshot = {
   stripeSubscriptionId: string | null;
   canManageBilling: boolean;
   canCompleteCheckout: boolean;
+  hasSavedPaymentMethod: boolean;
+  switchablePlans: SignupPlan[];
   intensive: {
     sessionsTotal: number | null;
     sessionsRemaining: number | null;
@@ -61,6 +64,14 @@ export async function getMemberMembershipSnapshot(
 
   const isSubscription = offer?.checkoutMode === "subscription";
   const stripeReady = isStripePaymentsEnabled();
+  const hasSavedPaymentMethod = profile.stripeCustomerId
+    ? await customerHasSavedPaymentMethod(profile.stripeCustomerId)
+    : false;
+
+  const switchablePlans: SignupPlan[] =
+    profile.paymentStatus === "paid" && profile.stripeSubscriptionId
+      ? (["member", "business"] as SignupPlan[]).filter((candidate) => candidate !== plan)
+      : [];
 
   return {
     plan,
@@ -83,6 +94,8 @@ export async function getMemberMembershipSnapshot(
     canCompleteCheckout: Boolean(
       isPaidSignupPlan(plan) && profile.paymentStatus !== "paid" && stripeReady,
     ),
+    hasSavedPaymentMethod,
+    switchablePlans,
     intensive:
       plan === "pro" && profile.intensiveSessionsTotal
         ? {

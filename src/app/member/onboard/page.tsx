@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import OnboardingWizard from "@/components/OnboardingWizard";
+import { getSessionUser } from "@/lib/auth";
 import { getAdminContact } from "@/lib/booking";
 import { getResolvedLandingVideos } from "@/lib/landing-media-server";
 import { COACH_CALENDLY_URL } from "@/lib/brand";
@@ -7,7 +8,8 @@ import { COACH_CALENDLY_URL } from "@/lib/brand";
 export const dynamic = "force-dynamic";
 
 export default async function OnboardingPage() {
-  const [{ welcomeVideoUrl }, contact] = await Promise.all([
+  const [session, { welcomeVideoUrl }, contact] = await Promise.all([
+    getSessionUser(),
     getResolvedLandingVideos(),
     getAdminContact(),
   ]);
@@ -23,7 +25,11 @@ export default async function OnboardingPage() {
         </div>
       }
     >
-      <OnboardingWizard welcomeVideoUrl={welcomeVideoUrl} calendlyUrl={calendlyUrl} />
+      <OnboardingWizard
+        email={session?.email || ""}
+        welcomeVideoUrl={welcomeVideoUrl}
+        calendlyUrl={calendlyUrl}
+      />
     </Suspense>
   );
 }

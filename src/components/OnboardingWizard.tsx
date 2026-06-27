@@ -7,6 +7,7 @@ import { landingVideoEmbedSrc } from "@/lib/landing-media";
 import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 import { COACH_CALENDLY_URL } from "@/lib/brand";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
+import QuickAuthSetupPrompt from "@/components/QuickAuthSetupPrompt";
 
 async function saveProgress(body: Record<string, unknown>) {
   await fetch("/api/member/onboard-progress", {
@@ -17,9 +18,11 @@ async function saveProgress(body: Record<string, unknown>) {
 }
 
 export default function OnboardingWizard({
+  email = "",
   welcomeVideoUrl = null,
   calendlyUrl = null,
 }: {
+  email?: string;
   welcomeVideoUrl?: string | null;
   calendlyUrl?: string | null;
 }) {
@@ -27,7 +30,7 @@ export default function OnboardingWizard({
   const plan = normalizeSignupPlan(searchParams.get("plan"));
   const programSlug = searchParams.get("program");
 
-  const totalSteps = 6;
+  const totalSteps = 7;
   const stepStorageKey = `ts-onboard-step:${plan}`;
   const [currentStep, setCurrentStep] = useState(1);
   const [stepReady, setStepReady] = useState(false);
@@ -65,20 +68,20 @@ export default function OnboardingWizard({
 
   async function nextStep() {
     setError(null);
-    if (currentStep === 3) {
+    if (currentStep === 4) {
       await saveProgress({
         plan,
         weightLbs: measurements.weight || null,
         notes: measurements.notes || null,
       });
     }
-    if (currentStep === 4) {
+    if (currentStep === 5) {
       await saveProgress({
         city: location.city || null,
         state: location.state || null,
       });
     }
-    if (currentStep === 5) {
+    if (currentStep === 6) {
       await saveProgress({
         phone: sms.phone || null,
         dailyReminderTime: sms.dailyReminderTime || null,
@@ -168,7 +171,20 @@ export default function OnboardingWizard({
           </>
         )}
 
-        {currentStep === 2 && (
+        {currentStep === 2 && email && (
+          <QuickAuthSetupPrompt email={email} onContinue={() => void nextStep()} />
+        )}
+
+        {currentStep === 2 && !email && (
+          <>
+            <p className="text-sm text-[var(--muted)]">Quick sign-in setup is available after sign-in.</p>
+            <button type="button" onClick={() => void nextStep()} className="btn-primary w-full">
+              Continue
+            </button>
+          </>
+        )}
+
+        {currentStep === 3 && (
           <>
             <h2 className="text-lg font-semibold">Home equipment</h2>
             <p className="text-sm text-[var(--muted)]">
@@ -186,7 +202,7 @@ export default function OnboardingWizard({
           </>
         )}
 
-        {currentStep === 3 && (
+        {currentStep === 4 && (
           <>
             <h2 className="text-lg font-semibold">Quick measurements</h2>
             <p className="text-sm text-[var(--muted)]">Optional — helps your coach track progress.</p>
@@ -223,7 +239,7 @@ export default function OnboardingWizard({
           </>
         )}
 
-        {currentStep === 4 && (
+        {currentStep === 5 && (
           <>
             <h2 className="text-lg font-semibold">Where are you training from?</h2>
             <p className="text-sm text-[var(--muted)]">
@@ -265,7 +281,7 @@ export default function OnboardingWizard({
           </>
         )}
 
-        {currentStep === 5 && (
+        {currentStep === 6 && (
           <>
             <h2 className="text-lg font-semibold">Daily workout texts</h2>
             <p className="text-sm text-[var(--muted)]">
@@ -302,7 +318,7 @@ export default function OnboardingWizard({
           </>
         )}
 
-        {currentStep === 6 && (
+        {currentStep === 7 && (
           <>
             <h2 className="text-lg font-semibold">Book your first session with your trainer, Jeremy</h2>
             <p className="text-sm text-[var(--muted)]">

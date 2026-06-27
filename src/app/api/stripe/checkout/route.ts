@@ -5,7 +5,12 @@ import { ensureMemberProfile, getMemberProfile, updateMemberProfile } from "@/li
 import { memberCheckoutPath } from "@/lib/member-gates";
 import { normalizeSignupPlan } from "@/lib/signup-plans";
 import { resolveReferralDiscount } from "@/lib/referral-discounts";
-import { createSignupCheckoutSession, stripeConfiguredForPlan } from "@/lib/stripe";
+import { getOfferDefinition } from "@/lib/product-offers";
+import {
+  changeMemberSubscriptionPlan,
+  createSignupCheckoutSession,
+  stripeConfiguredForPlan,
+} from "@/lib/stripe";
 
 const schema = z.object({
   plan: z.string().max(40).optional(),
@@ -38,6 +43,34 @@ export async function POST(request: Request) {
         },
         { status: 503 },
       );
+    }
+
+    if (
+      existingProfile?.paymentStatus === "paid" &&
+      existingProfile.stripeSubscriptionId &&
+      plan !== existingProfile.plan &&
+      getOfferDefinition(plan)?.checkoutMode === "subscription"
+    ) {
+      const changed = await changeMemberSubscriptionPlan({
+        userId: session.id,
+        subscriptionId: existingProfile.stripeSubscriptionId,
+        newPlan: plan,
+      });
+      if ("error" in changed) {
+        return NextResponse.json({ error: changed.error }, { status: 400 });
+      }
+      const updated = await getMemberProfile(session.id);
+      const res = NextResponse.json({
+        ok: true,
+        planChanged: true,
+        redirectTo: "/member/account",
+        plan: changed.plan,
+      });
+      syncMemberGateCookies(res, {
+        userId: session.id,
+        profile: updated,
+      });
+      return res;
     }
 
     const profile = await ensureMemberProfile({
@@ -84,7 +117,11 @@ export async function POST(request: Request) {
       console.error("[stripe/checkout] profile update failed after session create", e);
     }
 
-    const res = NextResponse.json({ ok: true, url: checkout.url });
+    const res = NextResponse.json({
+      ok: true,
+      url: checkout.url,
+      hasSavedCard: checkout.hasSavedCard,
+    });
     syncMemberGateCookies(res, {
       userId: session.id,
       profile: updatedProfile,

@@ -5,6 +5,7 @@ import { useState } from "react";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
 import { paymentBillingSummary } from "@/lib/membership-theme";
 import type { SignupPlan } from "@/lib/signup-plans";
+import { signupPlanLabel } from "@/lib/signup-plans";
 import QuickAuthSettings from "@/components/QuickAuthSettings";
 
 type MembershipData = {
@@ -20,6 +21,8 @@ type MembershipData = {
   referralCode: string | null;
   canManageBilling: boolean;
   canCompleteCheckout: boolean;
+  hasSavedPaymentMethod: boolean;
+  switchablePlans: SignupPlan[];
   intensive: {
     sessionsTotal: number | null;
     sessionsRemaining: number | null;
@@ -145,6 +148,30 @@ export default function MemberAccountClient({
       <div className="card space-y-3">
         <h3 className="font-semibold">Manage membership</h3>
 
+        {membership.hasSavedPaymentMethod && (
+          <p className="text-sm text-[var(--muted)]">
+            A payment method is saved securely with Stripe for faster checkout — card numbers never
+            touch our servers.
+          </p>
+        )}
+
+        {membership.switchablePlans.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm text-[var(--muted)]">Switch subscription plan (no re-signup needed):</p>
+            <div className="flex flex-wrap gap-2">
+              {membership.switchablePlans.map((switchPlan) => (
+                <Link
+                  key={switchPlan}
+                  href={`/member/checkout?plan=${encodeURIComponent(switchPlan)}`}
+                  className="btn-secondary text-xs"
+                >
+                  Switch to {signupPlanLabel(switchPlan)}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {membership.canCompleteCheckout && (
           <Link href={`/member/checkout?plan=${encodeURIComponent(membership.plan)}`} className="btn-primary inline-block text-sm">
             Complete checkout
@@ -172,11 +199,19 @@ export default function MemberAccountClient({
         {membership.plan === "explorer" && (
           <div className="space-y-2">
             <p className="text-sm text-[var(--muted)]">
-              Upgrade to Coach Class, Business Class, or 1st Class from the landing page.
+              Upgrade without creating a new account:
             </p>
-            <Link href="/#tickets" className="btn-secondary inline-block text-sm">
-              View membership tickets
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/member/checkout?plan=member" className="btn-secondary text-xs">
+                Coach Class
+              </Link>
+              <Link href="/member/checkout?plan=business" className="btn-secondary text-xs">
+                Business Class
+              </Link>
+              <Link href="/member/checkout?plan=pro" className="btn-secondary text-xs">
+                1st Class
+              </Link>
+            </div>
           </div>
         )}
 

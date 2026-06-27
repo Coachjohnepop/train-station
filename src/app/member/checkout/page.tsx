@@ -46,13 +46,20 @@ function MemberCheckoutInner() {
   const [error, setError] = useState<string | null>(null);
   const [payments, setPayments] = useState<PaymentsPublic | null>(null);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
+  const [hasSavedCard, setHasSavedCard] = useState(false);
+  const [planChanging, setPlanChanging] = useState(false);
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const res = await fetch("/api/payments/public");
-      const data = await res.json().catch(() => ({}));
+      const [paymentsRes, membershipRes] = await Promise.all([
+        fetch("/api/payments/public"),
+        fetch("/api/member/membership"),
+      ]);
+      const paymentsData = await paymentsRes.json().catch(() => ({}));
+      const membershipData = await membershipRes.json().catch(() => ({}));
       if (!cancelled) {
-        setPayments(res.ok ? data : null);
+        setPayments(paymentsRes.ok ? paymentsData : null);
+        setHasSavedCard(Boolean(membershipData.hasSavedPaymentMethod));
         setPaymentsLoading(false);
       }
     })();
@@ -82,6 +89,7 @@ function MemberCheckoutInner() {
 
   async function startCheckout() {
     setLoading(true);
+    setPlanChanging(false);
     setError(null);
     try {
       const res = await fetch("/api/stripe/checkout", {
@@ -94,7 +102,13 @@ function MemberCheckoutInner() {
         }),
       });
       const data = await res.json().catch(() => ({}));
+      if (res.ok && data.planChanged && data.redirectTo) {
+        setPlanChanging(true);
+        window.location.href = data.redirectTo;
+        return;
+      }
       if (res.ok && data.url) {
+        setHasSavedCard(Boolean(data.hasSavedCard));
         window.location.href = data.url;
         return;
       }
@@ -130,13 +144,19 @@ function MemberCheckoutInner() {
               <button
                 type="button"
                 onClick={() => void startCheckout()}
-                disabled={loading}
+                disabled={loading || planChanging}
                 className="btn-primary w-full"
               >
-                {loading ? "Opening Stripe…" : "Continue to secure checkout"}
+                {planChanging
+                  ? "Updating plan…"
+                  : loading
+                    ? "Opening Stripe…"
+                    : "Continue to secure checkout"}
               </button>
               <p className="text-center text-[11px] text-[var(--muted)]">
-                You&apos;ll confirm the exact amount on Stripe before paying.
+                {hasSavedCard
+                  ? "Your saved card on file with Stripe may be available for one-tap checkout."
+                  : "Card details are stored securely by Stripe — we never see or store your full card number."}
               </p>
             </div>
           )}

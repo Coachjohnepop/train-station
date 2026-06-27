@@ -8,10 +8,15 @@ import {
   getOfferDefinition,
   type CustomTrainingParameters,
 } from "@/lib/product-offers";
+import { updateMemberProfile } from "@/lib/member-profiles-store";
 import { resolveStripePriceId } from "@/lib/pricing-catalog";
 import type { SignupPlan } from "@/lib/signup-plans";
 import { signupPlanLabel } from "@/lib/signup-plans";
 import { isStripePaymentsEnabled, isPaidSignupPlan } from "@/lib/member-gates";
+import {
+  customerHasSavedPaymentMethod,
+  ensureStripeCustomer,
+} from "@/lib/stripe-customer";
 
 type StripeClient = import("stripe").default;
 
@@ -98,6 +103,40 @@ async function createCheckoutSession(
   }
 }
 
+type CheckoutCustomerFields = Pick<
+  import("stripe").Stripe.Checkout.SessionCreateParams,
+  "customer" | "customer_email" | "customer_update" | "saved_payment_method_options"
+>;
+
+async function checkoutCustomerFields(input: {
+  userId: string;
+  email: string;
+  name: string;
+}): Promise<{ customerId: string | null; hasSavedCard: boolean; fields: CheckoutCustomerFields }> {
+  const customerId = await ensureStripeCustomer(input);
+  if (!customerId) {
+    return {
+      customerId: null,
+      hasSavedCard: false,
+      fields: { customer_email: input.email },
+    };
+  }
+
+  const hasSavedCard = await customerHasSavedPaymentMethod(customerId);
+  return {
+    customerId,
+    hasSavedCard,
+    fields: {
+      customer: customerId,
+      customer_update: { address: "auto", name: "auto" },
+      saved_payment_method_options: {
+        payment_method_save: "enabled",
+        payment_method_remove: "enabled",
+      },
+    },
+  };
+}
+
 function applyReferralDiscounts(
   sessionParams: import("stripe").Stripe.Checkout.SessionCreateParams,
   discount?: CheckoutDiscount | null,
@@ -121,12 +160,20 @@ export async function createSignupCheckoutSession(input: {
   customOfferId?: string | null;
   merchandiseSkuId?: string | null;
   quantity?: number;
-}): Promise<{ url: string; sessionId: string } | { error: string }> {
+}): Promise<
+  { url: string; sessionId: string; hasSavedCard: boolean } | { error: string }
+> {
   const stripe = getStripe();
   if (!stripe) return { error: "Stripe is not configured." };
 
   const offer = getOfferDefinition(input.plan);
   if (!offer) return { error: "Unknown offer." };
+
+  const customer = await checkoutCustomerFields({
+    userId: input.userId,
+    email: input.email,
+    name: input.name,
+  });
 
   const base = appBaseUrl();
   const metadata: Record<string, string> = {
@@ -154,7 +201,7 @@ export async function createSignupCheckoutSession(input: {
 
     const sessionParams: import("stripe").Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
-      customer_email: input.email,
+      ...customer.fields,
       client_reference_id: input.userId,
       metadata,
       line_items: [
@@ -182,7 +229,7 @@ export async function createSignupCheckoutSession(input: {
       memberUserId: input.userId,
       memberEmail: input.email,
     });
-    return session;
+    return { ...session, hasSavedCard: customer.hasSavedCard };
   }
 
   if (input.plan === "merchandise") {
@@ -197,7 +244,7 @@ export async function createSignupCheckoutSession(input: {
     const qty = Math.max(1, Math.min(99, input.quantity ?? 1));
     const sessionParams: import("stripe").Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
-      customer_email: input.email,
+      ...customer.fields,
       client_reference_id: input.userId,
       metadata,
       line_items: [{ price: priceId, quantity: qty }],
@@ -207,7 +254,7 @@ export async function createSignupCheckoutSession(input: {
     applyReferralDiscounts(sessionParams, input.discount);
     const session = await createCheckoutSession(stripe, sessionParams);
     if ("error" in session) return session;
-    return session;
+    return { ...session, hasSavedCard: customer.hasSavedCard };
   }
 
   if (offer.checkoutMode === "one_time") {
@@ -217,7 +264,7 @@ export async function createSignupCheckoutSession(input: {
     }
     const sessionParams: import("stripe").Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
-      customer_email: input.email,
+      ...customer.fields,
       client_reference_id: input.userId,
       metadata,
       line_items: [{ price: priceId, quantity: 1 }],
@@ -227,7 +274,7 @@ export async function createSignupCheckoutSession(input: {
     applyReferralDiscounts(sessionParams, input.discount);
     const session = await createCheckoutSession(stripe, sessionParams);
     if ("error" in session) return session;
-    return session;
+    return { ...session, hasSavedCard: customer.hasSavedCard };
   }
 
   if (offer.checkoutMode === "subscription") {
@@ -237,7 +284,7 @@ export async function createSignupCheckoutSession(input: {
     }
     const sessionParams: import("stripe").Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
-      customer_email: input.email,
+      ...customer.fields,
       client_reference_id: input.userId,
       metadata,
       line_items: [{ price: priceId, quantity: 1 }],
@@ -256,10 +303,52 @@ export async function createSignupCheckoutSession(input: {
     applyReferralDiscounts(sessionParams, input.discount);
     const session = await createCheckoutSession(stripe, sessionParams);
     if ("error" in session) return session;
-    return session;
+    return { ...session, hasSavedCard: customer.hasSavedCard };
   }
 
   return { error: `${signupPlanLabel(input.plan)} requires a quote — contact the coach.` };
+}
+
+export async function changeMemberSubscriptionPlan(input: {
+  userId: string;
+  subscriptionId: string;
+  newPlan: SignupPlan;
+}): Promise<{ ok: true; plan: SignupPlan } | { error: string }> {
+  const stripe = getStripe();
+  if (!stripe) return { error: "Stripe is not configured." };
+
+  const offer = getOfferDefinition(input.newPlan);
+  if (!offer || offer.checkoutMode !== "subscription") {
+    return { error: "That plan is not available as a subscription switch." };
+  }
+
+  const priceId = await resolveStripePriceId(input.newPlan);
+  if (!priceId) {
+    return { error: `Stripe price is not configured for ${signupPlanLabel(input.newPlan)}.` };
+  }
+
+  try {
+    const subscription = await stripe.subscriptions.retrieve(input.subscriptionId);
+    const itemId = subscription.items.data[0]?.id;
+    if (!itemId) return { error: "Subscription has no billable items." };
+
+    await stripe.subscriptions.update(input.subscriptionId, {
+      items: [{ id: itemId, price: priceId }],
+      proration_behavior: "create_prorations",
+      metadata: {
+        ...subscription.metadata,
+        userId: input.userId,
+        plan: input.newPlan,
+      },
+    });
+
+    await updateMemberProfile(input.userId, { plan: input.newPlan });
+    return { ok: true, plan: input.newPlan };
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Plan change failed.";
+    console.error("[stripe] subscription plan change failed:", message);
+    return { error: message };
+  }
 }
 
 function summarizeCustomParams(params: CustomTrainingParameters): string {
