@@ -251,6 +251,10 @@ a {
   scrollbar-width: none;
 }
 
+.day-wheel {
+  -webkit-overflow-scrolling: touch;
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

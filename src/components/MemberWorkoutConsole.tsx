@@ -813,12 +813,14 @@ export default function MemberWorkoutConsole({
           </p>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <Link
-              href={backHref}
-              className="btn-primary inline-flex justify-center"
-            >
-              {backLabel}
-            </Link>
+            {backLabel ? (
+              <Link
+                href={backHref}
+                className="btn-primary inline-flex justify-center"
+              >
+                {backLabel}
+              </Link>
+            ) : null}
             <Link href="/member" className="btn-ghost inline-flex justify-center">
               Dashboard
             </Link>
