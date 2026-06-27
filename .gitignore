@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 .jeremy-review-frames/
+public/images/splash/*.pre-brand.jpg
 *.pem
 
 # debug
