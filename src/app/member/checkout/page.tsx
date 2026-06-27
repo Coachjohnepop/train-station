@@ -209,14 +209,11 @@ function MemberCheckoutInner() {
                 </p>
               </div>
             )}
-            {!paymentsLoading && payments?.stripeEnabled && !payments.stripePublishableKey && (
-              <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
-                Stripe publishable key is not configured. Contact support to complete checkout.
-              </p>
-            )}
             {!paymentsLoading && !stripeReady && !venmoReady && (
               <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
-                Online checkout is not configured yet. Contact Jeremy to complete signup.
+                {payments?.stripeEnabled
+                  ? "This plan is not ready for card checkout yet. Contact Jeremy to complete signup."
+                  : "Online checkout is not configured yet. Contact Jeremy to complete signup."}
               </p>
             )}
             {venmoReady && payments?.venmo && (

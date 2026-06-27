@@ -13,6 +13,7 @@ import { resolveStripePriceId } from "@/lib/pricing-catalog";
 import type { SignupPlan } from "@/lib/signup-plans";
 import { signupPlanLabel } from "@/lib/signup-plans";
 import { isStripePaymentsEnabled, isPaidSignupPlan } from "@/lib/member-gates";
+import { isStripeTestMode, STRIPE_TEST_PUBLISHABLE_KEY } from "@/lib/stripe-price-ids";
 import {
   customerHasSavedPaymentMethod,
   ensureStripeCustomer,
@@ -75,7 +76,14 @@ export async function createBillingPortalSession(input: {
 }
 
 export function getStripePublishableKey(): string | null {
-  return process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() || null;
+  const fromEnv =
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() ||
+    process.env.STRIPE_PUBLISHABLE_KEY?.trim();
+  if (fromEnv) return fromEnv;
+  if (isStripeTestMode() && process.env.STRIPE_USE_CANONICAL_PRICES !== "false") {
+    return STRIPE_TEST_PUBLISHABLE_KEY;
+  }
+  return null;
 }
 
 function embeddedCheckoutFields(base: string): Pick<

@@ -11,6 +11,10 @@ export const MEMBERSHIP_STRIPE_PRICE_IDS: Record<PaidMembershipPlan, string> = {
   pro: "price_1TmcQOHE54Aq5KQ7H3G9s997",
 };
 
+/** Test publishable key for embedded Checkout (acct_1TmKT3HE54Aq5KQ7). */
+export const STRIPE_TEST_PUBLISHABLE_KEY =
+  "pk_test_51TmKT3HE54Aq5KQ7yqbk3xVydmxm8XDFEbAC5eJH2PDVnWggqWobxVLFdxR8GqPu9f5iKvDM0p8Q2Enkmq9PeQFb00TDcHnB2i";
+
 export function isStripeTestMode(): boolean {
   const key = process.env.STRIPE_SECRET_KEY?.trim() || "";
   return key.startsWith("sk_test_");
