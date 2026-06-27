@@ -35,6 +35,19 @@ export function resendSendingDomain(): string {
   return `send.${siteHostname()}`;
 }
 
+/** Derive accounts@… from the verified LEAD_NOTIFY_FROM address (e.g. leads@send.buyecodelight.com). */
+function accountsFromLeadNotifyFrom(): string | null {
+  const leadFrom = process.env.LEAD_NOTIFY_FROM?.trim();
+  if (!leadFrom) return null;
+
+  const match = leadFrom.match(/<([^>]+)>/);
+  const email = (match?.[1] || leadFrom).trim();
+  const at = email.lastIndexOf("@");
+  if (at <= 0) return null;
+
+  return `${BRAND_NAME} <accounts${email.slice(at)}>`;
+}
+
 /** Single verified sender — must match a domain verified at resend.com/domains */
 export function resendFromAddress(): string {
   const explicit =
@@ -43,6 +56,9 @@ export function resendFromAddress(): string {
     process.env.MESSAGE_HUB_FROM?.trim() ||
     process.env.MEMBER_WELCOME_FROM?.trim();
   if (explicit) return explicit;
+
+  const leadAccounts = accountsFromLeadNotifyFrom();
+  if (leadAccounts) return leadAccounts;
 
   const domain = resendSendingDomain();
   return `${BRAND_NAME} <accounts@${domain}>`;
@@ -67,11 +83,20 @@ export function resendFromLooksMisconfigured(): boolean {
   const domain = resendFromDomain();
   if (!domain) return true;
   if (domain === "resend.dev" || domain.endsWith(".resend.dev")) return true;
-  if (domain.includes("buyecodelight")) return true;
   if (domain.includes("www.")) return true;
+
   const expected = resendSendingDomain().toLowerCase();
+  const leadDomain = resendFromDomainFromAddress(process.env.LEAD_NOTIFY_FROM?.trim() || "");
+  if (leadDomain && domain === leadDomain) return false;
+
   if (domain !== expected) return true;
   return false;
+}
+
+function resendFromDomainFromAddress(from: string): string | null {
+  const match = from.match(/<([^>]+)>/);
+  const addr = match?.[1] || from;
+  return addr.split("@")[1]?.toLowerCase() || null;
 }
 
 function wrapHtml(bodyText: string, ctaUrl?: string, ctaLabel?: string): string {
@@ -138,7 +163,41 @@ export async function sendResendEmail(input: ResendEmailInput): Promise<boolean>
 
     if (!res.ok) {
       const body = await res.text();
-      console.error("[RESEND] send failed:", res.status, body);
+      console.error("[RESEND] send failed:", res.status, body, "from:", resendFromAddress());
+
+      const fallback = accountsFromLeadNotifyFrom();
+      const primary = resendFromAddress();
+      if (
+        res.status === 403 &&
+        body.includes("not verified") &&
+        fallback &&
+        fallback !== primary
+      ) {
+        const retry = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: fallback,
+            to,
+            reply_to: input.replyTo || resendReplyTo(),
+            subject: input.subject,
+            text: input.text,
+            html: input.html || wrapHtml(input.text, input.ctaUrl, input.ctaLabel),
+            tags: input.tags,
+            headers,
+          }),
+        });
+        if (retry.ok) {
+          console.warn("[RESEND] sent via verified fallback from:", fallback);
+          return true;
+        }
+        const retryBody = await retry.text();
+        console.error("[RESEND] fallback send failed:", retry.status, retryBody);
+      }
+
       return false;
     }
     return true;

@@ -10,6 +10,7 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [emailed, setEmailed] = useState<boolean | null>(null);
 
   useEffect(() => {
     const localLast = getLastEmail();
@@ -31,6 +32,7 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setError(null);
     setMessage(null);
+    setEmailed(null);
 
     try {
       const res = await fetch("/api/auth/forgot-password", {
@@ -44,6 +46,7 @@ export default function ForgotPasswordPage() {
         return;
       }
       rememberEmail(email);
+      setEmailed(Boolean(data.emailed));
       setMessage(
         data.message ||
           "If that email is on file, we sent a link to reset your password. Check your inbox (and spam).",
@@ -73,11 +76,23 @@ export default function ForgotPasswordPage() {
             </p>
           )}
           {message && (
-            <div className="space-y-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+            <div
+              className={`space-y-2 rounded-lg border px-3 py-2 text-sm ${
+                emailed
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
+                  : "border-amber-500/30 bg-amber-500/10 text-amber-100"
+              }`}
+            >
               <p>{message}</p>
-              {email.toLowerCase().includes("@yahoo.") && (
-                <p className="text-xs text-emerald-200/90">
+              {emailed && email.toLowerCase().includes("@yahoo.") && (
+                <p className="text-xs opacity-90">
                   Yahoo often filters new senders — check Spam, Bulk, or the Archive folder too.
+                </p>
+              )}
+              {!emailed && message.includes("couldn't send") && (
+                <p className="text-xs opacity-90">
+                  Our email provider may need a moment — wait a minute and try again, or sign in with your
+                  password if you remember it.
                 </p>
               )}
             </div>
