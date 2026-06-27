@@ -115,7 +115,9 @@ export async function middleware(request: NextRequest) {
 
     if (
       !pathname.startsWith("/member/onboard") &&
-      request.cookies.get(NEEDS_ONBOARD_COOKIE)?.value === "1"
+      !pathname.startsWith("/member/checkout") &&
+      request.cookies.get(NEEDS_ONBOARD_COOKIE)?.value === "1" &&
+      request.cookies.get(NEEDS_PAYMENT_COOKIE)?.value !== "1"
     ) {
       const onboard = new URL("/member/onboard", request.url);
       if (plan) onboard.searchParams.set("plan", plan);

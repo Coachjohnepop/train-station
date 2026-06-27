@@ -2,9 +2,9 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import PasswordInput from "@/components/PasswordInput";
-import FormUsernameBridge from "@/components/FormUsernameBridge";
-import { offerSavePassword, offerSavePasswordFromForm } from "@/lib/browser-credentials";
+import { offerUpdateSavedPassword } from "@/lib/browser-credentials";
 import { useFormAutofillSync } from "@/hooks/useFormAutofillSync";
 
 export default function ResetPasswordForm({
@@ -14,6 +14,7 @@ export default function ResetPasswordForm({
   token: string;
   accountEmail: string | null;
 }) {
+  const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
 
   const [password, setPassword] = useState("");
@@ -21,8 +22,10 @@ export default function ResetPasswordForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [savedEmail, setSavedEmail] = useState<string | null>(null);
+  const [credentialPrompted, setCredentialPrompted] = useState(false);
 
-  useFormAutofillSync(formRef, ["password", "password-confirm"], (values) => {
+  useFormAutofillSync(formRef, ["username", "password", "password-confirm"], (values) => {
     if (values.password) setPassword(values.password);
     if (values["password-confirm"]) setConfirmPassword(values["password-confirm"]);
   });
@@ -56,20 +59,31 @@ export default function ResetPasswordForm({
         setError(data.error || "Reset failed — try again or request a new link.");
         return;
       }
-      const savedEmail = typeof data.email === "string" ? data.email : accountEmail || "";
-      await offerSavePasswordFromForm(formRef.current);
-      if (savedEmail) {
-        await offerSavePassword({ email: savedEmail, password });
-      }
+
+      const email =
+        typeof data.email === "string" ? data.email : accountEmail?.trim().toLowerCase() || "";
+      setSavedEmail(email || null);
+
+      const prompted = await offerUpdateSavedPassword({
+        email,
+        password,
+        form: formRef.current,
+      });
+      setCredentialPrompted(prompted);
       setDone(true);
-      window.setTimeout(() => {
-        window.location.href = data.redirectTo || "/login";
-      }, 1200);
     } catch {
       setError("Reset failed — try again.");
     } finally {
       setLoading(false);
     }
+  }
+
+  function continueToSignIn() {
+    const email = savedEmail || accountEmail || "";
+    const params = new URLSearchParams();
+    if (email) params.set("email", email);
+    params.set("passwordUpdated", "1");
+    router.push(`/login?${params.toString()}`);
   }
 
   if (!token) {
@@ -85,14 +99,28 @@ export default function ResetPasswordForm({
 
   if (done) {
     return (
-      <div className="card text-sm text-emerald-100">
-        Password updated. Redirecting you to sign in…
+      <div className="card space-y-4 text-sm">
+        <p className="text-emerald-100">Password updated for {savedEmail || accountEmail}.</p>
+        <p className="text-[var(--muted)]">
+          {credentialPrompted
+            ? "If your browser or keychain showed a save prompt, choose Update or Save so future sign-ins use this password."
+            : "On the next screen, sign in once with your new password — your browser or keychain should offer to update the saved login."}
+        </p>
+        <button type="button" onClick={continueToSignIn} className="btn-primary w-full">
+          Continue to sign in
+        </button>
       </div>
     );
   }
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} autoComplete="on" className="card space-y-4">
+    <form
+      ref={formRef}
+      id="reset-password-form"
+      onSubmit={handleSubmit}
+      autoComplete="on"
+      className="card space-y-4"
+    >
       {error && (
         <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200 space-y-2">
           <p>{error}</p>
@@ -107,12 +135,20 @@ export default function ResetPasswordForm({
       )}
 
       {accountEmail ? (
-        <>
-          <FormUsernameBridge email={accountEmail} />
-          <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--muted)]">
-            Account: <span className="font-medium text-white">{accountEmail}</span>
-          </p>
-        </>
+        <div>
+          <label htmlFor="reset-username" className="block text-xs text-[var(--muted)] mb-1">
+            Account email
+          </label>
+          <input
+            id="reset-username"
+            name="username"
+            type="email"
+            autoComplete="username"
+            value={accountEmail}
+            readOnly
+            className="input w-full text-[var(--muted)]"
+          />
+        </div>
       ) : null}
 
       <div>

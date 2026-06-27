@@ -16,11 +16,12 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "";
   const prefillEmail = searchParams.get("email") || "";
+  const passwordUpdated = searchParams.get("passwordUpdated") === "1";
   const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(passwordUpdated);
   const [quickAuthAvailable, setQuickAuthAvailable] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -114,6 +115,12 @@ function LoginForm() {
 
         {(showPasswordForm || !quickAuthAvailable || !email.trim()) && (
         <form ref={formRef} onSubmit={handleSubmit} autoComplete="on" className="card space-y-4">
+          {passwordUpdated && (
+            <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+              Password reset complete — sign in with your new password. Your browser or keychain may ask to
+              update the saved login for this site.
+            </p>
+          )}
           {error && (
             <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p>
           )}

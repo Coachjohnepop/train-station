@@ -79,7 +79,8 @@ export async function buildLoginResponse(
     const needsOnboard =
       (profile && !profile.onboardingComplete) ||
       (!profile && user.id.startsWith("member-"));
-    if (needsOnboard) {
+    const needsPayment = memberNeedsPayment(profile, user.id);
+    if (needsOnboard && !needsPayment) {
       applyNewMemberOnboardingCookie(res, profile?.plan);
     }
     syncMemberGateCookies(res, { userId: user.id, profile });
