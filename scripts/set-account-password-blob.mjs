@@ -4,7 +4,7 @@
  * Seed coach emails (jeremy@, john@) are overlaid in the blob so login works.
  *
  * Usage:
- *   node scripts/set-account-password-blob.mjs coachjohnepop+test@yahoo.com 'TestPass123!'
+ *   node scripts/set-account-password-blob.mjs coachjohnepop@yahoo.com 'TestPass123!'
  */
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import dotenv from "dotenv";

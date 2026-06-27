@@ -99,11 +99,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: checkout.error }, { status: 503 });
     }
 
+    const alreadyPaid = existingProfile?.paymentStatus === "paid";
+
     let updatedProfile = profile;
     try {
       updatedProfile = await updateMemberProfile(session.id, {
         plan,
-        paymentStatus: "pending",
+        ...(alreadyPaid ? {} : { paymentStatus: "pending" as const }),
         stripeCheckoutSessionId: checkout.sessionId,
         ...(parsed.data.customOfferId ? { customTrainingOfferId: parsed.data.customOfferId } : {}),
         ...(referral?.referralCode

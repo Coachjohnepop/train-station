@@ -6,7 +6,7 @@
  *   BASE_URL=https://www.thetrainstation.co node scripts/auth-flow-test.mjs
  *
  * Optional env:
- *   MEMBER_TEST_EMAIL=coachjohnepop+test@yahoo.com
+ *   MEMBER_TEST_EMAIL=coachjohnepop@yahoo.com
  *   MEMBER_TEST_PASSWORD=TestPass123!
  *   COACH_TEST_EMAIL=jeremy@thetrainstation.co
  *   COACH_TEST_PASSWORD=CoachTest123!
@@ -22,7 +22,7 @@ if (process.env.VERCEL !== "1") {
 }
 
 const BASE = process.env.BASE_URL || "https://www.thetrainstation.co";
-const MEMBER_EMAIL = process.env.MEMBER_TEST_EMAIL || "coachjohnepop+test@yahoo.com";
+const MEMBER_EMAIL = process.env.MEMBER_TEST_EMAIL || "coachjohnepop@yahoo.com";
 const MEMBER_PASSWORD = process.env.MEMBER_TEST_PASSWORD || "TestPass123!";
 const COACH_EMAIL = process.env.COACH_TEST_EMAIL || "jeremy@thetrainstation.co";
 const COACH_PASSWORD = process.env.COACH_TEST_PASSWORD || "CoachTest123!";
@@ -283,7 +283,37 @@ async function main() {
   await testForgot("Member test", MEMBER_EMAIL, true);
 
   const coachOk = await testLogin("Coach", COACH_EMAIL, COACH_PASSWORD, "/admin");
-  const memberOk = await testLogin("Member test", MEMBER_EMAIL, MEMBER_PASSWORD, "/member");
+  const memberOk = await testLogin("Member test", MEMBER_EMAIL, MEMBER_PASSWORD, "/member/today");
+
+  if (memberOk) {
+    cookies = "";
+    await req("/api/auth/login", {
+      method: "POST",
+      json: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD },
+    });
+    const { res, body } = await req("/api/member/membership");
+    if (res.ok && body?.hasSavedPaymentMethod) {
+      pass("Member saved payment on file", `customer=${body.stripeCustomerId || "linked"}`);
+    } else {
+      fail(
+        "Member saved payment on file",
+        body?.hasSavedPaymentMethod === false
+          ? "no saved card — use coachjohnepop@yahoo.com not +test alias"
+          : body?.error || `HTTP ${res.status}`,
+      );
+    }
+    const checkout = await req("/api/stripe/checkout", {
+      method: "POST",
+      json: { plan: "member" },
+    });
+    if (checkout.res.ok && checkout.body?.hasSavedCard) {
+      pass("Checkout offers saved card", "hasSavedCard=true");
+    } else if (checkout.body?.planChanged || checkout.body?.redirectTo) {
+      pass("Checkout skipped (already paid)", checkout.body.redirectTo || "plan ok");
+    } else {
+      fail("Checkout saved card", checkout.body?.error || "hasSavedCard=false");
+    }
+  }
 
   if (!coachOk) {
     console.log(`\n⚠ Coach login failed — run: node scripts/set-account-password-blob.mjs ${COACH_EMAIL} '${COACH_PASSWORD}'`);
