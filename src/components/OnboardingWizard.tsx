@@ -8,6 +8,7 @@ import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 import { COACH_CALENDLY_URL } from "@/lib/brand";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
 import QuickAuthSetupPrompt from "@/components/QuickAuthSetupPrompt";
+import EmbeddedCalendlyModal from "@/components/EmbeddedCalendlyModal";
 
 async function saveProgress(body: Record<string, unknown>) {
   await fetch("/api/member/onboard-progress", {
@@ -60,6 +61,8 @@ export default function OnboardingWizard({
   const [location, setLocation] = useState({ city: "", state: "" });
   const [sms, setSms] = useState({ phone: "", dailyReminderTime: "07:30" });
   const [calendlyOpened, setCalendlyOpened] = useState(false);
+  const [calendlyBooked, setCalendlyBooked] = useState(false);
+  const [calendlyModalOpen, setCalendlyModalOpen] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -322,19 +325,26 @@ export default function OnboardingWizard({
           <>
             <h2 className="text-lg font-semibold">Book your first session with your trainer, Jeremy</h2>
             <p className="text-sm text-[var(--muted)]">
-              Pick a time on Calendly. You can also do this later from your dashboard.
+              Pick a time that works for you. You can also do this later from your dashboard.
             </p>
-            <a
-              href={effectiveCalendly}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => setCalendlyOpened(true)}
-              className="btn-primary block text-center"
-            >
-              Book on Calendly
-            </a>
+            {calendlyBooked ? (
+              <p className="rounded-lg border border-[var(--success)]/30 bg-[var(--success)]/10 px-3 py-2 text-sm text-[var(--success)]">
+                Session booked — you&apos;ll get a confirmation email with your Zoom link.
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setCalendlyOpened(true);
+                  setCalendlyModalOpen(true);
+                }}
+                className="btn-primary w-full"
+              >
+                Book your session
+              </button>
+            )}
             <p className="text-[11px] text-[var(--muted)]">
-              Opens in a new tab — come back here when you&apos;re done, or skip and book later from your dashboard.
+              Scheduling opens here on thetrainstation.co — when you&apos;re done you&apos;ll land right back in this step.
             </p>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={prevStep} className="btn-ghost flex-1">
@@ -356,6 +366,18 @@ export default function OnboardingWizard({
           </>
         )}
       </div>
+
+      <EmbeddedCalendlyModal
+        open={calendlyModalOpen}
+        calendlyUrl={effectiveCalendly}
+        prefill={email ? { email } : undefined}
+        title="Book with Coach Jeremy"
+        onClose={() => setCalendlyModalOpen(false)}
+        onScheduled={() => {
+          setCalendlyBooked(true);
+          setCalendlyOpened(true);
+        }}
+      />
 
       {error && <p className="text-sm text-amber-400 text-center">{error}</p>}
 

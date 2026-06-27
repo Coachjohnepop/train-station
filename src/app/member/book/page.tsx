@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { COACH_CALENDLY_URL } from "@/lib/brand";
+import EmbeddedCalendlyModal from "@/components/EmbeddedCalendlyModal";
 import {
   formatSlotDateLabel,
   formatSlotTimeRange,
@@ -21,14 +22,23 @@ export default function MemberBookPage() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [showRequestForm, setShowRequestForm] = useState(false);
+  const [calendlyModalOpen, setCalendlyModalOpen] = useState(false);
+  const [calendlyBooked, setCalendlyBooked] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const [cRes, sRes] = await Promise.all([
+      const [cRes, sRes, sessionRes] = await Promise.all([
         fetch("/api/admin/contact"),
         fetch("/api/bookings?slots=true"),
+        fetch("/api/auth/session"),
       ]);
       if (cRes.ok) setContact(await cRes.json());
+      if (sessionRes.ok) {
+        const session = await sessionRes.json();
+        if (session.signedIn && session.user?.email) {
+          setMemberEmail(session.user.email);
+        }
+      }
       if (sRes.ok) {
         const raw = await sRes.json();
         setSlots(
@@ -93,18 +103,23 @@ export default function MemberBookPage() {
       </p>
 
       <div className="mt-6 card space-y-3">
-        <h2 className="font-semibold">Book on Calendly (recommended)</h2>
+        <h2 className="font-semibold">Book your intro call (recommended)</h2>
         <p className="text-sm text-[var(--muted)]">
-          Opens Jeremy&apos;s live calendar. You&apos;ll get a confirmation email with your Zoom link.
+          Jeremy&apos;s live calendar opens right here. You&apos;ll get a confirmation email with your Zoom link.
         </p>
-        <a
-          href={calendly}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-primary block text-center"
-        >
-          Open Calendly →
-        </a>
+        {calendlyBooked ? (
+          <p className="rounded-lg border border-[var(--success)]/30 bg-[var(--success)]/10 px-3 py-2 text-sm text-[var(--success)]">
+            Session booked — check your email for confirmation and Zoom details.
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setCalendlyModalOpen(true)}
+            className="btn-primary w-full"
+          >
+            Book your session
+          </button>
+        )}
         <p className="text-xs text-[var(--muted)]">
           Coach contact: {contact.email}
           {contact.phone ? ` · ${contact.phone}` : ""}
@@ -215,6 +230,15 @@ export default function MemberBookPage() {
       <p className="mt-6 text-xs text-center text-[var(--muted)]">
         Live sessions use Zoom. Calendly handles scheduling; the form above is a backup if you can&apos;t use Calendly.
       </p>
+
+      <EmbeddedCalendlyModal
+        open={calendlyModalOpen}
+        calendlyUrl={calendly}
+        prefill={memberEmail ? { email: memberEmail } : undefined}
+        title="Book with Coach Jeremy"
+        onClose={() => setCalendlyModalOpen(false)}
+        onScheduled={() => setCalendlyBooked(true)}
+      />
     </div>
   );
 }
