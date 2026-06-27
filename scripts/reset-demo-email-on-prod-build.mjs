@@ -10,8 +10,13 @@ import { removeMemberByEmail } from "./remove-member-email.mjs";
 const DEFAULT_EMAIL = "john+test@lemonvoice.com";
 
 async function main() {
-  if (process.env.VERCEL_ENV !== "production") {
-    console.log("[demo-reset] skip — not a production build");
+  // Only run on Vercel production deploys (CI=1 is set on Vercel, not in local .env pulls).
+  if (
+    process.env.VERCEL !== "1" ||
+    process.env.VERCEL_ENV !== "production" ||
+    process.env.CI !== "1"
+  ) {
+    console.log("[demo-reset] skip — not a Vercel production build");
     return;
   }
 
