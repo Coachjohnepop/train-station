@@ -1,20 +1,27 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import PasswordInput from "@/components/PasswordInput";
+import { offerSavePassword, offerSavePasswordFromForm } from "@/lib/browser-credentials";
+import { useFormAutofillSync } from "@/hooks/useFormAutofillSync";
 
 function ResetPasswordForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") || "";
+  const formRef = useRef<HTMLFormElement>(null);
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+
+  useFormAutofillSync(formRef, ["password", "password-confirm"], (values) => {
+    if (values.password) setPassword(values.password);
+    if (values["password-confirm"]) setConfirmPassword(values["password-confirm"]);
+  });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -45,8 +52,15 @@ function ResetPasswordForm() {
         setError(data.error || "Reset failed — try again or request a new link.");
         return;
       }
+      const savedEmail = typeof data.email === "string" ? data.email : "";
+      await offerSavePasswordFromForm(formRef.current);
+      if (savedEmail) {
+        await offerSavePassword({ email: savedEmail, password });
+      }
       setDone(true);
-      setTimeout(() => router.push(data.redirectTo || "/login"), 1500);
+      window.setTimeout(() => {
+        window.location.href = data.redirectTo || "/login";
+      }, 1200);
     } catch {
       setError("Reset failed — try again.");
     } finally {
@@ -74,7 +88,7 @@ function ResetPasswordForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card space-y-4">
+    <form ref={formRef} onSubmit={handleSubmit} autoComplete="on" className="card space-y-4">
       {error && (
         <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200 space-y-2">
           <p>{error}</p>
@@ -89,8 +103,13 @@ function ResetPasswordForm() {
       )}
 
       <div>
-        <label className="block text-xs text-[var(--muted)] mb-1">New password</label>
+        <label htmlFor="reset-password" className="block text-xs text-[var(--muted)] mb-1">
+          New password
+        </label>
         <PasswordInput
+          id="reset-password"
+          name="password"
+          autoComplete="new-password"
           value={password}
           onChange={setPassword}
           placeholder="At least 8 characters"
@@ -100,8 +119,13 @@ function ResetPasswordForm() {
       </div>
 
       <div>
-        <label className="block text-xs text-[var(--muted)] mb-1">Confirm password</label>
+        <label htmlFor="reset-password-confirm" className="block text-xs text-[var(--muted)] mb-1">
+          Confirm password
+        </label>
         <PasswordInput
+          id="reset-password-confirm"
+          name="password-confirm"
+          autoComplete="new-password"
           value={confirmPassword}
           onChange={setConfirmPassword}
           placeholder="Repeat password"

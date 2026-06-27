@@ -763,3 +763,16 @@ table.data th {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   color: var(--accent-light);
 }
+
+/* Lets client code detect Chrome/Safari password autofill via animationstart */
+@keyframes onAutoFillStart {
+  from {
+  }
+  to {
+  }
+}
+
+input:-webkit-autofill {
+  animation-name: onAutoFillStart;
+  animation-duration: 0.01s;
+}

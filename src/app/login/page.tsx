@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import EmailInput, { rememberEmail } from "@/components/EmailInput";
 import PasswordInput from "@/components/PasswordInput";
+import { offerSavePassword, offerSavePasswordFromForm } from "@/lib/browser-credentials";
+import { useFormAutofillSync } from "@/hooks/useFormAutofillSync";
 import { getLastEmail } from "@/lib/email-history";
 
 function LoginForm() {
@@ -16,6 +18,12 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useFormAutofillSync(formRef, ["username", "password"], (values) => {
+    if (values.username) setEmail(values.username);
+    if (values.password) setPassword(values.password);
+  });
 
   useEffect(() => {
     if (prefillEmail) return;
@@ -56,6 +64,8 @@ function LoginForm() {
         return;
       }
       rememberEmail(email);
+      await offerSavePasswordFromForm(formRef.current);
+      await offerSavePassword({ email: email.trim(), password });
       window.location.href = data.redirect || "/member";
     } catch {
       setError("Login failed — try again");
@@ -75,14 +85,19 @@ function LoginForm() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="card space-y-4">
+        <form ref={formRef} onSubmit={handleSubmit} autoComplete="on" className="card space-y-4">
           {error && (
             <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p>
           )}
 
           <div>
-            <label className="block text-xs text-[var(--muted)] mb-1">Email</label>
+            <label htmlFor="login-username" className="block text-xs text-[var(--muted)] mb-1">
+              Email
+            </label>
             <EmailInput
+              id="login-username"
+              name="username"
+              autoComplete="username"
               required
               value={email}
               onChange={setEmail}
@@ -92,9 +107,14 @@ function LoginForm() {
           </div>
 
           <div>
-            <label className="block text-xs text-[var(--muted)] mb-1">Password</label>
+            <label htmlFor="login-password" className="block text-xs text-[var(--muted)] mb-1">
+              Password
+            </label>
             <PasswordInput
+              id="login-password"
+              name="password"
               autoComplete="current-password"
+              required
               value={password}
               onChange={setPassword}
               placeholder="Set via forgot password if needed"

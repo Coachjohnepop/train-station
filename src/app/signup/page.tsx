@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 import EmailInput, { rememberEmail } from "@/components/EmailInput";
 import PasswordInput from "@/components/PasswordInput";
+import { offerSavePassword, offerSavePasswordFromForm } from "@/lib/browser-credentials";
+import { useFormAutofillSync } from "@/hooks/useFormAutofillSync";
 
 function SignupForm() {
   const router = useRouter();
@@ -24,8 +26,15 @@ function SignupForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const ticketPlan = normalizeSignupPlan(plan || "explorer");
+
+  useFormAutofillSync(formRef, ["username", "password", "password-confirm"], (values) => {
+    if (values.username) setEmail(values.username);
+    if (values.password) setPassword(values.password);
+    if (values["password-confirm"]) setConfirmPassword(values["password-confirm"]);
+  });
 
   useEffect(() => {
     try {
@@ -122,8 +131,16 @@ function SignupForm() {
       }
 
       rememberEmail(email);
-      router.push(data.redirectTo || `/member/onboard?plan=${ticketPlan}`);
-      router.refresh();
+      if (!isWaitlistOnly && password) {
+        await offerSavePasswordFromForm(formRef.current);
+        await offerSavePassword({
+          email: email.trim(),
+          password,
+          name: [firstName.trim(), lastName.trim()].filter(Boolean).join(" "),
+        });
+      }
+      window.location.href = data.redirectTo || `/member/onboard?plan=${encodeURIComponent(ticketPlan)}`;
+      return;
     } catch {
       setError("Something went wrong — try again.");
     } finally {
@@ -160,7 +177,12 @@ function SignupForm() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="rounded-3xl border border-[#3d2660] bg-[#140a22] p-8 space-y-4">
+          <form
+            ref={formRef}
+            onSubmit={handleSubmit}
+            autoComplete="on"
+            className="rounded-3xl border border-[#3d2660] bg-[#140a22] p-8 space-y-4"
+          >
             {error && (
               <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
                 {error}{" "}
@@ -173,8 +195,13 @@ function SignupForm() {
             )}
 
             <div>
-              <label className="block text-xs text-[#9d8ab8] mb-1">Email</label>
+              <label htmlFor="signup-username" className="block text-xs text-[#9d8ab8] mb-1">
+                Email
+              </label>
               <EmailInput
+                id="signup-username"
+                name="username"
+                autoComplete="username"
                 variant="signup"
                 required
                 value={email}
@@ -216,25 +243,33 @@ function SignupForm() {
             {!isWaitlistOnly && (
               <>
                 <div>
-                  <label className="block text-xs text-[#9d8ab8] mb-1">
+                  <label htmlFor="signup-password" className="block text-xs text-[#9d8ab8] mb-1">
                     Password{" "}
                     <span className="text-[#6b5b86]">(required in production — min 8 characters)</span>
                   </label>
                   <PasswordInput
+                    id="signup-password"
                     variant="signup"
-                    name="new-password"
+                    name="password"
                     autoComplete="new-password"
+                    required
+                    minLength={8}
                     value={password}
                     onChange={setPassword}
                     placeholder="••••••••"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#9d8ab8] mb-1">Confirm password</label>
+                  <label htmlFor="signup-password-confirm" className="block text-xs text-[#9d8ab8] mb-1">
+                    Confirm password
+                  </label>
                   <PasswordInput
+                    id="signup-password-confirm"
                     variant="signup"
-                    name="confirm-password"
+                    name="password-confirm"
                     autoComplete="new-password"
+                    required
+                    minLength={8}
                     value={confirmPassword}
                     onChange={setConfirmPassword}
                     placeholder="••••••••"

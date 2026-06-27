@@ -96,7 +96,7 @@ export async function requestPasswordReset(rawEmail: string): Promise<{
 export async function completePasswordReset(
   token: string,
   password: string,
-): Promise<{ ok: true } | { ok: false; detail: string }> {
+): Promise<{ ok: true; email: string } | { ok: false; detail: string }> {
   if (password.length < 8) {
     return { ok: false, detail: "Password must be at least 8 characters." };
   }
@@ -110,5 +110,5 @@ export async function completePasswordReset(
   if (!result.ok) return result;
 
   await revokePasswordResetToken(token);
-  return { ok: true };
+  return { ok: true, email: entry.email };
 }

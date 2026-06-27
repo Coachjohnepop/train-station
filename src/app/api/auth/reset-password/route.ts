@@ -21,5 +21,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: result.detail }, { status: 400 });
   }
 
-  return NextResponse.json({ ok: true, redirectTo: "/login" });
+  return NextResponse.json({ ok: true, redirectTo: "/login", email: result.email });
 }
