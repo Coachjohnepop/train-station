@@ -45,7 +45,7 @@ export default function LandingHero() {
   }
 
   return (
-    <div className="relative min-h-[100svh] w-full overflow-hidden bg-black">
+    <div className="relative z-0 isolate min-h-[100svh] w-full overflow-hidden bg-black">
       {images.map((image, index) => (
         <img
           key={index}

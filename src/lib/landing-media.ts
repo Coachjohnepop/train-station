@@ -10,6 +10,8 @@ export type LandingVideoEmbedOptions = {
   autoplay?: boolean;
   /** false = audible autoplay (works on mobile right after a tap). */
   mute?: boolean;
+  /** Required for YouTube iframe postMessage commands (enablejsapi). */
+  origin?: string;
 };
 
 export function landingVideoEmbedSrc(
@@ -28,6 +30,9 @@ export function landingVideoEmbedSrc(
   const u = new URL(base);
   u.searchParams.set("enablejsapi", "1");
   u.searchParams.set("playsinline", "1");
+  if (options.origin?.trim()) {
+    u.searchParams.set("origin", options.origin.trim());
+  }
 
   const shouldAutoplay = autoplay || options.autoplay;
   if (shouldAutoplay) {
