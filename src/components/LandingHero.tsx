@@ -5,8 +5,8 @@ import TrainStationBrand from "@/components/TrainStationBrand";
 
 const images = [
   { src: "/images/splash/black-guy.jpg", alt: "Fit Black athlete powering through a heavy lift" },
-  { src: "/images/splash/blonde-girl.jpg", alt: "Fit blonde woman with a confident, approachable gym smile" },
-  { src: "/images/splash/hispanic-split-squat.jpg", alt: "Mexican American athlete performing Bulgarian split squats" },
+  { src: "/images/splash/blonde-girl.jpg", alt: "Blonde athlete doing cable lat pulldowns in blue and white Train Station gear" },
+  { src: "/images/splash/hispanic-split-squat.jpg", alt: "Latino athlete in white and baby blue gear doing Bulgarian split squats" },
   { src: "/images/splash/asian-woman.jpg", alt: "Athletic woman in an intense workout" },
 ];
 

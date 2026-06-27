@@ -13,8 +13,8 @@ const LOGO = path.join(ROOT, "public/images/logo.png");
 /** left/top as fraction of image size; scale = logo width / image width */
 const PLACEMENTS = {
   "black-guy.jpg": { left: 0.47, top: 0.36, scale: 0.085 },
-  "blonde-girl.jpg": { left: 0.46, top: 0.36, scale: 0.08 },
-  "hispanic-split-squat.jpg": { left: 0.44, top: 0.3, scale: 0.082 },
+  "blonde-girl.jpg": { left: 0.44, top: 0.32, scale: 0.075 },
+  "hispanic-split-squat.jpg": { left: 0.41, top: 0.27, scale: 0.078 },
   "asian-woman.jpg": { left: 0.45, top: 0.34, scale: 0.082 },
 };
 
