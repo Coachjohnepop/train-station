@@ -79,7 +79,7 @@ function MemberCheckoutInner() {
   const priceLabel = planPriceLabel(plan, payments);
 
   useEffect(() => {
-    if (paymentsLoading || canceled || !stripeReady || venmoReady) return;
+    if (paymentsLoading || canceled || !stripeReady || venmoReady || error) return;
     void startCheckout();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentsLoading, canceled, stripeReady, venmoReady]);

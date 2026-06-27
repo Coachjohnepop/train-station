@@ -73,9 +73,29 @@ export function appBaseUrl(): string {
   const fromEnv =
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
     process.env.VERCEL_URL?.trim();
-  if (!fromEnv) return "http://localhost:3000";
-  if (fromEnv.startsWith("http")) return fromEnv.replace(/\/$/, "");
-  return `https://${fromEnv}`;
+  if (fromEnv) {
+    if (fromEnv.startsWith("http")) return fromEnv.replace(/\/$/, "");
+    return `https://${fromEnv.replace(/\/$/, "")}`;
+  }
+  if (process.env.VERCEL || process.env.NODE_ENV === "production") {
+    return "https://www.thetrainstation.co";
+  }
+  return "http://localhost:3000";
+}
+
+async function createCheckoutSession(
+  stripe: StripeClient,
+  sessionParams: import("stripe").Stripe.Checkout.SessionCreateParams,
+): Promise<{ url: string; sessionId: string } | { error: string }> {
+  try {
+    const session = await stripe.checkout.sessions.create(sessionParams);
+    if (!session.url) return { error: "Stripe did not return a checkout URL." };
+    return { url: session.url, sessionId: session.id };
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Stripe checkout failed.";
+    console.error("[stripe] checkout.sessions.create failed:", message);
+    return { error: message };
+  }
 }
 
 function applyReferralDiscounts(
@@ -155,15 +175,15 @@ export async function createSignupCheckoutSession(input: {
       cancel_url: `${base}/member/checkout?plan=custom_training&offerId=${encodeURIComponent(customOffer.id)}&canceled=1`,
     };
     applyReferralDiscounts(sessionParams, input.discount);
-    const session = await stripe.checkout.sessions.create(sessionParams);
-    if (!session.url) return { error: "Stripe did not return a checkout URL." };
+    const session = await createCheckoutSession(stripe, sessionParams);
+    if ("error" in session) return session;
     await updateCustomTrainingOffer(customOffer.id, {
       status: "sent",
-      stripeCheckoutSessionId: session.id,
+      stripeCheckoutSessionId: session.sessionId,
       memberUserId: input.userId,
       memberEmail: input.email,
     });
-    return { url: session.url, sessionId: session.id };
+    return session;
   }
 
   if (input.plan === "merchandise") {
@@ -186,9 +206,9 @@ export async function createSignupCheckoutSession(input: {
       cancel_url: `${base}/member/checkout?plan=merchandise&sku=${encodeURIComponent(sku.id)}&canceled=1`,
     };
     applyReferralDiscounts(sessionParams, input.discount);
-    const session = await stripe.checkout.sessions.create(sessionParams);
-    if (!session.url) return { error: "Stripe did not return a checkout URL." };
-    return { url: session.url, sessionId: session.id };
+    const session = await createCheckoutSession(stripe, sessionParams);
+    if ("error" in session) return session;
+    return session;
   }
 
   if (offer.checkoutMode === "one_time") {
@@ -206,9 +226,9 @@ export async function createSignupCheckoutSession(input: {
       cancel_url: `${base}/member/checkout?plan=${encodeURIComponent(input.plan)}&canceled=1`,
     };
     applyReferralDiscounts(sessionParams, input.discount);
-    const session = await stripe.checkout.sessions.create(sessionParams);
-    if (!session.url) return { error: "Stripe did not return a checkout URL." };
-    return { url: session.url, sessionId: session.id };
+    const session = await createCheckoutSession(stripe, sessionParams);
+    if ("error" in session) return session;
+    return session;
   }
 
   if (offer.checkoutMode === "subscription") {
@@ -235,9 +255,9 @@ export async function createSignupCheckoutSession(input: {
       },
     };
     applyReferralDiscounts(sessionParams, input.discount);
-    const session = await stripe.checkout.sessions.create(sessionParams);
-    if (!session.url) return { error: "Stripe did not return a checkout URL." };
-    return { url: session.url, sessionId: session.id };
+    const session = await createCheckoutSession(stripe, sessionParams);
+    if ("error" in session) return session;
+    return session;
   }
 
   return { error: `${signupPlanLabel(input.plan)} requires a quote — contact the coach.` };
