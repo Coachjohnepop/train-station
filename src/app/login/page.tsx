@@ -113,7 +113,7 @@ function LoginForm() {
             <PasswordInput
               id="login-password"
               name="password"
-              autoComplete="current-password"
+              purpose="current"
               required
               value={password}
               onChange={setPassword}

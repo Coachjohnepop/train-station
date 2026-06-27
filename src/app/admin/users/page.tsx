@@ -5,6 +5,7 @@ import Link from "next/link";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
 import EmailInput from "@/components/EmailInput";
 import PasswordInput from "@/components/PasswordInput";
+import FormUsernameBridge from "@/components/FormUsernameBridge";
 
 type Role = "ADMIN" | "INSTRUCTOR" | "MEMBER" | "PROSPECTIVE_INSTRUCTOR";
 
@@ -407,12 +408,14 @@ export default function AdminUsersPage() {
               </p>
             )}
 
-            <form onSubmit={saveUser} className="mt-4 space-y-4">
+            <form onSubmit={saveUser} autoComplete="on" className="mt-4 space-y-4">
               {!editing && (
                 <label className="block">
                   <span className="text-xs text-[var(--muted)]">Email</span>
                   <EmailInput
                     required
+                    name="username"
+                    autoComplete="username"
                     value={form.email}
                     onChange={(email) => setForm({ ...form, email })}
                     className="input mt-1 w-full"
@@ -496,14 +499,18 @@ export default function AdminUsersPage() {
               </label>
 
               {editing?.isSelf && (
-                <label className="block">
+                <label className="relative block">
                   <span className="text-xs text-[var(--muted)]">New password (optional)</span>
+                  <FormUsernameBridge email={editing.email} />
                   <PasswordInput
+                    id="admin-new-password"
+                    name="password"
+                    purpose="new"
                     value={form.password}
                     onChange={(password) => setForm({ ...form, password })}
                     wrapperClassName="mt-1"
                     placeholder="Min 8 characters"
-                    autoComplete="new-password"
+                    minLength={8}
                   />
                 </label>
               )}

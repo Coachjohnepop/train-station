@@ -211,6 +211,44 @@ function SignupForm() {
               />
             </div>
 
+            {!isWaitlistOnly && (
+              <>
+                <div>
+                  <label htmlFor="signup-password" className="block text-xs text-[#9d8ab8] mb-1">
+                    Password{" "}
+                    <span className="text-[#6b5b86]">(required in production — min 8 characters)</span>
+                  </label>
+                  <PasswordInput
+                    id="signup-password"
+                    variant="signup"
+                    name="password"
+                    purpose="new"
+                    required
+                    minLength={8}
+                    value={password}
+                    onChange={setPassword}
+                    placeholder="••••••••"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="signup-password-confirm" className="block text-xs text-[#9d8ab8] mb-1">
+                    Confirm password
+                  </label>
+                  <PasswordInput
+                    id="signup-password-confirm"
+                    variant="signup"
+                    name="password-confirm"
+                    purpose="confirm"
+                    required
+                    minLength={8}
+                    value={confirmPassword}
+                    onChange={setConfirmPassword}
+                    placeholder="••••••••"
+                  />
+                </div>
+              </>
+            )}
+
             <div className="flex gap-3">
               <div className="flex-1">
                 <label className="block text-xs text-[#9d8ab8] mb-1">First name</label>
@@ -239,44 +277,6 @@ function SignupForm() {
                 />
               </div>
             </div>
-
-            {!isWaitlistOnly && (
-              <>
-                <div>
-                  <label htmlFor="signup-password" className="block text-xs text-[#9d8ab8] mb-1">
-                    Password{" "}
-                    <span className="text-[#6b5b86]">(required in production — min 8 characters)</span>
-                  </label>
-                  <PasswordInput
-                    id="signup-password"
-                    variant="signup"
-                    name="password"
-                    autoComplete="new-password"
-                    required
-                    minLength={8}
-                    value={password}
-                    onChange={setPassword}
-                    placeholder="••••••••"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="signup-password-confirm" className="block text-xs text-[#9d8ab8] mb-1">
-                    Confirm password
-                  </label>
-                  <PasswordInput
-                    id="signup-password-confirm"
-                    variant="signup"
-                    name="password-confirm"
-                    autoComplete="new-password"
-                    required
-                    minLength={8}
-                    value={confirmPassword}
-                    onChange={setConfirmPassword}
-                    placeholder="••••••••"
-                  />
-                </div>
-              </>
-            )}
 
             <div>
               <label className="block text-xs text-[#9d8ab8] mb-1">
