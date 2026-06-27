@@ -122,7 +122,7 @@ export default function OnboardingWizard({
       } catch {
         // ignore
       }
-      window.location.href = data.redirectTo || "/member/today";
+      window.location.replace(data.redirectTo || "/member");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Finish failed");
     } finally {

@@ -1,6 +1,11 @@
 import type { MemberProfile } from "@/lib/member-profiles-store";
 import { MEMBER_PENDING_PATH, memberNeedsApproval } from "@/lib/member-gates";
 
+/** Member dashboard entry — routes to the Today hub. */
+export function memberDashboardPath(): string {
+  return "/member";
+}
+
 /** Primary member hub after signup — today's workout, coach comms, enrolled program. */
 export function memberTodayPath(): string {
   return "/member/today";
@@ -14,10 +19,10 @@ export function memberProgramStartPath(_programSlug?: string): string {
 export function memberPostOnboardPath(
   profile: MemberProfile | null,
   userId: string,
-  programSlug: string,
+  _programSlug: string,
 ): string {
   if (memberNeedsApproval(profile, userId)) return MEMBER_PENDING_PATH;
-  return memberProgramStartPath(programSlug);
+  return memberDashboardPath();
 }
 
 export function memberOnboardPath(programSlug?: string): string {

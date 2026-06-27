@@ -62,9 +62,10 @@ export function normalizePaymentStatus(raw: unknown, plan?: SignupPlan): Payment
 }
 
 export function memberNeedsPayment(
-  profile: Pick<MemberProfile, "plan" | "paymentStatus"> | null,
+  profile: Pick<MemberProfile, "plan" | "paymentStatus" | "onboardingComplete"> | null,
   userId: string,
 ): boolean {
+  if (profile?.onboardingComplete) return false;
   if (!isSelfRegisteredMember(userId)) return false;
   if (!isStripePaymentsEnabled()) {
     if (!stripeRequiredInProduction()) return false;
