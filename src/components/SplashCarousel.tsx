@@ -5,8 +5,8 @@ import Link from "next/link";
 
 const images = [
   "/images/splash/black-guy.jpg",
-  "/images/splash/curly-girl.jpg",
-  "/images/splash/diverse-man.jpg",
+  "/images/splash/blonde-girl.jpg",
+  "/images/splash/hispanic-split-squat.jpg",
   "/images/splash/asian-woman.jpg",
 ];
 

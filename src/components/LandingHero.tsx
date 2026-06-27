@@ -4,10 +4,10 @@ import React, { useState, useEffect } from "react";
 import TrainStationBrand from "@/components/TrainStationBrand";
 
 const images = [
-  { src: "/images/splash/black-guy.jpg", alt: "Fit Black guy powering through a workout" },
-  { src: "/images/splash/curly-girl.jpg", alt: "Curly haired white girl in dynamic fitness pose" },
-  { src: "/images/splash/diverse-man.jpg", alt: "Athletic diverse man in professional training session" },
-  { src: "/images/splash/asian-woman.jpg", alt: "Hot Asian young woman in intense workout" },
+  { src: "/images/splash/black-guy.jpg", alt: "Fit Black athlete powering through a heavy lift" },
+  { src: "/images/splash/blonde-girl.jpg", alt: "Athletic blonde woman in an intense gym session" },
+  { src: "/images/splash/hispanic-split-squat.jpg", alt: "Latino athlete performing Bulgarian split squats" },
+  { src: "/images/splash/asian-woman.jpg", alt: "Athletic woman in an intense workout" },
 ];
 
 const phrases = [
