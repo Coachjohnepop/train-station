@@ -2,14 +2,31 @@
 
 import { useState } from "react";
 
+type Variant = "default" | "signup";
+
+const VARIANT_CLASS: Record<Variant, string> = {
+  default: "input pr-11 w-full",
+  signup:
+    "w-full rounded-full border border-[#3d2660] bg-[#0a0612] px-4 py-3 pr-11 text-sm text-white placeholder:text-[#9d8ab8]",
+};
+
+const TOGGLE_CLASS: Record<Variant, string> = {
+  default: "text-[var(--muted)] hover:text-[var(--foreground)]",
+  signup: "text-[#9d8ab8] hover:text-white",
+};
+
 type PasswordInputProps = {
   id?: string;
+  name?: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   autoComplete?: string;
   required?: boolean;
   minLength?: number;
+  variant?: Variant;
+  className?: string;
+  wrapperClassName?: string;
 };
 
 function EyeIcon({ open }: { open: boolean }) {
@@ -39,32 +56,41 @@ function EyeIcon({ open }: { open: boolean }) {
 
 export default function PasswordInput({
   id,
+  name,
   value,
   onChange,
   placeholder,
   autoComplete = "new-password",
   required,
   minLength,
+  variant = "default",
+  className = "",
+  wrapperClassName = "",
 }: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
+  const inputClass = [VARIANT_CLASS[variant], className].filter(Boolean).join(" ");
 
   return (
-    <div className="relative">
+    <div className={["relative", wrapperClassName].filter(Boolean).join(" ")}>
       <input
         id={id}
+        name={name}
         type={visible ? "text" : "password"}
         autoComplete={autoComplete}
         required={required}
         minLength={minLength}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="input pr-11"
+        className={inputClass}
         placeholder={placeholder}
       />
       <button
         type="button"
         onClick={() => setVisible((v) => !v)}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-white transition"
+        className={[
+          "absolute right-3 top-1/2 -translate-y-1/2 transition",
+          TOGGLE_CLASS[variant],
+        ].join(" ")}
         aria-label={visible ? "Hide password" : "Show password"}
       >
         <EyeIcon open={visible} />

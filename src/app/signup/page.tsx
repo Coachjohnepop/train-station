@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 import EmailInput, { rememberEmail } from "@/components/EmailInput";
+import PasswordInput from "@/components/PasswordInput";
 
 function SignupForm() {
   const router = useRouter();
@@ -219,26 +220,24 @@ function SignupForm() {
                     Password{" "}
                     <span className="text-[#6b5b86]">(required in production — min 8 characters)</span>
                   </label>
-                  <input
-                    type="password"
+                  <PasswordInput
+                    variant="signup"
                     name="new-password"
                     autoComplete="new-password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={setPassword}
                     placeholder="••••••••"
-                    className="w-full rounded-full border border-[#3d2660] bg-[#0a0612] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
                   />
                 </div>
                 <div>
                   <label className="block text-xs text-[#9d8ab8] mb-1">Confirm password</label>
-                  <input
-                    type="password"
+                  <PasswordInput
+                    variant="signup"
                     name="confirm-password"
                     autoComplete="new-password"
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onChange={setConfirmPassword}
                     placeholder="••••••••"
-                    className="w-full rounded-full border border-[#3d2660] bg-[#0a0612] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
                   />
                 </div>
               </>

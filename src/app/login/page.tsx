@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import EmailInput, { rememberEmail } from "@/components/EmailInput";
+import PasswordInput from "@/components/PasswordInput";
 import { getLastEmail } from "@/lib/email-history";
 
 function LoginForm() {
@@ -92,12 +93,10 @@ function LoginForm() {
 
           <div>
             <label className="block text-xs text-[var(--muted)] mb-1">Password</label>
-            <input
-              type="password"
+            <PasswordInput
               autoComplete="current-password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input"
+              onChange={setPassword}
               placeholder="Set via forgot password if needed"
             />
           </div>

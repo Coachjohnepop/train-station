@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
 import EmailInput from "@/components/EmailInput";
+import PasswordInput from "@/components/PasswordInput";
 
 type Role = "ADMIN" | "INSTRUCTOR" | "MEMBER" | "PROSPECTIVE_INSTRUCTOR";
 
@@ -497,11 +498,10 @@ export default function AdminUsersPage() {
               {editing?.isSelf && (
                 <label className="block">
                   <span className="text-xs text-[var(--muted)]">New password (optional)</span>
-                  <input
-                    type="password"
+                  <PasswordInput
                     value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    className="input mt-1 w-full"
+                    onChange={(password) => setForm({ ...form, password })}
+                    wrapperClassName="mt-1"
                     placeholder="Min 8 characters"
                     autoComplete="new-password"
                   />
