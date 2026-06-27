@@ -194,7 +194,7 @@ function MemberCheckoutInner() {
                         ? "Preparing checkout…"
                         : checkoutOpen
                           ? "Payment window open"
-                          : "Proceed to payment"}
+                          : "Get your Ticket"}
                 </button>
                 <p className="text-center text-[11px] text-[var(--muted)]">
                   {hasSavedCard
@@ -255,7 +255,7 @@ function MemberCheckoutInner() {
                   ? "Confirming payment…"
                   : loading
                     ? "Preparing checkout…"
-                    : "Proceed to payment"}
+                    : "Get your Ticket"}
               </button>
             )}
           </div>
