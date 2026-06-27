@@ -2,6 +2,8 @@
 
 import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { getLandingMedia, saveLandingMedia } from "@/lib/landing-media-store";
+import { resolveSiteBrand } from "@/lib/site-brand";
+import { getSiteBrand, saveSiteBrand } from "@/lib/site-brand-store";
 
 export async function saveLandingMediaAction(input: {
   welcomeVideoUrl: string | null;
@@ -43,6 +45,36 @@ export async function saveLandingVideosAction(input: {
   freeChastiseVideoUrl: string | null;
 }) {
   return saveLandingMediaAction(input);
+}
+
+export async function saveSiteBrandAction(input: {
+  brandName?: string;
+  brandTagline?: string;
+  logoUrl?: string | null;
+  logoIconUrl?: string | null;
+  faviconUrl?: string | null;
+}) {
+  const session = await getSessionUser();
+  if (!session || !isStaffRole(session.role)) {
+    return { error: "Coach sign-in required. Sign out and sign in again at /login." };
+  }
+
+  try {
+    const config = await saveSiteBrand(input);
+    const brand = resolveSiteBrand(config);
+    return {
+      ok: true as const,
+      ...brand,
+      storedBrandName: config.brandName,
+      storedBrandTagline: config.brandTagline,
+      storedLogoUrl: config.logoUrl,
+      storedLogoIconUrl: config.logoIconUrl,
+      storedFaviconUrl: config.faviconUrl,
+      updatedAt: config.updatedAt,
+    };
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : "Save failed" };
+  }
 }
 
 export async function loadLandingVideosAction() {

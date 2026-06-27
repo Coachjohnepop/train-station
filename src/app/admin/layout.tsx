@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AdminAreaNav from "@/components/AdminAreaNav";
+import TrainStationBrand from "@/components/TrainStationBrand";
 import DevModeSwitcher from "@/components/DevModeSwitcher";
 import LogoutButton from "@/components/LogoutButton";
 import { getSessionUser } from "@/lib/auth";
@@ -24,8 +25,8 @@ export default async function AdminLayout({
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <Link href="/admin" className="text-sm font-semibold tracking-tight text-[var(--foreground)] hover:text-[var(--accent)]">
-                The Train Station
+              <Link href="/admin" className="transition hover:opacity-90">
+                <TrainStationBrand variant="header" className="!h-7 sm:!h-8" />
               </Link>
               <div>
                 <p className="text-sm font-medium">{session?.name || "Coach"}</p>

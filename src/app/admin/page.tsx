@@ -55,16 +55,16 @@ export default async function AdminPage() {
         >
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-[#7c3aed]">
-              Landing videos
+              Site brand & media
             </p>
             <p className="mt-2 text-2xl font-bold">
               {landingReady ? "Ready" : "Needs URLs"}
             </p>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              Welcome + free-ticket YouTube links
+              Logo, welcome + free-ticket videos
             </p>
           </div>
-          <span className="mt-4 text-sm font-medium text-[#7c3aed]">Edit videos →</span>
+          <span className="mt-4 text-sm font-medium text-[#7c3aed]">Edit site settings →</span>
         </Link>
         <StatCard label="Exercises" value={exercises} href="/admin/exercises" />
         <StatCard label="Workouts" value={workouts} href="/admin/workouts" />
