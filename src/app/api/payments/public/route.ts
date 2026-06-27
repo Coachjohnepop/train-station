@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { listMerchandiseSkus } from "@/lib/merchandise-store";
 import { getLandingMedia } from "@/lib/landing-media-store";
 import { isStripePaymentsEnabled } from "@/lib/member-gates";
-import { getEffectiveMembershipOffers } from "@/lib/pricing-catalog";
+import { getEffectiveMembershipOffers, resolveStripePriceId } from "@/lib/pricing-catalog";
+import { isStripeTestMode } from "@/lib/stripe-price-ids";
 import { SERVICE_OFFERS } from "@/lib/product-offers";
 
 export const dynamic = "force-dynamic";
@@ -26,8 +27,13 @@ export async function GET() {
         Boolean(offer.stripePriceId),
     }));
 
+  const memberPriceId = await resolveStripePriceId("member");
+
   return NextResponse.json({
     stripeEnabled,
+    ...(isStripeTestMode()
+      ? { stripeTestMode: true, memberPriceId, memberPriceLen: memberPriceId?.length ?? 0 }
+      : {}),
     memberships,
     services: SERVICE_OFFERS.map((o) => ({
       plan: o.id,

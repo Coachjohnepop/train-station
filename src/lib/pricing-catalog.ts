@@ -7,6 +7,7 @@ import {
   upsertPricingPlanRecord,
 } from "@/lib/pricing-catalog-store";
 import { getStripe } from "@/lib/stripe";
+import { canonicalMembershipPriceId } from "@/lib/stripe-price-ids";
 import type { MembershipPlan } from "@/lib/signup-plans";
 
 export type EffectiveMembershipOffer = ProductOfferDefinition & {
@@ -70,6 +71,9 @@ function pickStripePriceId(envId: string | null, catalogId: string | null): stri
 }
 
 export async function resolveStripePriceId(planId: string): Promise<string | null> {
+  const canonical = canonicalMembershipPriceId(planId);
+  if (canonical) return canonical;
+
   const record = PAID_PLANS.includes(planId as MembershipPlan)
     ? await getPricingPlanRecord(planId as MembershipPlan)
     : null;
@@ -84,10 +88,9 @@ async function buildEffectiveOffer(
     base.id !== "explorer" ? await getPricingPlanRecord(base.id as MembershipPlan) : null;
   const priceCents = record?.priceCents ?? defaultPriceCents(base);
   const display = formatPriceDisplay(priceCents, base.checkoutMode);
-  const stripePriceId = pickStripePriceId(
-    envStripePriceId(base.id),
-    record?.stripePriceId || null,
-  );
+  const stripePriceId =
+    canonicalMembershipPriceId(base.id) ||
+    pickStripePriceId(envStripePriceId(base.id), record?.stripePriceId || null);
 
   return {
     ...base,
@@ -176,7 +179,7 @@ export async function syncStripePriceForPlan(input: {
 
 export async function importStripePriceIdsFromEnv(): Promise<void> {
   for (const planId of PAID_PLANS) {
-    const envId = envStripePriceId(planId);
+    const envId = canonicalMembershipPriceId(planId) || envStripePriceId(planId);
     if (!envId) continue;
     const existing = await getPricingPlanRecord(planId);
     if (existing?.stripePriceId === envId) continue;
