@@ -55,6 +55,12 @@ export function formatPriceDisplay(
   return { priceLabel: dollars };
 }
 
+export function joinPriceDisplay(priceLabel: string, priceNote?: string): string {
+  if (!priceNote) return priceLabel;
+  if (priceNote.startsWith("/")) return `${priceLabel}${priceNote}`;
+  return `${priceLabel} ${priceNote}`;
+}
+
 export async function resolveStripePriceId(planId: string): Promise<string | null> {
   const record = PAID_PLANS.includes(planId as MembershipPlan)
     ? await getPricingPlanRecord(planId as MembershipPlan)
@@ -79,9 +85,7 @@ async function buildEffectiveOffer(
     priceLabel: display.priceLabel,
     priceNote: display.priceNote,
     priceCents,
-    priceDisplay: display.priceNote
-      ? `${display.priceLabel}${display.priceNote}`
-      : display.priceLabel,
+    priceDisplay: joinPriceDisplay(display.priceLabel, display.priceNote),
     stripePriceId: stripePriceId || null,
     stripeProductId: record?.stripeProductId ?? null,
     adminConfigured: Boolean(record),

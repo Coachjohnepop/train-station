@@ -40,9 +40,12 @@ export function buildMembershipNavItems(
     : TICKET_TIERS;
 
   return tiers.map((tier) => {
-    const priceDisplay = tier.priceNote
-      ? `${tier.price}${tier.priceNote}`
-      : tier.price;
+    const priceDisplay =
+      tier.priceNote && tier.priceNote.startsWith("/")
+        ? `${tier.price}${tier.priceNote}`
+        : tier.priceNote
+          ? `${tier.price} ${tier.priceNote}`
+          : tier.price;
     return {
       id: tier.id,
       label: tier.id === "free" ? "Explorer" : tier.title,
