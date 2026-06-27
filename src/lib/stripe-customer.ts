@@ -36,6 +36,7 @@ export async function ensureStripeCustomer(input: {
 
 export async function customerHasSavedPaymentMethod(
   customerId: string,
+  subscriptionId?: string | null,
 ): Promise<boolean> {
   const stripe = getStripe();
   if (!stripe) return false;
@@ -46,8 +47,33 @@ export async function customerHasSavedPaymentMethod(
       type: "card",
       limit: 1,
     });
-    return methods.data.length > 0;
+    if (methods.data.length > 0) return true;
   } catch {
-    return false;
+    /* fall through */
   }
+
+  try {
+    const customer = await stripe.customers.retrieve(customerId, {
+      expand: ["invoice_settings.default_payment_method"],
+    });
+    if (!("deleted" in customer && customer.deleted)) {
+      const dpm = customer.invoice_settings?.default_payment_method;
+      if (dpm) return true;
+    }
+  } catch {
+    /* fall through */
+  }
+
+  if (subscriptionId) {
+    try {
+      const sub = await stripe.subscriptions.retrieve(subscriptionId, {
+        expand: ["default_payment_method"],
+      });
+      if (sub.default_payment_method) return true;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return false;
 }

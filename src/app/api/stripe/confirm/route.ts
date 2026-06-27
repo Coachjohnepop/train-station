@@ -7,6 +7,10 @@ import {
 } from "@/lib/auth";
 import { markMemberPaid, attachPaidMemberCookies } from "@/lib/mark-member-paid";
 import { getStripe } from "@/lib/stripe";
+import {
+  checkoutCustomerId,
+  persistCheckoutPaymentMethod,
+} from "@/lib/stripe-payment-method-persist";
 import { verifyPaidCheckoutSession } from "@/lib/stripe-payment-verify";
 
 const schema = z.object({
@@ -41,12 +45,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: verified.reason }, { status: 409 });
   }
 
+  await persistCheckoutPaymentMethod(checkout);
+
   const updated = await markMemberPaid({
     userId: sessionUser.id,
     method: "stripe",
     plan: checkout.metadata?.plan ?? null,
     customOfferId: checkout.metadata?.customOfferId ?? null,
-    stripeCustomerId: typeof checkout.customer === "string" ? checkout.customer : null,
+    stripeCustomerId: checkoutCustomerId(checkout),
     stripeSubscriptionId:
       typeof checkout.subscription === "string" ? checkout.subscription : null,
     stripeCheckoutSessionId: checkout.id,

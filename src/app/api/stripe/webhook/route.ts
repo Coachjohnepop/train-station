@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { updateMemberProfile } from "@/lib/member-profiles-store";
 import { markMemberPaid } from "@/lib/mark-member-paid";
 import { getStripe } from "@/lib/stripe";
+import {
+  checkoutCustomerId,
+  persistCheckoutPaymentMethod,
+} from "@/lib/stripe-payment-method-persist";
 import { claimStripeWebhookEvent } from "@/lib/stripe-webhook-events";
 import {
   isCheckoutSessionPaid,
@@ -51,12 +55,14 @@ export async function POST(request: Request) {
         if (!isSubscriptionActive(sub)) break;
       }
 
+      await persistCheckoutPaymentMethod(session);
+
       await markMemberPaid({
         userId,
         method: "stripe",
         plan: session.metadata?.plan ?? null,
         customOfferId: session.metadata?.customOfferId ?? null,
-        stripeCustomerId: typeof session.customer === "string" ? session.customer : null,
+        stripeCustomerId: checkoutCustomerId(session),
         stripeSubscriptionId: subscriptionId ?? null,
         stripeCheckoutSessionId: session.id,
       });

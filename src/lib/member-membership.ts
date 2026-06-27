@@ -65,7 +65,10 @@ export async function getMemberMembershipSnapshot(
   const isSubscription = offer?.checkoutMode === "subscription";
   const stripeReady = isStripePaymentsEnabled();
   const hasSavedPaymentMethod = profile.stripeCustomerId
-    ? await customerHasSavedPaymentMethod(profile.stripeCustomerId)
+    ? await customerHasSavedPaymentMethod(
+        profile.stripeCustomerId,
+        profile.stripeSubscriptionId,
+      )
     : false;
 
   const switchablePlans: SignupPlan[] =

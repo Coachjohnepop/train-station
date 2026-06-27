@@ -157,6 +157,7 @@ async function checkoutCustomerFields(input: {
       saved_payment_method_options: {
         payment_method_save: "enabled",
         payment_method_remove: "enabled",
+        allow_redisplay_filters: ["always", "limited"],
       },
     },
   };
@@ -243,6 +244,9 @@ export async function createSignupCheckoutSession(input: {
           quantity: 1,
         },
       ],
+      payment_intent_data: {
+        setup_future_usage: "off_session",
+      },
     };
     applyReferralDiscounts(sessionParams, input.discount);
     const session = await createCheckoutSession(stripe, sessionParams);
@@ -273,6 +277,9 @@ export async function createSignupCheckoutSession(input: {
       client_reference_id: input.userId,
       metadata,
       line_items: [{ price: priceId, quantity: qty }],
+      payment_intent_data: {
+        setup_future_usage: "off_session",
+      },
     };
     applyReferralDiscounts(sessionParams, input.discount);
     const session = await createCheckoutSession(stripe, sessionParams);
@@ -292,6 +299,9 @@ export async function createSignupCheckoutSession(input: {
       client_reference_id: input.userId,
       metadata,
       line_items: [{ price: priceId, quantity: 1 }],
+      payment_intent_data: {
+        setup_future_usage: "off_session",
+      },
     };
     applyReferralDiscounts(sessionParams, input.discount);
     const session = await createCheckoutSession(stripe, sessionParams);
