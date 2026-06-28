@@ -35,7 +35,6 @@ const schema = z.object({
     .optional(),
   phone: z.string().optional(),
   dailyReminderTime: z.string().optional(),
-  calendlyOpened: z.boolean().optional(),
   programSlug: z.string().optional(),
   plan: z.string().optional(),
 });
@@ -57,7 +56,6 @@ export async function POST(request: Request) {
     location,
     phone,
     dailyReminderTime,
-    calendlyOpened,
     programSlug,
     plan,
   } = body.data;
@@ -107,7 +105,7 @@ Measurements:
 Location: ${location?.city || "—"}, ${location?.state || "—"}
 SMS phone: ${phone || "not set"}
 Daily reminder: ${dailyReminderTime || "not set"}
-Calendly opened: ${calendlyOpened ? "yes" : "no"}
+Coach intro booking: on dashboard after setup
 `;
 
   if (isDemoMode()) {
@@ -136,15 +134,6 @@ Calendly opened: ${calendlyOpened ? "yes" : "no"}
     type: "onboarding_complete",
     programSlug: enrolledSlug,
   });
-
-  if (calendlyOpened) {
-    await awardGamificationPoints({
-      userId: session.id,
-      eventId: "intake:scheduled",
-      type: "intake_scheduled",
-      programSlug: enrolledSlug,
-    });
-  }
 
   const welcomePatch: Parameters<typeof updateMemberProfile>[1] = {};
 

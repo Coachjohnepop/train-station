@@ -5,10 +5,8 @@ import { useEffect, useState } from "react";
 import MemberHomeEquipment from "@/components/MemberHomeEquipment";
 import { landingVideoEmbedSrc, welcomeVideoUrlForPlan } from "@/lib/landing-media";
 import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
-import { COACH_CALENDLY_URL } from "@/lib/brand";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
 import QuickAuthSetupPrompt from "@/components/QuickAuthSetupPrompt";
-import EmbeddedCalendlyModal from "@/components/EmbeddedCalendlyModal";
 import CityStateInput from "@/components/CityStateInput";
 
 async function saveProgress(body: Record<string, unknown>) {
@@ -23,18 +21,16 @@ export default function OnboardingWizard({
   email = "",
   welcomeVideoUrl = null,
   welcomeVideosByPlan = {},
-  calendlyUrl = null,
 }: {
   email?: string;
   welcomeVideoUrl?: string | null;
   welcomeVideosByPlan?: Record<string, string | null | undefined>;
-  calendlyUrl?: string | null;
 }) {
   const searchParams = useSearchParams();
   const plan = normalizeSignupPlan(searchParams.get("plan"));
   const programSlug = searchParams.get("program");
 
-  const totalSteps = 7;
+  const totalSteps = 6;
   const stepStorageKey = `ts-onboard-step:${plan}`;
   const [currentStep, setCurrentStep] = useState(1);
   const [stepReady, setStepReady] = useState(false);
@@ -60,16 +56,13 @@ export default function OnboardingWizard({
       // ignore
     }
   }, [currentStep, stepReady, stepStorageKey]);
+
   const [measurements, setMeasurements] = useState({ weight: "", notes: "" });
   const [location, setLocation] = useState({ city: "", state: "" });
   const [sms, setSms] = useState({ phone: "", dailyReminderTime: "07:30" });
-  const [calendlyOpened, setCalendlyOpened] = useState(false);
-  const [calendlyBooked, setCalendlyBooked] = useState(false);
-  const [calendlyModalOpen, setCalendlyModalOpen] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const effectiveCalendly = calendlyUrl || COACH_CALENDLY_URL;
   const planWelcomeUrl = welcomeVideoUrlForPlan(plan, welcomeVideoUrl, welcomeVideosByPlan);
   const welcomeEmbed = landingVideoEmbedSrc(planWelcomeUrl);
 
@@ -88,12 +81,6 @@ export default function OnboardingWizard({
         state: location.state || null,
       });
     }
-    if (currentStep === 6) {
-      await saveProgress({
-        phone: sms.phone || null,
-        dailyReminderTime: sms.dailyReminderTime || null,
-      });
-    }
     setCurrentStep((s) => Math.min(totalSteps, s + 1));
   }
 
@@ -105,6 +92,13 @@ export default function OnboardingWizard({
     setFinishing(true);
     setError(null);
     try {
+      if (currentStep === 6) {
+        await saveProgress({
+          phone: sms.phone || null,
+          dailyReminderTime: sms.dailyReminderTime || null,
+        });
+      }
+
       const res = await fetch("/api/onboard/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -114,7 +108,6 @@ export default function OnboardingWizard({
           location,
           phone: sms.phone,
           dailyReminderTime: sms.dailyReminderTime,
-          calendlyOpened,
           programSlug: programSlug || undefined,
           plan,
         }),
@@ -157,7 +150,8 @@ export default function OnboardingWizard({
           <>
             <h1 className="text-xl font-bold">Welcome aboard</h1>
             <p className="text-sm text-[var(--muted)] leading-relaxed">
-              Two minutes to set up texts, book your coach, and open your training dashboard on your phone.
+              A quick setup for texts and your profile — then your dashboard walks you through booking
+              your coach intro and warming up.
             </p>
             {welcomeEmbed ? (
               <div className="aspect-video overflow-hidden rounded-xl bg-black ring-1 ring-[#3d2660]">
@@ -276,7 +270,8 @@ export default function OnboardingWizard({
           <>
             <h2 className="text-lg font-semibold">Daily workout texts</h2>
             <p className="text-sm text-[var(--muted)]">
-              Get a morning SMS with a direct link to that day&apos;s workout.
+              Get a morning SMS with a direct link to that day&apos;s workout. On your dashboard next,
+              you&apos;ll book your 15-minute coach intro and start your guided warm-ups.
             </p>
             <div className="space-y-3 pt-1">
               <div>
@@ -302,42 +297,6 @@ export default function OnboardingWizard({
               <button type="button" onClick={prevStep} className="btn-ghost flex-1">
                 Back
               </button>
-              <button type="button" onClick={() => void nextStep()} className="btn-primary flex-1">
-                Continue
-              </button>
-            </div>
-          </>
-        )}
-
-        {currentStep === 7 && (
-          <>
-            <h2 className="text-lg font-semibold">Book your first session with your trainer, Jeremy</h2>
-            <p className="text-sm text-[var(--muted)]">
-              Pick a time that works for you. You can also do this later from your dashboard.
-            </p>
-            {calendlyBooked ? (
-              <p className="rounded-lg border border-[var(--success)]/30 bg-[var(--success)]/10 px-3 py-2 text-sm text-[var(--success)]">
-                Session booked — you&apos;ll get a confirmation email with your Zoom link.
-              </p>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setCalendlyOpened(true);
-                  setCalendlyModalOpen(true);
-                }}
-                className="btn-primary w-full"
-              >
-                Book your session
-              </button>
-            )}
-            <p className="text-[11px] text-[var(--muted)]">
-              Scheduling opens here on thetrainstation.co — when you&apos;re done you&apos;ll land right back in this step.
-            </p>
-            <div className="flex gap-3 pt-2">
-              <button type="button" onClick={prevStep} className="btn-ghost flex-1">
-                Back
-              </button>
               <button
                 type="button"
                 onClick={() => void handleFinish()}
@@ -354,18 +313,6 @@ export default function OnboardingWizard({
           </>
         )}
       </div>
-
-      <EmbeddedCalendlyModal
-        open={calendlyModalOpen}
-        calendlyUrl={effectiveCalendly}
-        prefill={email ? { email } : undefined}
-        title="Book with Coach Jeremy"
-        onClose={() => setCalendlyModalOpen(false)}
-        onScheduled={() => {
-          setCalendlyBooked(true);
-          setCalendlyOpened(true);
-        }}
-      />
 
       {error && <p className="text-sm text-amber-400 text-center">{error}</p>}
 

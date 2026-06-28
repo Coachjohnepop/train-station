@@ -230,6 +230,10 @@ export default function MemberTodayShell({
         <MemberIntakeIntroCard initialStatus={intakeStatus} followUpOnly />
       )}
 
+      {!intakeComplete && isToday && !showFollowUpCard && !showWarmupFlow && (
+        <MemberIntakeIntroCard initialStatus={intakeStatus} />
+      )}
+
       {showWarmupFlow && (
         <>
           {isToday && <MemberIntakeIntroCard initialStatus={intakeStatus} />}
