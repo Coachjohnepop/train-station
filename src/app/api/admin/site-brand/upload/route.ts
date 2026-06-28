@@ -21,15 +21,20 @@ export async function POST(request: Request) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const assets = await processAndStoreBrandLogo(buffer, file.type || "image/png");
-    const config = await saveSiteBrand(assets);
+    const config = await saveSiteBrand({
+      ...assets,
+      logoTransform: { scale: 1, rotation: 0, offsetX: 0, offsetY: 0, cropInset: 0 },
+    });
     const brand = resolveSiteBrand(config);
 
     return NextResponse.json({
       ok: true,
       ...brand,
+      logoTransform: config.logoTransform,
       storedLogoUrl: config.logoUrl,
       storedLogoIconUrl: config.logoIconUrl,
       storedFaviconUrl: config.faviconUrl,
+      storedLogoSourceUrl: config.logoSourceUrl,
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Upload failed";

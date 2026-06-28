@@ -1,6 +1,11 @@
 import path from "path";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
 import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
+import {
+  DEFAULT_LOGO_TRANSFORM,
+  normalizeLogoTransform,
+  type LogoTransform,
+} from "@/lib/logo-transform";
 
 export type SiteBrandConfig = {
   brandName: string;
@@ -8,8 +13,12 @@ export type SiteBrandConfig = {
   logoUrl: string | null;
   logoIconUrl: string | null;
   faviconUrl: string | null;
+  logoSourceUrl: string | null;
+  logoTransform: LogoTransform;
   updatedAt: string;
 };
+
+export type { LogoTransform };
 
 const DEV_FILE = path.join(process.cwd(), "prisma", "site-brand.dev.json");
 const BLOB_PATH = "demo/site-brand.json";
@@ -23,6 +32,8 @@ function emptyConfig(): SiteBrandConfig {
     logoUrl: null,
     logoIconUrl: null,
     faviconUrl: null,
+    logoSourceUrl: null,
+    logoTransform: { ...DEFAULT_LOGO_TRANSFORM },
     updatedAt: new Date().toISOString(),
   };
 }
@@ -49,6 +60,8 @@ function normalize(raw: unknown): SiteBrandConfig {
     logoUrl: normalizeUrl(data.logoUrl),
     logoIconUrl: normalizeUrl(data.logoIconUrl),
     faviconUrl: normalizeUrl(data.faviconUrl),
+    logoSourceUrl: normalizeUrl(data.logoSourceUrl),
+    logoTransform: normalizeLogoTransform(data.logoTransform),
     updatedAt:
       typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
   };
@@ -92,7 +105,13 @@ export async function saveSiteBrand(
   patch: Partial<
     Pick<
       SiteBrandConfig,
-      "brandName" | "brandTagline" | "logoUrl" | "logoIconUrl" | "faviconUrl"
+      | "brandName"
+      | "brandTagline"
+      | "logoUrl"
+      | "logoIconUrl"
+      | "faviconUrl"
+      | "logoSourceUrl"
+      | "logoTransform"
     >
   >,
 ): Promise<SiteBrandConfig> {
@@ -122,6 +141,14 @@ export async function saveSiteBrand(
     const url = patch.faviconUrl?.trim() || null;
     assertBrandAssetUrl(url, "Favicon");
     next.faviconUrl = url;
+  }
+  if (patch.logoSourceUrl !== undefined) {
+    const url = patch.logoSourceUrl?.trim() || null;
+    assertBrandAssetUrl(url, "Logo source");
+    next.logoSourceUrl = url;
+  }
+  if (patch.logoTransform !== undefined) {
+    next.logoTransform = normalizeLogoTransform(patch.logoTransform);
   }
 
   await persistJsonStore({

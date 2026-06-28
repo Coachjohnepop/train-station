@@ -8,9 +8,8 @@ import path from "path";
 import sharp from "sharp";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
-const DEFAULT_SOURCE =
-  "/Users/johnpopham/Desktop/Stuff/Lemon Voice/The Train Station/Images/320DA6C0-3FA4-41A2-B4FA-656530FBDFA8.PNG.jpg";
 const OUT_DIR = path.join(ROOT, "public/images");
+const DEFAULT_SOURCE = path.join(OUT_DIR, "logo-source.png");
 const BACKUP_DIR = path.join(OUT_DIR, "logo-backups");
 
 const VARIANTS = [

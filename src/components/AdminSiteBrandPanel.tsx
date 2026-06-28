@@ -1,7 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { saveSiteBrandAction } from "@/app/admin/landing/actions";
+import AdminLogoEditor from "@/components/AdminLogoEditor";
+import type { LogoTransform } from "@/lib/logo-transform";
+import { DEFAULT_LOGO_TRANSFORM } from "@/lib/logo-transform";
 import type { ResolvedSiteBrand } from "@/lib/site-brand";
 
 export default function AdminSiteBrandPanel({
@@ -10,6 +13,8 @@ export default function AdminSiteBrandPanel({
   initialLogoUrl = "",
   initialLogoIconUrl = "",
   initialFaviconUrl = "",
+  initialLogoSourceUrl = "",
+  initialLogoTransform = DEFAULT_LOGO_TRANSFORM,
   resolvedLogoUrl = "",
   resolvedLogoIconUrl = "",
   resolvedFaviconUrl = "",
@@ -19,23 +24,27 @@ export default function AdminSiteBrandPanel({
   initialLogoUrl?: string;
   initialLogoIconUrl?: string;
   initialFaviconUrl?: string;
+  initialLogoSourceUrl?: string;
+  initialLogoTransform?: LogoTransform;
   resolvedLogoUrl?: string;
   resolvedLogoIconUrl?: string;
   resolvedFaviconUrl?: string;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
   const [brandName, setBrandName] = useState(initialBrandName);
   const [brandTagline, setBrandTagline] = useState(initialBrandTagline);
   const [logoUrl, setLogoUrl] = useState(initialLogoUrl);
   const [logoIconUrl, setLogoIconUrl] = useState(initialLogoIconUrl);
   const [faviconUrl, setFaviconUrl] = useState(initialFaviconUrl);
+  const [logoSourceUrl, setLogoSourceUrl] = useState(
+    initialLogoSourceUrl || "/images/logo-source.png",
+  );
+  const [logoTransform, setLogoTransform] = useState<LogoTransform>(initialLogoTransform);
   const [preview, setPreview] = useState({
     logoUrl: resolvedLogoUrl,
     logoIconUrl: resolvedLogoIconUrl,
     faviconUrl: resolvedFaviconUrl,
   });
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState(false);
 
@@ -50,6 +59,8 @@ export default function AdminSiteBrandPanel({
       logoUrl: logoUrl.trim() || null,
       logoIconUrl: logoIconUrl.trim() || null,
       faviconUrl: faviconUrl.trim() || null,
+      logoSourceUrl: logoSourceUrl.trim() || null,
+      logoTransform,
     });
 
     if ("error" in result && result.error) {
@@ -61,12 +72,14 @@ export default function AdminSiteBrandPanel({
       setLogoUrl(result.storedLogoUrl || "");
       setLogoIconUrl(result.storedLogoIconUrl || "");
       setFaviconUrl(result.storedFaviconUrl || "");
+      if (result.storedLogoSourceUrl) setLogoSourceUrl(result.storedLogoSourceUrl);
+      if (result.logoTransform) setLogoTransform(result.logoTransform);
       setPreview({
         logoUrl: result.logoUrl,
         logoIconUrl: result.logoIconUrl,
         faviconUrl: result.faviconUrl,
       });
-      setMessage("Brand saved — live across the site now.");
+      setMessage("Brand text saved.");
       setError(false);
     } else {
       setError(true);
@@ -76,95 +89,39 @@ export default function AdminSiteBrandPanel({
     setSaving(false);
   }
 
-  async function handleUpload(file: File) {
-    setUploading(true);
-    setMessage(null);
-    setError(false);
-
-    const form = new FormData();
-    form.append("file", file);
-
-    try {
-      const res = await fetch("/api/admin/site-brand/upload", {
-        method: "POST",
-        body: form,
-      });
-      const body = (await res.json()) as ResolvedSiteBrand & {
-        ok?: boolean;
-        error?: string;
-        storedLogoUrl?: string | null;
-        storedLogoIconUrl?: string | null;
-        storedFaviconUrl?: string | null;
-      };
-
-      if (!res.ok || body.error) {
-        setError(true);
-        setMessage(body.error || "Upload failed");
-        return;
-      }
-
-      setLogoUrl(body.storedLogoUrl || "");
-      setLogoIconUrl(body.storedLogoIconUrl || "");
-      setFaviconUrl(body.storedFaviconUrl || "");
-      setPreview({
-        logoUrl: body.logoUrl,
-        logoIconUrl: body.logoIconUrl,
-        faviconUrl: body.faviconUrl,
-      });
-      setMessage("Logo uploaded and optimized — header, hero, and favicon updated.");
-      setError(false);
-    } catch {
-      setError(true);
-      setMessage("Upload failed");
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  }
-
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-[#7c3aed]/30 bg-[#7c3aed]/5 p-4 text-sm text-[#c4b5fd]">
         <p className="font-semibold text-white">White-label brand</p>
         <p className="mt-2 text-[#9d8ab8]">
-          Upload your main logo once — we generate optimized PNGs for the nav, hero, and favicon.
-          Display sizes scale with the page; files stay small for fast loads. Clear the URL fields
-          and save to fall back to the built-in defaults.
+          Use a transparent PNG for the cleanest result. The editor preserves alpha through zoom,
+          crop, and rotation — then publishes optimized site logos.
         </p>
       </div>
 
-      <div className="card space-y-4">
-        <div>
-          <p className="text-sm font-semibold text-white">Site logo</p>
-          <p className="mt-1 text-xs text-[var(--muted)]">
-            PNG or JPEG recommended. Square or circular emblems work best.
-          </p>
-        </div>
+      <AdminLogoEditor
+        sourceUrl={logoSourceUrl}
+        initialTransform={logoTransform}
+        onPublished={(result) => {
+          setLogoUrl(result.logoUrl);
+          setLogoIconUrl(result.logoIconUrl);
+          setFaviconUrl(result.faviconUrl);
+          setLogoTransform(result.logoTransform);
+          if (result.logoSourceUrl) setLogoSourceUrl(result.logoSourceUrl);
+          setPreview({
+            logoUrl: result.logoUrl,
+            logoIconUrl: result.logoIconUrl,
+            faviconUrl: result.faviconUrl,
+          });
+        }}
+      />
 
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl bg-black/40 ring-1 ring-[#3d2660]">
-            {preview.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={preview.logoUrl} alt="Logo preview" className="h-full w-full object-contain" />
-            ) : (
-              <span className="text-xs text-[var(--muted)]">No logo</span>
-            )}
-          </div>
-          <div className="space-y-2">
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
-              className="block text-xs text-[var(--muted)] file:mr-3 file:rounded-full file:border-0 file:bg-[#7c3aed] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#6d2dd6]"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void handleUpload(file);
-              }}
-            />
-            <p className="text-[10px] text-[var(--muted)]">
-              {uploading ? "Optimizing and uploading…" : "Max 8 MB · auto-resized to 480px, 128px, and 32px"}
-            </p>
-          </div>
+      <div className="card space-y-4">
+        <p className="text-sm font-semibold text-white">Published sizes</p>
+        <div className="flex flex-wrap gap-4">
+          <PreviewTile label="Header" url={preview.logoUrl} />
+          <PreviewTile label="Icon" url={preview.logoIconUrl} small />
+          <PreviewTile label="Favicon" url={preview.faviconUrl} small />
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -189,6 +146,13 @@ export default function AdminSiteBrandPanel({
             Advanced URLs (optional)
           </summary>
           <div className="mt-3 space-y-3">
+            <Field
+              id="logo-source-url"
+              label="Logo source URL"
+              value={logoSourceUrl}
+              onChange={setLogoSourceUrl}
+              placeholder="/images/logo-source.png"
+            />
             <Field
               id="logo-url"
               label="Logo URL override"
@@ -218,10 +182,10 @@ export default function AdminSiteBrandPanel({
         <button
           type="button"
           onClick={() => void handleSave()}
-          disabled={saving || uploading}
+          disabled={saving}
           className="inline-flex h-11 items-center justify-center rounded-full bg-[#7c3aed] px-8 text-sm font-semibold text-white hover:bg-[#6d2dd6] disabled:opacity-60"
         >
-          {saving ? "Saving…" : "Save brand"}
+          {saving ? "Saving…" : "Save brand text"}
         </button>
         <a href="/" target="_blank" rel="noopener noreferrer" className="text-sm text-[#7c3aed] hover:underline">
           Preview home page ↗
@@ -231,6 +195,37 @@ export default function AdminSiteBrandPanel({
       {message && (
         <p className={`text-sm ${error ? "text-amber-400" : "text-emerald-400"}`}>{message}</p>
       )}
+    </div>
+  );
+}
+
+function PreviewTile({
+  label,
+  url,
+  small = false,
+}: {
+  label: string;
+  url: string;
+  small?: boolean;
+}) {
+  const checkerboard =
+    "repeating-conic-gradient(#3d2660 0% 25%, #1a1028 0% 50%) 50% / 12px 12px";
+  return (
+    <div className="text-center">
+      <div
+        className={`mx-auto flex items-center justify-center overflow-hidden rounded-xl ring-1 ring-[#3d2660] ${
+          small ? "h-14 w-14" : "h-20 w-32"
+        }`}
+        style={{ background: checkerboard }}
+      >
+        {url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt={`${label} preview`} className="h-full w-full object-contain p-1" />
+        ) : (
+          <span className="text-[10px] text-[var(--muted)]">—</span>
+        )}
+      </div>
+      <p className="mt-1 text-[10px] text-[var(--muted)]">{label}</p>
     </div>
   );
 }

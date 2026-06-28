@@ -24,6 +24,8 @@ export default async function AdminLandingPage() {
           initialLogoUrl={brandConfig.logoUrl ?? ""}
           initialLogoIconUrl={brandConfig.logoIconUrl ?? ""}
           initialFaviconUrl={brandConfig.faviconUrl ?? ""}
+          initialLogoSourceUrl={brandConfig.logoSourceUrl ?? "/images/logo-source.png"}
+          initialLogoTransform={brandConfig.logoTransform}
           resolvedLogoUrl={brand.logoUrl}
           resolvedLogoIconUrl={brand.logoIconUrl}
           resolvedFaviconUrl={brand.faviconUrl}

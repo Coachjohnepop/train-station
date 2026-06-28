@@ -3,6 +3,7 @@
 import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { getLandingMedia, saveLandingMedia } from "@/lib/landing-media-store";
 import { resolveSiteBrand } from "@/lib/site-brand";
+import type { LogoTransform } from "@/lib/logo-transform";
 import { getSiteBrand, saveSiteBrand } from "@/lib/site-brand-store";
 
 export async function saveLandingMediaAction(input: {
@@ -53,6 +54,8 @@ export async function saveSiteBrandAction(input: {
   logoUrl?: string | null;
   logoIconUrl?: string | null;
   faviconUrl?: string | null;
+  logoSourceUrl?: string | null;
+  logoTransform?: LogoTransform;
 }) {
   const session = await getSessionUser();
   if (!session || !isStaffRole(session.role)) {
@@ -70,6 +73,8 @@ export async function saveSiteBrandAction(input: {
       storedLogoUrl: config.logoUrl,
       storedLogoIconUrl: config.logoIconUrl,
       storedFaviconUrl: config.faviconUrl,
+      storedLogoSourceUrl: config.logoSourceUrl,
+      logoTransform: config.logoTransform,
       updatedAt: config.updatedAt,
     };
   } catch (e: unknown) {

@@ -1,9 +1,11 @@
 import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
+import sharp from "sharp";
 import { put } from "@vercel/blob";
 import { renderLogoPng } from "@/lib/optimize-brand-logo";
 import { blobSdkOptions, isBlobConfigured } from "@/lib/demo-json-blob";
+import { normalizeLogoTransform, type LogoTransform } from "@/lib/logo-transform";
 
 const ALLOWED_MIME = new Set([
   "image/png",
@@ -26,6 +28,7 @@ export type BrandAssetUploadResult = {
   logoUrl: string;
   logoIconUrl: string;
   faviconUrl: string;
+  logoSourceUrl: string;
 };
 
 async function storeBuffer(
@@ -58,26 +61,63 @@ export function validateBrandLogoUpload(params: { size: number; mimeType: string
   }
 }
 
+async function toPngSource(buffer: Buffer, mimeType: string): Promise<Buffer> {
+  if (mimeType === "image/png") return buffer;
+  return sharp(buffer).png({ compressionLevel: 9, effort: 10 }).toBuffer();
+}
+
 export async function processAndStoreBrandLogo(
   buffer: Buffer,
   mimeType: string,
+  transform?: Partial<LogoTransform>,
 ): Promise<BrandAssetUploadResult> {
   validateBrandLogoUpload({ size: buffer.length, mimeType });
 
   const stamp = randomUUID().slice(0, 8);
-  const urls: Partial<BrandAssetUploadResult> = {};
+  const normalizedTransform = normalizeLogoTransform(transform);
+  const sourcePng = await toPngSource(buffer, mimeType);
+  const sourceUrl = await storeBuffer(`brand/${stamp}-source.png`, sourcePng, "image/png");
+
+  const urls: Partial<BrandAssetUploadResult> = { logoSourceUrl: sourceUrl };
 
   for (const variant of VARIANTS) {
-    const png = await renderLogoPng(buffer, {
+    const png = await renderLogoPng(sourcePng, {
       file: variant.file,
       width: variant.width,
       height: variant.key === "faviconUrl" ? variant.width : undefined,
       fit: variant.key === "faviconUrl" ? "cover" : "inside",
-    });
+    }, normalizedTransform);
 
     const filename = `${stamp}-${variant.file}`;
-    const relativePath = `brand/${filename}`;
-    urls[variant.key] = await storeBuffer(relativePath, png, "image/png");
+    urls[variant.key] = await storeBuffer(`brand/${filename}`, png, "image/png");
+  }
+
+  return {
+    logoUrl: urls.logoUrl!,
+    logoIconUrl: urls.logoIconUrl!,
+    faviconUrl: urls.faviconUrl!,
+    logoSourceUrl: sourceUrl,
+  };
+}
+
+export async function renderBrandLogoFromSource(
+  sourceBuffer: Buffer,
+  transform?: Partial<LogoTransform>,
+): Promise<Omit<BrandAssetUploadResult, "logoSourceUrl">> {
+  const stamp = randomUUID().slice(0, 8);
+  const normalizedTransform = normalizeLogoTransform(transform);
+  const urls: Partial<BrandAssetUploadResult> = {};
+
+  for (const variant of VARIANTS) {
+    const png = await renderLogoPng(sourceBuffer, {
+      file: variant.file,
+      width: variant.width,
+      height: variant.key === "faviconUrl" ? variant.width : undefined,
+      fit: variant.key === "faviconUrl" ? "cover" : "inside",
+    }, normalizedTransform);
+
+    const filename = `${stamp}-${variant.file}`;
+    urls[variant.key] = await storeBuffer(`brand/${filename}`, png, "image/png");
   }
 
   return {
@@ -85,4 +125,24 @@ export async function processAndStoreBrandLogo(
     logoIconUrl: urls.logoIconUrl!,
     faviconUrl: urls.faviconUrl!,
   };
+}
+
+export async function fetchBrandSourceBuffer(sourceUrl: string): Promise<Buffer> {
+  if (sourceUrl.startsWith("/")) {
+    const localPath = path.join(process.cwd(), "public", sourceUrl.replace(/^\//, ""));
+    if (fs.existsSync(localPath)) {
+      return fs.readFileSync(localPath);
+    }
+    const uploadsPath = path.join(process.cwd(), sourceUrl.replace(/^\//, ""));
+    if (fs.existsSync(uploadsPath)) {
+      return fs.readFileSync(uploadsPath);
+    }
+    throw new Error("Logo source file not found on server.");
+  }
+
+  const res = await fetch(sourceUrl, { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error("Could not load logo source image.");
+  }
+  return Buffer.from(await res.arrayBuffer());
 }
