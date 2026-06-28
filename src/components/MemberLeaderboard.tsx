@@ -5,6 +5,8 @@ import MemberScoreProgressPanel from "@/components/MemberScoreProgress";
 import { GAMIFICATION_POINTS, type LeaderboardPayload, type LeaderboardScope } from "@/lib/gamification-types";
 import type { MemberScoreProgress } from "@/lib/gamification-types";
 
+type ScoresTab = "mine" | "high";
+
 function rankLabel(rank: number): string {
   if (rank === 1) return "1ST";
   if (rank === 2) return "2ND";
@@ -65,7 +67,39 @@ function LeaderboardRowView({
   );
 }
 
+function ScoresTabBar({
+  active,
+  onChange,
+}: {
+  active: ScoresTab;
+  onChange: (tab: ScoresTab) => void;
+}) {
+  return (
+    <div className="flex rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-1">
+      <button
+        type="button"
+        onClick={() => onChange("mine")}
+        className={`flex-1 rounded-full px-3 py-2.5 text-xs font-semibold transition sm:text-sm ${
+          active === "mine" ? "nav-tab-active text-accent" : "text-[var(--muted)]"
+        }`}
+      >
+        My scores
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("high")}
+        className={`flex-1 rounded-full px-3 py-2.5 text-xs font-semibold transition sm:text-sm ${
+          active === "high" ? "nav-tab-active text-accent" : "text-[var(--muted)]"
+        }`}
+      >
+        High scores
+      </button>
+    </div>
+  );
+}
+
 export default function MemberLeaderboard() {
+  const [scoresTab, setScoresTab] = useState<ScoresTab>("mine");
   const [scope, setScope] = useState<LeaderboardScope>("program");
   const [data, setData] = useState<LeaderboardPayload | null>(null);
   const [progress, setProgress] = useState<MemberScoreProgress | null>(null);
@@ -144,86 +178,113 @@ export default function MemberLeaderboard() {
           The Train Station
         </p>
         <h1 className="relative mt-1 font-mono text-3xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl">
-          High Scores
+          {scoresTab === "mine" ? "My Scores" : "High Scores"}
         </h1>
         <p className="relative mt-2 text-xs text-[var(--muted)]">
-          K1-style standings — earn points for warm-ups, bookings, and logged workouts.
+          {scoresTab === "mine"
+            ? "Your points, milestones, and what’s still on your ramp."
+            : "K1-style standings — see how you stack up against other racers."}
         </p>
       </div>
 
-      {progress ? <MemberScoreProgressPanel progress={progress} /> : null}
+      <ScoresTabBar active={scoresTab} onChange={setScoresTab} />
 
-      {data?.viewer ? (
-        <div className="space-y-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
-            Your rank
-          </p>
-          <LeaderboardRowView row={data.viewer} highlight="self" />
-        </div>
-      ) : null}
+      {scoresTab === "mine" ? (
+        <div className="space-y-5">
+          {progress ? (
+            <MemberScoreProgressPanel progress={progress} />
+          ) : (
+            <div className="card h-32 animate-pulse" />
+          )}
 
-      <div className="flex rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-1">
-        <button
-          type="button"
-          onClick={() => setScope("program")}
-          className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold transition ${
-            scope === "program" ? "nav-tab-active text-accent" : "text-[var(--muted)]"
-          }`}
-        >
-          My program
-        </button>
-        <button
-          type="button"
-          onClick={() => setScope("site")}
-          className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold transition ${
-            scope === "site" ? "nav-tab-active text-accent" : "text-[var(--muted)]"
-          }`}
-        >
-          All station
-        </button>
-      </div>
+          {data?.viewer ? (
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
+                Your rank
+              </p>
+              <LeaderboardRowView row={data.viewer} highlight="self" />
+            </div>
+          ) : null}
 
-      {scope === "program" && data?.programName ? (
-        <p className="text-center text-xs text-[var(--muted)]">
-          Racers in <span className="font-medium text-[var(--text)]">{data.programName}</span>
-        </p>
-      ) : null}
-
-      {error ? <p className="text-sm text-amber-300">{error}</p> : null}
-      {loading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-14 animate-pulse rounded-lg bg-[var(--surface-2)]" />
-          ))}
-        </div>
-      ) : data?.rows.length ? (
-        <div className="space-y-2">
-          <div className="hidden grid-cols-[4rem_1fr_1fr_auto] gap-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--muted)] sm:grid">
-            <span>Rank</span>
-            <span>Racer</span>
-            <span>Best move</span>
-            <span className="text-right">Pts</span>
-          </div>
-          {data.rows.map((row) => (
-            <LeaderboardRowView key={row.userId} row={row} highlight={row.rank <= 3 ? "podium" : undefined} />
-          ))}
+          <details className="card p-3 text-xs text-[var(--muted)]">
+            <summary className="cursor-pointer font-semibold text-accent">How to earn points</summary>
+            <ul className="mt-2 space-y-1">
+              <li>Warm-ups before live — {GAMIFICATION_POINTS.warmup_before_live} pts (once per day)</li>
+              <li>Book intro call — {GAMIFICATION_POINTS.intake_scheduled} pts</li>
+              <li>Log a workout — {GAMIFICATION_POINTS.workout_logged} pts</li>
+              <li>Coach intake complete — {GAMIFICATION_POINTS.intake_complete} pts</li>
+              <li>Finish account setup — {GAMIFICATION_POINTS.onboarding_complete} pts</li>
+            </ul>
+          </details>
         </div>
       ) : (
-        <div className="card py-12 text-center text-sm text-[var(--muted)]">
-          No scores yet — log a workout or finish your warm-ups to get on the board.
+        <div className="space-y-4">
+          <div className="flex rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-1">
+            <button
+              type="button"
+              onClick={() => setScope("program")}
+              className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold transition ${
+                scope === "program" ? "nav-tab-active text-accent" : "text-[var(--muted)]"
+              }`}
+            >
+              My program
+            </button>
+            <button
+              type="button"
+              onClick={() => setScope("site")}
+              className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold transition ${
+                scope === "site" ? "nav-tab-active text-accent" : "text-[var(--muted)]"
+              }`}
+            >
+              All station
+            </button>
+          </div>
+
+          {scope === "program" && data?.programName ? (
+            <p className="text-center text-xs text-[var(--muted)]">
+              Racers in <span className="font-medium text-[var(--text)]">{data.programName}</span>
+            </p>
+          ) : null}
+
+          {data?.viewer ? (
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
+                You on the board
+              </p>
+              <LeaderboardRowView row={data.viewer} highlight="self" />
+            </div>
+          ) : null}
+
+          {error ? <p className="text-sm text-amber-300">{error}</p> : null}
+          {loading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-14 animate-pulse rounded-lg bg-[var(--surface-2)]" />
+              ))}
+            </div>
+          ) : data?.rows.length ? (
+            <div className="space-y-2">
+              <div className="hidden grid-cols-[4rem_1fr_1fr_auto] gap-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--muted)] sm:grid">
+                <span>Rank</span>
+                <span>Racer</span>
+                <span>Best move</span>
+                <span className="text-right">Pts</span>
+              </div>
+              {data.rows.map((row) => (
+                <LeaderboardRowView
+                  key={row.userId}
+                  row={row}
+                  highlight={row.rank <= 3 ? "podium" : undefined}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="card py-12 text-center text-sm text-[var(--muted)]">
+              No scores yet — log a workout or finish your warm-ups to get on the board.
+            </div>
+          )}
         </div>
       )}
-
-      <details className="card p-3 text-xs text-[var(--muted)]">
-        <summary className="cursor-pointer font-semibold text-accent">How to earn points</summary>
-        <ul className="mt-2 space-y-1">
-          <li>Warm-ups before live — {GAMIFICATION_POINTS.warmup_before_live} pts (once per day)</li>
-          <li>Book intro call — {GAMIFICATION_POINTS.intake_scheduled} pts</li>
-          <li>Log a workout — {GAMIFICATION_POINTS.workout_logged} pts</li>
-          <li>Coach intake complete — {GAMIFICATION_POINTS.intake_complete} pts</li>
-          <li>Finish account setup — {GAMIFICATION_POINTS.onboarding_complete} pts</li>
-        </ul>
-      </details>
     </div>
   );
 }
