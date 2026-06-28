@@ -1,9 +1,14 @@
 import path from "path";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import type { MembershipPlan } from "@/lib/signup-plans";
+import { MEMBERSHIP_PLANS } from "@/lib/signup-plans";
 import { isYoutubeUrl } from "@/lib/youtube";
+
+export type WelcomeVideosByPlan = Partial<Record<MembershipPlan, string | null>>;
 
 export type LandingMediaConfig = {
   welcomeVideoUrl: string | null;
+  welcomeVideosByPlan: WelcomeVideosByPlan;
   freeChastiseVideoUrl: string | null;
   venmoQrUrl: string | null;
   venmoHandle: string | null;
@@ -16,9 +21,21 @@ const BLOB_PATH = "demo/landing-media.json";
 
 let memoryStore: LandingMediaConfig | null = null;
 
+function normalizeWelcomeVideosByPlan(raw: unknown): WelcomeVideosByPlan {
+  if (!raw || typeof raw !== "object") return {};
+  const data = raw as Record<string, unknown>;
+  const out: WelcomeVideosByPlan = {};
+  for (const plan of MEMBERSHIP_PLANS) {
+    const value = data[plan];
+    if (typeof value === "string" && value.trim()) out[plan] = value.trim();
+  }
+  return out;
+}
+
 function emptyConfig(): LandingMediaConfig {
   return {
     welcomeVideoUrl: null,
+    welcomeVideosByPlan: {},
     freeChastiseVideoUrl: null,
     venmoQrUrl: null,
     venmoHandle: null,
@@ -38,6 +55,7 @@ function normalize(raw: unknown): LandingMediaConfig {
   const data = raw as Partial<LandingMediaConfig>;
   return {
     welcomeVideoUrl: normalizeUrl(data.welcomeVideoUrl),
+    welcomeVideosByPlan: normalizeWelcomeVideosByPlan(data.welcomeVideosByPlan),
     freeChastiseVideoUrl: normalizeUrl(data.freeChastiseVideoUrl),
     venmoQrUrl: normalizeUrl(data.venmoQrUrl),
     venmoHandle: normalizeUrl(data.venmoHandle),
@@ -76,6 +94,7 @@ export async function saveLandingMedia(
     Pick<
       LandingMediaConfig,
       | "welcomeVideoUrl"
+      | "welcomeVideosByPlan"
       | "freeChastiseVideoUrl"
       | "venmoQrUrl"
       | "venmoHandle"
@@ -95,6 +114,17 @@ export async function saveLandingMedia(
       throw new Error("Welcome video must be a valid YouTube URL.");
     }
     next.welcomeVideoUrl = url;
+  }
+
+  if (patch.welcomeVideosByPlan !== undefined) {
+    const normalized = normalizeWelcomeVideosByPlan(patch.welcomeVideosByPlan);
+    for (const plan of MEMBERSHIP_PLANS) {
+      const url = normalized[plan];
+      if (url && !isYoutubeUrl(url)) {
+        throw new Error(`${plan} welcome video must be a valid YouTube URL.`);
+      }
+    }
+    next.welcomeVideosByPlan = normalized;
   }
 
   if (patch.freeChastiseVideoUrl !== undefined) {

@@ -32,6 +32,7 @@ export default async function AdminLandingPage() {
         />
         <AdminLandingMediaPanel
           initialWelcomeUrl={config.welcomeVideoUrl ?? ""}
+          initialWelcomeVideosByPlan={config.welcomeVideosByPlan}
           initialFreeUrl={config.freeChastiseVideoUrl ?? ""}
           initialVenmoQrUrl={config.venmoQrUrl ?? ""}
           initialVenmoHandle={config.venmoHandle ?? ""}

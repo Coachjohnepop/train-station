@@ -1,5 +1,6 @@
 import path from "path";
 import { randomUUID } from "crypto";
+import { getAccountByUserId } from "@/lib/member-accounts-store";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { BLOB_TOKEN, hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
 import { requireBlobPersisted } from "@/lib/demo-persistence";
@@ -171,11 +172,14 @@ export async function ensureMemberThread(memberId: string): Promise<ChatThread> 
   if (existing) return existing;
 
   const user = resolveDemoUser(memberId);
+  const registered = user ? null : await getAccountByUserId(memberId);
+  const displayName =
+    user?.name || registered?.account.name || registered?.email || memberId;
   const thread: ChatThread = {
     id: `thread-member-${memberId}`,
     kind: "member",
     memberId,
-    title: user?.name || memberId,
+    title: displayName,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

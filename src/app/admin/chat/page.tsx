@@ -1,7 +1,11 @@
 import CoachChatComposer from "@/components/CoachChatComposer";
 import AdminChatWorkspace from "@/components/AdminChatWorkspace";
-import { hydrateCoachChat, listThreadsForCoach } from "@/lib/coach-chat";
-import { listMembersForCoach } from "@/lib/demo-coach";
+import {
+  getUnreadCountsByThreadForCoach,
+  hydrateCoachChat,
+  listThreadsForCoach,
+} from "@/lib/coach-chat";
+import { listCoachChatMembers } from "@/lib/coach-chat-members";
 import { getMemberCoachingMode } from "@/lib/member-coaching-mode";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +13,8 @@ export const dynamic = "force-dynamic";
 export default async function AdminChatPage() {
   await hydrateCoachChat({ preferFresh: true });
   const threads = listThreadsForCoach();
-  const members = listMembersForCoach().map((m) => ({
+  const roster = await listCoachChatMembers(threads);
+  const members = roster.map((m) => ({
     id: m.id,
     name: m.name,
     email: m.email,
@@ -25,7 +30,11 @@ export default async function AdminChatPage() {
         </p>
       </div>
 
-      <AdminChatWorkspace initialThreads={threads} members={members} />
+      <AdminChatWorkspace
+        initialThreads={threads}
+        members={members}
+        initialUnreadByThread={getUnreadCountsByThreadForCoach()}
+      />
 
       <details className="group rounded-xl border border-accent/25 bg-accent/5">
         <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 font-semibold text-sm">

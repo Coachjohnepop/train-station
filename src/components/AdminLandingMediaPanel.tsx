@@ -2,23 +2,27 @@
 
 import { useState } from "react";
 import { saveLandingMediaAction } from "@/app/admin/landing/actions";
-import { landingVideoEmbedSrc } from "@/lib/landing-media";
+import { landingVideoEmbedSrc, WELCOME_VIDEO_PLAN_OPTIONS } from "@/lib/landing-media";
+import type { WelcomeVideosByPlan } from "@/lib/landing-media-store";
 import { isYoutubeUrl } from "@/lib/youtube";
 
 export default function AdminLandingMediaPanel({
   initialWelcomeUrl = "",
+  initialWelcomeVideosByPlan = {},
   initialFreeUrl = "",
   initialVenmoQrUrl = "",
   initialVenmoHandle = "",
   initialVenmoInstructions = "",
 }: {
   initialWelcomeUrl?: string;
+  initialWelcomeVideosByPlan?: WelcomeVideosByPlan;
   initialFreeUrl?: string;
   initialVenmoQrUrl?: string;
   initialVenmoHandle?: string;
   initialVenmoInstructions?: string;
 }) {
   const [welcomeUrl, setWelcomeUrl] = useState(initialWelcomeUrl);
+  const [welcomeByPlan, setWelcomeByPlan] = useState<WelcomeVideosByPlan>(initialWelcomeVideosByPlan);
   const [freeUrl, setFreeUrl] = useState(initialFreeUrl);
   const [venmoQrUrl, setVenmoQrUrl] = useState(initialVenmoQrUrl);
   const [venmoHandle, setVenmoHandle] = useState(initialVenmoHandle);
@@ -38,9 +42,18 @@ export default function AdminLandingMediaPanel({
 
     if (welcome && !isYoutubeUrl(welcome)) {
       setError(true);
-      setMessage("Welcome video must be a YouTube link (youtube.com or youtu.be).");
+      setMessage("Default welcome video must be a YouTube link (youtube.com or youtu.be).");
       setSaving(false);
       return;
+    }
+    for (const { plan, label } of WELCOME_VIDEO_PLAN_OPTIONS) {
+      const url = welcomeByPlan[plan]?.trim();
+      if (url && !isYoutubeUrl(url)) {
+        setError(true);
+        setMessage(`${label} welcome video must be a YouTube link.`);
+        setSaving(false);
+        return;
+      }
     }
     if (free && !isYoutubeUrl(free)) {
       setError(true);
@@ -64,6 +77,7 @@ export default function AdminLandingMediaPanel({
 
     const result = await saveLandingMediaAction({
       welcomeVideoUrl: welcome || null,
+      welcomeVideosByPlan: welcomeByPlan,
       freeChastiseVideoUrl: free || null,
       venmoQrUrl: qr || null,
       venmoHandle: venmoHandle.trim() || null,
@@ -75,6 +89,7 @@ export default function AdminLandingMediaPanel({
       setMessage(result.error);
     } else if ("ok" in result && result.ok) {
       setWelcomeUrl(result.storedWelcomeVideoUrl || "");
+      if (result.storedWelcomeVideosByPlan) setWelcomeByPlan(result.storedWelcomeVideosByPlan);
       setFreeUrl(result.storedFreeChastiseVideoUrl || "");
       setVenmoQrUrl(result.storedVenmoQrUrl || "");
       setVenmoHandle(result.storedVenmoHandle || "");
@@ -98,8 +113,8 @@ export default function AdminLandingMediaPanel({
         <p className="font-semibold text-white">Where these show up</p>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-[#9d8ab8]">
           <li>
-            <strong className="text-white">Welcome video</strong> — logged-in home{" "}
-            <span className="text-[#c4b5fd]">Watch intro</span> and member onboarding.
+            <strong className="text-white">Welcome videos</strong> — onboarding step 1 per ticket
+            (Free Explorer, Coach Class, Business Class, 1st Class). Falls back to the default clip.
           </li>
           <li>
             <strong className="text-white">Free-ticket video</strong> — plays first when someone taps{" "}
@@ -117,15 +132,47 @@ export default function AdminLandingMediaPanel({
         </p>
       </div>
 
-      <VideoField
-        id="welcome"
-        label="Welcome video"
-        hint="Short intro — who you are, what The Train Station is."
-        value={welcomeUrl}
-        onChange={setWelcomeUrl}
-        previewSrc={welcomePreview}
-        where="Signed-in home → Watch intro · member onboarding"
-      />
+      <div className="card space-y-4">
+        <div>
+          <p className="text-sm font-semibold text-white">Welcome videos (onboarding)</p>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            Paste a YouTube link for each ticket tier. Members see their plan&apos;s clip on setup step
+            1 — swap Rick Roll for your real intro anytime.
+          </p>
+        </div>
+        {WELCOME_VIDEO_PLAN_OPTIONS.map(({ plan, label }) => {
+          const value = welcomeByPlan[plan] || "";
+          const preview = landingVideoEmbedSrc(value || welcomeUrl || null);
+          return (
+            <VideoField
+              key={plan}
+              id={`welcome-${plan}`}
+              label={`${label} welcome`}
+              hint={`Shown when someone signs up on the ${label} ticket.`}
+              value={value}
+              onChange={(next) =>
+                setWelcomeByPlan((prev) => ({
+                  ...prev,
+                  [plan]: next.trim() || undefined,
+                }))
+              }
+              previewSrc={preview}
+              where={`Member onboard · ${label}`}
+              compact
+            />
+          );
+        })}
+        <VideoField
+          id="welcome-default"
+          label="Default welcome (fallback)"
+          hint="Used when a plan-specific URL is blank — also powers Watch intro on the home page."
+          value={welcomeUrl}
+          onChange={setWelcomeUrl}
+          previewSrc={welcomePreview}
+          where="Home · Watch intro · onboard fallback"
+          compact
+        />
+      </div>
 
       <VideoField
         id="free"
@@ -239,6 +286,7 @@ function VideoField({
   onChange,
   previewSrc,
   where,
+  compact = false,
 }: {
   id: string;
   label: string;
@@ -247,9 +295,10 @@ function VideoField({
   onChange: (v: string) => void;
   previewSrc: string | null;
   where: string;
+  compact?: boolean;
 }) {
   return (
-    <div className="card space-y-3">
+    <div className={`space-y-3 ${compact ? "rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-3" : "card"}`}>
       <div>
         <label htmlFor={id} className="text-sm font-semibold text-white">
           {label}

@@ -9,6 +9,7 @@ import {
 import { getSessionUser } from "@/lib/auth";
 import { resolveMemberUserId } from "@/lib/current-user";
 import { coachDisplayName } from "@/lib/demo-coach";
+import { getAccountByUserId } from "@/lib/member-accounts-store";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { sendCoachReplySms } from "@/lib/sms";
 
@@ -68,6 +69,9 @@ export async function POST(request: Request) {
 
   const uid = await resolveMemberUserId();
   const user = resolveDemoUser(uid);
+  const registered = user ? null : await getAccountByUserId(uid);
+  const authorName =
+    user?.name || registered?.account.name || registered?.email || "Member";
   const thread = threadId ? await resolveThreadById(threadId) : null;
   const target =
     thread && (thread.kind === "member" ? thread.memberId === uid : true)
@@ -78,7 +82,7 @@ export async function POST(request: Request) {
     threadId: target.id,
     authorRole: "member",
     authorId: uid,
-    authorName: user?.name || "Member",
+    authorName,
     kind: "text",
     body: message,
   });

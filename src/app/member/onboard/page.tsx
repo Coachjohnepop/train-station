@@ -8,7 +8,7 @@ import { COACH_CALENDLY_URL } from "@/lib/brand";
 export const dynamic = "force-dynamic";
 
 export default async function OnboardingPage() {
-  const [session, { welcomeVideoUrl }, contact] = await Promise.all([
+  const [session, landingVideos, contact] = await Promise.all([
     getSessionUser(),
     getResolvedLandingVideos(),
     getAdminContact(),
@@ -27,7 +27,8 @@ export default async function OnboardingPage() {
     >
       <OnboardingWizard
         email={session?.email || ""}
-        welcomeVideoUrl={welcomeVideoUrl}
+        welcomeVideoUrl={landingVideos.welcomeVideoUrl}
+        welcomeVideosByPlan={landingVideos.welcomeVideosByPlan}
         calendlyUrl={calendlyUrl}
       />
     </Suspense>

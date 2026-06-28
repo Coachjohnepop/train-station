@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import MemberHomeEquipment from "@/components/MemberHomeEquipment";
-import { landingVideoEmbedSrc } from "@/lib/landing-media";
+import { landingVideoEmbedSrc, welcomeVideoUrlForPlan } from "@/lib/landing-media";
 import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 import { COACH_CALENDLY_URL } from "@/lib/brand";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
@@ -21,10 +21,12 @@ async function saveProgress(body: Record<string, unknown>) {
 export default function OnboardingWizard({
   email = "",
   welcomeVideoUrl = null,
+  welcomeVideosByPlan = {},
   calendlyUrl = null,
 }: {
   email?: string;
   welcomeVideoUrl?: string | null;
+  welcomeVideosByPlan?: Record<string, string | null | undefined>;
   calendlyUrl?: string | null;
 }) {
   const searchParams = useSearchParams();
@@ -67,7 +69,8 @@ export default function OnboardingWizard({
   const [error, setError] = useState<string | null>(null);
 
   const effectiveCalendly = calendlyUrl || COACH_CALENDLY_URL;
-  const welcomeEmbed = landingVideoEmbedSrc(welcomeVideoUrl);
+  const planWelcomeUrl = welcomeVideoUrlForPlan(plan, welcomeVideoUrl, welcomeVideosByPlan);
+  const welcomeEmbed = landingVideoEmbedSrc(planWelcomeUrl);
 
   async function nextStep() {
     setError(null);

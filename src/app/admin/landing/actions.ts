@@ -1,13 +1,18 @@
 "use server";
 
 import { getSessionUser, isStaffRole } from "@/lib/auth";
-import { getLandingMedia, saveLandingMedia } from "@/lib/landing-media-store";
+import {
+  getLandingMedia,
+  saveLandingMedia,
+  type WelcomeVideosByPlan,
+} from "@/lib/landing-media-store";
 import { resolveSiteBrand } from "@/lib/site-brand";
 import type { LogoTransform } from "@/lib/logo-transform";
 import { getSiteBrand, saveSiteBrand } from "@/lib/site-brand-store";
 
 export async function saveLandingMediaAction(input: {
   welcomeVideoUrl: string | null;
+  welcomeVideosByPlan?: WelcomeVideosByPlan;
   freeChastiseVideoUrl: string | null;
   venmoQrUrl?: string | null;
   venmoHandle?: string | null;
@@ -21,6 +26,7 @@ export async function saveLandingMediaAction(input: {
   try {
     const config = await saveLandingMedia({
       welcomeVideoUrl: input.welcomeVideoUrl,
+      welcomeVideosByPlan: input.welcomeVideosByPlan,
       freeChastiseVideoUrl: input.freeChastiseVideoUrl,
       venmoQrUrl: input.venmoQrUrl,
       venmoHandle: input.venmoHandle,
@@ -29,6 +35,7 @@ export async function saveLandingMediaAction(input: {
     return {
       ok: true as const,
       storedWelcomeVideoUrl: config.welcomeVideoUrl,
+      storedWelcomeVideosByPlan: config.welcomeVideosByPlan,
       storedFreeChastiseVideoUrl: config.freeChastiseVideoUrl,
       storedVenmoQrUrl: config.venmoQrUrl,
       storedVenmoHandle: config.venmoHandle,

@@ -47,19 +47,41 @@ function InboxLegend() {
 export default function AdminChatWorkspace({
   initialThreads,
   members,
+  initialUnreadByThread = {},
 }: {
   initialThreads: ChatThread[];
   members: CoachChatMember[];
+  initialUnreadByThread?: Record<string, number>;
 }) {
   const cohortThreads = useMemo(
     () => initialThreads.filter((t) => t.kind === "cohort"),
     [initialThreads],
   );
 
-  const defaultMember = members[0] || null;
-  const defaultThread = defaultMember
-    ? threadForMember(initialThreads, defaultMember.id)
-    : initialThreads.find((t) => t.kind === "member");
+  function pickUnreadTarget(
+    threadList: ChatThread[],
+    memberList: CoachChatMember[],
+    unread: Record<string, number>,
+  ) {
+    const top = Object.entries(unread)
+      .filter(([, count]) => count > 0)
+      .sort((a, b) => b[1] - a[1])[0];
+    if (!top) return null;
+    const thread = threadList.find((t) => t.id === top[0]);
+    if (!thread?.memberId) return null;
+    const member = memberList.find((m) => m.id === thread.memberId);
+    if (!member) return null;
+    return { memberId: member.id, threadId: thread.id };
+  }
+
+  const unreadTarget = pickUnreadTarget(initialThreads, members, initialUnreadByThread);
+  const defaultMember =
+    (unreadTarget && members.find((m) => m.id === unreadTarget.memberId)) || members[0] || null;
+  const defaultThread = unreadTarget
+    ? initialThreads.find((t) => t.id === unreadTarget.threadId)
+    : defaultMember
+      ? threadForMember(initialThreads, defaultMember.id)
+      : initialThreads.find((t) => t.kind === "member");
 
   const [threads, setThreads] = useState(initialThreads);
   const [activeMemberId, setActiveMemberId] = useState(defaultMember?.id || "");
@@ -67,7 +89,7 @@ export default function AdminChatWorkspace({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [previews, setPreviews] = useState<Record<string, string>>({});
-  const [unreadByThread, setUnreadByThread] = useState<Record<string, number>>({});
+  const [unreadByThread, setUnreadByThread] = useState<Record<string, number>>(initialUnreadByThread);
   const [mobilePanel, setMobilePanel] = useState<"inbox" | "chat">("inbox");
 
   const memberRows: CoachChatMember[] = useMemo(

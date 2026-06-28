@@ -1,3 +1,6 @@
+import type { SignupPlan } from "@/lib/signup-plans";
+import { MEMBERSHIP_PLANS, normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
+import type { WelcomeVideosByPlan } from "@/lib/landing-media-store";
 import { youtubeEmbedUrl } from "@/lib/youtube";
 
 /** Optional Vercel fallback if blob config is empty (full URL or bare video id). */
@@ -60,6 +63,24 @@ export function welcomeVideoUrlFromConfig(stored: string | null | undefined) {
     "NEXT_PUBLIC_WELCOME_VIDEO_YT",
   ]);
 }
+
+export function welcomeVideoUrlForPlan(
+  plan: SignupPlan | string | null | undefined,
+  storedDefault: string | null | undefined,
+  byPlan: WelcomeVideosByPlan = {},
+): string | null {
+  const normalized = normalizeSignupPlan(plan);
+  if ((MEMBERSHIP_PLANS as readonly string[]).includes(normalized)) {
+    const planUrl = byPlan[normalized as keyof WelcomeVideosByPlan];
+    if (planUrl?.trim()) return planUrl.trim();
+  }
+  return welcomeVideoUrlFromConfig(storedDefault);
+}
+
+export const WELCOME_VIDEO_PLAN_OPTIONS = MEMBERSHIP_PLANS.map((plan) => ({
+  plan,
+  label: signupPlanLabel(plan),
+}));
 
 const FREE_CHASTISE_FALLBACK_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 
