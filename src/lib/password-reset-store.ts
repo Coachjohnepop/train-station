@@ -66,10 +66,18 @@ async function upsertTokenForEmail(
 
     next[key] = entry;
     const { blobSaved } = await saveStore(next);
-    if (!blobSaved) return false;
+    if (!blobSaved) {
+      await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+      continue;
+    }
+
+    // Instance memory is updated synchronously in saveStore — trust it before CDN catches up.
+    if (memoryStore?.[key]?.email === email) return true;
 
     const verify = await getStore({ preferFresh: true });
     if (verify[key]?.email === email) return true;
+
+    await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
   }
 
   return false;
