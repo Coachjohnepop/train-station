@@ -1,5 +1,7 @@
 import path from "path";
 import { randomUUID } from "crypto";
+import { COMMUNITY_FEED_PROGRAM_SLUG } from "@/lib/community-feed";
+import { getUserEnrollments } from "@/lib/data/user-data";
 import { getAccountByUserId } from "@/lib/member-accounts-store";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { BLOB_TOKEN, hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
@@ -214,6 +216,18 @@ export function listThreadsForCoach(): ChatThread[] {
   return readStore().threads.sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
   );
+}
+
+export async function memberCanPostToThread(memberId: string, thread: ChatThread): Promise<boolean> {
+  if (thread.kind === "member") {
+    return thread.memberId === memberId;
+  }
+  if (thread.kind === "cohort") {
+    const slug = thread.programSlug || COMMUNITY_FEED_PROGRAM_SLUG;
+    const enrolled = Object.keys(getUserEnrollments(memberId));
+    return slug === COMMUNITY_FEED_PROGRAM_SLUG || enrolled.includes(slug);
+  }
+  return false;
 }
 
 export function listThreadsForMember(memberId: string, programSlugs: string[] = []): ChatThread[] {

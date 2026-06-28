@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import {
   addChatMessage,
   COACH_READER_ID,
-  ensureMemberThread,
   hydrateCoachChat,
+  memberCanPostToThread,
   resolveThreadById,
 } from "@/lib/coach-chat";
 import { getSessionUser } from "@/lib/auth";
@@ -67,19 +67,27 @@ export async function POST(request: Request) {
     });
   }
 
+  if (!threadId) {
+    return NextResponse.json({ error: "threadId is required" }, { status: 400 });
+  }
+
+  await hydrateCoachChat({ preferFresh: true });
   const uid = await resolveMemberUserId();
   const user = resolveDemoUser(uid);
   const registered = user ? null : await getAccountByUserId(uid);
   const authorName =
     user?.name || registered?.account.name || registered?.email || "Member";
-  const thread = threadId ? await resolveThreadById(threadId) : null;
-  const target =
-    thread && (thread.kind === "member" ? thread.memberId === uid : true)
-      ? thread
-      : await ensureMemberThread(uid);
+
+  const thread = await resolveThreadById(threadId, { preferFresh: true });
+  if (!thread) {
+    return NextResponse.json({ error: "Thread not found" }, { status: 404 });
+  }
+  if (!(await memberCanPostToThread(uid, thread))) {
+    return NextResponse.json({ error: "You cannot post to this thread" }, { status: 403 });
+  }
 
   const created = await addChatMessage({
-    threadId: target.id,
+    threadId: thread.id,
     authorRole: "member",
     authorId: uid,
     authorName,

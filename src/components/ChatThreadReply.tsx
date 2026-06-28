@@ -26,12 +26,14 @@ export default function ChatThreadReply({
   threadId,
   role,
   threadKind,
+  destinationLabel,
   placeholder,
   onSent,
 }: {
   threadId: string;
   role: "coach" | "member";
   threadKind?: ChatThreadKind;
+  destinationLabel?: string;
   placeholder?: string;
   onSent?: (message?: ChatMessage) => void;
 }) {
@@ -76,6 +78,11 @@ export default function ChatThreadReply({
 
   return (
     <div className={`${barClass} px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]`}>
+      {destinationLabel ? (
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+          {destinationLabel}
+        </p>
+      ) : null}
       <div className="flex items-end gap-2">
         <textarea
           className="input min-h-[44px] max-h-28 flex-1 resize-y text-sm lg:max-h-48"

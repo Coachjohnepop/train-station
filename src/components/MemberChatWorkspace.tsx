@@ -42,10 +42,34 @@ export default function MemberChatWorkspace({
   const defaultCommunity = orderedInitial.find((t) => t.kind === "cohort");
   const defaultDirect = orderedInitial.find((t) => t.kind === "member");
 
+  const tabStorageKey = `ts-member-chat-tab:${memberId}`;
+
   const [threads, setThreads] = useState(orderedInitial);
   const [activeId, setActiveId] = useState(
     defaultCommunity?.id || defaultDirect?.id || orderedInitial[0]?.id || "",
   );
+  const [tabReady, setTabReady] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(tabStorageKey);
+      if (saved && orderedInitial.some((t) => t.id === saved)) {
+        setActiveId(saved);
+      }
+    } catch {
+      /* ignore */
+    }
+    setTabReady(true);
+  }, [tabStorageKey, orderedInitial]);
+
+  useEffect(() => {
+    if (!tabReady || !activeId) return;
+    try {
+      sessionStorage.setItem(tabStorageKey, activeId);
+    } catch {
+      /* ignore */
+    }
+  }, [activeId, tabReady, tabStorageKey]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const isDesktopChat = useDesktopChatLayout();
@@ -112,6 +136,10 @@ export default function MemberChatWorkspace({
     activeReplyThread?.kind === "cohort"
       ? "Comment on this post..."
       : "Message your coach...";
+  const replyDestination =
+    activeReplyThread?.kind === "cohort"
+      ? "Posting to · Community feed"
+      : "Posting to · Direct message with coach";
 
   return (
     <div className="space-y-4">
@@ -178,6 +206,7 @@ export default function MemberChatWorkspace({
                 threadId={replyThreadId}
                 role="member"
                 threadKind={activeReplyThread?.kind}
+                destinationLabel={replyDestination}
                 placeholder={replyPlaceholder}
                 onSent={(message) => {
                   if (!message) return;
