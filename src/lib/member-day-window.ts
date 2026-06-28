@@ -163,8 +163,7 @@ export async function buildMemberDayWindow(
     const offset = daysFromToday(entry.iso, todayIso);
     const visibilityTier = dayVisibilityTier(entry.iso, todayIso);
     const rawWorkoutName = resolved?.workoutName || resolved?.option || null;
-    const themeLabel =
-      visibilityTier === "label" ? themeLabelForDay(rawWorkoutName, dayLabel) : null;
+    const themeLabel = rawWorkoutName ? themeLabelForDay(rawWorkoutName, dayLabel) : null;
     const visibleNames = visibilityTier === "label" ? [] : names;
 
     days.push({
@@ -175,8 +174,7 @@ export async function buildMemberDayWindow(
       dayLabel,
       weekNumber: entry.weekNumber,
       dayNumber: entry.dayNumber,
-      workoutName:
-        visibilityTier === "label" ? themeLabel : rawWorkoutName,
+      workoutName: rawWorkoutName,
       workoutId,
       programSlug,
       completed: !!(workoutId && loggedWorkoutIds.has(workoutId)),
@@ -204,9 +202,17 @@ export async function buildMemberDayWindow(
   };
 }
 
+/** Next calendar day after today in the member day wheel. */
+export function nextMemberDay(
+  days: MemberDaySummary[],
+  todayIso: string,
+): MemberDaySummary | null {
+  const idx = days.findIndex((d) => d.iso === todayIso);
+  if (idx < 0 || idx >= days.length - 1) return null;
+  return days[idx + 1] ?? null;
+}
+
 /** Tomorrow's stretch preview when member is on calendar today. */
 export function nextDayStretchPreview(days: MemberDaySummary[], todayIso: string): string[] {
-  const idx = days.findIndex((d) => d.iso === todayIso);
-  if (idx < 0 || idx >= days.length - 1) return [];
-  return days[idx + 1]?.stretchNames ?? [];
+  return nextMemberDay(days, todayIso)?.stretchNames ?? [];
 }

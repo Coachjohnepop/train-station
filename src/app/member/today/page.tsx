@@ -18,6 +18,7 @@ import {
   buildIntakeRampPlaceholderDays,
   buildMemberDayWindow,
   nextDayStretchPreview,
+  nextMemberDay,
   resolvePrimaryScheduleProgram,
   rollupForMemberDays,
 } from "@/lib/member-day-window";
@@ -124,6 +125,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const memberRollup = dayWindow?.rollup ?? (intakeRampDays ? rollupForMemberDays(intakeRampDays) : null);
   const selectedSummary = memberDays.find((d) => d.iso === viewDate) ?? null;
   const stretchPreview = memberDays.length ? nextDayStretchPreview(memberDays, todayKey) : [];
+  const tomorrowDay = memberDays.length ? nextMemberDay(memberDays, todayKey) : null;
   const memberWorkout = viewDate === todayKey ? workout : null;
 
   return (
@@ -145,6 +147,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
               rollup={memberRollup}
               selectedSummary={selectedSummary}
               nextStretchPreview={stretchPreview}
+              tomorrowDay={tomorrowDay}
               workout={memberWorkout}
               programSlug={programSlug}
               targetUserId={uid}

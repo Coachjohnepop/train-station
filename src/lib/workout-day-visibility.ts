@@ -22,20 +22,49 @@ export function dayVisibilityTier(iso: string, todayIso: string): DayVisibilityT
   return "label";
 }
 
-/** Short theme for far-future days — prefers workout name, else day label. */
+/** Short member-facing title (e.g. "Leg day", "Fasted cardio") from a workout name. */
 export function themeLabelForDay(workoutName: string | null, dayLabel: string): string {
   const name = (workoutName || "").trim();
-  if (name) {
-    const lower = name.toLowerCase();
-    if (
-      /leg|shoulder|arm|back|chest|upper|lower|core|cardio|push|pull|full body|mobility|stretch/i.test(
-        lower,
-      )
-    ) {
-      return name;
-    }
+  if (!name) return dayLabel || "Training day";
+
+  const lower = name.toLowerCase();
+
+  if (/fasted\s*cardio/i.test(lower)) return "Fasted cardio";
+  if (/active\s*recovery|rest\s*day/i.test(lower)) return "Active recovery";
+  if (/lower\s*body|\bleg\b/i.test(lower)) return "Leg day";
+  if (/upper\s*body/i.test(lower)) return "Arm day";
+  if (/\bback\b/i.test(lower) && /\bbicep/i.test(lower)) return "Back & biceps";
+  if (/\bshoulder\b/i.test(lower) && /\btricep/i.test(lower)) return "Shoulders & triceps";
+  if (/\bchest\b/i.test(lower)) return "Chest day";
+  if (/\bshoulder\b/i.test(lower)) return "Shoulder day";
+  if (/\bcardio\b/i.test(lower)) return "Cardio";
+  if (/stretch|mobility/i.test(lower)) return "Mobility";
+  if (/full\s*body/i.test(lower)) return "Full body";
+
+  const stripped = name
+    .replace(/^day\s*\d+\s*/i, "")
+    .replace(/\s*workout\s*/i, " ")
+    .replace(/\s*\((gym|home)\)\s*$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (stripped.length > 0 && stripped.length <= 36) {
+    return stripped.charAt(0).toUpperCase() + stripped.slice(1);
   }
+
   return dayLabel || "Training day";
+}
+
+/** Headline for schedule cards — short theme on future days, full name otherwise. */
+export function scheduleDayHeadline(
+  workoutName: string | null,
+  dayLabel: string,
+  opts?: { phase?: "past" | "today" | "future"; visibilityTier?: DayVisibilityTier },
+): string {
+  if (opts?.phase === "future") {
+    return themeLabelForDay(workoutName, dayLabel);
+  }
+  return workoutName || dayLabel || "No session scheduled";
 }
 
 export function addDaysIso(iso: string, days: number): string {

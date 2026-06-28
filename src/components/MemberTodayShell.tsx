@@ -9,6 +9,7 @@ import MemberIntakeIntroCard from "@/components/MemberIntakeIntroCard";
 import MemberWarmupDayNavigator from "@/components/MemberWarmupDayNavigator";
 import MemberWorkoutConsole, { type MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import type { MemberDaySummary, MemberDayWindowRollup } from "@/lib/member-day-window-types";
+import { scheduleDayHeadline } from "@/lib/workout-day-visibility";
 
 type Props = {
   todayIso: string;
@@ -17,6 +18,7 @@ type Props = {
   rollup: MemberDayWindowRollup | null;
   selectedSummary: MemberDaySummary | null;
   nextStretchPreview: string[];
+  tomorrowDay?: MemberDaySummary | null;
   workout: MemberWorkoutView | null;
   programSlug: string;
   targetUserId: string;
@@ -60,8 +62,9 @@ function DaySummaryCard({
             {dayLabel}
           </p>
           <h2 className="mt-1 text-lg font-semibold leading-tight">
-            {workoutName || "No session scheduled"}
+            {scheduleDayHeadline(workoutName, dayLabel, { phase, visibilityTier })}
           </h2>
+
         </div>
         {completed && (
           <span className="shrink-0 rounded-full bg-[var(--success)]/15 px-2 py-1 text-[10px] font-semibold text-[var(--success)]">
@@ -89,7 +92,7 @@ function DaySummaryCard({
         </div>
       )}
 
-      {phase === "future" && visibilityTier === "label" && (themeLabel || workoutName) && (
+      {phase === "future" && visibilityTier === "label" && (
         <p className="text-sm text-[var(--muted)]">
           Preview only — full exercises and sets unlock closer to the day.
         </p>
@@ -139,6 +142,7 @@ export default function MemberTodayShell({
   rollup,
   selectedSummary,
   nextStretchPreview,
+  tomorrowDay = null,
   workout,
   programSlug,
   targetUserId,
@@ -181,6 +185,7 @@ export default function MemberTodayShell({
   const rampHighlight = showWarmupFlow && !intakeComplete;
   const todayGold = isToday;
   const showFollowUpCard = isToday && !!coachMeetingRequestedAt && intakeComplete;
+
   const intakeStatus = {
     introBookedAt,
     coachMeetingRequestedAt,
@@ -286,24 +291,53 @@ export default function MemberTodayShell({
         </div>
       )}
 
-      {isToday && nextStretchPreview.length > 0 && (
+      {isToday && tomorrowDay && (
         <div className="card border-dashed border-[color-mix(in_srgb,var(--ramp-gold)_35%,var(--border))] bg-[color-mix(in_srgb,var(--ramp-gold)_6%,var(--surface))] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ramp-gold-light)]">
-            Tomorrow — stretch preview
+            Tomorrow —{" "}
+            {scheduleDayHeadline(tomorrowDay.workoutName, tomorrowDay.dayLabel, {
+              phase: "future",
+              visibilityTier: tomorrowDay.visibilityTier,
+            })}
           </p>
-          <p className="mt-1 text-xs text-[var(--muted)]">
-            Plan ahead for mobility (full workout unlocks tomorrow):
-          </p>
-          <ul className="mt-2 flex flex-wrap gap-1.5">
-            {nextStretchPreview.map((name) => (
-              <li
-                key={name}
-                className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs"
-              >
-                {name}
-              </li>
-            ))}
-          </ul>
+          {tomorrowDay.visibilityTier === "names" && tomorrowDay.exerciseNames.length > 0 ? (
+            <>
+              <p className="mt-1 text-xs text-[var(--muted)]">
+                Exercise preview (sets unlock tomorrow):
+              </p>
+              <ul className="mt-2 space-y-1 text-sm text-[var(--muted)]">
+                {tomorrowDay.exerciseNames.slice(0, 6).map((name) => (
+                  <li key={name} className="truncate">
+                    {name}
+                  </li>
+                ))}
+                {tomorrowDay.exerciseNames.length > 6 && (
+                  <li className="text-xs">+{tomorrowDay.exerciseNames.length - 6} more</li>
+                )}
+              </ul>
+            </>
+          ) : (
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              Full workout details unlock closer to the day.
+            </p>
+          )}
+          {nextStretchPreview.length > 0 && (
+            <>
+              <p className="mt-3 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+                Stretch preview
+              </p>
+              <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                {nextStretchPreview.map((name) => (
+                  <li
+                    key={name}
+                    className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs"
+                  >
+                    {name}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </div>
       )}
 
