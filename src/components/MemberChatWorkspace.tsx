@@ -6,6 +6,11 @@ import ChatThreadReply from "@/components/ChatThreadReply";
 import type { ChatMessage, ChatThread } from "@/lib/coach-chat";
 import { applyChatMessageLoad } from "@/lib/chat-message-merge";
 import { DEMO_COACH } from "@/lib/demo-coach";
+import {
+  ChatResizeDivider,
+  useDesktopChatLayout,
+  useStoredPanelSize,
+} from "@/lib/chat-panel-resize";
 
 function orderThreads(threads: ChatThread[]) {
   const cohorts = threads.filter((t) => t.kind === "cohort");
@@ -43,6 +48,19 @@ export default function MemberChatWorkspace({
   );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const isDesktopChat = useDesktopChatLayout();
+  const { size: workspaceHeight, setSize: setWorkspaceHeight } = useStoredPanelSize(
+    "ts-member-chat-height",
+    520,
+    400,
+    920,
+  );
+  const { size: feedHeight, setSize: setFeedHeight } = useStoredPanelSize(
+    "ts-member-chat-feed-height",
+    360,
+    160,
+    720,
+  );
 
   const orderedThreads = useMemo(() => orderThreads(threads), [threads]);
   const activeThread = threads.find((t) => t.id === activeId) || null;
@@ -116,41 +134,73 @@ export default function MemberChatWorkspace({
         </div>
       )}
 
-      <div className="flex min-h-[520px] flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
-        {loading && visibleMessages.length === 0 && (
-          <p className="shrink-0 border-b border-[var(--border)] px-4 py-2 text-xs text-[var(--muted)]">Loading...</p>
-        )}
-        <ChatFeed
-          thread={feedThread}
-          messages={visibleMessages}
-          viewerRole="member"
-          viewerId={memberId}
-          emptyLabel={
-            activeReplyThread?.kind === "cohort"
-              ? "No community posts yet."
-              : "No messages from your coach yet."
-          }
-          onReactionChange={(updated) =>
-            setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))
-          }
-        />
-        {replyThreadId && (
-          <ChatThreadReply
-            threadId={replyThreadId}
-            role="member"
-            threadKind={activeReplyThread?.kind}
-            placeholder={replyPlaceholder}
-            onSent={(message) => {
-              if (!message) return;
-              setMessages((prev) => {
-                if (prev.some((m) => m.id === message.id)) return prev;
-                return [...prev, message].sort(
-                  (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-                );
-              });
-            }}
+      <div className="chat-thread-shell flex flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+        <div
+          className="flex min-h-[520px] flex-col lg:min-h-0"
+          style={isDesktopChat ? { height: workspaceHeight } : undefined}
+        >
+          <div
+            className="flex min-h-0 flex-col overflow-hidden lg:shrink-0"
+            style={isDesktopChat ? { height: feedHeight } : undefined}
+          >
+            {loading && visibleMessages.length === 0 && (
+              <p className="shrink-0 border-b border-[var(--border)] px-4 py-2 text-xs text-[var(--muted)]">
+                Loading...
+              </p>
+            )}
+            <ChatFeed
+              thread={feedThread}
+              messages={visibleMessages}
+              viewerRole="member"
+              viewerId={memberId}
+              emptyLabel={
+                activeReplyThread?.kind === "cohort"
+                  ? "No community posts yet."
+                  : "No messages from your coach yet."
+              }
+              onReactionChange={(updated) =>
+                setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))
+              }
+            />
+          </div>
+
+          {isDesktopChat ? (
+            <ChatResizeDivider
+              direction="row"
+              label="Resize message thread height"
+              onDelta={(delta) => setFeedHeight((h) => h + delta)}
+            />
+          ) : null}
+
+          {replyThreadId ? (
+            <div className="shrink-0">
+              <ChatThreadReply
+                threadId={replyThreadId}
+                role="member"
+                threadKind={activeReplyThread?.kind}
+                placeholder={replyPlaceholder}
+                onSent={(message) => {
+                  if (!message) return;
+                  setMessages((prev) => {
+                    if (prev.some((m) => m.id === message.id)) return prev;
+                    return [...prev, message].sort(
+                      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+                    );
+                  });
+                }}
+              />
+            </div>
+          ) : null}
+        </div>
+
+        {isDesktopChat ? (
+          <ChatResizeDivider
+            direction="row"
+            className="chat-resize-divider--edge"
+            label="Resize chat workspace height"
+            onDelta={(delta) => setWorkspaceHeight((h) => h + delta)}
           />
-        )}
+        ) : null}
       </div>
     </div>
   );

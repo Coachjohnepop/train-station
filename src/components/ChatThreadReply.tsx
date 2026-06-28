@@ -78,7 +78,7 @@ export default function ChatThreadReply({
     <div className={`${barClass} px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]`}>
       <div className="flex items-end gap-2">
         <textarea
-          className="input min-h-[44px] max-h-28 flex-1 resize-y text-sm"
+          className="input min-h-[44px] max-h-28 flex-1 resize-y text-sm lg:max-h-48"
           placeholder={placeholder || (role === "coach" ? "Reply to this thread..." : "Message your coach...")}
           value={message}
           onChange={(e) => setMessage(e.target.value)}

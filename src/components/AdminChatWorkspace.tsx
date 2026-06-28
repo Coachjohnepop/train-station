@@ -14,6 +14,11 @@ import {
 } from "@/lib/chat-colors";
 import type { MemberCoachingMode } from "@/lib/member-coaching-mode";
 import { COMMUNITY_NO_BROADCAST_NOTE } from "@/lib/community-feed";
+import {
+  ChatResizeDivider,
+  useDesktopChatLayout,
+  useStoredPanelSize,
+} from "@/lib/chat-panel-resize";
 
 function threadPreview(messages: ChatMessage[]) {
   const last = messages[messages.length - 1];
@@ -95,6 +100,25 @@ export default function AdminChatWorkspace({
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const [unreadByThread, setUnreadByThread] = useState<Record<string, number>>(initialUnreadByThread);
   const [mobilePanel, setMobilePanel] = useState<"inbox" | "chat">("inbox");
+  const { size: inboxWidth, setSize: setInboxWidth } = useStoredPanelSize(
+    "ts-admin-chat-inbox-width",
+    280,
+    200,
+    440,
+  );
+  const { size: workspaceHeight, setSize: setWorkspaceHeight } = useStoredPanelSize(
+    "ts-admin-chat-height",
+    560,
+    400,
+    920,
+  );
+  const { size: feedHeight, setSize: setFeedHeight } = useStoredPanelSize(
+    "ts-admin-chat-feed-height",
+    340,
+    160,
+    720,
+  );
+  const isDesktopChat = useDesktopChatLayout();
 
   const memberRows: CoachChatMember[] = useMemo(
     () =>
@@ -289,19 +313,24 @@ export default function AdminChatWorkspace({
         </button>
       </div>
 
-      <div className="grid min-h-[min(70vh,560px)] gap-0 lg:grid-cols-[minmax(240px,280px)_1fr]">
+      <div className="chat-thread-shell flex flex-col">
+        <div
+          className="flex min-h-[min(70vh,560px)] flex-col lg:min-h-0 lg:flex-row"
+          style={isDesktopChat ? { height: workspaceHeight } : undefined}
+        >
         {/* Inbox — full screen on mobile when selected */}
         <aside
-          className={`border-b border-[var(--border)] lg:border-b-0 lg:border-r ${
-            mobilePanel === "inbox" ? "block" : "hidden lg:block"
+          className={`flex min-h-0 w-full flex-col border-b border-[var(--border)] lg:shrink-0 lg:border-b-0 lg:border-r ${
+            mobilePanel === "inbox" ? "flex" : "hidden lg:flex"
           }`}
+          style={isDesktopChat ? { width: inboxWidth } : undefined}
         >
           <div className="border-b border-[var(--border)] bg-violet-950/25 px-4 py-3">
             <p className="text-xs font-bold uppercase tracking-wide text-violet-200">Inbox</p>
             <p className="text-[11px] text-[var(--muted)]">Tap a member — colors show Live vs Asynch</p>
           </div>
           <InboxLegend />
-          <div className="max-h-[min(50vh,420px)] overflow-y-auto p-2 lg:max-h-[420px]">
+          <div className="min-h-0 flex-1 overflow-y-auto p-2 max-h-[min(50vh,420px)] lg:max-h-none">
             <CoachMemberChatPicker
               members={memberRows}
               activeMemberId={activeMemberId}
@@ -347,9 +376,17 @@ export default function AdminChatWorkspace({
           </button>
         </aside>
 
+        {isDesktopChat ? (
+          <ChatResizeDivider
+            direction="column"
+            label="Resize inbox width"
+            onDelta={(delta) => setInboxWidth((w) => w + delta)}
+          />
+        ) : null}
+
         {/* Conversation */}
         <div
-          className={`flex min-h-[min(60vh,480px)] flex-col ${
+          className={`flex min-w-0 flex-1 flex-col min-h-[min(60vh,480px)] lg:min-h-0 ${
             mobilePanel === "chat" ? "flex" : "hidden lg:flex"
           }`}
         >
@@ -391,42 +428,70 @@ export default function AdminChatWorkspace({
             </div>
           </div>
 
-          {loading && visibleMessages.length === 0 && (
-            <p className="shrink-0 border-b border-[var(--border)] px-4 py-2 text-xs text-[var(--muted)]">
-              Loading…
-            </p>
-          )}
-          <ChatFeed
-            thread={activeThread}
-            messages={visibleMessages}
-            viewerRole="coach"
-            viewerId="coach"
-            emptyLabel="No messages in this thread yet."
-            hideHeader
-            onReactionChange={(updated) =>
-              setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))
-            }
-          />
-          {replyThreadId && (
-            <ChatThreadReply
-              threadId={replyThreadId}
-              role="coach"
-              threadKind={activeThread?.kind}
-              placeholder={activeThread?.kind === "cohort" ? "Reply in community feed…" : "Quick reply…"}
-              onSent={(message) => {
-                if (!message) return;
-                setMessages((prev) => {
-                  if (prev.some((m) => m.id === message.id)) return prev;
-                  const next = [...prev, message].sort(
-                    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-                  );
-                  setPreviews((p) => ({ ...p, [replyThreadId]: threadPreview(next) }));
-                  return next;
-                });
-              }}
-            />
-          )}
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div
+              className="flex min-h-0 flex-col overflow-hidden lg:shrink-0"
+              style={isDesktopChat ? { height: feedHeight } : undefined}
+            >
+              {loading && visibleMessages.length === 0 && (
+                <p className="shrink-0 border-b border-[var(--border)] px-4 py-2 text-xs text-[var(--muted)]">
+                  Loading…
+                </p>
+              )}
+              <ChatFeed
+                thread={activeThread}
+                messages={visibleMessages}
+                viewerRole="coach"
+                viewerId="coach"
+                emptyLabel="No messages in this thread yet."
+                hideHeader
+                onReactionChange={(updated) =>
+                  setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))
+                }
+              />
+            </div>
+
+            {isDesktopChat ? (
+              <ChatResizeDivider
+                direction="row"
+                label="Resize message thread height"
+                onDelta={(delta) => setFeedHeight((h) => h + delta)}
+              />
+            ) : null}
+
+            {replyThreadId ? (
+              <div className="min-h-0 shrink-0">
+                <ChatThreadReply
+                  threadId={replyThreadId}
+                  role="coach"
+                  threadKind={activeThread?.kind}
+                  placeholder={activeThread?.kind === "cohort" ? "Reply in community feed…" : "Quick reply…"}
+                  onSent={(message) => {
+                    if (!message) return;
+                    setMessages((prev) => {
+                      if (prev.some((m) => m.id === message.id)) return prev;
+                      const next = [...prev, message].sort(
+                        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+                      );
+                      setPreviews((p) => ({ ...p, [replyThreadId]: threadPreview(next) }));
+                      return next;
+                    });
+                  }}
+                />
+              </div>
+            ) : null}
+          </div>
         </div>
+        </div>
+
+        {isDesktopChat ? (
+          <ChatResizeDivider
+            direction="row"
+            className="chat-resize-divider--edge"
+            label="Resize chat workspace height"
+            onDelta={(delta) => setWorkspaceHeight((h) => h + delta)}
+          />
+        ) : null}
       </div>
     </div>
   );

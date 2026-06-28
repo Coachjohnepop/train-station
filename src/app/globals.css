@@ -1084,3 +1084,39 @@ input:-webkit-autofill {
 .pac-item-query {
   color: var(--text);
 }
+
+/* Chat panels — drag to resize on desktop (like compose textarea resize-y) */
+.chat-resize-divider {
+  flex-shrink: 0;
+  touch-action: none;
+  z-index: 6;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.chat-resize-divider:hover,
+.chat-resize-divider:active {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.chat-resize-divider--column {
+  width: 8px;
+  margin: 0 -4px;
+  cursor: col-resize;
+  align-self: stretch;
+}
+
+.chat-resize-divider--row {
+  height: 8px;
+  margin: -4px 0;
+  cursor: row-resize;
+  width: 100%;
+}
+
+.chat-resize-divider--edge {
+  border-radius: 0 0 0.75rem 0.75rem;
+}
+
+.chat-thread-shell {
+  min-height: 400px;
+}
