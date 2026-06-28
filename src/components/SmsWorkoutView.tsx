@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { linkifyText } from "@/lib/linkify-text";
 
 export default function SmsWorkoutView({
   title,
@@ -33,9 +34,9 @@ export default function SmsWorkoutView({
       </div>
 
       <div className="card">
-        <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-[var(--foreground)]">
-          {body}
-        </pre>
+        <div className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-[var(--foreground)] break-words">
+          {linkifyText(body)}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

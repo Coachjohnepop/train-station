@@ -5,6 +5,7 @@ import Link from "next/link";
 import { youtubeEmbedUrl } from "@/lib/youtube";
 import type { ChatMessage, ChatReaction, ChatThread } from "@/lib/coach-chat";
 import { bubbleColorsForMessage, messageKindLabel } from "@/lib/chat-colors";
+import { linkifyText } from "@/lib/linkify-text";
 
 const QUICK_REACTIONS = ["✅", "👍", "❤️", "🙌", "💪", "🔥"] as const;
 
@@ -63,7 +64,9 @@ function WorkoutUpdateBubble({
   return (
     <div className={`overflow-hidden rounded-2xl text-sm text-left ${colors.bubble} px-3 py-2.5`}>
       <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-200">Workout update</p>
-      <p className="mt-1 font-medium">{message.workoutTitle || message.body}</p>
+      <p className="mt-1 font-medium">
+        {message.workoutTitle || linkifyText(message.body || "")}
+      </p>
       {message.sessionDate && (
         <p className="mt-1 text-xs text-[var(--muted)]">
           Scheduled for{" "}
@@ -101,7 +104,9 @@ function MediaBubble({
 
   return (
     <div className={`overflow-hidden rounded-2xl text-sm text-left ${colors.bubble} max-w-full`}>
-      {message.body && <p className="px-3 pt-2.5 pb-1 whitespace-pre-wrap">{message.body}</p>}
+      {message.body && (
+        <p className="px-3 pt-2.5 pb-1 whitespace-pre-wrap break-words">{linkifyText(message.body)}</p>
+      )}
       {embed && (
         <div className="aspect-video w-full bg-black">
           <iframe
@@ -134,9 +139,9 @@ function TextBubble({
     <div
       className={`overflow-hidden text-sm text-left whitespace-pre-wrap leading-relaxed px-3 py-2 rounded-2xl ${
         outgoing ? "rounded-br-md" : "rounded-bl-md"
-      } ${colors.bubble}`}
+      } ${colors.bubble} break-words`}
     >
-      {message.body}
+      {linkifyText(message.body)}
     </div>
   );
 }
@@ -317,8 +322,8 @@ function FeedItem({
   if (message.authorRole === "system") {
     return (
       <div className="flex justify-center py-1">
-        <p className="rounded-full bg-[var(--surface-2)] px-3 py-1 text-[10px] text-[var(--muted)]">
-          {message.body}
+        <p className="rounded-full bg-[var(--surface-2)] px-3 py-1 text-[10px] text-[var(--muted)] break-words">
+          {linkifyText(message.body)}
         </p>
       </div>
     );

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Build responsive logo PNGs from a source image.
+ * Build responsive logo PNGs from a source image (preserves or derives transparency).
  * Usage: node scripts/optimize-brand-logo.mjs [sourcePath]
  */
 import fs from "fs";
@@ -19,6 +19,29 @@ const VARIANTS = [
   { file: "logo-hero.png", width: 320 },
 ];
 
+async function stripNearBlackMatte(buffer, threshold = 28) {
+  const { data, info } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  if (info.channels < 4) return buffer;
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    if (r <= threshold && g <= threshold && b <= threshold) data[i + 3] = 0;
+  }
+  return sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } }).png().toBuffer();
+}
+
+async function renderLogoPng(source, { width, fit = "inside" }) {
+  const meta = await sharp(source).metadata();
+  let rendered = await sharp(source)
+    .rotate()
+    .resize({ width, fit, withoutEnlargement: true, background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png({ compressionLevel: 9, effort: 10 })
+    .toBuffer();
+  if (!meta.hasAlpha) rendered = await stripNearBlackMatte(rendered);
+  return rendered;
+}
+
 async function main() {
   const source = process.argv[2] || DEFAULT_SOURCE;
   if (!fs.existsSync(source)) {
@@ -35,25 +58,22 @@ async function main() {
     }
   }
 
-  const input = sharp(source).rotate();
-  const meta = await input.metadata();
-  console.log(`Source: ${source} (${meta.width}x${meta.height}, ${meta.format})`);
+  const meta = await sharp(source).metadata();
+  console.log(`Source: ${source} (${meta.width}x${meta.height}, ${meta.format}, alpha=${meta.hasAlpha})`);
 
   for (const { file, width } of VARIANTS) {
     const dest = path.join(OUT_DIR, file);
-    const buffer = await sharp(source)
-      .rotate()
-      .resize({ width, withoutEnlargement: true })
-      .png({ compressionLevel: 9, palette: true, quality: 90, effort: 10 })
-      .toBuffer();
+    const buffer = await renderLogoPng(source, { width });
     fs.writeFileSync(dest, buffer);
-    console.log(`  ${file}: ${(buffer.length / 1024).toFixed(1)} KB (${width}px wide)`);
+    const outMeta = await sharp(buffer).metadata();
+    console.log(
+      `  ${file}: ${(buffer.length / 1024).toFixed(1)} KB (${outMeta.width}x${outMeta.height}, alpha=${outMeta.hasAlpha})`,
+    );
   }
 
-  const favicon = await sharp(source)
-    .rotate()
+  const favicon = await sharp(await renderLogoPng(source, { width: 64 }))
     .resize({ width: 32, height: 32, fit: "cover" })
-    .png({ compressionLevel: 9, palette: true, quality: 90 })
+    .png({ compressionLevel: 9 })
     .toBuffer();
   fs.writeFileSync(path.join(ROOT, "public/favicon.png"), favicon);
   console.log(`  favicon.png: ${(favicon.length / 1024).toFixed(1)} KB`);

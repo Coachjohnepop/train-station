@@ -11,6 +11,7 @@ import {
   type RollingCalendarDayPhase,
 } from "@/lib/program-calendar";
 import ScheduleJumpLink from "@/components/ScheduleJumpLink";
+import { linkifyText } from "@/lib/linkify-text";
 
 type Program = {
   slug: string;
@@ -137,7 +138,9 @@ function DayCards({
                       <span className="text-[10px] rounded bg-amber-500/20 px-1.5 py-0.5 text-amber-300">SMS</span>
                     </div>
                     {!compact && (
-                      <p className="text-xs text-[var(--muted)] line-clamp-3 whitespace-pre-wrap">{day.smsWorkoutText}</p>
+                      <p className="text-xs text-[var(--muted)] line-clamp-3 whitespace-pre-wrap break-words">
+                        {linkifyText(day.smsWorkoutText)}
+                      </p>
                     )}
                     <span className="text-xs font-medium text-accent">Open →</span>
                   </Link>

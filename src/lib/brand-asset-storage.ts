@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
-import sharp from "sharp";
 import { put } from "@vercel/blob";
+import { renderLogoPng } from "@/lib/optimize-brand-logo";
 import { blobSdkOptions, isBlobConfigured } from "@/lib/demo-json-blob";
 
 const ALLOWED_MIME = new Set([
@@ -68,16 +68,12 @@ export async function processAndStoreBrandLogo(
   const urls: Partial<BrandAssetUploadResult> = {};
 
   for (const variant of VARIANTS) {
-    const png = await sharp(buffer)
-      .rotate()
-      .resize({
-        width: variant.width,
-        height: variant.width,
-        fit: variant.key === "faviconUrl" ? "cover" : "inside",
-        withoutEnlargement: true,
-      })
-      .png({ compressionLevel: 9, palette: true, quality: 90, effort: 10 })
-      .toBuffer();
+    const png = await renderLogoPng(buffer, {
+      file: variant.file,
+      width: variant.width,
+      height: variant.key === "faviconUrl" ? variant.width : undefined,
+      fit: variant.key === "faviconUrl" ? "cover" : "inside",
+    });
 
     const filename = `${stamp}-${variant.file}`;
     const relativePath = `brand/${filename}`;
