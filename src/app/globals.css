@@ -852,6 +852,74 @@ table.data th {
   background: color-mix(in srgb, var(--accent-deep) 12%, var(--surface));
 }
 
+/* Member bottom nav — Today is 2× the footprint of sibling tabs (mobile-first). */
+.member-nav {
+  min-height: 4.5rem;
+}
+
+.member-nav-home {
+  min-height: 4.5rem;
+  padding: 0.45rem 0.35rem 0.4rem;
+  gap: 0.1rem;
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--accent-deep) 22%, transparent);
+}
+
+.member-nav-home--idle {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 16%, var(--surface-2)) 0%,
+    color-mix(in srgb, var(--accent-deep) 10%, var(--surface)) 100%
+  );
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  color: var(--text);
+}
+
+.member-nav-home--active {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.member-nav-home--ramp {
+  border-color: color-mix(in srgb, var(--ramp-gold) 55%, var(--border));
+}
+
+.member-nav-home-icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  flex-shrink: 0;
+  opacity: 0.95;
+}
+
+.member-nav-home-label {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+}
+
+.member-nav-home-sublabel {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.member-nav-item {
+  min-height: 2.25rem;
+}
+
+@media (min-width: 640px) {
+  .member-nav-home-label {
+    font-size: 1rem;
+  }
+
+  .member-nav-home-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
 .nav-tab-active {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   color: var(--accent-light);
