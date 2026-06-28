@@ -91,6 +91,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname === "/setup-quick-auth") {
+    const session = await sessionFromRequest(request);
+    if (!session) {
+      const login = new URL("/login", request.url);
+      login.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(login);
+    }
+    return NextResponse.next();
+  }
+
   const needsAuth = pathname.startsWith("/member") || pathname.startsWith("/admin");
   if (!needsAuth) {
     return NextResponse.next();

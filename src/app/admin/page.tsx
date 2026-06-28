@@ -31,6 +31,23 @@ export default async function AdminPage() {
       </p>
 
       <div className="mt-6">
+        <div className="card border-[#7c3aed]/40 bg-[#7c3aed]/5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[#7c3aed]">
+            Faster sign-in
+          </p>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Set a PIN or Face ID on this device so you skip typing your password next time.
+          </p>
+          <a
+            href="/setup-quick-auth?redirect=/admin"
+            className="mt-3 inline-flex text-sm font-semibold text-[#7c3aed] hover:underline"
+          >
+            Set up quick sign-in →
+          </a>
+        </div>
+      </div>
+
+      <div className="mt-6">
         <CoachContentAlertsPanel alerts={contentAlerts} />
       </div>
 
