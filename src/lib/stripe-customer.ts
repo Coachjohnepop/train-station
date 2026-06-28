@@ -17,6 +17,12 @@ export async function ensureStripeCustomer(input: {
     try {
       const customer = await stripe.customers.retrieve(existingId);
       if (!("deleted" in customer && customer.deleted)) {
+        const patch: import("stripe").Stripe.CustomerUpdateParams = {};
+        if (!customer.email?.trim() && input.email.trim()) patch.email = input.email.trim();
+        if (!customer.name?.trim() && input.name?.trim()) patch.name = input.name.trim();
+        if (Object.keys(patch).length > 0) {
+          await stripe.customers.update(existingId, patch);
+        }
         return existingId;
       }
     } catch {

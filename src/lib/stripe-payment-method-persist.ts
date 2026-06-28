@@ -47,6 +47,56 @@ async function newestCustomerCardId(stripe: Stripe, customerId: string): Promise
   return methods.data[0]?.id ?? null;
 }
 
+function billingDetailsReadyForCheckoutPrefill(
+  billing: Stripe.PaymentMethod.BillingDetails | null | undefined,
+): boolean {
+  if (!billing?.email?.trim() || !billing?.name?.trim()) return false;
+  const country = billing.address?.country?.trim().toUpperCase();
+  if (!country) return false;
+  if (country === "US" || country === "CA" || country === "GB") {
+    return Boolean(billing.address?.postal_code?.trim());
+  }
+  return true;
+}
+
+async function enrichPaymentMethodBillingForCheckout(
+  stripe: Stripe,
+  customerId: string,
+  paymentMethodId: string,
+): Promise<boolean> {
+  try {
+    const [pm, customer] = await Promise.all([
+      stripe.paymentMethods.retrieve(paymentMethodId),
+      stripe.customers.retrieve(customerId),
+    ]);
+    if ("deleted" in customer && customer.deleted) return false;
+
+    const billingPatch: Stripe.PaymentMethodUpdateParams["billing_details"] = {
+      email: pm.billing_details?.email?.trim() || customer.email || undefined,
+      name: pm.billing_details?.name?.trim() || customer.name || undefined,
+      phone: pm.billing_details?.phone?.trim() || customer.phone || undefined,
+      address: {
+        line1: pm.billing_details?.address?.line1 || customer.address?.line1 || undefined,
+        line2: pm.billing_details?.address?.line2 || customer.address?.line2 || undefined,
+        city: pm.billing_details?.address?.city || customer.address?.city || undefined,
+        state: pm.billing_details?.address?.state || customer.address?.state || undefined,
+        postal_code:
+          pm.billing_details?.address?.postal_code || customer.address?.postal_code || undefined,
+        country: pm.billing_details?.address?.country || customer.address?.country || undefined,
+      },
+    };
+
+    const updated = await stripe.paymentMethods.update(paymentMethodId, {
+      allow_redisplay: "always",
+      billing_details: billingPatch,
+    });
+    return billingDetailsReadyForCheckoutPrefill(updated.billing_details);
+  } catch (e: unknown) {
+    console.error("[stripe] payment method billing enrich failed:", paymentMethodId, e);
+    return false;
+  }
+}
+
 async function paymentMethodIdFromCheckout(
   stripe: Stripe,
   session: Stripe.Checkout.Session,
@@ -137,6 +187,65 @@ export async function promoteCustomerPaymentMethodsForCheckout(
     }
   } catch (e: unknown) {
     console.error("[stripe] customer default payment method promote failed:", e);
+  }
+
+  await enrichPaymentMethodBillingForCheckout(stripe, customerId, preferredId);
+  for (const pm of methods.data) {
+    if (pm.id !== preferredId) {
+      await enrichPaymentMethodBillingForCheckout(stripe, customerId, pm.id);
+    }
+  }
+}
+
+/** True when Stripe Checkout can prefill/select the customer's default card. */
+export async function customerSavedCardReadyForCheckoutPrefill(
+  customerId: string,
+  subscriptionId?: string | null,
+): Promise<boolean> {
+  const stripe = getStripe();
+  if (!stripe) return false;
+
+  await promoteCustomerPaymentMethodsForCheckout(customerId, subscriptionId);
+
+  let paymentMethodId: string | null = null;
+  try {
+    const customer = await stripe.customers.retrieve(customerId, {
+      expand: ["invoice_settings.default_payment_method"],
+    });
+    if ("deleted" in customer && customer.deleted) return false;
+    const dpm = customer.invoice_settings?.default_payment_method;
+    paymentMethodId =
+      typeof dpm === "string" ? dpm : dpm && typeof dpm === "object" ? dpm.id : null;
+  } catch {
+    return false;
+  }
+
+  if (!paymentMethodId && subscriptionId) {
+    try {
+      const sub = await stripe.subscriptions.retrieve(subscriptionId, {
+        expand: ["default_payment_method"],
+      });
+      const dpm = sub.default_payment_method;
+      paymentMethodId =
+        typeof dpm === "string" ? dpm : dpm && typeof dpm === "object" ? dpm.id : null;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (!paymentMethodId) {
+    paymentMethodId = await newestCustomerCardId(stripe, customerId);
+  }
+  if (!paymentMethodId) return false;
+
+  try {
+    const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+    return (
+      pm.allow_redisplay === "always" &&
+      billingDetailsReadyForCheckoutPrefill(pm.billing_details)
+    );
+  } catch {
+    return false;
   }
 }
 

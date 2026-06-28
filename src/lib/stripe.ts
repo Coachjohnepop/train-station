@@ -19,7 +19,10 @@ import {
   ensureStripeCustomer,
   repairMemberStripeBillingState,
 } from "@/lib/stripe-customer";
-import { promoteCustomerPaymentMethodsForCheckout } from "@/lib/stripe-payment-method-persist";
+import {
+  customerSavedCardReadyForCheckoutPrefill,
+  promoteCustomerPaymentMethodsForCheckout,
+} from "@/lib/stripe-payment-method-persist";
 
 type StripeClient = import("stripe").default;
 
@@ -132,20 +135,32 @@ async function createCheckoutSession(
 
 type CheckoutCustomerFields = Pick<
   import("stripe").Stripe.Checkout.SessionCreateParams,
-  "customer" | "customer_email" | "customer_update" | "saved_payment_method_options"
+  | "customer"
+  | "customer_email"
+  | "customer_update"
+  | "saved_payment_method_options"
+  | "billing_address_collection"
+  | "payment_method_collection"
+  | "wallet_options"
 >;
 
 async function checkoutCustomerFields(input: {
   userId: string;
   email: string;
   name: string;
-}): Promise<{ customerId: string | null; hasSavedCard: boolean; fields: CheckoutCustomerFields }> {
+}): Promise<{
+  customerId: string | null;
+  hasSavedCard: boolean;
+  savedCardPrefillReady: boolean;
+  fields: CheckoutCustomerFields;
+}> {
   await repairMemberStripeBillingState(input.userId);
   const customerId = await ensureStripeCustomer(input);
   if (!customerId) {
     return {
       customerId: null,
       hasSavedCard: false,
+      savedCardPrefillReady: false,
       fields: { customer_email: input.email },
     };
   }
@@ -160,12 +175,25 @@ async function checkoutCustomerFields(input: {
     customerId,
     profile?.stripeSubscriptionId,
   );
+  const savedCardPrefillReady = hasSavedCard
+    ? await customerSavedCardReadyForCheckoutPrefill(
+        customerId,
+        profile?.stripeSubscriptionId,
+      )
+    : false;
+
   return {
     customerId,
     hasSavedCard,
+    savedCardPrefillReady,
     fields: {
       customer: customerId,
       customer_update: { address: "auto", name: "auto" },
+      billing_address_collection: "required",
+      payment_method_collection: savedCardPrefillReady ? "if_required" : "always",
+      wallet_options: {
+        link: { display: "never" },
+      },
       saved_payment_method_options: {
         payment_method_save: "enabled",
         payment_method_remove: "enabled",

@@ -198,7 +198,7 @@ function MemberCheckoutInner() {
                 </button>
                 <p className="text-center text-[11px] text-[var(--muted)]">
                   {hasSavedCard
-                    ? "Your saved card should appear in checkout — pick it for a faster second purchase."
+                    ? "Your saved card should be pre-selected in checkout. If you only see an empty form, enter your card once more with your billing address — it will prefill next time."
                     : "After your first payment, check “save for future purchases” in checkout to reuse your card next time."}
                 </p>
               </div>
