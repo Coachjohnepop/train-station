@@ -1013,6 +1013,24 @@ table.data th {
   }
 }
 
+.score-milestone-stamp span {
+  display: inline-block;
+  transform: rotate(-24deg);
+  border: 2px solid rgb(248 113 113 / 0.75);
+  padding: 0.2rem 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgb(248 113 113 / 0.92);
+  background: rgb(127 29 29 / 0.18);
+  box-shadow: 0 0 18px rgb(248 113 113 / 0.15);
+}
+
+.score-milestone-card {
+  min-height: 8.5rem;
+}
+
 .member-nav-score-badge {
   position: absolute;
   right: 0.15rem;

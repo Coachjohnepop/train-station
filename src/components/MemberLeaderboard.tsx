@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import MemberScoreProgressPanel from "@/components/MemberScoreProgress";
 import { GAMIFICATION_POINTS, type LeaderboardPayload, type LeaderboardScope } from "@/lib/gamification-types";
+import type { MemberScoreProgress } from "@/lib/gamification-types";
 
 function rankLabel(rank: number): string {
   if (rank === 1) return "1ST";
@@ -66,26 +68,67 @@ function LeaderboardRowView({
 export default function MemberLeaderboard() {
   const [scope, setScope] = useState<LeaderboardScope>("program");
   const [data, setData] = useState<LeaderboardPayload | null>(null);
+  const [progress, setProgress] = useState<MemberScoreProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const loadProgress = useCallback(async () => {
+    try {
+      const res = await fetch("/api/member/gamification", { cache: "no-store" });
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json.progress) setProgress(json.progress);
+      if (typeof json.totalPoints === "number" && data?.viewer) {
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                viewer: { ...prev.viewer, points: json.totalPoints },
+              }
+            : prev,
+        );
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [data?.viewer]);
 
   const load = useCallback(async (nextScope: LeaderboardScope) => {
     setLoading(true);
     setError("");
-    const res = await fetch(`/api/member/leaderboard?scope=${nextScope}`, { cache: "no-store" });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) {
+    const [boardRes, scoreRes] = await Promise.all([
+      fetch(`/api/member/leaderboard?scope=${nextScope}`, { cache: "no-store" }),
+      fetch("/api/member/gamification", { cache: "no-store" }),
+    ]);
+    const json = await boardRes.json().catch(() => ({}));
+    const scoreJson = await scoreRes.json().catch(() => ({}));
+    if (!boardRes.ok) {
       setError(json.error || "Could not load leaderboard.");
       setData(null);
     } else {
-      setData(json);
+      const totalPoints =
+        typeof scoreJson.totalPoints === "number" ? scoreJson.totalPoints : json.viewer?.points;
+      setData(
+        totalPoints != null && json.viewer
+          ? { ...json, viewer: { ...json.viewer, points: totalPoints } }
+          : json,
+      );
     }
+    if (scoreJson.progress) setProgress(scoreJson.progress);
     setLoading(false);
   }, []);
 
   useEffect(() => {
     void load(scope);
   }, [scope, load]);
+
+  useEffect(() => {
+    function onScoreUpdated() {
+      void loadProgress();
+    }
+    window.addEventListener("member-score-updated", onScoreUpdated);
+    return () => window.removeEventListener("member-score-updated", onScoreUpdated);
+  }, [loadProgress]);
 
   return (
     <div className="space-y-5">
@@ -108,10 +151,12 @@ export default function MemberLeaderboard() {
         </p>
       </div>
 
+      {progress ? <MemberScoreProgressPanel progress={progress} /> : null}
+
       {data?.viewer ? (
         <div className="space-y-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
-            Your score
+            Your rank
           </p>
           <LeaderboardRowView row={data.viewer} highlight="self" />
         </div>

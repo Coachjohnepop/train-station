@@ -52,3 +52,30 @@ export const GAMIFICATION_EVENT_LABELS: Record<GamificationEventType, string> = 
   intake_complete: "Intake complete",
   onboarding_complete: "Finished setup",
 };
+
+export type ScoreMilestoneStatus = "complete" | "incomplete";
+
+export type ScoreMilestone = {
+  id: string;
+  type: GamificationEventType;
+  label: string;
+  points: number;
+  status: ScoreMilestoneStatus;
+  earnedPoints: number;
+  completedAt: string | null;
+  repeatable?: boolean;
+  earnHint?: string;
+  href?: string;
+};
+
+export type MemberScoreProgress = {
+  earnedPoints: number;
+  availablePoints: number;
+  maxRampPoints: number;
+  milestones: ScoreMilestone[];
+  workoutLogs: {
+    count: number;
+    earnedPoints: number;
+    nextPoints: number;
+  };
+};
