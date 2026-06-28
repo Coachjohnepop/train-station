@@ -2,12 +2,12 @@ import Link from "next/link";
 import MemberChatWorkspace from "@/components/MemberChatWorkspace";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
 import {
-  COMMUNITY_FEED_PROGRAM_SLUG,
   ensureCohortThread,
   ensureMemberThread,
   hydrateCoachChat,
   listThreadsForMember,
 } from "@/lib/coach-chat";
+import { COMMUNITY_FEED_PROGRAM_SLUG, COMMUNITY_FEED_TITLE } from "@/lib/community-feed";
 import { getUserEnrollments } from "@/lib/data/user-data";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 import { resolveMemberUserId } from "@/lib/current-user";
@@ -19,7 +19,7 @@ export default async function MemberChatPage() {
   await hydrateCoachChat({ preferFresh: true });
   await ensureMemberThread(uid);
   const communitySlug = COMMUNITY_FEED_PROGRAM_SLUG;
-  await ensureCohortThread(communitySlug, "Train Station community");
+  await ensureCohortThread(communitySlug, COMMUNITY_FEED_TITLE);
   const enrolledSlugs = Object.keys(getUserEnrollments(uid));
   const programSlugs = [...new Set([communitySlug, ...enrolledSlugs])];
   const threads = listThreadsForMember(uid, programSlugs);
@@ -35,7 +35,7 @@ export default async function MemberChatPage() {
       <div>
         <h1 className="text-2xl font-bold">Messages</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Coach posts, videos, and notes — like a Patreon creator feed. Reply below or text your coach. Workouts with checklists are on Go to Today.
+          Community tab — coach posts, videos, and notes (Patreon-style). Coach tab — private 1:1 thread. Workouts with checklists are on Go to Today.
         </p>
       </div>
 

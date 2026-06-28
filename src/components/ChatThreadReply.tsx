@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ChatMessage } from "@/lib/coach-chat";
+import type { ChatMessage, ChatThreadKind } from "@/lib/coach-chat";
 
 type SmsResult = {
   sent?: number;
@@ -25,11 +25,13 @@ function smsStatusLine(sms?: SmsResult, twilioLive?: boolean): string | null {
 export default function ChatThreadReply({
   threadId,
   role,
+  threadKind,
   placeholder,
   onSent,
 }: {
   threadId: string;
   role: "coach" | "member";
+  threadKind?: ChatThreadKind;
   placeholder?: string;
   onSent?: (message?: ChatMessage) => void;
 }) {
@@ -101,7 +103,7 @@ export default function ChatThreadReply({
           {sending ? "..." : "Send"}
         </button>
       </div>
-      {role === "coach" && (
+      {role === "coach" && threadKind !== "cohort" && (
         <label className="mt-2 flex items-center gap-2 text-[10px] text-violet-200/90">
           <input
             type="checkbox"
@@ -112,7 +114,7 @@ export default function ChatThreadReply({
           Also text member&apos;s phone (SMS + in-app Messages)
         </label>
       )}
-      {role === "member" && (
+      {role === "member" && threadKind !== "cohort" && (
         <p className="mt-2 text-[10px] text-[var(--muted)]">
           Or text your coach — SMS replies show up in this thread too.
         </p>

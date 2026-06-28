@@ -4,21 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CHAT_IMAGE_MAX_BYTES, CHAT_VIDEO_MAX_DURATION_SEC } from "@/lib/chat-video-constants";
-import CoachMemberPicker from "@/components/CoachMemberPicker";
+import {
+  COMMUNITY_FEED_PROGRAM_SLUG,
+  COMMUNITY_FEED_TITLE,
+  COMMUNITY_NO_BROADCAST_NOTE,
+} from "@/lib/community-feed";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
-import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 
-type MemberOption = { id: string; name: string; email: string };
-
-export default function CoachChatComposer({
-  members,
-  embedded = false,
-}: {
-  members: MemberOption[];
-  embedded?: boolean;
-}) {
+export default function CommunityComposer({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
-  const [selectedIds, setSelectedIds] = useState<string[]>([DEFAULT_DEMO_MEMBER_ID]);
   const [body, setBody] = useState("");
   const [rawSms, setRawSms] = useState("");
   const [sessionDate, setSessionDate] = useState(new Date().toISOString().slice(0, 10));
@@ -29,7 +23,6 @@ export default function CoachChatComposer({
   const [videoDurationSec, setVideoDurationSec] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [sendSmsAlert, setSendSmsAlert] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [newExerciseCount, setNewExerciseCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -111,11 +104,6 @@ export default function CoachChatComposer({
   }
 
   async function handlePost() {
-    if (selectedIds.length === 0) {
-      setError("Select at least one member.");
-      return;
-    }
-
     setSending(true);
     setError(null);
     setMessage(null);
@@ -124,8 +112,9 @@ export default function CoachChatComposer({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          audience: "members",
-          memberIds: selectedIds,
+          audience: "cohort",
+          programSlug: COMMUNITY_FEED_PROGRAM_SLUG,
+          programName: COMMUNITY_FEED_TITLE,
           body: body.trim() || undefined,
           rawSms: rawSms.trim() || undefined,
           sessionDate: rawSms.trim() ? sessionDate : undefined,
@@ -134,7 +123,6 @@ export default function CoachChatComposer({
           mediaUrl: mediaUrl || undefined,
           imageUrl: imageUrl || undefined,
           videoDurationSec: videoDurationSec || undefined,
-          sendSmsAlert,
         }),
       });
       const data = await res.json();
@@ -142,9 +130,7 @@ export default function CoachChatComposer({
 
       const created = Array.isArray(data.newExerciseIds) ? data.newExerciseIds.length : 0;
       setNewExerciseCount(created);
-      setMessage(
-        `Posted to ${selectedIds.length} member thread${selectedIds.length === 1 ? "" : "s"}${data.alerts?.sent ? ` · SMS sent to ${data.alerts.sent}` : ""}.`,
-      );
+      setMessage(`Posted to community feed (${data.messages?.length || 0} item${data.messages?.length === 1 ? "" : "s"}).`);
       setBody("");
       setRawSms("");
       setYoutubeUrl("");
@@ -153,7 +139,7 @@ export default function CoachChatComposer({
       setVideoDurationSec(null);
       window.dispatchEvent(
         new CustomEvent("coach-chat-posted", {
-          detail: { audience: "member", threadIds: data.threads || [] },
+          detail: { audience: "cohort", threadIds: data.threads || [] },
         }),
       );
       router.refresh();
@@ -165,29 +151,23 @@ export default function CoachChatComposer({
   }
 
   return (
-    <div className={`space-y-4 ${embedded ? "p-4" : "card border-accent/30"}`}>
+    <div className={`space-y-4 ${embedded ? "p-4" : "card border-violet-500/30"}`}>
       {!embedded && (
         <div>
-          <h2 className="font-semibold">Direct message post</h2>
+          <h2 className="font-semibold">Community post</h2>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            Private 1:1 updates — text, photos, short clips, or YouTube. Only selected members see these.
+            Patreon-style updates — text, photos, short clips (≤{CHAT_VIDEO_MAX_DURATION_SEC}s), or YouTube.
           </p>
         </div>
       )}
 
-      <CoachMemberPicker
-        members={members.map((m) => ({ id: m.id, name: m.name }))}
-        selectedIds={selectedIds}
-        onChange={setSelectedIds}
-        label="Members"
-        required
-      />
+      <p className="text-[11px] text-[var(--muted)]">{COMMUNITY_NO_BROADCAST_NOTE}</p>
 
       <label className="block text-xs">
         <span className="text-[var(--muted)]">Message (optional)</span>
         <textarea
           className="input mt-1 h-20 w-full resize-y text-sm"
-          placeholder="Note for this member..."
+          placeholder="Share an update with the station..."
           value={body}
           onChange={(e) => setBody(e.target.value)}
         />
@@ -196,7 +176,7 @@ export default function CoachChatComposer({
       <details className="group rounded border border-amber-500/30 bg-amber-500/5 p-3">
         <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold">
           <span className="text-accent group-open:rotate-90 transition-transform text-xs">▶</span>
-          Text Upload (optional — overrides schedule)
+          Workout text (optional — posts to Today)
         </summary>
         <div className="mt-3 space-y-2">
           <div className="grid gap-2 sm:grid-cols-2 text-xs">
@@ -251,19 +231,9 @@ export default function CoachChatComposer({
         </label>
       </div>
 
-      <label className="flex items-center gap-2 text-xs cursor-pointer">
-        <input type="checkbox" checked={sendSmsAlert} onChange={(e) => setSendSmsAlert(e.target.checked)} />
-        Also text member&apos;s phone (message preview + link to Messages)
-      </label>
-
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          className="btn-primary px-4 py-1.5 text-sm"
-          disabled={sending || selectedIds.length === 0}
-          onClick={handlePost}
-        >
-          {sending ? "Posting..." : "Post to member(s)"}
+        <button type="button" className="btn-primary px-4 py-1.5 text-sm" disabled={sending} onClick={handlePost}>
+          {sending ? "Posting..." : "Post to community"}
         </button>
         {message && (
           <div className="space-y-1">

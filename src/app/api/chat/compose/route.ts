@@ -2,11 +2,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   addChatMessage,
-  COMMUNITY_FEED_PROGRAM_SLUG,
   ensureCohortThread,
   ensureMemberThread,
   COACH_READER_ID,
 } from "@/lib/coach-chat";
+import {
+  COMMUNITY_FEED_PROGRAM_SLUG,
+  COMMUNITY_FEED_TITLE,
+} from "@/lib/community-feed";
 import { requireCoachChatAccess } from "@/lib/chat-compose-auth";
 import { createTodaySessionFromSms } from "@/lib/today-sessions";
 import { sendCoachChatAlert, sendCoachReplySms } from "@/lib/sms";
@@ -48,7 +51,7 @@ export async function POST(request: Request) {
 
     const isCohort = input.audience === "cohort";
     const memberIds = isCohort
-      ? input.memberIds ?? []
+      ? []
       : input.memberIds?.length
         ? input.memberIds
         : [DEFAULT_DEMO_MEMBER_ID];
@@ -60,8 +63,8 @@ export async function POST(request: Request) {
     const threads = isCohort
       ? [
           await ensureCohortThread(
-            input.programSlug || COMMUNITY_FEED_PROGRAM_SLUG,
-            input.programName || "Train Station community",
+            COMMUNITY_FEED_PROGRAM_SLUG,
+            COMMUNITY_FEED_TITLE,
           ),
         ]
       : await Promise.all(memberIds.map((id) => ensureMemberThread(id)));
@@ -116,7 +119,7 @@ export async function POST(request: Request) {
             todaySessionId: sessionResult.session.id,
             workoutId: sessionResult.workoutId,
             workoutTitle: sessionResult.session.title,
-            alertSent: !!input.sendSmsAlert,
+            alertSent: !isCohort && !!input.sendSmsAlert,
             readByUserIds: [COACH_READER_ID],
           }),
         );
@@ -131,7 +134,7 @@ export async function POST(request: Request) {
             authorName,
             kind: "text",
             body: caption,
-            alertSent: !!input.sendSmsAlert,
+            alertSent: !isCohort && !!input.sendSmsAlert,
             readByUserIds: [COACH_READER_ID],
           }),
         );
@@ -147,7 +150,7 @@ export async function POST(request: Request) {
             kind: "image",
             body: caption || undefined,
             mediaUrl: input.imageUrl,
-            alertSent: !!input.sendSmsAlert,
+            alertSent: !isCohort && !!input.sendSmsAlert,
             readByUserIds: [COACH_READER_ID],
           }),
         );
@@ -164,7 +167,7 @@ export async function POST(request: Request) {
             body: caption || undefined,
             mediaUrl: input.mediaUrl,
             videoDurationSec: input.videoDurationSec,
-            alertSent: !!input.sendSmsAlert,
+            alertSent: !isCohort && !!input.sendSmsAlert,
             readByUserIds: [COACH_READER_ID],
           }),
         );
@@ -181,7 +184,7 @@ export async function POST(request: Request) {
             body: caption || undefined,
             mediaUrl: input.youtubeUrl,
             youtubeId,
-            alertSent: !!input.sendSmsAlert,
+            alertSent: !isCohort && !!input.sendSmsAlert,
             readByUserIds: [COACH_READER_ID],
           }),
         );
@@ -189,7 +192,7 @@ export async function POST(request: Request) {
     }
 
     let alertResult = { sent: 0, logs: [] as any[] };
-    if (input.sendSmsAlert !== false && memberIds.length > 0) {
+    if (!isCohort && input.sendSmsAlert !== false && memberIds.length > 0) {
       if (hasText && !isCohort) {
         const smsLogs: any[] = [];
         for (const memberId of memberIds) {

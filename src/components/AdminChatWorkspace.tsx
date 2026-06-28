@@ -13,6 +13,7 @@ import {
   memberInitials,
 } from "@/lib/chat-colors";
 import type { MemberCoachingMode } from "@/lib/member-coaching-mode";
+import { COMMUNITY_NO_BROADCAST_NOTE } from "@/lib/community-feed";
 
 function threadPreview(messages: ChatMessage[]) {
   const last = messages[messages.length - 1];
@@ -217,9 +218,16 @@ export default function AdminChatWorkspace({
   }, [replyThreadId, loadMessages, refreshUnread]);
 
   useEffect(() => {
-    function onPosted() {
-      void refreshThreads();
-      if (replyThreadId) void loadMessages(replyThreadId);
+    function onPosted(event: Event) {
+      const detail = (event as CustomEvent<{ audience?: string; threadIds?: string[] }>).detail;
+      void refreshThreads().then(() => {
+        if (detail?.audience === "cohort" && detail.threadIds?.[0]) {
+          selectCohort(detail.threadIds[0]);
+          void loadMessages(detail.threadIds[0], { replace: true });
+        } else if (replyThreadId) {
+          void loadMessages(replyThreadId);
+        }
+      });
       void refreshUnread();
     }
     window.addEventListener("coach-chat-posted", onPosted);
@@ -302,12 +310,12 @@ export default function AdminChatWorkspace({
               unreadByThread={unreadByThread}
             />
             {cohortThreads.length > 0 && (
-              <details className={`group mt-3 rounded-lg border px-1 pt-1 ${CHAT_COHORT_COLORS.section}`} open>
-                <summary className={`flex cursor-pointer list-none items-center gap-2 px-2 py-2 text-xs font-bold uppercase tracking-wide ${CHAT_COHORT_COLORS.chipText}`}>
-                  <span className="transition-transform group-open:rotate-90">▶</span>
-                  Community
-                </summary>
-                <div className="mt-1 px-1 pb-1">
+              <div className={`mt-3 rounded-lg border px-1 pt-1 ${CHAT_COHORT_COLORS.section}`}>
+                <p className={`px-2 py-2 text-xs font-bold uppercase tracking-wide ${CHAT_COHORT_COLORS.chipText}`}>
+                  Community feed
+                </p>
+                <p className="px-2 pb-2 text-[10px] text-[var(--muted)]">{COMMUNITY_NO_BROADCAST_NOTE}</p>
+                <div className="px-1 pb-1">
                   {cohortThreads.map((t) => (
                     <button
                       key={t.id}
@@ -321,13 +329,13 @@ export default function AdminChatWorkspace({
                       <span className="ml-2 min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold">{t.title}</span>
                         <span className="mt-0.5 block truncate text-[10px] text-[var(--muted)]">
-                          Cohort · {previews[t.id] || "…"}
+                          {previews[t.id] || "No posts yet"}
                         </span>
                       </span>
                     </button>
                   ))}
                 </div>
-              </details>
+              </div>
             )}
           </div>
           <button
@@ -365,7 +373,7 @@ export default function AdminChatWorkspace({
                 <p className="truncate text-base font-semibold">{conversationTitle}</p>
                 <p className="text-[11px] text-[var(--muted)]">
                   {activeThread?.kind === "cohort"
-                    ? "Community broadcast"
+                    ? COMMUNITY_NO_BROADCAST_NOTE
                     : activeMode === "live"
                       ? "Live member · 1:1 thread"
                       : "Asynch member · 1:1 thread"}
@@ -399,11 +407,12 @@ export default function AdminChatWorkspace({
               setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))
             }
           />
-          {replyThreadId && activeMemberId && (
+          {replyThreadId && (
             <ChatThreadReply
               threadId={replyThreadId}
               role="coach"
-              placeholder="Quick reply…"
+              threadKind={activeThread?.kind}
+              placeholder={activeThread?.kind === "cohort" ? "Reply in community feed…" : "Quick reply…"}
               onSent={(message) => {
                 if (!message) return;
                 setMessages((prev) => {

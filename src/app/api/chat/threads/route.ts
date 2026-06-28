@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import {
+  ensureCohortThread,
   ensureMemberThread,
   getUnreadCountsByThreadForCoach,
   hydrateCoachChat,
   listThreadsForCoach,
   listThreadsForMember,
 } from "@/lib/coach-chat";
+import { COMMUNITY_FEED_PROGRAM_SLUG, COMMUNITY_FEED_TITLE } from "@/lib/community-feed";
 import { resolveMemberUserId } from "@/lib/current-user";
 
 export async function POST(request: Request) {
@@ -35,8 +37,11 @@ export async function GET(request: Request) {
   }
 
   const uid = await resolveMemberUserId();
+  await ensureMemberThread(uid);
+  await ensureCohortThread(COMMUNITY_FEED_PROGRAM_SLUG, COMMUNITY_FEED_TITLE);
+  const slugs = [...new Set([COMMUNITY_FEED_PROGRAM_SLUG, ...programSlugs])];
   return NextResponse.json(
-    { threads: listThreadsForMember(uid, programSlugs) },
+    { threads: listThreadsForMember(uid, slugs) },
     { headers: { "Cache-Control": "no-store" } },
   );
 }

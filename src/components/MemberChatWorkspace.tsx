@@ -8,9 +8,9 @@ import { applyChatMessageLoad } from "@/lib/chat-message-merge";
 import { DEMO_COACH } from "@/lib/demo-coach";
 
 function orderThreads(threads: ChatThread[]) {
+  const cohorts = threads.filter((t) => t.kind === "cohort");
   const direct = threads.filter((t) => t.kind === "member");
-  const cohorts = threads.filter((t) => t.kind !== "member");
-  return [...direct, ...cohorts];
+  return [...cohorts, ...direct];
 }
 
 function threadLabel(thread: ChatThread) {
@@ -34,10 +34,13 @@ export default function MemberChatWorkspace({
   memberId: string;
 }) {
   const orderedInitial = useMemo(() => orderThreads(initialThreads), [initialThreads]);
+  const defaultCommunity = orderedInitial.find((t) => t.kind === "cohort");
   const defaultDirect = orderedInitial.find((t) => t.kind === "member");
 
   const [threads, setThreads] = useState(orderedInitial);
-  const [activeId, setActiveId] = useState(defaultDirect?.id || orderedInitial[0]?.id || "");
+  const [activeId, setActiveId] = useState(
+    defaultCommunity?.id || defaultDirect?.id || orderedInitial[0]?.id || "",
+  );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -85,8 +88,12 @@ export default function MemberChatWorkspace({
     return () => clearInterval(id);
   }, [activeId, loadMessages]);
 
-  const directThread = threads.find((t) => t.kind === "member");
-  const replyThreadId = directThread?.id || activeId;
+  const activeReplyThread = threads.find((t) => t.id === activeId);
+  const replyThreadId = activeId;
+  const replyPlaceholder =
+    activeReplyThread?.kind === "cohort"
+      ? "Comment on this post..."
+      : "Message your coach...";
 
   return (
     <div className="space-y-4">
@@ -118,7 +125,11 @@ export default function MemberChatWorkspace({
           messages={visibleMessages}
           viewerRole="member"
           viewerId={memberId}
-          emptyLabel="No posts from your coach yet."
+          emptyLabel={
+            activeReplyThread?.kind === "cohort"
+              ? "No community posts yet."
+              : "No messages from your coach yet."
+          }
           onReactionChange={(updated) =>
             setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))
           }
@@ -127,6 +138,8 @@ export default function MemberChatWorkspace({
           <ChatThreadReply
             threadId={replyThreadId}
             role="member"
+            threadKind={activeReplyThread?.kind}
+            placeholder={replyPlaceholder}
             onSent={(message) => {
               if (!message) return;
               setMessages((prev) => {

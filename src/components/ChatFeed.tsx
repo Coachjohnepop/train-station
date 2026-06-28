@@ -6,6 +6,7 @@ import { youtubeEmbedUrl } from "@/lib/youtube";
 import type { ChatMessage, ChatReaction, ChatThread } from "@/lib/coach-chat";
 import { bubbleColorsForMessage, messageKindLabel } from "@/lib/chat-colors";
 import { linkifyText } from "@/lib/linkify-text";
+import { COMMUNITY_NO_BROADCAST_NOTE } from "@/lib/community-feed";
 
 const QUICK_REACTIONS = ["✅", "👍", "❤️", "🙌", "💪", "🔥"] as const;
 
@@ -401,7 +402,7 @@ export default function ChatFeed({
         <div className={`shrink-0 border-b border-[var(--border)] px-4 py-2.5 ${headerAccent || ""}`}>
           <h2 className="text-sm font-semibold">{thread.title}</h2>
           <p className="text-[11px] text-[var(--muted)]">
-            {thread.kind === "cohort" ? "Community feed" : "Direct messages with your coach"}
+            {thread.kind === "cohort" ? `Community feed · ${COMMUNITY_NO_BROADCAST_NOTE}` : "Direct messages with your coach"}
           </p>
         </div>
       )}
