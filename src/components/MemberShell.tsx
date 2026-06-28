@@ -1,4 +1,5 @@
 import Link from "next/link";
+import IntakeBookingCelebrate from "@/components/IntakeBookingCelebrate";
 import MemberNav from "@/components/MemberNav";
 import TrainStationBrand from "@/components/TrainStationBrand";
 import LogoutButton from "@/components/LogoutButton";
@@ -55,6 +56,7 @@ export default function MemberShell({
       </header>
 
       <main className="mx-auto w-full max-w-lg md:max-w-3xl lg:max-w-6xl xl:max-w-7xl flex-1 px-4 py-6 md:px-6 lg:px-8">{children}</main>
+      <IntakeBookingCelebrate />
     </div>
   );
 }

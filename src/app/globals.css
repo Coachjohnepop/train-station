@@ -958,6 +958,58 @@ table.data th {
   color: var(--ramp-gold-light);
 }
 
+.intake-celebrate-points {
+  text-shadow: 0 4px 28px var(--ramp-gold-glow);
+  animation: intake-celebrate-pop 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes intake-celebrate-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.member-nav-score-badge {
+  position: absolute;
+  right: 0.15rem;
+  top: 0.1rem;
+  min-width: 1.15rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--ramp-gold) 55%, transparent);
+  background: linear-gradient(180deg, var(--ramp-gold-light) 0%, var(--ramp-gold) 100%);
+  padding: 0.05rem 0.3rem;
+  font-size: 0.5625rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #1a1028;
+  box-shadow: 0 0 10px var(--ramp-gold-glow);
+}
+
+.member-nav-score-badge--pulse {
+  animation: member-score-badge-pop 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.member-nav-score-pulse {
+  box-shadow: 0 0 16px var(--ramp-gold-glow);
+}
+
+@keyframes member-score-badge-pop {
+  0% {
+    transform: scale(0.5);
+  }
+  45% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 /* Lets client code detect Chrome/Safari password autofill via animationstart */
 @keyframes onAutoFillStart {
   from {

@@ -237,7 +237,22 @@ export default function MemberBookPage() {
         prefill={memberEmail ? { email: memberEmail } : undefined}
         title="Book with Coach Jeremy"
         onClose={() => setCalendlyModalOpen(false)}
-        onScheduled={() => setCalendlyBooked(true)}
+        onScheduled={() => {
+          setCalendlyBooked(true);
+          void (async () => {
+            const res = await fetch("/api/member/intake-scheduled", { method: "POST" });
+            if (!res.ok) return;
+            const data = await res.json();
+            window.dispatchEvent(
+              new CustomEvent("intake-booking-celebrate", {
+                detail: {
+                  pointsEarned: data.pointsEarned,
+                  totalPoints: data.totalPoints,
+                },
+              }),
+            );
+          })();
+        }}
       />
     </div>
   );
