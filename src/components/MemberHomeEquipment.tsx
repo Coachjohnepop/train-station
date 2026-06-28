@@ -69,6 +69,12 @@ export default function MemberHomeEquipment({ defaultOpen = false }: { defaultOp
     void save(updated);
   }
 
+  function setAll(hasAtHome: boolean) {
+    const updated = items.map((item) => ({ ...item, hasAtHome }));
+    setItems(updated);
+    void save(updated);
+  }
+
   useEffect(() => {
     load();
   }, []);
@@ -104,6 +110,27 @@ export default function MemberHomeEquipment({ defaultOpen = false }: { defaultOp
           {!hasItems ? (
             <div className="text-[var(--muted)]">No equipment catalog loaded.</div>
           ) : (
+            <>
+            <div className="mt-1 flex items-center gap-3 text-[11px]">
+              <button
+                type="button"
+                onClick={() => setAll(true)}
+                disabled={saving || selectedCount === items.length}
+                className="font-medium text-accent hover:underline disabled:cursor-default disabled:text-[var(--muted)] disabled:no-underline"
+              >
+                Select all
+              </button>
+              {selectedCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setAll(false)}
+                  disabled={saving}
+                  className="text-[var(--muted)] hover:text-white hover:underline disabled:opacity-50"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 mt-1">
               {items.map((item) => (
                 <label key={item.id} className="flex items-center gap-2 cursor-pointer hover:bg-[var(--surface)]/50 px-1 py-0.5 rounded">
@@ -122,6 +149,7 @@ export default function MemberHomeEquipment({ defaultOpen = false }: { defaultOp
                 </label>
               ))}
             </div>
+            </>
           )}
 
           <div className="mt-2 text-[10px] text-[var(--muted)]">
