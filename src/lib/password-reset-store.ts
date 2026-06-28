@@ -54,7 +54,7 @@ async function upsertTokenForEmail(
   entry: StoredResetToken,
 ): Promise<boolean> {
   // Retry if a concurrent reset for another address overwrote blob between read and write.
-  for (let attempt = 0; attempt < 4; attempt += 1) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
     const latest = await getStore({ preferFresh: true });
     const next: ResetStore = { ...latest };
 

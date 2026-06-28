@@ -5,7 +5,7 @@ import { normalizeAccountEmail } from "@/lib/account-email";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { isInvitedAccountEmail } from "@/lib/invited-accounts";
 import { getAllSignInAccounts, upsertSignInAccount } from "@/lib/member-accounts-store";
-import { hashPassword } from "@/lib/password";
+import { hashPassword, verifyPassword } from "@/lib/password";
 import { appBaseUrl } from "@/lib/sms";
 import { BRAND_NAME } from "@/lib/brand";
 import { sendResendEmail, transactionalSubject } from "@/lib/resend-mail";
@@ -100,14 +100,26 @@ export async function setAccountPassword(
 
   const passwordHash = hashPassword(password);
 
-  await upsertSignInAccount({
-    email: normalized,
-    userId: account.userId,
-    role: account.role,
-    name: account.name || normalized.split("@")[0],
-    phone: account.phone,
-    passwordHash,
-  });
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await upsertSignInAccount({
+      email: normalized,
+      userId: account.userId,
+      role: account.role,
+      name: account.name || normalized.split("@")[0],
+      phone: account.phone,
+      passwordHash,
+    });
+
+    const accounts = await getAllSignInAccounts({ preferFresh: true });
+    const saved = accounts[normalized]?.passwordHash;
+    if (saved && verifyPassword(password, saved)) {
+      break;
+    }
+    if (attempt === 3) {
+      return { ok: false, detail: "Password could not be saved — try again in a moment." };
+    }
+    await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+  }
 
   if (!isDemoMode()) {
     try {
