@@ -852,14 +852,15 @@ table.data th {
   background: color-mix(in srgb, var(--accent-deep) 12%, var(--surface));
 }
 
-/* Member bottom nav — Today is 2× the footprint of sibling tabs (mobile-first). */
+/* Member bottom nav — Today home tab: narrower column, still visually distinct. */
 .member-nav {
-  min-height: 4.5rem;
+  min-height: 2.75rem;
 }
 
 .member-nav-home {
-  min-height: 4.5rem;
-  padding: 0.45rem 0.35rem 0.4rem;
+  min-height: 2.75rem;
+  min-width: 0;
+  padding: 0.35rem 0.2rem 0.3rem;
   gap: 0.1rem;
   box-shadow: 0 4px 18px color-mix(in srgb, var(--accent-deep) 22%, transparent);
 }
@@ -884,23 +885,23 @@ table.data th {
 }
 
 .member-nav-home-icon {
-  width: 1.35rem;
-  height: 1.35rem;
+  width: 1.1rem;
+  height: 1.1rem;
   flex-shrink: 0;
   opacity: 0.95;
 }
 
 .member-nav-home-label {
-  font-size: 0.9375rem;
+  font-size: 0.6875rem;
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: 0.01em;
 }
 
 .member-nav-home-sublabel {
-  font-size: 0.5625rem;
+  font-size: 0.5rem;
   font-weight: 700;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   opacity: 0.72;
 }
@@ -911,12 +912,12 @@ table.data th {
 
 @media (min-width: 640px) {
   .member-nav-home-label {
-    font-size: 1rem;
+    font-size: 0.75rem;
   }
 
   .member-nav-home-icon {
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 1.2rem;
+    height: 1.2rem;
   }
 }
 
