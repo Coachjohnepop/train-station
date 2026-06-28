@@ -2,7 +2,6 @@
 
 import { useCallback, useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   approachLabel,
   formatPastPerformance,
@@ -97,7 +96,7 @@ export default function MemberWorkoutConsole({
   const [finishedListExpanded, setFinishedListExpanded] = useState(false);
   const [coachLive, setCoachLive] = useState(false);
   const [partnerLive, setPartnerLive] = useState(false);
-  const router = useRouter();
+  const [loggedDetailsOpen, setLoggedDetailsOpen] = useState(false);
 
   const LIVE_POLL_MS = 200;
   const liveSyncEnabled =
@@ -575,52 +574,57 @@ export default function MemberWorkoutConsole({
 
   return (
     <div
-      className={`mx-auto w-full max-w-md md:max-w-2xl lg:max-w-2xl xl:max-w-2xl ${embedded ? "px-0 py-2 md:px-2" : "px-4 py-6 md:px-6"}`}
+      className={`mx-auto w-full max-w-md md:max-w-2xl lg:max-w-2xl xl:max-w-2xl ${
+        embedded ? "px-0 py-2 md:px-2" : showLoggedSuccess ? "px-4 py-2 md:px-6" : "px-4 py-6 md:px-6"
+      }`}
     >
       {showLoggedSuccess ? (
         <div
           id="workout-logged-success"
-          className="rounded-2xl border border-[var(--success)]/40 bg-[var(--success)]/10 p-6 text-center"
+          className="rounded-xl border border-[var(--success)]/35 bg-[var(--success)]/8 px-3 py-2.5"
         >
-          <div className="mx-auto mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--success)]/20 text-xl">
-            ✓
-          </div>
-          <p className="text-lg font-semibold text-[var(--success)]">Workout logged!</p>
-          <p className="mt-1 text-sm font-medium text-white">{workout.workoutName}</p>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            {logResult.count > 0
-              ? `${logResult.count} exercise${logResult.count === 1 ? "" : "s"} saved. Your silhouettes are updated for next time.`
-              : "Session progress noted (no exercises marked finished this time)."}
-          </p>
-          {logResult.progress != null && (
-            <p className="mt-1 text-sm font-medium text-[var(--success)]">
-              {logResult.progress}% complete{" "}
-              {logResult.progress < 100
-                ? "— partial (instructor sees which exercises you marked)"
-                : "— full workout"}
-            </p>
-          )}
-          <p className="mt-3 text-xs text-[var(--muted)]">
-            Logged {new Date(logResult.performedAt).toLocaleString()}
-          </p>
-
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link
-              href="/member/today"
-              className="btn-ghost inline-flex min-w-[8.5rem] justify-center"
-              onClick={() => router.refresh()}
-            >
-              Dashboard
-            </Link>
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              className="btn-ghost min-w-[8.5rem]"
+              className="flex min-w-0 flex-1 items-center gap-2 text-left"
+              onClick={() => setLoggedDetailsOpen((open) => !open)}
+              aria-expanded={loggedDetailsOpen}
+            >
+              <span
+                className={`shrink-0 text-[10px] text-[var(--success)] transition-transform duration-200 ${
+                  loggedDetailsOpen ? "rotate-90" : ""
+                }`}
+                aria-hidden
+              >
+                ▶
+              </span>
+              <span className="truncate text-sm font-semibold text-[var(--success)]">Workout logged</span>
+            </button>
+            <button
+              type="button"
+              className="btn-ghost shrink-0 px-3 py-1.5 text-xs font-semibold"
               onClick={() => window.location.reload()}
             >
-              Workout
+              Open
             </button>
           </div>
-          <p className="mt-4 text-[10px] text-[var(--muted)]">Great work — consistency compounds.</p>
+          {loggedDetailsOpen && (
+            <div className="mt-2 space-y-1 border-t border-[var(--success)]/20 pt-2 text-xs text-[var(--muted)]">
+              <p className="font-medium text-white">{workout.workoutName}</p>
+              <p>
+                {logResult.count > 0
+                  ? `${logResult.count} exercise${logResult.count === 1 ? "" : "s"} saved — silhouettes updated.`
+                  : "Session progress noted."}
+              </p>
+              {logResult.progress != null && (
+                <p className="text-[var(--success)]">
+                  {logResult.progress}% complete
+                  {logResult.progress < 100 ? " (partial)" : ""}
+                </p>
+              )}
+              <p>Logged {new Date(logResult.performedAt).toLocaleString()}</p>
+            </div>
+          )}
         </div>
       ) : null}
 
