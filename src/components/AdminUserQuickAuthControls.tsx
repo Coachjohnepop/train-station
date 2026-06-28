@@ -184,14 +184,14 @@ export default function AdminUserQuickAuthControls({
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 className="input mt-1 w-full font-mono tracking-widest"
-                placeholder="4–6 digits"
+                placeholder="4 digits"
                 autoComplete="off"
               />
             </label>
             <button
               type="button"
               className="btn-primary text-xs"
-              disabled={busy || pin.length < 4}
+              disabled={busy || pin.length !== 4}
               onClick={() => void runAction({ action: "setPin", pin })}
             >
               Save PIN

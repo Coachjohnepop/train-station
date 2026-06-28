@@ -12,7 +12,7 @@ const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"]
 export default function PinPad({
   value,
   onChange,
-  maxLength = 6,
+  maxLength = 4,
   disabled = false,
 }: PinPadProps) {
   function press(key: (typeof KEYS)[number]) {

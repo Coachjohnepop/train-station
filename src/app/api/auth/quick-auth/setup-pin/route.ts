@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid device." }, { status: 400 });
   }
   if (!isValidPin(pin)) {
-    return NextResponse.json({ error: "PIN must be 4–6 digits." }, { status: 400 });
+    return NextResponse.json({ error: "PIN must be 4 digits." }, { status: 400 });
   }
 
   const existing = (await getDeviceQuickAuth(session.email, deviceId)) ?? {

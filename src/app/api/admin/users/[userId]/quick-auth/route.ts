@@ -61,7 +61,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   switch (body.action) {
     case "setPin":
       if (!isValidPin(body.pin)) {
-        return NextResponse.json({ error: "PIN must be 4–6 digits." }, { status: 400 });
+        return NextResponse.json({ error: "PIN must be 4 digits." }, { status: 400 });
       }
       await setAdminPinForEmail(email, body.pin);
       break;

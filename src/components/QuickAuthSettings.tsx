@@ -53,13 +53,13 @@ export default function QuickAuthSettings({ email }: { email: string }) {
   }, [email, deviceId, ready]);
 
   useEffect(() => {
-    if (pinStep !== "enter" || draftPin.length < 4 || busy) return;
+    if (pinStep !== "enter" || draftPin.length !== 4 || busy) return;
     setPinStep("confirm");
     setConfirmPin("");
   }, [draftPin, pinStep, busy]);
 
   useEffect(() => {
-    if (pinStep !== "confirm" || confirmPin.length < 4 || busy) return;
+    if (pinStep !== "confirm" || confirmPin.length !== 4 || busy) return;
     void savePin(draftPin, confirmPin);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirmPin, pinStep, busy]);
@@ -216,7 +216,7 @@ export default function QuickAuthSettings({ email }: { email: string }) {
           <div>
             <p className="font-medium">PIN code</p>
             <p className="text-xs text-[var(--muted)]">
-              {status.pin ? "Enabled on this device" : "4–6 digits, device only"}
+              {status.pin ? "Enabled on this device" : "4 digits, device only"}
             </p>
           </div>
           {status.pin ? (

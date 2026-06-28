@@ -76,7 +76,7 @@ export default function QuickAuthLogin({
 
   const submitPin = useCallback(
     async (pinValue: string) => {
-      if (!ready || pinValue.length < 4) return;
+      if (!ready || pinValue.length !== 4) return;
       setLoading(true);
       setError(null);
       try {
@@ -157,7 +157,7 @@ export default function QuickAuthLogin({
   }, [email, deviceId, ready, onAvailabilityChange, onStatusResolved]);
 
   useEffect(() => {
-    if (!pinEnabled || pin.length < 4 || loading || !ready) return;
+    if (!pinEnabled || pin.length !== 4 || loading || !ready) return;
 
     const timer = window.setTimeout(() => {
       void submitPin(pin);
@@ -187,7 +187,7 @@ export default function QuickAuthLogin({
         <>
           <PinPad value={pin} onChange={setPin} disabled={loading} />
           <p className="text-center text-[10px] text-[var(--muted)]">
-            Enter your 4–6 digit PIN — we&apos;ll verify after you pause typing.
+            Enter your 4-digit PIN — we&apos;ll verify after you pause typing.
           </p>
         </>
       )}

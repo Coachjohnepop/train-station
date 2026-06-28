@@ -9,6 +9,8 @@ import {
   writeQuickAuthMeta,
 } from "@/lib/quick-auth-client";
 
+const PIN_LENGTH = 4;
+
 type QuickAuthSetupPromptProps = {
   email: string;
   onContinue: () => void;
@@ -86,29 +88,38 @@ export default function QuickAuthSetupPrompt({
           setPinStep("enter");
           return;
         }
-        setMessage("PIN saved — you can sign in faster next time.");
+
         setPinEnabled(true);
         setDraftPin("");
         setConfirmPin("");
         setPinStep("enter");
-        await refreshStatus();
+        writeQuickAuthMeta({
+          email: email.trim().toLowerCase(),
+          pin: true,
+          webauthn: webauthnEnabled,
+          updatedAt: new Date().toISOString(),
+        });
+        onContinue();
       } catch {
         setError("Could not save PIN.");
+        setDraftPin("");
+        setConfirmPin("");
+        setPinStep("enter");
       } finally {
         setBusy(false);
       }
     },
-    [ready, deviceId, refreshStatus],
+    [ready, deviceId, email, webauthnEnabled, onContinue],
   );
 
   useEffect(() => {
-    if (pinStep !== "enter" || draftPin.length < 4 || busy) return;
+    if (pinStep !== "enter" || draftPin.length !== PIN_LENGTH || busy) return;
     setPinStep("confirm");
     setConfirmPin("");
   }, [draftPin, pinStep, busy]);
 
   useEffect(() => {
-    if (pinStep !== "confirm" || confirmPin.length < 4 || busy) return;
+    if (pinStep !== "confirm" || confirmPin.length !== PIN_LENGTH || busy) return;
     void savePin(draftPin, confirmPin);
   }, [confirmPin, pinStep, busy, draftPin, savePin]);
 
@@ -178,11 +189,12 @@ export default function QuickAuthSetupPrompt({
       {!pinEnabled ? (
         <div className="space-y-2">
           <p className="text-center text-xs text-[var(--muted)]">
-            {pinStep === "enter" ? "Choose a 4–6 digit PIN" : "Confirm your PIN"}
+            {pinStep === "enter" ? "Choose a 4-digit PIN" : "Confirm your PIN"}
           </p>
           <PinPad
             value={pinStep === "enter" ? draftPin : confirmPin}
             onChange={pinStep === "enter" ? setDraftPin : setConfirmPin}
+            maxLength={PIN_LENGTH}
             disabled={busy || !ready}
           />
         </div>
