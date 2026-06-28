@@ -8,7 +8,10 @@ export type IntakeCelebrateDetail = {
   totalPoints: number;
 };
 
-type Phase = "idle" | "burst" | "fly" | "done";
+type Phase = "idle" | "burst" | "fly" | "fade" | "done";
+
+const FLY_MS = 850;
+const FADE_MS = 2000;
 
 function runConfetti(canvas: HTMLCanvasElement, durationMs = 2200) {
   const ctx = canvas.getContext("2d");
@@ -81,22 +84,23 @@ export default function IntakeBookingCelebrate() {
   const flyRef = useRef<HTMLDivElement>(null);
   const stopConfettiRef = useRef<(() => void) | null>(null);
 
-  const finish = useCallback((totalPoints: number) => {
-    window.dispatchEvent(
-      new CustomEvent("member-score-updated", { detail: { totalPoints } }),
-    );
+  const cleanup = useCallback(() => {
     setPhase("done");
-    setTimeout(() => {
+    window.setTimeout(() => {
       setPhase("idle");
       setDetail(null);
-    }, 400);
+      setFlyStyle({});
+    }, 50);
   }, []);
 
-  const startFly = useCallback(() => {
+  const startFly = useCallback((payload: IntakeCelebrateDetail) => {
     const target = document.getElementById("member-nav-scores");
     const flyEl = flyRef.current;
     if (!target || !flyEl) {
-      if (detail) finish(detail.totalPoints);
+      window.dispatchEvent(
+        new CustomEvent("member-score-updated", { detail: { totalPoints: payload.totalPoints } }),
+      );
+      cleanup();
       return;
     }
 
@@ -104,6 +108,7 @@ export default function IntakeBookingCelebrate() {
     const to = target.getBoundingClientRect();
     const dx = to.left + to.width / 2 - (from.left + from.width / 2);
     const dy = to.top + to.height / 2 - (from.top + from.height / 2);
+    const atScores = `translate(${dx}px, ${dy}px) scale(0.35)`;
 
     setFlyStyle({
       transform: "translate(0, 0) scale(1)",
@@ -114,16 +119,28 @@ export default function IntakeBookingCelebrate() {
     requestAnimationFrame(() => {
       setPhase("fly");
       setFlyStyle({
-        transform: `translate(${dx}px, ${dy}px) scale(0.35)`,
+        transform: atScores,
         opacity: 0.85,
-        transition: "transform 0.85s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.85s ease",
+        transition: `transform ${FLY_MS}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${FLY_MS}ms ease`,
       });
     });
 
     window.setTimeout(() => {
-      if (detail) finish(detail.totalPoints);
-    }, 900);
-  }, [detail, finish]);
+      window.dispatchEvent(
+        new CustomEvent("member-score-updated", { detail: { totalPoints: payload.totalPoints } }),
+      );
+      setPhase("fade");
+      setFlyStyle({
+        transform: atScores,
+        opacity: 0,
+        transition: `opacity ${FADE_MS}ms ease`,
+      });
+    }, FLY_MS);
+
+    window.setTimeout(() => {
+      cleanup();
+    }, FLY_MS + FADE_MS);
+  }, [cleanup]);
 
   useEffect(() => {
     function onCelebrate(e: Event) {
@@ -143,7 +160,7 @@ export default function IntakeBookingCelebrate() {
         stopConfettiRef.current = runConfetti(canvasRef.current);
       }
 
-      window.setTimeout(() => startFly(), 1600);
+      window.setTimeout(() => startFly(payload), 1600);
     }
 
     window.addEventListener("intake-booking-celebrate", onCelebrate);
@@ -165,12 +182,12 @@ export default function IntakeBookingCelebrate() {
     >
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
 
-      {(phase === "burst" || phase === "fly") && (
+      {(phase === "burst" || phase === "fly" || phase === "fade") && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div
             ref={flyRef}
             className="intake-celebrate-points text-center"
-            style={phase === "fly" ? flyStyle : undefined}
+            style={phase === "fly" || phase === "fade" ? flyStyle : undefined}
           >
             <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--ramp-gold-light)]">
               Intro booked
