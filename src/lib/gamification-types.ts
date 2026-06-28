@@ -1,0 +1,54 @@
+export const GAMIFICATION_POINTS = {
+  warmup_before_live: 50,
+  intake_scheduled: 100,
+  workout_logged: 25,
+  intake_complete: 75,
+  onboarding_complete: 25,
+} as const;
+
+export type GamificationEventType = keyof typeof GAMIFICATION_POINTS;
+
+export type GamificationEvent = {
+  /** Dedupe key — same id cannot award twice */
+  id: string;
+  type: GamificationEventType;
+  points: number;
+  label: string;
+  at: string;
+  programSlug?: string | null;
+};
+
+export type UserGamification = {
+  userId: string;
+  totalPoints: number;
+  events: GamificationEvent[];
+  updatedAt: string;
+};
+
+export type LeaderboardScope = "program" | "site";
+
+export type LeaderboardRow = {
+  rank: number;
+  userId: string;
+  displayName: string;
+  points: number;
+  bestMove: string | null;
+  isSelf: boolean;
+};
+
+export type LeaderboardPayload = {
+  scope: LeaderboardScope;
+  programSlug: string | null;
+  programName: string | null;
+  viewer: LeaderboardRow;
+  rows: LeaderboardRow[];
+  updatedAt: string;
+};
+
+export const GAMIFICATION_EVENT_LABELS: Record<GamificationEventType, string> = {
+  warmup_before_live: "Warm-ups before live",
+  intake_scheduled: "Booked intro call",
+  workout_logged: "Workout logged",
+  intake_complete: "Intake complete",
+  onboarding_complete: "Finished setup",
+};

@@ -17,6 +17,7 @@ import { memberPostOnboardPath } from "@/lib/member-destinations";
 import { sendMemberWelcomeEmail } from "@/lib/member-welcome";
 import { sendWelcomeSms } from "@/lib/sms";
 import { notifyCoachNewMember } from "@/lib/coach-member-notify";
+import { awardGamificationPoints } from "@/lib/member-gamification-store";
 
 const schema = z.object({
   measurements: z
@@ -128,6 +129,22 @@ Calendly opened: ${calendlyOpened ? "yes" : "no"}
     email: session.email,
     plan: profile.plan,
   });
+
+  await awardGamificationPoints({
+    userId: session.id,
+    eventId: "onboarding:complete",
+    type: "onboarding_complete",
+    programSlug: enrolledSlug,
+  });
+
+  if (calendlyOpened) {
+    await awardGamificationPoints({
+      userId: session.id,
+      eventId: "intake:scheduled",
+      type: "intake_scheduled",
+      programSlug: enrolledSlug,
+    });
+  }
 
   const welcomePatch: Parameters<typeof updateMemberProfile>[1] = {};
 

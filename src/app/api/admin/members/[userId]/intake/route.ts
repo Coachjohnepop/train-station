@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { getMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
+import { awardGamificationPoints } from "@/lib/member-gamification-store";
+import { getUserEnrollments } from "@/lib/data/user-data";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +28,15 @@ export async function POST(_request: Request, { params }: Params) {
   const profile = await updateMemberProfile(userId, {
     coachIntakeCompleteAt: completedAt,
     coachIntakeCompletedBy: session.email,
+  });
+
+  const enrolls = getUserEnrollments(userId);
+  const programSlug = Object.keys(enrolls)[0] || "adult";
+  await awardGamificationPoints({
+    userId,
+    eventId: "intake:complete",
+    type: "intake_complete",
+    programSlug,
   });
 
   return NextResponse.json({ ok: true, profile });

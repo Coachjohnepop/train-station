@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { resolveUserId } from "@/lib/current-user";
 import { createWorkoutLogAndPerformances, type LogExerciseInput } from "@/lib/data/user-data";
+import { awardGamificationPoints } from "@/lib/member-gamification-store";
 
 const logExerciseSchema = z.object({
   workoutExerciseId: z.string().optional(),
@@ -45,6 +46,12 @@ export async function POST(request: Request, { params }: Params) {
       exercises: parsed.data.exercises as LogExerciseInput[],
       programSlug: parsed.data.programSlug,
       progress: parsed.data.progress,
+    });
+    await awardGamificationPoints({
+      userId: uid,
+      eventId: `workout:${result.logId || workoutId}:${result.performedAt}`,
+      type: "workout_logged",
+      programSlug: parsed.data.programSlug ?? null,
     });
     return NextResponse.json(result);
   } catch (e: any) {

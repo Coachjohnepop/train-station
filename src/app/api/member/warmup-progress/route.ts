@@ -9,6 +9,7 @@ import {
 } from "@/lib/member-warmup-progress-store";
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
+import { awardGamificationPoints } from "@/lib/member-gamification-store";
 
 const putSchema = z.object({
   sessionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -63,6 +64,11 @@ export async function PUT(request: Request) {
       completedSets: next.completedSets,
       finishedExercises: next.finishedExercises,
       coachNotifiedAt: new Date().toISOString(),
+    });
+    await awardGamificationPoints({
+      userId: session.id,
+      eventId: `warmup:${body.data.sessionDate}`,
+      type: "warmup_before_live",
     });
   }
 

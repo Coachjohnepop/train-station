@@ -21,6 +21,11 @@ const items = [
     badge: true,
   },
   {
+    href: "/member/leaderboard",
+    label: "Scores",
+    match: (p: string) => p.startsWith("/member/leaderboard"),
+  },
+  {
     href: "/member/book",
     label: "Book Call",
     match: (p: string) => p.startsWith("/member/book"),

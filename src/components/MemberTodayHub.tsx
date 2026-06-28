@@ -23,7 +23,10 @@ export default function MemberTodayHub({ dashboard }: Props) {
           <span className="text-xs font-medium text-accent">→</span>
         </Link>
 
-        <div className="card flex items-center justify-around gap-2 p-3">
+        <Link
+          href="/member/leaderboard"
+          className="card flex items-center justify-around gap-2 p-3 transition hover-accent-border"
+        >
           <div className="text-center">
             <p className="text-xl font-bold tabular-nums text-accent">{stats.dayStreak}</p>
             <p className="text-[10px] text-[var(--muted)]">streak</p>
@@ -32,7 +35,8 @@ export default function MemberTodayHub({ dashboard }: Props) {
             <p className="text-xl font-bold tabular-nums">{stats.totalWorkouts}</p>
             <p className="text-[10px] text-[var(--muted)]">logged</p>
           </div>
-        </div>
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-accent">Scores →</span>
+        </Link>
 
         <Link
           href="/member/account"
