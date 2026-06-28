@@ -179,6 +179,7 @@ export default function MemberTodayShell({
   }, [selectDate, todayIso]);
 
   const rampHighlight = showWarmupFlow && !intakeComplete;
+  const todayGold = isToday;
   const showFollowUpCard = isToday && !!coachMeetingRequestedAt && intakeComplete;
   const intakeStatus = {
     introBookedAt,
@@ -187,10 +188,13 @@ export default function MemberTodayShell({
   };
 
   return (
-    <div id="member-today-top" className="space-y-4 scroll-mt-4">
+    <div
+      id="member-today-top"
+      className={`scroll-mt-4 space-y-4 ${todayGold ? "member-today-gold-shell" : ""}`}
+    >
       <div>
         <h1
-          className={`text-xl font-bold sm:text-2xl ${isToday && rampHighlight ? "text-ramp-gold" : ""}`}
+          className={`text-xl font-bold sm:text-2xl ${todayGold ? "text-ramp-gold" : ""}`}
         >
           {isToday ? "Today" : "Your schedule"}
         </h1>
@@ -206,7 +210,7 @@ export default function MemberTodayShell({
       {rollup && days.length > 0 && (
         <div
           className={`flex flex-wrap items-center justify-center gap-3 rounded-xl border px-3 py-2 text-center text-[11px] text-[var(--muted)] ${
-            rampHighlight
+            todayGold
               ? "border-[color-mix(in_srgb,var(--ramp-gold)_40%,var(--border))] bg-[color-mix(in_srgb,var(--ramp-gold)_8%,var(--surface))]"
               : "border-[var(--border)] bg-[var(--surface)]/60"
           }`}
@@ -216,7 +220,7 @@ export default function MemberTodayShell({
             done
           </span>
           <span className="text-[var(--border)]">|</span>
-          <span className={`font-semibold ${rampHighlight ? "text-ramp-gold" : "text-accent font-medium"}`}>
+          <span className={`font-semibold ${todayGold ? "text-ramp-gold" : "text-accent font-medium"}`}>
             Today
           </span>
           <span className="text-[var(--border)]">|</span>
@@ -232,7 +236,7 @@ export default function MemberTodayShell({
           selectedIso={selectedDate}
           todayIso={todayIso}
           onSelect={selectDate}
-          highlightTodayGold={rampHighlight}
+          highlightTodayGold={todayGold}
         />
       )}
 
@@ -283,8 +287,8 @@ export default function MemberTodayShell({
       )}
 
       {isToday && nextStretchPreview.length > 0 && (
-        <div className="card border-dashed border-[var(--accent)]/25 bg-[var(--accent)]/5 p-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-accent">
+        <div className="card border-dashed border-[color-mix(in_srgb,var(--ramp-gold)_35%,var(--border))] bg-[color-mix(in_srgb,var(--ramp-gold)_6%,var(--surface))] p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ramp-gold-light)]">
             Tomorrow — stretch preview
           </p>
           <p className="mt-1 text-xs text-[var(--muted)]">
@@ -316,7 +320,7 @@ export default function MemberTodayShell({
         <button
           type="button"
           onClick={() => selectDate(todayIso)}
-          className="w-full rounded-full border border-accent/40 py-2.5 text-sm font-semibold text-accent transition hover:bg-accent/10"
+          className="w-full rounded-full border border-[color-mix(in_srgb,var(--ramp-gold)_45%,transparent)] py-2.5 text-sm font-semibold text-[var(--ramp-gold-light)] transition hover:bg-[color-mix(in_srgb,var(--ramp-gold)_12%,transparent)]"
         >
           Jump to today
         </button>

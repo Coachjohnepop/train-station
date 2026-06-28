@@ -865,19 +865,8 @@ table.data th {
   box-shadow: 0 4px 18px color-mix(in srgb, var(--accent-deep) 22%, transparent);
 }
 
-.member-nav-home--idle {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--accent) 16%, var(--surface-2)) 0%,
-    color-mix(in srgb, var(--accent-deep) 10%, var(--surface)) 100%
-  );
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
-  color: var(--text);
-}
-
 .member-nav-home--active {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
-  box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 28%, transparent);
+  box-shadow: 0 0 20px var(--ramp-gold-glow);
 }
 
 .member-nav-home--ramp {
@@ -927,6 +916,11 @@ table.data th {
 }
 
 /* Ramp-up / intake — gold “your next step” (distinct from tier purple accent) */
+.member-today-gold-shell {
+  border-radius: 1rem;
+  box-shadow: 0 8px 36px color-mix(in srgb, var(--ramp-gold-glow) 22%, transparent);
+}
+
 .nav-tab-ramp {
   background: color-mix(in srgb, var(--ramp-gold) 22%, transparent);
   color: var(--ramp-gold-light);

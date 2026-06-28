@@ -124,14 +124,8 @@ export default function MemberNav({ intakePending = false }: { intakePending?: b
                 e.preventDefault();
                 goMemberTodayHome(router);
               }}
-              className={`member-nav-home relative flex flex-[0.67] flex-col items-center justify-center rounded-xl border text-center transition lg:min-w-[3.2rem] lg:max-w-[4.5rem] lg:px-2 ${
-                rampHighlight
-                  ? active
-                    ? "member-nav-home--ramp member-nav-home--active nav-tab-ramp-active"
-                    : "member-nav-home--ramp nav-tab-ramp"
-                  : active
-                    ? "member-nav-home--active nav-tab-active"
-                    : "member-nav-home--idle border-[var(--border)]"
+              className={`member-nav-home member-nav-home--ramp relative flex flex-[0.67] flex-col items-center justify-center rounded-xl border text-center transition lg:min-w-[3.2rem] lg:max-w-[4.5rem] lg:px-2 ${
+                active ? "member-nav-home--active nav-tab-ramp-active" : "nav-tab-ramp"
               }`}
             >
               {homeIcon()}
