@@ -68,6 +68,11 @@ export const CHAT_KIND_COLORS: Record<
     badge: "bg-blue-500/30",
     badgeText: "text-blue-100",
   },
+  image: {
+    bubble: "bg-fuchsia-600/20 ring-1 ring-fuchsia-400/35",
+    badge: "bg-fuchsia-500/30",
+    badgeText: "text-fuchsia-100",
+  },
   system: {
     bubble: "bg-[var(--surface-2)]",
     badge: "bg-[var(--surface-2)]",
@@ -111,6 +116,8 @@ export function messageKindLabel(kind: ChatMessageKind): string | null {
       return "YouTube";
     case "video_upload":
       return "Video";
+    case "image":
+      return "Photo";
     case "system":
       return "System";
     default:
@@ -127,6 +134,7 @@ export function bubbleColorsForMessage(
   if (kind === "workout_update") return CHAT_KIND_COLORS.workout_update;
   if (kind === "youtube") return CHAT_KIND_COLORS.youtube;
   if (kind === "video_upload") return CHAT_KIND_COLORS.video_upload;
+  if (kind === "image") return CHAT_KIND_COLORS.image;
   if (kind === "system") return CHAT_KIND_COLORS.system;
   if (outgoing) return CHAT_KIND_COLORS.coach_text;
   if (viewerRole === "coach") return CHAT_KIND_COLORS.member_text;

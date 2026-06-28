@@ -101,11 +101,21 @@ function MediaBubble({
   const isYoutube = message.kind === "youtube" && message.mediaUrl;
   const embed = isYoutube ? youtubeEmbedUrl(message.mediaUrl!) : null;
   const isVideo = message.kind === "video_upload" && message.mediaUrl;
+  const isImage = message.kind === "image" && message.mediaUrl;
 
   return (
     <div className={`overflow-hidden rounded-2xl text-sm text-left ${colors.bubble} max-w-full`}>
       {message.body && (
         <p className="px-3 pt-2.5 pb-1 whitespace-pre-wrap break-words">{linkifyText(message.body)}</p>
+      )}
+      {isImage && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={message.mediaUrl}
+          alt={message.body || "Coach photo"}
+          className="max-h-[480px] w-full object-contain bg-black/40"
+          loading="lazy"
+        />
       )}
       {embed && (
         <div className="aspect-video w-full bg-black">
@@ -268,7 +278,8 @@ function MessageBubble({
   const isRich =
     message.kind === "workout_update" ||
     message.kind === "youtube" ||
-    message.kind === "video_upload";
+    message.kind === "video_upload" ||
+    message.kind === "image";
   const colors = bubbleColorsForMessage(message.kind, outgoing, viewerRole);
 
   return (
@@ -288,7 +299,7 @@ function MessageBubble({
 
         {message.kind === "workout_update" ? (
           <WorkoutUpdateBubble message={message} viewerRole={viewerRole} colors={colors} />
-        ) : message.kind === "youtube" || message.kind === "video_upload" ? (
+        ) : message.kind === "youtube" || message.kind === "video_upload" || message.kind === "image" ? (
           <MediaBubble message={message} colors={colors} />
         ) : (
           <TextBubble message={message} colors={colors} outgoing={outgoing} />

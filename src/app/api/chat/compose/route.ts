@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   addChatMessage,
+  COMMUNITY_FEED_PROGRAM_SLUG,
   ensureCohortThread,
   ensureMemberThread,
   COACH_READER_ID,
 } from "@/lib/coach-chat";
+import { requireCoachChatAccess } from "@/lib/chat-compose-auth";
 import { createTodaySessionFromSms } from "@/lib/today-sessions";
 import { sendCoachChatAlert, sendCoachReplySms } from "@/lib/sms";
-import { getSessionUser } from "@/lib/auth";
 import { coachDisplayName, DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 import { youtubeVideoId } from "@/lib/youtube";
 
@@ -23,6 +24,7 @@ const schema = z.object({
   scheduledTime: z.string().optional(),
   youtubeUrl: z.string().optional(),
   mediaUrl: z.string().optional(),
+  imageUrl: z.string().optional(),
   videoDurationSec: z.number().optional(),
   sendSmsAlert: z.boolean().optional(),
 });
@@ -36,22 +38,33 @@ function resolveScheduledIso(sessionDate: string, scheduledTime?: string) {
 
 export async function POST(request: Request) {
   try {
+    const auth = await requireCoachChatAccess();
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.error }, { status: 403 });
+    }
+
     const json = await request.json();
     const input = schema.parse(json);
 
-    const memberIds =
-      input.audience === "cohort"
-        ? input.memberIds?.length
-          ? input.memberIds
-          : [DEFAULT_DEMO_MEMBER_ID]
-        : input.memberIds?.length
-          ? input.memberIds
-          : [DEFAULT_DEMO_MEMBER_ID];
+    const isCohort = input.audience === "cohort";
+    const memberIds = isCohort
+      ? input.memberIds ?? []
+      : input.memberIds?.length
+        ? input.memberIds
+        : [DEFAULT_DEMO_MEMBER_ID];
 
-    const threads =
-      input.audience === "cohort"
-        ? [await ensureCohortThread(input.programSlug || "adult", input.programName)]
-        : await Promise.all(memberIds.map((id) => ensureMemberThread(id)));
+    if (!isCohort && memberIds.length === 0) {
+      return NextResponse.json({ error: "Select at least one member." }, { status: 400 });
+    }
+
+    const threads = isCohort
+      ? [
+          await ensureCohortThread(
+            input.programSlug || COMMUNITY_FEED_PROGRAM_SLUG,
+            input.programName || "Train Station community",
+          ),
+        ]
+      : await Promise.all(memberIds.map((id) => ensureMemberThread(id)));
 
     let sessionResult: Awaited<ReturnType<typeof createTodaySessionFromSms>> | null = null;
     if (input.rawSms?.trim() && input.sessionDate) {
@@ -71,18 +84,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid YouTube URL" }, { status: 400 });
     }
 
-    const hasText = !!input.body?.trim();
+    const caption = input.body?.trim() || "";
     const hasVideo = !!input.mediaUrl;
+    const hasImage = !!input.imageUrl;
     const hasYoutube = !!youtubeId;
     const hasWorkout = !!sessionResult;
+    const hasRichMedia = hasVideo || hasImage || hasYoutube;
+    const hasText = !!caption && !hasRichMedia;
 
-    if (!hasText && !hasVideo && !hasYoutube && !hasWorkout) {
-      return NextResponse.json({ error: "Add a message, video, YouTube link, or SMS workout" }, { status: 400 });
+    if (!caption && !hasVideo && !hasImage && !hasYoutube && !hasWorkout) {
+      return NextResponse.json(
+        { error: "Add a message, image, video, YouTube link, or SMS workout" },
+        { status: 400 },
+      );
     }
 
     const createdMessages: any[] = [];
-    const coachSession = await getSessionUser();
-    const authorName = coachDisplayName(coachSession);
+    const authorName = coachDisplayName(auth.session);
 
     for (const thread of threads) {
       if (hasWorkout && sessionResult) {
@@ -112,7 +130,23 @@ export async function POST(request: Request) {
             authorId: COACH_READER_ID,
             authorName,
             kind: "text",
-            body: input.body!.trim(),
+            body: caption,
+            alertSent: !!input.sendSmsAlert,
+            readByUserIds: [COACH_READER_ID],
+          }),
+        );
+      }
+
+      if (hasImage && input.imageUrl) {
+        createdMessages.push(
+          await addChatMessage({
+            threadId: thread.id,
+            authorRole: "coach",
+            authorId: COACH_READER_ID,
+            authorName,
+            kind: "image",
+            body: caption || undefined,
+            mediaUrl: input.imageUrl,
             alertSent: !!input.sendSmsAlert,
             readByUserIds: [COACH_READER_ID],
           }),
@@ -127,7 +161,7 @@ export async function POST(request: Request) {
             authorId: COACH_READER_ID,
             authorName,
             kind: "video_upload",
-            body: hasText ? "Coach video" : input.body?.trim() || "Coach video",
+            body: caption || undefined,
             mediaUrl: input.mediaUrl,
             videoDurationSec: input.videoDurationSec,
             alertSent: !!input.sendSmsAlert,
@@ -144,7 +178,7 @@ export async function POST(request: Request) {
             authorId: COACH_READER_ID,
             authorName,
             kind: "youtube",
-            body: hasText ? "Coach video" : input.body?.trim() || "Coach video",
+            body: caption || undefined,
             mediaUrl: input.youtubeUrl,
             youtubeId,
             alertSent: !!input.sendSmsAlert,
@@ -155,13 +189,13 @@ export async function POST(request: Request) {
     }
 
     let alertResult = { sent: 0, logs: [] as any[] };
-    if (input.sendSmsAlert !== false) {
-      if (hasText && input.audience !== "cohort") {
+    if (input.sendSmsAlert !== false && memberIds.length > 0) {
+      if (hasText && !isCohort) {
         const smsLogs: any[] = [];
         for (const memberId of memberIds) {
           const result = await sendCoachReplySms({
             memberId,
-            message: input.body!.trim(),
+            message: caption,
             coachName: authorName,
           });
           if (result.sent > 0) {
@@ -169,7 +203,7 @@ export async function POST(request: Request) {
           }
         }
         alertResult = { sent: smsLogs.length, logs: smsLogs };
-      } else {
+      } else if (!isCohort) {
         alertResult = await sendCoachChatAlert({
           userIds: memberIds,
           sessionDate: sessionResult?.session.sessionDate,

@@ -1,7 +1,14 @@
 import Link from "next/link";
 import MemberChatWorkspace from "@/components/MemberChatWorkspace";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
-import { ensureCohortThread, ensureMemberThread, hydrateCoachChat, listThreadsForMember } from "@/lib/coach-chat";
+import {
+  COMMUNITY_FEED_PROGRAM_SLUG,
+  ensureCohortThread,
+  ensureMemberThread,
+  hydrateCoachChat,
+  listThreadsForMember,
+} from "@/lib/coach-chat";
+import { getUserEnrollments } from "@/lib/data/user-data";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 import { resolveMemberUserId } from "@/lib/current-user";
 
@@ -11,8 +18,11 @@ export default async function MemberChatPage() {
   const [uid, session] = await Promise.all([resolveMemberUserId(), getSessionUser()]);
   await hydrateCoachChat({ preferFresh: true });
   await ensureMemberThread(uid);
-  await ensureCohortThread("adult", "Adult program cohort");
-  const threads = listThreadsForMember(uid, ["adult"]);
+  const communitySlug = COMMUNITY_FEED_PROGRAM_SLUG;
+  await ensureCohortThread(communitySlug, "Train Station community");
+  const enrolledSlugs = Object.keys(getUserEnrollments(uid));
+  const programSlugs = [...new Set([communitySlug, ...enrolledSlugs])];
+  const threads = listThreadsForMember(uid, programSlugs);
 
   const staffViewingSelf =
     session && isStaffRole(session.role) && uid === session.id;

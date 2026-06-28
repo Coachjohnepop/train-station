@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CHAT_VIDEO_MAX_DURATION_SEC } from "@/lib/chat-video-constants";
+import { CHAT_IMAGE_MAX_BYTES, CHAT_VIDEO_MAX_DURATION_SEC } from "@/lib/chat-video-constants";
+import { COMMUNITY_FEED_PROGRAM_SLUG } from "@/lib/community-feed";
 import CoachMemberPicker from "@/components/CoachMemberPicker";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
@@ -20,13 +21,14 @@ export default function CoachChatComposer({
   const router = useRouter();
   const [audience, setAudience] = useState<"member" | "cohort">("member");
   const [selectedIds, setSelectedIds] = useState<string[]>([DEFAULT_DEMO_MEMBER_ID]);
-  const [programSlug, setProgramSlug] = useState("adult");
+  const [programSlug, setProgramSlug] = useState(COMMUNITY_FEED_PROGRAM_SLUG);
   const [body, setBody] = useState("");
   const [rawSms, setRawSms] = useState("");
   const [sessionDate, setSessionDate] = useState(new Date().toISOString().slice(0, 10));
   const [scheduledTime, setScheduledTime] = useState("06:30");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [videoDurationSec, setVideoDurationSec] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -35,10 +37,39 @@ export default function CoachChatComposer({
   const [newExerciseCount, setNewExerciseCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
+  async function handleImagePick(file: File | null) {
+    setError(null);
+    setImageUrl(null);
+    if (!file) return;
+    if (file.size > CHAT_IMAGE_MAX_BYTES) {
+      setError("Image too large (max 5 MB).");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("kind", "image");
+      const res = await fetch("/api/chat/upload", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+      setImageUrl(data.url);
+      setMediaUrl(null);
+      setVideoDurationSec(null);
+      setYoutubeUrl("");
+    } catch (e: any) {
+      setError(e?.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function handleVideoPick(file: File | null) {
     setError(null);
     setMediaUrl(null);
     setVideoDurationSec(null);
+    setImageUrl(null);
     if (!file) return;
 
     const url = URL.createObjectURL(file);
@@ -62,6 +93,7 @@ export default function CoachChatComposer({
       try {
         const form = new FormData();
         form.append("file", file);
+        form.append("kind", "video");
         form.append("durationSec", String(Math.round(duration)));
         const res = await fetch("/api/chat/upload", { method: "POST", body: form });
         const data = await res.json();
@@ -82,7 +114,7 @@ export default function CoachChatComposer({
   }
 
   async function handlePost() {
-    if (selectedIds.length === 0) {
+    if (audience === "member" && selectedIds.length === 0) {
       setError("Select at least one member.");
       return;
     }
@@ -96,7 +128,7 @@ export default function CoachChatComposer({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           audience: audience === "cohort" ? "cohort" : "members",
-          memberIds: audience === "cohort" ? selectedIds : selectedIds,
+          memberIds: audience === "cohort" ? (sendSmsAlert ? selectedIds : []) : selectedIds,
           programSlug,
           body: body.trim() || undefined,
           rawSms: rawSms.trim() || undefined,
@@ -104,8 +136,9 @@ export default function CoachChatComposer({
           scheduledTime: rawSms.trim() ? scheduledTime : undefined,
           youtubeUrl: youtubeUrl.trim() || undefined,
           mediaUrl: mediaUrl || undefined,
+          imageUrl: imageUrl || undefined,
           videoDurationSec: videoDurationSec || undefined,
-          sendSmsAlert,
+          sendSmsAlert: audience === "cohort" ? sendSmsAlert && selectedIds.length > 0 : sendSmsAlert,
         }),
       });
       const data = await res.json();
@@ -120,6 +153,7 @@ export default function CoachChatComposer({
       setRawSms("");
       setYoutubeUrl("");
       setMediaUrl(null);
+      setImageUrl(null);
       setVideoDurationSec(null);
       window.dispatchEvent(new CustomEvent("coach-chat-posted"));
       router.refresh();
@@ -136,7 +170,7 @@ export default function CoachChatComposer({
         <div>
           <h2 className="font-semibold">Post coach update</h2>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            One place to message members, schedule an SMS workout override, attach a short clip or YouTube link, and send an alert.
+            Patreon-style posts — text, photos, short clips (≤{CHAT_VIDEO_MAX_DURATION_SEC}s on cheap Blob storage), or YouTube for longer video.
           </p>
         </div>
       )}
@@ -154,13 +188,20 @@ export default function CoachChatComposer({
           className={`btn-ghost px-3 py-1 ${audience === "cohort" ? "ring-1 ring-accent" : ""}`}
           onClick={() => setAudience("cohort")}
         >
-          Program cohort
+          Community feed
         </button>
       </div>
 
       {audience === "cohort" && (
+        <p className="rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-xs text-violet-100">
+          Posts to the station community feed — every member sees it under Messages → Community.
+          Pick members below only if you also want SMS alerts.
+        </p>
+      )}
+
+      {audience === "cohort" && (
         <label className="block text-xs">
-          <span className="text-[var(--muted)]">Program slug</span>
+          <span className="text-[var(--muted)]">Community slug (default: {COMMUNITY_FEED_PROGRAM_SLUG})</span>
           <input className="input mt-1 w-full" value={programSlug} onChange={(e) => setProgramSlug(e.target.value)} />
         </label>
       )}
@@ -169,6 +210,8 @@ export default function CoachChatComposer({
         members={members.map((m) => ({ id: m.id, name: m.name }))}
         selectedIds={selectedIds}
         onChange={setSelectedIds}
+        label={audience === "cohort" ? "SMS alert recipients (optional)" : "Members"}
+        required={audience === "member"}
       />
 
       <label className="block text-xs">
@@ -210,7 +253,17 @@ export default function CoachChatComposer({
         </div>
       </details>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="block text-xs">
+          <span className="text-[var(--muted)]">Photo (max 5MB)</span>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="input mt-1 w-full text-xs"
+            onChange={(e) => handleImagePick(e.target.files?.[0] || null)}
+          />
+          {imageUrl && <p className="mt-1 text-[10px] text-[var(--success)]">Photo ready</p>}
+        </label>
         <label className="block text-xs">
           <span className="text-[var(--muted)]">Short video (≤{CHAT_VIDEO_MAX_DURATION_SEC}s, max 20MB)</span>
           <input
@@ -235,14 +288,16 @@ export default function CoachChatComposer({
 
       <label className="flex items-center gap-2 text-xs cursor-pointer">
         <input type="checkbox" checked={sendSmsAlert} onChange={(e) => setSendSmsAlert(e.target.checked)} />
-        Also text member&apos;s phone (message preview + link to Messages)
+        {audience === "cohort"
+          ? "Also SMS selected members (optional — needs recipients above)"
+          : "Also text member's phone (message preview + link to Messages)"}
       </label>
 
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
           className="btn-primary px-4 py-1.5 text-sm"
-          disabled={sending || selectedIds.length === 0}
+          disabled={sending || (audience === "member" && selectedIds.length === 0)}
           onClick={handlePost}
         >
           {sending ? "Posting..." : "Post update"}

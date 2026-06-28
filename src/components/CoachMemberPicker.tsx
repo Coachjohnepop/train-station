@@ -9,10 +9,14 @@ export default function CoachMemberPicker({
   members,
   selectedIds,
   onChange,
+  label = "Members",
+  required = true,
 }: {
   members: CoachMemberOption[];
   selectedIds: string[];
   onChange: (ids: string[]) => void;
+  label?: string;
+  required?: boolean;
 }) {
   function toggle(id: string) {
     onChange(selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id]);
@@ -31,8 +35,9 @@ export default function CoachMemberPicker({
 
   return (
     <div className="space-y-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
+      <p className="text-xs font-semibold text-accent">{label}</p>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-accent">Quick picks</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Quick picks</span>
         <button type="button" onClick={selectCouple} className="btn-ghost px-2.5 py-1 text-xs">
           John &amp; Steph
         </button>
@@ -71,8 +76,10 @@ export default function CoachMemberPicker({
         <p className="text-[10px] text-[var(--success)]">
           {selectedIds.length} student{selectedIds.length !== 1 ? "s" : ""} selected
         </p>
-      ) : (
+      ) : required ? (
         <p className="text-[10px] text-amber-300">Pick at least one student — only they will see this workout.</p>
+      ) : (
+        <p className="text-[10px] text-[var(--muted)]">No SMS recipients — post still goes to the community feed.</p>
       )}
     </div>
   );

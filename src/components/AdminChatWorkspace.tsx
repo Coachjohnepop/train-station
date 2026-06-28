@@ -17,7 +17,10 @@ import type { MemberCoachingMode } from "@/lib/member-coaching-mode";
 function threadPreview(messages: ChatMessage[]) {
   const last = messages[messages.length - 1];
   if (!last) return "No messages yet";
-  const text = last.body || last.workoutTitle || (last.kind === "youtube" ? "Shared a video" : "Update");
+  const text =
+    last.body ||
+    last.workoutTitle ||
+    (last.kind === "youtube" ? "Shared a video" : last.kind === "image" ? "Shared a photo" : last.kind === "video_upload" ? "Shared a clip" : "Update");
   return text.length > 48 ? `${text.slice(0, 48)}…` : text;
 }
 

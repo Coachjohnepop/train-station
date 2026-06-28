@@ -9,11 +9,14 @@ export type ChatThreadKind = "member" | "cohort";
 
 export type ChatMessageKind =
   | "text"
+  | "image"
   | "video_upload"
   | "youtube"
   | "workout_update"
   | "member_sms"
   | "system";
+
+export { COMMUNITY_FEED_PROGRAM_SLUG } from "@/lib/community-feed";
 
 export type ChatThread = {
   id: string;
