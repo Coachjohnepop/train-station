@@ -48,6 +48,10 @@ export type MemberProfile = {
   welcomeSmsSentAt: string | null;
   coachIntakeCompleteAt: string | null;
   coachIntakeCompletedBy: string | null;
+  introBookedAt: string | null;
+  coachMeetingRequestedAt: string | null;
+  coachMeetingRequestedBy: string | null;
+  coachMeetingRequestNote: string | null;
   rampStartedAt: string | null;
   updatedAt: string;
 };
@@ -94,6 +98,10 @@ function emptyProfile(userId: string, email: string, plan: SignupPlan): MemberPr
     welcomeSmsSentAt: null,
     coachIntakeCompleteAt: null,
     coachIntakeCompletedBy: null,
+    introBookedAt: null,
+    coachMeetingRequestedAt: null,
+    coachMeetingRequestedBy: null,
+    coachMeetingRequestNote: null,
     rampStartedAt: null,
     updatedAt: new Date().toISOString(),
   };
@@ -158,6 +166,11 @@ function normalizeProfile(raw: unknown, userId: string): MemberProfile | null {
     welcomeSmsSentAt: data.welcomeSmsSentAt ?? null,
     coachIntakeCompleteAt: data.coachIntakeCompleteAt ?? null,
     coachIntakeCompletedBy: data.coachIntakeCompletedBy ?? null,
+    introBookedAt: data.introBookedAt ?? null,
+    coachMeetingRequestedAt: data.coachMeetingRequestedAt ?? null,
+    coachMeetingRequestedBy: data.coachMeetingRequestedBy ?? null,
+    coachMeetingRequestNote:
+      typeof data.coachMeetingRequestNote === "string" ? data.coachMeetingRequestNote : null,
     rampStartedAt: data.rampStartedAt ?? null,
     updatedAt: data.updatedAt || new Date().toISOString(),
   };
@@ -265,6 +278,10 @@ export async function updateMemberProfile(
       | "welcomeSmsSentAt"
       | "coachIntakeCompleteAt"
       | "coachIntakeCompletedBy"
+      | "introBookedAt"
+      | "coachMeetingRequestedAt"
+      | "coachMeetingRequestedBy"
+      | "coachMeetingRequestNote"
       | "rampStartedAt"
       | "approvalStatus"
       | "approvedAt"

@@ -20,6 +20,9 @@ type MemberRow = {
   createdAt: string;
   completedAt: string | null;
   coachIntakeCompleteAt: string | null;
+  introBookedAt: string | null;
+  coachMeetingRequestedAt: string | null;
+  coachMeetingRequestNote: string | null;
   rampStartedAt: string | null;
 };
 
@@ -67,6 +70,7 @@ export default function AdminMembersPage() {
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
   const [intakeSigning, setIntakeSigning] = useState<string | null>(null);
+  const [meetingRequesting, setMeetingRequesting] = useState<string | null>(null);
   const [markingPaid, setMarkingPaid] = useState<string | null>(null);
   const [markPaidTarget, setMarkPaidTarget] = useState<MemberRow | null>(null);
   const [markPaidMethod, setMarkPaidMethod] = useState<"venmo" | "manual" | "stripe" | "other">(
@@ -92,6 +96,28 @@ export default function AdminMembersPage() {
   useEffect(() => {
     void loadMembers();
   }, []);
+
+  async function requestMeeting(userId: string) {
+    const note =
+      window.prompt("Optional note for the member (e.g. 6-month check-in):", "Follow-up call")?.trim() ||
+      "Follow-up call";
+    if (note === null) return;
+
+    setMeetingRequesting(userId);
+    setError("");
+    const res = await fetch(`/api/admin/members/${encodeURIComponent(userId)}/meeting-request`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error || "Could not request meeting.");
+    } else {
+      await loadMembers();
+    }
+    setMeetingRequesting(null);
+  }
 
   async function completeIntake(userId: string) {
     setIntakeSigning(userId);
@@ -294,6 +320,20 @@ export default function AdminMembersPage() {
                           className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-sky-500/40 text-sky-300"
                         >
                           {intakeSigning === member.userId ? "…" : "Sign off intake"}
+                        </button>
+                      ) : null}
+                      {member.onboardingComplete ? (
+                        <button
+                          type="button"
+                          onClick={() => void requestMeeting(member.userId)}
+                          disabled={meetingRequesting === member.userId}
+                          className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-[color-mix(in_srgb,var(--ramp-gold)_55%,transparent)] text-[var(--ramp-gold-light)]"
+                        >
+                          {meetingRequesting === member.userId
+                            ? "…"
+                            : member.coachMeetingRequestedAt
+                              ? "Re-request meeting"
+                              : "Request meeting"}
                         </button>
                       ) : null}
                       {member.approvalStatus === "pending" && member.onboardingComplete ? (

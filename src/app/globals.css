@@ -921,6 +921,43 @@ table.data th {
   box-shadow: 0 6px 22px var(--ramp-gold-glow);
 }
 
+.intake-next-step-card--booked {
+  border-color: color-mix(in srgb, var(--success) 45%, var(--ramp-gold) 35%);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--success) 16%, var(--surface)) 0%,
+    color-mix(in srgb, var(--ramp-gold) 10%, var(--surface)) 100%
+  );
+  box-shadow: 0 0 24px color-mix(in srgb, var(--success) 25%, var(--ramp-gold-glow) 40%);
+}
+
+.intake-next-step-badge--booked {
+  border-color: color-mix(in srgb, var(--success) 50%, var(--ramp-gold) 40%);
+  background: color-mix(in srgb, var(--success) 22%, var(--ramp-gold) 12%);
+  color: color-mix(in srgb, #bbf7d0 70%, var(--ramp-gold-light));
+}
+
+.intake-next-step-title--booked {
+  color: color-mix(in srgb, #86efac 75%, var(--ramp-gold-light));
+}
+
+.intake-book-btn--completed {
+  border: 1px solid color-mix(in srgb, var(--success) 55%, var(--ramp-gold-light) 45%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #86efac 88%, var(--ramp-gold-light)) 0%,
+    color-mix(in srgb, var(--success) 75%, var(--ramp-gold)) 100%
+  );
+  color: #0f2418;
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--success) 35%, var(--ramp-gold-glow));
+  cursor: default;
+  opacity: 1;
+}
+
+.intake-book-btn--completed:disabled {
+  opacity: 1;
+}
+
 .intake-book-btn-wrap {
   position: relative;
   display: inline-flex;

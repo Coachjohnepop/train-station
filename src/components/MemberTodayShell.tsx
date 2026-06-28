@@ -24,6 +24,9 @@ type Props = {
   hasCoachSession: boolean;
   intakeComplete: boolean;
   warmupWorkout: MemberWorkoutView | null;
+  introBookedAt?: string | null;
+  coachMeetingRequestedAt?: string | null;
+  coachMeetingRequestNote?: string | null;
 };
 
 function DaySummaryCard({
@@ -143,6 +146,9 @@ export default function MemberTodayShell({
   hasCoachSession,
   intakeComplete,
   warmupWorkout,
+  introBookedAt = null,
+  coachMeetingRequestedAt = null,
+  coachMeetingRequestNote = null,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -159,6 +165,12 @@ export default function MemberTodayShell({
   }
 
   const rampHighlight = showWarmupFlow && !intakeComplete;
+  const showFollowUpCard = isToday && !!coachMeetingRequestedAt && intakeComplete;
+  const intakeStatus = {
+    introBookedAt,
+    coachMeetingRequestedAt,
+    coachMeetingRequestNote,
+  };
 
   return (
     <div className="space-y-4">
@@ -214,9 +226,13 @@ export default function MemberTodayShell({
         <DaySummaryCard summary={selectedSummary} isToday={false} />
       )}
 
+      {showFollowUpCard && (
+        <MemberIntakeIntroCard initialStatus={intakeStatus} followUpOnly />
+      )}
+
       {showWarmupFlow && (
         <>
-          {isToday && <MemberIntakeIntroCard />}
+          {isToday && <MemberIntakeIntroCard initialStatus={intakeStatus} />}
           <MemberWarmupDayNavigator
             days={days}
             todayIso={todayIso}

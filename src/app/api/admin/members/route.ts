@@ -41,6 +41,9 @@ export async function GET() {
       createdAt: account.createdAt,
       completedAt: profile?.completedAt ?? null,
       coachIntakeCompleteAt: profile?.coachIntakeCompleteAt ?? null,
+      introBookedAt: profile?.introBookedAt ?? null,
+      coachMeetingRequestedAt: profile?.coachMeetingRequestedAt ?? null,
+      coachMeetingRequestNote: profile?.coachMeetingRequestNote ?? null,
       rampStartedAt: profile?.rampStartedAt ?? null,
     };
   });

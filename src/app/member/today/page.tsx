@@ -151,6 +151,9 @@ export default async function MemberTodayPage({ searchParams }: Props) {
               hasCoachSession={!!session}
               intakeComplete={intakeComplete}
               warmupWorkout={warmupWorkout}
+              introBookedAt={profile?.introBookedAt ?? null}
+              coachMeetingRequestedAt={profile?.coachMeetingRequestedAt ?? null}
+              coachMeetingRequestNote={profile?.coachMeetingRequestNote ?? null}
             />
           </Suspense>
 
