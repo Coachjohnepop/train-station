@@ -5,6 +5,31 @@ export const MEMBERSHIP_PLANS = ["explorer", "member", "pro", "business"] as con
 
 export type MembershipPlan = (typeof MEMBERSHIP_PLANS)[number];
 
+/** Paid membership tiers ordered low → high for upgrade/downgrade rules. */
+export const PAID_MEMBERSHIP_PLANS = ["member", "business", "pro"] as const satisfies readonly MembershipPlan[];
+
+const MEMBERSHIP_PLAN_RANK: Record<MembershipPlan, number> = {
+  explorer: 0,
+  member: 1,
+  business: 2,
+  pro: 3,
+};
+
+export function isMembershipPlan(plan: SignupPlan): plan is MembershipPlan {
+  return (MEMBERSHIP_PLANS as readonly string[]).includes(plan);
+}
+
+export function membershipPlanRank(plan: SignupPlan): number | null {
+  return isMembershipPlan(plan) ? MEMBERSHIP_PLAN_RANK[plan] : null;
+}
+
+/** Higher tiers only — used at signup checkout (no downgrades during setup). */
+export function upgradeMembershipPlansFrom(plan: SignupPlan): MembershipPlan[] {
+  const rank = membershipPlanRank(plan);
+  if (rank === null) return [];
+  return PAID_MEMBERSHIP_PLANS.filter((candidate) => MEMBERSHIP_PLAN_RANK[candidate] > rank);
+}
+
 export const SIGNUP_PLANS = [...MEMBERSHIP_PLANS, ...SERVICE_OFFER_IDS] as const;
 export type SignupPlan = (typeof SIGNUP_PLANS)[number];
 

@@ -11,6 +11,7 @@ import {
 import { promoteCustomerPaymentMethodsForCheckout } from "@/lib/stripe-payment-method-persist";
 import {
   signupPlanLabel,
+  upgradeMembershipPlansFrom,
   type MembershipPlan,
   type SignupPlan,
 } from "@/lib/signup-plans";
@@ -85,7 +86,7 @@ export async function getMemberMembershipSnapshot(
 
   const switchablePlans: SignupPlan[] =
     profile.paymentStatus === "paid" && profile.stripeSubscriptionId
-      ? (["member", "business"] as SignupPlan[]).filter((candidate) => candidate !== plan)
+      ? upgradeMembershipPlansFrom(plan)
       : [];
 
   return {

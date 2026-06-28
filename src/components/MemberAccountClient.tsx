@@ -157,7 +157,7 @@ export default function MemberAccountClient({
 
         {membership.switchablePlans.length > 0 && (
           <div className="space-y-2">
-            <p className="text-sm text-[var(--muted)]">Switch subscription plan (no re-signup needed):</p>
+            <p className="text-sm text-[var(--muted)]">Upgrade your subscription (no re-signup needed):</p>
             <div className="flex flex-wrap gap-2">
               {membership.switchablePlans.map((switchPlan) => (
                 <Link
@@ -165,7 +165,7 @@ export default function MemberAccountClient({
                   href={`/member/checkout?plan=${encodeURIComponent(switchPlan)}`}
                   className="btn-secondary text-xs"
                 >
-                  Switch to {signupPlanLabel(switchPlan)}
+                  Upgrade to {signupPlanLabel(switchPlan)}
                 </Link>
               ))}
             </div>
@@ -181,8 +181,8 @@ export default function MemberAccountClient({
         {membership.canManageBilling && (
           <div className="space-y-2">
             <p className="text-sm text-[var(--muted)]">
-              Update your card, view invoices, or cancel your subscription in Stripe&apos;s secure
-              billing portal.
+              Update your card, view invoices, change to a lower tier, or cancel your subscription
+              in Stripe&apos;s secure billing portal.
             </p>
             <button
               type="button"

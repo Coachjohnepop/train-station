@@ -4,8 +4,15 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import EmbeddedStripeCheckoutModal from "@/components/EmbeddedStripeCheckoutModal";
+import CheckoutUpgradeOptions from "@/components/CheckoutUpgradeOptions";
 import MembershipPaymentCard from "@/components/MembershipPaymentCard";
-import { normalizeSignupPlan, signupPlanLabel, type SignupPlan } from "@/lib/signup-plans";
+import {
+  isMembershipPlan,
+  normalizeSignupPlan,
+  signupPlanLabel,
+  upgradeMembershipPlansFrom,
+  type SignupPlan,
+} from "@/lib/signup-plans";
 import { isPaidOffer } from "@/lib/product-offers";
 
 type PaymentsPublic = {
@@ -50,6 +57,7 @@ function MemberCheckoutInner() {
   const [payments, setPayments] = useState<PaymentsPublic | null>(null);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
   const [hasSavedCard, setHasSavedCard] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
   const [planChanging, setPlanChanging] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -67,6 +75,9 @@ function MemberCheckoutInner() {
       if (!cancelled) {
         setPayments(paymentsRes.ok ? paymentsData : null);
         setHasSavedCard(Boolean(membershipData.hasSavedPaymentMethod));
+        setPaymentStatus(
+          typeof membershipData.paymentStatus === "string" ? membershipData.paymentStatus : null,
+        );
         setPaymentsLoading(false);
       }
     })();
@@ -160,6 +171,9 @@ function MemberCheckoutInner() {
 
   const showMembershipCard = isPaidOffer(plan);
   const publishableKey = payments?.stripePublishableKey || "";
+  const isSignupCheckout = paymentStatus !== "paid";
+  const upgradePlans =
+    isSignupCheckout && isMembershipPlan(plan) ? upgradeMembershipPlansFrom(plan) : [];
 
   return (
     <>
@@ -228,10 +242,19 @@ function MemberCheckoutInner() {
                 </p>
               </div>
             )}
+            {isSignupCheckout && isMembershipPlan(plan) && upgradePlans.length > 0 && (
+              <CheckoutUpgradeOptions
+                currentPlan={plan}
+                upgradePlans={upgradePlans}
+                memberships={payments?.memberships}
+              />
+            )}
             <div className="flex flex-col items-center gap-2 text-xs text-[var(--muted)]">
-              <Link href="/#tickets" className="hover:text-accent">
-                Compare train seats
-              </Link>
+              {!isSignupCheckout && (
+                <Link href="/#tickets" className="hover:text-accent">
+                  Compare train seats
+                </Link>
+              )}
               <Link href="/" className="hover:text-accent">
                 Back to home
               </Link>

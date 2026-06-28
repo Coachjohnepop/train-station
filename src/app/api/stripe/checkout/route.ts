@@ -3,7 +3,11 @@ import { z } from "zod";
 import { getSessionUser, syncMemberGateCookies } from "@/lib/auth";
 import { ensureMemberProfile, getMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
 import { memberCheckoutPath } from "@/lib/member-gates";
-import { normalizeSignupPlan } from "@/lib/signup-plans";
+import {
+  isMembershipPlan,
+  membershipPlanRank,
+  normalizeSignupPlan,
+} from "@/lib/signup-plans";
 import { resolveReferralDiscount } from "@/lib/referral-discounts";
 import { getOfferDefinition } from "@/lib/product-offers";
 import {
@@ -34,6 +38,29 @@ export async function POST(request: Request) {
 
     const existingProfile = await getMemberProfile(session.id);
     const plan = normalizeSignupPlan(parsed.data.plan || existingProfile?.plan || "explorer");
+
+    if (
+      existingProfile?.paymentStatus !== "paid" &&
+      existingProfile?.plan &&
+      isMembershipPlan(existingProfile.plan) &&
+      isMembershipPlan(plan)
+    ) {
+      const currentRank = membershipPlanRank(existingProfile.plan);
+      const requestedRank = membershipPlanRank(plan);
+      if (
+        currentRank !== null &&
+        requestedRank !== null &&
+        requestedRank < currentRank
+      ) {
+        return NextResponse.json(
+          {
+            error: "Downgrades aren’t available during signup — finish checkout or upgrade to a higher tier.",
+            redirectTo: memberCheckoutPath(existingProfile.plan),
+          },
+          { status: 400 },
+        );
+      }
+    }
 
     if (!(await stripeConfiguredForPlan(plan))) {
       return NextResponse.json(
