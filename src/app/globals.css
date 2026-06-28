@@ -321,8 +321,22 @@ a {
   cursor: not-allowed;
 }
 
-.day-wheel-track {
+.day-wheel-viewport {
+  overflow: hidden;
   max-width: 100%;
+}
+
+.day-wheel-strip {
+  display: flex;
+  gap: 8px;
+  will-change: transform;
+  transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .day-wheel-strip {
+    transition: none;
+  }
 }
 
 .warmup-nav-shell {
