@@ -12,10 +12,7 @@
  */
 
 import { isDemoMode as _isDemoMode, getDemoEnrollments, enrollDemo, unenrollDemo, advanceDemoEnrollmentForWorkout } from "@/lib/demo-enrollments";
-import {
-  createDemoWorkoutLog,
-  createDemoExercisePerformance,
-} from "@/lib/demo-logs";
+import { recordDemoWorkoutSession } from "@/lib/demo-logs";
 import { prisma } from "@/lib/prisma";
 import { DEMO_MEMBER_EMAIL } from "@/lib/demo-workout";
 import { getCurrentUserId } from "@/lib/current-user";
@@ -43,15 +40,15 @@ export function getUserEnrollments(userId?: string): EnrollmentsMap {
  * Enroll a user in a program (idempotent).
  * Preview: writes to enrollments.dev.json.
  */
-export function enrollUserInProgram(slug: string, userId?: string) {
-  enrollDemo(slug, userId);
+export async function enrollUserInProgram(slug: string, userId?: string) {
+  await enrollDemo(slug, userId);
 }
 
 /**
  * Unenroll a user from a program.
  */
-export function unenrollUserFromProgram(slug: string, userId?: string) {
-  unenrollDemo(slug, userId);
+export async function unenrollUserFromProgram(slug: string, userId?: string) {
+  await unenrollDemo(slug, userId);
 }
 
 /**
@@ -100,19 +97,14 @@ export async function createWorkoutLogAndPerformances(input: {
     // Demo path: delegate to the proven helpers so that logs.dev.json, enrollments.dev.json,
     // greens/rings on schedule pages, past silhouettes, dashboard counts, coach impersonation,
     // and strength all continue to behave exactly as before.
-    const demoLog = createDemoWorkoutLog({
+    const { log: demoLog, performanceIds } = await recordDemoWorkoutSession({
       workoutId: input.workoutId,
       userId: uid,
       performedAt,
       completed,
       progress,
-    });
-
-    const createdIds: string[] = [];
-    for (const ex of input.exercises) {
-      const perf = createDemoExercisePerformance({
+      exercises: input.exercises.map((ex) => ({
         exerciseId: ex.exerciseId,
-        userId: uid,
         workoutExerciseId: ex.workoutExerciseId ?? null,
         setScheme: ex.setScheme,
         repPattern: ex.repPattern ?? null,
@@ -120,16 +112,14 @@ export async function createWorkoutLogAndPerformances(input: {
         sets: ex.sets ?? null,
         weightTier: ex.weightTier,
         startingWeightLbs: ex.startingWeightLbs ?? null,
-        performedAt,
         repsCompleted: ex.repsCompleted ?? null,
         setsCompleted: ex.setsCompleted ?? null,
-      });
-      createdIds.push(perf.id);
-    }
+      })),
+    });
 
     if (input.programSlug) {
       try {
-        advanceDemoEnrollmentForWorkout(input.programSlug, input.workoutId, uid);
+        await advanceDemoEnrollmentForWorkout(input.programSlug, input.workoutId, uid);
       } catch {
         // non-fatal (same as before)
       }
@@ -138,7 +128,7 @@ export async function createWorkoutLogAndPerformances(input: {
     return {
       ok: true,
       logId: demoLog.id,
-      performances: createdIds.length,
+      performances: performanceIds.length,
       performedAt: demoLog.performedAt,
       progress: demoLog.progress,
       completed: demoLog.completed,

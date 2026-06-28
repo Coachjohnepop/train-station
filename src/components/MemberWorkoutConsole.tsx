@@ -2,6 +2,7 @@
 
 import { useCallback, useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   approachLabel,
   formatPastPerformance,
@@ -96,6 +97,7 @@ export default function MemberWorkoutConsole({
   const [finishedListExpanded, setFinishedListExpanded] = useState(false);
   const [coachLive, setCoachLive] = useState(false);
   const [partnerLive, setPartnerLive] = useState(false);
+  const router = useRouter();
 
   const LIVE_POLL_MS = 200;
   const liveSyncEnabled =
@@ -603,7 +605,11 @@ export default function MemberWorkoutConsole({
           </p>
 
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link href="/member" className="btn-ghost inline-flex min-w-[8.5rem] justify-center">
+            <Link
+              href="/member/today"
+              className="btn-ghost inline-flex min-w-[8.5rem] justify-center"
+              onClick={() => router.refresh()}
+            >
               Dashboard
             </Link>
             <button

@@ -11,7 +11,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   const targetUserId = body.targetUserId || undefined;
 
   if (isDemoMode()) {
-    advanceDemoEnrollment(slug);
+    await advanceDemoEnrollment(slug);
     // In a fuller implementation we would also persist any `body.responses` for eating days under targetUserId
     return NextResponse.json({ ok: true, demo: true, targetUserId });
   }

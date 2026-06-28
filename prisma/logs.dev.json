@@ -47,6 +47,14 @@
       "performedAt": "2026-06-27T18:00:00.000Z",
       "completed": true,
       "progress": 100
+    },
+    {
+      "id": "log-member-8888cb23-f25-w1d7",
+      "userId": "member-8888cb23-f25",
+      "workoutId": "cmpzkkswq003695rzmh95szul",
+      "performedAt": "2026-06-28T22:01:40.000Z",
+      "completed": true,
+      "progress": 100
     }
   ],
   "performances": []

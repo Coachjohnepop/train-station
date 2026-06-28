@@ -83,7 +83,7 @@ export async function POST(request: Request) {
   const enrolledSlug = programSlug || "adult";
 
   if (isDemoMode()) {
-    enrollDemo(enrolledSlug, session.id);
+    await enrollDemo(enrolledSlug, session.id);
     await updateDemoUserSettings(session.id, {
       phone: phone || undefined,
       dailyReminderTime: dailyReminderTime || undefined,

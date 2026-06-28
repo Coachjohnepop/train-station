@@ -42,6 +42,13 @@ function formatDateLabel(dateKey: string) {
 
 export default async function MemberTodayPage({ searchParams }: Props) {
   const sp = await searchParams;
+  const { hydrateDemoEnrollmentsStore } = await import("@/lib/demo-enrollments");
+  const { hydrateDemoLogsStore } = await import("@/lib/demo-logs");
+  await Promise.all([
+    hydrateDemoLogsStore({ preferFresh: true }),
+    hydrateDemoEnrollmentsStore({ preferFresh: true }),
+  ]);
+
   const [dashboard, authSession] = await Promise.all([
     getMemberDashboard(),
     getSessionUser(),

@@ -1,45 +1,26 @@
 import fs from "fs";
 import path from "path";
+import {
+  getDemoEnrollmentsStoreSync,
+  hydrateDemoEnrollmentsStore,
+  persistDemoEnrollmentsStore,
+  type DemoEnrollmentsStore,
+  type PerUserEnrollments,
+} from "@/lib/demo-member-progress-store";
 
 const DEV_FILE = path.join(process.cwd(), "prisma", "enrollments.dev.json");
 
-type PerUserEnrollments = Record<string, { currentWeek: number; currentDay: number }>;
-
-type EnrollmentsStore = Record<string, PerUserEnrollments>;
+type EnrollmentsStore = DemoEnrollmentsStore;
 
 function loadEnrollmentsStore(): EnrollmentsStore {
-  if (fs.existsSync(DEV_FILE)) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(DEV_FILE, "utf8"));
-      if (parsed && typeof parsed === "object") {
-        // support legacy flat shape (pre multi-user): treat as the "demo-user" bucket
-        if (!parsed["demo-user"] && Object.keys(parsed).some((k) => !k.startsWith("_") && typeof parsed[k] === "object" && "currentWeek" in parsed[k])) {
-          return { "demo-user": parsed as PerUserEnrollments };
-        }
-        return parsed as EnrollmentsStore;
-      }
-    } catch {}
-  }
-  const initial: EnrollmentsStore = {
-    "demo-user-john-steph": {
-      adult: { currentWeek: 2, currentDay: 5 },
-    },
-    "demo-user": {
-      adult: { currentWeek: 2, currentDay: 5 },
-      "john-steph": { currentWeek: 1, currentDay: 2 },
-    },
-  };
-  try {
-    fs.writeFileSync(DEV_FILE, JSON.stringify(initial, null, 2));
-  } catch {}
-  return initial;
+  return getDemoEnrollmentsStoreSync();
 }
 
-function saveEnrollmentsStore(store: EnrollmentsStore) {
-  try {
-    fs.writeFileSync(DEV_FILE, JSON.stringify(store, null, 2));
-  } catch {}
+async function saveEnrollmentsStore(store: EnrollmentsStore) {
+  await persistDemoEnrollmentsStore(store);
 }
+
+export { hydrateDemoEnrollmentsStore };
 
 function getUserEnrollments(userId: string): PerUserEnrollments {
   const store = loadEnrollmentsStore();
@@ -48,11 +29,12 @@ function getUserEnrollments(userId: string): PerUserEnrollments {
   return store[key];
 }
 
-function setUserEnrollments(userId: string, data: PerUserEnrollments) {
+async function setUserEnrollments(userId: string, data: PerUserEnrollments) {
+  await hydrateDemoEnrollmentsStore({ preferFresh: true });
   const store = loadEnrollmentsStore();
   const key = userId || "demo-user";
   store[key] = data;
-  saveEnrollmentsStore(store);
+  await saveEnrollmentsStore(store);
 }
 
 /** Legacy single-user shape for callers that haven't been updated yet (returns demo-user bucket) */
@@ -60,8 +42,8 @@ function loadDemoEnrollments(): PerUserEnrollments {
   return getUserEnrollments("demo-user");
 }
 
-function saveDemoEnrollments(data: PerUserEnrollments) {
-  setUserEnrollments("demo-user", data);
+async function saveDemoEnrollments(data: PerUserEnrollments) {
+  await setUserEnrollments("demo-user", data);
 }
 
 export function isDemoMode() {
@@ -76,21 +58,22 @@ export function getDemoEnrollments(userId?: string) {
   return store[uid] || {};
 }
 
-export function enrollDemo(slug: string, userId?: string) {
+export async function enrollDemo(slug: string, userId?: string) {
+  await hydrateDemoEnrollmentsStore({ preferFresh: true });
   const uid = userId || "demo-user";
   const data = getUserEnrollments(uid);
   if (!data[slug]) {
     data[slug] = { currentWeek: 1, currentDay: 1 };
-    setUserEnrollments(uid, data);
+    await setUserEnrollments(uid, data);
   }
 }
 
-export function unenrollDemo(slug: string, userId?: string) {
+export async function unenrollDemo(slug: string, userId?: string) {
   const uid = userId || "demo-user";
   const data = getUserEnrollments(uid);
   if (data[slug]) {
     delete data[slug];
-    setUserEnrollments(uid, data);
+    await setUserEnrollments(uid, data);
   }
 }
 
@@ -109,7 +92,8 @@ function loadSeedRaw(): any {
  * Mirrors the logic in the log route for real DB: finds the ProgramDay for the workoutId
  * within the program's weeks, then increments day (wrapping week), capping at program end.
  */
-export function advanceDemoEnrollmentForWorkout(slug: string, workoutId: string, userId?: string) {
+export async function advanceDemoEnrollmentForWorkout(slug: string, workoutId: string, userId?: string) {
+  await hydrateDemoEnrollmentsStore({ preferFresh: true });
   const uid = userId || "demo-user";
   const enrolls = getUserEnrollments(uid);
   if (!enrolls[slug]) {
@@ -127,7 +111,7 @@ export function advanceDemoEnrollmentForWorkout(slug: string, workoutId: string,
     const maxW = prog?.durationWeeks || 4;
     if (w > maxW) { w = maxW; d = 7; }
     enrolls[slug] = { currentWeek: w, currentDay: d };
-    setUserEnrollments(uid, enrolls);
+    await setUserEnrollments(uid, enrolls);
     return;
   }
 
@@ -168,7 +152,7 @@ export function advanceDemoEnrollmentForWorkout(slug: string, workoutId: string,
   }
 
   enrolls[slug] = { currentWeek: nextWeek, currentDay: nextDay };
-  setUserEnrollments(uid, enrolls);
+  await setUserEnrollments(uid, enrolls);
 }
 
 /**
@@ -176,7 +160,7 @@ export function advanceDemoEnrollmentForWorkout(slug: string, workoutId: string,
  * Increments the current day/week for the slug's enrollment.
  * Used by prompts logging for eating/yoga so they advance independently.
  */
-export function advanceDemoEnrollment(slug: string, userId?: string) {
+export async function advanceDemoEnrollment(slug: string, userId?: string) {
   const uid = userId || "demo-user";
   const enrolls = getUserEnrollments(uid);
   if (!enrolls[slug]) {
@@ -198,5 +182,5 @@ export function advanceDemoEnrollment(slug: string, userId?: string) {
     }
   } catch {}
   enrolls[slug] = { currentWeek: w, currentDay: d };
-  setUserEnrollments(uid, enrolls);
+  await setUserEnrollments(uid, enrolls);
 }

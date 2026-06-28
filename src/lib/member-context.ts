@@ -14,6 +14,17 @@ import { getCurrentUser, resolveUserId, getCurrentUserName } from "@/lib/current
 import { resolveDemoUser } from "@/lib/demo-user-directory";
 
 export async function getMemberDashboard() {
+  if (isDemoMode()) {
+    const [{ hydrateDemoLogsStore }, { hydrateDemoEnrollmentsStore }] = await Promise.all([
+      import("@/lib/demo-logs"),
+      import("@/lib/demo-enrollments"),
+    ]);
+    await Promise.all([
+      hydrateDemoLogsStore({ preferFresh: true }),
+      hydrateDemoEnrollmentsStore({ preferFresh: true }),
+    ]);
+  }
+
   const programs = filterMemberCatalogPrograms(await listPrograms());
   const adult = programs.find((p: any) => p.slug === "adult") || programs.find((p: any) => (p.category || "workout") === "workout") || programs[0];
 

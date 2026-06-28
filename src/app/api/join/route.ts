@@ -103,7 +103,7 @@ export async function POST(request: Request) {
   if (programSlug) {
     try {
       if (demo) {
-        enrollDemo(programSlug, userId); // we'll extend to accept uid
+        await enrollDemo(programSlug, userId); // we'll extend to accept uid
       } else {
         // real path will be handled in updated enroll, but do direct here for join
         const prog = await prisma.program.findUnique({ where: { slug: programSlug } });

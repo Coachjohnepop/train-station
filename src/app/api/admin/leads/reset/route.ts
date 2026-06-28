@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       phone: seed.phone || null,
     });
 
-    enrollDemo("adult", account.userId);
+    await enrollDemo("adult", account.userId);
 
     await addToWaitlist({
       email: seed.email,

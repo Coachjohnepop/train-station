@@ -31,7 +31,7 @@ export async function POST(_request: Request, { params }: Params) {
     if (!program) {
       return NextResponse.json({ detail: "Program not found" }, { status: 404 });
     }
-    enrollDemo(slug, uid);
+    await enrollDemo(slug, uid);
     const redirectTo = await resolvePostEnrollRedirect(uid, slug);
     return NextResponse.json({ success: true, enrollmentId: `enroll-${uid}-${slug}`, redirectTo });
   }
@@ -84,7 +84,7 @@ export async function DELETE(_request: Request, { params }: Params) {
     if (!current[slug]) {
       return NextResponse.json({ detail: "Not enrolled" }, { status: 400 });
     }
-    unenrollDemo(slug, uid);
+    await unenrollDemo(slug, uid);
     return NextResponse.json({ success: true });
   }
 

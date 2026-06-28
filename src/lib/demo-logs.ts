@@ -2,42 +2,24 @@ import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import { isDemoMode } from "./demo-enrollments";
+import {
+  getDemoLogsStoreSync,
+  hydrateDemoLogsStore,
+  persistDemoLogsStore,
+  type DemoExercisePerformanceRow,
+  type DemoWorkoutLogRow,
+} from "@/lib/demo-member-progress-store";
 
 const DEV_FILE = path.join(process.cwd(), "prisma", "logs.dev.json");
 const SEED_FILE = path.join(process.cwd(), "prisma", "seed-data.json");
 
-export type DemoWorkoutLog = {
-  id: string;
-  userId: string;
-  workoutId: string;
-  performedAt: string;
-  completed: boolean;
-  progress: number;
-};
-
-export type DemoExercisePerformance = {
-  id: string;
-  userId: string;
-  exerciseId: string;
-  workoutExerciseId: string | null;
-  setScheme: string;
-  weightTier: string;
-  startingWeightLbs: number | null;
-  performedAt: string;
-  // extra for past display (not in prisma model, only for demo)
-  repPattern?: string | null;
-  reps?: string | null;
-  sets?: number | null;
-  repsCompleted?: number | null;
-  setsCompleted?: number | null;
-};
+export type DemoWorkoutLog = DemoWorkoutLogRow;
+export type DemoExercisePerformance = DemoExercisePerformanceRow;
 
 type DemoLogsStore = {
   workoutLogs: DemoWorkoutLog[];
   performances: DemoExercisePerformance[];
 };
-
-let cache: DemoLogsStore | null = null;
 
 function loadSeedIds() {
   try {
@@ -53,34 +35,68 @@ function loadSeedIds() {
 }
 
 function loadStore(): DemoLogsStore {
-  if (cache) return cache;
-  if (fs.existsSync(DEV_FILE)) {
-    try {
-      const raw = fs.readFileSync(DEV_FILE, "utf8");
-      const parsed = JSON.parse(raw);
-      cache = {
-        workoutLogs: Array.isArray(parsed?.workoutLogs) ? parsed.workoutLogs : [],
-        performances: Array.isArray(parsed?.performances) ? parsed.performances : [],
-      };
-    } catch {
-      cache = { workoutLogs: [], performances: [] };
-    }
-  } else {
-    cache = { workoutLogs: [], performances: [] };
-    try {
-      fs.writeFileSync(DEV_FILE, JSON.stringify(cache, null, 2));
-    } catch {}
-  }
-  return cache!;
+  return getDemoLogsStoreSync();
 }
 
-function saveStore(store: DemoLogsStore) {
-  cache = { workoutLogs: [...store.workoutLogs], performances: [...store.performances] };
-  try {
-    fs.writeFileSync(DEV_FILE, JSON.stringify(cache, null, 2));
-  } catch (e) {
-    console.error("Failed to persist demo logs", e);
+export { hydrateDemoLogsStore };
+
+export async function recordDemoWorkoutSession(input: {
+  workoutId: string;
+  userId?: string;
+  performedAt?: Date;
+  completed?: boolean;
+  progress?: number;
+  exercises: Array<{
+    exerciseId: string;
+    workoutExerciseId?: string | null;
+    setScheme: string;
+    weightTier: string;
+    startingWeightLbs?: number | null;
+    repPattern?: string | null;
+    reps?: string | null;
+    sets?: number | null;
+    repsCompleted?: number | null;
+    setsCompleted?: number | null;
+  }>;
+}): Promise<{ log: DemoWorkoutLog; performanceIds: string[] }> {
+  await hydrateDemoLogsStore({ preferFresh: true });
+  const store = loadStore();
+  const now = input.performedAt || new Date();
+  const userId = input.userId || loadSeedIds().userId;
+
+  const log: DemoWorkoutLog = {
+    id: "log_" + randomUUID().replace(/-/g, ""),
+    userId,
+    workoutId: input.workoutId,
+    performedAt: now.toISOString(),
+    completed: input.completed ?? ((input.progress ?? 100) === 100),
+    progress: input.progress ?? 100,
+  };
+  store.workoutLogs.push(log);
+
+  const performanceIds: string[] = [];
+  for (const ex of input.exercises) {
+    const perf: DemoExercisePerformance = {
+      id: "perf_" + randomUUID().replace(/-/g, ""),
+      userId,
+      exerciseId: ex.exerciseId,
+      workoutExerciseId: ex.workoutExerciseId ?? null,
+      setScheme: ex.setScheme,
+      weightTier: ex.weightTier,
+      startingWeightLbs: ex.startingWeightLbs ?? null,
+      performedAt: now.toISOString(),
+      repPattern: ex.repPattern ?? null,
+      reps: ex.reps ?? null,
+      sets: ex.sets ?? null,
+      repsCompleted: ex.repsCompleted ?? null,
+      setsCompleted: ex.setsCompleted ?? null,
+    };
+    store.performances.push(perf);
+    performanceIds.push(perf.id);
   }
+
+  await persistDemoLogsStore(store);
+  return { log, performanceIds };
 }
 
 export function createDemoWorkoutLog(input: {
@@ -102,7 +118,6 @@ export function createDemoWorkoutLog(input: {
     progress: input.progress ?? 100,
   };
   store.workoutLogs.push(log);
-  saveStore(store);
   return log;
 }
 
@@ -139,7 +154,6 @@ export function createDemoExercisePerformance(input: {
     setsCompleted: input.setsCompleted ?? null,
   };
   store.performances.push(perf);
-  saveStore(store);
   return perf;
 }
 

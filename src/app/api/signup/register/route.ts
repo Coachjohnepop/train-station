@@ -79,7 +79,7 @@ export async function POST(request: Request) {
       });
     }
 
-    enrollDemo("adult", account.userId);
+    await enrollDemo("adult", account.userId);
 
     const normalizedEmail = email.trim().toLowerCase();
     await addToWaitlist({

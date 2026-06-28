@@ -1,5 +1,4 @@
-import fs from "fs";
-import path from "path";
+import { hydrateDemoLogsStore } from "@/lib/demo-logs";
 
 export async function loadMemberLoggedWorkoutIds(uid: string): Promise<Set<string>> {
   const loggedSet = new Set<string>();
@@ -7,15 +6,12 @@ export async function loadMemberLoggedWorkoutIds(uid: string): Promise<Set<strin
 
   if (isDemo) {
     try {
-      const logsPath = path.join(process.cwd(), "prisma", "logs.dev.json");
-      if (fs.existsSync(logsPath)) {
-        const logsData = JSON.parse(fs.readFileSync(logsPath, "utf8"));
-        (logsData.workoutLogs || []).forEach((log: { userId?: string; workoutId?: string }) => {
-          if (log.userId === uid && log.workoutId) {
-            loggedSet.add(log.workoutId);
-          }
-        });
-      }
+      const logsData = await hydrateDemoLogsStore({ preferFresh: true });
+      (logsData.workoutLogs || []).forEach((log: { userId?: string; workoutId?: string }) => {
+        if (log.userId === uid && log.workoutId) {
+          loggedSet.add(log.workoutId);
+        }
+      });
     } catch {
       // ignore
     }
