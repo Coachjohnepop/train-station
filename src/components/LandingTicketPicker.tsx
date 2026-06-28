@@ -131,9 +131,11 @@ export default function LandingTicketPicker({
           Not sure? 1-minute assessment →
         </Link>
         <span className="hidden text-[#3d2660] sm:inline">·</span>
-        <Link href="/login" className="text-sm text-[var(--muted)] hover:text-[var(--text)]">
-          Already have access? Sign in
-        </Link>
+        {!purchaseAuth.signedIn ? (
+          <Link href="/login" className="text-sm text-[var(--muted)] hover:text-[var(--text)]">
+            Already have access? Sign in
+          </Link>
+        ) : null}
       </div>
 
       <FreeTicketModal

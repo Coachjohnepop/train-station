@@ -8,16 +8,33 @@ export default function LandingWelcomeBanner({
   email,
   isCoach,
   membershipPlan = null,
+  membershipPlanLabel = null,
+  isEstablishedMember = false,
   welcomeVideoUrl = null,
 }: {
   displayName: string;
   email?: string;
   isCoach?: boolean;
   membershipPlan?: string | null;
+  membershipPlanLabel?: string | null;
+  isEstablishedMember?: boolean;
   welcomeVideoUrl?: string | null;
 }) {
   const programHref = isCoach ? "/admin" : "/member";
   const isFreeTier = !isCoach && membershipPlan === "explorer";
+
+  function subtitle(): string {
+    if (isCoach) return "Your coach tools and member roster are ready.";
+    if (isEstablishedMember && membershipPlanLabel) {
+      return isFreeTier
+        ? `You're on ${membershipPlanLabel} (free) — sample the station, then upgrade when you're ready for daily coach workouts and live sessions.`
+        : `You're on ${membershipPlanLabel} — your programs, coach thread, and workouts are ready.`;
+    }
+    if (isFreeTier) {
+      return "You're on Explorer (free) — sample the station, then upgrade when you're ready for daily coach workouts and live sessions.";
+    }
+    return "Your programs, progress, and workouts are ready — or pick a membership ticket below.";
+  }
 
   return (
     <section className="border-b border-[var(--border)] px-4 py-10 text-center sm:px-6 sm:py-12">
@@ -25,13 +42,9 @@ export default function LandingWelcomeBanner({
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
           Welcome back, {displayName}.
         </h1>
-        <p className="mt-3 text-base text-[var(--muted)] sm:text-lg">
-          {isFreeTier
-            ? "You're on Explorer (free) — sample the station, then upgrade when you're ready for daily coach workouts and live sessions."
-            : "Your programs, progress, and workouts are ready — or pick a membership ticket below."}
-        </p>
+        <p className="mt-3 text-base text-[var(--muted)] sm:text-lg">{subtitle()}</p>
 
-        {isFreeTier && (
+        {isFreeTier && !isEstablishedMember && (
           <div className="mt-6 rounded-2xl border border-[#7c3aed]/35 bg-[#7c3aed]/10 px-4 py-4 text-left sm:px-5">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#c4b5fd]">
               Ready for the full ride?
@@ -66,12 +79,12 @@ export default function LandingWelcomeBanner({
         {email && (
           <p className="mt-4 text-xs text-[var(--muted)]">
             Signed in as <span className="text-[var(--text)]">{email}</span>
-            {isFreeTier && (
+            {membershipPlanLabel ? (
               <>
                 {" "}
-                · <span className="text-[#c4b5fd]">Explorer (free)</span>
+                · <span className="text-[#c4b5fd]">{membershipPlanLabel}</span>
               </>
-            )}
+            ) : null}
           </p>
         )}
       </div>

@@ -126,3 +126,11 @@ export async function getMemberMembershipSnapshot(
 export function formatMembershipPaymentStatus(snapshot: MemberMembershipSnapshot): string {
   return paymentStatusLabel(snapshot.paymentStatus);
 }
+
+/** Signed-in member who finished setup or has an active paid plan — not a prospect picking a ticket. */
+export function isEstablishedMember(profile: MemberProfile | null | undefined): boolean {
+  if (!profile) return false;
+  if (profile.onboardingComplete) return true;
+  if (profile.paymentStatus === "paid" && profile.plan !== "explorer") return true;
+  return false;
+}

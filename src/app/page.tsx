@@ -11,8 +11,14 @@ import LandingTicketPicker from "@/components/LandingTicketPicker";
 import LandingWelcomeBanner from "@/components/LandingWelcomeBanner";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
 import { getResolvedLandingVideos } from "@/lib/landing-media-server";
+import LandingMemberStatus from "@/components/LandingMemberStatus";
+import {
+  getMemberMembershipSnapshot,
+  isEstablishedMember,
+} from "@/lib/member-membership";
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import { membershipThemeTierFromPlan } from "@/lib/membership-theme";
+import { signupPlanLabel } from "@/lib/signup-plans";
 
 export default async function HomePage() {
   const cookieStore = await cookies();
@@ -32,6 +38,9 @@ export default async function HomePage() {
       session.role === "MEMBER" ? await getMemberProfile(session.id) : null;
     const membershipPlan = profile?.plan ?? (isCoach ? null : "explorer");
     const themeTier = membershipThemeTierFromPlan(profile?.plan);
+    const established = isEstablishedMember(profile);
+    const membershipSnapshot =
+      established && profile ? await getMemberMembershipSnapshot(session.id) : null;
 
     return (
       <div className="min-h-screen app-shell-bg">
@@ -45,13 +54,19 @@ export default async function HomePage() {
           email={email}
           isCoach={isCoach}
           membershipPlan={membershipPlan}
+          membershipPlanLabel={profile ? signupPlanLabel(profile.plan) : null}
+          isEstablishedMember={established}
           welcomeVideoUrl={landingVideos.welcomeVideoUrl}
         />
-        <LandingTicketPicker
-          freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
-          welcomeVideoUrl={landingVideos.welcomeVideoUrl}
-          purchaseAuth={{ signedIn: true, role: session.role }}
-        />
+        {established && membershipSnapshot ? (
+          <LandingMemberStatus membership={membershipSnapshot} />
+        ) : (
+          <LandingTicketPicker
+            freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
+            welcomeVideoUrl={landingVideos.welcomeVideoUrl}
+            purchaseAuth={{ signedIn: true, role: session.role }}
+          />
+        )}
         <LandingServicesSection purchaseAuth={{ signedIn: true, role: session.role }} />
         <ComingSoonPrograms />
       </div>
