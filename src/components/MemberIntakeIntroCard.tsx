@@ -90,7 +90,7 @@ export default function MemberIntakeIntroCard() {
           </div>
         ) : (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="intake-book-btn-wrap sm:pb-5">
+            <div className="intake-book-btn-wrap">
               <button
                 type="button"
                 onClick={() => setModalOpen(true)}
