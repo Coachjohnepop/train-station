@@ -96,6 +96,11 @@ export async function removeGamificationForUsers(userIds: string[]): Promise<num
   return removed;
 }
 
+function userHasEvent(userId: string, eventId: string): boolean {
+  const verified = normalizeUser(memoryStore?.[userId], userId);
+  return verified.events.some((e) => e.id === eventId);
+}
+
 export async function awardGamificationPoints(input: {
   userId: string;
   eventId: string;
@@ -107,7 +112,9 @@ export async function awardGamificationPoints(input: {
   const points = input.points ?? GAMIFICATION_POINTS[input.type];
 
   for (let attempt = 0; attempt < 4; attempt += 1) {
-    const store = await getStore({ preferFresh: true });
+    // Only cold-start with a fresh blob read; retries must not overwrite memory with stale CDN data.
+    const store =
+      attempt === 0 ? await getStore({ preferFresh: true }) : await getStore();
     const current = normalizeUser(store[input.userId], input.userId);
 
     if (current.events.some((e) => e.id === input.eventId)) {
@@ -147,12 +154,16 @@ export async function awardGamificationPoints(input: {
     }
     requireBlobPersisted(blobSaved, "Gamification points");
 
-    const verify = await getStore({ preferFresh: true });
-    const verified = normalizeUser(verify[input.userId], input.userId);
-    if (verified.events.some((e) => e.id === input.eventId)) {
+    // Trust instance memory immediately after persist — never re-verify via preferFresh blob reads.
+    if (userHasEvent(input.userId, input.eventId)) {
+      const verified = normalizeUser(memoryStore?.[input.userId], input.userId);
       return { awarded: true, totalPoints: verified.totalPoints };
     }
-    if (attempt < 3) continue;
+
+    if (attempt < 3) {
+      await new Promise((r) => setTimeout(r, 350 * (attempt + 1)));
+      continue;
+    }
   }
 
   throw new Error("Could not save gamification points — please try again in a moment.");

@@ -47,13 +47,25 @@ export async function POST(request: Request, { params }: Params) {
       programSlug: parsed.data.programSlug,
       progress: parsed.data.progress,
     });
-    await awardGamificationPoints({
-      userId: uid,
-      eventId: `workout:${result.logId || workoutId}:${result.performedAt}`,
-      type: "workout_logged",
-      programSlug: parsed.data.programSlug ?? null,
-    });
-    return NextResponse.json(result);
+
+    let gamification: { awarded: boolean; totalPoints: number } | null = null;
+    let gamificationWarning: string | null = null;
+    try {
+      gamification = await awardGamificationPoints({
+        userId: uid,
+        eventId: `workout:${result.logId || workoutId}:${result.performedAt}`,
+        type: "workout_logged",
+        programSlug: parsed.data.programSlug ?? null,
+      });
+    } catch (gamErr: unknown) {
+      gamificationWarning =
+        gamErr instanceof Error
+          ? gamErr.message
+          : "Could not save gamification points — please try again in a moment.";
+      console.warn("Workout logged but gamification award failed", gamErr);
+    }
+
+    return NextResponse.json({ ...result, gamification, gamificationWarning });
   } catch (e: any) {
     // Preserve previous error behavior for "user not found" / "workout not found" etc.
     if (e?.message?.includes("User not found")) {

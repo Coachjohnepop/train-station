@@ -533,7 +533,14 @@ export default function MemberWorkoutConsole({
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err?.detail || "Failed to log workout");
+        const detail = err?.detail;
+        const message =
+          typeof detail === "string"
+            ? detail
+            : typeof detail === "object" && detail !== null
+              ? "Failed to log workout"
+              : "Failed to log workout";
+        throw new Error(message);
       }
 
       const data = await res.json();
@@ -543,9 +550,18 @@ export default function MemberWorkoutConsole({
         count: data.performances || idsToLog.length,
         progress: data.progress ?? progress 
       });
+      const totalPoints = data.gamification?.totalPoints;
+      if (typeof totalPoints === "number") {
+        window.dispatchEvent(
+          new CustomEvent("member-score-updated", { detail: { totalPoints } }),
+        );
+      }
       // keep the finished marks so user can review what was logged
     } catch (e: any) {
-      alert(e?.message || "Could not save. Check connection and try again.");
+      const msg = e?.message || "Could not save. Check connection and try again.";
+      if (!/gamification points/i.test(msg)) {
+        alert(msg);
+      }
     } finally {
       setIsLogging(false);
     }
