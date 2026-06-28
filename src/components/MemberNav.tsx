@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import ChatNavBadge from "@/components/ChatNavBadge";
+import { goMemberTodayHome } from "@/lib/member-today-home";
 
 const items = [
   {
@@ -40,6 +41,7 @@ const items = [
 
 export default function MemberNav({ intakePending = false }: { intakePending?: boolean }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [scorePoints, setScorePoints] = useState<number | null>(null);
   const [scorePulse, setScorePulse] = useState(false);
 
@@ -118,6 +120,10 @@ export default function MemberNav({ intakePending = false }: { intakePending?: b
               href={item.href}
               aria-label="Home — Today dashboard"
               title="Home — your daily dashboard"
+              onClick={(e) => {
+                e.preventDefault();
+                goMemberTodayHome(router);
+              }}
               className={`member-nav-home relative flex flex-[2] flex-col items-center justify-center rounded-xl border text-center transition lg:min-w-[9.5rem] lg:px-8 ${
                 rampHighlight
                   ? active

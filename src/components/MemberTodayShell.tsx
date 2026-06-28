@@ -1,7 +1,9 @@
 "use client";
 
+import { useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { MEMBER_TODAY_RESET_EVENT } from "@/lib/member-today-home";
 import MemberDayWheel from "@/components/MemberDayWheel";
 import MemberIntakeIntroCard from "@/components/MemberIntakeIntroCard";
 import MemberWarmupDayNavigator from "@/components/MemberWarmupDayNavigator";
@@ -156,13 +158,25 @@ export default function MemberTodayShell({
   const showFullWorkout = isToday && !!workout && intakeComplete;
   const showWarmupFlow = !intakeComplete && !!warmupWorkout && days.length > 0;
 
-  function selectDate(iso: string) {
-    const q = new URLSearchParams(searchParams.toString());
-    if (iso === todayIso) q.delete("date");
-    else q.set("date", iso);
-    const suffix = q.toString() ? `?${q.toString()}` : "";
-    router.replace(`/member/today${suffix}`, { scroll: false });
-  }
+  const selectDate = useCallback(
+    (iso: string) => {
+      const q = new URLSearchParams(searchParams.toString());
+      if (iso === todayIso) q.delete("date");
+      else q.set("date", iso);
+      const suffix = q.toString() ? `?${q.toString()}` : "";
+      router.replace(`/member/today${suffix}`, { scroll: false });
+    },
+    [router, searchParams, todayIso],
+  );
+
+  useEffect(() => {
+    function onTodayReset() {
+      selectDate(todayIso);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    window.addEventListener(MEMBER_TODAY_RESET_EVENT, onTodayReset);
+    return () => window.removeEventListener(MEMBER_TODAY_RESET_EVENT, onTodayReset);
+  }, [selectDate, todayIso]);
 
   const rampHighlight = showWarmupFlow && !intakeComplete;
   const showFollowUpCard = isToday && !!coachMeetingRequestedAt && intakeComplete;
@@ -173,7 +187,7 @@ export default function MemberTodayShell({
   };
 
   return (
-    <div className="space-y-4">
+    <div id="member-today-top" className="space-y-4 scroll-mt-4">
       <div>
         <h1
           className={`text-xl font-bold sm:text-2xl ${isToday && rampHighlight ? "text-ramp-gold" : ""}`}

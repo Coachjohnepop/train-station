@@ -1,7 +1,7 @@
 import Link from "next/link";
 import IntakeBookingCelebrate from "@/components/IntakeBookingCelebrate";
 import MemberNav from "@/components/MemberNav";
-import TrainStationBrand from "@/components/TrainStationBrand";
+import MemberHeaderHomeLink from "@/components/MemberHeaderHomeLink";
 import LogoutButton from "@/components/LogoutButton";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
 import ThemeModeToggle from "@/components/ThemeModeToggle";
@@ -34,9 +34,7 @@ export default function MemberShell({
       <header className="app-shell-header">
         <div className="mx-auto flex w-full max-w-lg md:max-w-3xl lg:max-w-6xl xl:max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <Link href="/member/today" className="transition hover:opacity-90" title="Home — Today">
-              <TrainStationBrand variant="header" className="!h-7 sm:!h-8" />
-            </Link>
+            <MemberHeaderHomeLink />
             <div>
               <p className="text-sm font-medium">Hi, {memberName}</p>
               {memberEmail && <p className="text-[10px] text-[var(--muted)]">{memberEmail}</p>}
