@@ -11,7 +11,7 @@ type Props = {
   selectedIso: string;
   todayIso: string;
   onSelect: (iso: string) => void;
-  /** Gold emphasis on today's chip during intake ramp-up */
+  /** @deprecated Today chip is always gold; prop kept for API compatibility */
   highlightTodayGold?: boolean;
 };
 
@@ -20,7 +20,6 @@ export default function MemberDayWheel({
   selectedIso,
   todayIso,
   onSelect,
-  highlightTodayGold = false,
 }: Props) {
   const scroller = useRef<HTMLDivElement>(null);
   const scrollEndTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -65,7 +64,7 @@ export default function MemberDayWheel({
       <div
         aria-hidden
         className={`pointer-events-none absolute inset-y-0 left-1/2 z-10 w-[76px] -translate-x-1/2 rounded-xl border ${
-          highlightTodayGold && selectedIso === todayIso
+          selectedIso === todayIso
             ? "day-wheel-focus-gold"
             : "border-[var(--accent)]/40 bg-[var(--accent)]/6"
         }`}
@@ -81,7 +80,7 @@ export default function MemberDayWheel({
         {days.map((day) => {
           const isSelected = day.iso === selectedIso;
           const isToday = day.iso === todayIso;
-          const todayGold = highlightTodayGold && isToday;
+          const todayGold = isToday;
           const chipClass = todayGold
             ? isSelected
               ? "day-wheel-chip-today-gold day-wheel-chip-today-gold--selected"
@@ -100,7 +99,7 @@ export default function MemberDayWheel({
             >
               <span
                 className={`text-[10px] font-semibold uppercase tracking-wide ${
-                  todayGold ? "text-[var(--ramp-gold-light)]" : isToday ? "text-accent" : "text-[var(--muted)]"
+                  todayGold ? "text-[var(--ramp-gold-light)]" : "text-[var(--muted)]"
                 }`}
               >
                 {day.weekday}
@@ -122,7 +121,7 @@ export default function MemberDayWheel({
               )}
               {isToday && !day.completed && (
                 <span
-                  className={`mt-1 h-1.5 w-1.5 rounded-full ${todayGold ? "bg-[var(--ramp-gold)]" : "bg-accent"}`}
+                  className="mt-1 h-1.5 w-1.5 rounded-full bg-[var(--ramp-gold)]"
                   aria-hidden
                 />
               )}

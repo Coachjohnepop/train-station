@@ -488,10 +488,10 @@ table.data th {
 }
 
 .member-set-btn--done {
-  border-color: var(--success);
-  background: var(--success);
-  color: white;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--success) 30%, transparent);
+  border-color: var(--ramp-gold-light);
+  background: linear-gradient(180deg, var(--ramp-gold-light) 0%, var(--ramp-gold) 100%);
+  color: #1a1028;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ramp-gold-glow) 50%, transparent);
 }
 
 .member-set-btn--done .member-set-btn__num {
@@ -599,15 +599,15 @@ table.data th {
   align-items: center;
   gap: 0.75rem;
   border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--success) 35%, var(--border));
-  background: color-mix(in srgb, var(--success) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--ramp-gold) 45%, var(--border));
+  background: color-mix(in srgb, var(--ramp-gold) 10%, var(--surface));
   padding: 0.875rem 1rem;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
 
 .member-exercise-done:hover {
-  border-color: color-mix(in srgb, var(--success) 55%, var(--border));
+  border-color: color-mix(in srgb, var(--ramp-gold-light) 55%, var(--border));
 }
 
 .member-exercise-done__check {
@@ -618,10 +618,11 @@ table.data th {
   width: 1.75rem;
   height: 1.75rem;
   border-radius: 9999px;
-  background: var(--success);
-  color: #09090b;
+  background: linear-gradient(180deg, var(--ramp-gold-light) 0%, var(--ramp-gold) 100%);
+  color: #1a1028;
   font-size: 0.875rem;
   font-weight: 800;
+  box-shadow: 0 0 10px var(--ramp-gold-glow);
 }
 
 .member-exercise-done__name {

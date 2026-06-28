@@ -370,7 +370,7 @@ export default function MemberWorkoutConsole({
   ]);
 
   // Seed local completedSets from past when opening in (pure) review mode.
-  // This makes the "log your sets" buttons pre-render with green checks (✓ on --success)
+  // Pre-render completed sets with gold checkmarks (member-set-btn--done)
   // matching the previously logged setsCompleted. For active member or instructor sessions
   // we start empty so clicks immediately drive the green visual state.
   useEffect(() => {
@@ -580,7 +580,7 @@ export default function MemberWorkoutConsole({
       <div className="mt-3 flex items-center gap-2 text-xs">
         <div className="flex-1 h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden">
           <div
-            className="h-full bg-accent transition-all"
+            className="h-full bg-gradient-to-r from-[var(--ramp-gold-light)] to-[var(--ramp-gold)] transition-all"
             style={{ width: `${Math.round((finishedExercises.size / workout.exercises.length) * 100)}%` }}
           />
         </div>
@@ -823,7 +823,7 @@ export default function MemberWorkoutConsole({
                       </>
                     )}
                     {allSetsDone && (
-                      <p className="mt-1 text-center text-[10px] font-medium text-[var(--success)]">
+                      <p className="mt-1 text-center text-[10px] font-medium text-[var(--ramp-gold-light)]">
                         {isTimed ? "Timed complete" : "Sets logged"}
                       </p>
                     )}
