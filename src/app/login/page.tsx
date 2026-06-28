@@ -145,21 +145,25 @@ function LoginForm() {
       await offerSavePassword({ email: email.trim(), password });
 
       const destination = data.redirect || "/member";
-      try {
-        const deviceId = await ensureDeviceId();
-        const statusRes = await fetch("/api/auth/quick-auth/status", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify({ email: email.trim().toLowerCase(), deviceId }),
-        });
-        const status = (await statusRes.json().catch(() => ({}))) as { enabled?: boolean };
-        if (!status.enabled) {
-          window.location.href = `/setup-quick-auth?redirect=${encodeURIComponent(destination)}`;
-          return;
+      const skipQuickAuthSetup =
+        destination.includes("/member/onboard") || destination.includes("/member/checkout");
+      if (!skipQuickAuthSetup) {
+        try {
+          const deviceId = await ensureDeviceId();
+          const statusRes = await fetch("/api/auth/quick-auth/status", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ email: email.trim().toLowerCase(), deviceId }),
+          });
+          const status = (await statusRes.json().catch(() => ({}))) as { enabled?: boolean };
+          if (!status.enabled) {
+            window.location.href = `/setup-quick-auth?redirect=${encodeURIComponent(destination)}`;
+            return;
+          }
+        } catch {
+          /* fall through to destination */
         }
-      } catch {
-        /* fall through to destination */
       }
       window.location.href = destination;
     } catch {

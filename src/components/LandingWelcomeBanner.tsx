@@ -7,14 +7,17 @@ export default function LandingWelcomeBanner({
   displayName,
   email,
   isCoach,
+  membershipPlan = null,
   welcomeVideoUrl = null,
 }: {
   displayName: string;
   email?: string;
   isCoach?: boolean;
+  membershipPlan?: string | null;
   welcomeVideoUrl?: string | null;
 }) {
   const programHref = isCoach ? "/admin" : "/member";
+  const isFreeTier = !isCoach && membershipPlan === "explorer";
 
   return (
     <section className="border-b border-[var(--border)] px-4 py-10 text-center sm:px-6 sm:py-12">
@@ -23,17 +26,52 @@ export default function LandingWelcomeBanner({
           Welcome back, {displayName}.
         </h1>
         <p className="mt-3 text-base text-[var(--muted)] sm:text-lg">
-          Your programs, progress, and workouts are ready — or pick a membership ticket below.
+          {isFreeTier
+            ? "You're on Explorer (free) — sample the station, then upgrade when you're ready for daily coach workouts and live sessions."
+            : "Your programs, progress, and workouts are ready — or pick a membership ticket below."}
         </p>
+
+        {isFreeTier && (
+          <div className="mt-6 rounded-2xl border border-[#7c3aed]/35 bg-[#7c3aed]/10 px-4 py-4 text-left sm:px-5">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#c4b5fd]">
+              Ready for the full ride?
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--text)]">
+              Coach Class adds daily SMS workouts, your private coach thread, and scheduling with
+              Jeremy. Business Class and 1st Class unlock more live coaching and priority support.
+            </p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
+              <Link href="/member/checkout?plan=member" className="btn-primary text-xs sm:text-sm">
+                Upgrade to Coach Class
+              </Link>
+              <Link href="/member/checkout?plan=business" className="btn-secondary text-xs sm:text-sm">
+                Business Class
+              </Link>
+              <Link href="/member/checkout?plan=pro" className="btn-secondary text-xs sm:text-sm">
+                1st Class
+              </Link>
+            </div>
+            <p className="mt-3 text-[11px] text-[var(--muted)]">
+              Same account — no need to sign up again. Compare all tickets below.
+            </p>
+          </div>
+        )}
+
         <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link href={programHref} className="btn-primary px-8">
-            {isCoach ? "Coach admin" : "Open dashboard"}
+            {isCoach ? "Coach admin" : isFreeTier ? "Open free dashboard" : "Open dashboard"}
           </Link>
           <WelcomeVideoPopover welcomeVideoUrl={welcomeVideoUrl}>Watch intro</WelcomeVideoPopover>
         </div>
         {email && (
           <p className="mt-4 text-xs text-[var(--muted)]">
             Signed in as <span className="text-[var(--text)]">{email}</span>
+            {isFreeTier && (
+              <>
+                {" "}
+                · <span className="text-[#c4b5fd]">Explorer (free)</span>
+              </>
+            )}
           </p>
         )}
       </div>

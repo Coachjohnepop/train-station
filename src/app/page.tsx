@@ -11,6 +11,8 @@ import LandingTicketPicker from "@/components/LandingTicketPicker";
 import LandingWelcomeBanner from "@/components/LandingWelcomeBanner";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
 import { getResolvedLandingVideos } from "@/lib/landing-media-server";
+import { getMemberProfile } from "@/lib/member-profiles-store";
+import { membershipThemeTierFromPlan } from "@/lib/membership-theme";
 
 export default async function HomePage() {
   const cookieStore = await cookies();
@@ -26,10 +28,14 @@ export default async function HomePage() {
       "Member";
     const email = session.email || demoUser?.email;
     const isCoach = isStaffRole(session.role);
+    const profile =
+      session.role === "MEMBER" ? await getMemberProfile(session.id) : null;
+    const membershipPlan = profile?.plan ?? (isCoach ? null : "explorer");
+    const themeTier = membershipThemeTierFromPlan(profile?.plan);
 
     return (
       <div className="min-h-screen app-shell-bg">
-        <ThemeAttributesSync membershipTier="explorer" />
+        <ThemeAttributesSync membershipTier={themeTier} />
         <LandingNav
           variant="welcome"
           purchaseAuth={{ signedIn: true, role: session.role }}
@@ -38,6 +44,7 @@ export default async function HomePage() {
           displayName={displayName}
           email={email}
           isCoach={isCoach}
+          membershipPlan={membershipPlan}
           welcomeVideoUrl={landingVideos.welcomeVideoUrl}
         />
         <LandingTicketPicker
