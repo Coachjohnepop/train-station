@@ -93,6 +93,7 @@ export default function MemberWorkoutConsole({
   );
   const [isLogging, setIsLogging] = useState(false);
   const [logResult, setLogResult] = useState<null | { performedAt: string; count: number; progress?: number }>(null);
+  const [finishedListExpanded, setFinishedListExpanded] = useState(false);
   const [coachLive, setCoachLive] = useState(false);
   const [partnerLive, setPartnerLive] = useState(false);
 
@@ -472,6 +473,14 @@ export default function MemberWorkoutConsole({
     if (autoFinished) queueLiveSave(true);
   }, [completedSets, finishedExercises, workout.exercises, reviewMode, markExerciseFinished, instructorName, queueLiveSave]);
 
+  const totalExercises = workout.exercises.length;
+  const allExercisesFinished =
+    !reviewMode && totalExercises > 0 && finishedExercises.size === totalExercises;
+
+  useEffect(() => {
+    if (allExercisesFinished) setFinishedListExpanded(false);
+  }, [allExercisesFinished]);
+
   const handleLogComplete = useCallback(async () => {
     // Collect all exercises that were explicitly finished OR have per-set progress marked.
     // This ensures the "log your sets" buttons (per-set toggles) actually contribute setsCompleted to the log.
@@ -589,11 +598,34 @@ export default function MemberWorkoutConsole({
         </span>
       </div>
 
+      {allExercisesFinished ? (
+        <button
+          type="button"
+          className="member-workout-finished-collapse mt-4 w-full"
+          onClick={() => setFinishedListExpanded((open) => !open)}
+          aria-expanded={finishedListExpanded}
+        >
+          <span
+            className={`member-workout-finished-collapse__chev ${finishedListExpanded ? "is-open" : ""}`}
+            aria-hidden
+          >
+            ▶
+          </span>
+          <span className="member-workout-finished-collapse__label">
+            {finishedExercises.size} exercises complete
+          </span>
+          <span className="member-workout-finished-collapse__hint">
+            {finishedListExpanded ? "Tap to collapse" : "Tap to review"}
+          </span>
+        </button>
+      ) : null}
+
       <div className="mt-4 space-y-3">
         {workout.exercises.map((block) => {
           const isFinished = finishedExercises.has(block.id) && !reviewMode;
 
           if (isFinished) {
+            if (allExercisesFinished && !finishedListExpanded) return null;
             return (
               <button
                 key={block.id}

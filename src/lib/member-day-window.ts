@@ -144,13 +144,15 @@ export async function buildMemberDayWindow(
   userId: string,
   programSlug: string,
   loggedWorkoutIds: Set<string>,
-  rollingDays = 10,
+  opts?: { rollingDays?: number; daysBefore?: number },
 ): Promise<{ days: MemberDaySummary[]; rollup: MemberDayWindowRollup } | null> {
   const program = await getProgramBySlug(programSlug);
   if (!program) return null;
 
   const todayIso = localTodayIso();
-  const rolling = rollingProgramCalendarDays(program, todayIso, rollingDays);
+  const rollingDays = opts?.rollingDays ?? 10;
+  const daysBefore = opts?.daysBefore ?? 3;
+  const rolling = rollingProgramCalendarDays(program, todayIso, rollingDays, daysBefore);
   const days: MemberDaySummary[] = [];
 
   for (const entry of rolling) {

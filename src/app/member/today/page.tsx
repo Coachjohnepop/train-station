@@ -66,7 +66,10 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     ]);
 
   const dayWindow = primaryProgram
-    ? await buildMemberDayWindow(uid, primaryProgram.slug, loggedSet)
+    ? await buildMemberDayWindow(uid, primaryProgram.slug, loggedSet, {
+        rollingDays: 21,
+        daysBefore: 7,
+      })
     : null;
 
   const { session, workout, programSlug, source, scheduleLabel } = todayWorkout;
