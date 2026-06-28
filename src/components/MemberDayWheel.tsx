@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import type { MemberDaySummary } from "@/lib/member-day-window-types";
 
 const CHIP_W = 76;
 const GAP = 8;
+const VISIBLE_DAYS = 5;
 
 type Props = {
   days: MemberDaySummary[];
@@ -15,69 +16,64 @@ type Props = {
   highlightTodayGold?: boolean;
 };
 
+function visibleDayWindow(days: MemberDaySummary[], selectedIdx: number): MemberDaySummary[] {
+  if (days.length <= VISIBLE_DAYS) return days;
+  const half = Math.floor(VISIBLE_DAYS / 2);
+  let start = selectedIdx - half;
+  if (start < 0) start = 0;
+  if (start + VISIBLE_DAYS > days.length) start = days.length - VISIBLE_DAYS;
+  return days.slice(start, start + VISIBLE_DAYS);
+}
+
 export default function MemberDayWheel({
   days,
   selectedIso,
   todayIso,
   onSelect,
 }: Props) {
-  const scroller = useRef<HTMLDivElement>(null);
-  const scrollEndTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const userScrolling = useRef(false);
+  const selectedIdx = days.findIndex((d) => d.iso === selectedIso);
+  const currentIdx = selectedIdx >= 0 ? selectedIdx : days.findIndex((d) => d.iso === todayIso);
+  const canPrev = currentIdx > 0;
+  const canNext = currentIdx >= 0 && currentIdx < days.length - 1;
 
-  const scrollToIso = useCallback(
-    (iso: string, smooth = true) => {
-      const el = scroller.current;
-      if (!el) return;
-      const idx = days.findIndex((d) => d.iso === iso);
-      if (idx < 0) return;
-      const left = idx * (CHIP_W + GAP);
-      el.scrollTo({ left, behavior: smooth ? "smooth" : "auto" });
-    },
-    [days],
+  const visibleDays = useMemo(
+    () => visibleDayWindow(days, currentIdx >= 0 ? currentIdx : 0),
+    [days, currentIdx],
   );
 
-  useEffect(() => {
-    if (!userScrolling.current) scrollToIso(selectedIso, false);
-  }, [selectedIso, scrollToIso]);
+  const goPrev = useCallback(() => {
+    if (!canPrev || currentIdx < 0) return;
+    onSelect(days[currentIdx - 1].iso);
+  }, [canPrev, currentIdx, days, onSelect]);
 
-  function handleScroll() {
-    const el = scroller.current;
-    if (!el) return;
-    userScrolling.current = true;
-    if (scrollEndTimer.current) clearTimeout(scrollEndTimer.current);
-    scrollEndTimer.current = setTimeout(() => {
-      const idx = Math.round(el.scrollLeft / (CHIP_W + GAP));
-      const clamped = Math.max(0, Math.min(days.length - 1, idx));
-      const targetLeft = clamped * (CHIP_W + GAP);
-      el.scrollLeft = targetLeft;
-      const next = days[clamped]?.iso;
-      if (next && next !== selectedIso) onSelect(next);
-      userScrolling.current = false;
-    }, 90);
-  }
+  const goNext = useCallback(() => {
+    if (!canNext || currentIdx < 0) return;
+    onSelect(days[currentIdx + 1].iso);
+  }, [canNext, currentIdx, days, onSelect]);
 
   if (!days.length) return null;
 
+  const trackWidth = VISIBLE_DAYS * CHIP_W + (VISIBLE_DAYS - 1) * GAP;
+
   return (
-    <div className="relative -mx-1">
+    <div className="day-wheel-shell mx-auto flex max-w-full items-center justify-center gap-1 sm:gap-2">
+      <button
+        type="button"
+        aria-label="Previous day"
+        onClick={goPrev}
+        disabled={!canPrev}
+        className="day-wheel-spin day-wheel-spin--prev shrink-0"
+      >
+        <span aria-hidden className="day-wheel-spin__glyph" />
+      </button>
+
       <div
-        aria-hidden
-        className={`pointer-events-none absolute inset-y-0 left-1/2 z-10 w-[76px] -translate-x-1/2 rounded-xl border ${
-          selectedIso === todayIso
-            ? "day-wheel-focus-gold"
-            : "border-[var(--accent)]/40 bg-[var(--accent)]/6"
-        }`}
-      />
-      <div
-        ref={scroller}
         role="listbox"
         aria-label="Workout days"
-        className="day-wheel no-scrollbar flex gap-2 overflow-x-auto scroll-smooth px-[calc(50%-38px)] py-2"
-        style={{ scrollSnapType: "x mandatory" }}
-        onScroll={handleScroll}
+        className="day-wheel-track flex shrink-0 justify-center gap-2 py-2"
+        style={{ width: Math.min(trackWidth, visibleDays.length * CHIP_W + (visibleDays.length - 1) * GAP) }}
       >
-        {days.map((day) => {
+        {visibleDays.map((day) => {
           const isSelected = day.iso === selectedIso;
           const isToday = day.iso === todayIso;
           const todayGold = isToday;
@@ -88,6 +84,7 @@ export default function MemberDayWheel({
             : isSelected
               ? "border-[var(--accent)] bg-[var(--accent)]/12 shadow-sm"
               : "border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)]/30";
+
           return (
             <button
               key={day.iso}
@@ -95,7 +92,7 @@ export default function MemberDayWheel({
               role="option"
               aria-selected={isSelected}
               onClick={() => onSelect(day.iso)}
-              className={`relative flex w-[76px] shrink-0 snap-center flex-col items-center rounded-xl border px-1 py-2.5 text-center transition ${chipClass}`}
+              className={`relative flex w-[76px] shrink-0 flex-col items-center rounded-xl border px-1 py-2.5 text-center transition ${chipClass}`}
             >
               <span
                 className={`text-[10px] font-semibold uppercase tracking-wide ${
@@ -129,6 +126,16 @@ export default function MemberDayWheel({
           );
         })}
       </div>
+
+      <button
+        type="button"
+        aria-label="Next day"
+        onClick={goNext}
+        disabled={!canNext}
+        className="day-wheel-spin day-wheel-spin--next shrink-0"
+      >
+        <span aria-hidden className="day-wheel-spin__glyph" />
+      </button>
     </div>
   );
 }

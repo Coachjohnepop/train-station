@@ -66,7 +66,7 @@ async function main() {
       else fail(`Nav: ${tab}`);
     }
 
-    if (await page.locator(".day-wheel").count()) pass("Day wheel");
+    if (await page.locator(".day-wheel-shell").count()) pass("Day wheel");
     else fail("Day wheel");
 
     if (await page.getByRole("heading", { name: "Warm-up" }).count()) pass("Warm-up block");
