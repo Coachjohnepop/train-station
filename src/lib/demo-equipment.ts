@@ -17,10 +17,17 @@ type EquipmentStore = Record<string, DemoUserEquipment[]>;
 
 let memoryStore: EquipmentStore | null = null;
 
+const BODYWEIGHT_EQUIPMENT_ID = "eq-bodyweightonly";
+
 const DEMO_USER_DEFAULTS: DemoUserEquipment[] = [
-  { equipmentId: "eq-bodyweightonly", hasAtHome: true, quantity: 1 },
+  { equipmentId: BODYWEIGHT_EQUIPMENT_ID, hasAtHome: true, quantity: 1 },
   { equipmentId: "eq-dumbbellspair", hasAtHome: true, quantity: 1, notes: "Adjustable 5-25lb" },
   { equipmentId: "eq-resistancebands", hasAtHome: true, quantity: 3 },
+];
+
+/** Real members with no saved gear yet — bodyweight assumed unless they uncheck it. */
+const NEW_MEMBER_EQUIPMENT_DEFAULTS: DemoUserEquipment[] = [
+  { equipmentId: BODYWEIGHT_EQUIPMENT_ID, hasAtHome: true, quantity: 1 },
 ];
 
 function seedStoreFromDisk(): EquipmentStore {
@@ -71,7 +78,7 @@ async function getUserEquipment(userId: string): Promise<DemoUserEquipment[]> {
   if (shouldUseDemoDefaults(uid)) {
     return store["demo-user"]?.length ? store["demo-user"] : DEMO_USER_DEFAULTS;
   }
-  return [];
+  return NEW_MEMBER_EQUIPMENT_DEFAULTS;
 }
 
 export function isDemoMode() {
@@ -109,7 +116,9 @@ export async function getAllEquipmentWithUserStatus(userId?: string) {
     const userItem = userMap.get(eq.id);
     return {
       ...eq,
-      hasAtHome: userItem ? userItem.hasAtHome : false,
+      hasAtHome: userItem
+        ? userItem.hasAtHome
+        : eq.id === BODYWEIGHT_EQUIPMENT_ID,
       quantity: userItem?.quantity ?? 1,
       notes: userItem?.notes ?? eq.description ?? "",
     };

@@ -225,10 +225,10 @@ async function testEquipmentPersistence() {
   pass("Equipment catalog", `${list.length} items`);
 
   const bodyweight = list.find((e) => e.id === "eq-bodyweightonly");
-  if (bodyweight && bodyweight.hasAtHome === false) {
-    pass("New member starts unchecked", "bodyweight off");
-  } else if (bodyweight?.hasAtHome) {
-    fail("New member defaults", "bodyweight already on (demo bleed?)");
+  if (bodyweight?.hasAtHome) {
+    pass("New member default equipment", "bodyweight on");
+  } else {
+    fail("New member default equipment", "bodyweight should start checked");
   }
 
   const payload = list.map((e) => ({
