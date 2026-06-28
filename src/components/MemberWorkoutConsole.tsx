@@ -57,6 +57,7 @@ export default function MemberWorkoutConsole({
   progressMode = "live",
   hideLogButton = false,
   headerNote,
+  embedded = false,
 }: {
   workout: MemberWorkoutView;
   backHref?: string;
@@ -76,6 +77,8 @@ export default function MemberWorkoutConsole({
   progressMode?: "live" | "warmup";
   hideLogButton?: boolean;
   headerNote?: string;
+  /** Hide title block when nested inside warm-up day navigator */
+  embedded?: boolean;
 }) {
   const [weights, setWeights] = useState<Record<string, string>>({});
   const [activeId, setActiveId] = useState(workout.exercises[0]?.id ?? "");
@@ -532,23 +535,29 @@ export default function MemberWorkoutConsole({
   }, [finishedExercises, workout, weights, completedSets, activeId, programSlug, targetUserId, clearLiveSession]);
 
   return (
-    <div className="mx-auto w-full max-w-md md:max-w-2xl lg:max-w-2xl xl:max-w-2xl px-4 py-6 md:px-6">
-      <p className="text-xs font-semibold uppercase tracking-widest text-accent">
-        {calendarDateLabel ? "Scheduled workout" : "Today\u2019s workout"}
-      </p>
-      {calendarDateLabel && (
-        <p className="mt-1 text-sm font-medium text-white">{calendarDateLabel}</p>
+    <div
+      className={`mx-auto w-full max-w-md md:max-w-2xl lg:max-w-2xl xl:max-w-2xl ${embedded ? "px-0 py-2 md:px-2" : "px-4 py-6 md:px-6"}`}
+    >
+      {!embedded && (
+        <>
+          <p className="text-xs font-semibold uppercase tracking-widest text-accent">
+            {calendarDateLabel ? "Scheduled workout" : "Today\u2019s workout"}
+          </p>
+          {calendarDateLabel && (
+            <p className="mt-1 text-sm font-medium text-white">{calendarDateLabel}</p>
+          )}
+          {scheduleLabel && (
+            <p className="mt-0.5 text-xs text-[var(--muted)]">{scheduleLabel}</p>
+          )}
+          <h1 className={`${calendarDateLabel ? "mt-2" : "mt-1"} text-2xl font-bold`}>
+            {workout.workoutName}
+          </h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            {headerNote ||
+              `Hi ${workout.memberName} — follow each exercise. Your last session appears as a faint silhouette behind the active card.`}
+          </p>
+        </>
       )}
-      {scheduleLabel && (
-        <p className="mt-0.5 text-xs text-[var(--muted)]">{scheduleLabel}</p>
-      )}
-      <h1 className={`${calendarDateLabel ? "mt-2" : "mt-1"} text-2xl font-bold`}>
-        {workout.workoutName}
-      </h1>
-      <p className="mt-1 text-sm text-[var(--muted)]">
-        {headerNote ||
-          `Hi ${workout.memberName} — follow each exercise. Your last session appears as a faint silhouette behind the active card.`}
-      </p>
       {coachLive && !instructorName && (
         <p className="mt-2 text-xs font-medium text-[var(--success)]">
           Coach is marking your workout live — updates appear almost instantly.

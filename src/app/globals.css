@@ -255,6 +255,55 @@ a {
   -webkit-overflow-scrolling: touch;
 }
 
+.warmup-nav-arrow {
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  min-height: 12rem;
+  align-self: center;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  color: var(--accent-light);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.warmup-nav-arrow:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.warmup-nav-arrow:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+@media (min-width: 1024px) {
+  .warmup-nav-arrow {
+    width: 4rem;
+    min-height: 16rem;
+  }
+
+  .warmup-nav-arrow span {
+    font-size: 4.5rem;
+  }
+}
+
+.warmup-nav-arrow-mobile {
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: var(--surface);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-light);
+}
+
+.warmup-nav-arrow-mobile:disabled {
+  opacity: 0.35;
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

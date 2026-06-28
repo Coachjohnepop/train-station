@@ -111,10 +111,9 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const memberWorkout = viewDate === todayKey ? workout : null;
   const intakeComplete =
     !uid.startsWith("member-") || isCoachIntakeComplete(profile);
-  const warmupWorkout =
-    viewDate === todayKey && !intakeComplete
-      ? buildWarmupWorkoutView(memberName, coachSettings.warmupBlocks)
-      : null;
+  const warmupWorkout = !intakeComplete
+    ? buildWarmupWorkoutView(memberName, coachSettings.warmupBlocks)
+    : null;
 
   return (
     <div className="space-y-4">

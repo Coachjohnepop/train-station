@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import MemberDayWheel from "@/components/MemberDayWheel";
 import MemberIntakeIntroCard from "@/components/MemberIntakeIntroCard";
+import MemberWarmupDayNavigator from "@/components/MemberWarmupDayNavigator";
 import MemberWorkoutConsole, { type MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import type { MemberDaySummary, MemberDayWindowRollup } from "@/lib/member-day-window-types";
 
@@ -147,7 +148,7 @@ export default function MemberTodayShell({
   const searchParams = useSearchParams();
   const isToday = selectedDate === todayIso;
   const showFullWorkout = isToday && !!workout && intakeComplete;
-  const showWarmupOnly = isToday && !intakeComplete && !!warmupWorkout;
+  const showWarmupFlow = !intakeComplete && !!warmupWorkout && days.length > 0;
 
   function selectDate(iso: string) {
     const q = new URLSearchParams(searchParams.toString());
@@ -188,31 +189,27 @@ export default function MemberTodayShell({
         />
       )}
 
-      {!isToday && selectedSummary && (
+      {!showWarmupFlow && !isToday && selectedSummary && (
         <DaySummaryCard summary={selectedSummary} isToday={false} />
       )}
 
-      {isToday && !showFullWorkout && !showWarmupOnly && selectedSummary && (
-        <DaySummaryCard summary={selectedSummary} isToday />
+      {showWarmupFlow && (
+        <>
+          {isToday && <MemberIntakeIntroCard />}
+          <MemberWarmupDayNavigator
+            days={days}
+            todayIso={todayIso}
+            selectedDate={selectedDate}
+            onSelectDate={selectDate}
+            warmupWorkout={warmupWorkout}
+            programSlug={programSlug}
+            targetUserId={targetUserId}
+          />
+        </>
       )}
 
-      {showWarmupOnly && (
-        <>
-          <MemberIntakeIntroCard />
-          <div className="-mx-4 sm:mx-0">
-            <MemberWorkoutConsole
-              workout={warmupWorkout}
-              backHref="/member/today"
-              programSlug={programSlug}
-              targetUserId={targetUserId}
-              liveSyncUserId={targetUserId}
-              liveSessionDate={selectedDate}
-              progressMode="warmup"
-              hideLogButton
-              headerNote="Check off your warm-up sets before coach joins live — your coach gets a heads-up when you start."
-            />
-          </div>
-        </>
+      {!showWarmupFlow && isToday && !showFullWorkout && selectedSummary && (
+        <DaySummaryCard summary={selectedSummary} isToday />
       )}
 
       {showFullWorkout && workout && (
