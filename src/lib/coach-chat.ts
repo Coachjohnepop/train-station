@@ -367,4 +367,23 @@ export async function appendMemberSmsToChat(params: {
   });
 }
 
+/** Coach-facing alert in the member's chat thread (in-app notification). */
+export async function postCoachSystemMessage(params: {
+  memberId: string;
+  body: string;
+  sessionDate?: string;
+}) {
+  const thread = await ensureMemberThread(params.memberId);
+  return addChatMessage({
+    threadId: thread.id,
+    authorRole: "system",
+    authorId: "system",
+    authorName: "Train Station",
+    kind: "system",
+    body: params.body,
+    sessionDate: params.sessionDate,
+    readByUserIds: [],
+  });
+}
+
 export { COACH_READER_ID };

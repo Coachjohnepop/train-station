@@ -8,6 +8,11 @@ export type { MemberDaySummary, MemberDayWindowRollup } from "@/lib/member-day-w
 import { resolveProgramWorkoutForCalendarDate } from "@/lib/go-to-today";
 import { getProgramBySlug } from "@/lib/program-data";
 import { getUserEnrollments } from "@/lib/data/user-data";
+import {
+  dayVisibilityTier,
+  daysFromToday,
+  themeLabelForDay,
+} from "@/lib/workout-day-visibility";
 import { getDemoSeed } from "@/lib/demo-seed-store";
 import { hydrateDemoExercises, loadDemoExercises } from "@/lib/demo-exercises";
 import { buildDemoWorkoutExerciseItems } from "@/lib/demo-workout-items";
@@ -99,6 +104,12 @@ export async function buildMemberDayWindow(
     const workoutId = resolved?.smsOverride ? null : resolved?.workoutId || null;
     const names = workoutId ? await exerciseNamesForWorkout(workoutId) : [];
     const dayLabel = DAY_LABELS[entry.dayNumber - 1] ?? `Day ${entry.dayNumber}`;
+    const offset = daysFromToday(entry.iso, todayIso);
+    const visibilityTier = dayVisibilityTier(entry.iso, todayIso);
+    const rawWorkoutName = resolved?.workoutName || resolved?.option || null;
+    const themeLabel =
+      visibilityTier === "label" ? themeLabelForDay(rawWorkoutName, dayLabel) : null;
+    const visibleNames = visibilityTier === "label" ? [] : names;
 
     days.push({
       iso: entry.iso,
@@ -108,15 +119,19 @@ export async function buildMemberDayWindow(
       dayLabel,
       weekNumber: entry.weekNumber,
       dayNumber: entry.dayNumber,
-      workoutName: resolved?.workoutName || resolved?.option || null,
+      workoutName:
+        visibilityTier === "label" ? themeLabel : rawWorkoutName,
       workoutId,
       programSlug,
       completed: !!(workoutId && loggedWorkoutIds.has(workoutId)),
-      exerciseCount: names.length,
-      exerciseNames: names,
+      exerciseCount: visibleNames.length,
+      exerciseNames: visibleNames,
       stretchNames: pickStretchPreview(names),
       smsOverride: !!resolved?.smsOverride,
       hasWorkout: !!resolved,
+      daysFromToday: offset,
+      visibilityTier,
+      themeLabel,
     });
   }
 

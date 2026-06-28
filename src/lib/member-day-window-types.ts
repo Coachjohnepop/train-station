@@ -1,4 +1,5 @@
 import type { RollingCalendarDayPhase } from "@/lib/program-calendar";
+import type { DayVisibilityTier } from "@/lib/workout-day-visibility";
 
 export type MemberDaySummary = {
   iso: string;
@@ -17,6 +18,10 @@ export type MemberDaySummary = {
   stretchNames: string[];
   smsOverride: boolean;
   hasWorkout: boolean;
+  daysFromToday: number;
+  visibilityTier: DayVisibilityTier;
+  /** Theme-only label for far-future days (e.g. "Leg day"). */
+  themeLabel: string | null;
 };
 
 export type MemberDayWindowRollup = {

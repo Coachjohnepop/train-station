@@ -46,6 +46,9 @@ export type MemberProfile = {
   welcomeSignupEmailSentAt: string | null;
   welcomeCompleteEmailSentAt: string | null;
   welcomeSmsSentAt: string | null;
+  coachIntakeCompleteAt: string | null;
+  coachIntakeCompletedBy: string | null;
+  rampStartedAt: string | null;
   updatedAt: string;
 };
 
@@ -89,6 +92,9 @@ function emptyProfile(userId: string, email: string, plan: SignupPlan): MemberPr
     welcomeSignupEmailSentAt: null,
     welcomeCompleteEmailSentAt: null,
     welcomeSmsSentAt: null,
+    coachIntakeCompleteAt: null,
+    coachIntakeCompletedBy: null,
+    rampStartedAt: null,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -150,6 +156,9 @@ function normalizeProfile(raw: unknown, userId: string): MemberProfile | null {
     welcomeSignupEmailSentAt: data.welcomeSignupEmailSentAt ?? null,
     welcomeCompleteEmailSentAt: data.welcomeCompleteEmailSentAt ?? null,
     welcomeSmsSentAt: data.welcomeSmsSentAt ?? null,
+    coachIntakeCompleteAt: data.coachIntakeCompleteAt ?? null,
+    coachIntakeCompletedBy: data.coachIntakeCompletedBy ?? null,
+    rampStartedAt: data.rampStartedAt ?? null,
     updatedAt: data.updatedAt || new Date().toISOString(),
   };
 }
@@ -254,6 +263,9 @@ export async function updateMemberProfile(
       | "welcomeSignupEmailSentAt"
       | "welcomeCompleteEmailSentAt"
       | "welcomeSmsSentAt"
+      | "coachIntakeCompleteAt"
+      | "coachIntakeCompletedBy"
+      | "rampStartedAt"
       | "approvalStatus"
       | "approvedAt"
       | "paymentStatus"

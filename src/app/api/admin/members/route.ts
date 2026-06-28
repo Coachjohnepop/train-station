@@ -40,6 +40,8 @@ export async function GET() {
       approvedAt: profile?.approvedAt ?? null,
       createdAt: account.createdAt,
       completedAt: profile?.completedAt ?? null,
+      coachIntakeCompleteAt: profile?.coachIntakeCompleteAt ?? null,
+      rampStartedAt: profile?.rampStartedAt ?? null,
     };
   });
 

@@ -16,6 +16,7 @@ import { syncMemberGateCookies } from "@/lib/auth";
 import { memberPostOnboardPath } from "@/lib/member-destinations";
 import { sendMemberWelcomeEmail } from "@/lib/member-welcome";
 import { sendWelcomeSms } from "@/lib/sms";
+import { notifyCoachNewMember } from "@/lib/coach-member-notify";
 
 const schema = z.object({
   measurements: z
@@ -77,6 +78,7 @@ export async function POST(request: Request) {
     state: location?.state || null,
     onboardingComplete: true,
     completedAt,
+    rampStartedAt: completedAt,
   });
 
   const enrolledSlug = programSlug || "adult";
@@ -118,6 +120,13 @@ Calendly opened: ${calendlyOpened ? "yes" : "no"}
     plan: profile.plan,
     source: "onboard-complete",
     createdAt: completedAt,
+  });
+
+  await notifyCoachNewMember({
+    userId: session.id,
+    name: session.name || "Member",
+    email: session.email,
+    plan: profile.plan,
   });
 
   const welcomePatch: Parameters<typeof updateMemberProfile>[1] = {};

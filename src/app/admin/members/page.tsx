@@ -19,6 +19,8 @@ type MemberRow = {
   approvedAt: string | null;
   createdAt: string;
   completedAt: string | null;
+  coachIntakeCompleteAt: string | null;
+  rampStartedAt: string | null;
 };
 
 function formatWhen(iso: string | null): string {
@@ -64,6 +66,7 @@ export default function AdminMembersPage() {
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
+  const [intakeSigning, setIntakeSigning] = useState<string | null>(null);
   const [markingPaid, setMarkingPaid] = useState<string | null>(null);
   const [markPaidTarget, setMarkPaidTarget] = useState<MemberRow | null>(null);
   const [markPaidMethod, setMarkPaidMethod] = useState<"venmo" | "manual" | "stripe" | "other">(
@@ -89,6 +92,21 @@ export default function AdminMembersPage() {
   useEffect(() => {
     void loadMembers();
   }, []);
+
+  async function completeIntake(userId: string) {
+    setIntakeSigning(userId);
+    setError("");
+    const res = await fetch(`/api/admin/members/${encodeURIComponent(userId)}/intake`, {
+      method: "POST",
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error || "Intake sign-off failed.");
+    } else {
+      await loadMembers();
+    }
+    setIntakeSigning(null);
+  }
 
   async function approveMember(userId: string) {
     setApproving(userId);
@@ -132,6 +150,9 @@ export default function AdminMembersPage() {
   }
 
   const pendingCount = members.filter((m) => m.approvalStatus === "pending").length;
+  const intakePendingCount = members.filter(
+    (m) => m.onboardingComplete && !m.coachIntakeCompleteAt,
+  ).length;
   const unpaidCount = members.filter(
     (m) => isPaidPlan(m.plan) && m.paymentStatus !== "paid",
   ).length;
@@ -159,6 +180,12 @@ export default function AdminMembersPage() {
               Awaiting payment
             </div>
           </div>
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-center">
+            <div className="text-2xl font-semibold text-sky-300">{intakePendingCount}</div>
+            <div className="text-[10px] uppercase tracking-[2px] text-[var(--muted)]">
+              Needs intake
+            </div>
+          </div>
         </div>
       </div>
 
@@ -182,6 +209,7 @@ export default function AdminMembersPage() {
                 <th className="px-4 py-3 font-medium">Plan</th>
                 <th className="px-4 py-3 font-medium">Payment</th>
                 <th className="px-4 py-3 font-medium">Onboard</th>
+                <th className="px-4 py-3 font-medium">Intake</th>
                 <th className="px-4 py-3 font-medium">Approval</th>
                 <th className="px-4 py-3 font-medium">Signed up</th>
                 <th className="px-4 py-3 font-medium" />
@@ -227,6 +255,19 @@ export default function AdminMembersPage() {
                   <td className="px-4 py-3 text-[var(--muted)]">
                     {member.onboardingComplete ? "Done" : "In progress"}
                   </td>
+                  <td className="px-4 py-3">
+                    {member.coachIntakeCompleteAt ? (
+                      <span className="text-xs text-emerald-300">
+                        Done · {formatWhen(member.coachIntakeCompleteAt)}
+                      </span>
+                    ) : member.onboardingComplete ? (
+                      <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-sky-300">
+                        Pending
+                      </span>
+                    ) : (
+                      <span className="text-xs text-[var(--muted)]">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">{statusChip(member.approvalStatus, "approval")}</td>
                   <td className="px-4 py-3 text-[var(--muted)]">{formatWhen(member.createdAt)}</td>
                   <td className="px-4 py-3 text-right">
@@ -245,6 +286,16 @@ export default function AdminMembersPage() {
                           Mark paid
                         </button>
                       )}
+                      {member.onboardingComplete && !member.coachIntakeCompleteAt ? (
+                        <button
+                          type="button"
+                          onClick={() => void completeIntake(member.userId)}
+                          disabled={intakeSigning === member.userId}
+                          className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-sky-500/40 text-sky-300"
+                        >
+                          {intakeSigning === member.userId ? "…" : "Sign off intake"}
+                        </button>
+                      ) : null}
                       {member.approvalStatus === "pending" && member.onboardingComplete ? (
                         <button
                           type="button"

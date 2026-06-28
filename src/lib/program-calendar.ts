@@ -368,6 +368,8 @@ export function timeBlockLabel(column: number): string {
 }
 
 export const WARMUP_EXERCISE_NAMES = [
+  "Warm up well 5 min bike",
   "Upper body warm up",
   "Shoulder mobility warm",
+  "Up with bands",
 ] as const;

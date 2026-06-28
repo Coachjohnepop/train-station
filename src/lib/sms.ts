@@ -253,7 +253,7 @@ async function buildDemoPhoneUsers(): Promise<
   return [...byId.values()].filter((u): u is typeof u & { phone: string } => Boolean(u.phone?.trim()));
 }
 
-async function deliverSms(phone: string, message: string): Promise<boolean> {
+export async function deliverSms(phone: string, message: string): Promise<boolean> {
   const to = toE164(phone);
   if (twilioConfigured()) {
     try {

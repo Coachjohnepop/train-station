@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import MemberDayWheel from "@/components/MemberDayWheel";
+import MemberIntakeIntroCard from "@/components/MemberIntakeIntroCard";
 import MemberWorkoutConsole, { type MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import type { MemberDaySummary, MemberDayWindowRollup } from "@/lib/member-day-window-types";
 
@@ -20,6 +21,8 @@ type Props = {
   calendarDateLabel: string;
   subtitle: string;
   hasCoachSession: boolean;
+  intakeComplete: boolean;
+  warmupWorkout: MemberWorkoutView | null;
 };
 
 function DaySummaryCard({
@@ -29,8 +32,17 @@ function DaySummaryCard({
   summary: MemberDaySummary;
   isToday: boolean;
 }) {
-  const { phase, workoutName, completed, exerciseCount, exerciseNames, smsOverride, dayLabel } =
-    summary;
+  const {
+    phase,
+    workoutName,
+    completed,
+    exerciseCount,
+    exerciseNames,
+    smsOverride,
+    dayLabel,
+    visibilityTier,
+    themeLabel,
+  } = summary;
 
   return (
     <div className="card space-y-3 p-4">
@@ -71,10 +83,30 @@ function DaySummaryCard({
         </div>
       )}
 
-      {phase === "future" && exerciseCount > 0 && (
+      {phase === "future" && visibilityTier === "label" && (themeLabel || workoutName) && (
         <p className="text-sm text-[var(--muted)]">
-          {exerciseCount} movement{exerciseCount === 1 ? "" : "s"} — sets and reps unlock on this
-          day.
+          Preview only — full exercises and sets unlock closer to the day.
+        </p>
+      )}
+
+      {phase === "future" && visibilityTier === "names" && exerciseNames.length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+            Exercises (sets unlock day-of)
+          </p>
+          <ul className="mt-1.5 space-y-1 text-sm text-[var(--muted)]">
+            {exerciseNames.map((name) => (
+              <li key={name} className="truncate">
+                {name}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {phase === "future" && visibilityTier === "names" && exerciseNames.length === 0 && exerciseCount > 0 && (
+        <p className="text-sm text-[var(--muted)]">
+          {exerciseCount} movement{exerciseCount === 1 ? "" : "s"} — sets unlock on this day.
         </p>
       )}
 
@@ -108,11 +140,14 @@ export default function MemberTodayShell({
   calendarDateLabel,
   subtitle,
   hasCoachSession,
+  intakeComplete,
+  warmupWorkout,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isToday = selectedDate === todayIso;
-  const showFullWorkout = isToday && !!workout;
+  const showFullWorkout = isToday && !!workout && intakeComplete;
+  const showWarmupOnly = isToday && !intakeComplete && !!warmupWorkout;
 
   function selectDate(iso: string) {
     const q = new URLSearchParams(searchParams.toString());
@@ -157,16 +192,34 @@ export default function MemberTodayShell({
         <DaySummaryCard summary={selectedSummary} isToday={false} />
       )}
 
-      {isToday && !showFullWorkout && selectedSummary && (
+      {isToday && !showFullWorkout && !showWarmupOnly && selectedSummary && (
         <DaySummaryCard summary={selectedSummary} isToday />
       )}
 
-      {showFullWorkout && (
+      {showWarmupOnly && (
+        <>
+          <MemberIntakeIntroCard />
+          <div className="-mx-4 sm:mx-0">
+            <MemberWorkoutConsole
+              workout={warmupWorkout}
+              backHref="/member/today"
+              programSlug={programSlug}
+              targetUserId={targetUserId}
+              liveSyncUserId={targetUserId}
+              liveSessionDate={selectedDate}
+              progressMode="warmup"
+              hideLogButton
+              headerNote="Check off your warm-up sets before coach joins live — your coach gets a heads-up when you start."
+            />
+          </div>
+        </>
+      )}
+
+      {showFullWorkout && workout && (
         <div className="-mx-4 sm:mx-0">
           <MemberWorkoutConsole
             workout={workout}
             backHref="/member/today"
-
             programSlug={programSlug}
             targetUserId={targetUserId}
             liveSyncUserId={targetUserId}

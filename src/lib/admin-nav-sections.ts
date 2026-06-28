@@ -41,6 +41,11 @@ export const COACH_NAV_ITEMS: AdminNavItem[] = [
     match: (p) => p.startsWith("/admin/members"),
   },
   {
+    href: "/admin/settings",
+    label: "Settings",
+    match: (p) => p.startsWith("/admin/settings"),
+  },
+  {
     href: "/admin/today",
     label: "Today",
     match: (p) => p.startsWith("/admin/today"),

@@ -54,6 +54,9 @@ export default function MemberWorkoutConsole({
   scheduleLabel,
   liveSyncUserId,
   liveSessionDate,
+  progressMode = "live",
+  hideLogButton = false,
+  headerNote,
 }: {
   workout: MemberWorkoutView;
   backHref?: string;
@@ -69,6 +72,10 @@ export default function MemberWorkoutConsole({
   /** Member id for live coach ↔ member checkoff sync */
   liveSyncUserId?: string;
   liveSessionDate?: string;
+  /** Persist checkoffs to warmup-progress API (pre-intake warm-ups). */
+  progressMode?: "live" | "warmup";
+  hideLogButton?: boolean;
+  headerNote?: string;
 }) {
   const [weights, setWeights] = useState<Record<string, string>>({});
   const [activeId, setActiveId] = useState(workout.exercises[0]?.id ?? "");
@@ -87,7 +94,9 @@ export default function MemberWorkoutConsole({
   const [partnerLive, setPartnerLive] = useState(false);
 
   const LIVE_POLL_MS = 200;
-  const liveSyncEnabled = !!liveSyncUserId && !reviewMode;
+  const liveSyncEnabled =
+    progressMode === "live" && !!liveSyncUserId && !reviewMode && !instructorName;
+  const warmupSyncEnabled = progressMode === "warmup" && !!liveSyncUserId && !reviewMode;
   const lastAppliedRevision = useRef(0);
   const lastAppliedRemoteAt = useRef<string | null>(null);
   const applyingRemote = useRef(false);
@@ -162,6 +171,25 @@ export default function MemberWorkoutConsole({
     [instructorName],
   );
 
+  const flushWarmupSave = useCallback(() => {
+    if (!warmupSyncEnabled || !liveSyncUserId || !liveSessionDate) return;
+
+    saveChain.current = saveChain.current.catch(() => {}).then(async () => {
+      const snap = stateRef.current;
+      await fetch("/api/member/warmup-progress", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionDate: liveSessionDate,
+          completedSets: serializeCompletedSets(snap.completedSets),
+          finishedExercises: Array.from(snap.finishedExercises),
+        }),
+      });
+    });
+
+    return saveChain.current;
+  }, [warmupSyncEnabled, liveSyncUserId, liveSessionDate, serializeCompletedSets]);
+
   const flushLiveSave = useCallback(() => {
     if (!liveSyncEnabled || !liveSyncUserId) return;
 
@@ -204,15 +232,34 @@ export default function MemberWorkoutConsole({
 
   const queueLiveSave = useCallback(
     (immediate = false) => {
-      if (!liveSyncEnabled) return;
+      if (!liveSyncEnabled && !warmupSyncEnabled) return;
       if (saveTimer.current) clearTimeout(saveTimer.current);
       const delay = immediate ? 0 : instructorName ? 30 : 100;
       saveTimer.current = setTimeout(() => {
-        void flushLiveSave();
+        if (warmupSyncEnabled) void flushWarmupSave();
+        else void flushLiveSave();
       }, delay);
     },
-    [liveSyncEnabled, instructorName, flushLiveSave],
+    [liveSyncEnabled, warmupSyncEnabled, instructorName, flushLiveSave, flushWarmupSave],
   );
+
+  useEffect(() => {
+    if (!warmupSyncEnabled || !liveSessionDate) return;
+    void fetch(`/api/member/warmup-progress?date=${liveSessionDate}`, { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data?.progress) return;
+        const sets: Record<string, Set<number>> = {};
+        for (const [blockId, nums] of Object.entries(
+          data.progress.completedSets as Record<string, number[]>,
+        )) {
+          sets[blockId] = new Set(nums);
+        }
+        setCompletedSets(sets);
+        setFinishedExercises(new Set(data.progress.finishedExercises || []));
+      })
+      .catch(() => {});
+  }, [warmupSyncEnabled, liveSessionDate]);
 
   const clearLiveSession = useCallback(async () => {
     if (!liveSyncUserId) return;
@@ -499,8 +546,8 @@ export default function MemberWorkoutConsole({
         {workout.workoutName}
       </h1>
       <p className="mt-1 text-sm text-[var(--muted)]">
-        Hi {workout.memberName} — follow each exercise. Your last session appears
-        as a faint silhouette behind the active card.
+        {headerNote ||
+          `Hi ${workout.memberName} — follow each exercise. Your last session appears as a faint silhouette behind the active card.`}
       </p>
       {coachLive && !instructorName && (
         <p className="mt-2 text-xs font-medium text-[var(--success)]">
@@ -794,7 +841,7 @@ export default function MemberWorkoutConsole({
         })}
       </div>
 
-      {reviewMode ? null : logResult ? (
+      {reviewMode || hideLogButton ? null : logResult ? (
         <div className="mt-10 rounded-2xl border border-[var(--success)]/40 bg-[var(--success)]/10 p-6 text-center">
           <div className="mx-auto mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--success)]/20 text-xl">✓</div>
           <p className="text-lg font-semibold text-[var(--success)]">Workout logged!</p>

@@ -21,6 +21,10 @@ import {
 } from "@/lib/member-day-window";
 import { listDemoMembersForCoach } from "@/lib/sms";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
+import { getMemberProfile } from "@/lib/member-profiles-store";
+import { isCoachIntakeComplete } from "@/lib/member-intake";
+import { getCoachSettings } from "@/lib/coach-settings-store";
+import { buildWarmupWorkoutView } from "@/lib/warmup-template";
 
 export const dynamic = "force-dynamic";
 
@@ -49,12 +53,15 @@ export default async function MemberTodayPage({ searchParams }: Props) {
 
   const todayKey = localTodayIso();
   const viewDate = sp.date || todayKey;
-  const [todayWorkout, upcoming, loggedSet, primaryProgram] = await Promise.all([
-    resolveTodayPageWorkout(uid, viewDate, memberName),
-    loadMemberUpcomingSessions(uid),
-    loadMemberLoggedWorkoutIds(uid),
-    resolvePrimaryScheduleProgram(uid),
-  ]);
+  const [todayWorkout, upcoming, loggedSet, primaryProgram, profile, coachSettings] =
+    await Promise.all([
+      resolveTodayPageWorkout(uid, viewDate, memberName),
+      loadMemberUpcomingSessions(uid),
+      loadMemberLoggedWorkoutIds(uid),
+      resolvePrimaryScheduleProgram(uid),
+      getMemberProfile(uid),
+      getCoachSettings(),
+    ]);
 
   const dayWindow = primaryProgram
     ? await buildMemberDayWindow(uid, primaryProgram.slug, loggedSet)
@@ -102,6 +109,12 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const selectedSummary = dayWindow?.days.find((d) => d.iso === viewDate) ?? null;
   const stretchPreview = dayWindow ? nextDayStretchPreview(dayWindow.days, todayKey) : [];
   const memberWorkout = viewDate === todayKey ? workout : null;
+  const intakeComplete =
+    !uid.startsWith("member-") || isCoachIntakeComplete(profile);
+  const warmupWorkout =
+    viewDate === todayKey && !intakeComplete
+      ? buildWarmupWorkoutView(memberName, coachSettings.warmupBlocks)
+      : null;
 
   return (
     <div className="space-y-4">
@@ -129,6 +142,8 @@ export default async function MemberTodayPage({ searchParams }: Props) {
               calendarDateLabel={formatDateLabel(viewDate)}
               subtitle={subtitle}
               hasCoachSession={!!session}
+              intakeComplete={intakeComplete}
+              warmupWorkout={warmupWorkout}
             />
           </Suspense>
 
