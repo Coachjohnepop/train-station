@@ -1010,6 +1010,23 @@ table.data th {
   }
 }
 
+.day-wheel-focus-gold {
+  border-color: color-mix(in srgb, var(--ramp-gold) 55%, transparent);
+  background: color-mix(in srgb, var(--ramp-gold) 10%, transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--ramp-gold-glow) 45%, transparent);
+}
+
+.day-wheel-chip-today-gold {
+  border-color: color-mix(in srgb, var(--ramp-gold) 50%, var(--border));
+  background: color-mix(in srgb, var(--ramp-gold) 10%, var(--surface));
+}
+
+.day-wheel-chip-today-gold--selected {
+  border-color: var(--ramp-gold-light);
+  background: color-mix(in srgb, var(--ramp-gold) 22%, var(--surface));
+  box-shadow: 0 0 14px var(--ramp-gold-glow);
+}
+
 /* Calendly in-app modal — full-height iframe (inline widget left empty gaps) */
 .calendly-modal-frame {
   min-height: 0;

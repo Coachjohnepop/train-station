@@ -206,6 +206,7 @@ export default function MemberTodayShell({
           selectedIso={selectedDate}
           todayIso={todayIso}
           onSelect={selectDate}
+          highlightTodayGold={rampHighlight}
         />
       )}
 

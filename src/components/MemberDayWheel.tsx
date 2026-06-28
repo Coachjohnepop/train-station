@@ -11,9 +11,17 @@ type Props = {
   selectedIso: string;
   todayIso: string;
   onSelect: (iso: string) => void;
+  /** Gold emphasis on today's chip during intake ramp-up */
+  highlightTodayGold?: boolean;
 };
 
-export default function MemberDayWheel({ days, selectedIso, todayIso, onSelect }: Props) {
+export default function MemberDayWheel({
+  days,
+  selectedIso,
+  todayIso,
+  onSelect,
+  highlightTodayGold = false,
+}: Props) {
   const scroller = useRef<HTMLDivElement>(null);
   const scrollEndTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userScrolling = useRef(false);
@@ -56,7 +64,11 @@ export default function MemberDayWheel({ days, selectedIso, todayIso, onSelect }
     <div className="relative -mx-1">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-[76px] -translate-x-1/2 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/6"
+        className={`pointer-events-none absolute inset-y-0 left-1/2 z-10 w-[76px] -translate-x-1/2 rounded-xl border ${
+          highlightTodayGold && selectedIso === todayIso
+            ? "day-wheel-focus-gold"
+            : "border-[var(--accent)]/40 bg-[var(--accent)]/6"
+        }`}
       />
       <div
         ref={scroller}
@@ -69,6 +81,14 @@ export default function MemberDayWheel({ days, selectedIso, todayIso, onSelect }
         {days.map((day) => {
           const isSelected = day.iso === selectedIso;
           const isToday = day.iso === todayIso;
+          const todayGold = highlightTodayGold && isToday;
+          const chipClass = todayGold
+            ? isSelected
+              ? "day-wheel-chip-today-gold day-wheel-chip-today-gold--selected"
+              : "day-wheel-chip-today-gold"
+            : isSelected
+              ? "border-[var(--accent)] bg-[var(--accent)]/12 shadow-sm"
+              : "border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)]/30";
           return (
             <button
               key={day.iso}
@@ -76,20 +96,22 @@ export default function MemberDayWheel({ days, selectedIso, todayIso, onSelect }
               role="option"
               aria-selected={isSelected}
               onClick={() => onSelect(day.iso)}
-              className={`relative flex w-[76px] shrink-0 snap-center flex-col items-center rounded-xl border px-1 py-2.5 text-center transition ${
-                isSelected
-                  ? "border-[var(--accent)] bg-[var(--accent)]/12 shadow-sm"
-                  : "border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)]/30"
-              }`}
+              className={`relative flex w-[76px] shrink-0 snap-center flex-col items-center rounded-xl border px-1 py-2.5 text-center transition ${chipClass}`}
             >
               <span
                 className={`text-[10px] font-semibold uppercase tracking-wide ${
-                  isToday ? "text-accent" : "text-[var(--muted)]"
+                  todayGold ? "text-[var(--ramp-gold-light)]" : isToday ? "text-accent" : "text-[var(--muted)]"
                 }`}
               >
                 {day.weekday}
               </span>
-              <span className="mt-0.5 text-sm font-bold tabular-nums">{day.shortDate.split(" ")[1]}</span>
+              <span
+                className={`mt-0.5 text-sm font-bold tabular-nums ${
+                  todayGold ? "text-[var(--ramp-gold-light)]" : ""
+                }`}
+              >
+                {day.shortDate.split(" ")[1]}
+              </span>
               {day.completed && (
                 <span
                   className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--success)] text-[9px] text-white"
@@ -99,7 +121,10 @@ export default function MemberDayWheel({ days, selectedIso, todayIso, onSelect }
                 </span>
               )}
               {isToday && !day.completed && (
-                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />
+                <span
+                  className={`mt-1 h-1.5 w-1.5 rounded-full ${todayGold ? "bg-[var(--ramp-gold)]" : "bg-accent"}`}
+                  aria-hidden
+                />
               )}
             </button>
           );
