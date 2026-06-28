@@ -12,6 +12,7 @@ import {
   landingNavHref,
   type LandingMembershipNavItem,
 } from "@/lib/landing-nav";
+import { logoutUrl } from "@/lib/logout-url";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 
 export default function LandingNav({
@@ -174,7 +175,7 @@ export default function LandingNav({
               <button
                 type="button"
                 onClick={() => {
-                  window.location.href = "/api/auth/logout";
+                  window.location.href = logoutUrl();
                 }}
                 className="landing-nav__link hidden sm:inline-flex"
               >

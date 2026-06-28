@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import {
-  readEmailHistoryFromRequestCookies,
-} from "@/lib/email-history-cookies";
+import { readEmailHistoryFromRequestCookies } from "@/lib/email-history-cookies";
 import { LAST_EMAIL_COOKIE, normalizeRememberedEmail } from "@/lib/remembered-email";
 
 function readRememberedCookie(raw: string): string | null {
@@ -24,4 +22,12 @@ export async function GET() {
     email: email || emails[0] || null,
     emails,
   });
+}
+
+/** Clear last-used email cookie so login can switch accounts cleanly. */
+export async function DELETE() {
+  const res = NextResponse.json({ ok: true });
+  const opts = { path: "/", maxAge: 0 };
+  res.cookies.set(LAST_EMAIL_COOKIE, "", opts);
+  return res;
 }

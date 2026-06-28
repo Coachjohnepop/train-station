@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import EmailInput, { rememberEmail } from "@/components/EmailInput";
 import PasswordInput from "@/components/PasswordInput";
 import { offerSavePassword, offerSavePasswordFromForm } from "@/lib/browser-credentials";
 import { useFormAutofillSync } from "@/hooks/useFormAutofillSync";
-import { getLastEmail } from "@/lib/email-history";
+import { clearRememberedEmail, getLastEmail } from "@/lib/email-history";
 import QuickAuthLogin from "@/components/QuickAuthLogin";
-import { ensureDeviceId } from "@/lib/quick-auth-client";
+import { clearQuickAuthMeta, ensureDeviceId } from "@/lib/quick-auth-client";
 
 function isCompleteEmail(value: string): boolean {
   const trimmed = value.trim();
@@ -22,25 +22,33 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "";
   const prefillEmail = searchParams.get("email") || "";
+  const switchAccount = searchParams.get("switch") === "1";
   const passwordUpdated = searchParams.get("passwordUpdated") === "1";
-  const [email, setEmail] = useState(prefillEmail);
+  const coachLogin = redirect.startsWith("/admin");
+
+  const [email, setEmail] = useState(() => {
+    if (switchAccount) return "";
+    return prefillEmail;
+  });
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(
+    switchAccount || coachLogin || Boolean(prefillEmail),
+  );
   const [quickAuthAvailable, setQuickAuthAvailable] = useState(false);
   const [quickAuthResolved, setQuickAuthResolved] = useState(false);
+  const emailTouchedRef = useRef(switchAccount || Boolean(prefillEmail));
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (!passwordUpdated) return;
     setPassword("");
     setError(null);
-    setShowPasswordForm(false);
+    setShowPasswordForm(true);
   }, [passwordUpdated]);
 
-  useFormAutofillSync(formRef, ["username", "password"], (values) => {
-    if (values.username) setEmail(values.username);
+  useFormAutofillSync(formRef, ["password"], (values) => {
     if (values.password) setPassword(values.password);
   });
 
@@ -54,7 +62,7 @@ function LoginForm() {
   }, [email]);
 
   useEffect(() => {
-    if (prefillEmail) return;
+    if (prefillEmail || switchAccount || emailTouchedRef.current) return;
     let cancelled = false;
     const localLast = getLastEmail();
     if (localLast) setEmail(localLast);
@@ -62,7 +70,7 @@ function LoginForm() {
     fetch("/api/auth/remembered-email", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data: { email?: string | null } | null) => {
-        if (cancelled || !data?.email) return;
+        if (cancelled || emailTouchedRef.current || !data?.email) return;
         setEmail(data.email!);
         rememberEmail(data.email!);
       })
@@ -70,7 +78,29 @@ function LoginForm() {
     return () => {
       cancelled = true;
     };
-  }, [prefillEmail]);
+  }, [prefillEmail, switchAccount]);
+
+  const switchToDifferentAccount = useCallback(() => {
+    emailTouchedRef.current = true;
+    setEmail("");
+    setPassword("");
+    setError(null);
+    setShowPasswordForm(true);
+    setQuickAuthResolved(false);
+    setQuickAuthAvailable(false);
+    clearQuickAuthMeta();
+    clearRememberedEmail();
+    void fetch("/api/auth/remembered-email", { method: "DELETE" });
+  }, []);
+
+  function handleEmailChange(next: string) {
+    emailTouchedRef.current = true;
+    setEmail(next);
+    setError(null);
+    if (showPasswordForm && isCompleteEmail(next)) {
+      setShowPasswordForm(coachLogin);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -126,6 +156,11 @@ function LoginForm() {
     }
   }
 
+  const showQuickAuth = !showPasswordForm && isCompleteEmail(email);
+  const showPassword =
+    showPasswordForm ||
+    (quickAuthResolved && !quickAuthAvailable && isCompleteEmail(email));
+
   return (
     <div className="app-shell-bg flex min-h-screen flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
@@ -137,20 +172,53 @@ function LoginForm() {
           </p>
         </div>
 
-        {passwordUpdated && (
-          <p className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
-            Password reset complete — sign in with your new password. Quick sign-in (PIN / Face ID)
-            still works if you already set it up on this device. Your browser or keychain may ask to
-            update the saved login.
+        {switchAccount && (
+          <p className="mb-4 rounded-lg border border-[#7c3aed]/30 bg-[#7c3aed]/10 px-3 py-2 text-sm text-[#c4b5fd]">
+            Signed out — enter the email for the account you want, or pick one from your history.
           </p>
         )}
 
-        {!showPasswordForm && isCompleteEmail(email) && (
+        {passwordUpdated && (
+          <p className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+            Password reset complete — sign in with your new password. Quick sign-in (PIN / Face ID)
+            still works if you already set it up on this device.
+          </p>
+        )}
+
+        <div className="card mb-4 space-y-3">
+          <div>
+            <label htmlFor="login-username" className="mb-1 block text-xs text-[var(--muted)]">
+              Email
+            </label>
+            <EmailInput
+              id="login-username"
+              name="username"
+              autoComplete="username"
+              required
+              value={email}
+              onChange={handleEmailChange}
+              placeholder="you@thetrainstation.co"
+              prefillFromHistory={!switchAccount && !prefillEmail}
+            />
+          </div>
+          {email.trim() && (
+            <button
+              type="button"
+              className="text-xs text-accent hover:underline"
+              onClick={switchToDifferentAccount}
+            >
+              Use a different account
+            </button>
+          )}
+        </div>
+
+        {showQuickAuth && (
           <>
             <QuickAuthLogin
               email={email}
               redirect={redirect}
               onUsePassword={() => setShowPasswordForm(true)}
+              onSwitchAccount={switchToDifferentAccount}
               onAvailabilityChange={setQuickAuthAvailable}
               onStatusResolved={(enabled) => {
                 setQuickAuthResolved(true);
@@ -172,14 +240,14 @@ function LoginForm() {
           </>
         )}
 
-        {!showPasswordForm && isCompleteEmail(email) && !quickAuthResolved && (
+        {showQuickAuth && !quickAuthResolved && (
           <p className="card text-center text-sm text-[var(--muted)]">Checking quick sign-in…</p>
         )}
 
         {quickAuthResolved && !quickAuthAvailable && isCompleteEmail(email) && !showPasswordForm && (
           <p className="mb-3 text-center text-xs text-[var(--muted)]">
-            No quick sign-in on this device yet for {email.trim().toLowerCase()} — use your password
-            below, then set up a PIN from your dashboard.
+            No PIN on this device for {email.trim().toLowerCase()} yet — sign in with password once,
+            then set up quick sign-in from your dashboard.
           </p>
         )}
 
@@ -189,75 +257,63 @@ function LoginForm() {
             className="mb-3 w-full text-center text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
             onClick={() => setShowPasswordForm(false)}
           >
-            Back to quick sign-in
+            Back to PIN / Face ID
           </button>
         )}
 
-        {(showPasswordForm ||
-          (quickAuthResolved && !quickAuthAvailable && isCompleteEmail(email)) ||
-          !isCompleteEmail(email)) && (
-        <form ref={formRef} onSubmit={handleSubmit} autoComplete="on" className="card space-y-4">
-          {error && (
-            <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200 space-y-2">
-              <p>{error}</p>
-              {error.includes("Forgot password") && (
-                <p>
-                  <Link href="/forgot-password" className="text-accent hover:underline">
-                    Reset your password →
-                  </Link>
-                </p>
-              )}
+        {showPassword && (
+          <form ref={formRef} onSubmit={handleSubmit} autoComplete="on" className="card space-y-4">
+            {error && (
+              <div className="space-y-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                <p>{error}</p>
+                {error.includes("Forgot password") && (
+                  <p>
+                    <Link href="/forgot-password" className="text-accent hover:underline">
+                      Reset your password →
+                    </Link>
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="login-password" className="mb-1 block text-xs text-[var(--muted)]">
+                Password
+              </label>
+              <PasswordInput
+                id="login-password"
+                name="password"
+                purpose={passwordUpdated ? "new" : "current"}
+                required
+                value={password}
+                onChange={setPassword}
+                placeholder={passwordUpdated ? "Type your new password" : "Your password"}
+              />
             </div>
-          )}
 
-          <div>
-            <label htmlFor="login-username" className="block text-xs text-[var(--muted)] mb-1">
-              Email
-            </label>
-            <EmailInput
-              id="login-username"
-              name="username"
-              autoComplete="username"
-              required
-              value={email}
-              onChange={setEmail}
-              placeholder="you@thetrainstation.co"
-              prefillFromHistory={false}
-            />
-          </div>
+            <button type="submit" disabled={loading} className="btn-primary w-full">
+              {loading ? "Signing in…" : "Sign in"}
+            </button>
 
-          <div>
-            <label htmlFor="login-password" className="block text-xs text-[var(--muted)] mb-1">
-              Password
-            </label>
-            <PasswordInput
-              id="login-password"
-              name="password"
-              purpose={passwordUpdated ? "new" : "current"}
-              required
-              value={password}
-              onChange={setPassword}
-              placeholder={passwordUpdated ? "Type your new password" : "Your password"}
-            />
-          </div>
+            <p className="text-center text-xs">
+              <Link href="/forgot-password" className="text-accent hover:underline">
+                Forgot password?
+              </Link>
+            </p>
 
-          <button type="submit" disabled={loading} className="btn-primary w-full">
-            {loading ? "Signing in…" : "Sign in"}
-          </button>
+            <p className="text-center text-xs text-[var(--muted)]">
+              New here?{" "}
+              <Link href="/signup" className="text-accent hover:underline">
+                Join the waitlist
+              </Link>
+            </p>
+          </form>
+        )}
 
-          <p className="text-center text-xs">
-            <Link href="/forgot-password" className="text-accent hover:underline">
-              Forgot password?
-            </Link>
+        {!isCompleteEmail(email) && !email.trim() && (
+          <p className="mt-4 text-center text-xs text-[var(--muted)]">
+            Enter your email to continue — PIN, Face ID, or password.
           </p>
-
-          <p className="text-center text-xs text-[var(--muted)]">
-            New here?{" "}
-            <Link href="/signup" className="text-accent hover:underline">
-              Join the waitlist
-            </Link>
-          </p>
-        </form>
         )}
 
         <p className="mt-6 text-center text-[10px] text-[var(--muted)]">
@@ -274,7 +330,13 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="app-shell-bg min-h-screen flex items-center justify-center text-sm text-[var(--muted)]">Loading…</div>}>
+    <Suspense
+      fallback={
+        <div className="app-shell-bg flex min-h-screen items-center justify-center text-sm text-[var(--muted)]">
+          Loading…
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );

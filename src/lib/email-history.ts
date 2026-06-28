@@ -125,3 +125,14 @@ export function filterEmailHistory(query: string): string[] {
   if (!q) return all;
   return all.filter((e) => e.includes(q));
 }
+
+/** Clear last-used email on this device (switch-account flow). Keeps full history list. */
+export function clearRememberedEmail(): void {
+  if (typeof document === "undefined") return;
+  try {
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${LAST_EMAIL_COOKIE}=; path=/; max-age=0; SameSite=Lax${secure}`;
+  } catch {
+    /* ignore */
+  }
+}

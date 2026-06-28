@@ -44,7 +44,16 @@ export async function POST() {
 
 export async function GET(request: Request) {
   const email = await emailToRememberOnLogout();
-  const res = NextResponse.redirect(new URL("/", request.url));
+  const reqUrl = new URL(request.url);
+  const nextParam = reqUrl.searchParams.get("next");
+  const loginUrl = new URL("/login", reqUrl.origin);
+  loginUrl.searchParams.set("switch", "1");
+  const redirectAfter = reqUrl.searchParams.get("redirect");
+  if (redirectAfter?.startsWith("/")) {
+    loginUrl.searchParams.set("redirect", redirectAfter);
+  }
+  const destination = nextParam?.startsWith("/") ? new URL(nextParam, reqUrl.origin) : loginUrl;
+  const res = NextResponse.redirect(destination);
   await rememberEmailOnLogout(res, email);
   clearSessionCookies(res);
   return res;

@@ -14,6 +14,7 @@ type QuickAuthLoginProps = {
   email: string;
   redirect: string;
   onUsePassword: () => void;
+  onSwitchAccount?: () => void;
   onAvailabilityChange?: (enabled: boolean) => void;
   onStatusResolved?: (enabled: boolean) => void;
 };
@@ -22,6 +23,7 @@ export default function QuickAuthLogin({
   email,
   redirect,
   onUsePassword,
+  onSwitchAccount,
   onAvailabilityChange,
   onStatusResolved,
 }: QuickAuthLoginProps) {
@@ -203,11 +205,22 @@ export default function QuickAuthLogin({
 
       <button
         type="button"
-        className="w-full text-center text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
+        className="btn-secondary w-full text-sm"
+        disabled={loading}
         onClick={onUsePassword}
       >
-        Use password instead
+        Sign in with password
       </button>
+
+      {onSwitchAccount && (
+        <button
+          type="button"
+          className="w-full text-center text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
+          onClick={onSwitchAccount}
+        >
+          Use a different account
+        </button>
+      )}
     </div>
   );
 }
