@@ -22,12 +22,24 @@ let scriptPromise: Promise<void> | null = null;
 
 export function buildCalendlyEmbedUrl(
   baseUrl: string,
-  embedDomain = typeof window !== "undefined" ? window.location.hostname : "www.thetrainstation.co",
+  opts?: {
+    embedDomain?: string;
+    prefill?: CalendlyPrefill;
+    hideGdprBanner?: boolean;
+  },
 ): string {
+  const embedDomain =
+    opts?.embedDomain ??
+    (typeof window !== "undefined" ? window.location.hostname : "www.thetrainstation.co");
   try {
     const url = new URL(baseUrl);
     url.searchParams.set("embed_domain", embedDomain);
     url.searchParams.set("embed_type", "Inline");
+    if (opts?.hideGdprBanner !== false) {
+      url.searchParams.set("hide_gdpr_banner", "1");
+    }
+    if (opts?.prefill?.email) url.searchParams.set("email", opts.prefill.email);
+    if (opts?.prefill?.name) url.searchParams.set("name", opts.prefill.name);
     return url.toString();
   } catch {
     return baseUrl;

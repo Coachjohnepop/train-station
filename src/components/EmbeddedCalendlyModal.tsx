@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   buildCalendlyEmbedUrl,
   isCalendlyScheduledMessage,
-  loadCalendlyWidgetScript,
   type CalendlyPrefill,
 } from "@/lib/calendly-embed";
 
@@ -25,16 +24,18 @@ export default function EmbeddedCalendlyModal({
   onClose,
   onScheduled,
 }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const onScheduledRef = useRef(onScheduled);
   const onCloseRef = useRef(onClose);
-  const [mounting, setMounting] = useState(false);
-  const [mountError, setMountError] = useState<string | null>(null);
 
   useEffect(() => {
     onScheduledRef.current = onScheduled;
     onCloseRef.current = onClose;
   }, [onScheduled, onClose]);
+
+  const iframeSrc = useMemo(() => {
+    if (!open || !calendlyUrl) return null;
+    return buildCalendlyEmbedUrl(calendlyUrl, { prefill });
+  }, [open, calendlyUrl, prefill?.email, prefill?.name]);
 
   useEffect(() => {
     if (!open) return;
@@ -49,48 +50,6 @@ export default function EmbeddedCalendlyModal({
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
   }, [open]);
-
-  useEffect(() => {
-    if (!open || !calendlyUrl) return;
-
-    let destroyed = false;
-    setMounting(true);
-    setMountError(null);
-
-    if (containerRef.current) {
-      containerRef.current.innerHTML = "";
-    }
-
-    (async () => {
-      try {
-        await loadCalendlyWidgetScript();
-        if (destroyed || !containerRef.current || !window.Calendly) return;
-
-        const embedUrl = buildCalendlyEmbedUrl(calendlyUrl);
-        const prefillData =
-          prefill?.email || prefill?.name
-            ? { email: prefill.email, name: prefill.name }
-            : undefined;
-
-        window.Calendly.initInlineWidget({
-          url: embedUrl,
-          parentElement: containerRef.current,
-          prefill: prefillData,
-        });
-      } catch (e: unknown) {
-        if (!destroyed) {
-          setMountError(e instanceof Error ? e.message : "Could not load scheduling.");
-        }
-      } finally {
-        if (!destroyed) setMounting(false);
-      }
-    })();
-
-    return () => {
-      destroyed = true;
-      if (containerRef.current) containerRef.current.innerHTML = "";
-    };
-  }, [open, calendlyUrl, prefill?.email, prefill?.name]);
 
   useEffect(() => {
     if (!open) return;
@@ -109,47 +68,47 @@ export default function EmbeddedCalendlyModal({
     };
   }, [open]);
 
-  if (!open) return null;
+  if (!open || !iframeSrc) return null;
 
   return (
     <div
-      className="fixed inset-0 z-[110] flex items-end justify-center bg-black/70 p-2 backdrop-blur-sm sm:items-center sm:p-4"
+      className="calendly-modal-overlay fixed inset-0 z-[110] flex items-stretch justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="calendly-modal-title"
       onClick={onClose}
     >
       <div
-        className="flex max-h-[min(88vh,720px)] w-full max-w-[min(100%,28rem)] flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl sm:max-w-lg"
+        className="calendly-modal-panel flex h-[100dvh] w-full max-w-none flex-col overflow-hidden bg-white shadow-2xl sm:h-[min(92vh,820px)] sm:max-w-[440px] sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-[var(--border)] px-3 py-2.5">
+        <div className="calendly-modal-header flex shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-4 py-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent">Scheduling</p>
-            <h2 id="calendly-modal-title" className="text-sm font-semibold">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--ramp-gold-light)]">
+              Your next step
+            </p>
+            <h2 id="calendly-modal-title" className="text-base font-semibold text-[var(--text)]">
               {title}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full px-2 py-1 text-sm text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-white"
+            className="rounded-full px-2.5 py-1 text-lg leading-none text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-white"
             aria-label="Close scheduling"
           >
             ✕
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
-          {mounting && (
-            <p className="py-8 text-center text-xs text-[var(--muted)]">Loading calendar…</p>
-          )}
-          {mountError && (
-            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-              {mountError}
-            </p>
-          )}
-          <div ref={containerRef} className="min-h-[420px] sm:min-h-[520px]" />
+        <div className="calendly-modal-frame min-h-0 flex-1 bg-white">
+          <iframe
+            key={iframeSrc}
+            src={iframeSrc}
+            title={title}
+            className="calendly-modal-iframe h-full w-full border-0"
+            allow="fullscreen"
+          />
         </div>
       </div>
     </div>

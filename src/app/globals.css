@@ -1010,6 +1010,24 @@ table.data th {
   }
 }
 
+/* Calendly in-app modal — full-height iframe (inline widget left empty gaps) */
+.calendly-modal-frame {
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.calendly-modal-iframe {
+  display: block;
+  min-height: 100%;
+  background: #fff;
+}
+
+@media (max-width: 639px) {
+  .calendly-modal-panel {
+    border-radius: 0;
+  }
+}
+
 /* Lets client code detect Chrome/Safari password autofill via animationstart */
 @keyframes onAutoFillStart {
   from {
