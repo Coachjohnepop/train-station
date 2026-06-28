@@ -32,8 +32,6 @@ export async function POST(request: Request) {
   const created = !existing && !requested;
 
   const res = NextResponse.json({ deviceId, created });
-  if (!existing) {
-    attachDeviceCookie(res, deviceId);
-  }
+  attachDeviceCookie(res, deviceId);
   return res;
 }

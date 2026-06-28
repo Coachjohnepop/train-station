@@ -66,6 +66,14 @@ export async function middleware(request: NextRequest) {
       return NextResponse.json({ error: "Sign in required." }, { status: 401 });
     }
 
+    if (pathname.startsWith("/api/admin/") && !isStaffRole(session.role)) {
+      return NextResponse.json({ error: "Staff access required." }, { status: 403 });
+    }
+
+    if (pathname.startsWith("/api/dev/") && session.role !== "ADMIN") {
+      return NextResponse.json({ error: "Admin access required." }, { status: 403 });
+    }
+
     return NextResponse.next();
   }
 

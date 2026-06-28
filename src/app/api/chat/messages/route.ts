@@ -6,7 +6,8 @@ import {
   hydrateCoachChat,
   resolveThreadById,
 } from "@/lib/coach-chat";
-import { resolveMemberUserId } from "@/lib/current-user";
+import { assertChatThreadAccess } from "@/lib/chat-thread-access";
+import { isStaffRole } from "@/lib/auth-session";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -21,8 +22,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Thread not found" }, { status: 404 });
   }
 
-  const role = searchParams.get("role") || "member";
-  const readerId = role === "coach" ? COACH_READER_ID : await resolveMemberUserId();
+  const role = searchParams.get("role") === "coach" ? "coach" : "member";
+  const access = await assertChatThreadAccess(thread, { role });
+  if (!access.ok) return access.response;
+
+  const readerId =
+    role === "coach" && isStaffRole(access.session.role)
+      ? COACH_READER_ID
+      : access.memberId;
   await markThreadRead(threadId, readerId);
 
   const messages = getMessagesForThread(threadId);

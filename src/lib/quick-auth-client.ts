@@ -142,6 +142,14 @@ export function useQuickAuthDeviceId(): { deviceId: string; ready: boolean } {
   return { deviceId, ready };
 }
 
+export function quickAuthMetaForEmail(email: string): QuickAuthLocalMeta | null {
+  const meta = readQuickAuthMeta();
+  const normalized = email.trim().toLowerCase();
+  if (!meta || !normalized || meta.email !== normalized) return null;
+  if (!meta.pin && !meta.webauthn) return null;
+  return meta;
+}
+
 export function readQuickAuthMeta(): QuickAuthLocalMeta | null {
   if (typeof window === "undefined") return null;
   const storage = readMetaStorage();

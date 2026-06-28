@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/auth";
+import { requireMemberAccess } from "@/lib/api-auth";
 import { getUserGamification } from "@/lib/member-gamification-store";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const session = await getSessionUser();
-  if (!session) {
-    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
-  }
+  const auth = await requireMemberAccess();
+  if (!auth.ok) return auth.response;
 
-  const gamification = await getUserGamification(session.id);
+  const gamification = await getUserGamification(auth.session.id);
   return NextResponse.json({
     totalPoints: gamification.totalPoints,
     eventCount: gamification.events.length,

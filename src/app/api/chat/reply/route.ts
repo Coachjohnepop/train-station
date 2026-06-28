@@ -6,8 +6,8 @@ import {
   memberCanPostToThread,
   resolveThreadById,
 } from "@/lib/coach-chat";
-import { getSessionUser } from "@/lib/auth";
-import { resolveMemberUserId } from "@/lib/current-user";
+import { getSessionUser, isStaffRole } from "@/lib/auth";
+
 import { coachDisplayName } from "@/lib/demo-coach";
 import { getAccountByUserId } from "@/lib/member-accounts-store";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
@@ -25,6 +25,11 @@ export async function POST(request: Request) {
   }
 
   if (role === "coach") {
+    const coachSession = await getSessionUser();
+    if (!coachSession || !isStaffRole(coachSession.role)) {
+      return NextResponse.json({ error: "Coach access required." }, { status: 403 });
+    }
+
     if (!threadId) {
       return NextResponse.json({ error: "threadId is required for coach replies" }, { status: 400 });
     }
@@ -32,8 +37,6 @@ export async function POST(request: Request) {
     if (!thread) {
       return NextResponse.json({ error: "Thread not found" }, { status: 404 });
     }
-
-    const coachSession = await getSessionUser();
     let created;
     try {
       created = await addChatMessage({
@@ -67,12 +70,17 @@ export async function POST(request: Request) {
     });
   }
 
+  const memberSession = await getSessionUser();
+  if (!memberSession || memberSession.role !== "MEMBER") {
+    return NextResponse.json({ error: "Member access required." }, { status: 403 });
+  }
+
   if (!threadId) {
     return NextResponse.json({ error: "threadId is required" }, { status: 400 });
   }
 
   await hydrateCoachChat({ preferFresh: true });
-  const uid = await resolveMemberUserId();
+  const uid = memberSession.id;
   const user = resolveDemoUser(uid);
   const registered = user ? null : await getAccountByUserId(uid);
   const authorName =

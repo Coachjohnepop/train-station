@@ -6,6 +6,7 @@ import PinPad from "@/components/PinPad";
 import {
   clearQuickAuthMeta,
   platformAuthenticatorAvailable,
+  quickAuthMetaForEmail,
   useQuickAuthDeviceId,
   writeQuickAuthMeta,
 } from "@/lib/quick-auth-client";
@@ -117,16 +118,38 @@ export default function QuickAuthLogin({
       if (!cancelled) setBiometricReady(ok);
     });
 
+    const localMeta = quickAuthMetaForEmail(email);
+
     void fetch("/api/auth/quick-auth/status", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
       body: JSON.stringify({ email, deviceId }),
     })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { pin?: boolean; webauthn?: boolean; enabled?: boolean } | null) => {
+      .then(async (res) => {
+        if (!res.ok) return { ok: false as const, data: null };
+        const data = (await res.json()) as {
+          pin?: boolean;
+          webauthn?: boolean;
+          enabled?: boolean;
+        };
+        return { ok: true as const, data };
+      })
+      .then((result) => {
         if (cancelled) return;
-        const enabled = Boolean(data?.enabled);
+        if (!result.ok) {
+          const fallback = Boolean(localMeta);
+          onAvailabilityChange?.(fallback);
+          onStatusResolved?.(fallback);
+          setStatusResolved(true);
+          if (localMeta) {
+            setPinEnabled(localMeta.pin);
+            setWebauthnEnabled(localMeta.webauthn);
+          }
+          return;
+        }
+
+        const enabled = Boolean(result.data?.enabled);
         onAvailabilityChange?.(enabled);
         onStatusResolved?.(enabled);
         setStatusResolved(true);
@@ -134,21 +157,25 @@ export default function QuickAuthLogin({
           clearQuickAuthMeta();
           return;
         }
-        setPinEnabled(Boolean(data?.pin));
-        setWebauthnEnabled(Boolean(data?.webauthn));
+        setPinEnabled(Boolean(result.data?.pin));
+        setWebauthnEnabled(Boolean(result.data?.webauthn));
         writeQuickAuthMeta({
           email: email.trim().toLowerCase(),
-          pin: Boolean(data?.pin),
-          webauthn: Boolean(data?.webauthn),
+          pin: Boolean(result.data?.pin),
+          webauthn: Boolean(result.data?.webauthn),
           updatedAt: new Date().toISOString(),
         });
       })
       .catch(() => {
         if (cancelled) return;
-        onAvailabilityChange?.(false);
-        onStatusResolved?.(false);
+        const fallback = Boolean(localMeta);
+        onAvailabilityChange?.(fallback);
+        onStatusResolved?.(fallback);
         setStatusResolved(true);
-        clearQuickAuthMeta();
+        if (localMeta) {
+          setPinEnabled(localMeta.pin);
+          setWebauthnEnabled(localMeta.webauthn);
+        }
       });
 
     return () => {

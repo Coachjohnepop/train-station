@@ -9,7 +9,11 @@ import { offerSavePassword, offerSavePasswordFromForm } from "@/lib/browser-cred
 import { useFormAutofillSync } from "@/hooks/useFormAutofillSync";
 import { clearRememberedEmail, getLastEmail } from "@/lib/email-history";
 import QuickAuthLogin from "@/components/QuickAuthLogin";
-import { clearQuickAuthMeta, ensureDeviceId } from "@/lib/quick-auth-client";
+import {
+  clearQuickAuthMeta,
+  ensureDeviceId,
+  quickAuthMetaForEmail,
+} from "@/lib/quick-auth-client";
 
 function isCompleteEmail(value: string): boolean {
   const trimmed = value.trim();
@@ -33,9 +37,7 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showPasswordForm, setShowPasswordForm] = useState(
-    switchAccount || coachLogin || Boolean(prefillEmail),
-  );
+  const [showPasswordForm, setShowPasswordForm] = useState(coachLogin || passwordUpdated);
   const [quickAuthAvailable, setQuickAuthAvailable] = useState(false);
   const [quickAuthResolved, setQuickAuthResolved] = useState(false);
   const emailTouchedRef = useRef(switchAccount || Boolean(prefillEmail));
@@ -60,6 +62,13 @@ function LoginForm() {
     setQuickAuthResolved(false);
     setQuickAuthAvailable(false);
   }, [email]);
+
+  useEffect(() => {
+    if (!isCompleteEmail(email) || coachLogin || passwordUpdated) return;
+    if (quickAuthMetaForEmail(email)) {
+      setShowPasswordForm(false);
+    }
+  }, [email, coachLogin, passwordUpdated]);
 
   useEffect(() => {
     if (prefillEmail || switchAccount || emailTouchedRef.current) return;
@@ -97,6 +106,10 @@ function LoginForm() {
     emailTouchedRef.current = true;
     setEmail(next);
     setError(null);
+    if (isCompleteEmail(next) && !coachLogin) {
+      setShowPasswordForm(false);
+      return;
+    }
     if (showPasswordForm && isCompleteEmail(next)) {
       setShowPasswordForm(coachLogin);
     }
@@ -198,7 +211,7 @@ function LoginForm() {
               value={email}
               onChange={handleEmailChange}
               placeholder="you@thetrainstation.co"
-              prefillFromHistory={!switchAccount && !prefillEmail}
+              prefillFromHistory={!prefillEmail}
             />
           </div>
           {email.trim() && (
