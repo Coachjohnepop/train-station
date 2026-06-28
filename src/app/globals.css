@@ -1057,3 +1057,28 @@ input:-webkit-autofill {
   animation-name: onAutoFillStart;
   animation-duration: 0.01s;
 }
+
+/* Google Places city suggestions — above onboarding cards */
+.pac-container {
+  z-index: 10050;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  font-family: inherit;
+}
+
+.pac-item {
+  padding: 0.5rem 0.75rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.pac-item:hover,
+.pac-item-selected {
+  background: var(--surface-2);
+}
+
+.pac-item-query {
+  color: var(--text);
+}

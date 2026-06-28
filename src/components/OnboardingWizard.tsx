@@ -9,6 +9,7 @@ import { COACH_CALENDLY_URL } from "@/lib/brand";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
 import QuickAuthSetupPrompt from "@/components/QuickAuthSetupPrompt";
 import EmbeddedCalendlyModal from "@/components/EmbeddedCalendlyModal";
+import CityStateInput from "@/components/CityStateInput";
 
 async function saveProgress(body: Record<string, unknown>) {
   await fetch("/api/member/onboard-progress", {
@@ -251,30 +252,14 @@ export default function OnboardingWizard({
             <p className="text-sm text-[var(--muted)]">
               City and state power weather hints in your workout console.
             </p>
-            <div className="space-y-3 pt-1">
-              <div>
-                <label className="text-xs text-[var(--muted)] block mb-1">City</label>
-                <input
-                  type="text"
-                  autoComplete="address-level2"
-                  value={location.city}
-                  onChange={(e) => setLocation({ ...location, city: e.target.value })}
-                  placeholder="e.g. Austin"
-                  className="input w-full"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-[var(--muted)] block mb-1">State</label>
-                <input
-                  type="text"
-                  autoComplete="address-level1"
-                  value={location.state}
-                  onChange={(e) => setLocation({ ...location, state: e.target.value.toUpperCase() })}
-                  placeholder="TX"
-                  maxLength={2}
-                  className="input w-full uppercase"
-                />
-              </div>
+            <div className="pt-1">
+              <CityStateInput
+                enabled={currentStep === 5}
+                city={location.city}
+                state={location.state}
+                onCityChange={(city) => setLocation((prev) => ({ ...prev, city }))}
+                onStateChange={(state) => setLocation((prev) => ({ ...prev, state }))}
+              />
             </div>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={prevStep} className="btn-ghost flex-1">
