@@ -4,6 +4,7 @@ import { markMemberPaid } from "@/lib/mark-member-paid";
 import { getStripe } from "@/lib/stripe";
 import {
   checkoutCustomerId,
+  checkoutSubscriptionId,
   persistCheckoutPaymentMethod,
   promoteCustomerFromInvoice,
 } from "@/lib/stripe-payment-method-persist";
@@ -49,8 +50,7 @@ export async function POST(request: Request) {
       const userId = session.metadata?.userId || session.client_reference_id;
       if (!userId) break;
 
-      const subscriptionId =
-        typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
+      const subscriptionId = checkoutSubscriptionId(session);
       if (subscriptionId) {
         const sub = await stripe.subscriptions.retrieve(subscriptionId);
         if (!isSubscriptionActive(sub)) break;
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
         plan: session.metadata?.plan ?? null,
         customOfferId: session.metadata?.customOfferId ?? null,
         stripeCustomerId: checkoutCustomerId(session),
-        stripeSubscriptionId: subscriptionId ?? null,
+        stripeSubscriptionId: subscriptionId,
         stripeCheckoutSessionId: session.id,
       });
       break;

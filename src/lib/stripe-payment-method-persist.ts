@@ -159,8 +159,8 @@ export async function persistCheckoutPaymentMethod(
 
   if (!paymentMethodId) {
     // Subscription first invoice can lag behind checkout.session.completed — retry briefly.
-    for (let attempt = 0; attempt < 3 && !paymentMethodId; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+    for (let attempt = 0; attempt < 5 && !paymentMethodId; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
       paymentMethodId = await paymentMethodIdFromCheckout(stripe, session, customerId);
     }
   }
@@ -173,6 +173,26 @@ export async function persistCheckoutPaymentMethod(
       } else if (pm.customer !== customerId) {
         return;
       }
+
+      const details = session.customer_details;
+      const billingPatch: Stripe.PaymentMethodUpdateParams["billing_details"] = {};
+      if (details?.email) billingPatch.email = details.email;
+      if (details?.name) billingPatch.name = details.name;
+      if (details?.address) {
+        billingPatch.address = {
+          line1: details.address.line1 ?? undefined,
+          line2: details.address.line2 ?? undefined,
+          city: details.address.city ?? undefined,
+          state: details.address.state ?? undefined,
+          postal_code: details.address.postal_code ?? undefined,
+          country: details.address.country ?? undefined,
+        };
+      }
+
+      await stripe.paymentMethods.update(paymentMethodId, {
+        allow_redisplay: "always",
+        ...(Object.keys(billingPatch).length > 0 ? { billing_details: billingPatch } : {}),
+      });
     } catch (e: unknown) {
       console.error("[stripe] payment method attach failed:", e);
       paymentMethodId = null;
@@ -232,4 +252,12 @@ export async function promoteCustomerFromInvoice(
 
 export function checkoutCustomerId(session: Stripe.Checkout.Session): string | null {
   return sessionCustomerId(session);
+}
+
+export function checkoutSubscriptionId(session: Stripe.Checkout.Session): string | null {
+  if (typeof session.subscription === "string") return session.subscription;
+  if (session.subscription && typeof session.subscription === "object" && "id" in session.subscription) {
+    return session.subscription.id;
+  }
+  return null;
 }

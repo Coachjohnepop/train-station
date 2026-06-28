@@ -77,3 +77,39 @@ export async function customerHasSavedPaymentMethod(
 
   return false;
 }
+
+/** Repair profiles where payment completed but checkout race left status pending. */
+export async function repairMemberStripeBillingState(userId: string): Promise<void> {
+  const profile = await getMemberProfile(userId);
+  if (!profile?.stripeCustomerId) return;
+
+  const stripe = getStripe();
+  if (!stripe) return;
+
+  const patch: Parameters<typeof updateMemberProfile>[1] = {};
+
+  if (profile.paymentStatus !== "paid" && profile.paidAt && profile.paymentMethod === "stripe") {
+    patch.paymentStatus = "paid";
+  }
+
+  if (!profile.stripeSubscriptionId) {
+    try {
+      const subs = await stripe.subscriptions.list({
+        customer: profile.stripeCustomerId,
+        status: "all",
+        limit: 5,
+      });
+      const active = subs.data.find((sub) => sub.status === "active" || sub.status === "trialing");
+      if (active) {
+        patch.stripeSubscriptionId = active.id;
+        patch.paymentStatus = "paid";
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (Object.keys(patch).length > 0) {
+    await updateMemberProfile(userId, patch);
+  }
+}

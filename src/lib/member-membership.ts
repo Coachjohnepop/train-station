@@ -4,7 +4,10 @@ import { getMemberProfile, type MemberProfile } from "@/lib/member-profiles-stor
 import { isPaidSignupPlan, isStripePaymentsEnabled } from "@/lib/member-gates";
 import { getEffectiveMembershipOffer } from "@/lib/pricing-catalog";
 import { getOfferDefinition } from "@/lib/product-offers";
-import { customerHasSavedPaymentMethod } from "@/lib/stripe-customer";
+import {
+  customerHasSavedPaymentMethod,
+  repairMemberStripeBillingState,
+} from "@/lib/stripe-customer";
 import { promoteCustomerPaymentMethodsForCheckout } from "@/lib/stripe-payment-method-persist";
 import {
   signupPlanLabel,
@@ -53,6 +56,7 @@ function paymentStatusLabel(status: MemberProfile["paymentStatus"]): string {
 export async function getMemberMembershipSnapshot(
   userId: string,
 ): Promise<MemberMembershipSnapshot | null> {
+  await repairMemberStripeBillingState(userId);
   const profile = await getMemberProfile(userId);
   if (!profile) return null;
 

@@ -9,6 +9,7 @@ import { markMemberPaid, attachPaidMemberCookies } from "@/lib/mark-member-paid"
 import { getStripe } from "@/lib/stripe";
 import {
   checkoutCustomerId,
+  checkoutSubscriptionId,
   persistCheckoutPaymentMethod,
 } from "@/lib/stripe-payment-method-persist";
 import { verifyPaidCheckoutSession } from "@/lib/stripe-payment-verify";
@@ -55,8 +56,7 @@ export async function POST(request: Request) {
     plan: checkout.metadata?.plan ?? null,
     customOfferId: checkout.metadata?.customOfferId ?? null,
     stripeCustomerId: checkoutCustomerId(checkout),
-    stripeSubscriptionId:
-      typeof checkout.subscription === "string" ? checkout.subscription : null,
+    stripeSubscriptionId: checkoutSubscriptionId(checkout),
     stripeCheckoutSessionId: checkout.id,
   });
 

@@ -99,13 +99,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: checkout.error }, { status: 503 });
     }
 
-    const alreadyPaid = existingProfile?.paymentStatus === "paid";
+    // Re-read before write — confirm/webhook may mark paid while this request creates the session.
+    const latestProfile = await getMemberProfile(session.id);
+    const keepPaidStatus = latestProfile?.paymentStatus === "paid";
 
     let updatedProfile = profile;
     try {
       updatedProfile = await updateMemberProfile(session.id, {
         plan,
-        ...(alreadyPaid ? {} : { paymentStatus: "pending" as const }),
+        ...(keepPaidStatus ? {} : { paymentStatus: "pending" as const }),
         stripeCheckoutSessionId: checkout.sessionId,
         ...(parsed.data.customOfferId ? { customTrainingOfferId: parsed.data.customOfferId } : {}),
         ...(referral?.referralCode

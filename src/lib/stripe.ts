@@ -17,6 +17,7 @@ import { isStripeTestMode, STRIPE_TEST_PUBLISHABLE_KEY } from "@/lib/stripe-pric
 import {
   customerHasSavedPaymentMethod,
   ensureStripeCustomer,
+  repairMemberStripeBillingState,
 } from "@/lib/stripe-customer";
 import { promoteCustomerPaymentMethodsForCheckout } from "@/lib/stripe-payment-method-persist";
 
@@ -139,6 +140,7 @@ async function checkoutCustomerFields(input: {
   email: string;
   name: string;
 }): Promise<{ customerId: string | null; hasSavedCard: boolean; fields: CheckoutCustomerFields }> {
+  await repairMemberStripeBillingState(input.userId);
   const customerId = await ensureStripeCustomer(input);
   if (!customerId) {
     return {
