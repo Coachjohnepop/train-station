@@ -545,10 +545,10 @@ export default function MemberWorkoutConsole({
 
       const data = await res.json();
       await clearLiveSession();
-      setLogResult({ 
-        performedAt: data.performedAt, 
+      setLogResult({
+        performedAt: data.performedAt,
         count: data.performances || idsToLog.length,
-        progress: data.progress ?? progress 
+        progress: data.progress ?? progress,
       });
       const totalPoints = data.gamification?.totalPoints;
       if (typeof totalPoints === "number") {
@@ -556,7 +556,9 @@ export default function MemberWorkoutConsole({
           new CustomEvent("member-score-updated", { detail: { totalPoints } }),
         );
       }
-      // keep the finished marks so user can review what was logged
+      requestAnimationFrame(() => {
+        document.getElementById("workout-logged-success")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
     } catch (e: any) {
       const msg = e?.message || "Could not save. Check connection and try again.";
       if (!/gamification points/i.test(msg)) {
@@ -567,11 +569,56 @@ export default function MemberWorkoutConsole({
     }
   }, [finishedExercises, workout, weights, completedSets, activeId, programSlug, targetUserId, clearLiveSession]);
 
+  const showLoggedSuccess = !reviewMode && !hideLogButton && !!logResult;
+
   return (
     <div
       className={`mx-auto w-full max-w-md md:max-w-2xl lg:max-w-2xl xl:max-w-2xl ${embedded ? "px-0 py-2 md:px-2" : "px-4 py-6 md:px-6"}`}
     >
-      {!embedded && (
+      {showLoggedSuccess ? (
+        <div
+          id="workout-logged-success"
+          className="rounded-2xl border border-[var(--success)]/40 bg-[var(--success)]/10 p-6 text-center"
+        >
+          <div className="mx-auto mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--success)]/20 text-xl">
+            ✓
+          </div>
+          <p className="text-lg font-semibold text-[var(--success)]">Workout logged!</p>
+          <p className="mt-1 text-sm font-medium text-white">{workout.workoutName}</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            {logResult.count > 0
+              ? `${logResult.count} exercise${logResult.count === 1 ? "" : "s"} saved. Your silhouettes are updated for next time.`
+              : "Session progress noted (no exercises marked finished this time)."}
+          </p>
+          {logResult.progress != null && (
+            <p className="mt-1 text-sm font-medium text-[var(--success)]">
+              {logResult.progress}% complete{" "}
+              {logResult.progress < 100
+                ? "— partial (instructor sees which exercises you marked)"
+                : "— full workout"}
+            </p>
+          )}
+          <p className="mt-3 text-xs text-[var(--muted)]">
+            Logged {new Date(logResult.performedAt).toLocaleString()}
+          </p>
+
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Link href="/member" className="btn-ghost inline-flex min-w-[8.5rem] justify-center">
+              Dashboard
+            </Link>
+            <button
+              type="button"
+              className="btn-ghost min-w-[8.5rem]"
+              onClick={() => window.location.reload()}
+            >
+              Workout
+            </button>
+          </div>
+          <p className="mt-4 text-[10px] text-[var(--muted)]">Great work — consistency compounds.</p>
+        </div>
+      ) : null}
+
+      {!showLoggedSuccess && !embedded && (
         <>
           <p className="text-xs font-semibold uppercase tracking-widest text-accent">
             {calendarDateLabel ? "Scheduled workout" : "Today\u2019s workout"}
@@ -591,17 +638,19 @@ export default function MemberWorkoutConsole({
           </p>
         </>
       )}
-      {coachLive && !instructorName && (
+      {!showLoggedSuccess && coachLive && !instructorName && (
         <p className="mt-2 text-xs font-medium text-[var(--success)]">
           Coach is marking your workout live — updates appear almost instantly.
         </p>
       )}
-      {partnerLive && instructorName && (
+      {!showLoggedSuccess && partnerLive && instructorName && (
         <p className="mt-2 text-xs font-medium text-[var(--success)]">
           Member is logging live — their checkoffs sync here automatically.
         </p>
       )}
 
+      {!showLoggedSuccess ? (
+      <>
       <div className="mt-3 flex items-center gap-2 text-xs">
         <div className="flex-1 h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden">
           <div
@@ -905,50 +954,10 @@ export default function MemberWorkoutConsole({
           );
         })}
       </div>
+      </>
+      ) : null}
 
-      {reviewMode || hideLogButton ? null : logResult ? (
-        <div className="mt-10 rounded-2xl border border-[var(--success)]/40 bg-[var(--success)]/10 p-6 text-center">
-          <div className="mx-auto mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--success)]/20 text-xl">✓</div>
-          <p className="text-lg font-semibold text-[var(--success)]">Workout logged!</p>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            {logResult.count > 0
-              ? `${logResult.count} exercise${logResult.count === 1 ? "" : "s"} saved. Your silhouettes are updated for next time.`
-              : "Session progress noted (no exercises marked finished this time)."}
-          </p>
-          {logResult.progress != null && (
-            <p className="mt-1 text-sm font-medium text-[var(--success)]">
-              {logResult.progress}% complete {logResult.progress < 100 ? "— partial (instructor sees which exercises you marked)" : "— full workout"}
-            </p>
-          )}
-          <p className="mt-3 text-xs text-[var(--muted)]">
-            Logged {new Date(logResult.performedAt).toLocaleString()}
-          </p>
-
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            {backLabel ? (
-              <Link
-                href={backHref}
-                className="btn-primary inline-flex justify-center"
-              >
-                {backLabel}
-              </Link>
-            ) : null}
-            <Link href="/member" className="btn-ghost inline-flex justify-center">
-              Dashboard
-            </Link>
-            <button
-              type="button"
-              className="btn-ghost"
-              onClick={() => window.location.reload()}
-            >
-              Reload this workout
-            </button>
-          </div>
-          <p className="mt-4 text-[10px] text-[var(--muted)]">
-            Great work — consistency compounds.
-          </p>
-        </div>
-      ) : (
+      {!showLoggedSuccess && !reviewMode && !hideLogButton ? (
         <button
           type="button"
           className="btn-primary mt-10 w-full"
@@ -957,7 +966,7 @@ export default function MemberWorkoutConsole({
         >
           {isLogging ? "Saving your session..." : "Log workout complete"}
         </button>
-      )}
+      ) : null}
 
       {videoModalBlock?.videoUrl && (
         <MemberExerciseVideoModal
