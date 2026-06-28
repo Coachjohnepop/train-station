@@ -321,9 +321,36 @@ a {
   cursor: not-allowed;
 }
 
+@media (max-width: 639px) {
+  .day-wheel-spin {
+    width: 1.75rem;
+    min-height: 4.25rem;
+  }
+
+  .day-wheel-spin__glyph {
+    border-top-width: 10px;
+    border-bottom-width: 10px;
+  }
+
+  .day-wheel-spin--prev .day-wheel-spin__glyph {
+    margin-left: 2px;
+    border-right-width: 12px;
+  }
+
+  .day-wheel-spin--next .day-wheel-spin__glyph {
+    margin-right: 2px;
+    border-left-width: 12px;
+  }
+
+  .day-wheel-strip {
+    gap: 4px;
+  }
+}
+
 .day-wheel-viewport {
   overflow: hidden;
   max-width: 100%;
+  min-width: 0;
 }
 
 .day-wheel-strip {

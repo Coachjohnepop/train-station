@@ -1,12 +1,19 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { MemberDaySummary } from "@/lib/member-day-window-types";
 
-const CHIP_W = 76;
-const GAP = 8;
+const MAX_CHIP_W = 76;
+const MIN_CHIP_W = 48;
+const GAP_DESKTOP = 8;
+const GAP_MOBILE = 4;
 const VISIBLE_DAYS = 5;
-const STEP = CHIP_W + GAP;
+
+type WheelMetrics = {
+  chipW: number;
+  gap: number;
+  step: number;
+};
 
 type Props = {
   days: MemberDaySummary[];
@@ -26,21 +33,62 @@ function windowStartIndex(days: MemberDaySummary[], selectedIdx: number): number
   return start;
 }
 
+function gapForViewport(): number {
+  if (typeof window === "undefined") return GAP_DESKTOP;
+  return window.matchMedia("(min-width: 640px)").matches ? GAP_DESKTOP : GAP_MOBILE;
+}
+
+function chipWidthForViewport(viewportPx: number, visibleCount: number, gap: number): number {
+  if (visibleCount <= 0 || viewportPx <= 0) return MAX_CHIP_W;
+  const raw = (viewportPx - (visibleCount - 1) * gap) / visibleCount;
+  return Math.min(MAX_CHIP_W, Math.max(MIN_CHIP_W, Math.floor(raw)));
+}
+
 export default function MemberDayWheel({
   days,
   selectedIso,
   todayIso,
   onSelect,
 }: Props) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [metrics, setMetrics] = useState<WheelMetrics>({
+    chipW: MAX_CHIP_W,
+    gap: GAP_DESKTOP,
+    step: MAX_CHIP_W + GAP_DESKTOP,
+  });
+
   const selectedIdx = days.findIndex((d) => d.iso === selectedIso);
   const currentIdx = selectedIdx >= 0 ? selectedIdx : days.findIndex((d) => d.iso === todayIso);
   const canPrev = currentIdx > 0;
   const canNext = currentIdx >= 0 && currentIdx < days.length - 1;
+  const visibleCount = Math.min(VISIBLE_DAYS, days.length);
 
   const startIdx = useMemo(
     () => windowStartIndex(days, currentIdx >= 0 ? currentIdx : 0),
     [days, currentIdx],
   );
+
+  useLayoutEffect(() => {
+    const el = viewportRef.current;
+    if (!el || visibleCount <= 0) return;
+
+    const measure = () => {
+      const gap = gapForViewport();
+      const chipW = chipWidthForViewport(el.clientWidth, visibleCount, gap);
+      setMetrics({ chipW, gap, step: chipW + gap });
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+
+    const mq = window.matchMedia("(min-width: 640px)");
+    mq.addEventListener("change", measure);
+    return () => {
+      ro.disconnect();
+      mq.removeEventListener("change", measure);
+    };
+  }, [visibleCount]);
 
   const goPrev = useCallback(() => {
     if (!canPrev || currentIdx < 0) return;
@@ -54,12 +102,10 @@ export default function MemberDayWheel({
 
   if (!days.length) return null;
 
-  const viewportWidth =
-    Math.min(VISIBLE_DAYS, days.length) * CHIP_W +
-    (Math.min(VISIBLE_DAYS, days.length) - 1) * GAP;
+  const compactChip = metrics.chipW < 58;
 
   return (
-    <div className="day-wheel-shell mx-auto flex max-w-full items-center justify-center gap-1 sm:gap-2">
+    <div className="day-wheel-shell mx-auto flex w-full min-w-0 max-w-full items-center justify-center gap-1 sm:gap-2">
       <button
         type="button"
         aria-label="Previous day"
@@ -71,14 +117,17 @@ export default function MemberDayWheel({
       </button>
 
       <div
+        ref={viewportRef}
         role="listbox"
         aria-label="Workout days"
-        className="day-wheel-viewport shrink-0 py-2"
-        style={{ width: viewportWidth }}
+        className="day-wheel-viewport min-w-0 flex-1 py-2"
       >
         <div
           className="day-wheel-strip"
-          style={{ transform: `translate3d(-${startIdx * STEP}px, 0, 0)` }}
+          style={{
+            gap: metrics.gap,
+            transform: `translate3d(-${startIdx * metrics.step}px, 0, 0)`,
+          }}
         >
           {days.map((day) => {
             const isSelected = day.iso === selectedIso;
@@ -99,19 +148,22 @@ export default function MemberDayWheel({
                 role="option"
                 aria-selected={isSelected}
                 onClick={() => onSelect(day.iso)}
-                className={`relative flex w-[76px] shrink-0 flex-col items-center rounded-xl border px-1 py-2.5 text-center transition-colors duration-200 ${chipClass}`}
+                style={{ width: metrics.chipW, flexShrink: 0 }}
+                className={`relative flex flex-col items-center rounded-xl border px-0.5 py-2 text-center transition-colors duration-200 sm:px-1 sm:py-2.5 ${chipClass} ${
+                  compactChip ? "day-wheel-chip--compact" : ""
+                }`}
               >
                 <span
-                  className={`text-[10px] font-semibold uppercase tracking-wide ${
-                    todayGold ? "text-[var(--ramp-gold-light)]" : "text-[var(--muted)]"
-                  }`}
+                  className={`font-semibold uppercase tracking-wide ${
+                    compactChip ? "text-[9px]" : "text-[10px]"
+                  } ${todayGold ? "text-[var(--ramp-gold-light)]" : "text-[var(--muted)]"}`}
                 >
                   {day.weekday}
                 </span>
                 <span
-                  className={`mt-0.5 text-sm font-bold tabular-nums ${
-                    todayGold ? "text-[var(--ramp-gold-light)]" : ""
-                  }`}
+                  className={`mt-0.5 font-bold tabular-nums ${
+                    compactChip ? "text-xs" : "text-sm"
+                  } ${todayGold ? "text-[var(--ramp-gold-light)]" : ""}`}
                 >
                   {day.shortDate.split(" ")[1]}
                 </span>

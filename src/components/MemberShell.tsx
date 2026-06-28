@@ -53,7 +53,7 @@ export default function MemberShell({
         <MemberNav intakePending={intakePending} />
       </header>
 
-      <main className="mx-auto w-full max-w-lg md:max-w-3xl lg:max-w-6xl xl:max-w-7xl flex-1 px-4 py-6 md:px-6 lg:px-8">{children}</main>
+      <main className="mx-auto w-full min-w-0 max-w-lg overflow-x-clip md:max-w-3xl lg:max-w-6xl xl:max-w-7xl flex-1 px-4 py-6 md:px-6 lg:px-8">{children}</main>
       <IntakeBookingCelebrate />
     </div>
   );

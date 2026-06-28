@@ -184,8 +184,8 @@ export default function MemberWarmupDayNavigator({
         onTouchEnd={onTouchEnd}
       >
           {showFullWarmup ? (
-            <div className="-mx-4 sm:mx-0">
-              <div className="px-4 sm:px-0">
+            <div className="min-w-0 sm:mx-0">
+              <div className="sm:px-0">
                 <p className="text-xs font-semibold uppercase tracking-widest text-accent">
                   Today&apos;s workout
                 </p>

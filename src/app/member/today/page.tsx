@@ -225,7 +225,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
           </div>
 
           {hasWorkout ? (
-            <div className="-mx-4">
+            <div className="min-w-0">
               {session?.rawSms && (
                 <details className="mx-4 mb-3 text-xs group">
                   <summary className="flex items-center gap-2 cursor-pointer list-none text-[var(--muted)] hover:text-white">

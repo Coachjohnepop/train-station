@@ -195,7 +195,7 @@ export default function MemberTodayShell({
   return (
     <div
       id="member-today-top"
-      className={`scroll-mt-4 space-y-4 ${todayGold ? "member-today-gold-shell" : ""}`}
+      className={`scroll-mt-4 min-w-0 space-y-4 overflow-x-clip ${todayGold ? "member-today-gold-shell" : ""}`}
     >
       <div>
         <h1
@@ -277,7 +277,7 @@ export default function MemberTodayShell({
       )}
 
       {showFullWorkout && workout && (
-        <div className="-mx-4 sm:mx-0">
+        <div className="min-w-0 sm:mx-0">
           <MemberWorkoutConsole
             workout={workout}
             backHref="/member/today"
