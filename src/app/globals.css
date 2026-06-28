@@ -22,6 +22,10 @@
   --danger: #f07178;
   --brass: var(--accent);
   --brass-hover: var(--accent-hover);
+  --ramp-gold: #d4af37;
+  --ramp-gold-light: #fde68a;
+  --ramp-gold-deep: #b8860b;
+  --ramp-gold-glow: rgba(212, 175, 55, 0.38);
 }
 
 /* Coach Class — violet-indigo (purple-adjacent) */
@@ -74,6 +78,8 @@
   --text: #1a1028;
   --muted: #6b5b80;
   --accent-glow: color-mix(in srgb, var(--accent) 18%, transparent);
+  --ramp-gold-deep: #a16207;
+  --ramp-gold-light: #ca8a04;
 }
 
 [data-theme-mode="light"][data-membership-tier="explorer"] {
@@ -849,6 +855,107 @@ table.data th {
 .nav-tab-active {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   color: var(--accent-light);
+}
+
+/* Ramp-up / intake — gold “your next step” (distinct from tier purple accent) */
+.nav-tab-ramp {
+  background: color-mix(in srgb, var(--ramp-gold) 22%, transparent);
+  color: var(--ramp-gold-light);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ramp-gold) 45%, transparent);
+}
+
+.nav-tab-ramp-active {
+  background: color-mix(in srgb, var(--ramp-gold) 30%, transparent);
+  color: var(--ramp-gold-light);
+  box-shadow: 0 0 12px var(--ramp-gold-glow);
+}
+
+.intake-next-step-card {
+  position: relative;
+  overflow: visible;
+  border: 1px solid color-mix(in srgb, var(--ramp-gold) 55%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--ramp-gold) 14%, var(--surface)) 0%,
+    color-mix(in srgb, var(--ramp-gold) 6%, var(--surface)) 100%
+  );
+  box-shadow: 0 0 24px color-mix(in srgb, var(--ramp-gold-glow) 65%, transparent);
+}
+
+.intake-next-step-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--ramp-gold) 50%, transparent);
+  background: color-mix(in srgb, var(--ramp-gold) 18%, var(--surface));
+  padding: 0.2rem 0.65rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ramp-gold-light);
+}
+
+.intake-next-step-title {
+  color: var(--ramp-gold-light);
+}
+
+.intake-book-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--ramp-gold-light) 55%, var(--ramp-gold-deep));
+  background: linear-gradient(180deg, var(--ramp-gold-light) 0%, var(--ramp-gold) 100%);
+  padding: 0.65rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1a1028;
+  box-shadow: 0 4px 18px var(--ramp-gold-glow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.intake-book-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 22px var(--ramp-gold-glow);
+}
+
+.intake-book-btn-wrap {
+  position: relative;
+  display: inline-flex;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .intake-book-btn-wrap {
+    width: auto;
+  }
+}
+
+.intake-guide-pointer {
+  position: absolute;
+  right: -0.15rem;
+  bottom: -1.65rem;
+  font-size: 1.85rem;
+  line-height: 1;
+  pointer-events: none;
+  animation: intake-point-bounce 1.15s ease-in-out infinite;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+}
+
+@keyframes intake-point-bounce {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(-18deg);
+  }
+  50% {
+    transform: translate(-5px, -8px) rotate(-18deg);
+  }
+}
+
+.text-ramp-gold {
+  color: var(--ramp-gold-light);
 }
 
 /* Lets client code detect Chrome/Safari password autofill via animationstart */

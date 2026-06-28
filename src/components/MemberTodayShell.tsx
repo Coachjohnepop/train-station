@@ -158,21 +158,41 @@ export default function MemberTodayShell({
     router.replace(`/member/today${suffix}`, { scroll: false });
   }
 
+  const rampHighlight = showWarmupFlow && !intakeComplete;
+
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-bold sm:text-2xl">{isToday ? "Today" : "Your schedule"}</h1>
-        <p className="mt-1 text-xs text-[var(--muted)] sm:text-sm">{subtitle}</p>
+        <h1
+          className={`text-xl font-bold sm:text-2xl ${isToday && rampHighlight ? "text-ramp-gold" : ""}`}
+        >
+          {isToday ? "Today" : "Your schedule"}
+        </h1>
+        {isToday && rampHighlight ? (
+          <p className="mt-1 text-xs font-medium text-[var(--ramp-gold-light)] sm:text-sm">
+            Start here — book your intro, then warm up below.
+          </p>
+        ) : (
+          <p className="mt-1 text-xs text-[var(--muted)] sm:text-sm">{subtitle}</p>
+        )}
       </div>
 
       {rollup && days.length > 0 && (
-        <div className="flex flex-wrap items-center justify-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)]/60 px-3 py-2 text-center text-[11px] text-[var(--muted)]">
+        <div
+          className={`flex flex-wrap items-center justify-center gap-3 rounded-xl border px-3 py-2 text-center text-[11px] text-[var(--muted)] ${
+            rampHighlight
+              ? "border-[color-mix(in_srgb,var(--ramp-gold)_40%,var(--border))] bg-[color-mix(in_srgb,var(--ramp-gold)_8%,var(--surface))]"
+              : "border-[var(--border)] bg-[var(--surface)]/60"
+          }`}
+        >
           <span>
             <strong className="text-[var(--text)]">{rollup.pastDone}</strong>/{rollup.pastTotal}{" "}
             done
           </span>
           <span className="text-[var(--border)]">|</span>
-          <span className="text-accent font-medium">Today</span>
+          <span className={`font-semibold ${rampHighlight ? "text-ramp-gold" : "text-accent font-medium"}`}>
+            Today
+          </span>
           <span className="text-[var(--border)]">|</span>
           <span>
             <strong className="text-[var(--text)]">{rollup.futureTotal}</strong> ahead

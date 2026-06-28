@@ -16,12 +16,14 @@ export default function MemberShell({
   memberName,
   memberEmail,
   membershipTier,
+  intakePending = false,
 }: {
   children: React.ReactNode;
   access: MemberAccess;
   memberName: string;
   memberEmail?: string;
   membershipTier: MembershipThemeTier;
+  intakePending?: boolean;
 }) {
   const tierLabel = MEMBERSHIP_THEME_LABELS[membershipTier] || access.tierLabel;
 
@@ -49,7 +51,7 @@ export default function MemberShell({
             <LogoutButton />
           </div>
         </div>
-        <MemberNav />
+        <MemberNav intakePending={intakePending} />
       </header>
 
       <main className="mx-auto w-full max-w-lg md:max-w-3xl lg:max-w-6xl xl:max-w-7xl flex-1 px-4 py-6 md:px-6 lg:px-8">{children}</main>

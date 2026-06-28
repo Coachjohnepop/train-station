@@ -5,6 +5,7 @@ import { isStaffRole } from "@/lib/auth-session";
 import { getCurrentUserId } from "@/lib/current-user";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { getMemberProfile } from "@/lib/member-profiles-store";
+import { isCoachIntakeComplete } from "@/lib/member-intake";
 import { membershipThemeTierFromPlan } from "@/lib/membership-theme";
 
 export default async function MemberLayout({
@@ -39,6 +40,10 @@ export default async function MemberLayout({
     cookieUid || (session?.role === "MEMBER" ? session.id : null);
   const profile = profileUserId ? await getMemberProfile(profileUserId) : null;
   const membershipTier = membershipThemeTierFromPlan(profile?.plan);
+  const intakePending =
+    !!profileUserId &&
+    profileUserId.startsWith("member-") &&
+    !isCoachIntakeComplete(profile);
 
   return (
     <MemberShell
@@ -46,6 +51,7 @@ export default async function MemberLayout({
       memberName={name}
       memberEmail={email}
       membershipTier={membershipTier}
+      intakePending={intakePending}
     >
       {children}
     </MemberShell>
