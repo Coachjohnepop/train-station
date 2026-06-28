@@ -9,6 +9,7 @@ import { resolveProgramWorkoutForCalendarDate } from "@/lib/go-to-today";
 import { getProgramBySlug } from "@/lib/program-data";
 import { getUserEnrollments } from "@/lib/data/user-data";
 import {
+  addDaysIso,
   dayVisibilityTier,
   daysFromToday,
   themeLabelForDay,
@@ -84,6 +85,59 @@ export async function resolvePrimaryScheduleProgram(userId: string) {
     }
   }
   return null;
+}
+
+/** Placeholder schedule for intake ramp when member has no program enrolled yet. */
+export function buildIntakeRampPlaceholderDays(
+  todayIso: string,
+  windowDays = 10,
+  daysBefore = 3,
+): MemberDaySummary[] {
+  const daysAfter = Math.max(0, windowDays - 1 - daysBefore);
+  const days: MemberDaySummary[] = [];
+
+  for (let offset = -daysBefore; offset <= daysAfter; offset++) {
+    const iso = addDaysIso(todayIso, offset);
+    const phase = offset < 0 ? "past" : offset === 0 ? "today" : "future";
+    const visibilityTier = dayVisibilityTier(iso, todayIso);
+    const dayNumber = offset + daysBefore + 1;
+    const dayLabel = DAY_LABELS[dayNumber - 1] ?? `Day ${dayNumber}`;
+    const themeLabel = visibilityTier === "label" ? themeLabelForDay(null, dayLabel) : null;
+
+    days.push({
+      iso,
+      phase,
+      weekday: formatWeekday(iso),
+      shortDate: formatShortDate(iso),
+      dayLabel,
+      weekNumber: 1,
+      dayNumber,
+      workoutName: visibilityTier === "label" ? themeLabel : "Ramp-up",
+      workoutId: null,
+      programSlug: "intake-ramp",
+      completed: false,
+      exerciseCount: 0,
+      exerciseNames: [],
+      stretchNames: [],
+      smsOverride: false,
+      hasWorkout: true,
+      daysFromToday: offset,
+      visibilityTier,
+      themeLabel,
+    });
+  }
+
+  return days;
+}
+
+export function rollupForMemberDays(days: MemberDaySummary[]): MemberDayWindowRollup {
+  const past = days.filter((d) => d.phase === "past");
+  const future = days.filter((d) => d.phase === "future");
+  return {
+    pastDone: past.filter((d) => d.completed).length,
+    pastTotal: past.length,
+    futureTotal: future.filter((d) => d.hasWorkout).length,
+  };
 }
 
 export async function buildMemberDayWindow(

@@ -15,9 +15,11 @@ import { localTodayIso, toIsoDate } from "@/lib/program-calendar";
 import { loadMemberUpcomingSessions, memberTodayHref } from "@/lib/member-today";
 import { resolveTodayPageWorkout } from "@/lib/member-today-workout";
 import {
+  buildIntakeRampPlaceholderDays,
   buildMemberDayWindow,
   nextDayStretchPreview,
   resolvePrimaryScheduleProgram,
+  rollupForMemberDays,
 } from "@/lib/member-day-window";
 import { listDemoMembersForCoach } from "@/lib/sms";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
@@ -106,14 +108,20 @@ export default async function MemberTodayPage({ searchParams }: Props) {
       ? `Program schedule — ${scheduleLabel}`
       : "Spin the day wheel to see what you've done and what's ahead.";
 
-  const selectedSummary = dayWindow?.days.find((d) => d.iso === viewDate) ?? null;
-  const stretchPreview = dayWindow ? nextDayStretchPreview(dayWindow.days, todayKey) : [];
-  const memberWorkout = viewDate === todayKey ? workout : null;
   const intakeComplete =
     !uid.startsWith("member-") || isCoachIntakeComplete(profile);
   const warmupWorkout = !intakeComplete
     ? buildWarmupWorkoutView(memberName, coachSettings.warmupBlocks)
     : null;
+  const intakeRampDays =
+    !intakeComplete && warmupWorkout && !(dayWindow?.days.length)
+      ? buildIntakeRampPlaceholderDays(todayKey)
+      : null;
+  const memberDays = dayWindow?.days.length ? dayWindow.days : intakeRampDays ?? [];
+  const memberRollup = dayWindow?.rollup ?? (intakeRampDays ? rollupForMemberDays(intakeRampDays) : null);
+  const selectedSummary = memberDays.find((d) => d.iso === viewDate) ?? null;
+  const stretchPreview = memberDays.length ? nextDayStretchPreview(memberDays, todayKey) : [];
+  const memberWorkout = viewDate === todayKey ? workout : null;
 
   return (
     <div className="space-y-4">
@@ -130,8 +138,8 @@ export default async function MemberTodayPage({ searchParams }: Props) {
             <MemberTodayShell
               todayIso={todayKey}
               selectedDate={viewDate}
-              days={dayWindow?.days ?? []}
-              rollup={dayWindow?.rollup ?? null}
+              days={memberDays}
+              rollup={memberRollup}
               selectedSummary={selectedSummary}
               nextStretchPreview={stretchPreview}
               workout={memberWorkout}

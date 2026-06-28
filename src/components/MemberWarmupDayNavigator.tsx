@@ -161,29 +161,28 @@ export default function MemberWarmupDayNavigator({
   const showFullWarmup = isToday && summary.visibilityTier === "full";
 
   return (
-    <div className="relative">
+    <div className="warmup-nav-shell">
       <div className="mb-2 flex items-center justify-center gap-2 text-[11px] text-[var(--muted)] md:hidden">
         <span>Swipe left or right to change days</span>
       </div>
 
-      <div className="flex items-stretch gap-1 sm:gap-2">
-        <button
-          type="button"
-          aria-label="Previous day"
-          onClick={goPrev}
-          disabled={!canPrev}
-          className="warmup-nav-arrow hidden shrink-0 md:flex"
-        >
-          <span aria-hidden className="text-5xl font-light leading-none">
-            ‹
-          </span>
-        </button>
+      <button
+        type="button"
+        aria-label="Previous day"
+        onClick={goPrev}
+        disabled={!canPrev}
+        className="warmup-nav-arrow warmup-nav-arrow--prev shrink-0"
+      >
+        <span aria-hidden className="text-5xl font-light leading-none">
+          ‹
+        </span>
+      </button>
 
-        <div
-          className="min-w-0 flex-1 touch-pan-y"
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
-        >
+      <div
+        className="warmup-nav-body min-w-0 touch-pan-y"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
           {showFullWarmup ? (
             <div className="-mx-4 sm:mx-0">
               <div className="px-4 sm:px-0">
@@ -215,20 +214,19 @@ export default function MemberWarmupDayNavigator({
               todayIso={todayIso}
             />
           )}
-        </div>
-
-        <button
-          type="button"
-          aria-label="Next day"
-          onClick={goNext}
-          disabled={!canNext}
-          className="warmup-nav-arrow hidden shrink-0 md:flex"
-        >
-          <span aria-hidden className="text-5xl font-light leading-none">
-            ›
-          </span>
-        </button>
       </div>
+
+      <button
+        type="button"
+        aria-label="Next day"
+        onClick={goNext}
+        disabled={!canNext}
+        className="warmup-nav-arrow warmup-nav-arrow--next shrink-0"
+      >
+        <span aria-hidden className="text-5xl font-light leading-none">
+          ›
+        </span>
+      </button>
 
       <div className="mt-3 flex items-center justify-between gap-2 md:hidden">
         <button
