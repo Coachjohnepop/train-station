@@ -110,7 +110,7 @@ export async function setAccountPassword(
       passwordHash,
     });
 
-    const accounts = await getAllSignInAccounts({ preferFresh: true });
+    const accounts = await getAllSignInAccounts();
     const saved = accounts[normalized]?.passwordHash;
     if (saved && verifyPassword(password, saved)) {
       break;

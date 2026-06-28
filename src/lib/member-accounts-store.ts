@@ -312,7 +312,7 @@ export async function registerMember(input: RegisterMemberInput): Promise<Stored
       await new Promise((r) => setTimeout(r, 350 * (attempt + 1)));
       continue;
     }
-    const verify = await getRegisteredStore({ preferFresh: true });
+    const verify = await getRegisteredStore();
     if (verify[normalized]?.userId === account.userId) return account;
   }
 
