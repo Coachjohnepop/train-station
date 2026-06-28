@@ -1,1 +1,13 @@
-{"workoutLogs": [], "performances": []}
+{
+  "workoutLogs": [
+    {
+      "id": "log-ttt-enrollment-demo",
+      "userId": "member-8888cb23-f25",
+      "workoutId": "cmpyrgf3t0001tnrze7tvnioa",
+      "performedAt": "2026-06-28T21:25:00.000Z",
+      "completed": true,
+      "progress": 100
+    }
+  ],
+  "performances": []
+}
