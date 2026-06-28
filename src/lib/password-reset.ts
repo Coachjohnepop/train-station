@@ -152,7 +152,11 @@ export async function requestPasswordReset(rawEmail: string): Promise<{
     passwordHash: account.passwordHash ?? null,
   });
 
-  const token = await issuePasswordResetToken(normalized);
+  const { token, persisted } = await issuePasswordResetToken(normalized);
+  if (!persisted) {
+    return { message: RESET_SEND_FAILED_MESSAGE, emailed: false };
+  }
+
   const resetUrl = `${appBaseUrl()}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(normalized)}`;
   const emailed = await sendResetEmail(normalized, resetUrl);
 

@@ -11,6 +11,12 @@ import { getLastEmail } from "@/lib/email-history";
 import QuickAuthLogin from "@/components/QuickAuthLogin";
 import { ensureDeviceId } from "@/lib/quick-auth-client";
 
+function isCompleteEmail(value: string): boolean {
+  const trimmed = value.trim();
+  const at = trimmed.indexOf("@");
+  return at > 0 && at < trimmed.length - 1 && trimmed.includes(".");
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -139,7 +145,7 @@ function LoginForm() {
           </p>
         )}
 
-        {!showPasswordForm && email.trim() && (
+        {!showPasswordForm && isCompleteEmail(email) && (
           <>
             <QuickAuthLogin
               email={email}
@@ -166,14 +172,14 @@ function LoginForm() {
           </>
         )}
 
-        {!showPasswordForm && email.trim() && !quickAuthResolved && (
+        {!showPasswordForm && isCompleteEmail(email) && !quickAuthResolved && (
           <p className="card text-center text-sm text-[var(--muted)]">Checking quick sign-in…</p>
         )}
 
-        {quickAuthResolved && !quickAuthAvailable && email.trim() && !showPasswordForm && (
+        {quickAuthResolved && !quickAuthAvailable && isCompleteEmail(email) && !showPasswordForm && (
           <p className="mb-3 text-center text-xs text-[var(--muted)]">
-            No PIN on this device for {email.trim().toLowerCase()} yet — sign in with password once,
-            then set up quick sign-in from your dashboard.
+            No quick sign-in on this device yet for {email.trim().toLowerCase()} — use your password
+            below, then set up a PIN from your dashboard.
           </p>
         )}
 
@@ -187,7 +193,9 @@ function LoginForm() {
           </button>
         )}
 
-        {(showPasswordForm || (quickAuthResolved && !quickAuthAvailable) || !email.trim()) && (
+        {(showPasswordForm ||
+          (quickAuthResolved && !quickAuthAvailable && isCompleteEmail(email)) ||
+          !isCompleteEmail(email)) && (
         <form ref={formRef} onSubmit={handleSubmit} autoComplete="on" className="card space-y-4">
           {error && (
             <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200 space-y-2">
@@ -229,7 +237,7 @@ function LoginForm() {
               required
               value={password}
               onChange={setPassword}
-              placeholder={passwordUpdated ? "Type your new password" : "Set via forgot password if needed"}
+              placeholder={passwordUpdated ? "Type your new password" : "Your password"}
             />
           </div>
 

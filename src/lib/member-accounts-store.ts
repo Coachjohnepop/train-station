@@ -81,7 +81,7 @@ export async function getAllSignInAccounts(opts?: { preferFresh?: boolean }): Pr
 export async function canSignInWithEmail(email: string): Promise<boolean> {
   const normalized = normalizeAccountEmail(email);
   if (!normalized) return false;
-  const registered = await getRegisteredStore();
+  const registered = await getRegisteredStore({ preferFresh: true });
   const account = registered[normalized];
   if (account) return !account.hidden;
 
@@ -294,17 +294,27 @@ export async function registerMember(input: RegisterMemberInput): Promise<Stored
     createdAt: new Date().toISOString(),
   };
 
-  const store = await getRegisteredStore();
-  store[normalized] = account;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const store = await getRegisteredStore({ preferFresh: true });
+    if (store[normalized]) {
+      throw new Error("An account with this email already exists. Sign in instead.");
+    }
+    store[normalized] = account;
+    const { blobSaved } = await persistJsonStore({
+      blobPath: BLOB_PATH,
+      localPath: DEV_FILE,
+      data: store,
+      setMemory: (v) => {
+        memoryStore = v;
+      },
+    });
+    if (!blobSaved && attempt < 3) {
+      await new Promise((r) => setTimeout(r, 350 * (attempt + 1)));
+      continue;
+    }
+    const verify = await getRegisteredStore({ preferFresh: true });
+    if (verify[normalized]?.userId === account.userId) return account;
+  }
 
-  await persistJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    data: store,
-    setMemory: (v) => {
-      memoryStore = v;
-    },
-  });
-
-  return account;
+  throw new Error("Could not save your account right now — please try again in a moment.");
 }

@@ -136,10 +136,21 @@ async function injectResetToken(email) {
       if (verifyStore[key]?.email === email) return token;
     }
 
-    await new Promise((r) => setTimeout(r, 350 * (attempt + 1)));
+    await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
   }
 
   return token;
+}
+
+async function waitForResetToken(email, key, attempts = 8) {
+  const opts = blobOptions();
+  if (!opts) return false;
+  for (let i = 0; i < attempts; i++) {
+    await new Promise((r) => setTimeout(r, 500 + i * 400));
+    const store = await readTokenStore(opts);
+    if (store[key]?.email === email.trim().toLowerCase()) return true;
+  }
+  return false;
 }
 
 async function testLogin(label, email, password, expectRedirectPrefix) {
@@ -192,8 +203,14 @@ async function testResetRoundTrip(label, email, newPassword) {
     return false;
   }
 
-  const token = await injectResetToken(email.trim().toLowerCase());
-  await new Promise((r) => setTimeout(r, 1500));
+  const normalized = email.trim().toLowerCase();
+  const token = await injectResetToken(normalized);
+  const key = createHash("sha256").update(token).digest("hex");
+  const visible = await waitForResetToken(normalized, key);
+  if (!visible) {
+    fail(`${label} reset inject`, "token not visible in blob before reset");
+    return false;
+  }
 
   const { res, body } = await req("/api/auth/reset-password", {
     method: "POST",
@@ -239,15 +256,23 @@ async function testSignupAndLogin() {
   pass("New signup", body.redirectTo || "ok");
 
   cookies = "";
-  const login = await req("/api/auth/login", {
-    method: "POST",
-    json: { email, password },
-  });
-  if (!login.res.ok || !login.body?.ok) {
-    fail("New member login after signup", login.body?.error || `HTTP ${login.res.status}`);
-    return;
+  let loginOk = false;
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    await new Promise((r) => setTimeout(r, 400 * attempt));
+    const login = await req("/api/auth/login", {
+      method: "POST",
+      json: { email, password },
+    });
+    if (login.res.ok && login.body?.ok) {
+      pass("New member login after signup", login.body.redirect || "ok");
+      loginOk = true;
+      break;
+    }
+    if (attempt === 4) {
+      fail("New member login after signup", login.body?.error || `HTTP ${login.res.status}`);
+    }
   }
-  pass("New member login after signup", login.body.redirect || "ok");
+  if (!loginOk) return;
 
   await testForgot("New member", email, true);
 }
@@ -279,11 +304,14 @@ async function main() {
 
   await testForgot("Unknown email", "not-a-real-user@example.com", false);
 
-  await testForgot("Coach", COACH_EMAIL, true);
-  await testForgot("Member test", MEMBER_EMAIL, true);
-
   const coachOk = await testLogin("Coach", COACH_EMAIL, COACH_PASSWORD, "/admin");
   const memberOk = await testLogin("Member test", MEMBER_EMAIL, MEMBER_PASSWORD, "/member/today");
+
+  await testResetRoundTrip("Coach reset", COACH_EMAIL, RESET_PASSWORD);
+  await testResetRoundTrip("Member reset", MEMBER_EMAIL, RESET_PASSWORD);
+
+  await testForgot("Coach", COACH_EMAIL, true);
+  await testForgot("Member test", MEMBER_EMAIL, true);
 
   if (memberOk) {
     cookies = "";
@@ -323,9 +351,6 @@ async function main() {
   }
 
   await testQuickAuthStatus(MEMBER_EMAIL);
-
-  // Full reset link click is validated via forgot-password email delivery above.
-  // Blob-injected token round-trip is flaky under concurrent writes — run manually if needed.
 
   await testSignupAndLogin();
 

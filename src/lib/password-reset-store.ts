@@ -75,7 +75,9 @@ async function upsertTokenForEmail(
   return false;
 }
 
-export async function issuePasswordResetToken(email: string): Promise<string> {
+export async function issuePasswordResetToken(
+  email: string,
+): Promise<{ token: string; persisted: boolean }> {
   const token = randomBytes(32).toString("hex");
   const key = hashToken(token);
   const now = Date.now();
@@ -85,11 +87,13 @@ export async function issuePasswordResetToken(email: string): Promise<string> {
     expiresAt: new Date(now + TOKEN_TTL_MS).toISOString(),
   };
 
-  const blobSaved = await upsertTokenForEmail(email, key, entry);
-  if (!blobSaved) {
-    console.error("[password-reset] token store did not persist to blob — reset links may fail across instances");
+  const persisted = await upsertTokenForEmail(email, key, entry);
+  if (!persisted) {
+    console.error(
+      "[password-reset] token store did not persist to blob — reset email suppressed",
+    );
   }
-  return token;
+  return { token, persisted };
 }
 
 export async function lookupPasswordResetToken(
