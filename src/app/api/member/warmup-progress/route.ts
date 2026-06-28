@@ -10,6 +10,7 @@ import {
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { awardGamificationPoints } from "@/lib/member-gamification-store";
+import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
 
 const putSchema = z.object({
   sessionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -49,6 +50,9 @@ export async function PUT(request: Request) {
     warmupHasActivity(next) &&
     !warmupHasActivity(existing);
 
+  let pointsEarned = 0;
+  let totalPoints: number | null = null;
+
   if (shouldNotify) {
     const profile = await getMemberProfile(session.id);
     const name = session.name || resolveDemoUser(session.id)?.name || "Member";
@@ -65,12 +69,14 @@ export async function PUT(request: Request) {
       finishedExercises: next.finishedExercises,
       coachNotifiedAt: new Date().toISOString(),
     });
-    await awardGamificationPoints({
+    const award = await awardGamificationPoints({
       userId: session.id,
       eventId: `warmup:${body.data.sessionDate}`,
       type: "warmup_before_live",
     });
+    pointsEarned = award.awarded ? GAMIFICATION_POINTS.warmup_before_live : 0;
+    totalPoints = award.totalPoints;
   }
 
-  return NextResponse.json({ progress: next, coachNotified: shouldNotify });
+  return NextResponse.json({ progress: next, coachNotified: shouldNotify, pointsEarned, totalPoints });
 }

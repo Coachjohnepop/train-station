@@ -179,7 +179,7 @@ export default function MemberWorkoutConsole({
 
     saveChain.current = saveChain.current.catch(() => {}).then(async () => {
       const snap = stateRef.current;
-      await fetch("/api/member/warmup-progress", {
+      const res = await fetch("/api/member/warmup-progress", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -188,6 +188,14 @@ export default function MemberWorkoutConsole({
           finishedExercises: Array.from(snap.finishedExercises),
         }),
       });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (typeof data.totalPoints === "number" && data.pointsEarned > 0) {
+          window.dispatchEvent(
+            new CustomEvent("member-score-updated", { detail: { totalPoints: data.totalPoints } }),
+          );
+        }
+      }
     });
 
     return saveChain.current;

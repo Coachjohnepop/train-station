@@ -12,5 +12,12 @@ export async function GET() {
   return NextResponse.json({
     totalPoints: gamification.totalPoints,
     eventCount: gamification.events.length,
+    events: gamification.events.map((e) => ({
+      id: e.id,
+      type: e.type,
+      points: e.points,
+      label: e.label,
+      at: e.at,
+    })),
   });
 }
