@@ -16,16 +16,20 @@ const DEMO_MEMBERS = [
 export default function DevModeSwitcher({
   active,
   staffSession,
+  showImpersonation = true,
 }: {
   active: "member" | "admin";
   staffSession?: SessionUser | null;
+  /** Off in production — hides demo member preview links for real coaches. */
+  showImpersonation?: boolean;
 }) {
-  const showImpersonation = staffSession && isStaffRole(staffSession.role);
+  const canImpersonate =
+    showImpersonation && staffSession && isStaffRole(staffSession.role);
 
   return (
     <div className="app-shell-subbar">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-2 px-4 py-2">
-        <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-2 px-4 py-1.5 sm:py-2">
+        <span className="mr-1 hidden text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] sm:inline">
           View
         </span>
         <Link
@@ -36,7 +40,7 @@ export default function DevModeSwitcher({
               : "text-[var(--muted)] hover:text-[var(--text)]"
           }`}
         >
-          Member app
+          Member
         </Link>
         <Link
           href="/admin"
@@ -46,25 +50,25 @@ export default function DevModeSwitcher({
               : "text-[var(--muted)] hover:text-[var(--text)]"
           }`}
         >
-          Staff admin
+          Admin
         </Link>
-        {showImpersonation && (
+        {canImpersonate ? (
           <>
-            <span className="mx-1 text-[10px] text-[var(--muted)]">|</span>
-            <span className="text-[10px] text-[var(--muted)]">
+            <span className="mx-1 hidden text-[10px] text-[var(--muted)] sm:inline">|</span>
+            <span className="hidden text-[10px] text-[var(--muted)] md:inline">
               {active === "member" ? "Viewing as — switch to:" : "Preview as member:"}
             </span>
             {DEMO_MEMBERS.map((m) => (
               <a
                 key={m.id}
                 href={`/api/dev/switch-user?id=${m.id}&redirect=${encodeURIComponent(active === "member" ? "/member/today" : "/member")}`}
-                className="rounded-full px-2 py-0.5 text-[10px] font-medium text-accent hover:bg-accent/10"
+                className="hidden rounded-full px-2 py-0.5 text-[10px] font-medium text-accent hover:bg-accent/10 md:inline"
               >
                 {m.label}
               </a>
             ))}
           </>
-        )}
+        ) : null}
       </div>
     </div>
   );

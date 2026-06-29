@@ -15,9 +15,17 @@ type Props = {
   dualWorkspace: boolean;
   canCoach: boolean;
   canPlatform: boolean;
+  onNavClick?: () => void;
+  preferDashboardStorageKey?: string;
 };
 
-export default function AdminAreaNav({ dualWorkspace, canCoach, canPlatform }: Props) {
+export default function AdminAreaNav({
+  dualWorkspace,
+  canCoach,
+  canPlatform,
+  onNavClick,
+  preferDashboardStorageKey,
+}: Props) {
   const pathname = usePathname();
   const onPlatform = canPlatform && isPlatformAdminPath(pathname);
   const section: "coach" | "platform" = onPlatform ? "platform" : "coach";
@@ -73,6 +81,8 @@ export default function AdminAreaNav({ dualWorkspace, canCoach, canPlatform }: P
         groups={
           section === "platform" && canPlatform ? PLATFORM_NAV_GROUPS : COACH_NAV_GROUPS
         }
+        onNavClick={onNavClick}
+        preferDashboardStorageKey={preferDashboardStorageKey}
       />
     </div>
   );

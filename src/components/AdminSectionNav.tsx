@@ -7,8 +7,23 @@ import LeadsNavBadge from "@/components/LeadsNavBadge";
 import QueueNavBadge from "@/components/QueueNavBadge";
 import type { AdminNavGroup } from "@/lib/admin-nav-sections";
 
-export default function AdminSectionNav({ groups }: { groups: AdminNavGroup[] }) {
+export default function AdminSectionNav({
+  groups,
+  onNavClick,
+  preferDashboardStorageKey,
+}: {
+  groups: AdminNavGroup[];
+  onNavClick?: () => void;
+  preferDashboardStorageKey?: string;
+}) {
   const pathname = usePathname();
+
+  function handleNavClick(href: string) {
+    if (preferDashboardStorageKey && href === "/admin") {
+      sessionStorage.setItem(preferDashboardStorageKey, "1");
+    }
+    onNavClick?.();
+  }
 
   return (
     <nav className="admin-sidebar-nav space-y-5" aria-label="Admin sections">
@@ -24,6 +39,7 @@ export default function AdminSectionNav({ groups }: { groups: AdminNavGroup[] })
                 <li key={item.href}>
                   <Link
                     href={item.href}
+                    onClick={() => handleNavClick(item.href)}
                     className={`relative flex min-h-[44px] items-center rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                       active
                         ? "nav-tab-active text-accent"
