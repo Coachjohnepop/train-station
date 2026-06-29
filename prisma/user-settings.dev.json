@@ -1,14 +1,1 @@
-{
-  "demo-user": {
-    "phone": "",
-    "dailyReminderTime": ""
-  },
-  "demo-user-john-steph": {
-    "phone": "(512) 555-1234",
-    "dailyReminderTime": "08:00"
-  },
-  "demo-user-stephanie": {
-    "phone": "(555) 999-0001",
-    "dailyReminderTime": "08:15"
-  }
-}
+{}

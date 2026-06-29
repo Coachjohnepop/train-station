@@ -113,21 +113,25 @@ export async function fullyResetMemberByEmail(email) {
 }
 
 const emailArg = process.argv[2]?.trim().toLowerCase();
-if (!emailArg) {
-  console.error("Usage: node scripts/reset-member-full-prod.mjs <email>");
-  process.exit(1);
-}
+const invokedDirectly = process.argv[1]?.includes("reset-member-full-prod.mjs");
 
-try {
-  console.log(`Fully resetting ${emailArg} on production...\n`);
-  const result = await fullyResetMemberByEmail(emailArg);
-  console.log(JSON.stringify(result, null, 2));
-  if (!result.fullyReset && result.reason === "no_user_found") {
-    console.log("\nNo account found — nothing to reset.");
-    process.exit(0);
+if (invokedDirectly) {
+  if (!emailArg) {
+    console.error("Usage: node scripts/reset-member-full-prod.mjs <email>");
+    process.exit(1);
   }
-  console.log("\nDone. They can sign up fresh at /signup with that email.");
-} catch (e) {
-  console.error(e);
-  process.exit(1);
+
+  try {
+    console.log(`Fully resetting ${emailArg} on production...\n`);
+    const result = await fullyResetMemberByEmail(emailArg);
+    console.log(JSON.stringify(result, null, 2));
+    if (!result.fullyReset && result.reason === "no_user_found") {
+      console.log("\nNo account found — nothing to reset.");
+      process.exit(0);
+    }
+    console.log("\nDone. They can sign up fresh at /signup with that email.");
+  } catch (e) {
+    console.error(e);
+    process.exit(1);
+  }
 }
