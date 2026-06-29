@@ -3,9 +3,11 @@ import "server-only";
 import path from "path";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
 import { type CoachAlertPrefs, normalizeCoachAlertPrefs } from "@/lib/alert-channels";
+import { coachingModeFromPrefs, type MemberCoachingMode } from "@/lib/member-coaching-mode";
 
 export type MemberCoachPrefs = {
   userId: string;
+  coachingMode?: MemberCoachingMode;
   alertOverrides: Partial<CoachAlertPrefs>;
   updatedAt: string;
 };
@@ -31,8 +33,12 @@ function normalizePrefs(raw: unknown, userId: string): MemberCoachPrefs {
       }
     }
   }
+  const coachingMode =
+    data.coachingMode === "live" || data.coachingMode === "async" ? data.coachingMode : undefined;
+
   return {
     userId,
+    coachingMode,
     alertOverrides: overrides,
     updatedAt: data.updatedAt || new Date().toISOString(),
   };
@@ -57,14 +63,29 @@ export async function getMemberCoachPrefs(userId: string): Promise<MemberCoachPr
   return normalizePrefs(store[userId], userId);
 }
 
+export async function resolveMemberCoachingMode(userId: string): Promise<MemberCoachingMode> {
+  const prefs = await getMemberCoachPrefs(userId);
+  return coachingModeFromPrefs(prefs, userId);
+}
+
+export async function getMemberCoachPrefsMap(): Promise<Map<string, MemberCoachPrefs>> {
+  const store = await getStore();
+  return new Map(Object.entries(store).map(([id, raw]) => [id, normalizePrefs(raw, id)]));
+}
+
 export async function saveMemberCoachPrefs(
   userId: string,
-  alertOverrides: Partial<CoachAlertPrefs>,
+  input: {
+    alertOverrides?: Partial<CoachAlertPrefs>;
+    coachingMode?: MemberCoachingMode;
+  },
 ): Promise<MemberCoachPrefs> {
   const store = await getStore();
+  const existing = normalizePrefs(store[userId], userId);
   const next: MemberCoachPrefs = {
     userId,
-    alertOverrides,
+    coachingMode: input.coachingMode ?? existing.coachingMode,
+    alertOverrides: input.alertOverrides ?? existing.alertOverrides,
     updatedAt: new Date().toISOString(),
   };
   store[userId] = next;

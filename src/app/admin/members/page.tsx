@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import {
+  COACHING_MODE_LABELS,
+  type MemberCoachingMode,
+} from "@/lib/member-coaching-mode";
 import { signupPlanLabel } from "@/lib/signup-plans";
 
 type MemberFilter = "all" | "pending" | "unpaid" | "intake" | "meeting";
@@ -27,6 +31,7 @@ type MemberRow = {
   coachMeetingRequestedAt: string | null;
   coachMeetingRequestNote: string | null;
   rampStartedAt: string | null;
+  coachingMode: MemberCoachingMode;
 };
 
 function formatWhen(iso: string | null): string {
@@ -83,6 +88,7 @@ export default function AdminMembersPage() {
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<MemberFilter>("all");
   const [removing, setRemoving] = useState<string | null>(null);
+  const [savingMode, setSavingMode] = useState<string | null>(null);
 
   async function loadMembers() {
     setLoading(true);
@@ -193,6 +199,25 @@ export default function AdminMembersPage() {
       default:
         return true;
     }
+  }
+
+  async function updateCoachingMode(userId: string, coachingMode: MemberCoachingMode) {
+    setSavingMode(userId);
+    setError("");
+    const res = await fetch(`/api/admin/members/${encodeURIComponent(userId)}/coach-prefs`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ coachingMode }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error || "Could not save coaching mode.");
+    } else {
+      setMembers((prev) =>
+        prev.map((m) => (m.userId === userId ? { ...m, coachingMode } : m)),
+      );
+    }
+    setSavingMode(null);
   }
 
   async function removeMember(member: MemberRow) {
@@ -315,6 +340,7 @@ export default function AdminMembersPage() {
                 <th className="px-4 py-3 font-medium">Onboard</th>
                 <th className="px-4 py-3 font-medium">Intake</th>
                 <th className="px-4 py-3 font-medium">Approval</th>
+                <th className="px-4 py-3 font-medium">Coaching</th>
                 <th className="px-4 py-3 font-medium">Signed up</th>
                 <th className="px-4 py-3 font-medium" />
               </tr>
@@ -373,6 +399,25 @@ export default function AdminMembersPage() {
                     )}
                   </td>
                   <td className="px-4 py-3">{statusChip(member.approvalStatus, "approval")}</td>
+                  <td className="px-4 py-3">
+                    <select
+                      className="input text-xs py-1.5 min-w-[6.5rem]"
+                      value={member.coachingMode}
+                      disabled={savingMode === member.userId}
+                      onChange={(e) =>
+                        void updateCoachingMode(
+                          member.userId,
+                          e.target.value as MemberCoachingMode,
+                        )
+                      }
+                    >
+                      {(Object.keys(COACHING_MODE_LABELS) as MemberCoachingMode[]).map((mode) => (
+                        <option key={mode} value={mode}>
+                          {COACHING_MODE_LABELS[mode]}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
                   <td className="px-4 py-3 text-[var(--muted)]">{formatWhen(member.createdAt)}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex flex-col items-end gap-1.5">

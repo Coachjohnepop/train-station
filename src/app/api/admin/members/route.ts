@@ -3,6 +3,8 @@ import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { listSelfRegisteredAccounts } from "@/lib/member-accounts-store";
 import { listMemberProfiles } from "@/lib/member-profiles-store";
 import { signupPlanLabel } from "@/lib/signup-plans";
+import { getMemberCoachPrefsMap } from "@/lib/member-coach-prefs-store";
+import { coachingModeFromPrefs } from "@/lib/member-coaching-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +18,10 @@ export async function GET() {
   const session = await requireStaff();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [accounts, profiles] = await Promise.all([
+  const [accounts, profiles, prefsMap] = await Promise.all([
     listSelfRegisteredAccounts(),
     listMemberProfiles(),
+    getMemberCoachPrefsMap(),
   ]);
   const profileByUserId = new Map(profiles.map((p) => [p.userId, p]));
 
@@ -45,6 +48,7 @@ export async function GET() {
       coachMeetingRequestedAt: profile?.coachMeetingRequestedAt ?? null,
       coachMeetingRequestNote: profile?.coachMeetingRequestNote ?? null,
       rampStartedAt: profile?.rampStartedAt ?? null,
+      coachingMode: coachingModeFromPrefs(prefsMap.get(account.userId), account.userId),
     };
   });
 

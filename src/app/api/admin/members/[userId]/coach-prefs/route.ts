@@ -9,6 +9,7 @@ type Params = { params: Promise<{ userId: string }> };
 
 const patchSchema = z.object({
   alertOverrides: z.record(z.string(), z.unknown()).optional(),
+  coachingMode: z.enum(["live", "async"]).optional(),
 });
 
 async function requireStaff() {
@@ -36,6 +37,9 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ detail: body.error.flatten() }, { status: 400 });
   }
 
-  const prefs = await saveMemberCoachPrefs(userId, body.data.alertOverrides || {});
+  const prefs = await saveMemberCoachPrefs(userId, {
+    alertOverrides: body.data.alertOverrides,
+    coachingMode: body.data.coachingMode,
+  });
   return NextResponse.json({ prefs });
 }

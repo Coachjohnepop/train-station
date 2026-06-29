@@ -144,7 +144,13 @@ export async function buildWorkoutFromParsedSms(parsed: ParsedSmsWorkout, workou
   return { workoutId: id, exerciseCount: parsed.exercises.length, newExerciseIds };
 }
 
-export async function getWorkoutExercisePreview(workoutId: string, limit = 4): Promise<string[]> {
+export type WorkoutExerciseBlockMeta = {
+  id: string;
+  name: string;
+  setCount: number;
+};
+
+export async function getWorkoutExerciseBlocks(workoutId: string): Promise<WorkoutExerciseBlockMeta[]> {
   await hydrateSmsWorkouts();
   const store = readStore();
   const exercises = loadDemoExercises();
@@ -152,13 +158,20 @@ export async function getWorkoutExercisePreview(workoutId: string, limit = 4): P
   return store.workoutExercises
     .filter((we) => we.workoutId === workoutId)
     .sort((a, b) => a.sortOrder - b.sortOrder)
-    .slice(0, limit)
-    .map((item) => {
-      const name = exById[item.exerciseId]?.name || "Exercise";
-      const sets = item.sets ?? 1;
-      const reps = item.reps && item.reps !== "—" ? item.reps : "";
-      return reps ? `${name} · ${sets}×${reps}` : name;
-    });
+    .map((item) => ({
+      id: item.id,
+      name: exById[item.exerciseId]?.name || "Exercise",
+      setCount: item.sets ?? 3,
+    }));
+}
+
+export async function getWorkoutExercisePreview(workoutId: string, limit = 4): Promise<string[]> {
+  await hydrateSmsWorkouts();
+  const store = readStore();
+  const exercises = loadDemoExercises();
+  const exById = Object.fromEntries(exercises.map((e) => [e.id, e]));
+  const blocks = await getWorkoutExerciseBlocks(workoutId);
+  return blocks.slice(0, limit).map((block) => block.name);
 }
 
 export async function getSmsGeneratedWorkout(

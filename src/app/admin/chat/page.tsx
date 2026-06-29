@@ -13,7 +13,7 @@ import {
   listThreadsForCoach,
 } from "@/lib/coach-chat";
 import { listCoachChatMembers } from "@/lib/coach-chat-members";
-import { getMemberCoachingMode } from "@/lib/member-coaching-mode";
+import { resolveMemberCoachingMode } from "@/lib/member-coach-prefs-store";
 
 export const dynamic = "force-dynamic";
 
@@ -27,12 +27,14 @@ export default async function AdminChatPage({ searchParams }: Props) {
   await ensureCohortThread(COMMUNITY_FEED_PROGRAM_SLUG, COMMUNITY_FEED_TITLE);
   const threads = listThreadsForCoach();
   const roster = await listCoachChatMembers(threads);
-  const members = roster.map((m) => ({
-    id: m.id,
-    name: m.name,
-    email: m.email,
-    coachingMode: getMemberCoachingMode(m.id),
-  }));
+  const members = await Promise.all(
+    roster.map(async (m) => ({
+      id: m.id,
+      name: m.name,
+      email: m.email,
+      coachingMode: await resolveMemberCoachingMode(m.id),
+    })),
+  );
 
   return (
     <div className="space-y-6">

@@ -7,7 +7,11 @@ import {
   type LiveWorkoutSession,
 } from "@/lib/live-workout-session";
 
-import { getWorkoutExercisePreview } from "@/lib/sms-generated-workouts";
+import {
+  getWorkoutExerciseBlocks,
+  getWorkoutExercisePreview,
+  type WorkoutExerciseBlockMeta,
+} from "@/lib/sms-generated-workouts";
 import { getSessionsForDate, hydrateTodaySessions } from "@/lib/today-sessions";
 
 export type LiveFloorTile = {
@@ -28,20 +32,28 @@ export type LiveFloorTile = {
   liveRevision: number;
 };
 
-function countSets(session: LiveWorkoutSession | null, exerciseCount: number): {
+function countSets(
+  session: LiveWorkoutSession | null,
+  plannedSetsTotal: number,
+  exercisesTotal: number,
+): {
   setsCompleted: number;
   setsTotal: number;
   exercisesDone: number;
 } {
   if (!session) {
-    return { setsCompleted: 0, setsTotal: Math.max(exerciseCount * 3, 0), exercisesDone: 0 };
+    return {
+      setsCompleted: 0,
+      setsTotal: Math.max(plannedSetsTotal, exercisesTotal * 3, 1),
+      exercisesDone: 0,
+    };
   }
   let setsCompleted = 0;
   for (const nums of Object.values(session.completedSets)) {
     setsCompleted += nums.length;
   }
   const exercisesDone = session.finishedExercises.length;
-  const setsTotal = Math.max(exerciseCount * 3, setsCompleted, 1);
+  const setsTotal = Math.max(plannedSetsTotal, setsCompleted, 1);
   return { setsCompleted, setsTotal, exercisesDone };
 }
 
@@ -50,6 +62,27 @@ function liveSetsCompleted(session: LiveWorkoutSession | null): number {
   let n = 0;
   for (const nums of Object.values(session.completedSets)) n += nums.length;
   return n;
+}
+
+function resolveActiveExerciseName(
+  blocks: WorkoutExerciseBlockMeta[],
+  live: LiveWorkoutSession | null,
+  exercisesDone: number,
+): string | null {
+  if (blocks.length === 0) return null;
+
+  if (live?.activeId) {
+    const active = blocks.find((b) => b.id === live.activeId);
+    if (active) return active.name;
+  }
+
+  if (live?.finishedExercises?.length) {
+    const finished = new Set(live.finishedExercises);
+    const next = blocks.find((b) => !finished.has(b.id));
+    if (next) return next.name;
+  }
+
+  return blocks[Math.min(exercisesDone, blocks.length - 1)]?.name ?? blocks[0]?.name ?? null;
 }
 
 function tileStatus(
@@ -75,8 +108,9 @@ export async function buildCoachLiveFloor(sessionDate?: string): Promise<{
   const seen = new Set<string>();
 
   for (const todaySession of daySessions) {
-    const preview = await getWorkoutExercisePreview(todaySession.workoutId);
-    const exercisesTotal = preview.length;
+    const blocks = await getWorkoutExerciseBlocks(todaySession.workoutId);
+    const preview = blocks.map((b) => b.name);
+    const exercisesTotal = blocks.length;
 
     for (const userId of todaySession.userIds) {
       const dedupeKey = `${userId}:${todaySession.workoutId}`;
@@ -89,8 +123,13 @@ export async function buildCoachLiveFloor(sessionDate?: string): Promise<{
         sessionDate: date,
       });
 
-      const { setsCompleted: setsDone, setsTotal, exercisesDone } = countSets(live, exercisesTotal);
-      const activeExercise = preview[exercisesDone] ?? preview[0] ?? null;
+      const plannedSets = blocks.reduce((sum, b) => sum + b.setCount, 0);
+      const { setsCompleted: setsDone, setsTotal, exercisesDone } = countSets(
+        live,
+        plannedSets,
+        exercisesTotal,
+      );
+      const activeExercise = resolveActiveExerciseName(blocks, live, exercisesDone);
 
       tiles.push({
         userId,
