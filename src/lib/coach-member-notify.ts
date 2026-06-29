@@ -92,6 +92,35 @@ export async function notifyCoachNewMember(params: {
   });
 }
 
+function isPaidPlan(plan: string): boolean {
+  return plan === "member" || plan === "pro" || plan === "business";
+}
+
+export async function notifyCoachIntakeReady(params: {
+  userId: string;
+  name: string;
+  email: string;
+  plan: string;
+  paymentStatus?: string;
+}): Promise<{ inApp: boolean; email: boolean; sms: boolean }> {
+  const paymentPending =
+    isPaidPlan(params.plan) && params.paymentStatus !== "paid" && params.paymentStatus !== "none";
+
+  const paymentNote = paymentPending
+    ? "\n\nPayment is still pending — use Queue to mark paid (Venmo/cash) when you accept them."
+    : "";
+
+  return notifyCoachForMemberEvent({
+    event: "intakeScheduled",
+    memberUserId: params.userId,
+    memberName: params.name,
+    memberEmail: params.email,
+    subject: "Intake sign-off needed",
+    message: `${params.name} is ready for coach intake sign-off.${paymentNote}\n\nPlan: ${params.plan}`,
+    deepLink: `${appBaseUrl()}/admin/queue`,
+  });
+}
+
 export async function notifyCoachWarmupStarted(params: {
   userId: string;
   name: string;

@@ -151,14 +151,30 @@ export default function AdminQueuePanel() {
         );
       case "intake":
         return (
-          <button
-            type="button"
-            onClick={() => void completeIntake(item.userId)}
-            disabled={intakeSigning === item.userId}
-            className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-sky-500/40 text-sky-300"
-          >
-            {intakeSigning === item.userId ? "…" : "Sign off intake"}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => void completeIntake(item.userId)}
+              disabled={intakeSigning === item.userId}
+              className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-sky-500/40 text-sky-300"
+            >
+              {intakeSigning === item.userId ? "…" : "Accept intake"}
+            </button>
+            {item.plan === "member" || item.plan === "pro" || item.plan === "business" ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setMarkPaidTarget(item);
+                  setMarkPaidMethod("venmo");
+                  setMarkPaidNote("");
+                }}
+                disabled={markingPaid === item.userId}
+                className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-emerald-500/40 text-emerald-300"
+              >
+                Grant access (paid)
+              </button>
+            ) : null}
+          </>
         );
       case "meeting":
         return (

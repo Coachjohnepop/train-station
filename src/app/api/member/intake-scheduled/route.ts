@@ -3,7 +3,9 @@ import { getSessionUser } from "@/lib/auth";
 import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
 import { awardGamificationPoints } from "@/lib/member-gamification-store";
 import { ensureMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
-import { normalizeSignupPlan } from "@/lib/signup-plans";
+import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
+import { getAccountByUserId } from "@/lib/member-accounts-store";
+import { notifyCoachIntakeReady } from "@/lib/coach-member-notify";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +22,20 @@ export async function POST() {
   });
 
   const bookedAt = new Date().toISOString();
-  await updateMemberProfile(session.id, {
+  const profile = await updateMemberProfile(session.id, {
     introBookedAt: bookedAt,
     coachMeetingRequestedAt: null,
     coachMeetingRequestedBy: null,
     coachMeetingRequestNote: null,
+  });
+
+  const account = await getAccountByUserId(session.id);
+  await notifyCoachIntakeReady({
+    userId: session.id,
+    name: account?.account.name || session.name || "Member",
+    email: session.email,
+    plan: signupPlanLabel(profile.plan),
+    paymentStatus: profile.paymentStatus,
   });
 
   const result = await awardGamificationPoints({
