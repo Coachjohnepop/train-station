@@ -9,6 +9,7 @@ import {
   formatSlotTimeRange,
   slotLocalDateKey,
 } from "@/lib/booking-slot-format";
+import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
 
 type Slot = { start: string; end: string; label?: string };
 
@@ -243,14 +244,11 @@ export default function MemberBookPage() {
             const res = await fetch("/api/member/intake-scheduled", { method: "POST" });
             if (!res.ok) return;
             const data = await res.json();
-            window.dispatchEvent(
-              new CustomEvent("intake-booking-celebrate", {
-                detail: {
-                  pointsEarned: data.pointsEarned,
-                  totalPoints: data.totalPoints,
-                },
-              }),
-            );
+            dispatchMemberScoreCelebrate({
+              pointsEarned: data.pointsEarned ?? 0,
+              totalPoints: data.totalPoints,
+              label: "Intro booked",
+            });
           })();
         }}
       />

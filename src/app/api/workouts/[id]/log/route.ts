@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { resolveUserId } from "@/lib/current-user";
 import { createWorkoutLogAndPerformances, type LogExerciseInput } from "@/lib/data/user-data";
+import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
 import { awardGamificationPoints } from "@/lib/member-gamification-store";
 
 const logExerciseSchema = z.object({
@@ -65,7 +66,14 @@ export async function POST(request: Request, { params }: Params) {
       console.warn("Workout logged but gamification award failed", gamErr);
     }
 
-    return NextResponse.json({ ...result, gamification, gamificationWarning });
+    const gamificationPayload = gamification
+      ? {
+          ...gamification,
+          pointsEarned: gamification.awarded ? GAMIFICATION_POINTS.workout_logged : 0,
+        }
+      : null;
+
+    return NextResponse.json({ ...result, gamification: gamificationPayload, gamificationWarning });
   } catch (e: any) {
     // Preserve previous error behavior for "user not found" / "workout not found" etc.
     if (e?.message?.includes("User not found")) {

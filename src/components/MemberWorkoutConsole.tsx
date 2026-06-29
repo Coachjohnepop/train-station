@@ -11,6 +11,8 @@ import {
   weightTierLabel,
 } from "@/lib/workout-schemes";
 import MemberExerciseVideoModal from "@/components/MemberExerciseVideoModal";
+import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
+import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
 
 export type MemberExerciseBlock = {
   id: string;
@@ -192,10 +194,12 @@ export default function MemberWorkoutConsole({
       });
       if (res.ok) {
         const data = await res.json().catch(() => ({}));
-        if (typeof data.totalPoints === "number" && data.pointsEarned > 0) {
-          window.dispatchEvent(
-            new CustomEvent("member-score-updated", { detail: { totalPoints: data.totalPoints } }),
-          );
+        if (typeof data.totalPoints === "number") {
+          dispatchMemberScoreCelebrate({
+            pointsEarned: data.pointsEarned ?? 0,
+            totalPoints: data.totalPoints,
+            label: "Warm-ups before live",
+          });
         }
       }
     });
@@ -551,11 +555,16 @@ export default function MemberWorkoutConsole({
         count: data.performances || idsToLog.length,
         progress: data.progress ?? progress,
       });
-      const totalPoints = data.gamification?.totalPoints;
-      if (typeof totalPoints === "number") {
-        window.dispatchEvent(
-          new CustomEvent("member-score-updated", { detail: { totalPoints } }),
-        );
+      const gamification = data.gamification;
+      if (gamification && typeof gamification.totalPoints === "number") {
+        const pointsEarned = gamification.awarded
+          ? gamification.pointsEarned ?? GAMIFICATION_POINTS.workout_logged
+          : 0;
+        dispatchMemberScoreCelebrate({
+          pointsEarned,
+          totalPoints: gamification.totalPoints,
+          label: "Workout logged",
+        });
       }
       requestAnimationFrame(() => {
         document.getElementById("workout-logged-success")?.scrollIntoView({ behavior: "smooth", block: "center" });

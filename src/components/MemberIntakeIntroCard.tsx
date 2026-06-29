@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { COACH_CALENDLY_URL } from "@/lib/brand";
 import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
+import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
 import EmbeddedCalendlyModal from "@/components/EmbeddedCalendlyModal";
 
 type IntakeStatus = {
@@ -89,16 +90,11 @@ export default function MemberIntakeIntroCard({
       }));
 
       if (!bookingFollowUp) {
-        window.dispatchEvent(
-          new CustomEvent("intake-booking-celebrate", {
-            detail: { pointsEarned, totalPoints },
-          }),
-        );
-      }
-      if (pointsEarned === 0 && !bookingFollowUp) {
-        window.dispatchEvent(
-          new CustomEvent("member-score-updated", { detail: { totalPoints } }),
-        );
+        dispatchMemberScoreCelebrate({
+          pointsEarned,
+          totalPoints,
+          label: "Intro booked",
+        });
       }
     } finally {
       setBooking(false);

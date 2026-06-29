@@ -1,12 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
-
-export type IntakeCelebrateDetail = {
-  pointsEarned?: number;
-  totalPoints: number;
-};
+import type { MemberScoreCelebrateDetail } from "@/lib/member-score-celebrate";
 
 type Phase = "idle" | "burst" | "fly" | "fade" | "done";
 
@@ -76,9 +71,20 @@ function runConfetti(canvas: HTMLCanvasElement, durationMs = 2200) {
   return () => cancelAnimationFrame(raf);
 }
 
+function normalizeCelebrateDetail(raw: MemberScoreCelebrateDetail | undefined): MemberScoreCelebrateDetail | null {
+  if (!raw || typeof raw.totalPoints !== "number") return null;
+  const pointsEarned = typeof raw.pointsEarned === "number" ? raw.pointsEarned : 0;
+  if (pointsEarned <= 0) return null;
+  return {
+    pointsEarned,
+    totalPoints: raw.totalPoints,
+    label: raw.label || "Points earned",
+  };
+}
+
 export default function IntakeBookingCelebrate() {
   const [phase, setPhase] = useState<Phase>("idle");
-  const [detail, setDetail] = useState<IntakeCelebrateDetail | null>(null);
+  const [detail, setDetail] = useState<MemberScoreCelebrateDetail | null>(null);
   const [flyStyle, setFlyStyle] = useState<React.CSSProperties>({});
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const flyRef = useRef<HTMLDivElement>(null);
@@ -93,7 +99,7 @@ export default function IntakeBookingCelebrate() {
     }, 50);
   }, []);
 
-  const startFly = useCallback((payload: IntakeCelebrateDetail) => {
+  const startFly = useCallback((payload: MemberScoreCelebrateDetail) => {
     const target = document.getElementById("member-nav-scores");
     const flyEl = flyRef.current;
     if (!target || !flyEl) {
@@ -142,16 +148,12 @@ export default function IntakeBookingCelebrate() {
     }, FLY_MS + FADE_MS);
   }, [cleanup]);
 
-  useEffect(() => {
-    function onCelebrate(e: Event) {
-      const custom = e as CustomEvent<IntakeCelebrateDetail>;
-      const payload = custom.detail;
-      if (!payload) return;
+  const runCelebrate = useCallback(
+    (payload: MemberScoreCelebrateDetail) => {
+      const normalized = normalizeCelebrateDetail(payload);
+      if (!normalized) return;
 
-      setDetail({
-        pointsEarned: payload.pointsEarned ?? GAMIFICATION_POINTS.intake_scheduled,
-        totalPoints: payload.totalPoints,
-      });
+      setDetail(normalized);
       setPhase("burst");
       setFlyStyle({});
 
@@ -160,19 +162,30 @@ export default function IntakeBookingCelebrate() {
         stopConfettiRef.current = runConfetti(canvasRef.current);
       }
 
-      window.setTimeout(() => startFly(payload), 1600);
+      window.setTimeout(() => startFly(normalized), 1600);
+    },
+    [startFly],
+  );
+
+  useEffect(() => {
+    function onCelebrate(e: Event) {
+      const custom = e as CustomEvent<MemberScoreCelebrateDetail>;
+      runCelebrate(custom.detail);
     }
 
+    window.addEventListener("member-score-celebrate", onCelebrate);
     window.addEventListener("intake-booking-celebrate", onCelebrate);
     return () => {
+      window.removeEventListener("member-score-celebrate", onCelebrate);
       window.removeEventListener("intake-booking-celebrate", onCelebrate);
       stopConfettiRef.current?.();
     };
-  }, [startFly]);
+  }, [runCelebrate]);
 
   if (phase === "idle" || !detail) return null;
 
-  const earned = detail.pointsEarned ?? GAMIFICATION_POINTS.intake_scheduled;
+  const earned = detail.pointsEarned;
+  const headline = detail.label || "Points earned";
 
   return (
     <div
@@ -190,7 +203,7 @@ export default function IntakeBookingCelebrate() {
             style={phase === "fly" || phase === "fade" ? flyStyle : undefined}
           >
             <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--ramp-gold-light)]">
-              Intro booked
+              {headline}
             </p>
             <p className="mt-1 text-5xl font-black tabular-nums text-[var(--ramp-gold-light)] sm:text-6xl">
               +{earned}
