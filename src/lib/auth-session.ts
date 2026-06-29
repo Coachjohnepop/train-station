@@ -3,7 +3,12 @@ import { resolveSessionSecret } from "@/lib/session-secret";
 
 export const SESSION_COOKIE = "ts_session";
 
-export type UserRole = "ADMIN" | "INSTRUCTOR" | "MEMBER" | "PROSPECTIVE_INSTRUCTOR";
+export type UserRole =
+  | "ADMIN"
+  | "INSTRUCTOR"
+  | "PLATFORM_ADMIN"
+  | "MEMBER"
+  | "PROSPECTIVE_INSTRUCTOR";
 
 export type SessionUser = {
   id: string;
@@ -50,6 +55,4 @@ export function createSessionToken(user: SessionUser): string {
   return signPayload(payload);
 }
 
-export function isStaffRole(role: UserRole): boolean {
-  return role === "ADMIN" || role === "INSTRUCTOR";
-}
+export { isStaffRole } from "@/lib/staff-access";

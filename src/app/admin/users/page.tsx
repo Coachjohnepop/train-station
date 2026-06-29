@@ -8,7 +8,7 @@ import PasswordInput from "@/components/PasswordInput";
 import FormUsernameBridge from "@/components/FormUsernameBridge";
 import AdminUserQuickAuthControls from "@/components/AdminUserQuickAuthControls";
 
-type Role = "ADMIN" | "INSTRUCTOR" | "MEMBER" | "PROSPECTIVE_INSTRUCTOR";
+type Role = "ADMIN" | "INSTRUCTOR" | "PLATFORM_ADMIN" | "MEMBER" | "PROSPECTIVE_INSTRUCTOR";
 
 type UserRow = {
   id: string;
@@ -29,7 +29,21 @@ type UserRow = {
   source?: "seed" | "sign-in" | "managed";
 };
 
-const ROLES: Role[] = ["ADMIN", "INSTRUCTOR", "MEMBER", "PROSPECTIVE_INSTRUCTOR"];
+const ROLES: Role[] = [
+  "ADMIN",
+  "INSTRUCTOR",
+  "PLATFORM_ADMIN",
+  "MEMBER",
+  "PROSPECTIVE_INSTRUCTOR",
+];
+
+const ROLE_LABELS: Record<Role, string> = {
+  ADMIN: "Staff (coach + platform)",
+  INSTRUCTOR: "Coach",
+  PLATFORM_ADMIN: "Platform admin",
+  MEMBER: "Member",
+  PROSPECTIVE_INSTRUCTOR: "Prospective instructor",
+};
 const STATUSES = ["active", "pending", "suspended"];
 
 export default function AdminUsersPage() {
@@ -303,7 +317,7 @@ export default function AdminUsersPage() {
                   </td>
                   <td className="py-3 pr-4">
                     <span className="rounded bg-[var(--surface-2)] px-2 py-0.5 text-xs font-medium">
-                      {u.role.replace("_", " ")}
+                      {ROLE_LABELS[u.role]}
                     </span>
                   </td>
                   <td className="py-3 pr-4">
@@ -446,7 +460,7 @@ export default function AdminUsersPage() {
                       >
                         {ROLES.map((r) => (
                           <option key={r} value={r}>
-                            {r.replace("_", " ")}
+                            {ROLE_LABELS[r]}
                           </option>
                         ))}
                       </select>

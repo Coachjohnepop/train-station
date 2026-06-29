@@ -4,6 +4,12 @@ import TrainStationBrand from "@/components/TrainStationBrand";
 import DevModeSwitcher from "@/components/DevModeSwitcher";
 import LogoutButton from "@/components/LogoutButton";
 import { getSessionUser } from "@/lib/auth";
+import {
+  canAccessCoachAdmin,
+  canAccessPlatformAdmin,
+  hasDualStaffWorkspace,
+  staffWorkspaceLabel,
+} from "@/lib/staff-access";
 
 
 export default async function AdminLayout({
@@ -12,11 +18,11 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const session = await getSessionUser();
-  const showPlatform = session?.role === "ADMIN";
-  const areaLabel =
-    showPlatform && session
-      ? "Staff"
-      : "Coach";
+  const role = session?.role;
+  const dualWorkspace = role ? hasDualStaffWorkspace(role) : false;
+  const canCoach = role ? canAccessCoachAdmin(role) : false;
+  const canPlatform = role ? canAccessPlatformAdmin(role) : false;
+  const areaLabel = role ? staffWorkspaceLabel(role) : "Staff";
 
   return (
     <div className="app-shell-bg flex min-h-screen flex-col">
@@ -39,7 +45,11 @@ export default async function AdminLayout({
             <LogoutButton />
           </div>
           <div className="overflow-x-auto pb-1">
-            <AdminAreaNav showPlatform={showPlatform} />
+            <AdminAreaNav
+              dualWorkspace={dualWorkspace}
+              canCoach={canCoach}
+              canPlatform={canPlatform}
+            />
           </div>
         </div>
       </header>

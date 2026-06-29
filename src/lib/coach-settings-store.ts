@@ -7,6 +7,7 @@ import {
   type CoachAlertPrefs,
 } from "@/lib/alert-channels";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import { invalidateMessagingGateCache } from "@/lib/messaging-gate";
 import {
   DEFAULT_WARMUP_BLOCKS,
   normalizeWarmupBlocks,
@@ -21,6 +22,8 @@ import {
 export type CoachSettings = {
   coachPhone: string | null;
   coachEmail: string | null;
+  /** Master switch — when false, all outbound email (Resend) and carrier SMS are paused. */
+  messagingEnabled: boolean;
   alertPrefs: CoachAlertPrefs;
   warmupBlocks: WarmupBlockTemplate[];
   rampTemplate: RampWeekTemplate[];
@@ -36,6 +39,7 @@ function defaultSettings(): CoachSettings {
   return {
     coachPhone: null,
     coachEmail: process.env.COACH_NOTIFY_EMAIL?.trim() || null,
+    messagingEnabled: true,
     alertPrefs: defaultCoachAlertPrefs(),
     warmupBlocks: DEFAULT_WARMUP_BLOCKS.map((b) => ({ ...b })),
     rampTemplate: DEFAULT_RAMP_WEEKS.map((w) => ({
@@ -53,6 +57,7 @@ function normalizeSettings(raw: unknown): CoachSettings {
   return {
     coachPhone: typeof data.coachPhone === "string" ? data.coachPhone : defaults.coachPhone,
     coachEmail: typeof data.coachEmail === "string" ? data.coachEmail : defaults.coachEmail,
+    messagingEnabled: data.messagingEnabled === false ? false : true,
     alertPrefs: normalizeCoachAlertPrefs(data.alertPrefs),
     warmupBlocks: normalizeWarmupBlocks(data.warmupBlocks),
     rampTemplate: normalizeRampWeeks(data.rampTemplate),
@@ -80,13 +85,23 @@ export async function getCoachSettings(): Promise<CoachSettings> {
 
 export async function saveCoachSettings(
   patch: Partial<
-    Pick<CoachSettings, "coachPhone" | "coachEmail" | "alertPrefs" | "warmupBlocks" | "rampTemplate">
+    Pick<
+      CoachSettings,
+      | "coachPhone"
+      | "coachEmail"
+      | "messagingEnabled"
+      | "alertPrefs"
+      | "warmupBlocks"
+      | "rampTemplate"
+    >
   >,
 ): Promise<CoachSettings> {
   const current = await getStore();
   const next: CoachSettings = {
     ...current,
     ...patch,
+    messagingEnabled:
+      patch.messagingEnabled === undefined ? current.messagingEnabled : patch.messagingEnabled !== false,
     alertPrefs: patch.alertPrefs ? normalizeCoachAlertPrefs(patch.alertPrefs) : current.alertPrefs,
     warmupBlocks: patch.warmupBlocks
       ? normalizeWarmupBlocks(patch.warmupBlocks)
@@ -95,6 +110,7 @@ export async function saveCoachSettings(
     updatedAt: new Date().toISOString(),
   };
   memoryStore = next;
+  invalidateMessagingGateCache();
   await persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,

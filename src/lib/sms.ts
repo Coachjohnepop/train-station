@@ -254,6 +254,12 @@ async function buildDemoPhoneUsers(): Promise<
 }
 
 export async function deliverSms(phone: string, message: string): Promise<boolean> {
+  const { isOutboundMessagingEnabled } = await import("@/lib/messaging-gate");
+  if (!(await isOutboundMessagingEnabled())) {
+    console.log(`[SMS — paused] -> ${phone}: ${message.slice(0, 80)}…`);
+    return false;
+  }
+
   const to = toE164(phone);
   if (twilioConfigured()) {
     try {

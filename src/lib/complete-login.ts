@@ -5,10 +5,10 @@ import { cookies } from "next/headers";
 import {
   applyNewMemberOnboardingCookie,
   applySessionCookies,
-  isStaffRole,
   syncMemberGateCookies,
   type SessionUser,
 } from "@/lib/auth";
+import { defaultStaffLandingPath, isStaffRole } from "@/lib/staff-access";
 import {
   applyEmailHistoryCookies,
   readEmailHistoryFromRequestCookies,
@@ -27,7 +27,7 @@ export async function resolveLoginDestination(
   user: SessionUser,
   redirect?: string,
 ): Promise<string> {
-  let destination = isStaffRole(user.role) ? "/admin" : memberTodayPath();
+  let destination = isStaffRole(user.role) ? defaultStaffLandingPath(user.role) : memberTodayPath();
 
   if (!isStaffRole(user.role)) {
     const profile = await getMemberProfile(user.id);

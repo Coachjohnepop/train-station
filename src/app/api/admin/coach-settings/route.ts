@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 const patchSchema = z.object({
   coachPhone: z.string().max(40).nullable().optional(),
   coachEmail: z.string().email().max(120).nullable().optional(),
+  messagingEnabled: z.boolean().optional(),
   alertPrefs: z.record(z.string(), z.unknown()).optional(),
   warmupBlocks: z.array(z.unknown()).optional(),
   rampTemplate: z.array(z.unknown()).optional(),
@@ -38,6 +39,7 @@ export async function PATCH(request: Request) {
   const settings = await saveCoachSettings({
     coachPhone: body.data.coachPhone,
     coachEmail: body.data.coachEmail,
+    messagingEnabled: body.data.messagingEnabled,
     alertPrefs: body.data.alertPrefs as Parameters<typeof saveCoachSettings>[0]["alertPrefs"],
     warmupBlocks: body.data.warmupBlocks as Parameters<typeof saveCoachSettings>[0]["warmupBlocks"],
     rampTemplate: body.data.rampTemplate as Parameters<typeof saveCoachSettings>[0]["rampTemplate"],

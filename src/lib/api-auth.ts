@@ -1,7 +1,12 @@
 import "server-only";
 
 import { NextResponse } from "next/server";
-import { getSessionUser, isStaffRole } from "@/lib/auth";
+import { getSessionUser } from "@/lib/auth";
+import {
+  canAccessCoachAdmin,
+  canAccessPlatformAdmin,
+  isStaffRole,
+} from "@/lib/staff-access";
 import type { SessionUser } from "@/lib/auth-session";
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import { memberHasFullAccess } from "@/lib/member-gates";
@@ -28,6 +33,20 @@ export async function requireStaff(): Promise<AuthResult> {
   const session = await getSessionUser();
   if (!session) return unauthorized();
   if (!isStaffRole(session.role)) return forbidden("Staff access required.");
+  return { ok: true, session };
+}
+
+export async function requireCoachStaff(): Promise<AuthResult> {
+  const session = await getSessionUser();
+  if (!session) return unauthorized();
+  if (!canAccessCoachAdmin(session.role)) return forbidden("Coach staff access required.");
+  return { ok: true, session };
+}
+
+export async function requirePlatformStaff(): Promise<AuthResult> {
+  const session = await getSessionUser();
+  if (!session) return unauthorized();
+  if (!canAccessPlatformAdmin(session.role)) return forbidden("Platform staff access required.");
   return { ok: true, session };
 }
 

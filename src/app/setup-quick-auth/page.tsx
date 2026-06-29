@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
+import { defaultStaffLandingPath, isStaffRole } from "@/lib/staff-access";
 import SetupQuickAuthClient from "./SetupQuickAuthClient";
 
 export const dynamic = "force-dynamic";
@@ -19,8 +20,8 @@ export default async function SetupQuickAuthPage({
   const destination =
     redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")
       ? redirectTo
-      : session.role === "ADMIN" || session.role === "INSTRUCTOR"
-        ? "/admin"
+      : isStaffRole(session.role)
+        ? defaultStaffLandingPath(session.role)
         : "/member";
 
   return (

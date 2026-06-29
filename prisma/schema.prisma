@@ -14,6 +14,7 @@ datasource db {
 enum Role {
   ADMIN
   INSTRUCTOR
+  PLATFORM_ADMIN
   MEMBER
   PROSPECTIVE_INSTRUCTOR
 }

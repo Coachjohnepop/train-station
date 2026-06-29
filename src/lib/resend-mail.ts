@@ -1,6 +1,7 @@
 import "server-only";
 
 import { BRAND_NAME } from "@/lib/brand";
+import { isOutboundMessagingEnabled } from "@/lib/messaging-gate";
 
 export type ResendEmailInput = {
   to: string | string[];
@@ -123,6 +124,13 @@ ${cta}
 }
 
 export async function sendResendEmail(input: ResendEmailInput): Promise<boolean> {
+  if (!(await isOutboundMessagingEnabled())) {
+    console.log(
+      `[RESEND — paused] To: ${input.to}\nSubject: ${input.subject}\n(Admin → Coach settings or MESSAGING_ENABLED=false)\n`,
+    );
+    return false;
+  }
+
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) {
     console.log(`[RESEND — not configured] To: ${input.to}\nSubject: ${input.subject}\n${input.text}\n`);

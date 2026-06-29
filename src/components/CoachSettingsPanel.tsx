@@ -8,6 +8,7 @@ import type { RampWeekTemplate } from "@/lib/member-ramp-template";
 type CoachSettings = {
   coachPhone: string | null;
   coachEmail: string | null;
+  messagingEnabled: boolean;
   alertPrefs: CoachAlertPrefs;
   warmupBlocks: WarmupBlockTemplate[];
   rampTemplate: RampWeekTemplate[];
@@ -49,6 +50,7 @@ export default function CoachSettingsPanel() {
       body: JSON.stringify({
         coachPhone: settings.coachPhone,
         coachEmail: settings.coachEmail,
+        messagingEnabled: settings.messagingEnabled,
         alertPrefs: settings.alertPrefs,
         warmupBlocks: settings.warmupBlocks,
         rampTemplate: settings.rampTemplate,
@@ -107,6 +109,37 @@ export default function CoachSettingsPanel() {
 
   return (
     <div className="space-y-8">
+      <section
+        className={`card space-y-4 p-5 ${
+          settings.messagingEnabled ? "" : "border-amber-500/40 bg-amber-500/5"
+        }`}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold">Outbound messaging</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Master switch for all Resend email and carrier SMS — leads, welcome messages, password
+              resets, hub broadcasts, and coach alerts. In-app chat is not affected.
+            </p>
+          </div>
+          <label className="flex items-center gap-3 rounded-full border border-[var(--border)] px-4 py-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={settings.messagingEnabled}
+              onChange={(e) =>
+                setSettings({ ...settings, messagingEnabled: e.target.checked })
+              }
+            />
+            {settings.messagingEnabled ? "Messaging on" : "Messaging paused"}
+          </label>
+        </div>
+        {!settings.messagingEnabled && (
+          <p className="text-sm text-amber-200">
+            Paused — no outbound email or SMS will send until you turn this back on and save.
+          </p>
+        )}
+      </section>
+
       <section className="card space-y-4 p-5">
         <div>
           <h2 className="text-lg font-semibold">Contact for alerts</h2>

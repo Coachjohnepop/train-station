@@ -16,9 +16,9 @@ import { getAllSignInAccounts, upsertSignInAccount } from "@/lib/member-accounts
 import { applySelfProfileUpdate } from "@/lib/user-self-update";
 import { hideUserById, unhideUserById } from "@/lib/user-visibility";
 import { getAdminSession, isSelfUserId, pickSelfProfilePatch } from "@/lib/users-admin-session";
-import { assertUserScope, requireSession, requireStaff } from "@/lib/api-auth";
+import { assertUserScope, requirePlatformStaff, requireSession } from "@/lib/api-auth";
 
-const ROLES = ["ADMIN", "INSTRUCTOR", "MEMBER", "PROSPECTIVE_INSTRUCTOR"] as const;
+const ROLES = ["ADMIN", "INSTRUCTOR", "PLATFORM_ADMIN", "MEMBER", "PROSPECTIVE_INSTRUCTOR"] as const;
 
 const updateUserSchema = z.object({
   name: z.string().min(1).optional(),
@@ -40,7 +40,7 @@ export async function GET(_req: Request, { params }: Params) {
   const { id } = await params;
   const scope = assertUserScope(auth.session, id);
   if (scope) {
-    const staff = await requireStaff();
+    const staff = await requirePlatformStaff();
     if (!staff.ok) return staff.response;
   }
 
@@ -137,7 +137,7 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   if (!isSelf) {
-    const staff = await requireStaff();
+    const staff = await requirePlatformStaff();
     if (!staff.ok) return staff.response;
   }
 
@@ -234,7 +234,7 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
-  const staff = await requireStaff();
+  const staff = await requirePlatformStaff();
   if (!staff.ok) return staff.response;
 
   const { id } = await params;

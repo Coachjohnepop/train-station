@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifySessionTokenEdge, SESSION_COOKIE } from "@/lib/auth-session-edge";
-import { isStaffRole } from "@/lib/auth-session";
+import { isStaffRole, staffAdminRedirect } from "@/lib/staff-access";
 import { purchaseHref } from "@/lib/member-purchase-path";
 
 const NEEDS_ONBOARD_COOKIE = "ts_needs_onboard";
@@ -121,20 +121,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(login);
   }
 
-  if (pathname.startsWith("/admin") && session.role !== "ADMIN" && session.role !== "INSTRUCTOR") {
+  if (pathname.startsWith("/admin") && !isStaffRole(session.role)) {
     return NextResponse.redirect(new URL("/member", request.url));
   }
 
-  const platformAdminOnly =
-    pathname === "/admin/platform" ||
-    pathname.startsWith("/admin/platform/") ||
-    pathname.startsWith("/admin/commission") ||
-    pathname.startsWith("/admin/pricing") ||
-    pathname.startsWith("/admin/offers") ||
-    pathname.startsWith("/admin/users") ||
-    pathname.startsWith("/admin/reports");
-  if (platformAdminOnly && session.role !== "ADMIN") {
-    return NextResponse.redirect(new URL("/admin", request.url));
+  const staffRedirect = staffAdminRedirect(pathname, session.role);
+  if (staffRedirect) {
+    return NextResponse.redirect(new URL(staffRedirect, request.url));
   }
 
   if (session.role === "MEMBER" && pathname.startsWith("/member")) {

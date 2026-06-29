@@ -24,6 +24,7 @@ export default function SmsHubWorkspace() {
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [logs, setLogs] = useState<HubLog[]>([]);
   const [hubActive, setHubActive] = useState(true);
+  const [messagingEnabled, setMessagingEnabled] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [category, setCategory] = useState<"general" | "fasted-cardio" | "sleep" | "exercise">("general");
@@ -37,6 +38,7 @@ export default function SmsHubWorkspace() {
     ]);
     setRecipients(r.recipients || []);
     setHubActive(r.hubActive !== false);
+    setMessagingEnabled(r.messagingEnabled !== false);
     setLogs(Array.isArray(l) ? l : []);
     setSelectedIds((prev) =>
       prev.length ? prev : (r.recipients || []).map((u: Recipient) => u.id),
@@ -54,6 +56,10 @@ export default function SmsHubWorkspace() {
   }
 
   async function sendBroadcast() {
+    if (!messagingEnabled) {
+      setStatus("Outbound messaging is paused — enable it in Coach settings.");
+      return;
+    }
     if (!message.trim() || selectedIds.length === 0) return;
     setSending(true);
     setStatus(null);
@@ -89,19 +95,30 @@ export default function SmsHubWorkspace() {
 
   return (
     <div className="space-y-8">
-      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm">
-        <strong className="text-emerald-200">No paid phone number required.</strong>{" "}
-        Members get email alerts with a link to{" "}
-        <Link href="/member/chat" className="text-accent underline">
-          in-app Messages
-        </Link>
-        . Your personal number stays private — replies come through the hub, not text.
-        {hubActive ? (
-          <span className="block mt-1 text-[var(--muted)]">Active channel: email + in-app (Resend).</span>
-        ) : (
-          <span className="block mt-1 text-[var(--muted)]">Twilio SMS is configured — hub is bypassed.</span>
-        )}
-      </div>
+      {!messagingEnabled ? (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+          <strong className="text-amber-200">Outbound messaging is paused.</strong>{" "}
+          Hub broadcasts and email alerts are off. Turn messaging back on in{" "}
+          <Link href="/admin/settings" className="text-accent underline">
+            Coach settings
+          </Link>
+          . In-app Messages still work.
+        </div>
+      ) : (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm">
+          <strong className="text-emerald-200">No paid phone number required.</strong>{" "}
+          Members get email alerts with a link to{" "}
+          <Link href="/member/chat" className="text-accent underline">
+            in-app Messages
+          </Link>
+          . Your personal number stays private — replies come through the hub, not text.
+          {hubActive ? (
+            <span className="block mt-1 text-[var(--muted)]">Active channel: email + in-app (Resend).</span>
+          ) : (
+            <span className="block mt-1 text-[var(--muted)]">Twilio SMS is configured — hub is bypassed.</span>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="card space-y-4">

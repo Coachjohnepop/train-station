@@ -1,11 +1,11 @@
 {
   "jeremy@thetrainstation.co": {
     "userId": "demo-coach-jeremy",
-    "role": "ADMIN"
+    "role": "INSTRUCTOR"
   },
   "john@thetrainstation.co": {
     "userId": "demo-coach-john",
-    "role": "ADMIN"
+    "role": "PLATFORM_ADMIN"
   },
   "john@lemonvoice.com": {
     "userId": "demo-user-john-steph",

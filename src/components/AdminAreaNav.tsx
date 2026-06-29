@@ -11,14 +11,26 @@ import {
   isPlatformAdminPath,
 } from "@/lib/admin-nav-sections";
 
-export default function AdminAreaNav({ showPlatform }: { showPlatform: boolean }) {
+type Props = {
+  dualWorkspace: boolean;
+  canCoach: boolean;
+  canPlatform: boolean;
+};
+
+export default function AdminAreaNav({ dualWorkspace, canCoach, canPlatform }: Props) {
   const pathname = usePathname();
-  const onPlatform = showPlatform && isPlatformAdminPath(pathname);
+  const onPlatform = canPlatform && isPlatformAdminPath(pathname);
   const section: "coach" | "platform" = onPlatform ? "platform" : "coach";
+
+  const workspaceLabel = dualWorkspace
+    ? null
+    : canPlatform
+      ? "Platform workspace"
+      : "Coach workspace";
 
   return (
     <div className="space-y-3">
-      {showPlatform ? (
+      {dualWorkspace ? (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[10px] font-semibold uppercase tracking-[2px] text-[var(--muted)]">
             Workspace
@@ -51,13 +63,17 @@ export default function AdminAreaNav({ showPlatform }: { showPlatform: boolean }
               : "Payments, users, and site operations"}
           </span>
         </div>
-      ) : (
+      ) : workspaceLabel ? (
         <p className="text-[10px] font-semibold uppercase tracking-[2px] text-[var(--muted)]">
-          Coach workspace
+          {workspaceLabel}
         </p>
-      )}
+      ) : null}
 
-      <AdminSectionNav items={section === "platform" ? PLATFORM_NAV_ITEMS : COACH_NAV_ITEMS} />
+      <AdminSectionNav
+        items={
+          section === "platform" && canPlatform ? PLATFORM_NAV_ITEMS : COACH_NAV_ITEMS
+        }
+      />
     </div>
   );
 }

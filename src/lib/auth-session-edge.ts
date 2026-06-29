@@ -7,7 +7,12 @@ import { resolveSessionSecret } from "@/lib/session-secret";
 
 export const SESSION_COOKIE = "ts_session";
 
-export type UserRole = "ADMIN" | "INSTRUCTOR" | "MEMBER" | "PROSPECTIVE_INSTRUCTOR";
+export type UserRole =
+  | "ADMIN"
+  | "INSTRUCTOR"
+  | "PLATFORM_ADMIN"
+  | "MEMBER"
+  | "PROSPECTIVE_INSTRUCTOR";
 
 export type SessionPayload = {
   id: string;

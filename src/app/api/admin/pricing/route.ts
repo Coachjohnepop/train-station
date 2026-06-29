@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getSessionUser, isStaffRole } from "@/lib/auth";
+import { requirePlatformStaff } from "@/lib/api-auth";
 import {
   getAdminPricingSnapshot,
   importStripePriceIdsFromEnv,
@@ -23,23 +23,17 @@ const patchSchema = z.object({
   syncStripe: z.boolean().optional(),
 });
 
-async function requireAdmin() {
-  const session = await getSessionUser();
-  if (!session || session.role !== "ADMIN") return null;
-  return session;
-}
-
 export async function GET() {
-  const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requirePlatformStaff();
+  if (!auth.ok) return auth.response;
   await importStripePriceIdsFromEnv();
   const snapshot = await getAdminPricingSnapshot();
   return NextResponse.json(snapshot);
 }
 
 export async function PATCH(request: Request) {
-  const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requirePlatformStaff();
+  if (!auth.ok) return auth.response;
 
   const parsed = patchSchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) {

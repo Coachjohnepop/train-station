@@ -220,7 +220,7 @@ async function testPersistence() {
     method: "POST",
     json: { email: COACH_EMAIL, password: "", redirect: "/admin" },
   });
-  if (loginRes.ok && loginBody?.user?.role === "ADMIN") pass("Coach login", COACH_EMAIL);
+  if (loginRes.ok && loginBody?.user?.role === "INSTRUCTOR") pass("Coach login", COACH_EMAIL);
   else {
     fail("Coach login", `${loginRes.status} ${JSON.stringify(loginBody)}`);
     return;

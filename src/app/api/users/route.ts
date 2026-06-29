@@ -7,9 +7,9 @@ import { listDemoUsersForAdmin } from "@/lib/demo-users-admin";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { upsertSignInAccount } from "@/lib/member-accounts-store";
 import { annotateAdminUsersForSession } from "@/lib/users-admin-session";
-import { requireStaff } from "@/lib/api-auth";
+import { requirePlatformStaff } from "@/lib/api-auth";
 
-const ROLES = ["ADMIN", "INSTRUCTOR", "MEMBER", "PROSPECTIVE_INSTRUCTOR"] as const;
+const ROLES = ["ADMIN", "INSTRUCTOR", "PLATFORM_ADMIN", "MEMBER", "PROSPECTIVE_INSTRUCTOR"] as const;
 
 const createUserSchema = z.object({
   email: z.string().email(),
@@ -22,7 +22,7 @@ const createUserSchema = z.object({
 });
 
 export async function GET(request: Request) {
-  const auth = await requireStaff();
+  const auth = await requirePlatformStaff();
   if (!auth.ok) return auth.response;
 
   const { searchParams } = new URL(request.url);
@@ -100,7 +100,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireStaff();
+  const auth = await requirePlatformStaff();
   if (!auth.ok) return auth.response;
 
   const parsed = createUserSchema.safeParse(await request.json());
@@ -132,7 +132,12 @@ export async function POST(request: Request) {
     await upsertSignInAccount({
       email: user.email,
       userId: user.id,
-      role: user.role as "ADMIN" | "INSTRUCTOR" | "MEMBER" | "PROSPECTIVE_INSTRUCTOR",
+      role: user.role as
+        | "ADMIN"
+        | "INSTRUCTOR"
+        | "PLATFORM_ADMIN"
+        | "MEMBER"
+        | "PROSPECTIVE_INSTRUCTOR",
       name: user.name || user.email.split("@")[0],
       phone: user.phone,
       createdAt: user.createdAt.toISOString(),

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireStaff } from "@/lib/api-auth";
 import { coachDisplayName } from "@/lib/demo-coach";
+import { isOutboundMessagingEnabled } from "@/lib/messaging-gate";
 import { sendHubBroadcast, messageHubActive } from "@/lib/message-hub";
 import { sendSmsBroadcast } from "@/lib/sms";
 
@@ -22,6 +23,16 @@ export async function POST(request: Request) {
   }
 
   const coachName = coachDisplayName(auth.session);
+
+  if (!(await isOutboundMessagingEnabled())) {
+    return NextResponse.json(
+      {
+        error:
+          "Outbound messaging is paused. Turn it on in Admin → Coach settings, or set MESSAGING_ENABLED=true.",
+      },
+      { status: 503 },
+    );
+  }
 
   if (messageHubActive()) {
     const result = await sendHubBroadcast({
