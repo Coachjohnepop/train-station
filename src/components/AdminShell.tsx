@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import AdminAreaNav from "@/components/AdminAreaNav";
+import AdminMobileCoachNav from "@/components/AdminMobileCoachNav";
 import TrainStationBrand from "@/components/TrainStationBrand";
 import DevModeSwitcher from "@/components/DevModeSwitcher";
 import LogoutButton from "@/components/LogoutButton";
@@ -30,6 +31,7 @@ export default function AdminShell({
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+  const openDrawer = useCallback(() => setDrawerOpen(true), []);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -45,19 +47,28 @@ export default function AdminShell({
   }, [drawerOpen, closeDrawer]);
 
   return (
-    <div className="app-shell-bg flex min-h-screen flex-col lg:flex-row">
-      <DevModeSwitcher
-        active="admin"
-        staffSession={session}
-        showImpersonation={showDevSwitcher}
-      />
+    <div className="app-shell-bg flex min-h-screen flex-col xl:flex-row">
+      {showDevSwitcher ? (
+        <div className="hidden xl:block">
+          <DevModeSwitcher active="admin" staffSession={session} showImpersonation />
+        </div>
+      ) : (
+        <div className="xl:hidden border-b border-[var(--border)] px-4 py-2">
+          <Link
+            href="/member"
+            className="text-xs font-semibold text-[var(--muted)] hover:text-accent"
+          >
+            ← Member app
+          </Link>
+        </div>
+      )}
 
-      {/* Mobile header */}
-      <header className="app-shell-header flex items-center justify-between gap-3 px-4 py-3 lg:hidden">
+      {/* Mobile / tablet header */}
+      <header className="app-shell-header sticky top-0 z-30 flex items-center justify-between gap-2 px-3 py-2.5 xl:hidden">
         <button
           type="button"
-          onClick={() => setDrawerOpen(true)}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text)]"
+          onClick={openDrawer}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-2)]"
           aria-label="Open menu"
           aria-expanded={drawerOpen}
         >
@@ -70,30 +81,24 @@ export default function AdminShell({
             />
           </svg>
         </button>
-        <Link href="/admin/queue" className="min-w-0 flex-1 transition hover:opacity-90">
-          <TrainStationBrand variant="header" className="!h-7" />
+        <Link href="/admin/queue" className="min-w-0 flex-1 text-center transition hover:opacity-90">
+          <TrainStationBrand variant="header" className="!h-6 mx-auto" />
         </Link>
-        <div className="flex shrink-0 items-center gap-2">
-          <Link
-            href="/admin/live"
-            className="rounded-lg px-2.5 py-2 text-[10px] font-semibold uppercase tracking-wide text-accent ring-1 ring-accent/30"
-          >
-            Live
-          </Link>
+        <div className="flex w-11 shrink-0 items-center justify-end">
           <LogoutButton />
         </div>
       </header>
 
-      {/* Mobile drawer */}
+      {/* Drawer — mobile / tablet only */}
       {drawerOpen ? (
-        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-50 xl:hidden" role="dialog" aria-modal="true">
           <button
             type="button"
             className="absolute inset-0 bg-black/60"
             aria-label="Close menu"
             onClick={closeDrawer}
           />
-          <aside className="absolute left-0 top-0 flex h-full w-[min(100%,18rem)] flex-col border-r border-[var(--border)] bg-[var(--bg)] shadow-xl">
+          <aside className="absolute bottom-0 left-0 right-0 flex max-h-[85vh] flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--bg)] shadow-xl">
             <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-4 py-4">
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{session?.name || "Coach"}</p>
@@ -111,7 +116,10 @@ export default function AdminShell({
                 ✕
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto px-3 py-4" onClick={closeDrawer}>
+            <div
+              className="overflow-y-auto px-3 py-4"
+              style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+            >
               <AdminAreaNav
                 dualWorkspace={dualWorkspace}
                 canCoach={canCoach}
@@ -124,9 +132,14 @@ export default function AdminShell({
         </div>
       ) : null}
 
-      {/* Desktop sidebar */}
-      <aside className="app-shell-header hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-56 lg:shrink-0 lg:flex-col lg:border-r lg:border-[var(--border)]">
+      {/* Desktop sidebar — wide screens only */}
+      <aside className="app-shell-header hidden xl:sticky xl:top-0 xl:flex xl:h-screen xl:w-56 xl:shrink-0 xl:flex-col xl:border-r xl:border-[var(--border)]">
         <div className="flex flex-col gap-4 px-3 py-5">
+          {showDevSwitcher ? (
+            <div className="space-y-2 border-b border-[var(--border)] pb-4">
+              <DevModeSwitcher active="admin" staffSession={session} showImpersonation />
+            </div>
+          ) : null}
           <div className="flex flex-col items-stretch gap-2">
             <Link href="/admin" className="transition hover:opacity-90">
               <TrainStationBrand variant="header" className="!h-8" />
@@ -152,10 +165,12 @@ export default function AdminShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-4 md:px-6 md:py-8 lg:px-8">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-3 py-4 pb-[max(6rem,env(safe-area-inset-bottom))] md:px-6 md:py-6 xl:px-8 xl:pb-8">
           {children}
         </main>
       </div>
+
+      <AdminMobileCoachNav onOpenMenu={openDrawer} />
     </div>
   );
 }

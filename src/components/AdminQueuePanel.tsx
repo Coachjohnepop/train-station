@@ -129,7 +129,7 @@ export default function AdminQueuePanel() {
             type="button"
             onClick={() => void approveMember(item.userId)}
             disabled={approving === item.userId}
-            className="btn-primary text-xs px-3 py-1.5"
+            className="btn-primary min-h-[44px] w-full text-sm px-4 py-2.5 sm:w-auto sm:text-xs sm:px-3 sm:py-1.5"
           >
             {approving === item.userId ? "…" : "Approve"}
           </button>
@@ -233,18 +233,20 @@ export default function AdminQueuePanel() {
         <ul className="space-y-2">
           {items.map((item) => (
             <li key={`${item.userId}-${item.action}`}>
-              <div className="card flex min-h-[56px] flex-wrap items-center justify-between gap-3 px-4 py-3">
+              <div className="card flex flex-col gap-3 px-4 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium">{item.name}</p>
+                  <p className="text-lg font-semibold">{item.name}</p>
                   <p className="text-xs text-[var(--muted)]">{item.email}</p>
                   {item.phone && (
                     <p className="text-xs text-[var(--muted)]">{item.phone}</p>
                   )}
+                  <span className="mt-2 inline-block rounded-full bg-amber-500/15 px-3 py-1 text-[10px] font-semibold uppercase text-amber-200">
+                    {item.reason}
+                  </span>
                 </div>
-                <span className="rounded-full bg-amber-500/15 px-3 py-1 text-[10px] font-semibold uppercase text-amber-200">
-                  {item.reason}
-                </span>
-                <div className="flex flex-wrap items-center gap-2">{renderActions(item)}</div>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap [&_a]:flex [&_a]:min-h-[44px] [&_a]:w-full [&_a]:items-center [&_a]:justify-center [&_button]:min-h-[44px] [&_button]:w-full sm:[&_a]:w-auto sm:[&_button]:w-auto">
+                  {renderActions(item)}
+                </div>
               </div>
             </li>
           ))}
