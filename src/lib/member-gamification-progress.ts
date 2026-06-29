@@ -131,7 +131,7 @@ async function listWarmupProgressForUser(userId: string): Promise<WarmupProgress
     .filter((entry) => Boolean(entry?.userId));
 }
 
-/** Backfill missing ledger events from profile / warmup progress so totals match reality. */
+/** Backfill missing ledger events from profile / warmup progress (admin/migration only — never on GET). */
 export async function reconcileGamificationFromProfile(userId: string): Promise<UserGamification> {
   const profile = await getMemberProfile(userId);
   const gamification = await getUserGamification(userId);
@@ -218,7 +218,7 @@ export function buildMemberScoreProgress(
       ? [...workoutEvents].sort((a, b) => b.at.localeCompare(a.at))[0].at
       : null,
     repeatable: true,
-    earnHint: "Log sets and reps from any workout — +25 pts each time.",
+    earnHint: "Log a workout from Today — +25 pts once per scheduled workout per day.",
     href: "/member/today",
   });
 

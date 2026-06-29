@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireMemberAccess } from "@/lib/api-auth";
-import {
-  buildMemberScoreProgress,
-  reconcileGamificationFromProfile,
-} from "@/lib/member-gamification-progress";
+import { buildMemberScoreProgress } from "@/lib/member-gamification-progress";
+import { getUserGamification } from "@/lib/member-gamification-store";
 import { getMemberProfile } from "@/lib/member-profiles-store";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +10,7 @@ export async function GET() {
   const auth = await requireMemberAccess();
   if (!auth.ok) return auth.response;
 
-  const gamification = await reconcileGamificationFromProfile(auth.session.id);
+  const gamification = await getUserGamification(auth.session.id);
   const profile = await getMemberProfile(auth.session.id);
   const progress = buildMemberScoreProgress(gamification, profile);
 

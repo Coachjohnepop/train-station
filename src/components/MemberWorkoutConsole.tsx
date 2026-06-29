@@ -487,6 +487,8 @@ export default function MemberWorkoutConsole({
   }, [allExercisesFinished]);
 
   const handleLogComplete = useCallback(async () => {
+    if (logResult || isLogging) return;
+
     // Collect all exercises that were explicitly finished OR have per-set progress marked.
     // This ensures the "log your sets" buttons (per-set toggles) actually contribute setsCompleted to the log.
     const blocksWithSets = Object.keys(completedSets).filter(id => (completedSets[id]?.size ?? 0) > 0);
@@ -530,6 +532,7 @@ export default function MemberWorkoutConsole({
       const payload: any = { exercises: exercisesPayload, progress };
       if (programSlug) payload.programSlug = programSlug;
       if (targetUserId) payload.targetUserId = targetUserId;
+      if (liveSessionDate) payload.sessionDate = liveSessionDate;
       const res = await fetch(`/api/workouts/${workout.workoutId}/log`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -577,7 +580,19 @@ export default function MemberWorkoutConsole({
     } finally {
       setIsLogging(false);
     }
-  }, [finishedExercises, workout, weights, completedSets, activeId, programSlug, targetUserId, clearLiveSession]);
+  }, [
+    finishedExercises,
+    workout,
+    weights,
+    completedSets,
+    activeId,
+    programSlug,
+    targetUserId,
+    liveSessionDate,
+    clearLiveSession,
+    logResult,
+    isLogging,
+  ]);
 
   const showLoggedSuccess = !reviewMode && !hideLogButton && !!logResult;
 

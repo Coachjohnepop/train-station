@@ -4,6 +4,7 @@ import { resolveUserId } from "@/lib/current-user";
 import { createWorkoutLogAndPerformances, type LogExerciseInput } from "@/lib/data/user-data";
 import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
 import { awardGamificationPoints } from "@/lib/member-gamification-store";
+import { localTodayIso } from "@/lib/program-calendar";
 
 const logExerciseSchema = z.object({
   workoutExerciseId: z.string().optional(),
@@ -23,6 +24,7 @@ const logBodySchema = z.object({
   programSlug: z.string().optional(),
   progress: z.number().int().min(0).max(100).optional(),
   targetUserId: z.string().optional(),
+  sessionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
 type Params = { params: Promise<{ id: string }> };
@@ -52,9 +54,10 @@ export async function POST(request: Request, { params }: Params) {
     let gamification: { awarded: boolean; totalPoints: number } | null = null;
     let gamificationWarning: string | null = null;
     try {
+      const sessionDate = parsed.data.sessionDate || localTodayIso();
       gamification = await awardGamificationPoints({
         userId: uid,
-        eventId: `workout:${result.logId || workoutId}:${result.performedAt}`,
+        eventId: `workout:${workoutId}:${sessionDate}`,
         type: "workout_logged",
         programSlug: parsed.data.programSlug ?? null,
       });
