@@ -8,6 +8,7 @@ import EmailInput, { rememberEmail } from "@/components/EmailInput";
 import PasswordInput from "@/components/PasswordInput";
 import { offerSavePassword, offerSavePasswordFromForm } from "@/lib/browser-credentials";
 import { useFormAutofillSync } from "@/hooks/useFormAutofillSync";
+import OAuthButtons from "@/components/OAuthButtons";
 
 function SignupForm() {
   const router = useRouter();
@@ -181,6 +182,15 @@ function SignupForm() {
                 : "Next you'll set up texts, book your coach, and open your training dashboard."}
             </p>
           </div>
+
+          {!isWaitlistOnly && (
+            <>
+              <OAuthButtons mode="signup" plan={ticketPlan} className="mb-4" />
+              <p className="mb-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-[#9d8ab8]">
+                or create with email
+              </p>
+            </>
+          )}
 
           <form
             ref={formRef}

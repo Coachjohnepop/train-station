@@ -8,6 +8,7 @@ import PasswordInput from "@/components/PasswordInput";
 import { offerSavePassword, offerSavePasswordFromForm } from "@/lib/browser-credentials";
 import { useFormAutofillSync } from "@/hooks/useFormAutofillSync";
 import { clearRememberedEmail, getLastEmail } from "@/lib/email-history";
+import OAuthButtons from "@/components/OAuthButtons";
 import QuickAuthLogin from "@/components/QuickAuthLogin";
 import {
   clearQuickAuthMeta,
@@ -28,6 +29,7 @@ function LoginForm() {
   const prefillEmail = searchParams.get("email") || "";
   const switchAccount = searchParams.get("switch") === "1";
   const passwordUpdated = searchParams.get("passwordUpdated") === "1";
+  const oauthError = searchParams.get("oauthError");
   const coachLogin = redirect.startsWith("/admin");
 
   const [email, setEmail] = useState(() => {
@@ -200,6 +202,25 @@ function LoginForm() {
             Password reset complete — sign in with your new password. Quick sign-in (PIN / Face ID)
             still works if you already set it up on this device.
           </p>
+        )}
+
+        {oauthError && (
+          <p className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+            {oauthError === "missing_email"
+              ? "Social sign-in did not share an email — try another provider or use email and password."
+              : oauthError === "invalid_state"
+                ? "Sign-in timed out — please try again."
+                : "Social sign-in failed — try again or use email and password."}
+          </p>
+        )}
+
+        {!coachLogin && (
+          <>
+            <OAuthButtons mode="login" redirect={redirect} className="mb-4" />
+            <p className="mb-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+              or sign in with email
+            </p>
+          </>
         )}
 
         <div className="card mb-4 space-y-3">
