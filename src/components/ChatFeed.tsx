@@ -100,7 +100,9 @@ function MediaBubble({
   colors: ReturnType<typeof bubbleColorsForMessage>;
 }) {
   const isYoutube = message.kind === "youtube" && message.mediaUrl;
-  const embed = isYoutube ? youtubeEmbedUrl(message.mediaUrl!) : null;
+  const embed = isYoutube
+    ? youtubeEmbedUrl(message.mediaUrl!, { autoplay: true, mute: true })
+    : null;
   const isVideo = message.kind === "video_upload" && message.mediaUrl;
   const isImage = message.kind === "image" && message.mediaUrl;
 
@@ -129,7 +131,16 @@ function MediaBubble({
           />
         </div>
       )}
-      {isVideo && <video src={message.mediaUrl} controls playsInline className="w-full bg-black" />}
+      {isVideo && (
+        <video
+          src={message.mediaUrl}
+          controls
+          playsInline
+          autoPlay
+          muted
+          className="w-full bg-black"
+        />
+      )}
       {isVideo && message.videoDurationSec ? (
         <p className="px-3 py-1.5 text-[10px] text-[var(--muted)]">{message.videoDurationSec}s clip</p>
       ) : null}

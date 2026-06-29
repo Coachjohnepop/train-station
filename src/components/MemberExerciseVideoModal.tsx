@@ -16,7 +16,9 @@ export default function MemberExerciseVideoModal({
   onClose,
 }: Props) {
   const [mounted, setMounted] = useState(false);
-  const embedSrc = isYoutubeUrl(videoUrl) ? youtubeEmbedUrl(videoUrl) : null;
+  const embedSrc = isYoutubeUrl(videoUrl)
+    ? youtubeEmbedUrl(videoUrl, { autoplay: true, mute: false, enableJsApi: true })
+    : null;
 
   useEffect(() => {
     setMounted(true);

@@ -24,25 +24,22 @@ export function landingVideoEmbedSrc(
 ): string | null {
   if (!videoUrl?.trim()) return null;
   const trimmed = videoUrl.trim();
-  let base = youtubeEmbedUrl(trimmed);
-  if (!base && /^[A-Za-z0-9_-]{6,}$/.test(trimmed)) {
-    base = `https://www.youtube-nocookie.com/embed/${trimmed}?rel=0&playsinline=1&modestbranding=1`;
-  }
-  if (!base) return null;
-
-  const u = new URL(base);
-  u.searchParams.set("enablejsapi", "1");
-  u.searchParams.set("playsinline", "1");
-  if (options.origin?.trim()) {
-    u.searchParams.set("origin", options.origin.trim());
-  }
-
   const shouldAutoplay = autoplay || options.autoplay;
-  if (shouldAutoplay) {
-    u.searchParams.set("autoplay", "1");
-    u.searchParams.set("mute", options.mute === true ? "1" : "0");
+  let base = youtubeEmbedUrl(trimmed, {
+    autoplay: shouldAutoplay,
+    mute: options.mute ?? (shouldAutoplay ? false : undefined),
+    enableJsApi: true,
+    origin: options.origin,
+  });
+  if (!base && /^[A-Za-z0-9_-]{6,}$/.test(trimmed)) {
+    base = youtubeEmbedUrl(`https://www.youtube.com/watch?v=${trimmed}`, {
+      autoplay: shouldAutoplay,
+      mute: options.mute ?? (shouldAutoplay ? false : undefined),
+      enableJsApi: true,
+      origin: options.origin,
+    });
   }
-  return u.toString();
+  return base;
 }
 
 export function resolveLandingVideoUrl(

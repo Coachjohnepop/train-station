@@ -3,6 +3,22 @@
 import { useState } from "react";
 import Link from "next/link";
 import EmailInput, { rememberEmail } from "@/components/EmailInput";
+import { youtubeEmbedUrl } from "@/lib/youtube";
+
+const PLAN_VIDEO_EMBEDS = {
+  explorer: youtubeEmbedUrl("https://www.youtube.com/watch?v=dQw4w9wgxcQ", {
+    autoplay: true,
+    mute: true,
+  }),
+  member: youtubeEmbedUrl("https://www.youtube.com/watch?v=3JZ_9j6z8fQ", {
+    autoplay: true,
+    mute: true,
+  }),
+  pro: youtubeEmbedUrl("https://www.youtube.com/watch?v=fJ9rUzIMcZQ", {
+    autoplay: true,
+    mute: true,
+  }),
+} as const;
 
 export default function PricingWithInlineSignup({ recParam }: { recParam?: string }) {
   const [selected, setSelected] = useState<string | null>(null);
@@ -85,7 +101,7 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
             <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
               <iframe
                 className="w-full h-full"
-                src="https://www.youtube.com/embed/dQw4w9wgxcQ"
+                src={PLAN_VIDEO_EMBEDS.explorer ?? undefined}
                 title="Instructor message for Explorer plan"
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -138,7 +154,7 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
             <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
               <iframe
                 className="w-full h-full"
-                src="https://www.youtube.com/embed/3JZ_9j6z8fQ"
+                src={PLAN_VIDEO_EMBEDS.member ?? undefined}
                 title="Instructor message for Member plan"
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -190,7 +206,7 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
             <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
               <iframe
                 className="w-full h-full"
-                src="https://www.youtube.com/embed/fJ9rUzIMcZQ"
+                src={PLAN_VIDEO_EMBEDS.pro ?? undefined}
                 title="Instructor message for Pro plan"
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

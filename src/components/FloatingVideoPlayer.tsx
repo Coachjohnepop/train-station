@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { youtubeEmbedUrl } from "@/lib/youtube";
 
 interface FloatingVideoPlayerProps {
   videoUrl: string;
@@ -21,7 +22,7 @@ export default function FloatingVideoPlayer({
   const [size, setSize] = useState({ width: 420, height: 260 });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const videoId = videoUrl.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})/)?.[1] || "";
+  const embedSrc = youtubeEmbedUrl(videoUrl, { autoplay: true, mute: false });
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!containerRef.current) return;
@@ -107,9 +108,9 @@ export default function FloatingVideoPlayer({
 
       {/* Video iframe */}
       <div className="relative bg-black" style={{ height: "calc(100% - 32px)" }}>
-        {videoId ? (
+        {embedSrc ? (
           <iframe
-            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&modestbranding=1`}
+            src={embedSrc}
             title={title}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen

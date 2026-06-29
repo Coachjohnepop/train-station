@@ -28,7 +28,18 @@ export function youtubeVideoId(url: string): string | null {
   return null;
 }
 
-export function youtubeEmbedUrl(url: string): string | null {
+export type YoutubeEmbedOptions = {
+  autoplay?: boolean;
+  /** Browsers block audible autoplay without a gesture — default mute when autoplay is on. */
+  mute?: boolean;
+  enableJsApi?: boolean;
+  origin?: string;
+};
+
+export function youtubeEmbedUrl(
+  url: string,
+  options: YoutubeEmbedOptions = {},
+): string | null {
   const id = youtubeVideoId(url);
   if (!id) return null;
   const params = new URLSearchParams({
@@ -36,6 +47,16 @@ export function youtubeEmbedUrl(url: string): string | null {
     playsinline: "1",
     modestbranding: "1",
   });
+  if (options.autoplay) {
+    params.set("autoplay", "1");
+    params.set("mute", options.mute === false ? "0" : "1");
+  }
+  if (options.enableJsApi || options.origin) {
+    params.set("enablejsapi", "1");
+  }
+  if (options.origin?.trim()) {
+    params.set("origin", options.origin.trim());
+  }
   return `https://www.youtube-nocookie.com/embed/${id}?${params.toString()}`;
 }
 

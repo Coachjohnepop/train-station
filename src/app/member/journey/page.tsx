@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProgramBySlug } from "@/lib/program-data";
 import { getMemberDashboard } from "@/lib/member-context";
+import { youtubeEmbedUrl } from "@/lib/youtube";
 
 async function markWatchedAction(slug: string, dayNum: number) {
   'use server';
@@ -18,16 +19,6 @@ type Props = {
   searchParams: Promise<{ program?: string; day?: string }>;
 };
 
-function getYoutubeEmbed(url: string | null | undefined): string | null {
-  if (!url) return null;
-  // support youtu.be and youtube.com/watch?v= and /embed/
-  const m = url.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})/);
-  if (m && m[1]) {
-    return `https://www.youtube.com/embed/${m[1]}`;
-  }
-  return null;
-}
-
 export default async function MemberJourneyPage({ searchParams }: Props) {
   const { program: slug, day: dayStr = "1" } = await searchParams;
   if (!slug) notFound();
@@ -42,7 +33,9 @@ export default async function MemberJourneyPage({ searchParams }: Props) {
   const allDays = program.weeks.flatMap((w: any) => w.days);
   const day = allDays.find((d: any) => d.dayNumber === dayNum) || { notes: "Watch the recorded session.", videoUrl: null };
 
-  const embedUrl = getYoutubeEmbed(day.videoUrl);
+  const embedUrl = day.videoUrl
+    ? youtubeEmbedUrl(day.videoUrl, { autoplay: true, mute: false })
+    : null;
   const title = day.notes || "Recorded Live Session";
 
   return (

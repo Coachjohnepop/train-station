@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { setBackgroundMusicOverlay } from "@/lib/background-music-control";
-import { isIosDevice } from "@/lib/ios-device";
 import { landingVideoEmbedSrc } from "@/lib/landing-media";
 import { postYoutubeEmbedCommand } from "@/lib/youtube-embed-control";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
@@ -27,8 +26,6 @@ export default function FreeTicketModal({
   welcomeVideoUrl?: string | null;
   purchaseAuth?: PurchaseAuth;
 }) {
-  const [needsTapToPlay] = useState(() => isIosDevice());
-  const [playbackStarted, setPlaybackStarted] = useState(false);
   const [showJeremy, setShowJeremy] = useState(false);
   const [fadeJeremyIn, setFadeJeremyIn] = useState(false);
   const [hideRickroll, setHideRickroll] = useState(false);
@@ -37,21 +34,16 @@ export default function FreeTicketModal({
   const rickrollRef = useRef<HTMLIFrameElement>(null);
   const jeremyRef = useRef<HTMLIFrameElement>(null);
 
-  const readyToPlay = !needsTapToPlay || playbackStarted;
   const embedOrigin = typeof window !== "undefined" ? window.location.origin : undefined;
   const hasRickroll = Boolean(freeChastiseVideoUrl?.trim());
   const hasJeremy = Boolean(welcomeVideoUrl?.trim());
 
-  const rickrollSrc =
-    readyToPlay && hasRickroll
-      ? landingVideoEmbedSrc(freeChastiseVideoUrl, true, { mute: false, origin: embedOrigin })
-      : null;
+  const rickrollSrc = hasRickroll
+    ? landingVideoEmbedSrc(freeChastiseVideoUrl, true, { mute: false, origin: embedOrigin })
+    : null;
   const jeremySrc =
     loadJeremy && hasJeremy
-      ? landingVideoEmbedSrc(welcomeVideoUrl, true, {
-          mute: needsTapToPlay,
-          origin: embedOrigin,
-        })
+      ? landingVideoEmbedSrc(welcomeVideoUrl, true, { mute: false, origin: embedOrigin })
       : null;
 
   useEffect(() => {
@@ -59,7 +51,6 @@ export default function FreeTicketModal({
     timersRef.current = [];
 
     if (!open) {
-      setPlaybackStarted(false);
       setShowJeremy(false);
       setFadeJeremyIn(false);
       setHideRickroll(false);
@@ -70,7 +61,7 @@ export default function FreeTicketModal({
 
     setBackgroundMusicOverlay(true);
 
-    if (!readyToPlay || !hasJeremy) return;
+    if (!hasJeremy) return;
 
     const schedule = (fn: () => void, ms: number) => {
       timersRef.current.push(window.setTimeout(fn, ms));
@@ -88,16 +79,15 @@ export default function FreeTicketModal({
       timersRef.current = [];
       setBackgroundMusicOverlay(false);
     };
-  }, [open, readyToPlay, hasJeremy]);
+  }, [open, hasJeremy]);
 
   useEffect(() => {
-    if (!fadeJeremyIn || !needsTapToPlay) return;
-    const unmuteId = window.setTimeout(() => {
-      postYoutubeEmbedCommand(jeremyRef.current, "unMute");
+    if (!fadeJeremyIn) return;
+    const playId = window.setTimeout(() => {
       postYoutubeEmbedCommand(jeremyRef.current, "playVideo");
     }, 400);
-    return () => window.clearTimeout(unmuteId);
-  }, [fadeJeremyIn, needsTapToPlay]);
+    return () => window.clearTimeout(playId);
+  }, [fadeJeremyIn]);
 
   if (!open) return null;
 
@@ -128,33 +118,14 @@ export default function FreeTicketModal({
         <p className="mt-1 text-xs text-[#9d8ab8] leading-relaxed sm:text-sm">
           {showJeremy
             ? "Explorer is real access to starter programs — no homework, no follow-up calls required."
-            : needsTapToPlay && !playbackStarted
-              ? "You tapped Free. Tap play below — then hear from your coach."
-              : "You tapped Free. Enjoy the ride… then hear from your coach."}
+            : "You tapped Free. Enjoy the ride… then hear from your coach."}
         </p>
 
         <div className="relative mt-3 min-h-0 flex-1 overflow-hidden rounded-xl bg-black ring-1 ring-amber-500/20">
-          {needsTapToPlay && !playbackStarted && hasRickroll && (
-            <button
-              type="button"
-              className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-black/80 px-6 text-center transition hover:bg-black/70 active:scale-[0.99]"
-              onClick={() => setPlaybackStarted(true)}
-            >
-              <span
-                className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/20 text-3xl text-amber-300 ring-2 ring-amber-400/50"
-                aria-hidden
-              >
-                ▶
-              </span>
-              <span className="text-sm font-semibold text-white">Tap to play with sound</span>
-              <span className="text-[11px] text-[#9d8ab8]">iPhone needs a tap inside the video</span>
-            </button>
-          )}
-
           {rickrollSrc && !hideRickroll && (
             <iframe
               ref={rickrollRef}
-              key={`rickroll-${playbackStarted ? "on" : "off"}`}
+              key="rickroll"
               className={`absolute inset-0 h-full w-full transition-opacity duration-[1500ms] ease-in-out ${
                 fadeJeremyIn ? "pointer-events-none opacity-0" : "opacity-100"
               }`}

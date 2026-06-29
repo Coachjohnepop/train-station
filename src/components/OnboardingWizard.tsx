@@ -64,7 +64,7 @@ export default function OnboardingWizard({
   const [error, setError] = useState<string | null>(null);
 
   const planWelcomeUrl = welcomeVideoUrlForPlan(plan, welcomeVideoUrl, welcomeVideosByPlan);
-  const welcomeEmbed = landingVideoEmbedSrc(planWelcomeUrl);
+  const welcomeEmbed = landingVideoEmbedSrc(planWelcomeUrl, true);
 
   async function nextStep() {
     setError(null);
