@@ -10,6 +10,7 @@ import {
   MEMBERSHIP_THEME_LABELS,
   type MembershipThemeTier,
 } from "@/lib/membership-theme";
+import type { SignupPlan } from "@/lib/signup-plans";
 
 export default function MemberShell({
   children,
@@ -18,6 +19,8 @@ export default function MemberShell({
   memberEmail,
   membershipTier,
   intakePending = false,
+  paymentGateActive = false,
+  checkoutPlan = "member",
 }: {
   children: React.ReactNode;
   access: MemberAccess;
@@ -25,6 +28,8 @@ export default function MemberShell({
   memberEmail?: string;
   membershipTier: MembershipThemeTier;
   intakePending?: boolean;
+  paymentGateActive?: boolean;
+  checkoutPlan?: SignupPlan;
 }) {
   const tierLabel = MEMBERSHIP_THEME_LABELS[membershipTier] || access.tierLabel;
 
@@ -50,8 +55,19 @@ export default function MemberShell({
             <LogoutButton />
           </div>
         </div>
-        <MemberNav intakePending={intakePending} />
+        <MemberNav
+          intakePending={intakePending}
+          paymentGateActive={paymentGateActive}
+          checkoutPlan={checkoutPlan}
+        />
       </header>
+
+      {paymentGateActive ? (
+        <p className="mx-auto w-full max-w-lg border-b border-amber-500/25 bg-amber-500/10 px-4 py-2 text-center text-[11px] text-amber-100 md:max-w-3xl lg:max-w-6xl xl:max-w-7xl md:px-6 lg:px-8">
+          Complete your ticket to unlock Today&apos;s workout and scores. Messages and Book Call stay
+          open.
+        </p>
+      ) : null}
 
       <main className="mx-auto w-full min-w-0 max-w-lg overflow-x-clip md:max-w-3xl lg:max-w-6xl xl:max-w-7xl flex-1 px-4 py-6 md:px-6 lg:px-8">{children}</main>
       <IntakeBookingCelebrate />

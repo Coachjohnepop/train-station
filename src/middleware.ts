@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { verifySessionTokenEdge, SESSION_COOKIE } from "@/lib/auth-session-edge";
 import { isStaffRole, staffAdminRedirect } from "@/lib/staff-access";
 import { purchaseHref } from "@/lib/member-purchase-path";
+import { memberPathRequiresPayment } from "@/lib/member-route-gates";
 
 const NEEDS_ONBOARD_COOKIE = "ts_needs_onboard";
 const SIGNUP_PLAN_COOKIE = "ts_signup_plan";
@@ -136,7 +137,7 @@ export async function middleware(request: NextRequest) {
       request.cookies.get(SIGNUP_PLAN_COOKIE)?.value;
 
     if (
-      !pathname.startsWith("/member/checkout") &&
+      memberPathRequiresPayment(pathname) &&
       request.cookies.get(NEEDS_PAYMENT_COOKIE)?.value === "1"
     ) {
       const checkout = new URL("/member/checkout", request.url);

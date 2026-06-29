@@ -49,18 +49,25 @@ export default async function HomePage() {
           variant="welcome"
           purchaseAuth={{ signedIn: true, role: session.role }}
         />
-        <LandingWelcomeBanner
-          displayName={displayName}
-          email={email}
-          isCoach={isCoach}
-          membershipPlan={membershipPlan}
-          membershipPlanLabel={profile ? signupPlanLabel(profile.plan) : null}
-          isEstablishedMember={established}
-          welcomeVideoUrl={landingVideos.welcomeVideoUrl}
-        />
-        {established && membershipSnapshot ? (
-          <LandingMemberStatus membership={membershipSnapshot} />
+        {established && membershipSnapshot && !isCoach ? (
+          <LandingMemberStatus
+            membership={membershipSnapshot}
+            displayName={displayName}
+            email={email}
+            welcomeVideoUrl={landingVideos.welcomeVideoUrl}
+          />
         ) : (
+          <LandingWelcomeBanner
+            displayName={displayName}
+            email={email}
+            isCoach={isCoach}
+            membershipPlan={membershipPlan}
+            membershipPlanLabel={profile ? signupPlanLabel(profile.plan) : null}
+            isEstablishedMember={established}
+            welcomeVideoUrl={landingVideos.welcomeVideoUrl}
+          />
+        )}
+        {established && membershipSnapshot ? null : (
           <LandingTicketPicker
             freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
             welcomeVideoUrl={landingVideos.welcomeVideoUrl}

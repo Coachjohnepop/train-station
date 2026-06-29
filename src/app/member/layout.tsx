@@ -7,6 +7,8 @@ import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import { isCoachIntakeComplete } from "@/lib/member-intake";
 import { membershipThemeTierFromPlan } from "@/lib/membership-theme";
+import { memberNeedsPayment } from "@/lib/member-gates";
+import type { SignupPlan } from "@/lib/signup-plans";
 
 export default async function MemberLayout({
   children,
@@ -44,6 +46,10 @@ export default async function MemberLayout({
     !!profileUserId &&
     profileUserId.startsWith("member-") &&
     !isCoachIntakeComplete(profile);
+  const paymentGateActive = profileUserId
+    ? memberNeedsPayment(profile, profileUserId)
+    : false;
+  const checkoutPlan = (profile?.plan ?? "member") as SignupPlan;
 
   return (
     <MemberShell
@@ -52,6 +58,8 @@ export default async function MemberLayout({
       memberEmail={email}
       membershipTier={membershipTier}
       intakePending={intakePending}
+      paymentGateActive={paymentGateActive}
+      checkoutPlan={checkoutPlan}
     >
       {children}
     </MemberShell>

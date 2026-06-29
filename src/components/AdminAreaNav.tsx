@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import AdminSectionNav from "@/components/AdminSectionNav";
 import {
-  COACH_NAV_ITEMS,
-  PLATFORM_NAV_ITEMS,
+  COACH_NAV_GROUPS,
+  PLATFORM_NAV_GROUPS,
   defaultCoachAdminPath,
   defaultPlatformAdminPath,
   isPlatformAdminPath,
@@ -29,49 +29,49 @@ export default function AdminAreaNav({ dualWorkspace, canCoach, canPlatform }: P
       : "Coach workspace";
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {dualWorkspace ? (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="space-y-2 px-2">
           <span className="text-[10px] font-semibold uppercase tracking-[2px] text-[var(--muted)]">
             Workspace
           </span>
-          <div className="inline-flex rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-0.5">
+          <div className="flex flex-col gap-1">
             <Link
               href={defaultCoachAdminPath()}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+              className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
                 section === "coach"
                   ? "nav-tab-active text-accent"
-                  : "text-[var(--muted)] hover:text-[var(--text)]"
+                  : "text-[var(--muted)] hover:bg-[var(--surface-2)]"
               }`}
             >
               Coach
             </Link>
             <Link
               href={defaultPlatformAdminPath()}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+              className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
                 section === "platform"
                   ? "nav-tab-active text-accent"
-                  : "text-[var(--muted)] hover:text-[var(--text)]"
+                  : "text-[var(--muted)] hover:bg-[var(--surface-2)]"
               }`}
             >
               Platform
             </Link>
           </div>
-          <span className="text-[11px] text-[var(--muted)]">
+          <p className="text-[11px] leading-snug text-[var(--muted)]">
             {section === "coach"
-              ? "Programs, members, and day-to-day coaching"
-              : "Payments, users, and site operations"}
-          </span>
+              ? "Programs, members, live floor"
+              : "Payments, users, site ops"}
+          </p>
         </div>
       ) : workspaceLabel ? (
-        <p className="text-[10px] font-semibold uppercase tracking-[2px] text-[var(--muted)]">
+        <p className="px-2 text-[10px] font-semibold uppercase tracking-[2px] text-[var(--muted)]">
           {workspaceLabel}
         </p>
       ) : null}
 
       <AdminSectionNav
-        items={
-          section === "platform" && canPlatform ? PLATFORM_NAV_ITEMS : COACH_NAV_ITEMS
+        groups={
+          section === "platform" && canPlatform ? PLATFORM_NAV_GROUPS : COACH_NAV_GROUPS
         }
       />
     </div>

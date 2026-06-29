@@ -1,6 +1,7 @@
 import Link from "next/link";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
 import TrainStationBrand from "@/components/TrainStationBrand";
+import WelcomeVideoPopover from "@/components/WelcomeVideoPopover";
 import {
   MEMBERSHIP_THEME_LABELS,
   membershipThemeTierFromPlan,
@@ -17,8 +18,14 @@ const TICKET_ID_BY_PLAN = {
 
 export default function LandingMemberStatus({
   membership,
+  displayName,
+  email,
+  welcomeVideoUrl = null,
 }: {
   membership: MemberMembershipSnapshot;
+  displayName?: string;
+  email?: string;
+  welcomeVideoUrl?: string | null;
 }) {
   const themeTier = membershipThemeTierFromPlan(membership.plan);
   const planLabel = signupPlanLabel(membership.plan);
@@ -30,21 +37,36 @@ export default function LandingMemberStatus({
   return (
     <section
       id="membership"
-      className="relative z-20 isolate scroll-mt-20 bg-[var(--bg)] px-3 py-10 shadow-[0_-12px_32px_var(--bg)] sm:px-6 sm:py-14"
+      className="relative z-20 isolate scroll-mt-20 border-b border-[var(--border)] bg-[var(--bg)] px-3 py-10 shadow-[0_-12px_32px_var(--bg)] sm:px-6 sm:py-14"
     >
       <div className="mx-auto max-w-4xl text-center">
         <TrainStationBrand variant="compact" className="mb-6" />
-        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--accent)]">
+        {displayName ? (
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            Welcome back, {displayName}.
+          </h1>
+        ) : null}
+        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--accent)] mt-6">
           Your membership
         </p>
-        <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text)] sm:text-3xl">
-          You&apos;re already on board
+        <h2 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text)] sm:text-2xl">
+          {isFree ? "Explorer — starter access" : "You're already on board"}
         </h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-[var(--muted)]">
+        <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-[var(--muted)]">
           {isFree
-            ? "Explorer gives you starter access. Upgrade anytime — same account, no new signup."
-            : "Your ticket is active. Head to your dashboard for today’s workout, messages, and scores."}
+            ? "Sample the station, then upgrade when you are ready for daily coach workouts and live sessions."
+            : `Your ${planLabel} ticket is active. Open your dashboard for today’s workout, messages, and scores.`}
         </p>
+        {welcomeVideoUrl ? (
+          <div className="mt-4 flex justify-center">
+            <WelcomeVideoPopover welcomeVideoUrl={welcomeVideoUrl}>Watch intro</WelcomeVideoPopover>
+          </div>
+        ) : null}
+        {email ? (
+          <p className="mt-4 text-xs text-[var(--muted)]">
+            Signed in as <span className="text-[var(--text)]">{email}</span>
+          </p>
+        ) : null}
       </div>
 
       <div className="mx-auto mt-8 max-w-sm sm:max-w-md">

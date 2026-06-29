@@ -63,14 +63,26 @@ export default function CoachDayView({ day, dateQuery }: { day: CoachDayPlan; da
                     )}
 
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <Link href={item.coachHref} className="btn-primary px-3 py-1 text-xs">
-                        Open workout
-                      </Link>
-                      {item.checkoffHrefs.map((c) => (
-                        <Link key={c.memberId} href={c.href} className="btn-ghost px-3 py-1 text-xs">
-                          Check off · {c.name}
+                      {item.memberIds.length > 0 ? (
+                        <Link
+                          href={`/admin/live?date=${dateQuery}`}
+                          className="btn-primary px-3 py-1 text-xs"
+                        >
+                          Open Live Floor
+                          {item.memberIds.length > 1 ? ` · ${item.memberIds.length}` : ""}
                         </Link>
-                      ))}
+                      ) : (
+                        <Link href={item.coachHref} className="btn-primary px-3 py-1 text-xs">
+                          Open workout
+                        </Link>
+                      )}
+                      {item.memberIds.length <= 1
+                        ? item.checkoffHrefs.map((c) => (
+                            <Link key={c.memberId} href={c.href} className="btn-ghost px-3 py-1 text-xs">
+                              Check off · {c.name}
+                            </Link>
+                          ))
+                        : null}
                     </div>
                   </div>
                 </li>

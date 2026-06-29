@@ -5,22 +5,35 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import ChatNavBadge from "@/components/ChatNavBadge";
 import { goMemberTodayHome } from "@/lib/member-today-home";
+import { memberCheckoutPath } from "@/lib/member-route-gates";
+import type { SignupPlan } from "@/lib/signup-plans";
 
-const items = [
+type NavItem = {
+  href: string;
+  label: string;
+  match: (p: string) => boolean;
+  badge?: boolean;
+  /** Still reachable while payment is pending (Messages, Book Call, Account). */
+  openDuringPayment?: boolean;
+};
+
+const items: NavItem[] = [
   {
     href: "/member/today",
     label: "Today",
     match: (p: string) =>
-      p === "/member/today" ||
-      p === "/member/workout" ||
-      p === "/member" ||
-      p.startsWith("/member/programs"),
+      p !== "/member/checkout" &&
+      (p === "/member/today" ||
+        p === "/member/workout" ||
+        p === "/member" ||
+        p.startsWith("/member/programs")),
   },
   {
     href: "/member/chat",
     label: "Messages",
     match: (p: string) => p.startsWith("/member/chat"),
     badge: true,
+    openDuringPayment: true,
   },
   {
     href: "/member/leaderboard",
@@ -31,15 +44,30 @@ const items = [
     href: "/member/book",
     label: "Book Call",
     match: (p: string) => p.startsWith("/member/book"),
+    openDuringPayment: true,
   },
   {
     href: "/member/account",
     label: "Account",
     match: (p: string) => p.startsWith("/member/account"),
+    openDuringPayment: true,
   },
 ];
 
-export default function MemberNav({ intakePending = false }: { intakePending?: boolean }) {
+function navHref(item: NavItem, paymentGateActive: boolean, checkoutPlan: SignupPlan): string {
+  if (!paymentGateActive || item.openDuringPayment) return item.href;
+  return memberCheckoutPath(checkoutPlan);
+}
+
+export default function MemberNav({
+  intakePending = false,
+  paymentGateActive = false,
+  checkoutPlan = "member",
+}: {
+  intakePending?: boolean;
+  paymentGateActive?: boolean;
+  checkoutPlan?: SignupPlan;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [scorePoints, setScorePoints] = useState<number | null>(null);
@@ -100,10 +128,13 @@ export default function MemberNav({ intakePending = false }: { intakePending?: b
       aria-label="Member dashboard"
     >
       {items.map((item) => {
-        const active = item.match(pathname);
+        const href = navHref(item, paymentGateActive, checkoutPlan);
+        const locked = paymentGateActive && !item.openDuringPayment;
+        const onCheckout = pathname.startsWith("/member/checkout");
+        const active = !onCheckout && item.match(pathname);
         const isTodayTab = item.href === "/member/today";
         const isScoresTab = item.href === "/member/leaderboard";
-        const rampHighlight = intakePending && isTodayTab;
+        const rampHighlight = intakePending && isTodayTab && !locked;
         const tabClass = rampHighlight
           ? active
             ? "nav-tab-ramp-active font-semibold"
@@ -117,16 +148,17 @@ export default function MemberNav({ intakePending = false }: { intakePending?: b
             <Link
               key={item.href}
               id="member-nav-today"
-              href={item.href}
-              aria-label="Home — Today dashboard"
-              title="Home — your daily dashboard"
+              href={href}
+              aria-label={locked ? "Today — complete your ticket first" : "Home — Today dashboard"}
+              title={locked ? "Complete your ticket to unlock Today" : "Home — your daily dashboard"}
               onClick={(e) => {
+                if (locked) return;
                 e.preventDefault();
                 goMemberTodayHome(router);
               }}
               className={`member-nav-home member-nav-home--ramp relative flex flex-[0.67] flex-col items-center justify-center rounded-xl border text-center transition lg:min-w-[3.2rem] lg:max-w-[4.5rem] lg:px-2 ${
                 active ? "member-nav-home--active nav-tab-ramp-active" : "nav-tab-ramp"
-              }`}
+              } ${locked ? "opacity-80" : ""}`}
             >
               {homeIcon()}
               <span className="member-nav-home-label">{item.label}</span>
@@ -142,12 +174,18 @@ export default function MemberNav({ intakePending = false }: { intakePending?: b
           <Link
             key={item.href}
             id={isScoresTab ? "member-nav-scores" : undefined}
-            href={item.href}
+            href={href}
+            title={locked ? "Complete your ticket to unlock" : undefined}
             className={`member-nav-item relative flex flex-1 flex-col items-center justify-center rounded-lg px-1 py-2 text-center text-[10px] font-medium transition sm:text-xs lg:flex-none lg:min-w-[4.75rem] lg:px-5 ${tabClass} ${
               isScoresTab && scorePulse ? "member-nav-score-pulse" : ""
-            }`}
+            } ${locked ? "opacity-75" : ""}`}
           >
             {item.label}
+            {locked ? (
+              <span className="absolute -right-0.5 -top-0.5 text-[8px] leading-none opacity-70" aria-hidden>
+                🔒
+              </span>
+            ) : null}
             {isScoresTab && scorePoints != null && scorePoints > 0 ? (
               <span
                 className={`member-nav-score-badge ${scorePulse ? "member-nav-score-badge--pulse" : ""}`}

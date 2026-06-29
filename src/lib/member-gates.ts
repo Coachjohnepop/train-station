@@ -93,11 +93,10 @@ export function memberHasFullAccess(profile: MemberProfile | null, userId: strin
   return true;
 }
 
-export function memberCheckoutPath(plan?: string): string {
-  const params = new URLSearchParams();
-  if (plan && isSignupPlan(plan)) params.set("plan", plan);
-  const qs = params.toString();
-  return qs ? `/member/checkout?${qs}` : "/member/checkout";
-}
-
-export const MEMBER_PENDING_PATH = "/member/pending";
+export {
+  memberCheckoutPath,
+  MEMBER_PENDING_PATH,
+  MEMBER_PATHS_EXEMPT_FROM_PAYMENT_GATE,
+  isMemberPathExemptFromPaymentGate,
+  memberPathRequiresPayment,
+} from "@/lib/member-route-gates";
