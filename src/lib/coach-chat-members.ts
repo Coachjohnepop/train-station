@@ -1,9 +1,9 @@
 import "server-only";
 
 import type { ChatThread } from "@/lib/coach-chat";
-import { listMembersForCoach } from "@/lib/demo-coach";
 import type { DemoUserEntry } from "@/lib/demo-user-directory";
-import { getAccountByUserId, listSelfRegisteredAccounts } from "@/lib/member-accounts-store";
+import { getAccountByUserId } from "@/lib/member-accounts-store";
+import { listCoachRosterMembers } from "@/lib/coach-roster";
 
 export type CoachChatMemberEntry = DemoUserEntry & { isRegistered?: boolean };
 
@@ -17,22 +17,16 @@ export async function listCoachChatMembers(
 ): Promise<CoachChatMemberEntry[]> {
   const byKey = new Map<string, CoachChatMemberEntry>();
 
-  for (const demo of listMembersForCoach()) {
-    byKey.set(entryKey(demo), { ...demo });
-  }
-
-  const registered = await listSelfRegisteredAccounts();
-  for (const { email, account } of registered) {
-    if (account.hidden || account.role !== "MEMBER") continue;
+  const roster = await listCoachRosterMembers();
+  for (const member of roster) {
     const row: CoachChatMemberEntry = {
-      id: account.userId,
-      email,
-      name: account.name || email,
-      phone: account.phone ?? null,
+      id: member.id,
+      email: member.email,
+      name: member.name,
+      phone: member.phone,
       isRegistered: true,
     };
-    const key = entryKey(row);
-    if (!byKey.has(key)) byKey.set(key, row);
+    byKey.set(entryKey(row), row);
   }
 
   for (const thread of threads) {
@@ -51,8 +45,5 @@ export async function listCoachChatMembers(
     byKey.set(entryKey(row), row);
   }
 
-  const registeredRows = [...byKey.values()].filter((m) => m.isRegistered);
-  const demoRows = [...byKey.values()].filter((m) => !m.isRegistered);
-  registeredRows.sort((a, b) => a.name.localeCompare(b.name));
-  return [...registeredRows, ...demoRows];
+  return [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name));
 }

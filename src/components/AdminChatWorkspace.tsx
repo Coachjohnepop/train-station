@@ -57,10 +57,12 @@ export default function AdminChatWorkspace({
   initialThreads,
   members,
   initialUnreadByThread = {},
+  initialMemberId,
 }: {
   initialThreads: ChatThread[];
   members: CoachChatMember[];
   initialUnreadByThread?: Record<string, number>;
+  initialMemberId?: string;
 }) {
   const cohortThreads = useMemo(
     () => initialThreads.filter((t) => t.kind === "cohort"),
@@ -84,8 +86,14 @@ export default function AdminChatWorkspace({
   }
 
   const unreadTarget = pickUnreadTarget(initialThreads, members, initialUnreadByThread);
+  const linkedMember = initialMemberId
+    ? members.find((m) => m.id === initialMemberId)
+    : null;
   const defaultMember =
-    (unreadTarget && members.find((m) => m.id === unreadTarget.memberId)) || members[0] || null;
+    linkedMember ||
+    (unreadTarget && members.find((m) => m.id === unreadTarget.memberId)) ||
+    members[0] ||
+    null;
   const defaultThread = unreadTarget
     ? initialThreads.find((t) => t.id === unreadTarget.threadId)
     : defaultMember

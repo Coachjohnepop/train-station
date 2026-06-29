@@ -1,4 +1,4 @@
-import { listMembersForCoach } from "@/lib/demo-coach";
+import { listCoachRosterMembers } from "@/lib/coach-roster";
 import { getSessionsForDate, listTodaySessions, type TodaySession } from "@/lib/today-sessions";
 import { getAppointmentsForDate, type TodayAppointment } from "@/lib/today-appointments";
 import { getWorkoutExercisePreview } from "@/lib/sms-generated-workouts";
@@ -43,7 +43,7 @@ function formatTime(iso: string) {
 export async function buildCoachDayPlan(sessionDate: string): Promise<CoachDayPlan> {
   const sessions = getSessionsForDate(sessionDate);
   const appointments = await getAppointmentsForDate(sessionDate);
-  const roster = listMembersForCoach();
+  const roster = await listCoachRosterMembers();
 
   const previewByWorkout = new Map<string, string[]>();
   for (const session of sessions) {

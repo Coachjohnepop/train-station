@@ -22,7 +22,7 @@ import {
   resolvePrimaryScheduleProgram,
   rollupForMemberDays,
 } from "@/lib/member-day-window";
-import { listDemoMembersForCoach } from "@/lib/sms";
+import { listCoachMembersForUi } from "@/lib/sms";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import { isCoachIntakeComplete } from "@/lib/member-intake";
@@ -82,7 +82,10 @@ export default async function MemberTodayPage({ searchParams }: Props) {
 
   const { session, workout, programSlug, source, scheduleLabel } = todayWorkout;
   const hasWorkout = !!workout;
-  const coachMembers = listDemoMembersForCoach().map((m) => ({ id: m.id, name: m.name }));
+  const coachMembers = (await listCoachMembersForUi()).map((m) => ({
+    id: m.id,
+    name: m.name,
+  }));
 
   const scheduledLabel = session
     ? new Date(session.scheduledAt).toLocaleString(undefined, {

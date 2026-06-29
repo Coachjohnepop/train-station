@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ChatNavBadge from "@/components/ChatNavBadge";
 import LeadsNavBadge from "@/components/LeadsNavBadge";
+import QueueNavBadge from "@/components/QueueNavBadge";
 import type { AdminNavGroup } from "@/lib/admin-nav-sections";
 
 export default function AdminSectionNav({ groups }: { groups: AdminNavGroup[] }) {
@@ -32,6 +33,7 @@ export default function AdminSectionNav({ groups }: { groups: AdminNavGroup[] })
                     {item.label}
                     {item.badge === "chat" ? <ChatNavBadge role="coach" /> : null}
                     {item.leadsBadge ? <LeadsNavBadge /> : null}
+                    {item.queueBadge ? <QueueNavBadge /> : null}
                   </Link>
                 </li>
               );

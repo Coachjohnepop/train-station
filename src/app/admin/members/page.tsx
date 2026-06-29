@@ -1,7 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { signupPlanLabel } from "@/lib/signup-plans";
+
+type MemberFilter = "all" | "pending" | "unpaid" | "intake" | "meeting";
 
 type MemberRow = {
   userId: string;
@@ -78,6 +81,8 @@ export default function AdminMembersPage() {
   );
   const [markPaidNote, setMarkPaidNote] = useState("");
   const [error, setError] = useState("");
+  const [filter, setFilter] = useState<MemberFilter>("all");
+  const [removing, setRemoving] = useState<string | null>(null);
 
   async function loadMembers() {
     setLoading(true);
@@ -175,13 +180,64 @@ export default function AdminMembersPage() {
     setMarkingPaid(null);
   }
 
-  const pendingCount = members.filter((m) => m.approvalStatus === "pending").length;
+  function matchesFilter(member: MemberRow): boolean {
+    switch (filter) {
+      case "pending":
+        return member.approvalStatus === "pending" && member.onboardingComplete;
+      case "unpaid":
+        return isPaidPlan(member.plan) && member.paymentStatus !== "paid";
+      case "intake":
+        return member.onboardingComplete && !member.coachIntakeCompleteAt;
+      case "meeting":
+        return Boolean(member.coachMeetingRequestedAt);
+      default:
+        return true;
+    }
+  }
+
+  async function removeMember(member: MemberRow) {
+    if (
+      !window.confirm(
+        `Remove ${member.name} (${member.email})? They can sign up again with the same email.`,
+      )
+    ) {
+      return;
+    }
+    setRemoving(member.userId);
+    setError("");
+    const res = await fetch("/api/admin/members/remove", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: member.email }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error || "Could not remove member.");
+    } else {
+      await loadMembers();
+    }
+    setRemoving(null);
+  }
+
+  const pendingCount = members.filter(
+    (m) => m.approvalStatus === "pending" && m.onboardingComplete,
+  ).length;
   const intakePendingCount = members.filter(
     (m) => m.onboardingComplete && !m.coachIntakeCompleteAt,
   ).length;
   const unpaidCount = members.filter(
     (m) => isPaidPlan(m.plan) && m.paymentStatus !== "paid",
   ).length;
+  const meetingCount = members.filter((m) => m.coachMeetingRequestedAt).length;
+  const visibleMembers = members.filter(matchesFilter);
+
+  const filterButtons: { id: MemberFilter; label: string; count?: number }[] = [
+    { id: "all", label: "All" },
+    { id: "pending", label: "Pending", count: pendingCount },
+    { id: "unpaid", label: "Unpaid", count: unpaidCount },
+    { id: "intake", label: "Intake", count: intakePendingCount },
+    { id: "meeting", label: "Meetings", count: meetingCount },
+  ];
 
   return (
     <div className="space-y-6">
@@ -215,15 +271,37 @@ export default function AdminMembersPage() {
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        {filterButtons.map((btn) => (
+          <button
+            key={btn.id}
+            type="button"
+            onClick={() => setFilter(btn.id)}
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+              filter === btn.id
+                ? "nav-tab-active text-accent"
+                : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--text)]"
+            }`}
+          >
+            {btn.label}
+            {btn.count != null && btn.count > 0 ? ` (${btn.count})` : ""}
+          </button>
+        ))}
+      </div>
+
       {error && <p className="text-sm text-amber-400">{error}</p>}
 
       {loading ? (
         <p className="text-sm text-[var(--muted)]">Loading members…</p>
-      ) : members.length === 0 ? (
+      ) : visibleMembers.length === 0 ? (
         <div className="card py-16 text-center">
-          <p className="text-sm font-medium">No self-registered members yet.</p>
+          <p className="text-sm font-medium">
+            {members.length === 0 ? "No self-registered members yet." : "No members in this filter."}
+          </p>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            New signups from the ticket flow will appear here.
+            {members.length === 0
+              ? "New signups from the ticket flow will appear here."
+              : "Try another filter or clear the selection above."}
           </p>
         </div>
       ) : (
@@ -242,7 +320,7 @@ export default function AdminMembersPage() {
               </tr>
             </thead>
             <tbody>
-              {members.map((member) => (
+              {visibleMembers.map((member) => (
                 <tr
                   key={member.userId}
                   className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)]"
@@ -298,6 +376,12 @@ export default function AdminMembersPage() {
                   <td className="px-4 py-3 text-[var(--muted)]">{formatWhen(member.createdAt)}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex flex-col items-end gap-1.5">
+                      <Link
+                        href={`/admin/chat?member=${encodeURIComponent(member.userId)}`}
+                        className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-accent/30 text-accent"
+                      >
+                        Message
+                      </Link>
                       {isPaidPlan(member.plan) && member.paymentStatus !== "paid" && (
                         <button
                           type="button"
@@ -352,6 +436,14 @@ export default function AdminMembersPage() {
                       ) : (
                         <span className="text-xs text-[var(--muted)]">—</span>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => void removeMember(member)}
+                        disabled={removing === member.userId}
+                        className="btn-ghost text-xs px-3 py-1.5 text-rose-300 ring-1 ring-rose-500/30"
+                      >
+                        {removing === member.userId ? "…" : "Remove"}
+                      </button>
                     </div>
                   </td>
                 </tr>

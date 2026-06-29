@@ -4,7 +4,7 @@ import CoachDayView from "@/components/CoachDayView";
 import { buildCoachDayPlan } from "@/lib/coach-day";
 import { hydrateTodaySessions } from "@/lib/today-sessions";
 import { hydrateSmsWorkouts } from "@/lib/sms-generated-workouts";
-import { listDemoMembersForCoach } from "@/lib/sms";
+import { listCoachMembersForUi } from "@/lib/sms";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,7 @@ export default async function AdminTodayPage({ searchParams }: Props) {
   const todayKey = new Date().toISOString().slice(0, 10);
   const sessionDate = sp.date || todayKey;
   const dayPlan = await buildCoachDayPlan(sessionDate);
-  const coachMembers = listDemoMembersForCoach().map((m) => ({
+  const coachMembers = (await listCoachMembersForUi()).map((m) => ({
     id: m.id,
     name: m.name,
   }));

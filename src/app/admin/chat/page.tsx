@@ -17,7 +17,12 @@ import { getMemberCoachingMode } from "@/lib/member-coaching-mode";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminChatPage() {
+type Props = {
+  searchParams: Promise<{ member?: string }>;
+};
+
+export default async function AdminChatPage({ searchParams }: Props) {
+  const sp = await searchParams;
   await hydrateCoachChat({ preferFresh: true });
   await ensureCohortThread(COMMUNITY_FEED_PROGRAM_SLUG, COMMUNITY_FEED_TITLE);
   const threads = listThreadsForCoach();
@@ -55,6 +60,7 @@ export default async function AdminChatPage() {
           initialThreads={threads}
           members={members}
           initialUnreadByThread={getUnreadCountsByThreadForCoach()}
+          initialMemberId={sp.member}
         />
       </section>
 

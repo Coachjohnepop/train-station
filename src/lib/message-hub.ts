@@ -1,7 +1,7 @@
 import "server-only";
 
 import { BRAND_NAME } from "@/lib/brand";
-import { listMembersForCoach } from "@/lib/demo-coach";
+import { listCoachRosterMembers } from "@/lib/coach-roster";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { getAllSignInAccounts } from "@/lib/member-accounts-store";
 import { listMemberProfiles } from "@/lib/member-profiles-store";
@@ -75,7 +75,7 @@ export async function getHubRecipients(): Promise<HubRecipient[]> {
   if (isDemoMode()) {
     const byId = new Map<string, HubRecipient>();
 
-    for (const member of listMembersForCoach()) {
+    for (const member of await listCoachRosterMembers()) {
       const settings = getDemoUserSettings(member.id);
       byId.set(member.id, {
         id: member.id,

@@ -1,12 +1,12 @@
 import "server-only";
 
-import { resolveDemoUser } from "@/lib/demo-user-directory";
+import { resolveCoachMemberName } from "@/lib/coach-roster";
 import {
   getLiveWorkoutSession,
   normalizeLiveSessionDate,
   type LiveWorkoutSession,
 } from "@/lib/live-workout-session";
-import { getMemberProfile } from "@/lib/member-profiles-store";
+
 import { getWorkoutExercisePreview } from "@/lib/sms-generated-workouts";
 import { getSessionsForDate, hydrateTodaySessions } from "@/lib/today-sessions";
 
@@ -62,17 +62,6 @@ function tileStatus(
   return "waiting";
 }
 
-async function resolveMemberName(userId: string): Promise<string> {
-  const demo = resolveDemoUser(userId);
-  if (demo?.name) return demo.name;
-  const profile = await getMemberProfile(userId);
-  if (profile?.email) {
-    const local = profile.email.split("@")[0];
-    return local.charAt(0).toUpperCase() + local.slice(1);
-  }
-  return userId;
-}
-
 export async function buildCoachLiveFloor(sessionDate?: string): Promise<{
   sessionDate: string;
   tiles: LiveFloorTile[];
@@ -105,7 +94,7 @@ export async function buildCoachLiveFloor(sessionDate?: string): Promise<{
 
       tiles.push({
         userId,
-        name: await resolveMemberName(userId),
+        name: await resolveCoachMemberName(userId),
         workoutId: todaySession.workoutId,
         workoutTitle: todaySession.title,
         sessionDate: date,

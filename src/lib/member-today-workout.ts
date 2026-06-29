@@ -14,7 +14,7 @@ import {
   hydrateTodaySessions,
   type TodaySession,
 } from "@/lib/today-sessions";
-import { resolveDemoUser } from "@/lib/demo-user-directory";
+import { resolveCoachMemberName } from "@/lib/coach-roster";
 
 export type TodayWorkoutSource = "sms" | "program" | null;
 
@@ -36,10 +36,6 @@ function enrollmentSlugsForUser(userId: string): string[] {
   });
 }
 
-function memberDisplayName(userId: string, fallback = "Member"): string {
-  return resolveDemoUser(userId)?.name || fallback;
-}
-
 /** Resolve the workout to show on /member/today for a member + calendar date. */
 export async function resolveTodayPageWorkout(
   userId: string,
@@ -51,7 +47,7 @@ export async function resolveTodayPageWorkout(
     hydrateSmsWorkouts(),
   ]);
 
-  const memberName = memberDisplayName(userId, nameFallback);
+  const memberName = await resolveCoachMemberName(userId, nameFallback);
   const session = getSessionForUserOnDate(userId, viewDate);
 
   if (session?.workoutId) {

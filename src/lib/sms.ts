@@ -3,7 +3,7 @@ import twilio from "twilio";
 import { prisma } from "@/lib/prisma";
 import { isDemoMode } from "./demo-enrollments";
 import { DEMO_USER_DIRECTORY, resolveDemoUser, resolveDemoUserByEmail } from "@/lib/demo-user-directory";
-import { listMembersForCoach } from "@/lib/demo-coach";
+import { listCoachRosterMembers } from "@/lib/coach-roster";
 import { getDemoUserSettings } from "@/lib/demo-reminders";
 import { listMemberProfiles } from "@/lib/member-profiles-store";
 import { getAllSignInAccounts } from "@/lib/member-accounts-store";
@@ -208,7 +208,7 @@ async function buildDemoPhoneUsers(): Promise<
     });
   }
 
-  for (const member of listMembersForCoach()) {
+  for (const member of await listCoachRosterMembers()) {
     const settings = getDemoUserSettings(member.id);
     const current = byId.get(member.id);
     byId.set(member.id, {
@@ -612,8 +612,21 @@ export async function createReminderLogForUser(user: any, message: string) {
   return { user: user.email, phone: user.phone, message, sentAt: log.sentAt };
 }
 
-export function listDemoMembersForCoach() {
-  return listMembersForCoach();
+export async function listCoachMembersForUi(): Promise<
+  Array<{ id: string; name: string; email: string; phone: string | null }>
+> {
+  const roster = await listCoachRosterMembers();
+  return roster.map((m) => ({
+    id: m.id,
+    name: m.name,
+    email: m.email,
+    phone: m.phone,
+  }));
+}
+
+/** @deprecated Use listCoachMembersForUi */
+export async function listDemoMembersForCoach() {
+  return listCoachMembersForUi();
 }
 
 export { resolveDemoUserByEmail };

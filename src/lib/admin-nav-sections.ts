@@ -4,6 +4,7 @@ export type AdminNavItem = {
   match: (pathname: string) => boolean;
   badge?: "chat";
   leadsBadge?: boolean;
+  queueBadge?: boolean;
 };
 
 export type AdminNavGroup = {
@@ -19,6 +20,7 @@ const peopleItems: AdminNavItem[] = [
     href: "/admin/queue",
     label: "Queue",
     match: (p) => p.startsWith("/admin/queue"),
+    queueBadge: true,
   },
   {
     href: "/admin/members",
