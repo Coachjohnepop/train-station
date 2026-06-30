@@ -123,12 +123,16 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith("/admin") && !isStaffRole(session.role)) {
-    return NextResponse.redirect(new URL("/member", request.url));
+    return NextResponse.redirect(new URL("/member/today", request.url));
   }
 
   const staffRedirect = staffAdminRedirect(pathname, session.role);
   if (staffRedirect) {
     return NextResponse.redirect(new URL(staffRedirect, request.url));
+  }
+
+  if (pathname === "/member") {
+    return NextResponse.redirect(new URL("/member/today", request.url));
   }
 
   if (session.role === "MEMBER" && pathname.startsWith("/member")) {
