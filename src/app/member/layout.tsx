@@ -20,13 +20,7 @@ export default async function MemberLayout({
     getSessionUser(),
     getCurrentUserId(),
   ]);
-  const access = dashboard?.access ?? {
-    tier: "coach" as const,
-    isPreview: true,
-    tierLabel: "Coach Class",
-    canAccessProgram: () => true,
-    canAccessFeature: () => true,
-  };
+  const tierLabel = dashboard?.access.tierLabel ?? "Coach Class";
   const viewedMember = cookieUid ? resolveDemoUser(cookieUid) : undefined;
   const impersonating =
     session && isStaffRole(session.role) && viewedMember && viewedMember.id !== session.id;
@@ -55,7 +49,7 @@ export default async function MemberLayout({
 
   return (
     <MemberShell
-      access={access}
+      tierLabel={tierLabel}
       memberName={name}
       memberEmail={email}
       membershipTier={membershipTier}

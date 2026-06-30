@@ -2,17 +2,20 @@
 
 import { useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { storeResumePath } from "@/lib/resume-path";
+import {
+  COACH_RESUME_KEY,
+  MEMBER_RESUME_KEY,
+  isSaveableCoachPath,
+  isSaveableMemberPath,
+  storeResumePath,
+} from "@/lib/resume-path";
 
-export default function ResumePathTracker({
-  storageKey,
-  isSaveable,
-}: {
-  storageKey: string;
-  isSaveable: (pathname: string) => boolean;
-}) {
+/** Track last URL for resume — validators stay client-side (no function props from RSC). */
+export default function ResumePathTracker({ area }: { area: "member" | "coach" }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const storageKey = area === "member" ? MEMBER_RESUME_KEY : COACH_RESUME_KEY;
+  const isSaveable = area === "member" ? isSaveableMemberPath : isSaveableCoachPath;
 
   useEffect(() => {
     const qs = searchParams.toString();

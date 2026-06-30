@@ -2,13 +2,12 @@ import Link from "next/link";
 import { Suspense } from "react";
 import IntakeBookingCelebrate from "@/components/IntakeBookingCelebrate";
 import ResumePathTracker from "@/components/ResumePathTracker";
-import { MEMBER_RESUME_KEY, isSaveableMemberPath } from "@/lib/resume-path";
+
 import MemberNav from "@/components/MemberNav";
 import MemberHeaderHomeLink from "@/components/MemberHeaderHomeLink";
 import LogoutButton from "@/components/LogoutButton";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
 import ThemeModeToggle from "@/components/ThemeModeToggle";
-import type { MemberAccess } from "@/lib/access";
 import {
   MEMBERSHIP_THEME_LABELS,
   type MembershipThemeTier,
@@ -17,7 +16,7 @@ import type { SignupPlan } from "@/lib/signup-plans";
 
 export default function MemberShell({
   children,
-  access,
+  tierLabel: tierLabelProp,
   memberName,
   memberEmail,
   membershipTier,
@@ -26,7 +25,7 @@ export default function MemberShell({
   checkoutPlan = "member",
 }: {
   children: React.ReactNode;
-  access: MemberAccess;
+  tierLabel?: string;
   memberName: string;
   memberEmail?: string;
   membershipTier: MembershipThemeTier;
@@ -34,12 +33,12 @@ export default function MemberShell({
   paymentGateActive?: boolean;
   checkoutPlan?: SignupPlan;
 }) {
-  const tierLabel = MEMBERSHIP_THEME_LABELS[membershipTier] || access.tierLabel;
+  const tierLabel = MEMBERSHIP_THEME_LABELS[membershipTier] || tierLabelProp || "Member";
 
   return (
     <div className="app-shell-bg flex min-h-screen flex-col">
       <Suspense fallback={null}>
-        <ResumePathTracker storageKey={MEMBER_RESUME_KEY} isSaveable={isSaveableMemberPath} />
+        <ResumePathTracker area="member" />
       </Suspense>
       <ThemeAttributesSync membershipTier={membershipTier} />
       <header className="app-shell-header">
