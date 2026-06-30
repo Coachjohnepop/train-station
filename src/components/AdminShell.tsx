@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import AdminAreaNav from "@/components/AdminAreaNav";
+import ResumePathTracker from "@/components/ResumePathTracker";
+import { COACH_RESUME_KEY, isSaveableCoachPath } from "@/lib/resume-path";
 import AdminMobileCoachNav from "@/components/AdminMobileCoachNav";
 import TrainStationBrand from "@/components/TrainStationBrand";
 import DevModeSwitcher from "@/components/DevModeSwitcher";
@@ -48,6 +50,9 @@ export default function AdminShell({
 
   return (
     <div className="app-shell-bg flex min-h-screen flex-col xl:flex-row">
+      <Suspense fallback={null}>
+        <ResumePathTracker storageKey={COACH_RESUME_KEY} isSaveable={isSaveableCoachPath} />
+      </Suspense>
       {showDevSwitcher ? (
         <div className="hidden xl:block">
           <DevModeSwitcher active="admin" staffSession={session} showImpersonation />

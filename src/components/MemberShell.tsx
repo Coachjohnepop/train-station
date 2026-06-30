@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import IntakeBookingCelebrate from "@/components/IntakeBookingCelebrate";
+import ResumePathTracker from "@/components/ResumePathTracker";
+import { MEMBER_RESUME_KEY, isSaveableMemberPath } from "@/lib/resume-path";
 import MemberNav from "@/components/MemberNav";
 import MemberHeaderHomeLink from "@/components/MemberHeaderHomeLink";
 import LogoutButton from "@/components/LogoutButton";
@@ -35,6 +38,9 @@ export default function MemberShell({
 
   return (
     <div className="app-shell-bg flex min-h-screen flex-col">
+      <Suspense fallback={null}>
+        <ResumePathTracker storageKey={MEMBER_RESUME_KEY} isSaveable={isSaveableMemberPath} />
+      </Suspense>
       <ThemeAttributesSync membershipTier={membershipTier} />
       <header className="app-shell-header">
         <div className="mx-auto flex w-full max-w-lg md:max-w-3xl lg:max-w-6xl xl:max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-6 lg:px-8">

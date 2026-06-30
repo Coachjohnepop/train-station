@@ -1,8 +1,8 @@
-import { redirect } from "next/navigation";
+import MemberResumeRedirect from "@/components/MemberResumeRedirect";
 
 export const dynamic = "force-dynamic";
 
-/** Members land on Today — workout, coach comms, and enrolled program window. */
+/** Members resume last page (Today workout, chat, etc.) or land on Today. */
 export default function MemberDashboardPage() {
-  redirect("/member/today");
+  return <MemberResumeRedirect />;
 }

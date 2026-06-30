@@ -1,5 +1,5 @@
 import Link from "next/link";
-import AdminMobileQueueRedirect from "@/components/AdminMobileQueueRedirect";
+import CoachResumeRedirect from "@/components/CoachResumeRedirect";
 import CoachContentAlertsPanel from "@/components/CoachContentAlertsPanel";
 import GoToTodayCard from "@/components/GoToTodayCard";
 import AdminMessagesCard from "@/components/AdminMessagesCard";
@@ -26,7 +26,7 @@ export default async function AdminPage() {
 
   return (
     <div>
-      <AdminMobileQueueRedirect />
+      <CoachResumeRedirect />
       <h1 className="text-2xl font-bold">Coach dashboard</h1>
       <p className="mt-2 text-[var(--muted)]">
         Build content bottom-up: exercises → workouts → programs.
