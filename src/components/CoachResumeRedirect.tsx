@@ -25,7 +25,11 @@ export default function CoachResumeRedirect() {
     const fallback = defaultCoachResumePath(true);
     const dest = saved && saved !== "/admin" ? saved : fallback;
     if (dest !== window.location.pathname + window.location.search) {
-      router.replace(dest);
+      try {
+        router.replace(dest);
+      } catch {
+        window.location.assign(dest);
+      }
     }
   }, [router]);
 

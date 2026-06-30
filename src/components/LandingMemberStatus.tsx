@@ -1,4 +1,5 @@
 import Link from "next/link";
+import MemberDashboardLink from "@/components/MemberDashboardLink";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
 import TrainStationBrand from "@/components/TrainStationBrand";
 import {
@@ -56,9 +57,9 @@ export default function LandingMemberStatus({
             : `Your ${planLabel} ticket is active. Open your dashboard for today’s workout, messages, and scores.`}
         </p>
         <div className="mx-auto mt-6 flex max-w-md flex-col items-stretch gap-3 sm:flex-row sm:justify-center">
-          <Link href="/member" className="btn-primary w-full px-8 sm:w-auto">
+          <MemberDashboardLink className="btn-primary w-full px-8 sm:w-auto">
             Open Dashboard
-          </Link>
+          </MemberDashboardLink>
           <Link href="/member/account" className="btn-secondary w-full px-8 sm:w-auto">
             Account &amp; billing
           </Link>

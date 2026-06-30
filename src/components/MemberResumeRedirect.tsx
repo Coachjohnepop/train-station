@@ -7,6 +7,7 @@ import {
   defaultMemberResumePath,
   readStoredResumePath,
   isSaveableMemberPath,
+  sanitizeResumePath,
 } from "@/lib/resume-path";
 
 /** /member → last visited member page (e.g. mid-workout on Today). */
@@ -14,8 +15,19 @@ export default function MemberResumeRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    const saved = readStoredResumePath(MEMBER_RESUME_KEY, isSaveableMemberPath);
-    router.replace(saved ?? defaultMemberResumePath());
+    const saved = readStoredResumePath(MEMBER_RESUME_KEY, isSaveableMemberPath, {
+      stripMemberCoachParams: true,
+    });
+    const dest =
+      saved ??
+      sanitizeResumePath(defaultMemberResumePath(), isSaveableMemberPath) ??
+      defaultMemberResumePath();
+
+    try {
+      router.replace(dest);
+    } catch {
+      window.location.assign(dest);
+    }
   }, [router]);
 
   return (

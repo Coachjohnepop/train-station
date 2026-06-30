@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import MemberDashboardLink from "@/components/MemberDashboardLink";
 
 export default function LandingWelcomeBanner({
   displayName,
@@ -43,9 +44,15 @@ export default function LandingWelcomeBanner({
         <p className="mt-3 text-base text-[var(--muted)] sm:text-lg">{subtitle()}</p>
 
         <div className="mt-6 flex justify-center">
-          <Link href={programHref} className="btn-primary w-full max-w-xs px-8 sm:w-auto">
-            {isCoach ? "Coach admin" : isFreeTier ? "Open free dashboard" : "Open Dashboard"}
-          </Link>
+          {isCoach ? (
+            <Link href={programHref} className="btn-primary w-full max-w-xs px-8 sm:w-auto">
+              Coach admin
+            </Link>
+          ) : (
+            <MemberDashboardLink className="btn-primary w-full max-w-xs px-8 sm:w-auto">
+              {isFreeTier ? "Open free dashboard" : "Open Dashboard"}
+            </MemberDashboardLink>
+          )}
         </div>
 
         {isFreeTier && !isEstablishedMember && (

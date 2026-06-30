@@ -5,6 +5,9 @@ export const COACH_RESUME_KEY = "ts-coach-resume-path";
 
 const MEMBER_SKIP_PREFIXES = ["/member/checkout", "/member/onboard", "/member/pending"];
 
+/** Coach-only query params — never resume members into instructor view. */
+const MEMBER_STRIP_PARAMS = ["asInstructor", "forUser"];
+
 export function isSaveableMemberPath(pathname: string): boolean {
   if (!pathname.startsWith("/member/")) return false;
   return !MEMBER_SKIP_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -22,25 +25,89 @@ export function defaultCoachResumePath(mobile: boolean): string {
   return mobile ? "/admin/queue" : "/admin";
 }
 
-export function readStoredResumePath(key: string, validate: (path: string) => boolean): string | null {
+/**
+ * Normalize a stored resume target to a safe relative path+query.
+ * Returns null when the value cannot be used for in-app navigation.
+ */
+export function sanitizeResumePath(
+  raw: string | null | undefined,
+  validate: (pathname: string) => boolean,
+  opts?: { stripMemberCoachParams?: boolean },
+): string | null {
+  if (!raw?.trim()) return null;
+
+  let candidate = raw.trim();
+
+  try {
+    if (/^https?:\/\//i.test(candidate)) {
+      const absolute = new URL(candidate);
+      candidate = `${absolute.pathname}${absolute.search}`;
+    }
+  } catch {
+    return null;
+  }
+
+  if (!candidate.startsWith("/") || candidate.startsWith("//")) return null;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(candidate, "https://resume-path.invalid");
+  } catch {
+    return null;
+  }
+
+  const pathname = parsed.pathname.replace(/\/+$/, "") || parsed.pathname;
+  if (!validate(pathname)) return null;
+
+  const params = new URLSearchParams(parsed.search);
+  if (opts?.stripMemberCoachParams) {
+    for (const key of MEMBER_STRIP_PARAMS) params.delete(key);
+  }
+
+  const qs = params.toString();
+  const rebuilt = qs ? `${pathname}?${qs}` : pathname;
+
+  if (/[\s<>"']/.test(rebuilt)) return null;
+
+  return rebuilt;
+}
+
+export function readStoredResumePath(
+  key: string,
+  validate: (pathname: string) => boolean,
+  opts?: { stripMemberCoachParams?: boolean },
+): string | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(key);
-    if (!raw?.startsWith("/")) return null;
-    const pathname = raw.split("?")[0] ?? raw;
-    return validate(pathname) ? raw : null;
+    const sanitized = sanitizeResumePath(raw, validate, opts);
+    if (raw && !sanitized) {
+      localStorage.removeItem(key);
+    }
+    return sanitized;
   } catch {
     return null;
   }
 }
 
-export function storeResumePath(key: string, fullPath: string, validate: (path: string) => boolean) {
+export function storeResumePath(key: string, fullPath: string, validate: (pathname: string) => boolean) {
   if (typeof window === "undefined") return;
-  const pathname = fullPath.split("?")[0] ?? fullPath;
-  if (!validate(pathname)) return;
+  const sanitized = sanitizeResumePath(fullPath, validate, {
+    stripMemberCoachParams: key === MEMBER_RESUME_KEY,
+  });
+  if (!sanitized) return;
   try {
-    localStorage.setItem(key, fullPath);
+    localStorage.setItem(key, sanitized);
   } catch {
     /* ignore quota / private mode */
   }
+}
+
+export function resolveMemberDashboardHref(): string {
+  if (typeof window === "undefined") return defaultMemberResumePath();
+  return (
+    readStoredResumePath(MEMBER_RESUME_KEY, isSaveableMemberPath, {
+      stripMemberCoachParams: true,
+    }) ?? defaultMemberResumePath()
+  );
 }
