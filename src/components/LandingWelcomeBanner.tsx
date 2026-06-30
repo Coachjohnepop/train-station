@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import WelcomeVideoPopover from "@/components/WelcomeVideoPopover";
 
 export default function LandingWelcomeBanner({
   displayName,
@@ -10,7 +9,6 @@ export default function LandingWelcomeBanner({
   membershipPlan = null,
   membershipPlanLabel = null,
   isEstablishedMember = false,
-  welcomeVideoUrl = null,
 }: {
   displayName: string;
   email?: string;
@@ -44,6 +42,12 @@ export default function LandingWelcomeBanner({
         </h1>
         <p className="mt-3 text-base text-[var(--muted)] sm:text-lg">{subtitle()}</p>
 
+        <div className="mt-6 flex justify-center">
+          <Link href={programHref} className="btn-primary w-full max-w-xs px-8 sm:w-auto">
+            {isCoach ? "Coach admin" : isFreeTier ? "Open free dashboard" : "Open Dashboard"}
+          </Link>
+        </div>
+
         {isFreeTier && !isEstablishedMember && (
           <div className="mt-6 rounded-2xl border border-[#7c3aed]/35 bg-[#7c3aed]/10 px-4 py-4 text-left sm:px-5">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#c4b5fd]">
@@ -70,12 +74,6 @@ export default function LandingWelcomeBanner({
           </div>
         )}
 
-        <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Link href={programHref} className="btn-primary px-8">
-            {isCoach ? "Coach admin" : isFreeTier ? "Open free dashboard" : "Open dashboard"}
-          </Link>
-          <WelcomeVideoPopover welcomeVideoUrl={welcomeVideoUrl}>Watch intro</WelcomeVideoPopover>
-        </div>
         {email && (
           <p className="mt-4 text-xs text-[var(--muted)]">
             Signed in as <span className="text-[var(--text)]">{email}</span>

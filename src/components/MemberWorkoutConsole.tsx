@@ -101,9 +101,10 @@ export default function MemberWorkoutConsole({
   const [loggedDetailsOpen, setLoggedDetailsOpen] = useState(false);
 
   const LIVE_POLL_MS = 200;
-  const liveSyncEnabled =
-    progressMode === "live" && !!liveSyncUserId && !reviewMode && !instructorName;
+  const liveSessionScope = progressMode === "live" && !!liveSyncUserId && !reviewMode;
   const warmupSyncEnabled = progressMode === "warmup" && !!liveSyncUserId && !reviewMode;
+  const [liveSessionHydrated, setLiveSessionHydrated] = useState(false);
+  const livePushEnabled = liveSessionScope && liveSessionHydrated;
   const lastAppliedRevision = useRef(0);
   const lastAppliedRemoteAt = useRef<string | null>(null);
   const applyingRemote = useRef(false);
@@ -208,7 +209,7 @@ export default function MemberWorkoutConsole({
   }, [warmupSyncEnabled, liveSyncUserId, liveSessionDate, serializeCompletedSets]);
 
   const flushLiveSave = useCallback(() => {
-    if (!liveSyncEnabled || !liveSyncUserId) return;
+    if (!livePushEnabled || !liveSyncUserId) return;
 
     saveChain.current = saveChain.current.catch(() => {}).then(async () => {
       const snap = stateRef.current;
@@ -238,7 +239,7 @@ export default function MemberWorkoutConsole({
 
     return saveChain.current;
   }, [
-    liveSyncEnabled,
+    livePushEnabled,
     liveSyncUserId,
     liveSessionDate,
     instructorName,
@@ -249,7 +250,7 @@ export default function MemberWorkoutConsole({
 
   const queueLiveSave = useCallback(
     (immediate = false) => {
-      if (!liveSyncEnabled && !warmupSyncEnabled) return;
+      if (!livePushEnabled && !warmupSyncEnabled) return;
       if (saveTimer.current) clearTimeout(saveTimer.current);
       const delay = immediate ? 0 : instructorName ? 30 : 100;
       saveTimer.current = setTimeout(() => {
@@ -257,8 +258,15 @@ export default function MemberWorkoutConsole({
         else void flushLiveSave();
       }, delay);
     },
-    [liveSyncEnabled, warmupSyncEnabled, instructorName, flushLiveSave, flushWarmupSave],
+    [livePushEnabled, warmupSyncEnabled, instructorName, flushLiveSave, flushWarmupSave],
   );
+
+  useEffect(() => {
+    setLiveSessionHydrated(false);
+    lastAppliedRevision.current = 0;
+    lastPushedRevision.current = 0;
+    lastAppliedRemoteAt.current = null;
+  }, [liveSyncUserId, liveSessionDate, workout.workoutId]);
 
   useEffect(() => {
     if (!warmupSyncEnabled || !liveSessionDate) return;
@@ -300,13 +308,13 @@ export default function MemberWorkoutConsole({
 
   // Push local checkoffs to shared store (coach ↔ member).
   useEffect(() => {
-    if (!liveSyncEnabled) return;
+    if (!livePushEnabled) return;
     queueLiveSave();
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
   }, [
-    liveSyncEnabled,
+    livePushEnabled,
     completedSets,
     finishedExercises,
     weights,
@@ -314,9 +322,9 @@ export default function MemberWorkoutConsole({
     queueLiveSave,
   ]);
 
-  // Live push via SSE (in-memory hot cache) + fast poll fallback for other instances.
+  // Live read via SSE (in-memory hot cache) + fast poll fallback for other instances.
   useEffect(() => {
-    if (!liveSyncEnabled) return;
+    if (!liveSessionScope) return;
 
     const q = new URLSearchParams({ userId: liveSyncUserId! });
     if (liveSessionDate) q.set("date", liveSessionDate);
@@ -332,6 +340,7 @@ export default function MemberWorkoutConsole({
         if (!res.ok) return;
         const data = await res.json();
         if (data.session) applyRemoteSession(data.session);
+        setLiveSessionHydrated(true);
       } catch {
         /* ignore */
       }
@@ -368,7 +377,7 @@ export default function MemberWorkoutConsole({
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [
-    liveSyncEnabled,
+    liveSessionScope,
     liveSyncUserId,
     liveSessionDate,
     workout.workoutId,

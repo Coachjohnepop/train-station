@@ -13,6 +13,7 @@ import {
   type LandingMembershipNavItem,
 } from "@/lib/landing-nav";
 import { logoutUrl } from "@/lib/logout-url";
+import { isStaffRole } from "@/lib/auth-session";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 
 export default function LandingNav({
@@ -157,6 +158,14 @@ export default function LandingNav({
         </nav>
 
         <div className="flex items-center gap-2">
+          {variant === "welcome" && purchaseAuth.signedIn ? (
+            <Link
+              href={purchaseAuth.role && isStaffRole(purchaseAuth.role) ? "/admin" : "/member"}
+              className="btn-primary px-3 py-1.5 text-[11px] font-semibold md:hidden"
+            >
+              Open Dashboard
+            </Link>
+          ) : null}
           <ThemeModeToggle className="hidden sm:inline-flex" />
           {variant === "public" ? (
             <>

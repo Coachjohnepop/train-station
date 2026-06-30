@@ -1,7 +1,6 @@
 import Link from "next/link";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
 import TrainStationBrand from "@/components/TrainStationBrand";
-import WelcomeVideoPopover from "@/components/WelcomeVideoPopover";
 import {
   MEMBERSHIP_THEME_LABELS,
   membershipThemeTierFromPlan,
@@ -20,7 +19,6 @@ export default function LandingMemberStatus({
   membership,
   displayName,
   email,
-  welcomeVideoUrl = null,
 }: {
   membership: MemberMembershipSnapshot;
   displayName?: string;
@@ -57,11 +55,14 @@ export default function LandingMemberStatus({
             ? "Sample the station, then upgrade when you are ready for daily coach workouts and live sessions."
             : `Your ${planLabel} ticket is active. Open your dashboard for today’s workout, messages, and scores.`}
         </p>
-        {welcomeVideoUrl ? (
-          <div className="mt-4 flex justify-center">
-            <WelcomeVideoPopover welcomeVideoUrl={welcomeVideoUrl}>Watch intro</WelcomeVideoPopover>
-          </div>
-        ) : null}
+        <div className="mx-auto mt-6 flex max-w-md flex-col items-stretch gap-3 sm:flex-row sm:justify-center">
+          <Link href="/member" className="btn-primary w-full px-8 sm:w-auto">
+            Open Dashboard
+          </Link>
+          <Link href="/member/account" className="btn-secondary w-full px-8 sm:w-auto">
+            Account &amp; billing
+          </Link>
+        </div>
         {email ? (
           <p className="mt-4 text-xs text-[var(--muted)]">
             Signed in as <span className="text-[var(--text)]">{email}</span>
@@ -95,15 +96,6 @@ export default function LandingMemberStatus({
             </p>
           </div>
         </div>
-      </div>
-
-      <div className="mx-auto mt-6 flex max-w-md flex-col items-center gap-3 sm:flex-row sm:justify-center">
-        <Link href="/member" className="btn-primary px-8">
-          Open dashboard
-        </Link>
-        <Link href="/member/account" className="btn-secondary px-8">
-          Account &amp; billing
-        </Link>
       </div>
 
       {membership.switchablePlans.length > 0 ? (
