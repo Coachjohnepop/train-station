@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { defaultMemberResumePath } from "@/lib/resume-path";
 
-/** Open Dashboard — always lands on Today (resume path is for in-app reopen only). */
+/** Open Dashboard — full page load to Today (avoids mobile Safari RSC nav failures). */
 export default function MemberDashboardLink({
   className,
   children,
@@ -10,8 +9,8 @@ export default function MemberDashboardLink({
   children: React.ReactNode;
 }) {
   return (
-    <Link href={defaultMemberResumePath()} className={className}>
+    <a href={defaultMemberResumePath()} className={className}>
       {children}
-    </Link>
+    </a>
   );
 }

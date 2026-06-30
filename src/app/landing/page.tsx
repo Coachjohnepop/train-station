@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function LandingPage() {
-  redirect("/member");
+  redirect("/member/today");
 }

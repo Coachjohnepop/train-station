@@ -1,8 +1,8 @@
-import MemberResumeRedirect from "@/components/MemberResumeRedirect";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-/** Members resume last page (Today workout, chat, etc.) or land on Today. */
+/** Members land on Today — avoids client redirect hop that can fail on mobile Safari. */
 export default function MemberDashboardPage() {
-  return <MemberResumeRedirect />;
+  redirect("/member/today");
 }

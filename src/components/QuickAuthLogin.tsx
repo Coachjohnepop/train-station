@@ -67,7 +67,7 @@ export default function QuickAuthLogin({
         setError(data.error || "Biometric sign-in failed.");
         return;
       }
-      window.location.href = data.redirect || "/member";
+      window.location.href = data.redirect || "/member/today";
     } catch {
       setError("Biometric sign-in cancelled or failed.");
     } finally {
@@ -93,7 +93,7 @@ export default function QuickAuthLogin({
           setPin("");
           return;
         }
-        window.location.href = data.redirect || "/member";
+        window.location.href = data.redirect || "/member/today";
       } catch {
         setError("Sign-in failed — try again.");
         setPin("");

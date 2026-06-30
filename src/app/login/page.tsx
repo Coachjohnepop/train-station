@@ -146,7 +146,7 @@ function LoginForm() {
       await offerSavePasswordFromForm(formRef.current);
       await offerSavePassword({ email: email.trim(), password });
 
-      const destination = data.redirect || "/member";
+      const destination = data.redirect || "/member/today";
       const skipQuickAuthSetup =
         destination.includes("/member/onboard") || destination.includes("/member/checkout");
       if (!skipQuickAuthSetup) {
