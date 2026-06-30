@@ -213,7 +213,10 @@ export async function getWorkoutExerciseBlocks(workoutId: string): Promise<Worko
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((item) => ({
       id: item.id,
-      name: exById[item.exerciseId]?.name || "Exercise",
+      name:
+        sanitizeSmsExerciseName(item.blockName || "") ||
+        exById[item.exerciseId]?.name ||
+        "Exercise",
       setCount: item.sets ?? 3,
     }));
 }
@@ -245,10 +248,12 @@ export async function getSmsGeneratedWorkout(
 
   const blocks = items.map((item) => {
     const ex = exById[item.exerciseId] || { name: "Exercise" };
+    const displayName =
+      sanitizeSmsExerciseName(item.blockName || "") || ex.name || "Exercise";
     return {
       id: item.id,
       exerciseId: item.exerciseId,
-      name: ex.name,
+      name: displayName,
       description: item.notes ?? ex.description ?? null,
       videoUrl: resolveExerciseVideoUrl(ex),
       setScheme: item.setScheme || "standard",

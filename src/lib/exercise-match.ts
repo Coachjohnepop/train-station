@@ -8,28 +8,35 @@ export type ExerciseCatalogEntry = {
 
 /** SMS block name → preferred catalog name substring (longest wins). */
 const SMS_EXERCISE_ALIASES: Record<string, string> = {
-  "dumbbell bicep curls": "bicep curl",
-  "dumbbell shoulder press": "shoulder press",
+  "dumbbell bicep curls": "supinated bicep curl",
+  "dumbbell shoulder press": "standing dumbbell shoulder press",
   "air squats": "air squat",
   "leg press": "hack squat",
   "barbell hip thrust raise": "hip thrust",
   "barbell hip thrust": "hip thrust",
-  "seated calf raises": "calve raise",
-  "standing calf raises": "calve raise",
-  "dumbbell bulgarian split squats": "bulgarian",
+  "barbell hip thrust back on bench hold at top of squeeze": "hip thrust",
+  "seated calve raises": "seated calve raise",
+  "seated calf raises": "seated calve raise",
+  "standing calf raises": "standing calve raise",
+  "standing calve raises": "standing calve raise",
+  "dumbbell bulgarian split squats": "bulgarian split squat",
+  "dumbbell bulgarians split squats": "bulgarian split squat",
   "hiit jump squats to finish": "jump squat",
   "hiit jump squats": "jump squat",
   "stretch well": "cool down stretch",
+  stretch: "cool down stretch",
   "cool down": "cool down stretch",
   "warm up": "warmup",
 };
 
 export function sanitizeSmsExerciseName(name: string): string {
   let s = name.trim();
+  s = s.replace(/\bcave\b/gi, "calf"); // common SMS typo
   s = s.replace(/\s+\d+\s*$/i, ""); // trailing " 20"
   s = s.replace(/^\d+\s+/i, ""); // leading "25 "
   s = s.replace(/\s+x\s+\d+\s*sets?$/i, "");
   s = s.replace(/\s+\d+\s*sets?$/i, "");
+  s = s.replace(/,.*$/, ""); // drop coaching cues after comma in name
   return s.trim();
 }
 
@@ -42,10 +49,17 @@ export function normalizeExerciseName(s: string): string {
 
 function aliasTarget(normalized: string): string | null {
   if (SMS_EXERCISE_ALIASES[normalized]) return SMS_EXERCISE_ALIASES[normalized];
+  let best: string | null = null;
+  let bestLen = 0;
   for (const [key, target] of Object.entries(SMS_EXERCISE_ALIASES)) {
-    if (normalized.includes(key) || key.includes(normalized)) return target;
+    if (normalized.includes(key) || key.includes(normalized)) {
+      if (key.length > bestLen) {
+        bestLen = key.length;
+        best = target;
+      }
+    }
   }
-  return null;
+  return best;
 }
 
 function scoreMatch(target: string, candidate: string): number {
@@ -58,11 +72,29 @@ function scoreMatch(target: string, candidate: string): number {
     if (candidate.includes(tw)) score += 2;
   }
 
+  // Never use military press terminology
+  if (candidate.includes("military")) score -= 50;
+
   // Penalize wrong movement family
   if (target.includes("leg press") && candidate.includes("chest")) score -= 10;
   if (target.includes("hip thrust") && candidate.includes("chest")) score -= 10;
   if (target.includes("bicep") && !candidate.includes("bicep") && !candidate.includes("curl")) {
     score -= 3;
+  }
+  if (target.includes("shoulder press") && candidate.includes("sitting") && target.includes("standing")) {
+    score += 4;
+  }
+  if (target.includes("shoulder press") && candidate.includes("sitting")) {
+    score -= 2;
+  }
+  if (target.includes("shoulder press") && candidate.includes("standing")) {
+    score += 3;
+  }
+  if (target.includes("seated") && candidate.includes("standing") && !candidate.includes("seated")) {
+    score -= 5;
+  }
+  if (target.includes("seated") && candidate.includes("seated")) {
+    score += 4;
   }
 
   if (candidate.includes(target) || target.includes(candidate)) score += 3;

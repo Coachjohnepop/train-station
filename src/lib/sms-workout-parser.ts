@@ -14,7 +14,14 @@ export type ParsedSmsWorkout = {
 };
 
 const REP_ONLY = /^(\d+(?:\s*,\s*\d+)+|\d+)$/;
-const REP_WITH_NOTE = /^(\d+(?:\s*,\s*\d+)+|\d+)\s*(.+)$/i;
+
+const INSTRUCTION_LINE =
+  /^(then|stay|hold\b|rest\s+periods?|immediately|burnout|stay\s+flexible|on\s+\d|flexible)$/i;
+const DURATION_OR_SETS_LINE =
+  /^(\d+\s*(?:sec|min|mins|rounds?)\b|x\s*\d+\s*sets?|\d+\s*sets?\s*(?:each\s+leg)?$)/i;
+
+const EXERCISE_KEYWORDS =
+  /squat|press|extension|curl|row|pull|push|lunge|deadlift|raise|fly|crunch|plank|thrust|hip|calve|calf|bulgarian|bicep|hiit|jump|leg\s+press|barbell|dumbbell|machine/i;
 
 function isRepLine(line: string) {
   const cleaned = line.replace(/\s/g, "");
@@ -35,12 +42,42 @@ function parseRepLine(line: string): { sets: number; reps: string; notes?: strin
   return { sets: nums.length, reps: nums.join(","), notes };
 }
 
+function parseExerciseNameAndReps(line: string): { name: string; reps?: string } {
+  const leadingCount = line.match(/^(\d+)\s+(.+)$/i);
+  if (leadingCount) {
+    return { name: leadingCount[2].trim(), reps: leadingCount[1] };
+  }
+  const trailingCount = line.match(/^(.+?)\s+(\d+)\s*$/);
+  if (trailingCount && EXERCISE_KEYWORDS.test(trailingCount[1])) {
+    return { name: trailingCount[1].trim(), reps: trailingCount[2] };
+  }
+  return { name: line.trim() };
+}
+
+function titleCaseName(name: string): string {
+  const s = name.trim();
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function isInstructionLine(line: string): boolean {
+  if (INSTRUCTION_LINE.test(line)) return true;
+  if (DURATION_OR_SETS_LINE.test(line)) return true;
+  if (/^\d+\s*sec\b/i.test(line)) return true;
+  if (/burnout\s+reps/i.test(line) && !EXERCISE_KEYWORDS.test(line)) return true;
+  if (/hold at/i.test(line) && !/thrust|squat|press|raise/i.test(line)) return true;
+  return false;
+}
+
 function isWarmupLine(line: string) {
-  return /warm|mobility|bands?|bike|upper body/i.test(line) && !/press|extension|squat|curl|row|tricep|chest/i.test(line);
+  return (
+    /warm|mobility|bands?|bike|treadmill|walk|upper body|incline/i.test(line) &&
+    !/press|extension|squat|curl|row|tricep|chest|bicep|shoulder/i.test(line)
+  );
 }
 
 function isCooldownLine(line: string) {
-  return /stretch|hiit|cool\s*down/i.test(line);
+  return /^stretch\s*$/i.test(line) || /^stretch\s+well/i.test(line) || /cool\s*down/i.test(line);
 }
 
 function isTitleLine(line: string, index: number) {
@@ -50,9 +87,50 @@ function isTitleLine(line: string, index: number) {
 
 function isExerciseLine(line: string) {
   if (isRepLine(line)) return false;
+  if (isInstructionLine(line)) return false;
   if (isWarmupLine(line)) return false;
-  if (/^stretch\s+well/i.test(line)) return false;
-  return /squat|press|extension|curl|row|pull|push|lunge|deadlift|raise|fly|crunch|plank/i.test(line);
+  if (isCooldownLine(line)) return false;
+  if (/^leg\s+press$/i.test(line)) return true;
+  if (/^hiit\s+/i.test(line)) return true;
+  return EXERCISE_KEYWORDS.test(line);
+}
+
+function applySetsFromLine(current: ParsedSmsExercise, line: string): boolean {
+  const setsOnly = line.match(/^(\d+)\s*sets?\s*(each\s+leg)?$/i);
+  if (setsOnly) {
+    current.sets = Number(setsOnly[1]);
+    if (setsOnly[2]) current.notes = [current.notes, "Each leg"].filter(Boolean).join(" · ");
+    return true;
+  }
+  const xSets = line.match(/x\s*(\d+)\s*sets?/i);
+  if (xSets) {
+    current.sets = Number(xSets[1]);
+    return true;
+  }
+  const eachLeg = line.match(/^(\d+)\s*sets?\s*each\s+leg$/i);
+  if (eachLeg) {
+    current.sets = Number(eachLeg[1]);
+    current.notes = [current.notes, "Each leg"].filter(Boolean).join(" · ");
+    return true;
+  }
+  return false;
+}
+
+function applyHiitTiming(current: ParsedSmsExercise, line: string) {
+  const rounds = line.match(/(\d+)\s*rounds?\s*(?:on\s*)?(\d+)\s*sec/i);
+  if (rounds) {
+    current.sets = Number(rounds[1]);
+    current.reps = `${rounds[2]}s on`;
+    current.setScheme = "timed";
+    return true;
+  }
+  const timed = line.match(/(\d+)\s*sec\s+on\s+(\d+)\s*sec\s+off/i);
+  if (timed) {
+    current.reps = `${timed[1]}s on / ${timed[2]}s off`;
+    current.setScheme = "timed";
+    return true;
+  }
+  return false;
 }
 
 export function parseSmsWorkout(rawText: string): ParsedSmsWorkout {
@@ -84,6 +162,18 @@ export function parseSmsWorkout(rawText: string): ParsedSmsWorkout {
     current = null;
   };
 
+  const startExercise = (line: string): ParsedSmsExercise => {
+    flushWarmup();
+    pushCurrent();
+    const { name, reps } = parseExerciseNameAndReps(line);
+    return {
+      name: titleCaseName(name),
+      sets: 1,
+      reps: reps || "—",
+      section: "main",
+    };
+  };
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
@@ -93,7 +183,7 @@ export function parseSmsWorkout(rawText: string): ParsedSmsWorkout {
       continue;
     }
 
-    if (/^stretch\s+well/i.test(line)) {
+    if (isCooldownLine(line)) {
       flushWarmup();
       pushCurrent();
       exercises.push({
@@ -138,37 +228,34 @@ export function parseSmsWorkout(rawText: string): ParsedSmsWorkout {
       continue;
     }
 
+    if (current && applySetsFromLine(current, line)) {
+      continue;
+    }
+
+    if (current && applyHiitTiming(current, line)) {
+      continue;
+    }
+
     if (/^each\s+arm/i.test(line) && current) {
       current.notes = [current.notes, line].filter(Boolean).join(" · ");
       continue;
     }
 
     if (/^jump\s+squats?\s+(\d+)/i.test(line)) {
-      flushWarmup();
-      pushCurrent();
       const m = line.match(/^jump\s+squats?\s+(\d+)/i);
-      exercises.push({
-        name: "Jump Squats",
-        sets: 1,
-        reps: m?.[1] || "20",
-        section: "main",
-      });
+      current = startExercise(line);
+      if (m) current.reps = m[1];
       continue;
     }
 
     if (isExerciseLine(line)) {
-      flushWarmup();
-      pushCurrent();
-      current = {
-        name: line.charAt(0).toUpperCase() + line.slice(1),
-        sets: 1,
-        reps: "—",
-        section: "main",
-      };
+      current = startExercise(line);
       continue;
     }
 
     if (current) {
+      if (applySetsFromLine(current, line)) continue;
+      if (applyHiitTiming(current, line)) continue;
       current.notes = [current.notes, line].filter(Boolean).join(" · ");
     } else if (!isCooldownLine(line)) {
       warmupLines.push(line);

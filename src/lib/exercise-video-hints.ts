@@ -1,7 +1,7 @@
 /** Fallback YouTube demos when the matched library exercise has no videoUrl. */
 const VIDEO_HINTS: Array<{ pattern: RegExp; videoUrl: string }> = [
   {
-    pattern: /shoulder|military press/i,
+    pattern: /shoulder press|dumbbell shoulder/i,
     videoUrl: "https://www.youtube.com/watch?v=ZaDlbm8E8Tg",
   },
   {

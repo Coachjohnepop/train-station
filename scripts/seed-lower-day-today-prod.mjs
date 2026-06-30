@@ -24,45 +24,42 @@ dotenv.config({ path: ".env" });
 const { parseSmsWorkout } = await import("../src/lib/sms-workout-parser.ts");
 const { createTodaySessionFromSms } = await import("../src/lib/today-sessions.ts");
 
-const LOWER_DAY_SMS = `Lower Day
+const LOWER_DAY_SMS = `Lower Day 
 
-Warm up bicycle or walk at 3.3 on treadmill at 7.0 incline
-5 mins
+Warm up bicycle or walk at 3.3 on treadmill at 7.0 incline 
+5 mins 
 
-Rest periods are 1:30 min
+Rest periods are 1:30 min 
 
-Upper body warm up
-Band exercises
+Upper body warm up 
+Band exercises 
 Dumbbell bicep curls 20
 Dumbbell shoulder press 20
 
-25 air squats
+25 air squats 
 
-Leg press
-4 sets
-20 sec hold at bottom of lift
-Then burnout reps immediately
+leg press 
+20 sec hold at bottom of lift 
+Then burnout reps immediately 
+4 sets 
 Stay flexible
 
-Barbell hip thrust raise
-4 sets
-30 sec hold at top of squeeze
-Then burnout reps immediately
+Barbell Hip thrust, back on bench hold at top of squeeze
+30 sec then immediately burnout reps x 4 sets 
 
-Seated calf raises
-4 sets
+Seated calve raises machine or standing cave raises with weight single leg 
 30 sec hold at top of squeeze
-Then 15 reps immediately
+Then 15 reps immediately x 4 sets 
 
-Dumbbell Bulgarian split squats
-3 sets each leg
-Hold at bottom 20 sec
-Then burnout reps immediately
+Dumbbell Bulgarians split squats 
+Hold at bottom of lift 20 sec 
+Then burn out reps immediately 
+3 sets each leg 
 
 HIIT jump squats to finish
-8 rounds 20 sec on 20 sec off
+8 rounds on 20sec
 
-Stretch well`;
+Stretch`;
 
 const USER_IDS = ["member-e820ae6e-62c", "member-ab2cb068-b46"];
 
