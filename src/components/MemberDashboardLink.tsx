@@ -1,10 +1,7 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { defaultMemberResumePath, resolveMemberDashboardHref } from "@/lib/resume-path";
+import { defaultMemberResumePath } from "@/lib/resume-path";
 
-/** Open Dashboard — jumps to last member page or Today (avoids brittle /member hop). */
+/** Open Dashboard — always lands on Today (resume path is for in-app reopen only). */
 export default function MemberDashboardLink({
   className,
   children,
@@ -12,14 +9,8 @@ export default function MemberDashboardLink({
   className?: string;
   children: React.ReactNode;
 }) {
-  const [href, setHref] = useState(defaultMemberResumePath());
-
-  useEffect(() => {
-    setHref(resolveMemberDashboardHref());
-  }, []);
-
   return (
-    <Link href={href} className={className}>
+    <Link href={defaultMemberResumePath()} className={className}>
       {children}
     </Link>
   );

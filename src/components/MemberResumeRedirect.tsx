@@ -20,13 +20,15 @@ export default function MemberResumeRedirect() {
     });
     const dest =
       saved ??
-      sanitizeResumePath(defaultMemberResumePath(), isSaveableMemberPath) ??
+      sanitizeResumePath(defaultMemberResumePath(), isSaveableMemberPath, {
+        stripMemberCoachParams: true,
+      }) ??
       defaultMemberResumePath();
 
     try {
       router.replace(dest);
     } catch {
-      window.location.assign(dest);
+      window.location.assign(defaultMemberResumePath());
     }
   }, [router]);
 

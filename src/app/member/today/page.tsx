@@ -9,7 +9,7 @@ import MemberWorkoutConsole from "@/components/MemberWorkoutConsole";
 import { getMemberDashboard } from "@/lib/member-context";
 import { loadMemberLoggedWorkoutIds } from "@/lib/member-schedule";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
-import { resolveUserId } from "@/lib/current-user";
+import { resolveMemberUserId } from "@/lib/current-user";
 import { resolveTargetUserId } from "@/lib/resolve-target-user";
 import { localTodayIso, toIsoDate } from "@/lib/program-calendar";
 import { loadMemberUpcomingSessions, memberTodayHref } from "@/lib/member-today";
@@ -58,7 +58,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const staffCoach = authSession && isStaffRole(authSession.role);
   const asInstructor = !!sp.asInstructor || staffCoach;
   const forUser = sp.forUser;
-  const uid = resolveTargetUserId(forUser, await resolveUserId());
+  const uid = resolveTargetUserId(forUser, await resolveMemberUserId());
   const memberName = resolveDemoUser(uid)?.name || dashboard.user.name;
 
   const todayKey = localTodayIso();
@@ -82,10 +82,12 @@ export default async function MemberTodayPage({ searchParams }: Props) {
 
   const { session, workout, programSlug, source, scheduleLabel } = todayWorkout;
   const hasWorkout = !!workout;
-  const coachMembers = (await listCoachMembersForUi()).map((m) => ({
-    id: m.id,
-    name: m.name,
-  }));
+  const coachMembers = asInstructor
+    ? (await listCoachMembersForUi()).map((m) => ({
+        id: m.id,
+        name: m.name,
+      }))
+    : [];
 
   const scheduledLabel = session
     ? new Date(session.scheduledAt).toLocaleString(undefined, {

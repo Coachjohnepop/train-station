@@ -39,7 +39,9 @@ export default async function MemberLayout({
     : session?.email || dashboard?.user.email || viewedMember?.email;
 
   const profileUserId =
-    cookieUid || (session?.role === "MEMBER" ? session.id : null);
+    session?.role === "MEMBER"
+      ? session.id
+      : cookieUid || null;
   const profile = profileUserId ? await getMemberProfile(profileUserId) : null;
   const membershipTier = membershipThemeTierFromPlan(profile?.plan);
   const intakePending =

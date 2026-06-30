@@ -5,7 +5,7 @@ import SmsWorkoutView from "@/components/SmsWorkoutView";
 import { getDemoMemberWorkout } from "@/lib/demo-workout";
 import { getMemberWorkoutById } from "@/lib/member-workout";
 import { resolveMemberProgramWorkout } from "@/lib/member-program-workout";
-import { getCurrentUserLocation, resolveUserId } from "@/lib/current-user";
+import { getCurrentUserLocation, resolveMemberUserId } from "@/lib/current-user";
 import { getWeatherForLocation, logUserWeather } from "@/lib/weather";
 import { getActiveScheduleOverride } from "@/lib/demo-schedule-overrides";
 import { resolveMemberWorkoutContext } from "@/lib/member-workout-context";
@@ -48,7 +48,7 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
 
   // /member/workout?program=adult → current enrollment week/day (not generic preview shell)
   if (!workout && program) {
-    const uid = await resolveUserId();
+    const uid = await resolveMemberUserId();
     const resolved = await resolveMemberProgramWorkout(program, uid);
     if (resolved) {
       workout = await getMemberWorkoutById(resolved.workoutId);
@@ -79,7 +79,7 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
     ? await resolveMemberWorkoutContext({ programSlug: program, dateParam: date })
     : null;
 
-  const memberUserId = resolveTargetUserId(forUser, await resolveUserId());
+  const memberUserId = resolveTargetUserId(forUser, await resolveMemberUserId());
 
   const backHref = "/member/today";
   const backLabel = program ? "← Back to program" : "← Dashboard";

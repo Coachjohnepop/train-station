@@ -10,7 +10,7 @@ import { isDemoMode } from "@/lib/demo-enrollments";
 import { getUserEnrollments, getUserEnrollmentsAsArray } from "@/lib/data/user-data";
 import { getDemoWorkoutLogCount, getDemoStrengthScore, computeStrengthScoreFromPerfs } from "@/lib/demo-logs";
 import { getDemoUserSettings } from "@/lib/demo-reminders";
-import { getCurrentUser, resolveUserId, getCurrentUserName } from "@/lib/current-user";
+import { getCurrentUser, resolveMemberUserId, getCurrentUserName } from "@/lib/current-user";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
 
 export async function getMemberDashboard() {
@@ -29,7 +29,7 @@ export async function getMemberDashboard() {
   const adult = programs.find((p: any) => p.slug === "adult") || programs.find((p: any) => (p.category || "workout") === "workout") || programs[0];
 
   const current = await getCurrentUser();
-  const uid = await resolveUserId();
+  const uid = await resolveMemberUserId();
   const displayName = current?.name || (await getCurrentUserName()) || "Member";
 
   const demoEntry = resolveDemoUser(uid);
