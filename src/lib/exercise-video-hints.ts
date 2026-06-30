@@ -32,6 +32,10 @@ const VIDEO_HINTS: Array<{ pattern: RegExp; videoUrl: string }> = [
     pattern: /hiit|jump|interval|cardio/i,
     videoUrl: "https://www.youtube.com/watch?v=ultWZbUMr08",
   },
+  {
+    pattern: /stretch|cool\s*down|warm\s*up/i,
+    videoUrl: "https://www.youtube.com/watch?v=ultWZbUMr08",
+  },
 ];
 
 export function hintVideoUrlForExerciseName(name: string): string | null {

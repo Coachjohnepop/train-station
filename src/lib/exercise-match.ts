@@ -20,6 +20,7 @@ const SMS_EXERCISE_ALIASES: Record<string, string> = {
   "hiit jump squats to finish": "jump squat",
   "hiit jump squats": "jump squat",
   "stretch well": "cool down stretch",
+  "cool down": "cool down stretch",
   "warm up": "warmup",
 };
 
