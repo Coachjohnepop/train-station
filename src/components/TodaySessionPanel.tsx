@@ -17,6 +17,20 @@ type ParsedExercise = {
 
 const DEFAULT_COACH_MEMBERS = [DEFAULT_DEMO_MEMBER_ID];
 
+function addDaysToIso(isoDate: string, days: number): string {
+  const d = new Date(`${isoDate}T12:00:00`);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function quickDateLabel(offset: number): string {
+  if (offset === 0) return "Today";
+  if (offset === 1) return "Tomorrow";
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+}
+
 export default function TodaySessionPanel({
   defaultDate,
   defaultTime = "06:30",
@@ -29,6 +43,7 @@ export default function TodaySessionPanel({
   defaultAssignOpen = true,
   lockSessionDate,
   viewDateLabel,
+  showQuickDates = false,
 }: {
   defaultDate?: string;
   defaultTime?: string;
@@ -42,6 +57,8 @@ export default function TodaySessionPanel({
   /** When set (coach day view), saves always use this date — matches Prev/Next navigation. */
   lockSessionDate?: string;
   viewDateLabel?: string;
+  /** Coach assign page: one-tap Today / Tomorrow / +2 day chips. */
+  showQuickDates?: boolean;
 }) {
   const router = useRouter();
   const effectiveDate = lockSessionDate || defaultDate || new Date().toISOString().slice(0, 10);
@@ -228,7 +245,31 @@ export default function TodaySessionPanel({
           {lockSessionDate ? (
             <input type="date" className="input mt-1 w-full opacity-70" value={saveDate} readOnly />
           ) : (
-            <input type="date" className="input mt-1 w-full" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} />
+            <>
+              <input type="date" className="input mt-1 w-full" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} />
+              {showQuickDates && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {[0, 1, 2, 3].map((offset) => {
+                    const chipDate = addDaysToIso(new Date().toISOString().slice(0, 10), offset);
+                    const active = sessionDate === chipDate;
+                    return (
+                      <button
+                        key={offset}
+                        type="button"
+                        onClick={() => setSessionDate(chipDate)}
+                        className={`rounded-full border px-2.5 py-1 text-[10px] font-medium transition ${
+                          active
+                            ? "border-accent bg-accent/20 text-accent"
+                            : "border-[var(--border)] text-[var(--muted)] hover:border-accent/50 hover:text-accent"
+                        }`}
+                      >
+                        {quickDateLabel(offset)}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
         </label>
         <label className="block">

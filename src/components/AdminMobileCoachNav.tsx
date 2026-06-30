@@ -41,6 +41,7 @@ export default function AdminMobileCoachNav({ onOpenMenu }: Props) {
   }, []);
 
   const onQueue = pathname.startsWith("/admin/queue");
+  const onAssign = pathname.startsWith("/admin/assign");
   const onLive = pathname.startsWith("/admin/live");
   const onChat = pathname.startsWith("/admin/chat");
 
@@ -61,6 +62,12 @@ export default function AdminMobileCoachNav({ onOpenMenu }: Props) {
               {queueCount > 9 ? "9+" : queueCount}
             </span>
           ) : null}
+        </Link>
+        <Link href="/admin/assign" className={tabClass(onAssign)}>
+          <span className="text-base leading-none" aria-hidden>
+            ⊕
+          </span>
+          Assign
         </Link>
         <Link href="/admin/live" className={tabClass(onLive)}>
           <span className="text-base leading-none" aria-hidden>

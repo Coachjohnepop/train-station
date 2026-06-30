@@ -6,6 +6,8 @@ import type { MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import { resolveUserId } from "@/lib/current-user";
 import { getDemoPastsForWorkoutExercises } from "@/lib/demo-logs";
 import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
+import { matchExerciseInCatalog, sanitizeSmsExerciseName } from "@/lib/exercise-match";
+import { hintVideoUrlForExerciseName, resolveExerciseVideoUrl } from "@/lib/exercise-video-hints";
 
 const WORKOUTS_FILE = path.join(process.cwd(), "prisma", "sms-workouts.dev.json");
 const BLOB_PATH = "demo/sms-workouts.json";
@@ -60,50 +62,79 @@ async function writeStore(store: SmsWorkoutStore) {
   });
 }
 
-function normalizeName(s: string) {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-}
-
-function matchExercise(name: string, exercises: any[]): any | null {
-  const target = normalizeName(name);
-  const exact = exercises.find((e) => normalizeName(e.name) === target);
-  if (exact) return exact;
-
-  const keywords = target.split(" ").filter((w) => w.length > 3);
-  let best: any = null;
-  let bestScore = 0;
-  for (const ex of exercises) {
-    const en = normalizeName(ex.name);
-    let score = 0;
-    for (const kw of keywords) {
-      if (en.includes(kw)) score++;
-    }
-    if (score > bestScore) {
-      bestScore = score;
-      best = ex;
-    }
-  }
-  return bestScore >= Math.min(3, keywords.length) ? best : null;
-}
-
 import { NEWLY_ADDED_EXERCISE_TAG } from "@/lib/text-upload-exercises";
 
-async function ensureExercise(name: string, notes?: string): Promise<{ exercise: ReturnType<typeof loadDemoExercises>[number]; created: boolean }> {
+async function patchExerciseVideoIfMissing(
+  exercise: ReturnType<typeof loadDemoExercises>[number],
+  exercises: ReturnType<typeof loadDemoExercises>,
+): Promise<ReturnType<typeof loadDemoExercises>[number]> {
+  if (exercise.videoUrl) return exercise;
+  const hint = hintVideoUrlForExerciseName(exercise.name);
+  if (!hint) return exercise;
+
+  const next = { ...exercise, videoUrl: hint, updatedAt: new Date().toISOString() };
+  await saveDemoExercises(exercises.map((e) => (e.id === exercise.id ? next : e)));
+  return next;
+}
+
+async function ensureExercise(
+  rawName: string,
+  notes?: string,
+): Promise<{ exercise: ReturnType<typeof loadDemoExercises>[number]; created: boolean }> {
   await hydrateDemoExercises();
   const exercises = loadDemoExercises();
-  const existing = matchExercise(name, exercises);
-  if (existing) return { exercise: existing, created: false };
+  const displayName = sanitizeSmsExerciseName(rawName) || rawName.trim();
+  const existing = matchExerciseInCatalog(displayName, exercises);
+  if (existing) {
+    const patched = await patchExerciseVideoIfMissing(existing, exercises);
+    return { exercise: patched, created: false };
+  }
 
+  const hintVideo = hintVideoUrlForExerciseName(displayName);
   const created = {
     id: createDemoExerciseId(),
-    name,
+    name: displayName,
     description: notes || `Created from text upload (${new Date().toISOString().slice(0, 10)})`,
     tags: NEWLY_ADDED_EXERCISE_TAG,
+    videoUrl: hintVideo,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
   await saveDemoExercises([...exercises, created]);
   return { exercise: created, created: true };
+}
+
+/** Re-link SMS workout blocks to library exercises (restores videoUrl via catalog + hints). */
+export async function relinkSmsWorkoutExercises(workoutId: string): Promise<{
+  workoutId: string;
+  relinked: number;
+  videos: number;
+}> {
+  await hydrateSmsWorkouts();
+  await hydrateDemoExercises();
+  const store = readStore();
+  let exercises = loadDemoExercises();
+  const items = store.workoutExercises.filter((we) => we.workoutId === workoutId);
+  let relinked = 0;
+  let videos = 0;
+
+  for (const item of items) {
+    const current = exercises.find((e) => e.id === item.exerciseId);
+    const blockName = current?.name || "Exercise";
+    const matched = matchExerciseInCatalog(blockName, exercises);
+    if (!matched) continue;
+
+    if (matched.id !== item.exerciseId) {
+      item.exerciseId = matched.id;
+      relinked++;
+    }
+    const patched = await patchExerciseVideoIfMissing(matched, exercises);
+    exercises = loadDemoExercises();
+    if (resolveExerciseVideoUrl(patched)) videos++;
+  }
+
+  await writeStore(store);
+  return { workoutId, relinked, videos };
 }
 
 export async function buildWorkoutFromParsedSms(parsed: ParsedSmsWorkout, workoutId?: string) {
@@ -141,6 +172,7 @@ export async function buildWorkoutFromParsedSms(parsed: ParsedSmsWorkout, workou
   }
 
   await writeStore(store);
+  await relinkSmsWorkoutExercises(id);
   return { workoutId: id, exerciseCount: parsed.exercises.length, newExerciseIds };
 }
 
@@ -197,7 +229,7 @@ export async function getSmsGeneratedWorkout(
       exerciseId: item.exerciseId,
       name: ex.name,
       description: item.notes ?? ex.description ?? null,
-      videoUrl: ex.videoUrl ?? null,
+      videoUrl: resolveExerciseVideoUrl(ex),
       setScheme: item.setScheme || "standard",
       repPattern: null,
       reps: item.reps,

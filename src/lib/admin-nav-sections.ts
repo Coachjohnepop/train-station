@@ -78,6 +78,11 @@ export const COACH_NAV_GROUPS: AdminNavGroup[] = [
         match: (p) => p.startsWith("/admin/live"),
       },
       {
+        href: "/admin/assign",
+        label: "Assign",
+        match: (p) => p.startsWith("/admin/assign"),
+      },
+      {
         href: "/admin/today",
         label: "Today",
         match: (p) => p.startsWith("/admin/today"),
