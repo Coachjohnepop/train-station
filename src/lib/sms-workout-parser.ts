@@ -21,7 +21,7 @@ const DURATION_OR_SETS_LINE =
   /^(\d+\s*(?:sec|min|mins|rounds?)\b|x\s*\d+\s*sets?|\d+\s*sets?\s*(?:each\s+leg)?$)/i;
 
 const EXERCISE_KEYWORDS =
-  /squat|press|extension|curl|row|pull|push|lunge|deadlift|raise|fly|crunch|plank|thrust|hip|calve|calf|bulgarian|bicep|hiit|jump|leg\s+press|barbell|dumbbell|machine/i;
+  /squat|press|extension|curl|row|pull|push|lunge|deadlift|raise|fly|crunch|plank|thrust|hip|calve|calf|bulgarian|bicep|hiit|jump|leg\s+press|barbell|dumbbell|machine|lift|intestine|hardening|boob/i;
 
 function isRepLine(line: string) {
   const cleaned = line.replace(/\s/g, "");
