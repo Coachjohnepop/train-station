@@ -205,6 +205,61 @@ export async function deleteTodaySession(sessionIdOrDate: string) {
   return true;
 }
 
+export function getTodaySessionById(sessionId: string): TodaySession | null {
+  return readStore().sessions[sessionId] ?? null;
+}
+
+/** Add a member to an existing session (cascade — same workout for more students). */
+export async function addMemberToTodaySession(sessionId: string, userId: string) {
+  await hydrateTodaySessions({ preferFresh: true });
+  const store = readStore();
+  const session = store.sessions[sessionId];
+  if (!session) throw new Error("Session not found");
+  if (session.userIds.includes(userId)) {
+    return { session, alreadyAssigned: true as const };
+  }
+  session.userIds = [...session.userIds, userId];
+  await writeStore(store);
+  return { session, alreadyAssigned: false as const };
+}
+
+/** Copy one student's workout to others on the same day (joins shared session). */
+export async function cascadeWorkoutFromMember(input: {
+  sessionDate: string;
+  sourceUserId: string;
+  targetUserIds: string[];
+}) {
+  await hydrateTodaySessions({ preferFresh: true });
+  const source = getSessionForUserOnDate(input.sourceUserId, input.sessionDate);
+  if (!source) throw new Error("Source student has no workout for this day");
+
+  const added: string[] = [];
+  const skipped: string[] = [];
+
+  for (const userId of input.targetUserIds) {
+    if (userId === input.sourceUserId) continue;
+    const existing = getSessionForUserOnDate(userId, input.sessionDate);
+    if (existing && existing.id !== source.id) {
+      skipped.push(userId);
+      continue;
+    }
+    const result = await addMemberToTodaySession(source.id, userId);
+    if (!result.alreadyAssigned) added.push(userId);
+  }
+
+  const session = getTodaySessionById(source.id)!;
+  return { session, added, skipped };
+}
+
+/** Assign an open student to the day's most-used workout (largest group). */
+export async function addMemberToPrimarySession(sessionDate: string, userId: string) {
+  const sessions = getSessionsForDate(sessionDate).filter((s) => s.userIds.length > 0);
+  if (sessions.length === 0) throw new Error("No workouts on this day yet — build one first");
+
+  const primary = [...sessions].sort((a, b) => b.userIds.length - a.userIds.length)[0];
+  return addMemberToTodaySession(primary.id, userId);
+}
+
 /** Remove sessions on a date assigned to a specific member (leaves other sessions on that day). */
 export async function deleteSessionForUserOnDate(userId: string, sessionDate: string) {
   await hydrateTodaySessions({ preferFresh: true });

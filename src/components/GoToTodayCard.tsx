@@ -4,6 +4,7 @@ export default function GoToTodayCard({
   href,
   appointmentCount = 0,
   subtitle,
+  title,
   variant = "member",
   compact = false,
   statStyle = false,
@@ -11,10 +12,12 @@ export default function GoToTodayCard({
   href: string;
   appointmentCount?: number;
   subtitle?: string;
+  title?: string;
   variant?: "member" | "coach";
   compact?: boolean;
   statStyle?: boolean;
 }) {
+  const cardTitle = title ?? "Go to Today";
   const defaultSubtitle =
     variant === "coach"
       ? "Appointments & SMS workouts"
@@ -32,7 +35,7 @@ export default function GoToTodayCard({
         href={href}
         className="card transition hover-accent-border ring-1 ring-accent/40 bg-accent/15"
       >
-        <p className="text-sm font-semibold text-accent">Go to Today</p>
+        <p className="text-sm font-semibold text-accent">{cardTitle}</p>
         <p className="mt-2 text-3xl font-bold tabular-nums leading-none">
           {appointmentCount > 0 ? appointmentCount : "→"}
         </p>
@@ -47,7 +50,7 @@ export default function GoToTodayCard({
         href={href}
         className="card flex items-center justify-between gap-2 py-1 px-2 text-sm transition hover-accent-border ring-1 ring-accent/40 bg-accent/15"
       >
-        <span className="font-semibold text-accent whitespace-nowrap">Go to Today</span>
+        <span className="font-semibold text-accent whitespace-nowrap">{cardTitle}</span>
         <span className="truncate text-xs text-[var(--muted)] text-right">{detail}</span>
       </Link>
     );
@@ -60,7 +63,7 @@ export default function GoToTodayCard({
     >
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-base font-semibold text-accent">Go to Today</p>
+          <p className="text-base font-semibold text-accent">{cardTitle}</p>
           <p className="mt-1 text-sm text-[var(--muted)]">
             {subtitle ||
               (variant === "coach"

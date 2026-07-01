@@ -87,7 +87,7 @@ export default function LandingHero() {
               Member sign in
             </a>
             <a
-              href="/login?redirect=/admin"
+              href="/login?redirect=/admin/day"
               className="inline-flex h-12 items-center justify-center rounded-full border border-white/30 px-8 text-sm font-semibold text-white/90 backdrop-blur transition-all hover:bg-white/10 active:scale-[0.985]"
             >
               Coach sign in

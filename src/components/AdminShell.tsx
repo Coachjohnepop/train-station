@@ -146,7 +146,7 @@ export default function AdminShell({
             </div>
           ) : null}
           <div className="flex flex-col items-stretch gap-2">
-            <Link href="/admin" className="transition hover:opacity-90">
+            <Link href="/admin/day" className="transition hover:opacity-90">
               <TrainStationBrand variant="header" className="!h-8" />
             </Link>
             <LogoutButton />

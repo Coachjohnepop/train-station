@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-
 type Props = {
   onOpenMenu: () => void;
 };
@@ -16,32 +14,9 @@ function tabClass(active: boolean): string {
 
 export default function AdminMobileCoachNav({ onOpenMenu }: Props) {
   const pathname = usePathname();
-  const [queueCount, setQueueCount] = useState(0);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const res = await fetch("/api/admin/queue/count", { cache: "no-store" });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && typeof data.count === "number") setQueueCount(data.count);
-      } catch {
-        /* ignore */
-      }
-    }
-
-    void load();
-    const id = window.setInterval(() => void load(), 20_000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
-  }, []);
-
-  const onQueue = pathname.startsWith("/admin/queue");
-  const onAssign = pathname.startsWith("/admin/assign");
+  const onClass = pathname.startsWith("/admin/day") || pathname === "/admin";
+  const onPlan = pathname.startsWith("/admin/plan");
   const onLive = pathname.startsWith("/admin/live");
   const onChat = pathname.startsWith("/admin/chat");
 
@@ -52,22 +27,17 @@ export default function AdminMobileCoachNav({ onOpenMenu }: Props) {
       aria-label="Coach quick nav"
     >
       <div className="mx-auto flex max-w-lg items-stretch">
-        <Link href="/admin/queue" className={`relative ${tabClass(onQueue)}`}>
+        <Link href="/admin/day" className={tabClass(onClass)}>
           <span className="text-base leading-none" aria-hidden>
             ◉
           </span>
-          Queue
-          {queueCount > 0 ? (
-            <span className="absolute right-[calc(50%-1.25rem)] top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-bold text-black">
-              {queueCount > 9 ? "9+" : queueCount}
-            </span>
-          ) : null}
+          Class
         </Link>
-        <Link href="/admin/assign" className={tabClass(onAssign)}>
+        <Link href="/admin/plan" className={tabClass(onPlan)}>
           <span className="text-base leading-none" aria-hidden>
             ⊕
           </span>
-          Assign
+          Plan
         </Link>
         <Link href="/admin/live" className={tabClass(onLive)}>
           <span className="text-base leading-none" aria-hidden>

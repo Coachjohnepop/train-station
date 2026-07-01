@@ -22,6 +22,8 @@ export type CoachDayStudentCard = {
   name: string;
   assigned: boolean;
   workoutTitle?: string;
+  workoutId?: string;
+  sessionId?: string;
   timeLabel?: string;
   exercisePreview: string[];
   checkoffHref?: string;
@@ -97,6 +99,8 @@ export async function buildCoachDayPlan(sessionDate: string): Promise<CoachDayPl
       name: m.name,
       assigned,
       workoutTitle: session?.title,
+      workoutId: session?.workoutId,
+      sessionId: session?.id,
       timeLabel: session ? formatTime(session.scheduledAt) : undefined,
       exercisePreview: preview,
       checkoffHref: assigned

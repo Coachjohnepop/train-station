@@ -32,6 +32,15 @@ export function defaultStaffLandingPath(role: UserRole): string {
   return defaultCoachAdminPath();
 }
 
+/** Coaches start on My class — not the old dashboard or queue. */
+export function normalizeCoachLoginRedirect(redirect: string | null | undefined): string {
+  const raw = redirect?.trim();
+  if (!raw) return defaultCoachAdminPath();
+  if (raw === "/admin" || raw === "/admin/") return defaultCoachAdminPath();
+  if (raw.startsWith("/admin/queue")) return defaultCoachAdminPath();
+  return raw.startsWith("/admin") ? raw : defaultCoachAdminPath();
+}
+
 export function staffWorkspaceLabel(role: UserRole): string {
   if (hasDualStaffWorkspace(role)) return "Staff";
   if (role === "PLATFORM_ADMIN") return "Platform admin";

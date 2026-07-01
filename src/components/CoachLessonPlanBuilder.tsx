@@ -1,0 +1,617 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import TimeScrollPicker from "@/components/TimeScrollPicker";
+import type { CoachMemberOption } from "@/components/CoachMemberPicker";
+import type { LessonPlanQuestion } from "@/lib/lesson-plan-interpreter";
+
+type ParsedExercise = {
+  name: string;
+  sets: number;
+  reps: string;
+  notes?: string;
+  section?: string;
+};
+
+type InterpretResponse = {
+  normalizedText: string;
+  workout: { title: string; exercises: ParsedExercise[] };
+  questions: LessonPlanQuestion[];
+  includeWarmup: boolean;
+  warmupInjected: boolean;
+  usedAi: boolean;
+  confidence: "high" | "medium" | "low";
+};
+
+type IndividualDraft = {
+  userId: string;
+  rawSms: string;
+  useCustom: boolean;
+};
+
+const STEPS = ["Write plan", "Review", "Assign class"] as const;
+
+export default function CoachLessonPlanBuilder({
+  sessionDate,
+  viewDateLabel,
+  memberOptions,
+  defaultTime = "06:30",
+}: {
+  sessionDate: string;
+  viewDateLabel: string;
+  memberOptions: CoachMemberOption[];
+  defaultTime?: string;
+}) {
+  const router = useRouter();
+  const [step, setStep] = useState(0);
+  const [rawText, setRawText] = useState("");
+  const [includeWarmup, setIncludeWarmup] = useState(true);
+  const [scheduledTime, setScheduledTime] = useState(defaultTime);
+  const [templateMemberId, setTemplateMemberId] = useState<string>("");
+  const [cascadeIds, setCascadeIds] = useState<string[]>([]);
+  const [individualDrafts, setIndividualDrafts] = useState<IndividualDraft[]>([]);
+  const [interpretation, setInterpretation] = useState<InterpretResponse | null>(null);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [sendSmsAlert, setSendSmsAlert] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  const templateMember = memberOptions.find((m) => m.id === templateMemberId);
+
+  const unassignedMembers = useMemo(() => {
+    const assigned = new Set([
+      ...cascadeIds,
+      ...individualDrafts.filter((d) => d.useCustom).map((d) => d.userId),
+    ]);
+    return memberOptions.filter((m) => !assigned.has(m.id));
+  }, [memberOptions, cascadeIds, individualDrafts]);
+
+  useEffect(() => {
+    setIndividualDrafts((prev) => {
+      const map = new Map(prev.map((d) => [d.userId, d]));
+      return memberOptions.map((m) => {
+        const existing = map.get(m.id);
+        return (
+          existing ?? {
+            userId: m.id,
+            rawSms: "",
+            useCustom: false,
+          }
+        );
+      });
+    });
+  }, [memberOptions]);
+
+  async function runInterpret(nextAnswers?: Record<string, string>) {
+    if (!rawText.trim()) return;
+    setLoading(true);
+    setMessage(null);
+    setError(false);
+    try {
+      const res = await fetch("/api/today/lesson-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rawText: rawText.trim(),
+          includeWarmup,
+          templateMemberName: templateMember?.name,
+          answers: nextAnswers ?? answers,
+          priorQuestions: interpretation?.questions,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(true);
+        setMessage(data.error || "Could not interpret lesson plan.");
+        return;
+      }
+      setInterpretation(data);
+      if (data.questions?.length > 0 && (!nextAnswers || Object.keys(nextAnswers).length === 0)) {
+        const initial: Record<string, string> = {};
+        for (const q of data.questions as LessonPlanQuestion[]) {
+          if (q.choices?.length) initial[q.id] = q.choices[0];
+        }
+        setAnswers(initial);
+        setMessage(
+          data.usedAi
+            ? "Grok read your plan — answer any questions below, then continue."
+            : "Almost there — a few quick questions so we build the right workout.",
+        );
+      } else {
+        setMessage(
+          data.warmupInjected
+            ? "Standard warm-up added. Review the workout, then assign your class."
+            : "Workout ready — review below, then assign your class.",
+        );
+        setStep(1);
+      }
+    } catch (e: unknown) {
+      setError(true);
+      setMessage(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleAnswerAndContinue() {
+    setLoading(true);
+    setMessage(null);
+    setError(false);
+    try {
+      const res = await fetch("/api/today/lesson-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rawText: rawText.trim(),
+          includeWarmup,
+          templateMemberName: templateMember?.name,
+          answers,
+          priorQuestions: interpretation?.questions,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(true);
+        setMessage(data.error || "Could not apply answers.");
+        return;
+      }
+      setInterpretation(data);
+      if (!data.questions?.length) {
+        setMessage("Workout ready — review below, then assign your class.");
+        setStep(1);
+      } else {
+        setMessage("Still need a few details — update your answers above.");
+      }
+    } catch (e: unknown) {
+      setError(true);
+      setMessage(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function toggleCascade(id: string) {
+    setCascadeIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+    setIndividualDrafts((prev) =>
+      prev.map((d) => (d.userId === id ? { ...d, useCustom: false, rawSms: "" } : d)),
+    );
+  }
+
+  function toggleIndividual(userId: string) {
+    setIndividualDrafts((prev) =>
+      prev.map((d) =>
+        d.userId === userId
+          ? { ...d, useCustom: !d.useCustom, rawSms: d.useCustom ? "" : d.rawSms }
+          : d,
+      ),
+    );
+    if (!individualDrafts.find((d) => d.userId === userId)?.useCustom) {
+      setCascadeIds((prev) => prev.filter((x) => x !== userId));
+    }
+  }
+
+  function cascadeFromTemplate() {
+    if (!templateMemberId) return;
+    const others = memberOptions
+      .filter((m) => m.id !== templateMemberId)
+      .map((m) => m.id);
+    setCascadeIds([templateMemberId, ...others]);
+    setIndividualDrafts((prev) =>
+      prev.map((d) => ({ ...d, useCustom: false, rawSms: "" })),
+    );
+  }
+
+  async function handleDeploy() {
+    const normalized = interpretation?.normalizedText?.trim() || rawText.trim();
+    if (!normalized) return;
+
+    const individuals = individualDrafts
+      .filter((d) => d.useCustom && d.rawSms.trim())
+      .map((d) => ({ userId: d.userId, rawSms: d.rawSms.trim() }));
+
+    if (cascadeIds.length === 0 && individuals.length === 0) {
+      setError(true);
+      setMessage("Pick who gets the cascade workout or mark students for individual plans.");
+      return;
+    }
+
+    setSaving(true);
+    setMessage(null);
+    setError(false);
+
+    const scheduled = new Date(`${sessionDate}T${scheduledTime}:00`);
+    if (Number.isNaN(scheduled.getTime())) {
+      setSaving(false);
+      setError(true);
+      setMessage("Invalid scheduled time.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/today/cascade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionDate,
+          scheduledAt: scheduled.toISOString(),
+          sendSmsAlert,
+          cascade:
+            cascadeIds.length > 0
+              ? {
+                  rawSms: normalized,
+                  userIds: cascadeIds,
+                  title: interpretation?.workout?.title,
+                }
+              : undefined,
+          individuals,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(true);
+        setMessage(data.error || "Deploy failed.");
+        return;
+      }
+      const cascadeCount = cascadeIds.length;
+      const indCount = individuals.length;
+      setMessage(
+        `Deployed ${data.built} workout${data.built !== 1 ? "s" : ""} · ${cascadeCount} in cascade${indCount ? ` · ${indCount} individual` : ""}.`,
+      );
+      setError(false);
+      router.refresh();
+      setTimeout(() => {
+        setRawText("");
+        setInterpretation(null);
+        setCascadeIds([]);
+        setStep(0);
+        setMessage(null);
+      }, 8000);
+    } catch (e: unknown) {
+      setError(true);
+      setMessage(e instanceof Error ? e.message : "Deploy failed.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const workout = interpretation?.workout;
+  const warmups = workout?.exercises.filter((e) => e.section === "warmup") ?? [];
+  const main = workout?.exercises.filter((e) => e.section !== "warmup" && e.section !== "cooldown") ?? [];
+  const cooldown = workout?.exercises.filter((e) => e.section === "cooldown") ?? [];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-2">
+        {STEPS.map((label, i) => (
+          <button
+            key={label}
+            type="button"
+            onClick={() => i < step && setStep(i)}
+            className={`rounded-full px-3 py-1 text-xs font-semibold border transition ${
+              i === step
+                ? "border-accent bg-accent/20 text-accent"
+                : i < step
+                  ? "border-[var(--border)] text-[var(--muted)] hover:text-accent"
+                  : "border-[var(--border)] text-[var(--muted)] opacity-50"
+            }`}
+          >
+            {i + 1}. {label}
+          </button>
+        ))}
+      </div>
+
+      {step === 0 && (
+        <div className="card border-[#7c3aed]/40 bg-[#7c3aed]/5 space-y-4">
+          <div>
+            <h2 className="font-semibold text-lg">Lesson plan</h2>
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              Type or paste from voice-to-text — however you send workouts to John today. Grok interprets
+              it, asks questions if something is unclear, and builds the session.
+            </p>
+          </div>
+
+          <p className="rounded-md border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">
+            Saving to <strong>{viewDateLabel}</strong>
+          </p>
+
+          <label className="block text-xs">
+            <span className="text-[var(--muted)]">Built around student (optional)</span>
+            <select
+              className="input mt-1 w-full"
+              value={templateMemberId}
+              onChange={(e) => setTemplateMemberId(e.target.value)}
+            >
+              <option value="">General class plan</option>
+              {memberOptions.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-[10px] text-[var(--muted)]">
+              Pick Stephanie (or anyone) as the template — you can cascade the same workout to others
+              later or fork individuals with special needs.
+            </span>
+          </label>
+
+          <textarea
+            className="input min-h-[220px] w-full resize-y text-sm leading-relaxed"
+            placeholder={`Example:\n\nLower Day\n\nLeg press 4 sets\n10,10,10,10\n\nBarbell hip thrust 4 sets\nBulgarian split squats 3 each leg\n\nHIIT jump squats 8 rounds 20 sec on`}
+            value={rawText}
+            onChange={(e) => setRawText(e.target.value)}
+          />
+
+          <label className="flex items-center gap-2 text-xs cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeWarmup}
+              onChange={(e) => setIncludeWarmup(e.target.checked)}
+            />
+            Add standard warm-up if missing (wall taps, bands, light curls, Bosu/jump squats — bonus points
+            if members finish before you arrive)
+          </label>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => runInterpret()}
+              disabled={loading || !rawText.trim()}
+              className="btn-primary px-4 py-2 text-sm"
+            >
+              {loading ? "Reading plan…" : "Interpret plan"}
+            </button>
+          </div>
+
+          {interpretation && interpretation.questions.length > 0 && (
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 space-y-4">
+              <p className="text-sm font-semibold text-amber-200">Quick questions</p>
+              {interpretation.questions.map((q) => (
+                <div key={q.id} className="space-y-1">
+                  <p className="text-xs font-medium">{q.prompt}</p>
+                  {q.hint && <p className="text-[10px] text-[var(--muted)]">{q.hint}</p>}
+                  {q.choices?.length ? (
+                    <select
+                      className="input w-full text-sm"
+                      value={answers[q.id] ?? q.choices[0]}
+                      onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
+                    >
+                      {q.choices.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      className="input w-full text-sm"
+                      value={answers[q.id] ?? ""}
+                      onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
+                      placeholder="Your answer"
+                    />
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={handleAnswerAndContinue}
+                disabled={loading}
+                className="btn-primary px-4 py-1.5 text-sm"
+              >
+                Apply answers &amp; preview workout
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {step === 1 && workout && (
+        <div className="card space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-semibold text-lg">{workout.title}</h2>
+              <p className="text-xs text-[var(--muted)]">
+                {workout.exercises.length} blocks
+                {interpretation?.usedAi ? " · Grok" : " · rules"}
+                {interpretation?.confidence && ` · ${interpretation.confidence} confidence`}
+              </p>
+            </div>
+            <button type="button" onClick={() => setStep(0)} className="btn-ghost text-xs px-2 py-1">
+              ← Edit plan
+            </button>
+          </div>
+
+          {warmups.length > 0 && (
+            <section>
+              <p className="text-xs font-semibold text-emerald-400 mb-2">Warm-up · bonus if done early</p>
+              <ul className="space-y-1 text-sm">
+                {warmups.map((ex, i) => (
+                  <li key={i} className="text-[var(--muted)]">
+                    {ex.name}
+                    {ex.notes && <span className="block text-[10px]">{ex.notes}</span>}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <section>
+            <p className="text-xs font-semibold text-accent mb-2">Main workout</p>
+            <ul className="space-y-2 text-sm max-h-64 overflow-auto">
+              {main.map((ex, i) => (
+                <li key={i} className="border-b border-[var(--border)] pb-2">
+                  <span className="font-medium">{ex.name}</span>
+                  <span className="text-[var(--muted)]">
+                    {" "}
+                    · {ex.sets} set{ex.sets !== 1 ? "s" : ""} · {ex.reps}
+                  </span>
+                  {ex.notes && <p className="text-[10px] text-[var(--muted)]">{ex.notes}</p>}
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {cooldown.length > 0 && (
+            <section>
+              <p className="text-xs font-semibold text-[var(--muted)] mb-2">Cool-down</p>
+              <ul className="text-sm text-[var(--muted)]">
+                {cooldown.map((ex, i) => (
+                  <li key={i}>{ex.name}</li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <button type="button" onClick={() => setStep(2)} className="btn-primary px-4 py-2 text-sm">
+            Assign to class →
+          </button>
+        </div>
+      )}
+
+      {step === 2 && (
+        <div className="card space-y-5">
+          <div>
+            <h2 className="font-semibold text-lg">Assign class</h2>
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              Cascade the same workout to a group, or mark students who need their own plan (injuries,
+              different goals).
+            </p>
+          </div>
+
+          <label className="block text-xs">
+            <span className="text-[var(--muted)]">Session time</span>
+            <TimeScrollPicker className="mt-2" value={scheduledTime} onChange={setScheduledTime} />
+          </label>
+
+          <div className="space-y-3 rounded-lg border border-accent/30 bg-accent/5 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-accent">Cascade — same workout</p>
+              {templateMemberId && (
+                <button type="button" onClick={cascadeFromTemplate} className="btn-ghost text-xs px-2 py-1">
+                  Everyone except custom
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {memberOptions.map((m) => {
+                const on = cascadeIds.includes(m.id);
+                const isCustom = individualDrafts.find((d) => d.userId === m.id)?.useCustom;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    disabled={isCustom}
+                    onClick={() => toggleCascade(m.id)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-medium border transition ${
+                      isCustom
+                        ? "opacity-40 cursor-not-allowed border-[var(--border)]"
+                        : on
+                          ? "border-accent bg-accent/20 text-accent"
+                          : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)]"
+                    }`}
+                  >
+                    {on ? "✓ " : ""}
+                    {m.name}
+                  </button>
+                );
+              })}
+            </div>
+            {cascadeIds.length > 0 && (
+              <p className="text-[10px] text-[var(--success)]">
+                {cascadeIds.length} student{cascadeIds.length !== 1 ? "s" : ""} get the same workout
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm font-semibold">Individual — custom plan</p>
+            {memberOptions.map((m) => {
+              const draft = individualDrafts.find((d) => d.userId === m.id);
+              if (!draft) return null;
+              return (
+                <div
+                  key={m.id}
+                  className={`rounded-lg border p-3 ${
+                    draft.useCustom ? "border-amber-500/40 bg-amber-500/5" : "border-[var(--border)]"
+                  }`}
+                >
+                  <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={draft.useCustom}
+                      onChange={() => toggleIndividual(m.id)}
+                    />
+                    {m.name} — different workout
+                  </label>
+                  {draft.useCustom && (
+                    <textarea
+                      className="input mt-2 min-h-[100px] w-full text-xs"
+                      placeholder={`Custom plan for ${m.name}…`}
+                      value={draft.rawSms}
+                      onChange={(e) =>
+                        setIndividualDrafts((prev) =>
+                          prev.map((d) =>
+                            d.userId === m.id ? { ...d, rawSms: e.target.value } : d,
+                          ),
+                        )
+                      }
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {unassignedMembers.length > 0 && (
+            <p className="text-xs text-amber-300">
+              Not assigned yet: {unassignedMembers.map((m) => m.name).join(", ")}
+            </p>
+          )}
+
+          <label className="flex items-center gap-2 text-xs cursor-pointer">
+            <input
+              type="checkbox"
+              checked={sendSmsAlert}
+              onChange={(e) => setSendSmsAlert(e.target.checked)}
+            />
+            SMS alert with link to Go to Today
+          </label>
+
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setStep(1)} className="btn-ghost text-sm px-3 py-1">
+              ← Review workout
+            </button>
+            <button
+              type="button"
+              onClick={handleDeploy}
+              disabled={saving}
+              className="btn-primary px-4 py-2 text-sm"
+            >
+              {saving ? "Deploying…" : "Deploy to students"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {message && (
+        <p className={`text-sm ${error ? "text-red-400" : "text-[var(--success)]"}`}>{message}</p>
+      )}
+
+      <p className="text-[10px] text-[var(--muted)]">
+        Classic text-only paste still lives on{" "}
+        <Link href={`/admin/today?date=${sessionDate}`} className="text-accent hover:underline">
+          Go to Today
+        </Link>
+        .{" "}
+        {process.env.NEXT_PUBLIC_XAI_LESSON_PLAN_HINT !== "off" && (
+          <>Set <code className="text-[10px]">XAI_API_KEY</code> in Vercel for Grok interpretation.</>
+        )}
+      </p>
+    </div>
+  );
+}

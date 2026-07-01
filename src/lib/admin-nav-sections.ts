@@ -47,7 +47,10 @@ const peopleItems: AdminNavItem[] = [
 export const COACH_NAV_GROUPS: AdminNavGroup[] = [
   {
     label: "Overview",
-    items: [{ href: "/admin", label: "Dashboard", match: (p) => p === "/admin" }],
+    items: [
+      { href: "/admin/day", label: "My class", match: (p) => p.startsWith("/admin/day") },
+      { href: "/admin", label: "Dashboard", match: (p) => p === "/admin" },
+    ],
   },
   {
     label: "People",
@@ -81,6 +84,11 @@ export const COACH_NAV_GROUPS: AdminNavGroup[] = [
         href: "/admin/assign",
         label: "Assign",
         match: (p) => p.startsWith("/admin/assign"),
+      },
+      {
+        href: "/admin/plan",
+        label: "Plan workout",
+        match: (p) => p.startsWith("/admin/plan"),
       },
       {
         href: "/admin/today",
@@ -195,7 +203,7 @@ export function isPlatformAdminPath(pathname: string): boolean {
 }
 
 export function defaultCoachAdminPath(): string {
-  return "/admin";
+  return "/admin/day";
 }
 
 export function defaultPlatformAdminPath(): string {

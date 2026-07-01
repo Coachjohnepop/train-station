@@ -8,7 +8,11 @@ import {
   syncMemberGateCookies,
   type SessionUser,
 } from "@/lib/auth";
-import { defaultStaffLandingPath, isStaffRole } from "@/lib/staff-access";
+import {
+  defaultStaffLandingPath,
+  isStaffRole,
+  normalizeCoachLoginRedirect,
+} from "@/lib/staff-access";
 import {
   applyEmailHistoryCookies,
   readEmailHistoryFromRequestCookies,
@@ -47,7 +51,9 @@ export async function resolveLoginDestination(
   }
 
   if (redirect && redirect.startsWith("/") && !redirect.startsWith("//")) {
-    if (isStaffRole(user.role) && redirect.startsWith("/admin")) destination = redirect;
+    if (isStaffRole(user.role) && redirect.startsWith("/admin")) {
+      destination = normalizeCoachLoginRedirect(redirect);
+    }
     else if (!isStaffRole(user.role) && redirect.startsWith("/member")) destination = redirect;
     else if (redirect.startsWith("/member/chat")) destination = redirect;
   }

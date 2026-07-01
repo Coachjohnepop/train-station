@@ -21,8 +21,8 @@ export function defaultMemberResumePath(): string {
   return "/member/today";
 }
 
-export function defaultCoachResumePath(mobile: boolean): string {
-  return mobile ? "/admin/queue" : "/admin";
+export function defaultCoachResumePath(_mobile: boolean): string {
+  return "/admin/day";
 }
 
 /**
