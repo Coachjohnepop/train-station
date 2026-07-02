@@ -31,8 +31,26 @@ try {
   // new catalog
 }
 
+const secret = process.env.STRIPE_SECRET_KEY?.trim() || "";
+const isLive = secret.startsWith("sk_live_");
+const priceIds = isLive
+  ? {
+      member: process.env.STRIPE_PRICE_MEMBER?.trim(),
+      business: process.env.STRIPE_PRICE_BUSINESS?.trim(),
+      pro: process.env.STRIPE_PRICE_PRO?.trim(),
+    }
+  : STRIPE_PRICE_IDS;
+
+if (isLive && !Object.values(priceIds).every(Boolean)) {
+  console.warn(
+    "[pricing-catalog] Live Stripe key set but STRIPE_PRICE_MEMBER/BUSINESS/PRO missing — skip blob sync",
+  );
+  process.exit(0);
+}
+
 const now = new Date().toISOString();
-for (const [planId, stripePriceId] of Object.entries(STRIPE_PRICE_IDS)) {
+for (const [planId, stripePriceId] of Object.entries(priceIds)) {
+  if (!stripePriceId) continue;
   const meta = STRIPE_PRICE_LABELS[planId];
   const current = existing.plans?.[planId];
   existing.plans[planId] = {

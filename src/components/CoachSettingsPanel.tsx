@@ -9,6 +9,8 @@ type CoachSettings = {
   coachPhone: string | null;
   coachEmail: string | null;
   messagingEnabled: boolean;
+  autoPromptIntroBooking: boolean;
+  autoPromptFollowUpBooking: boolean;
   alertPrefs: CoachAlertPrefs;
   warmupBlocks: WarmupBlockTemplate[];
   rampTemplate: RampWeekTemplate[];
@@ -51,6 +53,8 @@ export default function CoachSettingsPanel() {
         coachPhone: settings.coachPhone,
         coachEmail: settings.coachEmail,
         messagingEnabled: settings.messagingEnabled,
+        autoPromptIntroBooking: settings.autoPromptIntroBooking,
+        autoPromptFollowUpBooking: settings.autoPromptFollowUpBooking,
         alertPrefs: settings.alertPrefs,
         warmupBlocks: settings.warmupBlocks,
         rampTemplate: settings.rampTemplate,
@@ -138,6 +142,53 @@ export default function CoachSettingsPanel() {
             Paused — no outbound email or SMS will send until you turn this back on and save.
           </p>
         )}
+      </section>
+
+      <section className="card space-y-4 p-5">
+        <div>
+          <h2 className="text-lg font-semibold">Book-a-call prompts on Today</h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Off by default — members won&apos;t see booking cards on Today unless you turn these on.
+            They can still use the Book Call tab. For follow-ups, use Request meeting on a member
+            profile, then enable the follow-up prompt below.
+          </p>
+        </div>
+        <div className="space-y-3">
+          <label className="flex items-start gap-3 rounded-lg border border-[var(--border)] px-4 py-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={settings.autoPromptIntroBooking}
+              onChange={(e) =>
+                setSettings({ ...settings, autoPromptIntroBooking: e.target.checked })
+              }
+            />
+            <span>
+              <span className="font-medium">Intro booking card</span>
+              <span className="mt-0.5 block text-xs text-[var(--muted)]">
+                Show &ldquo;Book your 15-minute intro&rdquo; on Today for new members before intake
+                sign-off.
+              </span>
+            </span>
+          </label>
+          <label className="flex items-start gap-3 rounded-lg border border-[var(--border)] px-4 py-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={settings.autoPromptFollowUpBooking}
+              onChange={(e) =>
+                setSettings({ ...settings, autoPromptFollowUpBooking: e.target.checked })
+              }
+            />
+            <span>
+              <span className="font-medium">Follow-up booking card</span>
+              <span className="mt-0.5 block text-xs text-[var(--muted)]">
+                After you click Request meeting on Members, show &ldquo;Book follow-up call&rdquo; on
+                that member&apos;s Today page.
+              </span>
+            </span>
+          </label>
+        </div>
       </section>
 
       <section className="card space-y-4 p-5">

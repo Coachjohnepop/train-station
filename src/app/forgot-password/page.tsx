@@ -86,9 +86,10 @@ export default function ForgotPasswordPage() {
               }`}
             >
               <p>{message}</p>
-              {emailed && email.toLowerCase().includes("@yahoo.") && (
+              {emailed && (
                 <p className="text-xs text-[var(--muted)]">
-                  Yahoo often filters new senders — check Spam, Bulk, or the Archive folder too.
+                  New senders often land in spam the first time — check your junk folder and mark
+                  &ldquo;Not spam&rdquo; so future Train Station emails reach your inbox.
                 </p>
               )}
               {!emailed && message.includes("couldn't send") && (

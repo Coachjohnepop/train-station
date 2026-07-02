@@ -40,12 +40,16 @@ export default function CoachLessonPlanBuilder({
   memberOptions,
   savedSessions = [],
   defaultTime = "06:30",
+  embedded = false,
+  onPublished,
 }: {
   sessionDate: string;
   viewDateLabel: string;
   memberOptions: CoachMemberOption[];
   savedSessions?: TodaySession[];
   defaultTime?: string;
+  embedded?: boolean;
+  onPublished?: () => void;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -296,6 +300,7 @@ export default function CoachLessonPlanBuilder({
       setError(false);
       setStep(3);
       setSaving(false);
+      onPublished?.();
       void router.refresh();
       return;
     } catch (e: unknown) {
@@ -674,8 +679,8 @@ export default function CoachLessonPlanBuilder({
             </div>
           )}
           <div className="flex flex-wrap gap-2">
-            <Link href={`/admin/day?date=${sessionDate}`} className="btn-primary px-4 py-2 text-sm">
-              Open Dashboard
+            <Link href="/admin/today" className="btn-primary px-4 py-2 text-sm">
+              Go to Today →
             </Link>
             <button
               type="button"
@@ -688,7 +693,7 @@ export default function CoachLessonPlanBuilder({
                 setStep(0);
               }}
             >
-              Plan another day
+              {embedded ? "Plan another workout" : "Plan another day"}
             </button>
           </div>
         </div>
@@ -698,16 +703,11 @@ export default function CoachLessonPlanBuilder({
         <p className={`text-sm ${error ? "text-red-400" : "text-[var(--success)]"}`}>{message}</p>
       )}
 
-      <p className="text-[10px] text-[var(--muted)]">
-        Classic text-only paste still lives on{" "}
-        <Link href={`/admin/today?date=${sessionDate}`} className="text-accent hover:underline">
-          Go to Today
-        </Link>
-        .{" "}
-        {process.env.NEXT_PUBLIC_XAI_LESSON_PLAN_HINT !== "off" && (
-          <>Set <code className="text-[10px]">XAI_API_KEY</code> in Vercel for Grok interpretation.</>
-        )}
-      </p>
+      {!embedded && process.env.NEXT_PUBLIC_XAI_LESSON_PLAN_HINT !== "off" && (
+        <p className="text-[10px] text-[var(--muted)]">
+          Set <code className="text-[10px]">XAI_API_KEY</code> in Vercel for Grok interpretation.
+        </p>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
+import { automatedCommissionPayoutAllowed, getCoachSettings } from "@/lib/coach-settings-store";
 import { runCommissionPayout } from "@/lib/stripe-commission-payout";
 import { previousCommissionPeriod } from "@/lib/stripe-commission";
 import { isSecurityEnforced } from "@/lib/security-config";
@@ -29,6 +30,14 @@ export async function POST(request: Request) {
 
   if (!staffOk && !cronOk) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (cronOk && !staffOk) {
+    const settings = await getCoachSettings();
+    const gate = automatedCommissionPayoutAllowed(settings);
+    if (!gate.allowed) {
+      return NextResponse.json({ error: gate.reason, skipped: true }, { status: 409 });
+    }
   }
 
   const parsed = schema.safeParse(await request.json().catch(() => ({})));

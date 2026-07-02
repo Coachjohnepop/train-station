@@ -161,8 +161,7 @@ async function interpretWithXai(
   text: string,
   templateMemberName?: string,
 ): Promise<{ normalizedText: string; workout: ParsedSmsWorkout; questions: LessonPlanQuestion[] } | null> {
-  const apiKey = process.env.XAI_API_KEY?.trim();
-  if (!apiKey) return null;
+  const { xaiChatCompletion } = await import("@/lib/xai-chat");
 
   const system = `You interpret coach lesson plans for a fitness app. Output JSON only:
 {
@@ -182,26 +181,20 @@ Rules:
     : text;
 
   try {
-    const res = await fetch("https://api.x.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: process.env.XAI_LESSON_PLAN_MODEL?.trim() || "grok-3-mini",
+    const result = await xaiChatCompletion(
+      [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+      {
+        model: process.env.XAI_LESSON_PLAN_MODEL?.trim() || undefined,
+        reasoningEffort: "low",
         temperature: 0.2,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-      }),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const content = data?.choices?.[0]?.message?.content;
-    if (!content || typeof content !== "string") return null;
+        responseFormat: { type: "json_object" },
+      },
+    );
+    if ("error" in result) return null;
+    const content = result.content;
     const parsed = JSON.parse(content) as {
       title?: string;
       normalizedText?: string;

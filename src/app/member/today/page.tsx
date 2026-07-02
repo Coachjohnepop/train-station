@@ -75,8 +75,8 @@ export default async function MemberTodayPage({ searchParams }: Props) {
 
   const dayWindow = primaryProgram
     ? await buildMemberDayWindow(uid, primaryProgram.slug, loggedSet, {
-        rollingDays: 21,
-        daysBefore: 7,
+        rollingDays: 5,
+        daysBefore: 2,
       })
     : null;
 
@@ -172,6 +172,8 @@ export default async function MemberTodayPage({ searchParams }: Props) {
               introBookedAt={profile?.introBookedAt ?? null}
               coachMeetingRequestedAt={profile?.coachMeetingRequestedAt ?? null}
               coachMeetingRequestNote={profile?.coachMeetingRequestNote ?? null}
+              autoPromptIntroBooking={coachSettings.autoPromptIntroBooking}
+              autoPromptFollowUpBooking={coachSettings.autoPromptFollowUpBooking}
             />
           </Suspense>
 

@@ -155,39 +155,109 @@
       "createdAt": "2026-06-15T03:46:27.165Z"
     },
     {
-      "id": "sms-w-9756afcd",
+      "id": "sms-w-7dce417d",
       "name": "Coach SMS Workout",
       "description": "Generated from coach SMS",
       "source": "sms",
-      "createdAt": "2026-06-23T12:18:05.728Z"
+      "createdAt": "2026-06-23T04:05:59.255Z"
     },
     {
-      "id": "sms-w-56671bc6",
+      "id": "sms-w-400aea5c",
       "name": "Coach SMS Workout",
       "description": "Generated from coach SMS",
       "source": "sms",
-      "createdAt": "2026-06-23T13:32:29.959Z"
+      "createdAt": "2026-06-23T04:08:06.365Z"
     },
     {
-      "id": "sms-w-fa75fae5",
+      "id": "sms-w-e210e62c",
       "name": "Coach SMS Workout",
       "description": "Generated from coach SMS",
       "source": "sms",
-      "createdAt": "2026-06-23T14:13:07.636Z"
+      "createdAt": "2026-06-23T14:12:36.238Z"
     },
     {
-      "id": "sms-w-9a18fbcc",
+      "id": "sms-w-d1cfe300",
       "name": "Coach SMS Workout",
       "description": "Generated from coach SMS",
       "source": "sms",
-      "createdAt": "2026-06-23T14:15:06.642Z"
+      "createdAt": "2026-06-23T14:16:07.861Z"
     },
     {
-      "id": "sms-w-36497522",
+      "id": "sms-w-e4dded5a",
       "name": "Coach SMS Workout",
       "description": "Generated from coach SMS",
       "source": "sms",
-      "createdAt": "2026-06-23T14:19:36.869Z"
+      "createdAt": "2026-06-23T14:18:23.917Z"
+    },
+    {
+      "id": "sms-w-e9fd7b47",
+      "name": "Coach SMS Workout",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-06-23T14:20:55.170Z"
+    },
+    {
+      "id": "sms-w-0cf28938",
+      "name": "Coach SMS Workout",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-06-23T14:22:28.769Z"
+    },
+    {
+      "id": "sms-w-f96742f6",
+      "name": "Coach SMS Workout",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-06-30T01:55:59.436Z"
+    },
+    {
+      "id": "sms-w-efdc6c34",
+      "name": "Lower Day",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-06-30T13:38:59.201Z"
+    },
+    {
+      "id": "sms-w-7a07088e",
+      "name": "Lower Day",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-06-30T14:15:12.434Z"
+    },
+    {
+      "id": "sms-w-fba35fa5",
+      "name": "Coach SMS Workout",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-07-01T15:02:46.769Z"
+    },
+    {
+      "id": "sms-w-647a00df",
+      "name": "Coach SMS Workout",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-07-01T15:03:26.640Z"
+    },
+    {
+      "id": "sms-w-a2cfb21f",
+      "name": "Coach SMS Workout",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-07-01T15:03:46.340Z"
+    },
+    {
+      "id": "sms-w-54987204",
+      "name": "Coach SMS Workout",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-07-01T15:04:26.424Z"
+    },
+    {
+      "id": "sms-w-c8bf056e",
+      "name": "Coach SMS Workout",
+      "description": "Generated from coach SMS",
+      "source": "sms",
+      "createdAt": "2026-07-01T15:49:13.053Z"
     }
   ],
   "workoutExercises": [
@@ -1303,19 +1373,19 @@
       "weightTier": "medium"
     },
     {
-      "id": "sms-we-e04dfcf3",
-      "workoutId": "sms-w-9756afcd",
+      "id": "sms-we-a18c163e",
+      "workoutId": "sms-w-7dce417d",
       "exerciseId": "cmpzjajej000095rzilwd9n9k",
       "sortOrder": 0,
       "sets": 1,
       "reps": "—",
-      "notes": "QA QA-SMOKE-1782217081903\nSo isolation/Core work\nWarm up well 5 min bike · Warm-up block",
+      "notes": "QA QA-SMOKE-1782187531231\nSo isolation/Core work\nWarm up well 5 min bike · Warm-up block",
       "setScheme": "standard",
       "weightTier": "medium"
     },
     {
-      "id": "sms-we-1baf3230",
-      "workoutId": "sms-w-9756afcd",
+      "id": "sms-we-a22e3813",
+      "workoutId": "sms-w-7dce417d",
       "exerciseId": "cmpzkkspv002q95rzf6nqlqga",
       "sortOrder": 1,
       "sets": 1,
@@ -1325,8 +1395,8 @@
       "weightTier": "medium"
     },
     {
-      "id": "sms-we-b3598bd0",
-      "workoutId": "sms-w-9756afcd",
+      "id": "sms-we-be644ff1",
+      "workoutId": "sms-w-7dce417d",
       "exerciseId": "cmpzjajfp000695rz8d6nbnvu",
       "sortOrder": 2,
       "sets": 4,
@@ -1336,8 +1406,8 @@
       "weightTier": "medium"
     },
     {
-      "id": "sms-we-32dd8b14",
-      "workoutId": "sms-w-9756afcd",
+      "id": "sms-we-978860d3",
+      "workoutId": "sms-w-7dce417d",
       "exerciseId": "cmpzjajgf000895rzkbecuupa",
       "sortOrder": 3,
       "sets": 4,
@@ -1347,8 +1417,8 @@
       "weightTier": "medium"
     },
     {
-      "id": "sms-we-7991686b",
-      "workoutId": "sms-w-9756afcd",
+      "id": "sms-we-e0dd994d",
+      "workoutId": "sms-w-7dce417d",
       "exerciseId": "ex_967839c7d89b41bb8e19dcf3d82df4cf",
       "sortOrder": 4,
       "sets": 1,
@@ -1358,8 +1428,63 @@
       "weightTier": "medium"
     },
     {
-      "id": "sms-we-0d633bb5",
-      "workoutId": "sms-w-56671bc6",
+      "id": "sms-we-4cfe88e9",
+      "workoutId": "sms-w-400aea5c",
+      "exerciseId": "cmpzjajej000095rzilwd9n9k",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "—",
+      "notes": "QA QA-SMOKE-1782187672049\nSo isolation/Core work\nWarm up well 5 min bike · Warm-up block",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-cd2f7193",
+      "workoutId": "sms-w-400aea5c",
+      "exerciseId": "cmpzkkspv002q95rzf6nqlqga",
+      "sortOrder": 1,
+      "sets": 1,
+      "reps": "20",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-9f8ff896",
+      "workoutId": "sms-w-400aea5c",
+      "exerciseId": "cmpzjajfp000695rz8d6nbnvu",
+      "sortOrder": 2,
+      "sets": 4,
+      "reps": "10,10,10,10",
+      "notes": "Each arm",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-2535b0fa",
+      "workoutId": "sms-w-400aea5c",
+      "exerciseId": "cmpzjajgf000895rzkbecuupa",
+      "sortOrder": 3,
+      "sets": 4,
+      "reps": "10,10,10,10",
+      "notes": "Each arm",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-2a44186f",
+      "workoutId": "sms-w-400aea5c",
+      "exerciseId": "ex_967839c7d89b41bb8e19dcf3d82df4cf",
+      "sortOrder": 4,
+      "sets": 1,
+      "reps": "5 min",
+      "notes": "30s on / 30s off",
+      "setScheme": "timed",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-5a4b5409",
+      "workoutId": "sms-w-e210e62c",
       "exerciseId": "cmpzjajej000095rzilwd9n9k",
       "sortOrder": 0,
       "sets": 1,
@@ -1369,8 +1494,8 @@
       "weightTier": "medium"
     },
     {
-      "id": "sms-we-f0829912",
-      "workoutId": "sms-w-56671bc6",
+      "id": "sms-we-e2ed4975",
+      "workoutId": "sms-w-e210e62c",
       "exerciseId": "cmpzkksb2001q95rz5xvwyj71",
       "sortOrder": 1,
       "sets": 3,
@@ -1380,8 +1505,8 @@
       "weightTier": "medium"
     },
     {
-      "id": "sms-we-8f16c38a",
-      "workoutId": "sms-w-fa75fae5",
+      "id": "sms-we-59de004d",
+      "workoutId": "sms-w-d1cfe300",
       "exerciseId": "cmpzjajej000095rzilwd9n9k",
       "sortOrder": 0,
       "sets": 1,
@@ -1391,8 +1516,8 @@
       "weightTier": "medium"
     },
     {
-      "id": "sms-we-28665a9f",
-      "workoutId": "sms-w-fa75fae5",
+      "id": "sms-we-467f85a2",
+      "workoutId": "sms-w-d1cfe300",
       "exerciseId": "cmpzkksb2001q95rz5xvwyj71",
       "sortOrder": 1,
       "sets": 3,
@@ -1402,8 +1527,8 @@
       "weightTier": "medium"
     },
     {
-      "id": "sms-we-717425d3",
-      "workoutId": "sms-w-9a18fbcc",
+      "id": "sms-we-fbb40065",
+      "workoutId": "sms-w-e4dded5a",
       "exerciseId": "cmpzjajej000095rzilwd9n9k",
       "sortOrder": 0,
       "sets": 1,
@@ -1413,8 +1538,8 @@
       "weightTier": "medium"
     },
     {
-      "id": "sms-we-94fcdee1",
-      "workoutId": "sms-w-9a18fbcc",
+      "id": "sms-we-72a4de6e",
+      "workoutId": "sms-w-e4dded5a",
       "exerciseId": "cmpzkksb2001q95rz5xvwyj71",
       "sortOrder": 1,
       "sets": 3,
@@ -1424,8 +1549,8 @@
       "weightTier": "medium"
     },
     {
-      "id": "sms-we-372f35f4",
-      "workoutId": "sms-w-36497522",
+      "id": "sms-we-7170bfed",
+      "workoutId": "sms-w-e9fd7b47",
       "exerciseId": "cmpzjajej000095rzilwd9n9k",
       "sortOrder": 0,
       "sets": 1,
@@ -1435,12 +1560,693 @@
       "weightTier": "medium"
     },
     {
-      "id": "sms-we-98c16d6f",
-      "workoutId": "sms-w-36497522",
+      "id": "sms-we-ff07aa32",
+      "workoutId": "sms-w-e9fd7b47",
       "exerciseId": "cmpzkksb2001q95rz5xvwyj71",
       "sortOrder": 1,
       "sets": 3,
       "reps": "10,10,10",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-e488e49c",
+      "workoutId": "sms-w-0cf28938",
+      "exerciseId": "cmpzjajej000095rzilwd9n9k",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "—",
+      "notes": "QA SMS priority · Warm-up block",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-fcd8bd4f",
+      "workoutId": "sms-w-0cf28938",
+      "exerciseId": "cmpzkksb2001q95rz5xvwyj71",
+      "sortOrder": 1,
+      "sets": 3,
+      "reps": "10,10,10",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-58b75006",
+      "workoutId": "sms-w-f96742f6",
+      "exerciseId": "cmpzjajej000095rzilwd9n9k",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "—",
+      "notes": "Kiss my ass\n20,20,20\nGet screwed\n10,10,10\nGet your ass out of bed\n1,1,1,1 · Warm-up block",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-ae685686",
+      "workoutId": "sms-w-efdc6c34",
+      "exerciseId": "cmpzjajej000095rzilwd9n9k",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "—",
+      "notes": "Warm up bicycle or walk at 3.3 on treadmill at 7.0 incline\n5 mins\nRest periods are 1:30 min\nUpper body warm up\nBand exercises · Warm-up block",
+      "setScheme": "standard",
+      "weightTier": "medium",
+      "blockName": "Warm-up"
+    },
+    {
+      "id": "sms-we-41bbcd5c",
+      "workoutId": "sms-w-efdc6c34",
+      "exerciseId": "cmpzjajf9000395rz0mflsjwv",
+      "sortOrder": 1,
+      "sets": 1,
+      "reps": "—",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium",
+      "blockName": "Dumbbell bicep curls 20"
+    },
+    {
+      "id": "sms-we-ab98608a",
+      "workoutId": "sms-w-efdc6c34",
+      "exerciseId": "cmpyrwo350001tfrzhruno48a",
+      "sortOrder": 2,
+      "sets": 1,
+      "reps": "—",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium",
+      "blockName": "Dumbbell shoulder press 20"
+    },
+    {
+      "id": "sms-we-3b4f5c10",
+      "workoutId": "sms-w-efdc6c34",
+      "exerciseId": "cmpzjajfj000595rz07vmle0l",
+      "sortOrder": 3,
+      "sets": 1,
+      "reps": "—",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium",
+      "blockName": "25 air squats"
+    },
+    {
+      "id": "sms-we-62c48cf5",
+      "workoutId": "sms-w-efdc6c34",
+      "exerciseId": "cmpzkksqd002s95rzfzpi0v9l",
+      "sortOrder": 4,
+      "sets": 1,
+      "reps": "—",
+      "notes": "4 sets · 20 sec hold at bottom of lift · Then burnout reps immediately · Stay flexible",
+      "setScheme": "standard",
+      "weightTier": "medium",
+      "blockName": "Leg press"
+    },
+    {
+      "id": "sms-we-3e2924a9",
+      "workoutId": "sms-w-efdc6c34",
+      "exerciseId": "ex_c3f19e68f97c42d982c2372527d9e20b",
+      "sortOrder": 5,
+      "sets": 1,
+      "reps": "—",
+      "notes": "4 sets · 30 sec hold at top of squeeze · Then burnout reps immediately",
+      "setScheme": "standard",
+      "weightTier": "medium",
+      "blockName": "Barbell hip thrust raise"
+    },
+    {
+      "id": "sms-we-33dd11a4",
+      "workoutId": "sms-w-efdc6c34",
+      "exerciseId": "ex_94f772a045464b4ebbe443385cfaae26",
+      "sortOrder": 6,
+      "sets": 1,
+      "reps": "—",
+      "notes": "4 sets · 30 sec hold at top of squeeze · Then 15 reps immediately",
+      "setScheme": "standard",
+      "weightTier": "medium",
+      "blockName": "Seated calf raises"
+    },
+    {
+      "id": "sms-we-75611552",
+      "workoutId": "sms-w-efdc6c34",
+      "exerciseId": "ex_a1b3d7fe1a2a4975815d79e8dc71ea0b",
+      "sortOrder": 7,
+      "sets": 1,
+      "reps": "—",
+      "notes": "3 sets each leg · Hold at bottom 20 sec · Then burnout reps immediately",
+      "setScheme": "standard",
+      "weightTier": "medium",
+      "blockName": "Dumbbell Bulgarian split squats"
+    },
+    {
+      "id": "sms-we-97455445",
+      "workoutId": "sms-w-efdc6c34",
+      "exerciseId": "ex_f0442b06fa3e4259a44c6d66a3d6a9a8",
+      "sortOrder": 8,
+      "sets": 1,
+      "reps": "—",
+      "notes": "8 rounds 20 sec on 20 sec off",
+      "setScheme": "standard",
+      "weightTier": "medium",
+      "blockName": "HIIT jump squats to finish"
+    },
+    {
+      "id": "sms-we-4c2fbbf2",
+      "workoutId": "sms-w-efdc6c34",
+      "exerciseId": "cmpzkks8c001j95rzjldj7mn5",
+      "sortOrder": 9,
+      "sets": 1,
+      "reps": "—",
+      "notes": "Stretch well",
+      "setScheme": "standard",
+      "weightTier": "medium",
+      "blockName": "Stretch / Cool-down"
+    },
+    {
+      "id": "sms-we-b67b656b",
+      "workoutId": "sms-w-7a07088e",
+      "exerciseId": "cmpzjajej000095rzilwd9n9k",
+      "blockName": "Warm-up",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "—",
+      "notes": "Warm up bicycle or walk at 3.3 on treadmill at 7.0 incline\n5 mins\nRest periods are 1:30 min\nUpper body warm up\nBand exercises · Warm-up block",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-aa9d91c7",
+      "workoutId": "sms-w-7a07088e",
+      "exerciseId": "cmpzjajf9000395rz0mflsjwv",
+      "blockName": "Dumbbell bicep curls",
+      "sortOrder": 1,
+      "sets": 1,
+      "reps": "20",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-77df80af",
+      "workoutId": "sms-w-7a07088e",
+      "exerciseId": "cmpzjajfd000495rzlurdsp0x",
+      "blockName": "Dumbbell shoulder press",
+      "sortOrder": 2,
+      "sets": 1,
+      "reps": "20",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-33ed129a",
+      "workoutId": "sms-w-7a07088e",
+      "exerciseId": "cmpzjajfj000595rz07vmle0l",
+      "blockName": "Air squats",
+      "sortOrder": 3,
+      "sets": 1,
+      "reps": "25",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-a8422e59",
+      "workoutId": "sms-w-7a07088e",
+      "exerciseId": "cmpzkksqd002s95rzfzpi0v9l",
+      "blockName": "Leg press",
+      "sortOrder": 4,
+      "sets": 4,
+      "reps": "—",
+      "notes": "20 sec hold at bottom of lift · Then burnout reps immediately · Stay flexible",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-6966bd72",
+      "workoutId": "sms-w-7a07088e",
+      "exerciseId": "ex_c3f19e68f97c42d982c2372527d9e20b",
+      "blockName": "Barbell Hip thrust, back on bench hold at top of squeeze",
+      "sortOrder": 5,
+      "sets": 4,
+      "reps": "—",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-1f08c63a",
+      "workoutId": "sms-w-7a07088e",
+      "exerciseId": "cmpzkksgn002195rzaah6s1oh",
+      "blockName": "Seated calve raises machine or standing cave raises with weight single leg",
+      "sortOrder": 6,
+      "sets": 4,
+      "reps": "—",
+      "notes": "30 sec hold at top of squeeze",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-7caa903a",
+      "workoutId": "sms-w-7a07088e",
+      "exerciseId": "ex_a1b3d7fe1a2a4975815d79e8dc71ea0b",
+      "blockName": "Dumbbell Bulgarians split squats",
+      "sortOrder": 7,
+      "sets": 3,
+      "reps": "—",
+      "notes": "Hold at bottom of lift 20 sec · Then burn out reps immediately · Each leg",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-b2b38749",
+      "workoutId": "sms-w-7a07088e",
+      "exerciseId": "ex_f0442b06fa3e4259a44c6d66a3d6a9a8",
+      "blockName": "HIIT jump squats to finish",
+      "sortOrder": 8,
+      "sets": 8,
+      "reps": "20s on",
+      "notes": null,
+      "setScheme": "timed",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-c523178f",
+      "workoutId": "sms-w-7a07088e",
+      "exerciseId": "cmpzkks8c001j95rzjldj7mn5",
+      "blockName": "Stretch / Cool-down",
+      "sortOrder": 9,
+      "sets": 1,
+      "reps": "—",
+      "notes": "Stretch",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-d2cbae2a",
+      "workoutId": "sms-w-fba35fa5",
+      "exerciseId": "cmpzjajej000095rzilwd9n9k",
+      "blockName": "Warm-up",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "—",
+      "notes": "Saturday Fun Day\nWarm-up (bonus points if done before coach arrives)\n5 min bike, row, or brisk walk\nWall taps 20\nBand pull-aparts 15 · Warm-up block",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-f287dced",
+      "workoutId": "sms-w-fba35fa5",
+      "exerciseId": "cmpzjajf9000395rz0mflsjwv",
+      "blockName": "Lightweight bicep curls",
+      "sortOrder": 1,
+      "sets": 1,
+      "reps": "15",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-22979cf6",
+      "workoutId": "sms-w-fba35fa5",
+      "exerciseId": "cmpzjajfd000495rzlurdsp0x",
+      "blockName": "Light shoulder press",
+      "sortOrder": 2,
+      "sets": 1,
+      "reps": "15",
+      "notes": "Shrugs 15",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-7373be82",
+      "workoutId": "sms-w-fba35fa5",
+      "exerciseId": "ex_9a54f20b094142e4ac8e51d415c18eb2",
+      "blockName": "Bosu ball squats",
+      "sortOrder": 3,
+      "sets": 1,
+      "reps": "10",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-2948f55f",
+      "workoutId": "sms-w-fba35fa5",
+      "exerciseId": "cmpzkkspv002q95rzf6nqlqga",
+      "blockName": "Jump squats",
+      "sortOrder": 4,
+      "sets": 3,
+      "reps": "15,15,15",
+      "notes": "Sexy boob lifts · Slap that ass hardening · Let's keep our intestines functioning",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-7a3b4a1c",
+      "workoutId": "sms-w-647a00df",
+      "exerciseId": "cmpzjajej000095rzilwd9n9k",
+      "blockName": "Warm-up",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "—",
+      "notes": "Saturday Fun Day\nWarm-up (bonus points if done before coach arrives)\n5 min bike, row, or brisk walk\nWall taps 20\nBand pull-aparts 15 · Warm-up block",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-50433a10",
+      "workoutId": "sms-w-647a00df",
+      "exerciseId": "cmpzjajf9000395rz0mflsjwv",
+      "blockName": "Lightweight bicep curls",
+      "sortOrder": 1,
+      "sets": 1,
+      "reps": "15",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-eb863355",
+      "workoutId": "sms-w-647a00df",
+      "exerciseId": "cmpzjajfd000495rzlurdsp0x",
+      "blockName": "Light shoulder press",
+      "sortOrder": 2,
+      "sets": 1,
+      "reps": "15",
+      "notes": "Shrugs 15",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-94352400",
+      "workoutId": "sms-w-647a00df",
+      "exerciseId": "ex_9a54f20b094142e4ac8e51d415c18eb2",
+      "blockName": "Bosu ball squats",
+      "sortOrder": 3,
+      "sets": 1,
+      "reps": "10",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-e5382e84",
+      "workoutId": "sms-w-647a00df",
+      "exerciseId": "cmpzkkspv002q95rzf6nqlqga",
+      "blockName": "Jump squats",
+      "sortOrder": 4,
+      "sets": 1,
+      "reps": "10",
+      "notes": "Sexy boob lifts 10,10,10 · Slap that ass hardening 12,12,12,12 · Let's keep our intestines functioning 15,15,15",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-d0d33ddf",
+      "workoutId": "sms-w-a2cfb21f",
+      "exerciseId": "cmpzjajej000095rzilwd9n9k",
+      "blockName": "Warm-up",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "—",
+      "notes": "Saturday Fun Day\nWarm-up (bonus points if done before coach arrives)\n5 min bike, row, or brisk walk\nWall taps 20\nBand pull-aparts 15 · Warm-up block",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-0a7d2ca5",
+      "workoutId": "sms-w-a2cfb21f",
+      "exerciseId": "cmpzjajf9000395rz0mflsjwv",
+      "blockName": "Lightweight bicep curls",
+      "sortOrder": 1,
+      "sets": 1,
+      "reps": "15",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-4e4ed13e",
+      "workoutId": "sms-w-a2cfb21f",
+      "exerciseId": "cmpzjajfd000495rzlurdsp0x",
+      "blockName": "Light shoulder press",
+      "sortOrder": 2,
+      "sets": 1,
+      "reps": "15",
+      "notes": "Shrugs 15",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-12ea7565",
+      "workoutId": "sms-w-a2cfb21f",
+      "exerciseId": "ex_9a54f20b094142e4ac8e51d415c18eb2",
+      "blockName": "Bosu ball squats",
+      "sortOrder": 3,
+      "sets": 1,
+      "reps": "10",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-7da2bfbc",
+      "workoutId": "sms-w-a2cfb21f",
+      "exerciseId": "cmpzkkspv002q95rzf6nqlqga",
+      "blockName": "Jump squats",
+      "sortOrder": 4,
+      "sets": 1,
+      "reps": "10",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-45e6201e",
+      "workoutId": "sms-w-a2cfb21f",
+      "exerciseId": "ex_818cfcba366b4cea9f483eaf2667d67f",
+      "blockName": "Sexy boob lifts 10,10,10",
+      "sortOrder": 5,
+      "sets": 1,
+      "reps": "—",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-7843268e",
+      "workoutId": "sms-w-a2cfb21f",
+      "exerciseId": "ex_84fc9e8b9152488a80980d98aed8ec99",
+      "blockName": "Slap that ass hardening 12,12,12,12",
+      "sortOrder": 6,
+      "sets": 1,
+      "reps": "—",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-1386a194",
+      "workoutId": "sms-w-a2cfb21f",
+      "exerciseId": "cmpzkktsh005j95rzsmqz30tu",
+      "blockName": "Let's keep our intestines functioning 15,15,15",
+      "sortOrder": 7,
+      "sets": 1,
+      "reps": "—",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-7f70a7b8",
+      "workoutId": "sms-w-54987204",
+      "exerciseId": "cmpzjajej000095rzilwd9n9k",
+      "blockName": "Warm-up",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "—",
+      "notes": "Saturday Fun Day\nWarm-up (bonus points if done before coach arrives)\n5 min bike, row, or brisk walk\nWall taps 20\nBand pull-aparts 15 · Warm-up block",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-17d797b0",
+      "workoutId": "sms-w-54987204",
+      "exerciseId": "cmpzjajf9000395rz0mflsjwv",
+      "blockName": "Lightweight bicep curls",
+      "sortOrder": 1,
+      "sets": 1,
+      "reps": "15",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-18efa62b",
+      "workoutId": "sms-w-54987204",
+      "exerciseId": "cmpzjajfd000495rzlurdsp0x",
+      "blockName": "Light shoulder press",
+      "sortOrder": 2,
+      "sets": 1,
+      "reps": "15",
+      "notes": "Shrugs 15",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-e054972b",
+      "workoutId": "sms-w-54987204",
+      "exerciseId": "ex_9a54f20b094142e4ac8e51d415c18eb2",
+      "blockName": "Bosu ball squats",
+      "sortOrder": 3,
+      "sets": 1,
+      "reps": "10",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-9b022940",
+      "workoutId": "sms-w-54987204",
+      "exerciseId": "cmpzkkspv002q95rzf6nqlqga",
+      "blockName": "Jump squats",
+      "sortOrder": 4,
+      "sets": 1,
+      "reps": "10",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-e02770f0",
+      "workoutId": "sms-w-54987204",
+      "exerciseId": "ex_818cfcba366b4cea9f483eaf2667d67f",
+      "blockName": "Sexy boob lifts",
+      "sortOrder": 5,
+      "sets": 3,
+      "reps": "10,10,10",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-d9bd29b9",
+      "workoutId": "sms-w-54987204",
+      "exerciseId": "ex_84fc9e8b9152488a80980d98aed8ec99",
+      "blockName": "Slap that ass hardening",
+      "sortOrder": 6,
+      "sets": 4,
+      "reps": "12,12,12,12",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-cbedb49c",
+      "workoutId": "sms-w-54987204",
+      "exerciseId": "cmpzkktsh005j95rzsmqz30tu",
+      "blockName": "Let's keep our intestines functioning",
+      "sortOrder": 7,
+      "sets": 3,
+      "reps": "15,15,15",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-7124033c",
+      "workoutId": "sms-w-c8bf056e",
+      "exerciseId": "cmpzjajej000095rzilwd9n9k",
+      "blockName": "Warm-up",
+      "sortOrder": 0,
+      "sets": 1,
+      "reps": "—",
+      "notes": "Saturday Fun Day\nWarm-up (bonus points if done before coach arrives)\n5 min bike, row, or brisk walk\nWall taps 20\nBand pull-aparts 15 · Warm-up block",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-9eaae436",
+      "workoutId": "sms-w-c8bf056e",
+      "exerciseId": "cmpzjajf9000395rz0mflsjwv",
+      "blockName": "Lightweight bicep curls",
+      "sortOrder": 1,
+      "sets": 1,
+      "reps": "15",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-66c05b06",
+      "workoutId": "sms-w-c8bf056e",
+      "exerciseId": "cmpzjajfd000495rzlurdsp0x",
+      "blockName": "Light shoulder press",
+      "sortOrder": 2,
+      "sets": 1,
+      "reps": "15",
+      "notes": "Shrugs 15",
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-eec725a2",
+      "workoutId": "sms-w-c8bf056e",
+      "exerciseId": "ex_9a54f20b094142e4ac8e51d415c18eb2",
+      "blockName": "Bosu ball squats",
+      "sortOrder": 3,
+      "sets": 1,
+      "reps": "10",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-d6fe9c48",
+      "workoutId": "sms-w-c8bf056e",
+      "exerciseId": "cmpzkkspv002q95rzf6nqlqga",
+      "blockName": "Jump squats",
+      "sortOrder": 4,
+      "sets": 1,
+      "reps": "10",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-a99967b8",
+      "workoutId": "sms-w-c8bf056e",
+      "exerciseId": "ex_818cfcba366b4cea9f483eaf2667d67f",
+      "blockName": "Sexy boob lifts",
+      "sortOrder": 5,
+      "sets": 3,
+      "reps": "10,10,10",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-dbdb9ecf",
+      "workoutId": "sms-w-c8bf056e",
+      "exerciseId": "ex_84fc9e8b9152488a80980d98aed8ec99",
+      "blockName": "Slap that ass hardening",
+      "sortOrder": 6,
+      "sets": 4,
+      "reps": "12,12,12,12",
+      "notes": null,
+      "setScheme": "standard",
+      "weightTier": "medium"
+    },
+    {
+      "id": "sms-we-ab9cfd80",
+      "workoutId": "sms-w-c8bf056e",
+      "exerciseId": "cmpzkktsh005j95rzsmqz30tu",
+      "blockName": "Let's keep our intestines functioning",
+      "sortOrder": 7,
+      "sets": 3,
+      "reps": "15,15,15",
       "notes": null,
       "setScheme": "standard",
       "weightTier": "medium"

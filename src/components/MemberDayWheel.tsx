@@ -103,6 +103,7 @@ export default function MemberDayWheel({
   if (!days.length) return null;
 
   const compactChip = metrics.chipW < 58;
+  const allDaysVisible = days.length <= VISIBLE_DAYS;
 
   return (
     <div className="day-wheel-shell mx-auto flex w-full min-w-0 max-w-full items-center justify-center gap-1 sm:gap-2">
@@ -120,13 +121,13 @@ export default function MemberDayWheel({
         ref={viewportRef}
         role="listbox"
         aria-label="Workout days"
-        className="day-wheel-viewport min-w-0 flex-1 py-2"
+        className={`day-wheel-viewport min-w-0 flex-1 py-2 ${allDaysVisible ? "day-wheel-viewport--centered" : ""}`}
       >
         <div
           className="day-wheel-strip"
           style={{
             gap: metrics.gap,
-            transform: `translate3d(-${startIdx * metrics.step}px, 0, 0)`,
+            transform: allDaysVisible ? undefined : `translate3d(-${startIdx * metrics.step}px, 0, 0)`,
           }}
         >
           {days.map((day) => {

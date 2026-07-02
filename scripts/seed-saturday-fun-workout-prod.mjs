@@ -100,7 +100,7 @@ async function main() {
   }
   console.log(`\n── Links (forward to students) ──`);
   console.log(`Coach class:  ${base}/admin/day?date=${SESSION_DATE}`);
-  console.log(`Coach plan:   ${base}/admin/plan?date=${SESSION_DATE}`);
+  console.log(`Coach plan:   ${base}/admin/day?plan=1`);
   for (const line of found) {
     const id = line.match(/\((member-[^)]+)\)/)?.[1];
     if (id) {

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import CoachClassDayBand from "@/components/CoachClassDayBand";
+import CoachLessonPlanBuilder from "@/components/CoachLessonPlanBuilder";
+import type { CoachMemberOption } from "@/components/CoachMemberPicker";
 import type { CoachDayStudentCard } from "@/lib/coach-day";
 import type { TodaySession } from "@/lib/today-sessions";
 
@@ -45,32 +46,27 @@ function attendanceStatus(
 export default function CoachDashboard({
   sessionDate,
   dateLabel,
-  calendarToday,
   students: initialStudents,
   sessionCount,
   savedSessions,
+  memberOptions,
+  initialPlanOpen = false,
 }: {
   sessionDate: string;
   dateLabel: string;
-  calendarToday: string;
   students: CoachDayStudentCard[];
   sessionCount: number;
   savedSessions: TodaySession[];
+  memberOptions: CoachMemberOption[];
+  initialPlanOpen?: boolean;
 }) {
   const router = useRouter();
   const newWorkoutRef = useRef<HTMLDivElement>(null);
   const [students, setStudents] = useState(initialStudents);
   const [tiles, setTiles] = useState<LiveFloorTile[]>([]);
   const [message, setMessage] = useState<string | null>(null);
-  const [newWorkoutStep, setNewWorkoutStep] = useState<"idle" | "paste" | "assign" | "done">("idle");
-  const [newPlanText, setNewPlanText] = useState("");
-  const [publishTargetIds, setPublishTargetIds] = useState<string[]>([]);
-  const [publishResult, setPublishResult] = useState<{ names: string[]; built: number } | null>(null);
-  const [sendSmsOnPublish] = useState(true);
-  const [savingPlan, setSavingPlan] = useState(false);
+  const [showPlanWorkout, setShowPlanWorkout] = useState(initialPlanOpen);
   const [publishingSaved, setPublishingSaved] = useState(false);
-
-  const showNewWorkout = newWorkoutStep === "paste" || newWorkoutStep === "assign";
   const assignedStudents = students.filter((s) => s.assigned);
   const openStudents = students.filter((s) => !s.assigned);
   const tileByUser = useMemo(() => new Map(tiles.map((t) => [t.userId, t])), [tiles]);
@@ -86,17 +82,17 @@ export default function CoachDashboard({
 
   const invitedCount = Math.max(0, assignedStudents.length - joinedCount);
 
-  const matchingSavedSession = useMemo(() => {
-    const key = newPlanText.trim().replace(/\r\n/g, "\n");
-    if (!key) return null;
-    return savedSessions.find((s) => s.rawSms.trim().replace(/\r\n/g, "\n") === key) ?? null;
-  }, [newPlanText, savedSessions]);
-
-  const publishingSavedClass = Boolean(matchingSavedSession);
-
   useEffect(() => {
     setStudents(initialStudents);
   }, [initialStudents]);
+
+  useEffect(() => {
+    if (!initialPlanOpen) return;
+    setShowPlanWorkout(true);
+    requestAnimationFrame(() => {
+      newWorkoutRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }, [initialPlanOpen]);
 
   const applyTiles = useCallback((data: { tiles: LiveFloorTile[] }) => {
     setTiles(
@@ -135,19 +131,15 @@ export default function CoachDashboard({
     return () => source.close();
   }, [sessionDate, applyTiles]);
 
-  const openNewWorkout = useCallback(() => {
-    setNewWorkoutStep("paste");
-    setPublishResult(null);
-    setPublishTargetIds(students.map((s) => s.id));
+  const openPlanWorkout = useCallback(() => {
+    setShowPlanWorkout(true);
     requestAnimationFrame(() => {
       newWorkoutRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
-  }, [students]);
+  }, []);
 
-  const closeNewWorkout = useCallback(() => {
-    setNewWorkoutStep("idle");
-    setNewPlanText("");
-    setPublishTargetIds([]);
+  const closePlanWorkout = useCallback(() => {
+    setShowPlanWorkout(false);
   }, []);
 
   async function publishSavedToOpenStudents() {
@@ -181,50 +173,6 @@ export default function CoachDashboard({
     }
   }
 
-  async function deployNewWorkout() {
-    if (!newPlanText.trim() || publishTargetIds.length === 0) return;
-    const names = students
-      .filter((s) => publishTargetIds.includes(s.id))
-      .map((s) => s.name);
-    setSavingPlan(true);
-    setMessage(null);
-    try {
-      const scheduled = new Date(`${sessionDate}T06:30:00`);
-      const res = await fetch("/api/today/cascade", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionDate,
-          scheduledAt: scheduled.toISOString(),
-          sendSmsAlert: sendSmsOnPublish,
-          cascade: {
-            rawSms: newPlanText.trim(),
-            userIds: publishTargetIds,
-            workoutId: publishingSavedClass ? matchingSavedSession?.workoutId : undefined,
-          },
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setMessage(data.error || "Could not build workout.");
-        return;
-      }
-      setPublishResult({ names, built: data.built ?? 1 });
-      setNewWorkoutStep("done");
-      setNewPlanText("");
-      setPublishTargetIds([]);
-      router.refresh();
-    } finally {
-      setSavingPlan(false);
-    }
-  }
-
-  function togglePublishTarget(id: string) {
-    setPublishTargetIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
-  }
-
   return (
     <div className="coach-dashboard flex min-h-[calc(100dvh-10rem)] flex-col gap-4">
       <div className="shrink-0 space-y-4">
@@ -247,38 +195,20 @@ export default function CoachDashboard({
           Full-screen workout floor — count sets, no sidebar, today only.
         </p>
 
-        {publishResult && newWorkoutStep === "done" && (
-          <div className="card space-y-3 border-emerald-500/35 bg-emerald-500/10">
-            <p className="text-sm font-semibold text-emerald-100">
-              Published to {publishResult.names.length} student
-              {publishResult.names.length !== 1 ? "s" : ""}
-            </p>
-            <Link href="/admin/today" className="btn-primary inline-flex min-h-[44px] px-4 text-sm">
-              Open Go to Today
-            </Link>
-          </div>
-        )}
-
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => {
-              if (showNewWorkout) closeNewWorkout();
-              else openNewWorkout();
+              if (showPlanWorkout) closePlanWorkout();
+              else openPlanWorkout();
             }}
-            className="btn-ghost min-h-[44px] flex-1 px-4 text-sm sm:flex-none"
+            className="btn-ghost min-h-[44px] w-full px-4 text-sm sm:w-auto"
           >
-            {showNewWorkout ? "Cancel plan" : "New workout"}
+            {showPlanWorkout ? "Cancel plan" : "Plan workout"}
           </button>
-          <Link
-            href={`/admin/plan?date=${sessionDate}`}
-            className="btn-ghost min-h-[44px] flex-1 px-4 text-center text-sm sm:flex-none"
-          >
-            Full planner
-          </Link>
         </div>
 
-        {sessionCount > 0 && !showNewWorkout && openStudents.length > 0 && (
+        {sessionCount > 0 && !showPlanWorkout && openStudents.length > 0 && (
           <button
             type="button"
             disabled={publishingSaved}
@@ -289,60 +219,17 @@ export default function CoachDashboard({
           </button>
         )}
 
-        {showNewWorkout && (
-          <div ref={newWorkoutRef} className="card space-y-3 border-amber-500/30 bg-amber-500/5">
-            {newWorkoutStep === "paste" && (
-              <>
-                <textarea
-                  className="input min-h-[120px] w-full text-sm"
-                  placeholder="Paste today’s plan…"
-                  value={newPlanText}
-                  onChange={(e) => setNewPlanText(e.target.value)}
-                />
-                <CoachClassDayBand sessionDate={sessionDate} calendarToday={calendarToday} />
-                <button
-                  type="button"
-                  disabled={!newPlanText.trim()}
-                  onClick={() => {
-                    setPublishTargetIds(students.map((s) => s.id));
-                    setNewWorkoutStep("assign");
-                  }}
-                  className="btn-primary min-h-[44px] px-4 text-sm"
-                >
-                  Choose students →
-                </button>
-              </>
-            )}
-            {newWorkoutStep === "assign" && (
-              <>
-                <div className="flex flex-wrap gap-2">
-                  {students.map((s) => {
-                    const on = publishTargetIds.includes(s.id);
-                    return (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => togglePublishTarget(s.id)}
-                        className={`rounded-full border px-3 py-2 text-xs font-medium ${
-                          on ? "border-accent bg-accent/20 text-accent" : "border-[var(--border)]"
-                        }`}
-                      >
-                        {on ? "✓ " : ""}
-                        {s.name}
-                      </button>
-                    );
-                  })}
-                </div>
-                <button
-                  type="button"
-                  disabled={savingPlan || publishTargetIds.length === 0}
-                  onClick={() => void deployNewWorkout()}
-                  className="btn-primary min-h-[44px] w-full text-sm"
-                >
-                  {savingPlan ? "Publishing…" : "Publish to class"}
-                </button>
-              </>
-            )}
+        {showPlanWorkout && (
+          <div ref={newWorkoutRef}>
+            <CoachLessonPlanBuilder
+              key={sessionDate}
+              sessionDate={sessionDate}
+              viewDateLabel={dateLabel}
+              memberOptions={memberOptions}
+              savedSessions={savedSessions}
+              embedded
+              onPublished={() => router.refresh()}
+            />
           </div>
         )}
 

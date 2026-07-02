@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useId, useState } from "react";
-import { landingVideoEmbedSrc } from "@/lib/landing-media";
+import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
 
 export default function WelcomeVideoPopover({
   children,
@@ -16,8 +16,6 @@ export default function WelcomeVideoPopover({
   const [open, setOpen] = useState(false);
   const [isTouch, setIsTouch] = useState(false);
   const titleId = useId();
-  const embedSrc = landingVideoEmbedSrc(welcomeVideoUrl, true);
-
   useEffect(() => {
     setIsTouch(window.matchMedia("(hover: none)").matches);
   }, []);
@@ -25,14 +23,13 @@ export default function WelcomeVideoPopover({
   const show = useCallback(() => setOpen(true), []);
   const hide = useCallback(() => setOpen(false), []);
 
-  const videoBody = embedSrc ? (
+  const videoBody = welcomeVideoUrl?.trim() ? (
     <div className="aspect-video overflow-hidden rounded-xl bg-black">
-      <iframe
+      <YoutubeAutoplayFrame
         className="h-full w-full"
-        src={embedSrc}
+        videoUrl={welcomeVideoUrl}
         title="Welcome video"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
+        kickPlayback={open}
       />
     </div>
   ) : (

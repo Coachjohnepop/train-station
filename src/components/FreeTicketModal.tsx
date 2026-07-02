@@ -82,11 +82,31 @@ export default function FreeTicketModal({
   }, [open, hasJeremy]);
 
   useEffect(() => {
+    if (!open || !rickrollSrc) return;
+    const kick = () => {
+      postYoutubeEmbedCommand(rickrollRef.current, "playVideo");
+      postYoutubeEmbedCommand(rickrollRef.current, "unMute");
+    };
+    const t1 = window.setTimeout(kick, 200);
+    const t2 = window.setTimeout(kick, 1000);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [open, rickrollSrc]);
+
+  useEffect(() => {
     if (!fadeJeremyIn) return;
-    const playId = window.setTimeout(() => {
+    const kick = () => {
       postYoutubeEmbedCommand(jeremyRef.current, "playVideo");
-    }, 400);
-    return () => window.clearTimeout(playId);
+      postYoutubeEmbedCommand(jeremyRef.current, "unMute");
+    };
+    const t1 = window.setTimeout(kick, 400);
+    const t2 = window.setTimeout(kick, 1200);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
   }, [fadeJeremyIn]);
 
   if (!open) return null;

@@ -3,21 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import EmailInput, { rememberEmail } from "@/components/EmailInput";
-import { youtubeEmbedUrl } from "@/lib/youtube";
+import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
 
-const PLAN_VIDEO_EMBEDS = {
-  explorer: youtubeEmbedUrl("https://www.youtube.com/watch?v=dQw4w9wgxcQ", {
-    autoplay: true,
-    mute: true,
-  }),
-  member: youtubeEmbedUrl("https://www.youtube.com/watch?v=3JZ_9j6z8fQ", {
-    autoplay: true,
-    mute: true,
-  }),
-  pro: youtubeEmbedUrl("https://www.youtube.com/watch?v=fJ9rUzIMcZQ", {
-    autoplay: true,
-    mute: true,
-  }),
+const PLAN_VIDEOS = {
+  explorer: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  member: "https://www.youtube.com/watch?v=3JZ_9j6z8fQ",
+  pro: "https://www.youtube.com/watch?v=fJ9rUzIMcZQ",
 } as const;
 
 export default function PricingWithInlineSignup({ recParam }: { recParam?: string }) {
@@ -99,14 +90,11 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
               "Starting here is how every great athlete began. Build the habit small and watch it compound."
             </p>
             <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
-              <iframe
-                className="w-full h-full"
-                src={PLAN_VIDEO_EMBEDS.explorer ?? undefined}
+              <YoutubeAutoplayFrame
+                className="h-full w-full"
+                videoUrl={PLAN_VIDEOS.explorer}
                 title="Instructor message for Explorer plan"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              ></iframe>
+              />
             </div>
           </div>
 
@@ -152,14 +140,11 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
               "This is the plan where real accountability kicks in. The structure here turns effort into lasting results."
             </p>
             <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
-              <iframe
-                className="w-full h-full"
-                src={PLAN_VIDEO_EMBEDS.member ?? undefined}
+              <YoutubeAutoplayFrame
+                className="h-full w-full"
+                videoUrl={PLAN_VIDEOS.member}
                 title="Instructor message for Member plan"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              ></iframe>
+              />
             </div>
           </div>
 
@@ -204,14 +189,11 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
               "Committing for the year is how the serious athletes separate themselves. This plan gives you the deepest level of support and priority access."
             </p>
             <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
-              <iframe
-                className="w-full h-full"
-                src={PLAN_VIDEO_EMBEDS.pro ?? undefined}
+              <YoutubeAutoplayFrame
+                className="h-full w-full"
+                videoUrl={PLAN_VIDEOS.pro}
                 title="Instructor message for Pro plan"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              ></iframe>
+              />
             </div>
           </div>
 

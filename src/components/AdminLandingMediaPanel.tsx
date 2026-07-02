@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { saveLandingMediaAction } from "@/app/admin/landing/actions";
-import { landingVideoEmbedSrc, WELCOME_VIDEO_PLAN_OPTIONS } from "@/lib/landing-media";
+import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
+import { WELCOME_VIDEO_PLAN_OPTIONS } from "@/lib/landing-media";
 import type { WelcomeVideosByPlan } from "@/lib/landing-media-store";
 import { isYoutubeUrl } from "@/lib/youtube";
 
@@ -104,9 +105,6 @@ export default function AdminLandingMediaPanel({
     setSaving(false);
   }
 
-  const welcomePreview = landingVideoEmbedSrc(welcomeUrl || null);
-  const freePreview = landingVideoEmbedSrc(freeUrl || null);
-
   return (
     <div className="space-y-8">
       <div className="rounded-2xl border border-[#7c3aed]/30 bg-[#7c3aed]/5 p-4 text-sm text-[#c4b5fd]">
@@ -142,7 +140,6 @@ export default function AdminLandingMediaPanel({
         </div>
         {WELCOME_VIDEO_PLAN_OPTIONS.map(({ plan, label }) => {
           const value = welcomeByPlan[plan] || "";
-          const preview = landingVideoEmbedSrc(value || welcomeUrl || null);
           return (
             <VideoField
               key={plan}
@@ -150,13 +147,13 @@ export default function AdminLandingMediaPanel({
               label={`${label} welcome`}
               hint={`Shown when someone signs up on the ${label} ticket.`}
               value={value}
+              previewUrl={value || welcomeUrl}
               onChange={(next) =>
                 setWelcomeByPlan((prev) => ({
                   ...prev,
                   [plan]: next.trim() || undefined,
                 }))
               }
-              previewSrc={preview}
               where={`Member onboard · ${label}`}
               compact
             />
@@ -168,7 +165,7 @@ export default function AdminLandingMediaPanel({
           hint="Used when a plan-specific URL is blank — also powers Watch intro on the home page."
           value={welcomeUrl}
           onChange={setWelcomeUrl}
-          previewSrc={welcomePreview}
+          previewUrl={welcomeUrl}
           where="Home · Watch intro · onboard fallback"
           compact
         />
@@ -180,7 +177,7 @@ export default function AdminLandingMediaPanel({
         hint="Prank clip (e.g. Rick Roll) — plays 10 seconds, then crossfades to Welcome video."
         value={freeUrl}
         onChange={setFreeUrl}
-        previewSrc={freePreview}
+        previewUrl={freeUrl}
         where="Home → Free ticket"
       />
 
@@ -284,7 +281,7 @@ function VideoField({
   hint,
   value,
   onChange,
-  previewSrc,
+  previewUrl,
   where,
   compact = false,
 }: {
@@ -293,10 +290,11 @@ function VideoField({
   hint: string;
   value: string;
   onChange: (v: string) => void;
-  previewSrc: string | null;
+  previewUrl?: string;
   where: string;
   compact?: boolean;
 }) {
+  const previewVideo = previewUrl?.trim() && isYoutubeUrl(previewUrl) ? previewUrl.trim() : null;
   return (
     <div className={`space-y-3 ${compact ? "rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-3" : "card"}`}>
       <div>
@@ -313,14 +311,12 @@ function VideoField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
-      {previewSrc ? (
+      {previewVideo ? (
         <div className="aspect-video overflow-hidden rounded-xl bg-black ring-1 ring-[#3d2660]">
-          <iframe
+          <YoutubeAutoplayFrame
             className="h-full w-full"
-            src={previewSrc}
+            videoUrl={previewVideo}
             title={`${label} preview`}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
           />
         </div>
       ) : (

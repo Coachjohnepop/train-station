@@ -30,7 +30,7 @@ export function youtubeVideoId(url: string): string | null {
 
 export type YoutubeEmbedOptions = {
   autoplay?: boolean;
-  /** Browsers block audible autoplay without a gesture — default mute when autoplay is on. */
+  /** true = muted autoplay. Default false when autoplay is on (audible after a tap). */
   mute?: boolean;
   enableJsApi?: boolean;
   origin?: string;
@@ -49,7 +49,7 @@ export function youtubeEmbedUrl(
   });
   if (options.autoplay) {
     params.set("autoplay", "1");
-    params.set("mute", options.mute === false ? "0" : "1");
+    params.set("mute", options.mute === true ? "1" : "0");
   }
   if (options.enableJsApi || options.origin) {
     params.set("enablejsapi", "1");

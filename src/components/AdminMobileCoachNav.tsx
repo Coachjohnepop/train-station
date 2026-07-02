@@ -30,7 +30,6 @@ export default function AdminMobileCoachNav({ onOpenMenu }: Props) {
 
   const onDash = pathname.startsWith("/admin/day") || pathname === "/admin";
   const onToday = pathname.startsWith("/admin/today");
-  const onPlan = pathname.startsWith("/admin/plan");
   const onLive = pathname.startsWith("/admin/live");
   const onChat = pathname.startsWith("/admin/chat");
 
@@ -52,12 +51,6 @@ export default function AdminMobileCoachNav({ onOpenMenu }: Props) {
             ▶
           </span>
           Today
-        </Link>
-        <Link href="/admin/plan" className={tabClass(onPlan)}>
-          <span className="coach-quick-nav-icon leading-none" aria-hidden>
-            ⊕
-          </span>
-          Plan
         </Link>
         <Link href="/admin/live" className={tabClass(onLive)}>
           <span className="coach-quick-nav-icon leading-none" aria-hidden>

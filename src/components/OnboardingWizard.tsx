@@ -3,7 +3,8 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import MemberHomeEquipment from "@/components/MemberHomeEquipment";
-import { landingVideoEmbedSrc, welcomeVideoUrlForPlan } from "@/lib/landing-media";
+import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
+import { welcomeVideoUrlForPlan } from "@/lib/landing-media";
 import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
 import QuickAuthSetupPrompt from "@/components/QuickAuthSetupPrompt";
@@ -64,7 +65,6 @@ export default function OnboardingWizard({
   const [error, setError] = useState<string | null>(null);
 
   const planWelcomeUrl = welcomeVideoUrlForPlan(plan, welcomeVideoUrl, welcomeVideosByPlan);
-  const welcomeEmbed = landingVideoEmbedSrc(planWelcomeUrl, true);
 
   async function nextStep() {
     setError(null);
@@ -153,14 +153,13 @@ export default function OnboardingWizard({
               A quick setup for texts and your profile — then your dashboard walks you through booking
               your coach intro and warming up.
             </p>
-            {welcomeEmbed ? (
+            {planWelcomeUrl ? (
               <div className="aspect-video overflow-hidden rounded-xl bg-black ring-1 ring-[#3d2660]">
-                <iframe
+                <YoutubeAutoplayFrame
                   className="h-full w-full"
-                  src={welcomeEmbed}
+                  videoUrl={planWelcomeUrl}
                   title="Welcome video"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
+                  kickPlayback={currentStep === 1}
                 />
               </div>
             ) : (

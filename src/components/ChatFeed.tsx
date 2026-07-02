@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { youtubeEmbedUrl } from "@/lib/youtube";
+import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
 import type { ChatMessage, ChatReaction, ChatThread } from "@/lib/coach-chat";
 import { bubbleColorsForMessage, messageKindLabel } from "@/lib/chat-colors";
 import { linkifyText } from "@/lib/linkify-text";
@@ -100,9 +100,6 @@ function MediaBubble({
   colors: ReturnType<typeof bubbleColorsForMessage>;
 }) {
   const isYoutube = message.kind === "youtube" && message.mediaUrl;
-  const embed = isYoutube
-    ? youtubeEmbedUrl(message.mediaUrl!, { autoplay: true, mute: true })
-    : null;
   const isVideo = message.kind === "video_upload" && message.mediaUrl;
   const isImage = message.kind === "image" && message.mediaUrl;
 
@@ -120,14 +117,12 @@ function MediaBubble({
           loading="lazy"
         />
       )}
-      {embed && (
+      {isYoutube && (
         <div className="aspect-video w-full bg-black">
-          <iframe
-            src={embed}
+          <YoutubeAutoplayFrame
+            videoUrl={message.mediaUrl!}
             title="Coach video"
             className="h-full w-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
           />
         </div>
       )}

@@ -20,9 +20,10 @@ export function isStripeTestMode(): boolean {
   return key.startsWith("sk_test_");
 }
 
-/** Demo membership prices — bypass env/blob until live Stripe catalog is wired. */
+/** Test-mode demo prices only — never override env when sk_live is set. */
 export function canonicalMembershipPriceId(planId: string): string | null {
   if (process.env.STRIPE_USE_CANONICAL_PRICES === "false") return null;
+  if (!isStripeTestMode()) return null;
   if (planId === "member" || planId === "business" || planId === "pro") {
     return MEMBERSHIP_STRIPE_PRICE_IDS[planId];
   }

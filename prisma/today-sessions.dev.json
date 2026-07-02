@@ -91,19 +91,80 @@
       "createdAt": "2026-06-15T03:40:07.383Z",
       "createdBy": "seed-beta"
     },
-    "today-2026-06-20-d2ac010c": {
-      "id": "today-2026-06-20-d2ac010c",
+    "today-2026-06-20-07261127": {
+      "id": "today-2026-06-20-07261127",
       "sessionDate": "2026-06-20",
       "scheduledAt": "2026-06-20T11:00:00.000Z",
       "title": "Coach SMS Workout",
-      "rawSms": "QA QA-SMOKE-1782217081903\nSo isolation/Core work\n\nWarm up well 5 min bike\n\nJump squats 20\n\nFlat bench Single arm dumbbell chest press\n10,10,10,10 each arm\n\nIncline bench single arm dumbbell chest press\n10,10,10,10 each arm\n\nHIIT cool down 5 mins\n30 sec on 30 sec off",
-      "workoutId": "sms-w-9756afcd",
+      "rawSms": "QA QA-SMOKE-1782217116734\nSo isolation/Core work\n\nWarm up well 5 min bike\n\nJump squats 20\n\nFlat bench Single arm dumbbell chest press\n10,10,10,10 each arm\n\nIncline bench single arm dumbbell chest press\n10,10,10,10 each arm\n\nHIIT cool down 5 mins\n30 sec on 30 sec off",
+      "workoutId": "sms-w-4e843f79",
       "programSlug": "adult",
       "userIds": [
         "demo-user-john-steph"
       ],
       "replacesSchedule": true,
-      "createdAt": "2026-06-23T12:18:05.729Z"
+      "createdAt": "2026-06-23T04:05:59.415Z"
+    },
+    "today-2026-06-23-dd3ccdba": {
+      "id": "today-2026-06-23-dd3ccdba",
+      "sessionDate": "2026-06-23",
+      "scheduledAt": "2026-06-23T10:30:00.000Z",
+      "title": "Coach SMS Workout",
+      "rawSms": "QA SMS priority\n\nGoblet squat\n10,10,10",
+      "workoutId": "sms-w-0cf28938",
+      "programSlug": "adult",
+      "userIds": [
+        "demo-user-john"
+      ],
+      "replacesSchedule": true,
+      "createdAt": "2026-06-23T14:22:28.933Z"
+    },
+    "today-2026-06-30-2de0e832": {
+      "id": "today-2026-06-30-2de0e832",
+      "sessionDate": "2026-06-30",
+      "scheduledAt": "2026-06-30T11:30:00.000Z",
+      "title": "Coach SMS Workout",
+      "rawSms": "Kiss my ass\n20,20,20\n\nGet screwed\n10,10,10 \n\nGet your ass out of bed \n1,1,1,1",
+      "workoutId": "sms-w-f96742f6",
+      "programSlug": "adult",
+      "userIds": [
+        "demo-user-john-steph"
+      ],
+      "replacesSchedule": true,
+      "createdAt": "2026-06-30T01:55:59.591Z",
+      "createdBy": "coach"
+    },
+    "today-2026-06-30-4d7c77be": {
+      "id": "today-2026-06-30-4d7c77be",
+      "sessionDate": "2026-06-30",
+      "scheduledAt": "2026-06-30T13:30:00.000Z",
+      "title": "Lower Day",
+      "rawSms": "Lower Day \n\nWarm up bicycle or walk at 3.3 on treadmill at 7.0 incline \n5 mins \n\nRest periods are 1:30 min \n\nUpper body warm up \nBand exercises \nDumbbell bicep curls 20\nDumbbell shoulder press 20\n\n25 air squats \n\nleg press \n20 sec hold at bottom of lift \nThen burnout reps immediately \n4 sets \nStay flexible\n\nBarbell Hip thrust, back on bench hold at top of squeeze\n30 sec then immediately burnout reps x 4 sets \n\nSeated calve raises machine or standing cave raises with weight single leg \n30 sec hold at top of squeeze\nThen 15 reps immediately x 4 sets \n\nDumbbell Bulgarians split squats \nHold at bottom of lift 20 sec \nThen burn out reps immediately \n3 sets each leg \n\nHIIT jump squats to finish\n8 rounds on 20sec\n\nStretch",
+      "workoutId": "sms-w-7a07088e",
+      "programSlug": "adult",
+      "userIds": [
+        "member-e820ae6e-62c",
+        "member-ab2cb068-b46"
+      ],
+      "replacesSchedule": true,
+      "createdAt": "2026-06-30T13:39:07.961Z",
+      "createdBy": "seed-lower-day-today-prod"
+    },
+    "today-2026-07-04-dc6b3157": {
+      "id": "today-2026-07-04-dc6b3157",
+      "sessionDate": "2026-07-04",
+      "scheduledAt": "2026-07-04T16:00:00.000Z",
+      "title": "Saturday Fun Day",
+      "rawSms": "Saturday Fun Day\n\nWarm-up (bonus points if done before coach arrives)\n5 min bike, row, or brisk walk\nWall taps 20\nBand pull-aparts 15\nLightweight bicep curls 15\nLight shoulder press 15\nShrugs 15\nBosu ball squats 10\nJump squats 10\n\nSexy boob lifts\n10,10,10\n\nSlap that ass hardening\n12,12,12,12\n\nLet's keep our intestines functioning\n15,15,15",
+      "workoutId": "sms-w-c8bf056e",
+      "programSlug": "adult",
+      "userIds": [
+        "member-e820ae6e-62c",
+        "member-ab2cb068-b46"
+      ],
+      "replacesSchedule": true,
+      "createdAt": "2026-07-01T15:02:52.367Z",
+      "createdBy": "seed-saturday-fun"
     }
   }
 }

@@ -19,7 +19,7 @@ export type LandingVideoEmbedOptions = {
 
 export function landingVideoEmbedSrc(
   videoUrl: string | null | undefined,
-  autoplay = false,
+  autoplay = true,
   options: LandingVideoEmbedOptions = {},
 ): string | null {
   if (!videoUrl?.trim()) return null;

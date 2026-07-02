@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProgramBySlug } from "@/lib/program-data";
 import { getMemberDashboard } from "@/lib/member-context";
-import { youtubeEmbedUrl } from "@/lib/youtube";
+import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
 
 async function markWatchedAction(slug: string, dayNum: number) {
   'use server';
@@ -33,9 +33,6 @@ export default async function MemberJourneyPage({ searchParams }: Props) {
   const allDays = program.weeks.flatMap((w: any) => w.days);
   const day = allDays.find((d: any) => d.dayNumber === dayNum) || { notes: "Watch the recorded session.", videoUrl: null };
 
-  const embedUrl = day.videoUrl
-    ? youtubeEmbedUrl(day.videoUrl, { autoplay: true, mute: false })
-    : null;
   const title = day.notes || "Recorded Live Session";
 
   return (
@@ -59,14 +56,12 @@ export default async function MemberJourneyPage({ searchParams }: Props) {
           <p className="text-xs text-[var(--muted)] mb-3">YouTube: <a href={day.videoUrl} target="_blank" className="underline">{day.videoUrl}</a></p>
         )}
 
-        {embedUrl ? (
+        {day.videoUrl ? (
           <div className="relative w-full pb-[56.25%] bg-black rounded overflow-hidden">
-            <iframe
-              src={embedUrl}
+            <YoutubeAutoplayFrame
+              videoUrl={day.videoUrl}
               title={title}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="absolute inset-0 w-full h-full"
+              className="absolute inset-0 h-full w-full"
             />
           </div>
         ) : (

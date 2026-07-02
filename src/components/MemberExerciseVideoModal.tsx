@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { isYoutubeUrl, youtubeEmbedUrl } from "@/lib/youtube";
+import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
+import { isYoutubeUrl } from "@/lib/youtube";
 
 type Props = {
   exerciseName: string;
@@ -16,9 +17,7 @@ export default function MemberExerciseVideoModal({
   onClose,
 }: Props) {
   const [mounted, setMounted] = useState(false);
-  const embedSrc = isYoutubeUrl(videoUrl)
-    ? youtubeEmbedUrl(videoUrl, { autoplay: true, mute: false, enableJsApi: true })
-    : null;
+  const isYoutube = isYoutubeUrl(videoUrl);
 
   useEffect(() => {
     setMounted(true);
@@ -68,16 +67,12 @@ export default function MemberExerciseVideoModal({
           </button>
         </div>
 
-        {embedSrc ? (
+        {isYoutube ? (
           <div className="member-video-modal__player">
-            <iframe
+            <YoutubeAutoplayFrame
+              className="h-full w-full"
+              videoUrl={videoUrl}
               title={`${exerciseName} demo video`}
-              src={embedSrc}
-              width="100%"
-              height="100%"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-              referrerPolicy="strict-origin-when-cross-origin"
             />
           </div>
         ) : (
