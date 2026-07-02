@@ -63,7 +63,13 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
         return;
       }
       setZoom(data.zoom);
-      setMessage(data.demo ? "Demo room ready — connect Zoom for real meetings." : "Live Zoom room ready.");
+      const notifyNote =
+        data.notified > 0 ? ` Link sent to ${data.notified} attendee${data.notified === 1 ? "" : "s"}.` : "";
+      setMessage(
+        data.demo
+          ? "Demo room ready — connect Zoom for real meetings."
+          : `Live Zoom room ready.${notifyNote}`,
+      );
       setTimeout(() => setMessage(null), 4000);
     } catch {
       setMessage("Could not create Zoom room.");
@@ -128,7 +134,7 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
         <div>
           <p className="text-sm font-semibold text-sky-200">Group video</p>
           <p className="text-xs text-[var(--muted)]">
-            One Zoom room for today&apos;s live class. Desktop: embed here while you check sets. Phone: open Zoom app.
+            One Zoom room for today&apos;s class. Creating the room texts today&apos;s attendees automatically.
           </p>
         </div>
         <button
@@ -162,8 +168,9 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
                     className="btn-primary min-h-[44px] px-4 py-2 text-sm"
                     disabled={busy || embedVisible}
                     onClick={() => void startEmbedded()}
+                    title="Keeps video in this page so you can check off sets at the same time"
                   >
-                    {busy ? "Starting…" : embedVisible ? "Video live" : "Start video here"}
+                    {busy ? "Starting…" : embedVisible ? "Video live" : "Embed video here"}
                   </button>
                 ) : null}
                 {zoom.hostUrl ? (
@@ -172,8 +179,9 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn-primary min-h-[44px] px-4 py-2 text-sm"
+                    title="Opens the full Zoom app — best on phone or if you want native Zoom controls"
                   >
-                    {desktop ? "Open in Zoom app" : "Start Zoom"}
+                    {desktop ? "Open Zoom app" : "Start Zoom app"}
                   </a>
                 ) : null}
                 {zoom.joinUrl ? (
@@ -198,11 +206,12 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
             )}
           </div>
 
-          {!desktop ? (
-            <p className="text-xs text-[var(--muted)]">
-              On phone, use Start Zoom for the native app — Live Floor stays open for checkoffs.
-            </p>
-          ) : null}
+          <p className="text-xs text-[var(--muted)]">
+            <strong className="text-[var(--text)]">Embed video here</strong> — video stays on this page
+            while you tap sets (desktop).{" "}
+            <strong className="text-[var(--text)]">Open Zoom app</strong> — full Zoom controls in a
+            separate app (recommended on phone).
+          </p>
 
           {desktop && embedVisible && embedCreds ? (
             <ZoomMeetingEmbedLazy

@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireCoachStaff } from "@/lib/api-auth";
-import { ensureLiveClassZoom, getLiveClassZoom } from "@/lib/live-class-zoom";
+import {
+  ensureLiveClassZoom,
+  getLiveClassZoom,
+  markLiveClassHostStarted,
+} from "@/lib/live-class-zoom";
 import { fetchZoomZakToken } from "@/lib/zoom";
 import {
   createZoomMeetingSdkSignature,
@@ -54,6 +58,8 @@ export async function GET(request: Request) {
       const message = err instanceof Error ? err.message : "Could not fetch ZAK token.";
       return NextResponse.json({ error: message }, { status: 502 });
     }
+
+    await markLiveClassHostStarted(record.sessionDate);
 
     const displayName =
       auth.session.name?.trim() || auth.session.email.split("@")[0] || "Coach";

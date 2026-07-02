@@ -44,6 +44,32 @@ export type MemberWorkoutView = {
   exercises: MemberExerciseBlock[];
 };
 
+function sortedSet(nums: number[]): number[] {
+  return nums.slice().sort((a, b) => a - b);
+}
+
+function completedSetsEqual(
+  local: Record<string, Set<number>>,
+  remote: Record<string, number[]>,
+): boolean {
+  const localKeys = Object.keys(local);
+  const remoteKeys = Object.keys(remote);
+  if (localKeys.length !== remoteKeys.length) return false;
+  for (const key of localKeys) {
+    const a = sortedSet(Array.from(local[key] ?? []));
+    const b = sortedSet(remote[key] ?? []);
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+function finishedExercisesEqual(local: Set<string>, remote: string[]): boolean {
+  if (local.size !== remote.length) return false;
+  for (const id of remote) if (!local.has(id)) return false;
+  return true;
+}
+
 export default function MemberWorkoutConsole({
   workout,
   backHref = "/member",
@@ -106,7 +132,7 @@ export default function MemberWorkoutConsole({
   const [partnerLive, setPartnerLive] = useState(false);
   const [loggedDetailsOpen, setLoggedDetailsOpen] = useState(false);
 
-  const LIVE_POLL_MS = 200;
+  const LIVE_POLL_MS = coachFloorMode ? 900 : 200;
   const liveSessionScope = progressMode === "live" && !!liveSyncUserId && !reviewMode;
   const warmupSyncEnabled = progressMode === "warmup" && !!liveSyncUserId && !reviewMode;
   const [liveSessionHydrated, setLiveSessionHydrated] = useState(false);
@@ -164,15 +190,32 @@ export default function MemberWorkoutConsole({
         return;
       }
 
-      applyingRemote.current = true;
       const sets: Record<string, Set<number>> = {};
       for (const [blockId, nums] of Object.entries(session.completedSets)) {
         sets[blockId] = new Set(nums);
       }
-      setCompletedSets(sets);
-      setFinishedExercises(new Set(session.finishedExercises));
-      if (session.weights) setWeights(session.weights);
-      if (session.activeId) setActiveId(session.activeId);
+      const remoteFinished = new Set(session.finishedExercises);
+      const setsSame = completedSetsEqual(completedSets, session.completedSets);
+      const finishedSame = finishedExercisesEqual(finishedExercises, session.finishedExercises);
+      const weightsSame =
+        !session.weights ||
+        JSON.stringify(session.weights) === JSON.stringify(weights);
+      const activeSame =
+        coachFloorMode ||
+        !session.activeId ||
+        session.activeId === activeId;
+
+      if (setsSame && finishedSame && weightsSame && activeSame) {
+        return;
+      }
+
+      applyingRemote.current = true;
+      if (!setsSame) setCompletedSets(sets);
+      if (!finishedSame) setFinishedExercises(remoteFinished);
+      if (session.weights && !weightsSame) setWeights(session.weights);
+      if (!coachFloorMode && session.activeId && session.activeId !== activeId) {
+        setActiveId(session.activeId);
+      }
 
       const fromCoach = session.updatedBy === "coach";
       if (instructorName) {
@@ -182,7 +225,7 @@ export default function MemberWorkoutConsole({
       }
       applyingRemote.current = false;
     },
-    [instructorName],
+    [instructorName, coachFloorMode, completedSets, finishedExercises, weights, activeId],
   );
 
   const flushWarmupSave = useCallback(() => {
@@ -219,15 +262,15 @@ export default function MemberWorkoutConsole({
 
     saveChain.current = saveChain.current.catch(() => {}).then(async () => {
       const snap = stateRef.current;
-      const payload = {
+      const payload: Record<string, unknown> = {
         userId: liveSyncUserId,
         sessionDate: liveSessionDate,
         completedSets: serializeCompletedSets(snap.completedSets),
         finishedExercises: Array.from(snap.finishedExercises),
         weights: snap.weights,
-        activeId: snap.activeId,
         updatedBy: instructorName ? ("coach" as const) : ("member" as const),
       };
+      if (!coachFloorMode) payload.activeId = snap.activeId;
       const res = await fetch(`/api/workouts/${workout.workoutId}/live-session`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -236,7 +279,14 @@ export default function MemberWorkoutConsole({
       });
       if (!res.ok) return;
       const data = await res.json();
-      if (data.session) applyRemoteSession(data.session);
+      if (data.session && !(coachFloorMode && instructorName)) {
+        applyRemoteSession(data.session);
+      } else if (data.session?.revision != null) {
+        lastAppliedRevision.current = Math.max(
+          lastAppliedRevision.current,
+          data.session.revision,
+        );
+      }
       const rev = data.session?.revision;
       if (typeof rev === "number") {
         lastPushedRevision.current = rev;
@@ -252,6 +302,7 @@ export default function MemberWorkoutConsole({
     workout.workoutId,
     serializeCompletedSets,
     applyRemoteSession,
+    coachFloorMode,
   ]);
 
   const queueLiveSave = useCallback(

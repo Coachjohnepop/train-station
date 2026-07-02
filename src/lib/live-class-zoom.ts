@@ -16,6 +16,8 @@ export type LiveClassZoomRecord = {
   password: string;
   topic: string;
   createdAt: string;
+  notifiedAt?: string;
+  hostStartedAt?: string;
   demo?: boolean;
 };
 
@@ -129,4 +131,119 @@ export async function ensureLiveClassZoom(sessionDate?: string): Promise<{
   store[date] = record;
   await saveStore(store);
   return { record, created: true };
+}
+
+export async function collectLiveClassAttendeeIds(sessionDate?: string): Promise<string[]> {
+  const date = normalizeLiveSessionDate(sessionDate);
+  await hydrateTodaySessions({ preferFresh: true });
+  const daySessions = getSessionsForDate(date);
+  const ids = new Set<string>();
+  for (const session of daySessions) {
+    for (const userId of session.userIds) ids.add(userId);
+  }
+
+  const bookings = await getBookings();
+  for (const booking of bookings as Array<{ userId?: string; scheduledAt?: string; status?: string }>) {
+    if (!booking.userId || !booking.scheduledAt) continue;
+    if (booking.status === "cancelled" || booking.status === "completed") continue;
+    if (sessionDateFromIso(booking.scheduledAt) === date) ids.add(booking.userId);
+  }
+
+  return Array.from(ids);
+}
+
+export async function notifyLiveClassZoomAttendees(
+  sessionDate: string,
+  joinUrl: string,
+): Promise<{ sent: number }> {
+  const userIds = await collectLiveClassAttendeeIds(sessionDate);
+  if (userIds.length === 0) return { sent: 0 };
+
+  const base = process.env.NEXT_PUBLIC_APP_URL || "https://www.thetrainstation.co";
+  const livePage = `${base}/member/live`;
+  const customBody =
+    `Live class Zoom is ready — tap to join: ${livePage}` +
+    (joinUrl ? ` Direct Zoom: ${joinUrl}` : "");
+
+  const { sendCoachChatAlert } = await import("@/lib/sms");
+  const result = await sendCoachChatAlert({
+    userIds,
+    sessionDate,
+    customBody,
+    coachName: "Your coach",
+  });
+  return { sent: result.sent };
+}
+
+export async function markLiveClassZoomNotified(sessionDate?: string): Promise<void> {
+  const date = normalizeLiveSessionDate(sessionDate);
+  const store = await loadStore({ preferFresh: true });
+  const record = store[date];
+  if (!record || record.notifiedAt) return;
+  store[date] = { ...record, notifiedAt: new Date().toISOString() };
+  await saveStore(store);
+}
+
+export async function markLiveClassHostStarted(sessionDate?: string): Promise<void> {
+  const date = normalizeLiveSessionDate(sessionDate);
+  const store = await loadStore({ preferFresh: true });
+  const record = store[date];
+  if (!record) return;
+  if (record.hostStartedAt) return;
+  store[date] = { ...record, hostStartedAt: new Date().toISOString() };
+  await saveStore(store);
+}
+
+export async function memberLiveZoomStatus(input: {
+  memberEmail: string;
+  userId?: string | null;
+  sessionDate?: string;
+}): Promise<{
+  sessionDate: string;
+  roomReady: boolean;
+  hostStarted: boolean;
+  canJoin: boolean;
+  joinUrl: string | null;
+  livePageUrl: string;
+}> {
+  const date = normalizeLiveSessionDate(input.sessionDate);
+  const record = await getLiveClassZoom(date);
+  const allowed = await memberHasLiveAccessOnDate({
+    memberEmail: input.memberEmail,
+    userId: input.userId,
+    sessionDate: date,
+  });
+
+  const base = process.env.NEXT_PUBLIC_APP_URL || "https://www.thetrainstation.co";
+  const livePageUrl = `${base}/member/live`;
+
+  if (!allowed || !record) {
+    return {
+      sessionDate: date,
+      roomReady: false,
+      hostStarted: false,
+      canJoin: false,
+      joinUrl: null,
+      livePageUrl,
+    };
+  }
+
+  const now = Date.now();
+  await hydrateTodaySessions({ preferFresh: true });
+  const daySessions = getSessionsForDate(date);
+  const scheduledAt =
+    daySessions[0]?.scheduledAt != null
+      ? new Date(daySessions[0].scheduledAt).getTime()
+      : new Date(`${date}T12:00:00`).getTime();
+  const startsInMin = Math.round((scheduledAt - now) / 60_000);
+  const canJoin = startsInMin <= 15 && startsInMin >= -40;
+
+  return {
+    sessionDate: date,
+    roomReady: true,
+    hostStarted: Boolean(record.hostStartedAt),
+    canJoin,
+    joinUrl: record.joinUrl,
+    livePageUrl,
+  };
 }

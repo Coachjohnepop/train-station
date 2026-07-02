@@ -85,7 +85,7 @@ export default function MemberLiveSessionsPanel({ canLive }: { canLive: boolean 
     <div className="mt-4 space-y-3">
       <p className="text-xs text-[var(--muted)]">
         {zoomReady
-          ? `Free Zoom sessions — up to ${maxDurationMin} min. Your coach starts the room; join when the button appears.`
+          ? `Free Zoom sessions — up to ${maxDurationMin} min. When class is live you'll get a Join Zoom prompt in the app.`
           : "Coach will create your Zoom link when the session is confirmed."}
       </p>
       {classSessionDate ? (

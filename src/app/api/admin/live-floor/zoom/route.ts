@@ -21,9 +21,19 @@ export async function POST(request: Request) {
 
   try {
     const { record, created } = await ensureLiveClassZoom(sessionDate);
+    let notified = 0;
+    if (created && !record.demo) {
+      const { notifyLiveClassZoomAttendees, markLiveClassZoomNotified } = await import(
+        "@/lib/live-class-zoom"
+      );
+      const alert = await notifyLiveClassZoomAttendees(record.sessionDate, record.joinUrl);
+      notified = alert.sent;
+      await markLiveClassZoomNotified(record.sessionDate);
+    }
     return NextResponse.json({
       ok: true,
       created,
+      notified,
       ready: await zoomReady(),
       sdkConfigured: zoomMeetingSdkConfigured(),
       maxDurationMin: ZOOM_FREE_MAX_DURATION_MIN,
