@@ -348,7 +348,7 @@ export default function CoachLessonPlanBuilder({
           </div>
 
           <p className="rounded-md border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">
-            Saving to <strong>{viewDateLabel}</strong>
+            Publishing to <strong>{viewDateLabel}</strong> — switch days with the square buttons above
           </p>
 
           <label className="block text-xs">

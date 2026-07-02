@@ -140,3 +140,29 @@ export function getSessionsInRange(dates: string[]) {
   const dateSet = new Set(dates);
   return listTodaySessions().filter((s) => dateSet.has(s.sessionDate));
 }
+
+export type CoachDaySummary = {
+  hasWorkout: boolean;
+  assignedCount: number;
+  sessionCount: number;
+  title?: string;
+};
+
+export function buildCoachDaySummaries(dates: string[]): Record<string, CoachDaySummary> {
+  const out: Record<string, CoachDaySummary> = {};
+  for (const date of dates) {
+    const sessions = getSessionsForDate(date);
+    const assigned = new Set<string>();
+    for (const session of sessions) {
+      for (const uid of session.userIds) assigned.add(uid);
+    }
+    const primary = sessions.find((s) => s.userIds.length > 0) ?? sessions[0];
+    out[date] = {
+      hasWorkout: assigned.size > 0,
+      assignedCount: assigned.size,
+      sessionCount: sessions.length,
+      title: primary?.title,
+    };
+  }
+  return out;
+}

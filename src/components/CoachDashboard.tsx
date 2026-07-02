@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import CoachClassDayBand from "@/components/CoachClassDayBand";
 import CoachLessonPlanBuilder from "@/components/CoachLessonPlanBuilder";
 import type { CoachMemberOption } from "@/components/CoachMemberPicker";
-import type { CoachDayStudentCard } from "@/lib/coach-day";
+import type { CoachDayStudentCard, CoachDaySummary } from "@/lib/coach-day";
 import type { TodaySession } from "@/lib/today-sessions";
 
 type LiveFloorTile = {
@@ -45,19 +46,23 @@ function attendanceStatus(
 
 export default function CoachDashboard({
   sessionDate,
+  calendarToday,
   dateLabel,
   students: initialStudents,
   sessionCount,
   savedSessions,
   memberOptions,
+  daySummaries = {},
   initialPlanOpen = false,
 }: {
   sessionDate: string;
+  calendarToday: string;
   dateLabel: string;
   students: CoachDayStudentCard[];
   sessionCount: number;
   savedSessions: TodaySession[];
   memberOptions: CoachMemberOption[];
+  daySummaries?: Record<string, CoachDaySummary>;
   initialPlanOpen?: boolean;
 }) {
   const router = useRouter();
@@ -81,6 +86,9 @@ export default function CoachDashboard({
   );
 
   const invitedCount = Math.max(0, assignedStudents.length - joinedCount);
+  const isCalendarToday = sessionDate === calendarToday;
+  const selectedDaySummary = daySummaries[sessionDate];
+  const classSectionLabel = isCalendarToday ? "Today's class" : "Class roster";
 
   useEffect(() => {
     setStudents(initialStudents);
@@ -176,24 +184,48 @@ export default function CoachDashboard({
   return (
     <div className="coach-dashboard flex min-h-[calc(100dvh-10rem)] flex-col gap-4">
       <div className="shrink-0 space-y-4">
-        <header className="card border-accent/30 bg-accent/5 py-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-accent">Dashboard</p>
-          <h1 className="mt-1 text-xl font-bold sm:text-2xl">{dateLabel}</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            {assignedStudents.length} invited · {joinedCount} in workout · {openStudents.length} not
-            assigned
-          </p>
+        <header className="card border-accent/30 bg-accent/5 py-4 space-y-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-accent">Dashboard</p>
+            <h1 className="mt-1 text-xl font-bold sm:text-2xl">{dateLabel}</h1>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              {assignedStudents.length} invited · {joinedCount} in workout · {openStudents.length} not
+              assigned
+            </p>
+            {selectedDaySummary?.hasWorkout ? (
+              <p className="mt-1 text-xs text-[var(--success)]">
+                ✓ {selectedDaySummary.title || "Workout planned"} · {selectedDaySummary.assignedCount}{" "}
+                assigned
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-[var(--muted)]">No workout on this day yet</p>
+            )}
+          </div>
+          <CoachClassDayBand
+            sessionDate={sessionDate}
+            calendarToday={calendarToday}
+            daySummaries={daySummaries}
+            planOpen={showPlanWorkout}
+          />
         </header>
 
-        <Link
-          href="/admin/today"
-          className="btn-primary flex min-h-[72px] w-full items-center justify-center rounded-2xl px-6 text-lg font-bold tracking-tight shadow-lg shadow-accent/20 transition active:scale-[0.99]"
-        >
-          Go to Today →
-        </Link>
-        <p className="text-center text-xs text-[var(--muted)]">
-          Full-screen workout floor — count sets, no sidebar, today only.
-        </p>
+        {isCalendarToday ? (
+          <>
+            <Link
+              href="/admin/today"
+              className="btn-primary flex min-h-[72px] w-full items-center justify-center rounded-2xl px-6 text-lg font-bold tracking-tight shadow-lg shadow-accent/20 transition active:scale-[0.99]"
+            >
+              Go to Today →
+            </Link>
+            <p className="text-center text-xs text-[var(--muted)]">
+              Full-screen workout floor — count sets, no sidebar, today only.
+            </p>
+          </>
+        ) : (
+          <p className="text-center text-xs text-[var(--muted)]">
+            Planning for a future day — use <strong>Go to Today</strong> on class day to run the floor.
+          </p>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <button
@@ -244,7 +276,7 @@ export default function CoachDashboard({
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-              Today&apos;s class
+              {classSectionLabel}
             </h2>
             <p className="mt-0.5 text-xs text-[var(--muted)]">
               <span className="inline-flex items-center gap-1.5">
@@ -258,9 +290,11 @@ export default function CoachDashboard({
               </span>
             </p>
           </div>
-          <Link href="/admin/today" className="text-xs font-semibold text-accent hover:underline">
-            Open floor →
-          </Link>
+          {isCalendarToday ? (
+            <Link href="/admin/today" className="text-xs font-semibold text-accent hover:underline">
+              Open floor →
+            </Link>
+          ) : null}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
