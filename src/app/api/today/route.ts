@@ -23,6 +23,7 @@ const postSchema = z.object({
   replacesSchedule: z.boolean().optional(),
   createdBy: z.string().optional(),
   title: z.string().optional(),
+  workoutId: z.string().optional(),
   sendSmsAlert: z.boolean().optional(),
 });
 

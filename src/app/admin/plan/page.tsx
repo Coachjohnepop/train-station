@@ -73,6 +73,7 @@ export default async function AdminPlanPage({ searchParams }: Props) {
         sessionDate={sessionDate}
         viewDateLabel={formatDateLabel(sessionDate)}
         memberOptions={coachMembers}
+        savedSessions={dayPlan.sessions}
         defaultTime="06:30"
       />
 

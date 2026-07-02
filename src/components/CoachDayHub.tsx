@@ -7,6 +7,7 @@ import CoachClassDayBand from "@/components/CoachClassDayBand";
 import CoachLiveFloorZoomPanel from "@/components/CoachLiveFloorZoomPanel";
 import MemberWorkoutConsole, { type MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import type { CoachDayStudentCard } from "@/lib/coach-day";
+import type { TodaySession } from "@/lib/today-sessions";
 import {
   quickAuthMetaForEmail,
   useQuickAuthDeviceId,
@@ -64,6 +65,7 @@ export default function CoachDayHub({
   calendarToday,
   students: initialStudents,
   sessionCount,
+  savedSessions,
   coachEmail,
 }: {
   sessionDate: string;
@@ -71,6 +73,7 @@ export default function CoachDayHub({
   calendarToday: string;
   students: CoachDayStudentCard[];
   sessionCount: number;
+  savedSessions: TodaySession[];
   coachEmail: string;
 }) {
   const router = useRouter();
@@ -93,6 +96,7 @@ export default function CoachDayHub({
   const [cascadeSourceId, setCascadeSourceId] = useState("");
   const [cascadeTargets, setCascadeTargets] = useState<string[]>([]);
   const [savingPlan, setSavingPlan] = useState(false);
+  const [publishingSaved, setPublishingSaved] = useState(false);
 
   const showNewWorkout = newWorkoutStep === "paste" || newWorkoutStep === "assign";
 
@@ -212,6 +216,38 @@ export default function CoachDayHub({
     }
   }
 
+  async function publishSavedToOpenStudents() {
+    if (openStudents.length === 0) return;
+    setPublishingSaved(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/today/assign-member", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "publish-saved",
+          sessionDate,
+          userIds: openStudents.map((s) => s.id),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessage(data.error || "Could not publish saved class.");
+        return;
+      }
+      const n = data.added?.length ?? 0;
+      setMessage(
+        n > 0
+          ? `Published saved class to ${n} student${n !== 1 ? "s" : ""}.`
+          : "Everyone already had today's workout.",
+      );
+      void loadFloor();
+      void router.refresh();
+    } finally {
+      setPublishingSaved(false);
+    }
+  }
+
   async function addStudent(userId: string) {
     setBusyId(userId);
     setMessage(null);
@@ -278,12 +314,25 @@ export default function CoachDayHub({
     setPublishTargetIds(students.map((s) => s.id));
   }
 
+  const matchingSavedSession = useMemo(() => {
+    const key = newPlanText.trim().replace(/\r\n/g, "\n");
+    if (!key) return null;
+    return (
+      savedSessions.find((s) => s.rawSms.trim().replace(/\r\n/g, "\n") === key) ?? null
+    );
+  }, [newPlanText, savedSessions]);
+
+  const publishingSavedClass = Boolean(matchingSavedSession);
+
   async function deployNewWorkout() {
     if (!newPlanText.trim()) return;
     if (publishTargetIds.length === 0) {
       setMessage("Pick at least one student to receive this workout.");
       return;
     }
+    const names = students
+      .filter((s) => publishTargetIds.includes(s.id))
+      .map((s) => s.name);
     setSavingPlan(true);
     setMessage(null);
     try {
@@ -295,7 +344,11 @@ export default function CoachDayHub({
           sessionDate,
           scheduledAt: scheduled.toISOString(),
           sendSmsAlert: sendSmsOnPublish,
-          cascade: { rawSms: newPlanText.trim(), userIds: publishTargetIds },
+          cascade: {
+            rawSms: newPlanText.trim(),
+            userIds: publishTargetIds,
+            workoutId: publishingSavedClass ? matchingSavedSession?.workoutId : undefined,
+          },
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -303,15 +356,13 @@ export default function CoachDayHub({
         setMessage(data.error || "Could not build workout.");
         return;
       }
-      const names = students
-        .filter((s) => publishTargetIds.includes(s.id))
-        .map((s) => s.name);
       setPublishResult({ names, built: data.built ?? 1 });
       setNewWorkoutStep("done");
       setNewPlanText("");
       setPublishTargetIds([]);
-      router.refresh();
       void loadFloor();
+      void router.refresh();
+      return;
     } finally {
       setSavingPlan(false);
     }
@@ -430,10 +481,24 @@ export default function CoachDayHub({
         </div>
 
         {sessionCount > 0 && !showNewWorkout && !showCascade && (
-          <p className="text-xs text-[var(--muted)] rounded-lg border border-[var(--border)] px-3 py-2">
-            Today&apos;s workouts are saved — tap a student to count sets, or use <strong>New workout</strong> only
-            if you want to replace them.
-          </p>
+          <div className="flex flex-col gap-2 rounded-lg border border-[var(--border)] px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-[var(--muted)]">
+              Today&apos;s workouts are saved — tap a student to count sets, or use <strong>New workout</strong> only
+              if you want to replace them.
+            </p>
+            {openStudents.length > 0 && (
+              <button
+                type="button"
+                disabled={publishingSaved}
+                onClick={() => void publishSavedToOpenStudents()}
+                className="btn-primary shrink-0 min-h-[40px] px-3 text-xs"
+              >
+                {publishingSaved
+                  ? "Publishing…"
+                  : `Publish saved class (${openStudents.length})`}
+              </button>
+            )}
+          </div>
         )}
 
         {newWorkoutStep === "paste" && (
@@ -549,7 +614,13 @@ export default function CoachDayHub({
                 onClick={() => void deployNewWorkout()}
                 className="btn-primary min-h-[44px] px-4 text-sm"
               >
-                {savingPlan ? "Publishing…" : "Publish to class"}
+                {savingPlan
+                  ? publishingSavedClass
+                    ? "Publishing…"
+                    : "Building workout…"
+                  : publishingSavedClass
+                    ? "Publish saved class"
+                    : "Publish to class"}
               </button>
             </div>
           </div>

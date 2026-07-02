@@ -150,6 +150,19 @@ export function getUpcomingSessionsForUser(userId: string, referenceDate = new D
     .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
 }
 
+function normalizePlanText(rawSms: string) {
+  return rawSms.trim().replace(/\r\n/g, "\n");
+}
+
+function findSessionWithPlanOnDate(sessionDate: string, rawSms: string, store = readStore()) {
+  const key = normalizePlanText(rawSms);
+  return (
+    Object.values(store.sessions).find(
+      (s) => s.sessionDate === sessionDate && normalizePlanText(s.rawSms) === key,
+    ) ?? null
+  );
+}
+
 export async function createTodaySessionFromSms(input: {
   sessionDate: string;
   scheduledAt: string;
@@ -159,14 +172,43 @@ export async function createTodaySessionFromSms(input: {
   replacesSchedule?: boolean;
   createdBy?: string;
   title?: string;
+  /** Skip rebuild when the coach is republishing a saved class plan. */
+  workoutId?: string;
 }) {
-  await hydrateTodaySessions({ preferFresh: true });
-  const parsed = parseSmsWorkout(input.rawSms);
-  const { workoutId, newExerciseIds } = await buildWorkoutFromParsedSms(parsed);
+  await hydrateTodaySessions();
+  const rawSms = input.rawSms.trim();
   const userIds = input.userIds?.length ? input.userIds : [];
-  const assignKey = userIdsKey(userIds);
+  const parsed = parseSmsWorkout(rawSms);
 
   const store = readStore();
+  const samePlan = findSessionWithPlanOnDate(input.sessionDate, rawSms, store);
+
+  let workoutId = input.workoutId || samePlan?.workoutId;
+  let newExerciseIds: string[] = [];
+
+  if (!workoutId) {
+    const built = await buildWorkoutFromParsedSms(parsed);
+    workoutId = built.workoutId;
+    newExerciseIds = built.newExerciseIds;
+  }
+
+  if (samePlan) {
+    const mergedIds = [...new Set([...samePlan.userIds, ...userIds])];
+    const session: TodaySession = {
+      ...samePlan,
+      scheduledAt: input.scheduledAt,
+      title: input.title || samePlan.title || parsed.title,
+      workoutId,
+      userIds: mergedIds,
+      replacesSchedule: input.replacesSchedule ?? samePlan.replacesSchedule,
+      createdBy: input.createdBy ?? samePlan.createdBy,
+    };
+    store.sessions[session.id] = session;
+    await writeStore(store);
+    return { session, parsed, workoutId, newExerciseIds, reused: true as const };
+  }
+
+  const assignKey = userIdsKey(userIds);
   const existing = Object.values(store.sessions).find(
     (s) => s.sessionDate === input.sessionDate && userIdsKey(s.userIds) === assignKey,
   );
@@ -176,7 +218,7 @@ export async function createTodaySessionFromSms(input: {
     sessionDate: input.sessionDate,
     scheduledAt: input.scheduledAt,
     title: input.title || parsed.title,
-    rawSms: input.rawSms,
+    rawSms,
     workoutId,
     programSlug: input.programSlug || "adult",
     userIds,
@@ -187,7 +229,7 @@ export async function createTodaySessionFromSms(input: {
 
   store.sessions[session.id] = session;
   await writeStore(store);
-  return { session, parsed, workoutId, newExerciseIds };
+  return { session, parsed, workoutId, newExerciseIds, reused: false as const };
 }
 
 export async function deleteTodaySession(sessionIdOrDate: string) {
@@ -210,8 +252,12 @@ export function getTodaySessionById(sessionId: string): TodaySession | null {
 }
 
 /** Add a member to an existing session (cascade — same workout for more students). */
-export async function addMemberToTodaySession(sessionId: string, userId: string) {
-  await hydrateTodaySessions({ preferFresh: true });
+export async function addMemberToTodaySession(
+  sessionId: string,
+  userId: string,
+  opts?: { preferFresh?: boolean },
+) {
+  await hydrateTodaySessions(opts?.preferFresh ? { preferFresh: true } : undefined);
   const store = readStore();
   const session = store.sessions[sessionId];
   if (!session) throw new Error("Session not found");
@@ -223,28 +269,58 @@ export async function addMemberToTodaySession(sessionId: string, userId: string)
   return { session, alreadyAssigned: false as const };
 }
 
+/** Add several members in one hydrate/write — faster when publishing a saved class. */
+export async function addMembersToTodaySession(sessionId: string, userIds: string[]) {
+  await hydrateTodaySessions();
+  const store = readStore();
+  const session = store.sessions[sessionId];
+  if (!session) throw new Error("Session not found");
+
+  const added: string[] = [];
+  const skipped: string[] = [];
+  for (const userId of userIds) {
+    if (session.userIds.includes(userId)) {
+      skipped.push(userId);
+      continue;
+    }
+    session.userIds.push(userId);
+    added.push(userId);
+  }
+
+  if (added.length > 0) {
+    await writeStore(store);
+  }
+
+  return { session, added, skipped };
+}
+
 /** Copy one student's workout to others on the same day (joins shared session). */
 export async function cascadeWorkoutFromMember(input: {
   sessionDate: string;
   sourceUserId: string;
   targetUserIds: string[];
 }) {
-  await hydrateTodaySessions({ preferFresh: true });
+  await hydrateTodaySessions();
   const source = getSessionForUserOnDate(input.sourceUserId, input.sessionDate);
   if (!source) throw new Error("Source student has no workout for this day");
 
   const added: string[] = [];
   const skipped: string[] = [];
 
-  for (const userId of input.targetUserIds) {
-    if (userId === input.sourceUserId) continue;
+  const targets = input.targetUserIds.filter((userId) => userId !== input.sourceUserId);
+  const eligible: string[] = [];
+  for (const userId of targets) {
     const existing = getSessionForUserOnDate(userId, input.sessionDate);
     if (existing && existing.id !== source.id) {
       skipped.push(userId);
       continue;
     }
-    const result = await addMemberToTodaySession(source.id, userId);
-    if (!result.alreadyAssigned) added.push(userId);
+    eligible.push(userId);
+  }
+
+  if (eligible.length > 0) {
+    const batch = await addMembersToTodaySession(source.id, eligible);
+    added.push(...batch.added);
   }
 
   const session = getTodaySessionById(source.id)!;

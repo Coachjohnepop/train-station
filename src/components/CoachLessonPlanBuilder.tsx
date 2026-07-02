@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
 import type { CoachMemberOption } from "@/components/CoachMemberPicker";
 import type { LessonPlanQuestion } from "@/lib/lesson-plan-interpreter";
+import type { TodaySession } from "@/lib/today-sessions";
 
 type ParsedExercise = {
   name: string;
@@ -37,11 +38,13 @@ export default function CoachLessonPlanBuilder({
   sessionDate,
   viewDateLabel,
   memberOptions,
+  savedSessions = [],
   defaultTime = "06:30",
 }: {
   sessionDate: string;
   viewDateLabel: string;
   memberOptions: CoachMemberOption[];
+  savedSessions?: TodaySession[];
   defaultTime?: string;
 }) {
   const router = useRouter();
@@ -217,6 +220,15 @@ export default function CoachLessonPlanBuilder({
     );
   }
 
+  const matchingSavedSession = useMemo(() => {
+    const normalized = interpretation?.normalizedText?.trim() || rawText.trim();
+    const key = normalized.replace(/\r\n/g, "\n");
+    if (!key) return null;
+    return (
+      savedSessions.find((s) => s.rawSms.trim().replace(/\r\n/g, "\n") === key) ?? null
+    );
+  }, [interpretation?.normalizedText, rawText, savedSessions]);
+
   async function handleDeploy() {
     const normalized = interpretation?.normalizedText?.trim() || rawText.trim();
     if (!normalized) return;
@@ -257,6 +269,7 @@ export default function CoachLessonPlanBuilder({
                   rawSms: normalized,
                   userIds: cascadeIds,
                   title: interpretation?.workout?.title,
+                  workoutId: matchingSavedSession?.workoutId,
                 }
               : undefined,
           individuals,
@@ -282,7 +295,9 @@ export default function CoachLessonPlanBuilder({
       setMessage(null);
       setError(false);
       setStep(3);
-      router.refresh();
+      setSaving(false);
+      void router.refresh();
+      return;
     } catch (e: unknown) {
       setError(true);
       setMessage(e instanceof Error ? e.message : "Deploy failed.");
@@ -603,7 +618,13 @@ export default function CoachLessonPlanBuilder({
               disabled={saving}
               className="btn-primary px-4 py-2 text-sm"
             >
-              {saving ? "Deploying…" : "Deploy to students"}
+              {saving
+                ? matchingSavedSession
+                  ? "Publishing…"
+                  : "Building workout…"
+                : matchingSavedSession
+                  ? "Publish saved class"
+                  : "Deploy to students"}
             </button>
           </div>
         </div>

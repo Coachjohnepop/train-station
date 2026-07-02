@@ -3,7 +3,9 @@ import { z } from "zod";
 import {
   addMemberToPrimarySession,
   addMemberToTodaySession,
+  addMembersToTodaySession,
   cascadeWorkoutFromMember,
+  getSessionsForDate,
 } from "@/lib/today-sessions";
 import { requireStaff } from "@/lib/api-auth";
 
@@ -23,6 +25,11 @@ const schema = z.discriminatedUnion("action", [
     sessionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     sourceUserId: z.string().min(1),
     targetUserIds: z.array(z.string()).min(1),
+  }),
+  z.object({
+    action: z.literal("publish-saved"),
+    sessionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    userIds: z.array(z.string()).min(1),
   }),
 ]);
 
@@ -44,6 +51,22 @@ export async function POST(request: Request) {
     if (body.action === "add-to-primary") {
       const result = await addMemberToPrimarySession(body.sessionDate, body.userId);
       return NextResponse.json(result);
+    }
+    if (body.action === "publish-saved") {
+      const sessions = getSessionsForDate(body.sessionDate).filter((s) => s.userIds.length > 0);
+      if (sessions.length === 0) {
+        return NextResponse.json(
+          { error: "No saved workout on this day yet — build one first." },
+          { status: 400 },
+        );
+      }
+      const primary = [...sessions].sort((a, b) => b.userIds.length - a.userIds.length)[0];
+      const result = await addMembersToTodaySession(primary.id, body.userIds);
+      return NextResponse.json({
+        session: result.session,
+        added: result.added,
+        skipped: result.skipped,
+      });
     }
     const result = await cascadeWorkoutFromMember(body);
     return NextResponse.json(result);

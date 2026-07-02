@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createTodaySessionFromSms } from "@/lib/today-sessions";
+import { createTodaySessionFromSms, hydrateTodaySessions } from "@/lib/today-sessions";
 import { sendCoachChatAlert } from "@/lib/sms";
 import { requireStaff } from "@/lib/api-auth";
 
@@ -21,6 +21,7 @@ const schema = z.object({
       rawSms: z.string().min(1),
       userIds: z.array(z.string()).min(1),
       title: z.string().optional(),
+      workoutId: z.string().optional(),
     })
     .optional(),
   individuals: z.array(individualSchema).optional(),
@@ -56,6 +57,8 @@ export async function POST(request: Request) {
   const allUserIds: string[] = [];
 
   try {
+    await hydrateTodaySessions();
+
     if (cascade && cascade.userIds.length > 0) {
       const result = await createTodaySessionFromSms({
         sessionDate,
@@ -66,35 +69,41 @@ export async function POST(request: Request) {
         replacesSchedule,
         createdBy: "coach",
         title: cascade.title,
+        workoutId: cascade.workoutId,
       });
       sessions.push(result);
       allUserIds.push(...cascade.userIds);
     }
 
-    for (const ind of individuals) {
-      const result = await createTodaySessionFromSms({
-        sessionDate,
-        scheduledAt,
-        rawSms: ind.rawSms,
-        programSlug,
-        userIds: [ind.userId],
-        replacesSchedule,
-        createdBy: "coach",
-        title: ind.title,
-      });
-      sessions.push(result);
-      allUserIds.push(ind.userId);
+    if (individuals.length > 0) {
+      const individualResults = await Promise.all(
+        individuals.map((ind) =>
+          createTodaySessionFromSms({
+            sessionDate,
+            scheduledAt,
+            rawSms: ind.rawSms,
+            programSlug,
+            userIds: [ind.userId],
+            replacesSchedule,
+            createdBy: "coach",
+            title: ind.title,
+          }),
+        ),
+      );
+      sessions.push(...individualResults);
+      allUserIds.push(...individuals.map((ind) => ind.userId));
     }
 
-    let alerts = { sent: 0, logs: [] as unknown[] };
     if (sendSmsAlert && allUserIds.length > 0) {
-      alerts = await sendCoachChatAlert({ userIds: allUserIds, sessionDate });
+      void sendCoachChatAlert({ userIds: allUserIds, sessionDate }).catch((err) => {
+        console.error("POST /api/today/cascade coach alert failed", err);
+      });
     }
 
     return NextResponse.json({
       sessions: sessions.map((s) => s.session),
       built: sessions.length,
-      alerts,
+      alerts: { sent: sendSmsAlert ? allUserIds.length : 0, logs: [] as unknown[] },
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Failed to assign workouts";

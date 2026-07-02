@@ -70,6 +70,7 @@ export default async function AdminDayPage({ searchParams }: Props) {
         calendarToday={todayKey}
         students={dayPlan.students}
         sessionCount={dayPlan.sessions.length}
+        savedSessions={dayPlan.sessions}
         coachEmail={session.email}
       />
     </div>
