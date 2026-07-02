@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import CoachClassDayBand from "@/components/CoachClassDayBand";
 import CoachLiveFloorZoomPanel from "@/components/CoachLiveFloorZoomPanel";
 import MemberWorkoutConsole, { type MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import type { CoachDayStudentCard } from "@/lib/coach-day";
@@ -60,12 +61,14 @@ function statusLabel(status: LiveFloorTile["status"]): string {
 export default function CoachDayHub({
   sessionDate,
   dateLabel,
+  calendarToday,
   students: initialStudents,
   sessionCount,
   coachEmail,
 }: {
   sessionDate: string;
   dateLabel: string;
+  calendarToday: string;
   students: CoachDayStudentCard[];
   sessionCount: number;
   coachEmail: string;
@@ -449,6 +452,7 @@ export default function CoachDayHub({
               value={newPlanText}
               onChange={(e) => setNewPlanText(e.target.value)}
             />
+            <CoachClassDayBand sessionDate={sessionDate} calendarToday={calendarToday} />
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -476,6 +480,7 @@ export default function CoachDayHub({
             ref={newWorkoutRef}
             className="card space-y-4 border-accent/30 bg-accent/5"
           >
+            <CoachClassDayBand sessionDate={sessionDate} calendarToday={calendarToday} />
             <div>
               <p className="text-sm font-semibold">2. Who gets this workout?</p>
               <p className="mt-1 text-xs text-[var(--muted)]">
@@ -605,6 +610,10 @@ export default function CoachDayHub({
           <p className="text-sm text-accent rounded-md border border-accent/30 bg-accent/10 px-3 py-2">
             {message}
           </p>
+        )}
+
+        {(newWorkoutStep === "idle" || newWorkoutStep === "done") && (
+          <CoachClassDayBand sessionDate={sessionDate} calendarToday={calendarToday} />
         )}
 
         <section>

@@ -67,6 +67,7 @@ export default async function AdminDayPage({ searchParams }: Props) {
         key={sessionDate}
         sessionDate={sessionDate}
         dateLabel={formatDateLabel(sessionDate)}
+        calendarToday={todayKey}
         students={dayPlan.students}
         sessionCount={dayPlan.sessions.length}
         coachEmail={session.email}
