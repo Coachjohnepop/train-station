@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import { defaultStaffLandingPath, isStaffRole } from "@/lib/staff-access";
 import SetupQuickAuthClient from "./SetupQuickAuthClient";
@@ -37,12 +36,6 @@ export default async function SetupQuickAuthPage({
         <div className="card">
           <SetupQuickAuthClient email={session.email} redirectTo={destination} />
         </div>
-
-        <p className="mt-6 text-center text-sm">
-          <Link href={destination} className="text-accent hover:underline">
-            Skip for now →
-          </Link>
-        </p>
       </div>
     </div>
   );

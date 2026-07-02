@@ -13,6 +13,7 @@ import QuickAuthLogin from "@/components/QuickAuthLogin";
 import {
   clearQuickAuthMeta,
   ensureDeviceId,
+  hasSkippedQuickAuthSetup,
   quickAuthMetaForEmail,
 } from "@/lib/quick-auth-client";
 
@@ -39,7 +40,7 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showPasswordForm, setShowPasswordForm] = useState(coachLogin || passwordUpdated);
+  const [showPasswordForm, setShowPasswordForm] = useState(passwordUpdated);
   const [quickAuthAvailable, setQuickAuthAvailable] = useState(false);
   const [quickAuthResolved, setQuickAuthResolved] = useState(false);
   const emailTouchedRef = useRef(switchAccount || Boolean(prefillEmail));
@@ -66,11 +67,11 @@ function LoginForm() {
   }, [email]);
 
   useEffect(() => {
-    if (!isCompleteEmail(email) || coachLogin || passwordUpdated) return;
+    if (!isCompleteEmail(email) || passwordUpdated) return;
     if (quickAuthMetaForEmail(email)) {
       setShowPasswordForm(false);
     }
-  }, [email, coachLogin, passwordUpdated]);
+  }, [email, passwordUpdated]);
 
   useEffect(() => {
     if (prefillEmail || switchAccount || emailTouchedRef.current) return;
@@ -108,12 +109,9 @@ function LoginForm() {
     emailTouchedRef.current = true;
     setEmail(next);
     setError(null);
-    if (isCompleteEmail(next) && !coachLogin) {
+    if (isCompleteEmail(next)) {
       setShowPasswordForm(false);
       return;
-    }
-    if (showPasswordForm && isCompleteEmail(next)) {
-      setShowPasswordForm(coachLogin);
     }
   }
 
@@ -159,7 +157,7 @@ function LoginForm() {
             body: JSON.stringify({ email: email.trim().toLowerCase(), deviceId }),
           });
           const status = (await statusRes.json().catch(() => ({}))) as { enabled?: boolean };
-          if (!status.enabled) {
+          if (!status.enabled && !hasSkippedQuickAuthSetup()) {
             window.location.href = `/setup-quick-auth?redirect=${encodeURIComponent(destination)}`;
             return;
           }

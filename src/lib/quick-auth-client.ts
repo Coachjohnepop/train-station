@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 const DEVICE_ID_KEY = "ts_quick_auth_device_id";
 const LOCAL_META_KEY = "ts_quick_auth_meta";
+const SETUP_SKIP_KEY = "ts_quick_auth_setup_skipped";
 export type QuickAuthLocalMeta = {
   email: string;
   pin: boolean;
@@ -182,6 +183,36 @@ export function clearQuickAuthMeta(): void {
   if (!storage) return;
   try {
     storage.removeItem(LOCAL_META_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** User chose "Skip for now" on setup-quick-auth — stop post-login redirects until they set a PIN. */
+export function markQuickAuthSetupSkipped(): void {
+  if (typeof window === "undefined") return;
+  const storage = readMetaStorage();
+  if (!storage) return;
+  try {
+    storage.setItem(SETUP_SKIP_KEY, new Date().toISOString());
+  } catch {
+    /* ignore */
+  }
+}
+
+export function hasSkippedQuickAuthSetup(): boolean {
+  if (typeof window === "undefined") return false;
+  const storage = readMetaStorage();
+  if (!storage) return false;
+  return Boolean(storage.getItem(SETUP_SKIP_KEY));
+}
+
+export function clearQuickAuthSetupSkipped(): void {
+  if (typeof window === "undefined") return;
+  const storage = readMetaStorage();
+  if (!storage) return;
+  try {
+    storage.removeItem(SETUP_SKIP_KEY);
   } catch {
     /* ignore */
   }

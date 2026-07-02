@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
 import PinPad from "@/components/PinPad";
 import {
+  clearQuickAuthSetupSkipped,
   platformAuthenticatorAvailable,
   useQuickAuthDeviceId,
   writeQuickAuthMeta,
@@ -91,6 +92,7 @@ export default function QuickAuthSettings({ email }: { email: string }) {
         setPinStep("enter");
         return;
       }
+      clearQuickAuthSetupSkipped();
       setMessage("PIN saved for this device.");
       setPinStep("idle");
       setDraftPin("");

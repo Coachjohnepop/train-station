@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
 import PinPad from "@/components/PinPad";
 import {
+  clearQuickAuthSetupSkipped,
   platformAuthenticatorAvailable,
   useQuickAuthDeviceId,
   writeQuickAuthMeta,
@@ -93,13 +94,14 @@ export default function QuickAuthSetupPrompt({
         setDraftPin("");
         setConfirmPin("");
         setPinStep("enter");
+        clearQuickAuthSetupSkipped();
         writeQuickAuthMeta({
           email: email.trim().toLowerCase(),
           pin: true,
           webauthn: webauthnEnabled,
           updatedAt: new Date().toISOString(),
         });
-        onContinue();
+        setMessage("PIN saved — quick sign-in is ready on this device.");
       } catch {
         setError("Could not save PIN.");
         setDraftPin("");

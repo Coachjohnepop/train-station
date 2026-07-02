@@ -23,6 +23,7 @@
     "test:s3-s6": "node scripts/test-s3-s6.mjs",
     "test:s5": "node scripts/s5-payments-test.mjs",
     "test:commission": "node scripts/stripe-commission-math-test.mjs",
+    "test:quick-auth": "node scripts/quick-auth-login-smoke.mjs",
     "test:blob": "node scripts/blob-probe.mjs"
   },
   "dependencies": {
