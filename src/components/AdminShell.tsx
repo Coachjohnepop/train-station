@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import AdminAreaNav from "@/components/AdminAreaNav";
 import ResumePathTracker from "@/components/ResumePathTracker";
@@ -35,6 +36,8 @@ export default function AdminShell({
   canPlatform,
   showDevSwitcher,
 }: Props) {
+  const pathname = usePathname();
+  const coachFloorFocus = pathname.startsWith("/admin/today");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [navCollapsed, setNavCollapsed] = useState(false);
 
@@ -65,6 +68,24 @@ export default function AdminShell({
       window.removeEventListener("keydown", onKey);
     };
   }, [drawerOpen, closeDrawer]);
+
+  if (coachFloorFocus) {
+    return (
+      <div className="coach-floor-shell flex min-h-[100dvh] flex-col bg-[var(--bg)]">
+        <header className="flex min-h-[52px] shrink-0 items-center justify-between gap-2 border-b border-[var(--border)] px-3 py-2">
+          <Link href="/admin/day" className="btn-ghost min-h-[44px] px-3 text-sm font-semibold">
+            ← Dashboard
+          </Link>
+          <p className="text-sm font-bold tracking-tight">Go to Today</p>
+          <LogoutButton compact className="shrink-0" />
+        </header>
+        <main className="min-h-0 flex-1 overflow-hidden px-2 py-2 sm:px-3">
+          {children}
+        </main>
+        <CoachHelpAssistant />
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell-bg flex min-h-screen flex-col xl:flex-row">

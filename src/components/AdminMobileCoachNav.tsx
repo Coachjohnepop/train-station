@@ -28,7 +28,8 @@ export default function AdminMobileCoachNav({ onOpenMenu }: Props) {
       .catch(() => {});
   }, []);
 
-  const onClass = pathname.startsWith("/admin/day") || pathname === "/admin";
+  const onDash = pathname.startsWith("/admin/day") || pathname === "/admin";
+  const onToday = pathname.startsWith("/admin/today");
   const onPlan = pathname.startsWith("/admin/plan");
   const onLive = pathname.startsWith("/admin/live");
   const onChat = pathname.startsWith("/admin/chat");
@@ -40,11 +41,17 @@ export default function AdminMobileCoachNav({ onOpenMenu }: Props) {
       aria-label="Coach quick nav"
     >
       <div className="mx-auto flex max-w-lg items-stretch">
-        <Link href="/admin/day" className={tabClass(onClass)}>
+        <Link href="/admin/day" className={tabClass(onDash)}>
           <span className="coach-quick-nav-icon leading-none" aria-hidden>
             ◉
           </span>
-          Dash
+          Board
+        </Link>
+        <Link href="/admin/today" className={tabClass(onToday)}>
+          <span className="coach-quick-nav-icon leading-none" aria-hidden>
+            ▶
+          </span>
+          Today
         </Link>
         <Link href="/admin/plan" className={tabClass(onPlan)}>
           <span className="coach-quick-nav-icon leading-none" aria-hidden>
