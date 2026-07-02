@@ -347,7 +347,7 @@ export default function AdminCommissionClient() {
           <div className="card space-y-4 p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-sm font-semibold uppercase tracking-[2px] text-accent">
-                Payout partners
+                Active partners
               </h2>
               <span
                 className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
@@ -369,19 +369,19 @@ export default function AdminCommissionClient() {
 
             {data.partners.length === 0 ? (
               <p className="text-sm text-[var(--muted)]">
-                No partners yet. Add John (or anyone else) who receives a share of the commission
-                pool.
+                No partners yet. Use the form below to add someone who receives a share of the
+                commission pool.
               </p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--surface-2)]">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-[var(--border)] text-left text-[10px] uppercase tracking-[2px] text-[var(--muted)]">
-                      <th className="px-2 py-2">Partner</th>
-                      <th className="px-2 py-2">Share</th>
-                      <th className="px-2 py-2">Stripe</th>
-                      <th className="px-2 py-2">Est. payout</th>
-                      <th className="px-2 py-2" />
+                      <th className="px-3 py-2">Partner</th>
+                      <th className="px-3 py-2">Share</th>
+                      <th className="px-3 py-2">Stripe</th>
+                      <th className="px-3 py-2">Est. payout</th>
+                      <th className="px-3 py-2" />
                     </tr>
                   </thead>
                   <tbody>
@@ -398,15 +398,15 @@ export default function AdminCommissionClient() {
                             !partner.enabled ? "opacity-50" : ""
                           }`}
                         >
-                          <td className="px-2 py-3">
+                          <td className="px-3 py-3">
                             <div className="font-medium">{partner.name}</div>
                             <div className="text-xs text-[var(--muted)]">{partner.email}</div>
                             {!partner.enabled && (
                               <span className="text-[10px] text-amber-400">Disabled</span>
                             )}
                           </td>
-                          <td className="px-2 py-3">{partner.sharePercent}%</td>
-                          <td className="px-2 py-3 text-xs">
+                          <td className="px-3 py-3">{partner.sharePercent}%</td>
+                          <td className="px-3 py-3 text-xs">
                             {!connect?.configured ? (
                               <span className="text-amber-300">Not linked</span>
                             ) : ready ? (
@@ -415,10 +415,10 @@ export default function AdminCommissionClient() {
                               <span className="text-amber-300">Onboarding</span>
                             )}
                           </td>
-                          <td className="px-2 py-3 text-[var(--muted)]">
+                          <td className="px-3 py-3 text-[var(--muted)]">
                             {partner.enabled && split ? split.amountLabel : "—"}
                           </td>
-                          <td className="px-2 py-3 text-right">
+                          <td className="px-3 py-3 text-right">
                             <div className="flex flex-wrap justify-end gap-1">
                               <button
                                 type="button"
@@ -456,8 +456,18 @@ export default function AdminCommissionClient() {
                 </table>
               </div>
             )}
+          </div>
 
-            <div className="grid gap-3 border-t border-[var(--border)] pt-4 sm:grid-cols-2">
+          <div className="card space-y-4 p-5">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-[2px] text-accent">
+                Add partner
+              </h2>
+              <p className="mt-1 text-xs text-[var(--muted)]">
+                Future shareholders or co-owners — each completes their own Stripe Connect onboarding.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
               <input
                 className="input"
                 placeholder="Name"
