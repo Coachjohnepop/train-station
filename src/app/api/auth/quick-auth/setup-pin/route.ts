@@ -6,7 +6,7 @@ import {
   resolveQuickAuthDeviceId,
 } from "@/lib/quick-auth-device-cookie";
 import { isValidPin } from "@/lib/quick-auth-pin";
-import { quickAuthStatusForDevice, setAdminPinForEmail } from "@/lib/quick-auth-store";
+import { confirmPinPersisted, setAdminPinForEmail } from "@/lib/quick-auth-store";
 
 export async function POST(request: Request) {
   const session = await getSessionUser();
@@ -33,8 +33,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 503 });
   }
 
-  const status = await quickAuthStatusForDevice(session.email, deviceId);
-  if (!status?.pin) {
+  const persisted = await confirmPinPersisted(session.email, deviceId, pin);
+  if (!persisted) {
     return NextResponse.json(
       { error: "PIN could not be verified after save — try again." },
       { status: 503 },

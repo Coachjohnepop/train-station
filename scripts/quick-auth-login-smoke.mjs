@@ -56,7 +56,7 @@ function fail(msg) {
   process.exit(1);
 }
 
-async function waitForPinStatus(deviceId, wantEnabled = true, attempts = 8) {
+async function waitForPinStatus(deviceId, wantEnabled = true, attempts = 20) {
   for (let i = 0; i < attempts; i++) {
     const status = await req("/api/auth/quick-auth/status", {
       method: "POST",
@@ -65,7 +65,7 @@ async function waitForPinStatus(deviceId, wantEnabled = true, attempts = 8) {
     if (status.body?.pin === wantEnabled && status.body?.enabled === wantEnabled) {
       return status.body;
     }
-    await new Promise((r) => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, 500));
   }
   return null;
 }
@@ -144,6 +144,22 @@ async function main() {
 
   await req("/api/auth/logout", { method: "GET" });
 
+  let newPinLogin = null;
+  for (let i = 0; i < 12; i++) {
+    newPinLogin = await req("/api/auth/quick-auth/pin-login", {
+      method: "POST",
+      json: { email: EMAIL, pin: NEW_PIN, deviceId, redirect: ADMIN_REDIRECT },
+    });
+    if (newPinLogin.res.ok) break;
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  if (!newPinLogin?.res.ok) {
+    fail(`new PIN login failed: ${newPinLogin?.res.status} ${JSON.stringify(newPinLogin?.body)}`);
+  }
+  console.log("✓ new PIN login works after change");
+
+  await req("/api/auth/logout", { method: "GET" });
+
   const oldPinLogin = await req("/api/auth/quick-auth/pin-login", {
     method: "POST",
     json: { email: EMAIL, pin: TEST_PIN, deviceId, redirect: ADMIN_REDIRECT },
@@ -152,15 +168,6 @@ async function main() {
     fail("old PIN should fail after change");
   }
   console.log("✓ old PIN rejected after change");
-
-  const newPinLogin = await req("/api/auth/quick-auth/pin-login", {
-    method: "POST",
-    json: { email: EMAIL, pin: NEW_PIN, deviceId, redirect: ADMIN_REDIRECT },
-  });
-  if (!newPinLogin.res.ok) {
-    fail(`new PIN login failed: ${newPinLogin.res.status} ${JSON.stringify(newPinLogin.body)}`);
-  }
-  console.log("✓ new PIN login works after change");
 
   const loginHtml = await req(`/login?redirect=${encodeURIComponent(ADMIN_REDIRECT)}`);
   if (!loginHtml.res.ok) {

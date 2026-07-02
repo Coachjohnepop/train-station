@@ -4,7 +4,7 @@ import path from "path";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
 import { normalizeAccountEmail } from "@/lib/account-email";
 import { normalizeDeviceId } from "@/lib/quick-auth-device";
-import { hashPin } from "@/lib/quick-auth-pin";
+import { hashPin, verifyPin } from "@/lib/quick-auth-pin";
 
 export type StoredWebAuthnCredential = {
   credentialId: string;
@@ -330,6 +330,22 @@ export async function clearAllQuickAuthForEmail(email: string): Promise<void> {
   }
 
   await saveStore(next);
+}
+
+/** Wait until blob read path sees the new PIN (serverless write propagation). */
+export async function confirmPinPersisted(
+  email: string,
+  deviceId: string,
+  pin: string,
+  attempts = 16,
+): Promise<boolean> {
+  for (let i = 0; i < attempts; i++) {
+    memoryStore = null;
+    const record = await resolvePinHashForDevice(email, deviceId);
+    if (record && verifyPin(pin, record.pinHash)) return true;
+    await new Promise((r) => setTimeout(r, 300));
+  }
+  return false;
 }
 
 export async function quickAuthStatusForDevice(
