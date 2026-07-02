@@ -137,6 +137,8 @@ export default function BackgroundMusic() {
     }
   };
 
+  const onAdminLanding = ADMIN_MUSIC_LANDING.has(pathname);
+
   return (
     <>
       <audio ref={audioRef} src={SRC} loop preload="auto" />
@@ -146,7 +148,15 @@ export default function BackgroundMusic() {
           onClick={toggle}
           aria-label={off ? "Unmute background music" : "Mute background music"}
           title={off ? "Play music" : "Mute music"}
-          className="fixed bottom-6 left-6 z-50 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#3d2660] bg-[#0a0612]/90 text-white shadow-xl backdrop-blur-md transition-all hover:border-[#7c3aed] hover:bg-[#1a1428] active:scale-[0.985]"
+          className={`bg-music-toggle fixed z-50 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_90%,transparent)] text-[var(--text)] shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.985] ${
+            onAdminLanding ? "bottom-20 xl:bottom-6" : "bottom-6"
+          }`}
+          style={{
+            right: "max(1.5rem, env(safe-area-inset-right))",
+            bottom: onAdminLanding
+              ? undefined
+              : "max(1.5rem, env(safe-area-inset-bottom))",
+          }}
         >
           {off ? <SpeakerOffIcon /> : <SpeakerOnIcon />}
         </button>
