@@ -104,6 +104,23 @@ async function readLegacyPartner(): Promise<Partial<CommissionPartner> | null> {
   };
 }
 
+function defaultMilestonePartnerSeed(): CommissionPartner[] {
+  const now = new Date().toISOString();
+  return [
+    {
+      id: randomUUID(),
+      name: "John Popham",
+      email: "john@thetrainstation.co",
+      stripeAccountId: null,
+      sharePercent: 100,
+      enabled: true,
+      notes: "Auto-seeded milestone partner",
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
+}
+
 function seedPartnersFromEnv(): CommissionPartner[] {
   const raw = process.env.STRIPE_COMMISSION_SEED_JSON?.trim();
   if (raw) {
@@ -189,7 +206,13 @@ async function ensureMigratedStore(): Promise<PartnersStore> {
         updatedAt: now,
       };
     } else {
-      const seeded = seedPartnersFromEnv();
+      let seeded = seedPartnersFromEnv();
+      if (seeded.length === 0 && process.env.STRIPE_COMMISSION_ENABLED !== "false") {
+        const mode = process.env.STRIPE_COMMISSION_MODE?.trim().toLowerCase();
+        if (mode !== "flat" && mode !== "tiered") {
+          seeded = defaultMilestonePartnerSeed();
+        }
+      }
       if (seeded.length > 0) {
         store = { partners: seeded, updatedAt: now };
       }
