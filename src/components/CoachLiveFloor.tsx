@@ -171,7 +171,7 @@ export default function CoachLiveFloor({ initialDate }: { initialDate: string })
           </Link>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="live-floor-grid grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
           {tiles.map((tile) => {
             const expanded = expandedUserId === tile.userId;
             const loaded = workouts[tile.userId];
@@ -181,6 +181,8 @@ export default function CoachLiveFloor({ initialDate }: { initialDate: string })
               <div
                 key={`${tile.userId}-${tile.workoutId}`}
                 className={`overflow-hidden rounded-2xl border transition-colors ${
+                  expanded ? "col-span-full" : ""
+                } ${
                   tile.status === "done"
                     ? "border-emerald-500/40 bg-emerald-500/10"
                     : tile.status === "active"

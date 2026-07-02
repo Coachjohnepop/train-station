@@ -6,6 +6,7 @@ import AdminAreaNav from "@/components/AdminAreaNav";
 import ResumePathTracker from "@/components/ResumePathTracker";
 
 import AdminMobileCoachNav from "@/components/AdminMobileCoachNav";
+import CoachHelpAssistant from "@/components/CoachHelpAssistant";
 import TrainStationBrand from "@/components/TrainStationBrand";
 import DevModeSwitcher from "@/components/DevModeSwitcher";
 import LogoutButton from "@/components/LogoutButton";
@@ -170,12 +171,13 @@ export default function AdminShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <main className="mx-auto w-full max-w-6xl flex-1 px-3 py-4 pb-[max(6rem,env(safe-area-inset-bottom))] md:px-6 md:py-6 xl:px-8 xl:pb-8">
+        <main className="admin-main mx-auto w-full max-w-6xl flex-1 px-3 py-4 pb-[max(6rem,env(safe-area-inset-bottom))] md:px-6 md:py-6 xl:max-w-[min(100%,96rem)] xl:px-8 xl:pb-8">
           {children}
         </main>
       </div>
 
       <AdminMobileCoachNav onOpenMenu={openDrawer} />
+      <CoachHelpAssistant />
     </div>
   );
 }
