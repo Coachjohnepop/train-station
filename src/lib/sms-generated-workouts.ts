@@ -101,8 +101,6 @@ async function ensureExercise(
     description: notes || `Created from text upload (${new Date().toISOString().slice(0, 10)})`,
     tags: NEWLY_ADDED_EXERCISE_TAG,
     videoUrl: hintVideo,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
   };
   await saveDemoExercises([...exercises, created]);
   return { exercise: created, created: true };
@@ -158,8 +156,9 @@ export async function relinkSmsWorkoutExercises(workoutId: string): Promise<{
 }
 
 export async function buildWorkoutFromParsedSms(parsed: ParsedSmsWorkout, workoutId?: string) {
-  await hydrateSmsWorkouts();
+  await Promise.all([hydrateSmsWorkouts(), hydrateDemoExercises()]);
   const store = readStore();
+  let exercises = loadDemoExercises();
   const id = workoutId || `sms-w-${randomUUID().slice(0, 8)}`;
   const now = new Date().toISOString();
 
@@ -175,9 +174,25 @@ export async function buildWorkoutFromParsedSms(parsed: ParsedSmsWorkout, workou
   });
 
   const newExerciseIds: string[] = [];
+  let exercisesDirty = false;
+
   for (const [idx, ex] of parsed.exercises.entries()) {
-    const { exercise, created } = await ensureExercise(ex.name, ex.notes);
-    if (created) newExerciseIds.push(exercise.id);
+    const displayName = sanitizeSmsExerciseName(ex.name) || ex.name.trim();
+    let exercise = matchExerciseInCatalog(displayName, exercises);
+    if (!exercise) {
+      const hintVideo = hintVideoUrlForExerciseName(displayName);
+      exercise = {
+        id: createDemoExerciseId(),
+        name: displayName,
+        description: ex.notes || `Created from text upload (${now.slice(0, 10)})`,
+        tags: NEWLY_ADDED_EXERCISE_TAG,
+        videoUrl: hintVideo,
+      };
+      exercises.push(exercise);
+      exercisesDirty = true;
+      newExerciseIds.push(exercise.id);
+    }
+
     store.workoutExercises.push({
       id: `sms-we-${randomUUID().slice(0, 8)}`,
       workoutId: id,
@@ -192,8 +207,10 @@ export async function buildWorkoutFromParsedSms(parsed: ParsedSmsWorkout, workou
     });
   }
 
+  if (exercisesDirty) {
+    await saveDemoExercises(exercises);
+  }
   await writeStore(store);
-  await relinkSmsWorkoutExercises(id);
   return { workoutId: id, exerciseCount: parsed.exercises.length, newExerciseIds };
 }
 

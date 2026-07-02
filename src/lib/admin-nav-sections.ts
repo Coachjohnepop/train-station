@@ -5,6 +5,7 @@ export type AdminNavItem = {
   badge?: "chat";
   leadsBadge?: boolean;
   queueBadge?: boolean;
+  coachSuggestionsBadge?: boolean;
 };
 
 export type AdminNavGroup = {
@@ -181,6 +182,12 @@ export const PLATFORM_NAV_GROUPS: AdminNavGroup[] = [
         label: "Reports",
         match: (p) => p.startsWith("/admin/reports"),
       },
+      {
+        href: "/admin/coach-suggestions",
+        label: "Coach suggestions",
+        match: (p) => p.startsWith("/admin/coach-suggestions"),
+        coachSuggestionsBadge: true,
+      },
     ],
   },
 ];
@@ -194,6 +201,7 @@ const PLATFORM_PATH_PREFIXES = [
   "/admin/offers",
   "/admin/users",
   "/admin/reports",
+  "/admin/coach-suggestions",
 ];
 
 export function isPlatformAdminPath(pathname: string): boolean {

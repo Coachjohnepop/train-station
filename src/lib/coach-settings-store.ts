@@ -19,16 +19,69 @@ import {
   type RampWeekTemplate,
 } from "@/lib/member-ramp-template";
 
+export type CommissionPayoutMode = "on_demand" | "weekly";
+
 export type CoachSettings = {
   coachPhone: string | null;
   coachEmail: string | null;
   /** Master switch — when false, all outbound email (Resend) and carrier SMS are paused. */
   messagingEnabled: boolean;
+  /** Show the intro booking card on member Today (pre-intake). Off by default — coach opts in. */
+  autoPromptIntroBooking: boolean;
+  /** Show follow-up booking card after coach requests a meeting on Members. Off by default. */
+  autoPromptFollowUpBooking: boolean;
+  /**
+   * Partner revenue share payouts (Connect transfers).
+   * on_demand = Jeremy runs payout manually; weekly = optional cron on commissionPayoutWeekday.
+   */
+  commissionPayoutMode: CommissionPayoutMode;
+  /** 0=Sun … 6=Sat — only used when commissionPayoutMode is weekly. */
+  commissionPayoutWeekday: number;
   alertPrefs: CoachAlertPrefs;
   warmupBlocks: WarmupBlockTemplate[];
   rampTemplate: RampWeekTemplate[];
   updatedAt: string;
 };
+
+export const COMMISSION_PAYOUT_WEEKDAYS = [
+  { value: 0, label: "Sunday" },
+  { value: 1, label: "Monday" },
+  { value: 2, label: "Tuesday" },
+  { value: 3, label: "Wednesday" },
+  { value: 4, label: "Thursday" },
+  { value: 5, label: "Friday" },
+  { value: 6, label: "Saturday" },
+] as const;
+
+export function normalizeCommissionPayoutWeekday(raw: unknown): number {
+  const n = typeof raw === "number" ? raw : Number(raw);
+  if (!Number.isFinite(n)) return 5;
+  return Math.max(0, Math.min(6, Math.floor(n)));
+}
+
+export function automatedCommissionPayoutAllowed(settings: CoachSettings, now = new Date()): {
+  allowed: boolean;
+  reason?: string;
+} {
+  if (settings.commissionPayoutMode === "on_demand") {
+    return {
+      allowed: false,
+      reason:
+        "Automated payouts are off — commission payout mode is Pay on demand. Use Run payout now in Admin → Commission.",
+    };
+  }
+  const today = now.getDay();
+  if (today !== settings.commissionPayoutWeekday) {
+    const label =
+      COMMISSION_PAYOUT_WEEKDAYS.find((d) => d.value === settings.commissionPayoutWeekday)?.label ??
+      "scheduled day";
+    return {
+      allowed: false,
+      reason: `Weekly payout is scheduled for ${label}s only (today is ${COMMISSION_PAYOUT_WEEKDAYS.find((d) => d.value === today)?.label ?? "another day"}).`,
+    };
+  }
+  return { allowed: true };
+}
 
 const BLOB_PATH = "demo/coach-settings.json";
 const DEV_FILE = path.join(process.cwd(), "prisma", "coach-settings.dev.json");
@@ -40,6 +93,10 @@ function defaultSettings(): CoachSettings {
     coachPhone: null,
     coachEmail: process.env.COACH_NOTIFY_EMAIL?.trim() || null,
     messagingEnabled: true,
+    autoPromptIntroBooking: false,
+    autoPromptFollowUpBooking: false,
+    commissionPayoutMode: "on_demand",
+    commissionPayoutWeekday: 5,
     alertPrefs: defaultCoachAlertPrefs(),
     warmupBlocks: DEFAULT_WARMUP_BLOCKS.map((b) => ({ ...b })),
     rampTemplate: DEFAULT_RAMP_WEEKS.map((w) => ({
@@ -58,6 +115,10 @@ function normalizeSettings(raw: unknown): CoachSettings {
     coachPhone: typeof data.coachPhone === "string" ? data.coachPhone : defaults.coachPhone,
     coachEmail: typeof data.coachEmail === "string" ? data.coachEmail : defaults.coachEmail,
     messagingEnabled: data.messagingEnabled === false ? false : true,
+    autoPromptIntroBooking: data.autoPromptIntroBooking === true,
+    autoPromptFollowUpBooking: data.autoPromptFollowUpBooking === true,
+    commissionPayoutMode: data.commissionPayoutMode === "weekly" ? "weekly" : "on_demand",
+    commissionPayoutWeekday: normalizeCommissionPayoutWeekday(data.commissionPayoutWeekday),
     alertPrefs: normalizeCoachAlertPrefs(data.alertPrefs),
     warmupBlocks: normalizeWarmupBlocks(data.warmupBlocks),
     rampTemplate: normalizeRampWeeks(data.rampTemplate),
@@ -90,6 +151,10 @@ export async function saveCoachSettings(
       | "coachPhone"
       | "coachEmail"
       | "messagingEnabled"
+      | "autoPromptIntroBooking"
+      | "autoPromptFollowUpBooking"
+      | "commissionPayoutMode"
+      | "commissionPayoutWeekday"
       | "alertPrefs"
       | "warmupBlocks"
       | "rampTemplate"
@@ -102,6 +167,24 @@ export async function saveCoachSettings(
     ...patch,
     messagingEnabled:
       patch.messagingEnabled === undefined ? current.messagingEnabled : patch.messagingEnabled !== false,
+    autoPromptIntroBooking:
+      patch.autoPromptIntroBooking === undefined
+        ? current.autoPromptIntroBooking
+        : patch.autoPromptIntroBooking === true,
+    autoPromptFollowUpBooking:
+      patch.autoPromptFollowUpBooking === undefined
+        ? current.autoPromptFollowUpBooking
+        : patch.autoPromptFollowUpBooking === true,
+    commissionPayoutMode:
+      patch.commissionPayoutMode === undefined
+        ? current.commissionPayoutMode
+        : patch.commissionPayoutMode === "weekly"
+          ? "weekly"
+          : "on_demand",
+    commissionPayoutWeekday:
+      patch.commissionPayoutWeekday === undefined
+        ? current.commissionPayoutWeekday
+        : normalizeCommissionPayoutWeekday(patch.commissionPayoutWeekday),
     alertPrefs: patch.alertPrefs ? normalizeCoachAlertPrefs(patch.alertPrefs) : current.alertPrefs,
     warmupBlocks: patch.warmupBlocks
       ? normalizeWarmupBlocks(patch.warmupBlocks)
