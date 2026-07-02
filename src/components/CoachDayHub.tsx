@@ -1,10 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import MemberWorkoutConsole, { type MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import type { CoachDayStudentCard } from "@/lib/coach-day";
+import {
+  quickAuthMetaForEmail,
+  useQuickAuthDeviceId,
+  writeQuickAuthMeta,
+} from "@/lib/quick-auth-client";
 
 type LiveFloorTile = {
   userId: string;
@@ -56,13 +61,18 @@ export default function CoachDayHub({
   dateLabel,
   students: initialStudents,
   sessionCount,
+  coachEmail,
 }: {
   sessionDate: string;
   dateLabel: string;
   students: CoachDayStudentCard[];
   sessionCount: number;
+  coachEmail: string;
 }) {
   const router = useRouter();
+  const newWorkoutRef = useRef<HTMLDivElement>(null);
+  const { deviceId, ready: deviceReady } = useQuickAuthDeviceId();
+  const [quickAuthEnabled, setQuickAuthEnabled] = useState<boolean | null>(null);
   const [students, setStudents] = useState(initialStudents);
   const [tiles, setTiles] = useState<LiveFloorTile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,6 +86,46 @@ export default function CoachDayHub({
   const [cascadeSourceId, setCascadeSourceId] = useState("");
   const [cascadeTargets, setCascadeTargets] = useState<string[]>([]);
   const [savingPlan, setSavingPlan] = useState(false);
+
+  const openNewWorkout = useCallback(() => {
+    setShowNewWorkout(true);
+    setShowCascade(false);
+    requestAnimationFrame(() => {
+      newWorkoutRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }, []);
+
+  useEffect(() => {
+    const local = quickAuthMetaForEmail(coachEmail);
+    if (local?.pin || local?.webauthn) setQuickAuthEnabled(true);
+  }, [coachEmail]);
+
+  useEffect(() => {
+    if (!deviceReady || !coachEmail.trim()) return;
+    let cancelled = false;
+    void (async () => {
+      const res = await fetch("/api/auth/quick-auth/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ email: coachEmail, deviceId }),
+      });
+      if (!res.ok || cancelled) return;
+      const data = await res.json().catch(() => ({}));
+      const enabled = Boolean(data.pin || data.webauthn);
+      if (cancelled) return;
+      setQuickAuthEnabled(enabled);
+      writeQuickAuthMeta({
+        email: coachEmail.trim().toLowerCase(),
+        pin: Boolean(data.pin),
+        webauthn: Boolean(data.webauthn),
+        updatedAt: new Date().toISOString(),
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [coachEmail, deviceId, deviceReady]);
 
   useEffect(() => {
     setStudents(initialStudents);
@@ -245,16 +295,26 @@ export default function CoachDayHub({
 
   return (
     <>
-      <div className="space-y-5">
-        <a
-          href="/setup-quick-auth?redirect=/admin/day"
-          className="block rounded-xl border border-[#7c3aed]/40 bg-[#7c3aed]/10 px-4 py-3 text-sm transition hover:border-[#7c3aed]/60"
-        >
-          <span className="font-semibold text-[#7c3aed]">Skip typing your password tomorrow</span>
-          <span className="mt-0.5 block text-xs text-[var(--muted)]">
-            Set a PIN or Face ID once on this phone — takes 30 seconds.
-          </span>
-        </a>
+      <div className="coach-dashboard space-y-5">
+        {quickAuthEnabled === false && (
+          <a
+            href="/setup-quick-auth?redirect=/admin/day"
+            className="block rounded-xl border border-[#7c3aed]/40 bg-[#7c3aed]/10 px-4 py-3 text-sm transition hover:border-[#7c3aed]/60"
+          >
+            <span className="font-semibold text-[#7c3aed]">Skip typing your password tomorrow</span>
+            <span className="mt-0.5 block text-xs text-[var(--muted)]">
+              Set a PIN or Face ID once on this phone — takes 30 seconds.
+            </span>
+          </a>
+        )}
+        {quickAuthEnabled === true && (
+          <Link
+            href="/setup-quick-auth?redirect=/admin/day"
+            className="inline-flex min-h-[40px] items-center rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--muted)] transition hover:border-[#7c3aed]/40 hover:text-accent"
+          >
+            Change PIN / Face ID
+          </Link>
+        )}
 
         <header className="card border-accent/30 bg-accent/5 py-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-accent">My class</p>
@@ -312,7 +372,10 @@ export default function CoachDayHub({
         )}
 
         {showNewWorkout && (
-          <div className="card space-y-3 border-amber-500/30 bg-amber-500/5">
+          <div
+            ref={newWorkoutRef}
+            className="card space-y-3 border-amber-500/30 bg-amber-500/5"
+          >
             <p className="text-sm font-semibold">Paste or dictate a new plan</p>
             <p className="text-xs text-[var(--muted)]">
               Type or voice-text your workout — same as texting John. Goes to everyone on your roster today.
@@ -466,14 +529,16 @@ export default function CoachDayHub({
                 </div>
                 <button
                   type="button"
-                  disabled={busyId === student.id || sessionCount === 0}
-                  onClick={() => void addStudent(student.id)}
+                  disabled={busyId === student.id}
+                  onClick={() =>
+                    sessionCount === 0 ? openNewWorkout() : void addStudent(student.id)
+                  }
                   className="btn-primary mt-3 min-h-[44px] w-full text-sm"
                 >
                   {busyId === student.id
                     ? "Adding…"
                     : sessionCount === 0
-                      ? "Build a workout first"
+                      ? "Create workout for class"
                       : "Add to class"}
                 </button>
               </div>
@@ -492,7 +557,7 @@ export default function CoachDayHub({
       </div>
 
       {drillDown ? (
-        <div className="fixed inset-0 z-50 flex flex-col bg-[var(--bg)] xl:flex-row">
+        <div className="coach-dashboard fixed inset-0 z-50 flex flex-col bg-[var(--bg)] xl:flex-row">
           <header className="flex min-h-[56px] shrink-0 items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3 xl:hidden">
             <button
               type="button"

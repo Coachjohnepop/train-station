@@ -38,7 +38,7 @@ export default async function AdminDayPage({ searchParams }: Props) {
   const nextKey = nextDate.toISOString().slice(0, 10);
 
   return (
-    <div className="space-y-4 pb-4">
+    <div className="coach-dashboard space-y-4 pb-4">
       <CoachResumeRedirect />
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <div className="flex items-center gap-2">
@@ -62,6 +62,7 @@ export default async function AdminDayPage({ searchParams }: Props) {
         dateLabel={formatDateLabel(sessionDate)}
         students={dayPlan.students}
         sessionCount={dayPlan.sessions.length}
+        coachEmail={session.email}
       />
     </div>
   );

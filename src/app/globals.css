@@ -353,6 +353,11 @@ a {
   min-width: 0;
 }
 
+.day-wheel-viewport--centered {
+  display: flex;
+  justify-content: center;
+}
+
 .day-wheel-strip {
   display: flex;
   gap: 8px;
@@ -1132,6 +1137,67 @@ table.data th {
 .intake-book-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 22px var(--ramp-gold-glow);
+}
+
+/* Coach dashboard — gold CTAs + browser bottom-nav icon polish */
+.coach-dashboard .btn-primary {
+  background: linear-gradient(180deg, var(--ramp-gold-light) 0%, var(--ramp-gold) 100%);
+  color: #1a1028;
+  border: 1px solid color-mix(in srgb, var(--ramp-gold-light) 55%, var(--ramp-gold-deep));
+  box-shadow: 0 4px 18px var(--ramp-gold-glow);
+}
+
+.coach-dashboard .btn-primary:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 6px 22px var(--ramp-gold-glow);
+}
+
+.coach-dashboard .btn-ghost,
+.coach-dashboard a.btn-ghost {
+  border-color: color-mix(in srgb, var(--ramp-gold) 45%, var(--border));
+  color: var(--ramp-gold-light);
+  background: color-mix(in srgb, var(--ramp-gold) 8%, transparent);
+}
+
+.coach-dashboard .btn-ghost:hover,
+.coach-dashboard a.btn-ghost:hover {
+  border-color: var(--ramp-gold-light);
+  background: color-mix(in srgb, var(--ramp-gold) 18%, var(--surface));
+  color: var(--ramp-gold-light);
+}
+
+.coach-dashboard .border-accent,
+.coach-dashboard [class*="border-accent"] {
+  border-color: color-mix(in srgb, var(--ramp-gold) 50%, var(--border)) !important;
+}
+
+.coach-dashboard .bg-accent\/10,
+.coach-dashboard .bg-accent\/15,
+.coach-dashboard .bg-accent\/20 {
+  background: color-mix(in srgb, var(--ramp-gold) 14%, transparent) !important;
+}
+
+.coach-dashboard .text-accent {
+  color: var(--ramp-gold-light) !important;
+}
+
+.coach-quick-nav-icon {
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+@media (min-width: 640px) {
+  .coach-quick-nav-icon {
+    font-size: 1.2rem;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .coach-quick-nav-tab:hover .coach-quick-nav-icon {
+    transform: scale(1.1);
+  }
 }
 
 .intake-next-step-card--booked {
