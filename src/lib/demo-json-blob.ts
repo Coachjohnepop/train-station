@@ -49,11 +49,23 @@ export function blobSdkOptionVariants(): PutCommandOptions[] {
   return variants;
 }
 
+function blobPublicHost(): string | null {
+  const fromEnv = process.env.BLOB_PUBLIC_HOST?.trim();
+  if (fromEnv) {
+    return fromEnv.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  }
+  // Derive from vercel_blob_rw_<storeId>… token when env host is unset on Vercel.
+  const token = BLOB_TOKEN;
+  if (!token) return null;
+  const match = token.match(/^vercel_blob_rw_([A-Za-z0-9]+)/);
+  if (!match) return null;
+  return `${match[1].toLowerCase()}.public.blob.vercel-storage.com`;
+}
+
 function publicBlobFetchUrl(blobPath: string): string | null {
-  const host = process.env.BLOB_PUBLIC_HOST?.trim();
+  const host = blobPublicHost();
   if (!host) return null;
-  const base = host.startsWith("http") ? host.replace(/\/$/, "") : `https://${host.replace(/\/$/, "")}`;
-  return `${base}/${blobPath}`;
+  return `https://${host}/${blobPath}`;
 }
 
 async function readBlobJsonViaPublicUrl<T>(blobPath: string): Promise<T | null> {
@@ -70,8 +82,11 @@ async function readBlobJsonViaPublicUrl<T>(blobPath: string): Promise<T | null> 
 }
 
 export async function readBlobJson<T>(blobPath: string): Promise<T | null> {
+  const viaPublic = await readBlobJsonViaPublicUrl<T>(blobPath);
+  if (viaPublic) return viaPublic;
+
   if (!isBlobConfigured()) {
-    return readBlobJsonViaPublicUrl<T>(blobPath);
+    return null;
   }
   for (const opts of blobSdkOptionVariants()) {
     try {
@@ -85,7 +100,9 @@ export async function readBlobJson<T>(blobPath: string): Promise<T | null> {
       continue;
     }
   }
-  return readBlobJsonViaPublicUrl<T>(blobPath);
+  const viaPublic = await readBlobJsonViaPublicUrl<T>(blobPath);
+  if (viaPublic) return viaPublic;
+  return null;
 }
 
 export type BlobWriteFailure = {
