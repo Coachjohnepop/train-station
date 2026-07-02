@@ -31,6 +31,8 @@ type Props = {
   introBookedAt?: string | null;
   coachMeetingRequestedAt?: string | null;
   coachMeetingRequestNote?: string | null;
+  autoPromptIntroBooking?: boolean;
+  autoPromptFollowUpBooking?: boolean;
 };
 
 function DaySummaryCard({
@@ -155,12 +157,15 @@ export default function MemberTodayShell({
   introBookedAt = null,
   coachMeetingRequestedAt = null,
   coachMeetingRequestNote = null,
+  autoPromptIntroBooking = false,
+  autoPromptFollowUpBooking = false,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isToday = selectedDate === todayIso;
-  const showFullWorkout = isToday && !!workout && intakeComplete;
-  const showWarmupFlow = !intakeComplete && !!warmupWorkout && days.length > 0;
+  const showFullWorkout = isToday && !!workout && (intakeComplete || hasCoachSession);
+  const showWarmupFlow =
+    !intakeComplete && !!warmupWorkout && days.length > 0 && !hasCoachSession;
 
   const selectDate = useCallback(
     (iso: string) => {
@@ -184,7 +189,9 @@ export default function MemberTodayShell({
 
   const rampHighlight = showWarmupFlow && !intakeComplete;
   const todayGold = isToday;
-  const showFollowUpCard = isToday && !!coachMeetingRequestedAt && intakeComplete;
+  const showFollowUpCard =
+    autoPromptFollowUpBooking && isToday && !!coachMeetingRequestedAt && intakeComplete;
+  const showIntroCard = autoPromptIntroBooking && isToday;
 
   const intakeStatus = {
     introBookedAt,
@@ -203,7 +210,7 @@ export default function MemberTodayShell({
         >
           {isToday ? "Today" : "Your schedule"}
         </h1>
-        {isToday && rampHighlight ? (
+        {isToday && rampHighlight && autoPromptIntroBooking ? (
           <p className="mt-1 text-xs font-medium text-[var(--ramp-gold-light)] sm:text-sm">
             Start here — book your intro, then warm up below.
           </p>
@@ -253,13 +260,13 @@ export default function MemberTodayShell({
         <MemberIntakeIntroCard initialStatus={intakeStatus} followUpOnly />
       )}
 
-      {!intakeComplete && isToday && !showFollowUpCard && !showWarmupFlow && (
+      {showIntroCard && !intakeComplete && !showFollowUpCard && !showWarmupFlow && (
         <MemberIntakeIntroCard initialStatus={intakeStatus} />
       )}
 
       {showWarmupFlow && (
         <>
-          {isToday && <MemberIntakeIntroCard initialStatus={intakeStatus} />}
+          {showIntroCard && <MemberIntakeIntroCard initialStatus={intakeStatus} />}
           <MemberWarmupDayNavigator
             days={days}
             todayIso={todayIso}
@@ -338,6 +345,12 @@ export default function MemberTodayShell({
               </ul>
             </>
           )}
+        </div>
+      )}
+
+      {isToday && hasCoachSession && !workout && (
+        <div className="card border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">
+          <p>Your coach assigned today&apos;s workout — it&apos;s still loading. Pull to refresh or wait a few seconds.</p>
         </div>
       )}
 

@@ -7,6 +7,8 @@ import type { MemberDaySummary, MemberDayWindowRollup } from "@/lib/member-day-w
 export type { MemberDaySummary, MemberDayWindowRollup } from "@/lib/member-day-window-types";
 import { resolveProgramWorkoutForCalendarDate } from "@/lib/go-to-today";
 import { getProgramBySlug } from "@/lib/program-data";
+import { getSessionForUserOnDate, hydrateTodaySessions } from "@/lib/today-sessions";
+import { getWorkoutExercisePreview } from "@/lib/sms-generated-workouts";
 import { getUserEnrollments } from "@/lib/data/user-data";
 import {
   addDaysIso,
@@ -90,8 +92,8 @@ export async function resolvePrimaryScheduleProgram(userId: string) {
 /** Placeholder schedule for intake ramp when member has no program enrolled yet. */
 export function buildIntakeRampPlaceholderDays(
   todayIso: string,
-  windowDays = 10,
-  daysBefore = 3,
+  windowDays = 5,
+  daysBefore = 2,
 ): MemberDaySummary[] {
   const daysAfter = Math.max(0, windowDays - 1 - daysBefore);
   const days: MemberDaySummary[] = [];
@@ -149,13 +151,46 @@ export async function buildMemberDayWindow(
   const program = await getProgramBySlug(programSlug);
   if (!program) return null;
 
+  await hydrateTodaySessions({ preferFresh: true });
   const todayIso = localTodayIso();
-  const rollingDays = opts?.rollingDays ?? 10;
-  const daysBefore = opts?.daysBefore ?? 3;
+  const rollingDays = opts?.rollingDays ?? 5;
+  const daysBefore = opts?.daysBefore ?? 2;
   const rolling = rollingProgramCalendarDays(program, todayIso, rollingDays, daysBefore);
   const days: MemberDaySummary[] = [];
 
   for (const entry of rolling) {
+    const coachSession = getSessionForUserOnDate(userId, entry.iso);
+    if (coachSession) {
+      const preview = await getWorkoutExercisePreview(coachSession.workoutId, 8);
+      const offset = daysFromToday(entry.iso, todayIso);
+      const visibilityTier = dayVisibilityTier(entry.iso, todayIso);
+      const dayLabel = DAY_LABELS[entry.dayNumber - 1] ?? `Day ${entry.dayNumber}`;
+      const visibleNames = visibilityTier === "label" ? [] : preview;
+
+      days.push({
+        iso: entry.iso,
+        phase: entry.phase,
+        weekday: formatWeekday(entry.iso),
+        shortDate: formatShortDate(entry.iso),
+        dayLabel,
+        weekNumber: entry.weekNumber,
+        dayNumber: entry.dayNumber,
+        workoutName: coachSession.title,
+        workoutId: coachSession.workoutId,
+        programSlug,
+        completed: loggedWorkoutIds.has(coachSession.workoutId),
+        exerciseCount: visibleNames.length,
+        exerciseNames: visibleNames,
+        stretchNames: pickStretchPreview(preview),
+        smsOverride: true,
+        hasWorkout: true,
+        daysFromToday: offset,
+        visibilityTier,
+        themeLabel: coachSession.title,
+      });
+      continue;
+    }
+
     const resolved = resolveProgramWorkoutForCalendarDate(program, entry.iso);
     const workoutId = resolved?.smsOverride ? null : resolved?.workoutId || null;
     const names = workoutId ? await exerciseNamesForWorkout(workoutId) : [];

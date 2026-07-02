@@ -31,7 +31,7 @@ type IndividualDraft = {
   useCustom: boolean;
 };
 
-const STEPS = ["Write plan", "Review", "Assign class"] as const;
+const STEPS = ["Write plan", "Review", "Assign class", "Published"] as const;
 
 export default function CoachLessonPlanBuilder({
   sessionDate,
@@ -59,6 +59,11 @@ export default function CoachLessonPlanBuilder({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const [deployResult, setDeployResult] = useState<{
+    cascadeNames: string[];
+    individualNames: string[];
+    built: number;
+  } | null>(null);
 
   const templateMember = memberOptions.find((m) => m.id === templateMemberId);
 
@@ -69,6 +74,11 @@ export default function CoachLessonPlanBuilder({
     ]);
     return memberOptions.filter((m) => !assigned.has(m.id));
   }, [memberOptions, cascadeIds, individualDrafts]);
+
+  useEffect(() => {
+    if (step !== 2 || cascadeIds.length > 0 || memberOptions.length === 0) return;
+    setCascadeIds(memberOptions.map((m) => m.id));
+  }, [step, cascadeIds.length, memberOptions]);
 
   useEffect(() => {
     setIndividualDrafts((prev) => {
@@ -258,20 +268,21 @@ export default function CoachLessonPlanBuilder({
         setMessage(data.error || "Deploy failed.");
         return;
       }
-      const cascadeCount = cascadeIds.length;
-      const indCount = individuals.length;
-      setMessage(
-        `Deployed ${data.built} workout${data.built !== 1 ? "s" : ""} · ${cascadeCount} in cascade${indCount ? ` · ${indCount} individual` : ""}.`,
-      );
+      const cascadeNames = memberOptions
+        .filter((m) => cascadeIds.includes(m.id))
+        .map((m) => m.name);
+      const individualNames = memberOptions
+        .filter((m) => individuals.some((i) => i.userId === m.id))
+        .map((m) => m.name);
+      setDeployResult({
+        cascadeNames,
+        individualNames,
+        built: data.built ?? 1,
+      });
+      setMessage(null);
       setError(false);
+      setStep(3);
       router.refresh();
-      setTimeout(() => {
-        setRawText("");
-        setInterpretation(null);
-        setCascadeIds([]);
-        setStep(0);
-        setMessage(null);
-      }, 8000);
     } catch (e: unknown) {
       setError(true);
       setMessage(e instanceof Error ? e.message : "Deploy failed.");
@@ -598,7 +609,71 @@ export default function CoachLessonPlanBuilder({
         </div>
       )}
 
-      {message && (
+      {step === 3 && deployResult && (
+        <div className="card space-y-4 border-emerald-500/35 bg-emerald-500/10">
+          <div>
+            <h2 className="font-semibold text-lg text-emerald-100">Published</h2>
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              Built {deployResult.built} workout{deployResult.built !== 1 ? "s" : ""} for{" "}
+              {viewDateLabel}. Students below should see it on Go to Today.
+            </p>
+          </div>
+          {deployResult.cascadeNames.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                Same workout ({deployResult.cascadeNames.length})
+              </p>
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {deployResult.cascadeNames.map((name) => (
+                  <li
+                    key={name}
+                    className="rounded-full border border-emerald-500/30 bg-[var(--surface)] px-3 py-1 text-xs"
+                  >
+                    ✓ {name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {deployResult.individualNames.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                Individual plans ({deployResult.individualNames.length})
+              </p>
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {deployResult.individualNames.map((name) => (
+                  <li
+                    key={name}
+                    className="rounded-full border border-amber-500/30 bg-[var(--surface)] px-3 py-1 text-xs"
+                  >
+                    ✓ {name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/admin/day?date=${sessionDate}`} className="btn-primary px-4 py-2 text-sm">
+              Open My class
+            </Link>
+            <button
+              type="button"
+              className="btn-ghost px-4 py-2 text-sm"
+              onClick={() => {
+                setDeployResult(null);
+                setRawText("");
+                setInterpretation(null);
+                setCascadeIds([]);
+                setStep(0);
+              }}
+            >
+              Plan another day
+            </button>
+          </div>
+        </div>
+      )}
+
+      {message && step !== 3 && (
         <p className={`text-sm ${error ? "text-red-400" : "text-[var(--success)]"}`}>{message}</p>
       )}
 

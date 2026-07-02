@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import CoachLiveFloorZoomPanel from "@/components/CoachLiveFloorZoomPanel";
 import MemberWorkoutConsole, { type MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import type { CoachDayStudentCard } from "@/lib/coach-day";
 import {
@@ -80,19 +81,32 @@ export default function CoachDayHub({
   const [drillLoading, setDrillLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [showNewWorkout, setShowNewWorkout] = useState(false);
+  const [newWorkoutStep, setNewWorkoutStep] = useState<"idle" | "paste" | "assign" | "done">("idle");
   const [showCascade, setShowCascade] = useState(false);
   const [newPlanText, setNewPlanText] = useState("");
+  const [publishTargetIds, setPublishTargetIds] = useState<string[]>([]);
+  const [publishResult, setPublishResult] = useState<{ names: string[]; built: number } | null>(null);
+  const [sendSmsOnPublish, setSendSmsOnPublish] = useState(true);
   const [cascadeSourceId, setCascadeSourceId] = useState("");
   const [cascadeTargets, setCascadeTargets] = useState<string[]>([]);
   const [savingPlan, setSavingPlan] = useState(false);
 
+  const showNewWorkout = newWorkoutStep === "paste" || newWorkoutStep === "assign";
+
   const openNewWorkout = useCallback(() => {
-    setShowNewWorkout(true);
+    setNewWorkoutStep("paste");
+    setPublishResult(null);
+    setPublishTargetIds(students.map((s) => s.id));
     setShowCascade(false);
     requestAnimationFrame(() => {
       newWorkoutRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
+  }, [students]);
+
+  const closeNewWorkout = useCallback(() => {
+    setNewWorkoutStep("idle");
+    setNewPlanText("");
+    setPublishTargetIds([]);
   }, []);
 
   useEffect(() => {
@@ -251,11 +265,20 @@ export default function CoachDayHub({
     }
   }
 
+  function togglePublishTarget(id: string) {
+    setPublishTargetIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
+
+  function selectAllPublishTargets() {
+    setPublishTargetIds(students.map((s) => s.id));
+  }
+
   async function deployNewWorkout() {
     if (!newPlanText.trim()) return;
-    const userIds = students.map((s) => s.id);
-    if (userIds.length === 0) {
-      setMessage("No students on your roster yet.");
+    if (publishTargetIds.length === 0) {
+      setMessage("Pick at least one student to receive this workout.");
       return;
     }
     setSavingPlan(true);
@@ -268,8 +291,8 @@ export default function CoachDayHub({
         body: JSON.stringify({
           sessionDate,
           scheduledAt: scheduled.toISOString(),
-          sendSmsAlert: true,
-          cascade: { rawSms: newPlanText.trim(), userIds },
+          sendSmsAlert: sendSmsOnPublish,
+          cascade: { rawSms: newPlanText.trim(), userIds: publishTargetIds },
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -277,9 +300,13 @@ export default function CoachDayHub({
         setMessage(data.error || "Could not build workout.");
         return;
       }
-      setMessage("New workout sent to your class.");
+      const names = students
+        .filter((s) => publishTargetIds.includes(s.id))
+        .map((s) => s.name);
+      setPublishResult({ names, built: data.built ?? 1 });
+      setNewWorkoutStep("done");
       setNewPlanText("");
-      setShowNewWorkout(false);
+      setPublishTargetIds([]);
       router.refresh();
       void loadFloor();
     } finally {
@@ -316,6 +343,40 @@ export default function CoachDayHub({
           </Link>
         )}
 
+        <CoachLiveFloorZoomPanel sessionDate={sessionDate} />
+
+        {publishResult && newWorkoutStep === "done" && (
+          <div className="card space-y-3 border-emerald-500/35 bg-emerald-500/10">
+            <p className="text-sm font-semibold text-emerald-100">
+              Published to {publishResult.names.length} student
+              {publishResult.names.length !== 1 ? "s" : ""}
+            </p>
+            <ul className="flex flex-wrap gap-2">
+              {publishResult.names.map((name) => (
+                <li
+                  key={name}
+                  className="rounded-full border border-emerald-500/30 bg-[var(--surface)] px-3 py-1 text-xs font-medium"
+                >
+                  ✓ {name}
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-[var(--muted)]">
+              They should see it on <strong>Go to Today</strong> now — tap a name below to count sets live.
+            </p>
+            <button
+              type="button"
+              className="btn-ghost text-xs"
+              onClick={() => {
+                setPublishResult(null);
+                setNewWorkoutStep("idle");
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         <header className="card border-accent/30 bg-accent/5 py-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-accent">My class</p>
           <h1 className="mt-1 text-xl font-bold sm:text-2xl">{dateLabel}</h1>
@@ -335,7 +396,8 @@ export default function CoachDayHub({
           <button
             type="button"
             onClick={() => {
-              setShowNewWorkout((v) => !v);
+              if (showNewWorkout) closeNewWorkout();
+              else openNewWorkout();
               setShowCascade(false);
             }}
             className="btn-primary min-h-[48px] flex-1 px-4 text-sm sm:flex-none"
@@ -347,7 +409,7 @@ export default function CoachDayHub({
             disabled={assignedStudents.length === 0}
             onClick={() => {
               setShowCascade((v) => !v);
-              setShowNewWorkout(false);
+              closeNewWorkout();
               if (!cascadeSourceId && assignedStudents[0]) {
                 setCascadeSourceId(assignedStudents[0].id);
               }
@@ -371,14 +433,15 @@ export default function CoachDayHub({
           </p>
         )}
 
-        {showNewWorkout && (
+        {newWorkoutStep === "paste" && (
           <div
             ref={newWorkoutRef}
             className="card space-y-3 border-amber-500/30 bg-amber-500/5"
           >
-            <p className="text-sm font-semibold">Paste or dictate a new plan</p>
+            <p className="text-sm font-semibold">1. Paste or dictate a new plan</p>
             <p className="text-xs text-[var(--muted)]">
-              Type or voice-text your workout — same as texting John. Goes to everyone on your roster today.
+              Type or voice-text your workout — same as texting John. Next you&apos;ll choose which
+              students receive it.
             </p>
             <textarea
               className="input min-h-[140px] w-full text-sm"
@@ -389,15 +452,100 @@ export default function CoachDayHub({
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                disabled={savingPlan || !newPlanText.trim()}
+                disabled={!newPlanText.trim()}
+                onClick={() => {
+                  setPublishTargetIds(students.map((s) => s.id));
+                  setNewWorkoutStep("assign");
+                  requestAnimationFrame(() => {
+                    newWorkoutRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                  });
+                }}
+                className="btn-primary min-h-[44px] px-4 text-sm"
+              >
+                Next: choose students →
+              </button>
+              <Link href={`/admin/plan?date=${sessionDate}`} className="btn-ghost min-h-[44px] px-3 text-xs">
+                Full planner (Grok + review)
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {newWorkoutStep === "assign" && (
+          <div
+            ref={newWorkoutRef}
+            className="card space-y-4 border-accent/30 bg-accent/5"
+          >
+            <div>
+              <p className="text-sm font-semibold">2. Who gets this workout?</p>
+              <p className="mt-1 text-xs text-[var(--muted)]">
+                Tap names to include or exclude. Only selected students will see it on Go to Today.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={selectAllPublishTargets} className="btn-ghost text-xs px-2 py-1">
+                Select all
+              </button>
+              <button
+                type="button"
+                onClick={() => setPublishTargetIds([])}
+                className="btn-ghost text-xs px-2 py-1"
+              >
+                Clear all
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {students.map((s) => {
+                const on = publishTargetIds.includes(s.id);
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => togglePublishTarget(s.id)}
+                    className={`rounded-full border px-3 py-2 text-xs font-medium min-h-[40px] ${
+                      on
+                        ? "border-accent bg-accent/20 text-accent"
+                        : "border-[var(--border)] text-[var(--muted)]"
+                    }`}
+                  >
+                    {on ? "✓ " : ""}
+                    {s.name}
+                  </button>
+                );
+              })}
+            </div>
+            {publishTargetIds.length > 0 ? (
+              <p className="text-[10px] text-[var(--success)]">
+                {publishTargetIds.length} student{publishTargetIds.length !== 1 ? "s" : ""} will receive
+                this workout
+              </p>
+            ) : (
+              <p className="text-xs text-amber-300">Select at least one student to publish.</p>
+            )}
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <input
+                type="checkbox"
+                checked={sendSmsOnPublish}
+                onChange={(e) => setSendSmsOnPublish(e.target.checked)}
+              />
+              SMS alert with link to Go to Today
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setNewWorkoutStep("paste")}
+                className="btn-ghost min-h-[44px] px-3 text-sm"
+              >
+                ← Back
+              </button>
+              <button
+                type="button"
+                disabled={savingPlan || !newPlanText.trim() || publishTargetIds.length === 0}
                 onClick={() => void deployNewWorkout()}
                 className="btn-primary min-h-[44px] px-4 text-sm"
               >
-                {savingPlan ? "Building…" : "Build & send to class"}
+                {savingPlan ? "Publishing…" : "Publish to class"}
               </button>
-              <Link href={`/admin/plan?date=${sessionDate}`} className="btn-ghost min-h-[44px] px-3 text-xs">
-                Advanced (cascade / individuals)
-              </Link>
             </div>
           </div>
         )}
