@@ -1,0 +1,48 @@
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+import { requireCoachStaff } from "@/lib/api-auth";
+import { appBaseUrl } from "@/lib/oauth/config";
+import {
+  verifyZoomOAuthState,
+  ZOOM_OAUTH_STATE_COOKIE,
+} from "@/lib/zoom-oauth-flow";
+import { exchangeZoomAuthCode, fetchZoomUserProfile } from "@/lib/zoom";
+import { saveZoomOAuthRecord } from "@/lib/zoom-oauth-store";
+
+export const dynamic = "force-dynamic";
+
+export async function GET(request: Request) {
+  const auth = await requireCoachStaff();
+  if (!auth.ok) return auth.response;
+
+  const url = new URL(request.url);
+  const code = url.searchParams.get("code");
+  const state = url.searchParams.get("state");
+  const cookieStore = await cookies();
+  const cookieState = cookieStore.get(ZOOM_OAUTH_STATE_COOKIE)?.value;
+
+  const settingsUrl = `${appBaseUrl()}/admin/settings`;
+
+  if (!code || !state || state !== cookieState || !verifyZoomOAuthState(state, auth.session.email)) {
+    return NextResponse.redirect(`${settingsUrl}?zoom=error`);
+  }
+
+  try {
+    const tokens = await exchangeZoomAuthCode(code);
+    const profile = await fetchZoomUserProfile(tokens.accessToken);
+    await saveZoomOAuthRecord({
+      zoomUserId: profile.id,
+      email: profile.email,
+      displayName: profile.displayName,
+      refreshToken: tokens.refreshToken,
+      connectedAt: new Date().toISOString(),
+      connectedByEmail: auth.session.email,
+    });
+
+    const res = NextResponse.redirect(`${settingsUrl}?zoom=connected`);
+    res.cookies.set(ZOOM_OAUTH_STATE_COOKIE, "", { path: "/", maxAge: 0 });
+    return res;
+  } catch {
+    return NextResponse.redirect(`${settingsUrl}?zoom=error`);
+  }
+}

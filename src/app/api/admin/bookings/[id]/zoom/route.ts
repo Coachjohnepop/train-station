@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireCoachStaff } from "@/lib/api-auth";
 import { ensureBookingZoomLink } from "@/lib/booking";
-import { zoomConfigured } from "@/lib/zoom";
+import { zoomReady } from "@/lib/zoom";
+import { ZOOM_FREE_MAX_DURATION_MIN } from "@/lib/zoom-oauth-flow";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,9 @@ export async function POST(_request: Request, { params }: Params) {
     }
     return NextResponse.json({
       ok: true,
-      configured: zoomConfigured(),
+      ready: await zoomReady(),
+      maxDurationMin: ZOOM_FREE_MAX_DURATION_MIN,
+      coachStartsFirst: true,
       reused: result.reused,
       demo: "demo" in result.zoom && result.zoom.demo === true,
       booking: result.booking,

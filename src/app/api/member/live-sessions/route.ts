@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireMemberAccess } from "@/lib/api-auth";
 import { getMemberLiveSessions } from "@/lib/booking";
-import { zoomConfigured } from "@/lib/zoom";
+import { zoomReady } from "@/lib/zoom";
+import { ZOOM_FREE_MAX_DURATION_MIN } from "@/lib/zoom-oauth-flow";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,8 @@ export async function GET() {
 
   return NextResponse.json({
     sessions,
-    zoomConfigured: zoomConfigured(),
+    zoomReady: await zoomReady(),
+    maxDurationMin: ZOOM_FREE_MAX_DURATION_MIN,
+    coachStartsFirst: true,
   });
 }

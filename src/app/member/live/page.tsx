@@ -29,7 +29,8 @@ export default async function MemberLivePage() {
         {canLive ? (
           <>
             <p className="mt-3 text-sm text-[var(--muted)]">
-              Upcoming sessions appear below. Your join button activates 15 minutes before start.
+              Upcoming sessions appear below. Your coach starts the Zoom room — you join once they&apos;re in
+              (up to 40 minutes on the free plan).
             </p>
             <MemberLiveSessionsPanel canLive={canLive} />
           </>

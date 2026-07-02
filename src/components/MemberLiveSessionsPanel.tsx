@@ -33,7 +33,8 @@ function startsLabel(min: number | null) {
 
 export default function MemberLiveSessionsPanel({ canLive }: { canLive: boolean }) {
   const [sessions, setSessions] = useState<LiveSession[]>([]);
-  const [zoomConfigured, setZoomConfigured] = useState(false);
+  const [zoomReady, setZoomReady] = useState(false);
+  const [maxDurationMin, setMaxDurationMin] = useState(40);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,7 +48,8 @@ export default function MemberLiveSessionsPanel({ canLive }: { canLive: boolean 
         const data = await res.json();
         if (res.ok) {
           setSessions(data.sessions || []);
-          setZoomConfigured(Boolean(data.zoomConfigured));
+          setZoomReady(Boolean(data.zoomReady));
+          setMaxDurationMin(data.maxDurationMin || 40);
         }
       } finally {
         setLoading(false);
@@ -73,11 +75,11 @@ export default function MemberLiveSessionsPanel({ canLive }: { canLive: boolean 
 
   return (
     <div className="mt-4 space-y-3">
-      {!zoomConfigured ? (
-        <p className="text-xs text-[var(--muted)]">
-          Coach will send your Zoom link when the session is confirmed.
-        </p>
-      ) : null}
+      <p className="text-xs text-[var(--muted)]">
+        {zoomReady
+          ? `Free Zoom sessions — up to ${maxDurationMin} min. Your coach starts the room; join when the button appears.`
+          : "Coach will create your Zoom link when the session is confirmed."}
+      </p>
       {sessions.map((session) => {
         const hint = startsLabel(session.startsInMin);
         return (
@@ -105,7 +107,7 @@ export default function MemberLiveSessionsPanel({ canLive }: { canLive: boolean 
                 </a>
               ) : session.zoomUrl ? (
                 <span className="rounded-full bg-[var(--surface-2)] px-3 py-1 text-xs text-[var(--muted)]">
-                  Link ready — opens 15 min before
+                  Waiting for coach to start
                 </span>
               ) : (
                 <span className="rounded-full bg-[var(--surface-2)] px-3 py-1 text-xs text-[var(--muted)]">

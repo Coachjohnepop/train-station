@@ -46,7 +46,9 @@ export default function CoachLiveZoomStrip({ items }: { items: CoachDayTimelineI
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-sky-200">Live Zoom sessions today</p>
-          <p className="text-xs text-[var(--muted)]">Start the room for members — they join from Live on their phone.</p>
+          <p className="text-xs text-[var(--muted)]">
+            Free Zoom — up to 40 min. You start the room first (Google login on Zoom if asked); members join after.
+          </p>
         </div>
         {message ? <p className="text-xs text-[var(--success)]">{message}</p> : null}
       </div>
