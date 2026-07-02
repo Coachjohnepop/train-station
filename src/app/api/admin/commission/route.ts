@@ -8,15 +8,17 @@ import { listCommissionPartners, validatePartnerShares } from "@/lib/commission-
 import { listCommissionPayouts } from "@/lib/commission-ledger-store";
 import {
   commissionConfigFromEnv,
+  commissionFromMrr,
   commissionSplitMode,
+  commissionUsesPoolSplit,
   fetchActiveMrrCents,
   formatUsdFromCents,
   isCommissionEnabled,
   previousCommissionPeriod,
   revenueSplitFromMrr,
-  tieredCommissionFromMrr,
 } from "@/lib/stripe-commission";
 import { listConnectPartnerStatuses } from "@/lib/stripe-connect";
+import { COMMISSION_PAYOUT_WEEKDAYS, getCoachSettings } from "@/lib/coach-settings-store";
 
 export const dynamic = "force-dynamic";
 
@@ -30,11 +32,12 @@ export async function GET() {
   const session = await requireStaff();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [mrr, payouts, partners, connectStatuses] = await Promise.all([
+  const [mrr, payouts, partners, connectStatuses, coachSettings] = await Promise.all([
     fetchActiveMrrCents(),
     listCommissionPayouts(),
     listCommissionPartners(),
     listConnectPartnerStatuses(),
+    getCoachSettings(),
   ]);
 
   const mode = commissionSplitMode();
@@ -42,11 +45,13 @@ export async function GET() {
   const config = commissionConfigFromEnv();
   const flatSplit =
     mode === "flat" ? revenueSplitFromMrr(mrr.mrrCents, shareCheck.shareTotal) : null;
-  const tieredBreakdown = mode === "tiered" ? tieredCommissionFromMrr(mrr.mrrCents) : null;
+  const poolBreakdown = commissionUsesPoolSplit(mode)
+    ? commissionFromMrr(mrr.mrrCents, mode)
+    : null;
   const projectedSplits = (
     mode === "flat"
       ? splitRevenueAmongPartners(mrr.mrrCents, partners)
-      : splitCommissionAmongPartners(tieredBreakdown?.totalCommissionCents ?? 0, partners)
+      : splitCommissionAmongPartners(poolBreakdown?.totalCommissionCents ?? 0, partners)
   ).map((line) => ({
     ...line,
     amountLabel: formatUsdFromCents(line.amountCents),
@@ -67,19 +72,28 @@ export async function GET() {
       totalCommissionCents:
         mode === "flat"
           ? (flatSplit?.totalPartnerPayoutCents ?? 0)
-          : (tieredBreakdown?.totalCommissionCents ?? 0),
+          : (poolBreakdown?.totalCommissionCents ?? 0),
       totalLabel: formatUsdFromCents(
         mode === "flat"
           ? (flatSplit?.totalPartnerPayoutCents ?? 0)
-          : (tieredBreakdown?.totalCommissionCents ?? 0),
+          : (poolBreakdown?.totalCommissionCents ?? 0),
       ),
-      tier1BaseCents: tieredBreakdown?.tier1BaseCents ?? 0,
-      tier1CommissionCents: tieredBreakdown?.tier1CommissionCents ?? 0,
-      tier2BaseCents: tieredBreakdown?.tier2BaseCents ?? 0,
-      tier2CommissionCents: tieredBreakdown?.tier2CommissionCents ?? 0,
+      tier1BaseCents: poolBreakdown?.tier1BaseCents ?? 0,
+      tier1CommissionCents: poolBreakdown?.tier1CommissionCents ?? 0,
+      tier2BaseCents: poolBreakdown?.tier2BaseCents ?? 0,
+      tier2CommissionCents: poolBreakdown?.tier2CommissionCents ?? 0,
       tier1CapLabel: formatUsdFromCents(config.tier1CapCents),
+      tier1CapCents: config.tier1CapCents,
       tier1RatePercent: Math.round(config.tier1Rate * 100),
       tier2RatePercent: Math.round(config.tier2Rate * 100),
+      atOrAboveGoal:
+        mode === "milestone" ? mrr.mrrCents >= config.tier1CapCents : undefined,
+      activeRatePercent:
+        mode === "milestone"
+          ? Math.round(
+              (mrr.mrrCents >= config.tier1CapCents ? config.tier2Rate : config.tier1Rate) * 100,
+            )
+          : undefined,
     },
     companyFeed:
       mode === "flat" && flatSplit
@@ -89,7 +103,26 @@ export async function GET() {
             amountLabel: formatUsdFromCents(flatSplit.companyRetainedCents),
             label: process.env.STRIPE_COMPANY_FEED_LABEL?.trim() || "Company (platform account)",
           }
-        : null,
+        : poolBreakdown
+          ? {
+              sharePercent:
+                poolBreakdown.mrrCents > 0
+                  ? Math.round(
+                      ((poolBreakdown.mrrCents - poolBreakdown.totalCommissionCents) /
+                        poolBreakdown.mrrCents) *
+                        100,
+                    )
+                  : 0,
+              amountCents: Math.max(
+                0,
+                poolBreakdown.mrrCents - poolBreakdown.totalCommissionCents,
+              ),
+              amountLabel: formatUsdFromCents(
+                Math.max(0, poolBreakdown.mrrCents - poolBreakdown.totalCommissionCents),
+              ),
+              label: process.env.STRIPE_COMPANY_FEED_LABEL?.trim() || "Company (platform account)",
+            }
+          : null,
     partners: partners.map((p) => ({
       ...p,
       connect: connectById.get(p.id) ?? null,
@@ -99,5 +132,12 @@ export async function GET() {
     shareMessage: shareCheck.message,
     projectedSplits,
     payouts,
+    payoutSchedule: {
+      mode: coachSettings.commissionPayoutMode,
+      weekday: coachSettings.commissionPayoutWeekday,
+      weekdayLabel:
+        COMMISSION_PAYOUT_WEEKDAYS.find((d) => d.value === coachSettings.commissionPayoutWeekday)
+          ?.label ?? "Friday",
+    },
   });
 }

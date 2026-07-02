@@ -16,11 +16,12 @@ import {
   type PartnerPayoutLine,
 } from "@/lib/commission-ledger-store";
 import {
+  commissionFromMrr,
   commissionSplitMode,
+  commissionUsesPoolSplit,
   fetchActiveMrrCents,
   isCommissionEnabled,
   revenueSplitFromMrr,
-  tieredCommissionFromMrr,
 } from "@/lib/stripe-commission";
 import { getStripe } from "@/lib/stripe";
 
@@ -87,14 +88,15 @@ export async function runCommissionPayout(input?: {
     amount = flat.totalPartnerPayoutCents;
     recordMrrCents = flat.mrrCents;
   } else {
-    const tiered = tieredCommissionFromMrr(mrrCents);
-    amount = tiered.totalCommissionCents;
-    recordMrrCents = tiered.mrrCents;
+    const pool = commissionFromMrr(mrrCents, mode);
+    if (!pool) return { error: "Invalid commission mode." };
+    amount = pool.totalCommissionCents;
+    recordMrrCents = pool.mrrCents;
     tierFields = {
-      tier1BaseCents: tiered.tier1BaseCents,
-      tier1CommissionCents: tiered.tier1CommissionCents,
-      tier2BaseCents: tiered.tier2BaseCents,
-      tier2CommissionCents: tiered.tier2CommissionCents,
+      tier1BaseCents: pool.tier1BaseCents,
+      tier1CommissionCents: pool.tier1CommissionCents,
+      tier2BaseCents: pool.tier2BaseCents,
+      tier2CommissionCents: pool.tier2CommissionCents,
     };
   }
 
@@ -102,10 +104,9 @@ export async function runCommissionPayout(input?: {
     return { error: "Commission amount is zero — no active MRR to pay against." };
   }
 
-  const splitLines =
-    mode === "flat"
-      ? splitRevenueAmongPartners(mrrCents, partners)
-      : splitCommissionAmongPartners(amount, partners);
+  const splitLines = commissionUsesPoolSplit(mode)
+    ? splitCommissionAmongPartners(amount, partners)
+    : splitRevenueAmongPartners(mrrCents, partners);
   const partnerById = new Map(partners.map((p) => [p.id, p]));
 
   const basePartnerLines: PartnerPayoutLine[] = splitLines.map((line) => {

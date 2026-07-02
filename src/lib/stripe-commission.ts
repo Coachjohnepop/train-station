@@ -2,7 +2,12 @@ import "server-only";
 
 import { getStripe } from "@/lib/stripe";
 
-export type CommissionSplitMode = "flat" | "tiered";
+export type CommissionSplitMode = "flat" | "tiered" | "milestone";
+
+/** Pool-based modes split partner shares across a computed commission pool (must total 100%). */
+export function commissionUsesPoolSplit(mode: CommissionSplitMode): boolean {
+  return mode === "tiered" || mode === "milestone";
+}
 
 export type CommissionTierConfig = {
   tier1CapCents: number;
@@ -31,8 +36,9 @@ export type CommissionBreakdown = {
 
 export function commissionSplitMode(): CommissionSplitMode {
   const raw = process.env.STRIPE_COMMISSION_MODE?.trim().toLowerCase();
+  if (raw === "flat") return "flat";
   if (raw === "tiered") return "tiered";
-  return "flat";
+  return "milestone";
 }
 
 export function commissionConfigFromEnv(): CommissionTierConfig {
@@ -95,6 +101,36 @@ export function tieredCommissionFromMrr(
     totalCommissionCents: tier1CommissionCents + tier2CommissionCents,
     config,
   };
+}
+
+/** Milestone mode: below goal → tier1Rate on all MRR; at/above goal → tier2Rate on all MRR. */
+export function milestoneCommissionFromMrr(
+  mrrCents: number,
+  config: CommissionTierConfig = commissionConfigFromEnv(),
+): CommissionBreakdown {
+  const safeMrr = Math.max(0, Math.round(mrrCents));
+  const atOrAboveGoal = safeMrr >= config.tier1CapCents;
+  const rate = atOrAboveGoal ? config.tier2Rate : config.tier1Rate;
+  const totalCommissionCents = Math.round(safeMrr * rate);
+
+  return {
+    mrrCents: safeMrr,
+    tier1BaseCents: atOrAboveGoal ? 0 : safeMrr,
+    tier1CommissionCents: atOrAboveGoal ? 0 : totalCommissionCents,
+    tier2BaseCents: atOrAboveGoal ? safeMrr : 0,
+    tier2CommissionCents: atOrAboveGoal ? totalCommissionCents : 0,
+    totalCommissionCents,
+    config,
+  };
+}
+
+export function commissionFromMrr(
+  mrrCents: number,
+  mode: CommissionSplitMode = commissionSplitMode(),
+): CommissionBreakdown | null {
+  if (mode === "tiered") return tieredCommissionFromMrr(mrrCents);
+  if (mode === "milestone") return milestoneCommissionFromMrr(mrrCents);
+  return null;
 }
 
 function monthlyAmountCents(price: import("stripe").Stripe.Price, quantity: number): number {

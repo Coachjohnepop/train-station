@@ -3,13 +3,17 @@ import "server-only";
 import { randomUUID } from "crypto";
 import path from "path";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import {
+  commissionUsesPoolSplit,
+  type CommissionSplitMode,
+} from "@/lib/stripe-commission";
 
 export type CommissionPartner = {
   id: string;
   name: string;
   email: string;
   stripeAccountId: string | null;
-  /** Flat mode: % of gross MRR. Tiered mode: % of the commission pool (enabled partners sum to 100). */
+  /** Flat mode: % of gross MRR. Milestone/tiered: % of the partner pool (enabled partners sum to 100). */
   sharePercent: number;
   enabled: boolean;
   notes: string | null;
@@ -326,7 +330,7 @@ export function sumEnabledSharePercents(partners: CommissionPartner[]): number {
 
 export function validatePartnerShares(
   partners: CommissionPartner[],
-  mode: "flat" | "tiered",
+  mode: CommissionSplitMode,
 ): { shareTotal: number; shareValid: boolean; message: string | null } {
   const shareTotal = sumEnabledSharePercents(partners);
   if (shareTotal <= 0) {
@@ -342,11 +346,11 @@ export function validatePartnerShares(
     }
     return { shareTotal, shareValid: true, message: null };
   }
-  if (shareTotal !== 100) {
+  if (commissionUsesPoolSplit(mode) && shareTotal !== 100) {
     return {
       shareTotal,
       shareValid: false,
-      message: `Enabled partner shares must total 100% (currently ${shareTotal}%).`,
+      message: `Enabled partner shares must total 100% of the commission pool (currently ${shareTotal}%).`,
     };
   }
   return { shareTotal, shareValid: true, message: null };
