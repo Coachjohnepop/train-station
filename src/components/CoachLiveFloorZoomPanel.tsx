@@ -33,12 +33,16 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
   const [zoom, setZoom] = useState<ZoomSummary | null>(null);
   const [embedCreds, setEmbedCreds] = useState<ZoomEmbedCredentials | null>(null);
   const [embedVisible, setEmbedVisible] = useState(false);
+  const [zoomReady, setZoomReady] = useState(false);
 
   const loadStatus = useCallback(async () => {
     try {
       const res = await fetch(`/api/admin/live-floor/zoom?date=${sessionDate}`, { cache: "no-store" });
       const data = await res.json();
-      if (res.ok && data.zoom) setZoom(data.zoom);
+      if (res.ok) {
+        setZoomReady(Boolean(data.ready));
+        if (data.zoom) setZoom(data.zoom);
+      }
     } catch {
       /* ignore */
     }
@@ -62,14 +66,15 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
         setMessage(data.error || "Could not create Zoom room.");
         return;
       }
-      setZoom(data.zoom);
       const notifyNote =
         data.notified > 0 ? ` Link sent to ${data.notified} attendee${data.notified === 1 ? "" : "s"}.` : "";
-      setMessage(
-        data.demo
-          ? "Demo room ready — connect Zoom for real meetings."
-          : `Live Zoom room ready.${notifyNote}`,
-      );
+      if (data.demo) {
+        setZoom(null);
+        setMessage("Connect Zoom in Admin → Settings first (demo links do not work on zoom.us).");
+      } else {
+        setZoom(data.zoom);
+        setMessage(`Live Zoom room ready.${notifyNote}`);
+      }
       setTimeout(() => setMessage(null), 4000);
     } catch {
       setMessage("Could not create Zoom room.");
@@ -103,7 +108,7 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
             demo: true,
           },
         );
-        setMessage("Demo mode — use Start in Zoom app.");
+        setMessage("Connect Zoom in Admin → Settings — demo meeting IDs are not valid on Zoom.");
         return;
       }
       setEmbedCreds({
@@ -148,6 +153,17 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
 
       {message ? <p className="mt-2 text-xs text-[var(--success)]">{message}</p> : null}
 
+      {!zoomReady ? (
+        <p className="mt-2 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+          Zoom is not connected yet —{" "}
+          <a href="/admin/settings" className="font-semibold text-amber-50 underline">
+            Admin → Settings → Connect Zoom
+          </a>{" "}
+          (Google sign-in on Zoom&apos;s page works). Until then, demo links will show &quot;Invalid
+          meeting ID&quot; on zoom.us.
+        </p>
+      ) : null}
+
       {open ? (
         <div className="mt-3 space-y-3">
           <div className="flex flex-wrap gap-2">
@@ -173,7 +189,7 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
                     {busy ? "Starting…" : embedVisible ? "Video live" : "Embed video here"}
                   </button>
                 ) : null}
-                {zoom.hostUrl ? (
+                {!zoom.demo && zoom.hostUrl ? (
                   <a
                     href={zoom.hostUrl}
                     target="_blank"
@@ -184,7 +200,7 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
                     {desktop ? "Open Zoom app" : "Start Zoom app"}
                   </a>
                 ) : null}
-                {zoom.joinUrl ? (
+                {!zoom.demo && zoom.joinUrl ? (
                   <button
                     type="button"
                     className="btn-ghost min-h-[44px] px-3 py-2 text-xs"

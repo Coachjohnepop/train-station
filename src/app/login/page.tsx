@@ -212,14 +212,10 @@ function LoginForm() {
           </p>
         )}
 
-        {!coachLogin && (
-          <>
-            <OAuthButtons mode="login" redirect={redirect} className="mb-4" />
-            <p className="mb-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-              or sign in with email
-            </p>
-          </>
-        )}
+        <OAuthButtons mode="login" redirect={redirect} className="mb-4" />
+        <p className="mb-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+          or sign in with email {coachLogin ? "(coach)" : ""}
+        </p>
 
         <div className="card mb-4 space-y-3">
           <div>

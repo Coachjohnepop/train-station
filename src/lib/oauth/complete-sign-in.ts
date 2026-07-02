@@ -28,6 +28,10 @@ import { isQuoteOffer } from "@/lib/product-offers";
 import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 import { stripeConfiguredForPlan } from "@/lib/stripe";
 import { addToWaitlist } from "@/lib/waitlist";
+import {
+  quickAuthSetupUrl,
+  shouldOfferQuickAuthSetup,
+} from "@/lib/quick-auth-redirect";
 
 function sessionFromAccount(
   email: string,
@@ -193,7 +197,10 @@ async function redirectWithSession(
   redirect?: string,
 ): Promise<NextResponse> {
   const destination = await resolveLoginDestination(sessionUser, redirect);
-  const res = NextResponse.redirect(new URL(destination, appBaseUrl()));
+  const finalDestination = shouldOfferQuickAuthSetup(destination)
+    ? quickAuthSetupUrl(destination)
+    : destination;
+  const res = NextResponse.redirect(new URL(finalDestination, appBaseUrl()));
   applySessionCookies(res, sessionUser);
   const cookieStore = await cookies();
   applyEmailHistoryCookies(

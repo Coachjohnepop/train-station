@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import TrainStationBrand from "@/components/TrainStationBrand";
+import LandingSignInRow from "@/components/LandingSignInRow";
 
 const images = [
   { src: "/images/splash/black-guy.jpg", alt: "Fit Black athlete powering through a heavy lift" },
@@ -72,7 +73,7 @@ export default function LandingHero() {
             Professional-grade programs. Real accountability.<br />Results that actually last.
           </p>
           
-          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
+          <div className="mt-10 flex flex-col items-center justify-center gap-6">
             <button
               type="button"
               onClick={scrollToTickets}
@@ -80,18 +81,7 @@ export default function LandingHero() {
             >
               Pick your ticket ↓
             </button>
-            <a
-              href="/login"
-              className="inline-flex h-12 items-center justify-center rounded-full border border-white/40 px-8 text-sm font-semibold text-white backdrop-blur transition-all hover:bg-white/10 active:scale-[0.985]"
-            >
-              Member sign in
-            </a>
-            <a
-              href="/login?redirect=/admin/day"
-              className="inline-flex h-12 items-center justify-center rounded-full border border-white/30 px-8 text-sm font-semibold text-white/90 backdrop-blur transition-all hover:bg-white/10 active:scale-[0.985]"
-            >
-              Coach sign in
-            </a>
+            <LandingSignInRow />
           </div>
           
           <p className="mt-8 text-xs text-white/50 tracking-widest">4-WEEK PROGRAMS • LIVE SESSIONS • COMMUNITY</p>
