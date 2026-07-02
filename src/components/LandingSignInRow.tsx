@@ -8,7 +8,7 @@ type Props = {
   className?: string;
 };
 
-/** Hero / landing sign-in: Google first, then PIN/Face ID via login page. */
+/** Hero / landing sign-in: Google first, then Face ID / Touch ID via login page. */
 export default function LandingSignInRow({
   coachRedirect = "/admin/day",
   className = "",
@@ -21,7 +21,7 @@ export default function LandingSignInRow({
           href="/login"
           className="inline-flex h-11 items-center justify-center rounded-full border border-white/35 px-6 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/10"
         >
-          PIN / Face ID sign in
+          Face ID / Touch ID sign in
         </Link>
         <Link
           href={`/login?redirect=${encodeURIComponent(coachRedirect)}`}
@@ -31,7 +31,7 @@ export default function LandingSignInRow({
         </Link>
       </div>
       <p className="text-center text-[10px] text-white/45">
-        Google once, then use PIN or Face ID on this device next time.
+        Google once, then use Face ID or Touch ID on this device next time.
       </p>
     </div>
   );

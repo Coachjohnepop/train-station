@@ -197,8 +197,8 @@ function LoginForm() {
 
         {passwordUpdated && (
           <p className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
-            Password reset complete — sign in with your new password. Quick sign-in (PIN / Face ID)
-            still works if you already set it up on this device.
+            Password reset complete — sign in with your new password. Face ID / Touch ID quick
+            sign-in still works if you already set it up on this device.
           </p>
         )}
 
@@ -259,7 +259,7 @@ function LoginForm() {
             />
             {quickAuthResolved && quickAuthAvailable && (
               <p className="mt-3 text-center text-[10px] text-[var(--muted)]">
-                PIN or Face ID not working?{" "}
+                Face ID / Touch ID not working?{" "}
                 <button
                   type="button"
                   className="text-accent hover:underline"
@@ -278,8 +278,8 @@ function LoginForm() {
 
         {quickAuthResolved && !quickAuthAvailable && isCompleteEmail(email) && !showPasswordForm && (
           <p className="mb-3 text-center text-xs text-[var(--muted)]">
-            No PIN on this device for {email.trim().toLowerCase()} yet — sign in with password once,
-            then set up quick sign-in from your dashboard.
+            No Face ID / Touch ID on this device for {email.trim().toLowerCase()} yet — sign in with
+            password once, then set up quick sign-in from your dashboard.
           </p>
         )}
 
@@ -289,7 +289,7 @@ function LoginForm() {
             className="mb-3 w-full text-center text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
             onClick={() => setShowPasswordForm(false)}
           >
-            Back to PIN / Face ID
+            Back to Face ID / Touch ID
           </button>
         )}
 
@@ -344,7 +344,7 @@ function LoginForm() {
 
         {!isCompleteEmail(email) && !email.trim() && (
           <p className="mt-4 text-center text-xs text-[var(--muted)]">
-            Enter your email to continue — PIN, Face ID, or password.
+            Enter your email to continue — Face ID, Touch ID, or password.
           </p>
         )}
 

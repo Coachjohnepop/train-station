@@ -197,8 +197,8 @@ export default function QuickAuthSettings({ email }: { email: string }) {
       <div>
         <h3 className="font-semibold">Quick sign-in</h3>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          After signing in with your password, set a PIN or biometrics on this device for faster
-          access next time — including private browsing for the current session.
+          Face ID / Touch ID is the default on this device. You can add a PIN as an optional backup
+          for faster access next time — including private browsing for the current session.
         </p>
       </div>
 
@@ -213,10 +213,44 @@ export default function QuickAuthSettings({ email }: { email: string }) {
         </p>
       )}
 
+      {biometricReady && (
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="font-medium">Face ID / Touch ID</p>
+              <p className="text-xs text-[var(--muted)]">
+                {status.webauthn
+                  ? "Default sign-in on this device"
+                  : "Recommended — fastest sign-in on phone and browser"}
+              </p>
+            </div>
+            {status.webauthn ? (
+              <button
+                type="button"
+                className="btn-secondary text-xs"
+                disabled={busy}
+                onClick={() => void removeBiometrics()}
+              >
+                Remove
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn-primary text-xs"
+                disabled={busy}
+                onClick={() => void registerBiometrics()}
+              >
+                Enable
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="font-medium">PIN code</p>
+            <p className="font-medium">PIN backup (optional)</p>
             <p className="text-xs text-[var(--muted)]">
               {status.pin ? "Enabled on this device" : "4 digits, device only"}
             </p>
@@ -225,7 +259,7 @@ export default function QuickAuthSettings({ email }: { email: string }) {
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                className="btn-primary text-xs"
+                className="btn-secondary text-xs"
                 disabled={busy}
                 onClick={() => {
                   setError("");
@@ -249,7 +283,7 @@ export default function QuickAuthSettings({ email }: { email: string }) {
           ) : pinStep === "idle" ? (
             <button
               type="button"
-              className="btn-primary text-xs"
+              className="btn-secondary text-xs"
               disabled={busy}
               onClick={() => {
                 setError("");
@@ -294,38 +328,6 @@ export default function QuickAuthSettings({ email }: { email: string }) {
           </div>
         )}
       </div>
-
-      {biometricReady && (
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="font-medium">Face ID / Touch ID</p>
-              <p className="text-xs text-[var(--muted)]">
-                {status.webauthn ? "Enabled on this device" : "Use your device biometrics"}
-              </p>
-            </div>
-            {status.webauthn ? (
-              <button
-                type="button"
-                className="btn-secondary text-xs"
-                disabled={busy}
-                onClick={() => void removeBiometrics()}
-              >
-                Remove
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="btn-primary text-xs"
-                disabled={busy}
-                onClick={() => void registerBiometrics()}
-              >
-                Enable
-              </button>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

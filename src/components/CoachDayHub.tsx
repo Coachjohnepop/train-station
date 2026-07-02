@@ -303,7 +303,7 @@ export default function CoachDayHub({
           >
             <span className="font-semibold text-[#7c3aed]">Skip typing your password tomorrow</span>
             <span className="mt-0.5 block text-xs text-[var(--muted)]">
-              Set a PIN or Face ID once on this phone — takes 30 seconds.
+              Set up Face ID or Touch ID once on this phone — takes 30 seconds.
             </span>
           </a>
         )}
@@ -312,7 +312,7 @@ export default function CoachDayHub({
             href="/setup-quick-auth?redirect=/admin/day"
             className="inline-flex min-h-[40px] items-center rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--muted)] transition hover:border-[#7c3aed]/40 hover:text-accent"
           >
-            Change PIN / Face ID
+            Change Face ID / Touch ID
           </Link>
         )}
 

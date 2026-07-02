@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
 import PinPad from "@/components/PinPad";
 import {
@@ -27,11 +27,13 @@ export default function QuickAuthSetupPrompt({
   const [confirmPin, setConfirmPin] = useState("");
   const [pinEnabled, setPinEnabled] = useState(false);
   const [editingPin, setEditingPin] = useState(false);
+  const [showPinSetup, setShowPinSetup] = useState(false);
   const [webauthnEnabled, setWebauthnEnabled] = useState(false);
   const [biometricReady, setBiometricReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const autoRegisterAttempted = useRef(false);
 
   const refreshStatus = useCallback(async () => {
     if (!ready) return;
@@ -55,11 +57,59 @@ export default function QuickAuthSetupPrompt({
     });
   }, [ready, email, deviceId]);
 
+  const registerBiometrics = useCallback(async () => {
+    if (!ready) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const optionsRes = await fetch("/api/auth/quick-auth/webauthn/register-options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ deviceId }),
+      });
+      const options = await optionsRes.json().catch(() => ({}));
+      if (!optionsRes.ok) {
+        setError(options.error || "Could not start biometric setup.");
+        return;
+      }
+
+      const attestation = await startRegistration({ optionsJSON: options });
+      const verifyRes = await fetch("/api/auth/quick-auth/webauthn/register-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ deviceId, attestation }),
+      });
+      const data = await verifyRes.json().catch(() => ({}));
+      if (!verifyRes.ok) {
+        setError(data.error || "Biometric setup failed.");
+        return;
+      }
+      clearQuickAuthSetupSkipped();
+      setMessage("Face ID / Touch ID enabled — you can sign in with one tap next time.");
+      setWebauthnEnabled(true);
+      await refreshStatus();
+    } catch {
+      setError("Biometric setup cancelled or failed.");
+    } finally {
+      setBusy(false);
+    }
+  }, [ready, deviceId, refreshStatus]);
+
   useEffect(() => {
     if (!ready) return;
     void refreshStatus();
     void platformAuthenticatorAvailable().then(setBiometricReady);
   }, [ready, refreshStatus]);
+
+  useEffect(() => {
+    if (!ready || !biometricReady || webauthnEnabled || busy) return;
+    if (autoRegisterAttempted.current) return;
+    autoRegisterAttempted.current = true;
+    void registerBiometrics();
+  }, [ready, biometricReady, webauthnEnabled, busy, registerBiometrics]);
 
   const savePin = useCallback(
     async (first: string, second: string) => {
@@ -93,6 +143,7 @@ export default function QuickAuthSetupPrompt({
 
         setPinEnabled(true);
         setEditingPin(false);
+        setShowPinSetup(false);
         setDraftPin("");
         setConfirmPin("");
         setPinStep("enter");
@@ -106,7 +157,7 @@ export default function QuickAuthSetupPrompt({
         setMessage(
           editingPin
             ? "PIN updated — use your new code next time you sign in."
-            : "PIN saved — quick sign-in is ready on this device.",
+            : "PIN saved as a backup on this device.",
         );
         await refreshStatus();
       } catch {
@@ -140,6 +191,7 @@ export default function QuickAuthSetupPrompt({
       }
       setPinEnabled(false);
       setEditingPin(false);
+      setShowPinSetup(false);
       setDraftPin("");
       setConfirmPin("");
       setPinStep("enter");
@@ -165,10 +217,12 @@ export default function QuickAuthSetupPrompt({
     setConfirmPin("");
     setPinStep("enter");
     setEditingPin(true);
+    setShowPinSetup(true);
   }
 
   function cancelChangePin() {
     setEditingPin(false);
+    setShowPinSetup(false);
     setDraftPin("");
     setConfirmPin("");
     setPinStep("enter");
@@ -186,55 +240,17 @@ export default function QuickAuthSetupPrompt({
     void savePin(draftPin, confirmPin);
   }, [confirmPin, pinStep, busy, draftPin, savePin]);
 
-  async function registerBiometrics() {
-    if (!ready) return;
-    setBusy(true);
-    setError("");
-    setMessage("");
-    try {
-      const optionsRes = await fetch("/api/auth/quick-auth/webauthn/register-options", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({ deviceId }),
-      });
-      const options = await optionsRes.json().catch(() => ({}));
-      if (!optionsRes.ok) {
-        setError(options.error || "Could not start biometric setup.");
-        return;
-      }
-
-      const attestation = await startRegistration({ optionsJSON: options });
-      const verifyRes = await fetch("/api/auth/quick-auth/webauthn/register-verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({ deviceId, attestation }),
-      });
-      const data = await verifyRes.json().catch(() => ({}));
-      if (!verifyRes.ok) {
-        setError(data.error || "Biometric setup failed.");
-        return;
-      }
-      setMessage("Face ID / Touch ID enabled.");
-      setWebauthnEnabled(true);
-      await refreshStatus();
-    } catch {
-      setError("Biometric setup cancelled or failed.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   const quickAuthReady = pinEnabled || webauthnEnabled;
+  const showPinSection =
+    (pinEnabled && !editingPin) || editingPin || showPinSetup || !biometricReady;
 
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold">Lock your phone for faster sign-in</h2>
+        <h2 className="text-lg font-semibold">Use Face ID / Touch ID for faster sign-in</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Set a PIN or Face ID / Touch ID so you don&apos;t have to type your password every time you
-          open the app — including private browsing on this device.
+          We&apos;ll ask for Touch ID or Face ID on this device so you don&apos;t have to type your
+          password every time — including private browsing. A PIN is optional as backup.
         </p>
       </div>
 
@@ -249,73 +265,114 @@ export default function QuickAuthSetupPrompt({
         </p>
       )}
 
-      {pinEnabled && !editingPin ? (
+      {biometricReady && (
         <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
-          <p className="text-sm text-emerald-100">PIN is enabled on this device.</p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="btn-primary text-xs"
-              disabled={busy || !ready}
-              onClick={startChangePin}
-            >
-              Change PIN
-            </button>
-            <button
-              type="button"
-              className="btn-secondary text-xs"
-              disabled={busy || !ready}
-              onClick={() => void removePin()}
-            >
-              Remove PIN
-            </button>
+          <div>
+            <p className="font-medium">Face ID / Touch ID</p>
+            <p className="text-xs text-[var(--muted)]">
+              {webauthnEnabled
+                ? "Enabled on this device"
+                : busy
+                  ? "Follow the prompt on your device…"
+                  : "Recommended — fastest sign-in on phone and browser"}
+            </p>
           </div>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <p className="text-center text-xs text-[var(--muted)]">
-            {editingPin
-              ? pinStep === "enter"
-                ? "Enter a new 4-digit PIN"
-                : "Confirm your new PIN"
-              : pinStep === "enter"
-                ? "Choose a 4-digit PIN"
-                : "Confirm your PIN"}
-          </p>
-          <PinPad
-            value={pinStep === "enter" ? draftPin : confirmPin}
-            onChange={pinStep === "enter" ? setDraftPin : setConfirmPin}
-            maxLength={PIN_LENGTH}
-            disabled={busy || !ready}
-          />
-          {editingPin && (
+          {webauthnEnabled ? (
+            <p className="text-sm text-emerald-100">You&apos;re set — use biometrics next time you sign in.</p>
+          ) : (
             <button
               type="button"
-              className="w-full text-center text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
-              disabled={busy}
-              onClick={cancelChangePin}
+              className="btn-primary w-full"
+              disabled={busy || !ready}
+              onClick={() => void registerBiometrics()}
             >
-              Cancel
+              {busy ? "Setting up…" : "Enable Face ID / Touch ID"}
             </button>
           )}
         </div>
       )}
 
-      {biometricReady && !webauthnEnabled && (
+      {showPinSection ? (
+        pinEnabled && !editingPin ? (
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+            <p className="text-sm text-[var(--muted)]">PIN backup is enabled on this device.</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn-secondary text-xs"
+                disabled={busy || !ready}
+                onClick={startChangePin}
+              >
+                Change PIN
+              </button>
+              <button
+                type="button"
+                className="btn-secondary text-xs"
+                disabled={busy || !ready}
+                onClick={() => void removePin()}
+              >
+                Remove PIN
+              </button>
+            </div>
+          </div>
+        ) : editingPin || showPinSetup || !biometricReady ? (
+          <div className="space-y-2">
+            <p className="text-center text-xs text-[var(--muted)]">
+              {biometricReady && !editingPin ? "Optional PIN backup" : null}
+              {editingPin
+                ? pinStep === "enter"
+                  ? "Enter a new 4-digit PIN"
+                  : "Confirm your new PIN"
+                : pinStep === "enter"
+                  ? "Choose a 4-digit PIN"
+                  : "Confirm your PIN"}
+            </p>
+            <PinPad
+              value={pinStep === "enter" ? draftPin : confirmPin}
+              onChange={pinStep === "enter" ? setDraftPin : setConfirmPin}
+              maxLength={PIN_LENGTH}
+              disabled={busy || !ready}
+            />
+            {editingPin ? (
+              <button
+                type="button"
+                className="w-full text-center text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
+                disabled={busy}
+                onClick={cancelChangePin}
+              >
+                Cancel
+              </button>
+            ) : biometricReady ? (
+              <button
+                type="button"
+                className="w-full text-center text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
+                disabled={busy}
+                onClick={() => {
+                  setShowPinSetup(false);
+                  setDraftPin("");
+                  setConfirmPin("");
+                  setPinStep("enter");
+                  setError("");
+                }}
+              >
+                Skip PIN — use Face ID / Touch ID only
+              </button>
+            ) : null}
+          </div>
+        ) : null
+      ) : (
         <button
           type="button"
-          className="btn-secondary w-full"
-          disabled={busy || !ready}
-          onClick={() => void registerBiometrics()}
+          className="w-full text-center text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
+          disabled={busy}
+          onClick={() => {
+            setShowPinSetup(true);
+            setError("");
+            setMessage("");
+          }}
         >
-          {busy ? "Setting up…" : "Enable Face ID / Touch ID"}
+          Set a PIN as backup (optional)
         </button>
-      )}
-
-      {webauthnEnabled && (
-        <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-emerald-100">
-          Biometrics enabled on this device.
-        </p>
       )}
 
       <div className="flex gap-3 pt-2">

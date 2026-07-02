@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { startAuthentication } from "@simplewebauthn/browser";
 import PinPad from "@/components/PinPad";
 import {
@@ -33,9 +33,11 @@ export default function QuickAuthLogin({
   const [pinEnabled, setPinEnabled] = useState(false);
   const [webauthnEnabled, setWebauthnEnabled] = useState(false);
   const [biometricReady, setBiometricReady] = useState(false);
+  const [showPin, setShowPin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusResolved, setStatusResolved] = useState(false);
+  const autoBiometricAttempted = useRef(false);
   const PIN_SUBMIT_DELAY_MS = 500;
 
   const signInWithBiometrics = useCallback(async () => {
@@ -103,6 +105,11 @@ export default function QuickAuthLogin({
     },
     [ready, email, deviceId, redirect],
   );
+
+  useEffect(() => {
+    setShowPin(false);
+    autoBiometricAttempted.current = false;
+  }, [email]);
 
   useEffect(() => {
     if (!ready) return;
@@ -183,15 +190,25 @@ export default function QuickAuthLogin({
     };
   }, [email, deviceId, ready, onAvailabilityChange, onStatusResolved]);
 
+  const biometricPrimary = webauthnEnabled && biometricReady;
+  const showPinPad = pinEnabled && (!biometricPrimary || showPin);
+
   useEffect(() => {
-    if (!pinEnabled || pin.length !== 4 || loading || !ready) return;
+    if (!statusResolved || !biometricPrimary || loading || showPin) return;
+    if (autoBiometricAttempted.current) return;
+    autoBiometricAttempted.current = true;
+    void signInWithBiometrics();
+  }, [statusResolved, biometricPrimary, loading, showPin, signInWithBiometrics]);
+
+  useEffect(() => {
+    if (!pinEnabled || pin.length !== 4 || loading || !ready || !showPinPad) return;
 
     const timer = window.setTimeout(() => {
       void submitPin(pin);
     }, PIN_SUBMIT_DELAY_MS);
 
     return () => window.clearTimeout(timer);
-  }, [pin, pinEnabled, loading, ready, submitPin]);
+  }, [pin, pinEnabled, loading, ready, showPinPad, submitPin]);
 
   if (!ready || !statusResolved || (!pinEnabled && !webauthnEnabled)) return null;
 
@@ -210,24 +227,58 @@ export default function QuickAuthLogin({
         </p>
       )}
 
-      {pinEnabled && (
+      {biometricPrimary && !showPin && (
+        <div className="space-y-2">
+          <button
+            type="button"
+            className="btn-primary w-full"
+            disabled={loading}
+            onClick={() => void signInWithBiometrics()}
+          >
+            {loading ? "Verifying…" : "Sign in with Face ID / Touch ID"}
+          </button>
+          <p className="text-center text-[10px] text-[var(--muted)]">
+            Touch ID or Face ID opens automatically on this device.
+          </p>
+          {pinEnabled ? (
+            <button
+              type="button"
+              className="w-full text-center text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
+              disabled={loading}
+              onClick={() => {
+                setShowPin(true);
+                setError(null);
+                setPin("");
+              }}
+            >
+              Use PIN instead
+            </button>
+          ) : null}
+        </div>
+      )}
+
+      {showPinPad && (
         <>
           <PinPad value={pin} onChange={setPin} disabled={loading} />
           <p className="text-center text-[10px] text-[var(--muted)]">
             Enter your 4-digit PIN — we&apos;ll verify after you pause typing.
           </p>
+          {biometricPrimary ? (
+            <button
+              type="button"
+              className="w-full text-center text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
+              disabled={loading}
+              onClick={() => {
+                setShowPin(false);
+                setPin("");
+                setError(null);
+                autoBiometricAttempted.current = false;
+              }}
+            >
+              Back to Face ID / Touch ID
+            </button>
+          ) : null}
         </>
-      )}
-
-      {webauthnEnabled && biometricReady && (
-        <button
-          type="button"
-          className="btn-secondary w-full"
-          disabled={loading}
-          onClick={() => void signInWithBiometrics()}
-        >
-          {loading ? "Verifying…" : "Sign in with Face ID / Touch ID"}
-        </button>
       )}
 
       <button
