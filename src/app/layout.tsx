@@ -5,6 +5,7 @@ import { getResolvedSiteBrand } from "@/lib/site-brand-server";
 import BackgroundMusic from "@/components/BackgroundMusic";
 import { SiteBrandProvider } from "@/components/SiteBrandProvider";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
+import GlobalThemeToggle from "@/components/GlobalThemeToggle";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
@@ -32,6 +33,7 @@ export default async function RootLayout({
       <body className="app-shell-bg">
         <SiteBrandProvider brand={brand}>
           <ThemeAttributesSync membershipTier="explorer" />
+          <GlobalThemeToggle />
           {children}
           <BackgroundMusic />
         </SiteBrandProvider>

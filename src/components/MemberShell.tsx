@@ -8,7 +8,7 @@ import MemberNav from "@/components/MemberNav";
 import MemberHeaderHomeLink from "@/components/MemberHeaderHomeLink";
 import LogoutButton from "@/components/LogoutButton";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
-import ThemeModeToggle from "@/components/ThemeModeToggle";
+
 import {
   MEMBERSHIP_THEME_LABELS,
   type MembershipThemeTier,
@@ -42,7 +42,7 @@ export default function MemberShell({
         <ResumePathTracker area="member" />
       </Suspense>
       <ThemeAttributesSync membershipTier={membershipTier} />
-      <header className="app-shell-header">
+      <header className="app-shell-header header-theme-clearance">
         <div className="mx-auto flex w-full max-w-lg md:max-w-3xl lg:max-w-6xl xl:max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <MemberHeaderHomeLink />
@@ -53,7 +53,6 @@ export default function MemberShell({
           </div>
           <div className="flex flex-col items-end gap-1">
             <div className="flex items-center gap-2">
-              <ThemeModeToggle />
               <span className="badge-accent inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold">
                 {tierLabel}
               </span>

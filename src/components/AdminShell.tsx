@@ -11,6 +11,10 @@ import TrainStationBrand from "@/components/TrainStationBrand";
 import DevModeSwitcher from "@/components/DevModeSwitcher";
 import LogoutButton from "@/components/LogoutButton";
 import type { SessionUser } from "@/lib/auth-session";
+import {
+  readAdminNavCollapsed,
+  writeAdminNavCollapsed,
+} from "@/lib/admin-nav-collapsed";
 
 type Props = {
   children: React.ReactNode;
@@ -32,9 +36,22 @@ export default function AdminShell({
   showDevSwitcher,
 }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [navCollapsed, setNavCollapsed] = useState(false);
 
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
   const openDrawer = useCallback(() => setDrawerOpen(true), []);
+
+  useEffect(() => {
+    setNavCollapsed(readAdminNavCollapsed());
+  }, []);
+
+  const toggleNavCollapsed = useCallback(() => {
+    setNavCollapsed((current) => {
+      const next = !current;
+      writeAdminNavCollapsed(next);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -70,7 +87,7 @@ export default function AdminShell({
       )}
 
       {/* Mobile / tablet header */}
-      <header className="app-shell-header sticky top-0 z-30 flex items-center justify-between gap-2 px-3 py-2.5 xl:hidden">
+      <header className="app-shell-header header-theme-clearance sticky top-0 z-30 flex items-center justify-between gap-2 px-3 py-2.5 xl:hidden">
         <button
           type="button"
           onClick={openDrawer}
@@ -139,34 +156,79 @@ export default function AdminShell({
       ) : null}
 
       {/* Desktop sidebar — wide screens only */}
-      <aside className="app-shell-header hidden xl:sticky xl:top-0 xl:flex xl:h-screen xl:w-56 xl:shrink-0 xl:flex-col xl:border-r xl:border-[var(--border)]">
-        <div className="flex flex-col gap-4 px-3 py-5">
+      <aside
+        className={`app-shell-header admin-sidebar hidden xl:sticky xl:top-0 xl:flex xl:h-screen xl:shrink-0 xl:flex-col xl:border-r xl:border-[var(--border)] xl:transition-[width] xl:duration-200 ${
+          navCollapsed ? "xl:w-[4.25rem]" : "xl:w-56"
+        }`}
+      >
+        <div className="flex h-full min-h-0 flex-col gap-4 px-2 py-5">
           {showDevSwitcher ? (
-            <div className="space-y-2 border-b border-[var(--border)] pb-4">
-              <DevModeSwitcher active="admin" staffSession={session} showImpersonation />
+            <div
+              className={`space-y-2 border-b border-[var(--border)] pb-4 ${navCollapsed ? "px-0" : "px-1"}`}
+            >
+              {!navCollapsed ? (
+                <DevModeSwitcher active="admin" staffSession={session} showImpersonation />
+              ) : (
+                <p className="sr-only">Dev mode switcher</p>
+              )}
             </div>
           ) : null}
-          <div className="flex flex-col items-stretch gap-2">
-            <Link href="/admin/day" className="transition hover:opacity-90">
-              <TrainStationBrand variant="header" className="!h-8" />
+          <div
+            className={`flex flex-col gap-2 ${navCollapsed ? "items-center px-0" : "items-stretch px-1"}`}
+          >
+            <Link
+              href="/admin/day"
+              className="transition hover:opacity-90"
+              title={navCollapsed ? "The Train Station" : undefined}
+            >
+              <TrainStationBrand
+                variant="header"
+                className={navCollapsed ? "!h-7 !w-7" : "!h-8"}
+              />
             </Link>
-            <LogoutButton />
+            {navCollapsed ? (
+              <LogoutButton
+                compact
+                className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-2)] hover:text-accent"
+              />
+            ) : (
+              <LogoutButton />
+            )}
           </div>
-          <div>
-            <p className="text-sm font-medium">{session?.name || "Coach"}</p>
-            <p className="text-[10px] text-[var(--muted)]">
-              {areaLabel}
-              {session?.email ? ` · ${session.email}` : ""}
+          {!navCollapsed ? (
+            <div className="px-1">
+              <p className="text-sm font-medium">{session?.name || "Coach"}</p>
+              <p className="text-[10px] text-[var(--muted)]">
+                {areaLabel}
+                {session?.email ? ` · ${session.email}` : ""}
+              </p>
+            </div>
+          ) : (
+            <p className="sr-only">
+              {session?.name || "Coach"} · {areaLabel}
             </p>
-          </div>
-          <div className="flex-1 overflow-y-auto">
+          )}
+          <div className="min-h-0 flex-1 overflow-y-auto">
             <AdminAreaNav
               dualWorkspace={dualWorkspace}
               canCoach={canCoach}
               canPlatform={canPlatform}
               preferDashboardStorageKey="ts-admin-prefer-dashboard"
+              collapsed={navCollapsed}
             />
           </div>
+          <button
+            type="button"
+            onClick={toggleNavCollapsed}
+            className={`flex min-h-[44px] items-center rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-xs font-semibold text-[var(--muted)] transition hover:text-[var(--text)] ${
+              navCollapsed ? "w-full justify-center px-0" : "w-full justify-center gap-2 px-3"
+            }`}
+            aria-label={navCollapsed ? "Expand navigation" : "Collapse navigation"}
+            title={navCollapsed ? "Expand navigation" : "Collapse navigation"}
+          >
+            <span aria-hidden>{navCollapsed ? "»" : "«"}</span>
+            {!navCollapsed ? <span>Collapse</span> : null}
+          </button>
         </div>
       </aside>
 

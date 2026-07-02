@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import ThemeModeToggle from "@/components/ThemeModeToggle";
 import TrainStationBrand from "@/components/TrainStationBrand";
 import { usePurchaseAuth } from "@/hooks/usePurchaseAuth";
 import {
@@ -78,7 +77,7 @@ export default function LandingNav({
   }
 
   return (
-    <header className="landing-nav sticky top-0 z-40 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_82%,transparent)] backdrop-blur-md">
+    <header className="landing-nav header-theme-clearance sticky top-0 z-40 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_82%,transparent)] backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <Link href="/" className="shrink-0 transition hover:opacity-90" onClick={closeMenus}>
           <TrainStationBrand variant="header" />
@@ -173,7 +172,6 @@ export default function LandingNav({
               </MemberDashboardLink>
             )
           ) : null}
-          <ThemeModeToggle className="hidden sm:inline-flex" />
           {variant === "public" ? (
             <>
               <Link href="/login" className="landing-nav__link hidden sm:inline-flex">
@@ -260,9 +258,6 @@ export default function LandingNav({
             <Link href="/login" className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]">
               Sign in
             </Link>
-            <div className="pt-2">
-              <ThemeModeToggle />
-            </div>
           </div>
         </div>
       )}
