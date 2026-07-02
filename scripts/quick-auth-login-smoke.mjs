@@ -56,6 +56,20 @@ function fail(msg) {
   process.exit(1);
 }
 
+async function waitForPinStatus(deviceId, wantEnabled = true, attempts = 8) {
+  for (let i = 0; i < attempts; i++) {
+    const status = await req("/api/auth/quick-auth/status", {
+      method: "POST",
+      json: { email: EMAIL, deviceId },
+    });
+    if (status.body?.pin === wantEnabled && status.body?.enabled === wantEnabled) {
+      return status.body;
+    }
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  return null;
+}
+
 async function main() {
   console.log(`Quick-auth PIN smoke @ ${BASE}\n`);
 
@@ -88,12 +102,9 @@ async function main() {
   }
   console.log("✓ PIN saved on device");
 
-  const statusAuthed = await req("/api/auth/quick-auth/status", {
-    method: "POST",
-    json: { email: EMAIL, deviceId },
-  });
-  if (!statusAuthed.body?.pin || !statusAuthed.body?.enabled) {
-    fail(`status after setup expected pin+enabled: ${JSON.stringify(statusAuthed.body)}`);
+  const statusAuthed = await waitForPinStatus(deviceId, true);
+  if (!statusAuthed) {
+    fail("status after setup never reported pin+enabled");
   }
   console.log("✓ status reports PIN enabled");
 

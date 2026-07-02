@@ -65,7 +65,7 @@ async function getStore(opts?: { preferFresh?: boolean }): Promise<QuickAuthStor
 }
 
 async function saveStore(store: QuickAuthStore): Promise<void> {
-  await persistJsonStore({
+  const { blobSaved } = await persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
     data: store,
@@ -73,6 +73,11 @@ async function saveStore(store: QuickAuthStore): Promise<void> {
       memoryStore = v;
     },
   });
+  if (process.env.VERCEL && !blobSaved) {
+    throw new Error(
+      "Could not persist quick-auth data to blob storage. PIN was not saved.",
+    );
+  }
 }
 
 export async function getDeviceQuickAuth(
@@ -83,7 +88,7 @@ export async function getDeviceQuickAuth(
   const normalizedDeviceId = normalizeDeviceId(deviceId);
   if (!normalizedEmail || !normalizedDeviceId) return null;
 
-  const store = await getStore({ preferFresh: true });
+  const store = await getStore();
   const raw = store[storeKey(normalizedEmail, normalizedDeviceId)];
   if (!raw || !("deviceId" in raw)) return null;
   return raw;
@@ -96,7 +101,7 @@ export async function upsertDeviceQuickAuth(
   const normalizedDeviceId = normalizeDeviceId(entry.deviceId);
   if (!normalizedEmail || !normalizedDeviceId) return null;
 
-  const store = await getStore({ preferFresh: true });
+  const store = await getStore();
   const key = storeKey(normalizedEmail, normalizedDeviceId);
   const next: QuickAuthStore = { ...store };
   next[key] = {
@@ -115,7 +120,7 @@ export async function removeDeviceQuickAuth(email: string, deviceId: string): Pr
   const normalizedDeviceId = normalizeDeviceId(deviceId);
   if (!normalizedEmail || !normalizedDeviceId) return;
 
-  const store = await getStore({ preferFresh: true });
+  const store = await getStore();
   const key = storeKey(normalizedEmail, normalizedDeviceId);
   if (!store[key]) return;
 
@@ -161,7 +166,7 @@ export async function getEmailQuickAuthPreset(
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) return null;
 
-  const store = await getStore({ preferFresh: true });
+  const store = await getStore();
   const raw = store[presetKey(normalizedEmail)];
   if (!raw || !("pinHash" in raw) || !raw.pinHash) return null;
   const preset = raw as StoredEmailQuickAuthPreset;
@@ -213,7 +218,7 @@ export async function listQuickAuthDevicesForEmail(
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) return [];
 
-  const store = await getStore({ preferFresh: true });
+  const store = await getStore();
   const prefix = `${normalizedEmail}:`;
   const devices: QuickAuthDeviceSummary[] = [];
 
@@ -238,7 +243,7 @@ export async function setAdminPinForEmail(email: string, pin: string): Promise<v
 
   const pinHash = hashPin(pin);
   const now = new Date().toISOString();
-  const store = await getStore({ preferFresh: true });
+  const store = await getStore();
   const next: QuickAuthStore = { ...store };
 
   next[presetKey(normalizedEmail)] = {
@@ -267,7 +272,7 @@ export async function clearAdminPinForEmail(email: string): Promise<void> {
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) return;
 
-  const store = await getStore({ preferFresh: true });
+  const store = await getStore();
   const next: QuickAuthStore = { ...store };
   delete next[presetKey(normalizedEmail)];
 
@@ -291,7 +296,7 @@ export async function clearWebAuthnForEmail(email: string): Promise<void> {
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) return;
 
-  const store = await getStore({ preferFresh: true });
+  const store = await getStore();
   const next: QuickAuthStore = { ...store };
   const prefix = `${normalizedEmail}:`;
 
@@ -314,7 +319,7 @@ export async function clearAllQuickAuthForEmail(email: string): Promise<void> {
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) return;
 
-  const store = await getStore({ preferFresh: true });
+  const store = await getStore();
   const next: QuickAuthStore = { ...store };
   const prefix = `${normalizedEmail}:`;
 

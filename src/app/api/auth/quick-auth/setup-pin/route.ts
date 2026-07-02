@@ -6,7 +6,7 @@ import {
   resolveQuickAuthDeviceId,
 } from "@/lib/quick-auth-device-cookie";
 import { isValidPin } from "@/lib/quick-auth-pin";
-import { setAdminPinForEmail } from "@/lib/quick-auth-store";
+import { quickAuthStatusForDevice, setAdminPinForEmail } from "@/lib/quick-auth-store";
 
 export async function POST(request: Request) {
   const session = await getSessionUser();
@@ -25,8 +25,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "PIN must be 4 digits." }, { status: 400 });
   }
 
-  // Sync preset + all registered devices so change-PIN works everywhere.
-  await setAdminPinForEmail(session.email, pin);
+  try {
+    // Sync preset + all registered devices so change-PIN works everywhere.
+    await setAdminPinForEmail(session.email, pin);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Could not save PIN.";
+    return NextResponse.json({ error: message }, { status: 503 });
+  }
+
+  const status = await quickAuthStatusForDevice(session.email, deviceId);
+  if (!status?.pin) {
+    return NextResponse.json(
+      { error: "PIN could not be verified after save — try again." },
+      { status: 503 },
+    );
+  }
 
   const res = NextResponse.json({ ok: true, pin: true });
   res.cookies.set(DEVICE_ID_COOKIE, deviceId, deviceIdCookieOptions());
