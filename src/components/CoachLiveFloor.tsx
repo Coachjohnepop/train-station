@@ -24,8 +24,7 @@ type FloorResponse = {
   assignedCount: number;
 };
 
-type DrillDown = {
-  tile: LiveFloorTile;
+type LoadedWorkout = {
   workout: MemberWorkoutView;
   memberName: string;
   instructorName: string;
@@ -46,8 +45,10 @@ function SetDots({ done, total }: { done: number; total: number }) {
       {Array.from({ length: count }, (_, i) => (
         <span
           key={i}
-          className={`h-4 w-4 rounded-full sm:h-3.5 sm:w-3.5 ${
-            i < filled ? "bg-emerald-400" : "bg-[var(--surface-2)] ring-1 ring-[var(--border)]"
+          className={`h-3.5 w-3.5 rounded-full ${
+            i < filled
+              ? "bg-[var(--ramp-gold)]"
+              : "bg-[var(--surface-2)] ring-1 ring-[var(--border)]"
           }`}
         />
       ))}
@@ -59,8 +60,9 @@ export default function CoachLiveFloor({ initialDate }: { initialDate: string })
   const [sessionDate, setSessionDate] = useState(initialDate);
   const [floor, setFloor] = useState<FloorResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [drillDown, setDrillDown] = useState<DrillDown | null>(null);
-  const [drillLoading, setDrillLoading] = useState(false);
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [workouts, setWorkouts] = useState<Record<string, LoadedWorkout>>({});
+  const [workoutLoading, setWorkoutLoading] = useState<string | null>(null);
 
   const applyFloor = useCallback((data: FloorResponse) => {
     setFloor(data);
@@ -96,150 +98,174 @@ export default function CoachLiveFloor({ initialDate }: { initialDate: string })
     return () => source.close();
   }, [sessionDate, applyFloor]);
 
-  async function openDrillDown(tile: LiveFloorTile) {
-    setDrillLoading(true);
-    try {
-      const params = new URLSearchParams({
-        userId: tile.userId,
-        workoutId: tile.workoutId,
-        date: sessionDate,
-      });
-      const res = await fetch(`/api/admin/live-floor/workout?${params}`, { cache: "no-store" });
-      const data = await res.json();
-      if (!res.ok) return;
-      setDrillDown({
-        tile,
-        workout: data.workout,
-        memberName: data.memberName,
-        instructorName: data.instructorName,
-        sessionDate: data.sessionDate,
-      });
-    } finally {
-      setDrillLoading(false);
+  const loadWorkout = useCallback(
+    async (tile: LiveFloorTile) => {
+      setWorkoutLoading(tile.userId);
+      try {
+        const params = new URLSearchParams({
+          userId: tile.userId,
+          workoutId: tile.workoutId,
+          date: sessionDate,
+        });
+        const res = await fetch(`/api/admin/live-floor/workout?${params}`, { cache: "no-store" });
+        const data = await res.json();
+        if (!res.ok) return;
+        setWorkouts((prev) => ({
+          ...prev,
+          [tile.userId]: {
+            workout: data.workout,
+            memberName: data.memberName,
+            instructorName: data.instructorName,
+            sessionDate: data.sessionDate,
+          },
+        }));
+      } finally {
+        setWorkoutLoading(null);
+      }
+    },
+    [sessionDate],
+  );
+
+  async function toggleStudent(tile: LiveFloorTile) {
+    if (expandedUserId === tile.userId) {
+      setExpandedUserId(null);
+      return;
+    }
+    setExpandedUserId(tile.userId);
+    if (!workouts[tile.userId]) {
+      await loadWorkout(tile);
     }
   }
 
   const tiles = floor?.tiles ?? [];
 
   return (
-    <>
-      <div className="live-floor-root space-y-4">
-        <div className="live-floor-toolbar sticky top-0 z-10 -mx-1 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 px-3 py-2 backdrop-blur-sm">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[2px] text-[var(--muted)]">
-              {sessionDate}
-            </p>
-            <p className="text-sm text-[var(--muted)]">
-              {loading ? "Loading…" : `${tiles.length} on deck · live sync`}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button type="button" className="btn-ghost min-h-[44px] px-3 py-2 text-xs" onClick={() => void load()}>
-              Refresh
-            </button>
-            <Link href={`/admin/today?date=${sessionDate}`} className="btn-ghost min-h-[44px] px-3 py-2 text-xs">
-              Today
-            </Link>
-          </div>
+    <div className="coach-dashboard live-floor-root space-y-4">
+      <div className="live-floor-toolbar sticky top-0 z-10 -mx-1 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 px-3 py-2 backdrop-blur-sm">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[2px] text-[var(--muted)]">
+            {sessionDate}
+          </p>
+          <p className="text-sm text-[var(--muted)]">
+            {loading ? "Loading…" : `${tiles.length} on deck · live sync`}
+          </p>
         </div>
+        <div className="flex gap-2">
+          <button type="button" className="btn-ghost min-h-[44px] px-3 py-2 text-xs" onClick={() => void load()}>
+            Refresh
+          </button>
+          <Link href={`/admin/today?date=${sessionDate}`} className="btn-ghost min-h-[44px] px-3 py-2 text-xs">
+            Today
+          </Link>
+        </div>
+      </div>
 
-        {tiles.length === 0 && !loading ? (
-          <div className="card py-16 text-center">
-            <p className="text-sm font-medium">No live students assigned yet.</p>
-            <p className="mt-1 text-xs text-[var(--muted)]">
-              Assign workouts on Today, then return here during the session.
-            </p>
-            <Link href={`/admin/today?date=${sessionDate}`} className="btn-primary mt-4 min-h-[44px] text-sm">
-              Go to Today
-            </Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-            {tiles.map((tile) => (
-              <button
+      {tiles.length === 0 && !loading ? (
+        <div className="card py-16 text-center">
+          <p className="text-sm font-medium">No live students assigned yet.</p>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            Assign workouts on Today, then return here during the session.
+          </p>
+          <Link href={`/admin/today?date=${sessionDate}`} className="btn-primary mt-4 min-h-[44px] text-sm">
+            Go to Today
+          </Link>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {tiles.map((tile) => {
+            const expanded = expandedUserId === tile.userId;
+            const loaded = workouts[tile.userId];
+            const isLoadingWorkout = workoutLoading === tile.userId;
+
+            return (
+              <div
                 key={`${tile.userId}-${tile.workoutId}`}
-                type="button"
-                disabled={drillLoading}
-                onClick={() => void openDrillDown(tile)}
-                className={`live-floor-tile flex min-h-[140px] flex-col justify-between rounded-2xl border p-4 text-left transition active:scale-[0.98] ${
+                className={`overflow-hidden rounded-2xl border transition-colors ${
                   tile.status === "done"
                     ? "border-emerald-500/40 bg-emerald-500/10"
                     : tile.status === "active"
-                      ? "border-accent/50 bg-accent/10"
+                      ? "border-[var(--ramp-gold)]/45 bg-[var(--ramp-gold)]/8"
                       : "border-[var(--border)] bg-[var(--surface)]"
                 }`}
               >
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-base font-semibold leading-tight">{tile.name}</p>
-                    <span className="shrink-0 rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--muted)]">
-                      {statusLabel(tile.status)}
-                    </span>
+                <button
+                  type="button"
+                  onClick={() => void toggleStudent(tile)}
+                  className="flex w-full items-start gap-3 p-4 text-left transition active:scale-[0.995]"
+                  aria-expanded={expanded}
+                >
+                  <span
+                    className={`mt-1 shrink-0 text-xs text-[var(--ramp-gold-light)] transition-transform duration-200 ${
+                      expanded ? "rotate-90" : ""
+                    }`}
+                    aria-hidden
+                  >
+                    ▶
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-base font-semibold leading-tight">{tile.name}</p>
+                      <span className="shrink-0 rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+                        {statusLabel(tile.status)}
+                      </span>
+                    </div>
+                    <p className="mt-1 line-clamp-1 text-xs text-[var(--muted)]">{tile.workoutTitle}</p>
+                    {tile.activeExercise ? (
+                      <p className="mt-1 line-clamp-1 text-sm font-medium text-[var(--ramp-gold-light)]">
+                        {tile.activeExercise}
+                      </p>
+                    ) : null}
+                    <div className="mt-2 space-y-1.5">
+                      <SetDots done={tile.setsCompleted} total={tile.setsTotal} />
+                      <p className="text-[10px] text-[var(--muted)]">
+                        {tile.exercisesDone}/{tile.exercisesTotal || "—"} exercises
+                      </p>
+                    </div>
                   </div>
-                  <p className="mt-1 line-clamp-1 text-xs text-[var(--muted)]">{tile.workoutTitle}</p>
-                  {tile.activeExercise ? (
-                    <p className="mt-2 line-clamp-2 text-sm font-medium text-accent">{tile.activeExercise}</p>
-                  ) : null}
-                </div>
-                <div className="mt-3 space-y-2">
-                  <SetDots done={tile.setsCompleted} total={tile.setsTotal} />
-                  <p className="text-[10px] text-[var(--muted)]">
-                    {tile.exercisesDone}/{tile.exercisesTotal || "—"} exercises
-                  </p>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
+                </button>
 
-        <label className="flex items-center gap-2 text-xs text-[var(--muted)]">
-          Session date
-          <input
-            type="date"
-            className="input min-h-[44px] py-2 text-xs"
-            value={sessionDate}
-            onChange={(e) => setSessionDate(e.target.value)}
-          />
-        </label>
-      </div>
-
-      {drillDown ? (
-        <div className="fixed inset-0 z-50 flex flex-col bg-[var(--bg)]">
-          <header className="flex min-h-[52px] shrink-0 items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
-            <button
-              type="button"
-              className="btn-ghost min-h-[44px] px-4 text-sm font-semibold"
-              onClick={() => setDrillDown(null)}
-            >
-              ← Floor
-            </button>
-            <div className="min-w-0 text-center">
-              <p className="truncate text-sm font-semibold">{drillDown.memberName}</p>
-              <p className="truncate text-[10px] text-[var(--muted)]">{drillDown.tile.workoutTitle}</p>
-            </div>
-            <Link
-              href={drillDown.tile.checkoffHref}
-              className="btn-ghost shrink-0 px-2 py-1 text-[10px]"
-            >
-              Full view
-            </Link>
-          </header>
-          <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3 sm:px-4">
-            <MemberWorkoutConsole
-              workout={drillDown.workout}
-              backHref="#"
-              backLabel=""
-              targetUserId={drillDown.tile.userId}
-              instructorName={drillDown.instructorName}
-              liveSyncUserId={drillDown.tile.userId}
-              liveSessionDate={drillDown.sessionDate}
-              embedded
-              hideLogButton
-              headerNote="Checkoffs sync live to the member."
-            />
-          </div>
+                {expanded ? (
+                  <div className="border-t border-[var(--border)] px-3 pb-4 pt-2">
+                    {isLoadingWorkout && !loaded ? (
+                      <p className="py-4 text-center text-xs text-[var(--muted)]">Loading workout…</p>
+                    ) : loaded ? (
+                      <MemberWorkoutConsole
+                        workout={loaded.workout}
+                        backHref="#"
+                        backLabel=""
+                        targetUserId={tile.userId}
+                        instructorName={loaded.instructorName}
+                        liveSyncUserId={tile.userId}
+                        liveSessionDate={loaded.sessionDate}
+                        embedded
+                        hideLogButton
+                        coachFloorMode
+                      />
+                    ) : (
+                      <p className="py-4 text-center text-xs text-[var(--muted)]">
+                        Could not load workout — tap to retry.
+                      </p>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
-      ) : null}
-    </>
+      )}
+
+      <label className="flex items-center gap-2 text-xs text-[var(--muted)]">
+        Session date
+        <input
+          type="date"
+          className="input min-h-[44px] py-2 text-xs"
+          value={sessionDate}
+          onChange={(e) => {
+            setSessionDate(e.target.value);
+            setExpandedUserId(null);
+          }}
+        />
+      </label>
+    </div>
   );
 }

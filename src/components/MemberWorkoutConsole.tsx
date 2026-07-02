@@ -60,6 +60,7 @@ export default function MemberWorkoutConsole({
   hideLogButton = false,
   headerNote,
   embedded = false,
+  coachFloorMode = false,
 }: {
   workout: MemberWorkoutView;
   backHref?: string;
@@ -81,6 +82,8 @@ export default function MemberWorkoutConsole({
   headerNote?: string;
   /** Hide title block when nested inside warm-up day navigator */
   embedded?: boolean;
+  /** Coach live floor: exercise names + set buttons only (live sync to member). */
+  coachFloorMode?: boolean;
 }) {
   const [weights, setWeights] = useState<Record<string, string>>({});
   const [activeId, setActiveId] = useState(workout.exercises[0]?.id ?? "");
@@ -604,6 +607,90 @@ export default function MemberWorkoutConsole({
   ]);
 
   const showLoggedSuccess = !reviewMode && !hideLogButton && !!logResult;
+
+  if (coachFloorMode) {
+    return (
+      <div className="coach-live-checkoff w-full space-y-2">
+        {partnerLive && instructorName ? (
+          <p className="text-[10px] font-medium text-[var(--success)]">
+            Member is logging — updates sync here.
+          </p>
+        ) : null}
+        {workout.exercises.map((block) => {
+          const prescription = normalizePrescription({
+            setScheme: block.setScheme,
+            repPattern: block.repPattern,
+            reps: block.reps,
+            sets: block.setCount,
+          });
+          const isTimed = isTimedApproach(prescription.approach);
+          const doneForBlock = completedSets[block.id] ?? new Set<number>();
+          const allSetsDone = isTimed
+            ? doneForBlock.has(1)
+            : doneForBlock.size >= block.setCount;
+          const exerciseDone = finishedExercises.has(block.id) || allSetsDone;
+
+          return (
+            <div
+              key={block.id}
+              className={`rounded-lg border px-3 py-2 ${
+                exerciseDone
+                  ? "border-[var(--ramp-gold)]/45 bg-[var(--ramp-gold)]/8"
+                  : "border-[var(--border)] bg-[var(--surface)]"
+              }`}
+            >
+              <p
+                className={`text-sm font-semibold leading-snug ${
+                  exerciseDone ? "text-[var(--ramp-gold-light)]" : ""
+                }`}
+              >
+                {block.name}
+              </p>
+              <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+                {isTimed ? (
+                  <button
+                    type="button"
+                    aria-pressed={allSetsDone}
+                    className={`member-set-btn w-full text-xs py-1 ${allSetsDone ? "member-set-btn--done" : ""}`}
+                    onClick={() => toggleSet(block.id, 1)}
+                  >
+                    <span className="member-set-btn__num text-sm">
+                      {allSetsDone ? "✓" : "▶"}
+                    </span>
+                    <span className="member-set-btn__label text-[9px]">
+                      {allSetsDone ? "Done" : "Mark"}
+                    </span>
+                  </button>
+                ) : (
+                  <div className="grid grid-cols-5 gap-1 sm:grid-cols-6">
+                    {Array.from({ length: block.setCount }, (_, i) => {
+                      const setNum = i + 1;
+                      const done = doneForBlock.has(setNum);
+                      return (
+                        <button
+                          key={setNum}
+                          type="button"
+                          aria-pressed={done}
+                          aria-label={`Set ${setNum}${done ? ", completed" : ""}`}
+                          className={`member-set-btn text-xs py-0.5 ${done ? "member-set-btn--done" : ""}`}
+                          onClick={() => toggleSet(block.id, setNum)}
+                        >
+                          <span className="member-set-btn__num text-sm">
+                            {done ? "✓" : setNum}
+                          </span>
+                          <span className="member-set-btn__label text-[8px]">Set</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div
