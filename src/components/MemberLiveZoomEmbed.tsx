@@ -3,18 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import ZoomMeetingEmbedLazy from "@/components/ZoomMeetingEmbedLazy";
 import type { ZoomEmbedCredentials } from "@/components/ZoomMeetingEmbed";
-
-function useDesktopEmbed() {
-  const [desktop, setDesktop] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)");
-    const update = () => setDesktop(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
-  return desktop;
-}
+import { useDesktopEmbed } from "@/lib/use-desktop-embed";
 
 export default function MemberLiveZoomEmbed({
   sessionDate,

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import ZoomMeetingEmbedLazy from "@/components/ZoomMeetingEmbedLazy";
 import type { ZoomEmbedCredentials } from "@/components/ZoomMeetingEmbed";
+import { isDesktopEmbedViewport, useDesktopEmbed } from "@/lib/use-desktop-embed";
 
 type ZoomSummary = {
   sessionDate: string;
@@ -13,18 +14,6 @@ type ZoomSummary = {
   topic: string;
   demo?: boolean;
 };
-
-function useDesktopEmbed() {
-  const [desktop, setDesktop] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)");
-    const update = () => setDesktop(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
-  return desktop;
-}
 
 export default function CoachLiveFloorZoomPanel({
   sessionDate,
@@ -149,12 +138,16 @@ export default function CoachLiveFloorZoomPanel({
       room = await ensureRoom();
       if (!room || room.demo) return;
     }
-    if (desktop && sdkConfigured) {
+    const wideEnough = isDesktopEmbedViewport();
+    if (wideEnough && sdkConfigured) {
       await startEmbedded();
       return;
     }
     if (room.hostUrl) {
       window.open(room.hostUrl, "_blank", "noopener,noreferrer");
+      if (wideEnough && !sdkConfigured) {
+        showMessage("Zoom opened in a new tab — connect Zoom in Settings to embed video on this page.");
+      }
     }
   }
 
@@ -173,7 +166,9 @@ export default function CoachLiveFloorZoomPanel({
         <div className="min-w-0 flex-1">
           {isFloor ? (
             <p className="text-xs text-[var(--muted)]">
-              Start video when class begins — members get the join link automatically.
+              {desktop && sdkConfigured
+                ? "Start video embeds Zoom here so you can count sets on the same screen."
+                : "Start video opens Zoom — members get the join link automatically."}
             </p>
           ) : (
             <>
@@ -289,6 +284,25 @@ export default function CoachLiveFloorZoomPanel({
                 >
                   Leave video
                 </button>
+              ) : desktop && sdkConfigured ? (
+                <button
+                  type="button"
+                  className="btn-ghost min-h-[40px] px-3 text-xs"
+                  disabled={busy}
+                  onClick={() => void startEmbedded()}
+                >
+                  {busy ? "Connecting…" : "Show video here"}
+                </button>
+              ) : null}
+              {zoom?.hostUrl && !zoom.demo && !embedVisible ? (
+                <a
+                  href={zoom.hostUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-ghost min-h-[40px] px-3 text-xs"
+                >
+                  Open in Zoom app
+                </a>
               ) : null}
               {zoom?.joinUrl && !zoom.demo ? (
                 <button
@@ -299,25 +313,18 @@ export default function CoachLiveFloorZoomPanel({
                   Copy member link
                 </button>
               ) : null}
-              {desktop && sdkConfigured && !embedVisible ? (
-                <button
-                  type="button"
-                  className="btn-ghost min-h-[40px] px-3 text-xs"
-                  disabled={busy}
-                  onClick={() => void startEmbedded()}
-                >
-                  Pin video on this page
-                </button>
-              ) : null}
             </div>
           )}
 
           {desktop && embedVisible && embedCreds ? (
-            <ZoomMeetingEmbedLazy
-              credentials={embedCreds}
-              height={isFloor ? 280 : 400}
-              onLeft={closeEmbed}
-            />
+            <div className={isFloor ? "sticky top-2 z-20" : undefined}>
+              <ZoomMeetingEmbedLazy
+                credentials={embedCreds}
+                height={isFloor ? 280 : 400}
+                onLeft={closeEmbed}
+                onError={(msg) => showMessage(msg, true)}
+              />
+            </div>
           ) : null}
         </div>
       ) : null}
