@@ -8,6 +8,7 @@ import {
 import { fetchZoomZakToken } from "@/lib/zoom";
 import {
   createZoomMeetingSdkSignature,
+  zoomMeetingSdkConfigHint,
   zoomMeetingSdkConfigured,
 } from "@/lib/zoom-meeting-sdk-signature";
 
@@ -19,7 +20,12 @@ export async function GET(request: Request) {
 
   if (!zoomMeetingSdkConfigured()) {
     return NextResponse.json(
-      { error: "Set ZOOM_CLIENT_ID and ZOOM_CLIENT_SECRET for Meeting SDK embed." },
+      {
+        error:
+          zoomMeetingSdkConfigHint() ||
+          "Meeting SDK is not configured — add Zoom app credentials in Vercel and redeploy.",
+        code: "sdk_not_configured",
+      },
       { status: 503 },
     );
   }

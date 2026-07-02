@@ -34,13 +34,20 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
   const [embedCreds, setEmbedCreds] = useState<ZoomEmbedCredentials | null>(null);
   const [embedVisible, setEmbedVisible] = useState(false);
   const [zoomReady, setZoomReady] = useState(false);
+  const [sdkConfigured, setSdkConfigured] = useState(false);
+  const [messageIsError, setMessageIsError] = useState(false);
 
   const loadStatus = useCallback(async () => {
     try {
-      const res = await fetch(`/api/admin/live-floor/zoom?date=${sessionDate}`, { cache: "no-store" });
-      const data = await res.json();
-      if (res.ok) {
+      const [zoomRes, statusRes] = await Promise.all([
+        fetch(`/api/admin/live-floor/zoom?date=${sessionDate}`, { cache: "no-store" }),
+        fetch("/api/admin/zoom/status", { cache: "no-store" }),
+      ]);
+      const data = await zoomRes.json();
+      const status = statusRes.ok ? await statusRes.json() : null;
+      if (zoomRes.ok) {
         setZoomReady(Boolean(data.ready));
+        setSdkConfigured(Boolean(status?.sdkConfigured ?? data.sdkConfigured));
         if (data.zoom) setZoom(data.zoom);
       }
     } catch {
@@ -52,9 +59,15 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
     void loadStatus();
   }, [loadStatus]);
 
+  function showMessage(text: string, isError = false) {
+    setMessageIsError(isError);
+    setMessage(text);
+  }
+
   async function ensureRoom() {
     setBusy(true);
     setMessage(null);
+    setMessageIsError(false);
     try {
       const res = await fetch("/api/admin/live-floor/zoom", {
         method: "POST",
@@ -63,21 +76,22 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
       });
       const data = await res.json();
       if (!res.ok) {
-        setMessage(data.error || "Could not create Zoom room.");
+        showMessage(data.error || "Could not create Zoom room.", true);
         return;
       }
       const notifyNote =
         data.notified > 0 ? ` Link sent to ${data.notified} attendee${data.notified === 1 ? "" : "s"}.` : "";
       if (data.demo) {
         setZoom(null);
-        setMessage("Connect Zoom in Admin → Settings first (demo links do not work on zoom.us).");
+        showMessage("Connect Zoom in Admin → Settings first (demo links do not work on zoom.us).", true);
       } else {
         setZoom(data.zoom);
-        setMessage(`Live Zoom room ready.${notifyNote}`);
+        setSdkConfigured(Boolean(data.sdkConfigured));
+        showMessage(`Live Zoom room ready.${notifyNote}`);
       }
       setTimeout(() => setMessage(null), 4000);
     } catch {
-      setMessage("Could not create Zoom room.");
+      showMessage("Could not create Zoom room.", true);
     } finally {
       setBusy(false);
     }
@@ -87,6 +101,7 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
     if (!desktop) return;
     setBusy(true);
     setMessage(null);
+    setMessageIsError(false);
     try {
       const res = await fetch(
         `/api/admin/live-floor/zoom/credentials?date=${sessionDate}&ensure=1`,
@@ -94,7 +109,7 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
       );
       const data = await res.json();
       if (!res.ok) {
-        setMessage(data.error || "Could not start embedded Zoom.");
+        showMessage(data.error || "Could not start embedded Zoom.", true);
         return;
       }
       if (data.demo) {
@@ -108,7 +123,7 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
             demo: true,
           },
         );
-        setMessage("Connect Zoom in Admin → Settings — demo meeting IDs are not valid on Zoom.");
+        showMessage("Connect Zoom in Admin → Settings — demo meeting IDs are not valid on Zoom.", true);
         return;
       }
       setEmbedCreds({
@@ -122,7 +137,7 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
       setEmbedVisible(true);
       setOpen(true);
     } catch {
-      setMessage("Could not start embedded Zoom.");
+      showMessage("Could not start embedded Zoom.", true);
     } finally {
       setBusy(false);
     }
@@ -151,7 +166,13 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
         </button>
       </div>
 
-      {message ? <p className="mt-2 text-xs text-[var(--success)]">{message}</p> : null}
+      {message ? (
+        <p
+          className={`mt-2 text-xs ${messageIsError ? "text-amber-200" : "text-[var(--success)]"}`}
+        >
+          {message}
+        </p>
+      ) : null}
 
       {!zoomReady ? (
         <p className="mt-2 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
@@ -161,6 +182,14 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
           </a>{" "}
           (Google sign-in on Zoom&apos;s page works). Until then, demo links will show &quot;Invalid
           meeting ID&quot; on zoom.us.
+        </p>
+      ) : null}
+
+      {zoomReady && !sdkConfigured ? (
+        <p className="mt-2 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+          In-page video needs <code className="text-amber-50">ZOOM_CLIENT_ID</code> and{" "}
+          <code className="text-amber-50">ZOOM_CLIENT_SECRET</code> in Vercel (Production) — then{" "}
+          <strong>redeploy</strong>. Use <strong>Open Zoom app</strong> until then (works today).
         </p>
       ) : null}
 
@@ -178,7 +207,7 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
               </button>
             ) : (
               <>
-                {desktop ? (
+                {desktop && sdkConfigured ? (
                   <button
                     type="button"
                     className="btn-primary min-h-[44px] px-4 py-2 text-sm"
