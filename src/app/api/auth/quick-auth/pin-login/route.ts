@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No quick sign-in for this account." }, { status: 403 });
   }
 
-  const pinRecord = await resolvePinHashForDevice(email, deviceId);
+  const pinRecord = await resolvePinHashForDevice(email, deviceId, true);
   if (!pinRecord || !verifyPin(pin, pinRecord.pinHash)) {
     return NextResponse.json({ error: "Incorrect PIN." }, { status: 401 });
   }

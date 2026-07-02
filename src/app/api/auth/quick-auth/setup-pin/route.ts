@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
   try {
     // Sync preset + all registered devices so change-PIN works everywhere.
-    await setAdminPinForEmail(session.email, pin);
+    await setAdminPinForEmail(session.email, pin, { deviceId });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Could not save PIN.";
     return NextResponse.json({ error: message }, { status: 503 });

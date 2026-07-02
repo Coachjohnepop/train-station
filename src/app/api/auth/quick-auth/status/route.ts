@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   }
 
   await materializePresetForDevice(email, deviceId);
-  const status = await quickAuthStatusForDevice(email, deviceId);
+  const status = await quickAuthStatusForDevice(email, deviceId, { preferFresh: true });
   if (!status) {
     return NextResponse.json({ pin: false, webauthn: false, enabled: false });
   }

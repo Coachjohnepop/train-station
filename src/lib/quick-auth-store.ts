@@ -83,12 +83,13 @@ async function saveStore(store: QuickAuthStore): Promise<void> {
 export async function getDeviceQuickAuth(
   email: string,
   deviceId: string,
+  opts?: { preferFresh?: boolean },
 ): Promise<StoredDeviceQuickAuth | null> {
   const normalizedEmail = normalizeAccountEmail(email);
   const normalizedDeviceId = normalizeDeviceId(deviceId);
   if (!normalizedEmail || !normalizedDeviceId) return null;
 
-  const store = await getStore();
+  const store = await getStore(opts);
   const raw = store[storeKey(normalizedEmail, normalizedDeviceId)];
   if (!raw || !("deviceId" in raw)) return null;
   return raw;
@@ -162,11 +163,12 @@ export type QuickAuthStatus = {
 
 export async function getEmailQuickAuthPreset(
   email: string,
+  opts?: { preferFresh?: boolean },
 ): Promise<StoredEmailQuickAuthPreset | null> {
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) return null;
 
-  const store = await getStore();
+  const store = await getStore(opts);
   const raw = store[presetKey(normalizedEmail)];
   if (!raw || !("pinHash" in raw) || !raw.pinHash) return null;
   const preset = raw as StoredEmailQuickAuthPreset;
@@ -176,13 +178,15 @@ export async function getEmailQuickAuthPreset(
 export async function resolvePinHashForDevice(
   email: string,
   deviceId: string,
+  preferFresh = false,
 ): Promise<{ pinHash: string; pinUpdatedAt?: string; fromPreset: boolean } | null> {
-  const entry = await getDeviceQuickAuth(email, deviceId);
+  const readOpts = preferFresh ? { preferFresh: true as const } : undefined;
+  const entry = await getDeviceQuickAuth(email, deviceId, readOpts);
   if (entry?.pinHash) {
     return { pinHash: entry.pinHash, pinUpdatedAt: entry.pinUpdatedAt, fromPreset: false };
   }
 
-  const preset = await getEmailQuickAuthPreset(email);
+  const preset = await getEmailQuickAuthPreset(email, readOpts);
   if (!preset?.pinHash) return null;
   return { pinHash: preset.pinHash, pinUpdatedAt: preset.pinUpdatedAt, fromPreset: true };
 }
@@ -237,7 +241,11 @@ export async function listQuickAuthDevicesForEmail(
   return devices.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
-export async function setAdminPinForEmail(email: string, pin: string): Promise<void> {
+export async function setAdminPinForEmail(
+  email: string,
+  pin: string,
+  opts?: { deviceId?: string },
+): Promise<void> {
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) return;
 
@@ -263,6 +271,27 @@ export async function setAdminPinForEmail(email: string, pin: string): Promise<v
       pinUpdatedAt: now,
       updatedAt: now,
     };
+  }
+
+  const normalizedDeviceId = opts?.deviceId ? normalizeDeviceId(opts.deviceId) : null;
+  if (normalizedDeviceId) {
+    const deviceKey = storeKey(normalizedEmail, normalizedDeviceId);
+    const existing = next[deviceKey];
+    next[deviceKey] =
+      existing && "deviceId" in existing
+        ? {
+            ...existing,
+            pinHash,
+            pinUpdatedAt: now,
+            updatedAt: now,
+          }
+        : {
+            email: normalizedEmail,
+            deviceId: normalizedDeviceId,
+            pinHash,
+            pinUpdatedAt: now,
+            updatedAt: now,
+          };
   }
 
   await saveStore(next);
@@ -340,10 +369,12 @@ export async function confirmPinPersisted(
   attempts = 16,
 ): Promise<boolean> {
   for (let i = 0; i < attempts; i++) {
-    memoryStore = null;
-    const record = await resolvePinHashForDevice(email, deviceId);
+    if (i > 0) {
+      memoryStore = null;
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    const record = await resolvePinHashForDevice(email, deviceId, i > 0);
     if (record && verifyPin(pin, record.pinHash)) return true;
-    await new Promise((r) => setTimeout(r, 300));
   }
   return false;
 }
@@ -351,9 +382,11 @@ export async function confirmPinPersisted(
 export async function quickAuthStatusForDevice(
   email: string,
   deviceId: string,
+  opts?: { preferFresh?: boolean },
 ): Promise<QuickAuthStatus | null> {
-  const entry = await getDeviceQuickAuth(email, deviceId);
-  const preset = await getEmailQuickAuthPreset(email);
+  const readOpts = opts?.preferFresh ? { preferFresh: true as const } : undefined;
+  const entry = await getDeviceQuickAuth(email, deviceId, readOpts);
+  const preset = await getEmailQuickAuthPreset(email, readOpts);
   const pin = Boolean(entry?.pinHash || preset?.pinHash);
   const webauthn = Boolean(entry?.webauthn?.credentialId);
 
