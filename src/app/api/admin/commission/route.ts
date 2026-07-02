@@ -17,7 +17,7 @@ import {
   previousCommissionPeriod,
   revenueSplitFromMrr,
 } from "@/lib/stripe-commission";
-import { listConnectPartnerStatuses } from "@/lib/stripe-connect";
+import { getConnectPlatformHint, listConnectPartnerStatuses } from "@/lib/stripe-connect";
 import { COMMISSION_PAYOUT_WEEKDAYS, getCoachSettings } from "@/lib/coach-settings-store";
 
 export const dynamic = "force-dynamic";
@@ -32,13 +32,15 @@ export async function GET() {
   const session = await requireStaff();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [mrr, payouts, partners, connectStatuses, coachSettings] = await Promise.all([
-    fetchActiveMrrCents(),
-    listCommissionPayouts(),
-    listCommissionPartners(),
-    listConnectPartnerStatuses(),
-    getCoachSettings(),
-  ]);
+  const [mrr, payouts, partners, connectStatuses, coachSettings, connectPlatform] =
+    await Promise.all([
+      fetchActiveMrrCents(),
+      listCommissionPayouts(),
+      listCommissionPartners(),
+      listConnectPartnerStatuses(),
+      getCoachSettings(),
+      getConnectPlatformHint(),
+    ]);
 
   const mode = commissionSplitMode();
   const shareCheck = validatePartnerShares(partners, mode);
@@ -139,5 +141,6 @@ export async function GET() {
         COMMISSION_PAYOUT_WEEKDAYS.find((d) => d.value === coachSettings.commissionPayoutWeekday)
           ?.label ?? "Friday",
     },
+    connectPlatform,
   });
 }

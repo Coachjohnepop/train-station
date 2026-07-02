@@ -81,6 +81,10 @@ type CommissionResponse = {
     weekday: number;
     weekdayLabel: string;
   };
+  connectPlatform?: {
+    ready: boolean;
+    message: string | null;
+  };
 };
 
 function centsToUsd(cents: number): string {
@@ -328,6 +332,13 @@ export default function AdminCommissionClient() {
       )}
 
       {error && <p className="text-sm text-amber-400">{error}</p>}
+
+      {data?.connectPlatform && !data.connectPlatform.ready && data.connectPlatform.message && (
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+          <strong className="text-amber-100">Stripe Connect setup needed.</strong>{" "}
+          {data.connectPlatform.message}
+        </p>
+      )}
 
       {loading ? (
         <p className="text-sm text-[var(--muted)]">Loading…</p>

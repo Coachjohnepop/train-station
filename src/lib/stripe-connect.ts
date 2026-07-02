@@ -7,6 +7,26 @@ import {
 } from "@/lib/commission-partners-store";
 import { appBaseUrl, getStripe } from "@/lib/stripe";
 
+function formatStripeConnectError(e: unknown): string {
+  if (e && typeof e === "object") {
+    const err = e as { message?: string; raw?: { message?: string } };
+    const message = err.message || err.raw?.message;
+    if (message) {
+      const lower = message.toLowerCase();
+      if (
+        lower.includes("connect") &&
+        (lower.includes("not enabled") ||
+          lower.includes("signed up") ||
+          lower.includes("complete your platform profile"))
+      ) {
+        return `${message} Open Stripe Dashboard → Connect → Get started and finish platform setup (profile + branding), then click Connect again.`;
+      }
+      return message;
+    }
+  }
+  return "Connect onboarding failed.";
+}
+
 export type ConnectPartnerStatus = {
   partnerId: string;
   configured: boolean;
@@ -85,23 +105,30 @@ export async function ensurePartnerConnectAccount(
     return { error: "Partner email is required before Connect onboarding." };
   }
 
-  const account = await stripe.accounts.create({
-    type: "express",
-    country: "US",
-    email: partner.email,
-    capabilities: {
-      transfers: { requested: true },
-    },
-    business_profile: partner.name ? { name: partner.name } : undefined,
-    metadata: {
-      role: "commission_partner",
-      product: "train-station",
-      partner_id: partnerId,
-    },
-  });
+  try {
+    const account = await stripe.accounts.create({
+      type: "express",
+      country: "US",
+      email: partner.email,
+      capabilities: {
+        transfers: { requested: true },
+      },
+      business_profile: {
+        ...(partner.name ? { name: partner.name } : {}),
+        url: appBaseUrl(),
+      },
+      metadata: {
+        role: "commission_partner",
+        product: "train-station",
+        partner_id: partnerId,
+      },
+    });
 
-  await updateCommissionPartner(partnerId, { stripeAccountId: account.id });
-  return { accountId: account.id };
+    await updateCommissionPartner(partnerId, { stripeAccountId: account.id });
+    return { accountId: account.id };
+  } catch (e: unknown) {
+    return { error: formatStripeConnectError(e) };
+  }
 }
 
 export async function createPartnerOnboardingLink(
@@ -114,15 +141,36 @@ export async function createPartnerOnboardingLink(
   if ("error" in ensured) return ensured;
 
   const base = appBaseUrl();
-  const link = await stripe.accountLinks.create({
-    account: ensured.accountId,
-    refresh_url: `${base}/admin/commission?connect=refresh&partnerId=${encodeURIComponent(partnerId)}`,
-    return_url: `${base}/admin/commission?connect=return&partnerId=${encodeURIComponent(partnerId)}`,
-    type: "account_onboarding",
-  });
+  try {
+    const link = await stripe.accountLinks.create({
+      account: ensured.accountId,
+      refresh_url: `${base}/admin/commission?connect=refresh&partnerId=${encodeURIComponent(partnerId)}`,
+      return_url: `${base}/admin/commission?connect=return&partnerId=${encodeURIComponent(partnerId)}`,
+      type: "account_onboarding",
+    });
 
-  if (!link.url) return { error: "Stripe did not return an onboarding URL." };
-  return { url: link.url };
+    if (!link.url) return { error: "Stripe did not return an onboarding URL." };
+    return { url: link.url };
+  } catch (e: unknown) {
+    return { error: formatStripeConnectError(e) };
+  }
+}
+
+export async function getConnectPlatformHint(): Promise<{
+  ready: boolean;
+  message: string | null;
+}> {
+  const stripe = getStripe();
+  if (!stripe) {
+    return { ready: false, message: "Stripe is not configured on this deployment." };
+  }
+
+  try {
+    await stripe.accounts.list({ limit: 1 });
+    return { ready: true, message: null };
+  } catch (e: unknown) {
+    return { ready: false, message: formatStripeConnectError(e) };
+  }
 }
 
 export async function createPartnerDashboardLink(
