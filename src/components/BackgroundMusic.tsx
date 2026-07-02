@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { BG_MUSIC_OVERLAY_EVENT } from "@/lib/background-music-control";
 
@@ -20,7 +21,16 @@ import { BG_MUSIC_OVERLAY_EVENT } from "@/lib/background-music-control";
 const SRC = "/background-music.mp3";
 const OFF_KEY = "ts-bg-music-muted"; // "1" = visitor turned music off
 
+/** Coach admin landing — keep the welcome track; deeper admin pages stay quiet. */
+const ADMIN_MUSIC_LANDING = new Set(["/admin", "/admin/day"]);
+
+function isAdminSubPage(pathname: string): boolean {
+  return pathname.startsWith("/admin") && !ADMIN_MUSIC_LANDING.has(pathname);
+}
+
 export default function BackgroundMusic() {
+  const pathname = usePathname() ?? "";
+  const adminSubPage = isAdminSubPage(pathname);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const overlayPauseRef = useRef(false);
   // `off` = the visitor's on/off choice (not the same as the silent-buffering
@@ -99,6 +109,20 @@ export default function BackgroundMusic() {
     return () => window.removeEventListener(BG_MUSIC_OVERLAY_EVENT, onOverlay);
   }, [off]);
 
+  // Hide the control and pause on admin sub-pages (queue, members, settings, etc.).
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (adminSubPage || overlayPauseRef.current) {
+      audio.pause();
+      return;
+    }
+    if (!off && window.localStorage.getItem(OFF_KEY) !== "1") {
+      audio.muted = false;
+      audio.play().catch(() => {});
+    }
+  }, [adminSubPage, off]);
+
   const toggle = () => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -116,15 +140,17 @@ export default function BackgroundMusic() {
   return (
     <>
       <audio ref={audioRef} src={SRC} loop preload="auto" />
-      <button
-        type="button"
-        onClick={toggle}
-        aria-label={off ? "Unmute background music" : "Mute background music"}
-        title={off ? "Play music" : "Mute music"}
-        className="fixed bottom-6 left-6 z-50 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#3d2660] bg-[#0a0612]/90 text-white shadow-xl backdrop-blur-md transition-all hover:border-[#7c3aed] hover:bg-[#1a1428] active:scale-[0.985]"
-      >
-        {off ? <SpeakerOffIcon /> : <SpeakerOnIcon />}
-      </button>
+      {!adminSubPage ? (
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label={off ? "Unmute background music" : "Mute background music"}
+          title={off ? "Play music" : "Mute music"}
+          className="fixed bottom-6 left-6 z-50 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#3d2660] bg-[#0a0612]/90 text-white shadow-xl backdrop-blur-md transition-all hover:border-[#7c3aed] hover:bg-[#1a1428] active:scale-[0.985]"
+        >
+          {off ? <SpeakerOffIcon /> : <SpeakerOnIcon />}
+        </button>
+      ) : null}
     </>
   );
 }
