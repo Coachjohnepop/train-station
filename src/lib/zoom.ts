@@ -12,6 +12,7 @@ export type ZoomMeetingResult = {
   meetingId: string;
   joinUrl: string;
   hostUrl: string;
+  password: string;
   durationMin: number;
   demo?: boolean;
 };
@@ -149,6 +150,7 @@ function demoMeeting(bookingId: string): ZoomMeetingResult {
     meetingId: `demo-${slug}`,
     joinUrl: `https://zoom.us/j/demo-${slug}`,
     hostUrl: `https://zoom.us/s/demo-${slug}?zak=demo`,
+    password: "",
     durationMin: ZOOM_FREE_MAX_DURATION_MIN,
     demo: true,
   };
@@ -204,8 +206,24 @@ export async function createZoomMeeting(input: {
     meetingId: String(data.id),
     joinUrl: data.join_url,
     hostUrl: data.start_url,
+    password: data.password || "",
     durationMin,
   };
+}
+
+export async function fetchZoomZakToken(): Promise<string | null> {
+  const token = await resolveZoomAccessToken();
+  if (!token) return null;
+
+  const res = await fetch("https://api.zoom.us/v2/users/me/token?type=zak", {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data?.message || `Could not fetch Zoom ZAK token (${res.status})`);
+  }
+  return (data.token as string) || null;
 }
 
 export async function exchangeZoomAuthCode(code: string): Promise<{

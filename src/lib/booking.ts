@@ -378,7 +378,7 @@ export async function getMemberLiveSessions(input: {
     .map((b: any) => {
       const start = new Date(b.scheduledAt).getTime();
       const startsInMin = Math.round((start - now) / 60_000);
-      const canJoin = Boolean(b.zoomUrl) && startsInMin <= 15 && startsInMin >= -(b.durationMin || 15);
+      const canJoin = startsInMin <= 15 && startsInMin >= -(b.durationMin || 15);
       return {
         id: b.id,
         scheduledAt: b.scheduledAt,

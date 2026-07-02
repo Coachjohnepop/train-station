@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import CoachLiveFloorZoomPanel from "@/components/CoachLiveFloorZoomPanel";
 import MemberWorkoutConsole, { type MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 
 type LiveFloorTile = {
@@ -171,6 +172,8 @@ export default function CoachLiveFloor({ initialDate }: { initialDate: string })
           </Link>
         </div>
       </div>
+
+      <CoachLiveFloorZoomPanel sessionDate={sessionDate} />
 
       {tiles.length === 0 && !loading ? (
         <div className="card py-16 text-center">

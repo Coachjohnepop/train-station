@@ -49,6 +49,7 @@ export function buildZoomAuthorizeUrl(state: string): string {
     client_id: clientId,
     redirect_uri: zoomOAuthCallbackUrl(),
     state,
+    scope: "user:read",
   });
   return `https://zoom.us/oauth/authorize?${params}`;
 }

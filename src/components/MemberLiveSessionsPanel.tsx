@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import MemberLiveZoomEmbed from "@/components/MemberLiveZoomEmbed";
 
 type LiveSession = {
   id: string;
@@ -65,6 +66,13 @@ export default function MemberLiveSessionsPanel({ canLive }: { canLive: boolean 
     );
   }
 
+  const primarySession = sessions[0];
+  const classSessionDate = useMemo(() => {
+    if (!primarySession) return null;
+    return new Date(primarySession.scheduledAt).toISOString().slice(0, 10);
+  }, [primarySession]);
+  const canJoinClassVideo = Boolean(primarySession?.canJoin);
+
   if (sessions.length === 0) {
     return (
       <div className="mt-4 rounded-lg border border-dashed border-[var(--border)] p-4 text-center text-sm text-[var(--muted)]">
@@ -80,6 +88,9 @@ export default function MemberLiveSessionsPanel({ canLive }: { canLive: boolean 
           ? `Free Zoom sessions — up to ${maxDurationMin} min. Your coach starts the room; join when the button appears.`
           : "Coach will create your Zoom link when the session is confirmed."}
       </p>
+      {classSessionDate ? (
+        <MemberLiveZoomEmbed sessionDate={classSessionDate} canJoin={canJoinClassVideo} />
+      ) : null}
       {sessions.map((session) => {
         const hint = startsLabel(session.startsInMin);
         return (
