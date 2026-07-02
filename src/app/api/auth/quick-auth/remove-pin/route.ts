@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { resolveQuickAuthDeviceId } from "@/lib/quick-auth-device-cookie";
-import { clearPinForDevice } from "@/lib/quick-auth-store";
+import { clearAdminPinForEmail } from "@/lib/quick-auth-store";
 
 export async function POST(request: Request) {
   const session = await getSessionUser();
@@ -15,6 +15,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid device." }, { status: 400 });
   }
 
-  await clearPinForDevice(session.email, deviceId);
+  await clearAdminPinForEmail(session.email);
   return NextResponse.json({ ok: true, pin: false });
 }

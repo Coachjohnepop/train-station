@@ -10,6 +10,7 @@ const BASE = process.env.BASE_URL || "https://www.thetrainstation.co";
 const EMAIL = process.env.COACH_EMAIL || "john@thetrainstation.co";
 const PASSWORD = process.env.COACH_PASSWORD || process.env.COACH_TEST_PASSWORD || "";
 const TEST_PIN = process.env.QUICK_AUTH_TEST_PIN || "2468";
+const NEW_PIN = process.env.QUICK_AUTH_NEW_PIN || "1357";
 const ADMIN_REDIRECT = "/admin/day";
 
 let cookies = "";
@@ -120,6 +121,35 @@ async function main() {
     fail(`pin-login redirect expected admin path, got: ${dest}`);
   }
   console.log(`✓ PIN login → ${dest}`);
+
+  const changePin = await req("/api/auth/quick-auth/setup-pin", {
+    method: "POST",
+    json: { pin: NEW_PIN, deviceId },
+  });
+  if (!changePin.res.ok) {
+    fail(`change-pin (setup-pin) failed: ${changePin.res.status} ${JSON.stringify(changePin.body)}`);
+  }
+  console.log("✓ PIN changed via setup-pin");
+
+  await req("/api/auth/logout", { method: "GET" });
+
+  const oldPinLogin = await req("/api/auth/quick-auth/pin-login", {
+    method: "POST",
+    json: { email: EMAIL, pin: TEST_PIN, deviceId, redirect: ADMIN_REDIRECT },
+  });
+  if (oldPinLogin.res.ok) {
+    fail("old PIN should fail after change");
+  }
+  console.log("✓ old PIN rejected after change");
+
+  const newPinLogin = await req("/api/auth/quick-auth/pin-login", {
+    method: "POST",
+    json: { email: EMAIL, pin: NEW_PIN, deviceId, redirect: ADMIN_REDIRECT },
+  });
+  if (!newPinLogin.res.ok) {
+    fail(`new PIN login failed: ${newPinLogin.res.status} ${JSON.stringify(newPinLogin.body)}`);
+  }
+  console.log("✓ new PIN login works after change");
 
   const loginHtml = await req(`/login?redirect=${encodeURIComponent(ADMIN_REDIRECT)}`);
   if (!loginHtml.res.ok) {

@@ -26,6 +26,7 @@ export default function QuickAuthSetupPrompt({
   const [draftPin, setDraftPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [pinEnabled, setPinEnabled] = useState(false);
+  const [editingPin, setEditingPin] = useState(false);
   const [webauthnEnabled, setWebauthnEnabled] = useState(false);
   const [biometricReady, setBiometricReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -91,6 +92,7 @@ export default function QuickAuthSetupPrompt({
         }
 
         setPinEnabled(true);
+        setEditingPin(false);
         setDraftPin("");
         setConfirmPin("");
         setPinStep("enter");
@@ -101,7 +103,12 @@ export default function QuickAuthSetupPrompt({
           webauthn: webauthnEnabled,
           updatedAt: new Date().toISOString(),
         });
-        setMessage("PIN saved — quick sign-in is ready on this device.");
+        setMessage(
+          editingPin
+            ? "PIN updated — use your new code next time you sign in."
+            : "PIN saved — quick sign-in is ready on this device.",
+        );
+        await refreshStatus();
       } catch {
         setError("Could not save PIN.");
         setDraftPin("");
@@ -111,8 +118,62 @@ export default function QuickAuthSetupPrompt({
         setBusy(false);
       }
     },
-    [ready, deviceId, email, webauthnEnabled, onContinue],
+    [ready, deviceId, email, webauthnEnabled, editingPin, refreshStatus],
   );
+
+  const removePin = useCallback(async () => {
+    if (!ready) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const res = await fetch("/api/auth/quick-auth/remove-pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ deviceId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Could not remove PIN.");
+        return;
+      }
+      setPinEnabled(false);
+      setEditingPin(false);
+      setDraftPin("");
+      setConfirmPin("");
+      setPinStep("enter");
+      writeQuickAuthMeta({
+        email: email.trim().toLowerCase(),
+        pin: false,
+        webauthn: webauthnEnabled,
+        updatedAt: new Date().toISOString(),
+      });
+      setMessage("PIN removed from this account on this device.");
+      await refreshStatus();
+    } catch {
+      setError("Could not remove PIN.");
+    } finally {
+      setBusy(false);
+    }
+  }, [ready, deviceId, email, webauthnEnabled, refreshStatus]);
+
+  function startChangePin() {
+    setError("");
+    setMessage("");
+    setDraftPin("");
+    setConfirmPin("");
+    setPinStep("enter");
+    setEditingPin(true);
+  }
+
+  function cancelChangePin() {
+    setEditingPin(false);
+    setDraftPin("");
+    setConfirmPin("");
+    setPinStep("enter");
+    setError("");
+  }
 
   useEffect(() => {
     if (pinStep !== "enter" || draftPin.length !== PIN_LENGTH || busy) return;
@@ -188,10 +249,38 @@ export default function QuickAuthSetupPrompt({
         </p>
       )}
 
-      {!pinEnabled ? (
+      {pinEnabled && !editingPin ? (
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+          <p className="text-sm text-emerald-100">PIN is enabled on this device.</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn-primary text-xs"
+              disabled={busy || !ready}
+              onClick={startChangePin}
+            >
+              Change PIN
+            </button>
+            <button
+              type="button"
+              className="btn-secondary text-xs"
+              disabled={busy || !ready}
+              onClick={() => void removePin()}
+            >
+              Remove PIN
+            </button>
+          </div>
+        </div>
+      ) : (
         <div className="space-y-2">
           <p className="text-center text-xs text-[var(--muted)]">
-            {pinStep === "enter" ? "Choose a 4-digit PIN" : "Confirm your PIN"}
+            {editingPin
+              ? pinStep === "enter"
+                ? "Enter a new 4-digit PIN"
+                : "Confirm your new PIN"
+              : pinStep === "enter"
+                ? "Choose a 4-digit PIN"
+                : "Confirm your PIN"}
           </p>
           <PinPad
             value={pinStep === "enter" ? draftPin : confirmPin}
@@ -199,11 +288,17 @@ export default function QuickAuthSetupPrompt({
             maxLength={PIN_LENGTH}
             disabled={busy || !ready}
           />
+          {editingPin && (
+            <button
+              type="button"
+              className="w-full text-center text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
+              disabled={busy}
+              onClick={cancelChangePin}
+            >
+              Cancel
+            </button>
+          )}
         </div>
-      ) : (
-        <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-emerald-100">
-          PIN enabled on this device.
-        </p>
       )}
 
       {biometricReady && !webauthnEnabled && (

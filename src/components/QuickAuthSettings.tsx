@@ -93,7 +93,7 @@ export default function QuickAuthSettings({ email }: { email: string }) {
         return;
       }
       clearQuickAuthSetupSkipped();
-      setMessage("PIN saved for this device.");
+      setMessage(status.pin ? "PIN updated for this device." : "PIN saved for this device.");
       setPinStep("idle");
       setDraftPin("");
       setConfirmPin("");
@@ -221,15 +221,31 @@ export default function QuickAuthSettings({ email }: { email: string }) {
               {status.pin ? "Enabled on this device" : "4 digits, device only"}
             </p>
           </div>
-          {status.pin ? (
-            <button
-              type="button"
-              className="btn-secondary text-xs"
-              disabled={busy}
-              onClick={() => void removePin()}
-            >
-              Remove
-            </button>
+          {status.pin && pinStep === "idle" ? (
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn-primary text-xs"
+                disabled={busy}
+                onClick={() => {
+                  setError("");
+                  setMessage("");
+                  setDraftPin("");
+                  setConfirmPin("");
+                  setPinStep("enter");
+                }}
+              >
+                Change PIN
+              </button>
+              <button
+                type="button"
+                className="btn-secondary text-xs"
+                disabled={busy}
+                onClick={() => void removePin()}
+              >
+                Remove
+              </button>
+            </div>
           ) : pinStep === "idle" ? (
             <button
               type="button"
@@ -251,7 +267,13 @@ export default function QuickAuthSettings({ email }: { email: string }) {
         {pinStep !== "idle" && (
           <div className="space-y-2">
             <p className="text-center text-xs text-[var(--muted)]">
-              {pinStep === "enter" ? "Choose a PIN" : "Confirm your PIN"}
+              {status.pin
+                ? pinStep === "enter"
+                  ? "Enter a new PIN"
+                  : "Confirm your new PIN"
+                : pinStep === "enter"
+                  ? "Choose a PIN"
+                  : "Confirm your PIN"}
             </p>
             <PinPad
               value={pinStep === "enter" ? draftPin : confirmPin}
