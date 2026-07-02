@@ -170,7 +170,7 @@ export default function CoachDayHub({
       <div
         className={`coach-dashboard space-y-3 ${isFloor ? "min-h-[calc(100dvh-3.5rem)] pb-2" : ""}`}
       >
-        <CoachLiveFloorZoomPanel sessionDate={sessionDate} />
+        <CoachLiveFloorZoomPanel sessionDate={sessionDate} variant="floor" />
 
         <header className={isFloor ? "py-1" : "card border-accent/30 bg-accent/5 py-4"}>
           <p className="text-xs font-semibold uppercase tracking-wider text-accent">Go to Today</p>

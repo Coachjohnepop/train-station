@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import CoachClassDayBand from "@/components/CoachClassDayBand";
-import CoachLiveFloorZoomPanel from "@/components/CoachLiveFloorZoomPanel";
 import type { CoachDayStudentCard } from "@/lib/coach-day";
 import type { TodaySession } from "@/lib/today-sessions";
 
@@ -247,8 +246,6 @@ export default function CoachDashboard({
         <p className="text-center text-xs text-[var(--muted)]">
           Full-screen workout floor — count sets, no sidebar, today only.
         </p>
-
-        <CoachLiveFloorZoomPanel sessionDate={sessionDate} />
 
         {publishResult && newWorkoutStep === "done" && (
           <div className="card space-y-3 border-emerald-500/35 bg-emerald-500/10">

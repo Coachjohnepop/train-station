@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import ZoomMeetingEmbedLazy from "@/components/ZoomMeetingEmbedLazy";
 import type { ZoomEmbedCredentials } from "@/components/ZoomMeetingEmbed";
@@ -25,9 +26,16 @@ function useDesktopEmbed() {
   return desktop;
 }
 
-export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: string }) {
+export default function CoachLiveFloorZoomPanel({
+  sessionDate,
+  variant = "default",
+}: {
+  sessionDate: string;
+  variant?: "default" | "floor";
+}) {
+  const isFloor = variant === "floor";
   const desktop = useDesktopEmbed();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(isFloor);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [zoom, setZoom] = useState<ZoomSummary | null>(null);
@@ -77,21 +85,23 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
       const data = await res.json();
       if (!res.ok) {
         showMessage(data.error || "Could not create Zoom room.", true);
-        return;
+        return null;
       }
       const notifyNote =
         data.notified > 0 ? ` Link sent to ${data.notified} attendee${data.notified === 1 ? "" : "s"}.` : "";
       if (data.demo) {
         setZoom(null);
-        showMessage("Connect Zoom in Admin → Settings first (demo links do not work on zoom.us).", true);
-      } else {
-        setZoom(data.zoom);
-        setSdkConfigured(Boolean(data.sdkConfigured));
-        showMessage(`Live Zoom room ready.${notifyNote}`);
+        showMessage("Connect Zoom in Admin → Settings first.", true);
+        return null;
       }
+      setZoom(data.zoom);
+      setSdkConfigured(Boolean(data.sdkConfigured));
+      showMessage(`Live room ready.${notifyNote}`);
       setTimeout(() => setMessage(null), 4000);
+      return data.zoom as ZoomSummary;
     } catch {
       showMessage("Could not create Zoom room.", true);
+      return null;
     } finally {
       setBusy(false);
     }
@@ -109,21 +119,11 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
       );
       const data = await res.json();
       if (!res.ok) {
-        showMessage(data.error || "Could not start embedded Zoom.", true);
+        showMessage(data.error || "Could not start video.", true);
         return;
       }
       if (data.demo) {
-        setZoom((prev) =>
-          prev ?? {
-            sessionDate,
-            meetingNumber: data.meetingNumber,
-            joinUrl: data.joinUrl,
-            hostUrl: data.hostUrl,
-            topic: `Train Station Live — ${sessionDate}`,
-            demo: true,
-          },
-        );
-        showMessage("Connect Zoom in Admin → Settings — demo meeting IDs are not valid on Zoom.", true);
+        showMessage("Connect Zoom in Admin → Settings.", true);
         return;
       }
       setEmbedCreds({
@@ -137,9 +137,24 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
       setEmbedVisible(true);
       setOpen(true);
     } catch {
-      showMessage("Could not start embedded Zoom.", true);
+      showMessage("Could not start video.", true);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function startVideo() {
+    let room = zoom;
+    if (!room || room.demo) {
+      room = await ensureRoom();
+      if (!room || room.demo) return;
+    }
+    if (desktop && sdkConfigured) {
+      await startEmbedded();
+      return;
+    }
+    if (room.hostUrl) {
+      window.open(room.hostUrl, "_blank", "noopener,noreferrer");
     }
   }
 
@@ -149,21 +164,45 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
   }
 
   return (
-    <section className="rounded-2xl border border-sky-500/35 bg-sky-500/8 p-4">
+    <section
+      className={`rounded-2xl border border-sky-500/35 bg-sky-500/8 ${
+        isFloor ? "p-3" : "p-4"
+      }`}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="text-sm font-semibold text-sky-200">Group video</p>
-          <p className="text-xs text-[var(--muted)]">
-            One Zoom room for today&apos;s class. Creating the room texts today&apos;s attendees automatically.
-          </p>
+        <div className="min-w-0 flex-1">
+          {isFloor ? (
+            <p className="text-xs text-[var(--muted)]">
+              Start video when class begins — members get the join link automatically.
+            </p>
+          ) : (
+            <>
+              <p className="text-sm font-semibold text-sky-200">Group video</p>
+              <p className="text-xs text-[var(--muted)]">
+                One Zoom room for today&apos;s class. Creating the room texts today&apos;s attendees
+                automatically.
+              </p>
+            </>
+          )}
         </div>
-        <button
-          type="button"
-          className="btn-ghost min-h-[44px] px-3 py-2 text-xs"
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? "Hide video" : "Show video"}
-        </button>
+        {isFloor && zoomReady ? (
+          <button
+            type="button"
+            className="btn-primary min-h-[48px] shrink-0 px-5 text-sm font-bold"
+            disabled={busy || embedVisible}
+            onClick={() => void startVideo()}
+          >
+            {busy ? "Starting…" : embedVisible ? "Video live" : "Start Video"}
+          </button>
+        ) : !isFloor ? (
+          <button
+            type="button"
+            className="btn-ghost min-h-[44px] px-3 py-2 text-xs"
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? "Hide video" : "Show video"}
+          </button>
+        ) : null}
       </div>
 
       {message ? (
@@ -176,92 +215,107 @@ export default function CoachLiveFloorZoomPanel({ sessionDate }: { sessionDate: 
 
       {!zoomReady ? (
         <p className="mt-2 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-          Zoom is not connected yet —{" "}
-          <a href="/admin/settings" className="font-semibold text-amber-50 underline">
-            Admin → Settings → Connect Zoom
-          </a>{" "}
-          (Google sign-in on Zoom&apos;s page works). Until then, demo links will show &quot;Invalid
-          meeting ID&quot; on zoom.us.
+          Connect Zoom once in{" "}
+          <Link href="/admin/settings" className="font-semibold text-amber-50 underline">
+            Settings
+          </Link>{" "}
+          — then <strong>Start Video</strong> works here every class day.
         </p>
       ) : null}
 
-      {zoomReady && !sdkConfigured ? (
-        <p className="mt-2 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-          In-page video needs <code className="text-amber-50">ZOOM_CLIENT_ID</code> and{" "}
-          <code className="text-amber-50">ZOOM_CLIENT_SECRET</code> in Vercel (Production) — then{" "}
-          <strong>redeploy</strong>. Use <strong>Open Zoom app</strong> until then (works today).
-        </p>
-      ) : null}
-
-      {open ? (
-        <div className="mt-3 space-y-3">
-          <div className="flex flex-wrap gap-2">
-            {!zoom ? (
-              <button
-                type="button"
-                className="btn-primary min-h-[44px] px-4 py-2 text-sm"
-                disabled={busy}
-                onClick={() => void ensureRoom()}
-              >
-                {busy ? "Creating…" : "Create class Zoom room"}
-              </button>
-            ) : (
-              <>
-                {desktop && sdkConfigured ? (
-                  <button
-                    type="button"
-                    className="btn-primary min-h-[44px] px-4 py-2 text-sm"
-                    disabled={busy || embedVisible}
-                    onClick={() => void startEmbedded()}
-                    title="Keeps video in this page so you can check off sets at the same time"
-                  >
-                    {busy ? "Starting…" : embedVisible ? "Video live" : "Embed video here"}
-                  </button>
-                ) : null}
-                {!zoom.demo && zoom.hostUrl ? (
-                  <a
-                    href={zoom.hostUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-primary min-h-[44px] px-4 py-2 text-sm"
-                    title="Opens the full Zoom app — best on phone or if you want native Zoom controls"
-                  >
-                    {desktop ? "Open Zoom app" : "Start Zoom app"}
-                  </a>
-                ) : null}
-                {!zoom.demo && zoom.joinUrl ? (
-                  <button
-                    type="button"
-                    className="btn-ghost min-h-[44px] px-3 py-2 text-xs"
-                    onClick={() => void navigator.clipboard.writeText(zoom.joinUrl)}
-                  >
-                    Copy member link
-                  </button>
-                ) : null}
-                {embedVisible ? (
-                  <button
-                    type="button"
-                    className="btn-ghost min-h-[44px] px-3 py-2 text-xs"
-                    onClick={closeEmbed}
-                  >
-                    Leave video
-                  </button>
-                ) : null}
-              </>
-            )}
-          </div>
-
-          <p className="text-xs text-[var(--muted)]">
-            <strong className="text-[var(--text)]">Embed video here</strong> — video stays on this page
-            while you tap sets (desktop).{" "}
-            <strong className="text-[var(--text)]">Open Zoom app</strong> — full Zoom controls in a
-            separate app (recommended on phone).
-          </p>
+      {(open || !isFloor) && zoomReady ? (
+        <div className={`${isFloor ? "mt-2" : "mt-3"} space-y-3`}>
+          {!isFloor ? (
+            <div className="flex flex-wrap gap-2">
+              {!zoom ? (
+                <button
+                  type="button"
+                  className="btn-primary min-h-[44px] px-4 py-2 text-sm"
+                  disabled={busy}
+                  onClick={() => void ensureRoom()}
+                >
+                  {busy ? "Creating…" : "Create class Zoom room"}
+                </button>
+              ) : (
+                <>
+                  {desktop && sdkConfigured ? (
+                    <button
+                      type="button"
+                      className="btn-primary min-h-[44px] px-4 py-2 text-sm"
+                      disabled={busy || embedVisible}
+                      onClick={() => void startEmbedded()}
+                    >
+                      {busy ? "Starting…" : embedVisible ? "Video live" : "Embed video here"}
+                    </button>
+                  ) : null}
+                  {!zoom.demo && zoom.hostUrl ? (
+                    <a
+                      href={zoom.hostUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-primary min-h-[44px] px-4 py-2 text-sm"
+                    >
+                      Start Video
+                    </a>
+                  ) : null}
+                  {!zoom.demo && zoom.joinUrl ? (
+                    <button
+                      type="button"
+                      className="btn-ghost min-h-[44px] px-3 py-2 text-xs"
+                      onClick={() => void navigator.clipboard.writeText(zoom.joinUrl)}
+                    >
+                      Copy member link
+                    </button>
+                  ) : null}
+                  {embedVisible ? (
+                    <button
+                      type="button"
+                      className="btn-ghost min-h-[44px] px-3 py-2 text-xs"
+                      onClick={closeEmbed}
+                    >
+                      Leave video
+                    </button>
+                  ) : null}
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              {embedVisible ? (
+                <button
+                  type="button"
+                  className="btn-ghost min-h-[40px] px-3 text-xs"
+                  onClick={closeEmbed}
+                >
+                  Leave video
+                </button>
+              ) : null}
+              {zoom?.joinUrl && !zoom.demo ? (
+                <button
+                  type="button"
+                  className="btn-ghost min-h-[40px] px-3 text-xs"
+                  onClick={() => void navigator.clipboard.writeText(zoom.joinUrl)}
+                >
+                  Copy member link
+                </button>
+              ) : null}
+              {desktop && sdkConfigured && !embedVisible ? (
+                <button
+                  type="button"
+                  className="btn-ghost min-h-[40px] px-3 text-xs"
+                  disabled={busy}
+                  onClick={() => void startEmbedded()}
+                >
+                  Pin video on this page
+                </button>
+              ) : null}
+            </div>
+          )}
 
           {desktop && embedVisible && embedCreds ? (
             <ZoomMeetingEmbedLazy
               credentials={embedCreds}
-              height={400}
+              height={isFloor ? 280 : 400}
               onLeft={closeEmbed}
             />
           ) : null}
