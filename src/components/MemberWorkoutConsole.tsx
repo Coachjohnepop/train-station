@@ -633,36 +633,38 @@ export default function MemberWorkoutConsole({
           return (
             <div
               key={block.id}
-              className={`rounded-lg border px-3 py-2 ${
+              className={`coach-floor-exercise rounded-lg border px-2 py-1.5 ${
                 exerciseDone
                   ? "border-[var(--ramp-gold)]/45 bg-[var(--ramp-gold)]/8"
                   : "border-[var(--border)] bg-[var(--surface)]"
               }`}
             >
               <p
-                className={`text-sm font-semibold leading-snug ${
+                className={`text-xs font-semibold leading-snug ${
                   exerciseDone ? "text-[var(--ramp-gold-light)]" : ""
                 }`}
               >
                 {block.name}
               </p>
-              <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+              <div className="mt-1" onClick={(e) => e.stopPropagation()}>
                 {isTimed ? (
-                  <button
-                    type="button"
-                    aria-pressed={allSetsDone}
-                    className={`member-set-btn w-full text-xs py-1 ${allSetsDone ? "member-set-btn--done" : ""}`}
-                    onClick={() => toggleSet(block.id, 1)}
-                  >
-                    <span className="member-set-btn__num text-sm">
-                      {allSetsDone ? "✓" : "▶"}
-                    </span>
-                    <span className="member-set-btn__label text-[9px]">
-                      {allSetsDone ? "Done" : "Mark"}
-                    </span>
-                  </button>
+                  <div className="coach-floor-set-grid">
+                    <button
+                      type="button"
+                      aria-pressed={allSetsDone}
+                      className={`coach-floor-set-btn ${allSetsDone ? "coach-floor-set-btn--done" : ""}`}
+                      onClick={() => toggleSet(block.id, 1)}
+                    >
+                      <span className="coach-floor-set-btn__num">
+                        {allSetsDone ? "✓" : "▶"}
+                      </span>
+                      <span className="coach-floor-set-btn__label">
+                        {allSetsDone ? "Done" : "Mark"}
+                      </span>
+                    </button>
+                  </div>
                 ) : (
-                  <div className="grid grid-cols-5 gap-1 sm:grid-cols-6">
+                  <div className="coach-floor-set-grid">
                     {Array.from({ length: block.setCount }, (_, i) => {
                       const setNum = i + 1;
                       const done = doneForBlock.has(setNum);
@@ -672,13 +674,13 @@ export default function MemberWorkoutConsole({
                           type="button"
                           aria-pressed={done}
                           aria-label={`Set ${setNum}${done ? ", completed" : ""}`}
-                          className={`member-set-btn text-xs py-0.5 ${done ? "member-set-btn--done" : ""}`}
+                          className={`coach-floor-set-btn ${done ? "coach-floor-set-btn--done" : ""}`}
                           onClick={() => toggleSet(block.id, setNum)}
                         >
-                          <span className="member-set-btn__num text-sm">
+                          <span className="coach-floor-set-btn__num">
                             {done ? "✓" : setNum}
                           </span>
-                          <span className="member-set-btn__label text-[8px]">Set</span>
+                          <span className="coach-floor-set-btn__label">Set</span>
                         </button>
                       );
                     })}

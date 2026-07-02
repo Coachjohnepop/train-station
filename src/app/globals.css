@@ -626,6 +626,73 @@ table.data th {
   opacity: 0.85;
 }
 
+/* Coach live floor — compact square set buttons, 6 per row then wrap */
+.coach-live-checkoff .coach-floor-set-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.coach-live-checkoff .coach-floor-set-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  flex: 0 0 calc((100% - 1.25rem) / 6);
+  max-width: calc((100% - 1.25rem) / 6);
+  aspect-ratio: 1;
+  min-height: 0;
+  padding: 0.1rem;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-2);
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.1s;
+}
+
+.coach-live-checkoff .coach-floor-set-btn:active {
+  transform: scale(0.96);
+}
+
+.coach-live-checkoff .coach-floor-set-btn:hover {
+  border-color: color-mix(in srgb, var(--ramp-gold) 45%, var(--border));
+}
+
+.coach-live-checkoff .coach-floor-set-btn--done {
+  border-color: var(--ramp-gold-light);
+  background: linear-gradient(180deg, var(--ramp-gold-light) 0%, var(--ramp-gold) 100%);
+  color: #1a1028;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ramp-gold-glow) 45%, transparent);
+}
+
+.coach-live-checkoff .coach-floor-set-btn--done .coach-floor-set-btn__label {
+  display: none;
+}
+
+.coach-live-checkoff .coach-floor-set-btn--done .coach-floor-set-btn__num {
+  font-size: 0.7rem;
+}
+
+.coach-live-checkoff .coach-floor-set-btn__num {
+  font-size: 0.625rem;
+  line-height: 1;
+}
+
+.coach-live-checkoff .coach-floor-set-btn__label {
+  font-size: 0.4rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  line-height: 1;
+}
+
+.live-floor-grid {
+  align-items: start;
+}
+
 /* In-workout video overlay */
 .member-video-modal {
   position: fixed;

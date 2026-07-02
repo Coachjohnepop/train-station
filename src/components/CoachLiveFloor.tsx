@@ -180,9 +180,7 @@ export default function CoachLiveFloor({ initialDate }: { initialDate: string })
             return (
               <div
                 key={`${tile.userId}-${tile.workoutId}`}
-                className={`overflow-hidden rounded-2xl border transition-colors ${
-                  expanded ? "col-span-full" : ""
-                } ${
+                className={`min-w-0 overflow-hidden rounded-2xl border transition-colors ${
                   tile.status === "done"
                     ? "border-emerald-500/40 bg-emerald-500/10"
                     : tile.status === "active"
@@ -227,7 +225,7 @@ export default function CoachLiveFloor({ initialDate }: { initialDate: string })
                 </button>
 
                 {expanded ? (
-                  <div className="border-t border-[var(--border)] px-3 pb-4 pt-2">
+                  <div className="border-t border-[var(--border)] px-2 pb-3 pt-1.5">
                     {isLoadingWorkout && !loaded ? (
                       <p className="py-4 text-center text-xs text-[var(--muted)]">Loading workout…</p>
                     ) : loaded ? (
