@@ -137,7 +137,19 @@ export default function CoachLiveFloor({ initialDate }: { initialDate: string })
     }
   }
 
+  const collapseStudent = useCallback((userId: string) => {
+    setExpandedUserId((current) => (current === userId ? null : current));
+  }, []);
+
   const tiles = floor?.tiles ?? [];
+
+  useEffect(() => {
+    if (!expandedUserId || !floor) return;
+    const tile = floor.tiles.find((t) => t.userId === expandedUserId);
+    if (tile?.status === "done") {
+      setExpandedUserId(null);
+    }
+  }, [expandedUserId, floor]);
 
   return (
     <div className="coach-dashboard live-floor-root space-y-4">
@@ -240,6 +252,7 @@ export default function CoachLiveFloor({ initialDate }: { initialDate: string })
                         embedded
                         hideLogButton
                         coachFloorMode
+                        onCoachFloorFinished={() => collapseStudent(tile.userId)}
                       />
                     ) : (
                       <p className="py-4 text-center text-xs text-[var(--muted)]">

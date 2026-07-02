@@ -32,10 +32,29 @@ export type LiveFloorTile = {
   liveRevision: number;
 };
 
+function exerciseIsDone(
+  block: WorkoutExerciseBlockMeta,
+  session: LiveWorkoutSession,
+): boolean {
+  if (session.finishedExercises.includes(block.id)) return true;
+  const nums = session.completedSets[block.id] ?? [];
+  if (nums.length === 0) return false;
+  return new Set(nums).size >= Math.max(1, block.setCount);
+}
+
+function countExercisesDone(
+  session: LiveWorkoutSession | null,
+  blocks: WorkoutExerciseBlockMeta[],
+): number {
+  if (!session || blocks.length === 0) return 0;
+  return blocks.filter((block) => exerciseIsDone(block, session)).length;
+}
+
 function countSets(
   session: LiveWorkoutSession | null,
   plannedSetsTotal: number,
   exercisesTotal: number,
+  blocks: WorkoutExerciseBlockMeta[],
 ): {
   setsCompleted: number;
   setsTotal: number;
@@ -52,7 +71,7 @@ function countSets(
   for (const nums of Object.values(session.completedSets)) {
     setsCompleted += nums.length;
   }
-  const exercisesDone = session.finishedExercises.length;
+  const exercisesDone = countExercisesDone(session, blocks);
   const setsTotal = Math.max(plannedSetsTotal, setsCompleted, 1);
   return { setsCompleted, setsTotal, exercisesDone };
 }
@@ -128,6 +147,7 @@ export async function buildCoachLiveFloor(sessionDate?: string): Promise<{
         live,
         plannedSets,
         exercisesTotal,
+        blocks,
       );
       const activeExercise = resolveActiveExerciseName(blocks, live, exercisesDone);
 

@@ -61,6 +61,7 @@ export default function MemberWorkoutConsole({
   headerNote,
   embedded = false,
   coachFloorMode = false,
+  onCoachFloorFinished,
 }: {
   workout: MemberWorkoutView;
   backHref?: string;
@@ -84,6 +85,8 @@ export default function MemberWorkoutConsole({
   embedded?: boolean;
   /** Coach live floor: exercise names + set buttons only (live sync to member). */
   coachFloorMode?: boolean;
+  /** Called after coach taps Finished on live floor (collapse tile, etc.). */
+  onCoachFloorFinished?: () => void;
 }) {
   const [weights, setWeights] = useState<Record<string, string>>({});
   const [activeId, setActiveId] = useState(workout.exercises[0]?.id ?? "");
@@ -471,24 +474,52 @@ export default function MemberWorkoutConsole({
     [queueLiveSave],
   );
 
-  // Auto-finish exercise when all its sets are marked done via the "log your sets" buttons.
+  // Auto-finish exercises when all sets are marked — batch into one state update so
+  // multiple exercises finishing together all land in finishedExercises (live floor balls).
   useEffect(() => {
     if (reviewMode && !instructorName) return;
-    let autoFinished = false;
-    workout.exercises.forEach((block) => {
-      if (finishedExercises.has(block.id)) return;
+    const toFinish: string[] = [];
+    for (const block of workout.exercises) {
+      if (finishedExercises.has(block.id)) continue;
       const doneForBlock = completedSets[block.id] ?? new Set<number>();
-      const isTimedBlock = isTimedApproach(block.setScheme);
+      const prescription = normalizePrescription({
+        setScheme: block.setScheme,
+        repPattern: block.repPattern,
+        reps: block.reps,
+        sets: block.setCount,
+      });
+      const isTimedBlock = isTimedApproach(prescription.approach);
       const allSetsDoneForBlock = isTimedBlock
         ? doneForBlock.has(1)
         : doneForBlock.size >= block.setCount;
-      if (allSetsDoneForBlock) {
-        autoFinished = true;
-        markExerciseFinished(block.id);
-      }
+      if (allSetsDoneForBlock) toFinish.push(block.id);
+    }
+    if (toFinish.length === 0) return;
+
+    setFinishedExercises((prev) => {
+      const next = new Set(prev);
+      for (const id of toFinish) next.add(id);
+      stateRef.current = { ...stateRef.current, finishedExercises: next };
+      return next;
     });
-    if (autoFinished) queueLiveSave(true);
-  }, [completedSets, finishedExercises, workout.exercises, reviewMode, markExerciseFinished, instructorName, queueLiveSave]);
+    queueLiveSave(true);
+  }, [
+    completedSets,
+    finishedExercises,
+    workout.exercises,
+    reviewMode,
+    instructorName,
+    queueLiveSave,
+  ]);
+
+  const markWorkoutFinished = useCallback(() => {
+    const allIds = workout.exercises.map((e) => e.id);
+    const next = new Set(allIds);
+    setFinishedExercises(next);
+    stateRef.current = { ...stateRef.current, finishedExercises: next };
+    queueLiveSave(true);
+    onCoachFloorFinished?.();
+  }, [workout.exercises, queueLiveSave, onCoachFloorFinished]);
 
   const totalExercises = workout.exercises.length;
   const allExercisesFinished =
@@ -690,6 +721,15 @@ export default function MemberWorkoutConsole({
             </div>
           );
         })}
+        <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className="btn-primary min-h-[44px] w-full rounded-xl py-2.5 text-sm font-semibold"
+            onClick={() => markWorkoutFinished()}
+          >
+            Finished
+          </button>
+        </div>
       </div>
     );
   }
