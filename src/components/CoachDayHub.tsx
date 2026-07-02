@@ -20,8 +20,7 @@ type LiveFloorTile = {
   checkoffHref: string;
 };
 
-type DrillDown = {
-  tile: LiveFloorTile;
+type LoadedWorkout = {
   workout: MemberWorkoutView;
   memberName: string;
   instructorName: string;
@@ -94,8 +93,9 @@ export default function CoachDayHub({
   const [students, setStudents] = useState(initialStudents);
   const [tiles, setTiles] = useState<LiveFloorTile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [drillDown, setDrillDown] = useState<DrillDown | null>(null);
-  const [drillLoading, setDrillLoading] = useState(false);
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [workouts, setWorkouts] = useState<Record<string, LoadedWorkout>>({});
+  const [workoutLoading, setWorkoutLoading] = useState<string | null>(null);
 
   useEffect(() => {
     setStudents(initialStudents);
@@ -138,30 +138,58 @@ export default function CoachDayHub({
     return () => source.close();
   }, [sessionDate, applyTiles]);
 
-  async function openDrillDown(student: CoachDayStudentCard) {
-    const tile = tileByUser.get(student.id);
-    if (!tile || !student.workoutId) return;
-    setDrillLoading(true);
-    try {
-      const params = new URLSearchParams({
-        userId: student.id,
-        workoutId: student.workoutId,
-        date: sessionDate,
-      });
-      const res = await fetch(`/api/admin/live-floor/workout?${params}`, { cache: "no-store" });
-      const data = await res.json();
-      if (!res.ok) return;
-      setDrillDown({
-        tile,
-        workout: data.workout,
-        memberName: data.memberName,
-        instructorName: data.instructorName,
-        sessionDate: data.sessionDate,
-      });
-    } finally {
-      setDrillLoading(false);
+  const loadWorkout = useCallback(
+    async (student: CoachDayStudentCard) => {
+      if (!student.workoutId) return;
+      setWorkoutLoading(student.id);
+      try {
+        const params = new URLSearchParams({
+          userId: student.id,
+          workoutId: student.workoutId,
+          date: sessionDate,
+        });
+        const res = await fetch(`/api/admin/live-floor/workout?${params}`, { cache: "no-store" });
+        const data = await res.json();
+        if (!res.ok) return;
+        setWorkouts((prev) => ({
+          ...prev,
+          [student.id]: {
+            workout: data.workout,
+            memberName: data.memberName,
+            instructorName: data.instructorName,
+            sessionDate: data.sessionDate,
+          },
+        }));
+      } finally {
+        setWorkoutLoading(null);
+      }
+    },
+    [sessionDate],
+  );
+
+  async function toggleStudent(student: CoachDayStudentCard) {
+    if (!student.workoutId) return;
+    if (expandedUserId === student.id) {
+      setExpandedUserId(null);
+      return;
+    }
+    setExpandedUserId(student.id);
+    if (!workouts[student.id]) {
+      await loadWorkout(student);
     }
   }
+
+  const collapseStudent = useCallback((userId: string) => {
+    setExpandedUserId((current) => (current === userId ? null : current));
+  }, []);
+
+  useEffect(() => {
+    if (!expandedUserId) return;
+    const tile = tileByUser.get(expandedUserId);
+    if (tile?.status === "done") {
+      setExpandedUserId(null);
+    }
+  }, [expandedUserId, tileByUser]);
 
   const isFloor = variant === "floor";
 
@@ -176,7 +204,7 @@ export default function CoachDayHub({
           <p className="text-xs font-semibold uppercase tracking-wider text-accent">Go to Today</p>
           <h1 className="mt-0.5 text-lg font-bold sm:text-xl">{dateLabel}</h1>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            Tap a name to count sets — live on member phones
+            Expand a card to count sets — live on member phones
           </p>
         </header>
 
@@ -189,13 +217,14 @@ export default function CoachDayHub({
             {assignedStudents.map((student) => {
               const tile = tileByUser.get(student.id);
               const lightStatus = tile?.status ?? "none";
+              const expanded = expandedUserId === student.id;
+              const loaded = workouts[student.id];
+              const isLoadingWorkout = workoutLoading === student.id;
+
               return (
-                <button
+                <div
                   key={student.id}
-                  type="button"
-                  disabled={drillLoading || !student.workoutId}
-                  onClick={() => void openDrillDown(student)}
-                  className={`flex min-h-[108px] flex-col justify-between rounded-2xl border p-3 text-left transition active:scale-[0.98] ${
+                  className={`min-w-0 overflow-hidden rounded-2xl border transition-colors ${
                     tile?.status === "done"
                       ? "border-emerald-500/40 bg-emerald-500/10"
                       : tile?.status === "active"
@@ -205,42 +234,86 @@ export default function CoachDayHub({
                           : "border-[var(--border)] bg-[var(--surface)]"
                   }`}
                 >
-                  <div>
-                    <div className="flex items-start gap-2">
-                      <Stoplight status={lightStatus} />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-base font-bold leading-tight">{student.name}</p>
-                          {tile && (
-                            <span className="shrink-0 text-[10px] font-semibold uppercase text-[var(--muted)]">
-                              {statusLabel(tile.status)}
-                            </span>
+                  <button
+                    type="button"
+                    disabled={!student.workoutId}
+                    onClick={() => void toggleStudent(student)}
+                    className="flex w-full items-start gap-2 p-3 text-left transition active:scale-[0.995]"
+                    aria-expanded={expanded}
+                  >
+                    <span
+                      className={`mt-1 shrink-0 text-xs text-accent transition-transform duration-200 ${
+                        expanded ? "rotate-90" : ""
+                      }`}
+                      aria-hidden
+                    >
+                      ▶
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start gap-2">
+                        <Stoplight status={lightStatus} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-base font-bold leading-tight">{student.name}</p>
+                            {tile && (
+                              <span className="shrink-0 text-[10px] font-semibold uppercase text-[var(--muted)]">
+                                {statusLabel(tile.status)}
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-0.5 line-clamp-1 text-xs text-[var(--muted)]">
+                            {student.workoutTitle || "Workout"}
+                          </p>
+                          {tile?.activeExercise && (
+                            <p className="mt-1 text-sm font-medium text-accent line-clamp-1">
+                              {tile.activeExercise}
+                            </p>
                           )}
                         </div>
-                        <p className="mt-0.5 line-clamp-1 text-xs text-[var(--muted)]">
-                          {student.workoutTitle || "Workout"}
-                        </p>
-                        {tile?.activeExercise && (
-                          <p className="mt-1 text-sm font-medium text-accent line-clamp-1">
-                            {tile.activeExercise}
+                      </div>
+                      <div className="mt-2 space-y-1">
+                        {tile ? (
+                          <>
+                            <SetDots done={tile.setsCompleted} total={tile.setsTotal} />
+                            <p className="text-[10px] text-[var(--muted)]">
+                              {tile.setsCompleted}/{tile.setsTotal || "—"} sets
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-[10px] text-[var(--muted)]">
+                            {loading ? "Loading…" : "Expand to count sets"}
                           </p>
                         )}
                       </div>
                     </div>
-                  </div>
-                  <div className="mt-2 space-y-1">
-                    {tile ? (
-                      <>
-                        <SetDots done={tile.setsCompleted} total={tile.setsTotal} />
-                        <p className="text-[10px] font-semibold text-accent">Tap to count sets →</p>
-                      </>
-                    ) : (
-                      <p className="text-[10px] text-[var(--muted)]">
-                        {loading ? "Loading…" : "Tap to count sets →"}
-                      </p>
-                    )}
-                  </div>
-                </button>
+                  </button>
+
+                  {expanded ? (
+                    <div className="border-t border-[var(--border)] px-2 pb-3 pt-1.5">
+                      {isLoadingWorkout && !loaded ? (
+                        <p className="py-4 text-center text-xs text-[var(--muted)]">Loading workout…</p>
+                      ) : loaded ? (
+                        <MemberWorkoutConsole
+                          workout={loaded.workout}
+                          backHref="#"
+                          backLabel=""
+                          targetUserId={student.id}
+                          instructorName={loaded.instructorName}
+                          liveSyncUserId={student.id}
+                          liveSessionDate={loaded.sessionDate}
+                          embedded
+                          hideLogButton
+                          coachFloorMode
+                          onCoachFloorFinished={() => collapseStudent(student.id)}
+                        />
+                      ) : (
+                        <p className="py-4 text-center text-xs text-[var(--muted)]">
+                          Could not load workout — tap to retry.
+                        </p>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
               );
             })}
           </div>
@@ -255,87 +328,6 @@ export default function CoachDayHub({
           )}
         </section>
       </div>
-
-      {drillDown ? (
-        <div className="coach-dashboard fixed inset-0 z-50 flex flex-col bg-[var(--bg)] xl:flex-row">
-          <header className="flex min-h-[56px] shrink-0 items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3 xl:hidden">
-            <button
-              type="button"
-              className="btn-primary min-h-[48px] px-5 text-base font-bold"
-              onClick={() => setDrillDown(null)}
-            >
-              ← Done
-            </button>
-            <div className="min-w-0 text-center">
-              <p className="truncate text-base font-bold">{drillDown.memberName}</p>
-              <p className="truncate text-xs text-[var(--muted)]">{drillDown.tile.workoutTitle}</p>
-            </div>
-            <span className="w-16" />
-          </header>
-          <aside className="hidden w-56 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface)] xl:flex">
-            <div className="border-b border-[var(--border)] px-4 py-3">
-              <button
-                type="button"
-                className="btn-ghost w-full text-sm font-semibold"
-                onClick={() => setDrillDown(null)}
-              >
-                ← Back to class
-              </button>
-            </div>
-            <p className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
-              Jump to student
-            </p>
-            <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4 space-y-1">
-              {assignedStudents.map((s) => {
-                const active = s.id === drillDown.tile.userId;
-                const tile = tileByUser.get(s.id);
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    disabled={!s.workoutId || drillLoading}
-                    onClick={() => void openDrillDown(s)}
-                    className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
-                      active
-                        ? "border-accent bg-accent/15 font-semibold text-accent"
-                        : "border-transparent hover:bg-[var(--surface-2)]"
-                    }`}
-                  >
-                    <span className="block truncate">{s.name}</span>
-                    {tile && (
-                      <span className="text-[10px] text-[var(--muted)]">
-                        {tile.setsCompleted}/{tile.setsTotal} sets
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </aside>
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div className="hidden shrink-0 border-b border-[var(--border)] px-6 py-3 xl:block">
-              <p className="text-lg font-bold">{drillDown.memberName}</p>
-              <p className="text-sm text-[var(--muted)]">{drillDown.tile.workoutTitle}</p>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3 xl:px-6">
-              <p className="mb-2 text-center text-[10px] text-[var(--success)] xl:text-left">
-                Checkoffs sync live — member sees greens on their phone
-              </p>
-              <MemberWorkoutConsole
-                workout={drillDown.workout}
-                backHref="#"
-                backLabel=""
-                targetUserId={drillDown.tile.userId}
-                instructorName={drillDown.instructorName}
-                liveSyncUserId={drillDown.tile.userId}
-                liveSessionDate={drillDown.sessionDate}
-                embedded
-                hideLogButton
-              />
-            </div>
-          </div>
-        </div>
-      ) : null}
     </>
   );
 }
