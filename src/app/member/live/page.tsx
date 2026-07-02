@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import MemberLiveSessionsPanel from "@/components/MemberLiveSessionsPanel";
 import { getMemberDashboard } from "@/lib/member-context";
 import { getAdminContact } from "@/lib/booking";
 import { COACH_CALENDLY_URL } from "@/lib/brand";
@@ -11,14 +12,14 @@ export default async function MemberLivePage() {
   if (!data) notFound();
 
   const contact = await getAdminContact();
-  const calendly = (contact as any).calendlyUrl || COACH_CALENDLY_URL;
+  const calendly = (contact as { calendlyUrl?: string }).calendlyUrl || COACH_CALENDLY_URL;
   const canLive = data.access.canAccessFeature("live_sessions");
 
   return (
     <div>
       <h1 className="text-2xl font-bold">Live sessions</h1>
       <p className="mt-2 text-sm text-[var(--muted)]">
-        On-demand programs plus live coaching with your trainer.
+        On-demand programs plus live coaching with your trainer on Zoom.
       </p>
 
       <div className="card mt-6 card-accent-frame">
@@ -28,12 +29,9 @@ export default async function MemberLivePage() {
         {canLive ? (
           <>
             <p className="mt-3 text-sm text-[var(--muted)]">
-              Live booking and video rooms are coming soon. Your{" "}
-              {data.access.tierLabel} membership will unlock scheduling here.
+              Upcoming sessions appear below. Your join button activates 15 minutes before start.
             </p>
-            <div className="mt-4 rounded-lg border border-dashed border-[var(--border)] p-4 text-center text-sm text-[var(--muted)]">
-              No upcoming live sessions scheduled yet.
-            </div>
+            <MemberLiveSessionsPanel canLive={canLive} />
           </>
         ) : (
           <p className="mt-3 text-sm text-[var(--muted)]">

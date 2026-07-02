@@ -12,6 +12,9 @@ export type CoachDayTimelineItem = {
   memberNames: string[];
   memberIds: string[];
   status?: string;
+  durationMin?: number;
+  zoomUrl?: string | null;
+  zoomHostUrl?: string | null;
   exercisePreview: string[];
   coachHref: string;
   checkoffHrefs: { memberId: string; name: string; href: string }[];
@@ -70,6 +73,9 @@ export async function buildCoachDayPlan(sessionDate: string): Promise<CoachDayPl
         memberNames: appt.memberNames,
         memberIds: appt.memberIds,
         status: appt.status,
+        durationMin: appt.durationMin,
+        zoomUrl: appt.zoomUrl,
+        zoomHostUrl: appt.zoomHostUrl,
         exercisePreview: preview,
         coachHref: appt.coachHref,
         checkoffHrefs: appt.memberIds.map((id, i) => ({

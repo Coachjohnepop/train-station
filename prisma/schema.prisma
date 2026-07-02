@@ -252,6 +252,8 @@ model Booking {
   scheduledAt   DateTime
   durationMin   Int      @default(15)
   zoomUrl       String?
+  zoomHostUrl   String?
+  zoomMeetingId String?
   status        String   @default("pending") // pending, confirmed, completed, cancelled
   notes         String?
   createdAt     DateTime @default(now())

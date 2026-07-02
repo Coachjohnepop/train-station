@@ -13,6 +13,8 @@ export type TodayAppointment = {
   status?: string;
   durationMin?: number;
   workoutId?: string;
+  zoomUrl?: string | null;
+  zoomHostUrl?: string | null;
   coachHref: string;
   memberHref: string;
 };
@@ -63,6 +65,8 @@ export async function getAppointmentsForDate(sessionDate: string): Promise<Today
       memberEmails: [b.memberEmail],
       status: b.status,
       durationMin: b.durationMin,
+      zoomUrl: b.zoomUrl || null,
+      zoomHostUrl: b.zoomHostUrl || null,
       coachHref: `/member/live?asInstructor=true&forUser=${encodeURIComponent(b.memberEmail)}`,
       memberHref: `/member/live`,
     });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import AdminBookingZoomActions from "@/components/AdminBookingZoomActions";
 import SmsWorkoutOverridePanel from "@/components/SmsWorkoutOverridePanel";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
 
@@ -15,6 +16,8 @@ type Booking = {
   scheduledAt: string;
   durationMin: number;
   zoomUrl?: string | null;
+  zoomHostUrl?: string | null;
+  zoomMeetingId?: string | null;
   status: string;
   notes?: string | null;
   createdAt: string;
@@ -277,10 +280,17 @@ export default function AdminBookingsPage() {
                   <div><strong>Status:</strong> {b.status}</div>
                   {b.user?.dailyReminderTime && <div><strong>Daily SMS reminder:</strong> {b.user.dailyReminderTime}</div>}
                 </div>
+                <div className="mt-2">
+                  <AdminBookingZoomActions
+                    bookingId={b.id}
+                    initialJoinUrl={b.zoomUrl}
+                    initialHostUrl={b.zoomHostUrl}
+                  />
+                </div>
                 <div className="mt-2 flex flex-wrap gap-2 items-center">
                   <input
                     className="input text-xs w-80"
-                    placeholder="Zoom URL (https://zoom.us/j/...)"
+                    placeholder="Zoom URL (https://zoom.us/j/...) — or use Create Zoom link"
                     defaultValue={b.zoomUrl || ""}
                     onBlur={(e) => updateBooking(b, { zoomUrl: e.target.value || undefined })}
                   />

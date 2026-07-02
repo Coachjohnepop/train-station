@@ -40,6 +40,22 @@ let demoBookings: any[] = [
     userId: "demo-user-stephanie",
   },
   {
+    id: "demo-bk-chad-jul3",
+    memberEmail: "chad@thetrainstation.co",
+    memberPhone: "(555) 111-2233",
+    adminEmail: "jeremy@thetrainstation.co",
+    adminPhone: "(555) 123-4567",
+    scheduledAt: "2026-07-03T18:00:00.000Z",
+    durationMin: 30,
+    zoomUrl: null,
+    zoomHostUrl: null,
+    zoomMeetingId: null,
+    status: "confirmed",
+    notes: "Live coaching check-in",
+    createdAt: "2026-07-01T12:00:00.000Z",
+    userId: "demo-user-john",
+  },
+  {
     id: "demo-bk-jordan-jun16",
     memberEmail: "jordan.member@example.com",
     memberPhone: "(555) 222-3344",
@@ -254,13 +270,27 @@ export async function getBookings() {
   });
 }
 
-export async function updateBookingStatus(id: string, status: string, zoomUrl?: string, notes?: string) {
+export type BookingZoomFields = {
+  zoomUrl?: string | null;
+  zoomHostUrl?: string | null;
+  zoomMeetingId?: string | null;
+};
+
+export async function updateBookingStatus(
+  id: string,
+  status: string,
+  zoomUrl?: string,
+  notes?: string,
+  zoomExtra?: BookingZoomFields,
+) {
   if (isDemoMode()) {
     const b = demoBookings.find((bk: any) => bk.id === id);
     if (b) {
       b.status = status;
       if (zoomUrl !== undefined) b.zoomUrl = zoomUrl;
       if (notes !== undefined) b.notes = notes;
+      if (zoomExtra?.zoomHostUrl !== undefined) b.zoomHostUrl = zoomExtra.zoomHostUrl;
+      if (zoomExtra?.zoomMeetingId !== undefined) b.zoomMeetingId = zoomExtra.zoomMeetingId;
     }
     return b || { id, status, zoomUrl: zoomUrl || null };
   }
@@ -268,9 +298,126 @@ export async function updateBookingStatus(id: string, status: string, zoomUrl?: 
     where: { id },
     data: {
       status,
-      zoomUrl: zoomUrl || undefined,
+      zoomUrl: zoomUrl ?? zoomExtra?.zoomUrl ?? undefined,
+      zoomHostUrl: zoomExtra?.zoomHostUrl ?? undefined,
+      zoomMeetingId: zoomExtra?.zoomMeetingId ?? undefined,
+      notes: notes ?? undefined,
     },
   });
+}
+
+export async function attachZoomToBooking(
+  id: string,
+  zoom: { meetingId: string; joinUrl: string; hostUrl: string },
+) {
+  if (isDemoMode()) {
+    const b = demoBookings.find((bk: any) => bk.id === id);
+    if (!b) return null;
+    b.zoomUrl = zoom.joinUrl;
+    b.zoomHostUrl = zoom.hostUrl;
+    b.zoomMeetingId = zoom.meetingId;
+    if (b.status === "pending") b.status = "confirmed";
+    return b;
+  }
+  return prisma.booking.update({
+    where: { id },
+    data: {
+      zoomUrl: zoom.joinUrl,
+      zoomHostUrl: zoom.hostUrl,
+      zoomMeetingId: zoom.meetingId,
+      status: "confirmed",
+    },
+  });
+}
+
+export async function getBookingById(id: string) {
+  if (isDemoMode()) {
+    const b = demoBookings.find((bk: any) => bk.id === id);
+    if (!b) return null;
+    const du = demoUsers.find((u: any) => u.email === b.memberEmail);
+    return { ...b, user: du ? { name: du.name, email: du.email, phone: du.phone } : null };
+  }
+  return prisma.booking.findUnique({
+    where: { id },
+    include: { user: { select: { name: true, email: true, phone: true } } },
+  });
+}
+
+export type MemberLiveSession = {
+  id: string;
+  scheduledAt: string;
+  durationMin: number;
+  title: string;
+  status: string;
+  zoomUrl: string | null;
+  canJoin: boolean;
+  startsInMin: number | null;
+};
+
+export async function getMemberLiveSessions(input: {
+  memberEmail: string;
+  userId?: string | null;
+}): Promise<MemberLiveSession[]> {
+  const bookings = await getBookings();
+  const now = Date.now();
+  const joinWindowMs = 15 * 60 * 1000;
+
+  return bookings
+    .filter((b: any) => {
+      const emailMatch = b.memberEmail?.toLowerCase() === input.memberEmail.toLowerCase();
+      const userMatch = input.userId && b.userId === input.userId;
+      if (!emailMatch && !userMatch) return false;
+      if (b.status === "cancelled" || b.status === "completed") return false;
+      const start = new Date(b.scheduledAt).getTime();
+      const end = start + (b.durationMin || 15) * 60_000;
+      return end >= now - joinWindowMs;
+    })
+    .sort(
+      (a: any, b: any) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime(),
+    )
+    .map((b: any) => {
+      const start = new Date(b.scheduledAt).getTime();
+      const startsInMin = Math.round((start - now) / 60_000);
+      const canJoin = Boolean(b.zoomUrl) && startsInMin <= 15 && startsInMin >= -(b.durationMin || 15);
+      return {
+        id: b.id,
+        scheduledAt: b.scheduledAt,
+        durationMin: b.durationMin || 15,
+        title: b.notes || "Live coaching session",
+        status: b.status,
+        zoomUrl: b.zoomUrl || null,
+        canJoin,
+        startsInMin,
+      };
+    });
+}
+
+export async function ensureBookingZoomLink(bookingId: string) {
+  const { createZoomMeeting } = await import("@/lib/zoom");
+  const booking = await getBookingById(bookingId);
+  if (!booking) return { error: "Booking not found." as const };
+  if (booking.zoomUrl && booking.zoomHostUrl) {
+    return {
+      booking,
+      zoom: {
+        meetingId: booking.zoomMeetingId || "",
+        joinUrl: booking.zoomUrl,
+        hostUrl: booking.zoomHostUrl,
+        reused: true,
+      },
+    };
+  }
+
+  const memberLabel = booking.user?.name || booking.memberEmail.split("@")[0];
+  const zoom = await createZoomMeeting({
+    bookingId: booking.id,
+    topic: `Train Station — ${memberLabel}`,
+    scheduledAt: new Date(booking.scheduledAt),
+    durationMin: booking.durationMin || 15,
+  });
+
+  const updated = await attachZoomToBooking(booking.id, zoom);
+  return { booking: updated, zoom, reused: false };
 }
 
 export async function setUserReminder(email: string, phone: string | null, reminderTime: string) {

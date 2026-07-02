@@ -80,7 +80,16 @@ export async function PATCH(request: Request) {
     const bookings = await getBookings();
     const b = bookings.find((bk: any) => bk.id === id);
     if (!b) return NextResponse.json({ detail: "Not found (demo)" }, { status: 404 });
-    const updated = await updateBookingStatus(id, data.status || b.status, data.zoomUrl);
+    const nextStatus = data.status || b.status;
+    const updated = await updateBookingStatus(id, nextStatus, data.zoomUrl, data.notes);
+    if (nextStatus === "confirmed" && !data.zoomUrl && !updated?.zoomUrl) {
+      try {
+        const { ensureBookingZoomLink } = await import("@/lib/booking");
+        await ensureBookingZoomLink(id);
+      } catch {
+        /* manual fallback */
+      }
+    }
     if (data.reminderTime || data.memberPhone) {
       await (await import("@/lib/booking")).setUserReminder(
         b.memberEmail,
@@ -91,9 +100,19 @@ export async function PATCH(request: Request) {
     return NextResponse.json(updated);
   }
 
-  const updated = await updateBookingStatus(id, data.status || "pending", data.zoomUrl);
-  if (data.notes) {
-    await prisma.booking.update({ where: { id }, data: { notes: data.notes } });
+  const nextStatus = data.status || "pending";
+  const updated = await updateBookingStatus(id, nextStatus, data.zoomUrl, data.notes);
+  if (
+    nextStatus === "confirmed" &&
+    !data.zoomUrl &&
+    !updated?.zoomUrl
+  ) {
+    try {
+      const { ensureBookingZoomLink } = await import("@/lib/booking");
+      await ensureBookingZoomLink(id);
+    } catch {
+      /* coach can create manually */
+    }
   }
   if (data.reminderTime || data.memberPhone) {
     const b = await prisma.booking.findUnique({ where: { id } });

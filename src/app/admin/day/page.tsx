@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import CoachResumeRedirect from "@/components/CoachResumeRedirect";
 import CoachDayHub from "@/components/CoachDayHub";
+import CoachLiveZoomStrip from "@/components/CoachLiveZoomStrip";
 import { buildCoachDayPlan } from "@/lib/coach-day";
 import { hydrateTodaySessions } from "@/lib/today-sessions";
 import { hydrateSmsWorkouts } from "@/lib/sms-generated-workouts";
@@ -55,6 +56,12 @@ export default async function AdminDayPage({ searchParams }: Props) {
           </a>
         </div>
       </div>
+
+      {dayPlan.timeline.filter((item) => item.type === "live-booking").length > 0 ? (
+        <CoachLiveZoomStrip
+          items={dayPlan.timeline.filter((item) => item.type === "live-booking")}
+        />
+      ) : null}
 
       <CoachDayHub
         key={sessionDate}

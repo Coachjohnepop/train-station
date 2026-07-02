@@ -63,6 +63,26 @@ export default function CoachDayView({ day, dateQuery }: { day: CoachDayPlan; da
                     )}
 
                     <div className="mt-3 flex flex-wrap gap-2">
+                      {item.type === "live-booking" && item.zoomHostUrl ? (
+                        <a
+                          href={item.zoomHostUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-primary px-3 py-1 text-xs"
+                        >
+                          Start Zoom
+                        </a>
+                      ) : null}
+                      {item.type === "live-booking" && item.zoomUrl ? (
+                        <a
+                          href={item.zoomUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-ghost px-3 py-1 text-xs"
+                        >
+                          Member join link
+                        </a>
+                      ) : null}
                       {item.memberIds.length > 0 ? (
                         <Link
                           href={`/admin/live?date=${dateQuery}`}
