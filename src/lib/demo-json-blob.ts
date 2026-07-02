@@ -100,8 +100,6 @@ export async function readBlobJson<T>(blobPath: string): Promise<T | null> {
       continue;
     }
   }
-  const viaPublic = await readBlobJsonViaPublicUrl<T>(blobPath);
-  if (viaPublic) return viaPublic;
   return null;
 }
 
