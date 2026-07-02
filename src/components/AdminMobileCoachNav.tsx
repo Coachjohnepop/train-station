@@ -44,7 +44,7 @@ export default function AdminMobileCoachNav({ onOpenMenu }: Props) {
           <span className="coach-quick-nav-icon leading-none" aria-hidden>
             ◉
           </span>
-          Class
+          Dash
         </Link>
         <Link href="/admin/plan" className={tabClass(onPlan)}>
           <span className="coach-quick-nav-icon leading-none" aria-hidden>

@@ -30,7 +30,7 @@ export default function AdminSectionNav({
   const pathname = usePathname();
 
   function handleNavClick(href: string) {
-    if (preferDashboardStorageKey && href === "/admin") {
+    if (preferDashboardStorageKey && (href === "/admin" || href === "/admin/day")) {
       sessionStorage.setItem(preferDashboardStorageKey, "1");
     }
     onNavClick?.();

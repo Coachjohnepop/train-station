@@ -432,7 +432,7 @@ export default function CoachDayHub({
         )}
 
         <header className="card border-accent/30 bg-accent/5 py-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-accent">My class</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-accent">Dashboard</p>
           <h1 className="mt-1 text-xl font-bold sm:text-2xl">{dateLabel}</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
             {assignedStudents.length} with workouts · {openStudents.length} not yet assigned

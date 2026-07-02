@@ -4,7 +4,7 @@ import { canAccessCoachAdmin, defaultStaffLandingPath } from "@/lib/staff-access
 
 export const dynamic = "force-dynamic";
 
-/** Coaches land on My class — one screen for the gym floor. */
+/** Coaches land on Dashboard (/admin/day). */
 export default async function AdminPage() {
   const session = await getSessionUser();
   if (!session) {

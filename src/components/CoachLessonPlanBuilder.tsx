@@ -675,7 +675,7 @@ export default function CoachLessonPlanBuilder({
           )}
           <div className="flex flex-wrap gap-2">
             <Link href={`/admin/day?date=${sessionDate}`} className="btn-primary px-4 py-2 text-sm">
-              Open My class
+              Open Dashboard
             </Link>
             <button
               type="button"

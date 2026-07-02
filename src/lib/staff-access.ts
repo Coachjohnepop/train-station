@@ -32,7 +32,7 @@ export function defaultStaffLandingPath(role: UserRole): string {
   return defaultCoachAdminPath();
 }
 
-/** Coaches start on My class — not the old dashboard or queue. */
+/** Coaches start on Dashboard (/admin/day). */
 export function normalizeCoachLoginRedirect(redirect: string | null | undefined): string {
   const raw = redirect?.trim();
   if (!raw) return defaultCoachAdminPath();

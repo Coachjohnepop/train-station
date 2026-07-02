@@ -39,7 +39,7 @@ export default async function AdminPlanPage({ searchParams }: Props) {
     <div className="space-y-6">
       <div>
         <Link href="/admin/day" className="text-xs text-accent hover:underline">
-          ← My class
+          ← Dashboard
         </Link>
         <h1 className="mt-2 text-2xl font-bold">Plan a workout</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
