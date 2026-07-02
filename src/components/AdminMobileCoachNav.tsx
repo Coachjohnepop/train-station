@@ -10,8 +10,8 @@ type Props = {
 };
 
 function tabClass(active: boolean): string {
-  return `coach-quick-nav-tab flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[10px] font-semibold transition ${
-    active ? "text-[var(--ramp-gold-light)]" : "text-[var(--muted)]"
+  return `coach-quick-nav-tab flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-[10px] font-semibold transition-colors ${
+    active ? "coach-quick-nav-tab--active" : ""
   }`;
 }
 
