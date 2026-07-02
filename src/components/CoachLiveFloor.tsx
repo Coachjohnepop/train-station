@@ -38,8 +38,8 @@ function statusLabel(status: LiveFloorTile["status"]): string {
 }
 
 function SetDots({ done, total }: { done: number; total: number }) {
-  const count = Math.min(Math.max(total, 1), 8);
-  const filled = Math.min(done, count);
+  const count = Math.min(Math.max(total, 1), 10);
+  const filled = total > 0 ? Math.min(done, count) : 0;
   return (
     <div className="flex flex-wrap gap-1.5" aria-hidden>
       {Array.from({ length: count }, (_, i) => (
@@ -216,7 +216,7 @@ export default function CoachLiveFloor({ initialDate }: { initialDate: string })
                       </p>
                     ) : null}
                     <div className="mt-2 space-y-1.5">
-                      <SetDots done={tile.setsCompleted} total={tile.setsTotal} />
+                      <SetDots done={tile.exercisesDone} total={tile.exercisesTotal} />
                       <p className="text-[10px] text-[var(--muted)]">
                         {tile.exercisesDone}/{tile.exercisesTotal || "—"} exercises
                       </p>
