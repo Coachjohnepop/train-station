@@ -11,6 +11,13 @@ import {
   DEFAULT_REST_TIMER_SECONDS,
   REST_TIMER_PRESETS,
 } from "@/lib/rest-timer";
+import {
+  formatParsedWorkoutAsSms,
+  resolveCertifiedExportText,
+  validateWorkoutExportText,
+  type WorkoutExportValidation,
+} from "@/lib/workout-export";
+import type { ParsedSmsWorkout } from "@/lib/sms-workout-parser";
 
 type ParsedExercise = {
   name: string;
@@ -36,7 +43,7 @@ type IndividualDraft = {
   useCustom: boolean;
 };
 
-const STEPS = ["Write plan", "Review", "Assign class", "Published"] as const;
+const STEPS = ["Write plan", "Review", "Certify", "Assign class", "Published"] as const;
 
 export default function CoachLessonPlanBuilder({
   sessionDate,
@@ -77,6 +84,12 @@ export default function CoachLessonPlanBuilder({
     individualNames: string[];
     built: number;
   } | null>(null);
+  const [exportDraftText, setExportDraftText] = useState("");
+  const [exportValidation, setExportValidation] = useState<WorkoutExportValidation | null>(null);
+  const [exportSource, setExportSource] = useState<"normalized" | "formatted" | "manual">("normalized");
+  const [certified, setCertified] = useState(false);
+  const [certifiedExportText, setCertifiedExportText] = useState("");
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
 
   const templateMember = memberOptions.find((m) => m.id === templateMemberId);
 
@@ -89,7 +102,7 @@ export default function CoachLessonPlanBuilder({
   }, [memberOptions, cascadeIds, individualDrafts]);
 
   useEffect(() => {
-    if (step !== 2 || cascadeIds.length > 0 || memberOptions.length === 0) return;
+    if (step !== 3 || cascadeIds.length > 0 || memberOptions.length === 0) return;
     setCascadeIds(memberOptions.map((m) => m.id));
   }, [step, cascadeIds.length, memberOptions]);
 
@@ -147,8 +160,8 @@ export default function CoachLessonPlanBuilder({
       } else {
         setMessage(
           data.warmupInjected
-            ? "Standard warm-up added. Review the workout, then assign your class."
-            : "Workout ready — review below, then assign your class.",
+            ? "Standard warm-up added. Review the workout, then certify the export."
+            : "Workout ready — review below, then certify the export.",
         );
         setStep(1);
       }
@@ -184,7 +197,7 @@ export default function CoachLessonPlanBuilder({
       }
       setInterpretation(data);
       if (!data.questions?.length) {
-        setMessage("Workout ready — review below, then assign your class.");
+        setMessage("Workout ready — review below, then certify the export.");
         setStep(1);
       } else {
         setMessage("Still need a few details — update your answers above.");
@@ -230,18 +243,91 @@ export default function CoachLessonPlanBuilder({
     );
   }
 
+  const parsedWorkoutForExport = useMemo((): ParsedSmsWorkout | null => {
+    if (!interpretation?.workout) return null;
+    return {
+      title: interpretation.workout.title,
+      exercises: interpretation.workout.exercises as ParsedSmsWorkout["exercises"],
+      rawText: interpretation.normalizedText?.trim() || rawText.trim(),
+    };
+  }, [interpretation, rawText]);
+
   const matchingSavedSession = useMemo(() => {
-    const normalized = interpretation?.normalizedText?.trim() || rawText.trim();
+    const normalized = certifiedExportText.trim() || interpretation?.normalizedText?.trim() || rawText.trim();
     const key = normalized.replace(/\r\n/g, "\n");
     if (!key) return null;
     return (
       savedSessions.find((s) => s.rawSms.trim().replace(/\r\n/g, "\n") === key) ?? null
     );
-  }, [interpretation?.normalizedText, rawText, savedSessions]);
+  }, [certifiedExportText, interpretation?.normalizedText, rawText, savedSessions]);
+
+  function primeCertifyExport() {
+    if (!parsedWorkoutForExport) return;
+    const resolved = resolveCertifiedExportText(
+      interpretation?.normalizedText,
+      parsedWorkoutForExport,
+    );
+    setExportDraftText(resolved.text);
+    setExportValidation(resolved.validation);
+    setExportSource(resolved.source);
+    setCertified(false);
+    setCertifiedExportText("");
+    setCopyState("idle");
+  }
+
+  function revalidateExportDraft(text = exportDraftText) {
+    if (!parsedWorkoutForExport) return null;
+    const validation = validateWorkoutExportText(text, parsedWorkoutForExport);
+    setExportValidation(validation);
+    return validation;
+  }
+
+  function handleCertifyWorkout() {
+    const validation = revalidateExportDraft();
+    if (!validation?.ok) {
+      setError(true);
+      setMessage("Fix export issues before certifying — re-parse must match this workout.");
+      return;
+    }
+    setCertified(true);
+    setCertifiedExportText(validation.exportText);
+    setExportSource("manual");
+    setError(false);
+    setMessage("Workout certified — export text is ready for re-ingest. Continue to assign your class.");
+  }
+
+  async function copyExportText() {
+    try {
+      await navigator.clipboard.writeText(exportDraftText);
+      setCopyState("copied");
+      window.setTimeout(() => setCopyState("idle"), 2000);
+    } catch {
+      setCopyState("error");
+    }
+  }
+
+  function downloadExportText() {
+    const blob = new Blob([exportDraftText], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    const slug = (workout?.title || "workout")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    anchor.href = url;
+    anchor.download = `${slug || "workout"}-certified.txt`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
 
   async function handleDeploy() {
-    const normalized = interpretation?.normalizedText?.trim() || rawText.trim();
+    const normalized = certifiedExportText.trim() || interpretation?.normalizedText?.trim() || rawText.trim();
     if (!normalized) return;
+    if (!certified) {
+      setError(true);
+      setMessage("Certify the workout before deploying to students.");
+      return;
+    }
 
     const individuals = individualDrafts
       .filter((d) => d.useCustom && d.rawSms.trim())
@@ -307,7 +393,7 @@ export default function CoachLessonPlanBuilder({
       });
       setMessage(null);
       setError(false);
-      setStep(3);
+      setStep(4);
       setSaving(false);
       onPublished?.();
       void router.refresh();
@@ -507,13 +593,146 @@ export default function CoachLessonPlanBuilder({
             </section>
           )}
 
-          <button type="button" onClick={() => setStep(2)} className="btn-primary px-4 py-2 text-sm">
-            Assign to class →
+          <button
+            type="button"
+            onClick={() => {
+              primeCertifyExport();
+              setStep(2);
+            }}
+            className="btn-primary px-4 py-2 text-sm"
+          >
+            Certify workout →
           </button>
         </div>
       )}
 
-      {step === 2 && (
+      {step === 2 && workout && parsedWorkoutForExport && (
+        <div className="card space-y-4 border-violet-500/30 bg-violet-500/5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-semibold text-lg">Certify workout</h2>
+              <p className="mt-1 text-xs text-[var(--muted)]">
+                Lock the export text coaches can paste back into the lesson plan box. We re-parse it
+                here to confirm perfect ingest before you assign students.
+              </p>
+            </div>
+            <button type="button" onClick={() => setStep(1)} className="btn-ghost text-xs px-2 py-1">
+              ← Review
+            </button>
+          </div>
+
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                Certified export text
+              </p>
+              <span className="text-[10px] text-[var(--muted)]">
+                Source:{" "}
+                {exportSource === "formatted"
+                  ? "auto-formatted from blocks"
+                  : exportSource === "manual"
+                    ? "certified copy"
+                    : "interpreted plan"}
+              </span>
+            </div>
+            <textarea
+              className="input min-h-[280px] w-full resize-y font-mono text-xs leading-relaxed"
+              value={exportDraftText}
+              onChange={(e) => {
+                setExportDraftText(e.target.value);
+                setCertified(false);
+                setCertifiedExportText("");
+                setExportSource("manual");
+                setCopyState("idle");
+              }}
+              onBlur={() => revalidateExportDraft()}
+              spellCheck={false}
+            />
+            <p className="text-[10px] text-[var(--muted)]">
+              Paste this into <strong>Write plan</strong> later — one exercise per block, sets/reps on
+              their own lines, same format Jeremy uses today.
+            </p>
+          </div>
+
+          <div
+            className={`rounded-lg border p-3 ${
+              exportValidation?.ok
+                ? "border-emerald-500/35 bg-emerald-500/10"
+                : "border-amber-500/35 bg-amber-500/10"
+            }`}
+          >
+            <p className="text-xs font-semibold">
+              {exportValidation?.ok ? "Re-parse check passed" : "Re-parse check needs attention"}
+            </p>
+            {exportValidation?.ok ? (
+              <p className="mt-1 text-[10px] text-[var(--muted)]">
+                {exportValidation.reparsed.exercises.length} blocks · title &quot;
+                {exportValidation.reparsed.title}&quot; · ready to paste back in.
+              </p>
+            ) : (
+              <ul className="mt-2 space-y-1 text-[10px] text-amber-100">
+                {(exportValidation?.issues ?? ["Run validation after editing export text."]).map(
+                  (issue) => (
+                    <li key={issue}>• {issue}</li>
+                  ),
+                )}
+              </ul>
+            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn-ghost text-xs px-2 py-1"
+                onClick={() => revalidateExportDraft()}
+              >
+                Re-validate export
+              </button>
+              {!exportValidation?.ok && parsedWorkoutForExport ? (
+                <button
+                  type="button"
+                  className="btn-ghost text-xs px-2 py-1"
+                  onClick={() => {
+                    const formatted = formatParsedWorkoutAsSms(parsedWorkoutForExport);
+                    setExportDraftText(formatted);
+                    setExportSource("formatted");
+                    setCertified(false);
+                    setCertifiedExportText("");
+                    revalidateExportDraft(formatted);
+                  }}
+                >
+                  Use auto-formatted export
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => void copyExportText()} className="btn-ghost text-sm px-3 py-1.5">
+              {copyState === "copied" ? "Copied" : copyState === "error" ? "Copy failed" : "Copy export"}
+            </button>
+            <button type="button" onClick={downloadExportText} className="btn-ghost text-sm px-3 py-1.5">
+              Download .txt
+            </button>
+            <button
+              type="button"
+              onClick={handleCertifyWorkout}
+              disabled={!exportValidation?.ok}
+              className="btn-primary px-4 py-2 text-sm"
+            >
+              {certified ? "Certified ✓" : "Certify workout"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep(3)}
+              disabled={!certified}
+              className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
+            >
+              Assign to class →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === 3 && (
         <div className="card space-y-5">
           <div>
             <h2 className="font-semibold text-lg">Assign class</h2>
@@ -654,8 +873,8 @@ export default function CoachLessonPlanBuilder({
           </label>
 
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => setStep(1)} className="btn-ghost text-sm px-3 py-1">
-              ← Review workout
+            <button type="button" onClick={() => setStep(2)} className="btn-ghost text-sm px-3 py-1">
+              ← Certify workout
             </button>
             <button
               type="button"
@@ -675,7 +894,7 @@ export default function CoachLessonPlanBuilder({
         </div>
       )}
 
-      {step === 3 && deployResult && (
+      {step === 4 && deployResult && (
         <div className="card space-y-4 border-emerald-500/35 bg-emerald-500/10">
           <div>
             <h2 className="font-semibold text-lg text-emerald-100">Published</h2>
@@ -730,6 +949,10 @@ export default function CoachLessonPlanBuilder({
                 setRawText("");
                 setInterpretation(null);
                 setCascadeIds([]);
+                setCertified(false);
+                setCertifiedExportText("");
+                setExportDraftText("");
+                setExportValidation(null);
                 setStep(0);
               }}
             >
@@ -739,7 +962,7 @@ export default function CoachLessonPlanBuilder({
         </div>
       )}
 
-      {message && step !== 3 && (
+      {message && step !== 4 && (
         <p className={`text-sm ${error ? "text-red-400" : "text-[var(--success)]"}`}>{message}</p>
       )}
 
