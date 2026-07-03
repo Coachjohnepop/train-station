@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import QuickAuthSetupPrompt from "@/components/QuickAuthSetupPrompt";
 import {
   hasSkippedQuickAuthSetup,
   markQuickAuthSetupSkipped,
   useQuickAuthDeviceId,
 } from "@/lib/quick-auth-client";
+
+function goToDestination(path: string) {
+  window.location.replace(path);
+}
 
 export default function SetupQuickAuthClient({
   email,
@@ -17,22 +20,28 @@ export default function SetupQuickAuthClient({
   email: string;
   redirectTo: string;
 }) {
-  const router = useRouter();
   const { deviceId, ready } = useQuickAuthDeviceId();
   const [checking, setChecking] = useState(true);
+  const leavingRef = useRef(false);
+
+  function leaveSetup() {
+    if (leavingRef.current) return;
+    leavingRef.current = true;
+    goToDestination(redirectTo);
+  }
 
   function skipSetup() {
     markQuickAuthSetupSkipped();
-    router.push(redirectTo);
-    router.refresh();
+    leaveSetup();
   }
 
   useEffect(() => {
     if (!ready) return;
     if (hasSkippedQuickAuthSetup()) {
-      router.replace(redirectTo);
+      leaveSetup();
       return;
     }
+
     let cancelled = false;
     void fetch("/api/auth/quick-auth/status", {
       method: "POST",
@@ -42,21 +51,22 @@ export default function SetupQuickAuthClient({
     })
       .then((res) => (res.ok ? res.json() : null))
       .then((data: { enabled?: boolean; pin?: boolean; webauthn?: boolean } | null) => {
-        if (cancelled) return;
+        if (cancelled || leavingRef.current) return;
         const enabled = Boolean(data?.enabled || data?.pin || data?.webauthn);
         if (enabled) {
-          router.replace(redirectTo);
+          leaveSetup();
           return;
         }
         setChecking(false);
       })
       .catch(() => {
-        if (!cancelled) setChecking(false);
+        if (!cancelled && !leavingRef.current) setChecking(false);
       });
+
     return () => {
       cancelled = true;
     };
-  }, [ready, email, deviceId, redirectTo, router]);
+  }, [ready, email, deviceId, redirectTo]);
 
   if (checking) {
     return <p className="text-center text-sm text-[var(--muted)]">Checking quick sign-in…</p>;
@@ -66,10 +76,8 @@ export default function SetupQuickAuthClient({
     <>
       <QuickAuthSetupPrompt
         email={email}
-        onContinue={() => {
-          router.push(redirectTo);
-          router.refresh();
-        }}
+        onContinue={leaveSetup}
+        onReady={leaveSetup}
       />
       <p className="mt-6 text-center text-sm">
         <button type="button" onClick={skipSetup} className="text-accent hover:underline">

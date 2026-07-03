@@ -16,6 +16,10 @@ import {
   hasSkippedQuickAuthSetup,
   quickAuthMetaForEmail,
 } from "@/lib/quick-auth-client";
+import {
+  needsQuickAuthSetupRedirect,
+  quickAuthSetupUrl,
+} from "@/lib/quick-auth-redirect";
 
 function isCompleteEmail(value: string): boolean {
   const trimmed = value.trim();
@@ -157,8 +161,14 @@ function LoginForm() {
             body: JSON.stringify({ email: email.trim().toLowerCase(), deviceId }),
           });
           const status = (await statusRes.json().catch(() => ({}))) as { enabled?: boolean };
-          if (!status.enabled && !hasSkippedQuickAuthSetup()) {
-            window.location.href = `/setup-quick-auth?redirect=${encodeURIComponent(destination)}`;
+          if (
+            needsQuickAuthSetupRedirect(
+              Boolean(status.enabled),
+              destination,
+              hasSkippedQuickAuthSetup(),
+            )
+          ) {
+            window.location.href = quickAuthSetupUrl(destination);
             return;
           }
         } catch {

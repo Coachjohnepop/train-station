@@ -6,6 +6,7 @@ import PinPad from "@/components/PinPad";
 import {
   clearQuickAuthSetupSkipped,
   platformAuthenticatorAvailable,
+  readQuickAuthMeta,
   useQuickAuthDeviceId,
   writeQuickAuthMeta,
 } from "@/lib/quick-auth-client";
@@ -15,11 +16,14 @@ const PIN_LENGTH = 4;
 type QuickAuthSetupPromptProps = {
   email: string;
   onContinue: () => void;
+  /** Called once quick sign-in is ready — parent can auto-redirect. */
+  onReady?: () => void;
 };
 
 export default function QuickAuthSetupPrompt({
   email,
   onContinue,
+  onReady,
 }: QuickAuthSetupPromptProps) {
   const { deviceId, ready } = useQuickAuthDeviceId();
   const [pinStep, setPinStep] = useState<"enter" | "confirm">("enter");
@@ -33,28 +37,35 @@ export default function QuickAuthSetupPrompt({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [statusLoaded, setStatusLoaded] = useState(false);
   const autoRegisterAttempted = useRef(false);
+  const readyNotified = useRef(false);
 
   const refreshStatus = useCallback(async () => {
     if (!ready) return;
-    const res = await fetch("/api/auth/quick-auth/status", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({ email, deviceId }),
-    });
-    if (!res.ok) return;
-    const data = (await res.json()) as { pin?: boolean; webauthn?: boolean };
-    const pin = Boolean(data.pin);
-    const webauthn = Boolean(data.webauthn);
-    setPinEnabled(pin);
-    setWebauthnEnabled(webauthn);
-    writeQuickAuthMeta({
-      email: email.trim().toLowerCase(),
-      pin,
-      webauthn,
-      updatedAt: new Date().toISOString(),
-    });
+    try {
+      const res = await fetch("/api/auth/quick-auth/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ email, deviceId }),
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as { pin?: boolean; webauthn?: boolean };
+      const pin = Boolean(data.pin);
+      const webauthn = Boolean(data.webauthn);
+      setPinEnabled((prev) => pin || prev);
+      setWebauthnEnabled((prev) => webauthn || prev);
+      const prior = readQuickAuthMeta();
+      writeQuickAuthMeta({
+        email: email.trim().toLowerCase(),
+        pin: pin || prior?.pin || false,
+        webauthn: webauthn || prior?.webauthn || false,
+        updatedAt: new Date().toISOString(),
+      });
+    } finally {
+      setStatusLoaded(true);
+    }
   }, [ready, email, deviceId]);
 
   const registerBiometrics = useCallback(async () => {
@@ -105,11 +116,19 @@ export default function QuickAuthSetupPrompt({
   }, [ready, refreshStatus]);
 
   useEffect(() => {
-    if (!ready || !biometricReady || webauthnEnabled || busy) return;
+    if (!ready || !statusLoaded || !biometricReady || webauthnEnabled || busy) return;
     if (autoRegisterAttempted.current) return;
     autoRegisterAttempted.current = true;
     void registerBiometrics();
-  }, [ready, biometricReady, webauthnEnabled, busy, registerBiometrics]);
+  }, [ready, statusLoaded, biometricReady, webauthnEnabled, busy, registerBiometrics]);
+
+  useEffect(() => {
+    if (!pinEnabled && !webauthnEnabled) return;
+    if (!onReady || readyNotified.current) return;
+    readyNotified.current = true;
+    const timer = window.setTimeout(() => onReady(), 900);
+    return () => window.clearTimeout(timer);
+  }, [pinEnabled, webauthnEnabled, onReady]);
 
   const savePin = useCallback(
     async (first: string, second: string) => {
@@ -377,11 +396,11 @@ export default function QuickAuthSetupPrompt({
 
       <div className="flex gap-3 pt-2">
         <button type="button" onClick={onContinue} className="btn-ghost flex-1" disabled={busy}>
-          {quickAuthReady ? "Continue setup" : "Skip for now"}
+          {quickAuthReady ? "Continue now" : "Skip for now"}
         </button>
         {quickAuthReady && (
           <button type="button" onClick={onContinue} className="btn-primary flex-1" disabled={busy}>
-            Continue
+            Go to dashboard
           </button>
         )}
       </div>

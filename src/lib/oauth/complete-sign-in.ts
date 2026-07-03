@@ -28,10 +28,7 @@ import { isQuoteOffer } from "@/lib/product-offers";
 import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 import { stripeConfiguredForPlan } from "@/lib/stripe";
 import { addToWaitlist } from "@/lib/waitlist";
-import {
-  quickAuthSetupUrl,
-  shouldOfferQuickAuthSetup,
-} from "@/lib/quick-auth-redirect";
+import { resolvePostLoginDestination } from "@/lib/quick-auth-setup-gate";
 
 function sessionFromAccount(
   email: string,
@@ -197,9 +194,9 @@ async function redirectWithSession(
   redirect?: string,
 ): Promise<NextResponse> {
   const destination = await resolveLoginDestination(sessionUser, redirect);
-  const finalDestination = shouldOfferQuickAuthSetup(destination)
-    ? quickAuthSetupUrl(destination)
-    : destination;
+  const finalDestination = isStaffRole(sessionUser.role)
+    ? destination
+    : await resolvePostLoginDestination(sessionUser.email, destination);
   const res = NextResponse.redirect(new URL(finalDestination, appBaseUrl()));
   applySessionCookies(res, sessionUser);
   const cookieStore = await cookies();

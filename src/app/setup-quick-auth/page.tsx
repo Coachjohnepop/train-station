@@ -10,12 +10,16 @@ export default async function SetupQuickAuthPage({
 }: {
   searchParams: Promise<{ redirect?: string }>;
 }) {
+  const { redirect: redirectTo } = await searchParams;
+
   const session = await getSessionUser();
   if (!session?.email) {
-    redirect("/login?redirect=/setup-quick-auth");
+    const setupReturn =
+      redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")
+        ? `/setup-quick-auth?redirect=${encodeURIComponent(redirectTo)}`
+        : "/setup-quick-auth";
+    redirect(`/login?redirect=${encodeURIComponent(setupReturn)}`);
   }
-
-  const { redirect: redirectTo } = await searchParams;
   const destination =
     redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")
       ? redirectTo

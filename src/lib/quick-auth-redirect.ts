@@ -12,3 +12,13 @@ export function quickAuthSetupUrl(destination: string): string {
   const params = new URLSearchParams({ redirect: destination });
   return `/setup-quick-auth?${params}`;
 }
+
+/** Client-side: should we send the user to setup-quick-auth after password login? */
+export function needsQuickAuthSetupRedirect(
+  enabled: boolean,
+  destination: string,
+  skippedSetup: boolean,
+): boolean {
+  if (skippedSetup || enabled) return false;
+  return shouldOfferQuickAuthSetup(destination);
+}
