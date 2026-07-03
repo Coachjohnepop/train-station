@@ -626,6 +626,61 @@ table.data th {
   opacity: 0.85;
 }
 
+/* Coach live floor — completed exercises collapse to a single text line */
+.coach-live-checkoff .coach-floor-exercise--complete {
+  padding: 0;
+}
+
+.coach-live-checkoff .coach-floor-exercise__compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2rem;
+  padding: 0.35rem 0.5rem;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.coach-live-checkoff .coach-floor-exercise__compact-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ramp-gold-light);
+}
+
+.coach-live-checkoff .coach-floor-exercise__compact-status {
+  flex-shrink: 0;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ramp-gold-light) 75%, var(--muted));
+}
+
+.coach-live-checkoff .coach-floor-exercise__collapse {
+  margin-top: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.coach-live-checkoff .coach-floor-exercise__collapse:hover {
+  color: var(--ramp-gold-light);
+}
+
 /* Coach live floor — compact square set buttons, 6 per row then wrap */
 .coach-live-checkoff .coach-floor-set-grid {
   display: flex;

@@ -146,6 +146,7 @@ export default function MemberWorkoutConsole({
   const [loggedDetailsOpen, setLoggedDetailsOpen] = useState(false);
   const [restTimer, setRestTimer] = useState<ActiveRestTimer | null>(null);
   const [restSecondsLeft, setRestSecondsLeft] = useState(0);
+  const [coachExpandedBlockId, setCoachExpandedBlockId] = useState<string | null>(null);
   const restHornPlayedRef = useRef(false);
 
   const LIVE_POLL_MS = coachFloorMode ? 900 : 200;
@@ -569,6 +570,7 @@ export default function MemberWorkoutConsole({
             const isLastSet = isTimed ? setNum === 1 : setNum === block.setCount;
             if (isLastSet) {
               fireWorkoutConfetti(confettiOriginFromElement(originEl));
+              setCoachExpandedBlockId((open) => (open === blockId ? null : open));
             }
           }
         }
@@ -822,66 +824,101 @@ export default function MemberWorkoutConsole({
             ? doneForBlock.has(1)
             : doneForBlock.size >= block.setCount;
           const exerciseDone = finishedExercises.has(block.id) || allSetsDone;
+          const showCompactSets = allSetsDone && coachExpandedBlockId !== block.id;
+          const doneLabel = isTimed
+            ? "Done"
+            : `${block.setCount} set${block.setCount === 1 ? "" : "s"} done`;
 
           return (
             <div
               key={block.id}
-              className={`coach-floor-exercise rounded-lg border px-2 py-1.5 ${
+              className={`coach-floor-exercise rounded-lg border ${
                 exerciseDone
-                  ? "border-[var(--ramp-gold)]/45 bg-[var(--ramp-gold)]/8"
-                  : "border-[var(--border)] bg-[var(--surface)]"
+                  ? `coach-floor-exercise--complete border-[var(--ramp-gold)]/45 bg-[var(--ramp-gold)]/8${
+                      showCompactSets ? "" : " px-2 py-1.5"
+                    }`
+                  : "border-[var(--border)] bg-[var(--surface)] px-2 py-1.5"
               }`}
             >
-              <p
-                className={`text-xs font-semibold leading-snug ${
-                  exerciseDone ? "text-[var(--ramp-gold-light)]" : ""
-                }`}
-              >
-                {block.name}
-              </p>
-              <div className="mt-1" onClick={(e) => e.stopPropagation()}>
-                {isTimed ? (
-                  <div className="coach-floor-set-grid">
-                    <button
-                      type="button"
-                      data-coach-last-set={block.id}
-                      aria-pressed={allSetsDone}
-                      className={`coach-floor-set-btn ${allSetsDone ? "coach-floor-set-btn--done" : ""}`}
-                      onClick={(e) => toggleSet(block.id, 1, e.currentTarget)}
-                    >
-                      <span className="coach-floor-set-btn__num">
-                        {allSetsDone ? "✓" : "▶"}
-                      </span>
-                      <span className="coach-floor-set-btn__label">
-                        {allSetsDone ? "Done" : "Mark"}
-                      </span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="coach-floor-set-grid">
-                    {Array.from({ length: block.setCount }, (_, i) => {
-                      const setNum = i + 1;
-                      const done = doneForBlock.has(setNum);
-                      return (
+              {showCompactSets ? (
+                <button
+                  type="button"
+                  className="coach-floor-exercise__compact"
+                  aria-label={`${block.name}, ${doneLabel}. Tap to edit sets.`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCoachExpandedBlockId(block.id);
+                  }}
+                >
+                  <span className="coach-floor-exercise__compact-name">{block.name}</span>
+                  <span className="coach-floor-exercise__compact-status">{doneLabel}</span>
+                </button>
+              ) : (
+                <>
+                  <p
+                    className={`text-xs font-semibold leading-snug ${
+                      exerciseDone ? "text-[var(--ramp-gold-light)]" : ""
+                    }`}
+                  >
+                    {block.name}
+                  </p>
+                  <div className="mt-1" onClick={(e) => e.stopPropagation()}>
+                    {isTimed ? (
+                      <div className="coach-floor-set-grid">
                         <button
-                          key={setNum}
                           type="button"
-                          {...(setNum === block.setCount ? { "data-coach-last-set": block.id } : {})}
-                          aria-pressed={done}
-                          aria-label={`Set ${setNum}${done ? ", completed" : ""}`}
-                          className={`coach-floor-set-btn ${done ? "coach-floor-set-btn--done" : ""}`}
-                          onClick={(e) => toggleSet(block.id, setNum, e.currentTarget)}
+                          data-coach-last-set={block.id}
+                          aria-pressed={allSetsDone}
+                          className={`coach-floor-set-btn ${allSetsDone ? "coach-floor-set-btn--done" : ""}`}
+                          onClick={(e) => toggleSet(block.id, 1, e.currentTarget)}
                         >
                           <span className="coach-floor-set-btn__num">
-                            {done ? "✓" : setNum}
+                            {allSetsDone ? "✓" : "▶"}
                           </span>
-                          <span className="coach-floor-set-btn__label">Set</span>
+                          <span className="coach-floor-set-btn__label">
+                            {allSetsDone ? "Done" : "Mark"}
+                          </span>
                         </button>
-                      );
-                    })}
+                      </div>
+                    ) : (
+                      <div className="coach-floor-set-grid">
+                        {Array.from({ length: block.setCount }, (_, i) => {
+                          const setNum = i + 1;
+                          const done = doneForBlock.has(setNum);
+                          return (
+                            <button
+                              key={setNum}
+                              type="button"
+                              {...(setNum === block.setCount ? { "data-coach-last-set": block.id } : {})}
+                              aria-pressed={done}
+                              aria-label={`Set ${setNum}${done ? ", completed" : ""}`}
+                              className={`coach-floor-set-btn ${done ? "coach-floor-set-btn--done" : ""}`}
+                              onClick={(e) => toggleSet(block.id, setNum, e.currentTarget)}
+                            >
+                              <span className="coach-floor-set-btn__num">
+                                {done ? "✓" : setNum}
+                              </span>
+                              <span className="coach-floor-set-btn__label">Set</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                  {allSetsDone ? (
+                    <button
+                      type="button"
+                      className="coach-floor-exercise__collapse"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCoachExpandedBlockId(null);
+                      }}
+                    >
+                      Collapse
+                    </button>
+                  ) : null}
+                </>
+              )}
             </div>
           );
         })}
