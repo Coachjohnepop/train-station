@@ -15,6 +15,7 @@ import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
 import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
 import WorkoutRestTimer from "@/components/WorkoutRestTimer";
 import { playCybertruckHorn } from "@/lib/play-cybertruck-horn";
+import { fireWorkoutConfetti } from "@/lib/workout-confetti";
 
 export type MemberExerciseBlock = {
   id: string;
@@ -146,6 +147,8 @@ export default function MemberWorkoutConsole({
   const [restTimer, setRestTimer] = useState<ActiveRestTimer | null>(null);
   const [restSecondsLeft, setRestSecondsLeft] = useState(0);
   const restHornPlayedRef = useRef(false);
+  const coachFinishedSeedRef = useRef(false);
+  const prevCoachFinishedRef = useRef<Set<string>>(new Set());
 
   const LIVE_POLL_MS = coachFloorMode ? 900 : 200;
   const liveSessionScope = progressMode === "live" && !!liveSyncUserId && !reviewMode;
@@ -338,7 +341,32 @@ export default function MemberWorkoutConsole({
     lastAppliedRevision.current = 0;
     lastPushedRevision.current = 0;
     lastAppliedRemoteAt.current = null;
+    coachFinishedSeedRef.current = false;
+    prevCoachFinishedRef.current = new Set();
   }, [liveSyncUserId, liveSessionDate, workout.workoutId]);
+
+  // Coach floor: confetti when an exercise moves to finished (all sets checked).
+  useEffect(() => {
+    if (!coachFloorMode) {
+      coachFinishedSeedRef.current = false;
+      return;
+    }
+
+    if (!coachFinishedSeedRef.current) {
+      coachFinishedSeedRef.current = true;
+      prevCoachFinishedRef.current = new Set(finishedExercises);
+      return;
+    }
+
+    const newlyFinished = [...finishedExercises].filter(
+      (id) => !prevCoachFinishedRef.current.has(id),
+    );
+    prevCoachFinishedRef.current = new Set(finishedExercises);
+
+    if (newlyFinished.length > 0) {
+      fireWorkoutConfetti();
+    }
+  }, [coachFloorMode, finishedExercises]);
 
   useEffect(() => {
     if (!warmupSyncEnabled || !liveSessionDate) return;
