@@ -73,6 +73,8 @@ export default function MemberExerciseVideoModal({
               className="h-full w-full"
               videoUrl={videoUrl}
               title={`${exerciseName} demo video`}
+              autoplay
+              kickPlayback
             />
           </div>
         ) : (

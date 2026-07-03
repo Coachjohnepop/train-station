@@ -9,7 +9,9 @@ type Props = {
   title: string;
   className?: string;
   embedOptions?: Omit<YoutubeEmbedOptions, "autoplay">;
-  /** Nudge the player after load (helps after a tap / modal open). */
+  /** When false (default), embed loads paused — use in admin previews. */
+  autoplay?: boolean;
+  /** Nudge the player after load (member-facing modals only). */
   kickPlayback?: boolean;
 };
 
@@ -18,7 +20,8 @@ export default function YoutubeAutoplayFrame({
   title,
   className = "h-full w-full",
   embedOptions = {},
-  kickPlayback = true,
+  autoplay = false,
+  kickPlayback = false,
 }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [embedSrc, setEmbedSrc] = useState<string | null>(null);
@@ -26,19 +29,19 @@ export default function YoutubeAutoplayFrame({
   useEffect(() => {
     setEmbedSrc(
       youtubeEmbedUrl(videoUrl, {
-        autoplay: true,
-        mute: false,
-        enableJsApi: true,
-        origin: window.location.origin,
+        autoplay,
+        mute: autoplay ? false : true,
+        enableJsApi: autoplay,
+        origin: autoplay ? window.location.origin : undefined,
         ...embedOptions,
       }),
     );
     // embedOptions intentionally omitted — callers pass stable overrides only
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoUrl]);
+  }, [videoUrl, autoplay]);
 
   useEffect(() => {
-    if (!kickPlayback || !embedSrc) return;
+    if (!autoplay || !kickPlayback || !embedSrc) return;
     const kick = () => {
       postYoutubeEmbedCommand(iframeRef.current, "playVideo");
       postYoutubeEmbedCommand(iframeRef.current, "unMute");
@@ -49,7 +52,7 @@ export default function YoutubeAutoplayFrame({
       window.clearTimeout(t1);
       window.clearTimeout(t2);
     };
-  }, [embedSrc, kickPlayback]);
+  }, [embedSrc, kickPlayback, autoplay]);
 
   if (!embedSrc) return null;
 

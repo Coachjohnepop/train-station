@@ -159,6 +159,7 @@ export default function OnboardingWizard({
                   className="h-full w-full"
                   videoUrl={planWelcomeUrl}
                   title="Welcome video"
+                  autoplay
                   kickPlayback={currentStep === 1}
                 />
               </div>

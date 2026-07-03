@@ -95,9 +95,11 @@ function WorkoutUpdateBubble({
 function MediaBubble({
   message,
   colors,
+  mediaAutoplay = false,
 }: {
   message: ChatMessage;
   colors: ReturnType<typeof bubbleColorsForMessage>;
+  mediaAutoplay?: boolean;
 }) {
   const isYoutube = message.kind === "youtube" && message.mediaUrl;
   const isVideo = message.kind === "video_upload" && message.mediaUrl;
@@ -123,6 +125,8 @@ function MediaBubble({
             videoUrl={message.mediaUrl!}
             title="Coach video"
             className="h-full w-full"
+            autoplay={mediaAutoplay}
+            kickPlayback={mediaAutoplay}
           />
         </div>
       )}
@@ -131,7 +135,7 @@ function MediaBubble({
           src={message.mediaUrl}
           controls
           playsInline
-          autoPlay
+          autoPlay={mediaAutoplay}
           muted
           className="w-full bg-black"
         />
@@ -274,11 +278,13 @@ function MessageBubble({
   viewerRole,
   viewerId,
   onToggleReaction,
+  mediaAutoplay = false,
 }: {
   message: ChatMessage;
   viewerRole: "coach" | "member";
   viewerId: string;
   onToggleReaction?: (messageId: string, emoji: string) => void;
+  mediaAutoplay?: boolean;
 }) {
   const outgoing = isOutgoing(message.authorRole, viewerRole);
   const label = message.kind === "member_sms" ? "via SMS" : null;
@@ -307,7 +313,7 @@ function MessageBubble({
         {message.kind === "workout_update" ? (
           <WorkoutUpdateBubble message={message} viewerRole={viewerRole} colors={colors} />
         ) : message.kind === "youtube" || message.kind === "video_upload" || message.kind === "image" ? (
-          <MediaBubble message={message} colors={colors} />
+          <MediaBubble message={message} colors={colors} mediaAutoplay={mediaAutoplay} />
         ) : (
           <TextBubble message={message} colors={colors} outgoing={outgoing} />
         )}
@@ -331,11 +337,13 @@ function FeedItem({
   viewerRole,
   viewerId,
   onToggleReaction,
+  mediaAutoplay = false,
 }: {
   message: ChatMessage;
   viewerRole: "coach" | "member";
   viewerId: string;
   onToggleReaction?: (messageId: string, emoji: string) => void;
+  mediaAutoplay?: boolean;
 }) {
   if (message.authorRole === "system") {
     return (
@@ -352,6 +360,7 @@ function FeedItem({
       viewerRole={viewerRole}
       viewerId={viewerId}
       onToggleReaction={onToggleReaction}
+      mediaAutoplay={mediaAutoplay}
     />
   );
 }
@@ -365,6 +374,7 @@ export default function ChatFeed({
   hideHeader = false,
   headerAccent,
   onReactionChange,
+  mediaAutoplay = false,
 }: {
   thread: ChatThread | null;
   messages: ChatMessage[];
@@ -374,6 +384,8 @@ export default function ChatFeed({
   hideHeader?: boolean;
   headerAccent?: string;
   onReactionChange?: (message: ChatMessage) => void;
+  /** Off in admin chat; on for member-facing surfaces. */
+  mediaAutoplay?: boolean;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -437,6 +449,7 @@ export default function ChatFeed({
                 viewerRole={viewerRole}
                 viewerId={viewerId}
                 onToggleReaction={toggleReaction}
+                mediaAutoplay={mediaAutoplay}
               />
             ))}
           </div>

@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import WorkoutCertifyPanel from "@/components/WorkoutCertifyPanel";
+import { workoutItemsToParsedSms } from "@/lib/workout-builder-export";
 import ExerciseCascadePicker, {
   type WorkoutExerciseConfig,
 } from "@/components/ExerciseCascadePicker";
@@ -36,6 +38,8 @@ type Workout = {
   id: string;
   name: string;
   description: string | null;
+  exportText?: string | null;
+  certifiedAt?: string | null;
   exercises: WorkoutItem[];
 };
 
@@ -237,6 +241,11 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
     }
   }
 
+  const parsedForExport = useMemo(
+    () => (workout ? workoutItemsToParsedSms(workout) : null),
+    [workout],
+  );
+
   const pickedExercise = library.find((e) => e.id === pickId);
   const editingItem = workout?.exercises.find((i) => i.id === editingItemId);
 
@@ -413,6 +422,27 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
           </p>
         )}
       </ul>
+
+      {parsedForExport && (
+        <WorkoutCertifyPanel
+          workoutId={workoutId}
+          parsedWorkout={parsedForExport}
+          savedExportText={workout.exportText}
+          savedCertifiedAt={workout.certifiedAt}
+          onCertified={(exportText) => {
+            setWorkout((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    exportText,
+                    certifiedAt: new Date().toISOString(),
+                  }
+                : prev,
+            );
+            setSaveMessage("Certified — paste export text into Workouts → text upload.");
+          }}
+        />
+      )}
     </div>
   );
 }

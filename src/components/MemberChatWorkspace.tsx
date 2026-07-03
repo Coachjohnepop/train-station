@@ -181,6 +181,7 @@ export default function MemberChatWorkspace({
               messages={visibleMessages}
               viewerRole="member"
               viewerId={memberId}
+              mediaAutoplay
               emptyLabel={
                 activeReplyThread?.kind === "cohort"
                   ? "No community posts yet."

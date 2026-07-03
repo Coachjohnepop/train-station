@@ -19,6 +19,9 @@ function isDemoMode() {
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).optional().nullable(),
+  exportText: z.string().max(100_000).optional().nullable(),
+  certifiedAt: z.string().datetime().optional().nullable(),
+  clearCertification: z.boolean().optional(),
 });
 
 type Params = { params: Promise<{ id: string }> };
@@ -69,6 +72,18 @@ export async function PATCH(request: Request, { params }: Params) {
       parsed.data.description !== undefined
         ? parsed.data.description?.trim() || null
         : undefined;
+    const expectedExportText =
+      parsed.data.clearCertification === true
+        ? null
+        : parsed.data.exportText !== undefined
+          ? parsed.data.exportText
+          : undefined;
+    const expectedCertifiedAt =
+      parsed.data.clearCertification === true
+        ? null
+        : parsed.data.certifiedAt !== undefined
+          ? parsed.data.certifiedAt
+          : undefined;
 
     try {
       for (let attempt = 0; attempt < 4; attempt++) {
@@ -84,6 +99,17 @@ export async function PATCH(request: Request, { params }: Params) {
           const w = { ...workouts[idx] };
           if (expectedName !== undefined) w.name = expectedName;
           if (expectedDescription !== undefined) w.description = expectedDescription;
+          if (parsed.data.clearCertification) {
+            w.exportText = null;
+            w.certifiedAt = null;
+            w.certifiedBy = null;
+          } else {
+            if (expectedExportText !== undefined) w.exportText = expectedExportText;
+            if (expectedCertifiedAt !== undefined) {
+              w.certifiedAt = expectedCertifiedAt;
+              w.certifiedBy = auth.ok ? auth.session.id : w.certifiedBy ?? null;
+            }
+          }
           w.updatedAt = new Date().toISOString();
           workouts[idx] = w;
           data.workouts = workouts;
@@ -101,7 +127,13 @@ export async function PATCH(request: Request, { params }: Params) {
         const descOk =
           expectedDescription === undefined ||
           (persisted?.description ?? null) === expectedDescription;
-        if (persisted && nameOk && descOk) {
+        const exportOk =
+          expectedExportText === undefined ||
+          (persisted?.exportText ?? null) === expectedExportText;
+        const certOk =
+          expectedCertifiedAt === undefined ||
+          (persisted?.certifiedAt ?? null) === expectedCertifiedAt;
+        if (persisted && nameOk && descOk && exportOk && certOk) {
           const data = await getDemoSeed({ preferFresh: true });
           await hydrateDemoExercises({ preferFresh: true });
           const items = buildDemoWorkoutExerciseItems(
@@ -124,9 +156,41 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   try {
+    const data: {
+      name?: string;
+      description?: string | null;
+      exportText?: string | null;
+      certifiedAt?: Date | null;
+      certifiedBy?: string | null;
+    } = {};
+
+    if (parsed.data.name !== undefined) data.name = parsed.data.name.trim();
+    if (parsed.data.description !== undefined) {
+      data.description = parsed.data.description?.trim() || null;
+    }
+    if (parsed.data.clearCertification) {
+      data.exportText = null;
+      data.certifiedAt = null;
+      data.certifiedBy = null;
+    } else {
+      if (parsed.data.exportText !== undefined) data.exportText = parsed.data.exportText;
+      if (parsed.data.certifiedAt !== undefined) {
+        data.certifiedAt = parsed.data.certifiedAt
+          ? new Date(parsed.data.certifiedAt)
+          : null;
+        data.certifiedBy = auth.ok ? auth.session.id : null;
+      }
+    }
+
     const workout = await prisma.workout.update({
       where: { id },
-      data: parsed.data,
+      data,
+      include: {
+        exercises: {
+          orderBy: { sortOrder: "asc" },
+          include: { exercise: true },
+        },
+      },
     });
     return NextResponse.json(workout);
   } catch {

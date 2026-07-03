@@ -29,6 +29,7 @@ export default function WelcomeVideoPopover({
         className="h-full w-full"
         videoUrl={welcomeVideoUrl}
         title="Welcome video"
+        autoplay
         kickPlayback={open}
       />
     </div>

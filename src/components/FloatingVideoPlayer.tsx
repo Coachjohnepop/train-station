@@ -112,6 +112,8 @@ export default function FloatingVideoPlayer({
             videoUrl={videoUrl}
             title={title}
             className="absolute inset-0 h-full w-full"
+            autoplay
+            kickPlayback
           />
         ) : (
           <div className="flex h-full items-center justify-center text-[var(--muted)] text-sm">

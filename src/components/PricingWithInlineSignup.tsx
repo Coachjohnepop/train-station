@@ -94,6 +94,8 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
                 className="h-full w-full"
                 videoUrl={PLAN_VIDEOS.explorer}
                 title="Instructor message for Explorer plan"
+                autoplay
+                kickPlayback
               />
             </div>
           </div>
@@ -144,6 +146,8 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
                 className="h-full w-full"
                 videoUrl={PLAN_VIDEOS.member}
                 title="Instructor message for Member plan"
+                autoplay
+                kickPlayback
               />
             </div>
           </div>
@@ -193,6 +197,8 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
                 className="h-full w-full"
                 videoUrl={PLAN_VIDEOS.pro}
                 title="Instructor message for Pro plan"
+                autoplay
+                kickPlayback
               />
             </div>
           </div>
