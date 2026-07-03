@@ -149,7 +149,6 @@ export default function MemberWorkoutConsole({
   const [coachExpandedBlockId, setCoachExpandedBlockId] = useState<string | null>(null);
   const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
   const restHornPlayedRef = useRef(false);
-  const scrollToExerciseIdRef = useRef<string | null>(null);
 
   const LIVE_POLL_MS = coachFloorMode ? 900 : 200;
   const liveSessionScope = progressMode === "live" && !!liveSyncUserId && !reviewMode;
@@ -233,7 +232,10 @@ export default function MemberWorkoutConsole({
       if (!finishedSame) setFinishedExercises(remoteFinished);
       if (session.weights && !weightsSame) setWeights(session.weights);
       if (!coachFloorMode && session.activeId && session.activeId !== activeId) {
-        setActiveId(session.activeId);
+        const localIdx = workout.exercises.findIndex((e) => e.id === activeId);
+        const remoteIdx = workout.exercises.findIndex((e) => e.id === session.activeId);
+        const localAhead = localIdx >= 0 && remoteIdx >= 0 && localIdx > remoteIdx;
+        if (!localAhead) setActiveId(session.activeId);
       }
 
       const fromCoach = session.updatedBy === "coach";
@@ -244,7 +246,7 @@ export default function MemberWorkoutConsole({
       }
       applyingRemote.current = false;
     },
-    [instructorName, coachFloorMode, completedSets, finishedExercises, weights, activeId],
+    [instructorName, coachFloorMode, completedSets, finishedExercises, weights, activeId, workout.exercises],
   );
 
   const flushWarmupSave = useCallback(() => {
@@ -604,33 +606,49 @@ export default function MemberWorkoutConsole({
     setVideoModalBlockId(blockId);
   }, []);
 
+  const scrollMemberToExercise = useCallback(
+    (blockId: string) => {
+      if (coachFloorMode || instructorName || reviewMode) return;
+
+      const scroll = () => {
+        const el = document.getElementById(`member-exercise-${blockId}`);
+        if (!el) return false;
+        const top = el.getBoundingClientRect().top + window.scrollY - 80;
+        window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+        return true;
+      };
+
+      // Wait for finished exercise to collapse before measuring next card.
+      window.setTimeout(() => {
+        if (!scroll()) window.setTimeout(scroll, 120);
+      }, 60);
+    },
+    [coachFloorMode, instructorName, reviewMode],
+  );
+
   const advanceToNextExercise = useCallback(
     (blockId: string, finished: Set<string>) => {
       const idx = workout.exercises.findIndex((e) => e.id === blockId);
       const upcoming = workout.exercises.slice(idx + 1).find((e) => !finished.has(e.id));
       if (!upcoming) return;
-      if (!coachFloorMode && !instructorName && !reviewMode) {
-        scrollToExerciseIdRef.current = upcoming.id;
-      }
       setActiveId(upcoming.id);
       stateRef.current = { ...stateRef.current, activeId: upcoming.id };
+      scrollMemberToExercise(upcoming.id);
     },
-    [workout.exercises, coachFloorMode, instructorName, reviewMode],
+    [workout.exercises, scrollMemberToExercise],
   );
 
   const markExerciseFinished = useCallback(
     (blockId: string) => {
       setVideoModalBlockId((openId) => (openId === blockId ? null : openId));
-      setFinishedExercises((prev) => {
-        const next = new Set(prev);
-        next.add(blockId);
-        advanceToNextExercise(blockId, next);
-        stateRef.current = { ...stateRef.current, finishedExercises: next };
-        return next;
-      });
+      const next = new Set(finishedExercises);
+      next.add(blockId);
+      setFinishedExercises(next);
+      stateRef.current = { ...stateRef.current, finishedExercises: next };
+      advanceToNextExercise(blockId, next);
       queueLiveSave(true);
     },
-    [advanceToNextExercise, queueLiveSave],
+    [finishedExercises, advanceToNextExercise, queueLiveSave],
   );
 
   const closeExerciseEdit = useCallback(() => {
@@ -643,11 +661,9 @@ export default function MemberWorkoutConsole({
       setEditingExerciseId(blockId);
       setActiveId(blockId);
       stateRef.current = { ...stateRef.current, activeId: blockId };
-      if (!coachFloorMode && !instructorName && !reviewMode) {
-        scrollToExerciseIdRef.current = blockId;
-      }
+      scrollMemberToExercise(blockId);
     },
-    [coachFloorMode, instructorName, reviewMode],
+    [scrollMemberToExercise],
   );
 
   // Auto-finish exercises when all sets are marked — batch into one state update so
@@ -672,14 +688,12 @@ export default function MemberWorkoutConsole({
     }
     if (toFinish.length === 0) return;
 
-    setFinishedExercises((prev) => {
-      const next = new Set(prev);
-      for (const id of toFinish) next.add(id);
-      const lastFinished = toFinish[toFinish.length - 1];
-      if (lastFinished) advanceToNextExercise(lastFinished, next);
-      stateRef.current = { ...stateRef.current, finishedExercises: next };
-      return next;
-    });
+    const next = new Set(finishedExercises);
+    for (const id of toFinish) next.add(id);
+    const lastFinished = toFinish[toFinish.length - 1];
+    setFinishedExercises(next);
+    stateRef.current = { ...stateRef.current, finishedExercises: next };
+    if (lastFinished) advanceToNextExercise(lastFinished, next);
     queueLiveSave(true);
   }, [
     completedSets,
@@ -707,27 +721,6 @@ export default function MemberWorkoutConsole({
   useEffect(() => {
     if (allExercisesFinished) setFinishedListExpanded(false);
   }, [allExercisesFinished]);
-
-  // Member browser: one-time smooth scroll when advancing to the next exercise.
-  useEffect(() => {
-    if (coachFloorMode || instructorName || reviewMode) return;
-    const targetId = scrollToExerciseIdRef.current;
-    if (!targetId || activeId !== targetId) return;
-    scrollToExerciseIdRef.current = null;
-
-    let inner = 0;
-    const outer = window.requestAnimationFrame(() => {
-      inner = window.requestAnimationFrame(() => {
-        const el = document.getElementById(`member-exercise-${targetId}`);
-        el?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    });
-
-    return () => {
-      window.cancelAnimationFrame(outer);
-      window.cancelAnimationFrame(inner);
-    };
-  }, [activeId, coachFloorMode, instructorName, reviewMode]);
 
   const handleLogComplete = useCallback(async () => {
     if (logResult || isLogging) return;
