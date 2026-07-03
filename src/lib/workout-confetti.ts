@@ -1,7 +1,18 @@
 "use client";
 
+export type ConfettiOrigin = { x: number; y: number };
+
+export function confettiOriginFromElement(el: HTMLElement): ConfettiOrigin {
+  const rect = el.getBoundingClientRect();
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+}
+
 /** Canvas confetti burst — shared by coach exercise finish + member score celebrate. */
-export function runConfetti(canvas: HTMLCanvasElement, durationMs = 2200) {
+export function runConfetti(
+  canvas: HTMLCanvasElement,
+  durationMs = 2200,
+  origin?: ConfettiOrigin,
+) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return () => {};
 
@@ -12,12 +23,15 @@ export function runConfetti(canvas: HTMLCanvasElement, durationMs = 2200) {
   canvas.style.height = `${window.innerHeight}px`;
   ctx.scale(dpr, dpr);
 
+  const ox = origin?.x ?? window.innerWidth / 2;
+  const oy = origin?.y ?? window.innerHeight / 2;
+
   const colors = ["#d4af37", "#fde68a", "#f0c75e", "#7c3aed", "#c4b5fd", "#4ade9a", "#f472b6"];
-  const particles = Array.from({ length: 140 }, () => ({
-    x: window.innerWidth / 2 + (Math.random() - 0.5) * 80,
-    y: window.innerHeight / 2 + (Math.random() - 0.5) * 40,
-    vx: (Math.random() - 0.5) * 14,
-    vy: Math.random() * -12 - 4,
+  const particles = Array.from({ length: 100 }, () => ({
+    x: ox + (Math.random() - 0.5) * 28,
+    y: oy + (Math.random() - 0.5) * 20,
+    vx: (Math.random() - 0.5) * 11,
+    vy: Math.random() * -11 - 3,
     rot: Math.random() * Math.PI,
     vr: (Math.random() - 0.5) * 0.3,
     size: Math.random() * 7 + 4,
@@ -64,8 +78,8 @@ export function runConfetti(canvas: HTMLCanvasElement, durationMs = 2200) {
   return () => cancelAnimationFrame(raf);
 }
 
-/** Quick full-screen burst for coach exercise completions. */
-export function fireWorkoutConfetti(durationMs = 1600) {
+/** Quick burst for coach last-set checkoffs — origin is viewport coords (scroll-safe). */
+export function fireWorkoutConfetti(origin?: ConfettiOrigin, durationMs = 1600) {
   if (typeof window === "undefined") return;
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
@@ -75,7 +89,7 @@ export function fireWorkoutConfetti(durationMs = 1600) {
     "position:fixed;inset:0;pointer-events:none;z-index:300;width:100%;height:100%;";
   document.body.appendChild(canvas);
 
-  const stop = runConfetti(canvas, durationMs);
+  const stop = runConfetti(canvas, durationMs, origin);
   window.setTimeout(() => {
     stop();
     canvas.remove();

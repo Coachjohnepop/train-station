@@ -15,7 +15,7 @@ import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
 import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
 import WorkoutRestTimer from "@/components/WorkoutRestTimer";
 import { playCybertruckHorn } from "@/lib/play-cybertruck-horn";
-import { fireWorkoutConfetti } from "@/lib/workout-confetti";
+import { confettiOriginFromElement, fireWorkoutConfetti } from "@/lib/workout-confetti";
 
 export type MemberExerciseBlock = {
   id: string;
@@ -147,8 +147,6 @@ export default function MemberWorkoutConsole({
   const [restTimer, setRestTimer] = useState<ActiveRestTimer | null>(null);
   const [restSecondsLeft, setRestSecondsLeft] = useState(0);
   const restHornPlayedRef = useRef(false);
-  const coachFinishedSeedRef = useRef(false);
-  const prevCoachFinishedRef = useRef<Set<string>>(new Set());
 
   const LIVE_POLL_MS = coachFloorMode ? 900 : 200;
   const liveSessionScope = progressMode === "live" && !!liveSyncUserId && !reviewMode;
@@ -341,32 +339,7 @@ export default function MemberWorkoutConsole({
     lastAppliedRevision.current = 0;
     lastPushedRevision.current = 0;
     lastAppliedRemoteAt.current = null;
-    coachFinishedSeedRef.current = false;
-    prevCoachFinishedRef.current = new Set();
   }, [liveSyncUserId, liveSessionDate, workout.workoutId]);
-
-  // Coach floor: confetti when an exercise moves to finished (all sets checked).
-  useEffect(() => {
-    if (!coachFloorMode) {
-      coachFinishedSeedRef.current = false;
-      return;
-    }
-
-    if (!coachFinishedSeedRef.current) {
-      coachFinishedSeedRef.current = true;
-      prevCoachFinishedRef.current = new Set(finishedExercises);
-      return;
-    }
-
-    const newlyFinished = [...finishedExercises].filter(
-      (id) => !prevCoachFinishedRef.current.has(id),
-    );
-    prevCoachFinishedRef.current = new Set(finishedExercises);
-
-    if (newlyFinished.length > 0) {
-      fireWorkoutConfetti();
-    }
-  }, [coachFloorMode, finishedExercises]);
 
   useEffect(() => {
     if (!warmupSyncEnabled || !liveSessionDate) return;
@@ -565,7 +538,7 @@ export default function MemberWorkoutConsole({
   }, [restTimer]);
 
   const toggleSet = useCallback(
-    (blockId: string, setNum: number) => {
+    (blockId: string, setNum: number, originEl?: HTMLElement) => {
       const wasDone = completedSets[blockId]?.has(setNum) ?? false;
 
       if (wasDone && restTimer?.blockId === blockId) {
@@ -581,10 +554,35 @@ export default function MemberWorkoutConsole({
         return updated;
       });
 
-      if (!wasDone) maybeStartRestTimer(blockId, setNum);
+      if (!wasDone) {
+        maybeStartRestTimer(blockId, setNum);
+        if (coachFloorMode && originEl) {
+          const block = workout.exercises.find((e) => e.id === blockId);
+          if (block) {
+            const prescription = normalizePrescription({
+              setScheme: block.setScheme,
+              repPattern: block.repPattern,
+              reps: block.reps,
+              sets: block.setCount,
+            });
+            const isTimed = isTimedApproach(prescription.approach);
+            const isLastSet = isTimed ? setNum === 1 : setNum === block.setCount;
+            if (isLastSet) {
+              fireWorkoutConfetti(confettiOriginFromElement(originEl));
+            }
+          }
+        }
+      }
       queueLiveSave(true);
     },
-    [queueLiveSave, completedSets, restTimer?.blockId, maybeStartRestTimer],
+    [
+      queueLiveSave,
+      completedSets,
+      restTimer?.blockId,
+      maybeStartRestTimer,
+      coachFloorMode,
+      workout.exercises,
+    ],
   );
 
   const restTimerUi =
@@ -846,9 +844,10 @@ export default function MemberWorkoutConsole({
                   <div className="coach-floor-set-grid">
                     <button
                       type="button"
+                      data-coach-last-set={block.id}
                       aria-pressed={allSetsDone}
                       className={`coach-floor-set-btn ${allSetsDone ? "coach-floor-set-btn--done" : ""}`}
-                      onClick={() => toggleSet(block.id, 1)}
+                      onClick={(e) => toggleSet(block.id, 1, e.currentTarget)}
                     >
                       <span className="coach-floor-set-btn__num">
                         {allSetsDone ? "✓" : "▶"}
@@ -867,10 +866,11 @@ export default function MemberWorkoutConsole({
                         <button
                           key={setNum}
                           type="button"
+                          {...(setNum === block.setCount ? { "data-coach-last-set": block.id } : {})}
                           aria-pressed={done}
                           aria-label={`Set ${setNum}${done ? ", completed" : ""}`}
                           className={`coach-floor-set-btn ${done ? "coach-floor-set-btn--done" : ""}`}
-                          onClick={() => toggleSet(block.id, setNum)}
+                          onClick={(e) => toggleSet(block.id, setNum, e.currentTarget)}
                         >
                           <span className="coach-floor-set-btn__num">
                             {done ? "✓" : setNum}
