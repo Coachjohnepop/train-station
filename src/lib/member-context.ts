@@ -42,7 +42,7 @@ export async function getMemberDashboard() {
   let mockEnrollments: any[] = [];
   // Use the new UserData layer (Phase 0 stabilization). Today this still delegates
   // to the preview JSON stores, but the call site no longer knows about demo-*.ts directly.
-  const userEnrolls = getUserEnrollments(uid);
+  const userEnrolls = await getUserEnrollments(uid);
   if (Object.keys(userEnrolls).length > 0) {
     mockEnrollments = Object.entries(userEnrolls).map(([slug, prog]: any) => {
       const p = programs.find((pp: any) => pp.slug === slug) || adult;

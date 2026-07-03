@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { isDatabaseConfigured } from "@/lib/database-config";
 import {
   getDemoEnrollmentsStoreSync,
   hydrateDemoEnrollmentsStore,
@@ -46,9 +47,9 @@ async function saveDemoEnrollments(data: PerUserEnrollments) {
   await setUserEnrollments("demo-user", data);
 }
 
-export function isDemoMode() {
-  const url = process.env.DATABASE_URL ?? "";
-  return !url || url.includes("dummy.supabase") || url.includes("dummy");
+/** True when member/enrollment state uses blob + JSON (no real Postgres). */
+export function isDemoMode(): boolean {
+  return !isDatabaseConfigured();
 }
 
 /** Returns enrollments for a specific user id (empty map for new users until enrolled). */

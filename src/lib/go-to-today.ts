@@ -95,8 +95,8 @@ export function memberWorkoutHref(input: {
   return `/member/workout?${params.toString()}`;
 }
 
-function enrollmentSlugsForUser(userId: string): string[] {
-  const enrolls = getUserEnrollments(userId);
+async function enrollmentSlugsForUser(userId: string): Promise<string[]> {
+  const enrolls = await getUserEnrollments(userId);
   const slugs = Object.keys(enrolls);
   return slugs.sort((a, b) => {
     if (a === "adult") return -1;
@@ -126,8 +126,8 @@ export async function resolveMemberGoToToday(
     };
   }
 
-  const enrolls = getUserEnrollments(userId);
-  for (const slug of enrollmentSlugsForUser(userId)) {
+  const enrolls = await getUserEnrollments(userId);
+  for (const slug of await enrollmentSlugsForUser(userId)) {
     const program = await getProgramBySlug(slug);
     if (!program) continue;
     const cat = (program.category || "workout") as string;
@@ -163,7 +163,7 @@ export async function resolveMemberGoToToday(
     };
   }
 
-  const fallbackSlug = enrollmentSlugsForUser(userId)[0];
+  const fallbackSlug = (await enrollmentSlugsForUser(userId))[0];
   return {
     href: "/member/today",
     kind: "empty",

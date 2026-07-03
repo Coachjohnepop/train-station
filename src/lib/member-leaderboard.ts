@@ -34,8 +34,8 @@ function bestMoveFromEvents(
   return GAMIFICATION_EVENT_LABELS[top.type] || top.label;
 }
 
-function primaryProgramSlug(userId: string): string | null {
-  const enrolls = getUserEnrollments(userId);
+async function primaryProgramSlug(userId: string): Promise<string | null> {
+  const enrolls = await getUserEnrollments(userId);
   const slugs = Object.keys(enrolls);
   if (!slugs.length) return "adult";
   return slugs.sort((a, b) => (a === "adult" ? -1 : b === "adult" ? 1 : a.localeCompare(b)))[0];
@@ -88,7 +88,7 @@ async function ensureDemoLeaderboardSeed(): Promise<void> {
           userId,
           eventId: `seed-workout:${userId}:${i}`,
           type: "workout_logged",
-          programSlug: primaryProgramSlug(userId),
+          programSlug: await primaryProgramSlug(userId),
         });
       }
     }
@@ -131,7 +131,7 @@ async function buildRows(
   for (const [userId, nameHint] of participants) {
     if (userId.includes("coach")) continue;
 
-    const userProgram = primaryProgramSlug(userId);
+    const userProgram = await primaryProgramSlug(userId);
     if (scope === "program" && programSlug && userProgram !== programSlug) continue;
 
     const ledger = await getUserGamification(userId);
@@ -171,7 +171,7 @@ export async function loadMemberLeaderboard(
   viewerId: string,
   scope: LeaderboardScope,
 ): Promise<LeaderboardPayload> {
-  const programSlug = primaryProgramSlug(viewerId);
+  const programSlug = await primaryProgramSlug(viewerId);
   const { viewer, rows } = await buildRows(viewerId, scope, programSlug);
 
   let programName: string | null = null;

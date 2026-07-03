@@ -38,7 +38,7 @@ export async function resolveMemberProgramWorkout(
   if (!program?.weeks?.length) return null;
 
   const uid = userId || (await resolveUserId());
-  const enrolls = getUserEnrollments(uid);
+  const enrolls = await getUserEnrollments(uid);
   const en = enrolls[slug] || enrolls[programSlug] || { currentWeek: 1, currentDay: 1 };
 
   const week =

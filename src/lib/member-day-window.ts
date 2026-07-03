@@ -72,7 +72,7 @@ export function pickStretchPreview(names: string[]): string[] {
 }
 
 export async function resolvePrimaryScheduleProgram(userId: string) {
-  const enrolls = getUserEnrollments(userId);
+  const enrolls = await getUserEnrollments(userId);
   const slugs = Object.keys(enrolls).sort((a, b) => {
     if (a === "adult") return -1;
     if (b === "adult") return 1;
@@ -160,7 +160,7 @@ export async function buildMemberDayWindow(
   const calendarToday = localTodayIso();
   const rollingDays = opts?.rollingDays ?? 5;
   const daysBefore = opts?.daysBefore ?? 2;
-  const enrolls = getUserEnrollments(userId);
+  const enrolls = await getUserEnrollments(userId);
   const enrollment = enrolls[programSlug] || { currentWeek: 1, currentDay: 1 };
   const programTodayKey = `W${enrollment.currentWeek}D${enrollment.currentDay}`;
 

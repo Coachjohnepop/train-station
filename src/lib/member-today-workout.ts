@@ -30,8 +30,8 @@ export type TodayPageWorkout = {
   scheduleLabel?: string;
 };
 
-function enrollmentSlugsForUser(userId: string): string[] {
-  const enrolls = getUserEnrollments(userId);
+async function enrollmentSlugsForUser(userId: string): Promise<string[]> {
+  const enrolls = await getUserEnrollments(userId);
   const slugs = Object.keys(enrolls);
   return slugs.sort((a, b) => {
     if (a === "adult") return -1;
@@ -55,7 +55,7 @@ async function resolveEnrollmentProgramWorkout(
   const program = await getProgramBySlug(slug);
   if (!program) return null;
 
-  const enrolls = getUserEnrollments(userId);
+  const enrolls = await getUserEnrollments(userId);
   const enrollment = enrolls[slug] || { currentWeek: 1, currentDay: 1 };
   const isProgramToday =
     weekNumber === enrollment.currentWeek && dayNumber === enrollment.currentDay;
@@ -115,7 +115,7 @@ export async function resolveTodayPageWorkout(
   const enrollmentCoord = parseEnrollmentDayKey(viewDate);
 
   if (enrollmentCoord) {
-    for (const slug of enrollmentSlugsForUser(userId)) {
+    for (const slug of await enrollmentSlugsForUser(userId)) {
       const program = await getProgramBySlug(slug);
       if (!program) continue;
       const cat = (program.category || "workout") as string;
@@ -149,7 +149,7 @@ export async function resolveTodayPageWorkout(
       }
     }
 
-    for (const slug of enrollmentSlugsForUser(userId)) {
+    for (const slug of await enrollmentSlugsForUser(userId)) {
       const program = await getProgramBySlug(slug);
       if (!program) continue;
       const cat = (program.category || "workout") as string;
@@ -176,13 +176,14 @@ export async function resolveTodayPageWorkout(
     return {
       session,
       workout: null,
-      programSlug: session?.programSlug || enrollmentSlugsForUser(userId)[0] || "adult",
+      programSlug: session?.programSlug || (await enrollmentSlugsForUser(userId))[0] || "adult",
       source: null,
     };
   }
 
-  const primarySlug = enrollmentSlugsForUser(userId)[0] || "adult";
-  const enrolls = getUserEnrollments(userId);
+  const slugs = await enrollmentSlugsForUser(userId);
+  const primarySlug = slugs[0] || "adult";
+  const enrolls = await getUserEnrollments(userId);
   const enrollment = enrolls[primarySlug] || { currentWeek: 1, currentDay: 1 };
 
   const resolved = await resolveEnrollmentProgramWorkout(

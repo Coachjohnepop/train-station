@@ -224,7 +224,7 @@ export async function memberCanPostToThread(memberId: string, thread: ChatThread
   }
   if (thread.kind === "cohort") {
     const slug = thread.programSlug || COMMUNITY_FEED_PROGRAM_SLUG;
-    const enrolled = Object.keys(getUserEnrollments(memberId));
+    const enrolled = Object.keys(await getUserEnrollments(memberId));
     return slug === COMMUNITY_FEED_PROGRAM_SLUG || enrolled.includes(slug);
   }
   return false;

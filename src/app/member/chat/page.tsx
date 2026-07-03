@@ -20,7 +20,7 @@ export default async function MemberChatPage() {
   await ensureMemberThread(uid);
   const communitySlug = COMMUNITY_FEED_PROGRAM_SLUG;
   await ensureCohortThread(communitySlug, COMMUNITY_FEED_TITLE);
-  const enrolledSlugs = Object.keys(getUserEnrollments(uid));
+  const enrolledSlugs = Object.keys(await getUserEnrollments(uid));
   const programSlugs = [...new Set([communitySlug, ...enrolledSlugs])];
   const threads = listThreadsForMember(uid, programSlugs);
 

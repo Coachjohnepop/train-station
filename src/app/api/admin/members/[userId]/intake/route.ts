@@ -30,7 +30,7 @@ export async function POST(_request: Request, { params }: Params) {
     coachIntakeCompletedBy: session.email,
   });
 
-  const enrolls = getUserEnrollments(userId);
+  const enrolls = await getUserEnrollments(userId);
   const programSlug = Object.keys(enrolls)[0] || "adult";
   await awardGamificationPoints({
     userId,

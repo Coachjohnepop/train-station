@@ -19,6 +19,12 @@ import {
   advanceDemoEnrollmentForWorkout,
   setDemoEnrollmentPosition,
 } from "@/lib/demo-enrollments";
+import {
+  enrollUserInProgramDb,
+  getEnrollmentsMapForUser,
+  setUserProgramPositionDb,
+  unenrollUserFromProgramDb,
+} from "@/lib/enrollment-db";
 import { clampEnrollmentPosition, linearEnrollmentDay } from "@/lib/member-enrollment-day";
 import { getProgramBySlug } from "@/lib/program-data";
 import { recordDemoWorkoutSession } from "@/lib/demo-logs";
@@ -40,9 +46,12 @@ export const isDemoMode = _isDemoMode;
  *
  * This is the first method migrated into the data layer as part of Phase 0 stabilization.
  */
-export function getUserEnrollments(userId?: string): EnrollmentsMap {
-  // Today this is purely the preview path. Real path will be added here.
-  return getDemoEnrollments(userId);
+export async function getUserEnrollments(userId?: string): Promise<EnrollmentsMap> {
+  const uid = userId || "demo-user";
+  if (isDemoMode()) {
+    return getDemoEnrollments(uid);
+  }
+  return getEnrollmentsMapForUser(uid);
 }
 
 /**
@@ -50,21 +59,31 @@ export function getUserEnrollments(userId?: string): EnrollmentsMap {
  * Preview: writes to enrollments.dev.json.
  */
 export async function enrollUserInProgram(slug: string, userId?: string) {
-  await enrollDemo(slug, userId);
+  const uid = userId || "demo-user";
+  if (isDemoMode()) {
+    await enrollDemo(slug, uid);
+    return;
+  }
+  await enrollUserInProgramDb(slug, uid);
 }
 
 /**
  * Unenroll a user from a program.
  */
 export async function unenrollUserFromProgram(slug: string, userId?: string) {
-  await unenrollDemo(slug, userId);
+  const uid = userId || "demo-user";
+  if (isDemoMode()) {
+    await unenrollDemo(slug, uid);
+    return;
+  }
+  await unenrollUserFromProgramDb(slug, uid);
 }
 
 /**
  * Convenience: turn the raw map into a typed array of UserEnrollment (what member-context etc. often want).
  */
-export function getUserEnrollmentsAsArray(userId?: string): UserEnrollment[] {
-  const map = getUserEnrollments(userId);
+export async function getUserEnrollmentsAsArray(userId?: string): Promise<UserEnrollment[]> {
+  const map = await getUserEnrollments(userId);
   return Object.entries(map).map(([slug, val]) => ({
     slug,
     currentWeek: val.currentWeek ?? 1,
@@ -100,7 +119,7 @@ export async function setUserProgramPosition(
   );
 
   if (isDemoMode()) {
-    const map = getUserEnrollments(userId);
+    const map = await getUserEnrollments(userId);
     if (!map[programSlug]) {
       await enrollDemo(programSlug, userId);
     }
@@ -112,24 +131,7 @@ export async function setUserProgramPosition(
       program.durationWeeks,
     );
   } else {
-    let enrollment = await prisma.programEnrollment.findFirst({
-      where: { userId, program: { slug: programSlug } },
-    });
-    if (!enrollment) {
-      enrollment = await prisma.programEnrollment.create({
-        data: {
-          userId,
-          programId: program.id,
-          currentWeek: weekNumber,
-          currentDay: dayNumber,
-        },
-      });
-    } else {
-      enrollment = await prisma.programEnrollment.update({
-        where: { id: enrollment.id },
-        data: { currentWeek: weekNumber, currentDay: dayNumber },
-      });
-    }
+    await setUserProgramPositionDb(userId, programSlug, weekNumber, dayNumber);
   }
 
   return {
@@ -143,7 +145,7 @@ export async function setUserProgramPosition(
 }
 
 export async function getUserProgramPositions(userId: string): Promise<ProgramPositionResult[]> {
-  const enrolls = getUserEnrollmentsAsArray(userId);
+  const enrolls = await getUserEnrollmentsAsArray(userId);
   const out: ProgramPositionResult[] = [];
 
   for (const en of enrolls) {
