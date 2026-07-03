@@ -15,12 +15,18 @@ import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { getAllSignInAccounts, upsertSignInAccount } from "@/lib/member-accounts-store";
 import { applySelfProfileUpdate } from "@/lib/user-self-update";
 import { hideUserById, unhideUserById } from "@/lib/user-visibility";
-import { getAdminSession, isSelfUserId, pickSelfProfilePatch } from "@/lib/users-admin-session";
+import {
+  getAdminSession,
+  isSelfUserId,
+  pickCoachContactPatch,
+  pickSelfProfilePatch,
+} from "@/lib/users-admin-session";
 import {
   annotatePrismaUserRow,
   resolvePrismaUserIdForAdmin,
 } from "@/lib/users-admin-annotations";
-import { assertUserScope, requirePlatformStaff, requireSession } from "@/lib/api-auth";
+import { canAccessPlatformAdmin } from "@/lib/staff-access";
+import { assertUserScope, requireCoachStaff, requirePlatformStaff, requireSession } from "@/lib/api-auth";
 
 const ROLES = ["ADMIN", "INSTRUCTOR", "PLATFORM_ADMIN", "MEMBER", "PROSPECTIVE_INSTRUCTOR"] as const;
 
@@ -166,11 +172,14 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   if (!isSelf) {
-    const staff = await requirePlatformStaff();
+    const staff = await requireCoachStaff();
     if (!staff.ok) return staff.response;
   }
 
   if (parsed.data.hidden !== undefined) {
+    const platform = await requirePlatformStaff();
+    if (!platform.ok) return platform.response;
+
     const result = parsed.data.hidden ? await hideUserById(id) : await unhideUserById(id);
     if (!result.ok) {
       return NextResponse.json({ detail: "User not found" }, { status: 404 });
@@ -256,7 +265,26 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ detail: "User not found" }, { status: 404 });
   }
 
-  const { password: _password, hidden: _hidden, ...updateFields } = parsed.data;
+  const isPlatform = canAccessPlatformAdmin(session!.role);
+  const updateFields = isPlatform
+    ? (({ password: _p, hidden: _h, ...rest }) => rest)(parsed.data)
+    : pickCoachContactPatch(parsed.data);
+
+  if (!isPlatform) {
+    const blocked =
+      parsed.data.role !== undefined ||
+      parsed.data.status !== undefined ||
+      parsed.data.hidden !== undefined;
+    if (blocked) {
+      return NextResponse.json(
+        { detail: "Coaches can update name, phone, reminder, and notes only." },
+        { status: 403 },
+      );
+    }
+    if (Object.keys(updateFields).length === 0) {
+      return NextResponse.json({ detail: "No contact fields to update." }, { status: 400 });
+    }
+  }
 
   try {
     const user = await prisma.user.update({

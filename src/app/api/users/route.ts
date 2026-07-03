@@ -8,7 +8,7 @@ import { isDemoMode } from "@/lib/demo-enrollments";
 import { upsertSignInAccount } from "@/lib/member-accounts-store";
 import { annotateAdminUsersForSession } from "@/lib/users-admin-session";
 import { annotatePrismaUserRow } from "@/lib/users-admin-annotations";
-import { requirePlatformStaff } from "@/lib/api-auth";
+import { requireCoachStaff, requirePlatformStaff } from "@/lib/api-auth";
 
 const ROLES = ["ADMIN", "INSTRUCTOR", "PLATFORM_ADMIN", "MEMBER", "PROSPECTIVE_INSTRUCTOR"] as const;
 
@@ -23,7 +23,7 @@ const createUserSchema = z.object({
 });
 
 export async function GET(request: Request) {
-  const auth = await requirePlatformStaff();
+  const auth = await requireCoachStaff();
   if (!auth.ok) return auth.response;
 
   const { searchParams } = new URL(request.url);

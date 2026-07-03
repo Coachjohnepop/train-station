@@ -11,6 +11,9 @@ export type AdminUserRow = Record<string, unknown>;
 
 export const SELF_PROFILE_FIELDS = ["name", "phone", "dailyReminderTime", "password"] as const;
 
+/** Coaches may edit member contact info without platform-admin role. */
+export const COACH_CONTACT_FIELDS = ["name", "phone", "dailyReminderTime", "notes"] as const;
+
 export function isSelfUserRow(session: SessionUser | null, row: AdminUserRow): boolean {
   if (!session) return false;
   const email = String(row.email || "").toLowerCase();
@@ -20,6 +23,14 @@ export function isSelfUserRow(session: SessionUser | null, row: AdminUserRow): b
 export function pickSelfProfilePatch<T extends Record<string, unknown>>(data: T): Partial<T> {
   const picked: Partial<T> = {};
   for (const key of SELF_PROFILE_FIELDS) {
+    if (data[key] !== undefined) picked[key as keyof T] = data[key as keyof T];
+  }
+  return picked;
+}
+
+export function pickCoachContactPatch<T extends Record<string, unknown>>(data: T): Partial<T> {
+  const picked: Partial<T> = {};
+  for (const key of COACH_CONTACT_FIELDS) {
     if (data[key] !== undefined) picked[key as keyof T] = data[key as keyof T];
   }
   return picked;
