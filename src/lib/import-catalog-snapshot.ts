@@ -172,7 +172,7 @@ export async function importCatalogSnapshot(
   for (const row of snapshot.exercises || []) {
     const data = normalizeExercise(row);
     await prisma.exercise.upsert({
-      where: { id: String(data.id) },
+      where: { id: String(row.id) },
       update: data as never,
       create: data as never,
     });
@@ -180,7 +180,7 @@ export async function importCatalogSnapshot(
   for (const row of snapshot.workouts || []) {
     const data = normalizeWorkout(row);
     await prisma.workout.upsert({
-      where: { id: String(data.id) },
+      where: { id: String(row.id) },
       update: data as never,
       create: data as never,
     });
@@ -196,7 +196,7 @@ export async function importCatalogSnapshot(
   for (const row of snapshot.programs || []) {
     const data = normalizeProgram(row);
     await prisma.program.upsert({
-      where: { id: String(data.id) },
+      where: { id: String(row.id) },
       update: data as never,
       create: data as never,
     });
@@ -211,7 +211,7 @@ export async function importCatalogSnapshot(
   for (const row of snapshot.programDays || []) {
     const dayData = normalizeProgramDay(row);
     await prisma.programDay.upsert({
-      where: { id: String(dayData.id) },
+      where: { id: String(row.id) },
       update: dayData as never,
       create: dayData as never,
     });
@@ -234,7 +234,7 @@ export async function importCatalogSnapshot(
   for (const row of snapshot.liveSessions || []) {
     const data = normalizeLiveSession(row);
     await prisma.liveSession.upsert({
-      where: { id: String(data.id) },
+      where: { id: String(row.id) },
       update: data as never,
       create: data as never,
     });
