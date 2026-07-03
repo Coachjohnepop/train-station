@@ -15,12 +15,71 @@ const BASE =
   process.env.BASE_URL ||
   "https://train-station-hdk40cvr9-johnepop-s-projects.vercel.app";
 
+const COACH_EMAIL = process.env.COACH_EMAIL || "jeremy@thetrainstation.co";
+const COACH_PASSWORD_ENV =
+  process.env.COACH_PASSWORD ?? process.env.COACH_TEST_PASSWORD ?? null;
+
 const TEST_BENCH = process.env.S1_TEST_BENCH === "1";
 const BENCH_NAME = "Bench Press";
 const BENCH_ID = "cmpyqegat0004r7rz0klfamt0";
 const MARKER = Date.now();
 
 const results = [];
+let cookies = "";
+
+function parseSetCookie(headers) {
+  const raw = headers.getSetCookie?.() || [];
+  return raw.map((c) => c.split(";")[0]).join("; ");
+}
+
+function mergeCookies(existing, added) {
+  const jar = new Map();
+  for (const part of `${existing}; ${added}`.split(";")) {
+    const trimmed = part.trim();
+    if (!trimmed || !trimmed.includes("=")) continue;
+    const [k, ...rest] = trimmed.split("=");
+    jar.set(k, rest.join("="));
+  }
+  return [...jar.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
+}
+
+async function tryLogin(password) {
+  const loginRes = await fetch(`${BASE}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: COACH_EMAIL,
+      password,
+      redirect: "/admin/exercises",
+    }),
+    redirect: "manual",
+  });
+  const loginBody = await loginRes.json().catch(() => ({}));
+  const setCookie = parseSetCookie(loginRes.headers);
+  if (loginRes.ok && setCookie.includes("ts_session")) {
+    cookies = setCookie;
+    return { ok: true, detail: password ? "password" : "no password" };
+  }
+  return { ok: false, detail: loginBody.error || `status ${loginRes.status}` };
+}
+
+async function loginCoach() {
+  const attempts = COACH_PASSWORD_ENV !== null
+    ? [COACH_PASSWORD_ENV]
+    : ["CoachTest123!", ""];
+  for (const password of attempts) {
+    const result = await tryLogin(password);
+    if (result.ok) {
+      pass("Coach login", `${COACH_EMAIL} (${result.detail})`);
+      return true;
+    }
+  }
+  fail(
+    "Coach login",
+    "set COACH_PASSWORD for prod accounts with a password",
+  );
+  return false;
+}
 
 function pass(name, detail = "") {
   results.push({ name, ok: true, detail });
@@ -44,6 +103,7 @@ async function req(path, opts = {}) {
     Pragma: "no-cache",
     ...(opts.headers || {}),
   };
+  if (cookies) headers.Cookie = cookies;
   if (opts.json) {
     headers["Content-Type"] = "application/json";
     opts.body = JSON.stringify(opts.json);
@@ -195,6 +255,13 @@ async function main() {
       ? "Mode: temp exercise + optional Bench Press delete\n"
       : "Mode: temp exercise only (set S1_TEST_BENCH=1 to test Bench Press)\n",
   );
+
+  const loggedIn = await loginCoach();
+  if (!loggedIn) {
+    const failed = results.filter((r) => !r.ok);
+    console.log(`\n---\n${results.length - failed.length}/${results.length} passed`);
+    process.exit(1);
+  }
 
   const { res, body } = await req("/api/admin/demo-persistence");
   if (!res.ok) {

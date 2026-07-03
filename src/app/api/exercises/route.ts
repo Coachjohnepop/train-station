@@ -46,7 +46,7 @@ export async function POST(request: Request) {
   const { name, description, videoUrl, tags } = parsed.data;
 
   if (isDemoMode()) {
-    await hydrateDemoExercises();
+    await hydrateDemoExercises({ preferFresh: true });
     const list = loadDemoExercises();
     const exercise = {
       id: createDemoExerciseId(),

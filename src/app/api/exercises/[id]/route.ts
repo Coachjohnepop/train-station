@@ -11,6 +11,7 @@ import {
   demoPersistenceError,
   demoPersistenceWarning,
 } from "@/lib/demo-persistence";
+import { requireStaff } from "@/lib/api-auth";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -22,6 +23,9 @@ const updateSchema = z.object({
 type Params = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: Params) {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
+
   const { id } = await params;
   const parsed = updateSchema.safeParse(await request.json());
   if (!parsed.success) {
@@ -47,7 +51,7 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   if (isDemoMode()) {
-    await hydrateDemoExercises();
+    await hydrateDemoExercises({ preferFresh: true });
     const list = loadDemoExercises();
     const idx = list.findIndex((e: any) => e.id === id);
     if (idx === -1) {
@@ -83,9 +87,12 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
+
   const { id } = await params;
   if (isDemoMode()) {
-    await hydrateDemoExercises();
+    await hydrateDemoExercises({ preferFresh: true });
     const list = loadDemoExercises();
     const idx = list.findIndex((e: any) => e.id === id);
     if (idx === -1) {
