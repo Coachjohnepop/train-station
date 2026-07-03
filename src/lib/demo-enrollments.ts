@@ -160,6 +160,23 @@ export async function advanceDemoEnrollmentForWorkout(slug: string, workoutId: s
  * Increments the current day/week for the slug's enrollment.
  * Used by prompts logging for eating/yoga so they advance independently.
  */
+export async function setDemoEnrollmentPosition(
+  slug: string,
+  currentWeek: number,
+  currentDay: number,
+  userId?: string,
+  durationWeeks = 4,
+) {
+  await hydrateDemoEnrollmentsStore({ preferFresh: true });
+  const uid = userId || "demo-user";
+  const enrolls = getUserEnrollments(uid);
+  const week = Math.min(Math.max(1, Math.floor(currentWeek)), Math.max(1, durationWeeks));
+  const day = Math.min(Math.max(1, Math.floor(currentDay)), 7);
+  enrolls[slug] = { currentWeek: week, currentDay: day };
+  await setUserEnrollments(uid, enrolls);
+  return { currentWeek: week, currentDay: day };
+}
+
 export async function advanceDemoEnrollment(slug: string, userId?: string) {
   const uid = userId || "demo-user";
   const enrolls = getUserEnrollments(uid);

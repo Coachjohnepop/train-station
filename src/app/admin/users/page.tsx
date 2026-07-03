@@ -7,6 +7,7 @@ import EmailInput from "@/components/EmailInput";
 import PasswordInput from "@/components/PasswordInput";
 import FormUsernameBridge from "@/components/FormUsernameBridge";
 import AdminUserQuickAuthControls from "@/components/AdminUserQuickAuthControls";
+import AdminMemberProgramPositionPanel from "@/components/AdminMemberProgramPositionPanel";
 
 type Role = "ADMIN" | "INSTRUCTOR" | "PLATFORM_ADMIN" | "MEMBER" | "PROSPECTIVE_INSTRUCTOR";
 
@@ -534,6 +535,13 @@ export default function AdminUsersPage() {
 
               {editing && (
                 <AdminUserQuickAuthControls userId={editing.id} userEmail={editing.email} />
+              )}
+
+              {editing && editing.role === "MEMBER" && (
+                <AdminMemberProgramPositionPanel
+                  userId={editing.id}
+                  memberName={editing.name}
+                />
               )}
 
               <div className="flex justify-end gap-2 pt-2">

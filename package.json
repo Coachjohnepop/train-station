@@ -18,6 +18,7 @@
     "test:persistence-soak": "node scripts/persistence-soak-test.mjs",
     "test:s1d": "node scripts/s1d-program-builder-test.mjs",
     "test:s2a": "node scripts/s2a-member-enrollment-day-test.mjs",
+    "test:s2b": "node scripts/s2b-member-program-position-test.mjs",
     "test:s2": "node scripts/s2-program-builder-test.mjs",
     "test:copy-week": "node scripts/s2-copy-week-test.mjs",
     "test:week-duplicate": "node scripts/program-week-duplicate-test.mjs",

@@ -11,7 +11,16 @@
  * directly importing "demo-*.ts" or doing raw isDemoMode() + fs reads.
  */
 
-import { isDemoMode as _isDemoMode, getDemoEnrollments, enrollDemo, unenrollDemo, advanceDemoEnrollmentForWorkout } from "@/lib/demo-enrollments";
+import {
+  isDemoMode as _isDemoMode,
+  getDemoEnrollments,
+  enrollDemo,
+  unenrollDemo,
+  advanceDemoEnrollmentForWorkout,
+  setDemoEnrollmentPosition,
+} from "@/lib/demo-enrollments";
+import { clampEnrollmentPosition, linearEnrollmentDay } from "@/lib/member-enrollment-day";
+import { getProgramBySlug } from "@/lib/program-data";
 import { recordDemoWorkoutSession } from "@/lib/demo-logs";
 import { prisma } from "@/lib/prisma";
 import { DEMO_MEMBER_EMAIL } from "@/lib/demo-workout";
@@ -61,6 +70,109 @@ export function getUserEnrollmentsAsArray(userId?: string): UserEnrollment[] {
     currentWeek: val.currentWeek ?? 1,
     currentDay: val.currentDay ?? 1,
   }));
+}
+
+export type ProgramPositionResult = {
+  programSlug: string;
+  programName: string;
+  currentWeek: number;
+  currentDay: number;
+  enrollmentDayNumber: number;
+  durationWeeks: number;
+};
+
+/** Coach-set member position in a program (week + day within week). */
+export async function setUserProgramPosition(
+  userId: string,
+  programSlug: string,
+  currentWeek: number,
+  currentDay: number,
+): Promise<ProgramPositionResult> {
+  const program = await getProgramBySlug(programSlug);
+  if (!program) {
+    throw new Error("Program not found");
+  }
+
+  const { weekNumber, dayNumber } = clampEnrollmentPosition(
+    currentWeek,
+    currentDay,
+    program.durationWeeks,
+  );
+
+  if (isDemoMode()) {
+    const map = getUserEnrollments(userId);
+    if (!map[programSlug]) {
+      await enrollDemo(programSlug, userId);
+    }
+    await setDemoEnrollmentPosition(
+      programSlug,
+      weekNumber,
+      dayNumber,
+      userId,
+      program.durationWeeks,
+    );
+  } else {
+    let enrollment = await prisma.programEnrollment.findFirst({
+      where: { userId, program: { slug: programSlug } },
+    });
+    if (!enrollment) {
+      enrollment = await prisma.programEnrollment.create({
+        data: {
+          userId,
+          programId: program.id,
+          currentWeek: weekNumber,
+          currentDay: dayNumber,
+        },
+      });
+    } else {
+      enrollment = await prisma.programEnrollment.update({
+        where: { id: enrollment.id },
+        data: { currentWeek: weekNumber, currentDay: dayNumber },
+      });
+    }
+  }
+
+  return {
+    programSlug,
+    programName: program.name,
+    currentWeek: weekNumber,
+    currentDay: dayNumber,
+    enrollmentDayNumber: linearEnrollmentDay(weekNumber, dayNumber),
+    durationWeeks: program.durationWeeks,
+  };
+}
+
+export async function getUserProgramPositions(userId: string): Promise<ProgramPositionResult[]> {
+  const enrolls = getUserEnrollmentsAsArray(userId);
+  const out: ProgramPositionResult[] = [];
+
+  for (const en of enrolls) {
+    const program = await getProgramBySlug(en.slug);
+    if (!program) continue;
+    const cat = (program.category || "workout") as string;
+    if (cat !== "workout" && cat !== "journey" && cat !== "yoga") continue;
+
+    const { weekNumber, dayNumber } = clampEnrollmentPosition(
+      en.currentWeek,
+      en.currentDay,
+      program.durationWeeks,
+    );
+
+    out.push({
+      programSlug: en.slug,
+      programName: program.name,
+      currentWeek: weekNumber,
+      currentDay: dayNumber,
+      enrollmentDayNumber: linearEnrollmentDay(weekNumber, dayNumber),
+      durationWeeks: program.durationWeeks,
+    });
+  }
+
+  return out.sort((a, b) => {
+    if (a.programSlug === "adult") return -1;
+    if (b.programSlug === "adult") return 1;
+    return a.programName.localeCompare(b.programName);
+  });
 }
 
 /**

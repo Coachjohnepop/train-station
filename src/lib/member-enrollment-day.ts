@@ -22,6 +22,18 @@ export function linearEnrollmentDay(weekNumber: number, dayNumber: number): numb
   return (weekNumber - 1) * DAYS_PER_WEEK + dayNumber;
 }
 
+/** Clamp coach-set week/day into valid program bounds. */
+export function clampEnrollmentPosition(
+  week: number,
+  day: number,
+  durationWeeks: number,
+): EnrollmentCoordinate {
+  const maxWeeks = Math.max(1, durationWeeks);
+  const weekNumber = Math.min(Math.max(1, Math.floor(week)), maxWeeks);
+  const dayNumber = Math.min(Math.max(1, Math.floor(day)), DAYS_PER_WEEK);
+  return { weekNumber, dayNumber };
+}
+
 export function enrollmentDayKey(weekNumber: number, dayNumber: number): string {
   return `W${weekNumber}D${dayNumber}`;
 }
