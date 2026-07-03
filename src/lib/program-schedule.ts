@@ -35,7 +35,13 @@ export async function syncProgramSchedule(programId: string) {
         include: {
           days: {
             orderBy: { dayNumber: "asc" },
-            include: { workout: true },
+            include: {
+              workout: true,
+              options: {
+                orderBy: { sortOrder: "asc" },
+                include: { workout: true },
+              },
+            },
           },
         },
       },

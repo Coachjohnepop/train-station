@@ -60,48 +60,13 @@ async function main() {
   // that were built via admin + ingest. IDs are preserved so sample logs etc attach.
   const seedDataPath = path.join(process.cwd(), "prisma", "seed-data.json");
   if (fs.existsSync(seedDataPath)) {
+    const { importCatalogSnapshot } = await import("../src/lib/import-catalog-snapshot");
     const seedData = JSON.parse(fs.readFileSync(seedDataPath, "utf8"));
     console.log("[seed] Importing from seed-data.json (exercises, workouts, schedule)...");
-    for (const row of seedData.exercises || []) {
-      await prisma.exercise.upsert({ where: { id: row.id }, update: row, create: row });
-    }
-    for (const row of seedData.workouts || []) {
-      await prisma.workout.upsert({ where: { id: row.id }, update: row, create: row });
-    }
-    for (const row of seedData.workoutExercises || []) {
-      await prisma.workoutExercise.upsert({ where: { id: row.id }, update: row, create: row });
-    }
-    for (const row of seedData.programs || []) {
-      await prisma.program.upsert({ where: { id: row.id }, update: row, create: row });
-    }
-    for (const row of seedData.programWeeks || []) {
-      await prisma.programWeek.upsert({ where: { id: row.id }, update: row, create: row });
-    }
-    for (const row of seedData.programDays || []) {
-      // Strip any embedded options if present (we use the separate programDayOptions table)
-      const { options, ...dayData } = row;
-      await prisma.programDay.upsert({ where: { id: dayData.id }, update: dayData, create: dayData });
-    }
-    for (const row of seedData.programDayOptions || []) {
-      await prisma.programDayOption.upsert({ where: { id: row.id }, update: row, create: row });
-    }
-    for (const row of seedData.equipment || []) {
-      await prisma.equipment.upsert({ where: { id: row.id }, update: row, create: row });
-    }
-    for (const row of seedData.userEquipment || []) {
-      await prisma.userEquipment.upsert({ where: { id: row.id }, update: row, create: row });
-    }
-    if (seedData.liveSessions?.length) {
-      for (const row of seedData.liveSessions) {
-        await prisma.liveSession.upsert({ where: { id: row.id }, update: row, create: row });
-      }
-    }
-    if (seedData.userWeatherLogs?.length) {
-      for (const row of seedData.userWeatherLogs) {
-        await prisma.userWeatherLog.upsert({ where: { id: row.id }, update: row, create: row });
-      }
-    }
-    console.log(`[seed] Imported ${seedData.exercises?.length || 0} exercises, ${seedData.workouts?.length || 0} workouts, ${seedData.programDays?.length || 0} program days, ${seedData.programDayOptions?.length || 0} day options, ${seedData.equipment?.length || 0} equipment items.`);
+    const result = await importCatalogSnapshot(prisma, seedData, "seed-data.json");
+    console.log(
+      `[seed] Imported ${result.exercises} exercises, ${result.workouts} workouts, ${result.programDays} program days, ${result.programDayOptions} day options, ${result.equipment} equipment items.`,
+    );
   } else {
     console.log("[seed] No prisma/seed-data.json — schedule will be minimal (run export script while sqlite data exists).");
   }

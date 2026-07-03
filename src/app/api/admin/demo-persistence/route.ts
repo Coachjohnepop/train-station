@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { isDemoMode } from "@/lib/demo-exercises";
+import { isCoachCatalogDemo } from "@/lib/catalog-mode";
 import { demoPersistenceHealth } from "@/lib/demo-persistence";
 
 export async function GET() {
-  if (!isDemoMode()) {
+  if (!isCoachCatalogDemo()) {
     return NextResponse.json({
       demoMode: false,
       durable: true,

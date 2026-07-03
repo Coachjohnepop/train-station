@@ -1,18 +1,13 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { syncProgramSchedule } from "@/lib/program-schedule";
+import { isCoachCatalogDemo } from "@/lib/catalog-mode";
 import { getDemoSeed } from "@/lib/demo-seed-store";
-
-function isDemoMode() {
-  const url = process.env.DATABASE_URL ?? "";
-  return !url || url.includes("dummy.supabase") || url.includes("dummy");
-}
+import { getSyncedProgramFromDb } from "@/lib/program-catalog-db";
 
 type Params = { params: Promise<{ slug: string }> };
 
 export async function POST(_request: Request, { params }: Params) {
   const { slug } = await params;
-  if (isDemoMode()) {
+  if (isCoachCatalogDemo()) {
     const data = await getDemoSeed({ preferFresh: true });
     const prog = (data.programs || []).find((p: any) => p.slug === slug);
     if (!prog) {
@@ -66,11 +61,9 @@ export async function POST(_request: Request, { params }: Params) {
     });
   }
 
-  const program = await prisma.program.findUnique({ where: { slug } });
-  if (!program) {
+  const synced = await getSyncedProgramFromDb(slug);
+  if (!synced) {
     return NextResponse.json({ detail: "Program not found" }, { status: 404 });
   }
-
-  const synced = await syncProgramSchedule(program.id);
   return NextResponse.json(synced);
 }

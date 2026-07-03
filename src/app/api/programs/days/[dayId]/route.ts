@@ -218,6 +218,25 @@ export async function PATCH(request: Request, { params }: Params) {
             workoutId: parsed.data.options!.length > 0 ? parsed.data.options![0].workoutId : null,
             ...(parsed.data.videoUrl !== undefined ? { videoUrl: parsed.data.videoUrl } : {}),
             ...(parsed.data.notes !== undefined ? { notes: parsed.data.notes } : {}),
+            ...(parsed.data.calendarDate !== undefined
+              ? { calendarDate: parsed.data.calendarDate }
+              : {}),
+            ...(parsed.data.defaultSets !== undefined
+              ? { defaultSets: parsed.data.defaultSets }
+              : {}),
+            ...(parsed.data.defaultReps !== undefined
+              ? { defaultReps: parsed.data.defaultReps }
+              : {}),
+            ...(parsed.data.defaultRestSec !== undefined
+              ? { defaultRestSec: parsed.data.defaultRestSec }
+              : {}),
+            ...(parsed.data.publishedAt !== undefined
+              ? {
+                  publishedAt: parsed.data.publishedAt
+                    ? new Date(parsed.data.publishedAt)
+                    : null,
+                }
+              : {}),
           },
           include: {
             workout: true,
@@ -251,7 +270,17 @@ export async function PATCH(request: Request, { params }: Params) {
     }
     if (parsed.data.videoUrl !== undefined) dataUpdate.videoUrl = parsed.data.videoUrl;
     if (parsed.data.notes !== undefined) dataUpdate.notes = parsed.data.notes;
-    // Day prescription + calendar fields are stored in demo seed JSON; Prisma columns TBD.
+    if (parsed.data.calendarDate !== undefined) dataUpdate.calendarDate = parsed.data.calendarDate;
+    if (parsed.data.defaultSets !== undefined) dataUpdate.defaultSets = parsed.data.defaultSets;
+    if (parsed.data.defaultReps !== undefined) dataUpdate.defaultReps = parsed.data.defaultReps;
+    if (parsed.data.defaultRestSec !== undefined) {
+      dataUpdate.defaultRestSec = parsed.data.defaultRestSec;
+    }
+    if (parsed.data.publishedAt !== undefined) {
+      dataUpdate.publishedAt = parsed.data.publishedAt
+        ? new Date(parsed.data.publishedAt)
+        : null;
+    }
 
     if (Object.keys(dataUpdate).length > 0) {
       const day = await prisma.programDay.update({

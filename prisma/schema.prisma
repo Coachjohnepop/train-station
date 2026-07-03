@@ -166,6 +166,7 @@ model Program {
   sortOrder          Int                 @default(0)
   published          Boolean             @default(true)
   coverUrl           String?
+  startDate          String?             // YYYY-MM-DD program calendar anchor
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   weeks              ProgramWeek[]
@@ -183,15 +184,20 @@ model ProgramWeek {
 }
 
 model ProgramDay {
-  id        String             @id @default(cuid())
-  weekId    String
-  dayNumber Int
-  workoutId String?            // legacy / default option
-  notes     String?
-  videoUrl  String?
-  week      ProgramWeek        @relation(fields: [weekId], references: [id], onDelete: Cascade)
-  workout   Workout?           @relation(fields: [workoutId], references: [id])
-  options   ProgramDayOption[]
+  id             String             @id @default(cuid())
+  weekId         String
+  dayNumber      Int
+  workoutId      String?            // legacy / default option
+  notes          String?
+  videoUrl       String?
+  calendarDate   String?            // YYYY-MM-DD
+  defaultSets    Int?
+  defaultReps    String?
+  defaultRestSec Int?
+  publishedAt    DateTime?
+  week           ProgramWeek        @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  workout        Workout?           @relation(fields: [workoutId], references: [id])
+  options        ProgramDayOption[]
 
   @@unique([weekId, dayNumber])
 }

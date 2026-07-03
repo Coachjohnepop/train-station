@@ -5,7 +5,7 @@ import { loadProgramContentAlert } from "@/lib/coach-content-alerts";
 import { getProgramBySlug } from "@/lib/program-data";
 import { syncProgramSchedule } from "@/lib/program-schedule";
 import { prisma } from "@/lib/prisma";
-import { isDemoMode } from "@/lib/demo-enrollments";
+import { isCoachCatalogDemo } from "@/lib/catalog-mode";
 import { getDemoSeed } from "@/lib/demo-seed-store";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export default async function ProgramAdminDetailPage({ params }: Props) {
 
   let workouts: { id: string; name: string }[] = [];
 
-  if (isDemoMode()) {
+  if (isCoachCatalogDemo()) {
     // In pure demo mode (DATABASE_URL contains "dummy") we load everything from seed-data.json.
     // No real Prisma connection is possible/necessary.
     try {

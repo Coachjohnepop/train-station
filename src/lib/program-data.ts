@@ -1,12 +1,17 @@
+import { isCoachCatalogDemo } from "@/lib/catalog-mode";
 import { applyOverrideToDay, hydrateScheduleOverrides } from "@/lib/demo-schedule-overrides";
 import { getDemoSeed } from "@/lib/demo-seed-store";
+import {
+  getProgramBySlugFromDb,
+  listProgramsFromDb,
+} from "@/lib/program-catalog-db";
 import { applyCatalogMetadata, normalizeProgramSlug } from "@/lib/programs";
 
 function freshSeedOpts() {
   return { preferFresh: true as const };
 }
 
-export async function listPrograms() {
+async function listProgramsFromDemo() {
   await hydrateScheduleOverrides();
   const data = await getDemoSeed(freshSeedOpts());
   const programDayOptionsByDayId = (data.programDayOptions || []).reduce((acc: any, o: any) => {
@@ -45,7 +50,7 @@ export async function listPrograms() {
   return progs.sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0));
 }
 
-export async function getProgramBySlug(slug: string) {
+async function getProgramBySlugFromDemo(slug: string) {
   await hydrateScheduleOverrides();
   const data = await getDemoSeed(freshSeedOpts());
   const target = normalizeProgramSlug(slug);
@@ -54,7 +59,7 @@ export async function getProgramBySlug(slug: string) {
   );
   if (!p) return null;
   const workoutsById: Record<string, any> = Object.fromEntries(
-    (data.workouts || []).map((w: any) => [w.id, w])
+    (data.workouts || []).map((w: any) => [w.id, w]),
   );
   const programDayOptionsByDayId = (data.programDayOptions || []).reduce((acc: any, o: any) => {
     if (!acc[o.dayId]) acc[o.dayId] = [];
@@ -96,4 +101,18 @@ export async function getProgramBySlug(slug: string) {
     weeks,
     _count: { enrollments: 1 },
   });
+}
+
+export async function listPrograms() {
+  if (isCoachCatalogDemo()) {
+    return listProgramsFromDemo();
+  }
+  return listProgramsFromDb();
+}
+
+export async function getProgramBySlug(slug: string) {
+  if (isCoachCatalogDemo()) {
+    return getProgramBySlugFromDemo(slug);
+  }
+  return getProgramBySlugFromDb(slug);
 }
