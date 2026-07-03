@@ -10,16 +10,22 @@ import { BG_MUSIC_OVERLAY_EVENT } from "@/lib/background-music-control";
  * Mounted once in the root layout so it survives client-side navigation —
  * the song keeps playing uninterrupted as visitors move between pages.
  *
- * Fast-start strategy: browsers block *audible* autoplay until a user gesture,
- * but they DO allow *muted* autoplay. So we start the track muted and playing
- * on load (it buffers silently in the background); on the visitor's first
- * interaction we simply unmute, so sound comes in instantly with no load lag.
- * A floating toggle turns it on/off, and that choice is remembered across
- * full page reloads via localStorage.
+ * Fast-start strategy: try audible autoplay first; if the browser blocks it,
+ * fall back to muted buffering until a real activation (click/tap/key — scroll
+ * does not count). A floating toggle turns music on/off, remembered in
+ * localStorage. First-time visitors see a guided hint pointing at the toggle.
  */
 
 const SRC = "/background-music.mp3";
 const OFF_KEY = "ts-bg-music-muted"; // "1" = visitor turned music off
+const HINT_KEY = "ts-bg-music-hint-seen";
+
+/** Browsers only honor audio from real activation — scroll does not count. */
+const ACTIVATION_EVENTS: (keyof DocumentEventMap)[] = [
+  "pointerdown",
+  "keydown",
+  "touchstart",
+];
 
 /** Coach admin landing — keep the welcome track; deeper admin pages stay quiet. */
 const ADMIN_MUSIC_LANDING = new Set(["/admin", "/admin/day"]);
@@ -36,9 +42,31 @@ export default function BackgroundMusic() {
   // `off` = the visitor's on/off choice (not the same as the silent-buffering
   // mute used purely for fast start). Default on; reconciled with storage below.
   const [off, setOff] = useState(false);
+  const [showHint, setShowHint] = useState(false);
 
-  // Start muted-and-playing on load so the file buffers immediately, and
-  // restore a prior "off" choice.
+  const dismissHint = () => {
+    setShowHint(false);
+    window.localStorage.setItem(HINT_KEY, "1");
+  };
+
+  const resumeAudible = (audio: HTMLAudioElement) => {
+    audio.muted = false;
+    return audio.play().catch(() => {});
+  };
+
+  const startMusic = async (audio: HTMLAudioElement) => {
+    audio.muted = false;
+    try {
+      await audio.play();
+      return;
+    } catch {
+      // Fall back to muted autoplay so the track buffers until a real gesture.
+      audio.muted = true;
+      await audio.play().catch(() => {});
+    }
+  };
+
+  // Try audible autoplay on load; fall back to muted buffering. Restore prior off.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -46,48 +74,49 @@ export default function BackgroundMusic() {
     const wasOff = window.localStorage.getItem(OFF_KEY) === "1";
     if (wasOff) {
       setOff(true);
-      return; // visitor turned it off before — stay silent.
+      return;
     }
 
-    // Buffer + play silently right away (allowed because it's muted).
-    audio.muted = true;
-    audio.play().catch(() => {
-      // If even muted autoplay is blocked, the first-interaction handler and
-      // the toggle button are the fallbacks.
-    });
+    void startMusic(audio);
+
+    const hintSeen = window.localStorage.getItem(HINT_KEY) === "1";
+    if (!hintSeen) setShowHint(true);
   }, []);
 
-  // On the first user gesture, unmute so audible sound starts instantly.
+  // Unmute on the first real user activation (click/tap/key — not scroll).
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    let done = false;
-    const onFirstGesture = () => {
-      if (done) return;
-      done = true;
-      if (window.localStorage.getItem(OFF_KEY) !== "1") {
-        audio.muted = false;
-        // Ensure it's actually rolling (covers the blocked-muted-autoplay case).
-        audio.play().catch(() => {});
-      }
-      remove();
+    const onActivation = () => {
+      if (window.localStorage.getItem(OFF_KEY) === "1") return;
+      audio.muted = false;
+      void audio
+        .play()
+        .then(() => {
+          dismissHint();
+          remove();
+        })
+        .catch(() => {});
     };
 
-    const events: (keyof DocumentEventMap)[] = [
-      "pointerdown",
-      "keydown",
-      "touchstart",
-      "scroll",
-    ];
     const remove = () =>
-      events.forEach((e) => window.removeEventListener(e, onFirstGesture));
-    events.forEach((e) =>
-      window.addEventListener(e, onFirstGesture, { passive: true })
+      ACTIVATION_EVENTS.forEach((e) =>
+        window.removeEventListener(e, onActivation)
+      );
+    ACTIVATION_EVENTS.forEach((e) =>
+      window.addEventListener(e, onActivation, { passive: true })
     );
 
     return remove;
   }, []);
+
+  // Auto-dismiss the guided hint after a few seconds.
+  useEffect(() => {
+    if (!showHint) return;
+    const timer = window.setTimeout(dismissHint, 10_000);
+    return () => window.clearTimeout(timer);
+  }, [showHint]);
 
   // Video overlays (free-ticket prank, etc.) duck the site music.
   useEffect(() => {
@@ -101,8 +130,7 @@ export default function BackgroundMusic() {
         return;
       }
       if (!off && window.localStorage.getItem(OFF_KEY) !== "1") {
-        audio.muted = false;
-        audio.play().catch(() => {});
+        void resumeAudible(audio);
       }
     };
     window.addEventListener(BG_MUSIC_OVERLAY_EVENT, onOverlay);
@@ -118,22 +146,21 @@ export default function BackgroundMusic() {
       return;
     }
     if (!off && window.localStorage.getItem(OFF_KEY) !== "1") {
-      audio.muted = false;
-      audio.play().catch(() => {});
+      void resumeAudible(audio);
     }
   }, [adminSubPage, off]);
 
   const toggle = () => {
     const audio = audioRef.current;
     if (!audio) return;
+    dismissHint();
     const next = !off;
     setOff(next);
     window.localStorage.setItem(OFF_KEY, next ? "1" : "0");
     if (next) {
       audio.pause();
     } else {
-      audio.muted = false;
-      audio.play().catch(() => {});
+      void resumeAudible(audio);
     }
   };
 
@@ -143,12 +170,8 @@ export default function BackgroundMusic() {
     <>
       <audio ref={audioRef} src={SRC} loop preload="auto" />
       {!adminSubPage ? (
-        <button
-          type="button"
-          onClick={toggle}
-          aria-label={off ? "Unmute background music" : "Mute background music"}
-          title={off ? "Play music" : "Mute music"}
-          className={`bg-music-toggle fixed z-50 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_90%,transparent)] text-[var(--text)] shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.985] ${
+        <div
+          className={`bg-music-control-cluster fixed z-50 flex items-end gap-2 sm:gap-3 ${
             onAdminLanding ? "bottom-20 xl:bottom-6" : "bottom-6"
           }`}
           style={{
@@ -158,8 +181,26 @@ export default function BackgroundMusic() {
               : "max(1.5rem, env(safe-area-inset-bottom))",
           }}
         >
-          {off ? <SpeakerOffIcon /> : <SpeakerOnIcon />}
-        </button>
+          {showHint && !off ? (
+            <div className="bg-music-guide" role="status" aria-live="polite">
+              <p className="bg-music-guide-bubble">
+                Click to mute — or just enjoy as you surf.
+              </p>
+              <span className="bg-music-guide-pointer" aria-hidden>
+                👉
+              </span>
+            </div>
+          ) : null}
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label={off ? "Unmute background music" : "Mute background music"}
+            title={off ? "Play music" : "Mute music"}
+            className="bg-music-toggle inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_90%,transparent)] text-[var(--text)] shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.985]"
+          >
+            {off ? <SpeakerOffIcon /> : <SpeakerOnIcon />}
+          </button>
+        </div>
       ) : null}
     </>
   );

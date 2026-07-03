@@ -4,32 +4,20 @@ import Link from "next/link";
 import OAuthButtons from "@/components/OAuthButtons";
 
 type Props = {
-  coachRedirect?: string;
   className?: string;
 };
 
-/** Hero / landing sign-in: Google first, then Face ID / Touch ID via login page. */
-export default function LandingSignInRow({
-  coachRedirect = "/admin/day",
-  className = "",
-}: Props) {
+/** Hero / landing sign-in: members only — Google, then Face ID / Touch ID via /login. */
+export default function LandingSignInRow({ className = "" }: Props) {
   return (
     <div className={`w-full max-w-sm space-y-3 ${className}`}>
       <OAuthButtons mode="login" className="[&_a]:rounded-full [&_a]:border-white/25 [&_a]:bg-white/95 [&_a]:text-[#1a1028] [&_a]:shadow-lg [&_a]:backdrop-blur" />
-      <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
-        <Link
-          href="/login"
-          className="inline-flex h-11 items-center justify-center rounded-full border border-white/35 px-6 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/10"
-        >
-          Face ID / Touch ID sign in
-        </Link>
-        <Link
-          href={`/login?redirect=${encodeURIComponent(coachRedirect)}`}
-          className="inline-flex h-11 items-center justify-center rounded-full border border-white/25 px-6 text-sm font-semibold text-white/85 backdrop-blur transition hover:bg-white/10"
-        >
-          Coach email sign in
-        </Link>
-      </div>
+      <Link
+        href="/login"
+        className="inline-flex h-11 w-full items-center justify-center rounded-full border border-white/35 px-6 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/10"
+      >
+        Member sign in
+      </Link>
       <p className="text-center text-[10px] text-white/45">
         Google once, then use Face ID or Touch ID on this device next time.
       </p>

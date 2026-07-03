@@ -175,7 +175,7 @@ export default function LandingNav({
           {variant === "public" ? (
             <>
               <Link href="/login" className="landing-nav__link hidden sm:inline-flex">
-                Sign in
+                Member sign in
               </Link>
               <Link href="/signup?plan=explorer" className="btn-primary hidden px-4 py-2 text-xs sm:inline-flex">
                 Get started
@@ -256,7 +256,7 @@ export default function LandingNav({
               </Link>
             ))}
             <Link href="/login" className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]">
-              Sign in
+              Member sign in
             </Link>
           </div>
         </div>
