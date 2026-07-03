@@ -148,6 +148,7 @@ export default function MemberWorkoutConsole({
   const [restSecondsLeft, setRestSecondsLeft] = useState(0);
   const [coachExpandedBlockId, setCoachExpandedBlockId] = useState<string | null>(null);
   const restHornPlayedRef = useRef(false);
+  const scrollToExerciseIdRef = useRef<string | null>(null);
 
   const LIVE_POLL_MS = coachFloorMode ? 900 : 200;
   const liveSessionScope = progressMode === "live" && !!liveSyncUserId && !reviewMode;
@@ -601,26 +602,33 @@ export default function MemberWorkoutConsole({
     setVideoModalBlockId(blockId);
   }, []);
 
+  const advanceToNextExercise = useCallback(
+    (blockId: string, finished: Set<string>) => {
+      const idx = workout.exercises.findIndex((e) => e.id === blockId);
+      const upcoming = workout.exercises.slice(idx + 1).find((e) => !finished.has(e.id));
+      if (!upcoming) return;
+      if (!coachFloorMode && !instructorName && !reviewMode) {
+        scrollToExerciseIdRef.current = upcoming.id;
+      }
+      setActiveId(upcoming.id);
+      stateRef.current = { ...stateRef.current, activeId: upcoming.id };
+    },
+    [workout.exercises, coachFloorMode, instructorName, reviewMode],
+  );
+
   const markExerciseFinished = useCallback(
     (blockId: string) => {
       setVideoModalBlockId((openId) => (openId === blockId ? null : openId));
       setFinishedExercises((prev) => {
         const next = new Set(prev);
         next.add(blockId);
-        const idx = workout.exercises.findIndex((e) => e.id === blockId);
-        const upcoming = workout.exercises
-          .slice(idx + 1)
-          .find((e) => !next.has(e.id));
-        if (upcoming) {
-          setActiveId(upcoming.id);
-          stateRef.current = { ...stateRef.current, activeId: upcoming.id };
-        }
+        advanceToNextExercise(blockId, next);
         stateRef.current = { ...stateRef.current, finishedExercises: next };
         return next;
       });
       queueLiveSave(true);
     },
-    [workout.exercises, queueLiveSave],
+    [advanceToNextExercise, queueLiveSave],
   );
 
   const reopenExercise = useCallback(
@@ -662,6 +670,8 @@ export default function MemberWorkoutConsole({
     setFinishedExercises((prev) => {
       const next = new Set(prev);
       for (const id of toFinish) next.add(id);
+      const lastFinished = toFinish[toFinish.length - 1];
+      if (lastFinished) advanceToNextExercise(lastFinished, next);
       stateRef.current = { ...stateRef.current, finishedExercises: next };
       return next;
     });
@@ -673,6 +683,7 @@ export default function MemberWorkoutConsole({
     reviewMode,
     instructorName,
     queueLiveSave,
+    advanceToNextExercise,
   ]);
 
   const markWorkoutFinished = useCallback(() => {
@@ -691,6 +702,27 @@ export default function MemberWorkoutConsole({
   useEffect(() => {
     if (allExercisesFinished) setFinishedListExpanded(false);
   }, [allExercisesFinished]);
+
+  // Member browser: one-time smooth scroll when advancing to the next exercise.
+  useEffect(() => {
+    if (coachFloorMode || instructorName || reviewMode) return;
+    const targetId = scrollToExerciseIdRef.current;
+    if (!targetId || activeId !== targetId) return;
+    scrollToExerciseIdRef.current = null;
+
+    let inner = 0;
+    const outer = window.requestAnimationFrame(() => {
+      inner = window.requestAnimationFrame(() => {
+        const el = document.getElementById(`member-exercise-${targetId}`);
+        el?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(outer);
+      window.cancelAnimationFrame(inner);
+    };
+  }, [activeId, coachFloorMode, instructorName, reviewMode]);
 
   const handleLogComplete = useCallback(async () => {
     if (logResult || isLogging) return;
@@ -1101,7 +1133,11 @@ export default function MemberWorkoutConsole({
             : doneForBlock.size >= block.setCount;
 
           return (
-            <section key={block.id} className="relative">
+            <section
+              key={block.id}
+              id={`member-exercise-${block.id}`}
+              className="member-exercise-anchor relative"
+            >
               {block.past && (
                 <div className="member-silhouette" aria-hidden="true">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">

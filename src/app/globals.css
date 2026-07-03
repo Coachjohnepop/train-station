@@ -559,6 +559,10 @@ table.data th {
   pointer-events: none;
 }
 
+.member-exercise-anchor {
+  scroll-margin-top: 4.5rem;
+}
+
 .member-active-card {
   position: relative;
   z-index: 1;
