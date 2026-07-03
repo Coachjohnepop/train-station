@@ -13,6 +13,7 @@
     "db:seed": "npx tsx prisma/seed.ts",
     "db:export-seed": "npx tsx prisma/export-seed-data.ts",
     "db:import-catalog": "npx tsx prisma/import-catalog-from-blob.ts",
+    "go-prod:catalog": "node scripts/go-prod-catalog.mjs",
     "db:studio": "prisma studio",
     "test:s1": "node scripts/s1-exercise-persistence-test.mjs",
     "test:s1b": "node scripts/s1b-workout-persistence-test.mjs",
