@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/mart-rollup",
+      "schedule": "0 7 * * *"
+    }
+  ]
+}
