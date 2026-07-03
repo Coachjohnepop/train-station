@@ -8,10 +8,13 @@
  *   PROGRAM_SLUG=adult node scripts/s2-program-builder-test.mjs
  */
 
+import { createCoachClient } from "./lib/coach-auth.mjs";
+
 const BASE = process.env.BASE_URL || "https://www.thetrainstation.co";
 const PROGRAM_SLUG = process.env.PROGRAM_SLUG || "adult";
 const MARKER = `S2-${Date.now()}`;
 
+const { req, loginCoach } = createCoachClient(BASE);
 const results = [];
 
 function pass(name, detail = "") {
@@ -27,28 +30,6 @@ function fail(name, detail = "") {
 function bust(path) {
   const sep = path.includes("?") ? "&" : "?";
   return `${path}${sep}_t=${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
-async function req(path, opts = {}) {
-  const url = path.startsWith("http") ? path : `${BASE}${path}`;
-  const headers = {
-    "Cache-Control": "no-cache",
-    Pragma: "no-cache",
-    ...(opts.headers || {}),
-  };
-  if (opts.json) {
-    headers["Content-Type"] = "application/json";
-    opts.body = JSON.stringify(opts.json);
-  }
-  const res = await fetch(url, { ...opts, headers, cache: "no-store" });
-  let body = null;
-  const text = await res.text();
-  try {
-    body = text ? JSON.parse(text) : null;
-  } catch {
-    body = text;
-  }
-  return { res, body, text };
 }
 
 async function waitForWorkoutItemCount(workoutId, expectedMin, label, maxMs = 35_000) {
@@ -77,6 +58,10 @@ function monday(week) {
 
 async function main() {
   console.log(`\nS2 program builder test\nBASE: ${BASE}\nPROGRAM: ${PROGRAM_SLUG}\n`);
+
+  if (!(await loginCoach({ onPass: pass, onFail: fail }))) {
+    process.exit(1);
+  }
 
   const sync = await req(`/api/programs/${PROGRAM_SLUG}/sync`, { method: "POST" });
   if (!sync.res.ok) {

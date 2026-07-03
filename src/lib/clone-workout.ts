@@ -1,15 +1,11 @@
 import { randomUUID } from "crypto";
+import { isCoachCatalogDemo } from "@/lib/catalog-mode";
 import { prisma } from "@/lib/prisma";
 import { hydrateDemoExercises, loadDemoExercises } from "@/lib/demo-exercises";
 import { BLOB_TOKEN } from "@/lib/demo-json-blob";
 import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
 import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { resolveDemoExercise } from "@/lib/demo-workout-items";
-
-export function isDemoMode(): boolean {
-  const url = process.env.DATABASE_URL ?? "";
-  return !url || url.includes("dummy.supabase") || url.includes("dummy");
-}
 
 function newDemoWorkoutId(): string {
   return `new-w-${Date.now()}-${randomUUID().slice(0, 8)}`;
@@ -30,7 +26,7 @@ export async function cloneWorkout(
   sourceWorkoutId: string,
   name?: string,
 ): Promise<ClonedWorkout> {
-  if (isDemoMode()) {
+  if (isCoachCatalogDemo()) {
     await hydrateDemoExercises({ preferFresh: true });
     const exList = loadDemoExercises();
 

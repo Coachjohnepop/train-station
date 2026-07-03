@@ -4,11 +4,12 @@
  * Usage: BASE_URL=https://www.thetrainstation.co npm run test:s4
  */
 
+import { createCoachClient } from "./lib/coach-auth.mjs";
+
 const BASE = process.env.BASE_URL || "https://www.thetrainstation.co";
-const COACH_EMAIL = process.env.COACH_EMAIL || "jeremy@thetrainstation.co";
 const MARKER = `S4-${Date.now()}`;
 
-let cookies = "";
+const { req, loginCoach } = createCoachClient(BASE);
 const results = [];
 
 function pass(n, d = "") {
@@ -20,53 +21,12 @@ function fail(n, d = "") {
   console.log(`❌ ${n}${d ? ` — ${d}` : ""}`);
 }
 
-async function req(path, opts = {}) {
-  const url = path.startsWith("http") ? path : `${BASE}${path}`;
-  const headers = { "Cache-Control": "no-cache", ...(opts.headers || {}) };
-  if (cookies) headers.Cookie = cookies;
-  if (opts.json) {
-    headers["Content-Type"] = "application/json";
-    opts.body = JSON.stringify(opts.json);
-  }
-  const res = await fetch(url, { ...opts, headers, cache: "no-store" });
-  const setCookie = res.headers.getSetCookie?.() || [];
-  if (setCookie.length) {
-    const jar = Object.fromEntries(
-      cookies
-        .split("; ")
-        .filter(Boolean)
-        .map((p) => p.split("="))
-        .map(([k, ...v]) => [k, v.join("=")]),
-    );
-    for (const c of setCookie) {
-      const [kv] = c.split(";");
-      const [k, ...v] = kv.split("=");
-      jar[k] = v.join("=");
-    }
-    cookies = Object.entries(jar).map(([k, v]) => `${k}=${v}`).join("; ");
-  }
-  const text = await res.text();
-  let body = null;
-  try {
-    body = text ? JSON.parse(text) : null;
-  } catch {
-    body = text;
-  }
-  return { res, body, text };
-}
-
-async function coachLogin() {
-  const { res, body } = await req("/api/auth/login", {
-    method: "POST",
-    json: { email: COACH_EMAIL, password: "", redirect: "/admin" },
-  });
-  if (res.ok && body?.user?.role) pass("Coach login", COACH_EMAIL);
-  else fail("Coach login", `${res.status}`);
-  return res.ok;
-}
-
 async function main() {
   console.log(`\nS4 bulk entry test\nBASE: ${BASE}\n`);
+
+  if (!(await loginCoach({ onPass: pass, onFail: fail }))) {
+    process.exit(1);
+  }
 
   const weekText =
     "Day 1 Gym: Day 1 Upper Body Workout (Gym)\nDay 2 Gym: Day 2 Lower Body Workout (Gym)";
@@ -104,7 +64,6 @@ async function main() {
   if (!res.ok) pass("Reject unmatched workout names");
   else fail("Reject unmatched workout names");
 
-  await coachLogin();
   const out = await req("/api/admin/export-seed");
   res = out.res;
   let snapshot = null;

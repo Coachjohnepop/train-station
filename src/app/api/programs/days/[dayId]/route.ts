@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isCoachCatalogDemo } from "@/lib/catalog-mode";
 import { assignWorkoutToDay } from "@/lib/program-schedule";
 import { prisma } from "@/lib/prisma";
 import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
 import { BLOB_TOKEN } from "@/lib/demo-json-blob";
 import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { ensureDemoWorkoutInSeed } from "@/lib/demo-workout-items";
-
-function isDemoMode() {
-  const url = process.env.DATABASE_URL ?? "";
-  return !url || url.includes("dummy.supabase") || url.includes("dummy");
-}
 
 const patchSchema = z.object({
   workoutId: z.string().nullable().optional(),
@@ -62,7 +58,7 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
   }
 
-  if (isDemoMode()) {
+  if (isCoachCatalogDemo()) {
     let notFound = false;
     let expectedWorkoutIds: string[] = [];
     const { blobSaved, data: persistedData } = await mutateDemoSeed((data) => {

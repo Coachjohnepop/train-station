@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
+import { isCoachCatalogDemo } from "@/lib/catalog-mode";
 import {
   hydrateJsonStore,
   persistJsonStore,
@@ -35,8 +36,7 @@ function mergeExerciseCatalogs(primary: any[], secondary: any[]): any[] {
 }
 
 export function isDemoMode(): boolean {
-  const url = process.env.DATABASE_URL ?? "";
-  return !url || url.includes("dummy.supabase") || url.includes("dummy");
+  return isCoachCatalogDemo();
 }
 
 export async function hydrateDemoExercises(opts?: { preferFresh?: boolean }): Promise<any[]> {

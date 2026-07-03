@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isCoachCatalogDemo } from "@/lib/catalog-mode";
 import { prisma } from "@/lib/prisma";
 import { hydrateDemoExercises, loadDemoExercises } from "@/lib/demo-exercises";
 import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
@@ -10,11 +11,6 @@ import {
   buildDemoWorkoutExerciseItems,
   findDemoWorkoutRecord,
 } from "@/lib/demo-workout-items";
-
-function isDemoMode() {
-  const url = process.env.DATABASE_URL ?? "";
-  return !url || url.includes("dummy.supabase") || url.includes("dummy");
-}
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -28,7 +24,7 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
-  if (isDemoMode()) {
+  if (isCoachCatalogDemo()) {
     const data = await getDemoSeed({ preferFresh: true });
     await hydrateDemoExercises({ preferFresh: true });
     const exList = loadDemoExercises();
@@ -65,7 +61,7 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
   }
 
-  if (isDemoMode()) {
+  if (isCoachCatalogDemo()) {
     const expectedName =
       parsed.data.name !== undefined ? parsed.data.name.trim() : undefined;
     const expectedDescription =

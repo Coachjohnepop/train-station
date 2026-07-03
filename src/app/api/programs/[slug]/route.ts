@@ -1,14 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isCoachCatalogDemo } from "@/lib/catalog-mode";
 import { prisma } from "@/lib/prisma";
 import { mutateDemoSeed } from "@/lib/demo-seed-store";
 import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { normalizeProgramSlug } from "@/lib/programs";
-
-function isDemoMode() {
-  const url = process.env.DATABASE_URL ?? "";
-  return !url || url.includes("dummy.supabase") || url.includes("dummy");
-}
 
 const patchSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -29,7 +25,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
   const trimmedName = parsed.data.name.trim();
 
-  if (isDemoMode()) {
+  if (isCoachCatalogDemo()) {
     let notFound = false;
     let updated: Record<string, unknown> | null = null;
     const { blobSaved } = await mutateDemoSeed((data) => {

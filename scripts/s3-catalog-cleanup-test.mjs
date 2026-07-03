@@ -7,7 +7,10 @@
  *   BASE_URL=https://www.thetrainstation.co npm run test:s3
  */
 
+import { createCoachClient } from "./lib/coach-auth.mjs";
+
 const BASE = process.env.BASE_URL || "https://www.thetrainstation.co";
+const { req, loginCoach } = createCoachClient(BASE);
 
 const LIVE_NAMES = [
   "Adult Strength Conditioning",
@@ -44,28 +47,6 @@ function bust(path) {
   return `${path}${sep}_t=${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-async function req(path, opts = {}) {
-  const url = path.startsWith("http") ? path : `${BASE}${path}`;
-  const headers = {
-    "Cache-Control": "no-cache",
-    Pragma: "no-cache",
-    ...(opts.headers || {}),
-  };
-  if (opts.json) {
-    headers["Content-Type"] = "application/json";
-    opts.body = JSON.stringify(opts.json);
-  }
-  const res = await fetch(url, { ...opts, headers, cache: "no-store" });
-  let body = null;
-  const text = await res.text();
-  try {
-    body = text ? JSON.parse(text) : null;
-  } catch {
-    body = text;
-  }
-  return { res, body, text };
-}
-
 function isQaWorkoutName(name) {
   const n = String(name || "").toLowerCase();
   return /\bqa\b/.test(n) || /\bqa[-_]/.test(n) || /\bsmoke\b/.test(n);
@@ -73,6 +54,10 @@ function isQaWorkoutName(name) {
 
 async function main() {
   console.log(`\nS3 catalog cleanup test\nBASE: ${BASE}\n`);
+
+  if (!(await loginCoach({ onPass: pass, onFail: fail }))) {
+    process.exit(1);
+  }
 
   const { res, body } = await req(bust("/api/programs"));
   if (!res.ok || !Array.isArray(body)) {

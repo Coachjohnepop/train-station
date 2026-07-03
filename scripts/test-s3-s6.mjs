@@ -4,10 +4,10 @@
  * Usage: BASE_URL=https://www.thetrainstation.co npm run test:s3-s6
  */
 
-const BASE = process.env.BASE_URL || "https://www.thetrainstation.co";
-const COACH_EMAIL = process.env.COACH_EMAIL || "jeremy@thetrainstation.co";
+import { createCoachClient } from "./lib/coach-auth.mjs";
 
-let cookies = "";
+const BASE = process.env.BASE_URL || "https://www.thetrainstation.co";
+const { req, loginCoach } = createCoachClient(BASE);
 const results = [];
 
 function ok(l) {
@@ -19,42 +19,12 @@ function bad(l, d = "") {
   console.log(`❌ ${l}${d ? ` — ${d}` : ""}`);
 }
 
-async function req(path, opts = {}) {
-  const url = path.startsWith("http") ? path : `${BASE}${path}`;
-  const headers = { "Cache-Control": "no-cache", ...(opts.headers || {}) };
-  if (cookies) headers.Cookie = cookies;
-  if (opts.json) {
-    headers["Content-Type"] = "application/json";
-    opts.body = JSON.stringify(opts.json);
-  }
-  const res = await fetch(url, { ...opts, headers, cache: "no-store" });
-  for (const c of res.headers.getSetCookie?.() || []) {
-    const jar = Object.fromEntries(
-      cookies
-        .split("; ")
-        .filter(Boolean)
-        .map((p) => p.split("="))
-        .map(([k, ...v]) => [k, v.join("=")]),
-    );
-    const [kv] = c.split(";");
-    const [k, ...v] = kv.split("=");
-    jar[k] = v.join("=");
-    cookies = Object.entries(jar)
-      .map(([k, v]) => `${k}=${v}`)
-      .join("; ");
-  }
-  const text = await res.text();
-  let body = null;
-  try {
-    body = text ? JSON.parse(text) : null;
-  } catch {
-    body = text;
-  }
-  return { res, body, text };
-}
-
 async function main() {
   console.log(`S3–S6 @ ${BASE}\n`);
+
+  if (!(await loginCoach({ onPass: ok, onFail: bad }))) {
+    process.exit(1);
+  }
 
   // S3
   const { body: programs } = await req(`/api/programs?_t=${Date.now()}`);
@@ -96,10 +66,6 @@ async function main() {
   else bad("S5 coming-soon enroll blocked", res.status);
 
   // S4 export
-  await req("/api/auth/login", {
-    method: "POST",
-    json: { email: COACH_EMAIL, password: "", redirect: "/admin" },
-  });
   const out = await req("/api/admin/export-seed");
   try {
     const snap = JSON.parse(out.text);

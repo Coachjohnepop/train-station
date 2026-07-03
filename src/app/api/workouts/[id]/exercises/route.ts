@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isCoachCatalogDemo } from "@/lib/catalog-mode";
 import { prisma } from "@/lib/prisma";
 import { workoutPrescriptionSchema } from "@/lib/exercise-schema";
 import { hydrateDemoExercises, loadDemoExercises } from "@/lib/demo-exercises";
@@ -8,11 +9,6 @@ import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
 import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { requireStaff } from "@/lib/api-auth";
 import { ensureDemoWorkoutInSeed, resolveDemoExercise } from "@/lib/demo-workout-items";
-
-function isDemoMode() {
-  const url = process.env.DATABASE_URL ?? "";
-  return !url || url.includes("dummy.supabase") || url.includes("dummy");
-}
 
 const addSchema = workoutPrescriptionSchema.extend({
   exerciseId: z.string().min(1),
@@ -43,7 +39,7 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
   }
 
-  if (isDemoMode()) {
+  if (isCoachCatalogDemo()) {
     await hydrateDemoExercises({ preferFresh: true });
     const exList = loadDemoExercises();
     const ex = exList.find((e: any) => e.id === parsed.data.exerciseId);
@@ -173,7 +169,7 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
   }
   const { itemId, ...data } = parsed.data;
-  if (isDemoMode()) {
+  if (isCoachCatalogDemo()) {
     await hydrateDemoExercises({ preferFresh: true });
     const exList = loadDemoExercises();
 
@@ -277,7 +273,7 @@ export async function DELETE(request: Request, { params }: Params) {
     return NextResponse.json({ detail: "itemId required" }, { status: 400 });
   }
 
-  if (isDemoMode()) {
+  if (isCoachCatalogDemo()) {
     try {
       for (let attempt = 0; attempt < 4; attempt++) {
         let removed = false;

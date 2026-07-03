@@ -32,7 +32,9 @@ export async function GET() {
   const exercises = await prisma.exercise.findMany({
     orderBy: { name: "asc" },
   });
-  return NextResponse.json(exercises);
+  return NextResponse.json(exercises, {
+    headers: { "Cache-Control": "no-store" },
+  });
 }
 
 export async function POST(request: Request) {

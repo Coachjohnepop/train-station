@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isCoachCatalogDemo } from "@/lib/catalog-mode";
 import { prisma } from "@/lib/prisma";
 import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
 import { BLOB_TOKEN } from "@/lib/demo-json-blob";
@@ -7,18 +8,13 @@ import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { filterVisibleWorkouts } from "@/lib/programs";
 import { requireStaff } from "@/lib/api-auth";
 
-function isDemoMode() {
-  const url = process.env.DATABASE_URL ?? "";
-  return !url || url.includes("dummy.supabase") || url.includes("dummy");
-}
-
 const createSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
 });
 
 export async function GET() {
-  if (isDemoMode()) {
+  if (isCoachCatalogDemo()) {
     const data = await getDemoSeed();
     const workouts = (data.workouts || []).map((w: any) => {
       const exCount = (data.workoutExercises || []).filter(
@@ -52,7 +48,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
   }
-  if (isDemoMode()) {
+  if (isCoachCatalogDemo()) {
     try {
       const now = new Date().toISOString();
       const workout = {

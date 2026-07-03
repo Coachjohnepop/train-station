@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { BLOB_TOKEN } from "@/lib/demo-json-blob";
-import { cloneWorkout, isDemoMode } from "@/lib/clone-workout";
+import { isCoachCatalogDemo } from "@/lib/catalog-mode";
+import { cloneWorkout } from "@/lib/clone-workout";
 
 const bodySchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -18,7 +19,7 @@ export async function POST(request: Request, { params }: Params) {
 
   try {
     const cloned = await cloneWorkout(sourceWorkoutId, parsed.data.name);
-    if (isDemoMode() && process.env.VERCEL && BLOB_TOKEN && cloned.blobSaved === false) {
+    if (isCoachCatalogDemo() && process.env.VERCEL && BLOB_TOKEN && cloned.blobSaved === false) {
       return NextResponse.json(
         { detail: "Workout cloned but cloud save failed — retry in a moment." },
         { status: 503 },
