@@ -88,6 +88,32 @@ export function programDayIndexFromDate(
   return { weekNumber, dayNumber };
 }
 
+export type ProgramDayCoordinate = {
+  weekNumber: number;
+  dayNumber: number;
+};
+
+/** Next or previous program day within [1..durationWeeks] × [1..7]. Returns null at boundaries. */
+export function adjacentProgramDay(
+  weekNumber: number,
+  dayNumber: number,
+  delta: -1 | 1,
+  durationWeeks: number,
+): ProgramDayCoordinate | null {
+  if (durationWeeks < 1) return null;
+  let w = weekNumber;
+  let d = dayNumber + delta;
+  if (d < 1) {
+    w -= 1;
+    d = DAYS_PER_WEEK;
+  } else if (d > DAYS_PER_WEEK) {
+    w += 1;
+    d = 1;
+  }
+  if (w < 1 || w > durationWeeks) return null;
+  return { weekNumber: w, dayNumber: d };
+}
+
 /** Local calendar date YYYY-MM-DD (not UTC). */
 export function localTodayIso(reference = new Date()): string {
   return toIsoDate(reference);

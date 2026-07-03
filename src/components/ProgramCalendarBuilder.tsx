@@ -28,6 +28,7 @@ import {
   resolveProgramStartMonday,
   slotIndicesForTimeColumn,
   timeBlockLabel,
+  adjacentProgramDay,
   findProgramDayForCalendarDate,
   localTodayIso,
   toIsoDate,
@@ -807,6 +808,73 @@ export default function ProgramCalendarBuilder({
     await openDayOption(day, week, gymIdx >= 0 ? gymIdx : 0, "Gym");
   }
 
+  const adjacentDayNav = useMemo(() => {
+    if (!focus) return { prev: null, next: null };
+    const prevCoord = adjacentProgramDay(
+      focus.weekNumber,
+      focus.dayNumber,
+      -1,
+      program.durationWeeks,
+    );
+    const nextCoord = adjacentProgramDay(
+      focus.weekNumber,
+      focus.dayNumber,
+      1,
+      program.durationWeeks,
+    );
+    const resolve = (coord: { weekNumber: number; dayNumber: number } | null) => {
+      if (!coord) return null;
+      const week = weeks.find((w) => w.weekNumber === coord.weekNumber);
+      const day = week?.days.find((d) => d.dayNumber === coord.dayNumber);
+      if (!week || !day) return null;
+      return { week, day, coord };
+    };
+    return { prev: resolve(prevCoord), next: resolve(nextCoord) };
+  }, [focus, program.durationWeeks, weeks]);
+
+  async function navigateAdjacentDay(delta: -1 | 1) {
+    if (!focus || saving) return;
+    const target = delta < 0 ? adjacentDayNav.prev : adjacentDayNav.next;
+    if (!target) return;
+
+    if (target.week.weekNumber !== activeWeek) {
+      setActiveWeek(target.week.weekNumber);
+    }
+
+    const targetOpts = getDayOptions(target.day);
+    const preferredLabel = isDayOffLabel(focus.label) || isFastedCardioLabel(focus.label)
+      ? "Gym"
+      : focus.label;
+    const matchIdx = targetOpts.findIndex((o) => o.label === preferredLabel);
+
+    if (matchIdx >= 0) {
+      await openDayOption(target.day, target.week, matchIdx, targetOpts[matchIdx].label);
+      return;
+    }
+
+    if (isGymLabel(preferredLabel) || isHomeLabel(preferredLabel)) {
+      const refreshed = await ensureGymHomeOptions(target.day);
+      const optIdx = isHomeLabel(preferredLabel) ? 1 : 0;
+      await openDayOption(refreshed, target.week, optIdx, preferredLabel);
+      return;
+    }
+
+    await selectDay(target.day, target.week);
+  }
+
+  useEffect(() => {
+    if (!focus) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      const tag = (e.target as HTMLElement | null)?.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea" || tag === "select") return;
+      e.preventDefault();
+      void navigateAdjacentDay(e.key === "ArrowLeft" ? -1 : 1);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [focus, saving, adjacentDayNav]);
+
   async function goToCalendarToday() {
     const iso = localTodayIso();
     const match = findProgramDayForCalendarDate(program, iso);
@@ -1073,15 +1141,16 @@ export default function ProgramCalendarBuilder({
           );
         }
 
-        await patchDay(toDay.id, {
+        const dayPatch: Record<string, unknown> = {
           options: clonedOpts,
-          defaultSets: fromDay.defaultSets ?? null,
-          defaultReps: fromDay.defaultReps ?? null,
-          defaultRestSec: fromDay.defaultRestSec ?? null,
-          publishedAt: fromDay.publishedAt ?? null,
           calendarDate: toCal,
           videoUrl: fromDay.videoUrl ?? null,
-        });
+        };
+        if (fromDay.defaultSets != null) dayPatch.defaultSets = fromDay.defaultSets;
+        if (fromDay.defaultReps != null) dayPatch.defaultReps = fromDay.defaultReps;
+        if (fromDay.defaultRestSec != null) dayPatch.defaultRestSec = fromDay.defaultRestSec;
+        if (fromDay.publishedAt != null) dayPatch.publishedAt = fromDay.publishedAt;
+        await patchDay(toDay.id, dayPatch);
       }
 
       return true;
@@ -1453,22 +1522,51 @@ export default function ProgramCalendarBuilder({
             </div>
           )}
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="min-w-0">
-              <h3 className="text-sm font-semibold">
-                {DAY_LABELS[focus.dayNumber - 1]}{" "}
-                <span className="font-normal text-[var(--muted)]">
-                  {formatShortDate(
-                    focusDay.calendarDate ||
-                      calendarDateForProgramDay(startMonday, focus.weekNumber, focus.dayNumber),
-                  )}
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <div
+                className="flex shrink-0 items-center gap-0.5 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-0.5"
+                role="navigation"
+                aria-label="Program day"
+              >
+                <button
+                  type="button"
+                  className="rounded-md px-2 py-1 text-sm font-semibold text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-30"
+                  disabled={saving || !adjacentDayNav.prev}
+                  aria-label="Previous day"
+                  onClick={() => void navigateAdjacentDay(-1)}
+                >
+                  ‹
+                </button>
+                <div className="min-w-[7rem] px-1 text-center">
+                  <p className="text-sm font-semibold leading-tight">
+                    {DAY_LABELS[focus.dayNumber - 1]}
+                    <span className="ml-1 font-normal text-[var(--muted)]">
+                      W{focus.weekNumber}
+                    </span>
+                  </p>
+                  <p className="text-[10px] text-[var(--muted)]">
+                    {formatShortDate(
+                      focusDay.calendarDate ||
+                        calendarDateForProgramDay(startMonday, focus.weekNumber, focus.dayNumber),
+                    )}
+                    <span className="text-violet-300"> · {focus.label}</span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="rounded-md px-2 py-1 text-sm font-semibold text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-30"
+                  disabled={saving || !adjacentDayNav.next}
+                  aria-label="Next day"
+                  onClick={() => void navigateAdjacentDay(1)}
+                >
+                  ›
+                </button>
+              </div>
+              {focusDay.publishedAt && (
+                <span className="inline-flex items-center rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 ring-1 ring-emerald-400/40">
+                  ✓ Published
                 </span>
-                <span className="ml-1 text-xs text-violet-300">· {focus.label}</span>
-                {focusDay.publishedAt && (
-                  <span className="ml-1.5 inline-flex items-center rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 ring-1 ring-emerald-400/40">
-                    ✓ Published
-                  </span>
-                )}
-              </h3>
+              )}
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-1.5">
               {focus.workoutId && (
