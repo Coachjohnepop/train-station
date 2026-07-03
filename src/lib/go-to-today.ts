@@ -8,6 +8,7 @@ import {
   localTodayIso,
 } from "@/lib/program-calendar";
 import { normalizeProgramSlug } from "@/lib/programs";
+import { enrollmentDayKey, linearEnrollmentDay } from "@/lib/member-enrollment-day";
 import {
   getSessionForUserOnDate,
   hydrateTodaySessions,
@@ -115,7 +116,7 @@ export async function resolveMemberGoToToday(
   const smsToday = getSessionForUserOnDate(userId, calendarDate);
   if (smsToday) {
     return {
-      href: `/member/today?date=${calendarDate}`,
+      href: "/member/today",
       kind: "sms",
       title: smsToday.title,
       subtitle: formatShortDate(calendarDate),
@@ -125,34 +126,37 @@ export async function resolveMemberGoToToday(
     };
   }
 
+  const enrolls = getUserEnrollments(userId);
   for (const slug of enrollmentSlugsForUser(userId)) {
     const program = await getProgramBySlug(slug);
     if (!program) continue;
     const cat = (program.category || "workout") as string;
     if (cat !== "workout" && cat !== "journey" && cat !== "yoga") continue;
 
-    const resolved = resolveProgramWorkoutForCalendarDate(program, calendarDate);
+    const enrollment = enrolls[slug] || { currentWeek: 1, currentDay: 1 };
+    const dayN = linearEnrollmentDay(enrollment.currentWeek, enrollment.currentDay);
+    const week = program.weeks.find(
+      (w: { weekNumber: number }) => w.weekNumber === enrollment.currentWeek,
+    );
+    const day = week?.days.find(
+      (d: { dayNumber: number; id: string }) => d.dayNumber === enrollment.currentDay,
+    );
+    const pick = day ? pickGymWorkout(day) : null;
+    const resolved = pick?.workoutId
+      ? {
+          ...pick,
+          weekNumber: enrollment.currentWeek,
+          dayNumber: enrollment.currentDay,
+          dayId: day!.id,
+        }
+      : null;
     if (!resolved) continue;
 
-    const href = resolved.smsOverride
-      ? memberWorkoutHref({
-          programSlug: slug,
-          smsDayId: resolved.dayId,
-          option: resolved.option,
-          calendarDate,
-        })
-      : memberWorkoutHref({
-          programSlug: slug,
-          workoutId: resolved.workoutId,
-          option: resolved.option,
-          calendarDate,
-        });
-
     return {
-      href,
+      href: "/member/today",
       kind: "program",
       title: resolved.workoutName || program.name,
-      subtitle: `${program.name} · ${formatShortDate(calendarDate)}`,
+      subtitle: `${program.name} · Day ${dayN}`,
       calendarDate,
       programSlug: slug,
       workoutId: resolved.workoutId || undefined,

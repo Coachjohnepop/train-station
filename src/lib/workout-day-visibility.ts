@@ -17,6 +17,11 @@ export function daysFromToday(iso: string, todayIso: string): number {
  */
 export function dayVisibilityTier(iso: string, todayIso: string): DayVisibilityTier {
   const offset = daysFromToday(iso, todayIso);
+  return dayVisibilityTierByOffset(offset);
+}
+
+/** Visibility from enrollment-day offset (0 = member program today). */
+export function dayVisibilityTierByOffset(offset: number): DayVisibilityTier {
   if (offset <= 0) return offset === 0 ? "full" : "names";
   if (offset <= 2) return "names";
   return "label";

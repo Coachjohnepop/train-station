@@ -7,6 +7,8 @@ export type MemberDaySummary = {
   weekday: string;
   shortDate: string;
   dayLabel: string;
+  /** W1D1 = 1 — member-facing program day from enrollment start. */
+  enrollmentDayNumber?: number;
   weekNumber: number;
   dayNumber: number;
   workoutName: string | null;

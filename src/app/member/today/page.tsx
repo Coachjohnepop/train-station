@@ -12,6 +12,7 @@ import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { resolveMemberUserId } from "@/lib/current-user";
 import { resolveTargetUserId } from "@/lib/resolve-target-user";
 import { localTodayIso, toIsoDate } from "@/lib/program-calendar";
+import { linearEnrollmentDay, parseEnrollmentDayKey } from "@/lib/member-enrollment-day";
 import { loadMemberUpcomingSessions, memberTodayHref } from "@/lib/member-today";
 import { resolveTodayPageWorkout } from "@/lib/member-today-workout";
 import {
@@ -36,6 +37,11 @@ type Props = {
 };
 
 function formatDateLabel(dateKey: string) {
+  const enrollment = parseEnrollmentDayKey(dateKey);
+  if (enrollment) {
+    const dayN = linearEnrollmentDay(enrollment.weekNumber, enrollment.dayNumber);
+    return `Day ${dayN} (Week ${enrollment.weekNumber})`;
+  }
   const d = new Date(`${dateKey}T12:00:00`);
   return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 }
@@ -61,17 +67,14 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const uid = resolveTargetUserId(forUser, await resolveMemberUserId());
   const memberName = resolveDemoUser(uid)?.name || dashboard.user.name;
 
-  const todayKey = localTodayIso();
-  const viewDate = sp.date || todayKey;
-  const [todayWorkout, upcoming, loggedSet, primaryProgram, profile, coachSettings] =
-    await Promise.all([
-      resolveTodayPageWorkout(uid, viewDate, memberName),
-      loadMemberUpcomingSessions(uid),
-      loadMemberLoggedWorkoutIds(uid),
-      resolvePrimaryScheduleProgram(uid),
-      getMemberProfile(uid),
-      getCoachSettings(),
-    ]);
+  const calendarToday = localTodayIso();
+  const [upcoming, loggedSet, primaryProgram, profile, coachSettings] = await Promise.all([
+    loadMemberUpcomingSessions(uid),
+    loadMemberLoggedWorkoutIds(uid),
+    resolvePrimaryScheduleProgram(uid),
+    getMemberProfile(uid),
+    getCoachSettings(),
+  ]);
 
   const dayWindow = primaryProgram
     ? await buildMemberDayWindow(uid, primaryProgram.slug, loggedSet, {
@@ -80,6 +83,9 @@ export default async function MemberTodayPage({ searchParams }: Props) {
       })
     : null;
 
+  const programTodayKey = dayWindow?.programTodayKey ?? calendarToday;
+  const viewDate = sp.date || programTodayKey;
+  const todayWorkout = await resolveTodayPageWorkout(uid, viewDate, memberName);
   const { session, workout, programSlug, source, scheduleLabel } = todayWorkout;
   const hasWorkout = !!workout;
   const coachMembers = asInstructor
@@ -131,14 +137,14 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     : null;
   const intakeRampDays =
     !intakeComplete && warmupWorkout && !(dayWindow?.days.length)
-      ? buildIntakeRampPlaceholderDays(todayKey)
+      ? buildIntakeRampPlaceholderDays(calendarToday)
       : null;
   const memberDays = dayWindow?.days.length ? dayWindow.days : intakeRampDays ?? [];
   const memberRollup = dayWindow?.rollup ?? (intakeRampDays ? rollupForMemberDays(intakeRampDays) : null);
   const selectedSummary = memberDays.find((d) => d.iso === viewDate) ?? null;
-  const stretchPreview = memberDays.length ? nextDayStretchPreview(memberDays, todayKey) : [];
-  const tomorrowDay = memberDays.length ? nextMemberDay(memberDays, todayKey) : null;
-  const memberWorkout = viewDate === todayKey ? workout : null;
+  const stretchPreview = memberDays.length ? nextDayStretchPreview(memberDays, programTodayKey) : [];
+  const tomorrowDay = memberDays.length ? nextMemberDay(memberDays, programTodayKey) : null;
+  const memberWorkout = viewDate === programTodayKey ? workout : null;
 
   return (
     <div className="space-y-4">
@@ -153,7 +159,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
         <>
           <Suspense fallback={<div className="card h-40 animate-pulse p-4" />}>
             <MemberTodayShell
-              todayIso={todayKey}
+              todayIso={programTodayKey}
               selectedDate={viewDate}
               days={memberDays}
               rollup={memberRollup}

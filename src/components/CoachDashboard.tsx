@@ -227,17 +227,23 @@ export default function CoachDashboard({
           </p>
         )}
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              if (showPlanWorkout) closePlanWorkout();
-              else openPlanWorkout();
-            }}
-            className="btn-ghost min-h-[44px] w-full px-4 text-sm sm:w-auto"
-          >
-            {showPlanWorkout ? "Cancel plan" : "Plan workout"}
-          </button>
+        <div className="space-y-1.5">
+          <p className="text-[11px] text-[var(--muted)]">
+            Members follow their <Link href="/admin/programs" className="text-accent hover:underline">program schedule</Link> by default.
+            Use override only for a one-off SMS workout.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (showPlanWorkout) closePlanWorkout();
+                else openPlanWorkout();
+              }}
+              className="btn-ghost min-h-[44px] w-full px-4 text-sm sm:w-auto"
+            >
+              {showPlanWorkout ? "Cancel override" : "Override schedule (SMS)"}
+            </button>
+          </div>
         </div>
 
         {sessionCount > 0 && !showPlanWorkout && openStudents.length > 0 && (

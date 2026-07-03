@@ -1,11 +1,15 @@
 import "server-only";
 
 import { DAY_LABELS } from "@/lib/program-constants";
-import { localTodayIso, rollingProgramCalendarDays } from "@/lib/program-calendar";
+import { localTodayIso } from "@/lib/program-calendar";
+import {
+  linearEnrollmentDay,
+  rollingEnrollmentProgramDays,
+} from "@/lib/member-enrollment-day";
 import type { MemberDaySummary, MemberDayWindowRollup } from "@/lib/member-day-window-types";
 
 export type { MemberDaySummary, MemberDayWindowRollup } from "@/lib/member-day-window-types";
-import { resolveProgramWorkoutForCalendarDate } from "@/lib/go-to-today";
+
 import { getProgramBySlug } from "@/lib/program-data";
 import { getSessionForUserOnDate, hydrateTodaySessions } from "@/lib/today-sessions";
 import { getWorkoutExercisePreview } from "@/lib/sms-generated-workouts";
@@ -13,9 +17,10 @@ import { getUserEnrollments } from "@/lib/data/user-data";
 import {
   addDaysIso,
   dayVisibilityTier,
-  daysFromToday,
+  dayVisibilityTierByOffset,
   themeLabelForDay,
 } from "@/lib/workout-day-visibility";
+import { dayWorkoutOptions } from "@/lib/member-program-workout";
 import { getDemoSeed } from "@/lib/demo-seed-store";
 import { hydrateDemoExercises, loadDemoExercises } from "@/lib/demo-exercises";
 import { buildDemoWorkoutExerciseItems } from "@/lib/demo-workout-items";
@@ -147,78 +152,92 @@ export async function buildMemberDayWindow(
   programSlug: string,
   loggedWorkoutIds: Set<string>,
   opts?: { rollingDays?: number; daysBefore?: number },
-): Promise<{ days: MemberDaySummary[]; rollup: MemberDayWindowRollup } | null> {
+): Promise<{ days: MemberDaySummary[]; rollup: MemberDayWindowRollup; programTodayKey: string } | null> {
   const program = await getProgramBySlug(programSlug);
   if (!program) return null;
 
   await hydrateTodaySessions({ preferFresh: true });
-  const todayIso = localTodayIso();
+  const calendarToday = localTodayIso();
   const rollingDays = opts?.rollingDays ?? 5;
   const daysBefore = opts?.daysBefore ?? 2;
-  const rolling = rollingProgramCalendarDays(program, todayIso, rollingDays, daysBefore);
+  const enrolls = getUserEnrollments(userId);
+  const enrollment = enrolls[programSlug] || { currentWeek: 1, currentDay: 1 };
+  const programTodayKey = `W${enrollment.currentWeek}D${enrollment.currentDay}`;
+
+  const rolling = rollingEnrollmentProgramDays(
+    program.weeks,
+    { weekNumber: enrollment.currentWeek, dayNumber: enrollment.currentDay },
+    program.durationWeeks,
+    rollingDays,
+    daysBefore,
+  );
   const days: MemberDaySummary[] = [];
 
   for (const entry of rolling) {
-    const coachSession = getSessionForUserOnDate(userId, entry.iso);
-    if (coachSession) {
-      const preview = await getWorkoutExercisePreview(coachSession.workoutId, 8);
-      const offset = daysFromToday(entry.iso, todayIso);
-      const visibilityTier = dayVisibilityTier(entry.iso, todayIso);
-      const dayLabel = DAY_LABELS[entry.dayNumber - 1] ?? `Day ${entry.dayNumber}`;
-      const visibleNames = visibilityTier === "label" ? [] : preview;
+    const enrollmentDayNumber = entry.enrollmentDayNumber;
+    const dayLabel = `Day ${enrollmentDayNumber}`;
+    const visibilityTier = dayVisibilityTierByOffset(entry.offset);
+    const isProgramToday = entry.offset === 0;
 
-      days.push({
-        iso: entry.iso,
-        phase: entry.phase,
-        weekday: formatWeekday(entry.iso),
-        shortDate: formatShortDate(entry.iso),
-        dayLabel,
-        weekNumber: entry.weekNumber,
-        dayNumber: entry.dayNumber,
-        workoutName: coachSession.title,
-        workoutId: coachSession.workoutId,
-        programSlug,
-        completed: loggedWorkoutIds.has(coachSession.workoutId),
-        exerciseCount: visibleNames.length,
-        exerciseNames: visibleNames,
-        stretchNames: pickStretchPreview(preview),
-        smsOverride: true,
-        hasWorkout: true,
-        daysFromToday: offset,
-        visibilityTier,
-        themeLabel: coachSession.title,
-      });
-      continue;
+    if (isProgramToday) {
+      const coachSession = getSessionForUserOnDate(userId, calendarToday);
+      if (coachSession) {
+        const preview = await getWorkoutExercisePreview(coachSession.workoutId, 8);
+        const visibleNames = visibilityTier === "label" ? [] : preview;
+
+        days.push({
+          iso: entry.key,
+          phase: entry.phase,
+          weekday: "Day",
+          shortDate: String(enrollmentDayNumber),
+          dayLabel,
+          enrollmentDayNumber,
+          weekNumber: entry.weekNumber,
+          dayNumber: entry.dayNumber,
+          workoutName: coachSession.title,
+          workoutId: coachSession.workoutId,
+          programSlug,
+          completed: loggedWorkoutIds.has(coachSession.workoutId),
+          exerciseCount: visibleNames.length,
+          exerciseNames: visibleNames,
+          stretchNames: pickStretchPreview(preview),
+          smsOverride: true,
+          hasWorkout: true,
+          daysFromToday: entry.offset,
+          visibilityTier,
+          themeLabel: coachSession.title,
+        });
+        continue;
+      }
     }
 
-    const resolved = resolveProgramWorkoutForCalendarDate(program, entry.iso);
-    const workoutId = resolved?.smsOverride ? null : resolved?.workoutId || null;
+    const optsForDay = dayWorkoutOptions(entry.day);
+    const pick = optsForDay.find((o) => /gym/i.test(o.label || "")) || optsForDay[0];
+    const workoutId = pick?.workoutId || null;
     const names = workoutId ? await exerciseNamesForWorkout(workoutId) : [];
-    const dayLabel = DAY_LABELS[entry.dayNumber - 1] ?? `Day ${entry.dayNumber}`;
-    const offset = daysFromToday(entry.iso, todayIso);
-    const visibilityTier = dayVisibilityTier(entry.iso, todayIso);
-    const rawWorkoutName = resolved?.workoutName || resolved?.option || null;
+    const rawWorkoutName = pick?.workout?.name || null;
     const themeLabel = rawWorkoutName ? themeLabelForDay(rawWorkoutName, dayLabel) : null;
     const visibleNames = visibilityTier === "label" ? [] : names;
 
     days.push({
-      iso: entry.iso,
+      iso: entry.key,
       phase: entry.phase,
-      weekday: formatWeekday(entry.iso),
-      shortDate: formatShortDate(entry.iso),
+      weekday: "Day",
+      shortDate: String(enrollmentDayNumber),
       dayLabel,
+      enrollmentDayNumber,
       weekNumber: entry.weekNumber,
       dayNumber: entry.dayNumber,
-      workoutName: rawWorkoutName,
+      workoutName: pick?.workout?.name || null,
       workoutId,
       programSlug,
       completed: !!(workoutId && loggedWorkoutIds.has(workoutId)),
       exerciseCount: visibleNames.length,
       exerciseNames: visibleNames,
       stretchNames: pickStretchPreview(names),
-      smsOverride: !!resolved?.smsOverride,
-      hasWorkout: !!resolved,
-      daysFromToday: offset,
+      smsOverride: false,
+      hasWorkout: !!workoutId || optsForDay.length > 0,
+      daysFromToday: entry.offset,
       visibilityTier,
       themeLabel,
     });
@@ -229,6 +248,7 @@ export async function buildMemberDayWindow(
 
   return {
     days,
+    programTodayKey,
     rollup: {
       pastDone: past.filter((d) => d.completed).length,
       pastTotal: past.length,
@@ -237,17 +257,26 @@ export async function buildMemberDayWindow(
   };
 }
 
-/** Next calendar day after today in the member day wheel. */
+/** Next day after program-today in the member day wheel. */
 export function nextMemberDay(
   days: MemberDaySummary[],
-  todayIso: string,
+  programTodayKey: string,
 ): MemberDaySummary | null {
-  const idx = days.findIndex((d) => d.iso === todayIso);
+  const idx = days.findIndex((d) => d.iso === programTodayKey);
   if (idx < 0 || idx >= days.length - 1) return null;
   return days[idx + 1] ?? null;
 }
 
-/** Tomorrow's stretch preview when member is on calendar today. */
-export function nextDayStretchPreview(days: MemberDaySummary[], todayIso: string): string[] {
-  return nextMemberDay(days, todayIso)?.stretchNames ?? [];
+/** Next program day's stretch preview when member is on program today. */
+export function nextDayStretchPreview(days: MemberDaySummary[], programTodayKey: string): string[] {
+  return nextMemberDay(days, programTodayKey)?.stretchNames ?? [];
+}
+
+export function memberScheduleLabel(
+  programName: string,
+  weekNumber: number,
+  dayNumber: number,
+): string {
+  const dayN = linearEnrollmentDay(weekNumber, dayNumber);
+  return `${programName} · Day ${dayN}`;
 }
