@@ -147,6 +147,7 @@ export default function MemberWorkoutConsole({
   const [restTimer, setRestTimer] = useState<ActiveRestTimer | null>(null);
   const [restSecondsLeft, setRestSecondsLeft] = useState(0);
   const [coachExpandedBlockId, setCoachExpandedBlockId] = useState<string | null>(null);
+  const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
   const restHornPlayedRef = useRef(false);
   const scrollToExerciseIdRef = useRef<string | null>(null);
 
@@ -341,6 +342,7 @@ export default function MemberWorkoutConsole({
     lastAppliedRevision.current = 0;
     lastPushedRevision.current = 0;
     lastAppliedRemoteAt.current = null;
+    setEditingExerciseId(null);
   }, [liveSyncUserId, liveSessionDate, workout.workoutId]);
 
   useEffect(() => {
@@ -631,18 +633,21 @@ export default function MemberWorkoutConsole({
     [advanceToNextExercise, queueLiveSave],
   );
 
+  const closeExerciseEdit = useCallback(() => {
+    setEditingExerciseId(null);
+    queueLiveSave(true);
+  }, [queueLiveSave]);
+
   const reopenExercise = useCallback(
     (blockId: string) => {
-      setFinishedExercises((prev) => {
-        const next = new Set(prev);
-        next.delete(blockId);
-        stateRef.current = { ...stateRef.current, finishedExercises: next, activeId: blockId };
-        return next;
-      });
+      setEditingExerciseId(blockId);
       setActiveId(blockId);
-      queueLiveSave(true);
+      stateRef.current = { ...stateRef.current, activeId: blockId };
+      if (!coachFloorMode && !instructorName && !reviewMode) {
+        scrollToExerciseIdRef.current = blockId;
+      }
     },
-    [queueLiveSave],
+    [coachFloorMode, instructorName, reviewMode],
   );
 
   // Auto-finish exercises when all sets are marked — batch into one state update so
@@ -1093,23 +1098,38 @@ export default function MemberWorkoutConsole({
 
       <div className="mt-4 space-y-3">
         {workout.exercises.map((block) => {
-          const isFinished = finishedExercises.has(block.id) && !reviewMode;
+          const isFinished =
+            finishedExercises.has(block.id) && !reviewMode && editingExerciseId !== block.id;
+          const isEditingFinished = editingExerciseId === block.id;
 
           if (isFinished) {
             if (allExercisesFinished && !finishedListExpanded) return null;
+            const loggedWeight = weights[block.id]?.trim();
             return (
-              <button
+              <div
                 key={block.id}
-                type="button"
-                className="member-exercise-done w-full text-left"
-                onClick={() => reopenExercise(block.id)}
-                aria-label={`${block.name} completed. Tap to review.`}
+                id={`member-exercise-${block.id}`}
+                className="member-exercise-anchor"
               >
-                <span className="member-exercise-done__check" aria-hidden="true">
-                  ✓
-                </span>
-                <span className="member-exercise-done__name">{block.name}</span>
-              </button>
+                <button
+                  type="button"
+                  className="member-exercise-done w-full text-left"
+                  onClick={() => reopenExercise(block.id)}
+                  aria-label={`${block.name} completed. Tap to edit weight.`}
+                >
+                  <span className="member-exercise-done__check" aria-hidden="true">
+                    ✓
+                  </span>
+                  <span className="member-exercise-done__body">
+                    <span className="member-exercise-done__name">{block.name}</span>
+                    <span className="member-exercise-done__hint">
+                      {loggedWeight
+                        ? `${loggedWeight} lbs · tap to edit`
+                        : "Tap to add or edit weight"}
+                    </span>
+                  </span>
+                </button>
+              </div>
             );
           }
 
@@ -1234,15 +1254,22 @@ export default function MemberWorkoutConsole({
                     value={reviewMode && block.past?.startingWeightLbs != null 
                       ? block.past.startingWeightLbs.toString() 
                       : (weights[block.id] ?? "")}
-                    onChange={(e) =>
-                      setWeights((w) => ({
-                        ...w,
-                        [block.id]: e.target.value,
-                      }))
-                    }
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setWeights((w) => {
+                        const updated = { ...w, [block.id]: value };
+                        stateRef.current = { ...stateRef.current, weights: updated };
+                        return updated;
+                      });
+                      queueLiveSave();
+                    }}
                     disabled={reviewMode && !instructorName}
                   />
-                  <p className="mt-0.5 text-[10px] text-[var(--muted)]">Enter weight before logging sets (becomes your silhouette next time).</p>
+                  <p className="mt-0.5 text-[10px] text-[var(--muted)]">
+                    {isEditingFinished
+                      ? "Update weight anytime — your sets stay logged."
+                      : "Enter weight before logging sets (becomes your silhouette next time)."}
+                  </p>
                 </label>
 
                 {/* Compact two-column: scheme info (left) + log sets (right) for better space use */}
@@ -1347,18 +1374,37 @@ export default function MemberWorkoutConsole({
                   </div>
                 )}
 
-                <button
-                  type="button"
-                  className="btn-primary mt-3 w-full text-sm py-1.5"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    markExerciseFinished(block.id);
-                  }}
-                  disabled={reviewMode && !instructorName}
-                >
-                  {reviewMode && !instructorName ? "Session already logged (review)" : instructorName ? "Mark done for member" : "Exercise finished"}
-                </button>
+                {isEditingFinished ? (
+                  <button
+                    type="button"
+                    className="btn-primary mt-3 w-full text-sm py-1.5"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      closeExerciseEdit();
+                    }}
+                    disabled={reviewMode && !instructorName}
+                  >
+                    Done editing
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-primary mt-3 w-full text-sm py-1.5"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      markExerciseFinished(block.id);
+                    }}
+                    disabled={reviewMode && !instructorName}
+                  >
+                    {reviewMode && !instructorName
+                      ? "Session already logged (review)"
+                      : instructorName
+                        ? "Mark done for member"
+                        : "Exercise finished"}
+                  </button>
+                )}
               </div>
             </section>
           );

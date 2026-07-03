@@ -861,9 +861,23 @@ table.data th {
   box-shadow: 0 0 10px var(--ramp-gold-glow);
 }
 
+.member-exercise-done__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
 .member-exercise-done__name {
   font-size: 1rem;
   font-weight: 600;
+}
+
+.member-exercise-done__hint {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--ramp-gold-light) 80%, var(--muted));
 }
 
 .member-workout-finished-collapse {
