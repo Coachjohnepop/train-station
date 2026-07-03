@@ -13,6 +13,7 @@ import {
   isCheckoutSessionPaid,
   isSubscriptionActive,
 } from "@/lib/stripe-payment-verify";
+import { recordSubscriptionPaymentFact } from "@/lib/analytics-facts";
 
 export const dynamic = "force-dynamic";
 
@@ -88,6 +89,35 @@ export async function POST(request: Request) {
           stripeSubscriptionId: sub.id,
         });
       }
+
+      const paidAtSec =
+        invoice.status_transitions?.paid_at ?? invoice.created ?? Math.floor(Date.now() / 1000);
+      await recordSubscriptionPaymentFact({
+        userId: userId ?? null,
+        stripeInvoiceId: invoice.id,
+        stripePaymentIntentId: (() => {
+          const pi = (invoice as unknown as { payment_intent?: string | null }).payment_intent;
+          return typeof pi === "string" ? pi : null;
+        })(),
+        stripeSubscriptionId: sub.id,
+        stripeCustomerId: typeof invoice.customer === "string" ? invoice.customer : null,
+        amountCents: invoice.amount_paid ?? 0,
+        currency: invoice.currency ?? "usd",
+        status: "paid",
+        planId: sub.metadata?.plan ?? null,
+        tierSlug: sub.metadata?.plan ?? null,
+        billingReason: invoice.billing_reason ?? null,
+        paidAt: new Date(paidAtSec * 1000),
+        periodStart: invoice.period_start
+          ? new Date(invoice.period_start * 1000)
+          : null,
+        periodEnd: invoice.period_end ? new Date(invoice.period_end * 1000) : null,
+        stripeEventId: event.id,
+        properties: {
+          invoiceNumber: invoice.number,
+          collectionMethod: invoice.collection_method,
+        },
+      });
       break;
     }
     case "invoice.payment_failed": {
@@ -103,6 +133,20 @@ export async function POST(request: Request) {
           stripeSubscriptionId: sub.id,
         });
       }
+
+      await recordSubscriptionPaymentFact({
+        userId: userId ?? null,
+        stripeInvoiceId: invoice.id,
+        stripeSubscriptionId: sub.id,
+        stripeCustomerId: typeof invoice.customer === "string" ? invoice.customer : null,
+        amountCents: invoice.amount_due ?? 0,
+        currency: invoice.currency ?? "usd",
+        status: "failed",
+        planId: sub.metadata?.plan ?? null,
+        tierSlug: sub.metadata?.plan ?? null,
+        paidAt: new Date(),
+        stripeEventId: event.id,
+      });
       break;
     }
     case "customer.subscription.updated": {

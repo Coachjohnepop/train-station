@@ -1,0 +1,36 @@
+{
+  "sessions": {
+    "test-session-12345678": {
+      "sessionKey": "test-session-12345678",
+      "landingPath": "/",
+      "deviceType": "desktop",
+      "userId": null,
+      "startedAt": "2026-07-03T15:41:05.845Z",
+      "lastActivityAt": "2026-07-03T15:41:05.845Z"
+    }
+  },
+  "events": [
+    {
+      "eventType": "page_view",
+      "pagePath": "/",
+      "id": "87297d62-3020-4b2a-9fd4-745999abb8ab",
+      "sessionKey": "test-session-12345678",
+      "userId": null,
+      "role": null,
+      "ingestedAt": "2026-07-03T15:41:05.845Z",
+      "pageSection": "landing"
+    },
+    {
+      "eventType": "page_click",
+      "pagePath": "/",
+      "elementText": "Get started",
+      "elementRole": "button",
+      "id": "10a15653-fc27-4fc1-9e32-6dc387a6f936",
+      "sessionKey": "test-session-12345678",
+      "userId": null,
+      "role": null,
+      "ingestedAt": "2026-07-03T15:41:05.845Z",
+      "pageSection": "landing"
+    }
+  ]
+}

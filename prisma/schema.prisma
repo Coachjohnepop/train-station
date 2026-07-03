@@ -48,6 +48,10 @@ model User {
   weatherLogs        UserWeatherLog[]
   promptResponses    PromptResponse[]
   measurements       UserMeasurement[]
+  analyticsSessions  AnalyticsSession[]
+  analyticsEvents    AnalyticsEvent[]
+  subscriptionPayments FactSubscriptionPayment[]
+  memberDailySnapshots MartMemberDailySnapshot[]
 }
 
 model SubscriptionTier {
@@ -90,6 +94,9 @@ model Workout {
   id          String            @id @default(cuid())
   name        String
   description String?
+  certifiedAt DateTime?
+  exportText  String?           @db.Text
+  certifiedBy String?
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   exercises   WorkoutExercise[]
@@ -359,4 +366,159 @@ model UserMeasurement {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, measuredAt])
+}
+
+// ---------------------------------------------------------------------------
+// Data warehouse — behavioral events, payment facts, daily marts
+// ---------------------------------------------------------------------------
+
+model AnalyticsSession {
+  id               String           @id @default(cuid())
+  sessionKey       String           @unique
+  userId           String?
+  anonymousId      String?
+  startedAt        DateTime         @default(now())
+  lastActivityAt   DateTime         @default(now())
+  landingPath      String?
+  referrer         String?
+  utmSource        String?
+  utmMedium        String?
+  utmCampaign      String?
+  utmTerm          String?
+  utmContent       String?
+  deviceType       String?
+  userAgent        String?
+  convertedSignup  Boolean          @default(false)
+  convertedPaid    Boolean          @default(false)
+  user             User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  events           AnalyticsEvent[]
+
+  @@index([userId])
+  @@index([startedAt])
+  @@index([lastActivityAt])
+}
+
+model AnalyticsEvent {
+  id            String            @id @default(cuid())
+  sessionKey    String?
+  sessionId     String?
+  eventType     String
+  occurredAt    DateTime          @default(now())
+  userId        String?
+  anonymousId   String?
+  pagePath      String?
+  pageTitle     String?
+  pageSection   String?
+  referrer      String?
+  elementId     String?
+  elementText   String?
+  elementRole   String?
+  clickHref     String?
+  clickAction   String?
+  programId     String?
+  programSlug   String?
+  workoutId     String?
+  exerciseId    String?
+  enrollmentId  String?
+  tierSlug      String?
+  utmSource     String?
+  utmMedium     String?
+  utmCampaign   String?
+  deviceType    String?
+  role          String?
+  properties    Json?
+  session       AnalyticsSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  user          User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([eventType, occurredAt])
+  @@index([userId, occurredAt])
+  @@index([sessionKey, occurredAt])
+  @@index([pagePath, occurredAt])
+  @@index([occurredAt])
+}
+
+model FactSubscriptionPayment {
+  id                    String   @id @default(cuid())
+  userId                String?
+  stripeInvoiceId       String?  @unique
+  stripePaymentIntentId String?
+  stripeSubscriptionId  String?
+  stripeCustomerId      String?
+  amountCents           Int
+  amountRefundedCents   Int      @default(0)
+  currency              String   @default("usd")
+  status                String
+  tierSlug              String?
+  planId                String?
+  billingReason         String?
+  paidAt                DateTime
+  periodStart           DateTime?
+  periodEnd             DateTime?
+  stripeEventId         String?
+  properties            Json?
+  user                  User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([paidAt])
+  @@index([userId, paidAt])
+  @@index([status, paidAt])
+}
+
+model FactCommissionPayout {
+  id               String    @id @default(cuid())
+  partnerId        String?
+  partnerEmail     String?
+  amountCents      Int
+  currency         String    @default("usd")
+  status           String
+  stripeTransferId String?
+  periodStart      DateTime?
+  periodEnd        DateTime?
+  paidAt           DateTime?
+  properties       Json?
+  createdAt        DateTime  @default(now())
+
+  @@index([paidAt])
+  @@index([partnerId])
+  @@index([status])
+}
+
+model MartDailyMetrics {
+  id                   String   @id @default(cuid())
+  metricDate           DateTime @db.Date
+  activeMembers        Int      @default(0)
+  payingMembers        Int      @default(0)
+  mrrCents             Int      @default(0)
+  newSignups           Int      @default(0)
+  workoutCompletions   Int      @default(0)
+  pageViews            Int      @default(0)
+  pageClicks           Int      @default(0)
+  uniqueVisitors       Int      @default(0)
+  liveSessionsJoined   Int      @default(0)
+  churnedSubscriptions Int      @default(0)
+  properties           Json?
+  computedAt           DateTime @default(now())
+
+  @@unique([metricDate])
+}
+
+model MartMemberDailySnapshot {
+  id                   String   @id @default(cuid())
+  userId               String
+  snapshotDate         DateTime @db.Date
+  tierSlug             String?
+  role                 String
+  isPaying             Boolean  @default(false)
+  workoutsCompleted    Int      @default(0)
+  exercisesLogged      Int      @default(0)
+  gamificationPoints   Int      @default(0)
+  programSlug          String?
+  enrollmentDay        Int?
+  daysSinceLastWorkout Int?
+  city                 String?
+  state                String?
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, snapshotDate])
+  @@index([snapshotDate])
+  @@index([snapshotDate, isPaying])
 }

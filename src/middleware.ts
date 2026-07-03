@@ -29,6 +29,7 @@ const PUBLIC_API_PREFIXES = [
   "/api/pricing/public",
   "/api/stripe/webhook",
   "/api/sms/inbound",
+  "/api/analytics",
 ];
 
 function isPublicPage(pathname: string): boolean {
