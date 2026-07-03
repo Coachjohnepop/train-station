@@ -38,6 +38,7 @@ async function main() {
       new URL("./s3a-enrollment-db-test.mjs", import.meta.url).pathname,
       new URL("./s3b-workout-logs-db-test.mjs", import.meta.url).pathname,
       new URL("./s3c-today-sessions-db-test.mjs", import.meta.url).pathname,
+      new URL("./s7-landing-brand-test.mjs", import.meta.url).pathname,
     );
   }
 
@@ -58,7 +59,9 @@ async function main() {
     }
   }
 
-  const suite = process.env.SOAK_DB === "1" ? "S1 + S1b + S3a + S3b + S3c" : "S1 + S1b";
+  const suite = process.env.SOAK_DB === "1"
+    ? "S1 + S1b + S3a + S3b + S3c + S7"
+    : "S1 + S1b";
   console.log(`\nSoak PASSED — ${ROUNDS} round(s), all ${suite} checks green.\n`);
 }
 

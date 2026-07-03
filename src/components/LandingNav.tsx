@@ -79,8 +79,20 @@ export default function LandingNav({
   return (
     <header className="landing-nav header-theme-clearance sticky top-0 z-40 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_82%,transparent)] backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-        <Link href="/" className="shrink-0 transition hover:opacity-90" onClick={closeMenus}>
-          <TrainStationBrand variant="header" />
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-2 transition hover:opacity-90"
+          onClick={closeMenus}
+        >
+          <span className="md:hidden">
+            <TrainStationBrand variant="icon" />
+          </span>
+          <span className="hidden md:block">
+            <TrainStationBrand variant="header" />
+          </span>
+          <span className="max-w-[10.5rem] text-[11px] font-semibold uppercase leading-tight tracking-[0.14em] text-[var(--text)] md:hidden">
+            The Train Station
+          </span>
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">

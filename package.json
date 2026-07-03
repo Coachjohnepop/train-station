@@ -30,6 +30,7 @@
     "test:s3a": "node scripts/s3a-enrollment-db-test.mjs",
     "test:s3b": "node scripts/s3b-workout-logs-db-test.mjs",
     "test:s3c": "node scripts/s3c-today-sessions-db-test.mjs",
+    "test:s7": "node scripts/s7-landing-brand-test.mjs",
     "test:s2": "node scripts/s2-program-builder-test.mjs",
     "test:copy-week": "node scripts/s2-copy-week-test.mjs",
     "test:week-duplicate": "node scripts/program-week-duplicate-test.mjs",

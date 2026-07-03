@@ -20,12 +20,12 @@ const SEED_DEMO_IDS = new Set(DEMO_USER_DIRECTORY.map((u) => u.id));
 
 const SEED_NOTES: Record<string, string> = {
   "demo-user-john-steph":
-    "Primary demo couple — enrolled in Adult. Default member preview account for Coach Jeremy.",
-  "demo-user": "Member assigned to Coach Jeremy. Has phone + daily reminder.",
-  "demo-user-john": "Assigned to Coach Jeremy.",
-  "demo-user-stephanie": "Assigned to Coach Jeremy.",
-  "demo-user-2": "Assigned to Coach Jeremy.",
-  "demo-user-3": "Member without phone yet (for broadcast filter testing).",
+    "Test account — John & Steph (primary demo couple). Safe to edit phone/reminder.",
+  "demo-user": "Test account — Alex (demo member for Coach Jeremy).",
+  "demo-user-john": "Test account — Chad.",
+  "demo-user-stephanie": "Test account — Katie. Edit phone here for SMS reminders.",
+  "demo-user-2": "Test account — Jordan Lee.",
+  "demo-user-3": "Test account — Casey (no phone yet; broadcast filter testing).",
   "demo-coach-jeremy": "Primary coach — roster: John & Steph, Chad, Kaite, Alex, Jordan.",
   "demo-coach-john": "Site admin — sign in at /login with this email.",
 };

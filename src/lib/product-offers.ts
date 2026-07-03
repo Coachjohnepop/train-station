@@ -211,6 +211,12 @@ export function formatCustomTrainingSummary(params: CustomTrainingParameters): s
 
 export const COMING_SOON_PROGRAMS = [
   {
+    slug: "adolescent",
+    name: "Adolescent Training",
+    emoji: "🏃",
+    blurb: "Age-appropriate strength and conditioning for teen athletes.",
+  },
+  {
     slug: "military-prep",
     name: "Military Preparation",
     emoji: "🎖️",

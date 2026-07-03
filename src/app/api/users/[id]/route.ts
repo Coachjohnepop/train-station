@@ -16,6 +16,10 @@ import { getAllSignInAccounts, upsertSignInAccount } from "@/lib/member-accounts
 import { applySelfProfileUpdate } from "@/lib/user-self-update";
 import { hideUserById, unhideUserById } from "@/lib/user-visibility";
 import { getAdminSession, isSelfUserId, pickSelfProfilePatch } from "@/lib/users-admin-session";
+import {
+  annotatePrismaUserRow,
+  resolvePrismaUserIdForAdmin,
+} from "@/lib/users-admin-annotations";
 import { assertUserScope, requirePlatformStaff, requireSession } from "@/lib/api-auth";
 
 const ROLES = ["ADMIN", "INSTRUCTOR", "PLATFORM_ADMIN", "MEMBER", "PROSPECTIVE_INSTRUCTOR"] as const;
@@ -64,16 +68,41 @@ export async function GET(_req: Request, { params }: Params) {
     return NextResponse.json({ detail: "User not found" }, { status: 404 });
   }
 
+  const prismaUserId = await resolvePrismaUserIdForAdmin(id);
+  if (!prismaUserId) {
+    return NextResponse.json({ detail: "User not found" }, { status: 404 });
+  }
+
   const user = await prisma.user.findUnique({
-    where: { id },
+    where: { id: prismaUserId },
     include: {
       subscriptions: { include: { tier: true }, orderBy: { id: "desc" }, take: 1 },
       enrollments: { include: { program: true }, orderBy: { startedAt: "desc" }, take: 5 },
       workoutLogs: { orderBy: { performedAt: "desc" }, take: 5 },
+      _count: { select: { enrollments: true, performances: true, workoutLogs: true } },
     },
   });
   if (!user) return NextResponse.json({ detail: "User not found" }, { status: 404 });
-  return NextResponse.json(user);
+
+  return NextResponse.json(
+    annotatePrismaUserRow({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      status: user.status,
+      notes: user.notes,
+      phone: user.phone || null,
+      dailyReminderTime: user.dailyReminderTime || null,
+      hidden: user.hidden,
+      hiddenAt: user.hiddenAt,
+      createdAt: user.createdAt,
+      subscription: user.subscriptions[0]
+        ? { tier: user.subscriptions[0].tier.slug, status: user.subscriptions[0].status }
+        : null,
+      counts: user._count,
+    }),
+  );
 }
 
 export async function PATCH(request: Request, { params }: Params) {
@@ -222,12 +251,51 @@ export async function PATCH(request: Request, { params }: Params) {
     );
   }
 
+  const prismaUserId = await resolvePrismaUserIdForAdmin(id);
+  if (!prismaUserId) {
+    return NextResponse.json({ detail: "User not found" }, { status: 404 });
+  }
+
+  const { password: _password, hidden: _hidden, ...updateFields } = parsed.data;
+
   try {
     const user = await prisma.user.update({
-      where: { id },
-      data: parsed.data,
+      where: { id: prismaUserId },
+      data: updateFields,
     });
-    return NextResponse.json(user);
+
+    if (updateFields.phone !== undefined || updateFields.dailyReminderTime !== undefined) {
+      await upsertSignInAccount({
+        email: user.email,
+        userId: user.id,
+        role: user.role as
+          | "ADMIN"
+          | "INSTRUCTOR"
+          | "PLATFORM_ADMIN"
+          | "MEMBER"
+          | "PROSPECTIVE_INSTRUCTOR",
+        name: user.name || user.email.split("@")[0],
+        phone: user.phone,
+      });
+    }
+
+    return NextResponse.json(
+      annotatePrismaUserRow({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        status: user.status,
+        notes: user.notes,
+        phone: user.phone || null,
+        dailyReminderTime: user.dailyReminderTime || null,
+        hidden: user.hidden,
+        hiddenAt: user.hiddenAt,
+        createdAt: user.createdAt,
+        subscription: null,
+        counts: { enrollments: 0, performances: 0, workoutLogs: 0 },
+      }),
+    );
   } catch {
     return NextResponse.json({ detail: "User not found or update failed" }, { status: 404 });
   }
