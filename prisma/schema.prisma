@@ -284,6 +284,24 @@ model SmsLog {
   user      User     @relation(fields: [userId], references: [id])
 }
 
+/** Coach-assigned daily workouts (SMS / lesson plan). workoutId may reference catalog or SMS blob workouts. */
+model CoachTodaySession {
+  id               String   @id
+  sessionDate      String
+  scheduledAt      DateTime
+  title            String
+  rawSms           String   @db.Text
+  workoutId        String
+  programSlug      String   @default("adult")
+  userIds          String[]
+  replacesSchedule Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  createdBy        String?
+
+  @@index([sessionDate])
+  @@index([scheduledAt])
+}
+
 model Equipment {
   id          String             @id @default(cuid())
   name        String             @unique

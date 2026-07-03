@@ -1,5 +1,6 @@
 import path from "path";
 import { randomUUID } from "crypto";
+import { isDemoMode } from "@/lib/demo-enrollments";
 import { parseSmsWorkout } from "@/lib/sms-workout-parser";
 import {
   buildWorkoutFromParsedSms,
@@ -8,6 +9,12 @@ import {
 } from "@/lib/sms-generated-workouts";
 import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
 import { localTodayIso } from "@/lib/program-calendar";
+import {
+  deleteSessionFromDb,
+  deleteSessionsForUserOnDateDb,
+  loadSessionsFromDb,
+  upsertSessionDb,
+} from "@/lib/today-sessions-db";
 
 export type TodaySession = {
   id: string;
@@ -70,6 +77,12 @@ function normalizeStore(raw: unknown): TodaySessionStore {
 export async function hydrateTodaySessions(opts?: {
   preferFresh?: boolean;
 }): Promise<TodaySessionStore> {
+  if (!isDemoMode()) {
+    const store = await loadSessionsFromDb();
+    setMemory(store);
+    return store;
+  }
+
   const hydrated = await hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
@@ -101,6 +114,14 @@ function readStore(): TodaySessionStore {
 }
 
 async function writeStore(store: TodaySessionStore) {
+  if (!isDemoMode()) {
+    setMemory(store);
+    for (const session of Object.values(store.sessions)) {
+      await upsertSessionDb(session);
+    }
+    return;
+  }
+
   await persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
@@ -244,12 +265,26 @@ export async function deleteTodaySession(sessionIdOrDate: string) {
   const store = readStore();
   if (store.sessions[sessionIdOrDate]) {
     delete store.sessions[sessionIdOrDate];
+    if (!isDemoMode()) {
+      await deleteSessionFromDb(sessionIdOrDate);
+      setMemory(store);
+      return true;
+    }
     await writeStore(store);
     return true;
   }
   const onDate = Object.values(store.sessions).filter((s) => s.sessionDate === sessionIdOrDate);
   if (onDate.length === 0) return false;
-  for (const s of onDate) delete store.sessions[s.id];
+  for (const s of onDate) {
+    delete store.sessions[s.id];
+    if (!isDemoMode()) {
+      await deleteSessionFromDb(s.id);
+    }
+  }
+  if (!isDemoMode()) {
+    setMemory(store);
+    return true;
+  }
   await writeStore(store);
   return true;
 }
@@ -346,6 +381,20 @@ export async function addMemberToPrimarySession(sessionDate: string, userId: str
 /** Remove sessions on a date assigned to a specific member (leaves other sessions on that day). */
 export async function deleteSessionForUserOnDate(userId: string, sessionDate: string) {
   await hydrateTodaySessions({ preferFresh: true });
+  if (!isDemoMode()) {
+    const ok = await deleteSessionsForUserOnDateDb(userId, sessionDate);
+    if (ok) {
+      const store = readStore();
+      for (const [id, s] of Object.entries(store.sessions)) {
+        if (s.sessionDate === sessionDate && s.userIds.includes(userId)) {
+          delete store.sessions[id];
+        }
+      }
+      setMemory(store);
+    }
+    return ok;
+  }
+
   const store = readStore();
   const toDelete = Object.values(store.sessions).filter(
     (s) => s.sessionDate === sessionDate && s.userIds.includes(userId),

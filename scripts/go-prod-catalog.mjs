@@ -66,7 +66,8 @@ run("npx", ["prisma", "db", "push", "--accept-data-loss"]);
 run("npm", ["run", "db:import-catalog"]);
 run("npm", ["run", "db:import-enrollments"]);
 run("npm", ["run", "db:import-logs"]);
+run("npm", ["run", "db:import-today-sessions"]);
 
-console.log("\n✅ Schema migrated, catalog + enrollments + logs imported.\n");
+console.log("\n✅ Schema migrated, catalog + enrollments + logs + today-sessions imported.\n");
 console.log("Next: redeploy production (git push main or vercel deploy --prod)\n");
 console.log("Then verify: BASE_URL=https://www.thetrainstation.co COACH_PASSWORD=… npm run test:s2e\n");

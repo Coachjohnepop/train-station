@@ -33,6 +33,14 @@ async function main() {
     new URL("./s1b-workout-persistence-test.mjs", import.meta.url).pathname,
   ];
 
+  if (process.env.SOAK_DB === "1") {
+    scripts.push(
+      new URL("./s3a-enrollment-db-test.mjs", import.meta.url).pathname,
+      new URL("./s3b-workout-logs-db-test.mjs", import.meta.url).pathname,
+      new URL("./s3c-today-sessions-db-test.mjs", import.meta.url).pathname,
+    );
+  }
+
   for (let round = 1; round <= ROUNDS; round++) {
     console.log(`\n=== Round ${round}/${ROUNDS} ===\n`);
     for (const script of scripts) {
@@ -50,7 +58,8 @@ async function main() {
     }
   }
 
-  console.log(`\nSoak PASSED — ${ROUNDS} round(s), all S1 + S1b checks green.\n`);
+  const suite = process.env.SOAK_DB === "1" ? "S1 + S1b + S3a + S3b + S3c" : "S1 + S1b";
+  console.log(`\nSoak PASSED — ${ROUNDS} round(s), all ${suite} checks green.\n`);
 }
 
 main().catch((err) => {
