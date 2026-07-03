@@ -14,6 +14,7 @@ import MemberExerciseVideoModal from "@/components/MemberExerciseVideoModal";
 import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
 import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
 import WorkoutRestTimer from "@/components/WorkoutRestTimer";
+import { playCybertruckHorn } from "@/lib/play-cybertruck-horn";
 
 export type MemberExerciseBlock = {
   id: string;
@@ -144,6 +145,7 @@ export default function MemberWorkoutConsole({
   const [loggedDetailsOpen, setLoggedDetailsOpen] = useState(false);
   const [restTimer, setRestTimer] = useState<ActiveRestTimer | null>(null);
   const [restSecondsLeft, setRestSecondsLeft] = useState(0);
+  const restHornPlayedRef = useRef(false);
 
   const LIVE_POLL_MS = coachFloorMode ? 900 : 200;
   const liveSessionScope = progressMode === "live" && !!liveSyncUserId && !reviewMode;
@@ -514,12 +516,20 @@ export default function MemberWorkoutConsole({
   useEffect(() => {
     if (!restTimer) {
       setRestSecondsLeft(0);
+      restHornPlayedRef.current = false;
       return;
     }
+    restHornPlayedRef.current = false;
     const tick = () => {
       const left = Math.max(0, Math.ceil((restTimer.endsAt - Date.now()) / 1000));
       setRestSecondsLeft(left);
-      if (left <= 0) setRestTimer(null);
+      if (left <= 0) {
+        if (!restHornPlayedRef.current) {
+          restHornPlayedRef.current = true;
+          playCybertruckHorn();
+        }
+        setRestTimer(null);
+      }
     };
     tick();
     const id = window.setInterval(tick, 250);
