@@ -55,9 +55,11 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
   const [pickId, setPickId] = useState("");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingName, setSavingName] = useState(false);
+  const [persistenceNote, setPersistenceNote] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoadError(null);
@@ -101,6 +103,15 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    fetch("/api/admin/demo-persistence", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.demoMode && data.message) setPersistenceNote(data.message);
+      })
+      .catch(() => {});
+  }, []);
+
   const saveExerciseConfig = useCallback(
     async (
       exerciseId: string,
@@ -108,6 +119,7 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
       itemId?: string,
     ) => {
       setSaveError(null);
+      setSaveMessage(null);
       const payload = {
         setScheme: config.setScheme,
         repPattern: config.repPattern,
@@ -133,18 +145,41 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
         return;
       }
 
+      const saved = (await res.json()) as WorkoutItem;
+      setWorkout((prev) => {
+        if (!prev) return prev;
+        if (itemId) {
+          return {
+            ...prev,
+            exercises: prev.exercises.map((row) =>
+              row.id === itemId ? { ...row, ...saved, exercise: saved.exercise ?? row.exercise } : row,
+            ),
+          };
+        }
+        return { ...prev, exercises: [...prev.exercises, saved] };
+      });
+
       if (itemId) {
         setEditingItemId(null);
+        setSaveMessage(`Updated “${saved.exercise?.name ?? "exercise"}”.`);
       } else {
         setPickId("");
+        setSaveMessage(`Added “${saved.exercise?.name ?? "exercise"}”.`);
       }
-      await load();
     },
-    [workoutId, load],
+    [workoutId],
   );
 
   async function removeItem(itemId: string) {
+    const item = workout?.exercises.find((row) => row.id === itemId);
+    if (
+      item &&
+      !confirm(`Remove “${item.exercise.name}” from this workout?`)
+    ) {
+      return;
+    }
     setSaveError(null);
+    setSaveMessage(null);
     const res = await fetch(
       `/api/workouts/${workoutId}/exercises?itemId=${encodeURIComponent(itemId)}`,
       { method: "DELETE" },
@@ -162,7 +197,17 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
     if (editingItemId === itemId) {
       setEditingItemId(null);
     }
-    await load();
+    setWorkout((prev) =>
+      prev
+        ? {
+            ...prev,
+            exercises: prev.exercises.filter((row) => row.id !== itemId),
+          }
+        : prev,
+    );
+    setSaveMessage(
+      item ? `Removed “${item.exercise.name}”.` : "Exercise removed.",
+    );
   }
 
   async function saveWorkoutName(name: string) {
@@ -170,6 +215,7 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
     if (!trimmed || !workout || trimmed === workout.name) return;
     setSavingName(true);
     setSaveError(null);
+    setSaveMessage(null);
     try {
       const res = await fetch(`/api/workouts/${workoutId}`, {
         method: "PATCH",
@@ -185,6 +231,7 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
       }
       const updated = await res.json();
       setWorkout((prev) => (prev ? { ...prev, name: updated.name ?? trimmed } : prev));
+      setSaveMessage(`Workout renamed to “${updated.name ?? trimmed}”.`);
     } finally {
       setSavingName(false);
     }
@@ -219,6 +266,20 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
       <Link href="/admin/workouts" className="text-sm text-accent hover:underline">
         ← All workouts
       </Link>
+
+      {persistenceNote && (
+        <div
+          className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--muted)]"
+          role="status"
+        >
+          <p className="font-medium text-[var(--text)]">How workout edits are saved</p>
+          <p className="mt-1">{persistenceNote}</p>
+          <p className="mt-2 text-xs">
+            Add, edit setup, remove, and rename all update the workout library and program day
+            previews. Refresh once if a change looks stale.
+          </p>
+        </div>
+      )}
 
       <div>
         <input
@@ -290,6 +351,15 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
           />
         )}
       </div>
+
+      {saveMessage && (
+        <p
+          className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text)]"
+          role="status"
+        >
+          {saveMessage}
+        </p>
+      )}
 
       {saveError && (
         <p className="rounded-lg border border-[var(--danger)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--danger)]">

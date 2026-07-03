@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { hydrateDemoExercises, loadDemoExercises } from "@/lib/demo-exercises";
 import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
 import { BLOB_TOKEN } from "@/lib/demo-json-blob";
+import { requireBlobPersisted } from "@/lib/demo-persistence";
+import { requireStaff } from "@/lib/api-auth";
 import {
   buildDemoWorkoutExerciseItems,
   findDemoWorkoutRecord,
@@ -51,6 +53,9 @@ export async function GET(_request: Request, { params }: Params) {
 }
 
 export async function PATCH(request: Request, { params }: Params) {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
+
   const { id } = await params;
   const parsed = updateSchema.safeParse(await request.json());
   if (!parsed.success) {
@@ -58,35 +63,64 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   if (isDemoMode()) {
-    let updated: Record<string, unknown> | null = null;
-    let notFound = false;
-    const { blobSaved } = await mutateDemoSeed((data) => {
-      const workouts = (data.workouts || []) as any[];
-      const idx = workouts.findIndex((w) => w.id === id);
-      if (idx === -1) {
-        notFound = true;
-        return;
+    const expectedName =
+      parsed.data.name !== undefined ? parsed.data.name.trim() : undefined;
+    const expectedDescription =
+      parsed.data.description !== undefined
+        ? parsed.data.description?.trim() || null
+        : undefined;
+
+    try {
+      for (let attempt = 0; attempt < 4; attempt++) {
+        let updated: Record<string, unknown> | null = null;
+        let notFound = false;
+        const { blobSaved } = await mutateDemoSeed((data) => {
+          const workouts = (data.workouts || []) as any[];
+          const idx = workouts.findIndex((w) => w.id === id);
+          if (idx === -1) {
+            notFound = true;
+            return;
+          }
+          const w = { ...workouts[idx] };
+          if (expectedName !== undefined) w.name = expectedName;
+          if (expectedDescription !== undefined) w.description = expectedDescription;
+          w.updatedAt = new Date().toISOString();
+          workouts[idx] = w;
+          data.workouts = workouts;
+          updated = w;
+        });
+        if (notFound) {
+          return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
+        }
+        requireBlobPersisted(blobSaved, "Workout update");
+
+        const seed = await getDemoSeed({ preferFresh: Boolean(BLOB_TOKEN) });
+        const persisted = ((seed.workouts as any[]) || []).find((w) => w.id === id);
+        const nameOk =
+          expectedName === undefined || persisted?.name === expectedName;
+        const descOk =
+          expectedDescription === undefined ||
+          (persisted?.description ?? null) === expectedDescription;
+        if (persisted && nameOk && descOk) {
+          const data = await getDemoSeed({ preferFresh: true });
+          await hydrateDemoExercises({ preferFresh: true });
+          const items = buildDemoWorkoutExerciseItems(
+            id,
+            (data.workoutExercises || []) as any[],
+            loadDemoExercises(),
+          );
+          return NextResponse.json({ ...persisted, exercises: items });
+        }
+        await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
       }
-      const w = { ...workouts[idx] };
-      if (parsed.data.name !== undefined) w.name = parsed.data.name.trim();
-      if (parsed.data.description !== undefined) {
-        w.description = parsed.data.description?.trim() || null;
-      }
-      w.updatedAt = new Date().toISOString();
-      workouts[idx] = w;
-      data.workouts = workouts;
-      updated = w;
-    });
-    if (notFound) {
-      return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
-    }
-    if (process.env.VERCEL && BLOB_TOKEN && !blobSaved) {
       return NextResponse.json(
-        { detail: "Update applied but cloud save failed — retry in a moment." },
+        { detail: "Workout update could not be verified — retry in a moment." },
         { status: 503 },
       );
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Workout update failed";
+      return NextResponse.json({ detail: msg }, { status: 503 });
     }
-    return NextResponse.json(updated);
   }
 
   try {

@@ -6,6 +6,7 @@ import { hydrateDemoExercises, loadDemoExercises } from "@/lib/demo-exercises";
 import { BLOB_TOKEN } from "@/lib/demo-json-blob";
 import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
 import { requireBlobPersisted } from "@/lib/demo-persistence";
+import { requireStaff } from "@/lib/api-auth";
 import { ensureDemoWorkoutInSeed, resolveDemoExercise } from "@/lib/demo-workout-items";
 
 function isDemoMode() {
@@ -33,6 +34,9 @@ const updateItemSchema = z.object({
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, { params }: Params) {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
+
   const { id: workoutId } = await params;
   const parsed = addSchema.safeParse(await request.json());
   if (!parsed.success) {
@@ -146,8 +150,24 @@ export async function POST(request: Request, { params }: Params) {
   }
 }
 
+function demoItemMatchesPatch(we: any, data: Record<string, unknown>): boolean {
+  if (data.exerciseId !== undefined && we.exerciseId !== data.exerciseId) return false;
+  if (data.setScheme !== undefined && we.setScheme !== data.setScheme) return false;
+  if (data.repPattern !== undefined && we.repPattern !== data.repPattern) return false;
+  if (data.reps !== undefined && we.reps !== data.reps) return false;
+  if (data.weightTier !== undefined && we.weightTier !== data.weightTier) return false;
+  if (data.sets !== undefined && we.sets !== data.sets) return false;
+  if (data.restSec !== undefined && we.restSec !== data.restSec) return false;
+  if (data.notes !== undefined && we.notes !== data.notes) return false;
+  if (data.sortOrder !== undefined && we.sortOrder !== data.sortOrder) return false;
+  return true;
+}
+
 export async function PATCH(request: Request, { params }: Params) {
-  await params;
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
+
+  const { id: workoutId } = await params;
   const parsed = updateItemSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
@@ -157,53 +177,69 @@ export async function PATCH(request: Request, { params }: Params) {
     await hydrateDemoExercises({ preferFresh: true });
     const exList = loadDemoExercises();
 
-    let updated: Record<string, unknown> | null = null;
-    let notFound = false;
-    const { blobSaved } = await mutateDemoSeed((seedData) => {
-      if (!seedData.workoutExercises) seedData.workoutExercises = [];
+    try {
+      for (let attempt = 0; attempt < 4; attempt++) {
+        let updated: Record<string, unknown> | null = null;
+        let notFound = false;
+        const { blobSaved } = await mutateDemoSeed((seedData) => {
+          if (!seedData.workoutExercises) seedData.workoutExercises = [];
 
-      const weIdx = seedData.workoutExercises.findIndex((we: any) => we.id === itemId);
-      if (weIdx === -1) {
-        notFound = true;
-        return;
-      }
+          const weIdx = seedData.workoutExercises.findIndex((we: any) => we.id === itemId);
+          if (weIdx === -1) {
+            notFound = true;
+            return;
+          }
 
-      const we = { ...seedData.workoutExercises[weIdx] } as any;
+          const we = { ...seedData.workoutExercises[weIdx] } as any;
 
-      if (data.exerciseId !== undefined) {
-        const ex = exList.find((e: any) => e.id === data.exerciseId);
-        if (!ex) {
-          notFound = true;
-          return;
+          if (data.exerciseId !== undefined) {
+            const ex = exList.find((e: any) => e.id === data.exerciseId);
+            if (!ex) {
+              notFound = true;
+              return;
+            }
+            we.exerciseId = data.exerciseId;
+          }
+          if (data.setScheme !== undefined) we.setScheme = data.setScheme;
+          if (data.repPattern !== undefined) we.repPattern = data.repPattern;
+          if (data.reps !== undefined) we.reps = data.reps;
+          if (data.weightTier !== undefined) we.weightTier = data.weightTier;
+          if (data.sets !== undefined) we.sets = data.sets;
+          if (data.restSec !== undefined) we.restSec = data.restSec;
+          if (data.notes !== undefined) we.notes = data.notes;
+          if (data.sortOrder !== undefined) we.sortOrder = data.sortOrder;
+
+          we.exercise = resolveDemoExercise(we.exerciseId, exList);
+
+          seedData.workoutExercises[weIdx] = we;
+          updated = we;
+        });
+
+        if (notFound) {
+          return NextResponse.json({ detail: "Item not found" }, { status: 404 });
         }
-        we.exerciseId = data.exerciseId;
+        requireBlobPersisted(blobSaved, "Exercise update");
+
+        const seed = await getDemoSeed({ preferFresh: Boolean(BLOB_TOKEN) });
+        const persisted = ((seed.workoutExercises as any[]) || []).find(
+          (we) => we.id === itemId && we.workoutId === workoutId,
+        );
+        if (persisted && demoItemMatchesPatch(persisted, data)) {
+          return NextResponse.json({
+            ...persisted,
+            exercise: resolveDemoExercise(persisted.exerciseId, exList),
+          });
+        }
+        await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
       }
-      if (data.setScheme !== undefined) we.setScheme = data.setScheme;
-      if (data.repPattern !== undefined) we.repPattern = data.repPattern;
-      if (data.reps !== undefined) we.reps = data.reps;
-      if (data.weightTier !== undefined) we.weightTier = data.weightTier;
-      if (data.sets !== undefined) we.sets = data.sets;
-      if (data.restSec !== undefined) we.restSec = data.restSec;
-      if (data.notes !== undefined) we.notes = data.notes;
-      if (data.sortOrder !== undefined) we.sortOrder = data.sortOrder;
-
-      we.exercise = resolveDemoExercise(we.exerciseId, exList);
-
-      seedData.workoutExercises[weIdx] = we;
-      updated = we;
-    });
-
-    if (notFound) {
-      return NextResponse.json({ detail: "Item not found" }, { status: 404 });
-    }
-    if (process.env.VERCEL && BLOB_TOKEN && !blobSaved) {
       return NextResponse.json(
-        { detail: "Update applied but cloud save failed — retry in a moment." },
+        { detail: "Exercise update could not be verified — retry in a moment." },
         { status: 503 },
       );
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Exercise update failed";
+      return NextResponse.json({ detail: msg }, { status: 503 });
     }
-
-    return NextResponse.json(updated);
   }
   try {
     const item = await prisma.workoutExercise.update({
@@ -221,6 +257,9 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(request: Request, { params }: Params) {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
+
   const { id: workoutId } = await params;
   const url = new URL(request.url);
   let itemId = url.searchParams.get("itemId") ?? undefined;
@@ -239,25 +278,39 @@ export async function DELETE(request: Request, { params }: Params) {
   }
 
   if (isDemoMode()) {
-    let removed = false;
-    const { blobSaved } = await mutateDemoSeed((seedData) => {
-      if (!seedData.workoutExercises) seedData.workoutExercises = [];
-      const before = seedData.workoutExercises.length;
-      seedData.workoutExercises = seedData.workoutExercises.filter(
-        (we: any) => !(we.id === itemId && we.workoutId === workoutId),
-      );
-      removed = seedData.workoutExercises.length !== before;
-    });
-    if (!removed) {
-      return NextResponse.json({ detail: "Item not found" }, { status: 404 });
-    }
-    if (process.env.VERCEL && BLOB_TOKEN && !blobSaved) {
+    try {
+      for (let attempt = 0; attempt < 4; attempt++) {
+        let removed = false;
+        const { blobSaved } = await mutateDemoSeed((seedData) => {
+          if (!seedData.workoutExercises) seedData.workoutExercises = [];
+          const before = seedData.workoutExercises.length;
+          seedData.workoutExercises = seedData.workoutExercises.filter(
+            (we: any) => !(we.id === itemId && we.workoutId === workoutId),
+          );
+          removed = seedData.workoutExercises.length !== before;
+        });
+        if (!removed) {
+          return NextResponse.json({ detail: "Item not found" }, { status: 404 });
+        }
+        requireBlobPersisted(blobSaved, "Exercise remove");
+
+        const seed = await getDemoSeed({ preferFresh: Boolean(BLOB_TOKEN) });
+        const stillThere = ((seed.workoutExercises as any[]) || []).some(
+          (we) => we.id === itemId && we.workoutId === workoutId,
+        );
+        if (!stillThere) {
+          return new NextResponse(null, { status: 204 });
+        }
+        await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+      }
       return NextResponse.json(
-        { detail: "Remove applied but cloud save failed — retry in a moment." },
+        { detail: "Remove could not be verified — retry in a moment." },
         { status: 503 },
       );
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Exercise remove failed";
+      return NextResponse.json({ detail: msg }, { status: 503 });
     }
-    return new NextResponse(null, { status: 204 });
   }
 
   const existing = await prisma.workoutExercise.findFirst({

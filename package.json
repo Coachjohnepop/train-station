@@ -14,6 +14,7 @@
     "db:export-seed": "npx tsx prisma/export-seed-data.ts",
     "db:studio": "prisma studio",
     "test:s1": "node scripts/s1-exercise-persistence-test.mjs",
+    "test:s1b": "node scripts/s1b-workout-persistence-test.mjs",
     "test:s2": "node scripts/s2-program-builder-test.mjs",
     "test:copy-week": "node scripts/s2-copy-week-test.mjs",
     "test:week-duplicate": "node scripts/program-week-duplicate-test.mjs",
