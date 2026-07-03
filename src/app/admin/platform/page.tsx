@@ -34,6 +34,12 @@ const cards = [
     cta: "View reports →",
   },
   {
+    href: "/admin/insights",
+    title: "Insights",
+    description: "Page views, clicks, and sessions from the live click tracker.",
+    cta: "View insights →",
+  },
+  {
     href: "/admin/landing",
     title: "Landing & Venmo",
     description: "Public checkout backup — videos, Venmo QR, and ticket media.",
