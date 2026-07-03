@@ -4,6 +4,12 @@ import { useEffect, useState } from "react";
 import type { CoachAlertEvent, CoachAlertPrefs } from "@/lib/alert-channels";
 import type { WarmupBlockTemplate } from "@/lib/warmup-template";
 import type { RampWeekTemplate } from "@/lib/member-ramp-template";
+import {
+  GAMIFICATION_EVENT_LABELS,
+  GAMIFICATION_EVENT_TYPES,
+  type GamificationEventType,
+  type GamificationPointsMap,
+} from "@/lib/gamification-types";
 
 type CoachSettings = {
   coachPhone: string | null;
@@ -14,6 +20,7 @@ type CoachSettings = {
   alertPrefs: CoachAlertPrefs;
   warmupBlocks: WarmupBlockTemplate[];
   rampTemplate: RampWeekTemplate[];
+  gamificationPoints: GamificationPointsMap;
   updatedAt: string;
 };
 
@@ -58,6 +65,7 @@ export default function CoachSettingsPanel() {
         alertPrefs: settings.alertPrefs,
         warmupBlocks: settings.warmupBlocks,
         rampTemplate: settings.rampTemplate,
+        gamificationPoints: settings.gamificationPoints,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -89,6 +97,17 @@ export default function CoachSettingsPanel() {
     const blocks = [...settings.warmupBlocks];
     blocks[idx] = { ...blocks[idx], ...patch };
     setSettings({ ...settings, warmupBlocks: blocks });
+  }
+
+  function updateGamificationPoint(type: GamificationEventType, value: number) {
+    if (!settings) return;
+    setSettings({
+      ...settings,
+      gamificationPoints: {
+        ...settings.gamificationPoints,
+        [type]: Math.max(0, Math.min(10_000, Math.round(value) || 0)),
+      },
+    });
   }
 
   function updateRampDay(
@@ -292,6 +311,37 @@ export default function CoachSettingsPanel() {
                 onChange={(e) => updateWarmup(idx, { reps: e.target.value || null })}
               />
             </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="card space-y-4 p-5">
+        <div>
+          <h2 className="text-lg font-semibold">Gamification points</h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Point values members earn for each accomplishment on Today. Changes apply to new awards
+            only — past ledger entries keep their original values.
+          </p>
+        </div>
+        <div className="space-y-2">
+          {GAMIFICATION_EVENT_TYPES.map((type) => (
+            <label
+              key={type}
+              className="grid gap-2 rounded-lg border border-[var(--border)] px-3 py-2 sm:grid-cols-[1fr_7rem]"
+            >
+              <span className="text-sm">
+                <span className="font-medium">{GAMIFICATION_EVENT_LABELS[type]}</span>
+                <span className="mt-0.5 block text-[10px] text-[var(--muted)]">{type}</span>
+              </span>
+              <input
+                className="input text-right tabular-nums"
+                type="number"
+                min={0}
+                max={10000}
+                value={settings.gamificationPoints[type]}
+                onChange={(e) => updateGamificationPoint(type, Number(e.target.value))}
+              />
+            </label>
           ))}
         </div>
       </section>

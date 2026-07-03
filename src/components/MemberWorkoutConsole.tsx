@@ -795,6 +795,9 @@ export default function MemberWorkoutConsole({
         progress: data.progress ?? progress,
       });
       const gamification = data.gamification;
+      const fullWorkout =
+        progress >= 100 ||
+        (total > 0 && finishedExercises.size >= total && idsToLog.length >= total);
       if (gamification && typeof gamification.totalPoints === "number") {
         const pointsEarned = gamification.awarded
           ? gamification.pointsEarned ?? GAMIFICATION_POINTS.workout_logged
@@ -802,7 +805,8 @@ export default function MemberWorkoutConsole({
         dispatchMemberScoreCelebrate({
           pointsEarned,
           totalPoints: gamification.totalPoints,
-          label: "Workout logged",
+          label: fullWorkout ? "Workout complete!" : "Workout logged",
+          celebration: fullWorkout ? "workout-complete" : "standard",
         });
       }
       requestAnimationFrame(() => {

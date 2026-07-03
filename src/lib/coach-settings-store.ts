@@ -18,6 +18,10 @@ import {
   normalizeRampWeeks,
   type RampWeekTemplate,
 } from "@/lib/member-ramp-template";
+import {
+  normalizeGamificationPoints,
+  type GamificationPointsMap,
+} from "@/lib/gamification-types";
 
 export type CommissionPayoutMode = "on_demand" | "weekly";
 
@@ -40,6 +44,8 @@ export type CoachSettings = {
   alertPrefs: CoachAlertPrefs;
   warmupBlocks: WarmupBlockTemplate[];
   rampTemplate: RampWeekTemplate[];
+  /** Point values for member score accomplishments (admin-editable). */
+  gamificationPoints: GamificationPointsMap;
   updatedAt: string;
 };
 
@@ -103,6 +109,7 @@ function defaultSettings(): CoachSettings {
       ...w,
       days: w.days.map((d) => ({ ...d })),
     })),
+    gamificationPoints: normalizeGamificationPoints(null),
     updatedAt: new Date().toISOString(),
   };
 }
@@ -122,6 +129,7 @@ function normalizeSettings(raw: unknown): CoachSettings {
     alertPrefs: normalizeCoachAlertPrefs(data.alertPrefs),
     warmupBlocks: normalizeWarmupBlocks(data.warmupBlocks),
     rampTemplate: normalizeRampWeeks(data.rampTemplate),
+    gamificationPoints: normalizeGamificationPoints(data.gamificationPoints),
     updatedAt: data.updatedAt || new Date().toISOString(),
   };
 }
@@ -158,6 +166,7 @@ export async function saveCoachSettings(
       | "alertPrefs"
       | "warmupBlocks"
       | "rampTemplate"
+      | "gamificationPoints"
     >
   >,
 ): Promise<CoachSettings> {
@@ -190,6 +199,9 @@ export async function saveCoachSettings(
       ? normalizeWarmupBlocks(patch.warmupBlocks)
       : current.warmupBlocks,
     rampTemplate: patch.rampTemplate ? normalizeRampWeeks(patch.rampTemplate) : current.rampTemplate,
+    gamificationPoints: patch.gamificationPoints
+      ? normalizeGamificationPoints(patch.gamificationPoints)
+      : current.gamificationPoints,
     updatedAt: new Date().toISOString(),
   };
   memoryStore = next;

@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import MemberScoreProgressPanel from "@/components/MemberScoreProgress";
-import { GAMIFICATION_POINTS, type LeaderboardPayload, type LeaderboardScope } from "@/lib/gamification-types";
+import {
+  DEFAULT_GAMIFICATION_POINTS,
+  type GamificationPointsMap,
+  type LeaderboardPayload,
+  type LeaderboardScope,
+} from "@/lib/gamification-types";
 import type { MemberScoreProgress } from "@/lib/gamification-types";
 
 type ScoresTab = "mine" | "high";
@@ -103,6 +108,7 @@ export default function MemberLeaderboard() {
   const [scope, setScope] = useState<LeaderboardScope>("program");
   const [data, setData] = useState<LeaderboardPayload | null>(null);
   const [progress, setProgress] = useState<MemberScoreProgress | null>(null);
+  const [pointValues, setPointValues] = useState<GamificationPointsMap>(DEFAULT_GAMIFICATION_POINTS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -112,6 +118,7 @@ export default function MemberLeaderboard() {
       if (!res.ok) return;
       const json = await res.json();
       if (json.progress) setProgress(json.progress);
+      if (json.pointValues) setPointValues(json.pointValues);
       if (typeof json.totalPoints === "number" && data?.viewer) {
         setData((prev) =>
           prev
@@ -149,6 +156,7 @@ export default function MemberLeaderboard() {
       );
     }
     if (scoreJson.progress) setProgress(scoreJson.progress);
+    if (scoreJson.pointValues) setPointValues(scoreJson.pointValues);
     setLoading(false);
   }, []);
 
@@ -209,11 +217,11 @@ export default function MemberLeaderboard() {
           <details className="card p-3 text-xs text-[var(--muted)]">
             <summary className="cursor-pointer font-semibold text-accent">How to earn points</summary>
             <ul className="mt-2 space-y-1">
-              <li>Warm-ups before live — {GAMIFICATION_POINTS.warmup_before_live} pts (once per day)</li>
-              <li>Book intro call — {GAMIFICATION_POINTS.intake_scheduled} pts</li>
-              <li>Log a workout — {GAMIFICATION_POINTS.workout_logged} pts</li>
-              <li>Coach intake complete — {GAMIFICATION_POINTS.intake_complete} pts</li>
-              <li>Finish account setup — {GAMIFICATION_POINTS.onboarding_complete} pts</li>
+              <li>Warm-ups before live — {pointValues.warmup_before_live} pts (once per day)</li>
+              <li>Book intro call — {pointValues.intake_scheduled} pts</li>
+              <li>Log a workout — {pointValues.workout_logged} pts</li>
+              <li>Coach intake complete — {pointValues.intake_complete} pts</li>
+              <li>Finish account setup — {pointValues.onboarding_complete} pts</li>
             </ul>
           </details>
         </div>

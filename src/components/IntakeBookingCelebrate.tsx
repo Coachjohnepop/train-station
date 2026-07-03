@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MemberScoreCelebrateDetail } from "@/lib/member-score-celebrate";
-import { runConfetti } from "@/lib/workout-confetti";
+import { runConfetti, runFireworks } from "@/lib/workout-confetti";
+
+const WORKOUT_FIREWORKS_MS = 3000;
 
 type Phase = "idle" | "burst" | "fly" | "fade" | "done";
 
@@ -12,11 +14,12 @@ const FADE_MS = 2000;
 function normalizeCelebrateDetail(raw: MemberScoreCelebrateDetail | undefined): MemberScoreCelebrateDetail | null {
   if (!raw || typeof raw.totalPoints !== "number") return null;
   const pointsEarned = typeof raw.pointsEarned === "number" ? raw.pointsEarned : 0;
-  if (pointsEarned <= 0) return null;
+  if (pointsEarned <= 0 && raw.celebration !== "workout-complete") return null;
   return {
     pointsEarned,
     totalPoints: raw.totalPoints,
-    label: raw.label || "Points earned",
+    label: raw.label || (raw.celebration === "workout-complete" ? "Workout complete!" : "Points earned"),
+    celebration: raw.celebration,
   };
 }
 
@@ -90,6 +93,14 @@ export default function IntakeBookingCelebrate() {
     (payload: MemberScoreCelebrateDetail) => {
       const normalized = normalizeCelebrateDetail(payload);
       if (!normalized) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        window.dispatchEvent(
+          new CustomEvent("member-score-updated", {
+            detail: { totalPoints: normalized.totalPoints },
+          }),
+        );
+        return;
+      }
 
       setDetail(normalized);
       setPhase("burst");
@@ -97,10 +108,15 @@ export default function IntakeBookingCelebrate() {
 
       if (canvasRef.current) {
         stopConfettiRef.current?.();
-        stopConfettiRef.current = runConfetti(canvasRef.current);
+        stopConfettiRef.current =
+          normalized.celebration === "workout-complete"
+            ? runFireworks(canvasRef.current, WORKOUT_FIREWORKS_MS)
+            : runConfetti(canvasRef.current);
       }
 
-      window.setTimeout(() => startFly(normalized), 1600);
+      const delayBeforeFly =
+        normalized.celebration === "workout-complete" ? WORKOUT_FIREWORKS_MS : 1600;
+      window.setTimeout(() => startFly(normalized), delayBeforeFly);
     },
     [startFly],
   );
@@ -124,12 +140,15 @@ export default function IntakeBookingCelebrate() {
 
   const earned = detail.pointsEarned;
   const headline = detail.label || "Points earned";
+  const isWorkoutComplete = detail.celebration === "workout-complete";
 
   return (
     <div
       className="pointer-events-none fixed inset-0 z-[200]"
       aria-live="polite"
-      aria-label={`You earned ${earned} points`}
+      aria-label={
+        earned > 0 ? `You earned ${earned} points` : "Workout complete"
+      }
     >
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
 
@@ -143,10 +162,19 @@ export default function IntakeBookingCelebrate() {
             <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--ramp-gold-light)]">
               {headline}
             </p>
-            <p className="mt-1 text-5xl font-black tabular-nums text-[var(--ramp-gold-light)] sm:text-6xl">
-              +{earned}
-            </p>
-            <p className="mt-1 text-sm font-semibold text-white/90">points</p>
+            {earned > 0 ? (
+              <>
+                <p className="mt-1 text-5xl font-black tabular-nums text-[var(--ramp-gold-light)] sm:text-6xl">
+                  +{earned}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-white/90">points</p>
+              </>
+            ) : isWorkoutComplete ? (
+              <p className="mt-2 text-lg font-semibold text-white/90">All exercises done</p>
+            ) : null}
+            {isWorkoutComplete && earned > 0 ? (
+              <p className="mt-2 text-xs font-medium text-white/75">Total: {detail.totalPoints} pts</p>
+            ) : null}
           </div>
         </div>
       )}

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireMemberAccess } from "@/lib/api-auth";
+import { getGamificationPointsConfig } from "@/lib/gamification-config";
 import { buildMemberScoreProgress } from "@/lib/member-gamification-progress";
 import { getUserGamification } from "@/lib/member-gamification-store";
 import { getMemberProfile } from "@/lib/member-profiles-store";
@@ -10,11 +11,15 @@ export async function GET() {
   const auth = await requireMemberAccess();
   if (!auth.ok) return auth.response;
 
-  const gamification = await getUserGamification(auth.session.id);
-  const profile = await getMemberProfile(auth.session.id);
-  const progress = buildMemberScoreProgress(gamification, profile);
+  const [gamification, profile, pointValues] = await Promise.all([
+    getUserGamification(auth.session.id),
+    getMemberProfile(auth.session.id),
+    getGamificationPointsConfig(),
+  ]);
+  const progress = buildMemberScoreProgress(gamification, profile, pointValues);
 
   return NextResponse.json({
+    pointValues,
     totalPoints: gamification.totalPoints,
     eventCount: gamification.events.length,
     events: gamification.events.map((e) => ({

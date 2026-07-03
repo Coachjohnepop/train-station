@@ -1,10 +1,12 @@
 import "server-only";
 
+import { getGamificationPointsConfig } from "@/lib/gamification-config";
 import {
+  DEFAULT_GAMIFICATION_POINTS,
   GAMIFICATION_EVENT_LABELS,
-  GAMIFICATION_POINTS,
   type GamificationEvent,
   type GamificationEventType,
+  type GamificationPointsMap,
   type MemberScoreProgress,
   type ScoreMilestone,
   type UserGamification,
@@ -18,7 +20,7 @@ import { hydrateJsonStore, isBlobConfigured } from "@/lib/demo-json-blob";
 import path from "path";
 import type { WarmupProgressEntry } from "@/lib/member-warmup-progress-store";
 
-const JOURNEY_MILESTONES: Array<{
+function journeyMilestones(points: GamificationPointsMap): Array<{
   id: string;
   type: GamificationEventType;
   points: number;
@@ -29,11 +31,12 @@ const JOURNEY_MILESTONES: Array<{
     completedAt: string | null;
     earnedPoints: number;
   };
-}> = [
+}> {
+  return [
   {
     id: "onboarding:complete",
     type: "onboarding_complete",
-    points: GAMIFICATION_POINTS.onboarding_complete,
+    points: points.onboarding_complete,
     earnHint: "Finish account setup during onboarding.",
     href: "/member/onboard",
     isComplete: (events, profile) => {
@@ -43,7 +46,7 @@ const JOURNEY_MILESTONES: Array<{
         return {
           complete: true,
           completedAt: profile.completedAt,
-          earnedPoints: GAMIFICATION_POINTS.onboarding_complete,
+          earnedPoints: points.onboarding_complete,
         };
       }
       return { complete: false, completedAt: null, earnedPoints: 0 };
@@ -52,7 +55,7 @@ const JOURNEY_MILESTONES: Array<{
   {
     id: "warmup:first",
     type: "warmup_before_live",
-    points: GAMIFICATION_POINTS.warmup_before_live,
+    points: points.warmup_before_live,
     earnHint: "Check off warm-ups on Today before your live session (once per day).",
     href: "/member/today",
     isComplete: (events) => {
@@ -71,7 +74,7 @@ const JOURNEY_MILESTONES: Array<{
   {
     id: "intake:scheduled",
     type: "intake_scheduled",
-    points: GAMIFICATION_POINTS.intake_scheduled,
+    points: points.intake_scheduled,
     earnHint: "Book your 15-minute intro from Today or Book Call.",
     href: "/member/today",
     isComplete: (events, profile) => {
@@ -81,7 +84,7 @@ const JOURNEY_MILESTONES: Array<{
         return {
           complete: true,
           completedAt: profile.introBookedAt,
-          earnedPoints: GAMIFICATION_POINTS.intake_scheduled,
+          earnedPoints: points.intake_scheduled,
         };
       }
       return { complete: false, completedAt: null, earnedPoints: 0 };
@@ -90,7 +93,7 @@ const JOURNEY_MILESTONES: Array<{
   {
     id: "intake:complete",
     type: "intake_complete",
-    points: GAMIFICATION_POINTS.intake_complete,
+    points: points.intake_complete,
     earnHint: "Coach marks intake complete after your intro call.",
     href: "/member/today",
     isComplete: (events, profile) => {
@@ -100,13 +103,14 @@ const JOURNEY_MILESTONES: Array<{
         return {
           complete: true,
           completedAt: profile.coachIntakeCompleteAt,
-          earnedPoints: GAMIFICATION_POINTS.intake_complete,
+          earnedPoints: points.intake_complete,
         };
       }
       return { complete: false, completedAt: null, earnedPoints: 0 };
     },
   },
 ];
+}
 
 const WARMUP_BLOB = "demo/member-warmup-progress.json";
 const WARMUP_DEV = path.join(process.cwd(), "prisma", "member-warmup-progress.dev.json");
@@ -182,14 +186,27 @@ export async function reconcileGamificationFromProfile(userId: string): Promise<
   return getUserGamification(userId);
 }
 
+export async function buildMemberScoreProgressForUser(
+  userId: string,
+): Promise<MemberScoreProgress> {
+  const [gamification, profile, pointsConfig] = await Promise.all([
+    getUserGamification(userId),
+    getMemberProfile(userId),
+    getGamificationPointsConfig(),
+  ]);
+  return buildMemberScoreProgress(gamification, profile, pointsConfig);
+}
+
 export function buildMemberScoreProgress(
   gamification: UserGamification,
   profile: Awaited<ReturnType<typeof getMemberProfile>>,
+  pointsConfig: GamificationPointsMap = DEFAULT_GAMIFICATION_POINTS,
 ): MemberScoreProgress {
   const events = gamification.events;
   const earnedPoints = events.reduce((sum, e) => sum + e.points, 0);
+  const journeyDefs = journeyMilestones(pointsConfig);
 
-  const milestones: ScoreMilestone[] = JOURNEY_MILESTONES.map((def) => {
+  const milestones: ScoreMilestone[] = journeyDefs.map((def) => {
     const state = def.isComplete(events, profile);
     return {
       id: def.id,
@@ -211,14 +228,14 @@ export function buildMemberScoreProgress(
     id: "workout:next",
     type: "workout_logged",
     label: GAMIFICATION_EVENT_LABELS.workout_logged,
-    points: GAMIFICATION_POINTS.workout_logged,
+    points: pointsConfig.workout_logged,
     status: "incomplete",
     earnedPoints: workoutEarned,
     completedAt: workoutEvents.length
       ? [...workoutEvents].sort((a, b) => b.at.localeCompare(a.at))[0].at
       : null,
     repeatable: true,
-    earnHint: "Log a workout from Today — +25 pts once per scheduled workout per day.",
+    earnHint: `Log a workout from Today — +${pointsConfig.workout_logged} pts once per scheduled workout per day.`,
     href: "/member/today",
   });
 
@@ -226,7 +243,7 @@ export function buildMemberScoreProgress(
     .filter((m) => m.status === "incomplete" && !m.repeatable)
     .reduce((sum, m) => sum + m.points, 0);
 
-  const maxRampPoints = JOURNEY_MILESTONES.reduce((sum, m) => sum + m.points, 0);
+  const maxRampPoints = journeyDefs.reduce((sum, m) => sum + m.points, 0);
 
   return {
     earnedPoints,
@@ -236,7 +253,7 @@ export function buildMemberScoreProgress(
     workoutLogs: {
       count: workoutEvents.length,
       earnedPoints: workoutEarned,
-      nextPoints: GAMIFICATION_POINTS.workout_logged,
+      nextPoints: pointsConfig.workout_logged,
     },
   };
 }

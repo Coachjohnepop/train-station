@@ -16,6 +16,7 @@ const patchSchema = z.object({
   alertPrefs: z.record(z.string(), z.unknown()).optional(),
   warmupBlocks: z.array(z.unknown()).optional(),
   rampTemplate: z.array(z.unknown()).optional(),
+  gamificationPoints: z.record(z.string(), z.number().int().min(0).max(10_000)).optional(),
 });
 
 async function requireStaff() {
@@ -51,6 +52,9 @@ export async function PATCH(request: Request) {
     alertPrefs: body.data.alertPrefs as Parameters<typeof saveCoachSettings>[0]["alertPrefs"],
     warmupBlocks: body.data.warmupBlocks as Parameters<typeof saveCoachSettings>[0]["warmupBlocks"],
     rampTemplate: body.data.rampTemplate as Parameters<typeof saveCoachSettings>[0]["rampTemplate"],
+    gamificationPoints: body.data.gamificationPoints as Parameters<
+      typeof saveCoachSettings
+    >[0]["gamificationPoints"],
   });
   return NextResponse.json({ settings });
 }

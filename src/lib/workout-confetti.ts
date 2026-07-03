@@ -95,3 +95,96 @@ export function fireWorkoutConfetti(origin?: ConfettiOrigin, durationMs = 1600) 
     canvas.remove();
   }, durationMs + 120);
 }
+
+type FireworkParticle = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  color: string;
+  size: number;
+};
+
+/** Full-screen fireworks show — member workout complete celebration. */
+export function runFireworks(canvas: HTMLCanvasElement, durationMs = 3000) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return () => {};
+
+  const dpr = window.devicePixelRatio || 1;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = `${w}px`;
+  canvas.style.height = `${h}px`;
+  ctx.scale(dpr, dpr);
+
+  const colors = ["#fde68a", "#f0c75e", "#d4af37", "#f472b6", "#c4b5fd", "#7c3aed", "#4ade9a", "#fff"];
+  const particles: FireworkParticle[] = [];
+  const start = performance.now();
+  let raf = 0;
+
+  function spawnBurst() {
+    const cx = w * (0.2 + Math.random() * 0.6);
+    const cy = h * (0.18 + Math.random() * 0.42);
+    const count = 36 + Math.floor(Math.random() * 28);
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + Math.random() * 0.35;
+      const speed = 2 + Math.random() * 5.5;
+      particles.push({
+        x: cx,
+        y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 0,
+        maxLife: 55 + Math.random() * 35,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        size: 2 + Math.random() * 2.5,
+      });
+    }
+  }
+
+  spawnBurst();
+  const burstTimer = window.setInterval(spawnBurst, 380);
+
+  function frame(now: number) {
+    if (!ctx) return;
+    const elapsed = now - start;
+    ctx.clearRect(0, 0, w, h);
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.life += 1;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.07;
+      p.vx *= 0.985;
+
+      const alpha = Math.max(0, 1 - p.life / p.maxLife);
+      if (alpha <= 0) {
+        particles.splice(i, 1);
+        continue;
+      }
+
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.globalAlpha = 1;
+    if (elapsed < durationMs) {
+      raf = requestAnimationFrame(frame);
+    }
+  }
+
+  raf = requestAnimationFrame(frame);
+
+  return () => {
+    window.clearInterval(burstTimer);
+    cancelAnimationFrame(raf);
+  };
+}

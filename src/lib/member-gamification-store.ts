@@ -3,8 +3,8 @@ import "server-only";
 import path from "path";
 import { hydrateJsonStore, isBlobConfigured, persistJsonStore } from "@/lib/demo-json-blob";
 import { requireBlobPersisted } from "@/lib/demo-persistence";
+import { getGamificationPointsConfig } from "@/lib/gamification-config";
 import {
-  GAMIFICATION_POINTS,
   type GamificationEvent,
   type GamificationEventType,
   type UserGamification,
@@ -108,8 +108,9 @@ export async function awardGamificationPoints(input: {
   label?: string;
   points?: number;
   programSlug?: string | null;
-}): Promise<{ awarded: boolean; totalPoints: number }> {
-  const points = input.points ?? GAMIFICATION_POINTS[input.type];
+}): Promise<{ awarded: boolean; totalPoints: number; pointsEarned: number }> {
+  const pointsConfig = await getGamificationPointsConfig();
+  const points = input.points ?? pointsConfig[input.type];
 
   for (let attempt = 0; attempt < 4; attempt += 1) {
     // Only cold-start with a fresh blob read; retries must not overwrite memory with stale CDN data.
@@ -118,7 +119,7 @@ export async function awardGamificationPoints(input: {
     const current = normalizeUser(store[input.userId], input.userId);
 
     if (current.events.some((e) => e.id === input.eventId)) {
-      return { awarded: false, totalPoints: current.totalPoints };
+      return { awarded: false, totalPoints: current.totalPoints, pointsEarned: 0 };
     }
 
     const event: GamificationEvent = {
@@ -157,7 +158,7 @@ export async function awardGamificationPoints(input: {
     // Trust instance memory immediately after persist — never re-verify via preferFresh blob reads.
     if (userHasEvent(input.userId, input.eventId)) {
       const verified = normalizeUser(memoryStore?.[input.userId], input.userId);
-      return { awarded: true, totalPoints: verified.totalPoints };
+      return { awarded: true, totalPoints: verified.totalPoints, pointsEarned: points };
     }
 
     if (attempt < 3) {

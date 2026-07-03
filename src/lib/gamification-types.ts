@@ -1,4 +1,4 @@
-export const GAMIFICATION_POINTS = {
+export const DEFAULT_GAMIFICATION_POINTS = {
   warmup_before_live: 50,
   intake_scheduled: 100,
   workout_logged: 25,
@@ -6,7 +6,28 @@ export const GAMIFICATION_POINTS = {
   onboarding_complete: 25,
 } as const;
 
-export type GamificationEventType = keyof typeof GAMIFICATION_POINTS;
+/** @deprecated Use configured points from coach settings; defaults remain for fallbacks. */
+export const GAMIFICATION_POINTS = DEFAULT_GAMIFICATION_POINTS;
+
+export type GamificationEventType = keyof typeof DEFAULT_GAMIFICATION_POINTS;
+
+export type GamificationPointsMap = Record<GamificationEventType, number>;
+
+export const GAMIFICATION_EVENT_TYPES = Object.keys(
+  DEFAULT_GAMIFICATION_POINTS,
+) as GamificationEventType[];
+
+export function normalizeGamificationPoints(raw: unknown): GamificationPointsMap {
+  const out: GamificationPointsMap = { ...DEFAULT_GAMIFICATION_POINTS };
+  if (!raw || typeof raw !== "object") return out;
+  for (const key of GAMIFICATION_EVENT_TYPES) {
+    const value = (raw as Record<string, unknown>)[key];
+    if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+      out[key] = Math.min(10_000, Math.round(value));
+    }
+  }
+  return out;
+}
 
 export type GamificationEvent = {
   /** Dedupe key — same id cannot award twice */

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
-import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
 import { awardGamificationPoints } from "@/lib/member-gamification-store";
 import { ensureMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
 import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
@@ -50,6 +49,6 @@ export async function POST() {
     ok: true,
     awarded: result.awarded,
     totalPoints: result.totalPoints,
-    pointsEarned: result.awarded ? GAMIFICATION_POINTS.intake_scheduled : 0,
+    pointsEarned: result.pointsEarned,
   });
 }

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { resolveUserId } from "@/lib/current-user";
 import { createWorkoutLogAndPerformances, type LogExerciseInput } from "@/lib/data/user-data";
-import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
 import { awardGamificationPoints } from "@/lib/member-gamification-store";
 import { localTodayIso } from "@/lib/program-calendar";
 
@@ -51,7 +50,7 @@ export async function POST(request: Request, { params }: Params) {
       progress: parsed.data.progress,
     });
 
-    let gamification: { awarded: boolean; totalPoints: number } | null = null;
+    let gamification: Awaited<ReturnType<typeof awardGamificationPoints>> | null = null;
     let gamificationWarning: string | null = null;
     try {
       const sessionDate = parsed.data.sessionDate || localTodayIso();
@@ -72,7 +71,7 @@ export async function POST(request: Request, { params }: Params) {
     const gamificationPayload = gamification
       ? {
           ...gamification,
-          pointsEarned: gamification.awarded ? GAMIFICATION_POINTS.workout_logged : 0,
+          pointsEarned: gamification.pointsEarned,
         }
       : null;
 

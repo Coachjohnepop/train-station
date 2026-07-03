@@ -10,7 +10,7 @@ import {
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { awardGamificationPoints } from "@/lib/member-gamification-store";
-import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
+
 
 const putSchema = z.object({
   sessionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -74,7 +74,7 @@ export async function PUT(request: Request) {
       eventId: `warmup:${body.data.sessionDate}`,
       type: "warmup_before_live",
     });
-    pointsEarned = award.awarded ? GAMIFICATION_POINTS.warmup_before_live : 0;
+    pointsEarned = award.pointsEarned;
     totalPoints = award.totalPoints;
   }
 
