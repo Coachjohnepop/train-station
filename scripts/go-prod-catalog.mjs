@@ -12,13 +12,29 @@
 import { spawnSync } from "node:child_process";
 import dotenv from "dotenv";
 
-dotenv.config({ path: ".env.vercel.production" });
+dotenv.config({ path: ".env" });
 dotenv.config({ path: ".env.vercel.prod" });
 dotenv.config({ path: ".env.local" });
-dotenv.config({ path: ".env" });
+// Supabase / Vercel production vars must win over local dummy DATABASE_URL.
+dotenv.config({ path: ".env.vercel.production", override: true });
 
-const url = process.env.DATABASE_URL ?? "";
-const direct = process.env.DIRECT_URL ?? process.env.DATABASE_URL ?? "";
+function resolveUrl() {
+  const postgres =
+    process.env.POSTGRES_PRISMA_URL ?? process.env.POSTGRES_URL ?? "";
+  const database = process.env.DATABASE_URL ?? "";
+  if (postgres) return postgres;
+  if (database && !database.includes("dummy")) return database;
+  return "";
+}
+
+function resolveDirect(fallback) {
+  const direct = process.env.DIRECT_URL ?? "";
+  if (direct && !direct.includes("dummy")) return direct;
+  return process.env.POSTGRES_URL_NON_POOLING ?? fallback;
+}
+
+const url = resolveUrl();
+const direct = resolveDirect(url);
 
 function fail(msg) {
   console.error(`\n❌ ${msg}`);
@@ -30,18 +46,23 @@ if (!url || url.includes("dummy")) {
 }
 
 console.log("\nGo-live catalog migration\n");
-console.log(`DB host: ${url.replace(/postgresql:\/\/[^@]+@/, "postgresql://***@").split("?")[0]}\n`);
+console.log(
+  `DB host: ${url.replace(/postgres(ql)?:\/\/[^@]+@/, "postgres://***@").split("?")[0]}\n`,
+);
+
+const childEnv = { ...process.env, DATABASE_URL: url, DIRECT_URL: direct };
 
 function run(cmd, args) {
   console.log(`→ ${cmd} ${args.join(" ")}`);
   const res = spawnSync(cmd, args, {
     stdio: "inherit",
-    env: { ...process.env, DATABASE_URL: url, DIRECT_URL: direct },
+    env: childEnv,
   });
   if (res.status !== 0) fail(`${cmd} exited ${res.status}`);
 }
 
-run("npx", ["prisma", "migrate", "deploy"]);
+// Fresh Supabase via Vercel: use db push (legacy migrations contain SQLite types).
+run("npx", ["prisma", "db", "push", "--accept-data-loss"]);
 run("npm", ["run", "db:import-catalog"]);
 
 console.log("\n✅ Schema migrated and catalog imported.\n");

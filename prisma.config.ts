@@ -12,6 +12,16 @@ export default defineConfig({
     // For migrate / db push / studio use DIRECT_URL when available (Supabase
     // direct connection, port 5432). Falls back to DATABASE_URL (pooled ok for
     // many ops, but direct is safer for schema changes).
-    url: process.env["DIRECT_URL"] || process.env["DATABASE_URL"],
+    url: (() => {
+      const direct = process.env["DIRECT_URL"] ?? "";
+      if (direct && !direct.includes("dummy")) return direct;
+      return (
+        process.env["POSTGRES_URL_NON_POOLING"] ??
+        process.env["POSTGRES_PRISMA_URL"] ??
+        process.env["POSTGRES_URL"] ??
+        process.env["DATABASE_URL"] ??
+        ""
+      );
+    })(),
   },
 });

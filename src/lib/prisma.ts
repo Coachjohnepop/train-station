@@ -1,8 +1,10 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
+import { resolveDatabaseUrl } from "@/lib/database-config";
+import { createPgPool } from "@/lib/pg-connection";
 
 /** Bump when prisma/schema.prisma changes so dev hot-reload gets a fresh client. */
-const PRISMA_SCHEMA_VERSION = 5;
+const PRISMA_SCHEMA_VERSION = 6;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -10,8 +12,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrisma(): PrismaClient {
-  const connectionString =
-    process.env.DATABASE_URL ?? "postgresql://user:pass@localhost:5432/db";
+  const connectionString = resolveDatabaseUrl() || "postgresql://user:pass@localhost:5432/db";
 
   if (!connectionString || connectionString.includes("dummy") || connectionString.includes("user:pass") || connectionString.includes("localhost")) {
     // Demo mode or no real DB / placeholder: return a proxy that throws if accidentally used.
@@ -26,7 +27,7 @@ function createPrisma(): PrismaClient {
     });
   }
 
-  const adapter = new PrismaPg({ connectionString });
+  const adapter = new PrismaPg(createPgPool(connectionString));
 
   return new PrismaClient({ adapter });
 }

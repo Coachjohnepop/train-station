@@ -1,24 +1,38 @@
-import "dotenv/config";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../src/generated/prisma/client";
-import {
-  importCatalogSnapshot,
-  loadCatalogSnapshotFromDemoSources,
-} from "../src/lib/import-catalog-snapshot";
-import { isCoachCatalogDemo } from "../src/lib/catalog-mode";
+import dotenv from "dotenv";
 
-const connectionString =
-  process.env.DATABASE_URL ?? "postgresql://user:pass@localhost:5432/db";
+dotenv.config({ path: ".env" });
+dotenv.config({ path: ".env.vercel.prod" });
+dotenv.config({ path: ".env.vercel.production", override: true });
+
+function resolveConnectionString(): string {
+  const direct = process.env.POSTGRES_URL_NON_POOLING ?? "";
+  const pooled =
+    process.env.POSTGRES_PRISMA_URL ?? process.env.POSTGRES_URL ?? "";
+  const database = process.env.DATABASE_URL ?? "";
+  return (
+    direct ||
+    (database && !database.includes("dummy") ? database : "") ||
+    pooled
+  );
+}
 
 async function main() {
-  if (isCoachCatalogDemo()) {
+  const connectionString = resolveConnectionString();
+  if (!connectionString) {
     console.error(
-      "[import-catalog] DATABASE_URL is unset or dummy — set a real Postgres URL first.",
+      "[import-catalog] No Postgres URL — pull Vercel production env (POSTGRES_PRISMA_URL).",
     );
     process.exit(1);
   }
 
-  const adapter = new PrismaPg({ connectionString });
+  const { PrismaPg } = await import("@prisma/adapter-pg");
+  const { PrismaClient } = await import("../src/generated/prisma/client");
+  const { createPgPool } = await import("../src/lib/pg-connection");
+  const { importCatalogSnapshot, loadCatalogSnapshotFromDemoSources } = await import(
+    "../src/lib/import-catalog-snapshot",
+  );
+
+  const adapter = new PrismaPg(createPgPool(connectionString));
   const prisma = new PrismaClient({ adapter });
 
   console.log("[import-catalog] Loading live blob / local seed snapshot…");
