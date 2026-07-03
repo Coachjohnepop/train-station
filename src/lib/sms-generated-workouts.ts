@@ -4,7 +4,7 @@ import { hydrateDemoExercises, loadDemoExercises, saveDemoExercises, createDemoE
 import type { ParsedSmsWorkout } from "@/lib/sms-workout-parser";
 import type { MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import { resolveUserId } from "@/lib/current-user";
-import { getDemoPastsForWorkoutExercises } from "@/lib/demo-logs";
+import { getPastsForWorkoutExercises } from "@/lib/workout-logs-store";
 import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
 import { parseSmsWorkout } from "@/lib/sms-workout-parser";
 import { hydrateTodaySessions, listTodaySessions } from "@/lib/today-sessions";
@@ -323,8 +323,10 @@ export async function getSmsGeneratedWorkout(
 
   const uid = userId || (await resolveUserId());
   const pastByBlockId: Record<string, any> = {};
-  if (isDemoMode()) {
-    Object.assign(pastByBlockId, getDemoPastsForWorkoutExercises(blocks, uid));
+  try {
+    Object.assign(pastByBlockId, await getPastsForWorkoutExercises(blocks, uid));
+  } catch {
+    // non-fatal
   }
 
   return {

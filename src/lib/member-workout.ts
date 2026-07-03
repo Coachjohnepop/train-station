@@ -1,9 +1,8 @@
 import type { MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import { normalizePrescription } from "@/lib/workout-schemes";
 import { DEMO_MEMBER_EMAIL } from "@/lib/demo-workout";
-import { getDemoPastsForWorkoutExercises } from "@/lib/demo-logs";
 import { isDemoMode } from "@/lib/demo-enrollments";
-import { prisma } from "@/lib/prisma";
+import { getPastsForWorkoutExercises } from "@/lib/workout-logs-store";
 import { resolveUserId } from "@/lib/current-user";
 import { hydrateDemoExercises, loadDemoExercises } from "@/lib/demo-exercises";
 import { getDemoSeed } from "@/lib/demo-seed-store";
@@ -71,30 +70,8 @@ export async function getMemberWorkoutById(
   const uid = opts?.userId || (await resolveUserId());
   const pastByBlockId: Record<string, any> = {};
   try {
-    if (isDemoMode()) {
-      const demoPasts = getDemoPastsForWorkoutExercises(exercises, uid);
-      Object.assign(pastByBlockId, demoPasts);
-    } else {
-      for (const ex of exercises) {
-        const latest = await prisma.exercisePerformance.findFirst({
-          where: { userId: uid, exerciseId: ex.exerciseId },
-          orderBy: { performedAt: "desc" },
-        });
-        if (latest) {
-          pastByBlockId[ex.id] = {
-            setScheme: latest.setScheme,
-            repPattern: null,
-            reps: null,
-            sets: null,
-            setsCompleted: null,
-            weightTier: latest.weightTier,
-            startingWeightLbs: latest.startingWeightLbs,
-            performedAt: latest.performedAt.toISOString(),
-          };
-        }
-      }
-    }
-  } catch (e) {
+    Object.assign(pastByBlockId, await getPastsForWorkoutExercises(exercises, uid));
+  } catch {
     // non-fatal; silhouettes just won't show this time
   }
 

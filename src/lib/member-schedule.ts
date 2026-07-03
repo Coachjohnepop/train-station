@@ -1,37 +1,7 @@
-import { hydrateDemoLogsStore } from "@/lib/demo-logs";
+import { loadLoggedWorkoutIds } from "@/lib/workout-logs-store";
 
 export async function loadMemberLoggedWorkoutIds(uid: string): Promise<Set<string>> {
-  const loggedSet = new Set<string>();
-  const isDemo = process.env.DATABASE_URL?.includes("dummy") ?? true;
-
-  if (isDemo) {
-    try {
-      const logsData = await hydrateDemoLogsStore({ preferFresh: true });
-      (logsData.workoutLogs || []).forEach((log: { userId?: string; workoutId?: string }) => {
-        if (log.userId === uid && log.workoutId) {
-          loggedSet.add(log.workoutId);
-        }
-      });
-    } catch {
-      // ignore
-    }
-    return loggedSet;
-  }
-
-  try {
-    const { prisma } = await import("@/lib/prisma");
-    const logs = await prisma.workoutLog.findMany({
-      where: { userId: uid },
-      select: { workoutId: true },
-    });
-    logs.forEach((l) => {
-      if (l.workoutId) loggedSet.add(l.workoutId);
-    });
-  } catch {
-    // ignore
-  }
-
-  return loggedSet;
+  return loadLoggedWorkoutIds(uid);
 }
 
 export function hasAssignedWorkout(day: {

@@ -22,6 +22,7 @@ import {
 import {
   enrollUserInProgramDb,
   getEnrollmentsMapForUser,
+  resolveStorageUserId,
   setUserProgramPositionDb,
   unenrollUserFromProgramDb,
 } from "@/lib/enrollment-db";
@@ -29,8 +30,7 @@ import { clampEnrollmentPosition, linearEnrollmentDay } from "@/lib/member-enrol
 import { getProgramBySlug } from "@/lib/program-data";
 import { recordDemoWorkoutSession } from "@/lib/demo-logs";
 import { prisma } from "@/lib/prisma";
-import { DEMO_MEMBER_EMAIL } from "@/lib/demo-workout";
-import { getCurrentUserId } from "@/lib/current-user";
+
 import type { EnrollmentsMap, UserEnrollment, LogExerciseInput, CreateLogResult } from "./types";
 
 // Re-export the log types so API routes and other layers can import the contract from the data layer.
@@ -189,8 +189,7 @@ export async function getUserProgramPositions(userId: string): Promise<ProgramPo
  * helpers (so shapes, ids, and side effects for logs.dev.json / enrollments.dev.json stay identical,
  * and all existing read paths that consume those files continue to work without changes this slice).
  *
- * For the real Prisma branch we use the exact logic that was previously inline in the route
- * (user lookup with cookie + legacy DEMO_MEMBER_EMAIL fallback, creates, hybrid-aware advance).
+ * For the real Prisma branch we resolve demo roster ids to Prisma User.id via resolveStorageUserId.
  *
  * Returns a uniform shape that the MemberWorkoutConsole (and future callers) expect.
  */
@@ -250,20 +249,9 @@ export async function createWorkoutLogAndPerformances(input: {
   }
 
   // --- Real DB path (Supabase/Postgres) ---
-  // (Logic moved from the previous inline version in the route for centralization.)
-  // Prefer cookie current user, fall back to the legacy demo email lookup for admin/demo flows.
-  let userId = uid;
-  try {
-    const cookieUid = await getCurrentUserId();
-    if (cookieUid) userId = cookieUid;
-  } catch {}
-
-  let user = await prisma.user.findUnique({ where: { id: userId } });
+  const storageUserId = await resolveStorageUserId(uid);
+  const user = await prisma.user.findUnique({ where: { id: storageUserId } });
   if (!user) {
-    user = await prisma.user.findUnique({ where: { email: DEMO_MEMBER_EMAIL } });
-  }
-  if (!user) {
-    // The caller (route) will typically surface a 500, but we return a shape the caller can handle.
     throw new Error("User not found for logging");
   }
 

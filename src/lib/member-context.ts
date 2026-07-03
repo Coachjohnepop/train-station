@@ -8,7 +8,7 @@ import { listPrograms } from "@/lib/program-data";
 import { filterMemberCatalogPrograms } from "@/lib/programs";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { getUserEnrollments, getUserEnrollmentsAsArray } from "@/lib/data/user-data";
-import { getDemoWorkoutLogCount, getDemoStrengthScore, computeStrengthScoreFromPerfs } from "@/lib/demo-logs";
+import { getStrengthScore, getWorkoutLogCount } from "@/lib/workout-logs-store";
 import { getDemoUserSettings } from "@/lib/demo-reminders";
 import { getCurrentUser, resolveMemberUserId, getCurrentUserName } from "@/lib/current-user";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
@@ -97,30 +97,13 @@ export async function getMemberDashboard() {
     }
   }
 
-  const totalWorkouts = isDemoMode() ? getDemoWorkoutLogCount(uid) : 12;
-
+  let totalWorkouts = 0;
   let strengthScore = 0;
-  if (isDemoMode()) {
-    strengthScore = getDemoStrengthScore(uid);
-  } else {
-    try {
-      const prismaModule = await import("@/lib/prisma");
-      const pr = prismaModule.prisma;
-      const perfs = await pr.exercisePerformance.findMany({
-        where: { userId: uid },
-        include: { exercise: { select: { name: true } } },
-      });
-      strengthScore = computeStrengthScoreFromPerfs(
-        perfs.map((p: any) => ({
-          exercise: { name: p.exercise?.name },
-          startingWeightLbs: p.startingWeightLbs,
-          repsCompleted: p.repsCompleted,
-          setsCompleted: p.setsCompleted,
-        }))
-      );
-    } catch (e) {
-      // ignore, fall to 0
-    }
+  try {
+    totalWorkouts = await getWorkoutLogCount(uid);
+    strengthScore = await getStrengthScore(uid);
+  } catch {
+    // non-fatal; dashboard shows zeros
   }
 
   // Support doing workouts + yoga + journeys in parallel: provide per-program continues
