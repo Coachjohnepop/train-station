@@ -10,12 +10,28 @@ import { parseSmsWorkout } from "@/lib/sms-workout-parser";
 import { hydrateTodaySessions, listTodaySessions } from "@/lib/today-sessions";
 import { matchExerciseInCatalog, sanitizeSmsExerciseName } from "@/lib/exercise-match";
 import { hintVideoUrlForExerciseName, resolveExerciseVideoUrl } from "@/lib/exercise-video-hints";
+import { DEFAULT_REST_TIMER_SECONDS, normalizeRestTimerSeconds } from "@/lib/rest-timer";
 
 const WORKOUTS_FILE = path.join(process.cwd(), "prisma", "sms-workouts.dev.json");
 const BLOB_PATH = "demo/sms-workouts.json";
 
+export type WorkoutRestTimerSettings = {
+  enabled: boolean;
+  seconds: number;
+};
+
+type SmsWorkoutRecord = {
+  id: string;
+  name: string;
+  description?: string;
+  source: "sms";
+  createdAt: string;
+  restTimerEnabled?: boolean;
+  restTimerSeconds?: number;
+};
+
 type SmsWorkoutStore = {
-  workouts: Array<{ id: string; name: string; description?: string; source: "sms"; createdAt: string }>;
+  workouts: SmsWorkoutRecord[];
   workoutExercises: Array<{
     id: string;
     workoutId: string;
@@ -155,7 +171,26 @@ export async function relinkSmsWorkoutExercises(workoutId: string): Promise<{
   return { workoutId, relinked, videos };
 }
 
-export async function buildWorkoutFromParsedSms(parsed: ParsedSmsWorkout, workoutId?: string) {
+export async function updateWorkoutRestTimer(
+  workoutId: string,
+  restTimer: WorkoutRestTimerSettings,
+): Promise<void> {
+  await hydrateSmsWorkouts();
+  const store = readStore();
+  const workout = store.workouts.find((w) => w.id === workoutId);
+  if (!workout) return;
+  workout.restTimerEnabled = restTimer.enabled;
+  workout.restTimerSeconds = restTimer.enabled
+    ? normalizeRestTimerSeconds(restTimer.seconds)
+    : undefined;
+  await writeStore(store);
+}
+
+export async function buildWorkoutFromParsedSms(
+  parsed: ParsedSmsWorkout,
+  workoutId?: string,
+  restTimer?: WorkoutRestTimerSettings,
+) {
   await Promise.all([hydrateSmsWorkouts(), hydrateDemoExercises()]);
   const store = readStore();
   let exercises = loadDemoExercises();
@@ -171,6 +206,10 @@ export async function buildWorkoutFromParsedSms(parsed: ParsedSmsWorkout, workou
     description: "Generated from coach SMS",
     source: "sms",
     createdAt: now,
+    restTimerEnabled: restTimer?.enabled ?? false,
+    restTimerSeconds: restTimer?.enabled
+      ? normalizeRestTimerSeconds(restTimer.seconds)
+      : undefined,
   });
 
   const newExerciseIds: string[] = [];
@@ -293,5 +332,9 @@ export async function getSmsGeneratedWorkout(
     workoutName: workout.name,
     memberName,
     exercises: blocks.map((b) => ({ ...b, past: pastByBlockId[b.id] ?? null })),
+    restTimerEnabled: Boolean(workout.restTimerEnabled),
+    restTimerSeconds: workout.restTimerEnabled
+      ? normalizeRestTimerSeconds(workout.restTimerSeconds ?? DEFAULT_REST_TIMER_SECONDS)
+      : undefined,
   };
 }

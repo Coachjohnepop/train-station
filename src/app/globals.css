@@ -1708,3 +1708,79 @@ input:-webkit-autofill {
     transform: translateX(10px);
   }
 }
+
+/* Rest timer — auto countdown after each logged set */
+.workout-rest-timer {
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+}
+
+.workout-rest-timer--compact {
+  border-radius: 0.85rem;
+}
+
+.workout-rest-timer__bar {
+  height: 4px;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+}
+
+.workout-rest-timer__bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--ramp-gold-light));
+  transition: width 0.25s linear;
+}
+
+.workout-rest-timer__body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+}
+
+.workout-rest-timer--compact .workout-rest-timer__body {
+  padding: 0.55rem 0.7rem;
+}
+
+.workout-rest-timer__label {
+  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.workout-rest-timer__time {
+  margin: 0.1rem 0 0;
+  font-size: 1.85rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--text);
+}
+
+.workout-rest-timer--compact .workout-rest-timer__time {
+  font-size: 1.45rem;
+}
+
+.workout-rest-timer__skip {
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0.45rem 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.workout-rest-timer__skip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}

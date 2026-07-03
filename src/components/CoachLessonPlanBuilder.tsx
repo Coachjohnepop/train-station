@@ -7,6 +7,10 @@ import TimeScrollPicker from "@/components/TimeScrollPicker";
 import type { CoachMemberOption } from "@/components/CoachMemberPicker";
 import type { LessonPlanQuestion } from "@/lib/lesson-plan-interpreter";
 import type { TodaySession } from "@/lib/today-sessions";
+import {
+  DEFAULT_REST_TIMER_SECONDS,
+  REST_TIMER_PRESETS,
+} from "@/lib/rest-timer";
 
 type ParsedExercise = {
   name: string;
@@ -62,6 +66,8 @@ export default function CoachLessonPlanBuilder({
   const [interpretation, setInterpretation] = useState<InterpretResponse | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [sendSmsAlert, setSendSmsAlert] = useState(true);
+  const [restTimerEnabled, setRestTimerEnabled] = useState(false);
+  const [restTimerSeconds, setRestTimerSeconds] = useState(DEFAULT_REST_TIMER_SECONDS);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -267,6 +273,9 @@ export default function CoachLessonPlanBuilder({
           sessionDate,
           scheduledAt: scheduled.toISOString(),
           sendSmsAlert,
+          restTimer: restTimerEnabled
+            ? { enabled: true, seconds: restTimerSeconds }
+            : { enabled: false, seconds: restTimerSeconds },
           cascade:
             cascadeIds.length > 0
               ? {
@@ -603,6 +612,37 @@ export default function CoachLessonPlanBuilder({
               Not assigned yet: {unassignedMembers.map((m) => m.name).join(", ")}
             </p>
           )}
+
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+            <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+              <input
+                type="checkbox"
+                checked={restTimerEnabled}
+                onChange={(e) => setRestTimerEnabled(e.target.checked)}
+              />
+              Rest timer between sets
+            </label>
+            {restTimerEnabled ? (
+              <label className="block text-xs">
+                <span className="text-[var(--muted)]">Countdown after each set (whole workout)</span>
+                <select
+                  className="input mt-1 w-full text-sm"
+                  value={restTimerSeconds}
+                  onChange={(e) => setRestTimerSeconds(Number(e.target.value))}
+                >
+                  {REST_TIMER_PRESETS.map((preset) => (
+                    <option key={preset.seconds} value={preset.seconds}>
+                      {preset.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <p className="text-[10px] text-[var(--muted)]">
+              When on, coach and member see an automatic countdown on Go to Today after each set
+              is checked off.
+            </p>
+          </div>
 
           <label className="flex items-center gap-2 text-xs cursor-pointer">
             <input

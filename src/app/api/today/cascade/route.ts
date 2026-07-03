@@ -10,12 +10,18 @@ const individualSchema = z.object({
   title: z.string().optional(),
 });
 
+const restTimerSchema = z.object({
+  enabled: z.boolean(),
+  seconds: z.number().int().min(15).max(600),
+});
+
 const schema = z.object({
   sessionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   scheduledAt: z.string().min(1),
   programSlug: z.string().optional(),
   replacesSchedule: z.boolean().optional(),
   sendSmsAlert: z.boolean().optional(),
+  restTimer: restTimerSchema.optional(),
   cascade: z
     .object({
       rawSms: z.string().min(1),
@@ -42,6 +48,7 @@ export async function POST(request: Request) {
     programSlug = "adult",
     replacesSchedule = true,
     sendSmsAlert = false,
+    restTimer,
     cascade,
     individuals = [],
   } = parsed.data;
@@ -70,6 +77,7 @@ export async function POST(request: Request) {
         createdBy: "coach",
         title: cascade.title,
         workoutId: cascade.workoutId,
+        restTimer,
       });
       sessions.push(result);
       allUserIds.push(...cascade.userIds);
@@ -87,6 +95,7 @@ export async function POST(request: Request) {
             replacesSchedule,
             createdBy: "coach",
             title: ind.title,
+            restTimer,
           }),
         ),
       );

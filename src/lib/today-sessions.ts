@@ -1,7 +1,11 @@
 import path from "path";
 import { randomUUID } from "crypto";
 import { parseSmsWorkout } from "@/lib/sms-workout-parser";
-import { buildWorkoutFromParsedSms } from "@/lib/sms-generated-workouts";
+import {
+  buildWorkoutFromParsedSms,
+  updateWorkoutRestTimer,
+  type WorkoutRestTimerSettings,
+} from "@/lib/sms-generated-workouts";
 import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
 import { localTodayIso } from "@/lib/program-calendar";
 
@@ -174,6 +178,7 @@ export async function createTodaySessionFromSms(input: {
   title?: string;
   /** Skip rebuild when the coach is republishing a saved class plan. */
   workoutId?: string;
+  restTimer?: WorkoutRestTimerSettings;
 }) {
   await hydrateTodaySessions();
   const rawSms = input.rawSms.trim();
@@ -187,9 +192,11 @@ export async function createTodaySessionFromSms(input: {
   let newExerciseIds: string[] = [];
 
   if (!workoutId) {
-    const built = await buildWorkoutFromParsedSms(parsed);
+    const built = await buildWorkoutFromParsedSms(parsed, undefined, input.restTimer);
     workoutId = built.workoutId;
     newExerciseIds = built.newExerciseIds;
+  } else if (input.restTimer) {
+    await updateWorkoutRestTimer(workoutId, input.restTimer);
   }
 
   if (samePlan) {

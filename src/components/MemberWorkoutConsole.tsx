@@ -13,6 +13,7 @@ import {
 import MemberExerciseVideoModal from "@/components/MemberExerciseVideoModal";
 import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
 import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
+import WorkoutRestTimer from "@/components/WorkoutRestTimer";
 
 export type MemberExerciseBlock = {
   id: string;
@@ -42,6 +43,16 @@ export type MemberWorkoutView = {
   workoutName: string;
   memberName: string;
   exercises: MemberExerciseBlock[];
+  /** Coach preset: auto countdown between sets for this workout. */
+  restTimerEnabled?: boolean;
+  restTimerSeconds?: number;
+};
+
+type ActiveRestTimer = {
+  blockId: string;
+  completedSetNum: number;
+  endsAt: number;
+  totalSeconds: number;
 };
 
 function sortedSet(nums: number[]): number[] {
@@ -131,6 +142,8 @@ export default function MemberWorkoutConsole({
   const [coachLive, setCoachLive] = useState(false);
   const [partnerLive, setPartnerLive] = useState(false);
   const [loggedDetailsOpen, setLoggedDetailsOpen] = useState(false);
+  const [restTimer, setRestTimer] = useState<ActiveRestTimer | null>(null);
+  const [restSecondsLeft, setRestSecondsLeft] = useState(0);
 
   const LIVE_POLL_MS = coachFloorMode ? 900 : 200;
   const liveSessionScope = progressMode === "live" && !!liveSyncUserId && !reviewMode;
@@ -470,20 +483,81 @@ export default function MemberWorkoutConsole({
     .slice(activeIdx + 1)
     .find((e) => !finishedExercises.has(e.id));
 
+  const clearRestTimer = useCallback(() => setRestTimer(null), []);
+
+  const maybeStartRestTimer = useCallback(
+    (blockId: string, setNum: number) => {
+      if (!workout.restTimerEnabled || !workout.restTimerSeconds) return;
+      const block = workout.exercises.find((e) => e.id === blockId);
+      if (!block) return;
+      const prescription = normalizePrescription({
+        setScheme: block.setScheme,
+        repPattern: block.repPattern,
+        reps: block.reps,
+        sets: block.setCount,
+      });
+      const isTimed = isTimedApproach(prescription.approach);
+      const totalSets = isTimed ? 1 : block.setCount;
+      if (setNum >= totalSets) return;
+
+      const seconds = workout.restTimerSeconds;
+      setRestTimer({
+        blockId,
+        completedSetNum: setNum,
+        endsAt: Date.now() + seconds * 1000,
+        totalSeconds: seconds,
+      });
+    },
+    [workout],
+  );
+
+  useEffect(() => {
+    if (!restTimer) {
+      setRestSecondsLeft(0);
+      return;
+    }
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((restTimer.endsAt - Date.now()) / 1000));
+      setRestSecondsLeft(left);
+      if (left <= 0) setRestTimer(null);
+    };
+    tick();
+    const id = window.setInterval(tick, 250);
+    return () => window.clearInterval(id);
+  }, [restTimer]);
+
   const toggleSet = useCallback(
     (blockId: string, setNum: number) => {
+      const wasDone = completedSets[blockId]?.has(setNum) ?? false;
+
+      if (wasDone && restTimer?.blockId === blockId) {
+        setRestTimer(null);
+      }
+
       setCompletedSets((prev) => {
         const next = new Set(prev[blockId] ?? []);
-        if (next.has(setNum)) next.delete(setNum);
+        if (wasDone) next.delete(setNum);
         else next.add(setNum);
         const updated = { ...prev, [blockId]: next };
         stateRef.current = { ...stateRef.current, completedSets: updated };
         return updated;
       });
+
+      if (!wasDone) maybeStartRestTimer(blockId, setNum);
       queueLiveSave(true);
     },
-    [queueLiveSave],
+    [queueLiveSave, completedSets, restTimer?.blockId, maybeStartRestTimer],
   );
+
+  const restTimerUi =
+    restTimer && restSecondsLeft > 0 ? (
+      <WorkoutRestTimer
+        secondsLeft={restSecondsLeft}
+        totalSeconds={restTimer.totalSeconds}
+        onSkip={clearRestTimer}
+        compact={coachFloorMode}
+      />
+    ) : null;
 
   const openVideo = useCallback((blockId: string) => {
     setVideoModalBlockId(blockId);
@@ -693,6 +767,7 @@ export default function MemberWorkoutConsole({
   if (coachFloorMode) {
     return (
       <div className="coach-live-checkoff w-full space-y-2">
+        {restTimerUi}
         {partnerLive && instructorName ? (
           <p className="text-[10px] font-medium text-[var(--success)]">
             Member is logging — updates sync here.
@@ -874,6 +949,7 @@ export default function MemberWorkoutConsole({
 
       {!showLoggedSuccess ? (
       <>
+      {restTimerUi}
       <div className="mt-3 flex items-center gap-2 text-xs">
         <div className="flex-1 h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden">
           <div
