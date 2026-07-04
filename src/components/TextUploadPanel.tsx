@@ -163,7 +163,7 @@ export default function TextUploadPanel({
         );
       } else if (mode === "workout") {
         setMessage(
-          `Saved workout "${data.workoutName}" with ${data.exerciseCount} blocks.`,
+          `Saved workout "${data.workoutName}" with ${data.exerciseCount} blocks. Open it to certify export text for reuse.`,
         );
       } else {
         setMessage(

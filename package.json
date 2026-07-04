@@ -20,6 +20,7 @@
     "db:studio": "prisma studio",
     "test:s1": "node scripts/s1-exercise-persistence-test.mjs",
     "test:s1b": "node scripts/s1b-workout-persistence-test.mjs",
+    "test:s1c": "node scripts/s1c-text-upload-db-test.mjs",
     "test:persistence-soak": "node scripts/persistence-soak-test.mjs",
     "test:s1d": "node scripts/s1d-program-builder-test.mjs",
     "test:s2a": "node scripts/s2a-member-enrollment-day-test.mjs",

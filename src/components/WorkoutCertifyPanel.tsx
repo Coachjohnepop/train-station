@@ -16,6 +16,8 @@ type Props = {
   savedCertifiedAt?: string | null;
   onCertified?: (exportText: string) => void;
   disabled?: boolean;
+  /** Open the panel on load (e.g. fresh text-upload workouts). */
+  defaultOpen?: boolean;
 };
 
 export default function WorkoutCertifyPanel({
@@ -25,8 +27,9 @@ export default function WorkoutCertifyPanel({
   savedCertifiedAt,
   onCertified,
   disabled = false,
+  defaultOpen = false,
 }: Props) {
-  const [open, setOpen] = useState(Boolean(savedCertifiedAt));
+  const [open, setOpen] = useState(defaultOpen || Boolean(savedCertifiedAt));
   const [exportDraftText, setExportDraftText] = useState("");
   const [exportValidation, setExportValidation] = useState<WorkoutExportValidation | null>(null);
   const [exportSource, setExportSource] = useState<"normalized" | "formatted" | "manual" | "saved">(

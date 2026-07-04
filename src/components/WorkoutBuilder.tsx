@@ -429,6 +429,10 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
           parsedWorkout={parsedForExport}
           savedExportText={workout.exportText}
           savedCertifiedAt={workout.certifiedAt}
+          defaultOpen={
+            !workout.certifiedAt &&
+            (workout.description?.toLowerCase().includes("text upload") ?? false)
+          }
           onCertified={(exportText) => {
             setWorkout((prev) =>
               prev

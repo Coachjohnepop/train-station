@@ -1,10 +1,16 @@
 import { randomUUID } from "crypto";
+import { isCoachCatalogDemo } from "@/lib/catalog-mode";
 import {
   hydrateDemoExercises,
   loadDemoExercises,
   saveDemoExercises,
   createDemoExerciseId,
 } from "@/lib/demo-exercises";
+import {
+  buildExercisesFromTextDb,
+  buildProgramWeekFromTextDb,
+  buildWorkoutFromParsedDb,
+} from "@/lib/text-upload-build-db";
 import { mutateDemoSeed, getDemoSeed } from "@/lib/demo-seed-store";
 import { parseExerciseList, type ParsedExerciseLine } from "@/lib/exercise-list-parser";
 import { parseProgramWeekText, type ParsedWeekDaySlot } from "@/lib/program-week-parser";
@@ -77,6 +83,10 @@ async function ensureExercise(name: string, notes?: string, tags?: string) {
 }
 
 export async function buildExercisesFromText(rawText: string) {
+  if (!isCoachCatalogDemo()) {
+    return buildExercisesFromTextDb(rawText);
+  }
+
   const { exercises: lines } = parseExerciseList(rawText);
   if (lines.length === 0) {
     throw new Error("No exercises found — add one name per line.");
@@ -173,6 +183,9 @@ export async function buildSeedWorkoutFromParsed(
 
 export async function buildWorkoutFromText(rawText: string, workoutName?: string) {
   const parsed = parseSmsWorkout(rawText);
+  if (!isCoachCatalogDemo()) {
+    return buildWorkoutFromParsedDb(parsed, workoutName);
+  }
   return buildSeedWorkoutFromParsed(parsed, workoutName);
 }
 
@@ -181,6 +194,10 @@ export async function buildProgramWeekFromText(
   programSlug: string,
   weekNumber: number,
 ) {
+  if (!isCoachCatalogDemo()) {
+    return buildProgramWeekFromTextDb(rawText, programSlug, weekNumber);
+  }
+
   const { slots, warnings } = parseProgramWeekText(rawText);
   if (slots.length === 0) {
     throw new Error("No schedule lines parsed — use format like: Day 1 Gym: Upper Body Workout");

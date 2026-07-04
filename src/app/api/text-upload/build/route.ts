@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { requireStaff } from "@/lib/api-auth";
 import {
   buildExercisesFromText,
   buildProgramWeekFromText,
@@ -15,6 +16,9 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
+
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
