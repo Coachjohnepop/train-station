@@ -443,7 +443,7 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
                   }
                 : prev,
             );
-            setSaveMessage("Certified — paste export text into Workouts → text upload.");
+            setSaveMessage("Certified — download or copy the export text; use the same format for future uploads.");
           }}
         />
       )}

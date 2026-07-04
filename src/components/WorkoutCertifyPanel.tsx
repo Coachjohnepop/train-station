@@ -93,7 +93,7 @@ export default function WorkoutCertifyPanel({
         );
       }
       setCertified(true);
-      setMessage("Workout certified — export text saved for text upload and program reuse.");
+      setMessage("Workout certified — export text saved. Download or copy it; use the same format for future uploads.");
       onCertified?.(exportText);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Certification save failed.");
@@ -138,7 +138,7 @@ export default function WorkoutCertifyPanel({
   if (exerciseCount === 0) {
     return (
       <div className="card text-sm text-[var(--muted)]">
-        Add at least one exercise before certifying export text for text upload.
+        Add at least one exercise before certifying export text for download.
       </div>
     );
   }
@@ -153,7 +153,7 @@ export default function WorkoutCertifyPanel({
             onClick={() => setOpen((v) => !v)}
           >
             <span className={`text-sm transition-transform ${open ? "rotate-90" : ""}`}>▶</span>
-            Certify for text upload
+            Certify for text download
             {certified ? (
               <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-200">
                 Certified ✓
@@ -161,7 +161,7 @@ export default function WorkoutCertifyPanel({
             ) : null}
           </button>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            Export plain text Jeremy can paste into Workouts → text upload or the daily plan box.
+            Download plain text to your computer (use the same format for future uploads).
             Re-parse must match before certify sticks.
           </p>
         </div>
