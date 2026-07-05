@@ -2,11 +2,16 @@
 /**
  * Browser OAuth loop — coach login → Connect Zoom → wait for Settings success.
  *
- * Requires: npx playwright install chromium
+ * Defaults to Brave on macOS (not Chrome).
  *
  * Usage:
  *   npm run test:zoom-oauth-loop
- *   HEADLESS=0 npm run test:zoom-oauth-loop   # visible browser (complete Zoom login if prompted)
+ *   HEADLESS=0 npm run test:zoom-oauth-loop
+ *
+ * Env:
+ *   BROWSER=brave|chromium   (default: brave on darwin, else chromium)
+ *   BROWSER_PROFILE_DIR        Brave/Chrome user-data dir for saved Zoom login
+ *   BROWSER_EXECUTABLE         override app path
  */
 
 import { chromium } from "playwright";
@@ -17,9 +22,36 @@ const COACH_EMAIL = process.env.COACH_EMAIL || "john@thetrainstation.co";
 const COACH_PASSWORD = process.env.COACH_PASSWORD ?? "";
 const HEADLESS = process.env.HEADLESS !== "0";
 
+const BRAVE_EXECUTABLE =
+  process.env.BROWSER_EXECUTABLE ||
+  "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser";
+const BRAVE_PROFILE_DEFAULT =
+  process.env.BROWSER_PROFILE_DIR ||
+  `${process.env.HOME}/Library/Application Support/BraveSoftware/Brave-Browser`;
+
+function browserKind() {
+  if (process.env.BROWSER) return process.env.BROWSER;
+  return process.platform === "darwin" ? "brave" : "chromium";
+}
+
+function launchOptions(headless) {
+  const kind = browserKind();
+  if (kind === "brave") {
+    return {
+      headless,
+      executablePath: BRAVE_EXECUTABLE,
+    };
+  }
+  return {
+    headless,
+    channel: process.env.PW_CHANNEL || "chrome",
+  };
+}
+
 async function main() {
+  const kind = browserKind();
   console.log(`\nZoom OAuth loop → ${BASE}`);
-  console.log(`Coach: ${COACH_EMAIL} | headless=${HEADLESS}\n`);
+  console.log(`Coach: ${COACH_EMAIL} | browser=${kind} | headless=${HEADLESS}\n`);
 
   const { req, loginCoach, getCookies } = createCoachClient(BASE, {
     coachEmail: COACH_EMAIL,
@@ -30,8 +62,7 @@ async function main() {
     onFail: (n, d) => { console.log(`❌ ${n} — ${d}`); process.exit(1); },
   }))) process.exit(1);
 
-  const cookieHeader = getCookies();
-  const sessionCookies = cookieHeader
+  const sessionCookies = getCookies()
     .split(";")
     .map((p) => p.trim())
     .filter(Boolean)
@@ -54,24 +85,22 @@ async function main() {
     }
   }
 
-  const chromeProfile = process.env.CHROME_PROFILE_DIR || "";
+  const profileDir = process.env.BROWSER_PROFILE_DIR || "";
   let browser;
   let context;
   let page;
 
-  if (chromeProfile) {
-    context = await chromium.launchPersistentContext(chromeProfile, {
-      headless: false,
-      channel: process.env.PW_CHANNEL || "chrome",
+  if (profileDir) {
+    console.log(`Using browser profile: ${profileDir}`);
+    console.log("Tip: quit Brave first or profile launch may fail.\n");
+    context = await chromium.launchPersistentContext(profileDir, {
+      ...launchOptions(false),
     });
     browser = null;
     page = context.pages()[0] || (await context.newPage());
     await context.addCookies(sessionCookies);
   } else {
-    browser = await chromium.launch({
-      headless: HEADLESS,
-      channel: process.env.PW_CHANNEL || "chrome",
-    });
+    browser = await chromium.launch(launchOptions(HEADLESS));
     context = await browser.newContext();
     await context.addCookies(sessionCookies);
     page = await context.newPage();
@@ -93,10 +122,10 @@ async function main() {
     const zoomUrl = zoomPage.url();
     console.log("Zoom step:", zoomUrl.slice(0, 120));
 
-    if (/zoom\.us\/oauth\/authorize/.test(zoomUrl)) {
-      console.log("⏳ Approve on Zoom if prompted (headless may stall — use HEADLESS=0)");
+    if (/zoom\.us\/(oauth\/authorize|signin)/.test(zoomUrl)) {
+      console.log("⏳ Sign into Zoom in Brave if prompted, then click Allow");
       await zoomPage.waitForURL(/thetrainstation\.co\/admin\/settings|zoom=connected|zoom=error/, {
-        timeout: 180000,
+        timeout: 300000,
       }).catch(() => {});
     }
 
