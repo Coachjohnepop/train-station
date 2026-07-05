@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isCoachCatalogDemo } from "@/lib/catalog-mode";
+import { DAY_OFF_LABEL } from "@/lib/program-calendar";
 import { assignWorkoutToDay } from "@/lib/program-schedule";
 import { prisma } from "@/lib/prisma";
 import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
@@ -188,7 +189,15 @@ export async function PATCH(request: Request, { params }: Params) {
 
   try {
     if (parsed.data.options !== undefined) {
-      for (const opt of parsed.data.options) {
+      const materialized = parsed.data.options.filter((opt) => opt.workoutId?.trim());
+      const restOnly =
+        parsed.data.options.length > 0 &&
+        materialized.length === 0 &&
+        parsed.data.options.every(
+          (opt) => !opt.workoutId?.trim() && /^day\s*off$/i.test(opt.label?.trim() || ""),
+        );
+
+      for (const opt of materialized) {
         const workout = await prisma.workout.findUnique({ where: { id: opt.workoutId } });
         if (!workout) {
           return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
@@ -197,9 +206,9 @@ export async function PATCH(request: Request, { params }: Params) {
 
       const day = await prisma.$transaction(async (tx) => {
         await tx.programDayOption.deleteMany({ where: { dayId } });
-        if (parsed.data.options!.length > 0) {
+        if (materialized.length > 0) {
           await tx.programDayOption.createMany({
-            data: parsed.data.options!.map((opt, idx) => ({
+            data: materialized.map((opt, idx) => ({
               dayId,
               workoutId: opt.workoutId,
               label: opt.label,
@@ -211,7 +220,8 @@ export async function PATCH(request: Request, { params }: Params) {
         return tx.programDay.update({
           where: { id: dayId },
           data: {
-            workoutId: parsed.data.options!.length > 0 ? parsed.data.options![0].workoutId : null,
+            workoutId: materialized.length > 0 ? materialized[0].workoutId : null,
+            ...(restOnly ? { notes: DAY_OFF_LABEL } : {}),
             ...(parsed.data.videoUrl !== undefined ? { videoUrl: parsed.data.videoUrl } : {}),
             ...(parsed.data.notes !== undefined ? { notes: parsed.data.notes } : {}),
             ...(parsed.data.calendarDate !== undefined
