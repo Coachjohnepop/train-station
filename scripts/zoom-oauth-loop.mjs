@@ -21,7 +21,7 @@ async function main() {
   console.log(`\nZoom OAuth loop → ${BASE}`);
   console.log(`Coach: ${COACH_EMAIL} | headless=${HEADLESS}\n`);
 
-  const { req, loginCoach } = createCoachClient(BASE, {
+  const { req, loginCoach, getCookies } = createCoachClient(BASE, {
     coachEmail: COACH_EMAIL,
     password: COACH_PASSWORD,
   });
@@ -29,6 +29,21 @@ async function main() {
     onPass: (n, d) => console.log(`✅ ${n} — ${d}`),
     onFail: (n, d) => { console.log(`❌ ${n} — ${d}`); process.exit(1); },
   }))) process.exit(1);
+
+  const cookieHeader = getCookies();
+  const sessionCookies = cookieHeader
+    .split(";")
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => {
+      const i = p.indexOf("=");
+      return {
+        name: p.slice(0, i),
+        value: p.slice(i + 1),
+        domain: "www.thetrainstation.co",
+        path: "/",
+      };
+    });
 
   const diag = await req(`/api/admin/zoom/diagnose?_=${Date.now()}`);
   if (diag.res.ok) {
@@ -39,22 +54,30 @@ async function main() {
     }
   }
 
-  const browser = await chromium.launch({ headless: HEADLESS });
-  const context = await browser.newContext();
-  const page = await context.newPage();
+  const chromeProfile = process.env.CHROME_PROFILE_DIR || "";
+  let browser;
+  let context;
+  let page;
+
+  if (chromeProfile) {
+    context = await chromium.launchPersistentContext(chromeProfile, {
+      headless: false,
+      channel: process.env.PW_CHANNEL || "chrome",
+    });
+    browser = null;
+    page = context.pages()[0] || (await context.newPage());
+    await context.addCookies(sessionCookies);
+  } else {
+    browser = await chromium.launch({
+      headless: HEADLESS,
+      channel: process.env.PW_CHANNEL || "chrome",
+    });
+    context = await browser.newContext();
+    await context.addCookies(sessionCookies);
+    page = await context.newPage();
+  }
 
   try {
-    await page.goto(`${BASE}/login?redirect=/admin/settings`, { waitUntil: "domcontentloaded" });
-    await page.fill("#login-username", COACH_EMAIL);
-    const pwdBtn = page.getByRole("button", { name: /Sign in with password/i });
-    if (await pwdBtn.isVisible().catch(() => false)) await pwdBtn.click();
-    if (COACH_PASSWORD) {
-      await page.waitForSelector("#login-password", { timeout: 8000 });
-      await page.fill("#login-password", COACH_PASSWORD);
-    }
-    await page.click('button[type="submit"]');
-    await page.waitForURL(/\/admin/, { timeout: 30000 });
-
     await page.goto(`${BASE}/admin/settings`, { waitUntil: "domcontentloaded" });
     const connect = page.getByRole("link", { name: /Connect Zoom account/i });
     await connect.waitFor({ timeout: 15000 });
@@ -90,7 +113,8 @@ async function main() {
     console.error("❌ OAuth loop failed:", e.message);
     process.exit(1);
   } finally {
-    await browser.close();
+    if (browser) await browser.close();
+    else await context?.close();
   }
 }
 
