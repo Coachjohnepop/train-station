@@ -94,7 +94,10 @@ export default function ZoomConnectPanel() {
       const base = messages[reason] || "Zoom connection failed — try Connect again.";
       setBanner({
         tone: "error",
-        text: detail && reason === "exchange" ? `${base} (${detail})` : base,
+        text:
+          detail && (reason === "exchange" || reason === "scope")
+            ? `${base} (${detail})`
+            : base,
       });
       router.replace("/admin/settings", { scroll: false });
     }

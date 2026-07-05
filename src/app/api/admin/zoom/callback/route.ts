@@ -33,7 +33,7 @@ export async function GET(request: Request) {
       /scope|invalid/i.test(zoomError) || /scope/i.test(zoomDescription)
         ? "scope"
         : "denied";
-    return redirectWithError(reason);
+    return redirectWithError(reason, zoomDescription || zoomError);
   }
 
   const code = url.searchParams.get("code");
