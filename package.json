@@ -58,7 +58,9 @@
     "catalog:export-csv": "npx tsx scripts/export-exercise-catalog-csv.ts",
     "test:p0-prod": "node scripts/p0-prod-verify.mjs",
     "test:catalog-smoke": "node scripts/catalog-post-cleanup-smoke.mjs",
-    "test:zoom-connect": "node scripts/zoom-connect-smoke.mjs"
+    "test:zoom-connect": "node scripts/zoom-connect-smoke.mjs",
+    "test:zoom-diagnose": "node scripts/zoom-oauth-diagnose.mjs",
+    "test:zoom-oauth-loop": "node scripts/zoom-oauth-loop.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
@@ -88,6 +90,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
+    "playwright": "^1.49.1",
     "prisma": "^7.8.0",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",

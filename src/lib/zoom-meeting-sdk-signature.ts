@@ -2,19 +2,16 @@ import "server-only";
 
 import { SignJWT } from "jose";
 import { zoomOAuthAppConfigured } from "@/lib/zoom-oauth-flow";
+import { zoomClientId, zoomClientSecret } from "@/lib/zoom-env";
 
 const MIN_EXP_SECONDS = 1800;
 
 export function zoomMeetingSdkSecret(): string {
-  return (
-    process.env.ZOOM_MEETING_SDK_SECRET?.trim() ||
-    process.env.ZOOM_CLIENT_SECRET?.trim() ||
-    ""
-  );
+  return process.env.ZOOM_MEETING_SDK_SECRET?.trim() || zoomClientSecret() || "";
 }
 
 export function zoomMeetingSdkKey(): string {
-  return process.env.ZOOM_MEETING_SDK_KEY?.trim() || process.env.ZOOM_CLIENT_ID?.trim() || "";
+  return process.env.ZOOM_MEETING_SDK_KEY?.trim() || zoomClientId() || "";
 }
 
 /** Meeting SDK JWT uses the same Client ID/Secret as the OAuth app (or dedicated SDK key pair). */

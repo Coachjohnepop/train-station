@@ -7,6 +7,7 @@ import {
   ZOOM_FREE_MAX_DURATION_MIN,
 } from "@/lib/zoom-oauth-flow";
 import { getZoomOAuthRecord, isZoomCoachConnected } from "@/lib/zoom-oauth-store";
+import { zoomAccountId, zoomClientId, zoomClientSecret } from "@/lib/zoom-env";
 
 export type ZoomMeetingResult = {
   meetingId: string;
@@ -29,11 +30,7 @@ let cachedS2SToken: { value: string; expiresAt: number } | null = null;
 let cachedUserToken: { value: string; expiresAt: number } | null = null;
 
 export function zoomS2SConfigured(): boolean {
-  return Boolean(
-    process.env.ZOOM_ACCOUNT_ID?.trim() &&
-      process.env.ZOOM_CLIENT_ID?.trim() &&
-      process.env.ZOOM_CLIENT_SECRET?.trim(),
-  );
+  return Boolean(zoomAccountId() && zoomClientId() && zoomClientSecret());
 }
 
 export function zoomConfigured(): boolean {
@@ -47,14 +44,14 @@ export async function zoomReady(): Promise<boolean> {
 }
 
 function getOAuthClientPair(): { clientId: string; clientSecret: string } | null {
-  const clientId = process.env.ZOOM_CLIENT_ID?.trim();
-  const clientSecret = process.env.ZOOM_CLIENT_SECRET?.trim();
+  const clientId = zoomClientId();
+  const clientSecret = zoomClientSecret();
   if (!clientId || !clientSecret) return null;
   return { clientId, clientSecret };
 }
 
 function getS2SCredentials(): ZoomCredentials | null {
-  const accountId = process.env.ZOOM_ACCOUNT_ID?.trim();
+  const accountId = zoomAccountId();
   const pair = getOAuthClientPair();
   if (!accountId || !pair) return null;
   return { accountId, clientId: pair.clientId, clientSecret: pair.clientSecret };
