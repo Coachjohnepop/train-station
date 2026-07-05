@@ -5,7 +5,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import SearchableExerciseSelect, {
   type LibraryExercise,
 } from "@/components/SearchableExerciseSelect";
-import { DAY_LABELS } from "@/lib/program-constants";
+import { DAY_LABELS, PROGRAM_CYCLE_DAYS } from "@/lib/program-constants";
+import {
+  coordinateFromEnrollmentDay,
+  linearEnrollmentDay,
+  programCycleDayCount,
+} from "@/lib/member-enrollment-day";
+import {
+  cloneWorkoutContentName,
+  defaultTrackWorkoutTitle,
+  workoutContentTitle,
+} from "@/lib/workout-content-name";
 import {
   calendarDateForProgramDay,
   columnSlotCountsForExerciseCount,
@@ -201,6 +211,8 @@ export default function ProgramCalendarBuilder({
   const [editorRest, setEditorRest] = useState(DEFAULT_DAY_PRESCRIPTION.defaultRestSec);
   const [fastedCardioMinutes, setFastedCardioMinutes] = useState(DEFAULT_FASTED_CARDIO_MINUTES);
   const [workoutPreviews, setWorkoutPreviews] = useState<Record<string, string[]>>({});
+  const [workoutTitle, setWorkoutTitle] = useState("");
+  const [savingTitle, setSavingTitle] = useState(false);
 
   const startMonday = useMemo(
     () => resolveProgramStartMonday(program.startDate),
@@ -224,6 +236,11 @@ export default function ProgramCalendarBuilder({
   }, [contentAlert]);
 
   const activeWeekData = weeks.find((w) => w.weekNumber === activeWeek) || weeks[0];
+  const cycleDays = programCycleDayCount(program.durationWeeks, PROGRAM_CYCLE_DAYS);
+
+  const focusEnrollmentDay = focus
+    ? linearEnrollmentDay(focus.weekNumber, focus.dayNumber)
+    : null;
 
   const sync = useCallback(async () => {
     const res = await fetch(`/api/programs/${program.slug}/sync`, { method: "POST" });
@@ -270,12 +287,20 @@ export default function ProgramCalendarBuilder({
     // workoutPreviews intentionally omitted — only fetch IDs not yet cached
   }, [program.weeks, loadWorkoutPreview]);
 
-  function previewForDay(day: ProgramDay): string | null {
-    for (const opt of getDayOptions(day)) {
-      const names = opt.workoutId ? workoutPreviews[opt.workoutId] : undefined;
-      if (names?.length) return names.join(" · ");
+  function previewForDay(day: ProgramDay, weekNumber: number): string | null {
+    const opts = getDayOptions(day);
+    if (opts.some((o) => isDayOffLabel(o.label))) return "Rest day";
+    const titles: string[] = [];
+    for (const opt of opts) {
+      if (!opt.workoutId) continue;
+      const fromLibrary = allWorkouts.find((w) => w.id === opt.workoutId);
+      const title = fromLibrary
+        ? workoutContentTitle(fromLibrary.name)
+        : workoutPreviews[opt.workoutId]?.[0];
+      if (title) titles.push(title);
     }
-    return null;
+    if (titles.length) return titles.join(" · ");
+    return dayKindLabel(day);
   }
 
   async function patchDay(dayId: string, patch: Record<string, unknown>) {
@@ -348,7 +373,7 @@ export default function ProgramCalendarBuilder({
     const cal =
       day.calendarDate ||
       calendarDateForProgramDay(startMonday, week.weekNumber, day.dayNumber);
-    const suggestedName = `${program.name} · ${formatShortDate(cal)} ${label}`;
+    const suggestedName = defaultTrackWorkoutTitle(label);
 
     const createRes = await fetch("/api/workouts", {
       method: "POST",
@@ -794,6 +819,77 @@ export default function ProgramCalendarBuilder({
     }
   }
 
+  useEffect(() => {
+    if (!focus?.workoutId) {
+      setWorkoutTitle("");
+      return;
+    }
+    const cached = allWorkouts.find((w) => w.id === focus.workoutId);
+    if (cached) {
+      setWorkoutTitle(workoutContentTitle(cached.name));
+      return;
+    }
+    fetch(`/api/workouts/${focus.workoutId}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.name) setWorkoutTitle(workoutContentTitle(data.name));
+      })
+      .catch(() => {});
+  }, [focus?.workoutId, allWorkouts]);
+
+  async function saveWorkoutTitle() {
+    if (!focus?.workoutId || savingTitle) return;
+    const trimmed = workoutTitle.trim();
+    if (!trimmed) return;
+    setSavingTitle(true);
+    try {
+      const res = await fetch(`/api/workouts/${focus.workoutId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if (!res.ok) {
+        setMessage("Could not save workout title.");
+        return;
+      }
+      const updated = await res.json();
+      setAllWorkouts((prev) =>
+        prev.map((w) => (w.id === focus.workoutId ? { ...w, name: updated.name } : w)),
+      );
+      setWorkoutTitle(workoutContentTitle(updated.name));
+      setMessage("Workout title saved.");
+      setTimeout(() => setMessage(null), 1500);
+    } finally {
+      setSavingTitle(false);
+    }
+  }
+
+  async function jumpToEnrollmentDay(dayN: number) {
+    const coord = coordinateFromEnrollmentDay(dayN, program.durationWeeks);
+    if (!coord) return;
+    const week = weeks.find((w) => w.weekNumber === coord.weekNumber);
+    const day = week?.days.find((d) => d.dayNumber === coord.dayNumber);
+    if (!week || !day) return;
+    if (week.weekNumber !== activeWeek) setActiveWeek(week.weekNumber);
+    const keepLabel =
+      focus && !isDayOffLabel(focus.label) && !isFastedCardioLabel(focus.label)
+        ? focus.label
+        : "Gym";
+    const opts = getDayOptions(day);
+    const idx = opts.findIndex((o) => o.label === keepLabel);
+    if (idx >= 0) {
+      await openDayOption(day, week, idx, opts[idx].label);
+      return;
+    }
+    if (isGymLabel(keepLabel) || isHomeLabel(keepLabel)) {
+      const refreshed = await ensureGymHomeOptions(day);
+      const optIdx = isHomeLabel(keepLabel) ? 1 : 0;
+      await openDayOption(refreshed, week, optIdx, keepLabel);
+      return;
+    }
+    await selectDay(day, week);
+  }
+
   async function selectDay(day: ProgramDay, week: ProgramWeek) {
     const opts = getDayOptions(day);
     if (opts.length === 1 && opts.some((o) => isFastedCardioLabel(o.label))) {
@@ -1122,12 +1218,12 @@ export default function ProgramCalendarBuilder({
 
         const clonedOpts: DayOption[] = [];
         for (const opt of fromOpts) {
-          const dayLabel = DAY_LABELS[toDay.dayNumber - 1] ?? `Day${toDay.dayNumber}`;
+          const sourceWorkout = allWorkouts.find((w) => w.id === opt.workoutId);
           const cloneRes = await fetch(`/api/workouts/${opt.workoutId}/clone`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              name: `${program.name} · W${toWeekNumber} ${dayLabel} ${opt.label}`,
+              name: cloneWorkoutContentName(sourceWorkout?.name || "", opt.label),
             }),
           });
           if (!cloneRes.ok) {
@@ -1218,15 +1314,15 @@ export default function ProgramCalendarBuilder({
       const cal =
         targetDay.calendarDate ||
         calendarDateForProgramDay(startMonday, targetWeek.weekNumber, targetDay.dayNumber);
-      const dayLabel = DAY_LABELS[targetDay.dayNumber - 1] || `D${targetDay.dayNumber}`;
       const clonedOpts: DayOption[] = [];
 
       for (const opt of sourceOpts) {
+        const sourceWorkout = allWorkouts.find((w) => w.id === opt.workoutId);
         const cloneRes = await fetch(`/api/workouts/${opt.workoutId}/clone`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name: `${program.name} · ${formatShortDate(cal)} ${opt.label}`,
+            name: cloneWorkoutContentName(sourceWorkout?.name || "", opt.label),
           }),
         });
         if (!cloneRes.ok) continue;
@@ -1260,12 +1356,6 @@ export default function ProgramCalendarBuilder({
   const focusDay = focus
     ? program.weeks.flatMap((w) => w.days).find((d) => d.id === focus.dayId)
     : null;
-
-  const duplicateMonth = focusDay?.calendarDate
-    ? parseIsoMonth(focusDay.calendarDate)
-    : { year: startMonday.getFullYear(), month: startMonday.getMonth() };
-
-  const monthDayCells = daysInMonth(duplicateMonth.year, duplicateMonth.month);
 
   function renderExerciseSlot(idx: number) {
     const slot = slots[idx];
@@ -1448,7 +1538,11 @@ export default function ProgramCalendarBuilder({
                 const isSelected = focus?.dayId === day.id;
                 const isExpanded = expandedDays.has(day.id);
                 const published = !!day.publishedAt;
-                const dayPreview = previewForDay(day);
+                const enrollmentDay = linearEnrollmentDay(
+                  activeWeekData.weekNumber,
+                  day.dayNumber,
+                );
+                const dayPreview = previewForDay(day, activeWeekData.weekNumber);
                 const isCalendarToday = cal === toIsoDate(new Date());
 
                 return (
@@ -1464,7 +1558,10 @@ export default function ProgramCalendarBuilder({
                   >
                     <div className="flex items-start justify-between gap-1">
                       <div className="min-w-0">
-                        <p className={`text-xs leading-none ${dayGridTextClass(isSelected, published, "title")}`}>
+                        <p className={`text-xs font-semibold leading-none ${dayGridTextClass(isSelected, published, "title")}`}>
+                          Day {enrollmentDay}
+                        </p>
+                        <p className={`text-[10px] leading-none ${dayGridTextClass(isSelected, published, "meta")}`}>
                           {DAY_LABELS[day.dayNumber - 1]}
                         </p>
                         <p className={`mt-0.5 text-[10px] ${dayGridTextClass(isSelected, published, "meta")}`}>
@@ -1537,18 +1634,25 @@ export default function ProgramCalendarBuilder({
                 >
                   ‹
                 </button>
-                <div className="min-w-[7rem] px-1 text-center">
-                  <p className="text-sm font-semibold leading-tight">
-                    {DAY_LABELS[focus.dayNumber - 1]}
-                    <span className="ml-1 font-normal text-[var(--muted)]">
-                      W{focus.weekNumber}
-                    </span>
-                  </p>
-                  <p className="text-[10px] text-[var(--muted)]">
-                    {formatShortDate(
-                      focusDay.calendarDate ||
-                        calendarDateForProgramDay(startMonday, focus.weekNumber, focus.dayNumber),
-                    )}
+                <div className="min-w-[8rem] px-1 text-center">
+                  <label className="sr-only" htmlFor="program-day-select">
+                    Program day
+                  </label>
+                  <select
+                    id="program-day-select"
+                    className="input w-full py-1 text-center text-sm font-semibold"
+                    value={focusEnrollmentDay ?? 1}
+                    disabled={saving}
+                    onChange={(e) => void jumpToEnrollmentDay(Number(e.target.value))}
+                  >
+                    {Array.from({ length: cycleDays }, (_, i) => i + 1).map((dayN) => (
+                      <option key={dayN} value={dayN}>
+                        Day {dayN}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-0.5 text-[10px] text-[var(--muted)]">
+                    {DAY_LABELS[focus.dayNumber - 1]} · Week {focus.weekNumber}
                     <span className="text-violet-300"> · {focus.label}</span>
                   </p>
                 </div>
@@ -1569,6 +1673,25 @@ export default function ProgramCalendarBuilder({
               )}
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+              {focus.workoutId && !isDayOffLabel(focus.label) && !isFastedCardioLabel(focus.label) && (
+                <label className="flex min-w-[10rem] flex-1 items-center gap-1.5 text-[10px] text-[var(--muted)]">
+                  <span className="shrink-0">Title</span>
+                  <input
+                    className="input min-w-0 flex-1 py-1 text-xs text-[var(--text)]"
+                    value={workoutTitle}
+                    disabled={saving || savingTitle || !!focusDay.publishedAt}
+                    placeholder="e.g. Upper body (Gym)"
+                    onChange={(e) => setWorkoutTitle(e.target.value)}
+                    onBlur={() => void saveWorkoutTitle()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void saveWorkoutTitle();
+                      }
+                    }}
+                  />
+                </label>
+              )}
               {focus.workoutId && (
                 <>
                   {workoutPreviews[focus.workoutId]?.length > 0 && (
@@ -1846,74 +1969,46 @@ export default function ProgramCalendarBuilder({
       {showDuplicate && focus && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="max-h-[90vh] w-full max-w-lg overflow-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl">
-            <h3 className="font-semibold">Assign this day&apos;s workout to other days</h3>
+            <h3 className="font-semibold">Assign this workout to other program days</h3>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              {formatMonthYear(toIsoDate(new Date(duplicateMonth.year, duplicateMonth.month, 1)))} —
-              each target gets its own copy.
+              Pick days 1–{cycleDays}. Each target gets its own copy — workout title stays
+              separate from the day slot.
             </p>
-            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {program.weeks.flatMap((w) =>
-                w.days.map((d) => {
-                  const cal =
-                    d.calendarDate ||
-                    calendarDateForProgramDay(startMonday, w.weekNumber, d.dayNumber);
-                  const [y, m] = cal.split("-").map(Number);
-                  if (y !== duplicateMonth.year || m - 1 !== duplicateMonth.month) return null;
-                  const checked = duplicateTargets.has(d.id);
-                  return (
-                    <label
-                      key={d.id}
-                      className={`flex cursor-pointer items-center gap-2 rounded border px-2 py-1.5 text-xs ${
-                        checked ? "border-accent bg-accent/10" : "border-[var(--border)]"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(e) => {
-                          setDuplicateTargets((prev) => {
-                            const next = new Set(prev);
-                            if (e.target.checked) next.add(d.id);
-                            else next.delete(d.id);
-                            return next;
-                          });
-                        }}
-                      />
-                      <span>
-                        {DAY_LABELS[d.dayNumber - 1]} {formatShortDate(cal)}
-                      </span>
-                    </label>
-                  );
-                }),
-              )}
-            </div>
-            <div className="mt-2 grid grid-cols-2 gap-1 sm:grid-cols-4">
-              {monthDayCells.map((cell) => {
-                const match = program.weeks.flatMap((w) =>
-                  w.days.map((d) => ({
-                    d,
-                    cal:
-                      d.calendarDate ||
-                      calendarDateForProgramDay(startMonday, w.weekNumber, d.dayNumber),
-                  })),
-                ).find((x) => x.cal === cell.iso);
-                if (!match) return null;
-                const checked = duplicateTargets.has(match.d.id);
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {Array.from({ length: cycleDays }, (_, i) => i + 1).map((dayN) => {
+                const coord = coordinateFromEnrollmentDay(dayN, program.durationWeeks);
+                if (!coord) return null;
+                const week = program.weeks.find((w) => w.weekNumber === coord.weekNumber);
+                const day = week?.days.find((d) => d.dayNumber === coord.dayNumber);
+                if (!day) return null;
+                const checked = duplicateTargets.has(day.id);
+                const isSource = day.id === focus.dayId;
                 return (
-                  <label key={cell.iso} className="flex items-center gap-1 text-[10px]">
+                  <label
+                    key={day.id}
+                    className={`flex cursor-pointer items-center gap-2 rounded border px-2 py-1.5 text-xs ${
+                      checked ? "border-accent bg-accent/10" : "border-[var(--border)]"
+                    } ${isSource ? "opacity-50" : ""}`}
+                  >
                     <input
                       type="checkbox"
                       checked={checked}
+                      disabled={isSource}
                       onChange={(e) => {
                         setDuplicateTargets((prev) => {
                           const next = new Set(prev);
-                          if (e.target.checked) next.add(match.d.id);
-                          else next.delete(match.d.id);
+                          if (e.target.checked) next.add(day.id);
+                          else next.delete(day.id);
                           return next;
                         });
                       }}
                     />
-                    {cell.day}
+                    <span>
+                      Day {dayN}
+                      <span className="ml-1 text-[var(--muted)]">
+                        {DAY_LABELS[coord.dayNumber - 1]}
+                      </span>
+                    </span>
                   </label>
                 );
               })}

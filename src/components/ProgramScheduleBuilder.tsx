@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import TextUploadPanel from "@/components/TextUploadPanel";
 import { DAY_LABELS } from "@/lib/program-constants";
+import { cloneWorkoutContentName, defaultTrackWorkoutTitle } from "@/lib/workout-content-name";
 
 type WorkoutOption = { id: string; name: string };
 
@@ -173,7 +174,7 @@ export default function ProgramScheduleBuilder({
 
     // Create a new workout with a sensible name for this slot
     const dayLabel = DAY_LABELS[day.dayNumber - 1] ?? `Day${day.dayNumber}`;
-    const suggestedName = `${program.name} · W${week.weekNumber} ${dayLabel} ${desiredLabel}`;
+    const suggestedName = defaultTrackWorkoutTitle(desiredLabel);
     setMessage("Creating workout slot…");
 
     const createRes = await fetch("/api/workouts", {
@@ -583,12 +584,12 @@ export default function ProgramScheduleBuilder({
           continue;
         }
 
-        const dayLabel = DAY_LABELS[toDay.dayNumber - 1] ?? `Day${toDay.dayNumber}`;
+        const sourceWorkout = allWorkouts.find((w) => w.id === opt.workoutId);
         const cloneRes = await fetch(`/api/workouts/${opt.workoutId}/clone`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name: `${program.name} · W${toWeekNumber} ${dayLabel} ${opt.label}`,
+            name: cloneWorkoutContentName(sourceWorkout?.name || "", opt.label),
           }),
         });
 

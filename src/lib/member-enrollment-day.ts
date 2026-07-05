@@ -22,6 +22,24 @@ export function linearEnrollmentDay(weekNumber: number, dayNumber: number): numb
   return (weekNumber - 1) * DAYS_PER_WEEK + dayNumber;
 }
 
+/** Map linear program day (1–28 for a 4-week cycle) back to week + weekday. */
+export function coordinateFromEnrollmentDay(
+  enrollmentDay: number,
+  durationWeeks: number,
+): EnrollmentCoordinate | null {
+  const maxDay = Math.max(1, durationWeeks) * DAYS_PER_WEEK;
+  const dayN = Math.floor(enrollmentDay);
+  if (dayN < 1 || dayN > maxDay) return null;
+  return {
+    weekNumber: Math.floor((dayN - 1) / DAYS_PER_WEEK) + 1,
+    dayNumber: ((dayN - 1) % DAYS_PER_WEEK) + 1,
+  };
+}
+
+export function programCycleDayCount(durationWeeks: number, cap = 28): number {
+  return Math.min(cap, Math.max(1, durationWeeks) * DAYS_PER_WEEK);
+}
+
 /** Clamp coach-set week/day into valid program bounds. */
 export function clampEnrollmentPosition(
   week: number,

@@ -1,4 +1,7 @@
 export const DAYS_PER_WEEK = 7;
+
+/** Default coach-facing program cycle (4 weeks × 7 days). */
+export const PROGRAM_CYCLE_DAYS = 28;
 export const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export const PROGRAM_IMAGES: Record<string, string> = {

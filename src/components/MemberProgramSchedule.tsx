@@ -11,6 +11,7 @@ import {
   type RollingCalendarDayPhase,
 } from "@/lib/program-calendar";
 import ScheduleJumpLink from "@/components/ScheduleJumpLink";
+import { workoutContentTitle } from "@/lib/workout-content-name";
 import { linkifyText } from "@/lib/linkify-text";
 
 type Program = {
@@ -177,9 +178,12 @@ function DayCards({
                   const isHome = /home/i.test(opt.label || "");
                   const weekDayLabel = `W${weekNumber} · D${day.dayNumber}`;
                   const calIso = iso;
+                  const contentTitle = workoutContentTitle(
+                    w.name.replace(/ \(Home\)| \(Gym\)/i, ""),
+                  );
                   const displayName =
                     (opts.length > 1 ? `${opt.label}: ` : "") +
-                    w.name.replace(/ \(Home\)| \(Gym\)/i, "").replace(/^Day \d+\s*/i, `${weekDayLabel} · `);
+                    `${weekDayLabel} · ${contentTitle || w.name}`;
 
                   return (
                     <Link
