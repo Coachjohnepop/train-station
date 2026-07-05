@@ -4,16 +4,16 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import WorkoutCertifyPanel from "@/components/WorkoutCertifyPanel";
 import { workoutItemsToParsedSms } from "@/lib/workout-builder-export";
-import ExerciseCascadePicker, {
-  type WorkoutExerciseConfig,
-} from "@/components/ExerciseCascadePicker";
+import PrescriptionRowEditor from "@/components/PrescriptionRowEditor";
 import { formatApiErrorDetail } from "@/lib/api-errors";
+import { legacyWorkoutItemToPrescriptionDraft } from "@/lib/prescription-from-legacy";
+import { prescriptionToLegacy } from "@/lib/prescription-to-legacy";
+import type { PrescriptionDraft } from "@/lib/prescription-example-types";
 import {
   approachLabel,
   formatPrescriptionSummary,
   normalizePrescription,
   weightTierLabel,
-  type WeightTierId,
 } from "@/lib/workout-schemes";
 
 type Exercise = {
@@ -116,21 +116,23 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
       .catch(() => {});
   }, []);
 
-  const saveExerciseConfig = useCallback(
+  const savePrescriptionDraft = useCallback(
     async (
       exerciseId: string,
-      config: WorkoutExerciseConfig,
+      draft: PrescriptionDraft & { summary: string },
       itemId?: string,
     ) => {
       setSaveError(null);
       setSaveMessage(null);
+      const legacy = prescriptionToLegacy(draft);
       const payload = {
-        setScheme: config.setScheme,
-        repPattern: config.repPattern,
-        reps: config.reps,
-        sets: config.setCount,
-        weightTier: config.weightTier,
-        notes: config.notes,
+        setScheme: legacy.setScheme,
+        repPattern: legacy.repPattern,
+        reps: legacy.reps,
+        sets: legacy.sets,
+        weightTier: legacy.weightTier,
+        restSec: legacy.restSec,
+        notes: legacy.notes,
       };
 
       const res = await fetch(`/api/workouts/${workoutId}/exercises`, {
@@ -172,6 +174,21 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
       }
     },
     [workoutId],
+  );
+
+  const defaultPrescriptionDraft = useCallback(
+    (exerciseName: string) =>
+      legacyWorkoutItemToPrescriptionDraft(
+        {
+          setScheme: "standard",
+          reps: "10",
+          sets: 3,
+          restSec: 90,
+          notes: null,
+        },
+        exerciseName,
+      ),
+    [],
   );
 
   async function removeItem(itemId: string) {
@@ -336,25 +353,22 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
         </div>
 
         {pickedExercise && !editingItemId && (
-          <ExerciseCascadePicker
+          <PrescriptionRowEditor
             exerciseName={pickedExercise.name}
-            onConfirm={(config) => saveExerciseConfig(pickedExercise.id, config)}
+            initial={defaultPrescriptionDraft(pickedExercise.name)}
+            confirmLabel="Add to workout"
+            onConfirm={(draft) => savePrescriptionDraft(pickedExercise.id, draft)}
             onCancel={() => setPickId("")}
           />
         )}
 
         {editingItem && (
-          <ExerciseCascadePicker
+          <PrescriptionRowEditor
             exerciseName={editingItem.exercise.name}
-            initialScheme={editingItem.setScheme}
-            initialRepPattern={editingItem.repPattern}
-            initialReps={editingItem.reps}
-            initialSetCount={editingItem.sets ?? undefined}
-            initialTier={(editingItem.weightTier as WeightTierId) ?? undefined}
-            initialNotes={editingItem.notes}
+            initial={legacyWorkoutItemToPrescriptionDraft(editingItem, editingItem.exercise.name)}
             confirmLabel="Save changes"
-            onConfirm={(config) =>
-              saveExerciseConfig(editingItem.exercise.id, config, editingItem.id)
+            onConfirm={(draft) =>
+              savePrescriptionDraft(editingItem.exercise.id, draft, editingItem.id)
             }
             onCancel={() => setEditingItemId(null)}
           />

@@ -361,6 +361,31 @@ model ZoomOAuthPendingState {
   @@index([createdAt])
 }
 
+/** Reference prescription patterns (seeded from workout-prescription-examples.csv). */
+model PrescriptionExample {
+  id                 Int      @id
+  patternType        String
+  sampleExercise     String
+  setCount           Int
+  restBetweenSetsSec Int      @default(90)
+  weightTier         String   @default("medium")
+  phase1Type         String?
+  phase1DurationSec  Int?
+  phase1Reps         Int?
+  phase1RepKind      String?
+  phase1PositionCue  String?
+  phase2Type         String?
+  phase2DurationSec  Int?
+  phase2Reps         Int?
+  phase2RepKind      String?
+  phase2PositionCue  String?
+  notes              String?  @db.Text
+  summary            String
+  updatedAt          DateTime @updatedAt
+
+  @@index([patternType])
+}
+
 model Equipment {
   id          String             @id @default(cuid())
   name        String             @unique
