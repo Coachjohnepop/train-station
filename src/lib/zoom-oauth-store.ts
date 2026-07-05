@@ -23,17 +23,22 @@ async function loadRecord(opts?: { preferFresh?: boolean }): Promise<ZoomOAuthRe
     localPath: DEV_FILE,
     memory: memoryStore,
     setMemory: (v) => {
-      memoryStore = v;
+      memoryStore = activeRecord(v);
     },
     fallback: () => null,
-    preferFresh: opts?.preferFresh,
+    preferFresh: opts?.preferFresh ?? true,
   });
-  memoryStore = hydrated;
-  return hydrated;
+  return activeRecord(hydrated);
+}
+
+function activeRecord(raw: ZoomOAuthRecord | null): ZoomOAuthRecord | null {
+  if (!raw?.refreshToken?.trim()) return null;
+  return raw;
 }
 
 export async function getZoomOAuthRecord(opts?: { preferFresh?: boolean }): Promise<ZoomOAuthRecord | null> {
-  return loadRecord(opts);
+  const raw = await loadRecord(opts);
+  return activeRecord(raw);
 }
 
 export async function saveZoomOAuthRecord(record: ZoomOAuthRecord): Promise<ZoomOAuthRecord> {
@@ -48,13 +53,24 @@ export async function saveZoomOAuthRecord(record: ZoomOAuthRecord): Promise<Zoom
   return record;
 }
 
-export async function clearZoomOAuthRecord(): Promise<void> {
-  await persistJsonStore({
+/** Tombstone written to blob — avoids null JSON + CDN stale reads showing old tokens. */
+export type ZoomOAuthCleared = {
+  clearedAt: string;
+  clearedByEmail?: string;
+};
+
+export async function clearZoomOAuthRecord(clearedByEmail?: string): Promise<{ blobSaved: boolean }> {
+  memoryStore = null;
+  const tombstone: ZoomOAuthCleared = {
+    clearedAt: new Date().toISOString(),
+    ...(clearedByEmail ? { clearedByEmail } : {}),
+  };
+  return persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
-    data: null,
+    data: tombstone as unknown as ZoomOAuthRecord,
     setMemory: (v) => {
-      memoryStore = v;
+      memoryStore = activeRecord(v as ZoomOAuthRecord | null);
     },
   });
 }
