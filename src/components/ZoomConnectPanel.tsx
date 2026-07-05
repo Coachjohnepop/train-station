@@ -62,6 +62,7 @@ export default function ZoomConnectPanel() {
   useEffect(() => {
     const zoom = searchParams.get("zoom");
     const reason = searchParams.get("reason") || "";
+    const detail = searchParams.get("detail") || "";
     const warn = searchParams.get("warn") || "";
 
     if (zoom === "connected") {
@@ -82,7 +83,7 @@ export default function ZoomConnectPanel() {
         scope:
           "Zoom needs the user:read:token scope — in marketplace.zoom.us open your app → Scopes, add it, save, then Connect again.",
         state:
-          "Connection timed out or your login changed mid-flow — stay signed in as the same coach, then tap Connect again.",
+          "Connection timed out or Connect was clicked more than once — stay signed in, tap Connect once, then approve on Zoom immediately.",
         session: "Your coach session expired — sign in again, then Connect Zoom.",
         denied: "Zoom authorization was cancelled or denied — tap Connect when you are ready.",
         redirect:
@@ -90,9 +91,10 @@ export default function ZoomConnectPanel() {
         exchange: "Zoom token exchange failed — confirm Client ID/Secret in Vercel match your Zoom app.",
         missing_code: "Zoom did not return an authorization code — try Connect again.",
       };
+      const base = messages[reason] || "Zoom connection failed — try Connect again.";
       setBanner({
         tone: "error",
-        text: messages[reason] || "Zoom connection failed — try Connect again.",
+        text: detail && reason === "exchange" ? `${base} (${detail})` : base,
       });
       router.replace("/admin/settings", { scroll: false });
     }
@@ -226,9 +228,18 @@ export default function ZoomConnectPanel() {
           <Link
             href="/api/admin/zoom/connect"
             className="btn-primary px-4 py-2 text-sm"
-            onClick={() => setBanner(null)}
+            onClick={(e) => {
+              setBanner(null);
+              if (busy) {
+                e.preventDefault();
+                return;
+              }
+              setBusy(true);
+              window.setTimeout(() => setBusy(false), 8000);
+            }}
+            aria-disabled={busy}
           >
-            Connect Zoom account
+            {busy ? "Opening Zoom…" : "Connect Zoom account"}
           </Link>
         ) : showServerOnly ? (
           <span className="text-xs text-[var(--muted)]">

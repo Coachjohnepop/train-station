@@ -12,9 +12,10 @@ import { saveZoomOAuthRecord } from "@/lib/zoom-oauth-store";
 
 export const dynamic = "force-dynamic";
 
-function redirectWithError(reason: string): NextResponse {
+function redirectWithError(reason: string, detail?: string): NextResponse {
   const settingsUrl = `${appBaseUrl()}/admin/settings`;
   const params = new URLSearchParams({ zoom: "error", reason });
+  if (detail) params.set("detail", detail.slice(0, 180));
   return NextResponse.redirect(`${settingsUrl}?${params.toString()}`);
 }
 
@@ -36,13 +37,21 @@ export async function GET(request: Request) {
   }
 
   const code = url.searchParams.get("code");
-  const state = url.searchParams.get("state");
+  const rawState = url.searchParams.get("state");
   const cookieStore = await cookies();
   const cookieState = cookieStore.get(ZOOM_OAUTH_STATE_COOKIE)?.value;
 
-  if (!code || !state) {
+  if (!code || !rawState) {
     return redirectWithError("missing_code");
   }
+
+  const state = (() => {
+    try {
+      return decodeURIComponent(rawState).trim();
+    } catch {
+      return rawState.trim();
+    }
+  })();
 
   const stateOk =
     (state === cookieState && verifyZoomOAuthState(state, auth.session.email)) ||
@@ -77,9 +86,9 @@ export async function GET(request: Request) {
     return res;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    if (/scope/i.test(message)) return redirectWithError("scope");
-    if (/redirect/i.test(message)) return redirectWithError("redirect");
+    if (/scope/i.test(message)) return redirectWithError("scope", message);
+    if (/redirect/i.test(message)) return redirectWithError("redirect", message);
     console.error("Zoom OAuth callback failed:", message);
-    return redirectWithError("exchange");
+    return redirectWithError("exchange", message);
   }
 }

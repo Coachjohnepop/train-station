@@ -53,9 +53,26 @@ async function saveMap(map: PendingMap): Promise<void> {
   });
 }
 
+function normalizeCoachEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function normalizeOAuthState(state: string): string {
+  try {
+    return decodeURIComponent(state).trim();
+  } catch {
+    return state.trim();
+  }
+}
+
 export async function rememberZoomOAuthState(state: string, coachEmail: string): Promise<void> {
   const map = await loadMap();
-  map[state] = { coachEmail, createdAt: new Date().toISOString() };
+  const email = normalizeCoachEmail(coachEmail);
+  // One active Connect per coach — double-clicks were leaving stale states that failed callback.
+  for (const [key, value] of Object.entries(map)) {
+    if (normalizeCoachEmail(value.coachEmail) === email) delete map[key];
+  }
+  map[state] = { coachEmail: email, createdAt: new Date().toISOString() };
   await saveMap(map);
 }
 
@@ -64,9 +81,13 @@ export async function consumeZoomOAuthState(
   coachEmail: string,
 ): Promise<boolean> {
   const map = await loadMap();
-  const pending = map[state];
-  if (!pending || pending.coachEmail !== coachEmail) return false;
-  delete map[state];
+  const email = normalizeCoachEmail(coachEmail);
+  const normalizedState = normalizeOAuthState(state);
+  const key = map[normalizedState] ? normalizedState : map[state] ? state : null;
+  if (!key) return false;
+  const pending = map[key];
+  if (!pending || normalizeCoachEmail(pending.coachEmail) !== email) return false;
+  delete map[key];
   await saveMap(map);
   return true;
 }
