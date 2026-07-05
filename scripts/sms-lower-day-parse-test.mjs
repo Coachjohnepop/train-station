@@ -10,7 +10,7 @@ Module._load = function (request, parent, isMain) {
   return originalLoad.call(this, request, parent, isMain);
 };
 
-const { parseSmsWorkout } = await import("../src/lib/sms-workout-parser.ts");
+const { parseSmsWorkout } = await import("../src/lib/sms-workout-parser");
 
 const LOWER_DAY = `Lower Day 
 

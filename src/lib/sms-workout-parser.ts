@@ -1,3 +1,6 @@
+import type { WorkoutSetPhaseInput } from "./workout-prescription";
+import { enrichLegacyExerciseRows } from "./workout-prescription-backfill";
+
 export type ParsedSmsExercise = {
   name: string;
   sets: number;
@@ -5,6 +8,11 @@ export type ParsedSmsExercise = {
   notes?: string;
   setScheme?: "standard" | "timed";
   section?: "warmup" | "main" | "cooldown" | "notes";
+  /** Structured prescription (set after parse). */
+  setCount?: number;
+  restBetweenSetsSec?: number | null;
+  phases?: WorkoutSetPhaseInput[];
+  pattern?: string;
 };
 
 export type ParsedSmsWorkout = {
@@ -114,6 +122,16 @@ function applySetsFromLine(current: ParsedSmsExercise, line: string): boolean {
     return true;
   }
   return false;
+}
+
+function appendCoachingCue(current: ParsedSmsExercise, line: string) {
+  if (
+    /hold|burnout|burn\s*out|\d+\s*sec|reps?\s+immediately|stay\s+flexible|each\s+leg|single\s+leg/i.test(
+      line,
+    )
+  ) {
+    current.notes = [current.notes, line].filter(Boolean).join(" · ");
+  }
 }
 
 function applyHiitTiming(current: ParsedSmsExercise, line: string) {
@@ -229,10 +247,12 @@ export function parseSmsWorkout(rawText: string): ParsedSmsWorkout {
     }
 
     if (current && applySetsFromLine(current, line)) {
+      appendCoachingCue(current, line);
       continue;
     }
 
     if (current && applyHiitTiming(current, line)) {
+      appendCoachingCue(current, line);
       continue;
     }
 
@@ -254,8 +274,18 @@ export function parseSmsWorkout(rawText: string): ParsedSmsWorkout {
     }
 
     if (current) {
-      if (applySetsFromLine(current, line)) continue;
-      if (applyHiitTiming(current, line)) continue;
+      if (applySetsFromLine(current, line)) {
+        appendCoachingCue(current, line);
+        continue;
+      }
+      if (applyHiitTiming(current, line)) {
+        appendCoachingCue(current, line);
+        continue;
+      }
+      if (isInstructionLine(line) || /hold|burnout|burn\s*out|\d+\s*sec/i.test(line)) {
+        appendCoachingCue(current, line);
+        continue;
+      }
       current.notes = [current.notes, line].filter(Boolean).join(" · ");
     } else if (!isCooldownLine(line)) {
       warmupLines.push(line);
@@ -264,6 +294,31 @@ export function parseSmsWorkout(rawText: string): ParsedSmsWorkout {
 
   flushWarmup();
   pushCurrent();
+
+  const enriched = enrichLegacyExerciseRows(
+    exercises.map((ex) => ({
+      ...ex,
+      sets: ex.sets,
+      reps: ex.reps,
+      notes: ex.notes ?? null,
+      setScheme: ex.setScheme ?? null,
+      exerciseName: ex.name,
+    })),
+  );
+
+  for (let i = 0; i < exercises.length; i++) {
+    const e = enriched[i];
+    if (!("prescription" in e)) continue;
+    exercises[i] = {
+      ...exercises[i],
+      setCount: e.prescription.setCount,
+      restBetweenSetsSec: e.prescription.restBetweenSetsSec,
+      phases: e.prescription.phases,
+      pattern: e.pattern,
+      notes: e.cleanedNotes ?? exercises[i].notes,
+      sets: e.prescription.setCount,
+    };
+  }
 
   if (exercises.length === 0) {
     exercises.push({

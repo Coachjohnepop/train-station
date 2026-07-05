@@ -1,6 +1,7 @@
 import "server-only";
 
 import { isCoachCatalogDemo } from "@/lib/catalog-mode";
+import { canonicalExerciseName } from "@/lib/exercise-canonical";
 import { matchExerciseInCatalog, sanitizeSmsExerciseName } from "@/lib/exercise-match";
 import { hintVideoUrlForExerciseName } from "@/lib/exercise-video-hints";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +10,11 @@ import { syncProgramSchedule } from "@/lib/program-schedule";
 import type { ParsedSmsWorkout } from "@/lib/sms-workout-parser";
 import { parseProgramWeekText, type ParsedWeekDaySlot } from "@/lib/program-week-parser";
 import { NEWLY_ADDED_EXERCISE_TAG } from "@/lib/text-upload-exercises";
+import {
+  buildWorkoutExerciseCreateData,
+  structuredPrescriptionReady,
+  type WorkoutExerciseCreateInput,
+} from "@/lib/workout-prescription-db";
 
 type ExerciseRow = {
   id: string;
@@ -55,7 +61,7 @@ async function ensureExerciseDb(
   catalog: ExerciseRow[],
   extraTags?: string,
 ): Promise<{ exercise: ExerciseRow; created: boolean }> {
-  const displayName = sanitizeSmsExerciseName(rawName) || rawName.trim();
+  const displayName = canonicalExerciseName(rawName) || rawName.trim();
   const existing = matchExerciseInCatalog(displayName, catalog);
   if (existing) {
     return {
@@ -73,7 +79,7 @@ async function ensureExerciseDb(
   const hintVideo = hintVideoUrlForExerciseName(displayName);
   const created = await prisma.exercise.create({
     data: {
-      name: displayName,
+      name: canonicalExerciseName(displayName),
       description:
         notes?.trim() ||
         `Created from text upload (${new Date().toISOString().slice(0, 10)})`,
@@ -127,31 +133,28 @@ export async function buildWorkoutFromParsedDb(
 ) {
   const name = (workoutName || parsed.title || "Text upload workout").trim();
   const catalog = await loadExerciseCatalog();
+  const structured = await structuredPrescriptionReady(prisma);
   const newExerciseIds: string[] = [];
-  const items: Array<{
-    exerciseId: string;
-    sortOrder: number;
-    setScheme: string;
-    reps: string | null;
-    sets: number | null;
-    weightTier: string;
-    notes: string | null;
-  }> = [];
+  const items: WorkoutExerciseCreateInput[] = [];
 
   for (const [idx, ex] of parsed.exercises.entries()) {
     const { exercise, created } = await ensureExerciseDb(ex.name, ex.notes, catalog);
     if (created) newExerciseIds.push(exercise.id);
+    const notes =
+      [ex.notes, ex.section === "warmup" ? "Warm-up block" : null]
+        .filter(Boolean)
+        .join(" · ") || null;
     items.push({
       exerciseId: exercise.id,
       sortOrder: idx,
       setScheme: ex.setScheme || "standard",
       reps: ex.reps ?? null,
-      sets: ex.sets ?? null,
+      sets: ex.setCount ?? ex.sets ?? null,
+      setCount: ex.setCount ?? ex.sets ?? null,
+      restBetweenSetsSec: ex.restBetweenSetsSec ?? null,
+      phases: ex.phases,
       weightTier: "medium",
-      notes:
-        [ex.notes, ex.section === "warmup" ? "Warm-up block" : null]
-          .filter(Boolean)
-          .join(" · ") || null,
+      notes,
     });
   }
 
@@ -159,7 +162,11 @@ export async function buildWorkoutFromParsedDb(
     data: {
       name,
       description: "Created from text upload",
-      exercises: { create: items },
+      exercises: {
+        create: items.map((item) =>
+          buildWorkoutExerciseCreateData(item, structured),
+        ),
+      },
     },
     select: { id: true, name: true },
   });

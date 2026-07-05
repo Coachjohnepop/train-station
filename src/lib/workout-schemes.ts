@@ -29,7 +29,10 @@ export type DanceCountId = (typeof DANCE_COUNTS)[number]["id"];
 
 export type RepPatternId = RepLadderId | DanceCountId;
 
-export const STANDARD_REP_PRESETS = [5, 8, 10, 12, 15, 20, 25] as const;
+export const MAX_SET_COUNT = 10 as const;
+export const MAX_REPS_PER_SET = 30 as const;
+
+export const STANDARD_REP_PRESETS = [5, 8, 10, 12, 15, 20, 25, 30] as const;
 
 export const WEIGHT_TIERS = [
   { id: "light", label: "Light weight" },

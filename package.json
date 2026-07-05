@@ -44,7 +44,13 @@
     "test:s5": "node scripts/s5-payments-test.mjs",
     "test:commission": "node scripts/stripe-commission-math-test.mjs",
     "test:quick-auth": "node scripts/quick-auth-login-smoke.mjs",
-    "test:blob": "node scripts/blob-probe.mjs"
+    "test:blob": "node scripts/blob-probe.mjs",
+    "catalog:standardize": "npx tsx scripts/standardize-exercise-catalog.ts",
+    "catalog:standardize:dry": "DRY_RUN=1 npx tsx scripts/standardize-exercise-catalog.ts",
+    "backfill:phases": "npx tsx scripts/backfill-workout-phases.ts",
+    "backfill:phases:dry": "DRY_RUN=1 npx tsx scripts/backfill-workout-phases.ts",
+    "test:prescription-parse": "npx tsx scripts/test-prescription-parse.mjs",
+    "test:lower-day-parse": "npx tsx scripts/sms-lower-day-parse-test.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",

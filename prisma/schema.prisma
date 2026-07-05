@@ -19,6 +19,21 @@ enum Role {
   PROSPECTIVE_INSTRUCTOR
 }
 
+/** What happens in one phase of a working set (hold, reps, burnout, timed). */
+enum SetPhaseType {
+  HOLD
+  REPS
+  BURNOUT
+  TIMED
+}
+
+/** How rep count is prescribed when phaseType is REPS (or burnout logging). */
+enum RepKind {
+  FIXED
+  BURNOUT
+  MAX
+}
+
 model User {
   id                 String              @id @default(cuid())
   email              String              @unique
@@ -113,14 +128,36 @@ model WorkoutExercise {
   setScheme  String?
   repPattern String?
   weightTier String?
+  /// Legacy flat prescription — migrate to setCount + phases, then deprecate.
   sets       Int?
   reps       String?
   restSec    Int?
+  /// Structured prescription: number of working sets (1–10).
+  setCount             Int?
+  /// Rest between working sets in seconds (e.g. 90 for 1:30).
+  restBetweenSetsSec   Int?
   notes      String?
   workout    Workout   @relation(fields: [workoutId], references: [id], onDelete: Cascade)
   exercise   Exercise  @relation(fields: [exerciseId], references: [id])
+  phases     WorkoutSetPhase[]
 
   @@index([workoutId, sortOrder])
+}
+
+/// Template for what happens inside one working set; repeats for all setCount sets.
+model WorkoutSetPhase {
+  id                String        @id @default(cuid())
+  workoutExerciseId String
+  phaseIndex        Int
+  phaseType         SetPhaseType
+  durationSec       Int?
+  reps              Int?
+  repKind           RepKind       @default(FIXED)
+  positionCue       String?
+  workoutExercise   WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([workoutExerciseId, phaseIndex])
+  @@index([workoutExerciseId])
 }
 
 model ExercisePerformance {

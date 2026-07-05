@@ -1,0 +1,97 @@
+number,name,id,tags
+1,1 Minute Sit Up Test,cmpzkks2y001595rzc7pntnxj,
+2,Abdominal,cmpzkksf1001x95rzxuddpcnq,
+3,Abdominal Bicycles,cmr6qdm5z0000zdrzptzvxv51,catalog-merge
+4,Abdominal Crunches,cmpzkkshv002595rz1n3p90nq,
+5,Abdominal Planks,cmpzkkucb007795rz73ps9rj8,
+6,Abdominal Scissor Kicks,cmpzkksfx001z95rzanfdn155,
+7,Air Squats,cmpzjajfj000595rz07vmle0l,
+8,Alternating Step Back Lunges,cmpzkkt8c003x95rzs0ju211x,
+9,Alternating Step Ups Onto 12” Step or 1st or 2nd Step on Stairs,cmr6qdpr10001zdrzjtz00725,catalog-merge
+10,Band Lat Pull Downs,exmq4prcsp,"home,strength"
+11,Band Rear Delt Extensions,cmpzjajeu000195rzcjo4p43p,
+12,Band Rotator Cuff Extensions,cmpzjajf2000295rzdzr23305,
+13,Barbell Back Squat,cmpyqegap0002r7rzr0pnvzx7,"legs,strength"
+14,Barbell Hip Thrust Raise,cmr6qdsqv0002zdrzqdx6ehrn,catalog-merge
+15,Barbell Romanian Deadlift,cmpyqegas0003r7rzz0k0lc86,"legs,hinge"
+16,Bench Press,cmpyqegat0004r7rz0klfamt0,"push,upper"
+17,Bent Over Dumbbell Rear Dealt Extensions,cmr6qdtm50003zdrzjp2f10mv,catalog-merge
+18,Bosu Ball Squats,cmr6qdu0j0004zdrz3mvq224y,catalog-merge
+19,Box Jump,cmpyqegaw0007r7rzjv1hzqb3,"plyo,power"
+20,Cable Lat Pull Downs,cmr6qdv7p0006zdrz28z8do28,catalog-merge
+21,Calf Raises,cmr6qdvoi0007zdrzumv8np0g,catalog-merge
+22,Calf Raises Both Legs Together,cmr6qdwvf0008zdrzno2hcv9g,catalog-merge
+23,Chest Flies,ex_6ea79bf89ab74437a9edd2a05e84b062,Chest
+24,Close Burnout Push-ups,cmr6qdxgr0009zdrz6tvscgm9,catalog-merge
+25,Cool Down & Stretch,cmpzkks8c001j95rzjldj7mn5,
+26,Double Arm Bicep Curls,cmr6qduci0005zdrzwu7ivyo4,catalog-merge
+27,Double Arm Bicep Curls Both,cmpzkku1w006795rzpm98jh3i,
+28,Double Arm Dumbbell Tricep Extensions,exmq4prcry,"home,strength"
+29,Double Arm Frontal Shoulder Raises,cmpzkku6m006l95rzlytzhi0c,
+30,Double Arm Lateral Shoulder Raises,cmpzkku65006j95rzmpc1dmpq,
+31,Double Arm Rear Dealt Extensions,cmr6qe0t6000azdrz2mfbdjxh,catalog-merge
+32,"Double Arm, Light to Medium Band with Handles",exmq4prcru,"home,strength"
+33,Dumbbell 40°Incline Bench Chest Press,cmpzjajgf000895rzkbecuupa,
+34,Dumbbell Bent Over Row,cmr6qe175000bzdrzv172ug94,catalog-merge
+35,Dumbbell Bulgarian Split Squats,cmr6qe1wz000czdrzifwr30ss,catalog-merge
+36,Dumbbell Chest Press 40 Degree,cmpzkks1k000z95rzzc583bzq,
+37,Dumbbell Flat Bench Chest Press,cmpzjajfp000695rz8d6nbnvu,
+38,Dumbbell Hack Squat,cmpzkksqd002s95rzfzpi0v9l,
+39,Dumbbell Hammer Curls,cmpzkku2e006995rzx2ov8lgi,
+40,Dumbbell Shoulder Press,cmpzkku5q006h95rz33yua9l6,
+41,Dumbbell Shrugs,cmpzkku09006395rz70rr558c,
+42,Dumbbell Single Arm Tricep Extensions,cmpzkku7r006n95rzyy57u9yi,
+43,Fasted Cardio,cmpzklxwz008s95rzuzq7x503,
+44,General Warm Up + Shoulder Mobility,cmpzkkrz6000t95rzm8gp0d7l,
+45,Goblet Squat,cmpzkksb2001q95rz5xvwyj71,
+46,Goblet Squats with Single Dumbbell,exmq4prcse,"home,strength"
+47,Hack Squat,cmr6qe9bc000dzdrzw6t9x8xw,catalog-merge
+48,HIIT Cardio Intervals,cmpzjajhk000c95rz8a72t1gn,
+49,Incline Bench Chest Press Medium,cmpzkkubw007595rziqgwsdgs,
+50,Incline Dumbbell Chest Press,exmq4prcrv,"home,strength"
+51,Incline Flyes,cmr6qecaf000ezdrz3gw8c61u,catalog-merge
+52,Jump Squats,cmpzkkspv002q95rzf6nqlqga,
+53,"Jump Squats, Power",cmpzkku3l006b95rzi38994yr,
+54,Lateral Leg Raises,cmr6qed0g000fzdrzxhzk48x6,catalog-merge
+55,"Lateral Leg Raises, No Resistance",cmr6qef29000gzdrzexbb4nak,catalog-merge
+56,Low Intensity Cardio Warmup,cmpzjajej000095rzilwd9n9k,
+57,Plank,cmpzkks6c001f95rziv99k9nw,abdominals
+58,Pull-up,cmr6qeg9f000hzdrz69zsvo38,catalog-merge
+59,Push Up Plank Position,cmr6qegnp000izdrz91iinvj3,catalog-merge
+60,Rest & Active Recovery,cmpzklxto008j95rz6475sn92,
+61,Seated Back Row Machine,cmpzkks0e000v95rzx0qtu971,
+62,Seated Cable Close Grip Row Bar,cmpzkks14000x95rzngedwa8a,
+63,Seated Calf Raise Machine,cmr6qejmv000lzdrzmfdygeeq,catalog-merge
+64,Seated Calf Raises,cmr6qej1m000kzdrz0w4vjqaw,catalog-merge
+65,Seated Double Arm Supinated Bicep Curls,cmpzkks57001d95rzbpu4kuck,
+66,Seated Dumbbell Double Arm Bicep Curls,exmq4prcsw,"home,strength"
+67,Seated Dumbbell Shoulder Press,cmr6qelcq000mzdrztx7um1us,catalog-merge
+68,Shoulder Taps,exmq4prcsi,"home,strength"
+69,Shoulder Taps (push Up Position),cmr6qema4000nzdrzpj63i6v6,catalog-merge
+70,Single Arm Dumbbell Bent Over Row,exmq4prcss,"home,strength"
+71,Single Arm Dumbbell Tricep Extensions,cmpzkks4d001995rzugitibmq,
+72,Single Dumbbell Goblet Squats,exmq4prcsn,"home,strength"
+73,Single Leg Pistol Squat,cmr6qemt1000ozdrzsa81bko7,catalog-merge
+74,Single Leg Step Back Lunges,exmq4prcso,"home,strength"
+75,Sit Ups,cmr6qenv1000qzdrz4dp8cqve,catalog-merge
+76,Sit Ups (feet Anchored),cmr6qenc0000pzdrzvhsoqe7s,catalog-merge
+77,Sit Ups on the Ground with Your Feet Anchored.,cmr6qeobp000rzdrzs0z6gj4j,catalog-merge
+78,Standing Alternating Step Back Lunges (no Weight),cmr6qeouo000szdrzcvlnpeic,catalog-merge
+79,Standing Back Row,exmq4prcrt,"home,strength"
+80,"Standing Bands with Handles, Lat Pull Over",exmq4prcs7,"home,strength"
+81,Standing Cable Lat Pull Over Using Straight Bar,cmr6qeqdd000tzdrzd9wg5cdj,catalog-merge
+82,Standing Calf Raises,cmr6qeqrl000uzdrztv8a9aop,catalog-merge
+83,Standing Dumbbell Double Arm Frontal Shoulder Raises,exmq4prct0,"home,strength"
+84,Standing Dumbbell Double Arm Lateral Shoulder Raises,exmq4prcsz,"home,strength"
+85,Standing Dumbbell Shoulder Press,cmpzjajfd000495rzlurdsp0x,
+86,Standing Dumbbell Supinated Bicep Curls,cmpzjajf9000395rz0mflsjwv,
+87,Standing Lateral and Frontal Shoulder Raises,cmpzkks2j001395rzmyhclofr,
+88,"Standing Lateral Leg Raises, No Resistance",cmr6qesju000vzdrzyy8n1kdq,catalog-merge
+89,Standing Pronated Grip Band Back Pull Overs,exmq4prcsu,"home,strength"
+90,Standing Straight Bar Cable Tricep Extensions,cmpzjajhb000a95rz00t98gwt,
+91,Step Back Lunges,cmpzkksc9001t95rzu33weoq5,
+92,Step Ups,cmr6qehpz000jzdrzadrbn7a2,catalog-merge
+93,"Step Ups Onto 12"" Step",cmr6qetef000wzdrzc8xn9mlt,catalog-merge
+94,Straight Leg Abdominal Crunches,cmr6qetxg000xzdrz86shgw0g,catalog-merge
+95,Tricep Pushdowns,cmr6qevid000yzdrzzi2exyia,catalog-merge
+96,Walking Lunges,cmr6qevu7000zzdrzh2i7x0wn,catalog-merge

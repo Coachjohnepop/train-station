@@ -1,0 +1,81 @@
+example_id,pattern_type,sample_exercise,set_count,rest_between_sets_sec,weight_tier,phase_1_type,phase_1_duration_sec,phase_1_reps,phase_1_rep_kind,phase_1_position_cue,phase_2_type,phase_2_duration_sec,phase_2_reps,phase_2_rep_kind,phase_2_position_cue,notes,summary
+1,standard_reps,Bench Press,1,90,heavy,reps,,5,fixed,,,,,,,,1 sets × 5 reps
+2,standard_reps,Bench Press,2,90,heavy,reps,,8,fixed,,,,,,,,2 sets × 8 reps
+3,standard_reps,Bench Press,3,90,heavy,reps,,10,fixed,,,,,,,,3 sets × 10 reps
+4,standard_reps,Bench Press,4,90,medium,reps,,12,fixed,,,,,,,,4 sets × 12 reps
+5,standard_reps,Bench Press,5,90,medium,reps,,15,fixed,,,,,,,,5 sets × 15 reps
+6,standard_reps,Bench Press,6,90,medium,reps,,20,fixed,,,,,,,,6 sets × 20 reps
+7,standard_reps,Bench Press,7,90,medium,reps,,25,fixed,,,,,,,,7 sets × 25 reps
+8,standard_reps,Bench Press,8,90,medium,reps,,30,fixed,,,,,,,,8 sets × 30 reps
+9,standard_reps,Bench Press,9,90,medium,reps,,12,fixed,,,,,,,,9 sets × 12 reps
+10,standard_reps,Bench Press,10,90,medium,reps,,10,fixed,,,,,,,,10 sets × 10 reps
+11,hold_burnout,Leg Press Machine,4,90,medium,hold,20,,,bottom of lift,burnout,,,burnout,,Log highest rep count achieved,4 sets: 20s hold (bottom of lift) → burnout reps
+12,hold_burnout,Leg Press Machine,3,90,medium,hold,30,,,top squeeze,burnout,,,burnout,,Log highest rep count achieved,3 sets: 30s hold (top squeeze) → burnout reps
+13,hold_burnout,Leg Press Machine,4,90,medium,hold,15,,,bottom of squat,burnout,,,burnout,,Log highest rep count achieved,4 sets: 15s hold (bottom of squat) → burnout reps
+14,hold_burnout,Leg Press Machine,5,90,medium,hold,20,,,top squeeze,burnout,,,burnout,,Log highest rep count achieved,5 sets: 20s hold (top squeeze) → burnout reps
+15,hold_burnout,Leg Press Machine,3,90,medium,hold,45,,,mid range,burnout,,,burnout,,Log highest rep count achieved,3 sets: 45s hold (mid range) → burnout reps
+16,hold_burnout,Leg Press Machine,4,90,medium,hold,10,,,bottom of lift,burnout,,,burnout,,Log highest rep count achieved,4 sets: 10s hold (bottom of lift) → burnout reps
+17,hold_burnout,Leg Press Machine,2,90,medium,hold,30,,,top squeeze,burnout,,,burnout,,Log highest rep count achieved,2 sets: 30s hold (top squeeze) → burnout reps
+18,hold_burnout,Leg Press Machine,6,90,medium,hold,20,,,bottom of lunge,burnout,,,burnout,,Log highest rep count achieved,6 sets: 20s hold (bottom of lunge) → burnout reps
+19,hold_burnout,Leg Press Machine,4,90,medium,hold,25,,,top squeeze,burnout,,,burnout,,Log highest rep count achieved,4 sets: 25s hold (top squeeze) → burnout reps
+20,hold_burnout,Leg Press Machine,3,90,medium,hold,20,,,bottom of lift,burnout,,,burnout,,Log highest rep count achieved,3 sets: 20s hold (bottom of lift) → burnout reps
+21,hold_fixed_reps,Standing Calf Raises,4,90,medium,hold,30,,,top squeeze,reps,,15,fixed,,Reps immediately after hold,4 sets: 30s hold (top squeeze) → 15 reps
+22,hold_fixed_reps,Standing Calf Raises,3,90,medium,hold,20,,,bottom of lift,reps,,10,fixed,,Reps immediately after hold,3 sets: 20s hold (bottom of lift) → 10 reps
+23,hold_fixed_reps,Standing Calf Raises,4,90,medium,hold,30,,,top squeeze,reps,,5,fixed,,Reps immediately after hold,4 sets: 30s hold (top squeeze) → 5 reps
+24,hold_fixed_reps,Standing Calf Raises,5,90,medium,hold,15,,,peak contraction,reps,,12,fixed,,Reps immediately after hold,5 sets: 15s hold (peak contraction) → 12 reps
+25,hold_fixed_reps,Standing Calf Raises,3,90,medium,hold,45,,,top squeeze,reps,,8,fixed,,Reps immediately after hold,3 sets: 45s hold (top squeeze) → 8 reps
+26,hold_fixed_reps,Standing Calf Raises,4,90,medium,hold,20,,,bottom of lift,reps,,30,fixed,,Reps immediately after hold,4 sets: 20s hold (bottom of lift) → 30 reps
+27,hold_fixed_reps,Standing Calf Raises,2,90,medium,hold,30,,,top squeeze,reps,,6,fixed,,Reps immediately after hold,2 sets: 30s hold (top squeeze) → 6 reps
+28,hold_fixed_reps,Standing Calf Raises,6,90,medium,hold,15,,,bottom of lift,reps,,25,fixed,,Reps immediately after hold,6 sets: 15s hold (bottom of lift) → 25 reps
+29,hold_fixed_reps,Standing Calf Raises,4,90,medium,hold,25,,,top squeeze,reps,,5,fixed,,Reps immediately after hold,4 sets: 25s hold (top squeeze) → 5 reps
+30,hold_fixed_reps,Standing Calf Raises,3,90,medium,hold,20,,,bottom of lift,reps,,20,fixed,,Reps immediately after hold,3 sets: 20s hold (bottom of lift) → 20 reps
+31,timed_rounds,Jump Squats,8,20,light,timed,20,,,,,,,,,Work interval; rest = rest_between_sets_sec,8 rounds × 20s on
+32,timed_rounds,Jump Squats,10,30,light,timed,30,,,,,,,,,Work interval; rest = rest_between_sets_sec,10 rounds × 30s on
+33,timed_rounds,Jump Squats,6,40,light,timed,40,,,,,,,,,Work interval; rest = rest_between_sets_sec,6 rounds × 40s on
+34,timed_rounds,Jump Squats,12,15,light,timed,15,,,,,,,,,Work interval; rest = rest_between_sets_sec,12 rounds × 15s on
+35,timed_rounds,Jump Squats,5,45,light,timed,45,,,,,,,,,Work interval; rest = rest_between_sets_sec,5 rounds × 45s on
+36,timed_rounds,Jump Squats,8,20,light,timed,20,,,,,,,,,Work interval; rest = rest_between_sets_sec,8 rounds × 20s on
+37,timed_rounds,Jump Squats,4,60,light,timed,60,,,,,,,,,Work interval; rest = rest_between_sets_sec,4 rounds × 60s on
+38,timed_rounds,Jump Squats,10,20,light,timed,20,,,,,,,,,Work interval; rest = rest_between_sets_sec,10 rounds × 20s on
+39,timed_rounds,Jump Squats,7,30,light,timed,30,,,,,,,,,Work interval; rest = rest_between_sets_sec,7 rounds × 30s on
+40,timed_rounds,Jump Squats,9,25,light,timed,25,,,,,,,,,Work interval; rest = rest_between_sets_sec,9 rounds × 25s on
+41,burnout_only,Close Burnout Push-ups,1,60,medium,burnout,,,burnout,,,,,,,Log highest rep count per set,1 sets to burnout
+42,burnout_only,Close Burnout Push-ups,2,60,medium,burnout,,,burnout,,,,,,,Log highest rep count per set,2 sets to burnout
+43,burnout_only,Close Burnout Push-ups,3,60,medium,burnout,,,burnout,,,,,,,Log highest rep count per set,3 sets to burnout
+44,burnout_only,Close Burnout Push-ups,4,60,medium,burnout,,,burnout,,,,,,,Log highest rep count per set,4 sets to burnout
+45,burnout_only,Close Burnout Push-ups,5,60,medium,burnout,,,burnout,,,,,,,Log highest rep count per set,5 sets to burnout
+46,burnout_only,Close Burnout Push-ups,3,60,medium,burnout,,,burnout,,,,,,,Log highest rep count per set,3 sets to burnout
+47,burnout_only,Close Burnout Push-ups,4,60,medium,burnout,,,burnout,,,,,,,Log highest rep count per set,4 sets to burnout
+48,burnout_only,Close Burnout Push-ups,2,60,medium,burnout,,,burnout,,,,,,,Log highest rep count per set,2 sets to burnout
+49,burnout_only,Close Burnout Push-ups,5,60,medium,burnout,,,burnout,,,,,,,Log highest rep count per set,5 sets to burnout
+50,burnout_only,Close Burnout Push-ups,4,60,medium,burnout,,,burnout,,,,,,,Log highest rep count per set,4 sets to burnout
+51,hold_only,Plank,1,45,light,hold,30,,,locked position,,,,,,Isometric — log hold time if needed,1 sets × 30s hold
+52,hold_only,Plank,2,45,light,hold,45,,,locked position,,,,,,Isometric — log hold time if needed,2 sets × 45s hold
+53,hold_only,Plank,3,45,light,hold,60,,,locked position,,,,,,Isometric — log hold time if needed,3 sets × 60s hold
+54,hold_only,Plank,4,45,light,hold,20,,,locked position,,,,,,Isometric — log hold time if needed,4 sets × 20s hold
+55,hold_only,Plank,5,45,light,hold,40,,,locked position,,,,,,Isometric — log hold time if needed,5 sets × 40s hold
+56,hold_only,Plank,1,45,light,hold,30,,,locked position,,,,,,Isometric — log hold time if needed,1 sets × 30s hold
+57,hold_only,Plank,2,45,light,hold,50,,,locked position,,,,,,Isometric — log hold time if needed,2 sets × 50s hold
+58,hold_only,Plank,3,45,light,hold,25,,,locked position,,,,,,Isometric — log hold time if needed,3 sets × 25s hold
+59,hold_only,Plank,4,45,light,hold,35,,,locked position,,,,,,Isometric — log hold time if needed,4 sets × 35s hold
+60,hold_only,Plank,5,45,light,hold,60,,,locked position,,,,,,Isometric — log hold time if needed,5 sets × 60s hold
+61,hold_then_timed,Wall Sit,4,60,medium,hold,10,,,setup position,timed,20,,,,Hold then timed work in same set,4 sets: 10s hold → 20s work
+62,hold_then_timed,Wall Sit,3,60,medium,hold,15,,,setup position,timed,30,,,,Hold then timed work in same set,3 sets: 15s hold → 30s work
+63,hold_then_timed,Wall Sit,5,60,medium,hold,20,,,setup position,timed,15,,,,Hold then timed work in same set,5 sets: 20s hold → 15s work
+64,hold_then_timed,Wall Sit,4,60,medium,hold,30,,,setup position,timed,20,,,,Hold then timed work in same set,4 sets: 30s hold → 20s work
+65,hold_then_timed,Wall Sit,2,60,medium,hold,45,,,setup position,timed,30,,,,Hold then timed work in same set,2 sets: 45s hold → 30s work
+66,hold_then_timed,Wall Sit,6,60,medium,hold,10,,,setup position,timed,20,,,,Hold then timed work in same set,6 sets: 10s hold → 20s work
+67,hold_then_timed,Wall Sit,3,60,medium,hold,20,,,setup position,timed,25,,,,Hold then timed work in same set,3 sets: 20s hold → 25s work
+68,hold_then_timed,Wall Sit,4,60,medium,hold,15,,,setup position,timed,20,,,,Hold then timed work in same set,4 sets: 15s hold → 20s work
+69,hold_then_timed,Wall Sit,5,60,medium,hold,25,,,setup position,timed,15,,,,Hold then timed work in same set,5 sets: 25s hold → 15s work
+70,hold_then_timed,Wall Sit,3,60,medium,hold,30,,,setup position,timed,20,,,,Hold then timed work in same set,3 sets: 30s hold → 20s work
+71,max_reps,Goblet Squat,3,90,medium,reps,,30,max,,,,,,,As many reps as possible up to 30,3 sets × max 30 reps
+72,max_reps,Goblet Squat,4,90,medium,reps,,25,max,,,,,,,As many reps as possible up to 25,4 sets × max 25 reps
+73,max_reps,Goblet Squat,2,90,medium,reps,,10,max,,,,,,,As many reps as possible up to 10,2 sets × max 10 reps
+74,max_reps,Goblet Squat,5,90,medium,reps,,12,max,,,,,,,As many reps as possible up to 12,5 sets × max 12 reps
+75,max_reps,Goblet Squat,3,90,medium,reps,,8,max,,,,,,,As many reps as possible up to 8,3 sets × max 8 reps
+76,max_reps,Goblet Squat,4,90,medium,reps,,30,max,,,,,,,As many reps as possible up to 30,4 sets × max 30 reps
+77,max_reps,Goblet Squat,6,90,medium,reps,,10,max,,,,,,,As many reps as possible up to 10,6 sets × max 10 reps
+78,max_reps,Goblet Squat,3,90,medium,reps,,15,max,,,,,,,As many reps as possible up to 15,3 sets × max 15 reps
+79,max_reps,Goblet Squat,4,90,medium,reps,,28,max,,,,,,,As many reps as possible up to 28,4 sets × max 28 reps
+80,max_reps,Goblet Squat,2,90,medium,reps,,30,max,,,,,,,As many reps as possible up to 30,2 sets × max 30 reps

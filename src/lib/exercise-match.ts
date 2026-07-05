@@ -1,3 +1,5 @@
+import { canonicalExerciseName, normalizeExerciseKey } from "@/lib/exercise-canonical";
+
 export type ExerciseCatalogEntry = {
   id: string;
   name: string;
@@ -11,7 +13,7 @@ const SMS_EXERCISE_ALIASES: Record<string, string> = {
   "dumbbell bicep curls": "supinated bicep curl",
   "dumbbell shoulder press": "standing dumbbell shoulder press",
   "air squats": "air squat",
-  "leg press": "hack squat",
+  "leg press": "leg press machine",
   "barbell hip thrust raise": "hip thrust",
   "barbell hip thrust": "hip thrust",
   "barbell hip thrust back on bench hold at top of squeeze": "hip thrust",
@@ -30,21 +32,11 @@ const SMS_EXERCISE_ALIASES: Record<string, string> = {
 };
 
 export function sanitizeSmsExerciseName(name: string): string {
-  let s = name.trim();
-  s = s.replace(/\bcave\b/gi, "calf"); // common SMS typo
-  s = s.replace(/\s+\d+\s*$/i, ""); // trailing " 20"
-  s = s.replace(/^\d+\s+/i, ""); // leading "25 "
-  s = s.replace(/\s+x\s+\d+\s*sets?$/i, "");
-  s = s.replace(/\s+\d+\s*sets?$/i, "");
-  s = s.replace(/,.*$/, ""); // drop coaching cues after comma in name
-  return s.trim();
+  return canonicalExerciseName(name);
 }
 
 export function normalizeExerciseName(s: string): string {
-  return sanitizeSmsExerciseName(s)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
+  return normalizeExerciseKey(sanitizeSmsExerciseName(s));
 }
 
 function aliasTarget(normalized: string): string | null {
