@@ -339,6 +339,28 @@ model CoachTodaySession {
   @@index([scheduledAt])
 }
 
+/** Coach Zoom OAuth connection (singleton row, id = "coach"). */
+model CoachZoomOAuth {
+  id               String   @id
+  zoomUserId       String
+  email            String
+  displayName      String
+  refreshToken     String   @db.Text
+  connectedAt      DateTime
+  connectedByEmail String
+  updatedAt        DateTime @updatedAt
+}
+
+/** Short-lived Zoom OAuth state backup when the state cookie is missing. */
+model ZoomOAuthPendingState {
+  state      String   @id
+  coachEmail String
+  createdAt  DateTime @default(now())
+
+  @@index([coachEmail])
+  @@index([createdAt])
+}
+
 model Equipment {
   id          String             @id @default(cuid())
   name        String             @unique

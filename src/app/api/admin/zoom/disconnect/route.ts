@@ -9,13 +9,13 @@ export async function POST() {
   const auth = await requireCoachStaff();
   if (!auth.ok) return auth.response;
 
-  const { blobSaved } = await clearZoomOAuthRecord(auth.session.email);
+  const { saved } = await clearZoomOAuthRecord(auth.session.email);
   const status = await getZoomCoachStatus();
 
   return NextResponse.json(
     {
       ok: true,
-      blobSaved,
+      saved,
       ...status,
     },
     {

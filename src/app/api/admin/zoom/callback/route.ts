@@ -64,7 +64,7 @@ export async function GET(request: Request) {
   try {
     const tokens = await exchangeZoomAuthCode(code);
     const profile = await fetchZoomUserProfile(tokens.accessToken);
-    const { blobSaved } = await saveZoomOAuthRecord({
+    const { saved } = await saveZoomOAuthRecord({
       zoomUserId: profile.id,
       email: profile.email,
       displayName: profile.displayName,
@@ -76,7 +76,7 @@ export async function GET(request: Request) {
     const settingsUrl = `${appBaseUrl()}/admin/settings`;
     const res = NextResponse.redirect(`${settingsUrl}?zoom=connected`);
     res.cookies.set(ZOOM_OAUTH_STATE_COOKIE, "", { path: "/", maxAge: 0 });
-    if (!blobSaved) {
+    if (!saved) {
       const params = new URLSearchParams({
         zoom: "connected",
         warn: "save",

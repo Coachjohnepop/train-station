@@ -23,8 +23,8 @@ export async function GET() {
           ? "ZOOM_CLIENT_ID/SECRET mismatch — copy Development credentials from marketplace.zoom.us into Vercel Production, then redeploy."
           : diagnostics.tokenProbe === "invalid_grant"
             ? "Credentials look valid — complete Connect in Settings; exchange should work after Zoom approves."
-            : !diagnostics.blobWriteOk
-              ? "Blob writes failing — OAuth may connect then fail to save tokens."
+            : !diagnostics.dbOk
+              ? "Database unreachable — OAuth may connect then fail to save tokens."
               : null,
     },
     {

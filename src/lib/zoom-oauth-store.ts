@@ -1,7 +1,13 @@
 import "server-only";
 
 import path from "path";
-import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import { isDemoMode } from "@/lib/demo-enrollments";
+import { readLocalJson, writeLocalJson } from "@/lib/demo-json-blob";
+import {
+  clearZoomOAuthRecordFromDb,
+  loadZoomOAuthRecordFromDb,
+  saveZoomOAuthRecordToDb,
+} from "@/lib/zoom-oauth-store-db";
 
 export type ZoomOAuthRecord = {
   zoomUserId: string;
@@ -12,70 +18,73 @@ export type ZoomOAuthRecord = {
   connectedByEmail: string;
 };
 
-const BLOB_PATH = "coach/zoom-oauth.json";
 const DEV_FILE = path.join(process.cwd(), "prisma", "zoom-oauth.dev.json");
 
 let memoryStore: ZoomOAuthRecord | null = null;
-
-async function loadRecord(opts?: { preferFresh?: boolean }): Promise<ZoomOAuthRecord | null> {
-  const hydrated = await hydrateJsonStore<ZoomOAuthRecord | null>({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    memory: memoryStore,
-    setMemory: (v) => {
-      memoryStore = activeRecord(v);
-    },
-    fallback: () => null,
-    preferFresh: opts?.preferFresh ?? true,
-  });
-  return activeRecord(hydrated);
-}
 
 function activeRecord(raw: ZoomOAuthRecord | null): ZoomOAuthRecord | null {
   if (!raw?.refreshToken?.trim()) return null;
   return raw;
 }
 
+async function loadRecordFromDevFile(): Promise<ZoomOAuthRecord | null> {
+  if (memoryStore) return activeRecord(memoryStore);
+  const fromDisk = readLocalJson<ZoomOAuthRecord | null>(DEV_FILE);
+  memoryStore = activeRecord(fromDisk);
+  return memoryStore;
+}
+
+async function loadRecord(opts?: { preferFresh?: boolean }): Promise<ZoomOAuthRecord | null> {
+  if (!isDemoMode()) {
+    const record = await loadZoomOAuthRecordFromDb();
+    memoryStore = record;
+    return record;
+  }
+
+  if (opts?.preferFresh) {
+    memoryStore = null;
+  }
+  return loadRecordFromDevFile();
+}
+
 export async function getZoomOAuthRecord(opts?: { preferFresh?: boolean }): Promise<ZoomOAuthRecord | null> {
-  const raw = await loadRecord(opts);
-  return activeRecord(raw);
+  return loadRecord(opts);
 }
 
 export async function saveZoomOAuthRecord(record: ZoomOAuthRecord): Promise<{
   record: ZoomOAuthRecord;
-  blobSaved: boolean;
+  saved: boolean;
 }> {
-  const { blobSaved } = await persistJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    data: record,
-    setMemory: (v) => {
-      memoryStore = activeRecord(v);
-    },
-  });
-  return { record, blobSaved };
+  memoryStore = activeRecord(record);
+
+  if (!isDemoMode()) {
+    const { saved } = await saveZoomOAuthRecordToDb(record);
+    return { record, saved };
+  }
+
+  try {
+    writeLocalJson(DEV_FILE, record);
+    return { record, saved: true };
+  } catch (e) {
+    console.error("Failed to save Zoom OAuth record to dev file:", e);
+    return { record, saved: false };
+  }
 }
 
-/** Tombstone written to blob — avoids null JSON + CDN stale reads showing old tokens. */
-export type ZoomOAuthCleared = {
-  clearedAt: string;
-  clearedByEmail?: string;
-};
-
-export async function clearZoomOAuthRecord(clearedByEmail?: string): Promise<{ blobSaved: boolean }> {
+export async function clearZoomOAuthRecord(_clearedByEmail?: string): Promise<{ saved: boolean }> {
   memoryStore = null;
-  const tombstone: ZoomOAuthCleared = {
-    clearedAt: new Date().toISOString(),
-    ...(clearedByEmail ? { clearedByEmail } : {}),
-  };
-  return persistJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    data: tombstone as unknown as ZoomOAuthRecord,
-    setMemory: (v) => {
-      memoryStore = activeRecord(v as ZoomOAuthRecord | null);
-    },
-  });
+
+  if (!isDemoMode()) {
+    return clearZoomOAuthRecordFromDb();
+  }
+
+  try {
+    writeLocalJson(DEV_FILE, null);
+    return { saved: true };
+  } catch (e) {
+    console.error("Failed to clear Zoom OAuth dev file:", e);
+    return { saved: false };
+  }
 }
 
 export async function isZoomCoachConnected(): Promise<boolean> {

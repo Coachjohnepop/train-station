@@ -1,7 +1,14 @@
 import "server-only";
 
 import path from "path";
-import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import { isDemoMode } from "@/lib/demo-enrollments";
+import { readLocalJson, writeLocalJson } from "@/lib/demo-json-blob";
+import {
+  deletePendingStateDb,
+  deletePendingStatesForCoachDb,
+  loadPendingStatesFromDb,
+  upsertPendingStateDb,
+} from "@/lib/zoom-oauth-pending-db";
 
 export type ZoomOAuthPending = {
   coachEmail: string;
@@ -10,7 +17,6 @@ export type ZoomOAuthPending = {
 
 type PendingMap = Record<string, ZoomOAuthPending>;
 
-const BLOB_PATH = "coach/zoom-oauth-pending.json";
 const DEV_FILE = path.join(process.cwd(), "prisma", "zoom-oauth-pending.dev.json");
 const TTL_MS = 15 * 60 * 1000;
 
@@ -25,32 +31,43 @@ function prune(map: PendingMap): PendingMap {
   return next;
 }
 
-async function loadMap(): Promise<PendingMap> {
-  const hydrated = await hydrateJsonStore<PendingMap>({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    memory: memoryStore,
-    setMemory: (v) => {
-      memoryStore = prune(v || {});
-    },
-    fallback: () => ({}),
-    preferFresh: true,
-  });
-  memoryStore = prune(hydrated || {});
+async function loadMapFromDevFile(): Promise<PendingMap> {
+  const fromDisk = readLocalJson<PendingMap>(DEV_FILE) || {};
+  memoryStore = prune(fromDisk);
   return memoryStore;
+}
+
+async function saveMapToDevFile(map: PendingMap): Promise<void> {
+  const pruned = prune(map);
+  memoryStore = pruned;
+  writeLocalJson(DEV_FILE, pruned);
+}
+
+async function loadMap(): Promise<PendingMap> {
+  if (!isDemoMode()) {
+    memoryStore = prune(await loadPendingStatesFromDb());
+    return memoryStore;
+  }
+  return loadMapFromDevFile();
 }
 
 async function saveMap(map: PendingMap): Promise<void> {
   const pruned = prune(map);
   memoryStore = pruned;
-  await persistJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    data: pruned,
-    setMemory: (v) => {
-      memoryStore = prune(v || {});
-    },
-  });
+
+  if (!isDemoMode()) {
+    const existing = await loadPendingStatesFromDb();
+    const nextKeys = new Set(Object.keys(pruned));
+    for (const key of Object.keys(existing)) {
+      if (!nextKeys.has(key)) await deletePendingStateDb(key);
+    }
+    for (const [state, pending] of Object.entries(pruned)) {
+      await upsertPendingStateDb(state, pending);
+    }
+    return;
+  }
+
+  await saveMapToDevFile(pruned);
 }
 
 function normalizeCoachEmail(email: string): string {
@@ -66,9 +83,18 @@ function normalizeOAuthState(state: string): string {
 }
 
 export async function rememberZoomOAuthState(state: string, coachEmail: string): Promise<void> {
-  const map = await loadMap();
   const email = normalizeCoachEmail(coachEmail);
-  // One active Connect per coach — double-clicks were leaving stale states that failed callback.
+
+  if (!isDemoMode()) {
+    await deletePendingStatesForCoachDb(email);
+    await upsertPendingStateDb(state, {
+      coachEmail: email,
+      createdAt: new Date().toISOString(),
+    });
+    return;
+  }
+
+  const map = await loadMap();
   for (const [key, value] of Object.entries(map)) {
     if (normalizeCoachEmail(value.coachEmail) === email) delete map[key];
   }
@@ -80,9 +106,20 @@ export async function consumeZoomOAuthState(
   state: string,
   coachEmail: string,
 ): Promise<boolean> {
-  const map = await loadMap();
   const email = normalizeCoachEmail(coachEmail);
   const normalizedState = normalizeOAuthState(state);
+
+  if (!isDemoMode()) {
+    const map = await loadPendingStatesFromDb();
+    const key = map[normalizedState] ? normalizedState : map[state] ? state : null;
+    if (!key) return false;
+    const pending = map[key];
+    if (!pending || normalizeCoachEmail(pending.coachEmail) !== email) return false;
+    await deletePendingStateDb(key);
+    return true;
+  }
+
+  const map = await loadMap();
   const key = map[normalizedState] ? normalizedState : map[state] ? state : null;
   if (!key) return false;
   const pending = map[key];

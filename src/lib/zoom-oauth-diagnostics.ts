@@ -1,8 +1,9 @@
 import "server-only";
 
-import { probeBlobWrite } from "@/lib/demo-json-blob";
+import { isDemoMode } from "@/lib/demo-enrollments";
 import { zoomOAuthCallbackUrl, ZOOM_OAUTH_SCOPES } from "@/lib/zoom-oauth-flow";
 import { getZoomOAuthRecord } from "@/lib/zoom-oauth-store";
+import { probeZoomOAuthDb } from "@/lib/zoom-oauth-store-db";
 import { zoomClientId, zoomClientSecret } from "@/lib/zoom-env";
 
 export type ZoomOAuthDiagnostics = {
@@ -13,8 +14,8 @@ export type ZoomOAuthDiagnostics = {
   scopes: string;
   tokenProbe: "invalid_client" | "invalid_grant" | "other" | "skipped";
   tokenProbeDetail: string | null;
-  blobWriteOk: boolean;
-  blobWriteDetail: string | null;
+  dbOk: boolean;
+  dbDetail: string | null;
   oauthRecord: "connected" | "cleared" | "missing";
   oauthEmail: string | null;
 };
@@ -59,7 +60,9 @@ export async function getZoomOAuthDiagnostics(): Promise<ZoomOAuthDiagnostics> {
     }
   }
 
-  const blobProbe = await probeBlobWrite();
+  const dbProbe = isDemoMode()
+    ? { ok: true, message: "demo_mode_local_file" }
+    : await probeZoomOAuthDb();
   const record = await getZoomOAuthRecord({ preferFresh: true });
 
   return {
@@ -70,9 +73,9 @@ export async function getZoomOAuthDiagnostics(): Promise<ZoomOAuthDiagnostics> {
     scopes: ZOOM_OAUTH_SCOPES,
     tokenProbe,
     tokenProbeDetail,
-    blobWriteOk: blobProbe.ok,
-    blobWriteDetail: blobProbe.ok ? null : blobProbe.message,
-    oauthRecord: record?.refreshToken ? "connected" : record ? "missing" : "missing",
+    dbOk: dbProbe.ok,
+    dbDetail: dbProbe.ok ? null : dbProbe.message,
+    oauthRecord: record?.refreshToken ? "connected" : "missing",
     oauthEmail: record?.email || null,
   };
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Prod Zoom OAuth diagnostics — credential probe, blob write, connection state.
+ * Prod Zoom OAuth diagnostics — credential probe, database, connection state.
  *
  * Usage:
  *   npm run test:zoom-diagnose
@@ -37,9 +37,9 @@ async function main() {
     d.clientIdPresent &&
     d.secretPresent &&
     d.tokenProbe === "invalid_grant" &&
-    d.blobWriteOk;
+    d.dbOk;
 
-  console.log(ok ? "\n✅ Credentials + blob look ready for Connect" : "\n⚠️  Fix issues above before Connect");
+  console.log(ok ? "\n✅ Credentials + database look ready for Connect" : "\n⚠️  Fix issues above before Connect");
   process.exit(ok ? 0 : 1);
 }
 
