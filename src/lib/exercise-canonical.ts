@@ -80,7 +80,8 @@ const EXPLICIT_CANONICAL: Record<string, string> = {
     "Jump Squats",
   "step ups air squats jumping": "Step Ups",
   "calve raises both legs together": "Calf Raises",
-  "seated calve raise machine or": "Seated Calf Raises",
+  "seated calve raise machine or": "Seated Calf Raise Machine",
+  "seated calf raises": "Seated Calf Raise Machine",
   "standing dumbbell goblet squat": "Goblet Squat",
   "standing dumbbell hack squat": "Hack Squat",
   "dumbell flat bench chest press": "Dumbbell Flat Bench Chest Press",
@@ -89,6 +90,38 @@ const EXPLICIT_CANONICAL: Record<string, string> = {
   "sitting dumbbell shoulder press": "Seated Dumbbell Shoulder Press",
   "hack sumo squat": "Hack Squat",
   "leg press": "Leg Press Machine",
+  "leg press machine": "Leg Press Machine",
+  "double arm bicep curls both": "Double Arm Bicep Curls",
+  "jump squats power": "Jump Squats",
+  "dumbbell chest press 40 degree": "Incline Dumbbell Chest Press",
+  "dumbbell 40 incline bench chest press": "Incline Dumbbell Chest Press",
+  "incline bench chest press medium": "Incline Dumbbell Chest Press",
+  "goblet squats with single dumbbell": "Goblet Squat",
+  "single dumbbell goblet squats": "Goblet Squat",
+  "calf raises both legs together": "Calf Raises",
+  "sit ups feet anchored": "Sit Ups",
+  "sit ups on the ground with your feet anchored": "Sit Ups",
+  "lateral leg raises no resistance": "Lateral Leg Raises",
+  "standing lateral leg raises no resistance": "Lateral Leg Raises",
+  "abdominal planks": "Plank",
+  "abdominal straight leg crunches": "Straight Leg Abdominal Crunches",
+  "abdominal bent knee crunches": "Abdominal Bent Knee Crunches",
+  "alternating step ups onto 12 step or 1st or 2nd step on stairs": "Step Ups",
+  "step ups onto 12 step": "Step Ups",
+  "standing alternating step back lunges no weight": "Alternating Step Back Lunges",
+  "single leg step back lunges": "Step Back Lunges",
+  "barbell hip thrust raise": "Barbell Hip Thrust",
+  "bent over dumbbell rear dealt extensions": "Double Arm Rear Delt Extensions",
+  "double arm rear dealt extensions": "Double Arm Rear Delt Extensions",
+  "shoulder taps push up position": "Shoulder Taps",
+  "seated dumbbell double arm bicep curls": "Seated Double Arm Supinated Bicep Curls",
+  "standing dumbbell double arm frontal shoulder raises":
+    "Double Arm Frontal Shoulder Raises",
+  "standing dumbbell double arm lateral shoulder raises":
+    "Double Arm Lateral Shoulder Raises",
+  "standing cable lat pull over using straight bar":
+    "Standing Bands with Handles, Lat Pull Over",
+  "1 minute sit up test": "Sit Ups",
   stretch: "Cool Down & Stretch",
   "cool down stretch": "Cool Down & Stretch",
   "laying on mat": "Abdominal Crunches",
@@ -181,6 +214,7 @@ export function canonicalExerciseName(rawName: string): string {
   s = s.replace(/\bDumbell\b/gi, "Dumbbell");
   s = s.replace(/\bShould Press\b/gi, "Shoulder Press");
   s = s.replace(/\bExtensios\b/gi, "Extensions");
+  s = s.replace(/\bDealt\b/gi, "Delt");
 
   s = s.replace(/\s*\([^)]*\d[^)]*\)\s*/gi, "");
   s = s.replace(/\s*\(\s*$/, "");
@@ -224,7 +258,8 @@ export function isJunkExerciseName(rawName: string): boolean {
     /sexy boob/.test(key) ||
     /slap that ass/.test(key) ||
     /^test only do what you/.test(key) ||
-    /^this is a strength test only do what you can/.test(key)
+    /^this is a strength test only do what you can/.test(key) ||
+    /^1 minute sit up test/.test(key)
   );
 }
 

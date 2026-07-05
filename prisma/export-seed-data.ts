@@ -1,12 +1,29 @@
-import "dotenv/config";
+import dotenv from "dotenv";
 import fs from "node:fs";
 import path from "node:path";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { createPgPool } from "../src/lib/pg-connection";
 
-const connectionString =
-  process.env.DATABASE_URL ?? "postgresql://user:pass@localhost:5432/db";
-const adapter = new PrismaPg({ connectionString });
+dotenv.config({ path: ".env" });
+dotenv.config({ path: ".env.local" });
+dotenv.config({ path: ".env.vercel.production", override: true });
+
+function resolveDatabaseUrl(): string {
+  const postgres =
+    process.env.POSTGRES_PRISMA_URL ?? process.env.POSTGRES_URL ?? "";
+  const database = process.env.DATABASE_URL ?? "";
+  const url =
+    postgres || (database && !database.includes("dummy") ? database : "");
+  if (!url || url.includes("dummy")) {
+    throw new Error(
+      "DATABASE_URL must be a real Postgres URL (vercel env pull .env.vercel.production)",
+    );
+  }
+  return url;
+}
+
+const adapter = new PrismaPg(createPgPool(resolveDatabaseUrl()));
 const prisma = new PrismaClient({ adapter });
 
 async function main() {

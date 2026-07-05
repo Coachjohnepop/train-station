@@ -300,6 +300,7 @@ export function parseSmsWorkout(rawText: string): ParsedSmsWorkout {
       ...ex,
       sets: ex.sets,
       reps: ex.reps,
+      restSec: null,
       notes: ex.notes ?? null,
       setScheme: ex.setScheme ?? null,
       exerciseName: ex.name,

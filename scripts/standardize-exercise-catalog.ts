@@ -62,6 +62,49 @@ function pickKeeper(group: Array<ExerciseRow & { canonical: string }>) {
   )[0];
 }
 
+type WorkoutExercisePatch = {
+  exerciseId?: string;
+  sets?: number | null;
+  reps?: string | null;
+  notes?: string | null;
+};
+
+/** Raw SQL patch — prod may not have setCount/restBetweenSetsSec columns yet. */
+async function patchWorkoutExercise(
+  prisma: { $executeRawUnsafe: (query: string, ...values: unknown[]) => Promise<number> },
+  id: string,
+  patch: WorkoutExercisePatch,
+) {
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  let idx = 1;
+
+  if (patch.exerciseId !== undefined) {
+    sets.push(`"exerciseId" = $${idx++}`);
+    values.push(patch.exerciseId);
+  }
+  if (patch.sets !== undefined) {
+    sets.push(`"sets" = $${idx++}`);
+    values.push(patch.sets);
+  }
+  if (patch.reps !== undefined) {
+    sets.push(`"reps" = $${idx++}`);
+    values.push(patch.reps);
+  }
+  if (patch.notes !== undefined) {
+    sets.push(`"notes" = $${idx++}`);
+    values.push(patch.notes);
+  }
+
+  if (sets.length === 0) return;
+
+  values.push(id);
+  await prisma.$executeRawUnsafe(
+    `UPDATE "WorkoutExercise" SET ${sets.join(", ")} WHERE id = $${idx}`,
+    ...values,
+  );
+}
+
 async function main() {
   const connectionString = resolveConnectionString();
   if (!connectionString) {
@@ -166,9 +209,8 @@ async function main() {
           );
           for (const item of refs) {
             if (!DRY_RUN) {
-              await prisma.workoutExercise.update({
-                where: { id: item.id },
-                data: { exerciseId: fallback.id },
+              await patchWorkoutExercise(prisma, item.id, {
+                exerciseId: fallback.id,
               });
             }
             relinked += 1;
@@ -222,10 +264,7 @@ async function main() {
         };
 
         if (!DRY_RUN) {
-          await prisma.workoutExercise.update({
-            where: { id: item.id },
-            data: patch,
-          });
+          await patchWorkoutExercise(prisma, item.id, patch);
         }
         relinked += 1;
       }
@@ -255,10 +294,7 @@ async function main() {
       );
       for (const item of refs) {
         if (!DRY_RUN) {
-          await prisma.workoutExercise.update({
-            where: { id: item.id },
-            data: { exerciseId: keeper.id },
-          });
+          await patchWorkoutExercise(prisma, item.id, { exerciseId: keeper.id });
         }
         relinked += 1;
       }

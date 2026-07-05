@@ -7,6 +7,9 @@ export const ZOOM_OAUTH_STATE_COOKIE = "ts_zoom_oauth_state";
 
 export const ZOOM_FREE_MAX_DURATION_MIN = 40;
 
+/** Scopes for coach OAuth — user:read:token required for Meeting SDK ZAK embed. */
+export const ZOOM_OAUTH_SCOPES = "user:read meeting:write:meeting user:read:token";
+
 export function zoomOAuthCallbackUrl(): string {
   return `${appBaseUrl()}/api/admin/zoom/callback`;
 }
@@ -49,7 +52,7 @@ export function buildZoomAuthorizeUrl(state: string): string {
     client_id: clientId,
     redirect_uri: zoomOAuthCallbackUrl(),
     state,
-    scope: "user:read meeting:write:meeting",
+    scope: ZOOM_OAUTH_SCOPES,
   });
   return `https://zoom.us/oauth/authorize?${params}`;
 }

@@ -115,24 +115,28 @@ async function main() {
   }
   pass("Adult program in catalog", adult.name);
 
-  const importRes = await fetch(`${BASE}/api/admin/catalog/import`, {
-    method: "POST",
-    headers: { Cookie: cookies },
-    cache: "no-store",
-  });
-  const importBody = await importRes.json();
-  if (statusBody.demoMode) {
-    if (importRes.status === 409 && importBody.skipped) {
-      pass("Import guarded in demo mode");
+  if (process.env.SKIP_CATALOG_IMPORT === "1") {
+    pass("Import skipped", "SKIP_CATALOG_IMPORT=1 (protect prod catalog)");
+  } else {
+    const importRes = await fetch(`${BASE}/api/admin/catalog/import`, {
+      method: "POST",
+      headers: { Cookie: cookies },
+      cache: "no-store",
+    });
+    const importBody = await importRes.json();
+    if (statusBody.demoMode) {
+      if (importRes.status === 409 && importBody.skipped) {
+        pass("Import guarded in demo mode");
+      } else {
+        fail("Import should 409 in demo mode", `${importRes.status}`);
+        process.exit(1);
+      }
+    } else if (importRes.ok && importBody.ok) {
+      pass("Import from blob", `${importBody.exercises} exercises`);
     } else {
-      fail("Import should 409 in demo mode", `${importRes.status}`);
+      fail("Catalog import", `${importRes.status} ${JSON.stringify(importBody)}`);
       process.exit(1);
     }
-  } else if (importRes.ok && importBody.ok) {
-    pass("Import from blob", `${importBody.exercises} exercises`);
-  } else {
-    fail("Catalog import", `${importRes.status} ${JSON.stringify(importBody)}`);
-    process.exit(1);
   }
 
   const failed = results.filter((r) => !r.ok);

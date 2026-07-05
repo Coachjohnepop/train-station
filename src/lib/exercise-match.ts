@@ -68,6 +68,7 @@ function scoreMatch(target: string, candidate: string): number {
   if (candidate.includes("military")) score -= 50;
 
   // Penalize wrong movement family
+  if (target.includes("leg press") && candidate.includes("hack squat")) score -= 20;
   if (target.includes("leg press") && candidate.includes("chest")) score -= 10;
   if (target.includes("hip thrust") && candidate.includes("chest")) score -= 10;
   if (target.includes("bicep") && !candidate.includes("bicep") && !candidate.includes("curl")) {

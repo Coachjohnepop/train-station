@@ -1,10 +1,21 @@
 import fs from "fs";
 import path from "path";
+import { randomUUID } from "crypto";
 import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
 
 const DEV_FILE = path.join(process.cwd(), "prisma", "user-equipment.dev.json");
 const BLOB_PATH = "demo/user-equipment.json";
+const CATALOG_DEV_FILE = path.join(process.cwd(), "prisma", "equipment-catalog.dev.json");
+const CATALOG_BLOB_PATH = "demo/equipment-catalog.json";
 const SEED_PATH = path.join(process.cwd(), "prisma", "seed-data.json");
+
+export type DemoEquipmentCatalogItem = {
+  id: string;
+  name: string;
+  category?: string | null;
+  description?: string | null;
+  createdAt?: string;
+};
 
 export type DemoUserEquipment = {
   equipmentId: string;
@@ -97,7 +108,7 @@ export async function setDemoUserEquipment(equipmentList: DemoUserEquipment[], u
   await saveEquipmentStore(store);
 }
 
-function loadSeedEquipment(): Array<{ id: string; name: string; category?: string; description?: string }> {
+function loadSeedEquipment(): DemoEquipmentCatalogItem[] {
   try {
     const seed = JSON.parse(fs.readFileSync(SEED_PATH, "utf8"));
     return seed.equipment || [];
@@ -106,13 +117,157 @@ function loadSeedEquipment(): Array<{ id: string; name: string; category?: strin
   }
 }
 
+type CatalogStore = {
+  items: DemoEquipmentCatalogItem[];
+  deletedIds: string[];
+};
+
+let catalogMemory: CatalogStore | null = null;
+
+function emptyCatalogStore(): CatalogStore {
+  return { items: [], deletedIds: [] };
+}
+
+function normalizeCatalogStore(raw: unknown): CatalogStore {
+  if (Array.isArray(raw)) {
+    return { items: raw as DemoEquipmentCatalogItem[], deletedIds: [] };
+  }
+  if (raw && typeof raw === "object") {
+    const obj = raw as Partial<CatalogStore>;
+    return {
+      items: Array.isArray(obj.items) ? obj.items : [],
+      deletedIds: Array.isArray(obj.deletedIds) ? obj.deletedIds : [],
+    };
+  }
+  return emptyCatalogStore();
+}
+
+function mergeEquipmentCatalogs(store: CatalogStore): DemoEquipmentCatalogItem[] {
+  const deleted = new Set(store.deletedIds);
+  const byId = new Map<string, DemoEquipmentCatalogItem>();
+  for (const item of loadSeedEquipment()) {
+    if (item?.id && !deleted.has(item.id)) byId.set(item.id, { ...item });
+  }
+  for (const item of store.items) {
+    if (item?.id) byId.set(item.id, { ...item });
+  }
+  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+async function loadEquipmentCatalogStore(): Promise<DemoEquipmentCatalogItem[]> {
+  const hydrated = await hydrateJsonStore({
+    blobPath: CATALOG_BLOB_PATH,
+    localPath: CATALOG_DEV_FILE,
+    memory: catalogMemory,
+    setMemory: (value) => {
+      catalogMemory = normalizeCatalogStore(value);
+    },
+    fallback: emptyCatalogStore,
+  });
+  catalogMemory = normalizeCatalogStore(hydrated);
+  return mergeEquipmentCatalogs(catalogMemory);
+}
+
+async function saveEquipmentCatalogStore(store: CatalogStore): Promise<void> {
+  catalogMemory = store;
+  await persistJsonStore({
+    blobPath: CATALOG_BLOB_PATH,
+    localPath: CATALOG_DEV_FILE,
+    data: store,
+    setMemory: (value) => {
+      catalogMemory = normalizeCatalogStore(value);
+    },
+  });
+}
+
+function currentCatalogStore(): CatalogStore {
+  return catalogMemory ?? emptyCatalogStore();
+}
+
+export async function listDemoEquipmentCatalog(): Promise<DemoEquipmentCatalogItem[]> {
+  return loadEquipmentCatalogStore();
+}
+
+export async function createDemoEquipmentItem(data: {
+  name: string;
+  category?: string | null;
+  description?: string | null;
+}): Promise<DemoEquipmentCatalogItem> {
+  const catalog = await loadEquipmentCatalogStore();
+  const name = data.name.trim();
+  if (catalog.some((item) => item.name.toLowerCase() === name.toLowerCase())) {
+    throw new Error("Equipment with that name already exists");
+  }
+
+  const created: DemoEquipmentCatalogItem = {
+    id: `eq-${randomUUID().slice(0, 8)}`,
+    name,
+    category: data.category ?? null,
+    description: data.description ?? null,
+    createdAt: new Date().toISOString(),
+  };
+
+  const store = currentCatalogStore();
+  store.items.push(created);
+  await saveEquipmentCatalogStore(store);
+  return created;
+}
+
+export async function updateDemoEquipmentItem(
+  id: string,
+  data: { name?: string; category?: string | null; description?: string | null },
+): Promise<DemoEquipmentCatalogItem> {
+  const catalog = await loadEquipmentCatalogStore();
+  const existing = catalog.find((item) => item.id === id);
+  if (!existing) throw new Error("Equipment not found");
+
+  const nextName = data.name?.trim() ?? existing.name;
+  if (
+    catalog.some(
+      (item) => item.id !== id && item.name.toLowerCase() === nextName.toLowerCase(),
+    )
+  ) {
+    throw new Error("Equipment with that name already exists");
+  }
+
+  const updated: DemoEquipmentCatalogItem = {
+    ...existing,
+    name: nextName,
+    category: data.category === undefined ? existing.category ?? null : data.category,
+    description:
+      data.description === undefined ? existing.description ?? null : data.description,
+  };
+
+  const store = currentCatalogStore();
+  const index = store.items.findIndex((item) => item.id === id);
+  if (index >= 0) {
+    store.items[index] = updated;
+  } else {
+    store.items.push(updated);
+  }
+  await saveEquipmentCatalogStore(store);
+  return updated;
+}
+
+export async function deleteDemoEquipmentItem(id: string): Promise<void> {
+  const catalog = await loadEquipmentCatalogStore();
+  if (!catalog.some((item) => item.id === id)) {
+    throw new Error("Equipment not found");
+  }
+
+  const store = currentCatalogStore();
+  store.items = store.items.filter((item) => item.id !== id);
+  if (!store.deletedIds.includes(id)) store.deletedIds.push(id);
+  await saveEquipmentCatalogStore(store);
+}
+
 export async function getAllEquipmentWithUserStatus(userId?: string) {
-  const seedEquipment = loadSeedEquipment();
+  const visibleCatalog = await loadEquipmentCatalogStore();
   const uid = userId || "demo-user";
   const userEq = await getUserEquipment(uid);
   const userMap = new Map(userEq.map((u) => [u.equipmentId, u]));
 
-  return seedEquipment.map((eq) => {
+  return visibleCatalog.map((eq) => {
     const userItem = userMap.get(eq.id);
     return {
       ...eq,

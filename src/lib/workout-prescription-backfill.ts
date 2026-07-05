@@ -292,7 +292,7 @@ export function inferWorkoutPrescriptions(
       if (!result) return null;
       return { ...result, id: row.id };
     })
-    .filter((r): r is BackfillResult & { id?: string } => r != null);
+    .filter((r) => r != null) as Array<BackfillResult & { id?: string }>;
 }
 
 /** Attach structured phases to parsed SMS/text upload exercises. */

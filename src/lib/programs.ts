@@ -118,15 +118,31 @@ export function filterAdminCatalogPrograms<T extends { slug: string }>(programs:
   return programs.filter((p) => getCatalogStatus(p.slug) !== "hidden");
 }
 
-/** Hide QA / smoke-test workouts from admin workout picker lists. */
+/** QA, smoke, and sprint-test workouts — hidden from admin lists and safe to purge. */
+export function isJunkWorkoutName(name: string): boolean {
+  const n = String(name || "").trim();
+  const lower = n.toLowerCase();
+
+  if (/\bqa\b/.test(lower) || /\bqa[-_]/.test(lower) || /\bsmoke\b/.test(lower)) {
+    return true;
+  }
+  if (/^s1b-workout/i.test(n)) return true;
+  if (/^s2-\d+/i.test(n)) return true;
+  if (/^s1c-/i.test(n)) return true;
+  if (/^s34-/i.test(n)) return true;
+  if (/copy-week/i.test(n)) return true;
+  if (/^gym$/i.test(n)) return true;
+  if (/day test showing/i.test(n)) return true;
+  if (/^adult strength conditioning ·/i.test(n)) return true;
+  if (/^totally fake/i.test(n)) return true;
+  if (/^qa workout/i.test(n)) return true;
+
+  return false;
+}
+
+/** @deprecated Use isJunkWorkoutName — kept for callers that only checked QA/smoke. */
 export function isHiddenWorkoutName(name: string): boolean {
-  const n = name.toLowerCase();
-  return (
-    /\bqa\b/.test(n) ||
-    /\bqa[-_]/.test(n) ||
-    /\bsmoke\b/.test(n) ||
-    /qa smoke/.test(n)
-  );
+  return isJunkWorkoutName(name);
 }
 
 export function filterVisibleWorkouts<T extends { name: string }>(workouts: T[]): T[] {

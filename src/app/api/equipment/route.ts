@@ -1,25 +1,26 @@
 import { NextResponse } from "next/server";
-import {
-  isDemoMode,
-  getAllEquipmentWithUserStatus,
-  setDemoUserEquipment,
-  normalizeEquipmentUpdates,
-} from "@/lib/demo-equipment";
+import { requireMemberAccess } from "@/lib/api-auth";
 import { resolveUserId } from "@/lib/current-user";
+import {
+  getMemberEquipmentWithStatus,
+  setMemberEquipment,
+} from "@/lib/equipment-store";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  if (isDemoMode()) {
-    const uid = await resolveUserId();
-    const equipment = await getAllEquipmentWithUserStatus(uid);
-    return NextResponse.json({ equipment });
-  }
+  const auth = await requireMemberAccess();
+  if (!auth.ok) return auth.response;
 
-  return NextResponse.json({ equipment: [], error: "Not implemented for real DB yet" }, { status: 501 });
+  const uid = await resolveUserId();
+  const equipment = await getMemberEquipmentWithStatus(uid);
+  return NextResponse.json({ equipment });
 }
 
 export async function POST(request: Request) {
+  const auth = await requireMemberAccess();
+  if (!auth.ok) return auth.response;
+
   const body = await request.json();
   const { equipment: updates } = body;
 
@@ -27,17 +28,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  if (isDemoMode()) {
-    const uid = await resolveUserId();
-    const normalized = normalizeEquipmentUpdates(updates);
-    if (normalized.length === 0) {
-      return NextResponse.json({ error: "No equipment items in payload" }, { status: 400 });
-    }
-
-    await setDemoUserEquipment(normalized, uid);
-    const equipment = await getAllEquipmentWithUserStatus(uid);
-    return NextResponse.json({ success: true, equipment });
-  }
-
-  return NextResponse.json({ success: false, error: "Not implemented for real DB yet" }, { status: 501 });
+  const uid = await resolveUserId();
+  const equipment = await setMemberEquipment(uid, updates);
+  return NextResponse.json({ success: true, equipment });
 }

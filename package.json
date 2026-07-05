@@ -50,7 +50,14 @@
     "backfill:phases": "npx tsx scripts/backfill-workout-phases.ts",
     "backfill:phases:dry": "DRY_RUN=1 npx tsx scripts/backfill-workout-phases.ts",
     "test:prescription-parse": "npx tsx scripts/test-prescription-parse.mjs",
-    "test:lower-day-parse": "npx tsx scripts/sms-lower-day-parse-test.mjs"
+    "test:lower-day-parse": "npx tsx scripts/sms-lower-day-parse-test.mjs",
+    "catalog:add-leg-press": "node scripts/add-leg-press-machine.mjs",
+    "catalog:cleanup-workouts": "npx tsx scripts/cleanup-junk-workouts.ts",
+    "catalog:cleanup-workouts:dry": "DRY_RUN=1 npx tsx scripts/cleanup-junk-workouts.ts",
+    "catalog:standardize:pass2": "npx tsx scripts/standardize-exercise-catalog.ts",
+    "catalog:export-csv": "npx tsx scripts/export-exercise-catalog-csv.ts",
+    "test:p0-prod": "node scripts/p0-prod-verify.mjs",
+    "test:catalog-smoke": "node scripts/catalog-post-cleanup-smoke.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",

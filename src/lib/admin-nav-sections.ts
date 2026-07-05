@@ -114,6 +114,11 @@ export const COACH_NAV_GROUPS: AdminNavGroup[] = [
         label: "Exercises",
         match: (p) => p.startsWith("/admin/exercises"),
       },
+      {
+        href: "/admin/equipment",
+        label: "Equipment",
+        match: (p) => p.startsWith("/admin/equipment"),
+      },
     ],
   },
   {

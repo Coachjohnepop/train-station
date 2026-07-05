@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import AdminMemberEquipmentModal from "@/components/AdminMemberEquipmentModal";
 import {
   COACHING_MODE_LABELS,
   type MemberCoachingMode,
@@ -89,6 +90,7 @@ export default function AdminMembersPage() {
   const [filter, setFilter] = useState<MemberFilter>("all");
   const [removing, setRemoving] = useState<string | null>(null);
   const [savingMode, setSavingMode] = useState<string | null>(null);
+  const [equipmentTarget, setEquipmentTarget] = useState<MemberRow | null>(null);
 
   async function loadMembers() {
     setLoading(true);
@@ -427,6 +429,13 @@ export default function AdminMembersPage() {
                       >
                         Message
                       </Link>
+                      <button
+                        type="button"
+                        onClick={() => setEquipmentTarget(member)}
+                        className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-sky-500/30 text-sky-300"
+                      >
+                        Equipment
+                      </button>
                       {isPaidPlan(member.plan) && member.paymentStatus !== "paid" && (
                         <button
                           type="button"
@@ -496,6 +505,14 @@ export default function AdminMembersPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {equipmentTarget && (
+        <AdminMemberEquipmentModal
+          userId={equipmentTarget.userId}
+          memberName={equipmentTarget.name}
+          onClose={() => setEquipmentTarget(null)}
+        />
       )}
 
       {markPaidTarget && (
