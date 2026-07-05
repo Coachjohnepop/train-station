@@ -64,7 +64,7 @@ export async function enrollDemo(slug: string, userId?: string) {
   const uid = userId || "demo-user";
   const data = getUserEnrollments(uid);
   if (!data[slug]) {
-    data[slug] = { currentWeek: 1, currentDay: 1 };
+    data[slug] = { currentWeek: 1, currentDay: 1, currentPhase: 1, trainingLocation: "gym" };
     await setUserEnrollments(uid, data);
   }
 }
@@ -167,15 +167,22 @@ export async function setDemoEnrollmentPosition(
   currentDay: number,
   userId?: string,
   durationWeeks = 4,
+  opts?: { currentPhase?: number; trainingLocation?: "gym" | "home" },
 ) {
   await hydrateDemoEnrollmentsStore({ preferFresh: true });
   const uid = userId || "demo-user";
   const enrolls = getUserEnrollments(uid);
   const week = Math.min(Math.max(1, Math.floor(currentWeek)), Math.max(1, durationWeeks));
   const day = Math.min(Math.max(1, Math.floor(currentDay)), 7);
-  enrolls[slug] = { currentWeek: week, currentDay: day };
+  const prev = enrolls[slug] || { currentWeek: 1, currentDay: 1 };
+  enrolls[slug] = {
+    currentWeek: week,
+    currentDay: day,
+    currentPhase: opts?.currentPhase ?? prev.currentPhase ?? 1,
+    trainingLocation: opts?.trainingLocation ?? prev.trainingLocation ?? "gym",
+  };
   await setUserEnrollments(uid, enrolls);
-  return { currentWeek: week, currentDay: day };
+  return enrolls[slug];
 }
 
 export async function advanceDemoEnrollment(slug: string, userId?: string) {

@@ -3,13 +3,26 @@
 import { useCallback, useEffect, useState } from "react";
 import { DAY_LABELS } from "@/lib/program-constants";
 
+type MacroPhase = {
+  phaseIndex: number;
+  slug: string;
+  name: string;
+  minWeeks: number;
+  maxWeeks: number;
+};
+
 type ProgramPosition = {
   programSlug: string;
   programName: string;
+  currentPhase: number;
+  currentPhaseName: string;
   currentWeek: number;
   currentDay: number;
+  trainingLocation: "gym" | "home";
   enrollmentDayNumber: number;
   durationWeeks: number;
+  maxWeeksInPhase: number;
+  macroPhases: MacroPhase[];
 };
 
 type Props = {
@@ -20,14 +33,23 @@ type Props = {
 export default function AdminMemberProgramPositionPanel({ userId, memberName }: Props) {
   const [positions, setPositions] = useState<ProgramPosition[]>([]);
   const [selectedSlug, setSelectedSlug] = useState("adult");
+  const [phase, setPhase] = useState(1);
   const [week, setWeek] = useState(1);
   const [day, setDay] = useState(1);
+  const [location, setLocation] = useState<"gym" | "home">("gym");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const selected = positions.find((p) => p.programSlug === selectedSlug) ?? null;
+  const phases = selected?.macroPhases?.length
+    ? selected.macroPhases
+    : [
+        { phaseIndex: 1, slug: "default", name: "Phase 1", minWeeks: 1, maxWeeks: selected?.maxWeeksInPhase ?? 4 },
+      ];
+  const activePhase = phases.find((p) => p.phaseIndex === phase) ?? phases[0];
+  const maxWeekInPhase = activePhase?.maxWeeks ?? selected?.maxWeeksInPhase ?? 4;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -48,8 +70,10 @@ export default function AdminMemberProgramPositionPanel({ userId, memberName }: 
       const primary = list.find((p) => p.programSlug === "adult") ?? list[0];
       if (primary) {
         setSelectedSlug(primary.programSlug);
+        setPhase(primary.currentPhase);
         setWeek(primary.currentWeek);
         setDay(primary.currentDay);
+        setLocation(primary.trainingLocation);
       }
     } catch {
       setError("Could not load program position");
@@ -64,9 +88,17 @@ export default function AdminMemberProgramPositionPanel({ userId, memberName }: 
 
   useEffect(() => {
     if (!selected) return;
+    setPhase(selected.currentPhase);
     setWeek(selected.currentWeek);
     setDay(selected.currentDay);
-  }, [selected?.programSlug, selected?.currentWeek, selected?.currentDay]);
+    setLocation(selected.trainingLocation);
+  }, [
+    selected?.programSlug,
+    selected?.currentPhase,
+    selected?.currentWeek,
+    selected?.currentDay,
+    selected?.trainingLocation,
+  ]);
 
   async function save() {
     if (!selectedSlug) return;
@@ -81,8 +113,10 @@ export default function AdminMemberProgramPositionPanel({ userId, memberName }: 
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             programSlug: selectedSlug,
+            currentPhase: phase,
             currentWeek: week,
             currentDay: day,
+            trainingLocation: location,
           }),
         },
       );
@@ -92,7 +126,7 @@ export default function AdminMemberProgramPositionPanel({ userId, memberName }: 
         return;
       }
       setMessage(
-        `Saved — ${memberName || "Member"} is on Day ${data.enrollmentDayNumber} (${DAY_LABELS[data.currentDay - 1]}, Week ${data.currentWeek}).`,
+        `Saved — ${memberName || "Member"} is in ${data.currentPhaseName}, Week ${data.currentWeek} · ${DAY_LABELS[data.currentDay - 1]} (${location === "home" ? "Home" : "Gym"}).`,
       );
       await load();
     } catch {
@@ -119,15 +153,12 @@ export default function AdminMemberProgramPositionPanel({ userId, memberName }: 
     );
   }
 
-  const previewDayN = (week - 1) * 7 + day;
-  const maxWeek = selected?.durationWeeks ?? 4;
-
   return (
     <div className="rounded-lg border border-accent/25 bg-accent/5 p-3">
-      <p className="text-xs font-semibold text-[var(--text)]">Program start position</p>
+      <p className="text-xs font-semibold text-[var(--text)]">Program position</p>
       <p className="mt-0.5 text-[10px] text-[var(--muted)]">
-        Sets where they are in the program (Day N on member Today). Tuesday enroll = set Week 1,
-        Day 2.
+        Macro phase, week in phase, day, and Gym/Home track. Start a returning member in Power
+        Week 3 here if needed — rare, but supported.
       </p>
 
       {positions.length > 1 && (
@@ -147,13 +178,35 @@ export default function AdminMemberProgramPositionPanel({ userId, memberName }: 
         </label>
       )}
 
+      {phases.length > 1 && (
+        <label className="mt-3 block">
+          <span className="text-[10px] text-[var(--muted)]">Training phase</span>
+          <select
+            className="input mt-1 w-full text-sm"
+            value={phase}
+            onChange={(e) => {
+              const next = Number(e.target.value);
+              setPhase(next);
+              const p = phases.find((mp) => mp.phaseIndex === next);
+              if (p && week > p.maxWeeks) setWeek(p.maxWeeks);
+            }}
+          >
+            {phases.map((p) => (
+              <option key={p.phaseIndex} value={p.phaseIndex}>
+                {p.name} ({p.minWeeks}–{p.maxWeeks} wk)
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
       <div className="mt-3 grid grid-cols-2 gap-2">
         <label className="block">
-          <span className="text-[10px] text-[var(--muted)]">Week</span>
+          <span className="text-[10px] text-[var(--muted)]">Week in phase</span>
           <input
             type="number"
             min={1}
-            max={maxWeek}
+            max={maxWeekInPhase}
             value={week}
             onChange={(e) => setWeek(Number(e.target.value))}
             className="input mt-1 w-full tabular-nums"
@@ -175,8 +228,24 @@ export default function AdminMemberProgramPositionPanel({ userId, memberName }: 
         </label>
       </div>
 
+      <label className="mt-3 block">
+        <span className="text-[10px] text-[var(--muted)]">Workout track</span>
+        <select
+          className="input mt-1 w-full text-sm"
+          value={location}
+          onChange={(e) => setLocation(e.target.value as "gym" | "home")}
+        >
+          <option value="gym">Gym</option>
+          <option value="home">Home</option>
+        </select>
+      </label>
+
       <p className="mt-2 text-[11px] text-[var(--muted)]">
-        Member will see <strong className="text-[var(--text)]">Day {previewDayN}</strong> on Today
+        Member sees{" "}
+        <strong className="text-[var(--text)]">
+          {activePhase?.name ?? `Phase ${phase}`} · Week {week} · {DAY_LABELS[day - 1]}
+        </strong>{" "}
+        ({location === "home" ? "Home" : "Gym"} workout)
         {selected ? ` · ${selected.programName}` : ""}.
       </p>
 

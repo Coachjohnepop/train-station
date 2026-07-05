@@ -24,9 +24,19 @@ import {
   getEnrollmentsMapForUser,
   resolveStorageUserId,
   setUserProgramPositionDb,
+  setUserTrainingLocationDb,
   unenrollUserFromProgramDb,
 } from "@/lib/enrollment-db";
 import { clampEnrollmentPosition, linearEnrollmentDay } from "@/lib/member-enrollment-day";
+import {
+  ADULT_MACRO_PHASES,
+  clampPhaseWeek,
+  linearMacroEnrollmentDay,
+  macroPhaseLabel,
+  macroPhasesForProgramSlug,
+  normalizeTrainingLocation,
+  type TrainingLocation,
+} from "@/lib/program-macro-cycle";
 import { getProgramBySlug } from "@/lib/program-data";
 import { recordDemoWorkoutSession } from "@/lib/demo-logs";
 import { prisma } from "@/lib/prisma";
@@ -88,35 +98,73 @@ export async function getUserEnrollmentsAsArray(userId?: string): Promise<UserEn
     slug,
     currentWeek: val.currentWeek ?? 1,
     currentDay: val.currentDay ?? 1,
+    currentPhase: val.currentPhase ?? 1,
+    trainingLocation: normalizeTrainingLocation(val.trainingLocation),
   }));
 }
+
+export type MacroPhaseSummary = {
+  phaseIndex: number;
+  slug: string;
+  name: string;
+  minWeeks: number;
+  maxWeeks: number;
+};
 
 export type ProgramPositionResult = {
   programSlug: string;
   programName: string;
+  currentPhase: number;
+  currentPhaseName: string;
   currentWeek: number;
   currentDay: number;
+  trainingLocation: TrainingLocation;
   enrollmentDayNumber: number;
   durationWeeks: number;
+  maxWeeksInPhase: number;
+  macroPhases: MacroPhaseSummary[];
 };
 
-/** Coach-set member position in a program (week + day within week). */
+function macroPhasesForProgram(programSlug: string): MacroPhaseSummary[] {
+  const phases = macroPhasesForProgramSlug(programSlug);
+  if (phases.length) return phases;
+  return [];
+}
+
+function maxWeeksInPhase(programSlug: string, phaseIndex: number, durationWeeks: number): number {
+  const phases = macroPhasesForProgramSlug(programSlug);
+  const phase = phases.find((p) => p.phaseIndex === phaseIndex);
+  return phase?.maxWeeks ?? durationWeeks;
+}
+
+/** Coach-set member position in a program (macro phase, week-in-phase, day, gym/home). */
 export async function setUserProgramPosition(
   userId: string,
   programSlug: string,
   currentWeek: number,
   currentDay: number,
+  opts?: { currentPhase?: number; trainingLocation?: TrainingLocation },
 ): Promise<ProgramPositionResult> {
   const program = await getProgramBySlug(programSlug);
   if (!program) {
     throw new Error("Program not found");
   }
 
+  const phases = macroPhasesForProgramSlug(programSlug);
+  const phaseIndex = opts?.currentPhase ?? 1;
+  const phaseClamped = phases.length
+    ? clampPhaseWeek(phaseIndex, currentWeek, phases)
+    : { phaseIndex, weekInPhase: currentWeek };
+  const weekCap = phases.length
+    ? phases[phaseClamped.phaseIndex - 1]?.maxWeeks ?? program.durationWeeks
+    : program.durationWeeks;
+
   const { weekNumber, dayNumber } = clampEnrollmentPosition(
-    currentWeek,
+    phaseClamped.weekInPhase,
     currentDay,
-    program.durationWeeks,
+    weekCap,
   );
+  const trainingLocation = normalizeTrainingLocation(opts?.trainingLocation);
 
   if (isDemoMode()) {
     const map = await getUserEnrollments(userId);
@@ -128,20 +176,62 @@ export async function setUserProgramPosition(
       weekNumber,
       dayNumber,
       userId,
-      program.durationWeeks,
+      weekCap,
+      {
+        currentPhase: phaseClamped.phaseIndex,
+        trainingLocation,
+      },
     );
   } else {
-    await setUserProgramPositionDb(userId, programSlug, weekNumber, dayNumber);
+    await setUserProgramPositionDb(userId, programSlug, weekNumber, dayNumber, {
+      currentPhase: phaseClamped.phaseIndex,
+      trainingLocation,
+    });
   }
+
+  const macroPhases = macroPhasesForProgram(programSlug);
+  const enrollmentDayNumber = macroPhases.length
+    ? linearMacroEnrollmentDay(macroPhases, phaseClamped.phaseIndex, weekNumber, dayNumber)
+    : linearEnrollmentDay(weekNumber, dayNumber);
 
   return {
     programSlug,
     programName: program.name,
+    currentPhase: phaseClamped.phaseIndex,
+    currentPhaseName: macroPhaseLabel(macroPhases.length ? macroPhases : ADULT_MACRO_PHASES, phaseClamped.phaseIndex),
     currentWeek: weekNumber,
     currentDay: dayNumber,
-    enrollmentDayNumber: linearEnrollmentDay(weekNumber, dayNumber),
+    trainingLocation,
+    enrollmentDayNumber,
     durationWeeks: program.durationWeeks,
+    maxWeeksInPhase: maxWeeksInPhase(programSlug, phaseClamped.phaseIndex, program.durationWeeks),
+    macroPhases,
   };
+}
+
+export async function setUserTrainingLocation(
+  userId: string,
+  programSlug: string,
+  trainingLocation: TrainingLocation,
+) {
+  const location = normalizeTrainingLocation(trainingLocation);
+  if (isDemoMode()) {
+    const map = await getUserEnrollments(userId);
+    if (!map[programSlug]) {
+      await enrollDemo(programSlug, userId);
+    }
+    await setDemoEnrollmentPosition(
+      programSlug,
+      map[programSlug]?.currentWeek ?? 1,
+      map[programSlug]?.currentDay ?? 1,
+      userId,
+      52,
+      { trainingLocation: location, currentPhase: map[programSlug]?.currentPhase ?? 1 },
+    );
+    return { programSlug, trainingLocation: location };
+  }
+  await setUserTrainingLocationDb(userId, programSlug, location);
+  return { programSlug, trainingLocation: location };
 }
 
 export async function getUserProgramPositions(userId: string): Promise<ProgramPositionResult[]> {
@@ -154,19 +244,34 @@ export async function getUserProgramPositions(userId: string): Promise<ProgramPo
     const cat = (program.category || "workout") as string;
     if (cat !== "workout" && cat !== "journey" && cat !== "yoga") continue;
 
+    const phaseIndex = en.currentPhase ?? 1;
+    const macroPhases = macroPhasesForProgram(en.slug);
+    const weekCap = maxWeeksInPhase(en.slug, phaseIndex, program.durationWeeks);
     const { weekNumber, dayNumber } = clampEnrollmentPosition(
       en.currentWeek,
       en.currentDay,
-      program.durationWeeks,
+      weekCap,
     );
+    const trainingLocation = normalizeTrainingLocation(en.trainingLocation);
+    const enrollmentDayNumber = macroPhases.length
+      ? linearMacroEnrollmentDay(macroPhases, phaseIndex, weekNumber, dayNumber)
+      : linearEnrollmentDay(weekNumber, dayNumber);
 
     out.push({
       programSlug: en.slug,
       programName: program.name,
+      currentPhase: phaseIndex,
+      currentPhaseName: macroPhaseLabel(
+        macroPhases.length ? macroPhases : ADULT_MACRO_PHASES,
+        phaseIndex,
+      ),
       currentWeek: weekNumber,
       currentDay: dayNumber,
-      enrollmentDayNumber: linearEnrollmentDay(weekNumber, dayNumber),
+      trainingLocation,
+      enrollmentDayNumber,
       durationWeeks: program.durationWeeks,
+      maxWeeksInPhase: weekCap,
+      macroPhases,
     });
   }
 
@@ -317,20 +422,27 @@ export async function createWorkoutLogAndPerformances(input: {
           include: { week: true },
         });
         if (matchingDay) {
-          let nextWeek = matchingDay.week.weekNumber;
+          const phases = macroPhasesForProgramSlug(input.programSlug);
+          let nextPhase = matchingDay.week.macroPhaseIndex ?? enrollment.currentPhase ?? 1;
+          let nextWeekInPhase = matchingDay.week.phaseWeekNumber ?? enrollment.currentWeek;
           let nextDay = matchingDay.dayNumber + 1;
           if (nextDay > 7) {
             nextDay = 1;
-            nextWeek += 1;
+            nextWeekInPhase += 1;
           }
-          const maxWeeks = enrollment.program.durationWeeks || 4;
-          if (nextWeek > maxWeeks) {
-            nextWeek = maxWeeks;
+          const phaseDef = phases.find((p) => p.phaseIndex === nextPhase);
+          const maxWeeksInPhase = phaseDef?.maxWeeks ?? (enrollment.program.durationWeeks || 4);
+          if (nextWeekInPhase > maxWeeksInPhase) {
+            nextWeekInPhase = maxWeeksInPhase;
             nextDay = 7;
           }
           await prisma.programEnrollment.update({
             where: { id: enrollment.id },
-            data: { currentWeek: nextWeek, currentDay: nextDay },
+            data: {
+              currentPhase: nextPhase,
+              currentWeek: nextWeekInPhase,
+              currentDay: nextDay,
+            },
           });
         }
       }

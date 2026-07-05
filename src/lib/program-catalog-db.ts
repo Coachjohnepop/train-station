@@ -98,6 +98,8 @@ export async function listProgramsFromDb() {
       weeks: p.weeks.map((w) => ({
         id: w.id,
         weekNumber: w.weekNumber,
+        macroPhaseIndex: w.macroPhaseIndex,
+        phaseWeekNumber: w.phaseWeekNumber,
         days: w.days.map((d) => mapDay(d)),
       })),
     }),
@@ -127,6 +129,8 @@ export async function getProgramBySlugFromDb(slug: string) {
     weeks: program.weeks.map((w) => ({
       id: w.id,
       weekNumber: w.weekNumber,
+      macroPhaseIndex: w.macroPhaseIndex,
+      phaseWeekNumber: w.phaseWeekNumber,
       days: w.days.map((d) => mapDay(d)),
     })),
     _count: { enrollments: program._count.enrollments },

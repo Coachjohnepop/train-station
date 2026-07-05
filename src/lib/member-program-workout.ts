@@ -1,15 +1,26 @@
 import "server-only";
 
 import { getUserEnrollments } from "@/lib/data/user-data";
-import { getProgramBySlug } from "@/lib/program-data";
-import { normalizeProgramSlug } from "@/lib/programs";
 import { resolveUserId } from "@/lib/current-user";
+import { getProgramBySlug } from "@/lib/program-data";
+import {
+  findEnrollmentWeek,
+  macroPhasesForProgramSlug,
+  normalizeTrainingLocation,
+  pickWorkoutOptionByLocation,
+  type ProgramWeekLike,
+  type TrainingLocation,
+} from "@/lib/program-macro-cycle";
+import { normalizeProgramSlug } from "@/lib/programs";
 
 export type ResolvedProgramWorkout = {
   workoutId: string;
   option?: string;
   weekNumber: number;
   dayNumber: number;
+  macroPhaseIndex?: number;
+  phaseWeekNumber?: number;
+  trainingLocation?: TrainingLocation;
   workoutName?: string;
 };
 
@@ -28,10 +39,18 @@ export function dayWorkoutOptions(day: {
   return [];
 }
 
-/** Resolve the member's current scheduled workout for a program (enrollment week/day). */
+export type EnrollmentSlice = {
+  currentWeek: number;
+  currentDay: number;
+  currentPhase?: number;
+  trainingLocation?: string | null;
+};
+
+/** Resolve the member's current scheduled workout for a program (phase week/day + gym/home). */
 export async function resolveMemberProgramWorkout(
   programSlug: string,
   userId?: string,
+  opts?: { trainingLocation?: TrainingLocation },
 ): Promise<ResolvedProgramWorkout | null> {
   const slug = normalizeProgramSlug(programSlug);
   const program = await getProgramBySlug(slug);
@@ -39,20 +58,49 @@ export async function resolveMemberProgramWorkout(
 
   const uid = userId || (await resolveUserId());
   const enrolls = await getUserEnrollments(uid);
-  const en = enrolls[slug] || enrolls[programSlug] || { currentWeek: 1, currentDay: 1 };
+  const en: EnrollmentSlice = enrolls[slug] ||
+    enrolls[programSlug] || { currentWeek: 1, currentDay: 1, currentPhase: 1, trainingLocation: "gym" };
 
-  const week =
-    program.weeks.find((w: { weekNumber: number }) => w.weekNumber === en.currentWeek) ||
-    program.weeks[0];
+  const phases = macroPhasesForProgramSlug(slug);
+  const location = opts?.trainingLocation ?? normalizeTrainingLocation(en.trainingLocation);
+
+  const week = findEnrollmentWeek(program.weeks, en, phases);
   const day =
     week?.days?.find((d: { dayNumber: number }) => d.dayNumber === en.currentDay) ||
     week?.days?.[0];
   if (!day) return null;
 
-  const opts = dayWorkoutOptions(day);
-  if (!opts.length) return null;
+  const optsList = dayWorkoutOptions(day);
+  if (!optsList.length) return null;
 
-  const pick = opts.find((o) => /gym/i.test(o.label || "")) || opts[0];
+  const pick = pickWorkoutOptionByLocation(optsList, location);
+  if (!pick?.workoutId) return null;
+
+  return {
+    workoutId: pick.workoutId,
+    option: pick.label,
+    weekNumber: week?.weekNumber ?? en.currentWeek,
+    dayNumber: day.dayNumber,
+    macroPhaseIndex: week?.macroPhaseIndex ?? en.currentPhase ?? 1,
+    phaseWeekNumber: week?.phaseWeekNumber ?? en.currentWeek,
+    trainingLocation: location,
+    workoutName: pick.workout?.name || day.workout?.name,
+  };
+}
+
+export function resolveDayWorkoutForEnrollment(
+  program: { weeks: ProgramWeekLike[] },
+  programSlug: string,
+  enrollment: EnrollmentSlice,
+  dayNumber = enrollment.currentDay,
+): Omit<ResolvedProgramWorkout, "workoutName"> & { workoutName?: string; dayId?: string } | null {
+  const phases = macroPhasesForProgramSlug(programSlug);
+  const location = normalizeTrainingLocation(enrollment.trainingLocation);
+  const week = findEnrollmentWeek(program.weeks, enrollment, phases);
+  const day = week?.days?.find((d) => d.dayNumber === dayNumber);
+  if (!week || !day) return null;
+
+  const pick = pickWorkoutOptionByLocation(dayWorkoutOptions(day), location);
   if (!pick?.workoutId) return null;
 
   return {
@@ -60,7 +108,11 @@ export async function resolveMemberProgramWorkout(
     option: pick.label,
     weekNumber: week.weekNumber,
     dayNumber: day.dayNumber,
+    macroPhaseIndex: week.macroPhaseIndex ?? enrollment.currentPhase ?? 1,
+    phaseWeekNumber: week.phaseWeekNumber ?? enrollment.currentWeek,
+    trainingLocation: location,
     workoutName: pick.workout?.name || day.workout?.name,
+    dayId: (day as { id?: string }).id,
   };
 }
 

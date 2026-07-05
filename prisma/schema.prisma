@@ -207,17 +207,39 @@ model Program {
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   weeks              ProgramWeek[]
+  macroPhases        ProgramMacroPhase[]
   enrollments        ProgramEnrollment[]
 }
 
-model ProgramWeek {
-  id         String       @id @default(cuid())
+/// Jeremy macro cycle: conditioning → hypertrophy → strength → power (week ranges per phase).
+model ProgramMacroPhase {
+  id         String  @id @default(cuid())
   programId  String
-  weekNumber Int
-  program    Program      @relation(fields: [programId], references: [id], onDelete: Cascade)
-  days       ProgramDay[]
+  phaseIndex Int
+  slug       String
+  name       String
+  minWeeks   Int
+  maxWeeks   Int
+  sortOrder  Int     @default(0)
+  program    Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@unique([programId, phaseIndex])
+  @@index([programId, sortOrder])
+}
+
+model ProgramWeek {
+  id              String       @id @default(cuid())
+  programId       String
+  weekNumber      Int
+  /// 1-based macro phase (conditioning=1, hypertrophy=2, strength=3, power=4).
+  macroPhaseIndex Int          @default(1)
+  /// Week within the macro phase (member enrollment currentWeek maps here).
+  phaseWeekNumber Int          @default(1)
+  program         Program      @relation(fields: [programId], references: [id], onDelete: Cascade)
+  days            ProgramDay[]
 
   @@unique([programId, weekNumber])
+  @@index([programId, macroPhaseIndex, phaseWeekNumber])
 }
 
 model ProgramDay {
@@ -250,16 +272,19 @@ model ProgramDayOption {
 }
 
 model ProgramEnrollment {
-  id          String   @id @default(cuid())
-  userId      String
-  programId   String
-  startedAt   DateTime @default(now())
-  currentWeek Int      @default(1)
-  currentDay  Int      @default(1)
-  currentPhase Int     @default(1)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  program     Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
-  promptResponses PromptResponse[]
+  id               String   @id @default(cuid())
+  userId           String
+  programId        String
+  startedAt        DateTime @default(now())
+  currentWeek      Int      @default(1)
+  currentDay       Int      @default(1)
+  /// Macro phase index (1=conditioning … 4=power for Adult).
+  currentPhase     Int      @default(1)
+  /// Member's Gym vs Home track — simple dropdown, not a wide options table.
+  trainingLocation String   @default("gym")
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  program          Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  promptResponses  PromptResponse[]
 }
 
 model LiveSession {

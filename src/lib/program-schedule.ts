@@ -1,4 +1,5 @@
 import { DAYS_PER_WEEK } from "@/lib/program-constants";
+import { macroPhasesForProgramSlug, syncMacroWeekTags } from "@/lib/program-macro-cycle";
 import { prisma } from "@/lib/prisma";
 
 export async function syncProgramSchedule(programId: string) {
@@ -6,6 +7,13 @@ export async function syncProgramSchedule(programId: string) {
     where: { id: programId },
   });
   if (!program) return null;
+
+  if (macroPhasesForProgramSlug(program.slug).length > 0) {
+    await syncMacroWeekTags(program.id, program.slug);
+    const refreshed = await prisma.program.findUnique({ where: { id: programId } });
+    if (!refreshed) return null;
+    program.durationWeeks = refreshed.durationWeeks;
+  }
 
   for (let weekNumber = 1; weekNumber <= program.durationWeeks; weekNumber++) {
     const week = await prisma.programWeek.upsert({

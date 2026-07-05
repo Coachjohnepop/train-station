@@ -16,7 +16,7 @@ import {
 } from "@/lib/today-sessions";
 import { resolveCoachMemberName } from "@/lib/coach-roster";
 import { parseEnrollmentDayKey } from "@/lib/member-enrollment-day";
-import { dayWorkoutOptions } from "@/lib/member-program-workout";
+import { resolveDayWorkoutForEnrollment } from "@/lib/member-program-workout";
 import { memberScheduleLabel } from "@/lib/member-day-window";
 import { localTodayIso } from "@/lib/program-calendar";
 
@@ -56,7 +56,12 @@ async function resolveEnrollmentProgramWorkout(
   if (!program) return null;
 
   const enrolls = await getUserEnrollments(userId);
-  const enrollment = enrolls[slug] || { currentWeek: 1, currentDay: 1 };
+  const enrollment = enrolls[slug] || {
+    currentWeek: 1,
+    currentDay: 1,
+    currentPhase: 1,
+    trainingLocation: "gym" as const,
+  };
   const isProgramToday =
     weekNumber === enrollment.currentWeek && dayNumber === enrollment.currentDay;
 
@@ -77,15 +82,10 @@ async function resolveEnrollmentProgramWorkout(
     }
   }
 
-  const week = program.weeks.find((w: { weekNumber: number }) => w.weekNumber === weekNumber);
-  const day = week?.days.find((d: { dayNumber: number }) => d.dayNumber === dayNumber);
-  if (!day) return null;
+  const resolved = resolveDayWorkoutForEnrollment(program, slug, enrollment, dayNumber);
+  if (!resolved?.workoutId) return null;
 
-  const opts = dayWorkoutOptions(day);
-  const pick = opts.find((o) => /gym/i.test(o.label || "")) || opts[0];
-  if (!pick?.workoutId) return null;
-
-  const workout = await getMemberWorkoutById(pick.workoutId, {
+  const workout = await getMemberWorkoutById(resolved.workoutId, {
     userId,
     memberName,
   });
@@ -96,7 +96,7 @@ async function resolveEnrollmentProgramWorkout(
     workout,
     programSlug: slug,
     source: "program",
-    scheduleLabel: memberScheduleLabel(program.name, weekNumber, dayNumber),
+    scheduleLabel: memberScheduleLabel(program.name, resolved.phaseWeekNumber ?? weekNumber, dayNumber),
   };
 }
 

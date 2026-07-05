@@ -7,6 +7,7 @@ import { MEMBER_TODAY_RESET_EVENT } from "@/lib/member-today-home";
 import MemberDayWheel from "@/components/MemberDayWheel";
 import MemberIntakeIntroCard from "@/components/MemberIntakeIntroCard";
 import MemberWarmupDayNavigator from "@/components/MemberWarmupDayNavigator";
+import MemberTrainingLocationToggle from "@/components/MemberTrainingLocationToggle";
 import MemberWorkoutConsole, { type MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import type { MemberDaySummary, MemberDayWindowRollup } from "@/lib/member-day-window-types";
 import { scheduleDayHeadline } from "@/lib/workout-day-visibility";
@@ -21,6 +22,7 @@ type Props = {
   tomorrowDay?: MemberDaySummary | null;
   workout: MemberWorkoutView | null;
   programSlug: string;
+  trainingLocation?: "gym" | "home";
   targetUserId: string;
   scheduleLabel?: string;
   calendarDateLabel: string;
@@ -147,6 +149,7 @@ export default function MemberTodayShell({
   tomorrowDay = null,
   workout,
   programSlug,
+  trainingLocation = "gym",
   targetUserId,
   scheduleLabel,
   calendarDateLabel,
@@ -285,6 +288,15 @@ export default function MemberTodayShell({
 
       {showFullWorkout && workout && (
         <div className="min-w-0 sm:mx-0">
+          {programSlug === "adult" && (
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+              <span className="text-xs text-[var(--muted)]">Today&apos;s track</span>
+              <MemberTrainingLocationToggle
+                programSlug={programSlug}
+                initialLocation={trainingLocation}
+              />
+            </div>
+          )}
           <MemberWorkoutConsole
             workout={workout}
             backHref="/member/today"

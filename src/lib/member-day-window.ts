@@ -20,6 +20,7 @@ import {
   dayVisibilityTierByOffset,
   themeLabelForDay,
 } from "@/lib/workout-day-visibility";
+import { findEnrollmentWeek, macroPhasesForProgramSlug, normalizeTrainingLocation, pickWorkoutOptionByLocation } from "@/lib/program-macro-cycle";
 import { dayWorkoutOptions } from "@/lib/member-program-workout";
 import { getDemoSeed } from "@/lib/demo-seed-store";
 import { hydrateDemoExercises, loadDemoExercises } from "@/lib/demo-exercises";
@@ -161,12 +162,20 @@ export async function buildMemberDayWindow(
   const rollingDays = opts?.rollingDays ?? 5;
   const daysBefore = opts?.daysBefore ?? 2;
   const enrolls = await getUserEnrollments(userId);
-  const enrollment = enrolls[programSlug] || { currentWeek: 1, currentDay: 1 };
+  const enrollment = enrolls[programSlug] || {
+    currentWeek: 1,
+    currentDay: 1,
+    currentPhase: 1,
+    trainingLocation: "gym" as const,
+  };
+  const phases = macroPhasesForProgramSlug(programSlug);
+  const centerWeek = findEnrollmentWeek(program.weeks, enrollment, phases);
+  const centerWeekNumber = centerWeek?.weekNumber ?? enrollment.currentWeek;
   const programTodayKey = `W${enrollment.currentWeek}D${enrollment.currentDay}`;
 
   const rolling = rollingEnrollmentProgramDays(
     program.weeks,
-    { weekNumber: enrollment.currentWeek, dayNumber: enrollment.currentDay },
+    { weekNumber: centerWeekNumber, dayNumber: enrollment.currentDay },
     program.durationWeeks,
     rollingDays,
     daysBefore,
@@ -212,7 +221,10 @@ export async function buildMemberDayWindow(
     }
 
     const optsForDay = dayWorkoutOptions(entry.day);
-    const pick = optsForDay.find((o) => /gym/i.test(o.label || "")) || optsForDay[0];
+    const pick = pickWorkoutOptionByLocation(
+      optsForDay,
+      normalizeTrainingLocation(enrollment.trainingLocation),
+    );
     const workoutId = pick?.workoutId || null;
     const names = workoutId ? await exerciseNamesForWorkout(workoutId) : [];
     const rawWorkoutName = pick?.workout?.name || null;

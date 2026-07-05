@@ -11,8 +11,10 @@ type Params = { params: Promise<{ userId: string }> };
 
 const patchSchema = z.object({
   programSlug: z.string().min(1),
+  currentPhase: z.number().int().min(1).max(12).optional(),
   currentWeek: z.number().int().min(1).max(52),
   currentDay: z.number().int().min(1).max(7),
+  trainingLocation: z.enum(["gym", "home"]).optional(),
 });
 
 export async function GET(request: Request, { params }: Params) {
@@ -50,6 +52,10 @@ export async function PATCH(request: Request, { params }: Params) {
       parsed.data.programSlug,
       parsed.data.currentWeek,
       parsed.data.currentDay,
+      {
+        currentPhase: parsed.data.currentPhase,
+        trainingLocation: parsed.data.trainingLocation,
+      },
     );
 
     return NextResponse.json({ ok: true, ...result });

@@ -21,13 +21,27 @@ type ProgramDay = {
   options?: { workoutId: string; label: string }[];
 };
 
+type MacroPhase = {
+  phaseIndex: number;
+  name: string;
+  minWeeks: number;
+  maxWeeks: number;
+};
+
 type Program = {
   id: string;
   slug: string;
   name: string;
   durationWeeks: number;
   startDate?: string | null;
-  weeks: { id: string; weekNumber: number; days: ProgramDay[] }[];
+  macroPhases?: MacroPhase[];
+  weeks: {
+    id: string;
+    weekNumber: number;
+    macroPhaseIndex?: number;
+    phaseWeekNumber?: number;
+    days: ProgramDay[];
+  }[];
 };
 
 export default function ProgramAdminClient({
@@ -56,6 +70,23 @@ export default function ProgramAdminClient({
         </div>
         <ExportSeedButton className="text-xs" />
       </div>
+
+      {initial.macroPhases && initial.macroPhases.length > 1 && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {initial.macroPhases.map((phase) => (
+            <span
+              key={phase.phaseIndex}
+              className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 text-[10px] text-[var(--muted)]"
+            >
+              <span className="font-medium text-[var(--text)]">{phase.name}</span>
+              {" · "}
+              {phase.minWeeks === phase.maxWeeks
+                ? `${phase.maxWeeks} wk`
+                : `${phase.minWeeks}–${phase.maxWeeks} wk`}
+            </span>
+          ))}
+        </div>
+      )}
       <p className="mt-1 text-[10px] text-[var(--muted)]">
         When content is final, export seed snapshot and commit{" "}
         <code className="rounded bg-[var(--surface-2)] px-1">prisma/seed-data.json</code> so it

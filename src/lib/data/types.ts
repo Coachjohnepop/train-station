@@ -6,13 +6,24 @@
  * Goal: one place to evolve the shape, and a single switch point between demo and real.
  */
 
+export type TrainingLocation = "gym" | "home";
+
+export type EnrollmentPosition = {
+  currentWeek: number;
+  currentDay: number;
+  currentPhase?: number;
+  trainingLocation?: TrainingLocation;
+};
+
 export type UserEnrollment = {
   slug: string;
   currentWeek: number;
   currentDay: number;
+  currentPhase?: number;
+  trainingLocation?: TrainingLocation;
 };
 
-export type EnrollmentsMap = Record<string, { currentWeek: number; currentDay: number }>;
+export type EnrollmentsMap = Record<string, EnrollmentPosition>;
 
 export type DemoWorkoutLog = {
   id: string;

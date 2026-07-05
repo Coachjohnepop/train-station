@@ -2,8 +2,14 @@ import "server-only";
 
 import { isDatabaseConfigured } from "@/lib/database-config";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
+import type { EnrollmentsMap, TrainingLocation } from "@/lib/data/types";
+import {
+  clampPhaseWeek,
+  macroPhasesForProgramSlug,
+  normalizeTrainingLocation,
+} from "@/lib/program-macro-cycle";
+import { clampEnrollmentPosition } from "@/lib/member-enrollment-day";
 import { prisma } from "@/lib/prisma";
-import type { EnrollmentsMap } from "@/lib/data/types";
 
 /** Map demo roster ids (demo-user-*) to Prisma User.id in database mode. */
 export async function resolveStorageUserId(userId: string): Promise<string> {
@@ -38,6 +44,8 @@ export async function getEnrollmentsMapForUser(userId: string): Promise<Enrollme
     map[row.program.slug] = {
       currentWeek: row.currentWeek,
       currentDay: row.currentDay,
+      currentPhase: row.currentPhase,
+      trainingLocation: normalizeTrainingLocation(row.trainingLocation),
     };
   }
   return map;
@@ -59,6 +67,8 @@ export async function enrollUserInProgramDb(slug: string, userId: string) {
       programId: program.id,
       currentWeek: 1,
       currentDay: 1,
+      currentPhase: 1,
+      trainingLocation: "gym",
     },
   });
 }
@@ -77,10 +87,22 @@ export async function setUserProgramPositionDb(
   slug: string,
   currentWeek: number,
   currentDay: number,
+  opts?: { currentPhase?: number; trainingLocation?: TrainingLocation },
 ) {
   const storageUserId = await resolveStorageUserId(userId);
   const program = await prisma.program.findUnique({ where: { slug } });
   if (!program) throw new Error("Program not found");
+
+  const phases = macroPhasesForProgramSlug(slug);
+  const phaseClamped = phases.length
+    ? clampPhaseWeek(opts?.currentPhase ?? 1, currentWeek, phases)
+    : { phaseIndex: opts?.currentPhase ?? 1, weekInPhase: currentWeek };
+  const { weekNumber, dayNumber } = clampEnrollmentPosition(
+    phaseClamped.weekInPhase,
+    currentDay,
+    phases.length ? phases[phaseClamped.phaseIndex - 1]?.maxWeeks ?? program.durationWeeks : program.durationWeeks,
+  );
+  const trainingLocation = normalizeTrainingLocation(opts?.trainingLocation);
 
   let enrollment = await prisma.programEnrollment.findFirst({
     where: { userId: storageUserId, programId: program.id },
@@ -90,15 +112,42 @@ export async function setUserProgramPositionDb(
       data: {
         userId: storageUserId,
         programId: program.id,
-        currentWeek,
-        currentDay,
+        currentWeek: weekNumber,
+        currentDay: dayNumber,
+        currentPhase: phaseClamped.phaseIndex,
+        trainingLocation,
       },
     });
   } else {
     enrollment = await prisma.programEnrollment.update({
       where: { id: enrollment.id },
-      data: { currentWeek, currentDay },
+      data: {
+        currentWeek: weekNumber,
+        currentDay: dayNumber,
+        currentPhase: phaseClamped.phaseIndex,
+        trainingLocation,
+      },
     });
   }
   return enrollment;
+}
+
+export async function setUserTrainingLocationDb(
+  userId: string,
+  slug: string,
+  trainingLocation: TrainingLocation,
+) {
+  const storageUserId = await resolveStorageUserId(userId);
+  const program = await prisma.program.findUnique({ where: { slug } });
+  if (!program) throw new Error("Program not found");
+
+  const enrollment = await prisma.programEnrollment.findFirst({
+    where: { userId: storageUserId, programId: program.id },
+  });
+  if (!enrollment) throw new Error("Not enrolled in program");
+
+  return prisma.programEnrollment.update({
+    where: { id: enrollment.id },
+    data: { trainingLocation: normalizeTrainingLocation(trainingLocation) },
+  });
 }

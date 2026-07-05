@@ -35,7 +35,15 @@ export type DemoLogsStore = {
   performances: DemoExercisePerformanceRow[];
 };
 
-export type PerUserEnrollments = Record<string, { currentWeek: number; currentDay: number }>;
+export type PerUserEnrollments = Record<
+  string,
+  {
+    currentWeek: number;
+    currentDay: number;
+    currentPhase?: number;
+    trainingLocation?: "gym" | "home";
+  }
+>;
 export type DemoEnrollmentsStore = Record<string, PerUserEnrollments>;
 
 const LOGS_BLOB = "demo/member-workout-logs.json";

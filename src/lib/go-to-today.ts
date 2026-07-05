@@ -10,11 +10,17 @@ import {
 import { normalizeProgramSlug } from "@/lib/programs";
 import { enrollmentDayKey, linearEnrollmentDay } from "@/lib/member-enrollment-day";
 import {
+  linearMacroEnrollmentDay,
+  macroPhasesForProgramSlug,
+  pickWorkoutOptionByLocation,
+} from "@/lib/program-macro-cycle";
+import {
   getSessionForUserOnDate,
   hydrateTodaySessions,
 } from "@/lib/today-sessions";
 import {
   dayWorkoutOptions,
+  resolveDayWorkoutForEnrollment,
   type ResolvedProgramWorkout,
 } from "@/lib/member-program-workout";
 
@@ -28,14 +34,17 @@ export type GoToTodayTarget = {
   workoutId?: string;
 };
 
-function pickGymWorkout(day: {
-  workoutId?: string | null;
-  workout?: { id: string; name?: string } | null;
-  options?: Array<{ workoutId: string; label?: string; workout?: { id: string; name?: string } | null }>;
-}): ResolvedProgramWorkout | null {
+function pickWorkoutForDay(
+  day: {
+    workoutId?: string | null;
+    workout?: { id: string; name?: string } | null;
+    options?: Array<{ workoutId: string; label?: string; workout?: { id: string; name?: string } | null }>;
+  },
+  location: "gym" | "home" = "gym",
+): ResolvedProgramWorkout | null {
   const opts = dayWorkoutOptions(day);
   if (!opts.length) return null;
-  const pick = opts.find((o) => /gym/i.test(o.label || "")) || opts[0];
+  const pick = pickWorkoutOptionByLocation(opts, location);
   if (!pick?.workoutId) return null;
   return {
     workoutId: pick.workoutId,
@@ -65,7 +74,7 @@ export function resolveProgramWorkoutForCalendarDate(
     };
   }
 
-  const pick = pickGymWorkout(match.day);
+  const pick = pickWorkoutForDay(match.day);
   if (!pick) return null;
 
   return {
@@ -133,23 +142,22 @@ export async function resolveMemberGoToToday(
     const cat = (program.category || "workout") as string;
     if (cat !== "workout" && cat !== "journey" && cat !== "yoga") continue;
 
-    const enrollment = enrolls[slug] || { currentWeek: 1, currentDay: 1 };
-    const dayN = linearEnrollmentDay(enrollment.currentWeek, enrollment.currentDay);
-    const week = program.weeks.find(
-      (w: { weekNumber: number }) => w.weekNumber === enrollment.currentWeek,
-    );
-    const day = week?.days.find(
-      (d: { dayNumber: number; id: string }) => d.dayNumber === enrollment.currentDay,
-    );
-    const pick = day ? pickGymWorkout(day) : null;
-    const resolved = pick?.workoutId
-      ? {
-          ...pick,
-          weekNumber: enrollment.currentWeek,
-          dayNumber: enrollment.currentDay,
-          dayId: day!.id,
-        }
-      : null;
+    const enrollment = enrolls[slug] || {
+      currentWeek: 1,
+      currentDay: 1,
+      currentPhase: 1,
+      trainingLocation: "gym" as const,
+    };
+    const phases = macroPhasesForProgramSlug(slug);
+    const dayN = phases.length
+      ? linearMacroEnrollmentDay(
+          phases,
+          enrollment.currentPhase ?? 1,
+          enrollment.currentWeek,
+          enrollment.currentDay,
+        )
+      : linearEnrollmentDay(enrollment.currentWeek, enrollment.currentDay);
+    const resolved = resolveDayWorkoutForEnrollment(program, slug, enrollment);
     if (!resolved) continue;
 
     return {

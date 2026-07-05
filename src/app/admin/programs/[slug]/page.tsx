@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import ProgramAdminClient from "@/components/ProgramAdminClient";
 import { loadProgramContentAlert } from "@/lib/coach-content-alerts";
 import { getProgramBySlug } from "@/lib/program-data";
+import { ADULT_MACRO_PHASES } from "@/lib/program-macro-cycle";
 import { syncProgramSchedule } from "@/lib/program-schedule";
 import { prisma } from "@/lib/prisma";
 import { isCoachCatalogDemo } from "@/lib/catalog-mode";
@@ -45,6 +46,16 @@ export default async function ProgramAdminDetailPage({ params }: Props) {
 
   const contentAlert = await loadProgramContentAlert(slug);
 
+  const macroPhases =
+    slug === "adult"
+      ? ADULT_MACRO_PHASES.map((p) => ({
+          phaseIndex: p.phaseIndex,
+          name: p.name,
+          minWeeks: p.minWeeks,
+          maxWeeks: p.maxWeeks,
+        }))
+      : undefined;
+
   return (
     <div>
       <Link href="/admin/programs" className="text-xs text-accent hover:underline">← Programs</Link>
@@ -56,6 +67,7 @@ export default async function ProgramAdminDetailPage({ params }: Props) {
           name: program.name,
           durationWeeks: program.durationWeeks,
           startDate: (program as { startDate?: string | null }).startDate ?? null,
+          macroPhases,
           weeks: program.weeks,
         }}
         workouts={workouts}

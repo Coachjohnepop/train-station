@@ -107,6 +107,10 @@ async function main() {
     where: { slug: "adult" },
   });
   if (adultProgram) {
+    const { syncMacroWeekTags } = await import("../src/lib/program-macro-cycle");
+    await syncMacroWeekTags(adultProgram.id, "adult");
+    const { syncProgramSchedule } = await import("../src/lib/program-schedule");
+    await syncProgramSchedule(adultProgram.id);
     const existingEnroll = await prisma.programEnrollment.findFirst({
       where: { userId: demoUser.id, programId: adultProgram.id },
     });

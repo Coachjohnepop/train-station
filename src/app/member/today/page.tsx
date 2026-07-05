@@ -29,6 +29,8 @@ import { getMemberProfile } from "@/lib/member-profiles-store";
 import { isCoachIntakeComplete } from "@/lib/member-intake";
 import { getCoachSettings } from "@/lib/coach-settings-store";
 import { buildWarmupWorkoutView } from "@/lib/warmup-template";
+import { getUserEnrollments } from "@/lib/data/user-data";
+import { normalizeTrainingLocation } from "@/lib/program-macro-cycle";
 
 export const dynamic = "force-dynamic";
 
@@ -70,13 +72,17 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const memberName = resolveDemoUser(uid)?.name || dashboard.user.name;
 
   const calendarToday = localTodayIso();
-  const [upcoming, loggedSet, primaryProgram, profile, coachSettings] = await Promise.all([
+  const [upcoming, loggedSet, primaryProgram, profile, coachSettings, enrollments] = await Promise.all([
     loadMemberUpcomingSessions(uid),
     loadMemberLoggedWorkoutIds(uid),
     resolvePrimaryScheduleProgram(uid),
     getMemberProfile(uid),
     getCoachSettings(),
+    getUserEnrollments(uid),
   ]);
+  const trainingLocation = normalizeTrainingLocation(
+    enrollments[primaryProgram?.slug ?? "adult"]?.trainingLocation,
+  );
 
   const dayWindow = primaryProgram
     ? await buildMemberDayWindow(uid, primaryProgram.slug, loggedSet, {
@@ -170,6 +176,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
               tomorrowDay={tomorrowDay}
               workout={memberWorkout}
               programSlug={programSlug}
+              trainingLocation={trainingLocation}
               targetUserId={uid}
               scheduleLabel={scheduleLabel}
               calendarDateLabel={formatDateLabel(viewDate)}
