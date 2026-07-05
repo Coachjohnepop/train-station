@@ -41,16 +41,19 @@ export async function getZoomOAuthRecord(opts?: { preferFresh?: boolean }): Prom
   return activeRecord(raw);
 }
 
-export async function saveZoomOAuthRecord(record: ZoomOAuthRecord): Promise<ZoomOAuthRecord> {
-  await persistJsonStore({
+export async function saveZoomOAuthRecord(record: ZoomOAuthRecord): Promise<{
+  record: ZoomOAuthRecord;
+  blobSaved: boolean;
+}> {
+  const { blobSaved } = await persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
     data: record,
     setMemory: (v) => {
-      memoryStore = v;
+      memoryStore = activeRecord(v);
     },
   });
-  return record;
+  return { record, blobSaved };
 }
 
 /** Tombstone written to blob — avoids null JSON + CDN stale reads showing old tokens. */

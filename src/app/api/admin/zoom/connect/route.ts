@@ -6,6 +6,7 @@ import {
   ZOOM_OAUTH_STATE_COOKIE,
   zoomOAuthAppConfigured,
 } from "@/lib/zoom-oauth-flow";
+import { rememberZoomOAuthState } from "@/lib/zoom-oauth-pending";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ export async function GET() {
   }
 
   const state = createZoomOAuthState(auth.session.email);
+  await rememberZoomOAuthState(state, auth.session.email);
   const res = NextResponse.redirect(buildZoomAuthorizeUrl(state));
   res.cookies.set(ZOOM_OAUTH_STATE_COOKIE, state, {
     httpOnly: true,

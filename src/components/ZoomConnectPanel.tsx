@@ -61,15 +61,39 @@ export default function ZoomConnectPanel() {
 
   useEffect(() => {
     const zoom = searchParams.get("zoom");
+    const reason = searchParams.get("reason") || "";
+    const warn = searchParams.get("warn") || "";
+
     if (zoom === "connected") {
       setBanner({
         tone: "success",
-        text: "Zoom connected — use Start Video on Go to Today when class begins.",
+        text:
+          warn === "save"
+            ? "Zoom authorized, but saving the link hit a snag — try Connect once more. If it persists, contact support."
+            : "Zoom connected — use Start Video on Go to Today when class begins.",
       });
       void load();
       router.replace("/admin/settings", { scroll: false });
-    } else if (zoom === "error") {
-      setBanner({ tone: "error", text: "Zoom connection failed — try Connect again." });
+      return;
+    }
+
+    if (zoom === "error") {
+      const messages: Record<string, string> = {
+        scope:
+          "Zoom needs the user:read:token scope — in marketplace.zoom.us open your app → Scopes, add it, save, then Connect again.",
+        state:
+          "Connection timed out or your login changed mid-flow — stay signed in as the same coach, then tap Connect again.",
+        session: "Your coach session expired — sign in again, then Connect Zoom.",
+        denied: "Zoom authorization was cancelled or denied — tap Connect when you are ready.",
+        redirect:
+          "Redirect URL mismatch — in Zoom app settings, OAuth redirect must be https://www.thetrainstation.co/api/admin/zoom/callback",
+        exchange: "Zoom token exchange failed — confirm Client ID/Secret in Vercel match your Zoom app.",
+        missing_code: "Zoom did not return an authorization code — try Connect again.",
+      };
+      setBanner({
+        tone: "error",
+        text: messages[reason] || "Zoom connection failed — try Connect again.",
+      });
       router.replace("/admin/settings", { scroll: false });
     }
   }, [searchParams, load, router]);
