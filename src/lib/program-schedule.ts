@@ -1,4 +1,5 @@
 import { DAYS_PER_WEEK } from "@/lib/program-constants";
+import { cycleFromWeekDay } from "@/lib/program-cycle-day";
 import { macroPhasesForProgramSlug, syncMacroWeekTags } from "@/lib/program-macro-cycle";
 import { prisma } from "@/lib/prisma";
 
@@ -25,12 +26,13 @@ export async function syncProgramSchedule(programId: string) {
     });
 
     for (let dayNumber = 1; dayNumber <= DAYS_PER_WEEK; dayNumber++) {
+      const { cycleMonth, cycleDay } = cycleFromWeekDay(weekNumber, dayNumber);
       await prisma.programDay.upsert({
         where: {
           weekId_dayNumber: { weekId: week.id, dayNumber },
         },
-        update: {},
-        create: { weekId: week.id, dayNumber },
+        update: { cycleMonth, cycleDay },
+        create: { weekId: week.id, dayNumber, cycleMonth, cycleDay },
       });
     }
   }

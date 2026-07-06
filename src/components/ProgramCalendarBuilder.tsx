@@ -8,6 +8,8 @@ import SearchableExerciseSelect, {
 import { DAY_LABELS, PROGRAM_CYCLE_DAYS } from "@/lib/program-constants";
 import {
   coordinateFromEnrollmentDay,
+  cycleDayKeyFromLinear,
+  formatCycleDayFromWeekDay,
   linearEnrollmentDay,
   programCycleDayCount,
 } from "@/lib/member-enrollment-day";
@@ -24,6 +26,7 @@ import {
   DEFAULT_DAY_OPTIONS,
   formatMonthYear,
   formatShortDate,
+  formatTrainingLocationLabel,
   DAY_OFF_LABEL,
   DEFAULT_FASTED_CARDIO_MINUTES,
   FASTED_CARDIO_LABEL,
@@ -38,6 +41,7 @@ import {
   resolveProgramStartMonday,
   slotIndicesForTimeColumn,
   timeBlockLabel,
+  trainingLocationFromLabel,
   adjacentProgramDay,
   findProgramDayForCalendarDate,
   localTodayIso,
@@ -56,7 +60,11 @@ import type { CoachContentAlert } from "@/lib/coach-content-alerts";
 
 type WorkoutOption = { id: string; name: string };
 
-type DayOption = { workoutId: string; label: string };
+type DayOption = {
+  workoutId: string;
+  label: string;
+  trainingLocation?: "gym" | "home" | null;
+};
 
 type ProgramDay = {
   id: string;
@@ -1011,8 +1019,8 @@ export default function ProgramCalendarBuilder({
     const gym = stored.find((o) => isGymLabel(o.label));
     const home = stored.find((o) => isHomeLabel(o.label));
     const workoutOpts: DayOption[] = [
-      { workoutId: gym?.workoutId || "", label: "Gym" },
-      { workoutId: home?.workoutId || "", label: "Home" },
+      { workoutId: gym?.workoutId || "", label: "Gym", trainingLocation: "gym" },
+      { workoutId: home?.workoutId || "", label: "Home", trainingLocation: "home" },
     ];
     const needsPatch =
       !gym ||
@@ -1559,7 +1567,7 @@ export default function ProgramCalendarBuilder({
                     <div className="flex items-start justify-between gap-1">
                       <div className="min-w-0">
                         <p className={`text-xs font-semibold leading-none ${dayGridTextClass(isSelected, published, "title")}`}>
-                          Day {enrollmentDay}
+                          {formatCycleDayFromWeekDay(activeWeekData.weekNumber, day.dayNumber)}
                         </p>
                         <p className={`text-[10px] leading-none ${dayGridTextClass(isSelected, published, "meta")}`}>
                           {DAY_LABELS[day.dayNumber - 1]}
@@ -1647,13 +1655,22 @@ export default function ProgramCalendarBuilder({
                   >
                     {Array.from({ length: cycleDays }, (_, i) => i + 1).map((dayN) => (
                       <option key={dayN} value={dayN}>
-                        Day {dayN}
+                        {cycleDayKeyFromLinear(dayN)}
                       </option>
                     ))}
                   </select>
                   <p className="mt-0.5 text-[10px] text-[var(--muted)]">
-                    {DAY_LABELS[focus.dayNumber - 1]} · Week {focus.weekNumber}
-                    <span className="text-violet-300"> · {focus.label}</span>
+                    {DAY_LABELS[focus.dayNumber - 1]}
+                    <span className="text-sky-300">
+                      {" "}
+                      · {formatCycleDayFromWeekDay(focus.weekNumber, focus.dayNumber)}
+                    </span>
+                    {formatTrainingLocationLabel(trainingLocationFromLabel(focus.label)) && (
+                      <span className="text-violet-300">
+                        {" "}
+                        · {formatTrainingLocationLabel(trainingLocationFromLabel(focus.label))}
+                      </span>
+                    )}
                   </p>
                 </div>
                 <button
@@ -1680,7 +1697,7 @@ export default function ProgramCalendarBuilder({
                     className="input min-w-0 flex-1 py-1 text-xs text-[var(--text)]"
                     value={workoutTitle}
                     disabled={saving || savingTitle || !!focusDay.publishedAt}
-                    placeholder="e.g. Upper body (Gym)"
+                    placeholder="e.g. Full body"
                     onChange={(e) => setWorkoutTitle(e.target.value)}
                     onBlur={() => void saveWorkoutTitle()}
                     onKeyDown={(e) => {
@@ -1971,8 +1988,8 @@ export default function ProgramCalendarBuilder({
           <div className="max-h-[90vh] w-full max-w-lg overflow-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl">
             <h3 className="font-semibold">Assign this workout to other program days</h3>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              Pick days 1–{cycleDays}. Each target gets its own copy — workout title stays
-              separate from the day slot.
+              Pick cycle days (M1D1, M1D2, … M1D28). Each target gets its own copy — title,
+              location, and cycle day stay separate.
             </p>
             <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {Array.from({ length: cycleDays }, (_, i) => i + 1).map((dayN) => {
@@ -2004,7 +2021,7 @@ export default function ProgramCalendarBuilder({
                       }}
                     />
                     <span>
-                      Day {dayN}
+                      {cycleDayKeyFromLinear(dayN)}
                       <span className="ml-1 text-[var(--muted)]">
                         {DAY_LABELS[coord.dayNumber - 1]}
                       </span>

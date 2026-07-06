@@ -117,6 +117,7 @@ model Workout {
   exercises   WorkoutExercise[]
   programDays ProgramDay[]
   dayOptions  ProgramDayOption[]
+  cycleSlots  WorkoutCycleDaySlot[]
   logs        WorkoutLog[]
 }
 
@@ -209,6 +210,57 @@ model Program {
   weeks              ProgramWeek[]
   macroPhases        ProgramMacroPhase[]
   enrollments        ProgramEnrollment[]
+  workoutCycles      WorkoutCycle[]
+}
+
+/// Reusable 28-day workout cycle — library template or deployed month on a program.
+model WorkoutCycle {
+  id           String         @id @default(cuid())
+  name         String
+  description  String?
+  /// Set when deployed on a program; null = standalone library template.
+  programId    String?
+  /// Month slot (M1=1 … M1D28). Null for library-only templates.
+  cycleMonth   Int?
+  clonedFromId String?
+  published    Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  program      Program?       @relation(fields: [programId], references: [id], onDelete: Cascade)
+  clonedFrom   WorkoutCycle?  @relation("WorkoutCycleClone", fields: [clonedFromId], references: [id], onDelete: SetNull)
+  clones       WorkoutCycle[] @relation("WorkoutCycleClone")
+  days         WorkoutCycleDay[]
+
+  @@unique([programId, cycleMonth])
+  @@index([programId])
+}
+
+/// One day (1–28) inside a workout cycle.
+model WorkoutCycleDay {
+  id          String                @id @default(cuid())
+  cycleId     String
+  dayNumber   Int
+  isDayOff    Boolean               @default(false)
+  notes       String?
+  publishedAt DateTime?
+  cycle       WorkoutCycle          @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  slots       WorkoutCycleDaySlot[]
+
+  @@unique([cycleId, dayNumber])
+}
+
+/// Gym or Home workout slot on a cycle day.
+model WorkoutCycleDaySlot {
+  id               String         @id @default(cuid())
+  cycleDayId       String
+  workoutId        String
+  trainingLocation String
+  sortOrder        Int            @default(0)
+  cycleDay         WorkoutCycleDay @relation(fields: [cycleDayId], references: [id], onDelete: Cascade)
+  workout          Workout        @relation(fields: [workoutId], references: [id])
+
+  @@unique([cycleDayId, trainingLocation])
+  @@index([workoutId])
 }
 
 /// Jeremy macro cycle: conditioning → hypertrophy → strength → power (week ranges per phase).
@@ -246,6 +298,10 @@ model ProgramDay {
   id             String             @id @default(cuid())
   weekId         String
   dayNumber      Int
+  /// Month in the 28-day cycle (M in M1D28).
+  cycleMonth     Int                @default(1)
+  /// Day within the month cycle (1–28).
+  cycleDay       Int?
   workoutId      String?            // legacy / default option
   notes          String?
   videoUrl       String?
@@ -262,13 +318,15 @@ model ProgramDay {
 }
 
 model ProgramDayOption {
-  id        String     @id @default(cuid())
-  dayId     String
-  workoutId String
-  label     String     // e.g. "Gym", "Home - Bodyweight", "Home - Dumbbells + Bands"
-  sortOrder Int        @default(0)
-  day       ProgramDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
-  workout   Workout    @relation(fields: [workoutId], references: [id])
+  id               String     @id @default(cuid())
+  dayId            String
+  workoutId        String
+  label            String     // e.g. "Gym", "Home - Bodyweight", "Home - Dumbbells + Bands"
+  /// Typed location — separate from workout name and label.
+  trainingLocation String?    // gym | home
+  sortOrder        Int        @default(0)
+  day              ProgramDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  workout          Workout    @relation(fields: [workoutId], references: [id])
 }
 
 model ProgramEnrollment {

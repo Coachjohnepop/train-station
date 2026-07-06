@@ -3,6 +3,7 @@ import "server-only";
 import { DAY_LABELS } from "@/lib/program-constants";
 import { localTodayIso } from "@/lib/program-calendar";
 import {
+  formatCycleDayFromWeekDay,
   linearEnrollmentDay,
   rollingEnrollmentProgramDays,
 } from "@/lib/member-enrollment-day";
@@ -289,6 +290,5 @@ export function memberScheduleLabel(
   weekNumber: number,
   dayNumber: number,
 ): string {
-  const dayN = linearEnrollmentDay(weekNumber, dayNumber);
-  return `${programName} · Day ${dayN}`;
+  return `${programName} · ${formatCycleDayFromWeekDay(weekNumber, dayNumber)}`;
 }

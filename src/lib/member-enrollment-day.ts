@@ -1,4 +1,12 @@
-import { DAYS_PER_WEEK } from "@/lib/program-constants";
+import { DAYS_PER_WEEK, PROGRAM_CYCLE_DAYS } from "@/lib/program-constants";
+import {
+  cycleDayKey,
+  cycleFromLinear,
+  cycleFromWeekDay,
+  formatCycleDayFromWeekDay,
+  parseCycleDayKey,
+  weekDayFromCycle,
+} from "@/lib/program-cycle-day";
 
 export type EnrollmentCoordinate = {
   weekNumber: number;
@@ -36,9 +44,12 @@ export function coordinateFromEnrollmentDay(
   };
 }
 
-export function programCycleDayCount(durationWeeks: number, cap = 28): number {
-  return Math.min(cap, Math.max(1, durationWeeks) * DAYS_PER_WEEK);
+/** Total program days (M1D1 … M{n}D{d}) for navigation. */
+export function programCycleDayCount(durationWeeks: number, cap = PROGRAM_CYCLE_DAYS): number {
+  return Math.max(1, durationWeeks) * DAYS_PER_WEEK;
 }
+
+export { formatCycleDayFromWeekDay, cycleFromWeekDay, cycleDayKey, parseCycleDayKey };
 
 /** Clamp coach-set week/day into valid program bounds. */
 export function clampEnrollmentPosition(
@@ -52,13 +63,18 @@ export function clampEnrollmentPosition(
   return { weekNumber, dayNumber };
 }
 
+/** Member/coach cycle key — M1D1 … M1D28 (month + day in 28-day cycle). */
 export function enrollmentDayKey(weekNumber: number, dayNumber: number): string {
-  return `W${weekNumber}D${dayNumber}`;
+  const { cycleMonth, cycleDay } = cycleFromWeekDay(weekNumber, dayNumber);
+  return cycleDayKey(cycleMonth, cycleDay);
 }
 
 export function parseEnrollmentDayKey(
   value: string,
 ): EnrollmentCoordinate | null {
+  const cycle = parseCycleDayKey(value);
+  if (cycle) return weekDayFromCycle(cycle.cycleMonth, cycle.cycleDay);
+
   const match = value.trim().match(/^W(\d+)D(\d+)$/i);
   if (!match) return null;
   const weekNumber = Number(match[1]);
@@ -66,6 +82,12 @@ export function parseEnrollmentDayKey(
   if (!Number.isFinite(weekNumber) || !Number.isFinite(dayNumber)) return null;
   if (weekNumber < 1 || dayNumber < 1 || dayNumber > DAYS_PER_WEEK) return null;
   return { weekNumber, dayNumber };
+}
+
+/** Map linear program day (1-based) → M1D* key. */
+export function cycleDayKeyFromLinear(linearDay: number): string {
+  const { cycleMonth, cycleDay } = cycleFromLinear(linearDay);
+  return cycleDayKey(cycleMonth, cycleDay);
 }
 
 /** Move by program-day offsets within [W1D1 … W{durationWeeks}D7]. */

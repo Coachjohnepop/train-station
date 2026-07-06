@@ -11,7 +11,9 @@ import {
   type RollingCalendarDayPhase,
 } from "@/lib/program-calendar";
 import ScheduleJumpLink from "@/components/ScheduleJumpLink";
+import { formatCycleDayFromWeekDay } from "@/lib/member-enrollment-day";
 import { workoutContentTitle } from "@/lib/workout-content-name";
+import { formatTrainingLocationLabel, trainingLocationFromLabel } from "@/lib/program-calendar";
 import { linkifyText } from "@/lib/linkify-text";
 
 type Program = {
@@ -175,15 +177,16 @@ function DayCards({
                   if (!w) return null;
                   const wid = opt.workoutId || w.id;
                   const isThisSessionDone = loggedSet.has(wid);
-                  const isHome = /home/i.test(opt.label || "");
-                  const weekDayLabel = `W${weekNumber} · D${day.dayNumber}`;
+                  const location =
+                    formatTrainingLocationLabel(
+                      (opt as { trainingLocation?: string | null }).trainingLocation ??
+                        trainingLocationFromLabel(opt.label || ""),
+                    ) || opt.label;
+                  const isHome = location === "Home";
+                  const cycleLabel = formatCycleDayFromWeekDay(weekNumber, day.dayNumber);
                   const calIso = iso;
-                  const contentTitle = workoutContentTitle(
-                    w.name.replace(/ \(Home\)| \(Gym\)/i, ""),
-                  );
-                  const displayName =
-                    (opts.length > 1 ? `${opt.label}: ` : "") +
-                    `${weekDayLabel} · ${contentTitle || w.name}`;
+                  const contentTitle = workoutContentTitle(w.name);
+                  const displayName = `${cycleLabel} · ${contentTitle || w.name} · ${location}`;
 
                   return (
                     <Link
@@ -199,7 +202,7 @@ function DayCards({
                     >
                       <div className="min-w-0 flex-1">
                         <p className={`font-medium truncate ${compact ? "text-xs" : ""}`} title={displayName}>
-                          {displayName} {isHome && <span className="text-[10px] text-blue-600">(Home)</span>}
+                          {displayName}
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-1 text-xs font-medium whitespace-nowrap">

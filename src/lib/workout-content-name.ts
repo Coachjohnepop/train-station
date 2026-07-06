@@ -11,27 +11,45 @@ export function stripDayPrefixFromWorkoutName(name: string): string {
   result = result.replace(/^day\s+\d+\s*[-–—:·]\s*/i, "");
   result = result.replace(/^day\s+\d+\s+/i, "");
   result = result.replace(/\s+day\s+\d+\s*$/i, "");
+  result = result.replace(/^m\d+d\d+\s*[-–—:·]\s*/i, "");
+  result = result.replace(/^w\d+d\d+\s*[-–—:·]\s*/i, "");
   result = result.replace(/\bupper\s+day\s+\d+\b/gi, "Upper body");
   result = result.replace(/\s{2,}/g, " ").trim();
 
   return result;
 }
 
-/** Display / library title — content only, no Day N prefix. */
-export function workoutContentTitle(name: string | null | undefined): string {
-  return stripDayPrefixFromWorkoutName(name || "") || "Workout";
+/** Remove Gym/Home location suffixes — location lives on ProgramDayOption, not Workout.name. */
+export function stripLocationSuffixFromWorkoutName(name: string): string {
+  let result = String(name || "").trim();
+  if (!result) return result;
+
+  result = result.replace(/\s*\((gym|home)\)\s*$/i, "");
+  result = result.replace(/\s*[-–—]\s*(gym|home)\s*$/i, "");
+  result = result.replace(/\s+(gym|home)\s*$/i, "");
+  result = result.replace(/\s{2,}/g, " ").trim();
+
+  return result;
 }
 
+/** Display / library title — content only, no day index or location. */
+export function workoutContentTitle(name: string | null | undefined): string {
+  return (
+    stripLocationSuffixFromWorkoutName(stripDayPrefixFromWorkoutName(name || "")) ||
+    "Workout"
+  );
+}
+
+/** Default title when coach has not named the workout yet — never embed location. */
 export function defaultTrackWorkoutTitle(trackLabel: string): string {
   const label = trackLabel.trim();
-  if (isGymLabel(label)) return "Gym workout";
-  if (isHomeLabel(label)) return "Home workout";
   if (/^day\s*off$/i.test(label)) return "Rest day";
   if (/fasted\s*cardio/i.test(label)) return "Fasted cardio";
+  if (isGymLabel(label) || isHomeLabel(label)) return "Workout";
   return label || "Workout";
 }
 
-/** Name for a cloned copy — preserve content title, never embed calendar day. */
+/** Name for a cloned copy — preserve content title, never embed calendar day or location. */
 export function cloneWorkoutContentName(
   sourceName: string,
   trackLabel?: string,

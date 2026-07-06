@@ -280,6 +280,24 @@ export function isHomeLabel(label: string): boolean {
   return /^home$/i.test(label.trim());
 }
 
+export function trainingLocationFromLabel(
+  label: string,
+): "gym" | "home" | null {
+  if (isGymLabel(label)) return "gym";
+  if (isHomeLabel(label)) return "home";
+  return null;
+}
+
+export function formatTrainingLocationLabel(
+  location: string | null | undefined,
+): string | null {
+  if (!location) return null;
+  const normalized = location.trim().toLowerCase();
+  if (normalized === "gym") return "Gym";
+  if (normalized === "home") return "Home";
+  return null;
+}
+
 export function isDayOffLabel(label: string): boolean {
   return /^day\s*off$/i.test(label.trim());
 }

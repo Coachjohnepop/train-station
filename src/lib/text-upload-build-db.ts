@@ -186,7 +186,7 @@ export async function buildProgramWeekFromTextDb(
 ) {
   const { slots, warnings } = parseProgramWeekText(rawText);
   if (slots.length === 0) {
-    throw new Error("No schedule lines parsed — use format like: Day 1 Gym: Upper Body Workout");
+    throw new Error("No schedule lines parsed — use format like: M1D1 Gym: Upper body");
   }
 
   const targetSlug = normalizeProgramSlug(programSlug);

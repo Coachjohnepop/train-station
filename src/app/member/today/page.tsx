@@ -12,7 +12,10 @@ import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { resolveMemberUserId } from "@/lib/current-user";
 import { resolveTargetUserId } from "@/lib/resolve-target-user";
 import { localTodayIso, toIsoDate } from "@/lib/program-calendar";
-import { linearEnrollmentDay, parseEnrollmentDayKey } from "@/lib/member-enrollment-day";
+import {
+  formatCycleDayFromWeekDay,
+  parseEnrollmentDayKey,
+} from "@/lib/member-enrollment-day";
 import { loadMemberUpcomingSessions, memberTodayHref } from "@/lib/member-today";
 import { resolveTodayPageWorkout } from "@/lib/member-today-workout";
 import {
@@ -41,8 +44,7 @@ type Props = {
 function formatDateLabel(dateKey: string) {
   const enrollment = parseEnrollmentDayKey(dateKey);
   if (enrollment) {
-    const dayN = linearEnrollmentDay(enrollment.weekNumber, enrollment.dayNumber);
-    return `Day ${dayN} (Week ${enrollment.weekNumber})`;
+    return formatCycleDayFromWeekDay(enrollment.weekNumber, enrollment.dayNumber);
   }
   const d = new Date(`${dateKey}T12:00:00`);
   return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });

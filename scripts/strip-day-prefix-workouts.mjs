@@ -7,26 +7,32 @@
  *   node scripts/strip-day-prefix-workouts.mjs
  */
 
-import "dotenv/config";
+import dotenv from "dotenv";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { createPgPool } from "../src/lib/pg-connection.ts";
+import { workoutContentTitle } from "../src/lib/workout-content-name.ts";
+
+dotenv.config({ path: ".env" });
+dotenv.config({ path: ".env.go-prod", override: true });
 
 const DRY_RUN = process.env.DRY_RUN === "1" || process.env.DRY_RUN === "true";
 
-function stripDayPrefix(name) {
-  let result = String(name || "").trim();
-  if (!result) return result;
-  result = result.replace(/^day\s+\d+\s*[-–—:·]\s*/i, "");
-  result = result.replace(/^day\s+\d+\s+/i, "");
-  result = result.replace(/\s+day\s+\d+\s*$/i, "");
-  result = result.replace(/\bupper\s+day\s+\d+\b/gi, "Upper body");
-  return result.replace(/\s{2,}/g, " ").trim();
+function resolveDatabaseUrl() {
+  const url =
+    process.env.POSTGRES_PRISMA_URL ??
+    process.env.POSTGRES_URL ??
+    process.env.DATABASE_URL ??
+    "";
+  if (!url || url.includes("dummy")) {
+    throw new Error("DATABASE_URL must be a real Postgres URL (.env.go-prod)");
+  }
+  return url;
 }
 
 async function main() {
-  const prisma = new PrismaClient({
-    adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
-  });
+  const pool = createPgPool(resolveDatabaseUrl());
+  const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
   const workouts = await prisma.workout.findMany({
     select: { id: true, name: true },
@@ -35,7 +41,7 @@ async function main() {
 
   const updates = [];
   for (const w of workouts) {
-    const next = stripDayPrefix(w.name);
+    const next = workoutContentTitle(w.name);
     if (next && next !== w.name) {
       updates.push({ id: w.id, from: w.name, to: next });
     }

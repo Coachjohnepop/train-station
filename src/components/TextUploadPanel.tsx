@@ -23,11 +23,11 @@ Incline dumbbell press
 10,10,10,10 each arm
 
 HIIT cool down 5 mins`,
-  "program-week": `Day 1 Gym: Upper Body Workout (Gym)
-Day 1 Home: Upper Body Workout (Home)
-Day 2 Gym: Lower Body Workout (Gym)
-Day 2 Home: Lower Body Workout (Home)
-Day 3 Gym: Full Body (Gym)`,
+  "program-week": `M1D1 Gym: Upper body
+M1D1 Home: Upper body
+M1D2 Gym: Lower body
+M1D2 Home: Lower body
+M1D3 Gym: Full body`,
 };
 
 const HINTS: Record<TextUploadMode, string> = {

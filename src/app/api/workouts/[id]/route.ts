@@ -195,9 +195,56 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
+
   const { id } = await params;
+
+  if (isCoachCatalogDemo()) {
+    let notFound = false;
+    const { blobSaved } = await mutateDemoSeed((data) => {
+      const workouts = (data.workouts || []) as any[];
+      const before = workouts.length;
+      data.workouts = workouts.filter((w) => w.id !== id);
+      if (data.workouts.length === before) notFound = true;
+      if (data.workoutExercises) {
+        data.workoutExercises = (data.workoutExercises as any[]).filter(
+          (we) => we.workoutId !== id,
+        );
+      }
+      if (data.programDayOptions) {
+        data.programDayOptions = (data.programDayOptions as any[]).filter(
+          (o) => o.workoutId !== id,
+        );
+      }
+      if (data.programDays) {
+        data.programDays = (data.programDays as any[]).map((d) =>
+          d.workoutId === id ? { ...d, workoutId: null } : d,
+        );
+      }
+    });
+    if (notFound) {
+      return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
+    }
+    try {
+      requireBlobPersisted(blobSaved, "Workout delete");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Workout delete failed";
+      return NextResponse.json({ detail: msg }, { status: 503 });
+    }
+    return new NextResponse(null, { status: 204 });
+  }
+
   try {
-    await prisma.workout.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      await tx.programDayOption.deleteMany({ where: { workoutId: id } });
+      await tx.programDay.updateMany({
+        where: { workoutId: id },
+        data: { workoutId: null },
+      });
+      await tx.workoutLog.deleteMany({ where: { workoutId: id } });
+      await tx.workout.delete({ where: { id } });
+    });
     return new NextResponse(null, { status: 204 });
   } catch {
     return NextResponse.json({ detail: "Workout not found" }, { status: 404 });

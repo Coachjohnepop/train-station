@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isCoachCatalogDemo } from "@/lib/catalog-mode";
-import { DAY_OFF_LABEL } from "@/lib/program-calendar";
+import { DAY_OFF_LABEL, trainingLocationFromLabel } from "@/lib/program-calendar";
 import { assignWorkoutToDay } from "@/lib/program-schedule";
 import { prisma } from "@/lib/prisma";
 import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
@@ -18,7 +18,15 @@ const patchSchema = z.object({
   defaultReps: z.string().max(40).optional(),
   defaultRestSec: z.number().int().min(0).max(600).optional(),
   publishedAt: z.string().nullable().optional(),
-  options: z.array(z.object({ workoutId: z.string(), label: z.string() })).optional(),
+  options: z
+    .array(
+      z.object({
+        workoutId: z.string(),
+        label: z.string(),
+        trainingLocation: z.enum(["gym", "home"]).optional().nullable(),
+      }),
+    )
+    .optional(),
 });
 
 type Params = { params: Promise<{ dayId: string }> };
@@ -37,6 +45,7 @@ function resolveDayResponse(data: Record<string, unknown>, dayId: string) {
     .map((o) => ({
       workoutId: o.workoutId,
       label: o.label,
+      trainingLocation: o.trainingLocation ?? null,
       workout: workoutsById[o.workoutId] || null,
     }));
 
@@ -212,6 +221,8 @@ export async function PATCH(request: Request, { params }: Params) {
               dayId,
               workoutId: opt.workoutId,
               label: opt.label,
+              trainingLocation:
+                opt.trainingLocation ?? trainingLocationFromLabel(opt.label),
               sortOrder: idx,
             })),
           });

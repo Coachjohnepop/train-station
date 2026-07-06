@@ -110,14 +110,27 @@ export function pickWorkoutOptionByLocation(
   );
   if (!opts.length) return null;
 
+  const locationOf = (o: { label: string; trainingLocation?: string | null }) =>
+    o.trainingLocation || (isHomeLabel(o.label) ? "home" : isGymLabel(o.label) ? "gym" : null);
+
   if (location === "home") {
-    const home = opts.find((o) => isHomeLabel(o.label));
-    if (home?.workoutId) {
-      return { ...home, workout: options.find((o) => o.workoutId === home.workoutId)?.workout };
+    const homeIdx = options.findIndex(
+      (o) => locationOf({ label: o.label || "", trainingLocation: (o as { trainingLocation?: string }).trainingLocation }) === "home",
+    );
+    const homeOpt = homeIdx >= 0 ? options[homeIdx] : options.find((o) => isHomeLabel(o.label || ""));
+    if (homeOpt?.workoutId) {
+      return {
+        workoutId: homeOpt.workoutId,
+        label: homeOpt.label,
+        workout: homeOpt.workout,
+      };
     }
   }
 
-  const gym = opts.find((o) => isGymLabel(o.label));
+  const gym =
+    options.find(
+      (o) => locationOf({ label: o.label || "", trainingLocation: (o as { trainingLocation?: string }).trainingLocation }) === "gym",
+    ) || opts.find((o) => isGymLabel(o.label));
   const pick = gym || opts.find((o) => o.workoutId) || opts[0];
   if (!pick?.workoutId) return null;
   return {
