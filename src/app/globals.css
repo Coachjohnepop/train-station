@@ -1023,6 +1023,10 @@ table.data th {
   font-size: 1rem;
 }
 
+.landing-hero-early-signup {
+  color: #2e1065 !important;
+}
+
 /* Landing membership tickets */
 .ticket-card {
   position: relative;
