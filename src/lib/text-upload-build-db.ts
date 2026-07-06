@@ -108,7 +108,7 @@ export async function buildExercisesFromTextDb(rawText: string) {
   const skipped: string[] = [];
 
   for (const line of lines) {
-    const match = matchExerciseInCatalog(line.name, catalog);
+    const match = matchExerciseInCatalog(line.name, catalog, { fuzzy: false });
     if (match) {
       skipped.push(line.name);
       continue;

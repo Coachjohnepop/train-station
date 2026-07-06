@@ -29,7 +29,10 @@ function sleep(ms) {
 }
 
 function runNode(script, extraEnv = {}) {
-  const res = spawnSync("node", [script], {
+  const isCleanup = script.endsWith("cleanup-jerdog.mjs");
+  const cmd = isCleanup ? "npx" : "node";
+  const args = isCleanup ? ["tsx", script] : [script];
+  const res = spawnSync(cmd, args, {
     stdio: "inherit",
     env: { ...process.env, BASE_URL: BASE, ...extraEnv },
   });

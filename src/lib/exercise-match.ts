@@ -105,6 +105,7 @@ function scoreMatch(target: string, candidate: string): number {
 export function matchExerciseInCatalog(
   rawName: string,
   exercises: ExerciseCatalogEntry[],
+  options?: { fuzzy?: boolean },
 ): ExerciseCatalogEntry | null {
   const sanitized = sanitizeSmsExerciseName(rawName);
   const normalized = normalizeExerciseName(sanitized);
@@ -112,6 +113,8 @@ export function matchExerciseInCatalog(
 
   const exact = exercises.find((e) => normalizeExerciseName(e.name) === normalized);
   if (exact) return exact;
+
+  if (options?.fuzzy === false) return null;
 
   const alias = aliasTarget(normalized);
   const searchKey = alias ? normalizeExerciseName(alias) : normalized;
