@@ -74,7 +74,13 @@ export default function LandingHero() {
             Professional-grade programs. Real accountability.<br />Results that actually last.
           </p>
           
-          <div className="mt-10 flex flex-col items-center justify-center gap-5">
+          <div className="mt-10 flex flex-col items-center justify-center gap-4">
+            <Link
+              href="/signup?plan=explorer"
+              className="inline-flex h-12 items-center justify-center rounded-full bg-white px-10 text-sm font-bold text-[#4c1d95] shadow-lg transition-all hover:bg-white/95 hover:scale-[1.03] active:scale-[0.98]"
+            >
+              Early sign up
+            </Link>
             <button
               type="button"
               onClick={scrollToTickets}
@@ -83,12 +89,12 @@ export default function LandingHero() {
               Pick your ticket ↓
             </button>
             <Link
-              href="/signup?plan=explorer"
-              className="inline-flex h-12 items-center justify-center rounded-full bg-white px-10 text-sm font-bold text-[#4c1d95] shadow-lg transition-all hover:bg-white/95 hover:scale-[1.03] active:scale-[0.98]"
+              href="/login"
+              className="inline-flex h-11 w-full max-w-sm items-center justify-center rounded-full border border-white/35 px-6 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/10"
             >
-              Early sign up
+              Member sign in
             </Link>
-            <LandingSignInRow />
+            <LandingSignInRow hideMemberSignIn />
           </div>
           
           <p className="mt-8 text-xs text-white/50 tracking-widest">4-WEEK PROGRAMS • LIVE SESSIONS • COMMUNITY</p>
