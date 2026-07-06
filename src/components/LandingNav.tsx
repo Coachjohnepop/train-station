@@ -190,7 +190,7 @@ export default function LandingNav({
                 Member sign in
               </Link>
               <Link href="/signup?plan=explorer" className="btn-primary hidden px-4 py-2 text-xs sm:inline-flex">
-                Get started
+                Early sign up
               </Link>
             </>
           ) : (
@@ -267,6 +267,12 @@ export default function LandingNav({
                 {section.label}
               </Link>
             ))}
+            <Link
+              href="/signup?plan=explorer"
+              className="block rounded-lg px-2 py-2 text-sm font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
+            >
+              Early sign up
+            </Link>
             <Link href="/login" className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]">
               Member sign in
             </Link>

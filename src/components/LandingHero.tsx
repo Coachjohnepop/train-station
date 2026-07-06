@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import TrainStationBrand from "@/components/TrainStationBrand";
 import LandingSignInRow from "@/components/LandingSignInRow";
@@ -73,7 +74,7 @@ export default function LandingHero() {
             Professional-grade programs. Real accountability.<br />Results that actually last.
           </p>
           
-          <div className="mt-10 flex flex-col items-center justify-center gap-6">
+          <div className="mt-10 flex flex-col items-center justify-center gap-5">
             <button
               type="button"
               onClick={scrollToTickets}
@@ -81,6 +82,12 @@ export default function LandingHero() {
             >
               Pick your ticket ↓
             </button>
+            <Link
+              href="/signup?plan=explorer"
+              className="inline-flex h-12 items-center justify-center rounded-full bg-white px-10 text-sm font-bold text-[#7c3aed] shadow-lg transition-all hover:bg-white/95 hover:scale-[1.03] active:scale-[0.98]"
+            >
+              Early sign up
+            </Link>
             <LandingSignInRow />
           </div>
           
