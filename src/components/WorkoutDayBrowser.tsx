@@ -317,7 +317,7 @@ export default function WorkoutDayBrowser() {
 
   async function removeSlot(location: "gym" | "home", workoutId: string, title: string) {
     if (!selectedCycle) return;
-    if (!window.confirm(`Remove "${title}" from ${location} on this day and delete the workout?`)) {
+    if (!window.confirm(`Remove "${title}" from ${location} on this day? The workout stays in your library.`)) {
       return;
     }
     setBusy(true);
@@ -388,7 +388,7 @@ export default function WorkoutDayBrowser() {
                 disabled={busy}
                 onClick={() => void removeSlot(location, slot!.workoutId, title)}
               >
-                Delete
+                Remove from day
               </ActionButton>
             </div>
           </>

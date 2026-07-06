@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import WorkoutCertifyPanel from "@/components/WorkoutCertifyPanel";
 import { workoutItemsToParsedSms } from "@/lib/workout-builder-export";
 import PrescriptionRowEditor from "@/components/PrescriptionRowEditor";
@@ -64,6 +64,7 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
   const [loading, setLoading] = useState(true);
   const [savingName, setSavingName] = useState(false);
   const [persistenceNote, setPersistenceNote] = useState<string | null>(null);
+  const nameSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
     setLoadError(null);
@@ -111,7 +112,7 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
     fetch("/api/admin/demo-persistence", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.demoMode && data.message) setPersistenceNote(data.message);
+        if (data?.message) setPersistenceNote(data.message);
       })
       .catch(() => {});
   }, []);
@@ -231,7 +232,7 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
     );
   }
 
-  async function saveWorkoutName(name: string) {
+  const saveWorkoutName = useCallback(async (name: string) => {
     const trimmed = name.trim();
     if (!trimmed || !workout || trimmed === workout.name) return;
     setSavingName(true);
@@ -256,6 +257,19 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
     } finally {
       setSavingName(false);
     }
+  }, [workout, workoutId]);
+
+  useEffect(() => {
+    return () => {
+      if (nameSaveTimer.current) clearTimeout(nameSaveTimer.current);
+    };
+  }, []);
+
+  function scheduleWorkoutNameSave(name: string) {
+    if (nameSaveTimer.current) clearTimeout(nameSaveTimer.current);
+    nameSaveTimer.current = setTimeout(() => {
+      void saveWorkoutName(name);
+    }, 900);
   }
 
   const parsedForExport = useMemo(
@@ -318,7 +332,11 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
             aria-label="Workout title"
             placeholder="e.g. Full body"
             disabled={savingName}
-            onBlur={(e) => void saveWorkoutName(e.target.value)}
+            onChange={(e) => scheduleWorkoutNameSave(e.target.value)}
+            onBlur={(e) => {
+              if (nameSaveTimer.current) clearTimeout(nameSaveTimer.current);
+              void saveWorkoutName(e.target.value);
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();

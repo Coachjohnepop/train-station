@@ -8,7 +8,8 @@ export async function GET() {
       demoMode: false,
       durable: true,
       blobWritable: true,
-      message: "Using database — edits persist automatically.",
+      message:
+        "Workouts, exercises, and 28-day cycles save to the production database automatically.",
     });
   }
 

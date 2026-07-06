@@ -45,18 +45,6 @@ export async function PATCH(request: Request, { params }: Params) {
         });
         if (slot) {
           await prisma.workoutCycleDaySlot.delete({ where: { id: slot.id } });
-          const workoutId = parsed.data.workoutId || slot.workoutId;
-          if (workoutId) {
-            await prisma.$transaction(async (tx) => {
-              await tx.programDayOption.deleteMany({ where: { workoutId } });
-              await tx.programDay.updateMany({
-                where: { workoutId },
-                data: { workoutId: null },
-              });
-              await tx.workoutLog.deleteMany({ where: { workoutId } });
-              await tx.workout.delete({ where: { id: workoutId } }).catch(() => null);
-            });
-          }
         }
       }
       const { getWorkoutCycleById, syncCycleToProgramSchedule } = await import(
