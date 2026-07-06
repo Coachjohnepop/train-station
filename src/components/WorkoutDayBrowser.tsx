@@ -280,10 +280,18 @@ export default function WorkoutDayBrowser() {
     setBusy(true);
     setError(null);
     try {
+      const libRes = await fetch("/api/workouts", fetchOpts);
+      const freshLibrary = libRes.ok ? ((await libRes.json()) as WorkoutRef[]) : workoutLibrary;
+      setWorkoutLibrary(freshLibrary);
+
       let id = workoutId;
       if (!id) {
         const workout = await createWorkout(title?.trim() || "Workout");
         id = workout.id;
+      } else if (!freshLibrary.some((w) => w.id === id)) {
+        throw new Error(
+          "That workout is no longer in the library (it may have been merged). Refresh and choose again.",
+        );
       }
       const res = await fetch(
         `/api/workout-cycles/${selectedCycle.id}/days/${selectedDay}`,

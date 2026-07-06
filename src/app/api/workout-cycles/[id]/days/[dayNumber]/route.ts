@@ -94,6 +94,7 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json(cycle);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Update failed";
-    return NextResponse.json({ detail: msg }, { status: 500 });
+    const status = msg.startsWith("WORKOUT_NOT_FOUND") ? 404 : 500;
+    return NextResponse.json({ detail: msg }, { status });
   }
 }

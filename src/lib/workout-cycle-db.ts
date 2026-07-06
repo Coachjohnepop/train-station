@@ -4,6 +4,18 @@ import { cloneWorkout } from "@/lib/clone-workout";
 import { prisma } from "@/lib/prisma";
 import { workoutContentTitle } from "@/lib/workout-content-name";
 
+async function assertWorkoutExists(workoutId: string) {
+  const workout = await prisma.workout.findUnique({
+    where: { id: workoutId },
+    select: { id: true },
+  });
+  if (!workout) {
+    throw new Error(
+      "WORKOUT_NOT_FOUND: That workout was removed or merged — refresh the page and pick again from the library.",
+    );
+  }
+}
+
 const cycleInclude = {
   days: {
     orderBy: { dayNumber: "asc" as const },
@@ -201,6 +213,7 @@ export async function updateCycleDaySlot(
       data: { isDayOff: true, notes: input.notes ?? "Day Off" },
     });
   } else if (input.workoutId) {
+    await assertWorkoutExists(input.workoutId);
     await prisma.workoutCycleDay.update({
       where: { id: day.id },
       data: { isDayOff: false, notes: input.notes ?? null },
