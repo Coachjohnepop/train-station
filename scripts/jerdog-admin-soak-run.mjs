@@ -79,6 +79,35 @@ async function main() {
     fail("Persistence API", JSON.stringify(persist.body));
   }
 
+  // --- Text upload: exercises first (before manual CRUD pollutes catalog) ---
+  const exLines = [
+    `${MARKER} Zq soak alpha ${RUN_ID}`,
+    `${MARKER} Zq soak beta ${RUN_ID}`,
+  ].join("\n");
+  const exImport = await req("/api/text-upload/build", {
+    method: "POST",
+    json: { mode: "exercises", rawText: exLines },
+  });
+  const exCreated = exImport.body?.created ?? 0;
+  const exTotal = exImport.body?.total ?? 0;
+  if (exImport.res.ok && exCreated >= 1) {
+    pass("Text upload exercises", `created ${exCreated}/${exTotal}`);
+    if (exImport.body.exerciseIds?.length) {
+      manifest.created.exercises.push(...exImport.body.exerciseIds);
+    }
+  } else if (exImport.res.ok && exTotal >= 1 && exImport.body?.skipped >= exTotal) {
+    fail(
+      "Text upload exercises",
+      `all ${exTotal} skipped as duplicates — ${JSON.stringify(exImport.body.skippedNames)}`,
+    );
+  } else {
+    fail(
+      "Text upload exercises",
+      exImport.body?.error ||
+        `status ${exImport.res.status} created=${exCreated} total=${exTotal}`,
+    );
+  }
+
   // --- Exercise create / rename / delete ---
   const exName = `${MARKER} Temp Curl ${RUN_ID}`;
   const exRenamed = `${MARKER} Renamed Curl ${RUN_ID}`;
@@ -185,35 +214,6 @@ async function main() {
     manifest.created.workouts[0].name = woRenamed;
   } else {
     fail("PATCH workout rename", `${woRename.res.status}`);
-  }
-
-  // --- Text upload: exercises (names must not fuzzy-match catalog) ---
-  const exLines = [
-    `${MARKER} Zq soak alpha ${RUN_ID}`,
-    `${MARKER} Zq soak beta ${RUN_ID}`,
-  ].join("\n");
-  const exImport = await req("/api/text-upload/build", {
-    method: "POST",
-    json: { mode: "exercises", rawText: exLines },
-  });
-  const exCreated = exImport.body?.created ?? 0;
-  const exTotal = exImport.body?.total ?? 0;
-  if (exImport.res.ok && exCreated >= 1) {
-    pass("Text upload exercises", `created ${exCreated}/${exTotal}`);
-    if (exImport.body.exerciseIds?.length) {
-      manifest.created.exercises.push(...exImport.body.exerciseIds);
-    }
-  } else if (exImport.res.ok && exTotal >= 1 && exImport.body?.skipped >= exTotal) {
-    fail(
-      "Text upload exercises",
-      `all ${exTotal} skipped as duplicates — ${JSON.stringify(exImport.body.skippedNames)}`,
-    );
-  } else {
-    fail(
-      "Text upload exercises",
-      exImport.body?.error ||
-        `status ${exImport.res.status} created=${exCreated} total=${exTotal}`,
-    );
   }
 
   // --- Text upload: workout ---

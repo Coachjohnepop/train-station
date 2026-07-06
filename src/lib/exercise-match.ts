@@ -54,9 +54,13 @@ function aliasTarget(normalized: string): string | null {
   return best;
 }
 
+function meaningfulWords(s: string): string[] {
+  return s.split(" ").filter((w) => w.length > 2 && !/^\d+$/.test(w));
+}
+
 function scoreMatch(target: string, candidate: string): number {
-  const tWords = target.split(" ").filter((w) => w.length > 2);
-  const cWords = candidate.split(" ").filter((w) => w.length > 2);
+  const tWords = meaningfulWords(target);
+  const cWords = meaningfulWords(candidate);
   if (tWords.length === 0) return 0;
 
   let score = 0;
@@ -124,6 +128,9 @@ export function matchExerciseInCatalog(
     }
   }
 
-  const minScore = Math.max(3, Math.min(4, searchKey.split(" ").filter((w) => w.length > 3).length * 2));
+  const minScore = Math.max(
+    3,
+    Math.min(4, meaningfulWords(searchKey).filter((w) => w.length > 3).length * 2),
+  );
   return bestScore >= minScore ? best : null;
 }
