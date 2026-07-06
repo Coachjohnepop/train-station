@@ -1023,8 +1023,20 @@ table.data th {
   font-size: 1rem;
 }
 
+/* Hero early-signup — fixed lavender pill; never inherits theme link/text colors */
 .landing-hero-early-signup {
+  background-color: #ddd6fe !important;
+  border: 1px solid #c4b5fd !important;
   color: #2e1065 !important;
+  -webkit-text-fill-color: #2e1065 !important;
+  box-shadow: 0 8px 24px rgba(46, 16, 101, 0.28);
+}
+
+.landing-hero-early-signup:hover {
+  background-color: #ede9fe !important;
+  border-color: #a78bfa !important;
+  color: #1e1b4b !important;
+  -webkit-text-fill-color: #1e1b4b !important;
 }
 
 /* Landing membership tickets */

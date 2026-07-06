@@ -77,8 +77,7 @@ export default function LandingHero() {
           <div className="mt-10 flex flex-col items-center justify-center gap-4">
             <Link
               href="/signup?plan=explorer"
-              className="landing-hero-early-signup inline-flex h-12 items-center justify-center rounded-full bg-white px-10 text-sm font-bold shadow-lg transition-all hover:bg-white/95 hover:scale-[1.03] active:scale-[0.98]"
-              style={{ color: "#2e1065" }}
+              className="landing-hero-early-signup inline-flex h-12 items-center justify-center rounded-full px-10 text-sm font-bold shadow-lg transition-all hover:scale-[1.03] active:scale-[0.98]"
             >
               Early sign up
             </Link>
