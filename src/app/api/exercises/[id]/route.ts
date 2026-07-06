@@ -22,6 +22,25 @@ const updateSchema = z.object({
 
 type Params = { params: Promise<{ id: string }> };
 
+export async function GET(_request: Request, { params }: Params) {
+  const { id } = await params;
+
+  if (isDemoMode()) {
+    await hydrateDemoExercises({ preferFresh: true });
+    const exercise = loadDemoExercises().find((e: { id: string }) => e.id === id);
+    if (!exercise) {
+      return NextResponse.json({ detail: "Exercise not found" }, { status: 404 });
+    }
+    return NextResponse.json(exercise, { headers: { "Cache-Control": "no-store" } });
+  }
+
+  const exercise = await prisma.exercise.findUnique({ where: { id } });
+  if (!exercise) {
+    return NextResponse.json({ detail: "Exercise not found" }, { status: 404 });
+  }
+  return NextResponse.json(exercise, { headers: { "Cache-Control": "no-store" } });
+}
+
 export async function PATCH(request: Request, { params }: Params) {
   const auth = await requireStaff();
   if (!auth.ok) return auth.response;
