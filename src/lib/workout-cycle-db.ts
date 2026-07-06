@@ -1,5 +1,3 @@
-import "server-only";
-
 import { PROGRAM_CYCLE_DAYS } from "@/lib/program-constants";
 import { weekDayFromCycle } from "@/lib/program-cycle-day";
 import { cloneWorkout } from "@/lib/clone-workout";
