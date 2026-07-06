@@ -17,6 +17,7 @@ import { parseProgramWeekText, type ParsedWeekDaySlot } from "@/lib/program-week
 import { parseSmsWorkout, type ParsedSmsWorkout } from "@/lib/sms-workout-parser";
 import { NEWLY_ADDED_EXERCISE_TAG } from "@/lib/text-upload-exercises";
 import { normalizeProgramSlug } from "@/lib/programs";
+import { workoutContentTitle } from "@/lib/workout-content-name";
 
 function normalizeName(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -134,10 +135,12 @@ export async function buildSeedWorkoutFromParsed(
   parsed: ParsedSmsWorkout,
   workoutName?: string,
 ) {
-  const name = (workoutName || parsed.title || "Text upload workout").trim();
-  const workoutId = `w-upload-${Date.now()}`;
+  const name = workoutContentTitle(
+    (workoutName || parsed.title || "Text upload workout").trim(),
+  );
   const newExerciseIds: string[] = [];
   const workoutExercises: any[] = [];
+  const workoutId = `w-upload-${Date.now()}`;
 
   for (const [idx, ex] of parsed.exercises.entries()) {
     const { exercise, created } = await ensureExercise(ex.name, ex.notes);
@@ -159,25 +162,47 @@ export async function buildSeedWorkoutFromParsed(
   }
 
   const now = new Date().toISOString();
+  let reused = false;
+  let resolvedId = workoutId;
+
   await mutateDemoSeed((seed) => {
     if (!seed.workouts) seed.workouts = [];
     if (!seed.workoutExercises) seed.workoutExercises = [];
 
-    seed.workouts.push({
-      id: workoutId,
-      name,
-      description: "Created from text upload",
-      createdAt: now,
-      updatedAt: now,
-    });
-    seed.workoutExercises.push(...workoutExercises);
+    const existing = (seed.workouts as any[]).find(
+      (w) => workoutContentTitle(w.name) === name,
+    );
+    if (existing) {
+      reused = true;
+      resolvedId = existing.id;
+      existing.name = name;
+      existing.description = "Updated from text upload";
+      existing.updatedAt = now;
+      seed.workoutExercises = (seed.workoutExercises as any[]).filter(
+        (we) => we.workoutId !== existing.id,
+      );
+    } else {
+      (seed.workouts as any[]).push({
+        id: workoutId,
+        name,
+        description: "Created from text upload",
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    for (const we of workoutExercises) {
+      we.workoutId = resolvedId;
+    }
+    (seed.workoutExercises as any[]).push(...workoutExercises);
   });
 
   return {
-    workoutId,
+    workoutId: resolvedId,
     workoutName: name,
     exerciseCount: parsed.exercises.length,
     newExerciseIds,
+    reused,
   };
 }
 

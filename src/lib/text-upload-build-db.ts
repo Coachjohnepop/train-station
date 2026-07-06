@@ -15,6 +15,10 @@ import {
   structuredPrescriptionReady,
   type WorkoutExerciseCreateInput,
 } from "@/lib/workout-prescription-db";
+import {
+  canonicalWorkoutContentName,
+  findWorkoutByContentTitle,
+} from "@/lib/workout-catalog";
 
 type ExerciseRow = {
   id: string;
@@ -158,15 +162,37 @@ export async function buildWorkoutFromParsedDb(
     });
   }
 
+  const canonicalName = canonicalWorkoutContentName(name);
+  const existing = await findWorkoutByContentTitle(canonicalName);
+  const exerciseCreates = items.map((item) =>
+    buildWorkoutExerciseCreateData(item, structured),
+  );
+
+  if (existing) {
+    await prisma.workoutExercise.deleteMany({ where: { workoutId: existing.id } });
+    const workout = await prisma.workout.update({
+      where: { id: existing.id },
+      data: {
+        name: canonicalName,
+        description: "Updated from text upload",
+        exercises: { create: exerciseCreates },
+      },
+      select: { id: true, name: true },
+    });
+    return {
+      workoutId: workout.id,
+      workoutName: workout.name,
+      exerciseCount: parsed.exercises.length,
+      newExerciseIds,
+      reused: true,
+    };
+  }
+
   const workout = await prisma.workout.create({
     data: {
-      name,
+      name: canonicalName,
       description: "Created from text upload",
-      exercises: {
-        create: items.map((item) =>
-          buildWorkoutExerciseCreateData(item, structured),
-        ),
-      },
+      exercises: { create: exerciseCreates },
     },
     select: { id: true, name: true },
   });

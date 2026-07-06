@@ -40,6 +40,18 @@ export function workoutContentTitle(name: string | null | undefined): string {
   );
 }
 
+/** Case-insensitive key for matching workout titles in the library. */
+export function workoutContentTitleKey(name: string | null | undefined): string {
+  return workoutContentTitle(name).trim().toLowerCase();
+}
+
+export function workoutsMatchByContentTitle(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): boolean {
+  return workoutContentTitleKey(a) === workoutContentTitleKey(b);
+}
+
 /** Default title when coach has not named the workout yet — never embed location. */
 export function defaultTrackWorkoutTitle(trackLabel: string): string {
   const label = trackLabel.trim();

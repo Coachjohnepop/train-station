@@ -7,6 +7,11 @@ import { BLOB_TOKEN } from "@/lib/demo-json-blob";
 import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { filterVisibleWorkouts } from "@/lib/programs";
 import { requireStaff } from "@/lib/api-auth";
+import {
+  canonicalWorkoutContentName,
+  findWorkoutByContentTitle,
+} from "@/lib/workout-catalog";
+
 
 const createSchema = z.object({
   name: z.string().min(1).max(200),
@@ -50,10 +55,19 @@ export async function POST(request: Request) {
   }
   if (isCoachCatalogDemo()) {
     try {
+      const name = canonicalWorkoutContentName(parsed.data.name);
+      const seedBefore = await getDemoSeed({ preferFresh: Boolean(BLOB_TOKEN) });
+      const existing = ((seedBefore.workouts as any[]) || []).find(
+        (w) => canonicalWorkoutContentName(w.name) === name,
+      );
+      if (existing) {
+        return NextResponse.json({ ...existing, reused: true });
+      }
+
       const now = new Date().toISOString();
       const workout = {
         id: `new-w-${Date.now()}`,
-        name: parsed.data.name.trim(),
+        name,
         description: parsed.data.description?.trim() || null,
         createdAt: now,
         updatedAt: now,
@@ -82,9 +96,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ detail: msg }, { status: 503 });
     }
   }
+  const name = canonicalWorkoutContentName(parsed.data.name);
+  const existing = await findWorkoutByContentTitle(name);
+  if (existing) {
+    return NextResponse.json({ ...existing, reused: true });
+  }
+
   const workout = await prisma.workout.create({
     data: {
-      name: parsed.data.name.trim(),
+      name,
       description: parsed.data.description?.trim() || null,
     },
   });
