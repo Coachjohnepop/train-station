@@ -307,22 +307,32 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
         </div>
       )}
 
-      <div>
-        <input
-          className="w-full max-w-xl border-0 bg-transparent p-0 text-2xl font-bold outline-none focus:ring-0"
-          defaultValue={workout.name}
-          aria-label="Workout name"
-          disabled={savingName}
-          onBlur={(e) => void saveWorkoutName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              (e.target as HTMLInputElement).blur();
-            }
-          }}
-        />
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          {workout.exercises.length} exercise{workout.exercises.length === 1 ? "" : "s"} · tap name to rename
+      <div className="max-w-xl space-y-2">
+        <label className="block text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+          Workout title
+        </label>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            className="input min-w-0 flex-1 text-xl font-bold"
+            defaultValue={workout.name}
+            aria-label="Workout title"
+            placeholder="e.g. Full body"
+            disabled={savingName}
+            onBlur={(e) => void saveWorkoutName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+          />
+          {savingName && (
+            <span className="text-sm text-[var(--muted)]">Saving…</span>
+          )}
+        </div>
+        <p className="text-sm text-[var(--muted)]">
+          {workout.exercises.length} exercise{workout.exercises.length === 1 ? "" : "s"} ·
+          content only — day (M1D2) and location (Gym/Home) live on the program cycle
         </p>
       </div>
 
