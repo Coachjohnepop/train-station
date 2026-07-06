@@ -84,7 +84,7 @@ export default function LandingHero() {
             </button>
             <Link
               href="/signup?plan=explorer"
-              className="inline-flex h-12 items-center justify-center rounded-full bg-white px-10 text-sm font-bold text-[#7c3aed] shadow-lg transition-all hover:bg-white/95 hover:scale-[1.03] active:scale-[0.98]"
+              className="inline-flex h-12 items-center justify-center rounded-full bg-white px-10 text-sm font-bold text-[#4c1d95] shadow-lg transition-all hover:bg-white/95 hover:scale-[1.03] active:scale-[0.98]"
             >
               Early sign up
             </Link>
