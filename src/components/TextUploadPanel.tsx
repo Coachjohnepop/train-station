@@ -2,8 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatApiError } from "@/lib/api-errors";
+import { cycleDayKey } from "@/lib/program-cycle-day";
+import {
+  detectUploadTargetFromPaste,
+  type UploadCycleTarget,
+} from "@/lib/parse-upload-cycle-target";
 
 export type TextUploadMode = "exercises" | "workout" | "program-week";
 
@@ -34,7 +39,7 @@ const HINTS: Record<TextUploadMode, string> = {
   exercises:
     "One exercise per line. Add tags after | or comma (e.g. Back Row | Back, Chest). Matches existing names are skipped.",
   workout:
-    "Same format as Go to Today / SMS paste — title, warm-up, exercise names, sets/reps lines. Saves a new workout to your library.",
+    "Paste workout text. Use “Day 3 Upper Body” or “M1D3 Gym: Upper body” in the title — assigns to that cycle day on the selected month. Title saves without day/location.",
   "program-week":
     "Assign workouts to program days. Format: Day N Gym: Workout Title (no Day number in the title — day is the slot).",
 };
@@ -51,11 +56,22 @@ type PreviewData =
       warnings?: string[];
     };
 
+export type CycleUploadContext = {
+  cycleId: string;
+  cycleMonth: number;
+  cycleName: string;
+  /** Default day when title has no day number. */
+  selectedDay?: number;
+  trainingLocation?: "gym" | "home";
+};
+
 export default function TextUploadPanel({
   mode,
   programSlug,
   weekNumber,
   weekOptions,
+  cycleContext,
+  onTargetDayChange,
   onBuilt,
   collapsible = true,
   defaultOpen = false,
@@ -64,6 +80,8 @@ export default function TextUploadPanel({
   programSlug?: string;
   weekNumber?: number;
   weekOptions?: number[];
+  cycleContext?: CycleUploadContext | null;
+  onTargetDayChange?: (day: number | null) => void;
   onBuilt?: (result: Record<string, unknown>) => void;
   collapsible?: boolean;
   defaultOpen?: boolean;
@@ -78,6 +96,39 @@ export default function TextUploadPanel({
   const [messageIsError, setMessageIsError] = useState(false);
   const [newExerciseCount, setNewExerciseCount] = useState(0);
   const [open, setOpen] = useState(defaultOpen);
+  const [uploadLocation, setUploadLocation] = useState<"gym" | "home">(
+    cycleContext?.trainingLocation ?? "gym",
+  );
+
+  const uploadTarget: UploadCycleTarget | null = useMemo(() => {
+    if (mode !== "workout" || !cycleContext) return null;
+    return detectUploadTargetFromPaste(workoutName, rawText);
+  }, [mode, cycleContext, workoutName, rawText]);
+
+  const resolvedCycleDay = useMemo(() => {
+    if (!uploadTarget) return null;
+    return (
+      uploadTarget.cycleDay ??
+      cycleContext?.selectedDay ??
+      null
+    );
+  }, [uploadTarget, cycleContext?.selectedDay]);
+
+  const resolvedCycleMonth = useMemo(() => {
+    if (!uploadTarget) return cycleContext?.cycleMonth ?? 1;
+    return uploadTarget.cycleMonth ?? cycleContext?.cycleMonth ?? 1;
+  }, [uploadTarget, cycleContext?.cycleMonth]);
+
+  const resolvedLocation = uploadTarget?.trainingLocation ?? uploadLocation;
+
+  useEffect(() => {
+    if (mode !== "workout") return;
+    onTargetDayChange?.(resolvedCycleDay);
+  }, [mode, resolvedCycleDay, onTargetDayChange]);
+
+  useEffect(() => {
+    if (cycleContext?.trainingLocation) setUploadLocation(cycleContext.trainingLocation);
+  }, [cycleContext?.trainingLocation, cycleContext?.cycleId]);
 
   function formatResponseError(res: Response, body: Record<string, unknown>) {
     if (typeof body.error === "string") return body.error;
@@ -133,8 +184,17 @@ export default function TextUploadPanel({
         mode,
         rawText: rawText.trim(),
       };
-      if (mode === "workout" && workoutName.trim()) {
-        body.workoutName = workoutName.trim();
+      if (mode === "workout") {
+        const title =
+          uploadTarget?.contentTitle ||
+          workoutName.trim() ||
+          undefined;
+        if (title) body.workoutName = title;
+        if (cycleContext?.cycleId && resolvedCycleDay) {
+          body.cycleId = cycleContext.cycleId;
+          body.cycleDay = resolvedCycleDay;
+          body.trainingLocation = resolvedLocation;
+        }
       }
       if (mode === "program-week") {
         body.programSlug = programSlug;
@@ -162,8 +222,15 @@ export default function TextUploadPanel({
           `Added ${data.created} exercise${data.created !== 1 ? "s" : ""}${data.skipped ? ` · skipped ${data.skipped} duplicates` : ""}.`,
         );
       } else if (mode === "workout") {
+        const slot = data.cycleSlot as { cycleDay?: number; cycleMonth?: number; location?: string } | undefined;
+        const slotLabel =
+          slot?.cycleDay != null
+            ? `${cycleDayKey(slot.cycleMonth ?? resolvedCycleMonth, slot.cycleDay)} · ${slot.location ?? resolvedLocation}`
+            : null;
         setMessage(
-          `Saved workout "${data.workoutName}" with ${data.exerciseCount} blocks. Open it to certify and download export text.`,
+          slotLabel
+            ? `Saved "${data.workoutName}" (${data.exerciseCount} blocks) → assigned to ${slotLabel}.`
+            : `Saved workout "${data.workoutName}" with ${data.exerciseCount} blocks.`,
         );
       } else {
         setMessage(
@@ -175,7 +242,7 @@ export default function TextUploadPanel({
       onBuilt?.(data);
       router.refresh();
 
-      if (mode === "workout" && data.workoutId) {
+      if (mode === "workout" && data.workoutId && !data.cycleSlot) {
         setTimeout(() => {
           window.location.href = `/admin/workouts/${data.workoutId}`;
         }, 800);
@@ -193,15 +260,66 @@ export default function TextUploadPanel({
       <p className="text-xs text-[var(--muted)]">{HINTS[mode]}</p>
 
       {mode === "workout" && (
-        <label className="block text-xs">
-          <span className="text-[var(--muted)]">Workout name (optional — uses parsed title if blank)</span>
-          <input
-            className="input mt-1 w-full"
-            value={workoutName}
-            onChange={(e) => setWorkoutName(e.target.value)}
-            placeholder="e.g. Day 3 Upper Body - Home"
-          />
-        </label>
+        <>
+          <label className="block text-xs">
+            <span className="text-[var(--muted)]">
+              Title line (optional — first line of paste if blank). “Day 3 Upper body” → M
+              {cycleContext?.cycleMonth ?? 1}D3
+            </span>
+            <input
+              className="input mt-1 w-full"
+              value={workoutName}
+              onChange={(e) => setWorkoutName(e.target.value)}
+              placeholder={`e.g. Day 3 Upper body — or M${cycleContext?.cycleMonth ?? 1}D3 Gym: Upper body`}
+            />
+          </label>
+          {cycleContext && (
+            <div className="flex flex-wrap items-center gap-3 text-xs">
+              <label className="flex items-center gap-2">
+                <span className="text-[var(--muted)]">Location</span>
+                <select
+                  className="input py-1"
+                  value={resolvedLocation}
+                  disabled={!!uploadTarget?.trainingLocation}
+                  onChange={(e) => setUploadLocation(e.target.value as "gym" | "home")}
+                >
+                  <option value="gym">Gym</option>
+                  <option value="home">Home</option>
+                </select>
+              </label>
+              {resolvedCycleMonth !== cycleContext.cycleMonth && resolvedCycleDay != null && (
+                <p className="text-amber-300">
+                  Title month M{resolvedCycleMonth} does not match selected cycle M
+                  {cycleContext.cycleMonth} — switch cycle or fix title.
+                </p>
+              )}
+              {resolvedCycleDay != null &&
+              resolvedCycleMonth === cycleContext.cycleMonth ? (
+                <p className="rounded-lg border border-sky-500/40 bg-sky-950/40 px-3 py-2 font-medium text-sky-200">
+                  Assigns to{" "}
+                  <strong>
+                    {cycleDayKey(resolvedCycleMonth, resolvedCycleDay)}
+                  </strong>{" "}
+                  · {resolvedLocation === "home" ? "Home" : "Gym"}
+                  {resolvedCycleMonth !== cycleContext.cycleMonth && (
+                    <span className="text-amber-300"> (month override in title)</span>
+                  )}
+                  <span className="block text-[10px] font-normal text-sky-300/80">
+                    Cycle: {cycleContext.cycleName}
+                    {uploadTarget?.contentTitle && (
+                      <> · Title: “{uploadTarget.contentTitle}”</>
+                    )}
+                  </span>
+                </p>
+              ) : resolvedCycleDay == null ? (
+                <p className="text-[var(--muted)]">
+                  Add “Day N” or “M{cycleContext.cycleMonth}DN” in the title to assign to a cycle day,
+                  or select a day in the column at left.
+                </p>
+              ) : null}
+            </div>
+          )}
+        </>
       )}
 
       {mode === "program-week" && weekOptions && weekOptions.length > 0 && (
@@ -235,7 +353,14 @@ export default function TextUploadPanel({
         <button
           type="button"
           onClick={handleBuild}
-          disabled={saving || !rawText.trim()}
+          disabled={
+            saving ||
+            !rawText.trim() ||
+            (mode === "workout" &&
+              !!cycleContext &&
+              resolvedCycleDay != null &&
+              resolvedCycleMonth !== cycleContext.cycleMonth)
+          }
           className="btn-primary text-sm px-4 py-1"
         >
           {saving ? "Building..." : "Build & save"}

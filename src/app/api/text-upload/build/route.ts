@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireStaff } from "@/lib/api-auth";
+import { detectUploadTargetFromPaste } from "@/lib/parse-upload-cycle-target";
 import {
   buildExercisesFromText,
   buildProgramWeekFromText,
@@ -13,6 +14,9 @@ const schema = z.object({
   workoutName: z.string().max(200).optional(),
   programSlug: z.string().optional(),
   weekNumber: z.number().int().positive().optional(),
+  cycleId: z.string().optional(),
+  cycleDay: z.number().int().min(1).max(28).optional(),
+  trainingLocation: z.enum(["gym", "home"]).optional(),
 });
 
 export async function POST(request: Request) {
@@ -34,8 +38,28 @@ export async function POST(request: Request) {
     }
 
     if (mode === "workout") {
-      const result = await buildWorkoutFromText(text, workoutName);
-      return NextResponse.json({ mode, ...result });
+      const target = detectUploadTargetFromPaste(workoutName || "", text);
+      const cleanName = workoutName?.trim()
+        ? target.contentTitle || workoutName
+        : target.contentTitle || undefined;
+      const result = await buildWorkoutFromText(text, cleanName);
+      let cycleSlot: Record<string, unknown> | null = null;
+      if (parsed.data.cycleId && parsed.data.cycleDay && result.workoutId) {
+        const { updateCycleDaySlot, getWorkoutCycleById } = await import(
+          "@/lib/workout-cycle-db"
+        );
+        const cycle = await getWorkoutCycleById(parsed.data.cycleId);
+        await updateCycleDaySlot(parsed.data.cycleId, parsed.data.cycleDay, {
+          trainingLocation: parsed.data.trainingLocation ?? "gym",
+          workoutId: result.workoutId,
+        });
+        cycleSlot = {
+          cycleDay: parsed.data.cycleDay,
+          cycleMonth: cycle?.cycleMonth ?? 1,
+          location: parsed.data.trainingLocation ?? "gym",
+        };
+      }
+      return NextResponse.json({ mode, ...result, cycleSlot });
     }
 
     if (!programSlug || !weekNumber) {

@@ -111,6 +111,7 @@ export default function WorkoutDayBrowser() {
   const [newCycleName, setNewCycleName] = useState("");
   const [newWorkoutTitle, setNewWorkoutTitle] = useState("");
   const [showLibrary, setShowLibrary] = useState(true);
+  const [uploadHighlightDay, setUploadHighlightDay] = useState<number | null>(null);
 
   const selectedCycle = useMemo(() => {
     const fromList =
@@ -505,8 +506,6 @@ export default function WorkoutDayBrowser() {
         </div>
       )}
 
-      <TextUploadPanel mode="workout" onBuilt={() => void refresh()} collapsible defaultOpen={false} />
-
       <div className="overflow-hidden rounded-xl border-2 border-[var(--border)] bg-[var(--surface)]">
         <div className="flex min-h-[28rem] flex-col lg:flex-row">
           <aside className="w-full shrink-0 border-b border-[var(--border)] bg-[var(--surface-2)] lg:w-52 lg:border-b-0 lg:border-r">
@@ -519,30 +518,47 @@ export default function WorkoutDayBrowser() {
                 const day = selectedCycle?.days?.find((d) => d.dayNumber === dayNum);
                 const hasContent =
                   day && (day.isDayOff || day.slots.some((s) => s.workoutId));
-                const isSelected = selectedDay === dayNum;
-                return (
-                  <li key={dayNum}>
-                    <button
-                      type="button"
-                      className={`flex w-full flex-col px-3 py-2.5 text-left text-xs transition lg:py-2 ${
-                        isSelected
+              const isSelected = selectedDay === dayNum;
+              const isUploadTarget = uploadHighlightDay === dayNum;
+              return (
+                <li key={dayNum}>
+                  <button
+                    type="button"
+                    className={`flex w-full flex-col px-3 py-2.5 text-left text-xs transition lg:py-2 ${
+                      isUploadTarget
+                        ? "ring-2 ring-inset ring-sky-400 bg-sky-950/50"
+                        : isSelected
                           ? "bg-accent text-white"
                           : "hover:bg-[var(--surface)]"
-                      }`}
-                      onClick={() => setSelectedDay(dayNum)}
+                    }`}
+                    onClick={() => {
+                      setSelectedDay(dayNum);
+                      setUploadHighlightDay(null);
+                    }}
+                  >
+                    <span className="font-bold">
+                      {mDayKey(selectedCycle?.cycleMonth, dayNum)}
+                    </span>
+                    <span
+                      className={
+                        isSelected && !isUploadTarget
+                          ? "text-white/80"
+                          : "text-[var(--muted)]"
+                      }
                     >
-                      <span className="font-bold">
-                        {mDayKey(selectedCycle?.cycleMonth, dayNum)}
+                      {DAY_LABELS[(dayNum - 1) % 7]}
+                    </span>
+                    {isUploadTarget && (
+                      <span className="mt-0.5 text-[9px] font-bold uppercase text-sky-300">
+                        ↑ upload here
                       </span>
-                      <span className={isSelected ? "text-white/80" : "text-[var(--muted)]"}>
-                        {DAY_LABELS[(dayNum - 1) % 7]}
-                      </span>
-                      {hasContent && !isSelected && (
-                        <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
-                      )}
-                    </button>
-                  </li>
-                );
+                    )}
+                    {hasContent && !isSelected && !isUploadTarget && (
+                      <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
+                    )}
+                  </button>
+                </li>
+              );
               })}
             </ul>
           </aside>
@@ -563,6 +579,30 @@ export default function WorkoutDayBrowser() {
                     <p className="text-sm text-sky-300/90">{selectedCycle.name}</p>
                   )}
                 </div>
+                <TextUploadPanel
+                  mode="workout"
+                  collapsible
+                  defaultOpen
+                  cycleContext={
+                    selectedCycle
+                      ? {
+                          cycleId: selectedCycle.id,
+                          cycleMonth: selectedCycle.cycleMonth ?? 1,
+                          cycleName: selectedCycle.name,
+                          selectedDay,
+                        }
+                      : null
+                  }
+                  onTargetDayChange={(day) => {
+                    setUploadHighlightDay(day);
+                    if (day != null) setSelectedDay(day);
+                  }}
+                  onBuilt={() => {
+                    setUploadHighlightDay(null);
+                    void refresh();
+                  }}
+                />
+
                 <div className="grid gap-4 md:grid-cols-2">
                   {renderSlot("gym")}
                   {renderSlot("home")}
