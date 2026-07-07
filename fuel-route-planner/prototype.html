@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diesel Route Planner — prototype</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; margin: 0; background: #f4f5f7; color: #1a1d21; }
+  header { background: #14532d; color: #fff; padding: 14px 20px; }
+  header h1 { margin: 0; font-size: 18px; }
+  header p { margin: 4px 0 0; font-size: 13px; opacity: .85; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px 20px; background: #fff; border-bottom: 1px solid #ddd; align-items: end; }
+  .controls label { display: flex; flex-direction: column; font-size: 12px; font-weight: 600; gap: 4px; }
+  .controls input { padding: 8px 10px; border: 1px solid #bbb; border-radius: 6px; font-size: 14px; min-width: 130px; }
+  .controls input.wide { min-width: 220px; }
+  button { padding: 9px 18px; border: 0; border-radius: 6px; background: #16a34a; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+  button:disabled { background: #9ca3af; cursor: wait; }
+  #status { padding: 8px 20px; font-size: 13px; color: #555; min-height: 30px; }
+  #status.error { color: #b91c1c; font-weight: 600; }
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  #map { height: 70vh; min-height: 400px; }
+  #results { height: 70vh; overflow-y: auto; padding: 0 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
+  th, td { padding: 7px 8px; border-bottom: 1px solid #e5e7eb; text-align: left; white-space: nowrap; }
+  th { position: sticky; top: 0; background: #f9fafb; cursor: default; }
+  tr.best { background: #dcfce7; font-weight: 700; }
+  td.price { font-variant-numeric: tabular-nums; font-weight: 600; }
+  td.stale { color: #9ca3af; }
+  .muted { color: #6b7280; font-weight: 400; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Diesel Route Planner — prototype</h1>
+  <p>Routes API + Places API (New) Search-Along-Route with live <code>fuelOptions</code> diesel prices. Needs an API key with Routes API, Places API (New), and Maps JavaScript API enabled.</p>
+</header>
+
+<div class="controls">
+  <label>Google Maps API key <input id="apiKey" class="wide" type="password" placeholder="AIza..."></label>
+  <label>Start <input id="origin" class="wide" value="Elk Grove, CA"></label>
+  <label>Destination <input id="dest" class="wide" value="Morro Bay, CA"></label>
+  <label>Max detour (mi) <input id="maxDetour" type="number" value="2" min="0.5" step="0.5" style="min-width:80px"></label>
+  <button id="go" onclick="plan()">Plan route</button>
+</div>
+<div id="status">Enter your API key and click <b>Plan route</b>.</div>
+
+<main>
+  <div id="map"></div>
+  <div id="results"></div>
+</main>
+
+<script>
+"use strict";
+let map, mapsLoaded = false, markers = [], routeLine = null;
+
+const $ = id => document.getElementById(id);
+const setStatus = (msg, isErr) => { const s = $("status"); s.textContent = msg; s.className = isErr ? "error" : ""; };
+
+// ---------- polyline encode / decode (Google encoded polyline algorithm) ----------
+function decodePolyline(str) {
+  const pts = []; let lat = 0, lng = 0, i = 0;
+  while (i < str.length) {
+    for (const which of [0, 1]) {
+      let shift = 0, result = 0, b;
+      do { b = str.charCodeAt(i++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      const delta = (result & 1) ? ~(result >> 1) : (result >> 1);
+      if (which === 0) lat += delta; else lng += delta;
+    }
+    pts.push({ lat: lat / 1e5, lng: lng / 1e5 });
+  }
+  return pts;
+}
+function encodePolyline(pts) {
+  let out = "", plat = 0, plng = 0;
+  const enc = v => {
+    v = v < 0 ? ~(v << 1) : (v << 1);
+    let s = "";
+    while (v >= 0x20) { s += String.fromCharCode((0x20 | (v & 0x1f)) + 63); v >>= 5; }
+    return s + String.fromCharCode(v + 63);
+  };
+  for (const p of pts) {
+    const lat = Math.round(p.lat * 1e5), lng = Math.round(p.lng * 1e5);
+    out += enc(lat - plat) + enc(lng - plng);
+    plat = lat; plng = lng;
+  }
+  return out;
+}
+
+// ---------- geometry ----------
+const MI_PER_DEG_LAT = 69.05;
+function ptSegDistMi(p, a, b) {
+  // equirectangular projection around the segment's latitude — fine at <10 mi scales
+  const kx = Math.cos(((a.lat + b.lat) / 2) * Math.PI / 180) * MI_PER_DEG_LAT;
+  const ax = a.lng * kx, ay = a.lat * MI_PER_DEG_LAT;
+  const bx = b.lng * kx, by = b.lat * MI_PER_DEG_LAT;
+  const px = p.lng * kx, py = p.lat * MI_PER_DEG_LAT;
+  const dx = bx - ax, dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  const t = len2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0;
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+// distance from point to route + how far along the route that closest point is
+function distToRoute(p, pts, cumMi) {
+  let best = Infinity, at = 0;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const d = ptSegDistMi(p, pts[i], pts[i + 1]);
+    if (d < best) { best = d; at = cumMi[i]; }
+  }
+  return { detourMi: best, alongMi: at };
+}
+function cumulativeMiles(pts) {
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i];
+    const kx = Math.cos(((a.lat + b.lat) / 2) * Math.PI / 180) * MI_PER_DEG_LAT;
+    cum.push(cum[i - 1] + Math.hypot((b.lng - a.lng) * kx, (b.lat - a.lat) * MI_PER_DEG_LAT));
+  }
+  return cum;
+}
+
+// ---------- API calls ----------
+async function computeRoute(key, origin, dest) {
+  const res = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": key,
+      "X-Goog-FieldMask": "routes.polyline.encodedPolyline,routes.distanceMeters,routes.duration",
+    },
+    body: JSON.stringify({
+      origin: { address: origin },
+      destination: { address: dest },
+      travelMode: "DRIVE",
+      polylineQuality: "HIGH_QUALITY",
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error("Routes API: " + (data.error?.message || res.status));
+  if (!data.routes?.length) throw new Error("No route found.");
+  return data.routes[0];
+}
+
+async function searchDieselAlong(key, encodedPolyline) {
+  const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": key,
+      "X-Goog-FieldMask": [
+        "places.id", "places.displayName", "places.formattedAddress",
+        "places.location", "places.fuelOptions", "places.currentOpeningHours.openNow",
+      ].join(","),
+    },
+    body: JSON.stringify({
+      textQuery: "diesel gas station",
+      searchAlongRouteParameters: { polyline: { encodedPolyline } },
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error("Places API: " + (data.error?.message || res.status));
+  return data.places || [];
+}
+
+function dieselPrice(place) {
+  const prices = place.fuelOptions?.fuelPrices || [];
+  // prefer regular DIESEL; fall back to truck lanes
+  for (const type of ["DIESEL", "TRUCK_DIESEL", "DIESEL_PLUS"]) {
+    const fp = prices.find(p => p.type === type && p.price);
+    if (fp) {
+      return {
+        usd: Number(fp.price.units || 0) + (fp.price.nanos || 0) / 1e9,
+        type, updated: fp.updateTime ? new Date(fp.updateTime) : null,
+      };
+    }
+  }
+  return null;
+}
+
+// ---------- Maps JS loader ----------
+function loadMapsJs(key) {
+  if (mapsLoaded) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    window.__mapsReady = () => { mapsLoaded = true; resolve(); };
+    const s = document.createElement("script");
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&callback=__mapsReady&loading=async`;
+    s.onerror = () => reject(new Error("Maps JS failed to load — check the API key."));
+    document.head.appendChild(s);
+  });
+}
+
+// ---------- main flow ----------
+async function plan() {
+  const key = $("apiKey").value.trim();
+  if (!key) return setStatus("API key required.", true);
+  const btn = $("go");
+  btn.disabled = true;
+  try {
+    setStatus("Computing route…");
+    const route = await computeRoute(key, $("origin").value, $("dest").value);
+    const pts = decodePolyline(route.polyline.encodedPolyline);
+    const cumMi = cumulativeMiles(pts);
+    const totalMi = cumMi[cumMi.length - 1];
+
+    // one SAR call per ~50-mile slice of route (each call returns max 20 places)
+    const sliceMi = 50;
+    const slices = [];
+    let start = 0;
+    for (let target = sliceMi; start < pts.length - 1; target += sliceMi) {
+      let end = cumMi.findIndex(m => m >= target);
+      if (end === -1) end = pts.length - 1;
+      slices.push(encodePolyline(pts.slice(start, end + 1)));
+      start = end;
+    }
+    setStatus(`Route: ${totalMi.toFixed(0)} mi. Searching diesel stations (${slices.length} segments)…`);
+
+    const results = await Promise.all(slices.map(s => searchDieselAlong(key, s)));
+    const byId = new Map();
+    for (const place of results.flat()) byId.set(place.id, place);
+
+    const maxDetour = parseFloat($("maxDetour").value) || 2;
+    const stations = [];
+    for (const place of byId.values()) {
+      const price = dieselPrice(place);
+      if (!price) continue; // no known diesel price → skip
+      const loc = { lat: place.location.latitude, lng: place.location.longitude };
+      const { detourMi, alongMi } = distToRoute(loc, pts, cumMi);
+      if (detourMi > maxDetour) continue;
+      stations.push({
+        name: place.displayName?.text || "Station",
+        address: place.formattedAddress || "",
+        openNow: place.currentOpeningHours?.openNow,
+        loc, price, detourMi, alongMi,
+      });
+    }
+    stations.sort((a, b) => a.price.usd - b.price.usd);
+
+    await loadMapsJs(key);
+    render(pts, stations, totalMi);
+    setStatus(stations.length
+      ? `${stations.length} diesel stations within ${maxDetour} mi of the route. Cheapest: ${stations[0].name} @ $${stations[0].price.usd.toFixed(2)}/gal (${stations[0].alongMi.toFixed(0)} mi into the trip).`
+      : "No stations with known diesel prices found inside the detour limit — try widening it.");
+  } catch (e) {
+    setStatus(e.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function render(pts, stations, totalMi) {
+  if (!map) map = new google.maps.Map($("map"), { center: pts[0], zoom: 7 });
+  markers.forEach(m => m.setMap(null)); markers = [];
+  if (routeLine) routeLine.setMap(null);
+
+  routeLine = new google.maps.Polyline({ path: pts, strokeColor: "#14532d", strokeWeight: 4, map });
+  const bounds = new google.maps.LatLngBounds();
+  pts.forEach(p => bounds.extend(p));
+  map.fitBounds(bounds);
+
+  const min = stations[0]?.price.usd, max = stations[stations.length - 1]?.price.usd;
+  const info = new google.maps.InfoWindow();
+  stations.forEach((s, i) => {
+    const frac = max > min ? (s.price.usd - min) / (max - min) : 0; // 0 = cheapest
+    const hue = 130 - frac * 130; // green → red
+    const marker = new google.maps.Marker({
+      position: s.loc, map,
+      label: { text: "$" + s.price.usd.toFixed(2), fontSize: "10px", fontWeight: "700" },
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE, scale: i === 0 ? 16 : 12,
+        fillColor: `hsl(${hue},80%,45%)`, fillOpacity: .95, strokeColor: "#fff", strokeWeight: 2,
+      },
+      zIndex: 1000 - i,
+    });
+    marker.addListener("click", () => {
+      info.setContent(`<b>${s.name}</b><br>${s.address}<br>Diesel $${s.price.usd.toFixed(2)}/gal (${s.price.type})<br>${s.alongMi.toFixed(0)} mi into trip · ${s.detourMi.toFixed(1)} mi off route`);
+      info.open(map, marker);
+    });
+    markers.push(marker);
+  });
+
+  const staleCutoff = Date.now() - 48 * 3600 * 1000;
+  $("results").innerHTML = `
+    <table>
+      <thead><tr><th>Diesel $/gal</th><th>Station</th><th>Mi into trip</th><th>Detour</th><th>Price updated</th></tr></thead>
+      <tbody>${stations.map((s, i) => `
+        <tr class="${i === 0 ? "best" : ""}">
+          <td class="price">$${s.price.usd.toFixed(2)} <span class="muted">${s.price.type === "TRUCK_DIESEL" ? "(truck lane)" : ""}</span></td>
+          <td>${s.name}<br><span class="muted">${s.address}</span></td>
+          <td>${s.alongMi.toFixed(0)} / ${totalMi.toFixed(0)}</td>
+          <td>${s.detourMi.toFixed(1)} mi</td>
+          <td class="${s.price.updated && s.price.updated.getTime() < staleCutoff ? "stale" : ""}">
+            ${s.price.updated ? s.price.updated.toLocaleString() : "unknown"}</td>
+        </tr>`).join("")}
+      </tbody>
+    </table>`;
+}
+</script>
+</body>
+</html>
