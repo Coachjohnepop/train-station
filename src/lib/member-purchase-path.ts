@@ -1,4 +1,5 @@
-import { isStaffRole, type UserRole } from "@/lib/auth-session";
+import type { UserRole } from "@/lib/auth-session-edge";
+import { isStaffRole } from "@/lib/staff-access";
 import { isSignupPlan, normalizeSignupPlan } from "@/lib/signup-plans";
 
 export type PurchaseAuth = {
