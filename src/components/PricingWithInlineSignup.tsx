@@ -266,7 +266,7 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
 
       {/* Also link the coach side */}
       <div className="mt-8 text-center">
-        <Link href="/admin" className="text-sm text-[#7c3aed] hover:underline">
+        <Link href="/login?next=/admin" className="text-sm text-[#7c3aed] hover:underline">
           Looking for coach / admin tools? →
         </Link>
       </div>

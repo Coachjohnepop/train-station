@@ -4,6 +4,8 @@ import {
   normalizeLiveSessionDate,
 } from "@/lib/live-workout-session";
 import { getHotLiveSession, subscribeLiveSession } from "@/lib/live-session-hot";
+import { requireSession, assertUserScope } from "@/lib/api-auth";
+import { isStaffRole } from "@/lib/staff-access";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -11,12 +13,17 @@ export const runtime = "nodejs";
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(request: Request, { params }: Params) {
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+
   const { id: workoutId } = await params;
   const { searchParams } = new URL(request.url);
-  const userId = searchParams.get("userId");
-  if (!userId) {
-    return new Response("userId required", { status: 400 });
-  }
+  const requestedUserId = searchParams.get("userId");
+  const userId = isStaffRole(auth.session.role) && requestedUserId
+    ? requestedUserId
+    : auth.session.id;
+  const scopeErr = assertUserScope(auth.session, userId);
+  if (scopeErr) return scopeErr;
 
   const sessionDate = normalizeLiveSessionDate(searchParams.get("date") || undefined);
   const key = liveSessionKey(userId, workoutId, sessionDate);

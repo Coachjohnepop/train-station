@@ -3,6 +3,7 @@ import { z } from "zod";
 import { BLOB_TOKEN } from "@/lib/demo-json-blob";
 import { isCoachCatalogDemo } from "@/lib/catalog-mode";
 import { cloneWorkout } from "@/lib/clone-workout";
+import { requireCoachStaff } from "@/lib/api-auth";
 
 const bodySchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -11,6 +12,9 @@ const bodySchema = z.object({
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, { params }: Params) {
+  const auth = await requireCoachStaff();
+  if (!auth.ok) return auth.response;
+
   const { id: sourceWorkoutId } = await params;
   const parsed = bodySchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) {

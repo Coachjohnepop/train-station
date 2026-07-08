@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { resolveUserId } from "@/lib/current-user";
+import { requireSession, assertUserScope } from "@/lib/api-auth";
+import { isStaffRole } from "@/lib/staff-access";
 import { createWorkoutLogAndPerformances, type LogExerciseInput } from "@/lib/data/user-data";
 import { awardGamificationPoints } from "@/lib/member-gamification-store";
 import { localTodayIso } from "@/lib/program-calendar";
@@ -29,6 +30,9 @@ const logBodySchema = z.object({
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, { params }: Params) {
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+
   const { id: workoutId } = await params;
 
   const parsed = logBodySchema.safeParse(await request.json());
@@ -39,7 +43,12 @@ export async function POST(request: Request, { params }: Params) {
     );
   }
 
-  const uid = parsed.data.targetUserId || (await resolveUserId());
+  const uid =
+    isStaffRole(auth.session.role) && parsed.data.targetUserId
+      ? parsed.data.targetUserId
+      : auth.session.id;
+  const scopeErr = assertUserScope(auth.session, uid);
+  if (scopeErr) return scopeErr;
 
   try {
     const result = await createWorkoutLogAndPerformances({

@@ -19,6 +19,8 @@ const createSchema = z.object({
 });
 
 export async function GET() {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
   if (isCoachCatalogDemo()) {
     const data = await getDemoSeed();
     const workouts = (data.workouts || []).map((w: any) => {

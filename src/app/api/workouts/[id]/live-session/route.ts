@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { resolveUserId } from "@/lib/current-user";
+import { requireSession, assertUserScope } from "@/lib/api-auth";
+import { isStaffRole } from "@/lib/staff-access";
 import {
   clearLiveWorkoutSession,
   getLiveWorkoutSession,
@@ -22,9 +23,18 @@ const putSchema = z.object({
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(request: Request, { params }: Params) {
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+
   const { id: workoutId } = await params;
   const { searchParams } = new URL(request.url);
-  const userId = searchParams.get("userId") || (await resolveUserId());
+  const requestedUserId = searchParams.get("userId");
+  const userId = isStaffRole(auth.session.role) && requestedUserId
+    ? requestedUserId
+    : auth.session.id;
+  const scopeErr = assertUserScope(auth.session, userId);
+  if (scopeErr) return scopeErr;
+
   const sessionDate = normalizeLiveSessionDate(searchParams.get("date") || undefined);
 
   const session = await getLiveWorkoutSession({
@@ -37,6 +47,9 @@ export async function GET(request: Request, { params }: Params) {
 }
 
 export async function PUT(request: Request, { params }: Params) {
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+
   const { id: workoutId } = await params;
   const parsed = putSchema.safeParse(await request.json());
   if (!parsed.success) {
@@ -44,6 +57,17 @@ export async function PUT(request: Request, { params }: Params) {
   }
 
   const data = parsed.data;
+  const scopeErr = assertUserScope(auth.session, data.userId);
+  if (scopeErr) return scopeErr;
+
+  if (!isStaffRole(auth.session.role)) {
+    if (data.updatedBy === "coach") {
+      return NextResponse.json({ error: "Members cannot write coach sessions." }, { status: 403 });
+    }
+    if (data.userId !== auth.session.id) {
+      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+    }
+  }
 
   if (data.clear) {
     await clearLiveWorkoutSession({

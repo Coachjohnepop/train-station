@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { DEMO_MEMBER_EMAIL } from "@/lib/demo-workout";
 import { isDemoMode, getDemoEnrollments, enrollDemo, unenrollDemo } from "@/lib/demo-enrollments";
-import { resolveUserId } from "@/lib/current-user";
 import { resolvePostEnrollRedirect } from "@/lib/member-destinations";
 import { getCatalogStatus } from "@/lib/programs";
+import { requireSession } from "@/lib/api-auth";
 
 type Params = { params: Promise<{ slug: string }> };
 
 export async function POST(_request: Request, { params }: Params) {
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+
   const { slug } = await params;
-  const uid = await resolveUserId();
+  const uid = auth.session.id;
 
   if (getCatalogStatus(slug) === "coming_soon") {
     return NextResponse.json({ detail: "This program is coming soon" }, { status: 403 });
@@ -24,10 +26,9 @@ export async function POST(_request: Request, { params }: Params) {
     if (current[slug]) {
       return NextResponse.json({ detail: "Already enrolled" }, { status: 400 });
     }
-    // Simulate enrollment; use program data to validate slug exists
     const { listPrograms } = await import("@/lib/program-data");
     const programs = await listPrograms();
-    const program = programs.find((p: any) => p.slug === slug);
+    const program = programs.find((p: { slug: string }) => p.slug === slug);
     if (!program) {
       return NextResponse.json({ detail: "Program not found" }, { status: 404 });
     }
@@ -36,13 +37,7 @@ export async function POST(_request: Request, { params }: Params) {
     return NextResponse.json({ success: true, enrollmentId: `enroll-${uid}-${slug}`, redirectTo });
   }
 
-  // Real DB: use cookie user or fallback to legacy demo email
-  let userId = uid;
-  let user = await prisma.user.findUnique({ where: { id: uid } }).catch(() => null);
-  if (!user) {
-    user = await prisma.user.findUnique({ where: { email: DEMO_MEMBER_EMAIL } });
-    if (user) userId = user.id;
-  }
+  const user = await prisma.user.findUnique({ where: { id: uid } });
   if (!user) {
     return NextResponse.json({ detail: "User not found" }, { status: 404 });
   }
@@ -55,7 +50,7 @@ export async function POST(_request: Request, { params }: Params) {
   }
 
   const existing = await prisma.programEnrollment.findFirst({
-    where: { userId: userId, programId: program.id },
+    where: { userId: uid, programId: program.id },
   });
   if (existing) {
     return NextResponse.json({ detail: "Already enrolled" }, { status: 400 });
@@ -63,7 +58,7 @@ export async function POST(_request: Request, { params }: Params) {
 
   const enrollment = await prisma.programEnrollment.create({
     data: {
-      userId: userId,
+      userId: uid,
       programId: program.id,
       startedAt: new Date(),
       currentWeek: 1,
@@ -71,13 +66,16 @@ export async function POST(_request: Request, { params }: Params) {
     },
   });
 
-  const redirectTo = await resolvePostEnrollRedirect(userId, slug);
+  const redirectTo = await resolvePostEnrollRedirect(uid, slug);
   return NextResponse.json({ success: true, enrollmentId: enrollment.id, redirectTo });
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+
   const { slug } = await params;
-  const uid = await resolveUserId();
+  const uid = auth.session.id;
 
   if (isDemoMode()) {
     const current = getDemoEnrollments(uid);
@@ -88,12 +86,7 @@ export async function DELETE(_request: Request, { params }: Params) {
     return NextResponse.json({ success: true });
   }
 
-  let userId = uid;
-  let user = await prisma.user.findUnique({ where: { id: uid } }).catch(() => null);
-  if (!user) {
-    user = await prisma.user.findUnique({ where: { email: DEMO_MEMBER_EMAIL } });
-    if (user) userId = user.id;
-  }
+  const user = await prisma.user.findUnique({ where: { id: uid } });
   if (!user) {
     return NextResponse.json({ detail: "User not found" }, { status: 404 });
   }
@@ -106,7 +99,7 @@ export async function DELETE(_request: Request, { params }: Params) {
   }
 
   await prisma.programEnrollment.deleteMany({
-    where: { userId: userId, programId: program.id },
+    where: { userId: uid, programId: program.id },
   });
 
   return NextResponse.json({ success: true });

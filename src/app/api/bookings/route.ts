@@ -8,6 +8,8 @@ import {
   getAvailableSlots,
 } from "@/lib/booking";
 import { prisma } from "@/lib/prisma";
+import { requireSession, requireStaff } from "@/lib/api-auth";
+import { isStaffRole } from "@/lib/staff-access";
 
 function isDemoMode() {
   const url = process.env.DATABASE_URL ?? "";
@@ -24,6 +26,9 @@ const createSchema = z.object({
 });
 
 export async function GET(request: Request) {
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+
   const url = new URL(request.url);
   if (url.searchParams.get("slots") === "true") {
     const slots = await getAvailableSlots();
@@ -34,17 +39,35 @@ export async function GET(request: Request) {
       })),
     );
   }
+
+  if (!isStaffRole(auth.session.role)) {
+    return NextResponse.json({ error: "Staff access required." }, { status: 403 });
+  }
   const bookings = await getBookings();
   return NextResponse.json(bookings);
 }
 
 export async function POST(request: Request) {
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+
   const parsed = createSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
   }
 
   const data = parsed.data;
+  const memberEmail = data.memberEmail.trim().toLowerCase();
+  const sessionEmail = auth.session.email?.trim().toLowerCase();
+  if (!isStaffRole(auth.session.role)) {
+    if (!sessionEmail || memberEmail !== sessionEmail) {
+      return NextResponse.json(
+        { error: "You can only book using your own email." },
+        { status: 403 },
+      );
+    }
+    data.userId = auth.session.id;
+  }
 
   const contact = await getAdminContact();
   const booking = await createBooking({
@@ -70,6 +93,9 @@ const updateSchema = z.object({
 });
 
 export async function PATCH(request: Request) {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
+
   const parsed = updateSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });

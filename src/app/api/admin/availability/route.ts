@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAvailabilities, setAvailabilities } from "@/lib/booking";
+import { requireStaff } from "@/lib/api-auth";
 
 function isDemoMode() {
   const url = process.env.DATABASE_URL ?? "";
@@ -17,12 +18,16 @@ const setSchema = z.array(z.object({
 }));
 
 export async function GET() {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
   if (isDemoMode()) return NextResponse.json(demoAvails);
   const avails = await getAvailabilities();
   return NextResponse.json(avails);
 }
 
 export async function POST(request: Request) {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
   const parsed = setSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });

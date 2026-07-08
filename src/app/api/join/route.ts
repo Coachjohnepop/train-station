@@ -6,6 +6,8 @@ import { randomUUID } from "crypto";
 import { MEMBER_COOKIE, MEMBER_NAME_COOKIE } from "@/lib/current-user";
 import { isInvitedAccountEmail } from "@/lib/invited-accounts";
 import { addToWaitlist } from "@/lib/waitlist";
+import { isSecurityEnforced } from "@/lib/security-config";
+import { getSessionUser } from "@/lib/auth";
 
 const joinSchema = z.object({
   name: z.string().min(1).max(80).optional(),
@@ -129,7 +131,22 @@ export async function POST(request: Request) {
     }
   }
 
-  // Build response and set cookies (joined identity)
+  const session = await getSessionUser();
+  const securityEnforced = isSecurityEnforced();
+
+  // Production: never bootstrap identity via cookie — require a real session.
+  if (securityEnforced && (!session || session.id !== userId)) {
+    const loginParams = new URLSearchParams({ next: "/member/today" });
+    if (userEmail) loginParams.set("email", userEmail);
+    return NextResponse.json({
+      success: true,
+      userId,
+      name: userName,
+      redirectTo: `/login?${loginParams.toString()}`,
+      requiresLogin: true,
+    });
+  }
+
   const res = NextResponse.json({
     success: true,
     userId,
@@ -137,21 +154,21 @@ export async function POST(request: Request) {
     redirectTo: "/member/today",
   });
 
-  // httpOnly uid for server-only use
-  res.cookies.set(MEMBER_COOKIE, userId, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 365, // 1 year
-  });
-
-  // name for quick display on public root / shell (non-sensitive)
-  res.cookies.set(MEMBER_NAME_COOKIE, userName.slice(0, 60), {
-    httpOnly: false,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 365,
-  });
+  // Demo / dev only: cookie-backed identity for join flows without password.
+  if (!securityEnforced) {
+    res.cookies.set(MEMBER_COOKIE, userId, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+    });
+    res.cookies.set(MEMBER_NAME_COOKIE, userName.slice(0, 60), {
+      httpOnly: false,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+    });
+  }
 
   return res;
 }

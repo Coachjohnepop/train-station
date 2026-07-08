@@ -8,6 +8,7 @@ import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
 import { BLOB_TOKEN } from "@/lib/demo-json-blob";
 import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { ensureDemoWorkoutInSeed } from "@/lib/demo-workout-items";
+import { requireCoachStaff } from "@/lib/api-auth";
 
 const patchSchema = z.object({
   workoutId: z.string().nullable().optional(),
@@ -62,6 +63,9 @@ function resolveDayResponse(data: Record<string, unknown>, dayId: string) {
 }
 
 export async function PATCH(request: Request, { params }: Params) {
+  const auth = await requireCoachStaff();
+  if (!auth.ok) return auth.response;
+
   const { dayId } = await params;
   const parsed = patchSchema.safeParse(await request.json());
   if (!parsed.success) {

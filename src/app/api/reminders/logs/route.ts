@@ -2,8 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { getDemoSmsLogs, addDemoSmsLog } from "@/lib/sms";
+import { requireStaff } from "@/lib/api-auth";
 
 export async function GET() {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
   if (isDemoMode()) {
     const logs = await getDemoSmsLogs();
     return NextResponse.json(logs.slice(0, 30));
@@ -18,6 +21,8 @@ export async function GET() {
 
 // For demo, allow other senders (broadcast) to append via the shared store
 export async function POST(request: Request) {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
   if (!isDemoMode()) return NextResponse.json({ ok: false }, { status: 400 });
   const body = await request.json();
   await addDemoSmsLog(body);

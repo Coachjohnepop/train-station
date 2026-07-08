@@ -23,6 +23,8 @@ const createSchema = z.object({
 });
 
 export async function GET() {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
   if (isDemoMode()) {
     await hydrateDemoExercises({ preferFresh: true });
     const exercises = loadDemoExercises();

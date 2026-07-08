@@ -2,10 +2,14 @@ import { NextResponse } from "next/server";
 import { isCoachCatalogDemo } from "@/lib/catalog-mode";
 import { getDemoSeed } from "@/lib/demo-seed-store";
 import { getSyncedProgramFromDb } from "@/lib/program-catalog-db";
+import { requireCoachStaff } from "@/lib/api-auth";
 
 type Params = { params: Promise<{ slug: string }> };
 
 export async function POST(_request: Request, { params }: Params) {
+  const auth = await requireCoachStaff();
+  if (!auth.ok) return auth.response;
+
   const { slug } = await params;
   if (isCoachCatalogDemo()) {
     const data = await getDemoSeed({ preferFresh: true });

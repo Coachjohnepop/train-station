@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { resolveMemberUserId } from "@/lib/current-user";
 import { setUserTrainingLocation } from "@/lib/data/user-data";
+import { requireMemberAccess } from "@/lib/api-auth";
 
 const patchSchema = z.object({
   programSlug: z.string().min(1),
@@ -9,7 +9,9 @@ const patchSchema = z.object({
 });
 
 export async function PATCH(request: Request) {
-  const userId = await resolveMemberUserId();
+  const auth = await requireMemberAccess();
+  if (!auth.ok) return auth.response;
+  const userId = auth.session.id;
   const parsed = patchSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });

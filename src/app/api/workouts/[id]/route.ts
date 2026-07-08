@@ -23,6 +23,8 @@ const updateSchema = z.object({
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: Params) {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
   const { id } = await params;
   if (isCoachCatalogDemo()) {
     const data = await getDemoSeed({ preferFresh: true });

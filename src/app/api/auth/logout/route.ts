@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { clearSessionCookies, getSessionUser } from "@/lib/auth";
+import { safeRelativePath } from "@/lib/api-auth";
 import { isStaffRole } from "@/lib/auth-session";
 import { MEMBER_COOKIE } from "@/lib/current-user";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
@@ -49,10 +50,12 @@ export async function GET(request: Request) {
   const loginUrl = new URL("/login", reqUrl.origin);
   loginUrl.searchParams.set("switch", "1");
   const redirectAfter = reqUrl.searchParams.get("redirect");
-  if (redirectAfter?.startsWith("/")) {
-    loginUrl.searchParams.set("redirect", redirectAfter);
+  const safeRedirectAfter = safeRelativePath(redirectAfter);
+  if (safeRedirectAfter) {
+    loginUrl.searchParams.set("redirect", safeRedirectAfter);
   }
-  const destination = nextParam?.startsWith("/") ? new URL(nextParam, reqUrl.origin) : loginUrl;
+  const safeNext = safeRelativePath(nextParam);
+  const destination = safeNext ? new URL(safeNext, reqUrl.origin) : loginUrl;
   const res = NextResponse.redirect(destination);
   await rememberEmailOnLogout(res, email);
   clearSessionCookies(res);

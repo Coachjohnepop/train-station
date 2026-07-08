@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { sendDailyReminders } from "@/lib/booking";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { addDemoSmsLog } from "@/lib/sms";
+import { cronAuthorized, requireCoachStaff } from "@/lib/api-auth";
 
-export async function POST() {
+export async function POST(request: Request) {
   // In real app this would be protected + called by cron/scheduler
   if (isDemoMode()) {
     // simulate for demo users that have reminder set (set via booking interview)
@@ -22,6 +23,12 @@ export async function POST() {
       },
     ];
     return NextResponse.json({ sent: logs.length, logs });
+  }
+
+  const cronOk = cronAuthorized(request, [process.env.CRON_SECRET]);
+  if (!cronOk) {
+    const auth = await requireCoachStaff();
+    if (!auth.ok) return auth.response;
   }
 
   const logs = await sendDailyReminders();

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { isDemoMode, getDemoUserSettings, updateDemoUserSettings } from "@/lib/demo-reminders";
-import { resolveUserId } from "@/lib/current-user";
 import { getMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
+import { requireSession } from "@/lib/api-auth";
 
 export async function GET() {
-  const uid = await resolveUserId();
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+  const uid = auth.session.id;
 
   if (isDemoMode()) {
     const profile = await getMemberProfile(uid);
@@ -18,7 +20,6 @@ export async function GET() {
     return NextResponse.json(settings);
   }
 
-  // TODO: real auth + prisma for logged in member
   try {
     const { prisma } = await import("@/lib/prisma");
     const user = await prisma.user.findUnique({
@@ -39,9 +40,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+  const uid = auth.session.id;
+
   const body = await request.json();
   const { phone, dailyReminderTime } = body;
-  const uid = await resolveUserId();
 
   if (isDemoMode()) {
     const profile = await getMemberProfile(uid);
@@ -62,7 +66,6 @@ export async function POST(request: Request) {
     return NextResponse.json(updated);
   }
 
-  // TODO: real path
   try {
     const { prisma } = await import("@/lib/prisma");
     const updated = await prisma.user.update({

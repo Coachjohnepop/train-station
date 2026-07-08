@@ -78,6 +78,26 @@ export async function requireMemberAccess(): Promise<AuthResult> {
   return { ok: true, session };
 }
 
+/** Safe in-app path for redirects (blocks protocol-relative //evil.com). */
+export function safeRelativePath(path: string | null | undefined): string | null {
+  if (!path?.trim()) return null;
+  const candidate = path.trim();
+  if (!candidate.startsWith("/") || candidate.startsWith("//")) return null;
+  return candidate;
+}
+
+/** Cron jobs: Bearer token must match CRON_SECRET (or route-specific secret). */
+export function cronAuthorized(
+  request: Request,
+  secrets: Array<string | undefined>,
+): boolean {
+  const valid = secrets.map((s) => s?.trim()).filter(Boolean) as string[];
+  if (valid.length === 0) return false;
+  const header = request.headers.get("authorization");
+  if (!header?.startsWith("Bearer ")) return false;
+  return valid.includes(header.slice(7));
+}
+
 /** Staff may access any userId; members only their own. Returns a 403 response when out of scope. */
 export function assertUserScope(session: SessionUser, userId: string): NextResponse | null {
   if (isStaffRole(session.role)) return null;

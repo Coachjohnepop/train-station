@@ -16,12 +16,12 @@ export default async function JoinPage({
       {/* Simple header */}
       <div className="border-b border-[#3d2660] bg-[#140a22]">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
-          <Link href="/member" className="font-semibold tracking-tight text-lg hover:text-[var(--accent)]">
+          <Link href="/join" className="font-semibold tracking-tight text-lg hover:text-[var(--accent)]">
             The Train Station
           </Link>
           <div className="flex items-center gap-3 text-sm">
-            <Link href="/member/programs" className="text-[#9d8ab8] hover:text-white transition">Explore programs</Link>
-            <Link href="/member" className="text-[#9d8ab8] hover:text-white transition">Enter as member</Link>
+            <a href="#plans" className="text-[#9d8ab8] hover:text-white transition">Explore programs</a>
+            <Link href="/login" className="text-[#9d8ab8] hover:text-white transition">Sign in</Link>
           </div>
         </div>
       </div>
@@ -72,9 +72,9 @@ export default async function JoinPage({
       <div className="border-t border-[#3d2660] py-10 bg-[#140a22]">
         <div className="mx-auto max-w-xl text-center px-6">
           <p className="text-[#9d8ab8] mb-4">Questions about plans or need a custom team option?</p>
-          <Link href="/admin" className="inline-flex h-11 items-center justify-center rounded-full border border-[#3d2660] px-8 text-sm font-semibold hover:bg-white/5 transition-all hover:scale-[1.05]">
+          <a href="mailto:jeremy@thetrainstation.co" className="inline-flex h-11 items-center justify-center rounded-full border border-[#3d2660] px-8 text-sm font-semibold hover:bg-white/5 transition-all hover:scale-[1.05]">
             Talk to the team
-          </Link>
+          </a>
         </div>
       </div>
     </div>

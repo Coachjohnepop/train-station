@@ -1,29 +1,32 @@
 import { NextResponse } from "next/server";
 import { isDemoMode, advanceDemoEnrollment } from "@/lib/demo-enrollments";
 import { prisma } from "@/lib/prisma";
-import { DEMO_MEMBER_EMAIL } from "@/lib/demo-workout";
+import { requireSession, assertUserScope } from "@/lib/api-auth";
+import { isStaffRole } from "@/lib/staff-access";
 
 export async function POST(request: Request, { params }: { params: Promise<{ slug: string }> }) {
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+
   const { slug } = await params;
   const body = await request.json().catch(() => ({}));
   const day = body.day ? parseInt(body.day, 10) : undefined;
-  // targetUserId for coach impersonation (future: persist responses under the correct member)
-  const targetUserId = body.targetUserId || undefined;
+  const requestedUserId = body.targetUserId as string | undefined;
+  const userId = isStaffRole(auth.session.role) && requestedUserId
+    ? requestedUserId
+    : auth.session.id;
+  const scopeErr = assertUserScope(auth.session, userId);
+  if (scopeErr) return scopeErr;
 
   if (isDemoMode()) {
-    await advanceDemoEnrollment(slug);
-    // In a fuller implementation we would also persist any `body.responses` for eating days under targetUserId
-    return NextResponse.json({ ok: true, demo: true, targetUserId });
+    await advanceDemoEnrollment(slug, userId);
+    return NextResponse.json({ ok: true, demo: true, targetUserId: userId });
   }
 
-  // Real DB path
   try {
-    const user = await prisma.user.findUnique({ where: { email: DEMO_MEMBER_EMAIL } });
-    if (!user) return NextResponse.json({ detail: "User not found" }, { status: 404 });
-
     const enrollment = await prisma.programEnrollment.findFirst({
       where: {
-        userId: user.id,
+        userId,
         program: { slug },
       },
       include: { program: true },

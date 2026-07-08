@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { requireMemberAccess } from "@/lib/api-auth";
-import { resolveUserId } from "@/lib/current-user";
 import {
   getMemberEquipmentWithStatus,
   setMemberEquipment,
@@ -12,8 +11,7 @@ export async function GET() {
   const auth = await requireMemberAccess();
   if (!auth.ok) return auth.response;
 
-  const uid = await resolveUserId();
-  const equipment = await getMemberEquipmentWithStatus(uid);
+  const equipment = await getMemberEquipmentWithStatus(auth.session.id);
   return NextResponse.json({ equipment });
 }
 
@@ -28,7 +26,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  const uid = await resolveUserId();
-  const equipment = await setMemberEquipment(uid, updates);
+  const equipment = await setMemberEquipment(auth.session.id, updates);
   return NextResponse.json({ success: true, equipment });
 }

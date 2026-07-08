@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { mutateDemoSeed } from "@/lib/demo-seed-store";
 import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { normalizeProgramSlug } from "@/lib/programs";
+import { requireCoachStaff } from "@/lib/api-auth";
 
 const patchSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -13,6 +14,9 @@ const patchSchema = z.object({
 type Params = { params: Promise<{ slug: string }> };
 
 export async function PATCH(request: Request, { params }: Params) {
+  const auth = await requireCoachStaff();
+  if (!auth.ok) return auth.response;
+
   const { slug } = await params;
   const parsed = patchSchema.safeParse(await request.json());
   if (!parsed.success) {

@@ -6,6 +6,7 @@ import {
   saveScheduleOverride,
 } from "@/lib/demo-schedule-overrides";
 import { sendSmsBroadcast } from "@/lib/sms";
+import { requireCoachStaff } from "@/lib/api-auth";
 
 const saveSchema = z.object({
   dayId: z.string().min(1),
@@ -21,10 +22,14 @@ const saveSchema = z.object({
 });
 
 export async function GET() {
+  const auth = await requireCoachStaff();
+  if (!auth.ok) return auth.response;
   return NextResponse.json({ overrides: await getAllScheduleOverrides() });
 }
 
 export async function POST(request: Request) {
+  const auth = await requireCoachStaff();
+  if (!auth.ok) return auth.response;
   const parsed = saveSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
@@ -59,6 +64,8 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const auth = await requireCoachStaff();
+  if (!auth.ok) return auth.response;
   const { searchParams } = new URL(request.url);
   const dayId = searchParams.get("dayId");
   if (!dayId) {
