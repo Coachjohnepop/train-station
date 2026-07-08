@@ -252,6 +252,10 @@ async function testUploadTranslation() {
   }));
   if (res.ok && body?.workoutId && body?.exerciseCount >= 2) {
     pass("upload-translation", "Build upload translation", `${body.exerciseCount} exercises`);
+    const del = await req(`/api/workouts/${body.workoutId}`, { method: "DELETE" });
+    if (del.res.status !== 204) {
+      fail("upload-translation", "Cleanup temp workout", String(del.res.status));
+    }
   } else {
     fail("upload-translation", "Build upload translation", JSON.stringify(body)?.slice(0, 120));
   }

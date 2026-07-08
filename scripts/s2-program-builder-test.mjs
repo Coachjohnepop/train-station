@@ -81,6 +81,7 @@ async function main() {
 
   const w1Mon = monday(week1);
   const w2Mon = monday(week2);
+  const originalW2MonOptions = dayOptions(w2Mon).filter((o) => o.workoutId);
   if (!w1Mon?.id || !w2Mon?.id) {
     fail("Monday day ids on weeks 1 and 2");
     process.exit(1);
@@ -216,6 +217,17 @@ async function main() {
   } else {
     fail("Week 1 workout unchanged after week 2 edit", `W1 sets changed ${sourceSetsBefore} → ${sourceItem?.sets}`);
   }
+
+  const restoreDay = await req(`/api/programs/days/${w2Mon.id}`, {
+    method: "PATCH",
+    json: { options: originalW2MonOptions },
+  });
+  if (restoreDay.res.ok) pass("Restore week 2 Monday options");
+  else fail("Restore week 2 Monday options", `${restoreDay.res.status}`);
+
+  const cleanupClone = await req(`/api/workouts/${clonedId}`, { method: "DELETE" });
+  if (cleanupClone.res.status === 204) pass("Cleanup cloned workout", clonedId);
+  else fail("Cleanup cloned workout", `${cleanupClone.res.status}`);
 
   const failed = results.filter((r) => !r.ok);
   console.log(`\n---\n${results.length - failed.length}/${results.length} passed`);

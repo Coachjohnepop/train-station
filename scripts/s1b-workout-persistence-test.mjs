@@ -228,6 +228,13 @@ async function main() {
     fail("Workout list shows renamed workout", "missing from /api/workouts");
   }
 
+  const cleanup = await req(`/api/workouts/${workoutId}`, { method: "DELETE" });
+  if (cleanup.res.status === 204) {
+    pass("Cleanup temp workout", workoutId);
+  } else {
+    fail("Cleanup temp workout", `${cleanup.res.status}`);
+  }
+
   const failed = results.filter((r) => !r.ok);
   console.log(`\n---\n${results.length - failed.length}/${results.length} passed`);
   if (failed.length) {
