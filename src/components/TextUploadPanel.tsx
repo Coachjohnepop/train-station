@@ -39,9 +39,15 @@ const HINTS: Record<TextUploadMode, string> = {
   exercises:
     "One exercise per line. Add tags after | or comma (e.g. Back Row | Back, Chest). Matches existing names are skipped.",
   workout:
-    "Paste workout text. Use “Day 3 Upper Body” or “M1D3 Gym: Upper body” in the title — assigns to that cycle day on the selected month. Title saves without day/location.",
+    "Paste SMS or workout notes — we translate lines into exercises, sets, and reps. Preview parse, then Build & save.",
   "program-week":
-    "Assign workouts to program days. Format: Day N Gym: Workout Title (no Day number in the title — day is the slot).",
+    "Paste a full week at once. Format: M1D1 Gym: Upper body — each line assigns a workout to that program day.",
+};
+
+const TITLES: Record<TextUploadMode, string> = {
+  exercises: "Upload translation — exercise list",
+  workout: "Upload translation — full workout",
+  "program-week": "Upload translation — whole week",
 };
 
 type PreviewData =
@@ -75,6 +81,8 @@ export default function TextUploadPanel({
   onBuilt,
   collapsible = true,
   defaultOpen = false,
+  panelId,
+  redirectToWorkout = true,
 }: {
   mode: TextUploadMode;
   programSlug?: string;
@@ -85,12 +93,19 @@ export default function TextUploadPanel({
   onBuilt?: (result: Record<string, unknown>) => void;
   collapsible?: boolean;
   defaultOpen?: boolean;
+  panelId?: string;
+  /** When false, do not navigate to the new workout after build (e.g. program calendar attaches in place). */
+  redirectToWorkout?: boolean;
 }) {
   const router = useRouter();
   const [rawText, setRawText] = useState("");
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [workoutName, setWorkoutName] = useState("");
   const [selectedWeek, setSelectedWeek] = useState(weekNumber ?? 1);
+
+  useEffect(() => {
+    if (weekNumber != null) setSelectedWeek(weekNumber);
+  }, [weekNumber]);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageIsError, setMessageIsError] = useState(false);
@@ -242,7 +257,7 @@ export default function TextUploadPanel({
       onBuilt?.(data);
       router.refresh();
 
-      if (mode === "workout" && data.workoutId && !data.cycleSlot) {
+      if (redirectToWorkout && mode === "workout" && data.workoutId && !data.cycleSlot) {
         setTimeout(() => {
           window.location.href = `/admin/workouts/${data.workoutId}`;
         }, 800);
@@ -426,13 +441,20 @@ export default function TextUploadPanel({
     </div>
   );
 
+  const title = TITLES[mode];
+
   if (collapsible) {
     return (
-      <div className="card border-amber-500/30 bg-amber-500/5">
+      <div id={panelId} className="card border-amber-500/30 bg-amber-500/5">
         <details open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
-          <summary className="flex cursor-pointer list-none items-center gap-2 py-1 text-sm font-semibold">
-            <span className="text-accent transition-transform text-xs">▶</span>
-            Text Upload
+          <summary className="flex cursor-pointer list-none flex-col gap-0.5 py-1">
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              <span className="text-accent transition-transform text-xs">▶</span>
+              {title}
+            </span>
+            <span className="pl-5 text-[10px] font-normal text-[var(--muted)]">
+              Paste workout text — translated into exercises automatically
+            </span>
           </summary>
           <div className="mt-3 border-t border-amber-500/20 pt-3">{panelBody}</div>
         </details>
@@ -441,8 +463,13 @@ export default function TextUploadPanel({
   }
 
   return (
-    <div className="card border-amber-500/30 bg-amber-500/5 space-y-3">
-      <h2 className="text-sm font-semibold">Text Upload</h2>
+    <div id={panelId} className="card border-amber-500/30 bg-amber-500/5 space-y-3">
+      <div>
+        <h2 className="text-sm font-semibold">{title}</h2>
+        <p className="text-[10px] text-[var(--muted)]">
+          Paste workout text — translated into exercises automatically
+        </p>
+      </div>
       {panelBody}
     </div>
   );

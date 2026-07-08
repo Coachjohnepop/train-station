@@ -7,6 +7,7 @@ type Props = {
   onJumpToWeek?: (weekNumber: number) => void;
   onCopyPrevWeek?: (toWeek: number, fromWeek: number) => void;
   onCopyWeek1Remaining?: () => void;
+  onTextUpload?: () => void;
 };
 
 export default function ProgramContentReadinessBanner({
@@ -14,6 +15,7 @@ export default function ProgramContentReadinessBanner({
   onJumpToWeek,
   onCopyPrevWeek,
   onCopyWeek1Remaining,
+  onTextUpload,
 }: Props) {
   const { readiness, focus, suggestions } = alert;
   const border =
@@ -30,7 +32,12 @@ export default function ProgramContentReadinessBanner({
       : `Week ${readiness.nextWeek?.weekNumber ?? readiness.anchorWeek + 1} needs content — clients need the following week built.`;
 
   function runSuggestion(s: (typeof suggestions)[number]) {
-    if (s.action === "open-week" || s.action === "publish-week" || s.action === "text-upload") {
+    if (s.action === "text-upload") {
+      if (s.weekNumber) onJumpToWeek?.(s.weekNumber);
+      onTextUpload?.();
+      return;
+    }
+    if (s.action === "open-week" || s.action === "publish-week") {
       if (s.weekNumber) onJumpToWeek?.(s.weekNumber);
       return;
     }
@@ -87,7 +94,9 @@ export default function ProgramContentReadinessBanner({
                     ? "Copy week →"
                     : s.action === "copy-week-1-remaining"
                       ? "Copy to remaining"
-                      : "Go →"}
+                      : s.action === "text-upload"
+                        ? "Upload →"
+                        : "Go →"}
                 </button>
               )}
             </li>

@@ -56,6 +56,7 @@ import {
   type DayPrescription,
 } from "@/lib/program-day-prescription";
 import ProgramContentReadinessBanner from "@/components/ProgramContentReadinessBanner";
+import TextUploadPanel from "@/components/TextUploadPanel";
 import type { CoachContentAlert } from "@/lib/coach-content-alerts";
 
 type WorkoutOption = { id: string; name: string };
@@ -206,6 +207,7 @@ export default function ProgramCalendarBuilder({
   );
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const editorRef = useRef<HTMLDivElement>(null);
+  const uploadPanelRef = useRef<HTMLDivElement>(null);
   const dragFromIdx = useRef<number | null>(null);
   const [prescription, setPrescription] = useState<DayPrescription>(DEFAULT_DAY_PRESCRIPTION);
   const [saving, setSaving] = useState(false);
@@ -1223,6 +1225,47 @@ export default function ProgramCalendarBuilder({
     }
   }
 
+  async function attachUploadedWorkoutToFocus(data: Record<string, unknown>) {
+    if (!focus) return;
+    const workoutId = data.workoutId as string | undefined;
+    if (!workoutId) return;
+
+    const week = program.weeks.find((w) => w.weekNumber === focus.weekNumber);
+    const day = week?.days.find((d) => d.id === focus.dayId);
+    if (!day) return;
+
+    const opts = [...getDayOptions(day)];
+    while (opts.length <= focus.optIdx) {
+      opts.push({ workoutId: "", label: focus.label || DEFAULT_DAY_OPTIONS[opts.length] || "Gym" });
+    }
+    opts[focus.optIdx] = {
+      workoutId,
+      label: opts[focus.optIdx]?.label || focus.label,
+      trainingLocation: trainingLocationFromLabel(focus.label) ?? opts[focus.optIdx]?.trainingLocation,
+    };
+
+    await setDayOptions(focus.dayId, opts, { silent: true });
+    const workoutName = (data.workoutName as string) || "Workout";
+    setAllWorkouts((prev) =>
+      prev.some((w) => w.id === workoutId) ? prev : [...prev, { id: workoutId, name: workoutName }],
+    );
+    setFocus({ ...focus, workoutId });
+    await loadSlots(workoutId, prescription);
+    void loadWorkoutPreview(workoutId);
+    const count = data.exerciseCount as number | undefined;
+    setMessage(
+      `Upload translation saved${count != null ? ` — ${count} block${count === 1 ? "" : "s"}` : ""} on ${focus.label}.`,
+    );
+    setTimeout(() => setMessage(null), 3500);
+    scrollToEditor();
+  }
+
+  function scrollToUploadPanel() {
+    requestAnimationFrame(() => {
+      uploadPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }
+
   async function addCustomOption(dayId: string) {
     const week = program.weeks.find((w) => w.days.some((d) => d.id === dayId));
     const day = week?.days.find((d) => d.id === dayId);
@@ -1564,6 +1607,7 @@ export default function ProgramCalendarBuilder({
         <ProgramContentReadinessBanner
           alert={contentAlert}
           onJumpToWeek={(weekNumber) => setActiveWeek(weekNumber)}
+          onTextUpload={scrollToUploadPanel}
           onCopyPrevWeek={async (toWeek, fromWeek) => {
             const ok = await copyWeek(fromWeek, toWeek);
             if (ok) {
@@ -1578,6 +1622,23 @@ export default function ProgramCalendarBuilder({
           }}
         />
       )}
+
+      <div ref={uploadPanelRef}>
+        <TextUploadPanel
+          mode="program-week"
+          programSlug={program.slug}
+          weekNumber={activeWeek}
+          weekOptions={weeks.map((w) => w.weekNumber)}
+          panelId="upload-translation-week"
+          collapsible
+          defaultOpen={false}
+          onBuilt={async () => {
+            await sync();
+            setMessage(`Week ${activeWeek} updated from upload translation.`);
+            setTimeout(() => setMessage(null), 3500);
+          }}
+        />
+      </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-[var(--muted)]">Jump to week</span>
@@ -1959,6 +2020,16 @@ export default function ProgramCalendarBuilder({
               + Add More
             </button>
           </div>
+
+          {!isDayOffLabel(focus.label) && !isFastedCardioLabel(focus.label) && (
+            <TextUploadPanel
+              mode="workout"
+              collapsible
+              defaultOpen={false}
+              redirectToWorkout={false}
+              onBuilt={(data) => void attachUploadedWorkoutToFocus(data)}
+            />
+          )}
 
           {isDayOffLabel(focus.label) ? (
               <p className="rounded-md bg-[var(--surface-2)] px-3 py-4 text-center text-sm text-[var(--muted)]">
