@@ -33,15 +33,7 @@ export function buildDemoWorkoutExerciseItems(
 ) {
   return workoutExercises
     .filter((we) => we.workoutId === workoutId)
-    .sort((a, b) => {
-      const aName = resolveDemoExercise(a.exerciseId, exList).name;
-      const bName = resolveDemoExercise(b.exerciseId, exList).name;
-      const aIsWarm = /warm/i.test(aName);
-      const bIsWarm = /warm/i.test(bName);
-      if (aIsWarm && !bIsWarm) return -1;
-      if (!aIsWarm && bIsWarm) return 1;
-      return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
-    })
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
     .map((we) => ({
       id: we.id,
       sortOrder: we.sortOrder,
@@ -71,6 +63,22 @@ export function findDemoWorkoutRecord(
     name: "Workout",
     description: null,
   };
+}
+
+/** Renumber sortOrder 0..n-1 for one workout after add/remove/reorder. */
+export function compactDemoWorkoutSortOrders(
+  workoutExercises: WorkoutExerciseRow[],
+  workoutId: string,
+): WorkoutExerciseRow[] {
+  const rows = workoutExercises
+    .filter((we) => we.workoutId === workoutId)
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const idToOrder = new Map(rows.map((we, idx) => [we.id, idx]));
+  return workoutExercises.map((we) =>
+    we.workoutId === workoutId && idToOrder.has(we.id)
+      ? { ...we, sortOrder: idToOrder.get(we.id)! }
+      : we,
+  );
 }
 
 export function ensureDemoWorkoutInSeed(
