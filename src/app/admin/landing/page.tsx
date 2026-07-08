@@ -1,13 +1,19 @@
 import AdminLandingMediaPanel from "@/components/AdminLandingMediaPanel";
+import AdminMemberContentPanel from "@/components/AdminMemberContentPanel";
 import AdminSiteBrandPanel from "@/components/AdminSiteBrandPanel";
 import { getLandingMedia } from "@/lib/landing-media-store";
+import { getMemberContent } from "@/lib/member-content-store";
 import { resolveSiteBrand } from "@/lib/site-brand";
 import { getSiteBrand } from "@/lib/site-brand-store";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminLandingPage() {
-  const [config, brandConfig] = await Promise.all([getLandingMedia(), getSiteBrand()]);
+  const [config, brandConfig, memberContent] = await Promise.all([
+    getLandingMedia(),
+    getSiteBrand(),
+    getMemberContent(),
+  ]);
   const brand = resolveSiteBrand(brandConfig);
 
   return (
@@ -37,6 +43,14 @@ export default async function AdminLandingPage() {
           initialVenmoQrUrl={config.venmoQrUrl ?? ""}
           initialVenmoHandle={config.venmoHandle ?? ""}
           initialVenmoInstructions={config.venmoInstructions ?? ""}
+        />
+        <AdminMemberContentPanel
+          initialWeeklyUrl={memberContent.weeklyVideoUrl ?? ""}
+          initialWeeklyTitle={memberContent.weeklyVideoTitle}
+          initialDinnerUrl={memberContent.dinnerVideoUrl ?? ""}
+          initialDinnerTitle={memberContent.dinnerVideoTitle}
+          initialNutritionIntro={memberContent.nutritionIntro}
+          initialNutritionTiers={memberContent.nutritionTiers}
         />
       </div>
     </div>

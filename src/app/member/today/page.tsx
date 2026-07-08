@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import MemberCoachMediaStrip from "@/components/MemberCoachMediaStrip";
 import MemberTodayHub from "@/components/MemberTodayHub";
 import MemberTodayShell from "@/components/MemberTodayShell";
 import TodaySessionPanel from "@/components/TodaySessionPanel";
@@ -31,6 +32,7 @@ import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import { isCoachIntakeComplete } from "@/lib/member-intake";
 import { getCoachSettings } from "@/lib/coach-settings-store";
+import { getMemberContent } from "@/lib/member-content-store";
 import { buildWarmupWorkoutView } from "@/lib/warmup-template";
 import { getUserEnrollments } from "@/lib/data/user-data";
 import { normalizeTrainingLocation } from "@/lib/program-macro-cycle";
@@ -74,13 +76,15 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const memberName = resolveDemoUser(uid)?.name || dashboard.user.name;
 
   const calendarToday = localTodayIso();
-  const [upcoming, loggedSet, primaryProgram, profile, coachSettings, enrollments] = await Promise.all([
+  const [upcoming, loggedSet, primaryProgram, profile, coachSettings, enrollments, memberContent] =
+    await Promise.all([
     loadMemberUpcomingSessions(uid),
     loadMemberLoggedWorkoutIds(uid),
     resolvePrimaryScheduleProgram(uid),
     getMemberProfile(uid),
     getCoachSettings(),
     getUserEnrollments(uid),
+    getMemberContent(),
   ]);
   const trainingLocation = normalizeTrainingLocation(
     enrollments[primaryProgram?.slug ?? "adult"]?.trainingLocation,
@@ -167,6 +171,8 @@ export default async function MemberTodayPage({ searchParams }: Props) {
 
       {!asInstructor ? (
         <>
+          <MemberCoachMediaStrip content={memberContent} />
+
           <Suspense fallback={<div className="card h-40 animate-pulse p-4" />}>
             <MemberTodayShell
               todayIso={programTodayKey}

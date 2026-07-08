@@ -6,6 +6,11 @@ import {
   saveLandingMedia,
   type WelcomeVideosByPlan,
 } from "@/lib/landing-media-store";
+import {
+  getMemberContent,
+  saveMemberContent,
+  type NutritionCalorieTier,
+} from "@/lib/member-content-store";
 import { resolveSiteBrand } from "@/lib/site-brand";
 import type { LogoTransform } from "@/lib/logo-transform";
 import { getSiteBrand, saveSiteBrand } from "@/lib/site-brand-store";
@@ -104,4 +109,34 @@ export async function loadLandingVideosAction() {
     storedVenmoInstructions: config.venmoInstructions,
     updatedAt: config.updatedAt,
   };
+}
+
+export async function saveMemberContentAction(input: {
+  weeklyVideoUrl: string | null;
+  weeklyVideoTitle: string;
+  dinnerVideoUrl: string | null;
+  dinnerVideoTitle: string;
+  nutritionIntro: string;
+  nutritionTiers: NutritionCalorieTier[];
+}) {
+  const session = await getSessionUser();
+  if (!session || !isStaffRole(session.role)) {
+    return { error: "Coach sign-in required. Sign out and sign in again at /login." };
+  }
+
+  try {
+    const config = await saveMemberContent(input);
+    return {
+      ok: true as const,
+      storedWeeklyVideoUrl: config.weeklyVideoUrl,
+      storedWeeklyVideoTitle: config.weeklyVideoTitle,
+      storedDinnerVideoUrl: config.dinnerVideoUrl,
+      storedDinnerVideoTitle: config.dinnerVideoTitle,
+      storedNutritionIntro: config.nutritionIntro,
+      storedNutritionTiers: config.nutritionTiers,
+      updatedAt: config.updatedAt,
+    };
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : "Save failed" };
+  }
 }
