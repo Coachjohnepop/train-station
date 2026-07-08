@@ -13,6 +13,7 @@ import {
   demoPersistenceWarning,
 } from "@/lib/demo-persistence";
 import { requireStaff } from "@/lib/api-auth";
+import { hintVideoUrlForExerciseName } from "@/lib/exercise-video-hints";
 
 const createSchema = z.object({
   name: z.string().min(1).max(200),
@@ -46,6 +47,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
   }
   const { name, description, videoUrl, tags } = parsed.data;
+  const resolvedVideoUrl =
+    videoUrl?.trim() || hintVideoUrlForExerciseName(name.trim()) || null;
 
   if (isDemoMode()) {
     await hydrateDemoExercises({ preferFresh: true });
@@ -54,7 +57,7 @@ export async function POST(request: Request) {
       id: createDemoExerciseId(),
       name: name.trim(),
       description: description?.trim() || null,
-      videoUrl: videoUrl?.trim() || null,
+      videoUrl: resolvedVideoUrl,
       tags: tags?.trim() || null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -79,7 +82,7 @@ export async function POST(request: Request) {
       data: {
         name: name.trim(),
         description: description?.trim() || null,
-        videoUrl: videoUrl?.trim() || null,
+        videoUrl: resolvedVideoUrl,
         tags: tags?.trim() || null,
       },
     });

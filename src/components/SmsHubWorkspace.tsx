@@ -128,7 +128,11 @@ export default function SmsHubWorkspace() {
             <Link href="/admin/chat" className="text-accent hover:underline">
               Messages
             </Link>
-            .
+            . For Patreon-style posts to everyone, use{" "}
+            <Link href="/admin/chat" className="text-accent hover:underline">
+              Community feed
+            </Link>{" "}
+            (in-app only — not SMS or email).
           </p>
 
           <div className="max-h-48 overflow-y-auto space-y-1 border border-[var(--border)] rounded-lg p-2">

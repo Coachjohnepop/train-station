@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { formatApiError } from "@/lib/api-errors";
 import TextUploadPanel from "@/components/TextUploadPanel";
 import { isNewlyAddedFromTextUpload } from "@/lib/text-upload-exercises";
+import { hintVideoUrlForExerciseName } from "@/lib/exercise-video-hints";
 import { isYoutubeUrl, normalizeYoutubeWatchUrl } from "@/lib/youtube";
 
 type Exercise = {
@@ -59,6 +60,31 @@ function FieldLabel({
       </span>
       <span className="mt-1 block text-xs text-[var(--muted)]">{hint}</span>
     </label>
+  );
+}
+
+function SuggestedVideoHint({
+  name,
+  onUse,
+  className = "",
+}: {
+  name: string;
+  onUse: (url: string) => void;
+  className?: string;
+}) {
+  const hint = hintVideoUrlForExerciseName(name.trim());
+  if (!hint) return null;
+  return (
+    <p className={`text-[10px] text-[var(--muted)] ${className}`}>
+      Suggested demo:{" "}
+      <button
+        type="button"
+        className="text-accent hover:underline"
+        onClick={() => onUse(hint)}
+      >
+        Use YouTube match
+      </button>
+    </p>
   );
 }
 
@@ -171,6 +197,15 @@ function ExerciseVideoCell({
         >
           Cancel
         </button>
+      )}
+      {!exercise.videoUrl && (
+        <SuggestedVideoHint
+          name={exercise.name}
+          onUse={(url) => {
+            setDraft(url);
+            setCellError(null);
+          }}
+        />
       )}
       {cellError && (
         <p className="text-xs text-[var(--danger)]" role="alert">
@@ -729,6 +764,11 @@ export default function ExerciseLibrary() {
                   value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
                 />
+                <SuggestedVideoHint
+                  name={name}
+                  className="mt-1"
+                  onUse={(url) => setVideoUrl(url)}
+                />
               </div>
 
               <div className="md:col-span-2">
@@ -804,7 +844,10 @@ export default function ExerciseLibrary() {
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] text-[10px] font-bold">3</span>
                 <div>
                   <p className="font-medium text-[var(--text)]">Add a demo video (optional)</p>
-                  <p className="text-xs">YouTube or other link — members can watch without leaving the workout.</p>
+                  <p className="text-xs">
+                    YouTube or other link — members can watch without leaving the workout. When the
+                    name matches a known movement, we suggest a YouTube demo (same as Text Upload).
+                  </p>
                 </div>
               </li>
             </ol>
@@ -1067,6 +1110,11 @@ export default function ExerciseLibrary() {
                   placeholder="https://www.youtube.com/watch?v=…"
                   value={editDraft.videoUrl}
                   onChange={(e) => setEditDraft({ ...editDraft, videoUrl: e.target.value })}
+                />
+                <SuggestedVideoHint
+                  name={editDraft.name}
+                  className="mt-1"
+                  onUse={(url) => setEditDraft({ ...editDraft, videoUrl: url })}
                 />
               </div>
 

@@ -722,11 +722,12 @@ export default function ProgramCalendarBuilder({
     return res.ok;
   }
 
-  async function saveSelectedSlot() {
+  async function saveSelectedSlot(opts?: { manageSaving?: boolean }) {
     if (!focus || selectedSlotIdx === null) return;
     const slot = slots[selectedSlotIdx];
+    const manageSaving = opts?.manageSaving !== false;
 
-    setSaving(true);
+    if (manageSaving) setSaving(true);
     try {
       if (!slot) {
         await patchDay(focus.dayId, {
@@ -765,7 +766,7 @@ export default function ProgramCalendarBuilder({
         setMessage("Could not save exercise.");
       }
     } finally {
-      setSaving(false);
+      if (manageSaving) setSaving(false);
     }
   }
 
@@ -1191,6 +1192,23 @@ export default function ProgramCalendarBuilder({
     await loadSlots(focus.workoutId, prescription);
     setMessage("Saved.");
     setTimeout(() => setMessage(null), 1500);
+  }
+
+  async function saveDayDraft() {
+    if (!focus) return;
+    setSaving(true);
+    try {
+      if (selectedSlotIdx !== null) {
+        await saveSelectedSlot({ manageSaving: false });
+      }
+      await loadSlots(focus.workoutId, prescription);
+      setMessage("Saved.");
+      setTimeout(() => setMessage(null), 2000);
+    } catch {
+      setMessage("Save failed — try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function publishDay() {
@@ -1836,9 +1854,15 @@ export default function ProgramCalendarBuilder({
                   </Link>
                 </>
               )}
-              <span className="text-[10px] text-[var(--muted)]" title="Exercise edits save as you go — Publish marks the day ready for members">
-                Auto-saved
-              </span>
+              <button
+                type="button"
+                className="btn-ghost px-2 py-1 text-xs"
+                disabled={saving}
+                title="Save draft — members only see this day after you Publish"
+                onClick={() => void saveDayDraft()}
+              >
+                {saving ? "Saving…" : "Save"}
+              </button>
               <button
                 type="button"
                 className={
@@ -1847,6 +1871,7 @@ export default function ProgramCalendarBuilder({
                     : "btn-primary px-2 py-1 text-xs"
                 }
                 disabled={saving || !!focusDay.publishedAt}
+                title="Mark this day ready for members"
                 onClick={() => void publishDay()}
               >
                 {focusDay.publishedAt ? "✓ Published" : "Publish"}
