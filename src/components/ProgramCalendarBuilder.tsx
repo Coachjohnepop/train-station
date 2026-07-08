@@ -209,6 +209,7 @@ export default function ProgramCalendarBuilder({
   const editorRef = useRef<HTMLDivElement>(null);
   const uploadPanelRef = useRef<HTMLDivElement>(null);
   const dragFromIdx = useRef<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [prescription, setPrescription] = useState<DayPrescription>(DEFAULT_DAY_PRESCRIPTION);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -1476,15 +1477,49 @@ export default function ProgramCalendarBuilder({
     }
   }
 
-  async function moveSlot(fromIdx: number, toIdx: number) {
-    if (fromIdx === toIdx || !slots[fromIdx] || !focus) return;
+  function countFilledSlots() {
+    return slots.filter((s) => s !== null).length;
+  }
+
+  function reorderFilledSlots(fromIdx: number, toIdx: number) {
+    if (!slots[fromIdx]) return null;
+    const filled = countFilledSlots();
+    const clampedTo = Math.max(0, Math.min(toIdx, Math.max(0, filled - 1)));
+    if (fromIdx === clampedTo) return [...slots];
+
     const next = [...slots];
-    const dragged = next[fromIdx];
-    if (!dragged) return;
-    next[fromIdx] = next[toIdx];
-    next[toIdx] = dragged;
+    const item = next[fromIdx]!;
+    if (fromIdx < clampedTo) {
+      for (let i = fromIdx; i < clampedTo; i++) next[i] = next[i + 1] ?? null;
+    } else {
+      for (let i = fromIdx; i > clampedTo; i--) next[i] = next[i - 1] ?? null;
+    }
+    next[clampedTo] = item;
+    return next;
+  }
+
+  async function moveSlot(fromIdx: number, toIdx: number) {
+    if (!focus || !slots[fromIdx]) return;
+    const next = reorderFilledSlots(fromIdx, toIdx);
+    if (!next) return;
     setSlots(next);
+    setDragOverIdx(null);
     await persistSlotOrder(next);
+    setMessage("Order updated.");
+    setTimeout(() => setMessage(null), 1200);
+  }
+
+  async function moveSlotByDirection(idx: number, direction: -1 | 1) {
+    if (!slots[idx]) return;
+    const filled = countFilledSlots();
+    const positions = slots
+      .map((s, i) => (s ? i : -1))
+      .filter((i) => i >= 0);
+    const pos = positions.indexOf(idx);
+    if (pos < 0) return;
+    const targetPos = pos + direction;
+    if (targetPos < 0 || targetPos >= filled) return;
+    await moveSlot(idx, positions[targetPos]!);
   }
 
   function renderExerciseSlot(idx: number) {
@@ -1492,18 +1527,43 @@ export default function ProgramCalendarBuilder({
     const isSelected = selectedSlotIdx === idx;
     const isChecked = checkedSlots.has(idx);
 
+    const filled = countFilledSlots();
+    const filledPositions = slots.map((s, i) => (s ? i : -1)).filter((i) => i >= 0);
+    const posInList = filledPositions.indexOf(idx);
+    const canMoveUp = slot != null && posInList > 0;
+    const canMoveDown = slot != null && posInList >= 0 && posInList < filled - 1;
+    const isDropTarget = dragOverIdx === idx && dragFromIdx.current !== null;
+
     return (
       <div
         key={idx}
         className={`flex items-center gap-1.5 rounded-md border px-2 py-1 transition ${
-          isChecked
-            ? "border-emerald-400 bg-emerald-500/20"
-            : isSelected
-              ? "border-accent bg-accent/10"
-              : "border-[var(--border)] bg-[var(--surface-2)] hover:border-accent/30"
-        }`}
+          isDropTarget
+            ? "border-sky-400 bg-sky-500/15 ring-1 ring-sky-400/50"
+            : isChecked
+              ? "border-emerald-400 bg-emerald-500/20"
+              : isSelected
+                ? "border-accent bg-accent/10"
+                : "border-[var(--border)] bg-[var(--surface-2)] hover:border-accent/30"
+        } ${slot && !saving ? "cursor-grab active:cursor-grabbing" : ""}`}
+        draggable={!!slot && !saving}
+        onDragStart={(e) => {
+          if (!slot) return;
+          dragFromIdx.current = idx;
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", String(idx));
+        }}
+        onDragEnd={() => {
+          dragFromIdx.current = null;
+          setDragOverIdx(null);
+        }}
         onDragOver={(e) => {
-          if (dragFromIdx.current !== null) e.preventDefault();
+          if (dragFromIdx.current === null || dragFromIdx.current === idx) return;
+          e.preventDefault();
+          setDragOverIdx(idx);
+        }}
+        onDragLeave={() => {
+          if (dragOverIdx === idx) setDragOverIdx(null);
         }}
         onDrop={(e) => {
           e.preventDefault();
@@ -1513,27 +1573,47 @@ export default function ProgramCalendarBuilder({
               ? Number(e.dataTransfer.getData("text/plain"))
               : null);
           dragFromIdx.current = null;
+          setDragOverIdx(null);
           if (from !== null && from !== idx) void moveSlot(from, idx);
         }}
       >
         {slot ? (
           <>
             <span
-              draggable={!saving}
-              onDragStart={(e) => {
-                dragFromIdx.current = idx;
-                e.dataTransfer.effectAllowed = "move";
-                e.dataTransfer.setData("text/plain", String(idx));
-              }}
-              onDragEnd={() => {
-                dragFromIdx.current = null;
-              }}
-              className="shrink-0 cursor-grab select-none text-[10px] text-[var(--muted)] active:cursor-grabbing"
-              title="Drag to reorder"
+              className="shrink-0 select-none text-[10px] text-[var(--muted)]"
+              title="Drag row to reorder"
               aria-hidden
             >
               ⠿
             </span>
+            <div className="flex shrink-0 flex-col gap-0.5">
+              <button
+                type="button"
+                className="rounded px-0.5 text-[9px] leading-none text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--text)] disabled:opacity-25"
+                disabled={saving || !canMoveUp}
+                title="Move up"
+                aria-label={`Move ${slot.name} up`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void moveSlotByDirection(idx, -1);
+                }}
+              >
+                ▲
+              </button>
+              <button
+                type="button"
+                className="rounded px-0.5 text-[9px] leading-none text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--text)] disabled:opacity-25"
+                disabled={saving || !canMoveDown}
+                title="Move down"
+                aria-label={`Move ${slot.name} down`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void moveSlotByDirection(idx, 1);
+                }}
+              >
+                ▼
+              </button>
+            </div>
             <input
               type="checkbox"
               className="h-3.5 w-3.5 shrink-0"
@@ -2134,6 +2214,10 @@ export default function ProgramCalendarBuilder({
                     Apply to checked ({checkedSlots.size})
                   </button>
                 </div>
+
+                <p className="text-[10px] text-[var(--muted)]">
+                  Drag a row or use ▲▼ to reorder — changes save automatically.
+                </p>
 
                 {loadingSlots ? (
                   <p className="text-xs text-[var(--muted)]">Loading…</p>
