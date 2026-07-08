@@ -8,7 +8,11 @@ import { BLOB_TOKEN } from "@/lib/demo-json-blob";
 import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
 import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { requireStaff } from "@/lib/api-auth";
-import { ensureDemoWorkoutInSeed, resolveDemoExercise } from "@/lib/demo-workout-items";
+import {
+  compactDemoWorkoutSortOrders,
+  ensureDemoWorkoutInSeed,
+  resolveDemoExercise,
+} from "@/lib/demo-workout-items";
 
 const addSchema = workoutPrescriptionSchema.extend({
   exerciseId: z.string().min(1),
@@ -284,6 +288,12 @@ export async function DELETE(request: Request, { params }: Params) {
             (we: any) => !(we.id === itemId && we.workoutId === workoutId),
           );
           removed = seedData.workoutExercises.length !== before;
+          if (removed) {
+            seedData.workoutExercises = compactDemoWorkoutSortOrders(
+              seedData.workoutExercises as any[],
+              workoutId,
+            );
+          }
         });
         if (!removed) {
           return NextResponse.json({ detail: "Item not found" }, { status: 404 });
@@ -317,6 +327,21 @@ export async function DELETE(request: Request, { params }: Params) {
     return NextResponse.json({ detail: "Item not found" }, { status: 404 });
   }
 
-  await prisma.workoutExercise.delete({ where: { id: itemId } });
+  await prisma.$transaction(async (tx) => {
+    await tx.workoutExercise.delete({ where: { id: itemId } });
+    const remaining = await tx.workoutExercise.findMany({
+      where: { workoutId },
+      orderBy: { sortOrder: "asc" },
+      select: { id: true },
+    });
+    await Promise.all(
+      remaining.map((row, idx) =>
+        tx.workoutExercise.update({
+          where: { id: row.id },
+          data: { sortOrder: idx },
+        }),
+      ),
+    );
+  });
   return new NextResponse(null, { status: 204 });
 }

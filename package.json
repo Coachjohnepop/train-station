@@ -60,6 +60,8 @@
     "test:catalog-smoke": "node scripts/catalog-post-cleanup-smoke.mjs",
     "test:zoom-connect": "node scripts/zoom-connect-smoke.mjs",
     "test:zoom-diagnose": "node scripts/zoom-oauth-diagnose.mjs",
+    "feedback:prepare-video": "node scripts/prepare-feedback-video-review.mjs",
+    "test:program-order": "node scripts/program-exercise-order-test.mjs",
     "test:zoom-oauth-loop": "node scripts/zoom-oauth-loop.mjs",
     "test:coach-loop": "node scripts/coach-workflow-loop-testingsilly.mjs",
     "catalog:strip-day-prefix": "npx tsx scripts/strip-day-prefix-workouts.mjs",

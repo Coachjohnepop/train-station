@@ -413,6 +413,9 @@ export default function ProgramCalendarBuilder({
     if (!res.ok) return;
     const w = await res.json();
     const existing = (w.exercises || []) as Array<{ exercise?: { name?: string } }>;
+    // Only seed a brand-new workout — re-opening a day must not re-inject warmups after deletes.
+    if (existing.length > 0) return;
+
     const existingNames = new Set(existing.map((e) => e.exercise?.name?.toLowerCase()));
 
     for (let i = 0; i < WARMUP_EXERCISE_NAMES.length; i++) {
@@ -1134,25 +1137,40 @@ export default function ProgramCalendarBuilder({
       });
     }
     await loadSlots(focus.workoutId, prescription);
+    setMessage("Saved.");
+    setTimeout(() => setMessage(null), 1500);
   }
 
   async function removeSlot(itemId: string) {
     if (!focus) return;
     setSaving(true);
-    await fetch(
-      `/api/workouts/${focus.workoutId}/exercises?itemId=${encodeURIComponent(itemId)}`,
-      { method: "DELETE" },
-    );
-    setSaving(false);
-    const idx = slots.findIndex((s) => s?.id === itemId);
-    if (idx >= 0) {
-      setCheckedSlots((prev) => {
-        const next = new Set(prev);
-        next.delete(idx);
-        return next;
-      });
+    try {
+      const res = await fetch(
+        `/api/workouts/${focus.workoutId}/exercises?itemId=${encodeURIComponent(itemId)}`,
+        { method: "DELETE" },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setMessage(
+          typeof body.detail === "string" ? body.detail : "Could not remove exercise — try again.",
+        );
+        setTimeout(() => setMessage(null), 3000);
+        return;
+      }
+      const idx = slots.findIndex((s) => s?.id === itemId);
+      if (idx >= 0) {
+        setCheckedSlots((prev) => {
+          const next = new Set(prev);
+          next.delete(idx);
+          return next;
+        });
+      }
+      await loadSlots(focus.workoutId, prescription);
+      setMessage("Saved.");
+      setTimeout(() => setMessage(null), 1500);
+    } finally {
+      setSaving(false);
     }
-    await loadSlots(focus.workoutId, prescription);
   }
 
   async function swapSlot(itemId: string, newExerciseId: string) {
@@ -1170,6 +1188,8 @@ export default function ProgramCalendarBuilder({
       }),
     });
     await loadSlots(focus.workoutId, prescription);
+    setMessage("Saved.");
+    setTimeout(() => setMessage(null), 1500);
   }
 
   async function publishDay() {
@@ -1746,6 +1766,9 @@ export default function ProgramCalendarBuilder({
                   </Link>
                 </>
               )}
+              <span className="text-[10px] text-[var(--muted)]" title="Exercise edits save as you go — Publish marks the day ready for members">
+                Auto-saved
+              </span>
               <button
                 type="button"
                 className={
