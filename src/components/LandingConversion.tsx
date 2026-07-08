@@ -19,7 +19,7 @@ export default function LandingConversion({
     <div className="relative min-h-screen app-shell-bg">
       <ThemeAttributesSync membershipTier="explorer" />
       <LandingNav />
-      <LandingHero />
+      <LandingHero welcomeVideoUrl={welcomeVideoUrl} />
       <LandingTicketPicker
         freeChastiseVideoUrl={freeChastiseVideoUrl}
         welcomeVideoUrl={welcomeVideoUrl}

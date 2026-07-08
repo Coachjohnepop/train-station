@@ -4,6 +4,7 @@ import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import TrainStationBrand from "@/components/TrainStationBrand";
 import LandingSignInRow from "@/components/LandingSignInRow";
+import WelcomeVideoPopover from "@/components/WelcomeVideoPopover";
 
 const images = [
   { src: "/images/splash/black-guy.jpg", alt: "Fit Black athlete powering through a heavy lift" },
@@ -19,7 +20,11 @@ const phrases = [
   <>Train with<br />Commitment.</>,
 ];
 
-export default function LandingHero() {
+export default function LandingHero({
+  welcomeVideoUrl = null,
+}: {
+  welcomeVideoUrl?: string | null;
+}) {
   const [tick, setTick] = useState(0);
 
   // Rotation: text changes "as fast" (every half image) but offset by 1/2 of the image scroll.
@@ -73,6 +78,14 @@ export default function LandingHero() {
           <p className="mx-auto max-w-2xl text-xl text-white/80 md:text-2xl tracking-tight">
             Professional-grade programs. Real accountability.<br />Results that actually last.
           </p>
+
+          {welcomeVideoUrl?.trim() ? (
+            <div className="mt-8">
+              <WelcomeVideoPopover welcomeVideoUrl={welcomeVideoUrl}>
+                Watch intro
+              </WelcomeVideoPopover>
+            </div>
+          ) : null}
           
           <div className="mt-10 flex flex-col items-center justify-center gap-4">
             <Link

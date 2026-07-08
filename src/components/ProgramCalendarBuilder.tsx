@@ -206,6 +206,7 @@ export default function ProgramCalendarBuilder({
   );
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const editorRef = useRef<HTMLDivElement>(null);
+  const dragFromIdx = useRef<number | null>(null);
   const [prescription, setPrescription] = useState<DayPrescription>(DEFAULT_DAY_PRESCRIPTION);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -1385,6 +1386,46 @@ export default function ProgramCalendarBuilder({
     ? program.weeks.flatMap((w) => w.days).find((d) => d.id === focus.dayId)
     : null;
 
+  async function persistSlotOrder(grid: (SlotItem | null)[]) {
+    if (!focus) return;
+    setSaving(true);
+    try {
+      const patches: Promise<Response>[] = [];
+      for (let i = 0; i < grid.length; i++) {
+        const slot = grid[i];
+        if (!slot) continue;
+        if ((slot.sortOrder ?? i) !== i) {
+          patches.push(
+            fetch(`/api/workouts/${focus.workoutId}/exercises`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ itemId: slot.id, sortOrder: i }),
+            }),
+          );
+        }
+      }
+      if (patches.length > 0) {
+        await Promise.all(patches);
+        await loadSlots(focus.workoutId, prescription);
+        setMessage("Saved.");
+        setTimeout(() => setMessage(null), 1500);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function moveSlot(fromIdx: number, toIdx: number) {
+    if (fromIdx === toIdx || !slots[fromIdx] || !focus) return;
+    const next = [...slots];
+    const dragged = next[fromIdx];
+    if (!dragged) return;
+    next[fromIdx] = next[toIdx];
+    next[toIdx] = dragged;
+    setSlots(next);
+    await persistSlotOrder(next);
+  }
+
   function renderExerciseSlot(idx: number) {
     const slot = slots[idx];
     const isSelected = selectedSlotIdx === idx;
@@ -1400,9 +1441,38 @@ export default function ProgramCalendarBuilder({
               ? "border-accent bg-accent/10"
               : "border-[var(--border)] bg-[var(--surface-2)] hover:border-accent/30"
         }`}
+        onDragOver={(e) => {
+          if (dragFromIdx.current !== null) e.preventDefault();
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          const from =
+            dragFromIdx.current ??
+            (Number.isFinite(Number(e.dataTransfer.getData("text/plain")))
+              ? Number(e.dataTransfer.getData("text/plain"))
+              : null);
+          dragFromIdx.current = null;
+          if (from !== null && from !== idx) void moveSlot(from, idx);
+        }}
       >
         {slot ? (
           <>
+            <span
+              draggable={!saving}
+              onDragStart={(e) => {
+                dragFromIdx.current = idx;
+                e.dataTransfer.effectAllowed = "move";
+                e.dataTransfer.setData("text/plain", String(idx));
+              }}
+              onDragEnd={() => {
+                dragFromIdx.current = null;
+              }}
+              className="shrink-0 cursor-grab select-none text-[10px] text-[var(--muted)] active:cursor-grabbing"
+              title="Drag to reorder"
+              aria-hidden
+            >
+              ⠿
+            </span>
             <input
               type="checkbox"
               className="h-3.5 w-3.5 shrink-0"

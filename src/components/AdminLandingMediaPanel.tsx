@@ -116,7 +116,7 @@ export default function AdminLandingMediaPanel({
           </li>
           <li>
             <strong className="text-white">Free-ticket video</strong> — plays first when someone taps{" "}
-            <span className="text-[#c4b5fd]">Free</span> (10s, then fades to Welcome video). Site music
+            <span className="text-[#c4b5fd]">Free</span> (20s, then fades to Welcome video). Site music
             mutes automatically.
           </li>
           <li>
@@ -174,7 +174,7 @@ export default function AdminLandingMediaPanel({
       <VideoField
         id="free"
         label="Free-ticket video"
-        hint="Prank clip (e.g. Rick Roll) — plays 10 seconds, then crossfades to Welcome video."
+        hint="Prank clip (e.g. Rick Roll) — plays 20 seconds, then crossfades to Welcome video."
         value={freeUrl}
         onChange={setFreeUrl}
         previewUrl={freeUrl}

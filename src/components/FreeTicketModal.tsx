@@ -7,9 +7,9 @@ import { landingVideoEmbedSrc } from "@/lib/landing-media";
 import { postYoutubeEmbedCommand } from "@/lib/youtube-embed-control";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 
-const RICKROLL_MS = 10_000;
+const RICKROLL_MS = 20_000;
 const FADE_MS = 1_500;
-const JEREMY_PRELOAD_MS = 7_000;
+const JEREMY_PRELOAD_MS = 17_000;
 
 export default function FreeTicketModal({
   open,
