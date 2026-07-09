@@ -18,18 +18,18 @@ import {
   REST_TIMER_PRESETS,
 } from "@/lib/rest-timer";
 
+
+type ParsedExercise = {
+  name: string;
+  sets: number;
+  reps: string;
+  notes?: string;
+  section?: string;
+};
+
 type InterpretResponse = {
   normalizedText: string;
-  workout: {
-    title: string;
-    exercises: Array<{
-      name: string;
-      sets: number;
-      reps: string;
-      notes?: string;
-      section?: string;
-    }>;
-  };
+  workout: { title: string; exercises: ParsedExercise[] };
   questions: LessonPlanQuestion[];
   includeWarmup: boolean;
   warmupInjected: boolean;
@@ -103,22 +103,6 @@ export default function CoachLessonPlanBuilder({
     setCascadeIds(memberOptions.map((m) => m.id));
   }, [step, cascadeIds.length, memberOptions]);
 
-  useEffect(() => {
-    setIndividualDrafts((prev) => {
-      const map = new Map(prev.map((d) => [d.userId, d]));
-      return memberOptions.map((m) => {
-        const existing = map.get(m.id);
-        return (
-          existing ?? {
-            userId: m.id,
-            rawSms: "",
-            useCustom: false,
-          }
-        );
-      });
-    });
-  }, [memberOptions]);
-
   async function openDraftEditor(
     data: InterpretResponse,
     priorQuestions: LessonPlanQuestion[] = [],
@@ -150,7 +134,7 @@ export default function CoachLessonPlanBuilder({
         ...(body.interpretation as InterpretResponse),
         catalogPreview: body.catalogPreview ?? data.catalogPreview,
       });
-      setMessage("Edit the workout below — same editor as Admin → Workouts.");
+      setMessage("Edit the workout below — same editor as the workout library.");
       setStep(1);
     } catch (e: unknown) {
       setError(true);
@@ -178,6 +162,22 @@ export default function CoachLessonPlanBuilder({
     setMessage(null);
     setError(false);
   }
+
+  useEffect(() => {
+    setIndividualDrafts((prev) => {
+      const map = new Map(prev.map((d) => [d.userId, d]));
+      return memberOptions.map((m) => {
+        const existing = map.get(m.id);
+        return (
+          existing ?? {
+            userId: m.id,
+            rawSms: "",
+            useCustom: false,
+          }
+        );
+      });
+    });
+  }, [memberOptions]);
 
   async function runInterpret(nextAnswers?: Record<string, string>) {
     if (!rawText.trim()) return;
@@ -295,10 +295,19 @@ export default function CoachLessonPlanBuilder({
     );
   }
 
+  const matchingSavedSession = useMemo(() => {
+    const normalized = interpretation?.normalizedText?.trim() || rawText.trim();
+    const key = normalized.replace(/\r\n/g, "\n");
+    if (!key) return null;
+    return (
+      savedSessions.find((s) => s.rawSms.trim().replace(/\r\n/g, "\n") === key) ?? null
+    );
+  }, [interpretation?.normalizedText, rawText, savedSessions]);
+
   async function handleDeploy() {
-    if (!draftWorkoutId) {
+    if (!draftWorkoutId && !matchingSavedSession?.workoutId) {
       setError(true);
-      setMessage("Edit the workout in the editor first — that becomes today's class.");
+      setMessage("Open the workout editor first — edits there become today's class workout.");
       return;
     }
 
@@ -343,7 +352,7 @@ export default function CoachLessonPlanBuilder({
                   rawSms: normalized,
                   userIds: cascadeIds,
                   title: interpretation?.workout?.title,
-                  workoutId: draftWorkoutId,
+                  workoutId: draftWorkoutId || matchingSavedSession?.workoutId,
                 }
               : undefined,
           individuals,
@@ -371,8 +380,10 @@ export default function CoachLessonPlanBuilder({
       setMessage(null);
       setError(false);
       setStep(3);
+      setSaving(false);
       onPublished?.();
       void router.refresh();
+      return;
     } catch (e: unknown) {
       setError(true);
       setMessage(e instanceof Error ? e.message : "Deploy failed.");
@@ -407,8 +418,8 @@ export default function CoachLessonPlanBuilder({
           <div>
             <h2 className="font-semibold text-lg">Lesson plan</h2>
             <p className="mt-1 text-xs text-[var(--muted)]">
-              Paste your plan — Grok interprets it, then you edit in the workout builder (same as
-              Admin → Workouts). No separate certify step.
+              Type or paste from voice-to-text — however you send workouts to John today. Grok interprets
+              it, asks questions if something is unclear, and builds the session.
             </p>
           </div>
 
@@ -430,11 +441,15 @@ export default function CoachLessonPlanBuilder({
                 </option>
               ))}
             </select>
+            <span className="mt-1 block text-[10px] text-[var(--muted)]">
+              Pick Stephanie (or anyone) as the template — you can cascade the same workout to others
+              later or fork individuals with special needs.
+            </span>
           </label>
 
           <textarea
             className="input min-h-[220px] w-full resize-y text-sm leading-relaxed"
-            placeholder={`Example:\n\nLower Day\n\nLeg press 4 sets\n10,10,10,10\n\nBarbell hip thrust 4 sets\nBulgarian split squats 3 each leg`}
+            placeholder={`Example:\n\nLower Day\n\nLeg press 4 sets\n10,10,10,10\n\nBarbell hip thrust 4 sets\nBulgarian split squats 3 each leg\n\nHIIT jump squats 8 rounds 20 sec on`}
             value={rawText}
             onChange={(e) => setRawText(e.target.value)}
           />
@@ -445,7 +460,8 @@ export default function CoachLessonPlanBuilder({
               checked={includeWarmup}
               onChange={(e) => setIncludeWarmup(e.target.checked)}
             />
-            Add standard warm-up if missing
+            Add standard warm-up if missing (wall taps, bands, light curls, Bosu/jump squats — bonus points
+            if members finish before you arrive)
           </label>
 
           <div className="flex flex-wrap gap-2">
@@ -518,11 +534,14 @@ export default function CoachLessonPlanBuilder({
             continueLabel="Assign to class →"
             headerNote={
               interpretation?.catalogPreview ? (
-                <ExerciseCatalogMatchList preview={interpretation.catalogPreview} showSets={false} />
+                <ExerciseCatalogMatchList
+                  preview={interpretation.catalogPreview}
+                  showSets={false}
+                />
               ) : (
                 <p className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">
-                  Same editor as <strong>Admin → Workouts</strong> — add, edit, remove exercises.
-                  Changes save automatically.
+                  Same workout editor as <strong>Admin → Workouts</strong> — add, edit setup, remove,
+                  rename. Changes save to today&apos;s class automatically.
                 </p>
               )
             }
@@ -535,15 +554,17 @@ export default function CoachLessonPlanBuilder({
           <div>
             <h2 className="font-semibold text-lg">Assign class</h2>
             <p className="mt-1 text-xs text-[var(--muted)]">
-              Students get the workout you edited — not a re-parsed text preview.
+              Cascade the same workout to a group, or mark students who need their own plan (injuries,
+              different goals).
             </p>
             {interpretation?.catalogPreview ? (
               <div className="mt-3">
                 <ExerciseCatalogMatchSummary preview={interpretation.catalogPreview} compact />
                 {interpretation.catalogPreview.summary.newCount > 0 ? (
                   <p className="mt-1 text-[10px] text-amber-200/90">
-                    Deploy adds {interpretation.catalogPreview.summary.newCount} exercise
-                    {interpretation.catalogPreview.summary.newCount !== 1 ? "s" : ""} to the library.
+                    Deploy will add {interpretation.catalogPreview.summary.newCount} exercise
+                    {interpretation.catalogPreview.summary.newCount !== 1 ? "s" : ""} to Admin →
+                    Exercises.
                   </p>
                 ) : null}
               </div>
@@ -588,6 +609,11 @@ export default function CoachLessonPlanBuilder({
                 );
               })}
             </div>
+            {cascadeIds.length > 0 && (
+              <p className="text-[10px] text-[var(--success)]">
+                {cascadeIds.length} student{cascadeIds.length !== 1 ? "s" : ""} get the same workout
+              </p>
+            )}
           </div>
 
           <div className="space-y-3">
@@ -646,7 +672,7 @@ export default function CoachLessonPlanBuilder({
             </label>
             {restTimerEnabled ? (
               <label className="block text-xs">
-                <span className="text-[var(--muted)]">Countdown after each set</span>
+                <span className="text-[var(--muted)]">Countdown after each set (whole workout)</span>
                 <select
                   className="input mt-1 w-full text-sm"
                   value={restTimerSeconds}
@@ -660,6 +686,10 @@ export default function CoachLessonPlanBuilder({
                 </select>
               </label>
             ) : null}
+            <p className="text-[10px] text-[var(--muted)]">
+              When on, coach and member see an automatic countdown on Go to Today after each set
+              is checked off.
+            </p>
           </div>
 
           <label className="flex items-center gap-2 text-xs cursor-pointer">
@@ -681,7 +711,13 @@ export default function CoachLessonPlanBuilder({
               disabled={saving}
               className="btn-primary px-4 py-2 text-sm"
             >
-              {saving ? "Deploying…" : "Deploy to students"}
+              {saving
+                ? matchingSavedSession
+                  ? "Publishing…"
+                  : "Building workout…"
+                : matchingSavedSession
+                  ? "Publish saved class"
+                  : "Deploy to students"}
             </button>
           </div>
         </div>
@@ -693,12 +729,9 @@ export default function CoachLessonPlanBuilder({
             <h2 className="font-semibold text-lg text-emerald-100">Published</h2>
             <p className="mt-1 text-xs text-[var(--muted)]">
               Built {deployResult.built} workout{deployResult.built !== 1 ? "s" : ""} for{" "}
-              {viewDateLabel}.
+              {viewDateLabel}. Students below should see it on Go to Today.
             </p>
-            <NewExerciseReviewLink
-              count={newExerciseCount}
-              className="mt-2 inline-block text-xs font-medium text-accent hover:underline"
-            />
+            <NewExerciseReviewLink count={newExerciseCount} className="mt-2 inline-block text-xs font-medium text-accent hover:underline" />
           </div>
           {deployResult.cascadeNames.length > 0 && (
             <div>
@@ -710,6 +743,23 @@ export default function CoachLessonPlanBuilder({
                   <li
                     key={name}
                     className="rounded-full border border-emerald-500/30 bg-[var(--surface)] px-3 py-1 text-xs"
+                  >
+                    ✓ {name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {deployResult.individualNames.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                Individual plans ({deployResult.individualNames.length})
+              </p>
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {deployResult.individualNames.map((name) => (
+                  <li
+                    key={name}
+                    className="rounded-full border border-amber-500/30 bg-[var(--surface)] px-3 py-1 text-xs"
                   >
                     ✓ {name}
                   </li>

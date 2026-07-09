@@ -1,6 +1,13 @@
 import path from "path";
 import { randomUUID } from "crypto";
-import { hydrateDemoExercises, loadDemoExercises, saveDemoExercises, createDemoExerciseId, isDemoMode } from "@/lib/demo-exercises";
+import {
+  loadExerciseCatalogForMatching,
+  loadExercisesByIds,
+  resolveExerciseForWorkoutBlock,
+  type CatalogExercise,
+} from "@/lib/exercise-catalog-load";
+import { hydrateDemoExercises, loadDemoExercises, saveDemoExercises } from "@/lib/demo-exercises";
+import { prisma } from "@/lib/prisma";
 import type { ParsedSmsWorkout } from "@/lib/sms-workout-parser";
 import type { MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import { resolveUserId } from "@/lib/current-user";
@@ -9,6 +16,7 @@ import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-js
 import { parseSmsWorkout } from "@/lib/sms-workout-parser";
 import { hydrateTodaySessions, listTodaySessions } from "@/lib/today-sessions";
 import { matchExerciseInCatalog, sanitizeSmsExerciseName } from "@/lib/exercise-match";
+import { isCoachCatalogDemo } from "@/lib/catalog-mode";
 import { hintVideoUrlForExerciseName, resolveExerciseVideoUrl } from "@/lib/exercise-video-hints";
 import { DEFAULT_REST_TIMER_SECONDS, normalizeRestTimerSeconds } from "@/lib/rest-timer";
 
@@ -32,7 +40,7 @@ type SmsWorkoutRecord = {
   certifiedAt?: string | null;
 };
 
-export type SmsWorkoutStore = {
+type SmsWorkoutStore = {
   workouts: SmsWorkoutRecord[];
   workoutExercises: Array<{
     id: string;
@@ -84,24 +92,21 @@ export async function writeSmsWorkoutStore(store: SmsWorkoutStore) {
   });
 }
 
-function readStore(): SmsWorkoutStore {
-  return readSmsWorkoutStore();
-}
-
-async function writeStore(store: SmsWorkoutStore) {
-  await writeSmsWorkoutStore(store);
-}
-
-import { NEWLY_ADDED_EXERCISE_TAG } from "@/lib/text-upload-exercises";
-
-async function patchExerciseVideoIfMissing(
-  exercise: ReturnType<typeof loadDemoExercises>[number],
-  exercises: ReturnType<typeof loadDemoExercises>,
-): Promise<ReturnType<typeof loadDemoExercises>[number]> {
+async function patchExerciseVideoIfMissing(exercise: CatalogExercise): Promise<CatalogExercise> {
   if (exercise.videoUrl) return exercise;
   const hint = hintVideoUrlForExerciseName(exercise.name);
   if (!hint) return exercise;
 
+  if (!isCoachCatalogDemo()) {
+    return prisma.exercise.update({
+      where: { id: exercise.id },
+      data: { videoUrl: hint },
+      select: { id: true, name: true, description: true, tags: true, videoUrl: true },
+    });
+  }
+
+  await hydrateDemoExercises();
+  const exercises = loadDemoExercises();
   const next = { ...exercise, videoUrl: hint, updatedAt: new Date().toISOString() };
   await saveDemoExercises(exercises.map((e) => (e.id === exercise.id ? next : e)));
   return next;
@@ -110,26 +115,11 @@ async function patchExerciseVideoIfMissing(
 async function ensureExercise(
   rawName: string,
   notes?: string,
-): Promise<{ exercise: ReturnType<typeof loadDemoExercises>[number]; created: boolean }> {
-  await hydrateDemoExercises();
-  const exercises = loadDemoExercises();
-  const displayName = sanitizeSmsExerciseName(rawName) || rawName.trim();
-  const existing = matchExerciseInCatalog(displayName, exercises);
-  if (existing) {
-    const patched = await patchExerciseVideoIfMissing(existing, exercises);
-    return { exercise: patched, created: false };
-  }
-
-  const hintVideo = hintVideoUrlForExerciseName(displayName);
-  const created = {
-    id: createDemoExerciseId(),
-    name: displayName,
-    description: notes || `Created from text upload (${new Date().toISOString().slice(0, 10)})`,
-    tags: NEWLY_ADDED_EXERCISE_TAG,
-    videoUrl: hintVideo,
-  };
-  await saveDemoExercises([...exercises, created]);
-  return { exercise: created, created: true };
+): Promise<{ exercise: CatalogExercise; created: boolean }> {
+  const catalog = await loadExerciseCatalogForMatching();
+  const resolved = await resolveExerciseForWorkoutBlock(rawName, notes, catalog);
+  const patched = await patchExerciseVideoIfMissing(resolved.exercise);
+  return { exercise: patched, created: resolved.created };
 }
 
 async function parsedSmsNamesForWorkout(workoutId: string): Promise<string[]> {
@@ -146,9 +136,8 @@ export async function relinkSmsWorkoutExercises(workoutId: string): Promise<{
   videos: number;
 }> {
   await hydrateSmsWorkouts();
-  await hydrateDemoExercises();
-  const store = readStore();
-  let exercises = loadDemoExercises();
+  const store = readSmsWorkoutStore();
+  let exercises = await loadExerciseCatalogForMatching();
   const items = store.workoutExercises
     .filter((we) => we.workoutId === workoutId)
     .sort((a, b) => a.sortOrder - b.sortOrder);
@@ -172,12 +161,12 @@ export async function relinkSmsWorkoutExercises(workoutId: string): Promise<{
       item.exerciseId = matched.id;
       relinked++;
     }
-    const patched = await patchExerciseVideoIfMissing(matched, exercises);
-    exercises = loadDemoExercises();
+    const patched = await patchExerciseVideoIfMissing(matched);
+    exercises = await loadExerciseCatalogForMatching();
     if (resolveExerciseVideoUrl(patched)) videos++;
   }
 
-  await writeStore(store);
+  await writeSmsWorkoutStore(store);
   return { workoutId, relinked, videos };
 }
 
@@ -186,14 +175,14 @@ export async function updateWorkoutRestTimer(
   restTimer: WorkoutRestTimerSettings,
 ): Promise<void> {
   await hydrateSmsWorkouts();
-  const store = readStore();
+  const store = readSmsWorkoutStore();
   const workout = store.workouts.find((w) => w.id === workoutId);
   if (!workout) return;
   workout.restTimerEnabled = restTimer.enabled;
   workout.restTimerSeconds = restTimer.enabled
     ? normalizeRestTimerSeconds(restTimer.seconds)
     : undefined;
-  await writeStore(store);
+  await writeSmsWorkoutStore(store);
 }
 
 export async function buildWorkoutFromParsedSms(
@@ -201,9 +190,9 @@ export async function buildWorkoutFromParsedSms(
   workoutId?: string,
   restTimer?: WorkoutRestTimerSettings,
 ) {
-  await Promise.all([hydrateSmsWorkouts(), hydrateDemoExercises()]);
-  const store = readStore();
-  let exercises = loadDemoExercises();
+  await hydrateSmsWorkouts();
+  const store = readSmsWorkoutStore();
+  let catalog = await loadExerciseCatalogForMatching();
   const id = workoutId || `sms-w-${randomUUID().slice(0, 8)}`;
   const now = new Date().toISOString();
 
@@ -223,24 +212,12 @@ export async function buildWorkoutFromParsedSms(
   });
 
   const newExerciseIds: string[] = [];
-  let exercisesDirty = false;
 
   for (const [idx, ex] of parsed.exercises.entries()) {
-    const displayName = sanitizeSmsExerciseName(ex.name) || ex.name.trim();
-    let exercise = matchExerciseInCatalog(displayName, exercises);
-    if (!exercise) {
-      const hintVideo = hintVideoUrlForExerciseName(displayName);
-      exercise = {
-        id: createDemoExerciseId(),
-        name: displayName,
-        description: ex.notes || `Created from text upload (${now.slice(0, 10)})`,
-        tags: NEWLY_ADDED_EXERCISE_TAG,
-        videoUrl: hintVideo,
-      };
-      exercises.push(exercise);
-      exercisesDirty = true;
-      newExerciseIds.push(exercise.id);
-    }
+    const resolved = await resolveExerciseForWorkoutBlock(ex.name, ex.notes, catalog);
+    catalog = resolved.catalog;
+    if (resolved.created) newExerciseIds.push(resolved.exercise.id);
+    const exercise = resolved.exercise;
 
     store.workoutExercises.push({
       id: `sms-we-${randomUUID().slice(0, 8)}`,
@@ -256,10 +233,7 @@ export async function buildWorkoutFromParsedSms(
     });
   }
 
-  if (exercisesDirty) {
-    await saveDemoExercises(exercises);
-  }
-  await writeStore(store);
+  await writeSmsWorkoutStore(store);
   return { workoutId: id, exerciseCount: parsed.exercises.length, newExerciseIds };
 }
 
@@ -271,27 +245,24 @@ export type WorkoutExerciseBlockMeta = {
 
 export async function getWorkoutExerciseBlocks(workoutId: string): Promise<WorkoutExerciseBlockMeta[]> {
   await hydrateSmsWorkouts();
-  const store = readStore();
-  const exercises = loadDemoExercises();
-  const exById = Object.fromEntries(exercises.map((e) => [e.id, e]));
-  return store.workoutExercises
+  const store = readSmsWorkoutStore();
+  const items = store.workoutExercises
     .filter((we) => we.workoutId === workoutId)
-    .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((item) => ({
-      id: item.id,
-      name:
-        sanitizeSmsExerciseName(item.blockName || "") ||
-        exById[item.exerciseId]?.name ||
-        "Exercise",
-      setCount: item.sets ?? 3,
-    }));
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  const exById = await loadExercisesByIds(items.map((item) => item.exerciseId));
+  return items.map((item) => ({
+    id: item.id,
+    name:
+      sanitizeSmsExerciseName(item.blockName || "") ||
+      exById[item.exerciseId]?.name ||
+      "Exercise",
+    setCount: item.sets ?? 3,
+  }));
 }
 
 export async function getWorkoutExercisePreview(workoutId: string, limit = 4): Promise<string[]> {
   await hydrateSmsWorkouts();
-  const store = readStore();
-  const exercises = loadDemoExercises();
-  const exById = Object.fromEntries(exercises.map((e) => [e.id, e]));
+  const store = readSmsWorkoutStore();
   const blocks = await getWorkoutExerciseBlocks(workoutId);
   return blocks.slice(0, limit).map((block) => block.name);
 }
@@ -302,15 +273,14 @@ export async function getSmsGeneratedWorkout(
   userId?: string,
 ): Promise<MemberWorkoutView | null> {
   await hydrateSmsWorkouts();
-  const store = readStore();
+  const store = readSmsWorkoutStore();
   const workout = store.workouts.find((w) => w.id === workoutId);
   if (!workout) return null;
 
-  const exercises = loadDemoExercises();
-  const exById = Object.fromEntries(exercises.map((e) => [e.id, e]));
   const items = store.workoutExercises
     .filter((we) => we.workoutId === workoutId)
     .sort((a, b) => a.sortOrder - b.sortOrder);
+  const exById = await loadExercisesByIds(items.map((item) => item.exerciseId));
 
   const blocks = items.map((item) => {
     const ex = exById[item.exerciseId] || { name: "Exercise" };

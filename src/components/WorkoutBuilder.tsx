@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import WorkoutCertifyPanel from "@/components/WorkoutCertifyPanel";
 import { workoutItemsToParsedSms } from "@/lib/workout-builder-export";
 import PrescriptionRowEditor from "@/components/PrescriptionRowEditor";
@@ -57,14 +57,14 @@ export default function WorkoutBuilder({
   workoutId,
   embedded = false,
   onContinue,
-  continueLabel = "Continue →",
+  continueLabel = "Continue to assign class →",
   headerNote,
 }: {
   workoutId: string;
   embedded?: boolean;
   onContinue?: () => void;
   continueLabel?: string;
-  headerNote?: ReactNode;
+  headerNote?: React.ReactNode;
 }) {
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [library, setLibrary] = useState<Exercise[]>([]);
@@ -299,11 +299,9 @@ export default function WorkoutBuilder({
   if (loadError || !workout) {
     return (
       <div className="space-y-4">
-        {!embedded ? (
-          <Link href="/admin/workouts" className="text-sm text-accent hover:underline">
-            ← All workouts
-          </Link>
-        ) : null}
+        <Link href="/admin/workouts" className="text-sm text-accent hover:underline">
+          ← All workouts
+        </Link>
         <div className="card border-[var(--danger)]/40">
           <p className="font-semibold text-[var(--danger)]">Could not open this workout</p>
           <p className="mt-2 text-sm text-[var(--muted)]">{loadError}</p>
@@ -314,11 +312,6 @@ export default function WorkoutBuilder({
       </div>
     );
   }
-
-  const showCertifyPanel =
-    parsedForExport &&
-    !embedded &&
-    !workoutId.startsWith("sms-w-");
 
   return (
     <div className="space-y-6">
@@ -490,7 +483,7 @@ export default function WorkoutBuilder({
         )}
       </ul>
 
-      {showCertifyPanel ? (
+      {parsedForExport && !embedded ? (
         <WorkoutCertifyPanel
           workoutId={workoutId}
           parsedWorkout={parsedForExport}
