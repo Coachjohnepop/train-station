@@ -80,10 +80,18 @@ export default function LandingHero({
           </p>
 
           {welcomeVideoUrl?.trim() ? (
-            <div className="mt-8">
+            <div className="mt-8 flex flex-col items-center gap-2">
               <WelcomeVideoPopover welcomeVideoUrl={welcomeVideoUrl}>
                 Watch intro
               </WelcomeVideoPopover>
+              <a
+                href={welcomeVideoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-white/70 hover:text-white hover:underline"
+              >
+                YouTube link →
+              </a>
             </div>
           ) : null}
           

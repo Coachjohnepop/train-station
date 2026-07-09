@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import MemberDashboardLink from "@/components/MemberDashboardLink";
+import WelcomeVideoPopover from "@/components/WelcomeVideoPopover";
 
 export default function LandingWelcomeBanner({
   displayName,
@@ -10,6 +11,7 @@ export default function LandingWelcomeBanner({
   membershipPlan = null,
   membershipPlanLabel = null,
   isEstablishedMember = false,
+  welcomeVideoUrl = null,
 }: {
   displayName: string;
   email?: string;
@@ -42,6 +44,22 @@ export default function LandingWelcomeBanner({
           Welcome back, {displayName}.
         </h1>
         <p className="mt-3 text-base text-[var(--muted)] sm:text-lg">{subtitle()}</p>
+
+        {welcomeVideoUrl?.trim() ? (
+          <div className="mt-6 flex flex-col items-center gap-2">
+            <WelcomeVideoPopover welcomeVideoUrl={welcomeVideoUrl}>
+              Watch intro
+            </WelcomeVideoPopover>
+            <a
+              href={welcomeVideoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-accent hover:underline"
+            >
+              YouTube link →
+            </a>
+          </div>
+        ) : null}
 
         <div className="mt-6 flex justify-center">
           {isCoach ? (

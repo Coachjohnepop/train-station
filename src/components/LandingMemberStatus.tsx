@@ -2,6 +2,7 @@ import Link from "next/link";
 import MemberDashboardLink from "@/components/MemberDashboardLink";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
 import TrainStationBrand from "@/components/TrainStationBrand";
+import WelcomeVideoPopover from "@/components/WelcomeVideoPopover";
 import {
   MEMBERSHIP_THEME_LABELS,
   membershipThemeTierFromPlan,
@@ -20,6 +21,7 @@ export default function LandingMemberStatus({
   membership,
   displayName,
   email,
+  welcomeVideoUrl = null,
 }: {
   membership: MemberMembershipSnapshot;
   displayName?: string;
@@ -56,6 +58,21 @@ export default function LandingMemberStatus({
             ? "Sample the station, then upgrade when you are ready for daily coach workouts and live sessions."
             : `Your ${planLabel} ticket is active. Open your dashboard for today’s workout, messages, and scores.`}
         </p>
+        {welcomeVideoUrl?.trim() ? (
+          <div className="mx-auto mt-5 flex max-w-md flex-col items-center gap-2">
+            <WelcomeVideoPopover welcomeVideoUrl={welcomeVideoUrl}>
+              Watch intro
+            </WelcomeVideoPopover>
+            <a
+              href={welcomeVideoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-accent hover:underline"
+            >
+              YouTube link →
+            </a>
+          </div>
+        ) : null}
         <div className="mx-auto mt-6 flex max-w-md flex-col items-stretch gap-3 sm:flex-row sm:justify-center">
           <MemberDashboardLink className="btn-primary w-full px-8 sm:w-auto">
             Open Dashboard

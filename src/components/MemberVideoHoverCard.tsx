@@ -57,6 +57,15 @@ export default function MemberVideoHoverCard({
             </p>
             <p className="mt-1 text-sm font-semibold">{title}</p>
             {subtitle ? <p className="mt-1 text-xs text-[var(--muted)]">{subtitle}</p> : null}
+            <a
+              href={videoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block text-xs text-accent hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              YouTube link →
+            </a>
           </div>
           <span className="shrink-0 text-xs font-semibold text-[var(--accent)]">
             {isTouch ? (open ? "Close" : "Play") : "Hover to play"}
