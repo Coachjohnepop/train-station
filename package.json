@@ -45,6 +45,7 @@
     "test:commission": "node scripts/stripe-commission-math-test.mjs",
     "test:quick-auth": "node scripts/quick-auth-login-smoke.mjs",
     "test:blob": "node scripts/blob-probe.mjs",
+    "test:blob-migration-config": "npx tsx scripts/blob-migration-config-test.mjs",
     "catalog:standardize": "npx tsx scripts/standardize-exercise-catalog.ts",
     "catalog:standardize:dry": "DRY_RUN=1 npx tsx scripts/standardize-exercise-catalog.ts",
     "backfill:phases": "npx tsx scripts/backfill-workout-phases.ts",

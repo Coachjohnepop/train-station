@@ -51,8 +51,13 @@ model User {
   hidden             Boolean             @default(false)
   hiddenAt           DateTime?
   notes              String?
+  signupPlan         String?
+  registeredAt       DateTime?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @default(now()) @updatedAt
+  memberProfile      MemberProfile?
+  oauthIdentities    OAuthIdentity[]
+  coachPrefs         MemberCoachPrefs?
   subscriptions      Subscription[]
   enrollments        ProgramEnrollment[]
   performances       ExercisePerformance[]
@@ -106,15 +111,18 @@ model Exercise {
 }
 
 model Workout {
-  id          String            @id @default(cuid())
-  name        String
-  description String?
-  certifiedAt DateTime?
-  exportText  String?           @db.Text
-  certifiedBy String?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  exercises   WorkoutExercise[]
+  id                String            @id @default(cuid())
+  name              String
+  description       String?
+  certifiedAt       DateTime?
+  exportText        String?           @db.Text
+  certifiedBy       String?
+  source            String            @default("catalog")
+  restTimerEnabled  Boolean           @default(false)
+  restTimerSeconds  Int?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  exercises         WorkoutExercise[]
   programDays ProgramDay[]
   dayOptions  ProgramDayOption[]
   cycleSlots  WorkoutCycleDaySlot[]
@@ -137,6 +145,7 @@ model WorkoutExercise {
   setCount             Int?
   /// Rest between working sets in seconds (e.g. 90 for 1:30).
   restBetweenSetsSec   Int?
+  blockName            String?
   notes      String?
   workout    Workout   @relation(fields: [workoutId], references: [id], onDelete: Cascade)
   exercise   Exercise  @relation(fields: [exerciseId], references: [id])
@@ -442,6 +451,287 @@ model ZoomOAuthPendingState {
 
   @@index([coachEmail])
   @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Blob migration — Tier 1 (auth, profiles, SMS, OAuth, password reset)
+// Tables unused at runtime until store facades flip migration flags (PR-2+).
+// ---------------------------------------------------------------------------
+
+model MemberProfile {
+  userId                      String    @id
+  email                       String
+  plan                        String
+  weightLbs                   String?
+  notes                       String?   @db.Text
+  onboardingComplete          Boolean   @default(false)
+  completedAt                 DateTime?
+  approvalStatus              String    @default("approved")
+  approvedAt                  DateTime?
+  paymentStatus               String    @default("none")
+  paidAt                      DateTime?
+  paymentMethod               String?
+  paymentNote                 String?   @db.Text
+  stripeCustomerId            String?
+  stripeSubscriptionId        String?
+  stripeCheckoutSessionId     String?
+  referralCode                String?
+  referredByUserId            String?
+  intensiveSessionsTotal      Int?
+  intensiveSessionsRemaining  Int?
+  intensiveWindowDays         Int?
+  intensiveStartsAt           DateTime?
+  intensiveExpiresAt          DateTime?
+  customTrainingOfferId       String?
+  welcomeSignupEmailSentAt    DateTime?
+  welcomeCompleteEmailSentAt  DateTime?
+  welcomeSmsSentAt            DateTime?
+  coachIntakeCompleteAt       DateTime?
+  coachIntakeCompletedBy      String?
+  introBookedAt               DateTime?
+  coachMeetingRequestedAt     DateTime?
+  coachMeetingRequestedBy     String?
+  coachMeetingRequestNote     String?   @db.Text
+  rampStartedAt               DateTime?
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([paymentStatus])
+  @@index([stripeCustomerId])
+}
+
+model OAuthIdentity {
+  id             String   @id @default(cuid())
+  provider       String
+  providerUserId String
+  userId         String
+  email          String
+  linkedAt       DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+  @@index([email])
+}
+
+model PasswordResetToken {
+  tokenHash String   @id
+  email     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Blob migration — Tier 2 (chat, live sessions, coach settings, prefs)
+// ---------------------------------------------------------------------------
+
+model CoachChatThread {
+  id          String   @id
+  kind        String
+  memberId    String?
+  programSlug String?
+  title       String
+  createdAt   DateTime
+  updatedAt   DateTime
+
+  messages CoachChatMessage[]
+
+  @@index([memberId])
+  @@index([programSlug])
+  @@index([updatedAt])
+}
+
+model CoachChatMessage {
+  id               String   @id
+  threadId         String
+  authorRole       String
+  authorId         String
+  authorName       String
+  kind             String
+  body             String?  @db.Text
+  mediaUrl         String?
+  youtubeId        String?
+  videoDurationSec Int?
+  sessionDate      String?
+  todaySessionId   String?
+  workoutId        String?
+  workoutTitle     String?
+  smsLogId         String?
+  alertSent        Boolean  @default(false)
+  readByUserIds    String[]
+  reactions        Json?
+  createdAt        DateTime
+
+  thread CoachChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@index([authorId])
+}
+
+model LiveWorkoutSession {
+  id                String   @id @default(cuid())
+  userId            String
+  workoutId         String
+  sessionDate       String
+  completedSets     Json
+  finishedExercises String[]
+  weights           Json
+  activeId          String?
+  updatedBy         String
+  revision          Int      @default(0)
+  updatedAt         DateTime @updatedAt
+
+  @@unique([userId, workoutId, sessionDate])
+  @@index([userId, sessionDate])
+}
+
+model CoachSettings {
+  id                        String   @id @default("default")
+  coachPhone                String?
+  coachEmail                String?
+  messagingEnabled          Boolean  @default(true)
+  autoPromptIntroBooking    Boolean  @default(false)
+  autoPromptFollowUpBooking Boolean  @default(false)
+  commissionPayoutMode      String   @default("on_demand")
+  commissionPayoutWeekday   Int      @default(5)
+  alertPrefs                Json
+  warmupBlocks              Json
+  rampTemplate              Json
+  gamificationPoints        Json
+  updatedAt                 DateTime @updatedAt
+}
+
+model MemberCoachPrefs {
+  userId         String   @id
+  coachingMode   String?
+  alertOverrides Json
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Blob migration — Tier 3 (commerce, referrals, webhooks, waitlist, offers)
+// ---------------------------------------------------------------------------
+
+model CommissionPartner {
+  id              String   @id
+  name            String
+  email           String
+  stripeAccountId String?
+  sharePercent    Float
+  enabled         Boolean  @default(true)
+  notes           String?  @db.Text
+  createdAt       DateTime
+  updatedAt       DateTime
+
+  payoutLines CommissionPayoutLine[]
+
+  @@index([email])
+  @@index([enabled])
+}
+
+model CommissionPayout {
+  id                   String   @id
+  period               String   @unique
+  mrrCents             Int
+  tier1BaseCents       Int
+  tier1CommissionCents Int
+  tier2BaseCents       Int
+  tier2CommissionCents Int
+  totalCommissionCents Int
+  transferId           String?
+  status               String
+  error                String?  @db.Text
+  createdAt            DateTime
+  paidAt               DateTime?
+
+  partnerLines CommissionPayoutLine[]
+
+  @@index([status])
+}
+
+model CommissionPayoutLine {
+  id           String   @id @default(cuid())
+  payoutId     String
+  partnerId    String
+  partnerName  String
+  sharePercent Float
+  amountCents  Int
+  transferId   String?
+  status       String
+  error        String?  @db.Text
+
+  payout  CommissionPayout  @relation(fields: [payoutId], references: [id], onDelete: Cascade)
+  partner CommissionPartner @relation(fields: [partnerId], references: [id])
+
+  @@index([payoutId])
+  @@index([partnerId])
+}
+
+model ReferralCode {
+  id                    String   @id
+  code                  String   @unique
+  label                 String
+  stripePromotionCodeId String?
+  stripeCouponId        String?
+  ownerUserId           String?
+  enabled               Boolean  @default(true)
+  notes                 String?  @db.Text
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@index([ownerUserId])
+}
+
+model StripeWebhookEvent {
+  eventId     String   @id
+  type        String
+  processedAt DateTime @default(now())
+
+  @@index([processedAt])
+}
+
+model WaitlistEntry {
+  id        String   @id
+  email     String   @unique
+  name      String
+  firstName String?
+  lastName  String?
+  phone     String?
+  plan      String?
+  source    String?
+  createdAt DateTime
+
+  @@index([createdAt])
+  @@index([plan])
+}
+
+model CustomTrainingOffer {
+  id                      String   @id
+  label                   String
+  memberEmail             String?
+  memberUserId            String?
+  priceCents              Int
+  currency                String   @default("usd")
+  parameters              Json
+  status                  String
+  stripeCheckoutSessionId String?
+  createdByEmail          String?
+  notes                   String?  @db.Text
+  createdAt               DateTime
+  updatedAt               DateTime
+
+  @@index([memberUserId])
+  @@index([memberEmail])
+  @@index([status])
 }
 
 /** Reference prescription patterns (seeded from workout-prescription-examples.csv). */

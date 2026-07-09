@@ -181,6 +181,34 @@ After first deploy, every push to main will auto-deploy previews + prod.
 
 This ensures the data you invested in building is never lost, is versioned with the code, ships as part of the product, yet the platform remains reusable/cleanable.
 
+## Blob → Postgres migration (per-store rollout)
+
+Production still reads/writes many stores via Vercel Blob JSON (`demo/*.json`). Migration is phased per store using env flags in `src/lib/blob-migration-config.ts`.
+
+| Phase | Read | Write | Meaning |
+|-------|------|-------|---------|
+| A (default) | `blob` | `blob` | Current prod — blob authoritative |
+| B | `blob` | `dual` | Backfill + verify DB writes |
+| C | `db_with_blob_fallback` | `dual` | DB authoritative; blob heals stale reads |
+| D | `db` | `db` | Cutover complete |
+
+**Env override pattern** (Vercel → Production):
+
+```
+BLOB_MIGRATION_<STORE>_READ=blob|db|db_with_blob_fallback
+BLOB_MIGRATION_<STORE>_WRITE=blob|db|dual
+```
+
+`<STORE>` is the blob slug in `SCREAMING_SNAKE_CASE`, e.g. `member-profiles` → `BLOB_MIGRATION_MEMBER_PROFILES_READ`.
+
+Demo mode (`DATABASE_URL` unset or contains `dummy`) **always** uses blob — migration flags are ignored.
+
+**Rollback:** Set read/write back to `blob` for a store in Vercel env (no redeploy required if config-only).
+
+**Parity checks:** Dual-write facades log `[migration-parity-mismatch]` when blob and DB snapshots diverge (`src/lib/blob-migration-parity.ts`).
+
+**Schema:** PR-1 adds unused Postgres tables; PR-2+ wire store facades. Run `npx prisma migrate deploy` after merging schema PRs.
+
 ## Rollback note
 The old `dev.db` sqlite file is still in the folder (gitignored). If you ever need to go back temporarily, we can restore the old prisma.ts + schema + reinstall the sqlite adapter packages.
 
