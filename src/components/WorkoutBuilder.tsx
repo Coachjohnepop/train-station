@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import WorkoutCertifyPanel from "@/components/WorkoutCertifyPanel";
 import { workoutItemsToParsedSms } from "@/lib/workout-builder-export";
 import PrescriptionRowEditor from "@/components/PrescriptionRowEditor";
@@ -53,7 +53,19 @@ function isWorkoutPayload(data: unknown): data is Workout {
   );
 }
 
-export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
+export default function WorkoutBuilder({
+  workoutId,
+  embedded = false,
+  onContinue,
+  continueLabel = "Continue →",
+  headerNote,
+}: {
+  workoutId: string;
+  embedded?: boolean;
+  onContinue?: () => void;
+  continueLabel?: string;
+  headerNote?: ReactNode;
+}) {
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [library, setLibrary] = useState<Exercise[]>([]);
   const [pickId, setPickId] = useState("");
@@ -287,9 +299,11 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
   if (loadError || !workout) {
     return (
       <div className="space-y-4">
-        <Link href="/admin/workouts" className="text-sm text-accent hover:underline">
-          ← All workouts
-        </Link>
+        {!embedded ? (
+          <Link href="/admin/workouts" className="text-sm text-accent hover:underline">
+            ← All workouts
+          </Link>
+        ) : null}
         <div className="card border-[var(--danger)]/40">
           <p className="font-semibold text-[var(--danger)]">Could not open this workout</p>
           <p className="mt-2 text-sm text-[var(--muted)]">{loadError}</p>
@@ -301,13 +315,22 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
     );
   }
 
+  const showCertifyPanel =
+    parsedForExport &&
+    !embedded &&
+    !workoutId.startsWith("sms-w-");
+
   return (
     <div className="space-y-6">
-      <Link href="/admin/workouts" className="text-sm text-accent hover:underline">
-        ← All workouts
-      </Link>
+      {!embedded ? (
+        <Link href="/admin/workouts" className="text-sm text-accent hover:underline">
+          ← All workouts
+        </Link>
+      ) : null}
 
-      {persistenceNote && (
+      {headerNote}
+
+      {persistenceNote && !embedded && (
         <div
           className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--muted)]"
           role="status"
@@ -349,8 +372,10 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
           )}
         </div>
         <p className="text-sm text-[var(--muted)]">
-          {workout.exercises.length} exercise{workout.exercises.length === 1 ? "" : "s"} ·
-          content only — day (M1D2) and location (Gym/Home) live on the program cycle
+          {workout.exercises.length} exercise{workout.exercises.length === 1 ? "" : "s"}
+          {embedded
+            ? " · edits save automatically — this is today’s class workout"
+            : " · content only — day (M1D2) and location (Gym/Home) live on the program cycle"}
         </p>
       </div>
 
@@ -465,7 +490,7 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
         )}
       </ul>
 
-      {parsedForExport && (
+      {showCertifyPanel ? (
         <WorkoutCertifyPanel
           workoutId={workoutId}
           parsedWorkout={parsedForExport}
@@ -488,7 +513,15 @@ export default function WorkoutBuilder({ workoutId }: { workoutId: string }) {
             setSaveMessage("Certified — download or copy the export text; use the same format for future uploads.");
           }}
         />
-      )}
+      ) : null}
+
+      {embedded && onContinue ? (
+        <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-4">
+          <button type="button" onClick={onContinue} className="btn-primary px-4 py-2 text-sm">
+            {continueLabel}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
