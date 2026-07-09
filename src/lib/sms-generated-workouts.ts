@@ -28,9 +28,11 @@ type SmsWorkoutRecord = {
   createdAt: string;
   restTimerEnabled?: boolean;
   restTimerSeconds?: number;
+  exportText?: string | null;
+  certifiedAt?: string | null;
 };
 
-type SmsWorkoutStore = {
+export type SmsWorkoutStore = {
   workouts: SmsWorkoutRecord[];
   workoutExercises: Array<{
     id: string;
@@ -67,19 +69,27 @@ export async function hydrateSmsWorkouts(): Promise<SmsWorkoutStore> {
   });
 }
 
-function readStore(): SmsWorkoutStore {
+export function readSmsWorkoutStore(): SmsWorkoutStore {
   if (memoryStore) return memoryStore;
   memoryStore = readLocalJson<SmsWorkoutStore>(WORKOUTS_FILE) || emptyStore();
   return memoryStore;
 }
 
-async function writeStore(store: SmsWorkoutStore) {
+export async function writeSmsWorkoutStore(store: SmsWorkoutStore) {
   await persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: WORKOUTS_FILE,
     data: store,
     setMemory,
   });
+}
+
+function readStore(): SmsWorkoutStore {
+  return readSmsWorkoutStore();
+}
+
+async function writeStore(store: SmsWorkoutStore) {
+  await writeSmsWorkoutStore(store);
 }
 
 import { NEWLY_ADDED_EXERCISE_TAG } from "@/lib/text-upload-exercises";
