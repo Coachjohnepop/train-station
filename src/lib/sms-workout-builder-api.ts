@@ -86,8 +86,11 @@ function itemToBuilder(
   };
 }
 
-export async function getSmsWorkoutForBuilder(workoutId: string): Promise<BuilderWorkout | null> {
-  await hydrateSmsWorkouts({ preferFresh: true });
+async function loadSmsWorkoutForBuilder(
+  workoutId: string,
+  opts?: { preferFresh?: boolean },
+): Promise<BuilderWorkout | null> {
+  await hydrateSmsWorkouts(opts);
   const store = readSmsWorkoutStore();
   const workout = store.workouts.find((w) => w.id === workoutId);
   if (!workout) return null;
@@ -112,6 +115,23 @@ export async function getSmsWorkoutForBuilder(workoutId: string): Promise<Builde
       ),
     ),
   };
+}
+
+export async function getSmsWorkoutForBuilder(workoutId: string): Promise<BuilderWorkout | null> {
+  return loadSmsWorkoutForBuilder(workoutId);
+}
+
+async function verifySmsWorkoutPersisted(
+  workoutId: string,
+  check: (workout: BuilderWorkout) => boolean,
+  action: string,
+): Promise<BuilderWorkout> {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const workout = await loadSmsWorkoutForBuilder(workoutId, { preferFresh: attempt > 0 });
+    if (workout && check(workout)) return workout;
+    await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+  }
+  throw new Error(`${action} could not be verified — retry in a moment.`);
 }
 
 export async function patchSmsWorkout(
@@ -141,8 +161,13 @@ export async function patchSmsWorkout(
     if (patch.certifiedAt !== undefined) workout.certifiedAt = patch.certifiedAt;
   }
 
+  const expectedName = patch.name !== undefined ? patch.name.trim() : undefined;
   await persistSmsWorkoutStore(store, "Workout update");
-  return getSmsWorkoutForBuilder(workoutId);
+  return verifySmsWorkoutPersisted(
+    workoutId,
+    (w) => expectedName === undefined || w.name === expectedName,
+    "Workout update",
+  );
 }
 
 export async function addSmsWorkoutExercise(
@@ -185,7 +210,13 @@ export async function addSmsWorkoutExercise(
   store.workoutExercises.push(item);
   await persistSmsWorkoutStore(store, "Exercise add");
 
-  return itemToBuilder(item, toBuilderExercise(exercise));
+  const verified = await verifySmsWorkoutPersisted(
+    workoutId,
+    (w) => w.exercises.some((row) => row.id === item.id),
+    "Exercise add",
+  );
+  const row = verified.exercises.find((row) => row.id === item.id);
+  return row ?? itemToBuilder(item, toBuilderExercise(exercise));
 }
 
 export async function patchSmsWorkoutExercise(
@@ -219,9 +250,19 @@ export async function patchSmsWorkoutExercise(
   store.workoutExercises[idx] = item;
   await persistSmsWorkoutStore(store, "Exercise update");
 
-  const exById = await loadExercisesByIds([item.exerciseId]);
-  const exercise = exById[item.exerciseId] || { id: item.exerciseId, name: "Exercise", videoUrl: null };
-  return itemToBuilder(item, toBuilderExercise(exercise));
+  const verified = await verifySmsWorkoutPersisted(
+    workoutId,
+    (w) => {
+      const row = w.exercises.find((row) => row.id === itemId);
+      if (!row) return false;
+      if (data.reps !== undefined && row.reps !== data.reps) return false;
+      if (data.sets !== undefined && row.sets !== data.sets) return false;
+      if (data.notes !== undefined && row.notes !== data.notes) return false;
+      return true;
+    },
+    "Exercise update",
+  );
+  return verified.exercises.find((row) => row.id === itemId) ?? null;
 }
 
 export async function deleteSmsWorkoutExercise(
@@ -244,5 +285,10 @@ export async function deleteSmsWorkoutExercise(
   });
 
   await persistSmsWorkoutStore(store, "Exercise remove");
+  await verifySmsWorkoutPersisted(
+    workoutId,
+    (w) => !w.exercises.some((row) => row.id === itemId),
+    "Exercise remove",
+  );
   return true;
 }

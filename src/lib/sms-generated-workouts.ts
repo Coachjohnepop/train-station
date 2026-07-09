@@ -277,7 +277,7 @@ export async function getSmsGeneratedWorkout(
   memberName = "Member",
   userId?: string,
 ): Promise<MemberWorkoutView | null> {
-  await hydrateSmsWorkouts({ preferFresh: true });
+  await hydrateSmsWorkouts();
   const store = readSmsWorkoutStore();
   const workout = store.workouts.find((w) => w.id === workoutId);
   if (!workout) return null;

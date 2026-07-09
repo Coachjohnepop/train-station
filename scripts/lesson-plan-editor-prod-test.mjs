@@ -110,13 +110,16 @@ async function main() {
     method: "PATCH",
     json: { name: renamed },
   });
-  if (!patchName.res.ok) {
-    fail("Rename workout", patchName.body?.detail || patchName.res.status);
+  if (!patchName.res.ok || patchName.body?.name !== renamed) {
+    fail(
+      "Rename workout",
+      patchName.body?.detail || patchName.body?.name || patchName.res.status,
+    );
   } else {
     pass("Rename workout", renamed);
   }
 
-  await new Promise((r) => setTimeout(r, 1500));
+  await new Promise((r) => setTimeout(r, 2500));
   const reread = await req(bust(`/api/workouts/${workoutId}`));
   if (!reread.res.ok || reread.body?.name !== renamed) {
     fail(
