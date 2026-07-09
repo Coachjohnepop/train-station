@@ -40,10 +40,16 @@ export async function POST(request: Request) {
     );
   }
 
-  const built = await buildWorkoutFromParsedSms(
-    interpreted.workout,
-    parsed.data.workoutId,
-  );
+  let built;
+  try {
+    built = await buildWorkoutFromParsedSms(
+      interpreted.workout,
+      parsed.data.workoutId,
+    );
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "Could not save lesson plan draft.";
+    return NextResponse.json({ error: msg }, { status: 503 });
+  }
   const catalogPreview = await previewWorkoutCatalogMatches(interpreted.workout);
 
   return NextResponse.json({

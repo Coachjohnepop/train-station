@@ -13,6 +13,7 @@ import type { MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import { resolveUserId } from "@/lib/current-user";
 import { getPastsForWorkoutExercises } from "@/lib/workout-logs-store";
 import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
+import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { parseSmsWorkout } from "@/lib/sms-workout-parser";
 import { hydrateTodaySessions, listTodaySessions } from "@/lib/today-sessions";
 import { matchExerciseInCatalog, sanitizeSmsExerciseName } from "@/lib/exercise-match";
@@ -67,13 +68,16 @@ function setMemory(store: SmsWorkoutStore) {
   memoryStore = store;
 }
 
-export async function hydrateSmsWorkouts(): Promise<SmsWorkoutStore> {
+export async function hydrateSmsWorkouts(opts?: {
+  preferFresh?: boolean;
+}): Promise<SmsWorkoutStore> {
   return hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: WORKOUTS_FILE,
     memory: memoryStore,
     setMemory,
     fallback: emptyStore,
+    preferFresh: opts?.preferFresh,
   });
 }
 
@@ -84,7 +88,7 @@ export function readSmsWorkoutStore(): SmsWorkoutStore {
 }
 
 export async function writeSmsWorkoutStore(store: SmsWorkoutStore) {
-  await persistJsonStore({
+  return persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: WORKOUTS_FILE,
     data: store,
@@ -233,7 +237,8 @@ export async function buildWorkoutFromParsedSms(
     });
   }
 
-  await writeSmsWorkoutStore(store);
+  const { blobSaved } = await writeSmsWorkoutStore(store);
+  requireBlobPersisted(blobSaved, "Lesson plan draft");
   return { workoutId: id, exerciseCount: parsed.exercises.length, newExerciseIds };
 }
 
@@ -272,7 +277,7 @@ export async function getSmsGeneratedWorkout(
   memberName = "Member",
   userId?: string,
 ): Promise<MemberWorkoutView | null> {
-  await hydrateSmsWorkouts();
+  await hydrateSmsWorkouts({ preferFresh: true });
   const store = readSmsWorkoutStore();
   const workout = store.workouts.find((w) => w.id === workoutId);
   if (!workout) return null;

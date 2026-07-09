@@ -87,6 +87,8 @@ export default function CoachLessonPlanBuilder({
   } | null>(null);
   const [newExerciseCount, setNewExerciseCount] = useState(0);
   const [draftWorkoutId, setDraftWorkoutId] = useState<string | null>(null);
+  /** Plan text used to build the current draft — re-interpret with different text gets a new draft. */
+  const [draftSourceText, setDraftSourceText] = useState<string | null>(null);
 
   const templateMember = memberOptions.find((m) => m.id === templateMemberId);
 
@@ -120,7 +122,10 @@ export default function CoachLessonPlanBuilder({
           templateMemberName: templateMember?.name,
           answers,
           priorQuestions,
-          workoutId: draftWorkoutId || undefined,
+          workoutId:
+            draftWorkoutId && rawText.trim() === draftSourceText
+              ? draftWorkoutId
+              : undefined,
         }),
       });
       const body = await res.json().catch(() => ({}));
@@ -130,6 +135,7 @@ export default function CoachLessonPlanBuilder({
         return;
       }
       setDraftWorkoutId(body.workoutId);
+      setDraftSourceText(rawText.trim());
       setInterpretation({
         ...(body.interpretation as InterpretResponse),
         catalogPreview: body.catalogPreview ?? data.catalogPreview,
@@ -778,6 +784,7 @@ export default function CoachLessonPlanBuilder({
                 setDeployResult(null);
                 setNewExerciseCount(0);
                 setDraftWorkoutId(null);
+                setDraftSourceText(null);
                 setRawText("");
                 setInterpretation(null);
                 setCascadeIds([]);

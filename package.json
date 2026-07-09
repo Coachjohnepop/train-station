@@ -57,6 +57,7 @@
     "catalog:standardize:pass2": "npx tsx scripts/standardize-exercise-catalog.ts",
     "catalog:export-csv": "npx tsx scripts/export-exercise-catalog-csv.ts",
     "test:p0-prod": "node scripts/p0-prod-verify.mjs",
+    "test:lesson-plan-prod": "node scripts/lesson-plan-editor-prod-test.mjs",
     "test:catalog-smoke": "node scripts/catalog-post-cleanup-smoke.mjs",
     "test:zoom-connect": "node scripts/zoom-connect-smoke.mjs",
     "test:zoom-diagnose": "node scripts/zoom-oauth-diagnose.mjs",

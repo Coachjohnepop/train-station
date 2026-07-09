@@ -1,12 +1,21 @@
 import "server-only";
 
 import { loadExerciseCatalogForMatching, loadExercisesByIds } from "@/lib/exercise-catalog-load";
+import { requireBlobPersisted } from "@/lib/demo-persistence";
 import {
   hydrateSmsWorkouts,
   readSmsWorkoutStore,
   writeSmsWorkoutStore,
 } from "@/lib/sms-generated-workouts";
 import { randomUUID } from "crypto";
+
+async function persistSmsWorkoutStore(
+  store: Awaited<ReturnType<typeof readSmsWorkoutStore>>,
+  action: string,
+) {
+  const { blobSaved } = await writeSmsWorkoutStore(store);
+  requireBlobPersisted(blobSaved, action);
+}
 
 export function isSmsWorkoutId(id: string): boolean {
   return id.startsWith("sms-w-");
@@ -78,7 +87,7 @@ function itemToBuilder(
 }
 
 export async function getSmsWorkoutForBuilder(workoutId: string): Promise<BuilderWorkout | null> {
-  await hydrateSmsWorkouts();
+  await hydrateSmsWorkouts({ preferFresh: true });
   const store = readSmsWorkoutStore();
   const workout = store.workouts.find((w) => w.id === workoutId);
   if (!workout) return null;
@@ -132,7 +141,7 @@ export async function patchSmsWorkout(
     if (patch.certifiedAt !== undefined) workout.certifiedAt = patch.certifiedAt;
   }
 
-  await writeSmsWorkoutStore(store);
+  await persistSmsWorkoutStore(store, "Workout update");
   return getSmsWorkoutForBuilder(workoutId);
 }
 
@@ -174,7 +183,7 @@ export async function addSmsWorkoutExercise(
     weightTier: data.weightTier,
   };
   store.workoutExercises.push(item);
-  await writeSmsWorkoutStore(store);
+  await persistSmsWorkoutStore(store, "Exercise add");
 
   return itemToBuilder(item, toBuilderExercise(exercise));
 }
@@ -208,7 +217,7 @@ export async function patchSmsWorkoutExercise(
   if (data.sortOrder !== undefined) item.sortOrder = data.sortOrder;
 
   store.workoutExercises[idx] = item;
-  await writeSmsWorkoutStore(store);
+  await persistSmsWorkoutStore(store, "Exercise update");
 
   const exById = await loadExercisesByIds([item.exerciseId]);
   const exercise = exById[item.exerciseId] || { id: item.exerciseId, name: "Exercise", videoUrl: null };
@@ -234,6 +243,6 @@ export async function deleteSmsWorkoutExercise(
     we.sortOrder = index;
   });
 
-  await writeSmsWorkoutStore(store);
+  await persistSmsWorkoutStore(store, "Exercise remove");
   return true;
 }

@@ -50,11 +50,16 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   if (isSmsWorkoutId(workoutId)) {
-    const item = await addSmsWorkoutExercise(workoutId, parsed.data);
-    if (!item) {
-      return NextResponse.json({ detail: "Workout or exercise not found" }, { status: 404 });
+    try {
+      const item = await addSmsWorkoutExercise(workoutId, parsed.data);
+      if (!item) {
+        return NextResponse.json({ detail: "Workout or exercise not found" }, { status: 404 });
+      }
+      return NextResponse.json(item, { status: 201 });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Exercise add failed";
+      return NextResponse.json({ detail: msg }, { status: 503 });
     }
-    return NextResponse.json(item, { status: 201 });
   }
 
   if (isCoachCatalogDemo()) {
@@ -188,11 +193,16 @@ export async function PATCH(request: Request, { params }: Params) {
   }
   const { itemId, ...data } = parsed.data;
   if (isSmsWorkoutId(workoutId)) {
-    const item = await patchSmsWorkoutExercise(workoutId, itemId, data);
-    if (!item) {
-      return NextResponse.json({ detail: "Item not found" }, { status: 404 });
+    try {
+      const item = await patchSmsWorkoutExercise(workoutId, itemId, data);
+      if (!item) {
+        return NextResponse.json({ detail: "Item not found" }, { status: 404 });
+      }
+      return NextResponse.json(item);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Exercise update failed";
+      return NextResponse.json({ detail: msg }, { status: 503 });
     }
-    return NextResponse.json(item);
   }
   if (isCoachCatalogDemo()) {
     await hydrateDemoExercises({ preferFresh: true });
@@ -299,11 +309,16 @@ export async function DELETE(request: Request, { params }: Params) {
   }
 
   if (isSmsWorkoutId(workoutId)) {
-    const ok = await deleteSmsWorkoutExercise(workoutId, itemId);
-    if (!ok) {
-      return NextResponse.json({ detail: "Item not found" }, { status: 404 });
+    try {
+      const ok = await deleteSmsWorkoutExercise(workoutId, itemId);
+      if (!ok) {
+        return NextResponse.json({ detail: "Item not found" }, { status: 404 });
+      }
+      return new NextResponse(null, { status: 204 });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Exercise remove failed";
+      return NextResponse.json({ detail: msg }, { status: 503 });
     }
-    return new NextResponse(null, { status: 204 });
   }
 
   if (isCoachCatalogDemo()) {

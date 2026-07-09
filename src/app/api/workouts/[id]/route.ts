@@ -76,11 +76,16 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   if (isSmsWorkoutId(id)) {
-    const updated = await patchSmsWorkout(id, parsed.data);
-    if (!updated) {
-      return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
+    try {
+      const updated = await patchSmsWorkout(id, parsed.data);
+      if (!updated) {
+        return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
+      }
+      return NextResponse.json(updated);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Workout update failed";
+      return NextResponse.json({ detail: msg }, { status: 503 });
     }
-    return NextResponse.json(updated);
   }
 
   if (isCoachCatalogDemo()) {
