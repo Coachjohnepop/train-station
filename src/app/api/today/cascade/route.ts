@@ -109,9 +109,14 @@ export async function POST(request: Request) {
       });
     }
 
+    const newExerciseIds = [
+      ...new Set(sessions.flatMap((s) => s.newExerciseIds ?? [])),
+    ];
+
     return NextResponse.json({
       sessions: sessions.map((s) => s.session),
       built: sessions.length,
+      newExerciseIds,
       alerts: { sent: sendSmsAlert ? allUserIds.length : 0, logs: [] as unknown[] },
     });
   } catch (e: unknown) {
