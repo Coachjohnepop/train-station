@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { previewWorkoutCatalogMatches } from "@/lib/exercise-catalog-preview";
 import { interpretLessonPlan } from "@/lib/lesson-plan-interpreter";
 import { requireStaff } from "@/lib/api-auth";
 
@@ -30,5 +31,6 @@ export async function POST(request: Request) {
   }
 
   const result = await interpretLessonPlan(parsed.data);
-  return NextResponse.json(result);
+  const catalogPreview = await previewWorkoutCatalogMatches(result.workout);
+  return NextResponse.json({ ...result, catalogPreview });
 }

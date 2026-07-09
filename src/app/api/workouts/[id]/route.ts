@@ -11,6 +11,11 @@ import {
   buildDemoWorkoutExerciseItems,
   findDemoWorkoutRecord,
 } from "@/lib/demo-workout-items";
+import {
+  getSmsWorkoutForBuilder,
+  isSmsWorkoutId,
+  patchSmsWorkout,
+} from "@/lib/sms-workout-builder-api";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -26,6 +31,13 @@ export async function GET(_request: Request, { params }: Params) {
   const auth = await requireStaff();
   if (!auth.ok) return auth.response;
   const { id } = await params;
+  if (isSmsWorkoutId(id)) {
+    const workout = await getSmsWorkoutForBuilder(id);
+    if (!workout) {
+      return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
+    }
+    return NextResponse.json(workout);
+  }
   if (isCoachCatalogDemo()) {
     const data = await getDemoSeed({ preferFresh: true });
     await hydrateDemoExercises({ preferFresh: true });
@@ -61,6 +73,14 @@ export async function PATCH(request: Request, { params }: Params) {
   const parsed = updateSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
+  }
+
+  if (isSmsWorkoutId(id)) {
+    const updated = await patchSmsWorkout(id, parsed.data);
+    if (!updated) {
+      return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
+    }
+    return NextResponse.json(updated);
   }
 
   if (isCoachCatalogDemo()) {
