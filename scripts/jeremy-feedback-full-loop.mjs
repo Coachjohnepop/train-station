@@ -129,6 +129,12 @@ async function loginMember() {
   return false;
 }
 
+/** Member tests clear the cookie jar; coach-only checks must re-auth. */
+async function ensureCoachSession() {
+  cookies = "";
+  return loginCoach();
+}
+
 async function testExerciseFlow() {
   if (!(await loginCoach())) {
     fail("exercise-flow", "Coach login");
@@ -321,19 +327,6 @@ async function testMemberSurfaces() {
   if (today.res.ok) pass("member-weekly-video", "Member Today page loads");
   else fail("member-weekly-video", "Member Today", String(today.res.status));
 
-  const content = await req("/api/admin/member-content");
-  if (content.res.ok) {
-    const w = content.body?.weeklyVideoUrl;
-    const d = content.body?.dinnerVideoUrl;
-    if (w) pass("member-weekly-video", "Weekly video URL configured", w.slice(0, 40));
-    else skip("member-weekly-video", "Weekly video URL", "not set — Jeremy must paste in Admin → Landing");
-
-    if (d) pass("member-dinner", "Dinner video URL configured", d.slice(0, 40));
-    else skip("member-dinner", "Dinner video URL", "not set — Jeremy must paste");
-  } else {
-    skip("member-weekly-video", "Member content API", "coach-only endpoint");
-  }
-
   const nutrition = await req("/member/nutrition");
   if (nutrition.res.ok && nutrition.text.match(/1600|2000|2500|calorie/i)) {
     pass("member-nutrition", "Nutrition calorie tiers page");
@@ -344,11 +337,53 @@ async function testMemberSurfaces() {
   }
 }
 
+async function testMemberContentUrls() {
+  if (!(await ensureCoachSession())) {
+    skip("member-weekly-video", "Coach login for landing media", "credentials");
+    skip("member-dinner", "Dinner video URL", "coach login failed");
+    return;
+  }
+
+  const landing = await req("/admin/landing");
+  if (!landing.res.ok) {
+    skip("member-weekly-video", "Admin Landing page", String(landing.res.status));
+    skip("member-dinner", "Admin Landing page", String(landing.res.status));
+    return;
+  }
+
+  const html = landing.text || "";
+  const hasWeeklyField =
+    /weeklyVideoUrl[^}]*https?:\/\/(?:www\.)?youtube/i.test(html) ||
+    /This week from Coach Jeremy[\s\S]{0,800}youtube\.com/i.test(html);
+  const hasDinnerField =
+    /dinnerVideoUrl[^}]*https?:\/\/(?:www\.)?youtube/i.test(html) ||
+    /What(?:&#x27;|'|&apos;)s for dinner[\s\S]{0,800}youtube\.com/i.test(html);
+
+  if (hasWeeklyField) {
+    pass("member-weekly-video", "Weekly video URL configured (Admin → Landing)");
+  } else {
+    skip("member-weekly-video", "Weekly video URL", "not set — Jeremy must paste in Admin → Landing");
+  }
+
+  if (hasDinnerField) {
+    pass("member-dinner", "Dinner video URL configured (Admin → Landing)");
+  } else {
+    skip("member-dinner", "Dinner video URL", "not set — Jeremy must paste in Admin → Landing");
+  }
+}
+
 async function testWeek1Week2() {
+  if (!(await ensureCoachSession())) {
+    fail("program-week2", "Coach login before program sync");
+    fail("week1-template", "Coach login before program sync");
+    return;
+  }
+
   const { res, body } = await req("/api/programs/adult/sync", { method: "POST" });
   if (!res.ok) {
-    fail("program-week2", "Program sync");
-    fail("week1-template", "Week 1 days");
+    const detail = typeof body === "string" ? body.slice(0, 120) : body?.error || String(res.status);
+    fail("program-week2", "Program sync", detail);
+    fail("week1-template", "Week 1 days", detail);
     return;
   }
 
@@ -444,6 +479,7 @@ async function main() {
   await testMessageAndSms();
   await testLandingAndFreeTicket();
   await testMemberSurfaces();
+  await testMemberContentUrls();
   await testWeek1Week2();
 
   const failCount = printReport();
