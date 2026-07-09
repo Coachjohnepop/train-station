@@ -200,6 +200,7 @@ export default function CoachLessonPlanBuilder({
         setMessage("Workout ready — review below, then certify the export.");
         setStep(1);
       } else {
+        setError(true);
         setMessage("Still need a few details — update your answers above.");
       }
     } catch (e: unknown) {
@@ -529,7 +530,7 @@ export default function CoachLessonPlanBuilder({
                 disabled={loading}
                 className="btn-primary px-4 py-1.5 text-sm"
               >
-                Apply answers &amp; preview workout
+                {loading ? "Building preview…" : "Apply answers & preview workout"}
               </button>
             </div>
           )}

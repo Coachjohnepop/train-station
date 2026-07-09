@@ -31,8 +31,10 @@ const VAGUE_EXERCISE =
 function detectQuestions(
   workout: ParsedSmsWorkout,
   rawText: string,
+  opts?: { includeWarmup?: boolean; skipIds?: Set<string> },
 ): LessonPlanQuestion[] {
   const questions: LessonPlanQuestion[] = [];
+  const skip = opts?.skipIds ?? new Set<string>();
 
   if (workout.exercises.length === 0) {
     questions.push({
@@ -75,7 +77,11 @@ function detectQuestions(
     });
   }
 
-  if (workout.title === "Coach SMS Workout" && rawText.split("\n").filter(Boolean).length > 3) {
+  if (
+    !skip.has("session-title") &&
+    workout.title === "Coach SMS Workout" &&
+    rawText.split("\n").filter(Boolean).length > 3
+  ) {
     questions.push({
       id: "session-title",
       prompt: "What should we call this session?",
@@ -83,7 +89,7 @@ function detectQuestions(
     });
   }
 
-  if (!lessonPlanHasWarmup(rawText)) {
+  if (!skip.has("include-warmup") && !lessonPlanHasWarmup(rawText) && !opts?.includeWarmup) {
     questions.push({
       id: "include-warmup",
       prompt: "Include Jeremy's standard warm-up (wall taps, bands, light curls, Bosu/jump squats)?",
@@ -92,11 +98,14 @@ function detectQuestions(
   }
 
   const seen = new Set<string>();
-  return questions.filter((q) => {
-    if (seen.has(q.id)) return false;
-    seen.add(q.id);
-    return true;
-  }).slice(0, 6);
+  return questions
+    .filter((q) => {
+      if (skip.has(q.id)) return false;
+      if (seen.has(q.id)) return false;
+      seen.add(q.id);
+      return true;
+    })
+    .slice(0, 6);
 }
 
 function slugify(s: string): string {
@@ -112,6 +121,32 @@ function guessChoices(name: string): string[] {
   if (n === "squat") return ["Back squat", "Goblet squat", "Bulgarian split squat"];
   if (n === "row") return ["Cable row", "Barbell row", "Machine row"];
   return ["Specify in answer"];
+}
+
+function formatRepsAnswerLines(exerciseName: string, answer: string): string[] {
+  const a = answer.trim();
+  if (/^\d+$/.test(a)) {
+    const sets = Math.max(1, Math.min(12, Number(a)));
+    const reps = Array(sets).fill("10").join(",");
+    return [exerciseName, `${sets} sets`, reps];
+  }
+  if (/^\d+(?:\s*,\s*\d+)+$/.test(a.replace(/\s/g, ""))) {
+    const nums = a.match(/\d+/g) ?? [];
+    return [exerciseName, `${nums.length} sets`, nums.join(",")];
+  }
+  return [exerciseName, a];
+}
+
+function insertLinesAfterExercise(text: string, exerciseName: string, newLines: string[]): string {
+  const lines = text.trim().split("\n");
+  const needle = exerciseName.toLowerCase();
+  const idx = lines.findIndex((line) => line.toLowerCase().includes(needle.slice(0, 24)));
+  if (idx < 0) {
+    return `${text.trim()}\n${newLines.join("\n")}`;
+  }
+  const merged = [...lines];
+  merged.splice(idx + 1, 0, ...newLines.slice(1));
+  return merged.join("\n");
 }
 
 function applyAnswerToText(text: string, question: LessonPlanQuestion, answer: string): string {
@@ -132,8 +167,11 @@ function applyAnswerToText(text: string, question: LessonPlanQuestion, answer: s
     return text;
   }
   if (question.id.startsWith("reps-")) {
-    const namePart = question.id.replace("reps-", "").replace(/-/g, " ");
-    return `${text.trim()}\n${namePart} ${a}`;
+    const exerciseName =
+      question.prompt.match(/"([^"]+)"/)?.[1] ??
+      question.id.replace("reps-", "").replace(/-/g, " ");
+    const repLines = formatRepsAnswerLines(exerciseName, a);
+    return insertLinesAfterExercise(text, exerciseName, repLines);
   }
   if (question.id.startsWith("clarify-") || question.id === "leg-press-type") {
     const vague = question.prompt.match(/"([^"]+)"/)?.[1];
@@ -240,6 +278,22 @@ export function applyLessonPlanAnswers(
   return injectWarmupIfMissing(out, includeWarmup);
 }
 
+function answeredQuestionIds(
+  questions: LessonPlanQuestion[],
+  answers: Record<string, string>,
+): Set<string> {
+  const ids = new Set<string>();
+  for (const q of questions) {
+    if (answers[q.id]?.trim()) ids.add(q.id);
+  }
+  return ids;
+}
+
+function applySessionTitleAnswer(workout: ParsedSmsWorkout, answers: Record<string, string>) {
+  const title = answers["session-title"]?.trim();
+  if (title) workout.title = title;
+}
+
 export async function interpretLessonPlan(opts: {
   rawText: string;
   includeWarmup?: boolean;
@@ -257,32 +311,47 @@ export async function interpretLessonPlan(opts: {
 
   let text = rawText.trim();
   let usedAi = false;
+  const resolvedIds = answeredQuestionIds(priorQuestions, answers);
+  const applyingAnswers = resolvedIds.size > 0;
 
-  if (Object.keys(answers).length > 0 && priorQuestions.length > 0) {
+  if (applyingAnswers) {
     const warmupAnswer = answers["include-warmup"];
     const wantsWarmup =
-      includeWarmupOpt &&
-      (!warmupAnswer || /^yes/i.test(warmupAnswer));
+      includeWarmupOpt && (!warmupAnswer || /^yes/i.test(warmupAnswer));
     text = applyLessonPlanAnswers(text, priorQuestions, answers, wantsWarmup);
   }
 
-  const ai = await interpretWithXai(text, templateMemberName);
   let workout: ParsedSmsWorkout;
   let questions: LessonPlanQuestion[];
 
-  if (ai) {
-    usedAi = true;
-    workout = ai.workout;
-    questions = ai.questions;
-    text = ai.normalizedText;
-  } else {
+  // After the coach answers quick questions, use deterministic parsing — avoids Grok
+  // re-asking the same prompts and long second-round waits.
+  if (applyingAnswers) {
     const withWarmup = injectWarmupIfMissing(text, includeWarmupOpt);
     workout = parseSmsWorkout(withWarmup);
+    applySessionTitleAnswer(workout, answers);
     text = withWarmup;
-    questions = detectQuestions(workout, text);
+    questions = detectQuestions(workout, text, {
+      includeWarmup: includeWarmupOpt,
+      skipIds: resolvedIds,
+    });
+  } else {
+    const ai = await interpretWithXai(text, templateMemberName);
+    if (ai) {
+      usedAi = true;
+      workout = ai.workout;
+      questions = ai.questions;
+      text = ai.normalizedText;
+    } else {
+      const withWarmup = injectWarmupIfMissing(text, includeWarmupOpt);
+      workout = parseSmsWorkout(withWarmup);
+      text = withWarmup;
+      questions = detectQuestions(workout, text, { includeWarmup: includeWarmupOpt });
+    }
   }
 
-  const warmupInjected = includeWarmupOpt && !lessonPlanHasWarmup(rawText) && lessonPlanHasWarmup(text);
+  const warmupInjected =
+    includeWarmupOpt && !lessonPlanHasWarmup(rawText) && lessonPlanHasWarmup(text);
   const confidence = scoreConfidence(workout, questions.length);
 
   return {
