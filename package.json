@@ -73,6 +73,7 @@
     "seed:adult-week1": "node scripts/seed-adult-week1-template.mjs",
     "test:jeremy-loop": "node scripts/jeremy-feedback-full-loop.mjs",
     "cleanup:qa-test-data": "npx tsx scripts/cleanup-qa-test-data.mjs",
+    "cleanup:migration-test-data": "npx tsx scripts/cleanup-migration-test-data.mjs",
     "test:zoom-oauth-loop": "node scripts/zoom-oauth-loop.mjs",
     "test:coach-loop": "node scripts/coach-workflow-loop-testingsilly.mjs",
     "catalog:strip-day-prefix": "npx tsx scripts/strip-day-prefix-workouts.mjs",
