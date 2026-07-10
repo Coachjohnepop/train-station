@@ -44,8 +44,14 @@ export const BLOB_STORE_KEYS: readonly BlobStoreKey[] = [
   "custom-training-offers",
 ] as const;
 
-const DEFAULT_READ_MODE: StoreReadMode = "blob";
-const DEFAULT_WRITE_MODE: StoreWriteMode = "blob";
+/** When Postgres is configured, default to DB-only (Phase D). Override per store via env for rollback. */
+function defaultReadMode(): StoreReadMode {
+  return isDatabaseConfigured() ? "db" : "blob";
+}
+
+function defaultWriteMode(): StoreWriteMode {
+  return isDatabaseConfigured() ? "db" : "blob";
+}
 
 const READ_MODE_VALUES: readonly StoreReadMode[] = [
   "blob",
@@ -80,14 +86,14 @@ function parseWriteMode(raw: string | undefined): StoreWriteMode | null {
 export function readMode(store: BlobStoreKey): StoreReadMode {
   if (isDemoMode()) return "blob";
   const override = parseReadMode(process.env[envKeyForStore(store, "READ")]);
-  return override ?? DEFAULT_READ_MODE;
+  return override ?? defaultReadMode();
 }
 
 /** Effective write mode for a store. Demo mode always uses blob. */
 export function writeMode(store: BlobStoreKey): StoreWriteMode {
   if (isDemoMode()) return "blob";
   const override = parseWriteMode(process.env[envKeyForStore(store, "WRITE")]);
-  return override ?? DEFAULT_WRITE_MODE;
+  return override ?? defaultWriteMode();
 }
 
 /** True when reads should hit Postgres (with optional blob fallback). */

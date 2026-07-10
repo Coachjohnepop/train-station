@@ -378,21 +378,33 @@ export async function DELETE(request: Request, { params }: Params) {
     return NextResponse.json({ detail: "Item not found" }, { status: 404 });
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.workoutExercise.delete({ where: { id: itemId } });
-    const remaining = await tx.workoutExercise.findMany({
-      where: { workoutId },
-      orderBy: { sortOrder: "asc" },
-      select: { id: true },
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.workoutExercise.delete({ where: { id: itemId } });
+      const remaining = await tx.workoutExercise.findMany({
+        where: { workoutId },
+        orderBy: { sortOrder: "asc" },
+        select: { id: true },
+      });
+      await Promise.all(
+        remaining.map((row, idx) =>
+          tx.workoutExercise.update({
+            where: { id: row.id },
+            data: { sortOrder: idx },
+          }),
+        ),
+      );
+      await tx.workout.update({
+        where: { id: workoutId },
+        data: { updatedAt: new Date() },
+      });
     });
-    await Promise.all(
-      remaining.map((row, idx) =>
-        tx.workoutExercise.update({
-          where: { id: row.id },
-          data: { sortOrder: idx },
-        }),
-      ),
+    return new NextResponse(null, { status: 204 });
+  } catch (err) {
+    console.error("workoutExercise.delete failed:", err);
+    return NextResponse.json(
+      { detail: "Could not remove exercise — try again." },
+      { status: 500 },
     );
-  });
-  return new NextResponse(null, { status: 204 });
+  }
 }

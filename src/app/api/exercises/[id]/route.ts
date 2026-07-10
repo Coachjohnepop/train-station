@@ -12,6 +12,7 @@ import {
   demoPersistenceWarning,
 } from "@/lib/demo-persistence";
 import { requireStaff } from "@/lib/api-auth";
+import { deleteCatalogExercise } from "@/lib/delete-catalog-exercise";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -123,6 +124,13 @@ export async function DELETE(_request: Request, { params }: Params) {
       );
     }
     list.splice(idx, 1);
+    const { mutateDemoSeed } = await import("@/lib/demo-seed-store");
+    await mutateDemoSeed((seed) => {
+      if (!seed.workoutExercises) return;
+      seed.workoutExercises = (seed.workoutExercises as Array<{ exerciseId?: string }>).filter(
+        (we) => we.exerciseId !== id,
+      );
+    });
     const saveResult = await saveDemoExercises(list);
     const persistenceFailure = demoPersistenceError(saveResult, "Exercise delete");
     if (persistenceFailure) return persistenceFailure;
@@ -135,9 +143,23 @@ export async function DELETE(_request: Request, { params }: Params) {
     return response;
   }
   try {
-    await prisma.exercise.delete({ where: { id } });
-    return new NextResponse(null, { status: 204 });
-  } catch {
-    return NextResponse.json({ detail: "Exercise not found" }, { status: 404 });
+    const { removedFromWorkouts } = await deleteCatalogExercise(id);
+    const response = new NextResponse(null, { status: 204 });
+    if (removedFromWorkouts > 0) {
+      response.headers.set(
+        "X-Removed-From-Workouts",
+        String(removedFromWorkouts),
+      );
+    }
+    return response;
+  } catch (err) {
+    if (err instanceof Error && err.message === "NOT_FOUND") {
+      return NextResponse.json({ detail: "Exercise not found" }, { status: 404 });
+    }
+    console.error("exercise.delete failed:", err);
+    return NextResponse.json(
+      { detail: "Could not delete exercise — try again." },
+      { status: 500 },
+    );
   }
 }

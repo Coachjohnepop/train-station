@@ -52,9 +52,11 @@ async function run() {
     delete process.env.BLOB_MIGRATION_MEMBER_PROFILES_WRITE;
 
     const prod = await loadModule();
-    assert.equal(prod.readMode("member-profiles"), "blob");
-    assert.equal(prod.writeMode("member-profiles"), "blob");
-    ok("prod defaults to blob read/write");
+    assert.equal(prod.readMode("member-profiles"), "db");
+    assert.equal(prod.writeMode("member-profiles"), "db");
+    assert.equal(prod.readsFromDatabase("member-profiles"), true);
+    assert.equal(prod.writesToBlob("member-profiles"), false);
+    ok("prod defaults to db read/write when Postgres is configured");
 
     process.env.BLOB_MIGRATION_MEMBER_PROFILES_READ = "db_with_blob_fallback";
     process.env.BLOB_MIGRATION_MEMBER_PROFILES_WRITE = "dual";

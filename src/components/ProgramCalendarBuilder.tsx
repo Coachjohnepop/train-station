@@ -439,14 +439,21 @@ export default function ProgramCalendarBuilder({
     optIdx: number,
     label: string,
     dayOverride?: ProgramDay,
-  ): Promise<string | null> {
+  ): Promise<{ workoutId: string; created: boolean } | null> {
     const week = program.weeks.find((w) => w.days.some((d) => d.id === dayId));
     const day = dayOverride ?? week?.days.find((d) => d.id === dayId);
     if (!week || !day) return null;
 
     const opts = [...getDayOptions(day)];
     if (opts[optIdx]?.workoutId) {
-      return detachSharedWorkoutForOption(dayId, optIdx, label, day, opts[optIdx].workoutId);
+      const workoutId = await detachSharedWorkoutForOption(
+        dayId,
+        optIdx,
+        label,
+        day,
+        opts[optIdx].workoutId,
+      );
+      return { workoutId, created: false };
     }
 
     const cal =
@@ -476,7 +483,7 @@ export default function ProgramCalendarBuilder({
       await patchDay(dayId, { calendarDate: cal });
     }
 
-    return created.id as string;
+    return { workoutId: created.id as string, created: true };
   }
 
   async function seedWarmups(workoutId: string, rx: DayPrescription) {
@@ -650,15 +657,17 @@ export default function ProgramCalendarBuilder({
       ];
     }
 
-    const workoutId = await ensureWorkoutForOption(day.id, optIdx, optLabel, day);
-    if (!workoutId) return;
+    const ensured = await ensureWorkoutForOption(day.id, optIdx, optLabel, day);
+    if (!ensured) return;
+    const { workoutId, created } = ensured;
 
     setFocus((prev) =>
       prev?.dayId === day.id && prev.optIdx === optIdx ? { ...prev, workoutId } : prev,
     );
 
     void loadSlots(workoutId, rx);
-    if (isWorkoutDayLabel(optLabel)) {
+    // Only seed warmups on a brand-new workout — re-opening a day after deletes must not re-inject.
+    if (created && isWorkoutDayLabel(optLabel)) {
       void seedWarmups(workoutId, rx).then(() => loadSlots(workoutId, rx));
     }
   }
