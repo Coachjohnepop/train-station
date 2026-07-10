@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Persistence soak — run S1 + S1b repeatedly to catch flaky blob/demo saves.
+ * Persistence soak — run S1 + S1b repeatedly to catch flaky catalog saves.
  *
  * Usage:
  *   npm run test:persistence-soak
@@ -11,7 +11,7 @@ import { spawnSync } from "node:child_process";
 
 const ROUNDS = Math.max(1, Number(process.env.ROUNDS || "3"));
 const GAP_MS = Math.max(0, Number(process.env.SOAK_GAP_MS || "5000"));
-const BASE = process.env.BASE_URL || "http://localhost:3000";
+const BASE = process.env.BASE_URL || "https://www.thetrainstation.co";
 
 function runScript(scriptPath) {
   const result = spawnSync("node", [scriptPath], {

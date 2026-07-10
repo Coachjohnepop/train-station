@@ -110,37 +110,54 @@ async function main() {
     `W${get0.body.currentWeek}D${get0.body.currentDay} · day ${get0.body.enrollmentDayNumber}`,
   );
 
-  const targetWeek = get0.body.currentWeek === 1 ? 2 : 1;
+  const origWeek = get0.body.currentWeek;
+  const origDay = get0.body.currentDay;
+  const targetWeek = origWeek === 1 ? 2 : 1;
   const targetDay = 3;
-  const patch = await req(
-    `/api/admin/users/${encodeURIComponent(MEMBER_USER_ID)}/program-position`,
-    {
-      method: "PATCH",
-      json: {
-        programSlug: PROGRAM_SLUG,
-        currentWeek: targetWeek,
-        currentDay: targetDay,
-      },
-    },
-  );
-  if (!patch.res.ok || !patch.body?.ok) {
-    fail("Set enrollment position", `${patch.res.status} ${JSON.stringify(patch.body)}`);
-    process.exit(1);
-  }
-  pass("Set enrollment position", `W${targetWeek}D${targetDay}`);
 
-  const get1 = await req(
-    `/api/admin/users/${encodeURIComponent(MEMBER_USER_ID)}/program-position?programSlug=${PROGRAM_SLUG}`,
-  );
-  if (
-    !get1.res.ok ||
-    get1.body.currentWeek !== targetWeek ||
-    get1.body.currentDay !== targetDay
-  ) {
-    fail("Verify persisted position", JSON.stringify(get1.body));
-    process.exit(1);
+  try {
+    const patch = await req(
+      `/api/admin/users/${encodeURIComponent(MEMBER_USER_ID)}/program-position`,
+      {
+        method: "PATCH",
+        json: {
+          programSlug: PROGRAM_SLUG,
+          currentWeek: targetWeek,
+          currentDay: targetDay,
+        },
+      },
+    );
+    if (!patch.res.ok || !patch.body?.ok) {
+      fail("Set enrollment position", `${patch.res.status} ${JSON.stringify(patch.body)}`);
+      process.exit(1);
+    }
+    pass("Set enrollment position", `W${targetWeek}D${targetDay}`);
+
+    const get1 = await req(
+      `/api/admin/users/${encodeURIComponent(MEMBER_USER_ID)}/program-position?programSlug=${PROGRAM_SLUG}`,
+    );
+    if (
+      !get1.res.ok ||
+      get1.body.currentWeek !== targetWeek ||
+      get1.body.currentDay !== targetDay
+    ) {
+      fail("Verify persisted position", JSON.stringify(get1.body));
+      process.exit(1);
+    }
+    pass("Verify persisted position", `W${get1.body.currentWeek}D${get1.body.currentDay}`);
+  } finally {
+    await req(
+      `/api/admin/users/${encodeURIComponent(MEMBER_USER_ID)}/program-position`,
+      {
+        method: "PATCH",
+        json: {
+          programSlug: PROGRAM_SLUG,
+          currentWeek: origWeek,
+          currentDay: origDay,
+        },
+      },
+    );
   }
-  pass("Verify persisted position", `W${get1.body.currentWeek}D${get1.body.currentDay}`);
 
   const failed = results.filter((r) => !r.ok);
   console.log(`\n---\n${results.length - failed.length}/${results.length} passed`);

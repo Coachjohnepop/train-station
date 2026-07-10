@@ -108,6 +108,7 @@ const SUITES = [
     stores: ["sms-workouts"],
     cmd: "npm",
     args: ["run", "test:s2e"],
+    env: { SKIP_CATALOG_IMPORT: "1" },
     skipWhenReadOnly: true,
   },
   {

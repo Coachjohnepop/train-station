@@ -115,8 +115,12 @@ async function main() {
   }
   pass("Adult program in catalog", adult.name);
 
-  if (process.env.SKIP_CATALOG_IMPORT === "1") {
-    pass("Import skipped", "SKIP_CATALOG_IMPORT=1 (protect prod catalog)");
+  const skipImport =
+    process.env.SKIP_CATALOG_IMPORT === "1" ||
+    (BASE.includes("thetrainstation.co") && statusBody.storage === "database");
+
+  if (skipImport) {
+    pass("Import skipped", "prod Postgres catalog protected");
   } else {
     const importRes = await fetch(`${BASE}/api/admin/catalog/import`, {
       method: "POST",

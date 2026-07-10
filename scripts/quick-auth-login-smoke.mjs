@@ -8,7 +8,10 @@
  */
 const BASE = process.env.BASE_URL || "https://www.thetrainstation.co";
 const EMAIL = process.env.COACH_EMAIL || "john@thetrainstation.co";
-const PASSWORD = process.env.COACH_PASSWORD || process.env.COACH_TEST_PASSWORD || "";
+const PASSWORD =
+  process.env.COACH_PASSWORD ||
+  process.env.COACH_TEST_PASSWORD ||
+  (EMAIL.includes("jeremy@") ? "CoachTest123!" : "");
 const TEST_PIN = process.env.QUICK_AUTH_TEST_PIN || "2468";
 const NEW_PIN = process.env.QUICK_AUTH_NEW_PIN || "1357";
 const ADMIN_REDIRECT = "/admin/day";

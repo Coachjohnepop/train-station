@@ -50,3 +50,11 @@ prisma/dev.db-journal
 prisma/exercises.dev.json
 /public/uploads/chat/
 *.bak.*
+
+# ephemeral test manifests / reports
+scripts/.testingsilly-manifest-*.json
+scripts/.deleltetesing-manifest-*.json
+scripts/.database-prodtest-results-*.json
+scripts/.jerdog-manifest-*.json
+scripts/.jerdog-loop-state.json
+scripts/.jerdog-loop.log

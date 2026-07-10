@@ -8,7 +8,9 @@
  */
 
 import dotenv from "dotenv";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { createPgPool } from "../src/lib/pg-connection.ts";
@@ -19,17 +21,16 @@ dotenv.config({ path: ".env.go-prod", override: true });
 const DRY_RUN = process.env.DRY_RUN === "1" || process.env.DRY_RUN === "true";
 const MARKER = "testingsilly";
 
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+
 function loadManifestIds() {
-  const manifests = [
-    "scripts/.testingsilly-manifest-1783288586821.json",
-    "scripts/.testingsilly-manifest-1783288634350.json",
-  ];
   const workoutIds = new Set();
   const exerciseIds = new Set();
   const dayOffIds = new Set();
 
-  for (const path of manifests) {
-    const m = JSON.parse(readFileSync(new URL(`../${path}`, import.meta.url), "utf8"));
+  for (const name of readdirSync(scriptDir)) {
+    if (!name.startsWith(".testingsilly-manifest-") || !name.endsWith(".json")) continue;
+    const m = JSON.parse(readFileSync(join(scriptDir, name), "utf8"));
     for (const w of m.created.workouts || []) workoutIds.add(w.id);
     for (const e of m.created.exercises || []) exerciseIds.add(e);
     for (const d of m.created.programDays || []) {

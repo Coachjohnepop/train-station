@@ -10,9 +10,7 @@
  *   BASE_URL=http://localhost:3000 npm run test:s1b
  */
 
-const BASE =
-  process.env.BASE_URL ||
-  "https://train-station-hdk40cvr9-johnepop-s-projects.vercel.app";
+const BASE = process.env.BASE_URL || "https://www.thetrainstation.co";
 
 const COACH_EMAIL = process.env.COACH_EMAIL || "jeremy@thetrainstation.co";
 const COACH_PASSWORD_ENV =

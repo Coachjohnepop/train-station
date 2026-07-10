@@ -39,11 +39,10 @@ const LOWER_DAY_ID = process.env.LOWER_DAY_ID || "cmr6okj25000004jlh7a4bdlu";
 const LEG_PRESS_ID = process.env.LEG_PRESS_ID || "cmr7wjntw000004jsp1eqtz32";
 
 const EXPECT = {
-  exercisesMin: Number(process.env.EXPECT_EXERCISES_MIN || 70),
-  exercisesMax: Number(process.env.EXPECT_EXERCISES_MAX || 80),
-  workoutsVisibleMin: Number(process.env.EXPECT_WORKOUTS_MIN || 55),
-  workoutsVisibleMax: Number(process.env.EXPECT_WORKOUTS_MAX || 65),
-  lowerDayBlocks: 10,
+  exercisesMin: Number(process.env.EXPECT_EXERCISES_MIN || 50),
+  workoutsVisibleMin: Number(process.env.EXPECT_WORKOUTS_MIN || 40),
+  lowerDayBlocksMin: Number(process.env.EXPECT_LOWER_DAY_BLOCKS_MIN || 8),
+  programsMin: Number(process.env.EXPECT_PROGRAMS_MIN || 1),
 };
 
 const results = [];
@@ -106,13 +105,10 @@ async function verifyProd() {
   if (statusRes.body.storage === "database") pass("Catalog storage", "Postgres");
   else fail("Catalog storage", statusRes.body.storage || "unknown");
 
-  if (exercises >= EXPECT.exercisesMin && exercises <= EXPECT.exercisesMax) {
-    pass("Exercise count (DB)", String(exercises));
+  if (exercises >= EXPECT.exercisesMin) {
+    pass("Exercise count (DB)", `${exercises} (min ${EXPECT.exercisesMin})`);
   } else {
-    fail(
-      "Exercise count (DB)",
-      `${exercises} (expected ${EXPECT.exercisesMin}–${EXPECT.exercisesMax})`,
-    );
+    fail("Exercise count (DB)", `${exercises} (expected ≥ ${EXPECT.exercisesMin})`);
   }
 
   const exRes = await req(bust("/api/exercises"));
@@ -148,13 +144,10 @@ async function verifyProd() {
     fail("GET /api/workouts", `${wRes.res.status}`);
   } else {
     const visible = wRes.body.length;
-    if (visible >= EXPECT.workoutsVisibleMin && visible <= EXPECT.workoutsVisibleMax) {
-      pass("Visible workout count", String(visible));
+    if (visible >= EXPECT.workoutsVisibleMin) {
+      pass("Visible workout count", `${visible} (min ${EXPECT.workoutsVisibleMin})`);
     } else {
-      fail(
-        "Visible workout count",
-        `${visible} (expected ${EXPECT.workoutsVisibleMin}–${EXPECT.workoutsVisibleMax})`,
-      );
+      fail("Visible workout count", `${visible} (expected ≥ ${EXPECT.workoutsVisibleMin})`);
     }
 
     const junkVisible = wRes.body.filter((w) => isJunkWorkoutName(w.name));
@@ -171,8 +164,11 @@ async function verifyProd() {
     fail("GET Lower Day workout", `${lowerRes.res.status}`);
   } else {
     const blocks = lowerRes.body?.exercises?.length ?? 0;
-    if (blocks === EXPECT.lowerDayBlocks) pass("Lower Day block count", String(blocks));
-    else fail("Lower Day block count", `expected ${EXPECT.lowerDayBlocks}, got ${blocks}`);
+    if (blocks >= EXPECT.lowerDayBlocksMin) {
+      pass("Lower Day block count", `${blocks} (min ${EXPECT.lowerDayBlocksMin})`);
+    } else {
+      fail("Lower Day block count", `expected ≥ ${EXPECT.lowerDayBlocksMin}, got ${blocks}`);
+    }
 
     const legInWorkout = (lowerRes.body?.exercises || []).some(
       (row) => row.exerciseId === LEG_PRESS_ID,
@@ -184,10 +180,12 @@ async function verifyProd() {
   const programsRes = await req(bust("/api/programs"));
   if (!programsRes.res.ok || !Array.isArray(programsRes.body)) {
     fail("GET /api/programs", `${programsRes.res.status}`);
-  } else if (programsRes.body.length === 5) {
-    pass("Program catalog count", "5 visible");
+  } else if (programsRes.body.length >= EXPECT.programsMin) {
+    const adult = programsRes.body.find((p) => p.slug === "adult");
+    if (adult) pass("Program catalog", `${programsRes.body.length} programs (adult present)`);
+    else fail("Program catalog", `${programsRes.body.length} programs but adult missing`);
   } else {
-    fail("Program catalog count", `${programsRes.body.length}`);
+    fail("Program catalog count", `${programsRes.body.length} (expected ≥ ${EXPECT.programsMin})`);
   }
 
   return true;

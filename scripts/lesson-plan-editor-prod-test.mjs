@@ -166,11 +166,11 @@ async function main() {
     }
   }
 
-  const blob = await req("/api/admin/demo-persistence");
-  if (blob.res.ok && blob.body?.blobWritable) {
-    pass("Blob writable", blob.body.message || "ok");
+  const persist = await req("/api/admin/demo-persistence");
+  if (persist.res.ok && persist.body?.databaseConfigured && !persist.body?.demoMode) {
+    pass("Postgres persistence", persist.body.message || "database mode");
   } else {
-    fail("Blob writable", blob.body?.message || `status ${blob.res.status}`);
+    fail("Postgres persistence", persist.body?.message || `status ${persist.res.status}`);
   }
 
   const failed = results.filter((r) => !r.ok);

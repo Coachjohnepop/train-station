@@ -11,9 +11,7 @@
  *   S1_TEST_BENCH=1 node scripts/s1-exercise-persistence-test.mjs
  */
 
-const BASE =
-  process.env.BASE_URL ||
-  "https://train-station-hdk40cvr9-johnepop-s-projects.vercel.app";
+const BASE = process.env.BASE_URL || "https://www.thetrainstation.co";
 
 const COACH_EMAIL = process.env.COACH_EMAIL || "jeremy@thetrainstation.co";
 const COACH_PASSWORD_ENV =
