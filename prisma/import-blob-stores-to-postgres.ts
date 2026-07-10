@@ -28,12 +28,23 @@ const AUTH_BLOB = "demo/registered-accounts.json";
 const AUTH_DEV = path.join(process.cwd(), "prisma", "registered-accounts.dev.json");
 const PROFILES_BLOB = "demo/member-profiles.json";
 const PROFILES_DEV = path.join(process.cwd(), "prisma", "member-profiles.dev.json");
+const OAUTH_BLOB = "demo/oauth-identities.json";
+const OAUTH_DEV = path.join(process.cwd(), "prisma", "oauth-identities.dev.json");
+const RESET_BLOB = "demo/password-reset-tokens.json";
+const RESET_DEV = path.join(process.cwd(), "prisma", "password-reset-tokens.dev.json");
+
+const OAUTH_PROVIDERS = new Set(["google", "apple", "facebook"]);
 
 const STORE_ALIASES: Record<string, string> = {
   auth: "auth",
   "registered-accounts": "auth",
   profiles: "profiles",
   "member-profiles": "profiles",
+  oauth: "oauth",
+  "oauth-identities": "oauth",
+  reset: "reset-tokens",
+  "reset-tokens": "reset-tokens",
+  "password-reset-tokens": "reset-tokens",
 };
 
 function parseArgs(argv: string[]) {
@@ -366,6 +377,204 @@ async function importProfiles(
   console.log(JSON.stringify(summary, null, 2));
 }
 
+type OAuthIdentityStore = Record<
+  string,
+  {
+    provider: string;
+    providerUserId: string;
+    userId: string;
+    email: string;
+    linkedAt: string;
+  }
+>;
+
+type ResetTokenStore = Record<
+  string,
+  {
+    email: string;
+    expiresAt: string;
+    createdAt: string;
+  }
+>;
+
+async function loadOAuthSnapshot(): Promise<OAuthIdentityStore> {
+  let memory: OAuthIdentityStore | null = null;
+  const hydrated = await hydrateJsonStore({
+    blobPath: OAUTH_BLOB,
+    localPath: OAUTH_DEV,
+    memory,
+    setMemory: (v) => {
+      memory = (v as OAuthIdentityStore) || {};
+    },
+    fallback: () => ({}),
+    preferFresh: true,
+  });
+  return (hydrated as OAuthIdentityStore) || {};
+}
+
+async function importOAuth(
+  prisma: import("../src/generated/prisma/client").PrismaClient,
+  opts: { dryRun: boolean; verbose: boolean },
+) {
+  const store = await loadOAuthSnapshot();
+  const entries = Object.entries(store);
+  let imported = 0;
+  let skipped = 0;
+  const orphanUserIds: string[] = [];
+  const errors: string[] = [];
+
+  for (const [, identity] of entries) {
+    const provider = identity.provider?.trim().toLowerCase();
+    const providerUserId = identity.providerUserId?.trim();
+    const userId = identity.userId?.trim();
+    const email = normalizeAccountEmail(identity.email);
+
+    if (!provider || !OAUTH_PROVIDERS.has(provider) || !providerUserId || !userId || !email) {
+      skipped += 1;
+      continue;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!user) {
+      orphanUserIds.push(userId);
+      skipped += 1;
+      if (opts.verbose) console.log(`[oauth] skip orphan userId=${userId}`);
+      continue;
+    }
+
+    const linkedAt = parseOptionalDate(identity.linkedAt) ?? new Date();
+
+    if (opts.dryRun) {
+      if (opts.verbose) console.log(`[oauth] dry-run upsert ${provider}:${providerUserId}`);
+      imported += 1;
+      continue;
+    }
+
+    try {
+      await prisma.oAuthIdentity.upsert({
+        where: {
+          provider_providerUserId: { provider, providerUserId },
+        },
+        create: {
+          provider,
+          providerUserId,
+          userId,
+          email,
+          linkedAt,
+        },
+        update: {
+          userId,
+          email,
+          linkedAt,
+        },
+      });
+      imported += 1;
+      if (opts.verbose) console.log(`[oauth] upserted ${provider}:${providerUserId}`);
+    } catch (error) {
+      skipped += 1;
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(`${provider}:${providerUserId}: ${message}`);
+      console.error(`[oauth] failed ${provider}:${providerUserId}:`, message);
+    }
+  }
+
+  const summary = {
+    store: "oauth",
+    blobCount: entries.length,
+    imported,
+    skipped,
+    orphanUserIds,
+    errors,
+  };
+  console.log(JSON.stringify(summary, null, 2));
+}
+
+async function loadResetSnapshot(): Promise<ResetTokenStore> {
+  let memory: ResetTokenStore | null = null;
+  const hydrated = await hydrateJsonStore({
+    blobPath: RESET_BLOB,
+    localPath: RESET_DEV,
+    memory,
+    setMemory: (v) => {
+      memory = (v as ResetTokenStore) || {};
+    },
+    fallback: () => ({}),
+    preferFresh: true,
+  });
+  return (hydrated as ResetTokenStore) || {};
+}
+
+async function importResetTokens(
+  prisma: import("../src/generated/prisma/client").PrismaClient,
+  opts: { dryRun: boolean; verbose: boolean },
+) {
+  const store = await loadResetSnapshot();
+  const entries = Object.entries(store);
+  let imported = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  for (const [tokenHash, entry] of entries) {
+    const email = normalizeAccountEmail(entry.email);
+    const expiresAt = parseOptionalDate(entry.expiresAt);
+    const createdAt = parseOptionalDate(entry.createdAt) ?? new Date();
+
+    if (!tokenHash || !email || !expiresAt) {
+      skipped += 1;
+      continue;
+    }
+
+    if (expiresAt.getTime() < Date.now()) {
+      skipped += 1;
+      if (opts.verbose) console.log(`[reset-tokens] skip expired ${email}`);
+      continue;
+    }
+
+    if (opts.dryRun) {
+      if (opts.verbose) console.log(`[reset-tokens] dry-run upsert ${email}`);
+      imported += 1;
+      continue;
+    }
+
+    try {
+      await prisma.passwordResetToken.upsert({
+        where: { tokenHash },
+        create: {
+          tokenHash,
+          email,
+          expiresAt,
+          createdAt,
+        },
+        update: {
+          email,
+          expiresAt,
+          createdAt,
+        },
+      });
+      imported += 1;
+      if (opts.verbose) console.log(`[reset-tokens] upserted ${email}`);
+    } catch (error) {
+      skipped += 1;
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(`${tokenHash.slice(0, 8)}…: ${message}`);
+      console.error(`[reset-tokens] failed ${email}:`, message);
+    }
+  }
+
+  const summary = {
+    store: "reset-tokens",
+    blobCount: entries.length,
+    imported,
+    skipped,
+    orphanUserIds: [] as string[],
+    errors,
+  };
+  console.log(JSON.stringify(summary, null, 2));
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const connectionString = resolveConnectionString();
@@ -385,6 +594,10 @@ async function main() {
         await importAuth(prisma, { dryRun: args.dryRun, verbose: args.verbose });
       } else if (store === "profiles") {
         await importProfiles(prisma, { dryRun: args.dryRun, verbose: args.verbose });
+      } else if (store === "oauth") {
+        await importOAuth(prisma, { dryRun: args.dryRun, verbose: args.verbose });
+      } else if (store === "reset-tokens") {
+        await importResetTokens(prisma, { dryRun: args.dryRun, verbose: args.verbose });
       } else {
         console.warn(`[import-blob-stores] Store not implemented yet: ${store}`);
       }

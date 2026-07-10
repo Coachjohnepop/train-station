@@ -2,18 +2,28 @@ import "server-only";
 
 import { createHash, randomBytes } from "crypto";
 import path from "path";
+import {
+  blobReadFallbackEnabled,
+  readsFromDatabase,
+  writesToBlob,
+  writesToDatabase,
+} from "@/lib/blob-migration-config";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import { isDemoMode } from "@/lib/demo-enrollments";
+import {
+  issuePasswordResetTokenToDb,
+  lookupPasswordResetTokenFromDb,
+  revokePasswordResetTokenFromDb,
+} from "@/lib/password-reset-db";
+import type { StoredResetToken } from "@/lib/password-reset-types";
 
-export type StoredResetToken = {
-  email: string;
-  expiresAt: string;
-  createdAt: string;
-};
+export type { StoredResetToken };
 
 type ResetStore = Record<string, StoredResetToken>;
 
 const BLOB_PATH = "demo/password-reset-tokens.json";
 const DEV_FILE = path.join(process.cwd(), "prisma", "password-reset-tokens.dev.json");
+const STORE_KEY = "password-reset-tokens" as const;
 const TOKEN_TTL_MS = 60 * 60 * 1000;
 
 let memoryStore: ResetStore | null = null;
@@ -38,6 +48,11 @@ async function getStore(opts?: { preferFresh?: boolean }): Promise<ResetStore> {
 }
 
 async function saveStore(store: ResetStore): Promise<{ blobSaved: boolean }> {
+  if (!writesToBlob(STORE_KEY)) {
+    memoryStore = store;
+    return { blobSaved: true };
+  }
+
   return persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
@@ -48,7 +63,7 @@ async function saveStore(store: ResetStore): Promise<{ blobSaved: boolean }> {
   });
 }
 
-async function upsertTokenForEmail(
+async function upsertTokenForEmailInBlob(
   email: string,
   key: string,
   entry: StoredResetToken,
@@ -83,6 +98,15 @@ async function upsertTokenForEmail(
   return false;
 }
 
+async function mirrorTokenToDb(
+  email: string,
+  key: string,
+  entry: StoredResetToken,
+): Promise<void> {
+  if (!writesToDatabase(STORE_KEY) || isDemoMode()) return;
+  await issuePasswordResetTokenToDb(email, key, entry);
+}
+
 export async function issuePasswordResetToken(
   email: string,
 ): Promise<{ token: string; persisted: boolean }> {
@@ -95,26 +119,63 @@ export async function issuePasswordResetToken(
     expiresAt: new Date(now + TOKEN_TTL_MS).toISOString(),
   };
 
-  const persisted = await upsertTokenForEmail(email, key, entry);
-  if (!persisted) {
-    console.error(
-      "[password-reset] token store did not persist to blob — reset email suppressed",
-    );
+  let persisted = true;
+
+  if (writesToBlob(STORE_KEY)) {
+    persisted = await upsertTokenForEmailInBlob(email, key, entry);
+    if (!persisted) {
+      console.error(
+        "[password-reset] token store did not persist to blob — reset email suppressed",
+      );
+    }
   }
+
+  if (writesToDatabase(STORE_KEY) && !isDemoMode()) {
+    try {
+      await mirrorTokenToDb(email, key, entry);
+      if (!writesToBlob(STORE_KEY)) {
+        persisted = true;
+      }
+    } catch (error) {
+      if (!writesToBlob(STORE_KEY)) {
+        persisted = false;
+        console.error("[password-reset] token store did not persist to DB", error);
+      }
+    }
+  }
+
   return { token, persisted };
 }
 
 export async function lookupPasswordResetToken(
   token: string,
 ): Promise<StoredResetToken | null> {
+  const key = hashToken(token);
+
+  if (!isDemoMode() && readsFromDatabase(STORE_KEY)) {
+    try {
+      const fromDb = await lookupPasswordResetTokenFromDb(key);
+      if (fromDb) return fromDb;
+      if (!blobReadFallbackEnabled(STORE_KEY)) return null;
+    } catch (error) {
+      if (!blobReadFallbackEnabled(STORE_KEY)) throw error;
+      console.warn(
+        "[migration] password-reset-tokens DB read failed, falling back to blob",
+        error,
+      );
+    }
+  }
+
   const store = await getStore({ preferFresh: true });
-  const entry = store[hashToken(token)];
+  const entry = store[key];
   if (!entry) return null;
   if (new Date(entry.expiresAt).getTime() < Date.now()) {
-    const key = hashToken(token);
     const next = { ...store };
     delete next[key];
     await saveStore(next);
+    if (writesToDatabase(STORE_KEY) && !isDemoMode()) {
+      await revokePasswordResetTokenFromDb(key);
+    }
     return null;
   }
   return entry;
@@ -122,6 +183,13 @@ export async function lookupPasswordResetToken(
 
 export async function revokePasswordResetToken(token: string): Promise<void> {
   const key = hashToken(token);
+
+  if (writesToDatabase(STORE_KEY) && !isDemoMode()) {
+    await revokePasswordResetTokenFromDb(key);
+  }
+
+  if (!writesToBlob(STORE_KEY)) return;
+
   const store = await getStore({ preferFresh: true });
   if (!store[key]) return;
   const next = { ...store };
