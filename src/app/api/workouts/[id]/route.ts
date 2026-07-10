@@ -62,7 +62,19 @@ export async function GET(_request: Request, { params }: Params) {
   if (!workout) {
     return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
   }
-  return NextResponse.json(workout);
+  return NextResponse.json({
+    ...workout,
+    exercises: workout.exercises.map((item) => ({
+      ...item,
+      exercise: item.exercise ?? {
+        id: item.exerciseId,
+        name: "Unknown — use Swap",
+        description: null,
+        videoUrl: null,
+        tags: null,
+      },
+    })),
+  });
 }
 
 export async function PATCH(request: Request, { params }: Params) {

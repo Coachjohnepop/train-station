@@ -273,6 +273,13 @@ export async function PATCH(request: Request, { params }: Params) {
     }
   }
   try {
+    const existing = await prisma.workoutExercise.findFirst({
+      where: { id: itemId, workoutId },
+      select: { id: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ detail: "Item not found" }, { status: 404 });
+    }
     const item = await prisma.workoutExercise.update({
       where: { id: itemId },
       data,

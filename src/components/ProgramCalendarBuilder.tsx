@@ -207,6 +207,7 @@ export default function ProgramCalendarBuilder({
   );
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const editorRef = useRef<HTMLDivElement>(null);
+  const setsInputRef = useRef<HTMLInputElement>(null);
   const uploadPanelRef = useRef<HTMLDivElement>(null);
   const dragFromIdx = useRef<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
@@ -456,9 +457,22 @@ export default function ProgramCalendarBuilder({
     }
   }
 
-  function selectSlot(idx: number, grid: (SlotItem | null)[], rx: DayPrescription) {
+  function focusSetsEditor() {
+    requestAnimationFrame(() => {
+      setsInputRef.current?.focus();
+      setsInputRef.current?.select();
+    });
+  }
+
+  function selectSlot(
+    idx: number,
+    grid: (SlotItem | null)[],
+    rx: DayPrescription,
+    opts?: { focusEditor?: boolean },
+  ) {
     setSelectedSlotIdx(idx);
     syncEditorFromSlot(grid[idx], rx);
+    if (opts?.focusEditor) focusSetsEditor();
   }
 
   const loadSlots = useCallback(async (workoutId: string, rx?: DayPrescription) => {
@@ -479,7 +493,9 @@ export default function ProgramCalendarBuilder({
       const items: SlotItem[] = (w.exercises || []).map((it: any) => ({
         id: it.id,
         exerciseId: it.exercise?.id || it.exerciseId,
-        name: it.exercise?.name || "Exercise",
+        name:
+          it.exercise?.name ||
+          (it.exerciseId ? "Unknown — use Swap" : "Exercise"),
         sets: it.sets ?? null,
         reps: it.reps ?? null,
         restSec: it.restSec ?? null,
@@ -977,15 +993,27 @@ export default function ProgramCalendarBuilder({
   useEffect(() => {
     if (!focus) return;
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       const tag = (e.target as HTMLElement | null)?.tagName?.toLowerCase();
-      if (tag === "input" || tag === "textarea" || tag === "select") return;
-      e.preventDefault();
-      void navigateAdjacentDay(e.key === "ArrowLeft" ? -1 : 1);
+      const inField = tag === "input" || tag === "textarea" || tag === "select";
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        if (inField) return;
+        e.preventDefault();
+        void navigateAdjacentDay(e.key === "ArrowLeft" ? -1 : 1);
+        return;
+      }
+
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedSlotIdx !== null) {
+        if (inField) return;
+        const slot = slots[selectedSlotIdx];
+        if (!slot) return;
+        e.preventDefault();
+        void removeSlot(slot.id);
+      }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [focus, saving, adjacentDayNav]);
+  }, [focus, saving, adjacentDayNav, selectedSlotIdx, slots, prescription]);
 
   async function goToCalendarToday() {
     const iso = localTodayIso();
@@ -1147,12 +1175,19 @@ export default function ProgramCalendarBuilder({
   }
 
   async function removeSlot(itemId: string) {
-    if (!focus) return;
+    if (!focus || saving) return;
+    const workoutId = focus.workoutId;
+    if (!workoutId) {
+      setMessage("No workout loaded — pick Gym/Home first.");
+      setTimeout(() => setMessage(null), 2500);
+      return;
+    }
+    const idx = slots.findIndex((s) => s?.id === itemId);
     setSaving(true);
     try {
       const res = await fetch(
-        `/api/workouts/${focus.workoutId}/exercises?itemId=${encodeURIComponent(itemId)}`,
-        { method: "DELETE" },
+        `/api/workouts/${workoutId}/exercises?itemId=${encodeURIComponent(itemId)}`,
+        { method: "DELETE", cache: "no-store" },
       );
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -1160,18 +1195,23 @@ export default function ProgramCalendarBuilder({
           typeof body.detail === "string" ? body.detail : "Could not remove exercise — try again.",
         );
         setTimeout(() => setMessage(null), 3000);
+        await loadSlots(workoutId, prescription);
         return;
       }
-      const idx = slots.findIndex((s) => s?.id === itemId);
       if (idx >= 0) {
+        setSlots((prev) => {
+          const next = [...prev];
+          next[idx] = null;
+          return next;
+        });
         setCheckedSlots((prev) => {
           const next = new Set(prev);
           next.delete(idx);
           return next;
         });
       }
-      await loadSlots(focus.workoutId, prescription);
-      setMessage("Saved.");
+      await loadSlots(workoutId, prescription);
+      setMessage("Exercise removed.");
       setTimeout(() => setMessage(null), 1500);
     } finally {
       setSaving(false);
@@ -1576,6 +1616,12 @@ export default function ProgramCalendarBuilder({
           setDragOverIdx(null);
           if (from !== null && from !== idx) void moveSlot(from, idx);
         }}
+        onDoubleClick={(e) => {
+          if (!slot) return;
+          e.preventDefault();
+          e.stopPropagation();
+          selectSlot(idx, slots, prescription, { focusEditor: true });
+        }}
       >
         {slot ? (
           <>
@@ -1626,11 +1672,49 @@ export default function ProgramCalendarBuilder({
               className="min-w-0 flex-1 text-left"
               onClick={() => selectSlot(idx, slots, prescription)}
             >
-              <span className="block truncate text-xs font-medium">{slot.name}</span>
-              <span className="text-[10px] text-[var(--muted)]">
-                {slot.sets ?? editorSets} × {slot.reps ?? editorReps}
-                {slot.restSec != null ? ` · ${slot.restSec}s` : ""}
+              <span
+                className={`block truncate text-xs font-medium ${
+                  /unknown/i.test(slot.name) ? "text-amber-300" : ""
+                }`}
+              >
+                {slot.name}
               </span>
+              {isSelected ? (
+                <span
+                  className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    className="input h-6 w-10 px-1 text-[10px]"
+                    value={editorSets}
+                    disabled={saving}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value, 10);
+                      if (!Number.isNaN(v)) setEditorSets(Math.max(1, v));
+                    }}
+                    onBlur={() => void saveSelectedSlot()}
+                  />
+                  <span className="text-[var(--muted)]">×</span>
+                  <input
+                    className="input h-6 w-14 px-1 text-[10px]"
+                    value={editorReps}
+                    disabled={saving}
+                    onChange={(e) => setEditorReps(e.target.value)}
+                    onBlur={() => void saveSelectedSlot()}
+                  />
+                  {slot.restSec != null ? (
+                    <span className="text-[var(--muted)]">· {slot.restSec}s</span>
+                  ) : null}
+                </span>
+              ) : (
+                <span className="text-[10px] text-[var(--muted)]">
+                  {slot.sets ?? editorSets} × {slot.reps ?? editorReps}
+                  {slot.restSec != null ? ` · ${slot.restSec}s` : ""}
+                </span>
+              )}
             </button>
             <div className="w-24 shrink-0" onClick={(e) => e.stopPropagation()}>
               <SearchableExerciseSelect
@@ -1643,8 +1727,15 @@ export default function ProgramCalendarBuilder({
             </div>
             <button
               type="button"
-              className="shrink-0 text-[10px] text-[var(--danger)]"
-              onClick={() => void removeSlot(slot.id)}
+              className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold text-[var(--danger)] hover:bg-[var(--danger)]/10"
+              title="Remove exercise (Delete)"
+              aria-label={`Remove ${slot.name}`}
+              disabled={saving}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                void removeSlot(slot.id);
+              }}
             >
               ×
             </button>
@@ -2158,6 +2249,7 @@ export default function ProgramCalendarBuilder({
                   <label className="text-[10px]">
                     Sets
                     <input
+                      ref={setsInputRef}
                       type="number"
                       min={1}
                       max={20}
@@ -2216,7 +2308,8 @@ export default function ProgramCalendarBuilder({
                 </div>
 
                 <p className="text-[10px] text-[var(--muted)]">
-                  Drag a row or use ▲▼ to reorder — changes save automatically.
+                  Click a row to edit sets/reps · double-click focuses the editor · Delete removes ·
+                  drag or ▲▼ to reorder.
                 </p>
 
                 {loadingSlots ? (
