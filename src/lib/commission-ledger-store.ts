@@ -155,17 +155,18 @@ export async function getCommissionPayoutForPeriod(
 export async function upsertCommissionPayout(
   record: CommissionPayoutRecord,
 ): Promise<CommissionPayoutRecord> {
-  const store = await getStore();
   const normalized = normalizePayout(record)!;
-  const idx = store.payouts.findIndex((p) => p.period === normalized.period);
-  if (idx >= 0) store.payouts[idx] = normalized;
-  else store.payouts.push(normalized);
-  store.updatedAt = new Date().toISOString();
 
   if (!isDemoMode()) {
     await upsertCommissionPayoutToDb(normalized);
     return normalized;
   }
+
+  const store = await getStore();
+  const idx = store.payouts.findIndex((p) => p.period === normalized.period);
+  if (idx >= 0) store.payouts[idx] = normalized;
+  else store.payouts.push(normalized);
+  store.updatedAt = new Date().toISOString();
 
   await persistJsonStore({
     blobPath: BLOB_PATH,
