@@ -5,6 +5,7 @@ import { hashPassword, verifyPassword } from "@/lib/password";
 import { MEMBER_COOKIE, MEMBER_NAME_COOKIE } from "@/lib/current-user";
 import { normalizeAccountEmail } from "@/lib/account-email";
 import { getAllSignInAccounts } from "@/lib/member-accounts-store";
+import { readsFromDatabase } from "@/lib/blob-migration-config";
 import { resolveDemoUser, resolveDemoUserByEmail } from "@/lib/demo-user-directory";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import {
@@ -34,6 +35,7 @@ type DemoAccount = {
 };
 
 const SESSION_DAYS = 30;
+const AUTH_STORE_KEY = "registered-accounts" as const;
 export const NEEDS_ONBOARD_COOKIE = "ts_needs_onboard";
 export const SIGNUP_PLAN_COOKIE = "ts_signup_plan";
 export const NEEDS_PAYMENT_COOKIE = "ts_needs_payment";
@@ -93,7 +95,7 @@ export async function resolveUserByEmail(email: string): Promise<SessionUser | n
     return sessionFromDemoAccount(normalized, demoAccount);
   }
 
-  if (isDemoMode()) {
+  if (isDemoMode() || readsFromDatabase(AUTH_STORE_KEY)) {
     return null;
   }
 
@@ -128,19 +130,23 @@ export async function authenticateCredentials(
     return null;
   }
 
-  try {
-    const { prisma } = await import("@/lib/prisma");
-    const user = await prisma.user.findUnique({ where: { email: normalized } });
-    if (!user || user.hidden || !passwordAccepted(password, user.passwordHash)) return null;
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name || "Member",
-      role: user.role as UserRole,
-    };
-  } catch {
-    return null;
+  if (!readsFromDatabase(AUTH_STORE_KEY)) {
+    try {
+      const { prisma } = await import("@/lib/prisma");
+      const user = await prisma.user.findUnique({ where: { email: normalized } });
+      if (!user || user.hidden || !passwordAccepted(password, user.passwordHash)) return null;
+      return {
+        id: user.id,
+        email: user.email,
+        name: user.name || "Member",
+        role: user.role as UserRole,
+      };
+    } catch {
+      return null;
+    }
   }
+
+  return null;
 }
 
 export async function getSessionUser(): Promise<SessionUser | null> {

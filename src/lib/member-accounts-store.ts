@@ -4,24 +4,34 @@ import path from "path";
 import { randomUUID } from "crypto";
 import type { UserRole } from "@/lib/auth-session";
 import { normalizeAccountEmail } from "@/lib/account-email";
+import {
+  blobReadFallbackEnabled,
+  readMode,
+  readsFromDatabase,
+  writesToBlob,
+  writesToDatabase,
+} from "@/lib/blob-migration-config";
 import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
+import {
+  loadAccountByEmailFromDb,
+  loadAccountByUserIdFromDb,
+  loadRegisteredAccountsFromDb,
+  removeAccountByEmailFromDb,
+  setAccountHiddenInDb,
+  upsertAccountToDb,
+} from "@/lib/member-accounts-db";
 import { hashPassword } from "@/lib/password";
+import { isDemoMode } from "@/lib/demo-enrollments";
+import type { RegisterMemberInput, StoredMemberAccount } from "@/lib/member-accounts-types";
 
-export type StoredMemberAccount = {
-  userId: string;
-  role: UserRole;
-  name: string;
-  phone?: string | null;
-  passwordHash?: string | null;
-  hidden?: boolean;
-  createdAt: string;
-};
+export type { RegisterMemberInput, StoredMemberAccount };
 
 type RegisteredAccountsStore = Record<string, StoredMemberAccount>;
 
 const SEED_ACCOUNTS_FILE = path.join(process.cwd(), "prisma", "accounts.dev.json");
 const BLOB_PATH = "demo/registered-accounts.json";
 const DEV_FILE = path.join(process.cwd(), "prisma", "registered-accounts.dev.json");
+const STORE_KEY = "registered-accounts" as const;
 
 let memoryStore: RegisteredAccountsStore | null = null;
 
@@ -38,7 +48,9 @@ function loadSeedAccounts(): Record<string, SeedAccount> {
   return seed || {};
 }
 
-async function getRegisteredStore(opts?: { preferFresh?: boolean }): Promise<RegisteredAccountsStore> {
+async function loadRegisteredStoreFromBlob(
+  opts?: { preferFresh?: boolean },
+): Promise<RegisteredAccountsStore> {
   const hydrated = await hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
@@ -51,6 +63,65 @@ async function getRegisteredStore(opts?: { preferFresh?: boolean }): Promise<Reg
   });
   memoryStore = hydrated;
   return hydrated;
+}
+
+async function loadRegisteredStoreFromDb(): Promise<RegisteredAccountsStore> {
+  const store = await loadRegisteredAccountsFromDb();
+  memoryStore = store;
+  return store;
+}
+
+async function getRegisteredStore(opts?: { preferFresh?: boolean }): Promise<RegisteredAccountsStore> {
+  if (isDemoMode() || readMode(STORE_KEY) === "blob") {
+    return loadRegisteredStoreFromBlob(opts);
+  }
+
+  try {
+    return await loadRegisteredStoreFromDb();
+  } catch (error) {
+    if (blobReadFallbackEnabled(STORE_KEY)) {
+      console.warn("[migration] registered-accounts DB read failed, falling back to blob", error);
+      return loadRegisteredStoreFromBlob(opts);
+    }
+    throw error;
+  }
+}
+
+async function persistRegisteredStore(store: RegisteredAccountsStore): Promise<{ blobSaved: boolean }> {
+  let blobSaved = true;
+
+  if (writesToBlob(STORE_KEY)) {
+    const result = await persistJsonStore({
+      blobPath: BLOB_PATH,
+      localPath: DEV_FILE,
+      data: store,
+      setMemory: (v) => {
+        memoryStore = v;
+      },
+    });
+    blobSaved = result.blobSaved;
+  } else {
+    memoryStore = store;
+  }
+
+  return { blobSaved };
+}
+
+async function mirrorAccountToDb(
+  email: string,
+  account: StoredMemberAccount,
+): Promise<void> {
+  if (!writesToDatabase(STORE_KEY) || isDemoMode()) return;
+  await upsertAccountToDb({
+    email,
+    userId: account.userId,
+    role: account.role,
+    name: account.name,
+    phone: account.phone,
+    passwordHash: account.passwordHash,
+    hidden: account.hidden,
+    createdAt: account.createdAt,
+  });
 }
 
 export async function getAllSignInAccounts(opts?: { preferFresh?: boolean }): Promise<
@@ -92,6 +163,18 @@ export async function canSignInWithEmail(email: string): Promise<boolean> {
 export async function getAccountByEmail(email: string): Promise<StoredMemberAccount | null> {
   const normalized = normalizeAccountEmail(email);
   if (!normalized) return null;
+
+  if (!isDemoMode() && readsFromDatabase(STORE_KEY)) {
+    try {
+      const fromDb = await loadAccountByEmailFromDb(normalized);
+      if (fromDb) return fromDb;
+      if (!blobReadFallbackEnabled(STORE_KEY)) return null;
+    } catch (error) {
+      if (!blobReadFallbackEnabled(STORE_KEY)) throw error;
+      console.warn("[migration] registered-accounts DB read failed, falling back to blob", error);
+    }
+  }
+
   const registered = await getRegisteredStore();
   return registered[normalized] || null;
 }
@@ -113,15 +196,6 @@ export async function listSelfRegisteredAccounts(): Promise<
     }))
     .filter(({ email }) => !seedEmails.has(email));
 }
-
-export type RegisterMemberInput = {
-  email: string;
-  firstName: string;
-  lastName: string;
-  phone?: string;
-  plan: string;
-  password?: string;
-};
 
 /** Remove all self-registered members (keeps seeded coach/demo accounts). */
 export async function clearSelfRegisteredAccounts(): Promise<{
@@ -145,14 +219,7 @@ export async function clearSelfRegisteredAccounts(): Promise<{
     delete store[email];
   }
 
-  await persistJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    data: store,
-    setMemory: (v) => {
-      memoryStore = v;
-    },
-  });
+  await persistRegisteredStore(store);
 
   return { removedEmails, removedUserIds };
 }
@@ -185,14 +252,8 @@ export async function upsertSignInAccount(input: {
   };
 
   store[normalized] = account;
-  await persistJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    data: store,
-    setMemory: (v) => {
-      memoryStore = v;
-    },
-  });
+  await persistRegisteredStore(store);
+  await mirrorAccountToDb(normalized, account);
 
   return account;
 }
@@ -203,21 +264,29 @@ export async function setSignInAccountHidden(email: string, hidden: boolean): Pr
   const store = await getRegisteredStore();
   const account = store[normalized];
   if (!account) return false;
-  store[normalized] = { ...account, hidden };
-  await persistJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    data: store,
-    setMemory: (v) => {
-      memoryStore = v;
-    },
-  });
+  const updated = { ...account, hidden };
+  store[normalized] = updated;
+  await persistRegisteredStore(store);
+  if (writesToDatabase(STORE_KEY) && !isDemoMode()) {
+    await setAccountHiddenInDb(normalized, hidden);
+  }
   return true;
 }
 
 export async function getAccountByUserId(
   userId: string,
 ): Promise<{ email: string; account: StoredMemberAccount } | null> {
+  if (!isDemoMode() && readsFromDatabase(STORE_KEY)) {
+    try {
+      const fromDb = await loadAccountByUserIdFromDb(userId);
+      if (fromDb) return fromDb;
+      if (!blobReadFallbackEnabled(STORE_KEY)) return null;
+    } catch (error) {
+      if (!blobReadFallbackEnabled(STORE_KEY)) throw error;
+      console.warn("[migration] registered-accounts DB read failed, falling back to blob", error);
+    }
+  }
+
   const store = await getRegisteredStore();
   for (const [email, account] of Object.entries(store)) {
     if (account.userId === userId) {
@@ -246,14 +315,10 @@ export async function removeSelfRegisteredMemberByEmail(
   if (!account) return null;
 
   delete store[normalized];
-  await persistJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    data: store,
-    setMemory: (v) => {
-      memoryStore = v;
-    },
-  });
+  await persistRegisteredStore(store);
+  if (writesToDatabase(STORE_KEY) && !isDemoMode()) {
+    await removeAccountByEmailFromDb(normalized);
+  }
 
   return { email: normalized, userId: account.userId };
 }
@@ -264,14 +329,10 @@ export async function removeSignInAccount(email: string): Promise<boolean> {
   const store = await getRegisteredStore();
   if (!store[normalized]) return false;
   delete store[normalized];
-  await persistJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    data: store,
-    setMemory: (v) => {
-      memoryStore = v;
-    },
-  });
+  await persistRegisteredStore(store);
+  if (writesToDatabase(STORE_KEY) && !isDemoMode()) {
+    await removeAccountByEmailFromDb(normalized);
+  }
   return true;
 }
 
@@ -300,15 +361,9 @@ export async function registerMember(input: RegisterMemberInput): Promise<Stored
       throw new Error("An account with this email already exists. Sign in instead.");
     }
     store[normalized] = account;
-    const { blobSaved } = await persistJsonStore({
-      blobPath: BLOB_PATH,
-      localPath: DEV_FILE,
-      data: store,
-      setMemory: (v) => {
-        memoryStore = v;
-      },
-    });
-    if (!blobSaved && attempt < 3) {
+    const { blobSaved } = await persistRegisteredStore(store);
+    await mirrorAccountToDb(normalized, account);
+    if (!blobSaved && writesToBlob(STORE_KEY) && attempt < 3) {
       await new Promise((r) => setTimeout(r, 350 * (attempt + 1)));
       continue;
     }
