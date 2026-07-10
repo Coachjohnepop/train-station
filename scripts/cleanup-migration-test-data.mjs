@@ -57,6 +57,7 @@ async function main() {
     where: {
       OR: [
         { name: { contains: "lp-test-", mode: "insensitive" } },
+        { name: { contains: "QA-MIGRATION", mode: "insensitive" } },
         { id: { contains: "migration-loop" } },
       ],
     },
@@ -69,7 +70,12 @@ async function main() {
   });
 
   const chatMessages = await prisma.coachChatMessage.findMany({
-    where: { body: { contains: "QA-CHAT" } },
+    where: {
+      OR: [
+        { body: { contains: "QA-CHAT" } },
+        { body: { contains: "QA-MIGRATION" } },
+      ],
+    },
     select: { id: true, threadId: true, body: true },
   });
 
@@ -131,7 +137,12 @@ async function main() {
 
   if (chatMessages.length) {
     const r = await prisma.coachChatMessage.deleteMany({
-      where: { body: { contains: "QA-CHAT" } },
+      where: {
+        OR: [
+          { body: { contains: "QA-CHAT" } },
+          { body: { contains: "QA-MIGRATION" } },
+        ],
+      },
     });
     console.log(`Deleted ${r.count} chat message(s)`);
   }
