@@ -16,7 +16,9 @@ import {
 import {
   cloneWorkoutContentName,
   defaultTrackWorkoutTitle,
+  findCatalogHomeForProgramDay,
   workoutContentTitle,
+  workoutsMatchByContentTitle,
 } from "@/lib/workout-content-name";
 import {
   calendarDateForProgramDay,
@@ -371,6 +373,30 @@ export default function ProgramCalendarBuilder({
     setSlots(Array(totalSlotsFromColumnCounts(DEFAULT_COLUMN_SLOT_COUNTS)).fill(null));
   }
 
+  function resolveDetachCloneSourceId(
+    day: ProgramDay,
+    label: string,
+    sharedWorkoutId: string,
+  ): string {
+    if (!isHomeLabel(label)) return sharedWorkoutId;
+
+    const gymOpt = getDayOptions(day).find((o) => isGymLabel(o.label) && o.workoutId);
+    const gymWorkout = gymOpt ? allWorkouts.find((w) => w.id === gymOpt.workoutId) : null;
+    const sharedWorkout = allWorkouts.find((w) => w.id === sharedWorkoutId);
+    if (gymWorkout && sharedWorkout) {
+      const alreadyPaired = workoutsMatchByContentTitle(gymWorkout.name, sharedWorkout.name);
+      if (!alreadyPaired) {
+        const template = findCatalogHomeForProgramDay(
+          day.dayNumber,
+          gymWorkout.name,
+          allWorkouts,
+        );
+        if (template?.id) return template.id;
+      }
+    }
+    return sharedWorkoutId;
+  }
+
   async function detachSharedWorkoutForOption(
     dayId: string,
     optIdx: number,
@@ -382,8 +408,9 @@ export default function ProgramCalendarBuilder({
       return workoutId;
     }
 
-    const sourceWorkout = allWorkouts.find((w) => w.id === workoutId);
-    const cloneRes = await fetch(`/api/workouts/${workoutId}/clone`, {
+    const cloneSourceId = resolveDetachCloneSourceId(day, label, workoutId);
+    const sourceWorkout = allWorkouts.find((w) => w.id === cloneSourceId);
+    const cloneRes = await fetch(`/api/workouts/${cloneSourceId}/clone`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

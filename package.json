@@ -80,6 +80,7 @@
     "test:database-prodtest-loop": "node scripts/database-prodtest-loop.mjs",
     "cleanup:database-prodtest": "npx tsx scripts/cleanup-database-prodtest.mjs",
     "fix:shared-program-workouts": "npx tsx scripts/fix-shared-program-workouts-prodtest.mjs",
+    "fix:restore-home-workouts": "npx tsx scripts/restore-mismatched-home-workouts-prodtest.mjs",
     "catalog:strip-day-prefix": "npx tsx scripts/strip-day-prefix-workouts.mjs",
     "catalog:strip-day-prefix:dry": "DRY_RUN=1 npx tsx scripts/strip-day-prefix-workouts.mjs"
   },

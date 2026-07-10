@@ -52,6 +52,52 @@ export function workoutsMatchByContentTitle(
   return workoutContentTitleKey(a) === workoutContentTitleKey(b);
 }
 
+/** Catalog workout.name for the Home track paired with a Gym workout title. */
+export function pairedHomeTemplateName(gymWorkoutName: string): string | null {
+  const name = String(gymWorkoutName || "").trim();
+  if (!name) return null;
+  if (/\(Gym\)/i.test(name)) return name.replace(/\(Gym\)/gi, "(Home)");
+  if (/\(gym\)/i.test(name)) return name.replace(/\(gym\)/gi, "(home)");
+  if (/\s[-–—]\s*Gym\s*$/i.test(name)) return name.replace(/\s[-–—]\s*Gym\s*$/i, " (Home)");
+  if (/\sGym\s*$/i.test(name)) return name.replace(/\sGym\s*$/i, " Home");
+  return null;
+}
+
+export function findPairedHomeTemplateWorkout<
+  T extends { id: string; name: string },
+>(gymWorkoutName: string, library: readonly T[]): T | null {
+  const targetName = pairedHomeTemplateName(gymWorkoutName);
+  if (!targetName) return null;
+  const exact = library.find((w) => w.name === targetName);
+  if (exact) return exact;
+  const key = workoutContentTitleKey(targetName);
+  return library.find((w) => workoutContentTitleKey(w.name) === key) ?? null;
+}
+
+/** Fallback when Gym workout was renamed generically (e.g. "Lower Body Workout"). */
+export function findCatalogHomeForProgramDay<
+  T extends { id: string; name: string },
+>(dayNumber: number, gymWorkoutName: string, library: readonly T[]): T | null {
+  const paired = findPairedHomeTemplateWorkout(gymWorkoutName, library);
+  if (paired) return paired;
+
+  const dayTag = `Day ${dayNumber} `;
+  const homeCandidates = library.filter(
+    (w) => w.name.startsWith(dayTag) && /\(Home\)/i.test(w.name),
+  );
+  if (!homeCandidates.length) return null;
+
+  const gymLower = /lower|leg/i.test(gymWorkoutName);
+  const gymUpper = /upper|push|chest|shoulder/i.test(gymWorkoutName);
+  if (gymLower) {
+    return homeCandidates.find((w) => /lower|leg/i.test(w.name)) ?? null;
+  }
+  if (gymUpper) {
+    return homeCandidates.find((w) => /upper/i.test(w.name)) ?? null;
+  }
+  return homeCandidates[0] ?? null;
+}
+
 /** Default title when coach has not named the workout yet — never embed location. */
 export function defaultTrackWorkoutTitle(trackLabel: string): string {
   const label = trackLabel.trim();
