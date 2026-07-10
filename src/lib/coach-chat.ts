@@ -4,64 +4,37 @@ import { COMMUNITY_FEED_PROGRAM_SLUG } from "@/lib/community-feed";
 import { getUserEnrollments } from "@/lib/data/user-data";
 import { getAccountByUserId } from "@/lib/member-accounts-store";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
+import { isDemoMode } from "@/lib/demo-enrollments";
 import { BLOB_TOKEN, hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
 import { requireBlobPersisted } from "@/lib/demo-persistence";
+import {
+  addCoachChatMessageToDb,
+  clearCoachChatInDb,
+  coachChatMessageExistsInDb,
+  loadCoachChatFromDb,
+  markThreadReadInDb,
+  updateCoachChatMessageInDb,
+  upsertCoachChatThreadToDb,
+} from "@/lib/coach-chat-db";
+import {
+  emptyCoachChatStore,
+  type ChatMessage,
+  type ChatMessageKind,
+  type ChatReaction,
+  type ChatStore,
+  type ChatThread,
+  type ChatThreadKind,
+} from "@/lib/coach-chat-types";
 
-export type ChatThreadKind = "member" | "cohort";
-
-export type ChatMessageKind =
-  | "text"
-  | "image"
-  | "video_upload"
-  | "youtube"
-  | "workout_update"
-  | "member_sms"
-  | "system";
+export type {
+  ChatMessage,
+  ChatMessageKind,
+  ChatReaction,
+  ChatThread,
+  ChatThreadKind,
+};
 
 export { COMMUNITY_FEED_PROGRAM_SLUG } from "@/lib/community-feed";
-
-export type ChatThread = {
-  id: string;
-  kind: ChatThreadKind;
-  memberId?: string;
-  programSlug?: string;
-  title: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type ChatReaction = {
-  emoji: string;
-  userId: string;
-  createdAt: string;
-};
-
-export type ChatMessage = {
-  id: string;
-  threadId: string;
-  authorRole: "coach" | "member" | "system";
-  authorId: string;
-  authorName: string;
-  kind: ChatMessageKind;
-  body?: string;
-  mediaUrl?: string;
-  youtubeId?: string;
-  videoDurationSec?: number;
-  sessionDate?: string;
-  todaySessionId?: string;
-  workoutId?: string;
-  workoutTitle?: string;
-  smsLogId?: string;
-  alertSent?: boolean;
-  createdAt: string;
-  readByUserIds: string[];
-  reactions?: ChatReaction[];
-};
-
-type ChatStore = {
-  threads: ChatThread[];
-  messages: ChatMessage[];
-};
 
 const DEV_FILE = path.join(process.cwd(), "prisma", "coach-chat.dev.json");
 const BLOB_PATH = "demo/coach-chat.json";
@@ -70,7 +43,7 @@ const COACH_READER_ID = "coach";
 let memoryStore: ChatStore | null = null;
 
 function emptyStore(): ChatStore {
-  return { threads: [], messages: [] };
+  return emptyCoachChatStore();
 }
 
 function setMemory(store: ChatStore) {
@@ -99,6 +72,12 @@ function mergeChatStores(base: ChatStore, overlay: ChatStore): ChatStore {
 }
 
 export async function hydrateCoachChat(opts?: { preferFresh?: boolean }): Promise<ChatStore> {
+  if (!isDemoMode()) {
+    const store = await loadCoachChatFromDb();
+    setMemory(store);
+    return store;
+  }
+
   const local = memoryStore;
   const fresh = await hydrateJsonStore({
     blobPath: BLOB_PATH,
@@ -117,6 +96,12 @@ export async function hydrateCoachChat(opts?: { preferFresh?: boolean }): Promis
 }
 
 export async function clearCoachChat(): Promise<{ threadsRemoved: number; messagesRemoved: number }> {
+  if (!isDemoMode()) {
+    const counts = await clearCoachChatInDb();
+    setMemory(emptyStore());
+    return counts;
+  }
+
   await hydrateCoachChat();
   const store = readStore();
   const threadsRemoved = store.threads.length;
@@ -148,10 +133,17 @@ async function writeStore(store: ChatStore): Promise<{ blobSaved: boolean }> {
 }
 
 /**
- * Load latest Blob (when configured), merge with warm-instance memory, then write.
- * Prevents a stale lambda from overwriting threads/messages another instance saved.
+ * Load latest state before write.
+ * Demo: merge Blob + warm-instance memory.
+ * Prod: reload from Postgres (transactional per-message writes).
  */
 async function hydrateForWrite(): Promise<ChatStore> {
+  if (!isDemoMode()) {
+    const store = await loadCoachChatFromDb();
+    setMemory(store);
+    return store;
+  }
+
   const local = memoryStore;
   const fresh = await hydrateCoachChat({ preferFresh: Boolean(BLOB_TOKEN) });
   if (!local || !BLOB_TOKEN) return fresh;
@@ -161,6 +153,11 @@ async function hydrateForWrite(): Promise<ChatStore> {
 }
 
 async function persistStore(store: ChatStore, action: string): Promise<void> {
+  if (!isDemoMode()) {
+    setMemory(store);
+    return;
+  }
+
   const { blobSaved } = await writeStore(store);
   requireBlobPersisted(blobSaved, action);
 }
@@ -188,6 +185,14 @@ export async function ensureMemberThread(memberId: string): Promise<ChatThread> 
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
+
+  if (!isDemoMode()) {
+    await upsertCoachChatThreadToDb(thread);
+    store.threads.push(thread);
+    setMemory(store);
+    return thread;
+  }
+
   store.threads.push(thread);
   await persistStore(store, "Chat thread");
   return thread;
@@ -207,6 +212,14 @@ export async function ensureCohortThread(programSlug: string, programName?: stri
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
+
+  if (!isDemoMode()) {
+    await upsertCoachChatThreadToDb(thread);
+    store.threads.push(thread);
+    setMemory(store);
+    return thread;
+  }
+
   store.threads.push(thread);
   await persistStore(store, "Chat thread");
   return thread;
@@ -248,7 +261,7 @@ export function getThread(threadId: string): ChatThread | null {
   return readStore().threads.find((t) => t.id === threadId) ?? null;
 }
 
-/** Hydrate from Blob, then find or create thread by canonical id (serverless-safe). */
+/** Hydrate from store, then find or create thread by canonical id (serverless-safe). */
 export async function resolveThreadById(
   threadId: string,
   opts?: { preferFresh?: boolean },
@@ -287,7 +300,28 @@ export async function addChatMessage(input: Omit<ChatMessage, "id" | "createdAt"
     readByUserIds: input.readByUserIds ?? (input.authorRole === "coach" ? [COACH_READER_ID] : []),
   };
 
-  for (let attempt = 0; attempt < 4; attempt++) {
+  if (!isDemoMode()) {
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      await hydrateForWrite();
+      const store = readStore();
+      if (!store.messages.some((m) => m.id === message.id)) {
+        store.messages.push(message);
+        touchThread(store, input.threadId);
+      }
+      await addCoachChatMessageToDb(message);
+      setMemory(store);
+
+      if (await coachChatMessageExistsInDb(message.id)) {
+        return message;
+      }
+
+      await new Promise((r) => setTimeout(r, 150 * (attempt + 1)));
+    }
+
+    throw new Error("Chat message could not be saved — retry in a moment.");
+  }
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
     await hydrateForWrite();
     const store = readStore();
     if (!store.messages.some((m) => m.id === message.id)) {
@@ -321,11 +355,26 @@ export async function toggleMessageReaction(messageId: string, userId: string, e
     reactions.push({ emoji, userId, createdAt: new Date().toISOString() });
   }
   message.reactions = reactions;
+
+  if (!isDemoMode()) {
+    await updateCoachChatMessageInDb(message);
+    setMemory(store);
+    return message;
+  }
+
   await persistStore(store, "Chat reaction");
   return message;
 }
 
 export async function markThreadRead(threadId: string, readerId: string) {
+  if (!isDemoMode()) {
+    const changed = await markThreadReadInDb(threadId, readerId);
+    if (changed) {
+      await hydrateCoachChat({ preferFresh: true });
+    }
+    return;
+  }
+
   await hydrateForWrite();
   const store = readStore();
   let changed = false;

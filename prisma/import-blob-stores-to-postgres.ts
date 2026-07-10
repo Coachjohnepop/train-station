@@ -30,6 +30,8 @@ const RESET_BLOB = "demo/password-reset-tokens.json";
 const RESET_DEV = path.join(process.cwd(), "prisma", "password-reset-tokens.dev.json");
 const SMS_BLOB = "demo/sms-workouts.json";
 const SMS_DEV = path.join(process.cwd(), "prisma", "sms-workouts.dev.json");
+const CHAT_BLOB = "demo/coach-chat.json";
+const CHAT_DEV = path.join(process.cwd(), "prisma", "coach-chat.dev.json");
 
 const OAUTH_PROVIDERS = new Set(["google", "apple", "facebook"]);
 
@@ -45,6 +47,8 @@ const STORE_ALIASES: Record<string, string> = {
   "password-reset-tokens": "reset-tokens",
   sms: "sms",
   "sms-workouts": "sms",
+  chat: "coach-chat",
+  "coach-chat": "coach-chat",
 };
 
 function parseArgs(argv: string[]) {
@@ -730,6 +734,199 @@ async function importSmsWorkouts(
   console.log(JSON.stringify(summary, null, 2));
 }
 
+type CoachChatStore = {
+  threads: Array<{
+    id: string;
+    kind: string;
+    memberId?: string;
+    programSlug?: string;
+    title: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  messages: Array<{
+    id: string;
+    threadId: string;
+    authorRole: string;
+    authorId: string;
+    authorName: string;
+    kind: string;
+    body?: string;
+    mediaUrl?: string;
+    youtubeId?: string;
+    videoDurationSec?: number;
+    sessionDate?: string;
+    todaySessionId?: string;
+    workoutId?: string;
+    workoutTitle?: string;
+    smsLogId?: string;
+    alertSent?: boolean;
+    createdAt: string;
+    readByUserIds: string[];
+    reactions?: unknown;
+  }>;
+};
+
+async function loadCoachChatSnapshot(): Promise<CoachChatStore> {
+  let memory: CoachChatStore | null = null;
+  const hydrated = await hydrateJsonStore({
+    blobPath: CHAT_BLOB,
+    localPath: CHAT_DEV,
+    memory,
+    setMemory: (v) => {
+      memory = (v as CoachChatStore) || { threads: [], messages: [] };
+    },
+    fallback: () => ({ threads: [], messages: [] }),
+    preferFresh: true,
+  });
+  return (hydrated as CoachChatStore) || { threads: [], messages: [] };
+}
+
+async function importCoachChat(
+  prisma: import("../src/generated/prisma/client").PrismaClient,
+  opts: { dryRun: boolean; verbose: boolean },
+) {
+  const store = await loadCoachChatSnapshot();
+  const threads = store.threads || [];
+  const messages = store.messages || [];
+  let imported = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+  const threadIds = new Set(threads.map((t) => t.id));
+
+  for (const thread of threads) {
+    if (!thread.id || !thread.title || !thread.kind) {
+      skipped += 1;
+      continue;
+    }
+
+    const data = {
+      id: thread.id,
+      kind: thread.kind,
+      memberId: thread.memberId ?? null,
+      programSlug: thread.programSlug ?? null,
+      title: thread.title,
+      createdAt: parseOptionalDate(thread.createdAt) ?? new Date(),
+      updatedAt: parseOptionalDate(thread.updatedAt) ?? new Date(),
+    };
+
+    if (opts.dryRun) {
+      if (opts.verbose) console.log(`[coach-chat] dry-run thread ${thread.id}`);
+      imported += 1;
+      continue;
+    }
+
+    try {
+      await prisma.coachChatThread.upsert({
+        where: { id: thread.id },
+        create: data,
+        update: {
+          kind: data.kind,
+          memberId: data.memberId,
+          programSlug: data.programSlug,
+          title: data.title,
+          updatedAt: data.updatedAt,
+        },
+      });
+      imported += 1;
+      if (opts.verbose) console.log(`[coach-chat] upserted thread ${thread.id}`);
+    } catch (error) {
+      skipped += 1;
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(`thread ${thread.id}: ${message}`);
+      console.error(`[coach-chat] failed thread ${thread.id}:`, message);
+    }
+  }
+
+  let messagesImported = 0;
+  for (const message of messages) {
+    if (!message.id || !message.threadId || !threadIds.has(message.threadId)) {
+      skipped += 1;
+      if (opts.verbose && message.threadId) {
+        console.log(`[coach-chat] skip orphan message ${message.id}`);
+      }
+      continue;
+    }
+
+    const data = {
+      id: message.id,
+      threadId: message.threadId,
+      authorRole: message.authorRole,
+      authorId: message.authorId,
+      authorName: message.authorName,
+      kind: message.kind,
+      body: message.body ?? null,
+      mediaUrl: message.mediaUrl ?? null,
+      youtubeId: message.youtubeId ?? null,
+      videoDurationSec: message.videoDurationSec ?? null,
+      sessionDate: message.sessionDate ?? null,
+      todaySessionId: message.todaySessionId ?? null,
+      workoutId: message.workoutId ?? null,
+      workoutTitle: message.workoutTitle ?? null,
+      smsLogId: message.smsLogId ?? null,
+      alertSent: Boolean(message.alertSent),
+      readByUserIds: message.readByUserIds ?? [],
+      reactions:
+        message.reactions === null || message.reactions === undefined
+          ? undefined
+          : (message.reactions as import("../src/generated/prisma/client").Prisma.InputJsonValue),
+      createdAt: parseOptionalDate(message.createdAt) ?? new Date(),
+    };
+
+    if (opts.dryRun) {
+      if (opts.verbose) console.log(`[coach-chat] dry-run message ${message.id}`);
+      messagesImported += 1;
+      continue;
+    }
+
+    try {
+      await prisma.coachChatMessage.upsert({
+        where: { id: message.id },
+        create: data,
+        update: {
+          threadId: data.threadId,
+          authorRole: data.authorRole,
+          authorId: data.authorId,
+          authorName: data.authorName,
+          kind: data.kind,
+          body: data.body,
+          mediaUrl: data.mediaUrl,
+          youtubeId: data.youtubeId,
+          videoDurationSec: data.videoDurationSec,
+          sessionDate: data.sessionDate,
+          todaySessionId: data.todaySessionId,
+          workoutId: data.workoutId,
+          workoutTitle: data.workoutTitle,
+          smsLogId: data.smsLogId,
+          alertSent: data.alertSent,
+          readByUserIds: data.readByUserIds,
+          reactions: data.reactions,
+          createdAt: data.createdAt,
+        },
+      });
+      messagesImported += 1;
+      if (opts.verbose) console.log(`[coach-chat] upserted message ${message.id}`);
+    } catch (error) {
+      skipped += 1;
+      const errMessage = error instanceof Error ? error.message : String(error);
+      errors.push(`message ${message.id}: ${errMessage}`);
+      console.error(`[coach-chat] failed message ${message.id}:`, errMessage);
+    }
+  }
+
+  const summary = {
+    store: "coach-chat",
+    blobCount: threads.length + messages.length,
+    imported: imported + messagesImported,
+    skipped,
+    orphanUserIds: [] as string[],
+    threadCount: threads.length,
+    messageCount: messages.length,
+    errors,
+  };
+  console.log(JSON.stringify(summary, null, 2));
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const connectionString = resolveConnectionString();
@@ -755,6 +952,8 @@ async function main() {
         await importResetTokens(prisma, { dryRun: args.dryRun, verbose: args.verbose });
       } else if (store === "sms") {
         await importSmsWorkouts(prisma, { dryRun: args.dryRun, verbose: args.verbose });
+      } else if (store === "coach-chat") {
+        await importCoachChat(prisma, { dryRun: args.dryRun, verbose: args.verbose });
       } else {
         console.warn(`[import-blob-stores] Store not implemented yet: ${store}`);
       }
