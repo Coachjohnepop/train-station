@@ -1,7 +1,7 @@
 # Jeremy — Migration QA Checklist
 
 **Prod:** https://www.thetrainstation.co  
-**Last updated:** 2026-07-09 (after PR-7 deploy + `DATABASE_URL` fix)
+**Last updated:** 2026-07-09 (after PR-9 — Tier 3 commerce stores)
 
 Mark each item when tested. Report anything broken or odd in Slack.
 
@@ -32,7 +32,18 @@ Mark each item when tested. Report anything broken or odd in Slack.
 
 ---
 
-## PR-8+ (when deployed — live sessions & coach settings)
+## PR-9 (Tier 3 commerce — when deployed)
+
+| # | Area | Steps | Pass? | Notes |
+|---|------|-------|-------|-------|
+| 15 | **Admin → Commission** | View partners + payout history → run or review a payout | ☐ | Postgres ledger |
+| 16 | **Referral codes** | Admin referral list loads; checkout with a code still works | ☐ | |
+| 17 | **Waitlist / Leads** | Admin → Leads shows waitlist + signups | ☐ | |
+| 18 | **Custom training offer** | Create/send a custom offer (if you use this flow) | ☐ | |
+
+---
+
+## PR-8 (live sessions & coach settings)
 
 | # | Area | Steps | Pass? | Notes |
 |---|------|-------|-------|-------|

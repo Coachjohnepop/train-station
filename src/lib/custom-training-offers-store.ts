@@ -2,7 +2,14 @@ import "server-only";
 
 import { randomUUID } from "crypto";
 import path from "path";
+import { isDemoMode } from "@/lib/demo-enrollments";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import {
+  createCustomTrainingOfferInDb,
+  getCustomTrainingOfferFromDb,
+  listCustomTrainingOffersFromDb,
+  updateCustomTrainingOfferInDb,
+} from "@/lib/custom-training-offers-db";
 import type { CustomTrainingParameters } from "@/lib/product-offers";
 
 export type CustomTrainingOffer = {
@@ -84,6 +91,7 @@ async function getStore(): Promise<Store> {
 }
 
 export async function listCustomTrainingOffers(): Promise<CustomTrainingOffer[]> {
+  if (!isDemoMode()) return listCustomTrainingOffersFromDb();
   const store = await getStore();
   return [...(store.offers || [])]
     .map(normalizeOffer)
@@ -92,6 +100,7 @@ export async function listCustomTrainingOffers(): Promise<CustomTrainingOffer[]>
 }
 
 export async function getCustomTrainingOffer(id: string): Promise<CustomTrainingOffer | null> {
+  if (!isDemoMode()) return getCustomTrainingOfferFromDb(id);
   const store = await getStore();
   const found = store.offers?.find((o) => o.id === id);
   return found ? normalizeOffer(found) : null;
@@ -106,7 +115,6 @@ export async function createCustomTrainingOffer(input: {
   notes?: string | null;
   createdByEmail?: string | null;
 }): Promise<CustomTrainingOffer> {
-  const store = await getStore();
   const now = new Date().toISOString();
   const offer: CustomTrainingOffer = {
     id: randomUUID(),
@@ -123,6 +131,12 @@ export async function createCustomTrainingOffer(input: {
     createdAt: now,
     updatedAt: now,
   };
+  if (!isDemoMode()) {
+    await createCustomTrainingOfferInDb(offer);
+    return offer;
+  }
+
+  const store = await getStore();
   store.offers = store.offers || [];
   store.offers.push(offer);
   store.updatedAt = now;
@@ -152,15 +166,22 @@ export async function updateCustomTrainingOffer(
     >
   >,
 ): Promise<CustomTrainingOffer> {
-  const store = await getStore();
-  const idx = store.offers?.findIndex((o) => o.id === id) ?? -1;
-  if (idx < 0) throw new Error("Custom training offer not found.");
-  const current = normalizeOffer(store.offers![idx])!;
+  const current = await getCustomTrainingOffer(id);
+  if (!current) throw new Error("Custom training offer not found.");
   const next: CustomTrainingOffer = {
     ...current,
     ...patch,
     updatedAt: new Date().toISOString(),
   };
+
+  if (!isDemoMode()) {
+    await updateCustomTrainingOfferInDb(next);
+    return next;
+  }
+
+  const store = await getStore();
+  const idx = store.offers?.findIndex((o) => o.id === id) ?? -1;
+  if (idx < 0) throw new Error("Custom training offer not found.");
   store.offers![idx] = next;
   store.updatedAt = next.updatedAt;
   await persistJsonStore({

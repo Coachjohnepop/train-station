@@ -2,7 +2,15 @@ import "server-only";
 
 import { randomUUID } from "crypto";
 import path from "path";
+import { isDemoMode } from "@/lib/demo-enrollments";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import {
+  deleteReferralCodeFromDb,
+  getReferralCodeByCodeFromDb,
+  getReferralCodeByIdFromDb,
+  listReferralCodesFromDb,
+  upsertReferralCodeToDb,
+} from "@/lib/referral-codes-db";
 
 export type ReferralCode = {
   id: string;
@@ -150,6 +158,7 @@ async function ensureStore(): Promise<ReferralStore> {
 }
 
 export async function listReferralCodes(): Promise<ReferralCode[]> {
+  if (!isDemoMode()) return listReferralCodesFromDb();
   const store = await ensureStore();
   return [...store.codes].sort((a, b) => a.code.localeCompare(b.code));
 }
@@ -157,6 +166,7 @@ export async function listReferralCodes(): Promise<ReferralCode[]> {
 export async function getReferralCodeByCode(code: string): Promise<ReferralCode | null> {
   const normalized = normalizeCode(code);
   if (!normalized) return null;
+  if (!isDemoMode()) return getReferralCodeByCodeFromDb(normalized);
   const store = await ensureStore();
   const found = store.codes.find((c) => c.code === normalized);
   return found ? normalizeReferralCode(found) : null;
@@ -170,11 +180,17 @@ export async function createReferralCode(input: {
   ownerUserId?: string | null;
   notes?: string | null;
 }): Promise<ReferralCode> {
-  const store = await ensureStore();
   const code = normalizeCode(input.code);
   if (!code) throw new Error("Referral code is required.");
-  if (store.codes.some((c) => c.code === code)) {
-    throw new Error("That referral code already exists.");
+  if (!isDemoMode()) {
+    if (await getReferralCodeByCodeFromDb(code)) {
+      throw new Error("That referral code already exists.");
+    }
+  } else {
+    const store = await ensureStore();
+    if (store.codes.some((c) => c.code === code)) {
+      throw new Error("That referral code already exists.");
+    }
   }
 
   const now = new Date().toISOString();
@@ -191,6 +207,12 @@ export async function createReferralCode(input: {
     updatedAt: now,
   };
 
+  if (!isDemoMode()) {
+    await upsertReferralCodeToDb(entry);
+    return entry;
+  }
+
+  const store = await ensureStore();
   store.codes.push(entry);
   store.updatedAt = now;
   await persistJsonStore({
@@ -220,17 +242,31 @@ export async function updateReferralCode(
     >
   >,
 ): Promise<ReferralCode> {
-  const store = await ensureStore();
-  const idx = store.codes.findIndex((c) => c.id === id);
-  if (idx < 0) throw new Error("Referral code not found.");
+  const current = !isDemoMode()
+    ? await getReferralCodeByIdFromDb(id)
+    : (await ensureStore()).codes.find((c) => c.id === id) ?? null;
+  if (!current) throw new Error("Referral code not found.");
 
-  const current = store.codes[idx];
+  if (!isDemoMode()) {
+    const nextCode = patch.code !== undefined ? normalizeCode(patch.code) : current.code;
+    if (!nextCode) throw new Error("Referral code is required.");
+    const existing = await getReferralCodeByCodeFromDb(nextCode);
+    if (existing && existing.id !== id) {
+      throw new Error("That referral code already exists.");
+    }
+  } else {
+    const store = await ensureStore();
+    const nextCode =
+      patch.code !== undefined ? normalizeCode(patch.code) : current.code;
+    if (!nextCode) throw new Error("Referral code is required.");
+    if (store.codes.some((c) => c.id !== id && c.code === nextCode)) {
+      throw new Error("That referral code already exists.");
+    }
+  }
+
   const nextCode =
     patch.code !== undefined ? normalizeCode(patch.code) : current.code;
   if (!nextCode) throw new Error("Referral code is required.");
-  if (store.codes.some((c) => c.id !== id && c.code === nextCode)) {
-    throw new Error("That referral code already exists.");
-  }
 
   const next: ReferralCode = {
     ...current,
@@ -253,6 +289,14 @@ export async function updateReferralCode(
     updatedAt: new Date().toISOString(),
   };
 
+  if (!isDemoMode()) {
+    await upsertReferralCodeToDb(next);
+    return next;
+  }
+
+  const store = await ensureStore();
+  const idx = store.codes.findIndex((c) => c.id === id);
+  if (idx < 0) throw new Error("Referral code not found.");
   store.codes[idx] = next;
   store.updatedAt = next.updatedAt;
   await persistJsonStore({
@@ -268,6 +312,7 @@ export async function updateReferralCode(
 }
 
 export async function deleteReferralCode(id: string): Promise<boolean> {
+  if (!isDemoMode()) return deleteReferralCodeFromDb(id);
   const store = await ensureStore();
   const before = store.codes.length;
   store.codes = store.codes.filter((c) => c.id !== id);

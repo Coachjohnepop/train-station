@@ -1,11 +1,19 @@
 import path from "path";
 import { randomUUID } from "crypto";
+import { isDemoMode } from "@/lib/demo-enrollments";
 import {
   readBlobJson,
   writeBlobJson,
   readLocalJson,
   writeLocalJson,
 } from "@/lib/demo-json-blob";
+import {
+  clearWaitlistInDb,
+  deleteWaitlistByEmailFromDb,
+  getWaitlistEntryByEmailFromDb,
+  listWaitlistFromDb,
+  upsertWaitlistEntryToDb,
+} from "@/lib/waitlist-db";
 
 export type WaitlistEntry = {
   id: string;
@@ -54,6 +62,37 @@ export async function addToWaitlist(input: {
   const phone = input.phone?.trim() || null;
   const name = [firstName, lastName].filter(Boolean).join(" ") || "Guest";
 
+  if (!isDemoMode()) {
+    const existing = await getWaitlistEntryByEmailFromDb(email);
+    if (existing) {
+      const updated: WaitlistEntry = {
+        ...existing,
+        firstName: firstName ?? existing.firstName,
+        lastName: lastName ?? existing.lastName,
+        phone: phone ?? existing.phone,
+        name: name !== "Guest" ? name : existing.name,
+        plan: input.plan ?? existing.plan,
+        source: input.source ?? existing.source,
+      };
+      await upsertWaitlistEntryToDb(updated);
+      return updated;
+    }
+
+    const entry: WaitlistEntry = {
+      id: randomUUID(),
+      email,
+      name,
+      firstName,
+      lastName,
+      phone,
+      plan: input.plan || null,
+      source: input.source || null,
+      createdAt: new Date().toISOString(),
+    };
+    await upsertWaitlistEntryToDb(entry);
+    return entry;
+  }
+
   const store = await readStore();
   const existing = store.entries.find((e) => e.email === email);
 
@@ -86,14 +125,20 @@ export async function addToWaitlist(input: {
 }
 
 export async function listWaitlist(): Promise<WaitlistEntry[]> {
+  if (!isDemoMode()) return listWaitlistFromDb();
   return (await readStore()).entries;
 }
 
 export async function clearWaitlist(): Promise<void> {
+  if (!isDemoMode()) {
+    await clearWaitlistInDb();
+    return;
+  }
   await writeStore({ entries: [] });
 }
 
 export async function removeWaitlistByEmail(email: string): Promise<boolean> {
+  if (!isDemoMode()) return deleteWaitlistByEmailFromDb(email);
   const normalized = email.trim().toLowerCase();
   const store = await readStore();
   const before = store.entries.length;
@@ -109,7 +154,8 @@ export async function listLeads(): Promise<WaitlistEntry[]> {
   const { getMemberProfile } = await import("@/lib/member-profiles-store");
 
   const byEmail = new Map<string, WaitlistEntry>();
-  for (const entry of (await readStore()).entries) {
+  const waitlistEntries = await listWaitlist();
+  for (const entry of waitlistEntries) {
     byEmail.set(entry.email.toLowerCase(), entry);
   }
 

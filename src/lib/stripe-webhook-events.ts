@@ -1,7 +1,9 @@
 import "server-only";
 
 import path from "path";
+import { isDemoMode } from "@/lib/demo-enrollments";
 import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
+import { claimStripeWebhookEventInDb } from "@/lib/stripe-webhook-events-db";
 
 type WebhookEventStore = Record<string, { processedAt: string; type: string }>;
 
@@ -29,6 +31,8 @@ export async function claimStripeWebhookEvent(
   eventId: string,
   eventType: string,
 ): Promise<boolean> {
+  if (!isDemoMode()) return claimStripeWebhookEventInDb(eventId, eventType);
+
   const store = await getStore();
   if (store[eventId]) return false;
 

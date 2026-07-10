@@ -1,7 +1,13 @@
 import "server-only";
 
 import path from "path";
+import { isDemoMode } from "@/lib/demo-enrollments";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import {
+  getCommissionPayoutForPeriodFromDb,
+  listCommissionPayoutsFromDb,
+  upsertCommissionPayoutToDb,
+} from "@/lib/commission-ledger-db";
 
 export type PartnerPayoutLineStatus = "pending" | "paid" | "failed" | "skipped";
 
@@ -132,6 +138,7 @@ async function getStore(): Promise<LedgerStore> {
 }
 
 export async function listCommissionPayouts(): Promise<CommissionPayoutRecord[]> {
+  if (!isDemoMode()) return listCommissionPayoutsFromDb();
   const store = await getStore();
   return [...store.payouts].sort((a, b) => b.period.localeCompare(a.period));
 }
@@ -139,6 +146,7 @@ export async function listCommissionPayouts(): Promise<CommissionPayoutRecord[]>
 export async function getCommissionPayoutForPeriod(
   period: string,
 ): Promise<CommissionPayoutRecord | null> {
+  if (!isDemoMode()) return getCommissionPayoutForPeriodFromDb(period);
   const store = await getStore();
   const payout = store.payouts.find((p) => p.period === period);
   return payout ? normalizePayout(payout) : null;
@@ -153,6 +161,11 @@ export async function upsertCommissionPayout(
   if (idx >= 0) store.payouts[idx] = normalized;
   else store.payouts.push(normalized);
   store.updatedAt = new Date().toISOString();
+
+  if (!isDemoMode()) {
+    await upsertCommissionPayoutToDb(normalized);
+    return normalized;
+  }
 
   await persistJsonStore({
     blobPath: BLOB_PATH,

@@ -38,6 +38,18 @@ const SETTINGS_BLOB = "demo/coach-settings.json";
 const SETTINGS_DEV = path.join(process.cwd(), "prisma", "coach-settings.dev.json");
 const PREFS_BLOB = "demo/member-coach-prefs.json";
 const PREFS_DEV = path.join(process.cwd(), "prisma", "member-coach-prefs.dev.json");
+const PARTNERS_BLOB = "demo/commission-partners.json";
+const PARTNERS_DEV = path.join(process.cwd(), "prisma", "commission-partners.dev.json");
+const LEDGER_BLOB = "demo/commission-ledger.json";
+const LEDGER_DEV = path.join(process.cwd(), "prisma", "commission-ledger.dev.json");
+const REFERRAL_BLOB = "demo/referral-codes.json";
+const REFERRAL_DEV = path.join(process.cwd(), "prisma", "referral-codes.dev.json");
+const WEBHOOK_BLOB = "demo/stripe-webhook-events.json";
+const WEBHOOK_DEV = path.join(process.cwd(), "prisma", "stripe-webhook-events.dev.json");
+const WAITLIST_BLOB = "demo/waitlist.json";
+const WAITLIST_DEV = path.join(process.cwd(), "prisma", "waitlist.dev.json");
+const OFFERS_BLOB = "demo/custom-training-offers.json";
+const OFFERS_DEV = path.join(process.cwd(), "prisma", "custom-training-offers.dev.json");
 
 const OAUTH_PROVIDERS = new Set(["google", "apple", "facebook"]);
 
@@ -63,17 +75,51 @@ const STORE_ALIASES: Record<string, string> = {
   prefs: "coach-prefs",
   "coach-prefs": "coach-prefs",
   "member-coach-prefs": "coach-prefs",
+  partners: "partners",
+  "commission-partners": "partners",
+  ledger: "ledger",
+  "commission-ledger": "ledger",
+  referrals: "referrals",
+  "referral-codes": "referrals",
+  webhooks: "webhooks",
+  "stripe-webhook-events": "webhooks",
+  waitlist: "waitlist",
+  offers: "offers",
+  "custom-training-offers": "offers",
 };
+
+const ALL_STORES = [
+  "auth",
+  "profiles",
+  "oauth",
+  "reset-tokens",
+  "sms",
+  "coach-chat",
+  "live-sessions",
+  "coach-settings",
+  "coach-prefs",
+  "partners",
+  "ledger",
+  "referrals",
+  "webhooks",
+  "waitlist",
+  "offers",
+] as const;
 
 function parseArgs(argv: string[]) {
   const storesArg = argv.find((a) => a.startsWith("--stores="))?.split("=")[1] ?? "auth";
+  const rawStores = storesArg
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const stores =
+    rawStores.length === 1 && rawStores[0] === "all"
+      ? [...ALL_STORES]
+      : rawStores.map((s) => STORE_ALIASES[s] ?? s);
   return {
     dryRun: argv.includes("--dry-run"),
     verbose: argv.includes("--verbose"),
-    stores: storesArg
-      .split(",")
-      .map((s) => STORE_ALIASES[s.trim()] ?? s.trim())
-      .filter(Boolean),
+    stores,
   };
 }
 
@@ -1281,6 +1327,700 @@ async function importMemberCoachPrefs(
   console.log(JSON.stringify(summary, null, 2));
 }
 
+type PartnersStore = {
+  partners: Array<{
+    id: string;
+    name: string;
+    email: string;
+    stripeAccountId?: string | null;
+    sharePercent?: number;
+    enabled?: boolean;
+    notes?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
+  }>;
+};
+
+async function loadPartnersSnapshot(): Promise<PartnersStore> {
+  let memory: PartnersStore | null = null;
+  const hydrated = await hydrateJsonStore({
+    blobPath: PARTNERS_BLOB,
+    localPath: PARTNERS_DEV,
+    memory,
+    setMemory: (v) => {
+      memory = (v as PartnersStore) || { partners: [] };
+    },
+    fallback: () => ({ partners: [] }),
+    preferFresh: true,
+  });
+  return (hydrated as PartnersStore) || { partners: [] };
+}
+
+async function importCommissionPartners(
+  prisma: import("../src/generated/prisma/client").PrismaClient,
+  opts: { dryRun: boolean; verbose: boolean },
+) {
+  const store = await loadPartnersSnapshot();
+  const partners = store.partners || [];
+  let imported = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  for (const partner of partners) {
+    if (!partner.id || !partner.name || !partner.email) {
+      skipped += 1;
+      continue;
+    }
+
+    const data = {
+      id: partner.id,
+      name: partner.name.trim(),
+      email: partner.email.trim().toLowerCase(),
+      stripeAccountId: partner.stripeAccountId?.trim() || null,
+      sharePercent:
+        typeof partner.sharePercent === "number" && Number.isFinite(partner.sharePercent)
+          ? Math.max(0, Math.min(100, partner.sharePercent))
+          : 0,
+      enabled: partner.enabled !== false,
+      notes: typeof partner.notes === "string" ? partner.notes : null,
+      createdAt: parseOptionalDate(partner.createdAt) ?? new Date(),
+      updatedAt: parseOptionalDate(partner.updatedAt) ?? new Date(),
+    };
+
+    if (opts.dryRun) {
+      if (opts.verbose) console.log(`[partners] dry-run ${partner.id}`);
+      imported += 1;
+      continue;
+    }
+
+    try {
+      await prisma.commissionPartner.upsert({
+        where: { id: partner.id },
+        create: data,
+        update: {
+          name: data.name,
+          email: data.email,
+          stripeAccountId: data.stripeAccountId,
+          sharePercent: data.sharePercent,
+          enabled: data.enabled,
+          notes: data.notes,
+          updatedAt: data.updatedAt,
+        },
+      });
+      imported += 1;
+      if (opts.verbose) console.log(`[partners] upserted ${partner.id}`);
+    } catch (error) {
+      skipped += 1;
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(`${partner.id}: ${message}`);
+      console.error(`[partners] failed ${partner.id}:`, message);
+    }
+  }
+
+  const summary = {
+    store: "partners",
+    blobCount: partners.length,
+    imported,
+    skipped,
+    orphanUserIds: [] as string[],
+    errors,
+  };
+  console.log(JSON.stringify(summary, null, 2));
+}
+
+type LedgerStore = {
+  payouts: Array<{
+    id: string;
+    period: string;
+    mrrCents?: number;
+    tier1BaseCents?: number;
+    tier1CommissionCents?: number;
+    tier2BaseCents?: number;
+    tier2CommissionCents?: number;
+    totalCommissionCents?: number;
+    transferId?: string | null;
+    partnerLines?: Array<{
+      partnerId: string;
+      partnerName: string;
+      sharePercent?: number;
+      amountCents?: number;
+      transferId?: string | null;
+      status?: string;
+      error?: string | null;
+    }>;
+    status?: string;
+    createdAt?: string;
+    paidAt?: string | null;
+    error?: string | null;
+  }>;
+};
+
+async function loadLedgerSnapshot(): Promise<LedgerStore> {
+  let memory: LedgerStore | null = null;
+  const hydrated = await hydrateJsonStore({
+    blobPath: LEDGER_BLOB,
+    localPath: LEDGER_DEV,
+    memory,
+    setMemory: (v) => {
+      memory = (v as LedgerStore) || { payouts: [] };
+    },
+    fallback: () => ({ payouts: [] }),
+    preferFresh: true,
+  });
+  return (hydrated as LedgerStore) || { payouts: [] };
+}
+
+async function importCommissionLedger(
+  prisma: import("../src/generated/prisma/client").PrismaClient,
+  opts: { dryRun: boolean; verbose: boolean },
+) {
+  const store = await loadLedgerSnapshot();
+  const payouts = store.payouts || [];
+  let imported = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+  const skippedLines: string[] = [];
+
+  const partnerIds = new Set(
+    (await prisma.commissionPartner.findMany({ select: { id: true } })).map((p) => p.id),
+  );
+  const fallbackPartnerId = partnerIds.values().next().value as string | undefined;
+
+  for (const payout of payouts) {
+    if (!payout.id || !payout.period) {
+      skipped += 1;
+      continue;
+    }
+
+    const data = {
+      id: payout.id,
+      period: payout.period,
+      mrrCents: payout.mrrCents ?? 0,
+      tier1BaseCents: payout.tier1BaseCents ?? 0,
+      tier1CommissionCents: payout.tier1CommissionCents ?? 0,
+      tier2BaseCents: payout.tier2BaseCents ?? 0,
+      tier2CommissionCents: payout.tier2CommissionCents ?? 0,
+      totalCommissionCents: payout.totalCommissionCents ?? 0,
+      transferId: payout.transferId ?? null,
+      status: payout.status ?? "pending",
+      error: payout.error ?? null,
+      createdAt: parseOptionalDate(payout.createdAt) ?? new Date(),
+      paidAt: parseOptionalDate(payout.paidAt),
+    };
+
+    const lines = payout.partnerLines ?? [];
+    const lineData: Array<{
+      payoutId: string;
+      partnerId: string;
+      partnerName: string;
+      sharePercent: number;
+      amountCents: number;
+      transferId: string | null;
+      status: string;
+      error: string | null;
+    }> = [];
+
+    for (const line of lines) {
+      if (!line.partnerId || !line.partnerName) continue;
+      let partnerId = line.partnerId;
+      if (!partnerIds.has(partnerId)) {
+        if (partnerId === "legacy" && fallbackPartnerId) {
+          partnerId = fallbackPartnerId;
+        } else {
+          skippedLines.push(`${payout.period}:${line.partnerId}`);
+          if (opts.verbose) {
+            console.log(`[ledger] skip line missing partner ${line.partnerId} for ${payout.period}`);
+          }
+          continue;
+        }
+      }
+      lineData.push({
+        payoutId: payout.id,
+        partnerId,
+        partnerName: line.partnerName,
+        sharePercent: line.sharePercent ?? 0,
+        amountCents: line.amountCents ?? 0,
+        transferId: line.transferId ?? null,
+        status: line.status ?? "pending",
+        error: line.error ?? null,
+      });
+    }
+
+    if (opts.dryRun) {
+      if (opts.verbose) console.log(`[ledger] dry-run ${payout.period}`);
+      imported += 1;
+      continue;
+    }
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        await tx.commissionPayout.upsert({
+          where: { period: payout.period },
+          create: data,
+          update: {
+            mrrCents: data.mrrCents,
+            tier1BaseCents: data.tier1BaseCents,
+            tier1CommissionCents: data.tier1CommissionCents,
+            tier2BaseCents: data.tier2BaseCents,
+            tier2CommissionCents: data.tier2CommissionCents,
+            totalCommissionCents: data.totalCommissionCents,
+            transferId: data.transferId,
+            status: data.status,
+            error: data.error,
+            paidAt: data.paidAt,
+          },
+        });
+        await tx.commissionPayoutLine.deleteMany({ where: { payoutId: payout.id } });
+        if (lineData.length > 0) {
+          await tx.commissionPayoutLine.createMany({ data: lineData });
+        }
+      });
+      imported += 1;
+      if (opts.verbose) console.log(`[ledger] upserted ${payout.period}`);
+    } catch (error) {
+      skipped += 1;
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(`${payout.period}: ${message}`);
+      console.error(`[ledger] failed ${payout.period}:`, message);
+    }
+  }
+
+  const summary = {
+    store: "ledger",
+    blobCount: payouts.length,
+    imported,
+    skipped,
+    orphanUserIds: [] as string[],
+    skippedPartnerLines: [...new Set(skippedLines)],
+    errors,
+  };
+  console.log(JSON.stringify(summary, null, 2));
+}
+
+type ReferralStore = {
+  codes: Array<{
+    id: string;
+    code: string;
+    label?: string;
+    stripePromotionCodeId?: string | null;
+    stripeCouponId?: string | null;
+    ownerUserId?: string | null;
+    enabled?: boolean;
+    notes?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
+  }>;
+};
+
+async function loadReferralsSnapshot(): Promise<ReferralStore> {
+  let memory: ReferralStore | null = null;
+  const hydrated = await hydrateJsonStore({
+    blobPath: REFERRAL_BLOB,
+    localPath: REFERRAL_DEV,
+    memory,
+    setMemory: (v) => {
+      memory = (v as ReferralStore) || { codes: [] };
+    },
+    fallback: () => ({ codes: [] }),
+    preferFresh: true,
+  });
+  return (hydrated as ReferralStore) || { codes: [] };
+}
+
+async function importReferralCodes(
+  prisma: import("../src/generated/prisma/client").PrismaClient,
+  opts: { dryRun: boolean; verbose: boolean },
+) {
+  const store = await loadReferralsSnapshot();
+  const codes = store.codes || [];
+  let imported = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+  const orphanUserIds: string[] = [];
+
+  for (const code of codes) {
+    if (!code.id || !code.code) {
+      skipped += 1;
+      continue;
+    }
+
+    const normalizedCode = code.code.trim().toUpperCase().replace(/\s+/g, "");
+    if (!normalizedCode) {
+      skipped += 1;
+      continue;
+    }
+
+    if (code.ownerUserId) {
+      const user = await prisma.user.findUnique({
+        where: { id: code.ownerUserId },
+        select: { id: true },
+      });
+      if (!user) {
+        skipped += 1;
+        orphanUserIds.push(code.ownerUserId);
+        if (opts.verbose) console.log(`[referrals] skip orphan owner ${code.ownerUserId}`);
+        continue;
+      }
+    }
+
+    const data = {
+      id: code.id,
+      code: normalizedCode,
+      label: code.label?.trim() || normalizedCode,
+      stripePromotionCodeId: code.stripePromotionCodeId?.trim() || null,
+      stripeCouponId: code.stripeCouponId?.trim() || null,
+      ownerUserId: code.ownerUserId?.trim() || null,
+      enabled: code.enabled !== false,
+      notes: typeof code.notes === "string" ? code.notes : null,
+      createdAt: parseOptionalDate(code.createdAt) ?? new Date(),
+      updatedAt: parseOptionalDate(code.updatedAt) ?? new Date(),
+    };
+
+    if (opts.dryRun) {
+      if (opts.verbose) console.log(`[referrals] dry-run ${normalizedCode}`);
+      imported += 1;
+      continue;
+    }
+
+    try {
+      await prisma.referralCode.upsert({
+        where: { id: code.id },
+        create: data,
+        update: {
+          code: data.code,
+          label: data.label,
+          stripePromotionCodeId: data.stripePromotionCodeId,
+          stripeCouponId: data.stripeCouponId,
+          ownerUserId: data.ownerUserId,
+          enabled: data.enabled,
+          notes: data.notes,
+          updatedAt: data.updatedAt,
+        },
+      });
+      imported += 1;
+      if (opts.verbose) console.log(`[referrals] upserted ${normalizedCode}`);
+    } catch (error) {
+      skipped += 1;
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(`${normalizedCode}: ${message}`);
+      console.error(`[referrals] failed ${normalizedCode}:`, message);
+    }
+  }
+
+  const summary = {
+    store: "referrals",
+    blobCount: codes.length,
+    imported,
+    skipped,
+    orphanUserIds: [...new Set(orphanUserIds)],
+    errors,
+  };
+  console.log(JSON.stringify(summary, null, 2));
+}
+
+type WebhookEventStore = Record<string, { processedAt: string; type: string }>;
+
+async function loadWebhooksSnapshot(): Promise<WebhookEventStore> {
+  let memory: WebhookEventStore | null = null;
+  const hydrated = await hydrateJsonStore({
+    blobPath: WEBHOOK_BLOB,
+    localPath: WEBHOOK_DEV,
+    memory,
+    setMemory: (v) => {
+      memory = (v as WebhookEventStore) || {};
+    },
+    fallback: () => ({}),
+    preferFresh: true,
+  });
+  return (hydrated as WebhookEventStore) || {};
+}
+
+async function importStripeWebhooks(
+  prisma: import("../src/generated/prisma/client").PrismaClient,
+  opts: { dryRun: boolean; verbose: boolean },
+) {
+  const store = await loadWebhooksSnapshot();
+  const entries = Object.entries(store);
+  let imported = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  for (const [eventId, event] of entries) {
+    if (!eventId || !event?.type) {
+      skipped += 1;
+      continue;
+    }
+
+    const data = {
+      eventId,
+      type: event.type,
+      processedAt: parseOptionalDate(event.processedAt) ?? new Date(),
+    };
+
+    if (opts.dryRun) {
+      if (opts.verbose) console.log(`[webhooks] dry-run ${eventId}`);
+      imported += 1;
+      continue;
+    }
+
+    try {
+      await prisma.stripeWebhookEvent.upsert({
+        where: { eventId },
+        create: data,
+        update: {
+          type: data.type,
+          processedAt: data.processedAt,
+        },
+      });
+      imported += 1;
+      if (opts.verbose) console.log(`[webhooks] upserted ${eventId}`);
+    } catch (error) {
+      skipped += 1;
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(`${eventId}: ${message}`);
+      console.error(`[webhooks] failed ${eventId}:`, message);
+    }
+  }
+
+  const summary = {
+    store: "webhooks",
+    blobCount: entries.length,
+    imported,
+    skipped,
+    orphanUserIds: [] as string[],
+    errors,
+  };
+  console.log(JSON.stringify(summary, null, 2));
+}
+
+type WaitlistStore = {
+  entries: Array<{
+    id: string;
+    email: string;
+    name: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    phone?: string | null;
+    plan?: string | null;
+    source?: string | null;
+    createdAt?: string;
+  }>;
+};
+
+async function loadWaitlistSnapshot(): Promise<WaitlistStore> {
+  let memory: WaitlistStore | null = null;
+  const hydrated = await hydrateJsonStore({
+    blobPath: WAITLIST_BLOB,
+    localPath: WAITLIST_DEV,
+    memory,
+    setMemory: (v) => {
+      memory = (v as WaitlistStore) || { entries: [] };
+    },
+    fallback: () => ({ entries: [] }),
+    preferFresh: true,
+  });
+  return (hydrated as WaitlistStore) || { entries: [] };
+}
+
+async function importWaitlist(
+  prisma: import("../src/generated/prisma/client").PrismaClient,
+  opts: { dryRun: boolean; verbose: boolean },
+) {
+  const store = await loadWaitlistSnapshot();
+  const entries = store.entries || [];
+  let imported = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  for (const entry of entries) {
+    if (!entry.id || !entry.email || !entry.name) {
+      skipped += 1;
+      continue;
+    }
+
+    const email = entry.email.trim().toLowerCase();
+    const data = {
+      id: entry.id,
+      email,
+      name: entry.name,
+      firstName: entry.firstName ?? null,
+      lastName: entry.lastName ?? null,
+      phone: entry.phone ?? null,
+      plan: entry.plan ?? null,
+      source: entry.source ?? null,
+      createdAt: parseOptionalDate(entry.createdAt) ?? new Date(),
+    };
+
+    if (opts.dryRun) {
+      if (opts.verbose) console.log(`[waitlist] dry-run ${email}`);
+      imported += 1;
+      continue;
+    }
+
+    try {
+      await prisma.waitlistEntry.upsert({
+        where: { email },
+        create: data,
+        update: {
+          name: data.name,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          plan: data.plan,
+          source: data.source,
+        },
+      });
+      imported += 1;
+      if (opts.verbose) console.log(`[waitlist] upserted ${email}`);
+    } catch (error) {
+      skipped += 1;
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(`${email}: ${message}`);
+      console.error(`[waitlist] failed ${email}:`, message);
+    }
+  }
+
+  const summary = {
+    store: "waitlist",
+    blobCount: entries.length,
+    imported,
+    skipped,
+    orphanUserIds: [] as string[],
+    errors,
+  };
+  console.log(JSON.stringify(summary, null, 2));
+}
+
+type OffersStore = {
+  offers: Array<{
+    id: string;
+    label: string;
+    memberEmail?: string | null;
+    memberUserId?: string | null;
+    priceCents?: number;
+    currency?: string;
+    parameters?: unknown;
+    status?: string;
+    stripeCheckoutSessionId?: string | null;
+    createdByEmail?: string | null;
+    notes?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
+  }>;
+};
+
+async function loadOffersSnapshot(): Promise<OffersStore> {
+  let memory: OffersStore | null = null;
+  const hydrated = await hydrateJsonStore({
+    blobPath: OFFERS_BLOB,
+    localPath: OFFERS_DEV,
+    memory,
+    setMemory: (v) => {
+      memory = (v as OffersStore) || { offers: [] };
+    },
+    fallback: () => ({ offers: [] }),
+    preferFresh: true,
+  });
+  return (hydrated as OffersStore) || { offers: [] };
+}
+
+async function importCustomTrainingOffers(
+  prisma: import("../src/generated/prisma/client").PrismaClient,
+  opts: { dryRun: boolean; verbose: boolean },
+) {
+  const store = await loadOffersSnapshot();
+  const offers = store.offers || [];
+  let imported = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+  const orphanUserIds: string[] = [];
+
+  for (const offer of offers) {
+    if (!offer.id || !offer.label) {
+      skipped += 1;
+      continue;
+    }
+
+    if (offer.memberUserId) {
+      const user = await prisma.user.findUnique({
+        where: { id: offer.memberUserId },
+        select: { id: true },
+      });
+      if (!user) {
+        skipped += 1;
+        orphanUserIds.push(offer.memberUserId);
+        if (opts.verbose) console.log(`[offers] skip orphan member ${offer.memberUserId}`);
+        continue;
+      }
+    }
+
+    const data = {
+      id: offer.id,
+      label: offer.label.trim(),
+      memberEmail: offer.memberEmail?.trim().toLowerCase() || null,
+      memberUserId: offer.memberUserId?.trim() || null,
+      priceCents: Math.max(0, Math.round(Number(offer.priceCents) || 0)),
+      currency: offer.currency?.trim() || "usd",
+      parameters: offer.parameters ?? {},
+      status:
+        offer.status === "sent" || offer.status === "paid" || offer.status === "canceled"
+          ? offer.status
+          : "draft",
+      stripeCheckoutSessionId: offer.stripeCheckoutSessionId ?? null,
+      createdByEmail: offer.createdByEmail ?? null,
+      notes: typeof offer.notes === "string" ? offer.notes : null,
+      createdAt: parseOptionalDate(offer.createdAt) ?? new Date(),
+      updatedAt: parseOptionalDate(offer.updatedAt) ?? new Date(),
+    };
+
+    if (opts.dryRun) {
+      if (opts.verbose) console.log(`[offers] dry-run ${offer.id}`);
+      imported += 1;
+      continue;
+    }
+
+    try {
+      await prisma.customTrainingOffer.upsert({
+        where: { id: offer.id },
+        create: {
+          ...data,
+          parameters: data.parameters as import("../src/generated/prisma/client").Prisma.InputJsonValue,
+        },
+        update: {
+          label: data.label,
+          memberEmail: data.memberEmail,
+          memberUserId: data.memberUserId,
+          priceCents: data.priceCents,
+          currency: data.currency,
+          parameters: data.parameters as import("../src/generated/prisma/client").Prisma.InputJsonValue,
+          status: data.status,
+          stripeCheckoutSessionId: data.stripeCheckoutSessionId,
+          createdByEmail: data.createdByEmail,
+          notes: data.notes,
+          updatedAt: data.updatedAt,
+        },
+      });
+      imported += 1;
+      if (opts.verbose) console.log(`[offers] upserted ${offer.id}`);
+    } catch (error) {
+      skipped += 1;
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(`${offer.id}: ${message}`);
+      console.error(`[offers] failed ${offer.id}:`, message);
+    }
+  }
+
+  const summary = {
+    store: "offers",
+    blobCount: offers.length,
+    imported,
+    skipped,
+    orphanUserIds: [...new Set(orphanUserIds)],
+    errors,
+  };
+  console.log(JSON.stringify(summary, null, 2));
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const connectionString = resolveConnectionString();
@@ -1314,6 +2054,18 @@ async function main() {
         await importCoachSettings(prisma, { dryRun: args.dryRun, verbose: args.verbose });
       } else if (store === "coach-prefs") {
         await importMemberCoachPrefs(prisma, { dryRun: args.dryRun, verbose: args.verbose });
+      } else if (store === "partners") {
+        await importCommissionPartners(prisma, { dryRun: args.dryRun, verbose: args.verbose });
+      } else if (store === "ledger") {
+        await importCommissionLedger(prisma, { dryRun: args.dryRun, verbose: args.verbose });
+      } else if (store === "referrals") {
+        await importReferralCodes(prisma, { dryRun: args.dryRun, verbose: args.verbose });
+      } else if (store === "webhooks") {
+        await importStripeWebhooks(prisma, { dryRun: args.dryRun, verbose: args.verbose });
+      } else if (store === "waitlist") {
+        await importWaitlist(prisma, { dryRun: args.dryRun, verbose: args.verbose });
+      } else if (store === "offers") {
+        await importCustomTrainingOffers(prisma, { dryRun: args.dryRun, verbose: args.verbose });
       } else {
         console.warn(`[import-blob-stores] Store not implemented yet: ${store}`);
       }

@@ -2,7 +2,14 @@ import "server-only";
 
 import { randomUUID } from "crypto";
 import path from "path";
+import { isDemoMode } from "@/lib/demo-enrollments";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import {
+  deleteCommissionPartnerFromDb,
+  getCommissionPartnerFromDb,
+  listCommissionPartnersFromDb,
+  upsertCommissionPartnerToDb,
+} from "@/lib/commission-partners-db";
 import {
   commissionUsesPoolSplit,
   type CommissionSplitMode,
@@ -235,6 +242,7 @@ async function ensureMigratedStore(): Promise<PartnersStore> {
 }
 
 export async function listCommissionPartners(): Promise<CommissionPartner[]> {
+  if (!isDemoMode()) return listCommissionPartnersFromDb();
   const store = await ensureMigratedStore();
   return [...store.partners].sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -245,6 +253,7 @@ export async function listEnabledCommissionPartners(): Promise<CommissionPartner
 }
 
 export async function getCommissionPartner(id: string): Promise<CommissionPartner | null> {
+  if (!isDemoMode()) return getCommissionPartnerFromDb(id);
   const store = await ensureMigratedStore();
   const partner = store.partners.find((p) => p.id === id);
   return partner ? normalizePartner(partner) : null;
@@ -256,7 +265,6 @@ export async function createCommissionPartner(input: {
   sharePercent?: number;
   notes?: string | null;
 }): Promise<CommissionPartner> {
-  const store = await ensureMigratedStore();
   const now = new Date().toISOString();
   const partner: CommissionPartner = {
     id: randomUUID(),
@@ -273,6 +281,12 @@ export async function createCommissionPartner(input: {
     updatedAt: now,
   };
 
+  if (!isDemoMode()) {
+    await upsertCommissionPartnerToDb(partner);
+    return partner;
+  }
+
+  const store = await ensureMigratedStore();
   store.partners.push(partner);
   store.updatedAt = now;
   await persistJsonStore({
@@ -296,11 +310,11 @@ export async function updateCommissionPartner(
     >
   >,
 ): Promise<CommissionPartner> {
-  const store = await ensureMigratedStore();
-  const idx = store.partners.findIndex((p) => p.id === id);
-  if (idx < 0) throw new Error("Partner not found");
+  const current = !isDemoMode()
+    ? await getCommissionPartnerFromDb(id)
+    : (await ensureMigratedStore()).partners.find((p) => p.id === id) ?? null;
+  if (!current) throw new Error("Partner not found");
 
-  const current = store.partners[idx];
   const next: CommissionPartner = {
     ...current,
     ...patch,
@@ -314,7 +328,15 @@ export async function updateCommissionPartner(
     updatedAt: new Date().toISOString(),
   };
 
-  store.partners[idx] = next;
+  if (!isDemoMode()) {
+    await upsertCommissionPartnerToDb(next);
+    return next;
+  }
+
+  const store = await ensureMigratedStore();
+  const storeIdx = store.partners.findIndex((p) => p.id === id);
+  if (storeIdx < 0) throw new Error("Partner not found");
+  store.partners[storeIdx] = next;
   store.updatedAt = next.updatedAt;
   await persistJsonStore({
     blobPath: BLOB_PATH,
@@ -329,6 +351,7 @@ export async function updateCommissionPartner(
 }
 
 export async function deleteCommissionPartner(id: string): Promise<boolean> {
+  if (!isDemoMode()) return deleteCommissionPartnerFromDb(id);
   const store = await ensureMigratedStore();
   const before = store.partners.length;
   store.partners = store.partners.filter((p) => p.id !== id);
