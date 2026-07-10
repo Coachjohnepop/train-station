@@ -1,65 +1,42 @@
 import "server-only";
 
 import path from "path";
+import {
+  blobReadFallbackEnabled,
+  readMode,
+  readsFromDatabase,
+  writesToBlob,
+  writesToDatabase,
+} from "@/lib/blob-migration-config";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import { isDemoMode } from "@/lib/demo-enrollments";
 import {
   defaultApprovalStatus,
   defaultPaymentStatus,
   normalizeApprovalStatus,
   normalizePaymentStatus,
-  type ApprovalStatus,
-  type PaymentStatus,
 } from "@/lib/member-gates";
+import {
+  loadMemberProfileFromDb,
+  loadMemberProfilesFromDb,
+  removeMemberProfilesFromDb,
+  updateMemberProfileInDb,
+  upsertMemberProfileToDb,
+} from "@/lib/member-profiles-db";
+import type {
+  MemberProfile,
+  MemberProfilePatch,
+  PaymentMethod,
+} from "@/lib/member-profiles-types";
 import { normalizeSignupPlan, type SignupPlan } from "@/lib/signup-plans";
 
-export type PaymentMethod = "stripe" | "venmo" | "manual" | "other";
-
-export type MemberProfile = {
-  userId: string;
-  email: string;
-  plan: SignupPlan;
-  phone: string | null;
-  dailyReminderTime: string | null;
-  weightLbs: string | null;
-  notes: string | null;
-  city: string | null;
-  state: string | null;
-  onboardingComplete: boolean;
-  completedAt: string | null;
-  approvalStatus: ApprovalStatus;
-  approvedAt: string | null;
-  paymentStatus: PaymentStatus;
-  paidAt: string | null;
-  paymentMethod: PaymentMethod | null;
-  paymentNote: string | null;
-  stripeCustomerId: string | null;
-  stripeSubscriptionId: string | null;
-  stripeCheckoutSessionId: string | null;
-  referralCode: string | null;
-  referredByUserId: string | null;
-  intensiveSessionsTotal: number | null;
-  intensiveSessionsRemaining: number | null;
-  intensiveWindowDays: number | null;
-  intensiveStartsAt: string | null;
-  intensiveExpiresAt: string | null;
-  customTrainingOfferId: string | null;
-  welcomeSignupEmailSentAt: string | null;
-  welcomeCompleteEmailSentAt: string | null;
-  welcomeSmsSentAt: string | null;
-  coachIntakeCompleteAt: string | null;
-  coachIntakeCompletedBy: string | null;
-  introBookedAt: string | null;
-  coachMeetingRequestedAt: string | null;
-  coachMeetingRequestedBy: string | null;
-  coachMeetingRequestNote: string | null;
-  rampStartedAt: string | null;
-  updatedAt: string;
-};
+export type { MemberProfile, PaymentMethod };
 
 type ProfileStore = Record<string, MemberProfile>;
 
 const BLOB_PATH = "demo/member-profiles.json";
 const DEV_FILE = path.join(process.cwd(), "prisma", "member-profiles.dev.json");
+const STORE_KEY = "member-profiles" as const;
 
 let memoryStore: ProfileStore | null = null;
 
@@ -176,7 +153,9 @@ function normalizeProfile(raw: unknown, userId: string): MemberProfile | null {
   };
 }
 
-async function getStore(opts?: { preferFresh?: boolean }): Promise<ProfileStore> {
+async function loadProfileStoreFromBlob(
+  opts?: { preferFresh?: boolean },
+): Promise<ProfileStore> {
   const hydrated = await hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
@@ -191,7 +170,60 @@ async function getStore(opts?: { preferFresh?: boolean }): Promise<ProfileStore>
   return memoryStore;
 }
 
+async function loadProfileStoreFromDb(): Promise<ProfileStore> {
+  const store = await loadMemberProfilesFromDb();
+  memoryStore = store;
+  return store;
+}
+
+async function getStore(opts?: { preferFresh?: boolean }): Promise<ProfileStore> {
+  if (isDemoMode() || readMode(STORE_KEY) === "blob") {
+    return loadProfileStoreFromBlob(opts);
+  }
+
+  try {
+    return await loadProfileStoreFromDb();
+  } catch (error) {
+    if (blobReadFallbackEnabled(STORE_KEY)) {
+      console.warn("[migration] member-profiles DB read failed, falling back to blob", error);
+      return loadProfileStoreFromBlob(opts);
+    }
+    throw error;
+  }
+}
+
+async function persistProfileStore(store: ProfileStore): Promise<void> {
+  if (writesToBlob(STORE_KEY)) {
+    await persistJsonStore({
+      blobPath: BLOB_PATH,
+      localPath: DEV_FILE,
+      data: store,
+      setMemory: (v) => {
+        memoryStore = v as ProfileStore;
+      },
+    });
+  } else {
+    memoryStore = store;
+  }
+}
+
+async function mirrorProfileToDb(profile: MemberProfile): Promise<void> {
+  if (!writesToDatabase(STORE_KEY) || isDemoMode()) return;
+  await upsertMemberProfileToDb(profile);
+}
+
 export async function getMemberProfile(userId: string): Promise<MemberProfile | null> {
+  if (!isDemoMode() && readsFromDatabase(STORE_KEY)) {
+    try {
+      const fromDb = await loadMemberProfileFromDb(userId);
+      if (fromDb) return fromDb;
+      if (!blobReadFallbackEnabled(STORE_KEY)) return null;
+    } catch (error) {
+      if (!blobReadFallbackEnabled(STORE_KEY)) throw error;
+      console.warn("[migration] member-profiles DB read failed, falling back to blob", error);
+    }
+  }
+
   const store = await getStore();
   const profile = store[userId];
   return profile ? normalizeProfile(profile, userId) : null;
@@ -211,6 +243,24 @@ export async function ensureMemberProfile(input: {
   plan: string;
   phone?: string | null;
 }): Promise<MemberProfile> {
+  if (!isDemoMode() && readsFromDatabase(STORE_KEY)) {
+    try {
+      const existing = await loadMemberProfileFromDb(input.userId);
+      if (existing) return existing;
+      if (!blobReadFallbackEnabled(STORE_KEY)) {
+        const plan = normalizeSignupPlan(input.plan);
+        const profile = emptyProfile(input.userId, input.email, plan);
+        if (input.phone) profile.phone = input.phone;
+        await mirrorProfileToDb(profile);
+        memoryStore = { ...(memoryStore ?? {}), [input.userId]: profile };
+        return profile;
+      }
+    } catch (error) {
+      if (!blobReadFallbackEnabled(STORE_KEY)) throw error;
+      console.warn("[migration] member-profiles DB read failed, falling back to blob", error);
+    }
+  }
+
   const store = await getStore();
   const existing = store[input.userId];
   if (existing) {
@@ -224,20 +274,15 @@ export async function ensureMemberProfile(input: {
   if (input.phone) profile.phone = input.phone;
 
   store[input.userId] = profile;
-  await persistJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    data: store,
-    setMemory: (v) => {
-      memoryStore = v as ProfileStore;
-    },
-  });
+  await persistProfileStore(store);
+  await mirrorProfileToDb(profile);
 
   return profile;
 }
 
 export async function removeMemberProfiles(userIds: string[]): Promise<number> {
   if (userIds.length === 0) return 0;
+
   const store = await getStore();
   let removed = 0;
   for (const id of userIds) {
@@ -246,67 +291,31 @@ export async function removeMemberProfiles(userIds: string[]): Promise<number> {
       removed++;
     }
   }
+
   if (removed > 0) {
-    await persistJsonStore({
-      blobPath: BLOB_PATH,
-      localPath: DEV_FILE,
-      data: store,
-      setMemory: (v) => {
-        memoryStore = v as ProfileStore;
-      },
-    });
+    await persistProfileStore(store);
+    if (writesToDatabase(STORE_KEY) && !isDemoMode()) {
+      await removeMemberProfilesFromDb(userIds);
+    }
   }
+
   return removed;
 }
 
 export async function updateMemberProfile(
   userId: string,
-  patch: Partial<
-    Pick<
-      MemberProfile,
-      | "phone"
-      | "dailyReminderTime"
-      | "weightLbs"
-      | "notes"
-      | "city"
-      | "state"
-      | "onboardingComplete"
-      | "completedAt"
-      | "plan"
-      | "welcomeSignupEmailSentAt"
-      | "welcomeCompleteEmailSentAt"
-      | "welcomeSmsSentAt"
-      | "coachIntakeCompleteAt"
-      | "coachIntakeCompletedBy"
-      | "introBookedAt"
-      | "coachMeetingRequestedAt"
-      | "coachMeetingRequestedBy"
-      | "coachMeetingRequestNote"
-      | "rampStartedAt"
-      | "approvalStatus"
-      | "approvedAt"
-      | "paymentStatus"
-      | "paidAt"
-      | "paymentMethod"
-      | "paymentNote"
-      | "stripeCustomerId"
-      | "stripeSubscriptionId"
-      | "stripeCheckoutSessionId"
-      | "referralCode"
-      | "referredByUserId"
-      | "intensiveSessionsTotal"
-      | "intensiveSessionsRemaining"
-      | "intensiveWindowDays"
-      | "intensiveStartsAt"
-      | "intensiveExpiresAt"
-      | "customTrainingOfferId"
-    >
-  >,
+  patch: MemberProfilePatch,
 ): Promise<MemberProfile> {
+  if (!isDemoMode() && readsFromDatabase(STORE_KEY) && !writesToBlob(STORE_KEY)) {
+    return updateMemberProfileInDb(userId, patch);
+  }
+
   // Retry: blob CDN can briefly lag behind a profile we just wrote during signup.
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const store =
-      memoryStore?.[userId] != null ? memoryStore : await getStore();
+      memoryStore?.[userId] != null && readMode(STORE_KEY) === "blob"
+        ? memoryStore
+        : await getStore();
     const current = store[userId];
     if (!current) {
       if (attempt < 2) {
@@ -323,14 +332,8 @@ export async function updateMemberProfile(
     };
 
     store[userId] = next;
-    await persistJsonStore({
-      blobPath: BLOB_PATH,
-      localPath: DEV_FILE,
-      data: store,
-      setMemory: (v) => {
-        memoryStore = v as ProfileStore;
-      },
-    });
+    await persistProfileStore(store);
+    await mirrorProfileToDb(next);
 
     return next;
   }
