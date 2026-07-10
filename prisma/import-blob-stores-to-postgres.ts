@@ -32,6 +32,12 @@ const SMS_BLOB = "demo/sms-workouts.json";
 const SMS_DEV = path.join(process.cwd(), "prisma", "sms-workouts.dev.json");
 const CHAT_BLOB = "demo/coach-chat.json";
 const CHAT_DEV = path.join(process.cwd(), "prisma", "coach-chat.dev.json");
+const LIVE_BLOB = "demo/live-workout-sessions.json";
+const LIVE_DEV = path.join(process.cwd(), "prisma", "live-workout-sessions.dev.json");
+const SETTINGS_BLOB = "demo/coach-settings.json";
+const SETTINGS_DEV = path.join(process.cwd(), "prisma", "coach-settings.dev.json");
+const PREFS_BLOB = "demo/member-coach-prefs.json";
+const PREFS_DEV = path.join(process.cwd(), "prisma", "member-coach-prefs.dev.json");
 
 const OAUTH_PROVIDERS = new Set(["google", "apple", "facebook"]);
 
@@ -49,6 +55,14 @@ const STORE_ALIASES: Record<string, string> = {
   "sms-workouts": "sms",
   chat: "coach-chat",
   "coach-chat": "coach-chat",
+  live: "live-sessions",
+  "live-sessions": "live-sessions",
+  "live-workout-sessions": "live-sessions",
+  settings: "coach-settings",
+  "coach-settings": "coach-settings",
+  prefs: "coach-prefs",
+  "coach-prefs": "coach-prefs",
+  "member-coach-prefs": "coach-prefs",
 };
 
 function parseArgs(argv: string[]) {
@@ -927,6 +941,346 @@ async function importCoachChat(
   console.log(JSON.stringify(summary, null, 2));
 }
 
+type LiveSessionStore = {
+  sessions: Record<
+    string,
+    {
+      userId: string;
+      workoutId: string;
+      sessionDate: string;
+      completedSets?: Record<string, number[]>;
+      finishedExercises?: string[];
+      weights?: Record<string, string>;
+      activeId?: string;
+      updatedBy?: string;
+      revision?: number;
+      updatedAt?: string;
+    }
+  >;
+};
+
+async function loadLiveSessionsSnapshot(): Promise<LiveSessionStore> {
+  let memory: LiveSessionStore | null = null;
+  const hydrated = await hydrateJsonStore({
+    blobPath: LIVE_BLOB,
+    localPath: LIVE_DEV,
+    memory,
+    setMemory: (v) => {
+      memory = (v as LiveSessionStore) || { sessions: {} };
+    },
+    fallback: () => ({ sessions: {} }),
+    preferFresh: true,
+  });
+  return (hydrated as LiveSessionStore) || { sessions: {} };
+}
+
+async function importLiveSessions(
+  prisma: import("../src/generated/prisma/client").PrismaClient,
+  opts: { dryRun: boolean; verbose: boolean },
+) {
+  const store = await loadLiveSessionsSnapshot();
+  const sessions = Object.values(store.sessions || {});
+  let imported = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  for (const session of sessions) {
+    if (!session.userId || !session.workoutId || !session.sessionDate) {
+      skipped += 1;
+      continue;
+    }
+
+    const data = {
+      userId: session.userId,
+      workoutId: session.workoutId,
+      sessionDate: session.sessionDate,
+      completedSets: session.completedSets ?? {},
+      finishedExercises: session.finishedExercises ?? [],
+      weights: session.weights ?? {},
+      activeId: session.activeId ?? null,
+      updatedBy: session.updatedBy === "member" ? "member" : "coach",
+      revision: typeof session.revision === "number" ? session.revision : 0,
+      updatedAt: parseOptionalDate(session.updatedAt) ?? new Date(),
+    };
+
+    if (opts.dryRun) {
+      if (opts.verbose) {
+        console.log(`[live-sessions] dry-run ${session.userId}:${session.workoutId}:${session.sessionDate}`);
+      }
+      imported += 1;
+      continue;
+    }
+
+    try {
+      await prisma.liveWorkoutSession.upsert({
+        where: {
+          userId_workoutId_sessionDate: {
+            userId: data.userId,
+            workoutId: data.workoutId,
+            sessionDate: data.sessionDate,
+          },
+        },
+        create: data,
+        update: {
+          completedSets: data.completedSets,
+          finishedExercises: data.finishedExercises,
+          weights: data.weights,
+          activeId: data.activeId,
+          updatedBy: data.updatedBy,
+          revision: data.revision,
+          updatedAt: data.updatedAt,
+        },
+      });
+      imported += 1;
+      if (opts.verbose) {
+        console.log(`[live-sessions] upserted ${session.userId}:${session.workoutId}:${session.sessionDate}`);
+      }
+    } catch (error) {
+      skipped += 1;
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(`${session.userId}:${session.workoutId}: ${message}`);
+      console.error(`[live-sessions] failed ${session.userId}:`, message);
+    }
+  }
+
+  const summary = {
+    store: "live-sessions",
+    blobCount: sessions.length,
+    imported,
+    skipped,
+    orphanUserIds: [] as string[],
+    errors,
+  };
+  console.log(JSON.stringify(summary, null, 2));
+}
+
+async function loadCoachSettingsSnapshot(): Promise<unknown> {
+  let memory: unknown = null;
+  const hydrated = await hydrateJsonStore({
+    blobPath: SETTINGS_BLOB,
+    localPath: SETTINGS_DEV,
+    memory,
+    setMemory: (v) => {
+      memory = v;
+    },
+    fallback: () => null,
+    preferFresh: true,
+  });
+  return hydrated;
+}
+
+async function importCoachSettings(
+  prisma: import("../src/generated/prisma/client").PrismaClient,
+  opts: { dryRun: boolean; verbose: boolean },
+) {
+  const raw = await loadCoachSettingsSnapshot();
+  if (!raw || typeof raw !== "object") {
+    console.log(
+      JSON.stringify(
+        {
+          store: "coach-settings",
+          blobCount: 0,
+          imported: 0,
+          skipped: 1,
+          orphanUserIds: [] as string[],
+          errors: ["empty or invalid coach-settings blob"],
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+
+  const data = raw as Record<string, unknown>;
+  const row = {
+    id: "default",
+    coachPhone: typeof data.coachPhone === "string" ? data.coachPhone : null,
+    coachEmail: typeof data.coachEmail === "string" ? data.coachEmail : null,
+    messagingEnabled: data.messagingEnabled === false ? false : true,
+    autoPromptIntroBooking: data.autoPromptIntroBooking === true,
+    autoPromptFollowUpBooking: data.autoPromptFollowUpBooking === true,
+    commissionPayoutMode: data.commissionPayoutMode === "weekly" ? "weekly" : "on_demand",
+    commissionPayoutWeekday:
+      typeof data.commissionPayoutWeekday === "number"
+        ? Math.max(0, Math.min(6, Math.floor(data.commissionPayoutWeekday)))
+        : 5,
+    alertPrefs: data.alertPrefs ?? {},
+    warmupBlocks: data.warmupBlocks ?? [],
+    rampTemplate: data.rampTemplate ?? [],
+    gamificationPoints: data.gamificationPoints ?? {},
+    updatedAt: parseOptionalDate(data.updatedAt) ?? new Date(),
+  };
+
+  if (opts.dryRun) {
+    if (opts.verbose) console.log("[coach-settings] dry-run upsert default");
+    console.log(
+      JSON.stringify(
+        {
+          store: "coach-settings",
+          blobCount: 1,
+          imported: 1,
+          skipped: 0,
+          orphanUserIds: [] as string[],
+          errors: [] as string[],
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+
+  try {
+    await prisma.coachSettings.upsert({
+      where: { id: "default" },
+      create: row,
+      update: {
+        coachPhone: row.coachPhone,
+        coachEmail: row.coachEmail,
+        messagingEnabled: row.messagingEnabled,
+        autoPromptIntroBooking: row.autoPromptIntroBooking,
+        autoPromptFollowUpBooking: row.autoPromptFollowUpBooking,
+        commissionPayoutMode: row.commissionPayoutMode,
+        commissionPayoutWeekday: row.commissionPayoutWeekday,
+        alertPrefs: row.alertPrefs as import("../src/generated/prisma/client").Prisma.InputJsonValue,
+        warmupBlocks: row.warmupBlocks as import("../src/generated/prisma/client").Prisma.InputJsonValue,
+        rampTemplate: row.rampTemplate as import("../src/generated/prisma/client").Prisma.InputJsonValue,
+        gamificationPoints:
+          row.gamificationPoints as import("../src/generated/prisma/client").Prisma.InputJsonValue,
+        updatedAt: row.updatedAt,
+      },
+    });
+    console.log(
+      JSON.stringify(
+        {
+          store: "coach-settings",
+          blobCount: 1,
+          imported: 1,
+          skipped: 0,
+          orphanUserIds: [] as string[],
+          errors: [] as string[],
+        },
+        null,
+        2,
+      ),
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.log(
+      JSON.stringify(
+        {
+          store: "coach-settings",
+          blobCount: 1,
+          imported: 0,
+          skipped: 1,
+          orphanUserIds: [] as string[],
+          errors: [message],
+        },
+        null,
+        2,
+      ),
+    );
+    console.error("[coach-settings] failed:", message);
+  }
+}
+
+type MemberCoachPrefsStore = Record<
+  string,
+  {
+    userId?: string;
+    coachingMode?: string;
+    alertOverrides?: unknown;
+    updatedAt?: string;
+  }
+>;
+
+async function loadMemberCoachPrefsSnapshot(): Promise<MemberCoachPrefsStore> {
+  let memory: MemberCoachPrefsStore | null = null;
+  const hydrated = await hydrateJsonStore({
+    blobPath: PREFS_BLOB,
+    localPath: PREFS_DEV,
+    memory,
+    setMemory: (v) => {
+      memory = (v as MemberCoachPrefsStore) || {};
+    },
+    fallback: () => ({}),
+    preferFresh: true,
+  });
+  return (hydrated as MemberCoachPrefsStore) || {};
+}
+
+async function importMemberCoachPrefs(
+  prisma: import("../src/generated/prisma/client").PrismaClient,
+  opts: { dryRun: boolean; verbose: boolean },
+) {
+  const store = await loadMemberCoachPrefsSnapshot();
+  const entries = Object.entries(store);
+  let imported = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+  const orphanUserIds: string[] = [];
+
+  for (const [userId, raw] of entries) {
+    if (!userId) {
+      skipped += 1;
+      continue;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+    if (!user) {
+      skipped += 1;
+      orphanUserIds.push(userId);
+      if (opts.verbose) console.log(`[coach-prefs] skip orphan user ${userId}`);
+      continue;
+    }
+
+    const coachingMode =
+      raw?.coachingMode === "live" || raw?.coachingMode === "async" ? raw.coachingMode : null;
+    const data = {
+      userId,
+      coachingMode,
+      alertOverrides: raw?.alertOverrides ?? {},
+      updatedAt: parseOptionalDate(raw?.updatedAt) ?? new Date(),
+    };
+
+    if (opts.dryRun) {
+      if (opts.verbose) console.log(`[coach-prefs] dry-run ${userId}`);
+      imported += 1;
+      continue;
+    }
+
+    try {
+      await prisma.memberCoachPrefs.upsert({
+        where: { userId },
+        create: data,
+        update: {
+          coachingMode: data.coachingMode,
+          alertOverrides: data.alertOverrides as import("../src/generated/prisma/client").Prisma.InputJsonValue,
+          updatedAt: data.updatedAt,
+        },
+      });
+      imported += 1;
+      if (opts.verbose) console.log(`[coach-prefs] upserted ${userId}`);
+    } catch (error) {
+      skipped += 1;
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(`${userId}: ${message}`);
+      console.error(`[coach-prefs] failed ${userId}:`, message);
+    }
+  }
+
+  const summary = {
+    store: "coach-prefs",
+    blobCount: entries.length,
+    imported,
+    skipped,
+    orphanUserIds: [...new Set(orphanUserIds)],
+    errors,
+  };
+  console.log(JSON.stringify(summary, null, 2));
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const connectionString = resolveConnectionString();
@@ -954,6 +1308,12 @@ async function main() {
         await importSmsWorkouts(prisma, { dryRun: args.dryRun, verbose: args.verbose });
       } else if (store === "coach-chat") {
         await importCoachChat(prisma, { dryRun: args.dryRun, verbose: args.verbose });
+      } else if (store === "live-sessions") {
+        await importLiveSessions(prisma, { dryRun: args.dryRun, verbose: args.verbose });
+      } else if (store === "coach-settings") {
+        await importCoachSettings(prisma, { dryRun: args.dryRun, verbose: args.verbose });
+      } else if (store === "coach-prefs") {
+        await importMemberCoachPrefs(prisma, { dryRun: args.dryRun, verbose: args.verbose });
       } else {
         console.warn(`[import-blob-stores] Store not implemented yet: ${store}`);
       }

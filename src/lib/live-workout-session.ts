@@ -1,7 +1,13 @@
 import path from "path";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
-import { localTodayIso } from "@/lib/program-calendar";
+import { isDemoMode } from "@/lib/demo-enrollments";
+import {
+  deleteLiveWorkoutSessionFromDb,
+  getLiveWorkoutSessionFromDb,
+  upsertLiveWorkoutSessionToDb,
+} from "@/lib/live-workout-sessions-db";
 import { getHotLiveSession, setHotLiveSession } from "@/lib/live-session-hot";
+import { localTodayIso } from "@/lib/program-calendar";
 
 export type LiveWorkoutSession = {
   userId: string;
@@ -88,6 +94,14 @@ async function persistSessionToBlob(session: LiveWorkoutSession): Promise<boolea
   return blobSaved;
 }
 
+async function persistSession(session: LiveWorkoutSession): Promise<boolean> {
+  if (!isDemoMode()) {
+    await upsertLiveWorkoutSessionToDb(session);
+    return true;
+  }
+  return persistSessionToBlob(session);
+}
+
 export async function getLiveWorkoutSession(input: {
   userId: string;
   workoutId: string;
@@ -96,6 +110,17 @@ export async function getLiveWorkoutSession(input: {
   const key = liveSessionKey(input.userId, input.workoutId, input.sessionDate);
   const hot = getHotLiveSession(key);
   if (hot) return hot;
+
+  if (!isDemoMode()) {
+    const sessionDate = normalizeLiveSessionDate(input.sessionDate);
+    const session = await getLiveWorkoutSessionFromDb({
+      userId: input.userId,
+      workoutId: input.workoutId,
+      sessionDate,
+    });
+    if (session) setHotLiveSession(key, session);
+    return session;
+  }
 
   const store = await loadStore(true);
   const session = store.sessions[key] ?? null;
@@ -117,8 +142,16 @@ export async function upsertLiveWorkoutSession(input: {
   const key = liveSessionKey(input.userId, input.workoutId, sessionDate);
   let existing = getHotLiveSession(key);
   if (!existing) {
-    const store = await loadStore(true);
-    existing = store.sessions[key] ?? null;
+    if (!isDemoMode()) {
+      existing = await getLiveWorkoutSessionFromDb({
+        userId: input.userId,
+        workoutId: input.workoutId,
+        sessionDate,
+      });
+    } else {
+      const store = await loadStore(true);
+      existing = store.sessions[key] ?? null;
+    }
     if (existing) setHotLiveSession(key, existing);
   }
   const session: LiveWorkoutSession = {
@@ -139,8 +172,8 @@ export async function upsertLiveWorkoutSession(input: {
 
   setHotLiveSession(key, session);
 
-  void persistSessionToBlob(session).catch((err) => {
-    console.warn("live session blob persist failed", err);
+  void persistSession(session).catch((err) => {
+    console.warn("live session persist failed", err);
   });
 
   return { session, blobSaved: true };
@@ -153,6 +186,15 @@ export async function clearLiveWorkoutSession(input: {
 }): Promise<void> {
   const key = liveSessionKey(input.userId, input.workoutId, input.sessionDate);
   setHotLiveSession(key, null);
+
+  if (!isDemoMode()) {
+    await deleteLiveWorkoutSessionFromDb({
+      userId: input.userId,
+      workoutId: input.workoutId,
+      sessionDate: normalizeLiveSessionDate(input.sessionDate),
+    });
+    return;
+  }
 
   const store = await loadStore(true);
   if (!store.sessions[key]) return;

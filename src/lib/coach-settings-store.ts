@@ -6,7 +6,12 @@ import {
   normalizeCoachAlertPrefs,
   type CoachAlertPrefs,
 } from "@/lib/alert-channels";
+import { isDemoMode } from "@/lib/demo-enrollments";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import {
+  loadCoachSettingsFromDb,
+  persistCoachSettingsToDb,
+} from "@/lib/coach-settings-db";
 import { invalidateMessagingGateCache } from "@/lib/messaging-gate";
 import {
   DEFAULT_WARMUP_BLOCKS,
@@ -135,6 +140,12 @@ function normalizeSettings(raw: unknown): CoachSettings {
 }
 
 async function getStore(): Promise<CoachSettings> {
+  if (!isDemoMode()) {
+    const settings = await loadCoachSettingsFromDb();
+    memoryStore = settings;
+    return settings;
+  }
+
   const hydrated = await hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
@@ -206,13 +217,17 @@ export async function saveCoachSettings(
   };
   memoryStore = next;
   invalidateMessagingGateCache();
-  await persistJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    data: next,
-    setMemory: (v) => {
-      memoryStore = normalizeSettings(v);
-    },
-  });
+  if (!isDemoMode()) {
+    await persistCoachSettingsToDb(next);
+  } else {
+    await persistJsonStore({
+      blobPath: BLOB_PATH,
+      localPath: DEV_FILE,
+      data: next,
+      setMemory: (v) => {
+        memoryStore = normalizeSettings(v);
+      },
+    });
+  }
   return next;
 }

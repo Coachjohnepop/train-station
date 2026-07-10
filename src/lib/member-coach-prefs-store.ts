@@ -1,7 +1,13 @@
 import "server-only";
 
 import path from "path";
+import { isDemoMode } from "@/lib/demo-enrollments";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import {
+  getMemberCoachPrefsFromDb,
+  loadMemberCoachPrefsMapFromDb,
+  persistMemberCoachPrefsToDb,
+} from "@/lib/member-coach-prefs-db";
 import { type CoachAlertPrefs, normalizeCoachAlertPrefs } from "@/lib/alert-channels";
 import { coachingModeFromPrefs, type MemberCoachingMode } from "@/lib/member-coaching-mode";
 
@@ -59,6 +65,10 @@ async function getStore(): Promise<PrefsStore> {
 }
 
 export async function getMemberCoachPrefs(userId: string): Promise<MemberCoachPrefs> {
+  if (!isDemoMode()) {
+    const row = await getMemberCoachPrefsFromDb(userId);
+    return row ?? normalizePrefs(undefined, userId);
+  }
   const store = await getStore();
   return normalizePrefs(store[userId], userId);
 }
@@ -69,6 +79,9 @@ export async function resolveMemberCoachingMode(userId: string): Promise<MemberC
 }
 
 export async function getMemberCoachPrefsMap(): Promise<Map<string, MemberCoachPrefs>> {
+  if (!isDemoMode()) {
+    return loadMemberCoachPrefsMapFromDb();
+  }
   const store = await getStore();
   return new Map(Object.entries(store).map(([id, raw]) => [id, normalizePrefs(raw, id)]));
 }
@@ -80,22 +93,26 @@ export async function saveMemberCoachPrefs(
     coachingMode?: MemberCoachingMode;
   },
 ): Promise<MemberCoachPrefs> {
-  const store = await getStore();
-  const existing = normalizePrefs(store[userId], userId);
+  const existing = await getMemberCoachPrefs(userId);
   const next: MemberCoachPrefs = {
     userId,
     coachingMode: input.coachingMode ?? existing.coachingMode,
     alertOverrides: input.alertOverrides ?? existing.alertOverrides,
     updatedAt: new Date().toISOString(),
   };
-  store[userId] = next;
-  await persistJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    data: store,
-    setMemory: (v) => {
-      memoryStore = v as PrefsStore;
-    },
-  });
+  if (!isDemoMode()) {
+    await persistMemberCoachPrefsToDb(next);
+  } else {
+    const store = await getStore();
+    store[userId] = next;
+    await persistJsonStore({
+      blobPath: BLOB_PATH,
+      localPath: DEV_FILE,
+      data: store,
+      setMemory: (v) => {
+        memoryStore = v as PrefsStore;
+      },
+    });
+  }
   return next;
 }
