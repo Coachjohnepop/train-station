@@ -104,6 +104,61 @@ function normalizeProgramDay(row: Record<string, unknown>): Record<string, unkno
   };
 }
 
+/** Golden catalog from committed prisma/seed-data.json (no blob). */
+export function loadCatalogSnapshotFromSeedFile(
+  seed: CatalogSnapshot & Record<string, unknown>,
+): { snapshot: CatalogSnapshot; source: string } {
+  const workoutExercises = (seed.workoutExercises as Array<Record<string, unknown>>) || [];
+  const exerciseById = new Map<string, Record<string, unknown>>();
+
+  for (const row of (seed.exercises as Array<Record<string, unknown>>) || []) {
+    if (row?.id) exerciseById.set(String(row.id), row);
+  }
+  for (const row of workoutExercises) {
+    const embedded = row.exercise as Record<string, unknown> | undefined;
+    if (embedded?.id) exerciseById.set(String(embedded.id), embedded);
+  }
+
+  const exercises = [...exerciseById.values()];
+  const exerciseIds = new Set(exercises.map((e) => String(e.id)));
+  const workouts = (seed.workouts as Array<Record<string, unknown>>) || [];
+  const workoutIds = new Set(workouts.map((w) => String(w.id)));
+  const programWeeks = (seed.programWeeks as Array<Record<string, unknown>>) || [];
+  const weekIds = new Set(programWeeks.map((w) => String(w.id)));
+  const programDays = ((seed.programDays as Array<Record<string, unknown>>) || []).filter(
+    (row) =>
+      weekIds.has(String(row.weekId)) &&
+      (!row.workoutId || workoutIds.has(String(row.workoutId))),
+  );
+  const dayIds = new Set(programDays.map((d) => String(d.id)));
+  const programDayOptions = (
+    (seed.programDayOptions as Array<Record<string, unknown>>) || []
+  ).filter(
+    (row) =>
+      dayIds.has(String(row.dayId)) && workoutIds.has(String(row.workoutId)),
+  );
+
+  return {
+    source: "prisma/seed-data.json",
+    snapshot: {
+      exercises,
+      workouts,
+      workoutExercises: workoutExercises.filter(
+        (row) =>
+          exerciseIds.has(String(row.exerciseId)) && workoutIds.has(String(row.workoutId)),
+      ),
+      programs: (seed.programs as Array<Record<string, unknown>>) || [],
+      programWeeks,
+      programDays,
+      programDayOptions,
+      equipment: (seed.equipment as Array<Record<string, unknown>>) || [],
+      userEquipment: (seed.userEquipment as Array<Record<string, unknown>>) || [],
+      liveSessions: (seed.liveSessions as Array<Record<string, unknown>>) || [],
+      userWeatherLogs: (seed.userWeatherLogs as Array<Record<string, unknown>>) || [],
+    },
+  };
+}
+
 export async function loadCatalogSnapshotFromDemoSources(): Promise<{
   snapshot: CatalogSnapshot;
   source: string;
