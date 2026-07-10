@@ -7,19 +7,25 @@ import {
   type CatalogExercise,
 } from "@/lib/exercise-catalog-load";
 import { hydrateDemoExercises, loadDemoExercises, saveDemoExercises } from "@/lib/demo-exercises";
+import { isDemoMode } from "@/lib/demo-enrollments";
 import { prisma } from "@/lib/prisma";
+import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
+import { requireBlobPersisted } from "@/lib/demo-persistence";
 import type { ParsedSmsWorkout } from "@/lib/sms-workout-parser";
 import type { MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import { resolveUserId } from "@/lib/current-user";
 import { getPastsForWorkoutExercises } from "@/lib/workout-logs-store";
-import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
-import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { parseSmsWorkout } from "@/lib/sms-workout-parser";
 import { hydrateTodaySessions, listTodaySessions } from "@/lib/today-sessions";
 import { matchExerciseInCatalog, sanitizeSmsExerciseName } from "@/lib/exercise-match";
 import { isCoachCatalogDemo } from "@/lib/catalog-mode";
 import { hintVideoUrlForExerciseName, resolveExerciseVideoUrl } from "@/lib/exercise-video-hints";
 import { DEFAULT_REST_TIMER_SECONDS, normalizeRestTimerSeconds } from "@/lib/rest-timer";
+import { loadSmsWorkoutsFromDb, persistSmsWorkoutStoreToDb } from "@/lib/sms-workouts-db";
+import {
+  emptySmsWorkoutStore,
+  type SmsWorkoutStore,
+} from "@/lib/sms-workouts-types";
 
 const WORKOUTS_FILE = path.join(process.cwd(), "prisma", "sms-workouts.dev.json");
 const BLOB_PATH = "demo/sms-workouts.json";
@@ -29,39 +35,10 @@ export type WorkoutRestTimerSettings = {
   seconds: number;
 };
 
-type SmsWorkoutRecord = {
-  id: string;
-  name: string;
-  description?: string;
-  source: "sms";
-  createdAt: string;
-  restTimerEnabled?: boolean;
-  restTimerSeconds?: number;
-  exportText?: string | null;
-  certifiedAt?: string | null;
-};
-
-type SmsWorkoutStore = {
-  workouts: SmsWorkoutRecord[];
-  workoutExercises: Array<{
-    id: string;
-    workoutId: string;
-    exerciseId: string;
-    /** Original SMS block name — used when re-linking to catalog after bad fuzzy matches. */
-    blockName?: string | null;
-    sortOrder: number;
-    sets: number | null;
-    reps: string | null;
-    notes: string | null;
-    setScheme: string | null;
-    weightTier: string | null;
-  }>;
-};
-
 let memoryStore: SmsWorkoutStore | null = null;
 
 function emptyStore(): SmsWorkoutStore {
-  return { workouts: [], workoutExercises: [] };
+  return emptySmsWorkoutStore();
 }
 
 function setMemory(store: SmsWorkoutStore) {
@@ -71,6 +48,12 @@ function setMemory(store: SmsWorkoutStore) {
 export async function hydrateSmsWorkouts(opts?: {
   preferFresh?: boolean;
 }): Promise<SmsWorkoutStore> {
+  if (!isDemoMode()) {
+    const store = await loadSmsWorkoutsFromDb();
+    setMemory(store);
+    return store;
+  }
+
   return hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: WORKOUTS_FILE,
@@ -88,6 +71,12 @@ export function readSmsWorkoutStore(): SmsWorkoutStore {
 }
 
 export async function writeSmsWorkoutStore(store: SmsWorkoutStore) {
+  if (!isDemoMode()) {
+    await persistSmsWorkoutStoreToDb(store);
+    setMemory(store);
+    return { blobSaved: true };
+  }
+
   return persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: WORKOUTS_FILE,
@@ -238,7 +227,9 @@ export async function buildWorkoutFromParsedSms(
   }
 
   const { blobSaved } = await writeSmsWorkoutStore(store);
-  requireBlobPersisted(blobSaved, "Lesson plan draft");
+  if (isDemoMode()) {
+    requireBlobPersisted(blobSaved, "Lesson plan draft");
+  }
   return { workoutId: id, exerciseCount: parsed.exercises.length, newExerciseIds };
 }
 

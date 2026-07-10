@@ -1,9 +1,5 @@
+import "./import-env";
 import path from "node:path";
-import dotenv from "dotenv";
-
-dotenv.config({ path: ".env" });
-dotenv.config({ path: ".env.vercel.prod" });
-dotenv.config({ path: ".env.vercel.production", override: true });
 
 import { hydrateJsonStore } from "../src/lib/demo-json-blob";
 import { createPgPool } from "../src/lib/pg-connection";
@@ -32,6 +28,8 @@ const OAUTH_BLOB = "demo/oauth-identities.json";
 const OAUTH_DEV = path.join(process.cwd(), "prisma", "oauth-identities.dev.json");
 const RESET_BLOB = "demo/password-reset-tokens.json";
 const RESET_DEV = path.join(process.cwd(), "prisma", "password-reset-tokens.dev.json");
+const SMS_BLOB = "demo/sms-workouts.json";
+const SMS_DEV = path.join(process.cwd(), "prisma", "sms-workouts.dev.json");
 
 const OAUTH_PROVIDERS = new Set(["google", "apple", "facebook"]);
 
@@ -45,6 +43,8 @@ const STORE_ALIASES: Record<string, string> = {
   reset: "reset-tokens",
   "reset-tokens": "reset-tokens",
   "password-reset-tokens": "reset-tokens",
+  sms: "sms",
+  "sms-workouts": "sms",
 };
 
 function parseArgs(argv: string[]) {
@@ -575,6 +575,161 @@ async function importResetTokens(
   console.log(JSON.stringify(summary, null, 2));
 }
 
+type SmsWorkoutStore = {
+  workouts: Array<{
+    id: string;
+    name: string;
+    description?: string;
+    source?: string;
+    createdAt: string;
+    restTimerEnabled?: boolean;
+    restTimerSeconds?: number;
+    exportText?: string | null;
+    certifiedAt?: string | null;
+  }>;
+  workoutExercises: Array<{
+    id: string;
+    workoutId: string;
+    exerciseId: string;
+    blockName?: string | null;
+    sortOrder: number;
+    sets: number | null;
+    reps: string | null;
+    notes: string | null;
+    setScheme: string | null;
+    weightTier: string | null;
+  }>;
+};
+
+async function loadSmsSnapshot(): Promise<SmsWorkoutStore> {
+  let memory: SmsWorkoutStore | null = null;
+  const hydrated = await hydrateJsonStore({
+    blobPath: SMS_BLOB,
+    localPath: SMS_DEV,
+    memory,
+    setMemory: (v) => {
+      memory = (v as SmsWorkoutStore) || { workouts: [], workoutExercises: [] };
+    },
+    fallback: () => ({ workouts: [], workoutExercises: [] }),
+    preferFresh: true,
+  });
+  return (hydrated as SmsWorkoutStore) || { workouts: [], workoutExercises: [] };
+}
+
+async function importSmsWorkouts(
+  prisma: import("../src/generated/prisma/client").PrismaClient,
+  opts: { dryRun: boolean; verbose: boolean },
+) {
+  const store = await loadSmsSnapshot();
+  const workouts = store.workouts || [];
+  let imported = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+  const missingExerciseIds: string[] = [];
+
+  for (const workout of workouts) {
+    if (!workout.id || !workout.name) {
+      skipped += 1;
+      continue;
+    }
+
+    const exercises = (store.workoutExercises || [])
+      .filter((we) => we.workoutId === workout.id)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+
+    for (const exercise of exercises) {
+      const exists = await prisma.exercise.findUnique({
+        where: { id: exercise.exerciseId },
+        select: { id: true },
+      });
+      if (!exists) {
+        missingExerciseIds.push(exercise.exerciseId);
+      }
+    }
+
+    if (opts.dryRun) {
+      if (opts.verbose) console.log(`[sms] dry-run upsert ${workout.id}`);
+      imported += 1;
+      continue;
+    }
+
+    try {
+      await prisma.workout.upsert({
+        where: { id: workout.id },
+        create: {
+          id: workout.id,
+          name: workout.name,
+          description: workout.description ?? null,
+          source: "sms",
+          restTimerEnabled: Boolean(workout.restTimerEnabled),
+          restTimerSeconds: workout.restTimerSeconds ?? null,
+          exportText: workout.exportText ?? null,
+          certifiedAt: parseOptionalDate(workout.certifiedAt),
+          createdAt: parseOptionalDate(workout.createdAt) ?? new Date(),
+        },
+        update: {
+          name: workout.name,
+          description: workout.description ?? null,
+          source: "sms",
+          restTimerEnabled: Boolean(workout.restTimerEnabled),
+          restTimerSeconds: workout.restTimerSeconds ?? null,
+          exportText: workout.exportText ?? null,
+          certifiedAt: parseOptionalDate(workout.certifiedAt),
+        },
+      });
+
+      await prisma.workoutExercise.deleteMany({ where: { workoutId: workout.id } });
+      for (const exercise of exercises) {
+        const exists = await prisma.exercise.findUnique({
+          where: { id: exercise.exerciseId },
+          select: { id: true },
+        });
+        if (!exists) {
+          skipped += 1;
+          if (opts.verbose) {
+            console.log(`[sms] skip missing exercise ${exercise.exerciseId} for ${workout.id}`);
+          }
+          continue;
+        }
+
+        await prisma.workoutExercise.create({
+          data: {
+            id: exercise.id,
+            workoutId: exercise.workoutId,
+            exerciseId: exercise.exerciseId,
+            blockName: exercise.blockName ?? null,
+            sortOrder: exercise.sortOrder,
+            sets: exercise.sets,
+            reps: exercise.reps,
+            notes: exercise.notes,
+            setScheme: exercise.setScheme,
+            weightTier: exercise.weightTier,
+          },
+        });
+      }
+
+      imported += 1;
+      if (opts.verbose) console.log(`[sms] upserted ${workout.id}`);
+    } catch (error) {
+      skipped += 1;
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(`${workout.id}: ${message}`);
+      console.error(`[sms] failed ${workout.id}:`, message);
+    }
+  }
+
+  const summary = {
+    store: "sms",
+    blobCount: workouts.length,
+    imported,
+    skipped,
+    orphanUserIds: [] as string[],
+    missingExerciseIds: [...new Set(missingExerciseIds)],
+    errors,
+  };
+  console.log(JSON.stringify(summary, null, 2));
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const connectionString = resolveConnectionString();
@@ -598,6 +753,8 @@ async function main() {
         await importOAuth(prisma, { dryRun: args.dryRun, verbose: args.verbose });
       } else if (store === "reset-tokens") {
         await importResetTokens(prisma, { dryRun: args.dryRun, verbose: args.verbose });
+      } else if (store === "sms") {
+        await importSmsWorkouts(prisma, { dryRun: args.dryRun, verbose: args.verbose });
       } else {
         console.warn(`[import-blob-stores] Store not implemented yet: ${store}`);
       }
