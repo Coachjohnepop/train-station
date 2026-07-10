@@ -77,6 +77,8 @@
     "cleanup:migration-test-data": "npx tsx scripts/cleanup-migration-test-data.mjs",
     "test:zoom-oauth-loop": "node scripts/zoom-oauth-loop.mjs",
     "test:coach-loop": "node scripts/coach-workflow-loop-testingsilly.mjs",
+    "test:deleltetesing-loop": "node scripts/program-delete-loop-deleltetesing.mjs",
+    "cleanup:deleltetesing": "npx tsx scripts/cleanup-deleltetesing.mjs",
     "catalog:strip-day-prefix": "npx tsx scripts/strip-day-prefix-workouts.mjs",
     "catalog:strip-day-prefix:dry": "DRY_RUN=1 npx tsx scripts/strip-day-prefix-workouts.mjs"
   },
