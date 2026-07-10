@@ -23,6 +23,7 @@ import {
 import { hashPassword } from "@/lib/password";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import type { RegisterMemberInput, StoredMemberAccount } from "@/lib/member-accounts-types";
+import { normalizeSignupPlan } from "@/lib/signup-plans";
 
 export type { RegisterMemberInput, StoredMemberAccount };
 
@@ -339,10 +340,18 @@ export async function removeSignInAccount(email: string): Promise<boolean> {
 export async function registerMember(input: RegisterMemberInput): Promise<StoredMemberAccount> {
   const normalized = normalizeAccountEmail(input.email);
   if (!normalized) throw new Error("Invalid email.");
+  const signupPlan = normalizeSignupPlan(input.plan);
 
   const accounts = await getAllSignInAccounts();
   if (accounts[normalized]) {
     throw new Error("An account with this email already exists. Sign in instead.");
+  }
+
+  if (!isDemoMode()) {
+    const fromDb = await loadAccountByEmailFromDb(normalized);
+    if (fromDb) {
+      throw new Error("An account with this email already exists. Sign in instead.");
+    }
   }
 
   const name = [input.firstName.trim(), input.lastName.trim()].filter(Boolean).join(" ") || "Member";
@@ -355,21 +364,39 @@ export async function registerMember(input: RegisterMemberInput): Promise<Stored
     createdAt: new Date().toISOString(),
   };
 
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    const store = await getRegisteredStore({ preferFresh: true });
-    if (store[normalized]) {
-      throw new Error("An account with this email already exists. Sign in instead.");
-    }
-    store[normalized] = account;
-    const { blobSaved } = await persistRegisteredStore(store);
-    await mirrorAccountToDb(normalized, account);
-    if (!blobSaved && writesToBlob(STORE_KEY) && attempt < 3) {
-      await new Promise((r) => setTimeout(r, 350 * (attempt + 1)));
-      continue;
-    }
-    const verify = await getRegisteredStore();
-    if (verify[normalized]?.userId === account.userId) return account;
+  // New signups always land in Postgres when a real database is configured (PR-5).
+  if (!isDemoMode()) {
+    await upsertAccountToDb({
+      email: normalized,
+      userId: account.userId,
+      role: account.role,
+      name: account.name,
+      phone: account.phone,
+      passwordHash: account.passwordHash,
+      createdAt: account.createdAt,
+      signupPlan,
+    });
   }
 
-  throw new Error("Could not save your account right now — please try again in a moment.");
+  if (isDemoMode() || writesToBlob(STORE_KEY)) {
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const store = await getRegisteredStore({ preferFresh: true });
+      if (store[normalized]) {
+        throw new Error("An account with this email already exists. Sign in instead.");
+      }
+      store[normalized] = account;
+      const { blobSaved } = await persistRegisteredStore(store);
+      if (!blobSaved && writesToBlob(STORE_KEY) && attempt < 3) {
+        await new Promise((r) => setTimeout(r, 350 * (attempt + 1)));
+        continue;
+      }
+      const verify = await getRegisteredStore();
+      if (verify[normalized]?.userId === account.userId) return account;
+    }
+
+    throw new Error("Could not save your account right now — please try again in a moment.");
+  }
+
+  memoryStore = { ...(memoryStore ?? {}), [normalized]: account };
+  return account;
 }

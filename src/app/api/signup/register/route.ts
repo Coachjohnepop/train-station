@@ -21,7 +21,7 @@ import { isQuoteOffer } from "@/lib/product-offers";
 import { resolveReferralDiscount } from "@/lib/referral-discounts";
 import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 import { addToWaitlist } from "@/lib/waitlist";
-import { enrollDemo } from "@/lib/demo-enrollments";
+import { enrollUserInProgram } from "@/lib/data/user-data";
 import { requireSignupPassword } from "@/lib/security-config";
 
 const schema = z.object({
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
       });
     }
 
-    await enrollDemo("adult", account.userId);
+    await enrollUserInProgram("adult", account.userId);
 
     const normalizedEmail = email.trim().toLowerCase();
     await addToWaitlist({

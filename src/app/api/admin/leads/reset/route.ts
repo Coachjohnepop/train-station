@@ -4,7 +4,7 @@ import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { clearWaitlist, addToWaitlist, listLeads } from "@/lib/waitlist";
 import { clearSelfRegisteredAccounts, registerMember } from "@/lib/member-accounts-store";
 import { ensureMemberProfile, removeMemberProfiles } from "@/lib/member-profiles-store";
-import { enrollDemo } from "@/lib/demo-enrollments";
+import { enrollUserInProgram } from "@/lib/data/user-data";
 import { normalizeSignupPlan } from "@/lib/signup-plans";
 
 export const dynamic = "force-dynamic";
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       phone: seed.phone || null,
     });
 
-    await enrollDemo("adult", account.userId);
+    await enrollUserInProgram("adult", account.userId);
 
     await addToWaitlist({
       email: seed.email,

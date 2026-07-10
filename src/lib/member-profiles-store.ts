@@ -212,6 +212,12 @@ async function mirrorProfileToDb(profile: MemberProfile): Promise<void> {
   await upsertMemberProfileToDb(profile);
 }
 
+/** New signups always persist MemberProfile to Postgres when DB is configured (PR-5). */
+async function persistNewSignupProfileToDb(profile: MemberProfile): Promise<void> {
+  if (isDemoMode()) return;
+  await upsertMemberProfileToDb(profile);
+}
+
 export async function getMemberProfile(userId: string): Promise<MemberProfile | null> {
   if (!isDemoMode() && readsFromDatabase(STORE_KEY)) {
     try {
@@ -251,8 +257,14 @@ export async function ensureMemberProfile(input: {
         const plan = normalizeSignupPlan(input.plan);
         const profile = emptyProfile(input.userId, input.email, plan);
         if (input.phone) profile.phone = input.phone;
-        await mirrorProfileToDb(profile);
-        memoryStore = { ...(memoryStore ?? {}), [input.userId]: profile };
+        await persistNewSignupProfileToDb(profile);
+        if (writesToBlob(STORE_KEY)) {
+          const store = await getStore();
+          store[input.userId] = profile;
+          await persistProfileStore(store);
+        } else {
+          memoryStore = { ...(memoryStore ?? {}), [input.userId]: profile };
+        }
         return profile;
       }
     } catch (error) {
@@ -273,9 +285,13 @@ export async function ensureMemberProfile(input: {
   const profile = emptyProfile(input.userId, input.email, plan);
   if (input.phone) profile.phone = input.phone;
 
-  store[input.userId] = profile;
-  await persistProfileStore(store);
-  await mirrorProfileToDb(profile);
+  if (isDemoMode() || writesToBlob(STORE_KEY)) {
+    store[input.userId] = profile;
+    await persistProfileStore(store);
+  } else {
+    memoryStore = { ...store, [input.userId]: profile };
+  }
+  await persistNewSignupProfileToDb(profile);
 
   return profile;
 }

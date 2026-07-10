@@ -15,7 +15,7 @@ import {
   applyEmailHistoryCookies,
   readEmailHistoryFromRequestCookies,
 } from "@/lib/email-history-cookies";
-import { enrollDemo } from "@/lib/demo-enrollments";
+import { enrollUserInProgram } from "@/lib/data/user-data";
 import { notifyNewLead } from "@/lib/lead-notify";
 import { memberCheckoutPath } from "@/lib/member-gates";
 import { appBaseUrl } from "@/lib/oauth/config";
@@ -108,7 +108,7 @@ async function provisionNewOAuthMember(
     phone: account.phone,
   });
 
-  await enrollDemo("adult", account.userId);
+  await enrollUserInProgram("adult", account.userId);
   await addToWaitlist({
     email: normalizedEmail,
     firstName: profile.firstName || "Member",

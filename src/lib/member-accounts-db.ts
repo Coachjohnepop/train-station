@@ -74,6 +74,7 @@ export async function upsertAccountToDb(input: {
   passwordHash?: string | null;
   hidden?: boolean;
   createdAt?: string;
+  signupPlan?: string | null;
 }): Promise<StoredMemberAccount> {
   const registeredAt = input.createdAt ? new Date(input.createdAt) : undefined;
   const row = await prisma.user.upsert({
@@ -88,6 +89,7 @@ export async function upsertAccountToDb(input: {
       hidden: input.hidden ?? false,
       hiddenAt: input.hidden ? new Date() : null,
       registeredAt: registeredAt ?? new Date(),
+      signupPlan: input.signupPlan ?? null,
     },
     update: {
       name: input.name,
@@ -98,6 +100,7 @@ export async function upsertAccountToDb(input: {
       hidden: input.hidden,
       hiddenAt: input.hidden ? new Date() : null,
       ...(registeredAt ? { registeredAt } : {}),
+      ...(input.signupPlan !== undefined ? { signupPlan: input.signupPlan } : {}),
     },
   });
 
