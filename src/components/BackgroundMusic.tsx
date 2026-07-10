@@ -17,6 +17,7 @@ import { BG_MUSIC_OVERLAY_EVENT } from "@/lib/background-music-control";
  */
 
 const SRC = "/background-music.mp3";
+const VOLUME = 0.5;
 const OFF_KEY = "ts-bg-music-muted"; // "1" = visitor turned music off
 const HINT_KEY = "ts-bg-music-hint-seen";
 
@@ -50,11 +51,13 @@ export default function BackgroundMusic() {
   };
 
   const resumeAudible = (audio: HTMLAudioElement) => {
+    audio.volume = VOLUME;
     audio.muted = false;
     return audio.play().catch(() => {});
   };
 
   const startMusic = async (audio: HTMLAudioElement) => {
+    audio.volume = VOLUME;
     audio.muted = false;
     try {
       await audio.play();
@@ -70,6 +73,7 @@ export default function BackgroundMusic() {
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+    audio.volume = VOLUME;
 
     const wasOff = window.localStorage.getItem(OFF_KEY) === "1";
     if (wasOff) {
