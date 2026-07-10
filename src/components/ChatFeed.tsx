@@ -127,6 +127,7 @@ function MediaBubble({
             className="h-full w-full"
             autoplay={mediaAutoplay}
             kickPlayback={mediaAutoplay}
+            duckBackgroundMusic={mediaAutoplay}
           />
         </div>
       )}

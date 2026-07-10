@@ -75,6 +75,7 @@ export default function MemberExerciseVideoModal({
               title={`${exerciseName} demo video`}
               autoplay
               kickPlayback
+              duckBackgroundMusic
             />
           </div>
         ) : (

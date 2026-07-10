@@ -33,6 +33,7 @@ export default function MemberVideoHoverCard({
         title={title}
         autoplay
         kickPlayback={open}
+        duckBackgroundMusic={open}
       />
     </div>
   );

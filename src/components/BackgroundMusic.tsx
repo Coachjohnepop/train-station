@@ -2,7 +2,11 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { BG_MUSIC_OVERLAY_EVENT } from "@/lib/background-music-control";
+import {
+  BG_MUSIC_OVERLAY_EVENT,
+  markBackgroundMusicElement,
+  registerBackgroundMusicMediaDucking,
+} from "@/lib/background-music-control";
 
 /**
  * Site-wide background music.
@@ -69,10 +73,14 @@ export default function BackgroundMusic() {
     }
   };
 
+  // Duck when other trusted media plays (video controls, horn, etc.).
+  useEffect(() => registerBackgroundMusicMediaDucking(), []);
+
   // Try audible autoplay on load; fall back to muted buffering. Restore prior off.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+    markBackgroundMusicElement(audio);
     audio.volume = VOLUME;
 
     const wasOff = window.localStorage.getItem(OFF_KEY) === "1";
@@ -172,7 +180,7 @@ export default function BackgroundMusic() {
 
   return (
     <>
-      <audio ref={audioRef} src={SRC} loop preload="auto" />
+      <audio ref={audioRef} src={SRC} loop preload="auto" data-ts-bg-music="true" />
       {!adminSubPage ? (
         <div
           className={`bg-music-control-cluster fixed z-50 flex items-end gap-2 sm:gap-3 ${

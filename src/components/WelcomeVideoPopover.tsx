@@ -31,6 +31,7 @@ export default function WelcomeVideoPopover({
         title="Welcome video"
         autoplay
         kickPlayback={open}
+        duckBackgroundMusic={open}
       />
     </div>
   ) : (

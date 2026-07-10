@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { holdBackgroundMusicForMedia } from "@/lib/background-music-control";
 import { postYoutubeEmbedCommand } from "@/lib/youtube-embed-control";
 import { youtubeEmbedUrl, type YoutubeEmbedOptions } from "@/lib/youtube";
 
@@ -13,6 +14,8 @@ type Props = {
   autoplay?: boolean;
   /** Nudge the player after load (member-facing modals only). */
   kickPlayback?: boolean;
+  /** Pause site background music while this embed is open/playing (user-click flows). */
+  duckBackgroundMusic?: boolean;
 };
 
 export default function YoutubeAutoplayFrame({
@@ -22,6 +25,7 @@ export default function YoutubeAutoplayFrame({
   embedOptions = {},
   autoplay = false,
   kickPlayback = false,
+  duckBackgroundMusic = false,
 }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [embedSrc, setEmbedSrc] = useState<string | null>(null);
@@ -39,6 +43,11 @@ export default function YoutubeAutoplayFrame({
     // embedOptions intentionally omitted — callers pass stable overrides only
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoUrl, autoplay]);
+
+  useEffect(() => {
+    if (!duckBackgroundMusic) return;
+    return holdBackgroundMusicForMedia();
+  }, [duckBackgroundMusic]);
 
   useEffect(() => {
     if (!autoplay || !kickPlayback || !embedSrc) return;
