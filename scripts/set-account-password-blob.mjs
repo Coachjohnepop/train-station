@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
- * Set or update sign-in password for an email in production registered-accounts blob.
- * Seed coach emails (jeremy@, john@) are overlaid in the blob so login works.
+ * @deprecated Use scripts/set-account-password.mjs — updates Postgres when configured
+ * and still mirrors to blob when dual-write is enabled.
+ *
+ * Low-level blob-only password write (used internally by set-account-password.mjs).
  *
  * Usage:
  *   node scripts/set-account-password-blob.mjs coachjohnepop@yahoo.com 'TestPass123!'

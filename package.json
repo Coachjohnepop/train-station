@@ -17,6 +17,8 @@
     "db:import-logs": "npx tsx prisma/import-logs-from-blob.ts",
     "db:import-today-sessions": "npx tsx prisma/import-today-sessions-from-blob.ts",
     "db:import-blob-stores": "npx tsx prisma/import-blob-stores-to-postgres.ts",
+    "db:import-blob-stores:all": "npx tsx prisma/import-blob-stores-to-postgres.ts --stores=all",
+    "set-account-password": "node scripts/set-account-password.mjs",
     "go-prod:catalog": "node scripts/go-prod-catalog.mjs",
     "db:studio": "prisma studio",
     "test:s1": "node scripts/s1-exercise-persistence-test.mjs",

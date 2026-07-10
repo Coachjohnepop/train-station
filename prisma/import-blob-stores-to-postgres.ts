@@ -123,14 +123,24 @@ function parseArgs(argv: string[]) {
   };
 }
 
+function isUsableDatabaseUrl(url: string): boolean {
+  if (!url) return false;
+  if (url.includes("dummy")) return false;
+  if (/user:pass@localhost/i.test(url)) return false;
+  return true;
+}
+
 function resolveConnectionString(): string {
   const direct = process.env.POSTGRES_URL_NON_POOLING ?? process.env.DIRECT_URL ?? "";
-  const pooled =
-    process.env.POSTGRES_PRISMA_URL ?? process.env.POSTGRES_URL ?? process.env.DATABASE_URL ?? "";
-  return (
-    direct ||
-    (pooled && !pooled.includes("dummy") ? pooled : "")
-  );
+  if (isUsableDatabaseUrl(direct)) return direct;
+  for (const url of [
+    process.env.POSTGRES_PRISMA_URL,
+    process.env.POSTGRES_URL,
+    process.env.DATABASE_URL,
+  ]) {
+    if (url && isUsableDatabaseUrl(url)) return url;
+  }
+  return direct || process.env.POSTGRES_PRISMA_URL || process.env.DATABASE_URL || "";
 }
 
 async function loadAuthSnapshot(): Promise<RegisteredAccountsStore> {
@@ -582,7 +592,11 @@ async function importResetTokens(
   const errors: string[] = [];
 
   for (const [tokenHash, entry] of entries) {
-    const email = normalizeAccountEmail(entry.email);
+    if (!entry || typeof entry !== "object") {
+      skipped += 1;
+      continue;
+    }
+    const email = entry.email ? normalizeAccountEmail(entry.email) : "";
     const expiresAt = parseOptionalDate(entry.expiresAt);
     const createdAt = parseOptionalDate(entry.createdAt) ?? new Date();
 
@@ -2034,6 +2048,20 @@ async function main() {
   const adapter = new PrismaPg(createPgPool(connectionString));
   const prisma = new PrismaClient({ adapter });
 
+  const startedAt = Date.now();
+  console.log(
+    JSON.stringify(
+      {
+        event: "import-blob-stores-start",
+        stores: args.stores,
+        dryRun: args.dryRun,
+        storeCount: args.stores.length,
+      },
+      null,
+      2,
+    ),
+  );
+
   try {
     for (const store of args.stores) {
       if (store === "auth") {
@@ -2070,6 +2098,19 @@ async function main() {
         console.warn(`[import-blob-stores] Store not implemented yet: ${store}`);
       }
     }
+    console.log(
+      JSON.stringify(
+        {
+          event: "import-blob-stores-complete",
+          stores: args.stores,
+          dryRun: args.dryRun,
+          elapsedMs: Date.now() - startedAt,
+          allStores: args.stores.length === ALL_STORES.length,
+        },
+        null,
+        2,
+      ),
+    );
   } finally {
     await prisma.$disconnect();
   }

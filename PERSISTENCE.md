@@ -6,12 +6,46 @@
 
 ## Demo vs database
 
-| `DATABASE_URL` | Mode | Where saves go |
-|----------------|------|----------------|
-| unset, `dummy`, or contains `dummy` | **Demo** | `prisma/*.dev.json` locally; Vercel Blob (`TS_BLOB_TOKEN`) in preview/prod without Postgres |
+| `DATABASE_URL` / `POSTGRES_PRISMA_URL` | Mode | Where saves go |
+|----------------------------------------|------|----------------|
+| unset, `dummy`, or placeholder only | **Demo** | `prisma/*.dev.json` locally; Vercel Blob in preview/prod without Postgres |
 | Real Supabase / Postgres URL | **Database** | Prisma → PostgreSQL (durable by default) |
 
-Check runtime: `GET /api/admin/demo-persistence`
+`resolveDatabaseUrl()` skips dummy `DATABASE_URL` when a real `POSTGRES_PRISMA_URL` is present (common with Vercel env pulls).
+
+**Runtime check:** `GET /api/admin/demo-persistence` — returns `databaseConfigured`, catalog mode, and per-store blob migration phase in `migration`.
+
+## Blob → Postgres migration (2026)
+
+Fifteen JSON blob stores are migrating to Postgres. Facades in `src/lib/*-store.ts` route to DB when `isDatabaseConfigured()` is true (same as non-demo catalog mode).
+
+| Store | Postgres tables | Import alias |
+|-------|-----------------|--------------|
+| registered-accounts | `User` | `auth` |
+| member-profiles | `MemberProfile` | `profiles` |
+| oauth-identities | `OAuthIdentity` | `oauth` |
+| password-reset-tokens | `PasswordResetToken` | `reset-tokens` |
+| sms-workouts | `Workout` (source=sms) | `sms` |
+| coach-chat | `CoachChatThread`, `CoachChatMessage` | `coach-chat` |
+| live-workout-sessions | `LiveWorkoutSession` | `live-sessions` |
+| coach-settings | `CoachSettings` | `coach-settings` |
+| member-coach-prefs | `MemberCoachPrefs` | `coach-prefs` |
+| commission-partners | `CommissionPartner` | `partners` |
+| commission-ledger | `CommissionPayout`, `CommissionPayoutLine` | `ledger` |
+| referral-codes | `ReferralCode` | `referrals` |
+| stripe-webhook-events | `StripeWebhookEvent` | `webhooks` |
+| waitlist | `WaitlistEntry` | `waitlist` |
+| custom-training-offers | `CustomTrainingOffer` | `offers` |
+
+**One-time backfill (idempotent):**
+
+```bash
+npm run db:import-blob-stores:all
+# or per store:
+npm run db:import-blob-stores -- --stores=auth,profiles,sms
+```
+
+Phased cutover for auth/profiles uses `BLOB_MIGRATION_<STORE>_READ/WRITE` env vars (see `DEPLOY.md`). SMS, chat, live sessions, and Tier 3 stores use Postgres whenever the database is configured.
 
 ## User visibility (soft-hide)
 
@@ -28,21 +62,20 @@ Check runtime: `GET /api/admin/demo-persistence`
 
 Hard deletes are deprecated for users.
 
-## What still uses blob in demo mode
+## Ops scripts
 
-Until migrated to Prisma models:
+| Task | Command |
+|------|---------|
+| Set password (Postgres + blob dual-write) | `npm run set-account-password -- <email> '<password>'` |
+| Migration loop smoke | `npm run test:blob-migration-loop` |
+| Full blob backfill | `npm run db:import-blob-stores:all` |
 
-- Member profiles & payment flags (`member-profiles.json`)
-- Commission partners & ledger
-- Landing media (Venmo QR, etc.)
-- Coach chat, SMS workouts, enrollments progress
-
-With a real `DATABASE_URL`, **users** and core workout/program catalog use Postgres. Payment profile blobs remain on the migration path — plan DB models before going live on Stripe production.
+Deprecated: `scripts/set-account-password-blob.mjs` (blob-only) — use `set-account-password.mjs`.
 
 ## Stripe checklist
 
 1. Set real `DATABASE_URL` + `DIRECT_URL` on Vercel production (see `DEPLOY.md` Supabase section).
-2. Keep `TS_BLOB_TOKEN` on preview for demo-path fallbacks, or migrate remaining blob stores.
+2. Run `npm run db:import-blob-stores:all` once after deploy.
 3. Create test members via admin or signup; **hide** when done — do not delete.
 4. Stripe webhooks and `Subscription` rows reference `User.id` — hiding preserves those rows.
 

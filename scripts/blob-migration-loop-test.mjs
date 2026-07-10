@@ -266,6 +266,20 @@ async function testProdApis() {
   } else {
     fail("Admin custom-training API", customOffers.body?.error || `status ${customOffers.res.status}`);
   }
+
+  const persistence = await req("/api/admin/demo-persistence");
+  if (
+    persistence.res.ok &&
+    persistence.body?.databaseConfigured === true &&
+    Array.isArray(persistence.body?.migration)
+  ) {
+    pass(
+      "Demo-persistence migration status",
+      `${persistence.body.migration.length} stores, dbBacked=${persistence.body.dbBackedStoreCount ?? "?"}`,
+    );
+  } else {
+    fail("Demo-persistence migration status", JSON.stringify(persistence.body));
+  }
 }
 
 async function main() {

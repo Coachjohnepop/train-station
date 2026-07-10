@@ -1,7 +1,7 @@
 # Jeremy — Migration QA Checklist
 
 **Prod:** https://www.thetrainstation.co  
-**Last updated:** 2026-07-09 (after PR-9 — Tier 3 commerce stores)
+**Last updated:** 2026-07-09 (after PR-10 — ops + migration status API)
 
 Mark each item when tested. Report anything broken or odd in Slack.
 

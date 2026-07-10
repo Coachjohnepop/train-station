@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getBlobMigrationStatus } from "@/lib/blob-migration-config";
+import { isDatabaseConfigured } from "@/lib/database-config";
 import { isBlobConfigured, probeBlobWrite, useBlobOidc } from "@/lib/demo-json-blob";
 
 export type DemoSaveResult = {
@@ -88,6 +90,19 @@ export function requireBlobPersisted(blobSaved: boolean, action: string): void {
 
 function blobConfigured(): boolean {
   return isDemoBlobConfigured();
+}
+
+/** Blob migration phase per store + whether Postgres is active (for admin diagnostics). */
+export function migrationPersistenceSnapshot() {
+  const databaseConfigured = isDatabaseConfigured();
+  const migration = getBlobMigrationStatus();
+  const dbBackedStores = migration.filter((row) => row.read !== "blob" || row.write !== "blob");
+  return {
+    databaseConfigured,
+    migration,
+    dbBackedStoreCount: dbBackedStores.length,
+    blobOnlyStoreCount: migration.length - dbBackedStores.length,
+  };
 }
 
 export function demoPersistenceWarning(result: DemoSaveResult): string | null {

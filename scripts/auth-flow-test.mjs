@@ -225,9 +225,9 @@ async function testResetRoundTrip(label, email, newPassword) {
   const ok = await testLogin(`${label} after reset`, email, newPassword, "/");
   if (ok) {
     // restore original password for repeat runs
-    const { setAccountPasswordBlob } = await import("./set-account-password-blob.mjs");
+    const { setAccountPassword } = await import("./set-account-password.mjs");
     const restore = label.includes("Coach") ? COACH_PASSWORD : MEMBER_PASSWORD;
-    await setAccountPasswordBlob(email, restore);
+    await setAccountPassword(email, restore);
     pass(`${label} restore password`, restore);
   }
   return ok;
@@ -344,10 +344,10 @@ async function main() {
   }
 
   if (!coachOk) {
-    console.log(`\n⚠ Coach login failed — run: node scripts/set-account-password-blob.mjs ${COACH_EMAIL} '${COACH_PASSWORD}'`);
+    console.log(`\n⚠ Coach login failed — run: npm run set-account-password -- ${COACH_EMAIL} '${COACH_PASSWORD}'`);
   }
   if (!memberOk) {
-    console.log(`\n⚠ Member login failed — run: node scripts/set-account-password-blob.mjs ${MEMBER_EMAIL} '${MEMBER_PASSWORD}'`);
+    console.log(`\n⚠ Member login failed — run: npm run set-account-password -- ${MEMBER_EMAIL} '${MEMBER_PASSWORD}'`);
   }
 
   await testQuickAuthStatus(MEMBER_EMAIL);

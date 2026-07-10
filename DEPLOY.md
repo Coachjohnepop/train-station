@@ -209,6 +209,42 @@ Demo mode (`DATABASE_URL` unset or contains `dummy`) **always** uses blob — mi
 
 **Schema:** PR-1 adds unused Postgres tables; PR-2+ wire store facades. Run `npx prisma migrate deploy` after merging schema PRs.
 
+### One-time blob backfill (after PR-2–9 deploy)
+
+Pull production env locally (`.env.vercel.prod`), then:
+
+```bash
+npm run db:import-blob-stores:all
+# dry-run first:
+npx tsx prisma/import-blob-stores-to-postgres.ts --stores=all --dry-run
+```
+
+Import order is FK-safe (auth → profiles → … → offers). Re-running is idempotent.
+
+### Verify migration phase on prod
+
+```bash
+# After coach login, or from server:
+curl -s https://www.thetrainstation.co/api/admin/demo-persistence | jq .
+```
+
+Response includes `databaseConfigured`, `migration` (read/write per store), and `dbBackedStoreCount`.
+
+### Set account password (ops)
+
+```bash
+npm run set-account-password -- jeremy@thetrainstation.co 'CoachTest123!'
+```
+
+Updates `User.passwordHash` in Postgres when configured; mirrors to blob when `BLOB_MIGRATION_REGISTERED_ACCOUNTS_WRITE=dual`.
+
+### Smoke tests
+
+```bash
+npm run test:blob-migration-loop
+BASE_URL=https://www.thetrainstation.co npm run test:p0-prod
+```
+
 ## Rollback note
 The old `dev.db` sqlite file is still in the folder (gitignored). If you ever need to go back temporarily, we can restore the old prisma.ts + schema + reinstall the sqlite adapter packages.
 

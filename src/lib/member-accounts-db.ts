@@ -107,6 +107,19 @@ export async function upsertAccountToDb(input: {
   return rowToStoredAccount(row);
 }
 
+export async function setAccountPasswordInDb(
+  email: string,
+  passwordHash: string,
+): Promise<StoredMemberAccount | null> {
+  const row = await prisma.user.findUnique({ where: { email } });
+  if (!row) return null;
+  const updated = await prisma.user.update({
+    where: { email },
+    data: { passwordHash },
+  });
+  return rowToStoredAccount(updated);
+}
+
 export async function setAccountHiddenInDb(
   email: string,
   hidden: boolean,
