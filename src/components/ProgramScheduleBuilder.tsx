@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import TextUploadPanel from "@/components/TextUploadPanel";
 import { DAY_LABELS } from "@/lib/program-constants";
 import { cloneWorkoutContentName, defaultTrackWorkoutTitle } from "@/lib/workout-content-name";
+import { isWorkoutSharedAcrossProgramDays } from "@/lib/program-calendar";
 
 type WorkoutOption = { id: string; name: string };
 
@@ -170,7 +171,31 @@ export default function ProgramScheduleBuilder({
     const currentOpts = [...getDayOptions(day)];
 
     let target = currentOpts[optIdx];
-    if (target && target.workoutId) return target.workoutId;
+    if (target?.workoutId) {
+      if (isWorkoutSharedAcrossProgramDays(program, target.workoutId, dayId)) {
+        const sourceWorkout = allWorkouts.find((w) => w.id === target.workoutId);
+        const cloneRes = await fetch(`/api/workouts/${target.workoutId}/clone`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: cloneWorkoutContentName(sourceWorkout?.name || "", desiredLabel),
+          }),
+        });
+        if (cloneRes.ok) {
+          const cloned = await cloneRes.json();
+          const updatedOpts = [...currentOpts];
+          updatedOpts[optIdx] = { ...updatedOpts[optIdx], workoutId: cloned.id };
+          await setDayOptions(dayId, updatedOpts);
+          setAllWorkouts((prev) =>
+            prev.some((w) => w.id === cloned.id) ? prev : [...prev, { id: cloned.id, name: cloned.name }],
+          );
+          setMessage("This day now has its own workout copy.");
+          setTimeout(() => setMessage(null), 2500);
+          return cloned.id as string;
+        }
+      }
+      return target.workoutId;
+    }
 
     // Create a new workout with a sensible name for this slot
     const dayLabel = DAY_LABELS[day.dayNumber - 1] ?? `Day${day.dayNumber}`;

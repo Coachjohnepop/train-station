@@ -331,6 +331,45 @@ function pickPreferredOption(
 }
 
 /** Collapse duplicate Gym/Home pills from legacy seed data — keep one of each + custom settings. */
+/** Day IDs (excluding `exceptDayId`) that reference this workout via legacy field or options. */
+export function programDaysUsingWorkout(
+  program: {
+    weeks: Array<{
+      days: Array<{
+        id: string;
+        workoutId?: string | null;
+        options?: DayOptionLike[];
+      }>;
+    }>;
+  },
+  workoutId: string,
+  exceptDayId?: string,
+): string[] {
+  if (!workoutId?.trim()) return [];
+  const hits: string[] = [];
+  for (const week of program.weeks) {
+    for (const day of week.days) {
+      if (exceptDayId && day.id === exceptDayId) continue;
+      if (day.workoutId === workoutId) {
+        hits.push(day.id);
+        continue;
+      }
+      if ((day.options || []).some((o) => o.workoutId === workoutId)) {
+        hits.push(day.id);
+      }
+    }
+  }
+  return hits;
+}
+
+export function isWorkoutSharedAcrossProgramDays(
+  program: Parameters<typeof programDaysUsingWorkout>[0],
+  workoutId: string,
+  exceptDayId: string,
+): boolean {
+  return programDaysUsingWorkout(program, workoutId, exceptDayId).length > 0;
+}
+
 export function normalizeDayOptions(options: DayOptionLike[]): DayOptionLike[] {
   if (options.length === 0) return options;
 

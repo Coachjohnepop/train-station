@@ -35,6 +35,7 @@ import {
   isFastedCardioLabel,
   isGymLabel,
   isHomeLabel,
+  isWorkoutSharedAcrossProgramDays,
   isWorkoutDayLabel,
   normalizeDayOptions,
   parseFastedCardioMinutes,
@@ -370,6 +371,42 @@ export default function ProgramCalendarBuilder({
     setSlots(Array(totalSlotsFromColumnCounts(DEFAULT_COLUMN_SLOT_COUNTS)).fill(null));
   }
 
+  async function detachSharedWorkoutForOption(
+    dayId: string,
+    optIdx: number,
+    label: string,
+    day: ProgramDay,
+    workoutId: string,
+  ): Promise<string> {
+    if (!isWorkoutSharedAcrossProgramDays(program, workoutId, dayId)) {
+      return workoutId;
+    }
+
+    const sourceWorkout = allWorkouts.find((w) => w.id === workoutId);
+    const cloneRes = await fetch(`/api/workouts/${workoutId}/clone`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: cloneWorkoutContentName(sourceWorkout?.name || "", label),
+      }),
+    });
+    if (!cloneRes.ok) return workoutId;
+
+    const cloned = await cloneRes.json();
+    const opts = [...getDayOptions(day)];
+    while (opts.length <= optIdx) {
+      opts.push({ workoutId: "", label: DEFAULT_DAY_OPTIONS[opts.length] || "Custom" });
+    }
+    opts[optIdx] = { workoutId: cloned.id, label: opts[optIdx].label || label };
+    await setDayOptions(dayId, opts, { silent: true });
+    setAllWorkouts((prev) =>
+      prev.some((w) => w.id === cloned.id) ? prev : [...prev, { id: cloned.id, name: cloned.name }],
+    );
+    setMessage("This day now has its own workout — edits won't affect other days.");
+    setTimeout(() => setMessage(null), 3000);
+    return cloned.id as string;
+  }
+
   async function ensureWorkoutForOption(
     dayId: string,
     optIdx: number,
@@ -381,7 +418,9 @@ export default function ProgramCalendarBuilder({
     if (!week || !day) return null;
 
     const opts = [...getDayOptions(day)];
-    if (opts[optIdx]?.workoutId) return opts[optIdx].workoutId;
+    if (opts[optIdx]?.workoutId) {
+      return detachSharedWorkoutForOption(dayId, optIdx, label, day, opts[optIdx].workoutId);
+    }
 
     const cal =
       day.calendarDate ||
@@ -558,13 +597,9 @@ export default function ProgramCalendarBuilder({
     });
     scrollToEditor();
 
-    if (existingWorkoutId) {
-      void loadSlots(existingWorkoutId, rx);
-    } else {
-      resetSlotGrid();
-      setSelectedSlotIdx(0);
-      syncEditorFromSlot(null, rx);
-    }
+    resetSlotGrid();
+    setSelectedSlotIdx(0);
+    syncEditorFromSlot(null, rx);
 
     if (dayOptionsNeedCleanup(day)) {
       const cleaned = normalizeDayOptions(day.options || []) as DayOption[];
