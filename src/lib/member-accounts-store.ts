@@ -381,7 +381,9 @@ export async function registerMember(input: RegisterMemberInput): Promise<Stored
   if (isDemoMode() || writesToBlob(STORE_KEY)) {
     for (let attempt = 0; attempt < 4; attempt += 1) {
       const store = await getRegisteredStore({ preferFresh: true });
-      if (store[normalized]) {
+      const existing = store[normalized];
+      // DB upsert may have run first — same userId is this signup, not a duplicate.
+      if (existing && existing.userId !== account.userId) {
         throw new Error("An account with this email already exists. Sign in instead.");
       }
       store[normalized] = account;

@@ -45,6 +45,7 @@
     "test:s3-s4": "node scripts/test-s3-s4.mjs",
     "test:s3-s6": "node scripts/test-s3-s6.mjs",
     "test:s5": "node scripts/s5-payments-test.mjs",
+    "test:s5-e2e": "node scripts/s5-payments-e2e-prodtest.mjs",
     "test:commission": "node scripts/stripe-commission-math-test.mjs",
     "test:quick-auth": "node scripts/quick-auth-login-smoke.mjs",
     "test:blob": "node scripts/blob-probe.mjs",
