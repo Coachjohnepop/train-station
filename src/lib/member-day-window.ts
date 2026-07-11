@@ -1,6 +1,6 @@
 import "server-only";
 
-import { DAY_LABELS, PROGRAM_CYCLE_DAYS } from "@/lib/program-constants";
+import { DAY_LABELS } from "@/lib/program-constants";
 import { localTodayIso } from "@/lib/program-calendar";
 import {
   coordinateFromEnrollmentDay,
@@ -21,6 +21,8 @@ import type { MemberDaySummary, MemberDayWindowRollup } from "@/lib/member-day-w
 export type { MemberDaySummary, MemberDayWindowRollup } from "@/lib/member-day-window-types";
 
 import { getProgramBySlug } from "@/lib/program-data";
+import { getCoachSettings } from "@/lib/coach-settings-store";
+import { programStartSettingsFromCoach } from "@/lib/program-start-settings";
 import { getSessionForUserOnDate, hydrateTodaySessions } from "@/lib/today-sessions";
 import { getWorkoutExercisePreview } from "@/lib/sms-generated-workouts";
 import { getUserEnrollments } from "@/lib/data/user-data";
@@ -277,17 +279,25 @@ export async function buildMemberDayWindow(
     trainingLocation: "gym" as const,
   };
 
+  const startSettings = programStartSettingsFromCoach(await getCoachSettings());
+
   if (enrollment.programStartDate) {
-    const block = resolveProgramBlock(enrollment, calendarToday, program.durationWeeks);
+    const block = resolveProgramBlock(
+      enrollment,
+      calendarToday,
+      program.durationWeeks,
+      startSettings.blockDays,
+    );
     const effective = effectiveEnrollmentPosition(
       enrollment,
       calendarToday,
       program.durationWeeks,
+      startSettings.blockDays,
     );
     const programTodayKey = enrollmentDayKey(effective.currentWeek, effective.currentDay);
     const days: MemberDaySummary[] = [];
 
-    for (let linearDay = 1; linearDay <= PROGRAM_CYCLE_DAYS; linearDay++) {
+    for (let linearDay = 1; linearDay <= startSettings.blockDays; linearDay++) {
       const coord = coordinateFromEnrollmentDay(linearDay, program.durationWeeks);
       if (!coord) continue;
       const week = program.weeks.find(

@@ -63,7 +63,7 @@ export function getDemoEnrollments(userId?: string) {
 export async function enrollDemo(
   slug: string,
   userId?: string,
-  opts?: { programStartDate?: string | null },
+  opts?: { programStartDate?: string | null; blockDays?: number },
 ) {
   await hydrateDemoEnrollmentsStore({ preferFresh: true });
   const uid = userId || "demo-user";
@@ -76,7 +76,10 @@ export async function enrollDemo(
       currentPhase: 1,
       trainingLocation: "gym",
       ...(startIso
-        ? { programStartDate: startIso, blockEndsAt: blockEndDateFromStart(startIso) }
+        ? {
+            programStartDate: startIso,
+            blockEndsAt: blockEndDateFromStart(startIso, opts?.blockDays),
+          }
         : {}),
     };
     await setUserEnrollments(uid, data);
@@ -84,7 +87,7 @@ export async function enrollDemo(
     data[slug] = {
       ...data[slug],
       programStartDate: startIso,
-      blockEndsAt: blockEndDateFromStart(startIso),
+      blockEndsAt: blockEndDateFromStart(startIso, opts?.blockDays),
     };
     await setUserEnrollments(uid, data);
   }

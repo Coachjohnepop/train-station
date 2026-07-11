@@ -12,6 +12,11 @@ import {
   type GamificationPointsMap,
 } from "@/lib/gamification-types";
 import {
+  normalizeProgramBlockDays,
+  normalizeProgramStartMaxOffsetDays,
+  normalizeProgramStartRecommendWeekday,
+} from "@/lib/program-start-settings";
+import {
   DEFAULT_RAMP_WEEKS,
   normalizeRampWeeks,
   type RampWeekTemplate,
@@ -46,6 +51,9 @@ function defaultSettings(): CoachSettings {
       days: w.days.map((d) => ({ ...d })),
     })),
     gamificationPoints: normalizeGamificationPoints(null),
+    programStartMaxOffsetDays: normalizeProgramStartMaxOffsetDays(null),
+    programStartRecommendWeekday: normalizeProgramStartRecommendWeekday(1),
+    programBlockDays: normalizeProgramBlockDays(null),
     updatedAt: new Date().toISOString(),
   };
 }
@@ -62,6 +70,9 @@ function rowToSettings(row: {
   warmupBlocks: unknown;
   rampTemplate: unknown;
   gamificationPoints: unknown;
+  programStartMaxOffsetDays: number;
+  programStartRecommendWeekday: number | null;
+  programBlockDays: number;
   updatedAt: Date;
 }): CoachSettings {
   return {
@@ -76,6 +87,11 @@ function rowToSettings(row: {
     warmupBlocks: normalizeWarmupBlocks(row.warmupBlocks as WarmupBlockTemplate[] | null),
     rampTemplate: normalizeRampWeeks(row.rampTemplate as RampWeekTemplate[] | null),
     gamificationPoints: normalizeGamificationPoints(row.gamificationPoints as GamificationPointsMap | null),
+    programStartMaxOffsetDays: normalizeProgramStartMaxOffsetDays(row.programStartMaxOffsetDays),
+    programStartRecommendWeekday: normalizeProgramStartRecommendWeekday(
+      row.programStartRecommendWeekday,
+    ),
+    programBlockDays: normalizeProgramBlockDays(row.programBlockDays),
     updatedAt: toIso(row.updatedAt),
   };
 }
@@ -94,6 +110,9 @@ function settingsToRow(settings: CoachSettings) {
     warmupBlocks: settings.warmupBlocks as Prisma.InputJsonValue,
     rampTemplate: settings.rampTemplate as Prisma.InputJsonValue,
     gamificationPoints: settings.gamificationPoints as Prisma.InputJsonValue,
+    programStartMaxOffsetDays: settings.programStartMaxOffsetDays,
+    programStartRecommendWeekday: settings.programStartRecommendWeekday,
+    programBlockDays: settings.programBlockDays,
     updatedAt: new Date(settings.updatedAt),
   };
 }
@@ -121,6 +140,9 @@ export async function persistCoachSettingsToDb(settings: CoachSettings): Promise
       warmupBlocks: data.warmupBlocks,
       rampTemplate: data.rampTemplate,
       gamificationPoints: data.gamificationPoints,
+      programStartMaxOffsetDays: data.programStartMaxOffsetDays,
+      programStartRecommendWeekday: data.programStartRecommendWeekday,
+      programBlockDays: data.programBlockDays,
       updatedAt: data.updatedAt,
     },
   });

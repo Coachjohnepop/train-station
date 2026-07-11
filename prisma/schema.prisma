@@ -611,6 +611,12 @@ model CoachSettings {
   warmupBlocks              Json
   rampTemplate              Json
   gamificationPoints        Json
+  /// How far ahead (days) a new member may schedule program Day 1 after payment.
+  programStartMaxOffsetDays Int      @default(6)
+  /// Weekday to recommend/default (0=Sun … 6=Sat). Null = no weekday preference.
+  programStartRecommendWeekday Int?
+  /// Length of paid program block in calendar days (default 28).
+  programBlockDays          Int      @default(28)
   updatedAt                 DateTime @updatedAt
 }
 

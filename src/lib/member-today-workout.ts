@@ -20,6 +20,8 @@ import { resolveDayWorkoutForEnrollment } from "@/lib/member-program-workout";
 import { memberScheduleLabel } from "@/lib/member-day-window";
 import { localTodayIso } from "@/lib/program-calendar";
 import { resolveProgramBlock } from "@/lib/member-program-block";
+import { getCoachSettings } from "@/lib/coach-settings-store";
+import { programStartSettingsFromCoach } from "@/lib/program-start-settings";
 
 export type TodayWorkoutSource = "sms" | "program" | null;
 
@@ -63,7 +65,13 @@ async function resolveEnrollmentProgramWorkout(
     currentPhase: 1,
     trainingLocation: "gym" as const,
   };
-  const block = resolveProgramBlock(enrollment, localTodayIso(), program.durationWeeks);
+  const startSettings = programStartSettingsFromCoach(await getCoachSettings());
+  const block = resolveProgramBlock(
+    enrollment,
+    localTodayIso(),
+    program.durationWeeks,
+    startSettings.blockDays,
+  );
   if (block.status === "pending" || block.status === "expired") return null;
 
   const effectiveEnrollment = {

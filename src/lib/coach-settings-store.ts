@@ -27,6 +27,11 @@ import {
   normalizeGamificationPoints,
   type GamificationPointsMap,
 } from "@/lib/gamification-types";
+import {
+  normalizeProgramBlockDays,
+  normalizeProgramStartMaxOffsetDays,
+  normalizeProgramStartRecommendWeekday,
+} from "@/lib/program-start-settings";
 
 export type CommissionPayoutMode = "on_demand" | "weekly";
 
@@ -51,6 +56,12 @@ export type CoachSettings = {
   rampTemplate: RampWeekTemplate[];
   /** Point values for member score accomplishments (admin-editable). */
   gamificationPoints: GamificationPointsMap;
+  /** New member program start — max days ahead they may pick Day 1. */
+  programStartMaxOffsetDays: number;
+  /** Weekday to recommend (0–6). Null = default to today. */
+  programStartRecommendWeekday: number | null;
+  /** Paid block length in calendar days. */
+  programBlockDays: number;
   updatedAt: string;
 };
 
@@ -115,6 +126,9 @@ function defaultSettings(): CoachSettings {
       days: w.days.map((d) => ({ ...d })),
     })),
     gamificationPoints: normalizeGamificationPoints(null),
+    programStartMaxOffsetDays: normalizeProgramStartMaxOffsetDays(null),
+    programStartRecommendWeekday: normalizeProgramStartRecommendWeekday(1),
+    programBlockDays: normalizeProgramBlockDays(null),
     updatedAt: new Date().toISOString(),
   };
 }
@@ -135,6 +149,18 @@ function normalizeSettings(raw: unknown): CoachSettings {
     warmupBlocks: normalizeWarmupBlocks(data.warmupBlocks),
     rampTemplate: normalizeRampWeeks(data.rampTemplate),
     gamificationPoints: normalizeGamificationPoints(data.gamificationPoints),
+    programStartMaxOffsetDays:
+      data.programStartMaxOffsetDays === undefined
+        ? defaults.programStartMaxOffsetDays
+        : normalizeProgramStartMaxOffsetDays(data.programStartMaxOffsetDays),
+    programStartRecommendWeekday:
+      data.programStartRecommendWeekday === undefined
+        ? defaults.programStartRecommendWeekday
+        : normalizeProgramStartRecommendWeekday(data.programStartRecommendWeekday),
+    programBlockDays:
+      data.programBlockDays === undefined
+        ? defaults.programBlockDays
+        : normalizeProgramBlockDays(data.programBlockDays),
     updatedAt: data.updatedAt || new Date().toISOString(),
   };
 }
@@ -178,6 +204,9 @@ export async function saveCoachSettings(
       | "warmupBlocks"
       | "rampTemplate"
       | "gamificationPoints"
+      | "programStartMaxOffsetDays"
+      | "programStartRecommendWeekday"
+      | "programBlockDays"
     >
   >,
 ): Promise<CoachSettings> {
@@ -213,6 +242,18 @@ export async function saveCoachSettings(
     gamificationPoints: patch.gamificationPoints
       ? normalizeGamificationPoints(patch.gamificationPoints)
       : current.gamificationPoints,
+    programStartMaxOffsetDays:
+      patch.programStartMaxOffsetDays === undefined
+        ? current.programStartMaxOffsetDays
+        : normalizeProgramStartMaxOffsetDays(patch.programStartMaxOffsetDays),
+    programStartRecommendWeekday:
+      patch.programStartRecommendWeekday === undefined
+        ? current.programStartRecommendWeekday
+        : normalizeProgramStartRecommendWeekday(patch.programStartRecommendWeekday),
+    programBlockDays:
+      patch.programBlockDays === undefined
+        ? current.programBlockDays
+        : normalizeProgramBlockDays(patch.programBlockDays),
     updatedAt: new Date().toISOString(),
   };
   memoryStore = next;

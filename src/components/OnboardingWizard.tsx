@@ -13,6 +13,8 @@ import ProgramStartDatePicker from "@/components/ProgramStartDatePicker";
 import { localTodayIso } from "@/lib/program-calendar";
 import { isPaidOffer } from "@/lib/product-offers";
 import { recommendedProgramStartDate } from "@/lib/member-program-block";
+import type { ProgramStartSettings } from "@/lib/program-start-settings";
+import { weekdayLabel } from "@/lib/program-start-settings";
 
 async function saveProgress(body: Record<string, unknown>) {
   await fetch("/api/member/onboard-progress", {
@@ -26,10 +28,12 @@ export default function OnboardingWizard({
   email = "",
   welcomeVideoUrl = null,
   welcomeVideosByPlan = {},
+  programStartSettings,
 }: {
   email?: string;
   welcomeVideoUrl?: string | null;
   welcomeVideosByPlan?: Record<string, string | null | undefined>;
+  programStartSettings?: ProgramStartSettings;
 }) {
   const searchParams = useSearchParams();
   const plan = normalizeSignupPlan(searchParams.get("plan"));
@@ -67,7 +71,7 @@ export default function OnboardingWizard({
   const [location, setLocation] = useState({ city: "", state: "" });
   const [sms, setSms] = useState({ phone: "", dailyReminderTime: "07:30" });
   const [programStartDate, setProgramStartDate] = useState(() =>
-    recommendedProgramStartDate(localTodayIso()),
+    recommendedProgramStartDate(localTodayIso(), programStartSettings),
   );
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -280,11 +284,30 @@ export default function OnboardingWizard({
           <>
             <h2 className="text-lg font-semibold">When do you want to start?</h2>
             <p className="text-sm text-[var(--muted)]">
-              Your $25 unlocks 28 days of workouts. We recommend starting on{" "}
-              <strong className="text-emerald-200">Monday</strong> so Day 1 matches the training
-              week — especially if you lift on weekends. You can pick today through 6 days out.
+              Your membership unlocks {programStartSettings?.blockDays ?? 28} days of workouts.
+              {programStartSettings?.recommendWeekday != null ? (
+                <>
+                  {" "}
+                  We recommend starting on{" "}
+                  <strong className="text-emerald-200">
+                    {weekdayLabel(programStartSettings.recommendWeekday)}
+                  </strong>{" "}
+                  so Day 1 matches the training week
+                  {programStartSettings.recommendWeekday === 1
+                    ? " — especially if you lift on weekends"
+                    : ""}
+                  .
+                </>
+              ) : (
+                " Pick when Day 1 begins."
+              )}{" "}
+              You can schedule up to {programStartSettings?.maxOffsetDays ?? 6} days out.
             </p>
-            <ProgramStartDatePicker value={programStartDate} onChange={setProgramStartDate} />
+            <ProgramStartDatePicker
+              value={programStartDate}
+              onChange={setProgramStartDate}
+              settings={programStartSettings}
+            />
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={prevStep} className="btn-ghost flex-1">
                 Back

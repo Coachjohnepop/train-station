@@ -1169,6 +1169,20 @@ async function importCoachSettings(
     warmupBlocks: data.warmupBlocks ?? [],
     rampTemplate: data.rampTemplate ?? [],
     gamificationPoints: data.gamificationPoints ?? {},
+    programStartMaxOffsetDays:
+      typeof data.programStartMaxOffsetDays === "number"
+        ? Math.max(0, Math.min(14, Math.floor(data.programStartMaxOffsetDays)))
+        : 6,
+    programStartRecommendWeekday:
+      typeof data.programStartRecommendWeekday === "number"
+        ? Math.max(0, Math.min(6, Math.floor(data.programStartRecommendWeekday)))
+        : data.programStartRecommendWeekday === null
+          ? null
+          : 1,
+    programBlockDays:
+      typeof data.programBlockDays === "number"
+        ? Math.max(7, Math.min(56, Math.floor(data.programBlockDays)))
+        : 28,
     updatedAt: parseOptionalDate(data.updatedAt) ?? new Date(),
   };
 
@@ -1208,6 +1222,9 @@ async function importCoachSettings(
         rampTemplate: row.rampTemplate as import("../src/generated/prisma/client").Prisma.InputJsonValue,
         gamificationPoints:
           row.gamificationPoints as import("../src/generated/prisma/client").Prisma.InputJsonValue,
+        programStartMaxOffsetDays: row.programStartMaxOffsetDays,
+        programStartRecommendWeekday: row.programStartRecommendWeekday,
+        programBlockDays: row.programBlockDays,
         updatedAt: row.updatedAt,
       },
     });

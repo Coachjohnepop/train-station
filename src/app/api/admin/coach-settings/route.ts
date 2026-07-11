@@ -17,6 +17,9 @@ const patchSchema = z.object({
   warmupBlocks: z.array(z.unknown()).optional(),
   rampTemplate: z.array(z.unknown()).optional(),
   gamificationPoints: z.record(z.string(), z.number().int().min(0).max(10_000)).optional(),
+  programStartMaxOffsetDays: z.number().int().min(0).max(14).optional(),
+  programStartRecommendWeekday: z.number().int().min(0).max(6).nullable().optional(),
+  programBlockDays: z.number().int().min(7).max(56).optional(),
 });
 
 async function requireStaff() {
@@ -55,6 +58,9 @@ export async function PATCH(request: Request) {
     gamificationPoints: body.data.gamificationPoints as Parameters<
       typeof saveCoachSettings
     >[0]["gamificationPoints"],
+    programStartMaxOffsetDays: body.data.programStartMaxOffsetDays,
+    programStartRecommendWeekday: body.data.programStartRecommendWeekday,
+    programBlockDays: body.data.programBlockDays,
   });
   return NextResponse.json({ settings });
 }

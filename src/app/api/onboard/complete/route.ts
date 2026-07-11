@@ -19,12 +19,10 @@ import { sendWelcomeSms } from "@/lib/sms";
 import { notifyCoachNewMember } from "@/lib/coach-member-notify";
 import { awardGamificationPoints } from "@/lib/member-gamification-store";
 import { enrollUserInProgram } from "@/lib/data/user-data";
-import {
-  isValidProgramStartDate,
-  MAX_PROGRAM_START_OFFSET_DAYS,
-  recommendedProgramStartDate,
-} from "@/lib/member-program-block";
+import { isValidProgramStartDate, recommendedProgramStartDate } from "@/lib/member-program-block";
 import { localTodayIso } from "@/lib/program-calendar";
+import { getCoachSettings } from "@/lib/coach-settings-store";
+import { programStartSettingsFromCoach } from "@/lib/program-start-settings";
 
 const schema = z.object({
   measurements: z
@@ -70,10 +68,16 @@ export async function POST(request: Request) {
   } = body.data;
 
   const todayIso = localTodayIso();
-  const startIso = programStartDate?.trim() || recommendedProgramStartDate(todayIso);
-  if (!isValidProgramStartDate(startIso, todayIso, MAX_PROGRAM_START_OFFSET_DAYS)) {
+  const coachSettings = await getCoachSettings();
+  const startSettings = programStartSettingsFromCoach(coachSettings);
+  const startIso =
+    programStartDate?.trim() ||
+    recommendedProgramStartDate(todayIso, startSettings);
+  if (!isValidProgramStartDate(startIso, todayIso, startSettings.maxOffsetDays)) {
     return NextResponse.json(
-      { error: "Start date must be between today and 6 days from now." },
+      {
+        error: `Start date must be between today and ${startSettings.maxOffsetDays} days from now.`,
+      },
       { status: 400 },
     );
   }
@@ -100,7 +104,10 @@ export async function POST(request: Request) {
 
   const enrolledSlug = programSlug || "adult";
 
-  await enrollUserInProgram(enrolledSlug, session.id, { programStartDate: startIso });
+  await enrollUserInProgram(enrolledSlug, session.id, {
+    programStartDate: startIso,
+    blockDays: startSettings.blockDays,
+  });
 
   if (isDemoMode()) {
     await updateDemoUserSettings(session.id, {

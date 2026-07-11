@@ -10,6 +10,7 @@ import {
   type GamificationEventType,
   type GamificationPointsMap,
 } from "@/lib/gamification-types";
+import { PROGRAM_START_WEEKDAYS } from "@/lib/program-start-settings";
 
 type CoachSettings = {
   coachPhone: string | null;
@@ -21,6 +22,9 @@ type CoachSettings = {
   warmupBlocks: WarmupBlockTemplate[];
   rampTemplate: RampWeekTemplate[];
   gamificationPoints: GamificationPointsMap;
+  programStartMaxOffsetDays: number;
+  programStartRecommendWeekday: number | null;
+  programBlockDays: number;
   updatedAt: string;
 };
 
@@ -66,6 +70,9 @@ export default function CoachSettingsPanel() {
         warmupBlocks: settings.warmupBlocks,
         rampTemplate: settings.rampTemplate,
         gamificationPoints: settings.gamificationPoints,
+        programStartMaxOffsetDays: settings.programStartMaxOffsetDays,
+        programStartRecommendWeekday: settings.programStartRecommendWeekday,
+        programBlockDays: settings.programBlockDays,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -208,6 +215,98 @@ export default function CoachSettingsPanel() {
             </span>
           </label>
         </div>
+      </section>
+
+      <section className="card space-y-4 p-5">
+        <div>
+          <h2 className="text-lg font-semibold">New member program start</h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            After payment, members pick when Day 1 begins. Defaults encourage Monday for weekend
+            trainers.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm">
+            <span className="text-[var(--muted)]">Max days to schedule ahead</span>
+            <input
+              className="input mt-1 w-full"
+              type="number"
+              min={0}
+              max={14}
+              value={settings.programStartMaxOffsetDays}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  programStartMaxOffsetDays: Math.max(
+                    0,
+                    Math.min(14, Number(e.target.value) || 0),
+                  ),
+                })
+              }
+            />
+            <span className="mt-1 block text-[10px] text-[var(--muted)]">
+              0 = today only · 6 = through six days out (current default)
+            </span>
+          </label>
+          <label className="block text-sm">
+            <span className="text-[var(--muted)]">Paid block length (days)</span>
+            <input
+              className="input mt-1 w-full"
+              type="number"
+              min={7}
+              max={56}
+              value={settings.programBlockDays}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  programBlockDays: Math.max(7, Math.min(56, Number(e.target.value) || 28)),
+                })
+              }
+            />
+          </label>
+        </div>
+        <label className="flex items-start gap-3 rounded-lg border border-[var(--border)] px-4 py-3 text-sm">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={settings.programStartRecommendWeekday != null}
+            onChange={(e) =>
+              setSettings({
+                ...settings,
+                programStartRecommendWeekday: e.target.checked
+                  ? settings.programStartRecommendWeekday ?? 1
+                  : null,
+              })
+            }
+          />
+          <span>
+            <span className="font-medium">Recommend a start weekday</span>
+            <span className="mt-0.5 block text-xs text-[var(--muted)]">
+              Pre-selects that day in onboarding (e.g. Monday for members who train weekends).
+            </span>
+          </span>
+        </label>
+        {settings.programStartRecommendWeekday != null && (
+          <label className="block text-sm max-w-xs">
+            <span className="text-[var(--muted)]">Recommended weekday</span>
+            <select
+              className="input mt-1 w-full"
+              value={settings.programStartRecommendWeekday}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  programStartRecommendWeekday: Number(e.target.value),
+                })
+              }
+            >
+              {PROGRAM_START_WEEKDAYS.map((d) => (
+                <option key={d.value} value={d.value}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </section>
 
       <section className="card space-y-4 p-5">

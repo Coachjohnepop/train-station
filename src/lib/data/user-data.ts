@@ -71,7 +71,7 @@ export async function getUserEnrollments(userId?: string): Promise<EnrollmentsMa
 export async function enrollUserInProgram(
   slug: string,
   userId?: string,
-  opts?: { programStartDate?: string | null },
+  opts?: { programStartDate?: string | null; blockDays?: number },
 ) {
   const uid = userId || "demo-user";
   if (isDemoMode()) {

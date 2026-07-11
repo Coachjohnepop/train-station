@@ -1,5 +1,11 @@
 import { PROGRAM_CYCLE_DAYS } from "@/lib/program-constants";
 import {
+  DEFAULT_PROGRAM_BLOCK_DAYS,
+  DEFAULT_PROGRAM_START_MAX_OFFSET_DAYS,
+  DEFAULT_PROGRAM_START_RECOMMEND_WEEKDAY,
+  type ProgramStartSettings,
+} from "@/lib/program-start-settings";
+import {
   coordinateFromEnrollmentDay,
   linearEnrollmentDay,
 } from "@/lib/member-enrollment-day";
@@ -34,8 +40,11 @@ function parseIsoDateOnly(iso: string): Date {
   return parseIsoDate(iso);
 }
 
-export function blockEndDateFromStart(startIso: string): string {
-  return addDaysIso(startIso, PROGRAM_CYCLE_DAYS - 1);
+export function blockEndDateFromStart(
+  startIso: string,
+  blockDays = DEFAULT_PROGRAM_BLOCK_DAYS,
+): string {
+  return addDaysIso(startIso, Math.max(1, blockDays) - 1);
 }
 
 export function isValidProgramStartDate(
@@ -74,24 +83,48 @@ export function isWeekendIso(iso: string): boolean {
   return d === 0 || d === 6;
 }
 
+export type ProgramStartPickerOptions = Pick<
+  ProgramStartSettings,
+  "maxOffsetDays" | "recommendWeekday"
+>;
+
+export function programStartPickerOptions(
+  settings?: Partial<ProgramStartSettings> | null,
+): ProgramStartPickerOptions {
+  return {
+    maxOffsetDays: settings?.maxOffsetDays ?? DEFAULT_PROGRAM_START_MAX_OFFSET_DAYS,
+    recommendWeekday:
+      settings?.recommendWeekday === undefined
+        ? DEFAULT_PROGRAM_START_RECOMMEND_WEEKDAY
+        : settings.recommendWeekday,
+  };
+}
+
 /**
- * Prefer the first Monday in the allowed window — keeps M1D1 on a Monday
- * (especially helpful for members who train on weekends).
+ * Prefer the first matching weekday in the allowed window (default Monday).
+ * When recommendWeekday is null, default to today.
  */
 export function recommendedProgramStartDate(
   todayIso: string,
-  maxOffset = MAX_PROGRAM_START_OFFSET_DAYS,
+  opts?: Partial<ProgramStartPickerOptions>,
 ): string {
-  const monday = allowedProgramStartDates(todayIso, maxOffset).find((iso) => isMondayIso(iso));
-  return monday ?? todayIso;
+  const maxOffset = opts?.maxOffsetDays ?? DEFAULT_PROGRAM_START_MAX_OFFSET_DAYS;
+  const options = allowedProgramStartDates(todayIso, maxOffset);
+  const weekday = opts?.recommendWeekday;
+  if (weekday != null) {
+    const match = options.find((iso) => weekdayIndexFromIso(iso) === weekday);
+    if (match) return match;
+  }
+  return todayIso;
 }
 
-/** Monday first, then remaining dates chronologically. */
+/** Recommended date first, then remaining dates chronologically. */
 export function orderedProgramStartDateOptions(
   todayIso: string,
-  maxOffset = MAX_PROGRAM_START_OFFSET_DAYS,
+  opts?: Partial<ProgramStartPickerOptions>,
 ): Array<{ iso: string; recommended: boolean }> {
-  const recommended = recommendedProgramStartDate(todayIso, maxOffset);
+  const maxOffset = opts?.maxOffsetDays ?? DEFAULT_PROGRAM_START_MAX_OFFSET_DAYS;
+  const recommended = recommendedProgramStartDate(todayIso, opts);
   const all = allowedProgramStartDates(todayIso, maxOffset);
   const rest = all.filter((iso) => iso !== recommended);
   return [
@@ -113,9 +146,11 @@ export function resolveProgramBlock(
   enrollment: ProgramBlockEnrollment,
   todayIso: string,
   durationWeeks = 4,
+  blockDays = DEFAULT_PROGRAM_BLOCK_DAYS,
 ): ResolvedProgramBlock {
   const start = enrollment.programStartDate?.trim() || todayIso;
-  const end = enrollment.blockEndsAt?.trim() || blockEndDateFromStart(start);
+  const end = enrollment.blockEndsAt?.trim() || blockEndDateFromStart(start, blockDays);
+  const cycleDays = Math.min(Math.max(1, blockDays), durationWeeks * 7);
   const untilStart = daysFromToday(start, todayIso);
   const untilEnd = daysFromToday(end, todayIso);
 
@@ -128,17 +163,17 @@ export function resolveProgramBlock(
       weekNumber: 1,
       dayNumber: 1,
       daysUntilStart: untilStart,
-      daysRemaining: PROGRAM_CYCLE_DAYS,
+      daysRemaining: cycleDays,
     };
   }
 
   if (untilEnd < 0) {
-    const last = coordinateFromEnrollmentDay(PROGRAM_CYCLE_DAYS, durationWeeks);
+    const last = coordinateFromEnrollmentDay(cycleDays, durationWeeks);
     return {
       status: "expired",
       programStartDate: start,
       blockEndsAt: end,
-      linearDay: PROGRAM_CYCLE_DAYS,
+      linearDay: cycleDays,
       weekNumber: last?.weekNumber ?? 4,
       dayNumber: last?.dayNumber ?? 7,
       daysUntilStart: 0,
@@ -146,7 +181,7 @@ export function resolveProgramBlock(
     };
   }
 
-  const linearDay = Math.min(PROGRAM_CYCLE_DAYS, Math.max(1, -untilStart + 1));
+  const linearDay = Math.min(cycleDays, Math.max(1, -untilStart + 1));
   const coord =
     coordinateFromEnrollmentDay(linearDay, durationWeeks) ?? {
       weekNumber: enrollment.currentWeek,
@@ -189,8 +224,9 @@ export function effectiveEnrollmentPosition(
   enrollment: ProgramBlockEnrollment,
   todayIso: string,
   durationWeeks = 4,
+  blockDays = DEFAULT_PROGRAM_BLOCK_DAYS,
 ): { currentWeek: number; currentDay: number; linearDay: number; block: ResolvedProgramBlock } {
-  const block = resolveProgramBlock(enrollment, todayIso, durationWeeks);
+  const block = resolveProgramBlock(enrollment, todayIso, durationWeeks, blockDays);
   return {
     currentWeek: block.weekNumber,
     currentDay: block.dayNumber,

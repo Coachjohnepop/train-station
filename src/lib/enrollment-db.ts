@@ -66,7 +66,7 @@ export async function getEnrollmentsMapForUser(userId: string): Promise<Enrollme
 export async function enrollUserInProgramDb(
   slug: string,
   userId: string,
-  opts?: { programStartDate?: string | null },
+  opts?: { programStartDate?: string | null; blockDays?: number },
 ) {
   const storageUserId = await resolveStorageUserId(userId);
   const program = await prisma.program.findUnique({ where: { slug } });
@@ -76,7 +76,9 @@ export async function enrollUserInProgramDb(
   const blockDates = startIso
     ? {
         programStartDate: parseProgramStartDate(startIso),
-        blockEndsAt: parseProgramStartDate(blockEndDateFromStart(startIso)),
+        blockEndsAt: parseProgramStartDate(
+          blockEndDateFromStart(startIso, opts?.blockDays),
+        ),
       }
     : {};
 

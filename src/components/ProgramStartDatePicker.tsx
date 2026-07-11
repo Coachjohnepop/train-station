@@ -3,33 +3,66 @@
 import {
   blockEndDateFromStart,
   formatProgramStartOption,
-  isMondayIso,
   isWeekendIso,
   orderedProgramStartDateOptions,
+  programStartPickerOptions,
   recommendedProgramStartDate,
+  weekdayIndexFromIso,
 } from "@/lib/member-program-block";
 import { localTodayIso } from "@/lib/program-calendar";
+import {
+  PROGRAM_START_WEEKDAYS,
+  type ProgramStartSettings,
+  weekdayLabel,
+} from "@/lib/program-start-settings";
 
 type Props = {
   value: string;
   onChange: (iso: string) => void;
   todayIso?: string;
+  settings?: Partial<ProgramStartSettings>;
 };
 
-function optionSubtitle(iso: string, today: string, recommended: boolean): string {
-  if (recommended && isMondayIso(iso)) {
-    return "Recommended — Day 1 on Monday (best if you train weekends)";
+function optionSubtitle(
+  iso: string,
+  today: string,
+  recommended: boolean,
+  recommendWeekday: number | null,
+  blockDays: number,
+): string {
+  if (recommended && recommendWeekday != null) {
+    const day = weekdayLabel(recommendWeekday);
+    if (recommendWeekday === 1) {
+      return `Recommended — Day 1 on ${day} (best if you train weekends)`;
+    }
+    return `Recommended — Day 1 on ${day}`;
   }
   if (iso === today) return "Start today — Day 1";
-  if (isWeekendIso(iso)) return "Weekend start — Monday is usually a better fit";
+  if (
+    recommendWeekday === 1 &&
+    isWeekendIso(iso) &&
+    weekdayIndexFromIso(iso) !== recommendWeekday
+  ) {
+    return "Weekend start — Monday is usually a better fit";
+  }
   return "Schedule Day 1";
 }
 
-export default function ProgramStartDatePicker({ value, onChange, todayIso }: Props) {
+export default function ProgramStartDatePicker({
+  value,
+  onChange,
+  todayIso,
+  settings,
+}: Props) {
   const today = todayIso || localTodayIso();
-  const options = orderedProgramStartDateOptions(today);
-  const recommended = recommendedProgramStartDate(today);
-  const showMondayNudge = value !== recommended && isWeekendIso(value);
+  const pickerOpts = programStartPickerOptions(settings);
+  const blockDays = settings?.blockDays ?? 28;
+  const options = orderedProgramStartDateOptions(today, pickerOpts);
+  const recommended = recommendedProgramStartDate(today, pickerOpts);
+  const showWeekdayNudge =
+    pickerOpts.recommendWeekday != null &&
+    value !== recommended &&
+    weekdayIndexFromIso(value) !== pickerOpts.recommendWeekday;
 
   return (
     <div className="space-y-2">
@@ -61,12 +94,18 @@ export default function ProgramStartDatePicker({ value, onChange, todayIso }: Pr
             <span
               className={`mt-0.5 block text-[10px] ${isRec ? "text-emerald-200/80" : "text-[var(--muted)]"}`}
             >
-              {optionSubtitle(iso, today, isRec)}
+              {optionSubtitle(
+                iso,
+                today,
+                isRec,
+                pickerOpts.recommendWeekday,
+                blockDays,
+              )}
             </span>
           </button>
         );
       })}
-      {showMondayNudge && (
+      {showWeekdayNudge && pickerOpts.recommendWeekday != null && (
         <p className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-3 py-2 text-[10px] text-emerald-100/90">
           Tip: Starting on{" "}
           <button
@@ -76,15 +115,18 @@ export default function ProgramStartDatePicker({ value, onChange, todayIso }: Pr
           >
             {formatProgramStartOption(recommended)}
           </button>{" "}
-          lines Day 1 up with the week — handy if Saturday/Sunday are your gym days.
+          lines Day 1 up with the week
+          {pickerOpts.recommendWeekday === 1 ? " — handy if Saturday/Sunday are your gym days" : ""}.
         </p>
       )}
       {value && (
         <p className="text-[10px] text-[var(--muted)]">
-          28 days: {formatProgramStartOption(value)} →{" "}
-          {formatProgramStartOption(blockEndDateFromStart(value))}
+          {blockDays} days: {formatProgramStartOption(value)} →{" "}
+          {formatProgramStartOption(blockEndDateFromStart(value, blockDays))}
         </p>
       )}
     </div>
   );
 }
+
+export { PROGRAM_START_WEEKDAYS };
