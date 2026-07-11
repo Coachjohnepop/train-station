@@ -26,6 +26,8 @@
     "test:s1c": "node scripts/s1c-text-upload-db-test.mjs",
     "test:persistence-soak": "node scripts/persistence-soak-test.mjs",
     "test:s1d": "node scripts/s1d-program-builder-test.mjs",
+    "test:jeremy-builder": "node scripts/jeremy-program-builder-prodtest.mjs",
+    "test:builder-soak": "node scripts/builder-soak-loop.mjs",
     "test:s2a": "node scripts/s2a-member-enrollment-day-test.mjs",
     "test:s2b": "node scripts/s2b-member-program-position-test.mjs",
     "test:s2c": "node scripts/s2c-insights-test.mjs",

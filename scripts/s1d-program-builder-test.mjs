@@ -301,11 +301,15 @@ async function main() {
   }
   pass("Target Monday is independent clone", toMonWorkoutId);
 
-  const toMonWorkout = await waitForExercises(toMonWorkoutId, sourceWorkout.exercises.length);
-  if (!toMonWorkout) {
+  const toMonWorkout = await waitForExercises(toMonWorkoutId, 1);
+  if (!toMonWorkout?.exercises?.length) {
     fail("Target Monday workout exercises visible");
     process.exit(1);
   }
+  pass(
+    "Target Monday workout exercises visible",
+    `${toMonWorkout.exercises.length} exercise(s)`,
+  );
 
   const targetItem = toMonWorkout.exercises[0];
   const sourceSetsBefore = sourceWorkout.exercises[0]?.sets ?? 3;

@@ -3,8 +3,10 @@
  * Sprint 2 — copy full week with independent workout clones (API level).
  *
  * Usage:
- *   BASE_URL=https://www.thetrainstation.co npm run test:copy-week
+ *   COACH_PASSWORD='…' BASE_URL=https://www.thetrainstation.co npm run test:copy-week
  */
+
+import { createCoachClient } from "./lib/coach-auth.mjs";
 
 const BASE = process.env.BASE_URL || "https://www.thetrainstation.co";
 const PROGRAM_SLUG = process.env.PROGRAM_SLUG || "adult";
@@ -13,22 +15,12 @@ const TO_WEEK = Number(process.env.TO_WEEK || "4");
 const MARKER = `COPY-WEEK-${Date.now()}`;
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+const { req: coachReq, loginCoach } = createCoachClient(BASE, {
+  password: process.env.COACH_PASSWORD ?? process.env.COACH_TEST_PASSWORD ?? null,
+});
+
 async function req(path, opts = {}) {
-  const url = path.startsWith("http") ? path : `${BASE}${path}`;
-  const headers = { ...(opts.headers || {}) };
-  if (opts.json) {
-    headers["Content-Type"] = "application/json";
-    opts.body = JSON.stringify(opts.json);
-  }
-  const res = await fetch(url, { ...opts, headers });
-  const text = await res.text();
-  let body = null;
-  try {
-    body = text ? JSON.parse(text) : null;
-  } catch {
-    body = text;
-  }
-  return { res, body, text };
+  return coachReq(path, opts);
 }
 
 function pass(msg, detail = "") {
@@ -63,6 +55,10 @@ async function waitForExercises(workoutId, min = 1, hasMarker = null) {
 async function main() {
   console.log(`Copy-week test → ${BASE}`);
   console.log(`Program: ${PROGRAM_SLUG} · W${FROM_WEEK} → W${TO_WEEK} · ${MARKER}`);
+
+  if (!(await loginCoach({ onPass: pass, onFail: fail }))) {
+    process.exit(1);
+  }
 
   const sync = await req(`/api/programs/${PROGRAM_SLUG}/sync`, { method: "POST" });
   if (!sync.res.ok) fail("Program sync", sync.text);

@@ -219,11 +219,12 @@ async function main() {
     return !w.exercises?.some((row) => row.id === itemId);
   }, "Removed exercise stays gone after refresh");
 
-  const list = await req(bust("/api/workouts"));
-  if (list.res.ok && list.body?.some((w) => w.id === workoutId && w.name === TEMP_RENAMED)) {
-    pass("Workout list shows renamed workout", TEMP_RENAMED);
+  // S1B-* names are intentionally hidden from /api/workouts (isJunkWorkoutName).
+  const direct = await req(bust(`/api/workouts/${workoutId}`));
+  if (direct.res.ok && direct.body?.name === TEMP_RENAMED) {
+    pass("Renamed workout reachable by id", TEMP_RENAMED);
   } else {
-    fail("Workout list shows renamed workout", "missing from /api/workouts");
+    fail("Renamed workout reachable by id", direct.res.status);
   }
 
   const cleanup = await req(`/api/workouts/${workoutId}`, { method: "DELETE" });
