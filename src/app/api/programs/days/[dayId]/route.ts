@@ -25,6 +25,7 @@ const patchSchema = z.object({
         workoutId: z.string(),
         label: z.string(),
         trainingLocation: z.enum(["gym", "home"]).optional().nullable(),
+        notes: z.string().nullable().optional(),
       }),
     )
     .optional(),
@@ -47,6 +48,7 @@ function resolveDayResponse(data: Record<string, unknown>, dayId: string) {
       workoutId: o.workoutId,
       label: o.label,
       trainingLocation: o.trainingLocation ?? null,
+      notes: o.notes ?? null,
       workout: workoutsById[o.workoutId] || null,
     }));
 
@@ -103,6 +105,8 @@ export async function PATCH(request: Request, { params }: Params) {
             dayId,
             workoutId: opt.workoutId,
             label: opt.label,
+            trainingLocation: opt.trainingLocation ?? trainingLocationFromLabel(opt.label),
+            notes: opt.notes ?? null,
             sortOrder: idx,
           });
         });
@@ -227,6 +231,7 @@ export async function PATCH(request: Request, { params }: Params) {
               label: opt.label,
               trainingLocation:
                 opt.trainingLocation ?? trainingLocationFromLabel(opt.label),
+              notes: opt.notes ?? null,
               sortOrder: idx,
             })),
           });
@@ -274,6 +279,8 @@ export async function PATCH(request: Request, { params }: Params) {
         options: day.options.map((opt) => ({
           workoutId: opt.workoutId,
           label: opt.label,
+          trainingLocation: opt.trainingLocation ?? null,
+          notes: opt.notes ?? null,
           workout: opt.workout,
         })),
       });
@@ -317,6 +324,8 @@ export async function PATCH(request: Request, { params }: Params) {
         options: day.options.map((opt) => ({
           workoutId: opt.workoutId,
           label: opt.label,
+          trainingLocation: opt.trainingLocation ?? null,
+          notes: opt.notes ?? null,
           workout: opt.workout,
         })),
       });

@@ -68,6 +68,7 @@ type DayOption = {
   workoutId: string;
   label: string;
   trainingLocation?: "gym" | "home" | null;
+  notes?: string | null;
 };
 
 type ProgramDay = {
@@ -229,6 +230,9 @@ export default function ProgramCalendarBuilder({
   const [workoutPreviews, setWorkoutPreviews] = useState<Record<string, string[]>>({});
   const [workoutTitle, setWorkoutTitle] = useState("");
   const [savingTitle, setSavingTitle] = useState(false);
+  const [optionNotes, setOptionNotes] = useState("");
+  const [savingOptionNotes, setSavingOptionNotes] = useState(false);
+  const optionNotesDirtyRef = useRef(false);
 
   const startMonday = useMemo(
     () => resolveProgramStartMonday(program.startDate),
@@ -597,6 +601,10 @@ export default function ProgramCalendarBuilder({
   }, []);
 
   async function openDayOption(day: ProgramDay, week: ProgramWeek, optIdx: number, label: string) {
+    if (focus && optionNotesDirtyRef.current) {
+      await saveOptionNotes({ silent: true });
+    }
+
     let opts = getDayOptions(day);
     const optLabel = opts[optIdx]?.label || label;
     const rx = readDayPrescription(day);
@@ -923,6 +931,19 @@ export default function ProgramCalendarBuilder({
   }
 
   useEffect(() => {
+    if (!focus) {
+      setOptionNotes("");
+      optionNotesDirtyRef.current = false;
+      return;
+    }
+    const day = program.weeks.flatMap((w) => w.days).find((d) => d.id === focus.dayId);
+    if (!day) return;
+    const opts = getDayOptions(day);
+    setOptionNotes(opts[focus.optIdx]?.notes ?? "");
+    optionNotesDirtyRef.current = false;
+  }, [focus?.dayId, focus?.optIdx, program.weeks]);
+
+  useEffect(() => {
     if (!focus?.workoutId) {
       setWorkoutTitle("");
       return;
@@ -939,6 +960,48 @@ export default function ProgramCalendarBuilder({
       })
       .catch(() => {});
   }, [focus?.workoutId, allWorkouts]);
+
+  async function saveOptionNotes(opts?: { silent?: boolean }) {
+    if (!focus || savingOptionNotes) return;
+    const day = program.weeks.flatMap((w) => w.days).find((d) => d.id === focus.dayId);
+    if (!day) return;
+
+    const trimmed = optionNotes.trim();
+    const currentOpts = [...getDayOptions(day)];
+    const stored = currentOpts[focus.optIdx]?.notes ?? "";
+    if (trimmed === (stored || "").trim()) {
+      optionNotesDirtyRef.current = false;
+      return;
+    }
+
+    while (currentOpts.length <= focus.optIdx) {
+      currentOpts.push({
+        workoutId: "",
+        label: focus.label || DEFAULT_DAY_OPTIONS[currentOpts.length] || "Gym",
+      });
+    }
+    currentOpts[focus.optIdx] = {
+      ...currentOpts[focus.optIdx],
+      notes: trimmed || null,
+    };
+
+    const silent = opts?.silent === true;
+    if (!silent) setSaving(true);
+    setSavingOptionNotes(true);
+    try {
+      await patchDay(focus.dayId, { options: normalizeDayOptions(currentOpts) as DayOption[] });
+      optionNotesDirtyRef.current = false;
+      if (!silent) {
+        setMessage("Description saved.");
+        setTimeout(() => setMessage(null), 1500);
+      }
+    } catch {
+      if (!silent) setMessage("Could not save description.");
+    } finally {
+      setSavingOptionNotes(false);
+      if (!silent) setSaving(false);
+    }
+  }
 
   async function saveWorkoutTitle() {
     if (!focus?.workoutId || savingTitle) return;
@@ -1126,8 +1189,18 @@ export default function ProgramCalendarBuilder({
     const gym = stored.find((o) => isGymLabel(o.label));
     const home = stored.find((o) => isHomeLabel(o.label));
     const workoutOpts: DayOption[] = [
-      { workoutId: gym?.workoutId || "", label: "Gym", trainingLocation: "gym" },
-      { workoutId: home?.workoutId || "", label: "Home", trainingLocation: "home" },
+      {
+        workoutId: gym?.workoutId || "",
+        label: "Gym",
+        trainingLocation: "gym",
+        notes: gym?.notes ?? null,
+      },
+      {
+        workoutId: home?.workoutId || "",
+        label: "Home",
+        trainingLocation: "home",
+        notes: home?.notes ?? null,
+      },
     ];
     const needsPatch =
       !gym ||
@@ -1433,7 +1506,11 @@ export default function ProgramCalendarBuilder({
             return false;
           }
           const cloned = await cloneRes.json();
-          clonedOpts.push({ workoutId: cloned.id, label: opt.label });
+          clonedOpts.push({
+            workoutId: cloned.id,
+            label: opt.label,
+            notes: opt.notes ?? null,
+          });
           setAllWorkouts((prev) =>
             prev.some((w) => w.id === cloned.id) ? prev : [...prev, { id: cloned.id, name: cloned.name }],
           );
@@ -1529,7 +1606,11 @@ export default function ProgramCalendarBuilder({
         });
         if (!cloneRes.ok) continue;
         const cloned = await cloneRes.json();
-        clonedOpts.push({ workoutId: cloned.id, label: opt.label });
+        clonedOpts.push({
+          workoutId: cloned.id,
+          label: opt.label,
+          notes: opt.notes ?? null,
+        });
         setAllWorkouts((prev) =>
           prev.some((w) => w.id === cloned.id) ? prev : [...prev, { id: cloned.id, name: cloned.name }],
         );
@@ -2262,6 +2343,33 @@ export default function ProgramCalendarBuilder({
               + Add More
             </button>
           </div>
+
+          {focus.workoutId &&
+            !isDayOffLabel(focus.label) &&
+            !isFastedCardioLabel(focus.label) && (
+              <label className="block px-1">
+                <span className="text-[10px] font-medium text-[var(--muted)]">
+                  Day description
+                  {formatTrainingLocationLabel(trainingLocationFromLabel(focus.label)) && (
+                    <span className="text-violet-300">
+                      {" "}
+                      ({formatTrainingLocationLabel(trainingLocationFromLabel(focus.label))})
+                    </span>
+                  )}
+                </span>
+                <textarea
+                  className="input mt-1 min-h-[4.5rem] w-full resize-y py-2 text-xs"
+                  value={optionNotes}
+                  disabled={saving || savingOptionNotes || !!focusDay.publishedAt}
+                  placeholder="Notes for this day only — won't carry to other days"
+                  onChange={(e) => {
+                    setOptionNotes(e.target.value);
+                    optionNotesDirtyRef.current = true;
+                  }}
+                  onBlur={() => void saveOptionNotes({ silent: true })}
+                />
+              </label>
+            )}
 
           {!isDayOffLabel(focus.label) && !isFastedCardioLabel(focus.label) && (
             <TextUploadPanel

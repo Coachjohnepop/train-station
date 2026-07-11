@@ -333,6 +333,8 @@ model ProgramDayOption {
   label            String     // e.g. "Gym", "Home - Bodyweight", "Home - Dumbbells + Bands"
   /// Typed location — separate from workout name and label.
   trainingLocation String?    // gym | home
+  /// Per-day coach note for this option — does not travel with the workout template.
+  notes            String?    @db.Text
   sortOrder        Int        @default(0)
   day              ProgramDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
   workout          Workout    @relation(fields: [workoutId], references: [id])

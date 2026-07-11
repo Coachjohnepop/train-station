@@ -16,7 +16,7 @@ async function listProgramsFromDemo() {
   const data = await getDemoSeed(freshSeedOpts());
   const programDayOptionsByDayId = (data.programDayOptions || []).reduce((acc: any, o: any) => {
     if (!acc[o.dayId]) acc[o.dayId] = [];
-    acc[o.dayId].push({ workoutId: o.workoutId, label: o.label });
+    acc[o.dayId].push({ workoutId: o.workoutId, label: o.label, notes: o.notes ?? null });
     return acc;
   }, {});
   const progs = (data.programs || []).map((p: any) => {
@@ -63,7 +63,7 @@ async function getProgramBySlugFromDemo(slug: string) {
   );
   const programDayOptionsByDayId = (data.programDayOptions || []).reduce((acc: any, o: any) => {
     if (!acc[o.dayId]) acc[o.dayId] = [];
-    acc[o.dayId].push({ workoutId: o.workoutId, label: o.label });
+    acc[o.dayId].push({ workoutId: o.workoutId, label: o.label, notes: o.notes ?? null });
     return acc;
   }, {});
   const weeks = (data.programWeeks || [])

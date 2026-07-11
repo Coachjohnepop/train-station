@@ -7,6 +7,7 @@ import { syncProgramSchedule } from "@/lib/program-schedule";
 type DayOptionRow = {
   workoutId: string;
   label: string;
+  notes?: string | null;
   workout?: { id: string; name: string; description?: string | null } | null;
 };
 
@@ -25,6 +26,7 @@ type DayRow = {
   options?: Array<{
     workoutId: string;
     label: string;
+    notes?: string | null;
     workout?: { id: string; name: string; description?: string | null } | null;
   }>;
 };
@@ -33,6 +35,7 @@ function mapDayOptions(day: DayRow): DayOptionRow[] {
   const fromOptions = (day.options || []).map((opt) => ({
     workoutId: opt.workoutId,
     label: opt.label,
+    notes: opt.notes ?? null,
     workout: opt.workout ?? null,
   }));
   if (fromOptions.length > 0) return fromOptions;

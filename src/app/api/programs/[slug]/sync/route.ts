@@ -35,6 +35,7 @@ export async function POST(_request: Request, { params }: Params) {
               .map((o: any) => ({
                 workoutId: o.workoutId,
                 label: o.label,
+                notes: o.notes ?? null,
                 workout: workoutsById[o.workoutId] || null,
               }));
             return {

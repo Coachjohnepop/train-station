@@ -14,12 +14,14 @@ export type MemberWorkoutContext = {
   calendarDate: string;
   calendarDateLabel: string;
   scheduleLabel?: string;
+  dayOptionNotes?: string | null;
   isToday: boolean;
 };
 
 export async function resolveMemberWorkoutContext(input: {
   programSlug?: string;
   dateParam?: string;
+  optionLabel?: string;
 }): Promise<MemberWorkoutContext | null> {
   if (!input.programSlug) return null;
 
@@ -35,11 +37,22 @@ export async function resolveMemberWorkoutContext(input: {
     ? `Week ${match.weekNumber} · ${DAY_LABELS[match.dayNumber - 1] ?? `Day ${match.dayNumber}`}`
     : undefined;
 
+  let dayOptionNotes: string | null = null;
+  if (match?.day && input.optionLabel?.trim()) {
+    const wanted = input.optionLabel.trim().toLowerCase();
+    const opt = (match.day.options || []).find(
+      (o: { label?: string; notes?: string | null }) =>
+        o.label?.trim().toLowerCase() === wanted,
+    );
+    dayOptionNotes = opt?.notes?.trim() || null;
+  }
+
   const todayIso = localTodayIso();
   return {
     calendarDate,
     calendarDateLabel: formatLongDate(calendarDate),
     scheduleLabel,
+    dayOptionNotes,
     isToday: calendarDate === todayIso,
   };
 }

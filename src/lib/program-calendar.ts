@@ -136,7 +136,7 @@ type ProgramDayLike = {
   dayNumber: number;
   calendarDate?: string | null;
   workoutId?: string | null;
-  options?: Array<{ workoutId: string; label?: string }>;
+  options?: Array<{ workoutId: string; label?: string; notes?: string | null }>;
   smsOverrideActive?: boolean;
   smsOverrideLabel?: string | null;
 };
@@ -270,7 +270,11 @@ export const DAY_OFF_LABEL = "Day Off";
 export const FASTED_CARDIO_LABEL = "Fasted cardio";
 export const DEFAULT_FASTED_CARDIO_MINUTES = 30;
 
-export type DayOptionLike = { workoutId: string; label: string };
+export type DayOptionLike = {
+  workoutId: string;
+  label: string;
+  notes?: string | null;
+};
 
 export function isGymLabel(label: string): boolean {
   return /^gym$/i.test(label.trim());
@@ -327,7 +331,8 @@ function pickPreferredOption(
   if (!current) return next;
   if (next.workoutId && !current.workoutId) return next;
   if (current.workoutId && !next.workoutId) return current;
-  return next;
+  const notes = next.notes?.trim() ? next.notes : current.notes;
+  return notes ? { ...next, notes } : next;
 }
 
 /** Collapse duplicate Gym/Home pills from legacy seed data — keep one of each + custom settings. */

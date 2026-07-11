@@ -76,7 +76,11 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
   }
 
   const workoutContext = program
-    ? await resolveMemberWorkoutContext({ programSlug: program, dateParam: date })
+    ? await resolveMemberWorkoutContext({
+        programSlug: program,
+        dateParam: date,
+        optionLabel: option,
+      })
     : null;
 
   const memberUserId = resolveTargetUserId(forUser, await resolveMemberUserId());
@@ -142,6 +146,9 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
               <p className="font-medium">{workoutContext.calendarDateLabel}</p>
               {workoutContext.scheduleLabel && (
                 <p className="text-xs text-[var(--muted)]">{workoutContext.scheduleLabel}</p>
+              )}
+              {workoutContext.dayOptionNotes && (
+                <p className="mt-2 text-sm text-[var(--text)]">{workoutContext.dayOptionNotes}</p>
               )}
             </div>
           )}
