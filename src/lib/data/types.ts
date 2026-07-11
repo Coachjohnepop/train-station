@@ -13,6 +13,9 @@ export type EnrollmentPosition = {
   currentDay: number;
   currentPhase?: number;
   trainingLocation?: TrainingLocation;
+  /** YYYY-MM-DD — member-chosen day 1 of paid block. */
+  programStartDate?: string | null;
+  blockEndsAt?: string | null;
 };
 
 export type UserEnrollment = {

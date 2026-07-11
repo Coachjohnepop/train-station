@@ -345,6 +345,10 @@ model ProgramEnrollment {
   userId           String
   programId        String
   startedAt        DateTime @default(now())
+  /// Member-chosen calendar day 1 of their paid 28-day block (today … today+6).
+  programStartDate DateTime? @db.Date
+  /// Last inclusive calendar day of the 28-day block.
+  blockEndsAt      DateTime? @db.Date
   currentWeek      Int      @default(1)
   currentDay       Int      @default(1)
   /// Macro phase index (1=conditioning … 4=power for Adult).

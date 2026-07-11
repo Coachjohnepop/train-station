@@ -68,13 +68,17 @@ export async function getUserEnrollments(userId?: string): Promise<EnrollmentsMa
  * Enroll a user in a program (idempotent).
  * Preview: writes to enrollments.dev.json.
  */
-export async function enrollUserInProgram(slug: string, userId?: string) {
+export async function enrollUserInProgram(
+  slug: string,
+  userId?: string,
+  opts?: { programStartDate?: string | null },
+) {
   const uid = userId || "demo-user";
   if (isDemoMode()) {
-    await enrollDemo(slug, uid);
+    await enrollDemo(slug, uid, opts);
     return;
   }
-  await enrollUserInProgramDb(slug, uid);
+  await enrollUserInProgramDb(slug, uid, opts);
 }
 
 /**

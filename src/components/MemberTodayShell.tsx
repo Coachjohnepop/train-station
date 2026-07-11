@@ -11,6 +11,10 @@ import MemberTrainingLocationToggle from "@/components/MemberTrainingLocationTog
 import MemberWorkoutConsole, { type MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import type { MemberDaySummary, MemberDayWindowRollup } from "@/lib/member-day-window-types";
 import { scheduleDayHeadline } from "@/lib/workout-day-visibility";
+import {
+  formatProgramStartOption,
+  type ResolvedProgramBlock,
+} from "@/lib/member-program-block";
 
 type Props = {
   todayIso: string;
@@ -35,6 +39,7 @@ type Props = {
   coachMeetingRequestNote?: string | null;
   autoPromptIntroBooking?: boolean;
   autoPromptFollowUpBooking?: boolean;
+  programBlock?: ResolvedProgramBlock | null;
 };
 
 function DaySummaryCard({
@@ -162,6 +167,7 @@ export default function MemberTodayShell({
   coachMeetingRequestNote = null,
   autoPromptIntroBooking = false,
   autoPromptFollowUpBooking = false,
+  programBlock = null,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -207,11 +213,43 @@ export default function MemberTodayShell({
       id="member-today-top"
       className={`scroll-mt-4 min-w-0 space-y-4 overflow-x-clip ${todayGold ? "member-today-gold-shell" : ""}`}
     >
+      {programBlock?.status === "pending" && (
+        <div className="rounded-xl border border-[#7c3aed]/40 bg-[#7c3aed]/10 px-4 py-3 text-sm">
+          <p className="font-semibold text-[#e9d5ff]">Program starts soon</p>
+          <p className="mt-1 text-[var(--muted)]">
+            Day 1 is {formatProgramStartOption(programBlock.programStartDate)}
+            {programBlock.daysUntilStart === 1
+              ? " — tomorrow."
+              : programBlock.daysUntilStart > 1
+                ? ` — in ${programBlock.daysUntilStart} days.`
+                : "."}
+            {" "}Your full 28-day calendar is below; workouts unlock on start day.
+          </p>
+        </div>
+      )}
+
+      {programBlock?.status === "expired" && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+          <p className="font-semibold text-amber-200">28-day block complete</p>
+          <p className="mt-1 text-[var(--muted)]">
+            Your access ended {formatProgramStartOption(programBlock.blockEndsAt)}. Renew your
+            membership to start the next block.
+          </p>
+          <Link href="/member/account" className="mt-2 inline-block text-xs text-accent hover:underline">
+            Account & billing →
+          </Link>
+        </div>
+      )}
+
       <div>
         <h1
           className={`text-xl font-bold sm:text-2xl ${todayGold ? "text-ramp-gold" : ""}`}
         >
-          {isToday ? "Today" : "Your schedule"}
+          {isToday
+            ? programBlock?.status === "pending"
+              ? "Before Day 1"
+              : "Today"
+            : "Your schedule"}
         </h1>
         {isToday && rampHighlight && autoPromptIntroBooking ? (
           <p className="mt-1 text-xs font-medium text-[var(--ramp-gold-light)] sm:text-sm">

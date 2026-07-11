@@ -36,6 +36,7 @@ import { getMemberContent } from "@/lib/member-content-store";
 import { buildWarmupWorkoutView } from "@/lib/warmup-template";
 import { getUserEnrollments } from "@/lib/data/user-data";
 import { normalizeTrainingLocation } from "@/lib/program-macro-cycle";
+import { formatProgramStartOption } from "@/lib/member-program-block";
 
 export const dynamic = "force-dynamic";
 
@@ -97,6 +98,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
       })
     : null;
 
+  const programBlock = dayWindow?.block ?? null;
   const programTodayKey = dayWindow?.programTodayKey ?? calendarToday;
   const viewDate = sp.date || programTodayKey;
   const todayWorkout = await resolveTodayPageWorkout(uid, viewDate, memberName);
@@ -140,9 +142,13 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     ? isUpcoming
       ? `Coach workout scheduled — ${scheduledLabel}`
       : `Today's coach workout — ${scheduledLabel}`
-    : source === "program"
-      ? `Program schedule — ${scheduleLabel}`
-      : "Spin the day wheel to see what you've done and what's ahead.";
+    : programBlock?.status === "pending"
+      ? `Your 28-day program starts ${formatProgramStartOption(programBlock.programStartDate)}`
+      : programBlock?.status === "expired"
+        ? "Your 28-day block has ended — renew to continue"
+        : source === "program"
+          ? `Program schedule — ${scheduleLabel}`
+          : "Spin the day wheel to see what you've done and what's ahead.";
 
   const intakeComplete =
     !uid.startsWith("member-") || isCoachIntakeComplete(profile);
@@ -197,6 +203,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
               coachMeetingRequestNote={profile?.coachMeetingRequestNote ?? null}
               autoPromptIntroBooking={coachSettings.autoPromptIntroBooking}
               autoPromptFollowUpBooking={coachSettings.autoPromptFollowUpBooking}
+              programBlock={programBlock}
             />
           </Suspense>
 

@@ -42,6 +42,8 @@ export type PerUserEnrollments = Record<
     currentDay: number;
     currentPhase?: number;
     trainingLocation?: "gym" | "home";
+    programStartDate?: string | null;
+    blockEndsAt?: string | null;
   }
 >;
 export type DemoEnrollmentsStore = Record<string, PerUserEnrollments>;

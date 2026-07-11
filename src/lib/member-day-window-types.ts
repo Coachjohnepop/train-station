@@ -3,6 +3,8 @@ import type { DayVisibilityTier } from "@/lib/workout-day-visibility";
 
 export type MemberDaySummary = {
   iso: string;
+  /** Calendar date for this block day (when member chose a start date). */
+  calendarDate?: string;
   phase: RollingCalendarDayPhase;
   weekday: string;
   shortDate: string;

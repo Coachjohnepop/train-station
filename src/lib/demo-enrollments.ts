@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { isDatabaseConfigured } from "@/lib/database-config";
+import { blockEndDateFromStart } from "@/lib/member-program-block";
 import {
   getDemoEnrollmentsStoreSync,
   hydrateDemoEnrollmentsStore,
@@ -59,12 +60,32 @@ export function getDemoEnrollments(userId?: string) {
   return store[uid] || {};
 }
 
-export async function enrollDemo(slug: string, userId?: string) {
+export async function enrollDemo(
+  slug: string,
+  userId?: string,
+  opts?: { programStartDate?: string | null },
+) {
   await hydrateDemoEnrollmentsStore({ preferFresh: true });
   const uid = userId || "demo-user";
   const data = getUserEnrollments(uid);
+  const startIso = opts?.programStartDate?.trim() || null;
   if (!data[slug]) {
-    data[slug] = { currentWeek: 1, currentDay: 1, currentPhase: 1, trainingLocation: "gym" };
+    data[slug] = {
+      currentWeek: 1,
+      currentDay: 1,
+      currentPhase: 1,
+      trainingLocation: "gym",
+      ...(startIso
+        ? { programStartDate: startIso, blockEndsAt: blockEndDateFromStart(startIso) }
+        : {}),
+    };
+    await setUserEnrollments(uid, data);
+  } else if (startIso && !data[slug].programStartDate) {
+    data[slug] = {
+      ...data[slug],
+      programStartDate: startIso,
+      blockEndsAt: blockEndDateFromStart(startIso),
+    };
     await setUserEnrollments(uid, data);
   }
 }

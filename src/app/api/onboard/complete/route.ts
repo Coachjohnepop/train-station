@@ -10,7 +10,7 @@ import {
   updateMemberProfile,
 } from "@/lib/member-profiles-store";
 import { isDemoMode, updateDemoUserSettings } from "@/lib/demo-reminders";
-import { enrollDemo } from "@/lib/demo-enrollments";
+
 import { notifyNewLead } from "@/lib/lead-notify";
 import { syncMemberGateCookies } from "@/lib/auth";
 import { memberPostOnboardPath } from "@/lib/member-destinations";
@@ -18,6 +18,12 @@ import { sendMemberWelcomeEmail } from "@/lib/member-welcome";
 import { sendWelcomeSms } from "@/lib/sms";
 import { notifyCoachNewMember } from "@/lib/coach-member-notify";
 import { awardGamificationPoints } from "@/lib/member-gamification-store";
+import { enrollUserInProgram } from "@/lib/data/user-data";
+import {
+  isValidProgramStartDate,
+  MAX_PROGRAM_START_OFFSET_DAYS,
+} from "@/lib/member-program-block";
+import { localTodayIso } from "@/lib/program-calendar";
 
 const schema = z.object({
   measurements: z
@@ -36,6 +42,7 @@ const schema = z.object({
   phone: z.string().optional(),
   dailyReminderTime: z.string().optional(),
   programSlug: z.string().optional(),
+  programStartDate: z.string().optional(),
   plan: z.string().optional(),
 });
 
@@ -57,8 +64,18 @@ export async function POST(request: Request) {
     phone,
     dailyReminderTime,
     programSlug,
+    programStartDate,
     plan,
   } = body.data;
+
+  const todayIso = localTodayIso();
+  const startIso = programStartDate?.trim() || todayIso;
+  if (!isValidProgramStartDate(startIso, todayIso, MAX_PROGRAM_START_OFFSET_DAYS)) {
+    return NextResponse.json(
+      { error: "Start date must be between today and 6 days from now." },
+      { status: 400 },
+    );
+  }
 
   await ensureMemberProfile({
     userId: session.id,
@@ -82,8 +99,9 @@ export async function POST(request: Request) {
 
   const enrolledSlug = programSlug || "adult";
 
+  await enrollUserInProgram(enrolledSlug, session.id, { programStartDate: startIso });
+
   if (isDemoMode()) {
-    await enrollDemo(enrolledSlug, session.id);
     await updateDemoUserSettings(session.id, {
       phone: phone || undefined,
       dailyReminderTime: dailyReminderTime || undefined,
@@ -97,6 +115,7 @@ ${session.name} <${session.email}> finished setup.
 
 Ticket plan: ${profile.plan}
 Program context: ${programSlug || "general"}
+Program start (Day 1): ${startIso}
 
 Measurements:
 - Weight: ${measurements?.weight || "not provided"} lbs

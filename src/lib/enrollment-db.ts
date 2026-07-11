@@ -9,7 +9,17 @@ import {
   normalizeTrainingLocation,
 } from "@/lib/program-macro-cycle";
 import { clampEnrollmentPosition } from "@/lib/member-enrollment-day";
+import { blockEndDateFromStart } from "@/lib/member-program-block";
 import { prisma } from "@/lib/prisma";
+
+function isoDateFromDb(value: Date | null | undefined): string | null {
+  if (!value) return null;
+  return value.toISOString().slice(0, 10);
+}
+
+function parseProgramStartDate(iso: string): Date {
+  return new Date(`${iso}T12:00:00.000Z`);
+}
 
 /** Map demo roster ids (demo-user-*) to Prisma User.id in database mode. */
 export async function resolveStorageUserId(userId: string): Promise<string> {
@@ -46,20 +56,42 @@ export async function getEnrollmentsMapForUser(userId: string): Promise<Enrollme
       currentDay: row.currentDay,
       currentPhase: row.currentPhase,
       trainingLocation: normalizeTrainingLocation(row.trainingLocation),
+      programStartDate: isoDateFromDb(row.programStartDate),
+      blockEndsAt: isoDateFromDb(row.blockEndsAt),
     };
   }
   return map;
 }
 
-export async function enrollUserInProgramDb(slug: string, userId: string) {
+export async function enrollUserInProgramDb(
+  slug: string,
+  userId: string,
+  opts?: { programStartDate?: string | null },
+) {
   const storageUserId = await resolveStorageUserId(userId);
   const program = await prisma.program.findUnique({ where: { slug } });
   if (!program) throw new Error("Program not found");
 
+  const startIso = opts?.programStartDate?.trim() || null;
+  const blockDates = startIso
+    ? {
+        programStartDate: parseProgramStartDate(startIso),
+        blockEndsAt: parseProgramStartDate(blockEndDateFromStart(startIso)),
+      }
+    : {};
+
   const existing = await prisma.programEnrollment.findFirst({
     where: { userId: storageUserId, programId: program.id },
   });
-  if (existing) return existing;
+  if (existing) {
+    if (startIso && !existing.programStartDate) {
+      return prisma.programEnrollment.update({
+        where: { id: existing.id },
+        data: blockDates,
+      });
+    }
+    return existing;
+  }
 
   return prisma.programEnrollment.create({
     data: {
@@ -69,6 +101,7 @@ export async function enrollUserInProgramDb(slug: string, userId: string) {
       currentDay: 1,
       currentPhase: 1,
       trainingLocation: "gym",
+      ...blockDates,
     },
   });
 }

@@ -12,6 +12,8 @@ import {
   type TrainingLocation,
 } from "@/lib/program-macro-cycle";
 import { normalizeProgramSlug } from "@/lib/programs";
+import { localTodayIso } from "@/lib/program-calendar";
+import { resolveProgramBlock } from "@/lib/member-program-block";
 
 export type ResolvedProgramWorkout = {
   workoutId: string;
@@ -44,6 +46,8 @@ export type EnrollmentSlice = {
   currentDay: number;
   currentPhase?: number;
   trainingLocation?: string | null;
+  programStartDate?: string | null;
+  blockEndsAt?: string | null;
 };
 
 /** Resolve the member's current scheduled workout for a program (phase week/day + gym/home). */

@@ -19,6 +19,7 @@ import { parseEnrollmentDayKey } from "@/lib/member-enrollment-day";
 import { resolveDayWorkoutForEnrollment } from "@/lib/member-program-workout";
 import { memberScheduleLabel } from "@/lib/member-day-window";
 import { localTodayIso } from "@/lib/program-calendar";
+import { resolveProgramBlock } from "@/lib/member-program-block";
 
 export type TodayWorkoutSource = "sms" | "program" | null;
 
@@ -62,8 +63,17 @@ async function resolveEnrollmentProgramWorkout(
     currentPhase: 1,
     trainingLocation: "gym" as const,
   };
+  const block = resolveProgramBlock(enrollment, localTodayIso(), program.durationWeeks);
+  if (block.status === "pending" || block.status === "expired") return null;
+
+  const effectiveEnrollment = {
+    ...enrollment,
+    currentWeek: block.weekNumber,
+    currentDay: block.dayNumber,
+  };
   const isProgramToday =
-    weekNumber === enrollment.currentWeek && dayNumber === enrollment.currentDay;
+    weekNumber === effectiveEnrollment.currentWeek &&
+    dayNumber === effectiveEnrollment.currentDay;
 
   if (isProgramToday) {
     const calendarToday = localTodayIso();
@@ -82,7 +92,12 @@ async function resolveEnrollmentProgramWorkout(
     }
   }
 
-  const resolved = resolveDayWorkoutForEnrollment(program, slug, enrollment, dayNumber);
+  const resolved = resolveDayWorkoutForEnrollment(
+    program,
+    slug,
+    effectiveEnrollment,
+    dayNumber,
+  );
   if (!resolved?.workoutId) return null;
 
   const workout = await getMemberWorkoutById(resolved.workoutId, {

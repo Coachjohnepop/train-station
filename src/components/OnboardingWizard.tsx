@@ -9,6 +9,9 @@ import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
 import QuickAuthSetupPrompt from "@/components/QuickAuthSetupPrompt";
 import CityStateInput from "@/components/CityStateInput";
+import ProgramStartDatePicker from "@/components/ProgramStartDatePicker";
+import { localTodayIso } from "@/lib/program-calendar";
+import { isPaidOffer } from "@/lib/product-offers";
 
 async function saveProgress(body: Record<string, unknown>) {
   await fetch("/api/member/onboard-progress", {
@@ -31,7 +34,8 @@ export default function OnboardingWizard({
   const plan = normalizeSignupPlan(searchParams.get("plan"));
   const programSlug = searchParams.get("program");
 
-  const totalSteps = 6;
+  const needsStartDate = isPaidOffer(plan);
+  const totalSteps = needsStartDate ? 7 : 6;
   const stepStorageKey = `ts-onboard-step:${plan}`;
   const [currentStep, setCurrentStep] = useState(1);
   const [stepReady, setStepReady] = useState(false);
@@ -61,6 +65,7 @@ export default function OnboardingWizard({
   const [measurements, setMeasurements] = useState({ weight: "", notes: "" });
   const [location, setLocation] = useState({ city: "", state: "" });
   const [sms, setSms] = useState({ phone: "", dailyReminderTime: "07:30" });
+  const [programStartDate, setProgramStartDate] = useState(() => localTodayIso());
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,7 +97,8 @@ export default function OnboardingWizard({
     setFinishing(true);
     setError(null);
     try {
-      if (currentStep === 6) {
+      const smsStep = needsStartDate ? 7 : 6;
+      if (currentStep === smsStep) {
         await saveProgress({
           phone: sms.phone || null,
           dailyReminderTime: sms.dailyReminderTime || null,
@@ -109,6 +115,7 @@ export default function OnboardingWizard({
           phone: sms.phone,
           dailyReminderTime: sms.dailyReminderTime,
           programSlug: programSlug || undefined,
+          programStartDate: needsStartDate ? programStartDate : localTodayIso(),
           plan,
         }),
       });
@@ -266,7 +273,26 @@ export default function OnboardingWizard({
           </>
         )}
 
-        {currentStep === 6 && (
+        {needsStartDate && currentStep === 6 && (
+          <>
+            <h2 className="text-lg font-semibold">When do you want to start?</h2>
+            <p className="text-sm text-[var(--muted)]">
+              Your $25 unlocks 28 days of workouts. Pick day 1 — you can start today or schedule up
+              to 6 days out.
+            </p>
+            <ProgramStartDatePicker value={programStartDate} onChange={setProgramStartDate} />
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={prevStep} className="btn-ghost flex-1">
+                Back
+              </button>
+              <button type="button" onClick={() => void nextStep()} className="btn-primary flex-1">
+                Continue
+              </button>
+            </div>
+          </>
+        )}
+
+        {currentStep === (needsStartDate ? 7 : 6) && (
           <>
             <h2 className="text-lg font-semibold">Daily workout texts</h2>
             <p className="text-sm text-[var(--muted)]">
@@ -305,9 +331,11 @@ export default function OnboardingWizard({
               >
                 {finishing
                   ? "Finishing…"
-                  : programSlug
-                    ? "Finish & start Day 1"
-                    : "Finish & go to dashboard"}
+                  : needsStartDate
+                    ? "Finish setup"
+                    : programSlug
+                      ? "Finish & start Day 1"
+                      : "Finish & go to dashboard"}
               </button>
             </div>
           </>
