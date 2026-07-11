@@ -60,6 +60,46 @@ export function allowedProgramStartDates(
   return out;
 }
 
+/** 0 = Sunday … 6 = Saturday (local calendar). */
+export function weekdayIndexFromIso(iso: string): number {
+  return parseIsoDateOnly(iso).getDay();
+}
+
+export function isMondayIso(iso: string): boolean {
+  return weekdayIndexFromIso(iso) === 1;
+}
+
+export function isWeekendIso(iso: string): boolean {
+  const d = weekdayIndexFromIso(iso);
+  return d === 0 || d === 6;
+}
+
+/**
+ * Prefer the first Monday in the allowed window — keeps M1D1 on a Monday
+ * (especially helpful for members who train on weekends).
+ */
+export function recommendedProgramStartDate(
+  todayIso: string,
+  maxOffset = MAX_PROGRAM_START_OFFSET_DAYS,
+): string {
+  const monday = allowedProgramStartDates(todayIso, maxOffset).find((iso) => isMondayIso(iso));
+  return monday ?? todayIso;
+}
+
+/** Monday first, then remaining dates chronologically. */
+export function orderedProgramStartDateOptions(
+  todayIso: string,
+  maxOffset = MAX_PROGRAM_START_OFFSET_DAYS,
+): Array<{ iso: string; recommended: boolean }> {
+  const recommended = recommendedProgramStartDate(todayIso, maxOffset);
+  const all = allowedProgramStartDates(todayIso, maxOffset);
+  const rest = all.filter((iso) => iso !== recommended);
+  return [
+    { iso: recommended, recommended: true },
+    ...rest.map((iso) => ({ iso, recommended: false })),
+  ];
+}
+
 export function formatProgramStartOption(iso: string): string {
   const d = parseIsoDateOnly(iso);
   return d.toLocaleDateString(undefined, {

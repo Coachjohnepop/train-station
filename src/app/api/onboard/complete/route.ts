@@ -22,6 +22,7 @@ import { enrollUserInProgram } from "@/lib/data/user-data";
 import {
   isValidProgramStartDate,
   MAX_PROGRAM_START_OFFSET_DAYS,
+  recommendedProgramStartDate,
 } from "@/lib/member-program-block";
 import { localTodayIso } from "@/lib/program-calendar";
 
@@ -69,7 +70,7 @@ export async function POST(request: Request) {
   } = body.data;
 
   const todayIso = localTodayIso();
-  const startIso = programStartDate?.trim() || todayIso;
+  const startIso = programStartDate?.trim() || recommendedProgramStartDate(todayIso);
   if (!isValidProgramStartDate(startIso, todayIso, MAX_PROGRAM_START_OFFSET_DAYS)) {
     return NextResponse.json(
       { error: "Start date must be between today and 6 days from now." },

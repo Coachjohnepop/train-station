@@ -12,6 +12,7 @@ import CityStateInput from "@/components/CityStateInput";
 import ProgramStartDatePicker from "@/components/ProgramStartDatePicker";
 import { localTodayIso } from "@/lib/program-calendar";
 import { isPaidOffer } from "@/lib/product-offers";
+import { recommendedProgramStartDate } from "@/lib/member-program-block";
 
 async function saveProgress(body: Record<string, unknown>) {
   await fetch("/api/member/onboard-progress", {
@@ -65,7 +66,9 @@ export default function OnboardingWizard({
   const [measurements, setMeasurements] = useState({ weight: "", notes: "" });
   const [location, setLocation] = useState({ city: "", state: "" });
   const [sms, setSms] = useState({ phone: "", dailyReminderTime: "07:30" });
-  const [programStartDate, setProgramStartDate] = useState(() => localTodayIso());
+  const [programStartDate, setProgramStartDate] = useState(() =>
+    recommendedProgramStartDate(localTodayIso()),
+  );
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -277,8 +280,9 @@ export default function OnboardingWizard({
           <>
             <h2 className="text-lg font-semibold">When do you want to start?</h2>
             <p className="text-sm text-[var(--muted)]">
-              Your $25 unlocks 28 days of workouts. Pick day 1 — you can start today or schedule up
-              to 6 days out.
+              Your $25 unlocks 28 days of workouts. We recommend starting on{" "}
+              <strong className="text-emerald-200">Monday</strong> so Day 1 matches the training
+              week — especially if you lift on weekends. You can pick today through 6 days out.
             </p>
             <ProgramStartDatePicker value={programStartDate} onChange={setProgramStartDate} />
             <div className="flex gap-3 pt-2">
