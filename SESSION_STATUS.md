@@ -1,6 +1,10 @@
 # Train Station — Session Status
 
-*Last updated: Thursday, July 2, 2026 — John in PST (California)*
+> **Superseded as the living handoff.**  
+> Current notebook: **[`CONTEXT.md`](./CONTEXT.md)** (WHERE WE LEFT OFF, people, archive/clone, soaks).  
+> This file is a **July 2, 2026** snapshot (Go to Today / Zoom / dashboard) kept for history.
+
+*Last updated (this snapshot): Thursday, July 2, 2026 — John in PST (California)*
 
 ## Where we are
 
