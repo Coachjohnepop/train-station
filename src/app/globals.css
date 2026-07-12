@@ -1910,7 +1910,7 @@ input:-webkit-autofill {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  /* Real OS emoji 👉🏾 — medium-dark tan skin, points right */
+  /* Real OS emoji 👉🏽 — medium tan skin (one shade lighter), points right */
   font-size: 2.85rem;
   line-height: 1;
   transform: translate3d(-6px, 0, 0);
