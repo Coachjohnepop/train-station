@@ -14,6 +14,10 @@ import {
 } from "@/lib/demo-persistence";
 import { requireStaff } from "@/lib/api-auth";
 import { hintVideoUrlForExerciseName } from "@/lib/exercise-video-hints";
+import {
+  listCatalogExercises,
+  type ArchiveFilter,
+} from "@/lib/catalog-exercise-archive";
 
 const createSchema = z.object({
   name: z.string().min(1).max(200),
@@ -22,22 +26,32 @@ const createSchema = z.object({
   tags: z.string().optional(),
 });
 
-export async function GET() {
+/** GET ?archive=active|archived|all — default active (pickers hide archived). */
+export async function GET(request: Request) {
   const auth = await requireStaff();
   if (!auth.ok) return auth.response;
-  if (isDemoMode()) {
-    await hydrateDemoExercises({ preferFresh: true });
-    const exercises = loadDemoExercises();
+
+  const url = new URL(request.url);
+  const archiveParam = url.searchParams.get("archive");
+  const archive: ArchiveFilter =
+    archiveParam === "archived" ||
+    archiveParam === "all" ||
+    archiveParam === "active"
+      ? archiveParam
+      : "active";
+
+  try {
+    const exercises = await listCatalogExercises(archive);
     return NextResponse.json(exercises, {
       headers: { "Cache-Control": "no-store" },
     });
+  } catch (err) {
+    console.error("GET /api/exercises", err);
+    return NextResponse.json(
+      { detail: "Could not load exercises." },
+      { status: 500 },
+    );
   }
-  const exercises = await prisma.exercise.findMany({
-    orderBy: { name: "asc" },
-  });
-  return NextResponse.json(exercises, {
-    headers: { "Cache-Control": "no-store" },
-  });
 }
 
 export async function POST(request: Request) {
@@ -61,6 +75,7 @@ export async function POST(request: Request) {
       description: description?.trim() || null,
       videoUrl: resolvedVideoUrl,
       tags: tags?.trim() || null,
+      archivedAt: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       defaultSetScheme: null,

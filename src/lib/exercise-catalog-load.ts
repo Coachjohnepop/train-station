@@ -22,14 +22,16 @@ export type CatalogExercise = ExerciseCatalogEntry & {
 };
 
 export async function loadExerciseCatalogForMatching(): Promise<CatalogExercise[]> {
+  // Active only — archived exercises stay on past workouts (by id) but are not matched into new content.
   if (!isCoachCatalogDemo()) {
     return prisma.exercise.findMany({
+      where: { archivedAt: null },
       select: { id: true, name: true, description: true, tags: true, videoUrl: true },
       orderBy: { name: "asc" },
     });
   }
   await hydrateDemoExercises({ preferFresh: true });
-  return loadDemoExercises();
+  return loadDemoExercises().filter((e: { archivedAt?: string | null }) => !e.archivedAt);
 }
 
 export async function loadExercisesByIds(

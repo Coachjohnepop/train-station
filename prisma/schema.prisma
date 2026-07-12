@@ -103,11 +103,15 @@ model Exercise {
   description       String?
   videoUrl          String?
   tags              String?
+  /// Soft-archive: hidden from pickers / active library; existing workout refs stay intact.
+  archivedAt        DateTime?
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
   workoutItems      WorkoutExercise[]
   performances      ExercisePerformance[]
   requiredEquipment ExerciseEquipment[]
+
+  @@index([archivedAt])
 }
 
 model Workout {

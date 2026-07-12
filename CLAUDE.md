@@ -43,9 +43,9 @@ Jeremy builds content by **cloning**, never by shared mutable references:
 - **Same day next week** and **Copy Gym → Home** on program calendar.
 - **Coach note on a workout line** (`WorkoutExercise.notes`) = session cue for members — distinct from library `Exercise.description` / YouTube video.
 - **28-day cycle packs** (`WorkoutCycle` library): snapshot program month → library; paste onto any program by **day number** (1–28). **Warn and require confirm if target month already has content** (`force: true` after confirm). Calendar-date alignment deferred.
-- **Archive → then delete (look-back shelf):** Templates and cycle packs use `archivedAt`. `DELETE` soft-archives (hidden from default lists, still listable with `?archive=archived`). **Restore** via `PATCH { action: "restore" }`. **Permanent delete** only with `?hard=1` and only if already archived (or `force=1`). Same pattern as user soft-hide — Jeremy can look back before true purge. Extend to catalog workouts later if needed.
-- UI entry: program calendar → **Templates & paste** panel. APIs under `/api/workout-templates/*` and `/api/workout-cycles/*` (+ snapshot|paste).
-- Migrations: `20260712180000_workout_templates`, `20260712230000_archive_templates_cycles`.
+- **Archive → then delete (look-back shelf):** Templates, cycle packs, **and catalog exercises** use `archivedAt`. `DELETE` soft-archives (hidden from default lists / pickers, still listable with `?archive=archived`). **Restore** via `PATCH { action: "restore" }`. **Permanent delete** only with `?hard=1` and only if already archived (or `force=1`). **Exercises:** archive hides from pickers and text-upload matching; existing `WorkoutExercise` refs stay intact so past sessions still resolve names/videos. Hard delete strips workout refs (rare). Same pattern as user soft-hide — Jeremy can look back before true purge.
+- UI: program calendar → **Templates & paste** panel (templates/packs); **Admin → Exercises** archive shelf. APIs: `/api/workout-templates/*`, `/api/workout-cycles/*`, `/api/exercises?archive=…`.
+- Migrations: `20260712180000_workout_templates`, `20260712230000_archive_templates_cycles`, `20260712240000_archive_exercises`.
 
 ## Deploy branches (June 2026)
 - **Production:** `main` only — currently tagged `prod-fallback-2026-06-14` (`64807c9`). Do not push WIP features to `main` unless John explicitly asks for prod.

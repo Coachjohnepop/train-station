@@ -12,13 +12,19 @@ import {
   demoPersistenceWarning,
 } from "@/lib/demo-persistence";
 import { requireStaff } from "@/lib/api-auth";
-import { deleteCatalogExercise } from "@/lib/delete-catalog-exercise";
+import {
+  archiveCatalogExercise,
+  deleteOrArchiveCatalogExercise,
+  restoreCatalogExercise,
+} from "@/lib/catalog-exercise-archive";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).optional().nullable(),
   videoUrl: z.string().max(2000).optional().nullable(),
   tags: z.string().optional().nullable(),
+  /** Soft-restore from archive shelf. */
+  action: z.literal("restore").optional(),
 });
 
 type Params = { params: Promise<{ id: string }> };
@@ -49,7 +55,27 @@ export async function PATCH(request: Request, { params }: Params) {
   if (!auth.ok) return auth.response;
 
   const { id } = await params;
-  const parsed = updateSchema.safeParse(await request.json());
+  const body = await request.json().catch(() => ({}));
+
+  // Restore from archive shelf (same contract as workout templates).
+  if (body?.action === "restore") {
+    try {
+      const row = await restoreCatalogExercise(id);
+      return NextResponse.json(row);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Restore failed";
+      if (msg === "NOT_FOUND") {
+        return NextResponse.json({ detail: "Exercise not found" }, { status: 404 });
+      }
+      console.error("exercise.restore failed:", e);
+      return NextResponse.json(
+        { detail: msg.includes("could not be saved") ? msg : "Could not restore exercise." },
+        { status: msg.includes("could not be saved") ? 503 : 500 },
+      );
+    }
+  }
+
+  const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
   }
@@ -75,7 +101,7 @@ export async function PATCH(request: Request, { params }: Params) {
   if (isDemoMode()) {
     await hydrateDemoExercises({ preferFresh: true });
     const list = loadDemoExercises();
-    const idx = list.findIndex((e: any) => e.id === id);
+    const idx = list.findIndex((e: { id: string }) => e.id === id);
     if (idx === -1) {
       return NextResponse.json(
         { detail: "Exercise not found — refresh the page and try again." },
@@ -108,53 +134,51 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(_request: Request, { params }: Params) {
+/**
+ * DELETE = soft-archive by default (hide from pickers; keep workout refs).
+ * ?hard=1 = permanent delete only if already archived (or force=1).
+ */
+export async function DELETE(request: Request, { params }: Params) {
   const auth = await requireStaff();
   if (!auth.ok) return auth.response;
 
   const { id } = await params;
-  if (isDemoMode()) {
-    await hydrateDemoExercises({ preferFresh: true });
-    const list = loadDemoExercises();
-    const idx = list.findIndex((e: any) => e.id === id);
-    if (idx === -1) {
-      return NextResponse.json(
-        { detail: "Exercise not found — refresh the page and try again." },
-        { status: 404 },
-      );
-    }
-    list.splice(idx, 1);
-    const { mutateDemoSeed } = await import("@/lib/demo-seed-store");
-    await mutateDemoSeed((seed) => {
-      if (!seed.workoutExercises) return;
-      seed.workoutExercises = (seed.workoutExercises as Array<{ exerciseId?: string }>).filter(
-        (we) => we.exerciseId !== id,
-      );
-    });
-    const saveResult = await saveDemoExercises(list);
-    const persistenceFailure = demoPersistenceError(saveResult, "Exercise delete");
-    if (persistenceFailure) return persistenceFailure;
+  const url = new URL(request.url);
+  const hard = url.searchParams.get("hard") === "1";
+  const forceHard = url.searchParams.get("force") === "1";
 
-    const warning = demoPersistenceWarning(saveResult);
-    const response = new NextResponse(null, { status: 204 });
-    if (warning) {
-      response.headers.set("X-Persistence-Warning", warning);
-    }
-    return response;
-  }
   try {
-    const { removedFromWorkouts } = await deleteCatalogExercise(id);
-    const response = new NextResponse(null, { status: 204 });
-    if (removedFromWorkouts > 0) {
-      response.headers.set(
-        "X-Removed-From-Workouts",
-        String(removedFromWorkouts),
+    if (!hard) {
+      // Prefer dedicated archive path so response includes the row.
+      const exercise = await archiveCatalogExercise(id);
+      return NextResponse.json({ ok: true, mode: "archived", exercise });
+    }
+
+    const result = await deleteOrArchiveCatalogExercise(id, {
+      hard: true,
+      forceHard,
+    });
+    return NextResponse.json({
+      ok: true,
+      mode: result.mode,
+      removedFromWorkouts: result.removedFromWorkouts ?? 0,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Delete failed";
+    if (msg === "NOT_FOUND") {
+      return NextResponse.json({ detail: "Exercise not found" }, { status: 404 });
+    }
+    if (msg === "NOT_ARCHIVED") {
+      return NextResponse.json(
+        {
+          detail:
+            "Archive the exercise first, then permanently delete from the archive shelf.",
+        },
+        { status: 409 },
       );
     }
-    return response;
-  } catch (err) {
-    if (err instanceof Error && err.message === "NOT_FOUND") {
-      return NextResponse.json({ detail: "Exercise not found" }, { status: 404 });
+    if (msg.includes("could not be saved")) {
+      return NextResponse.json({ detail: msg }, { status: 503 });
     }
     console.error("exercise.delete failed:", err);
     return NextResponse.json(

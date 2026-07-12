@@ -54,6 +54,7 @@ function matchWorkoutByName(name: string, workouts: Array<{ id: string; name: st
 
 async function loadExerciseCatalog(): Promise<ExerciseRow[]> {
   return prisma.exercise.findMany({
+    where: { archivedAt: null },
     select: { id: true, name: true, description: true, tags: true, videoUrl: true },
     orderBy: { name: "asc" },
   });

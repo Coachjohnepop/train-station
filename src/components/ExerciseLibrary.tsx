@@ -14,6 +14,7 @@ type Exercise = {
   description: string | null;
   videoUrl: string | null;
   tags: string | null;
+  archivedAt?: string | null;
 };
 
 type UsageSummary = {
@@ -334,6 +335,8 @@ type PersistenceStatus = {
 export default function ExerciseLibrary() {
   const searchParams = useSearchParams();
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [archivedExercises, setArchivedExercises] = useState<Exercise[]>([]);
+  const [showArchiveShelf, setShowArchiveShelf] = useState(false);
   const [usages, setUsages] = useState<Record<string, UsageSummary>>({});
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -381,8 +384,9 @@ export default function ExerciseLibrary() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [exRes, usageRes] = await Promise.all([
-      fetch("/api/exercises", { cache: "no-store" }),
+    const [exRes, archRes, usageRes] = await Promise.all([
+      fetch("/api/exercises?archive=active", { cache: "no-store" }),
+      fetch("/api/exercises?archive=archived", { cache: "no-store" }),
       fetch("/api/exercises/usage", { cache: "no-store" }),
     ]);
 
@@ -391,7 +395,13 @@ export default function ExerciseLibrary() {
       return;
     }
     const exs = await exRes.json();
-    setExercises(exs);
+    setExercises(Array.isArray(exs) ? exs : []);
+    if (archRes.ok) {
+      const arch = await archRes.json();
+      setArchivedExercises(Array.isArray(arch) ? arch : []);
+    } else {
+      setArchivedExercises([]);
+    }
 
     if (usageRes.ok) {
       setUsages(await usageRes.json());
@@ -544,31 +554,68 @@ export default function ExerciseLibrary() {
     await load();
   }
 
-  async function remove(id: string, exerciseName: string) {
+  async function archiveExercise(id: string, exerciseName: string) {
     const u = usages[id];
-    const usageNote = u && u.programCount > 0
-      ? ` (used in ${u.programCount} program${u.programCount === 1 ? "" : "s"} / ${u.workoutCount} workout${u.workoutCount === 1 ? "" : "s"} — it will be removed from those workouts)`
-      : "";
-    if (!confirm(`Delete “${exerciseName}” from the library?${usageNote}`)) return;
+    const usageNote =
+      u && u.programCount > 0
+        ? ` Used in ${u.programCount} program${u.programCount === 1 ? "" : "s"} / ${u.workoutCount} workout${u.workoutCount === 1 ? "" : "s"} — those workouts keep the exercise; it only disappears from pickers.`
+        : " Hidden from workout pickers; restore anytime from the archive shelf.";
+    if (!confirm(`Archive “${exerciseName}”?${usageNote}`)) return;
     const res = await fetch(`/api/exercises/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      setError(formatApiError((body as { detail?: unknown }).detail) || "Delete failed — try again.");
+      setError(
+        formatApiError((body as { detail?: unknown }).detail) ||
+          "Archive failed — try again.",
+      );
       return;
     }
-    const warning = res.headers.get("X-Persistence-Warning");
-    setExercises((prev) => prev.filter((e) => e.id !== id));
-    setUsages((prev) => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
+    setMessage(`Archived “${exerciseName}” — find it under Archive shelf.`);
+    await load();
+  }
+
+  async function restoreExercise(id: string, exerciseName: string) {
+    const res = await fetch(`/api/exercises/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "restore" }),
     });
-    setMessage(
-      warning
-        ? `Deleted “${exerciseName}”. ${warning}`
-        : `Deleted “${exerciseName}”.`,
-    );
-    // List already updated locally; skip immediate reload so a stale blob read cannot resurrect the row.
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(
+        formatApiError((body as { detail?: unknown }).detail) ||
+          "Restore failed — try again.",
+      );
+      return;
+    }
+    setMessage(`Restored “${exerciseName}” to the active library.`);
+    await load();
+  }
+
+  async function hardDeleteExercise(id: string, exerciseName: string) {
+    const u = usages[id];
+    const usageNote =
+      u && u.workoutCount > 0
+        ? `\n\nWARNING: used in ${u.workoutCount} workout${u.workoutCount === 1 ? "" : "s"} — permanent delete removes it from those workouts.`
+        : "";
+    if (
+      !confirm(
+        `Permanently delete archived “${exerciseName}”?${usageNote}\n\nThis cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    const res = await fetch(`/api/exercises/${id}?hard=1`, { method: "DELETE" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(
+        formatApiError((body as { detail?: unknown }).detail) ||
+          "Delete failed — try again.",
+      );
+      return;
+    }
+    setMessage(`Permanently deleted “${exerciseName}”.`);
+    await load();
   }
 
   function startEdit(ex: Exercise) {
@@ -685,8 +732,9 @@ export default function ExerciseLibrary() {
           <p className="font-medium text-[var(--text)]">How exercise edits are saved</p>
           <p className="mt-1">{persistenceStatus.message}</p>
           <p className="mt-2 text-xs text-[var(--muted)]">
-            Deletes and renames update workouts and programs automatically. For a permanent
-            live snapshot, use <strong>Export seed snapshot</strong> on Programs (or{" "}
+            Archive hides an exercise from pickers but keeps it on existing workouts. Permanent
+            delete is only from the archive shelf. For a permanent live snapshot, use{" "}
+            <strong>Export seed snapshot</strong> on Programs (or{" "}
             <code className="rounded bg-[var(--surface)] px-1">npm run db:export-seed</code>) and commit{" "}
             <code className="rounded bg-[var(--surface)] px-1">prisma/seed-data.json</code>.
           </p>
@@ -1034,9 +1082,10 @@ export default function ExerciseLibrary() {
                       <button
                         type="button"
                         className="text-sm text-[var(--danger)]"
-                        onClick={() => remove(ex.id, ex.name)}
+                        onClick={() => void archiveExercise(ex.id, ex.name)}
+                        title="Hide from pickers — existing workouts keep this exercise"
                       >
-                        Delete
+                        Archive
                       </button>
                     </td>
                   </tr>
@@ -1044,6 +1093,67 @@ export default function ExerciseLibrary() {
               })}
             </tbody>
           </table>
+        )}
+      </div>
+
+      {/* Archive shelf — look back before permanent delete */}
+      <div className="space-y-2 rounded-xl border border-dashed border-[var(--border)] p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold">Archive shelf</h3>
+          <button
+            type="button"
+            className="btn-ghost px-2 py-0.5 text-xs"
+            onClick={() => setShowArchiveShelf((v) => !v)}
+          >
+            {showArchiveShelf ? "Hide" : "Show"} archived ({archivedExercises.length})
+          </button>
+        </div>
+        <p className="text-xs text-[var(--muted)]">
+          Archive = hide from workout pickers (past workouts still show the name). Permanent
+          delete only from this shelf — and only if you are sure.
+        </p>
+        {showArchiveShelf && (
+          <ul className="max-h-64 space-y-1 overflow-y-auto text-sm">
+            {archivedExercises.length === 0 ? (
+              <li className="text-[var(--muted)] text-xs">No archived exercises yet.</li>
+            ) : (
+              archivedExercises.map((ex) => {
+                const u = usages[ex.id];
+                return (
+                  <li
+                    key={ex.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded border border-[var(--border)] px-3 py-2"
+                  >
+                    <span className="min-w-0">
+                      <span className="font-medium">{ex.name}</span>
+                      {u && u.workoutCount > 0 ? (
+                        <span className="ml-2 text-[10px] text-[var(--muted)]">
+                          still on {u.workoutCount} workout
+                          {u.workoutCount === 1 ? "" : "s"}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="flex shrink-0 gap-2 text-xs">
+                      <button
+                        type="button"
+                        className="text-accent underline"
+                        onClick={() => void restoreExercise(ex.id, ex.name)}
+                      >
+                        Restore
+                      </button>
+                      <button
+                        type="button"
+                        className="text-[var(--danger)] underline"
+                        onClick={() => void hardDeleteExercise(ex.id, ex.name)}
+                      >
+                        Delete forever
+                      </button>
+                    </span>
+                  </li>
+                );
+              })
+            )}
+          </ul>
         )}
       </div>
 
