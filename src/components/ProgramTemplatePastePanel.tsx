@@ -63,12 +63,15 @@ export default function ProgramTemplatePastePanel({
   >([]);
   const [pasteCycleId, setPasteCycleId] = useState("");
   const [pasteCycleMonth, setPasteCycleMonth] = useState(1);
+  const [showArchivedTemplates, setShowArchivedTemplates] = useState(false);
+  const [archivedTemplates, setArchivedTemplates] = useState<TemplateRow[]>([]);
 
   const load = useCallback(async () => {
-    const [tRes, wRes, cRes] = await Promise.all([
-      fetch("/api/workout-templates", { cache: "no-store" }),
+    const [tRes, wRes, cRes, archRes] = await Promise.all([
+      fetch("/api/workout-templates?archive=active", { cache: "no-store" }),
       fetch("/api/workouts", { cache: "no-store" }),
-      fetch("/api/workout-cycles?library=1", { cache: "no-store" }),
+      fetch("/api/workout-cycles?library=1&archive=active", { cache: "no-store" }),
+      fetch("/api/workout-templates?archive=archived", { cache: "no-store" }),
     ]);
     if (tRes.ok) setTemplates(await tRes.json());
     if (wRes.ok) setWorkouts(await wRes.json());
@@ -80,6 +83,7 @@ export default function ProgramTemplatePastePanel({
         ),
       );
     }
+    if (archRes.ok) setArchivedTemplates(await archRes.json());
   }, []);
 
   useEffect(() => {
@@ -225,6 +229,74 @@ export default function ProgramTemplatePastePanel({
         return;
       }
       msg(`Saved 28-day pack “${name}” to library (deep clone).`);
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function archiveSelectedTemplate() {
+    if (!templateId) {
+      setError("Pick a template to archive.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/workout-templates/${templateId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(formatApiErrorDetail(data.detail) || "Archive failed");
+        return;
+      }
+      setTemplateId("");
+      msg("Template archived — find it under Archive shelf.");
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function restoreTemplate(id: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/workout-templates/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "restore" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(formatApiErrorDetail(data.detail) || "Restore failed");
+        return;
+      }
+      msg("Template restored to the active library.");
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function hardDeleteTemplate(id: string, name: string) {
+    const ok = window.confirm(
+      `Permanently delete archived template “${name}”?\n\nThis cannot be undone.`,
+    );
+    if (!ok) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/workout-templates/${id}?hard=1`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(formatApiErrorDetail(data.detail) || "Delete failed");
+        return;
+      }
+      msg("Template permanently deleted.");
       await load();
     } finally {
       setBusy(false);
@@ -465,6 +537,71 @@ export default function ProgramTemplatePastePanel({
         >
           Promote to template library
         </button>
+      </div>
+
+      {/* Archive shelf — look back before permanent delete */}
+      <div className="space-y-2 rounded-md border border-dashed border-[var(--border)] p-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[11px] font-semibold">Archive shelf</p>
+          <button
+            type="button"
+            className="btn-ghost px-2 py-0.5 text-[10px]"
+            onClick={() => setShowArchivedTemplates((v) => !v)}
+          >
+            {showArchivedTemplates ? "Hide" : "Show"} archived templates (
+            {archivedTemplates.length})
+          </button>
+        </div>
+        <p className="text-[10px] text-[var(--muted)]">
+          Delete = archive first (look back anytime). Permanent delete only from this shelf.
+        </p>
+        {templateId ? (
+          <button
+            type="button"
+            className="btn-ghost h-8 px-3 text-[11px] text-[var(--danger)]"
+            disabled={busy || disabled || !templateId}
+            onClick={() => void archiveSelectedTemplate()}
+          >
+            Archive selected template
+          </button>
+        ) : null}
+        {showArchivedTemplates && (
+          <ul className="max-h-36 space-y-1 overflow-y-auto text-[10px]">
+            {archivedTemplates.length === 0 ? (
+              <li className="text-[var(--muted)]">No archived templates yet.</li>
+            ) : (
+              archivedTemplates.map((t) => (
+                <li
+                  key={t.id}
+                  className="flex flex-wrap items-center justify-between gap-1 rounded border border-[var(--border)] px-2 py-1"
+                >
+                  <span className="min-w-0 truncate">
+                    [{t.category}] {t.name}
+                    {t.versionLabel ? ` · ${t.versionLabel}` : ""}
+                  </span>
+                  <span className="flex shrink-0 gap-1">
+                    <button
+                      type="button"
+                      className="text-accent underline"
+                      disabled={busy}
+                      onClick={() => void restoreTemplate(t.id)}
+                    >
+                      Restore
+                    </button>
+                    <button
+                      type="button"
+                      className="text-[var(--danger)] underline"
+                      disabled={busy}
+                      onClick={() => void hardDeleteTemplate(t.id, t.name)}
+                    >
+                      Delete forever
+                    </button>
+                  </span>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
       </div>
 
       {/* 28-day pack */}

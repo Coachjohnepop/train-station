@@ -32,19 +32,36 @@ export async function POST(request: Request) {
     if (!isCoachCatalogDemo()) {
       const tmpl = await prisma.workoutTemplate.findUnique({
         where: { id: parsed.data.templateId },
-        select: { workoutId: true },
+        select: { workoutId: true, archivedAt: true },
       });
       if (!tmpl) {
         return NextResponse.json({ detail: "Template not found" }, { status: 404 });
+      }
+      if (tmpl.archivedAt) {
+        return NextResponse.json(
+          { detail: "Template is archived — restore it before pasting." },
+          { status: 409 },
+        );
       }
       sourceWorkoutId = tmpl.workoutId;
     } else {
       const { getDemoSeed } = await import("@/lib/demo-seed-store");
       const seed = await getDemoSeed({ preferFresh: true });
-      const list = (seed.workoutTemplates as { id: string; workoutId: string }[]) || [];
+      const list =
+        (seed.workoutTemplates as {
+          id: string;
+          workoutId: string;
+          archivedAt?: string | null;
+        }[]) || [];
       const tmpl = list.find((t) => t.id === parsed.data.templateId);
       if (!tmpl) {
         return NextResponse.json({ detail: "Template not found" }, { status: 404 });
+      }
+      if (tmpl.archivedAt) {
+        return NextResponse.json(
+          { detail: "Template is archived — restore it before pasting." },
+          { status: 409 },
+        );
       }
       sourceWorkoutId = tmpl.workoutId;
     }

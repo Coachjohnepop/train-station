@@ -49,6 +49,8 @@ export async function listWorkoutCycles(opts?: {
   programId?: string;
   programSlug?: string;
   libraryOnly?: boolean;
+  /** Default active only. */
+  archive?: "active" | "archived" | "all";
 }) {
   let programId = opts?.programId;
   if (!programId && opts?.programSlug) {
@@ -63,11 +65,19 @@ export async function listWorkoutCycles(opts?: {
     await backfillProgramCycles(programId);
   }
 
-  const where = opts?.libraryOnly
-    ? { programId: null }
+  const archive = opts?.archive || "active";
+  const base = opts?.libraryOnly
+    ? { programId: null as string | null }
     : programId
       ? { OR: [{ programId: null }, { programId }] }
-      : { programId: null };
+      : { programId: null as string | null };
+
+  const where =
+    archive === "all"
+      ? base
+      : archive === "archived"
+        ? { AND: [base, { archivedAt: { not: null } }] }
+        : { AND: [base, { archivedAt: null }] };
 
   return prisma.workoutCycle.findMany({
     where,
@@ -77,6 +87,59 @@ export async function listWorkoutCycles(opts?: {
       _count: { select: { days: true, clones: true } },
     },
   });
+}
+
+/** Soft-archive a 28-day pack / cycle (look-back shelf). */
+export async function archiveWorkoutCycle(id: string) {
+  const existing = await prisma.workoutCycle.findUnique({ where: { id } });
+  if (!existing) throw new Error("CYCLE_NOT_FOUND");
+  // Free program month slot so a new active pack can land there; keep name for look-back.
+  const name =
+    existing.programId && existing.cycleMonth
+      ? `${existing.name.replace(/\s*\[archived.*\]\s*$/i, "")} [archived M${existing.cycleMonth}]`
+      : existing.name;
+  return prisma.workoutCycle.update({
+    where: { id },
+    data: {
+      archivedAt: new Date(),
+      programId: null,
+      cycleMonth: null,
+      name,
+    },
+    include: cycleInclude,
+  });
+}
+
+export async function restoreWorkoutCycle(id: string) {
+  const existing = await prisma.workoutCycle.findUnique({ where: { id } });
+  if (!existing) throw new Error("CYCLE_NOT_FOUND");
+  return prisma.workoutCycle.update({
+    where: { id },
+    data: { archivedAt: null },
+    include: cycleInclude,
+  });
+}
+
+/**
+ * Permanent delete — only if already archived (unless forceHard).
+ * Soft path: archiveWorkoutCycle.
+ */
+export async function deleteWorkoutCycle(
+  id: string,
+  opts?: { hard?: boolean; forceHard?: boolean },
+): Promise<{ mode: "archived" | "deleted" }> {
+  const existing = await prisma.workoutCycle.findUnique({ where: { id } });
+  if (!existing) throw new Error("CYCLE_NOT_FOUND");
+
+  if (!opts?.hard) {
+    await archiveWorkoutCycle(id);
+    return { mode: "archived" };
+  }
+  if (!existing.archivedAt && !opts?.forceHard) {
+    throw new Error("NOT_ARCHIVED");
+  }
+  await prisma.workoutCycle.delete({ where: { id } });
+  return { mode: "deleted" };
 }
 
 export async function getWorkoutCycleById(id: string) {

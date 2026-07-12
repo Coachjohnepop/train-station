@@ -134,20 +134,23 @@ model Workout {
 
 /// Coach template library entry — paste always deep-clones `workoutId` (never shared by reference).
 model WorkoutTemplate {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   name         String
   /// Folder-style organization: adult, athletes, youth, general, …
-  category     String   @default("general")
+  category     String    @default("general")
   /// Free-text version tag (e.g. v_adult, vyoungkids).
   versionLabel String?
-  notes        String?  @db.Text
-  workoutId    String   @unique
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  workout      Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  notes        String?   @db.Text
+  workoutId    String    @unique
+  /// Soft-archive: hidden from default library; restore before permanent delete.
+  archivedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  workout      Workout   @relation(fields: [workoutId], references: [id], onDelete: Cascade)
 
   @@index([category, name])
   @@index([updatedAt])
+  @@index([archivedAt])
 }
 
 model WorkoutExercise {
@@ -254,6 +257,8 @@ model WorkoutCycle {
   cycleMonth   Int?
   clonedFromId String?
   published    Boolean        @default(false)
+  /// Soft-archive: look-back shelf before permanent delete.
+  archivedAt   DateTime?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   program      Program?       @relation(fields: [programId], references: [id], onDelete: Cascade)
@@ -263,6 +268,7 @@ model WorkoutCycle {
 
   @@unique([programId, cycleMonth])
   @@index([programId])
+  @@index([archivedAt])
 }
 
 /// One day (1–28) inside a workout cycle.

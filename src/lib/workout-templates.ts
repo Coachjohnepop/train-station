@@ -20,6 +20,7 @@ export type WorkoutTemplateRecord = {
   versionLabel: string | null;
   notes: string | null;
   workoutId: string;
+  archivedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   exerciseCount?: number;
@@ -50,7 +51,11 @@ function demoTemplatesFromSeed(data: Record<string, unknown>): WorkoutTemplateRe
 
 export async function listWorkoutTemplates(opts?: {
   category?: string;
+  /** Default: active only. "archived" | "all" for look-back shelf. */
+  archive?: "active" | "archived" | "all";
 }): Promise<WorkoutTemplateRecord[]> {
+  const archive = opts?.archive || "active";
+
   if (isCoachCatalogDemo()) {
     const seed = await getDemoSeed({ preferFresh: true });
     let list = demoTemplatesFromSeed(seed as Record<string, unknown>);
@@ -58,13 +63,18 @@ export async function listWorkoutTemplates(opts?: {
       const cat = normalizeTemplateCategory(opts.category);
       list = list.filter((t) => t.category === cat);
     }
+    if (archive === "active") list = list.filter((t) => !t.archivedAt);
+    if (archive === "archived") list = list.filter((t) => Boolean(t.archivedAt));
     return list;
   }
 
+  const where: Record<string, unknown> = {};
+  if (opts?.category) where.category = normalizeTemplateCategory(opts.category);
+  if (archive === "active") where.archivedAt = null;
+  if (archive === "archived") where.archivedAt = { not: null };
+
   const rows = await prisma.workoutTemplate.findMany({
-    where: opts?.category
-      ? { category: normalizeTemplateCategory(opts.category) }
-      : undefined,
+    where,
     orderBy: [{ category: "asc" }, { name: "asc" }],
     include: {
       workout: {
@@ -84,6 +94,7 @@ export async function listWorkoutTemplates(opts?: {
     versionLabel: r.versionLabel,
     notes: r.notes,
     workoutId: r.workoutId,
+    archivedAt: r.archivedAt?.toISOString() ?? null,
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
     exerciseCount: r.workout._count.exercises,
@@ -181,30 +192,136 @@ export async function promoteWorkoutToTemplate(input: {
   };
 }
 
-export async function deleteWorkoutTemplate(id: string): Promise<void> {
+/**
+ * Soft-archive (default) or permanent delete.
+ * - archive: hide from active library (look-back shelf)
+ * - hard: only allowed if already archived (or forceHard)
+ */
+export async function archiveWorkoutTemplate(id: string): Promise<WorkoutTemplateRecord> {
+  if (isCoachCatalogDemo()) {
+    let updated: WorkoutTemplateRecord | null = null;
+    const { blobSaved } = await mutateDemoSeed((data) => {
+      const list = (data.workoutTemplates as WorkoutTemplateRecord[]) || [];
+      const row = list.find((t) => t.id === id);
+      if (!row) throw new Error("TEMPLATE_NOT_FOUND");
+      row.archivedAt = new Date().toISOString();
+      row.updatedAt = row.archivedAt;
+      updated = row;
+    }, { preferFresh: true });
+    requireBlobPersisted(blobSaved, "Template archive");
+    return updated!;
+  }
+
+  const existing = await prisma.workoutTemplate.findUnique({
+    where: { id },
+    include: {
+      workout: { select: { id: true, name: true, _count: { select: { exercises: true } } } },
+    },
+  });
+  if (!existing) throw new Error("TEMPLATE_NOT_FOUND");
+  const row = await prisma.workoutTemplate.update({
+    where: { id },
+    data: { archivedAt: new Date() },
+    include: {
+      workout: { select: { id: true, name: true, _count: { select: { exercises: true } } } },
+    },
+  });
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    versionLabel: row.versionLabel,
+    notes: row.notes,
+    workoutId: row.workoutId,
+    archivedAt: row.archivedAt?.toISOString() ?? null,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    exerciseCount: row.workout._count.exercises,
+    workoutName: row.workout.name,
+  };
+}
+
+export async function restoreWorkoutTemplate(id: string): Promise<WorkoutTemplateRecord> {
+  if (isCoachCatalogDemo()) {
+    let updated: WorkoutTemplateRecord | null = null;
+    const { blobSaved } = await mutateDemoSeed((data) => {
+      const list = (data.workoutTemplates as WorkoutTemplateRecord[]) || [];
+      const row = list.find((t) => t.id === id);
+      if (!row) throw new Error("TEMPLATE_NOT_FOUND");
+      row.archivedAt = null;
+      row.updatedAt = new Date().toISOString();
+      updated = row;
+    }, { preferFresh: true });
+    requireBlobPersisted(blobSaved, "Template restore");
+    return updated!;
+  }
+
+  const existing = await prisma.workoutTemplate.findUnique({ where: { id } });
+  if (!existing) throw new Error("TEMPLATE_NOT_FOUND");
+  const row = await prisma.workoutTemplate.update({
+    where: { id },
+    data: { archivedAt: null },
+    include: {
+      workout: { select: { id: true, name: true, _count: { select: { exercises: true } } } },
+    },
+  });
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    versionLabel: row.versionLabel,
+    notes: row.notes,
+    workoutId: row.workoutId,
+    archivedAt: null,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    exerciseCount: row.workout._count.exercises,
+    workoutName: row.workout.name,
+  };
+}
+
+/** Permanent delete — only if already archived (unless force). */
+export async function deleteWorkoutTemplate(
+  id: string,
+  opts?: { hard?: boolean; forceHard?: boolean },
+): Promise<{ mode: "archived" | "deleted" }> {
+  const hard = opts?.hard === true;
+  const forceHard = opts?.forceHard === true;
+
+  if (!hard) {
+    await archiveWorkoutTemplate(id);
+    return { mode: "archived" };
+  }
+
   if (isCoachCatalogDemo()) {
     const { blobSaved } = await mutateDemoSeed((data) => {
       const list = (data.workoutTemplates as WorkoutTemplateRecord[]) || [];
       const idx = list.findIndex((t) => t.id === id);
       if (idx < 0) throw new Error("TEMPLATE_NOT_FOUND");
+      const row = list[idx];
+      if (!row.archivedAt && !forceHard) throw new Error("NOT_ARCHIVED");
       const [removed] = list.splice(idx, 1);
       data.workoutTemplates = list;
-      // Keep the underlying workout as a normal catalog row
       const workouts = (data.workouts as any[]) || [];
       const w = workouts.find((x) => x.id === removed.workoutId);
       if (w) w.source = "catalog";
     }, { preferFresh: true });
-    requireBlobPersisted(blobSaved, "Template delete");
-    return;
+    requireBlobPersisted(blobSaved, "Template hard delete");
+    return { mode: "deleted" };
   }
 
   const existing = await prisma.workoutTemplate.findUnique({ where: { id } });
   if (!existing) throw new Error("TEMPLATE_NOT_FOUND");
+  if (!existing.archivedAt && !forceHard) throw new Error("NOT_ARCHIVED");
+
   await prisma.workoutTemplate.delete({ where: { id } });
-  await prisma.workout.update({
-    where: { id: existing.workoutId },
-    data: { source: "catalog" },
-  }).catch(() => {});
+  await prisma.workout
+    .update({
+      where: { id: existing.workoutId },
+      data: { source: "catalog" },
+    })
+    .catch(() => {});
+  return { mode: "deleted" };
 }
 
 /**

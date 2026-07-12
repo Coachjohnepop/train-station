@@ -12,7 +12,15 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const category = url.searchParams.get("category") || undefined;
-  const list = await listWorkoutTemplates({ category: category || undefined });
+  const archiveParam = url.searchParams.get("archive");
+  const archive =
+    archiveParam === "archived" || archiveParam === "all" || archiveParam === "active"
+      ? archiveParam
+      : "active";
+  const list = await listWorkoutTemplates({
+    category: category || undefined,
+    archive,
+  });
   return NextResponse.json(list);
 }
 

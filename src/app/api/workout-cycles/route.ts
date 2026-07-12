@@ -18,8 +18,13 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const programSlug = url.searchParams.get("program") || url.searchParams.get("programSlug") || undefined;
   const libraryOnly = url.searchParams.get("library") === "1";
+  const archiveParam = url.searchParams.get("archive");
+  const archive =
+    archiveParam === "archived" || archiveParam === "all" || archiveParam === "active"
+      ? archiveParam
+      : "active";
 
-  const cycles = await listWorkoutCycles({ programSlug, libraryOnly });
+  const cycles = await listWorkoutCycles({ programSlug, libraryOnly, archive });
   return NextResponse.json(cycles);
 }
 
