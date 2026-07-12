@@ -128,13 +128,117 @@ Audit Jeremy: `MINUTES=120 npx tsx scripts/jeremy-post-audit-prodtest.mjs`
 | `DEMO_SCRIPT.md` | End-to-end demo plan |
 | `JUN13_CUSTOMER_REVIEW_ACTION_PLAN.md` | Jeremy Jun 13 feedback (P0 persistence) |
 | `JEREMY_*.md` | Customer-facing test scripts |
+| `JEREMY_REMAINING_CHECKLIST.md` | Jeremy’s content + 5-min verify list |
+| `STRIPE_DEMO_SCRIPT.md` / `STRIPE_COMMISSION_SETUP.md` | Payments go-live + revenue share |
+| `PAYMENT_ADMIN_DEMO_SCRIPT.md` | Coach payment walkthrough |
+| `SESSION_STATUS.md` | Older Go to Today / Zoom verify list |
+
+---
+
+## OPEN BACKLOG (sticky — more than Stripe)
+
+*Last expanded: 2026-07-12. Reorder when priorities change; tick mental boxes here when done.*
+
+### Suggested stack order
+1. **Stripe Live + webhook + one real payment** (+ Venmo path)  
+2. **Commission / Connect** if John payouts matter before revenue grows  
+3. **Jeremy content** (YouTube + real Adult W1/W2)  
+4. **E2E money + member path** (ticket → pay → onboard → Adult → log sets)  
+5. **Zoom / Go to Today / SMS** phone verify  
+6. **Infra hygiene** (blob→Postgres pace, seed commits, soak scripts)  
+7. **Parked product** only when Jeremy asks (food, store, more programs)
+
+---
+
+### 1. Stripe — finalize money
+
+**Live probe (Jul 12):** `/api/payments/public` → `stripeEnabled: true`, **`stripeTestMode: true`**. Prices exist: **$25/mo**, **$50/mo**, **$850** one-time. Not Live money yet.
+
+| Item | Status / notes |
+|------|----------------|
+| Products/prices in **Test** | Done (member / business / pro) |
+| Checkout + webhook code paths | Shipped; prove on Live |
+| **Go Live checklist** | Flip Dashboard Live · new live `price_…` · live `sk`/`pk`/`whsec` in Vercel · redeploy · one real $25 (or refund) |
+| Live webhook **200** | `checkout.session.completed`, invoice paid/failed, subscription updated/deleted |
+| `STRIPE_PRICE_MEMBER` / `BUSINESS` / `PRO` | All three on Live env |
+| `STRIPE_AUTO_APPROVE` | Optional — auto-approve member after pay |
+| Full `STRIPE_DEMO_SCRIPT.md` pass/fail | Signup → paid → Adult Start → Admin Members shows Stripe |
+| **Venmo backup** | Landing QR + Admin → Members **Mark paid** (`JEREMY_S5_PAYMENTS_TEST.md`) |
+| **Commission / Connect** | `STRIPE_COMMISSION_*` envs · Connect Express for John · Admin → Commission · optional monthly cron |
+| Referral promos | Optional coupons / `promo_…` in commission panel |
+| Per-program Stripe products | **Not planned** — Adult unlocks with membership only |
+
+Docs: `STRIPE_DEMO_SCRIPT.md`, `STRIPE_COMMISSION_SETUP.md`, `STRIPE_PRODUCT_CATALOG.md`, `PAYMENT_ADMIN_DEMO_SCRIPT.md`
+
+---
+
+### 2. Jeremy’s plate (content + verify)
+
+Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
+
+| Item | Notes |
+|------|--------|
+| Landing YouTube links | Welcome, free-ticket chastise, weekly coach, “what’s for dinner” |
+| Real **Adult Strength** W1/W2 | Replace calendar templates with real Gym/Home content; copy-week then tweak |
+| Phone 5-min verify | Free ticket → chastise; welcome video; Member Today videos; SMS self-test; builder delete/reorder sticky |
+| Optional cleanup | Rename generic exercises; hide unused workouts; nutrition tier wording |
+
+**Watch:** Did he find MARSHMALLOW-BADGER trail / archive shelf? (`jeremy-post-audit-prodtest.mjs`)
+
+---
+
+### 3. Coach product / engineering polish
+
+| Item | Notes |
+|------|--------|
+| Archive + clone | **Shipped + soaked** — monitor Jeremy usage |
+| Jun 13 leftovers | Demo-path edge cases if still on dummy DB; messy imported workout names; **4-week / phase model** clarity |
+| Program UX | Day-card drill-down to edit exercises; hybrid Gym/Home clarity |
+| Go to Today / Zoom | Re-verify embed (not new tab), set checkoffs live, sticky video, “Show video here” |
+| Zoom → member SMS join | E2E after coach Start Video |
+| Nav cleanup | Live Floor vs Go to Today overlap; mobile bottom nav simplification |
+| Chat | Routes exist; Blob for short video uploads; coach/member chat polish as needed |
+| SMS (Twilio) | Real outbound/inbound when `TWILIO_*` set; else simulated |
+| Publish speed | Smoke republish saved class → open students |
+| Optional: commit soak scripts | `scripts/marshmallow-badger-soak.mjs`, `clone-party-soak.mjs`, etc. |
+
+---
+
+### 4. Infra / data hygiene
+
+| Item | Notes |
+|------|--------|
+| **Always ship data** with content | `prisma/seed-data.json` + `*.dev.json` |
+| Export seed after coach content sessions | `npm run db:export-seed` (or admin export) |
+| Blob → Postgres migration | Phased stores (`DEPLOY.md`) — dual-write / backfill / parity |
+| Demo vs real DB consistency | Dummy URL = demo JSON; prod Postgres path for durable multi-user |
+| Local dev | Restart `npm run dev` (:3000 / :3002) after long sessions |
+
+---
+
+### 5. Parked / later (not active unless asked)
+
+- Eating / food logging (“coming soon”)  
+- Store section (placeholder by design)  
+- Coming-soon programs: military, glute, yoga, nutrition, stretching waitlists  
+- AB tests, extra coach tools from old `PROJECT_BUILD_PLAN.md`  
+- **Coss family story** (separate repo) — live Speechify free tier (~50k chars/mo hard cap) OK for rare use; pre-record later if binge listening  
+
+---
+
+### Shipped recently (not backlog)
+
+- Always-clone paste, freeform template categories, overwrite warnings  
+- Archive shelf: templates, 28-day packs, **exercises** (prod)  
+- Theme Song / honest muted speaker  
+- MARSHMALLOW-BADGER soak green + coach-only easter egg (not on member schedule)  
 
 ---
 
 ## WHERE WE LEFT OFF
 
 **Date:** 2026-07-12 evening PT  
-**Status:** Taking a break.
+**Status:** Taking a break. Full open list → **OPEN BACKLOG** above.
 
 ### Done this stretch
 - Site hardening around admin/coach content durability  
@@ -142,16 +246,18 @@ Audit Jeremy: `MINUTES=120 npx tsx scripts/jeremy-post-audit-prodtest.mjs`
 - Archive shelf for **templates, 28-day packs, exercises** — on **prod** (`main`)  
 - Theme Song / muted speaker honesty  
 - Soak **MARSHMALLOW-BADGER** green; coach-only trail planted for Jeremy  
-- Commits of note: `0ac0df5` exercise archive · `f71efb6` template/pack archive · handoff note `d5f0e28`
+- Commits of note: `0ac0df5` exercise archive · `f71efb6` template/pack archive · handoff `d5f0e28` · `CONTEXT.md` hub `b0cbdeb`  
+- Stripe: **test mode live on prod** (not Live money yet) — go-live still open  
 
 ### Explicit decision
 No MARSHMALLOW warm-up on Jeremy’s **live/member** workouts — coach library / shelf / playground only.
 
 ### When back
-1. Did Jeremy find the trail / use archive? (post-audit)  
-2. Optional: commit soak scripts under `scripts/`  
-3. More DEMO_SCRIPT / Jeremy workflow; always ship data with content changes  
-4. Local `npm run dev` may need restart (:3000 / :3002)
+1. **Stripe Live** (+ webhook + Venmo + optional Commission) — top money path  
+2. Jeremy content / did he use archive? (post-audit)  
+3. Optional: commit soak scripts; E2E money→member→Adult  
+4. Zoom / SMS / Go to Today phone verify  
+5. Infra as needed (seed export, blob migration)  
 
 ### Branch
-`main` · in sync with origin for shipped archive work; local untracked soak artifacts under `scripts/` OK to leave or commit later.
+`main` · shipped archive work on origin; local untracked soak artifacts under `scripts/` OK to leave or commit later.
