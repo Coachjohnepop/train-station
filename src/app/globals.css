@@ -1910,30 +1910,23 @@ input:-webkit-autofill {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  /* Phone: smaller so it doesn’t crowd View memberships + speaker */
-  width: 2.85rem;
-  height: 2.85rem;
+  /* Real OS emoji 👉🏽 — medium/tan skin, points right */
+  font-size: 2.85rem;
   line-height: 1;
   transform: translate3d(-6px, 0, 0);
   animation: bg-music-point-nudge-mobile 1.1s ease-in-out infinite;
-  filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--accent, #7c3aed) 45%, transparent));
+  /* Soft depth only — don’t recolor the emoji (that made it look fake) */
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.35));
   user-select: none;
 }
 
 @media (min-width: 640px) {
   .bg-music-guide-pointer {
-    width: 4.75rem;
-    height: 4.75rem;
+    font-size: 4.75rem;
     transform: translate3d(-12px, 0, 0);
     animation: bg-music-point-nudge-desktop 1.1s ease-in-out infinite;
-    filter: drop-shadow(0 6px 14px color-mix(in srgb, var(--accent, #7c3aed) 45%, transparent));
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
   }
-}
-
-.bg-music-guide-pointer-svg {
-  display: block;
-  width: 100%;
-  height: 100%;
 }
 
 @keyframes bg-music-point-nudge-mobile {

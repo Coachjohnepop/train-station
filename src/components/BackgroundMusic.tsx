@@ -28,8 +28,8 @@ const OFF_KEY = "ts-bg-music-muted"; // "1" = visitor turned music off
  * Hint is dismissed only by mute toggle or timeout — never by a random page tap
  * (that was making the finger vanish instantly in private windows).
  */
-const HINT_KEY = "ts-bg-music-hint-seen-v4";
-/** Keep the purple finger on screen ~20s (mute toggle also dismisses). */
+const HINT_KEY = "ts-bg-music-hint-seen-v5";
+/** Keep the pointing finger on screen ~20s (mute toggle also dismisses). */
 const HINT_MS = 20_000;
 
 /** Browsers only honor audio from real activation — scroll does not count. */
@@ -220,8 +220,12 @@ export default function BackgroundMusic() {
                   Click to mute — or just enjoy as you surf.
                 </span>
               </p>
+              {/*
+                Real emoji 👉 with medium skin tone (not default yellow).
+                U+1F449 + U+1F3FD → 👉🏽 — OS-rendered pointing hand.
+              */}
               <span className="bg-music-guide-pointer" aria-hidden>
-                <PurplePointingFinger />
+                {"\u{1F449}\u{1F3FD}"}
               </span>
             </div>
           ) : null}
@@ -237,83 +241,6 @@ export default function BackgroundMusic() {
         </div>
       ) : null}
     </>
-  );
-}
-
-/**
- * Brand-purple “👉” — index finger clearly points RIGHT at the speaker.
- */
-function PurplePointingFinger() {
-  const stroke = "color-mix(in srgb, var(--accent-light, #c4b5fd) 80%, white)";
-  return (
-    <svg
-      className="bg-music-guide-pointer-svg"
-      width="76"
-      height="76"
-      viewBox="0 0 96 96"
-      fill="none"
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient
-          id="bg-music-finger-grad"
-          x1="16"
-          y1="16"
-          x2="88"
-          y2="80"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="var(--accent-hover, #a78bfa)" />
-          <stop offset="0.5" stopColor="var(--accent, #7c3aed)" />
-          <stop offset="1" stopColor="var(--accent-deep, #5b21b6)" />
-        </linearGradient>
-      </defs>
-      <ellipse cx="48" cy="54" rx="30" ry="22" fill="var(--accent, #7c3aed)" opacity="0.18" />
-      {/* Palm + wrist (left) */}
-      <path
-        d="M18 44c0-7 5.5-12.5 12.5-12.5H42v8.5c0 2.5-2 4.5-4.5 4.5H30.5C24 44.5 18 50.5 18 58.5v6c0 9 7 16 16 16h18c7.5 0 13.5-5 15.5-12l6-20c1.4-4.5-1.2-9.3-5.8-10.8-3.2-1-6.6.4-8.2 3.2l-2.2 3.8V44H18z"
-        fill="url(#bg-music-finger-grad)"
-        stroke={stroke}
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-      {/* Index finger → right (main readable shape) */}
-      <rect
-        x="38"
-        y="24"
-        width="46"
-        height="18"
-        rx="9"
-        fill="url(#bg-music-finger-grad)"
-        stroke={stroke}
-        strokeWidth="1.6"
-      />
-      {/* Fingernail tip accent on the right */}
-      <path
-        d="M76 27.5h2.5c4 0 7.5 3.3 7.5 7.5s-3.5 7.5-7.5 7.5H76V27.5z"
-        fill="color-mix(in srgb, var(--accent-light, #c4b5fd) 55%, white)"
-        opacity="0.55"
-      />
-      {/* Middle finger (slightly up, shorter — reads as hand) */}
-      <rect
-        x="40"
-        y="14"
-        width="14"
-        height="16"
-        rx="7"
-        fill="url(#bg-music-finger-grad)"
-        stroke={stroke}
-        strokeWidth="1.4"
-      />
-      {/* Thumb (angled under index) */}
-      <path
-        d="M36 48c-1 6 2.5 12 9 14.5 3 1.2 6.2-.4 7.2-3.3l2.5-7.2c1-2.9-.6-6-3.5-7.1-4.5-1.7-13.2-1.5-15.2 3.1z"
-        fill="url(#bg-music-finger-grad)"
-        stroke={stroke}
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-      />
-    </svg>
   );
 }
 
