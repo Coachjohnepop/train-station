@@ -28,7 +28,7 @@ const OFF_KEY = "ts-bg-music-muted"; // "1" = visitor turned music off
  * Hint is dismissed only by mute toggle or timeout — never by a random page tap
  * (that was making the finger vanish instantly in private windows).
  */
-const HINT_KEY = "ts-bg-music-hint-seen-v5";
+const HINT_KEY = "ts-bg-music-hint-seen-v6";
 /** Keep the pointing finger on screen ~20s (mute toggle also dismisses). */
 const HINT_MS = 20_000;
 
@@ -221,11 +221,11 @@ export default function BackgroundMusic() {
                 </span>
               </p>
               {/*
-                Real emoji 👉 with medium skin tone (not default yellow).
-                U+1F449 + U+1F3FD → 👉🏽 — OS-rendered pointing hand.
+                Real emoji 👉 with medium-dark skin tone (tan, a shade darker).
+                U+1F449 + U+1F3FE → 👉🏾 — OS-rendered pointing hand.
               */}
               <span className="bg-music-guide-pointer" aria-hidden>
-                {"\u{1F449}\u{1F3FD}"}
+                {"\u{1F449}\u{1F3FE}"}
               </span>
             </div>
           ) : null}
