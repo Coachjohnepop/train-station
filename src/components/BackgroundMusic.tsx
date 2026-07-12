@@ -190,21 +190,25 @@ export default function BackgroundMusic() {
             onAdminLanding
               ? "bottom-20 xl:bottom-6"
               : onPublicHome
-                ? "bottom-24 sm:bottom-28"
+                ? /* Above View memberships: taller on phone for safe-area + FAB */
+                  "bottom-[5.75rem] sm:bottom-28"
                 : "bottom-6"
           }`}
           style={{
-            right: "max(1.5rem, env(safe-area-inset-right))",
+            right: "max(1rem, env(safe-area-inset-right, 0px))",
             bottom:
               onAdminLanding || onPublicHome
                 ? undefined
-                : "max(1.5rem, env(safe-area-inset-bottom))",
+                : "max(1.25rem, env(safe-area-inset-bottom, 0px))",
           }}
         >
           {showHint && !off ? (
             <div className="bg-music-guide" role="status" aria-live="polite">
               <p className="bg-music-guide-bubble">
-                Click to mute — or just enjoy as you surf.
+                <span className="sm:hidden">Tap to mute music</span>
+                <span className="hidden sm:inline">
+                  Click to mute — or just enjoy as you surf.
+                </span>
               </p>
               <span className="bg-music-guide-pointer" aria-hidden>
                 <PurplePointingFinger />
@@ -216,7 +220,7 @@ export default function BackgroundMusic() {
             onClick={toggle}
             aria-label={off ? "Unmute background music" : "Mute background music"}
             title={off ? "Play music" : "Mute music"}
-            className="bg-music-toggle relative z-10 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_90%,transparent)] text-[var(--text)] shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.985]"
+            className="bg-music-toggle relative z-10 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_90%,transparent)] text-[var(--text)] shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.985] sm:h-11 sm:w-11"
           >
             {off ? <SpeakerOffIcon /> : <SpeakerOnIcon />}
           </button>

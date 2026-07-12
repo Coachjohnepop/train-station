@@ -1757,36 +1757,57 @@ input:-webkit-autofill {
 }
 
 /* Background music — guided hint pointing at the mute toggle.
-   Finger sits left of the speaker and clear of home “View memberships”.
-   Size / bounce / color kept; only horizontal clearance changed. */
+   Mobile-first (~95% members on phones): compact finger + short copy.
+   Desktop/laptop (coach Jeremy): larger finger, roomier bubble, clear of CTAs. */
 .bg-music-control-cluster {
   overflow: visible;
 }
 
 .bg-music-guide {
   display: flex;
+  flex-direction: column;
   align-items: flex-end;
-  gap: 0.5rem;
-  /* Clear gap before the speaker — finger never sits on the button */
-  margin-right: 1.1rem;
-  max-width: min(15rem, calc(100vw - 7rem));
+  gap: 0.2rem;
+  margin-right: 0.55rem;
+  max-width: min(11.5rem, calc(100vw - 5.25rem));
   overflow: visible;
   pointer-events: none;
 }
 
+@media (min-width: 640px) {
+  .bg-music-guide {
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 0.5rem;
+    margin-right: 1.1rem;
+    max-width: min(15rem, calc(100vw - 7rem));
+  }
+}
+
 .bg-music-guide-bubble {
   margin: 0;
-  padding: 0.65rem 0.85rem;
-  border-radius: 1rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.85rem;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   color: var(--text);
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.3;
   letter-spacing: -0.01em;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
   backdrop-filter: blur(10px);
+  text-align: right;
+}
+
+@media (min-width: 640px) {
+  .bg-music-guide-bubble {
+    padding: 0.65rem 0.85rem;
+    border-radius: 1rem;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    text-align: left;
+  }
 }
 
 .bg-music-guide-pointer {
@@ -1794,29 +1815,62 @@ input:-webkit-autofill {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 4.75rem;
-  height: 4.75rem;
+  /* Phone: smaller so it doesn’t crowd View memberships + speaker */
+  width: 2.85rem;
+  height: 2.85rem;
   line-height: 1;
-  /* Park left of the speaker; short nudge still points at it without overlapping */
-  transform: translate3d(-12px, 0, 0);
-  animation: bg-music-point-nudge 1.1s ease-in-out infinite;
-  filter: drop-shadow(0 6px 14px color-mix(in srgb, var(--accent, #7c3aed) 45%, transparent));
+  transform: translate3d(-6px, 0, 0);
+  animation: bg-music-point-nudge-mobile 1.1s ease-in-out infinite;
+  filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--accent, #7c3aed) 45%, transparent));
   user-select: none;
+}
+
+@media (min-width: 640px) {
+  .bg-music-guide-pointer {
+    width: 4.75rem;
+    height: 4.75rem;
+    transform: translate3d(-12px, 0, 0);
+    animation: bg-music-point-nudge-desktop 1.1s ease-in-out infinite;
+    filter: drop-shadow(0 6px 14px color-mix(in srgb, var(--accent, #7c3aed) 45%, transparent));
+  }
 }
 
 .bg-music-guide-pointer-svg {
   display: block;
-  width: 4.75rem;
-  height: 4.75rem;
+  width: 100%;
+  height: 100%;
 }
 
-@keyframes bg-music-point-nudge {
+@keyframes bg-music-point-nudge-mobile {
+  0%,
+  100% {
+    transform: translate3d(-6px, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes bg-music-point-nudge-desktop {
   0%,
   100% {
     transform: translate3d(-12px, 0, 0);
   }
   50% {
     transform: translate3d(-2px, 0, 0);
+  }
+}
+
+/* Home floating CTA — sit under speaker cluster; leave room on phones */
+.home-memberships-fab {
+  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  right: max(1rem, env(safe-area-inset-right));
+}
+
+@media (min-width: 640px) {
+  .home-memberships-fab {
+    bottom: 1.5rem;
+    right: 1.5rem;
   }
 }
 
