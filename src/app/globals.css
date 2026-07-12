@@ -1756,12 +1756,16 @@ input:-webkit-autofill {
   min-height: 400px;
 }
 
-/* Background music — guided hint pointing at the mute toggle */
+/* Background music — guided hint pointing at the mute toggle.
+   Finger stays well left of the speaker (+ home “View memberships”) so it never
+   collides with those controls; size/motion/color intentionally preserved. */
 .bg-music-guide {
   display: flex;
   align-items: flex-end;
-  gap: 0.15rem;
-  max-width: min(14.5rem, calc(100vw - 6.5rem));
+  gap: 0.45rem;
+  /* Keep bubble+finger clear of the speaker and any right-edge CTAs */
+  margin-right: 0.85rem;
+  max-width: min(14.5rem, calc(100vw - 8.5rem));
   pointer-events: none;
 }
 
@@ -1784,6 +1788,8 @@ input:-webkit-autofill {
   flex-shrink: 0;
   font-size: 4.75rem;
   line-height: 1;
+  /* Rest further left; nudge stays short so the tip never enters the control cluster */
+  transform: translateX(-14px);
   animation: bg-music-point-nudge 1.1s ease-in-out infinite;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
 }
@@ -1791,10 +1797,10 @@ input:-webkit-autofill {
 @keyframes bg-music-point-nudge {
   0%,
   100% {
-    transform: translateX(0);
+    transform: translateX(-14px);
   }
   50% {
-    transform: translateX(10px);
+    transform: translateX(-4px);
   }
 }
 

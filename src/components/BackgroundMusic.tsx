@@ -177,6 +177,8 @@ export default function BackgroundMusic() {
   };
 
   const onAdminLanding = ADMIN_MUSIC_LANDING.has(pathname);
+  /** Home has a floating “View memberships” pill at bottom-right — sit above it. */
+  const onPublicHome = pathname === "/";
 
   return (
     <>
@@ -184,13 +186,18 @@ export default function BackgroundMusic() {
       {!adminSubPage ? (
         <div
           className={`bg-music-control-cluster fixed z-50 flex items-end gap-2 sm:gap-3 ${
-            onAdminLanding ? "bottom-20 xl:bottom-6" : "bottom-6"
+            onAdminLanding
+              ? "bottom-20 xl:bottom-6"
+              : onPublicHome
+                ? "bottom-24 sm:bottom-28"
+                : "bottom-6"
           }`}
           style={{
             right: "max(1.5rem, env(safe-area-inset-right))",
-            bottom: onAdminLanding
-              ? undefined
-              : "max(1.5rem, env(safe-area-inset-bottom))",
+            bottom:
+              onAdminLanding || onPublicHome
+                ? undefined
+                : "max(1.5rem, env(safe-area-inset-bottom))",
           }}
         >
           {showHint && !off ? (
