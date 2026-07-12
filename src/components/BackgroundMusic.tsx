@@ -23,7 +23,8 @@ import {
 const SRC = "/background-music.mp3";
 const VOLUME = 0.5;
 const OFF_KEY = "ts-bg-music-muted"; // "1" = visitor turned music off
-const HINT_KEY = "ts-bg-music-hint-seen";
+/** Bump when re-introducing the guide so returning visitors see the finger again. */
+const HINT_KEY = "ts-bg-music-hint-seen-v2";
 
 /** Browsers only honor audio from real activation — scroll does not count. */
 const ACTIVATION_EVENTS: (keyof DocumentEventMap)[] = [
@@ -123,10 +124,10 @@ export default function BackgroundMusic() {
     return remove;
   }, []);
 
-  // Auto-dismiss the guided hint after a few seconds.
+  // Auto-dismiss the guided hint after a bit longer so the finger is easy to spot.
   useEffect(() => {
     if (!showHint) return;
-    const timer = window.setTimeout(dismissHint, 10_000);
+    const timer = window.setTimeout(dismissHint, 16_000);
     return () => window.clearTimeout(timer);
   }, [showHint]);
 
@@ -185,7 +186,7 @@ export default function BackgroundMusic() {
       <audio ref={audioRef} src={SRC} loop preload="auto" data-ts-bg-music="true" />
       {!adminSubPage ? (
         <div
-          className={`bg-music-control-cluster fixed z-50 flex items-end gap-2 sm:gap-3 ${
+          className={`bg-music-control-cluster fixed z-50 flex items-end overflow-visible ${
             onAdminLanding
               ? "bottom-20 xl:bottom-6"
               : onPublicHome
@@ -215,7 +216,7 @@ export default function BackgroundMusic() {
             onClick={toggle}
             aria-label={off ? "Unmute background music" : "Mute background music"}
             title={off ? "Play music" : "Mute music"}
-            className="bg-music-toggle inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_90%,transparent)] text-[var(--text)] shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.985]"
+            className="bg-music-toggle relative z-10 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_90%,transparent)] text-[var(--text)] shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.985]"
           >
             {off ? <SpeakerOffIcon /> : <SpeakerOnIcon />}
           </button>
