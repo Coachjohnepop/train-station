@@ -327,12 +327,12 @@ export default function BackgroundMusic() {
     ? "Theme Song — tap to play"
     : soundLive
       ? "Theme Song — tap to mute"
-      : "Theme Song — tap to play";
+      : "Theme Song — tap anywhere to play";
   const bubbleDesktop = off
     ? "Theme Song — click the speaker to play"
     : soundLive
       ? "Theme Song — click to mute anytime"
-      : "Theme Song — click the speaker (or anywhere) to play";
+      : "Theme Song — click anywhere to play";
 
   return (
     <>
