@@ -1627,6 +1627,99 @@ table.data th {
   box-shadow: 0 0 10px var(--ramp-gold-glow);
 }
 
+/**
+ * Workout-complete / points celebrate — 3D gold “+N” that grows from landing-header
+ * size toward full width; confetti launches from this glyph.
+ */
+.score-points-3d {
+  display: inline-block;
+  margin: 0;
+  /* ~ landing hero h1 start size (text-5xl / ~3rem) */
+  font-size: clamp(2.75rem, 10vw, 4.5rem);
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  /* Metallic gold fill */
+  background: linear-gradient(
+    165deg,
+    #fff8e7 0%,
+    #fde68a 18%,
+    #f0c75e 38%,
+    #d4af37 55%,
+    #b8860b 78%,
+    #8b6914 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* Fake 3D extrusion + rim light (works with clipped gradient text via filter wrapper) */
+  filter: drop-shadow(0 1px 0 #8b6914) drop-shadow(0 2px 0 #7a5a0a)
+    drop-shadow(0 3px 0 #6b4e08) drop-shadow(0 5px 12px rgba(212, 175, 55, 0.55))
+    drop-shadow(0 0 28px rgba(253, 230, 138, 0.35));
+  -webkit-text-stroke: 1px color-mix(in srgb, #fde68a 40%, #b8860b);
+}
+
+.score-points-grow {
+  transform-origin: center center;
+  animation: score-points-grow 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.score-points-settled {
+  transform: scale(1);
+  font-weight: 900;
+}
+
+@keyframes score-points-grow {
+  0% {
+    transform: scale(0.55);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    filter: drop-shadow(0 1px 0 #8b6914) drop-shadow(0 0 8px rgba(212, 175, 55, 0.25));
+  }
+  55% {
+    font-weight: 800;
+  }
+  /* Expand toward ~full width (header → billboard) */
+  100% {
+    transform: scale(min(2.65, 90vw / 11rem));
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    filter: drop-shadow(0 1px 0 #8b6914) drop-shadow(0 2px 0 #7a5a0a)
+      drop-shadow(0 4px 0 #6b4e08) drop-shadow(0 8px 18px rgba(212, 175, 55, 0.6))
+      drop-shadow(0 0 36px rgba(253, 230, 138, 0.45));
+  }
+}
+
+@media (min-width: 640px) {
+  .score-points-3d {
+    font-size: clamp(3.5rem, 8vw, 5.5rem);
+  }
+
+  @keyframes score-points-grow {
+    0% {
+      transform: scale(0.5);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    55% {
+      font-weight: 800;
+    }
+    100% {
+      transform: scale(min(2.35, 85vw / 14rem));
+      font-weight: 900;
+      letter-spacing: -0.06em;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .score-points-grow {
+    animation: none;
+    transform: scale(1);
+    font-weight: 900;
+  }
+}
+
 .member-nav-score-badge--pulse {
   animation: member-score-badge-pop 0.9s cubic-bezier(0.22, 1, 0.36, 1);
 }

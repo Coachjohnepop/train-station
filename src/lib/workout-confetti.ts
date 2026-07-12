@@ -26,18 +26,32 @@ export function runConfetti(
   const ox = origin?.x ?? window.innerWidth / 2;
   const oy = origin?.y ?? window.innerHeight / 2;
 
-  const colors = ["#d4af37", "#fde68a", "#f0c75e", "#7c3aed", "#c4b5fd", "#4ade9a", "#f472b6"];
-  const particles = Array.from({ length: 100 }, () => ({
-    x: ox + (Math.random() - 0.5) * 28,
-    y: oy + (Math.random() - 0.5) * 20,
-    vx: (Math.random() - 0.5) * 11,
-    vy: Math.random() * -11 - 3,
-    rot: Math.random() * Math.PI,
-    vr: (Math.random() - 0.5) * 0.3,
-    size: Math.random() * 7 + 4,
-    color: colors[Math.floor(Math.random() * colors.length)],
-    shape: Math.random() > 0.5 ? "rect" : "circle",
-  }));
+  // Gold-heavy palette so bursts read as “from the points” on celebrate
+  const colors = [
+    "#d4af37",
+    "#fde68a",
+    "#f0c75e",
+    "#fff8e7",
+    "#b8860b",
+    "#7c3aed",
+    "#c4b5fd",
+    "#f472b6",
+  ];
+  const particles = Array.from({ length: 140 }, () => {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 3 + Math.random() * 10;
+    return {
+      x: ox + (Math.random() - 0.5) * 36,
+      y: oy + (Math.random() - 0.5) * 24,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed * 0.85 - 2,
+      rot: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 0.35,
+      size: Math.random() * 8 + 3.5,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      shape: Math.random() > 0.45 ? "rect" : "circle",
+    };
+  });
 
   const start = performance.now();
   let raf = 0;
