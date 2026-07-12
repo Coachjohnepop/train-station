@@ -11,15 +11,16 @@ import {
 /**
  * Site-wide background music + pointing-finger guide.
  *
- * Finger appears for at least 20s and we start music in the same beat.
- * Browsers may block *audible* autoplay; we then buffer muted and unmute on
- * the first real gesture so sound still kicks in without hunting for the button.
+ * Speaker icon is honest: it only shows “playing” after we confirm the track
+ * is unmuted AND currentTime is advancing. Until then it shows muted and the
+ * finger says “tap for sound” — even in a brand-new private window (browsers
+ * almost always block silent-tab autoplay with volume).
  */
 
 const SRC = "/background-music.mp3";
 const VOLUME = 0.55;
-const OFF_KEY = "ts-bg-music-muted"; // "1" = user explicitly muted
-/** At least 20 seconds of finger visible. */
+const OFF_KEY = "ts-bg-music-muted";
+/** Finger stays up at least this long (mute also dismisses). */
 const HINT_MS = 22_000;
 
 const ACTIVATION_EVENTS: (keyof WindowEventMap)[] = [
@@ -43,18 +44,25 @@ function isUserMuted(): boolean {
   }
 }
 
+function sleep(ms: number) {
+  return new Promise<void>((r) => window.setTimeout(r, ms));
+}
+
 export default function BackgroundMusic() {
   const pathname = usePathname() ?? "";
   const adminSubPage = isAdminSubPage(pathname);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const overlayPauseRef = useRef(false);
   const hintTimerRef = useRef<number | null>(null);
-  const unlockAttemptedRef = useRef(false);
+  const unlockedRef = useRef(false);
 
-  /** Explicit user mute (speaker button). */
+  /** User hit mute on the speaker. */
   const [off, setOff] = useState(false);
-  /** True when browser is only allowing muted playback until a gesture. */
-  const [awaitingGesture, setAwaitingGesture] = useState(false);
+  /**
+   * True until we confirm real audible playback (currentTime advancing, unmuted).
+   * Starts true so the icon is muted in private windows until sound works.
+   */
+  const [soundLive, setSoundLive] = useState(false);
   const [showHint, setShowHint] = useState(true);
 
   const clearHintTimer = useCallback(() => {
@@ -64,7 +72,6 @@ export default function BackgroundMusic() {
     }
   }, []);
 
-  /** Finger stays up for HINT_MS — restarted whenever we intentionally re-show. */
   const showFingerForAtLeastTwentySeconds = useCallback(() => {
     setShowHint(true);
     clearHintTimer();
@@ -79,25 +86,43 @@ export default function BackgroundMusic() {
     setShowHint(false);
   }, [clearHintTimer]);
 
-  const forceAudible = useCallback(async (audio: HTMLAudioElement) => {
-    if (isUserMuted() || overlayPauseRef.current) return false;
-    audio.volume = VOLUME;
-    audio.muted = false;
-    try {
-      // Restart from pause if needed so unmute actually produces sound
-      if (audio.paused) {
-        await audio.play();
-      } else {
-        // Some engines need play() again after unmuting
-        await audio.play();
-      }
-      setAwaitingGesture(false);
-      setOff(false);
-      return !audio.muted && !audio.paused;
-    } catch {
+  /** Confirm the engine is actually moving the playhead with sound on. */
+  const confirmSoundLive = useCallback(async (audio: HTMLAudioElement) => {
+    if (audio.paused || audio.muted) {
+      setSoundLive(false);
       return false;
     }
+    const t0 = audio.currentTime;
+    await sleep(280);
+    const advancing =
+      !audio.paused &&
+      !audio.muted &&
+      (audio.currentTime > t0 + 0.05 || audio.currentTime > 0.15);
+    setSoundLive(advancing);
+    if (advancing) unlockedRef.current = true;
+    return advancing;
   }, []);
+
+  const forceAudible = useCallback(
+    async (audio: HTMLAudioElement) => {
+      if (isUserMuted() || overlayPauseRef.current) {
+        setSoundLive(false);
+        return false;
+      }
+      audio.volume = VOLUME;
+      audio.muted = false;
+      try {
+        await audio.play();
+      } catch {
+        setSoundLive(false);
+        return false;
+      }
+      const ok = await confirmSoundLive(audio);
+      if (ok) setOff(false);
+      return ok;
+    },
+    [confirmSoundLive],
+  );
 
   const whenCanPlay = (audio: HTMLAudioElement, ms = 8000) =>
     new Promise<void>((resolve) => {
@@ -118,34 +143,32 @@ export default function BackgroundMusic() {
       audio.addEventListener("canplaythrough", finish);
       audio.addEventListener("loadeddata", finish);
       try {
-        if (audio.networkState === HTMLMediaElement.NETWORK_EMPTY) {
-          audio.load();
-        }
+        audio.load();
       } catch {
         /* ignore */
       }
       window.setTimeout(finish, ms);
     });
 
-  /**
-   * Finger + music together. Prefer real sound; fall back to muted buffer + gesture unlock.
-   */
+  /** Finger + best-effort music. Speaker stays “muted” until sound is confirmed. */
   const startMusicWithFinger = useCallback(
     async (audio: HTMLAudioElement) => {
+      showFingerForAtLeastTwentySeconds();
+
       if (isUserMuted()) {
         setOff(true);
-        showFingerForAtLeastTwentySeconds();
+        setSoundLive(false);
         return;
       }
 
-      showFingerForAtLeastTwentySeconds();
       setOff(false);
+      // Optimistic: not live until confirmSoundLive says so
+      setSoundLive(false);
 
       audio.loop = true;
       audio.preload = "auto";
       audio.defaultMuted = false;
       audio.setAttribute("playsinline", "true");
-      audio.setAttribute("webkit-playsinline", "true");
       try {
         (audio as HTMLAudioElement & { playsInline?: boolean }).playsInline = true;
       } catch {
@@ -155,37 +178,33 @@ export default function BackgroundMusic() {
 
       await whenCanPlay(audio);
 
-      // --- Audible attempts (several quick retries) ---
-      for (let i = 0; i < 4; i++) {
+      // Try audible autoplay a few times
+      for (let i = 0; i < 5; i++) {
         audio.muted = false;
         audio.volume = VOLUME;
         try {
           await audio.play();
-          if (!audio.paused && !audio.muted) {
-            setAwaitingGesture(false);
-            return;
-          }
+          if (await confirmSoundLive(audio)) return;
         } catch {
-          /* keep trying */
+          /* blocked */
         }
-        await new Promise((r) => window.setTimeout(r, 200 * (i + 1)));
+        await sleep(180 * (i + 1));
       }
 
-      // --- Muted buffer so the next gesture only has to unmute ---
+      // Buffer muted — icon stays muted; any gesture will unlock
       audio.muted = true;
       try {
         await audio.play();
-        setAwaitingGesture(true);
       } catch {
-        setAwaitingGesture(true);
+        /* cold start on gesture */
       }
+      setSoundLive(false);
     },
-    [showFingerForAtLeastTwentySeconds],
+    [showFingerForAtLeastTwentySeconds, confirmSoundLive],
   );
 
   useEffect(() => registerBackgroundMusicMediaDucking(), []);
 
-  // Mount: finger + music
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -212,17 +231,14 @@ export default function BackgroundMusic() {
     };
   }, [startMusicWithFinger, forceAudible, clearHintTimer]);
 
-  // Any real gesture → unlock audible music (finger stays for the full 20s+)
+  // First real gesture → unlock sound (does not hide the finger)
   useEffect(() => {
     const opts: AddEventListenerOptions = { capture: true, passive: true };
     const onActivation = () => {
       const audio = audioRef.current;
       if (!audio || isUserMuted() || overlayPauseRef.current) return;
-      void forceAudible(audio).then((ok) => {
-        if (ok) unlockAttemptedRef.current = true;
-      });
+      void forceAudible(audio);
     };
-
     ACTIVATION_EVENTS.forEach((e) => window.addEventListener(e, onActivation, opts));
     return () => {
       ACTIVATION_EVENTS.forEach((e) =>
@@ -239,6 +255,7 @@ export default function BackgroundMusic() {
       overlayPauseRef.current = active;
       if (active) {
         audio.pause();
+        setSoundLive(false);
         return;
       }
       if (!isUserMuted()) void forceAudible(audio);
@@ -252,10 +269,12 @@ export default function BackgroundMusic() {
     if (!audio) return;
     if (adminSubPage || overlayPauseRef.current) {
       audio.pause();
+      setSoundLive(false);
       return;
     }
     if (isUserMuted()) {
       setOff(true);
+      setSoundLive(false);
       return;
     }
     void startMusicWithFinger(audio);
@@ -264,20 +283,34 @@ export default function BackgroundMusic() {
   const toggle = () => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    // If we're only waiting for a gesture, speaker click = unlock (user gesture)
+    if (!off && !soundLive) {
+      void forceAudible(audio).then((ok) => {
+        if (!ok) {
+          // Still blocked — fall through to treat as explicit play attempt
+          audio.muted = false;
+          void audio.play().then(() => confirmSoundLive(audio));
+        }
+      });
+      return;
+    }
+
     const next = !off;
     setOff(next);
     try {
       window.localStorage.setItem(OFF_KEY, next ? "1" : "0");
     } catch {
-      /* private mode edge cases */
+      /* ignore */
     }
     if (next) {
       dismissHint();
-      setAwaitingGesture(false);
+      setSoundLive(false);
+      unlockedRef.current = false;
       audio.muted = true;
       audio.pause();
     } else {
-      // Unmute button = explicit gesture → should allow audible play
+      // Explicit unmute is a user gesture — should allow sound
       void startMusicWithFinger(audio).then(() => forceAudible(audio));
     }
   };
@@ -285,8 +318,20 @@ export default function BackgroundMusic() {
   const onAdminLanding = ADMIN_MUSIC_LANDING.has(pathname);
   const onPublicHome = pathname === "/";
   const fingerVisible = showHint && !adminSubPage;
-  /** Speaker icon: “on” only when we believe sound can be heard */
-  const showAsPlaying = !off && !awaitingGesture;
+
+  // Honest icon: only “on” when sound is confirmed live
+  const showAsPlaying = !off && soundLive;
+
+  const bubbleMobile = off
+    ? "Tap speaker for music"
+    : soundLive
+      ? "Music on — tap to mute"
+      : "Tap speaker or page for sound";
+  const bubbleDesktop = off
+    ? "Click the speaker to play music."
+    : soundLive
+      ? "Music is on — click to mute anytime."
+      : "Tap the speaker (or anywhere) to start the sound.";
 
   return (
     <>
@@ -319,22 +364,10 @@ export default function BackgroundMusic() {
           {fingerVisible ? (
             <div className="bg-music-guide" role="status" aria-live="polite">
               <p className="bg-music-guide-bubble">
-                <span className="sm:hidden">
-                  {off
-                    ? "Tap speaker for music"
-                    : awaitingGesture
-                      ? "Tap anywhere for sound"
-                      : "Music on — tap to mute"}
-                </span>
-                <span className="hidden sm:inline">
-                  {off
-                    ? "Click the speaker to play music."
-                    : awaitingGesture
-                      ? "Tap or click anywhere to start the sound."
-                      : "Music is on — click to mute anytime."}
-                </span>
+                <span className="sm:hidden">{bubbleMobile}</span>
+                <span className="hidden sm:inline">{bubbleDesktop}</span>
               </p>
-              {/* 👉 medium skin (one shade lighter than medium-dark) → 👉🏽 */}
+              {/* 👉🏽 medium tan — one shade lighter than medium-dark */}
               <span className="bg-music-guide-pointer" aria-hidden>
                 {"\u{1F449}\u{1F3FD}"}
               </span>
@@ -343,13 +376,13 @@ export default function BackgroundMusic() {
           <button
             type="button"
             onClick={toggle}
-            aria-label={
-              off || awaitingGesture
-                ? "Play background music"
-                : "Mute background music"
-            }
-            title={off || awaitingGesture ? "Play music" : "Mute music"}
-            className="bg-music-toggle relative z-10 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_90%,transparent)] text-[var(--text)] shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.985]"
+            aria-label={showAsPlaying ? "Mute background music" : "Play background music"}
+            title={showAsPlaying ? "Mute music" : "Play music"}
+            className={`bg-music-toggle relative z-10 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.985] ${
+              showAsPlaying
+                ? "border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_18%,var(--bg))] text-[var(--text)]"
+                : "border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_90%,transparent)] text-[var(--muted)]"
+            }`}
           >
             {showAsPlaying ? <SpeakerOnIcon /> : <SpeakerOffIcon />}
           </button>
