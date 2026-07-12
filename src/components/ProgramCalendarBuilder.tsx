@@ -59,6 +59,7 @@ import {
   type DayPrescription,
 } from "@/lib/program-day-prescription";
 import ProgramContentReadinessBanner from "@/components/ProgramContentReadinessBanner";
+import ProgramTemplatePastePanel from "@/components/ProgramTemplatePastePanel";
 import TextUploadPanel from "@/components/TextUploadPanel";
 import type { CoachContentAlert } from "@/lib/coach-content-alerts";
 
@@ -81,6 +82,7 @@ type ProgramDay = {
   defaultRestSec?: number | null;
   publishedAt?: string | null;
   videoUrl?: string | null;
+  notes?: string | null;
   options?: DayOption[];
 };
 
@@ -102,6 +104,8 @@ type SlotItem = {
   sets: number | null;
   reps: string | null;
   restSec: number | null;
+  /** Coach note for this workout line only (not the library exercise). */
+  notes: string | null;
   sortOrder: number;
 };
 
@@ -226,6 +230,7 @@ export default function ProgramCalendarBuilder({
   const [editorSets, setEditorSets] = useState(DEFAULT_DAY_PRESCRIPTION.defaultSets);
   const [editorReps, setEditorReps] = useState(DEFAULT_DAY_PRESCRIPTION.defaultReps);
   const [editorRest, setEditorRest] = useState(DEFAULT_DAY_PRESCRIPTION.defaultRestSec);
+  const [editorNotes, setEditorNotes] = useState("");
   const [fastedCardioMinutes, setFastedCardioMinutes] = useState(DEFAULT_FASTED_CARDIO_MINUTES);
   const [workoutPreviews, setWorkoutPreviews] = useState<Record<string, string[]>>({});
   const [workoutTitle, setWorkoutTitle] = useState("");
@@ -527,10 +532,12 @@ export default function ProgramCalendarBuilder({
       setEditorSets(slot.sets ?? rx.defaultSets);
       setEditorReps(slot.reps ?? rx.defaultReps);
       setEditorRest(slot.restSec ?? rx.defaultRestSec);
+      setEditorNotes(slot.notes ?? "");
     } else {
       setEditorSets(rx.defaultSets);
       setEditorReps(rx.defaultReps);
       setEditorRest(rx.defaultRestSec);
+      setEditorNotes("");
     }
   }
 
@@ -576,6 +583,7 @@ export default function ProgramCalendarBuilder({
         sets: it.sets ?? null,
         reps: it.reps ?? null,
         restSec: it.restSec ?? null,
+        notes: typeof it.notes === "string" ? it.notes : it.notes ?? null,
         sortOrder: it.sortOrder ?? 0,
       }));
       items.sort((a, b) => a.sortOrder - b.sortOrder);
@@ -809,7 +817,7 @@ export default function ProgramCalendarBuilder({
 
   async function patchExerciseItem(
     itemId: string,
-    data: { sets?: number; reps?: string; restSec?: number },
+    data: { sets?: number; reps?: string; restSec?: number; notes?: string | null },
   ) {
     if (!focus) return false;
     const res = await fetch(`/api/workouts/${focus.workoutId}/exercises`, {
@@ -841,10 +849,12 @@ export default function ProgramCalendarBuilder({
         return;
       }
 
+      const notesValue = editorNotes.trim() || null;
       const ok = await patchExerciseItem(slot.id, {
         sets: editorSets,
         reps: editorReps,
         restSec: editorRest,
+        notes: notesValue,
       });
       if (ok) {
         setSlots((prev) => {
@@ -856,6 +866,7 @@ export default function ProgramCalendarBuilder({
               sets: editorSets,
               reps: editorReps,
               restSec: editorRest,
+              notes: notesValue,
             };
           }
           return next;
@@ -865,6 +876,194 @@ export default function ProgramCalendarBuilder({
       }
     } finally {
       if (manageSaving) setSaving(false);
+    }
+  }
+
+  /** Clone all options on this day onto the same weekday next week (always clone workouts). */
+  async function pasteDayToNextWeek() {
+    if (!focus || !focusDay || !activeWeekData) return;
+    const nextWeek = weeks.find((w) => w.weekNumber === activeWeekData.weekNumber + 1);
+    if (!nextWeek) {
+      setMessage("No next week in this program.");
+      setTimeout(() => setMessage(null), 2500);
+      return;
+    }
+    const targetDay = nextWeek.days.find((d) => d.dayNumber === focusDay.dayNumber);
+    if (!targetDay) {
+      setMessage("Could not find same day next week.");
+      return;
+    }
+
+    const sourceOpts = getDayOptions(focusDay).filter((o) => o.workoutId);
+    if (sourceOpts.length === 0 && !isDayOffLabel(focus.label) && !isFastedCardioLabel(focus.label)) {
+      setMessage("Nothing to paste — add Gym/Home workouts first.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (isDayOffLabel(focus.label)) {
+        await patchDay(targetDay.id, {
+          options: [{ workoutId: "", label: DAY_OFF_LABEL }],
+          notes: "Rest day",
+        });
+      } else if (isFastedCardioLabel(focus.label)) {
+        // Clone underlying workout if present
+        const src = sourceOpts[0];
+        if (src?.workoutId) {
+          const cloneRes = await fetch(`/api/workouts/${src.workoutId}/clone`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: cloneWorkoutContentName(
+                allWorkouts.find((w) => w.id === src.workoutId)?.name || "Fasted cardio",
+                FASTED_CARDIO_LABEL,
+              ),
+            }),
+          });
+          if (!cloneRes.ok) throw new Error("clone failed");
+          const cloned = await cloneRes.json();
+          setAllWorkouts((prev) =>
+            prev.some((w) => w.id === cloned.id)
+              ? prev
+              : [...prev, { id: cloned.id, name: cloned.name }],
+          );
+          await patchDay(targetDay.id, {
+            options: [
+              {
+                workoutId: cloned.id,
+                label: FASTED_CARDIO_LABEL,
+                trainingLocation: null,
+                notes: src.notes ?? null,
+              },
+            ],
+            notes: focusDay.notes ?? null,
+          });
+        }
+      } else {
+        const clonedOpts: DayOption[] = [];
+        for (const opt of sourceOpts) {
+          const cloneRes = await fetch(`/api/workouts/${opt.workoutId}/clone`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: cloneWorkoutContentName(
+                allWorkouts.find((w) => w.id === opt.workoutId)?.name || "Workout",
+                opt.label,
+              ),
+            }),
+          });
+          if (!cloneRes.ok) throw new Error("clone failed");
+          const cloned = await cloneRes.json();
+          clonedOpts.push({
+            workoutId: cloned.id,
+            label: opt.label,
+            trainingLocation: opt.trainingLocation ?? trainingLocationFromLabel(opt.label),
+            notes: opt.notes ?? null,
+          });
+          setAllWorkouts((prev) =>
+            prev.some((w) => w.id === cloned.id)
+              ? prev
+              : [...prev, { id: cloned.id, name: cloned.name }],
+          );
+          void loadWorkoutPreview(cloned.id);
+        }
+        await setDayOptions(targetDay.id, clonedOpts, { silent: true });
+      }
+
+      setMessage(
+        `Pasted week ${activeWeekData.weekNumber} day ${focusDay.dayNumber} → week ${nextWeek.weekNumber} (clones only).`,
+      );
+      setTimeout(() => setMessage(null), 4000);
+      setActiveWeek(nextWeek.weekNumber);
+    } catch {
+      setMessage("Could not paste to next week — try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /**
+   * Clone Gym workout → attach as this day's Home (own copy for small edits).
+   * Does not change the Gym workout.
+   */
+  async function copyGymToHome() {
+    if (!focusDay || !activeWeekData) return;
+
+    const day = focusDay;
+    const refreshed = await ensureGymHomeOptions(day);
+    const opts = [...getDayOptions(refreshed)];
+    const gymIdx = opts.findIndex((o) => isGymLabel(o.label));
+    const homeIdx = opts.findIndex((o) => isHomeLabel(o.label));
+    if (gymIdx < 0 || homeIdx < 0) {
+      setMessage("This day needs Gym and Home options first.");
+      return;
+    }
+
+    const gymId = opts[gymIdx]?.workoutId;
+    if (!gymId) {
+      setMessage("Build the Gym workout first, then copy it to Home.");
+      return;
+    }
+
+    // Confirm if Home already has a different populated workout
+    const homeId = opts[homeIdx]?.workoutId;
+    if (homeId && homeId !== gymId) {
+      const homePreview = workoutPreviews[homeId];
+      const homeHasContent =
+        (homePreview && homePreview.length > 0) ||
+        (await (async () => {
+          const res = await fetch(`/api/workouts/${homeId}`, { cache: "no-store" });
+          if (!res.ok) return false;
+          const w = await res.json();
+          return Array.isArray(w.exercises) && w.exercises.length > 0;
+        })());
+      if (homeHasContent) {
+        const ok = window.confirm(
+          "Home already has a workout. Replace it with a fresh copy of Gym? (Gym is unchanged.)",
+        );
+        if (!ok) return;
+      }
+    }
+
+    setSaving(true);
+    try {
+      const sourceWorkout = allWorkouts.find((w) => w.id === gymId);
+      const cloneRes = await fetch(`/api/workouts/${gymId}/clone`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: cloneWorkoutContentName(sourceWorkout?.name || "Workout", "Home"),
+        }),
+      });
+      if (!cloneRes.ok) {
+        setMessage("Could not copy Gym → Home — try again.");
+        return;
+      }
+      const cloned = (await cloneRes.json()) as { id: string; name: string };
+
+      opts[homeIdx] = {
+        workoutId: cloned.id,
+        label: "Home",
+        trainingLocation: "home",
+        notes: opts[homeIdx]?.notes ?? null,
+      };
+      await setDayOptions(day.id, opts, { silent: true });
+      setAllWorkouts((prev) =>
+        prev.some((w) => w.id === cloned.id)
+          ? prev
+          : [...prev, { id: cloned.id, name: cloned.name }],
+      );
+      void loadWorkoutPreview(cloned.id);
+
+      const dayWithHome: ProgramDay = { ...refreshed, options: opts };
+      await openDayOption(dayWithHome, activeWeekData, homeIdx, "Home");
+      setMessage("Gym copied to Home — tweak Home only, then Save.");
+      setTimeout(() => setMessage(null), 4000);
+    } catch {
+      setMessage("Could not copy Gym → Home — try again.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -1867,6 +2066,14 @@ export default function ProgramCalendarBuilder({
                   {slot.restSec != null ? ` · ${slot.restSec}s` : ""}
                 </span>
               )}
+              {slot.notes?.trim() ? (
+                <span
+                  className="mt-0.5 block truncate text-[10px] text-violet-300/90"
+                  title={slot.notes}
+                >
+                  Note: {slot.notes}
+                </span>
+              ) : null}
             </button>
             <div className="w-24 shrink-0" onClick={(e) => e.stopPropagation()}>
               <SearchableExerciseSelect
@@ -2323,6 +2530,28 @@ export default function ProgramCalendarBuilder({
             >
               Home Workout
             </button>
+            {(isGymLabel(focus.label) || isHomeLabel(focus.label) || isWorkoutDayLabel(focus.label)) && (
+              <button
+                type="button"
+                className="btn-ghost px-2 py-1 text-xs font-semibold text-violet-200"
+                disabled={saving}
+                title="Clone Gym exercises into a new Home workout on this day, then edit Home only"
+                onClick={() => void copyGymToHome()}
+              >
+                Copy Gym → Home
+              </button>
+            )}
+            {focus && focusDay && !isDayOffLabel(focus.label) && (
+              <button
+                type="button"
+                className="btn-ghost px-2 py-1 text-xs font-semibold text-violet-200"
+                disabled={saving}
+                title="Clone this day's Gym/Home (and options) to the same weekday next week"
+                onClick={() => void pasteDayToNextWeek()}
+              >
+                Paste → same day next week
+              </button>
+            )}
             {customSettingOptions(focusDay).map((opt) => (
               <button
                 key={opt.label}
@@ -2380,6 +2609,37 @@ export default function ProgramCalendarBuilder({
               onBuilt={(data) => void attachUploadedWorkoutToFocus(data)}
             />
           )}
+
+          <ProgramTemplatePastePanel
+            programSlug={program.slug}
+            dayId={focus.dayId}
+            focusWorkoutId={focus.workoutId || null}
+            focusWorkoutLabel={
+              focus.workoutId
+                ? workoutContentTitle(
+                    allWorkouts.find((w) => w.id === focus.workoutId)?.name || workoutTitle,
+                  )
+                : workoutTitle || undefined
+            }
+            disabled={saving}
+            onMessage={(m) => {
+              setMessage(m);
+              setTimeout(() => setMessage(null), 4000);
+            }}
+            onPasted={async () => {
+              // Reload program from server so pasted options appear
+              try {
+                const res = await fetch(`/api/programs/${program.slug}`, { cache: "no-store" });
+                if (res.ok) {
+                  const fresh = await res.json();
+                  if (fresh?.weeks) setProgram((prev) => ({ ...prev, ...fresh, weeks: fresh.weeks }));
+                }
+              } catch {
+                /* non-fatal */
+              }
+              if (focus?.workoutId) void loadSlots(focus.workoutId, prescription);
+            }}
+          />
 
           {isDayOffLabel(focus.label) ? (
               <p className="rounded-md bg-[var(--surface-2)] px-3 py-4 text-center text-sm text-[var(--muted)]">
@@ -2468,6 +2728,28 @@ export default function ProgramCalendarBuilder({
                       onBlur={() => void saveSelectedSlot()}
                     />
                   </label>
+                  <label className="min-w-[12rem] flex-1 text-[10px]">
+                    Coach note (this workout only)
+                    <input
+                      className="input mt-0.5 h-7 w-full min-w-[10rem] px-1.5 text-xs"
+                      value={editorNotes}
+                      disabled={
+                        selectedSlotIdx === null ||
+                        saving ||
+                        !slots[selectedSlotIdx ?? -1]
+                      }
+                      placeholder="e.g. light band · skip if knees hurt"
+                      maxLength={500}
+                      onChange={(e) => setEditorNotes(e.target.value)}
+                      onBlur={() => void saveSelectedSlot()}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void saveSelectedSlot();
+                        }
+                      }}
+                    />
+                  </label>
                   <button
                     type="button"
                     className="btn-ghost h-7 px-2 text-[10px]"
@@ -2487,8 +2769,10 @@ export default function ProgramCalendarBuilder({
                 </div>
 
                 <p className="text-[10px] text-[var(--muted)]">
-                  Click a row to edit sets/reps · double-click focuses the editor · Delete removes ·
-                  drag or ▲▼ to reorder.
+                  Click a row to edit sets/reps/notes ·{" "}
+                  <strong className="font-medium text-violet-200/90">Copy Gym → Home</strong> makes
+                  a Home copy to tweak · notes are for this workout only (not the library) · Delete
+                  removes · drag or ▲▼ to reorder.
                 </p>
 
                 {loadingSlots ? (

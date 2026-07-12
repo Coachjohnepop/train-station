@@ -584,6 +584,75 @@ export default function ProgramScheduleBuilder({
     setDayOptions(dayId, currentOpts);
   }
 
+  /** Clone Gym track → Home on the same day (own copy for small edits). */
+  async function copyGymToHome(dayId: string) {
+    const week = program.weeks.find((w) => w.days.some((d) => d.id === dayId));
+    const day = week?.days.find((d) => d.id === dayId);
+    if (!day) return;
+
+    const opts = [...getDayOptions(day)];
+    let gymIdx = opts.findIndex((o) => /^gym$/i.test(o.label.trim()));
+    let homeIdx = opts.findIndex((o) => /^home$/i.test(o.label.trim()));
+
+    if (gymIdx < 0) {
+      opts.unshift({ workoutId: "", label: "Gym" });
+      gymIdx = 0;
+      homeIdx = homeIdx < 0 ? -1 : homeIdx + 1;
+    }
+    if (homeIdx < 0) {
+      opts.push({ workoutId: "", label: "Home" });
+      homeIdx = opts.length - 1;
+    }
+
+    const gymId = opts[gymIdx]?.workoutId;
+    if (!gymId) {
+      setMessage("Build the Gym workout first, then copy to Home.");
+      setTimeout(() => setMessage(null), 2500);
+      return;
+    }
+
+    const homeId = opts[homeIdx]?.workoutId;
+    if (homeId && homeId !== gymId) {
+      const ok = window.confirm(
+        "Replace Home with a copy of Gym? (Gym stays the same.)",
+      );
+      if (!ok) return;
+    }
+
+    setSaving(dayId);
+    setMessage("Copying Gym → Home…");
+    try {
+      const sourceWorkout = allWorkouts.find((w) => w.id === gymId);
+      const cloneRes = await fetch(`/api/workouts/${gymId}/clone`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: cloneWorkoutContentName(sourceWorkout?.name || "Workout", "Home"),
+        }),
+      });
+      if (!cloneRes.ok) {
+        setMessage("Copy failed — try again.");
+        return;
+      }
+      const cloned = await cloneRes.json();
+      opts[homeIdx] = { workoutId: cloned.id, label: "Home" };
+      await setDayOptions(dayId, opts);
+      setAllWorkouts((prev) =>
+        prev.some((w) => w.id === cloned.id)
+          ? prev
+          : [...prev, { id: cloned.id, name: cloned.name }],
+      );
+      void loadWorkoutPreview(cloned.id);
+      await focusOption(dayId, homeIdx, cloned.id, "Home");
+      setMessage("Gym copied to Home — edit Home only.");
+      setTimeout(() => setMessage(null), 3000);
+    } catch {
+      setMessage("Copy failed — try again.");
+    } finally {
+      setSaving(null);
+    }
+  }
+
   async function copyWeek(fromWeekNumber: number, toWeekNumber: number) {
     const fromWeek = program.weeks.find((w) => w.weekNumber === fromWeekNumber);
     const toWeek = program.weeks.find((w) => w.weekNumber === toWeekNumber);
@@ -757,6 +826,15 @@ export default function ProgramScheduleBuilder({
                     disabled={!!saving}
                   >
                     {dayName}
+                  </button>
+                  <button
+                    type="button"
+                    className="shrink-0 text-[9px] font-semibold text-violet-300 hover:underline disabled:opacity-40"
+                    title="Clone Gym into Home on this day for small edits"
+                    disabled={!!saving}
+                    onClick={() => void copyGymToHome(day.id)}
+                  >
+                    Gym→Home
                   </button>
 
                   {/* Options (Gym/Home etc) — very compact */}

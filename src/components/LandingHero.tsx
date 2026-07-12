@@ -67,20 +67,33 @@ export default function LandingHero({
       <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/15 to-black/45" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.12)_0%,transparent_68%)]" />
 
-      {/* Centered hero content - clean, professional, inspiring */}
-      <div className="relative z-10 flex h-full items-center justify-center px-6">
-        <div className="max-w-5xl text-center">
-          <TrainStationBrand variant="hero" className="mb-8" />
-          <h1 className="mb-6 text-6xl font-semibold tracking-[-2.5px] text-white sm:text-7xl md:text-8xl leading-[0.9]">
+      {/*
+        3-zone placement (browser):
+        - Left: logo circle + "THE TRAIN STATION"
+        - Center: rotating headline + everything below (true page center)
+        - Right: empty balance (logo is out of the flow so center stays centered)
+      */}
+      <div className="relative z-10 min-h-[100svh]">
+        {/* Left zone — brand high and left; does not push center content off-middle */}
+        <div className="absolute left-5 top-5 z-20 sm:left-8 sm:top-6 md:left-10 md:top-8">
+          <TrainStationBrand variant="hero" />
+        </div>
+
+        {/* Center zone — full-width centered stack (title through CTAs) */}
+        <div className="relative z-10 flex min-h-[100svh] flex-col items-center px-5 pb-20 pt-[9.5rem] text-center sm:px-8 sm:pt-40 md:justify-center md:pt-24 md:pb-24">
+          <h1 className="mb-3 text-5xl font-semibold leading-[0.9] tracking-[-2px] text-white sm:mb-4 sm:text-6xl sm:tracking-[-2.5px] md:text-7xl lg:text-8xl">
             {phrases[textIndex]}
           </h1>
-          
-          <p className="mx-auto max-w-2xl text-xl text-white/80 md:text-2xl tracking-tight">
-            Professional-grade programs. Real accountability.<br />Results that actually last.
+
+          <p className="max-w-2xl text-lg tracking-tight text-white/80 sm:text-xl md:text-2xl">
+            Professional-grade programs. Real accountability.
+            <br className="hidden sm:block" />
+            <span className="sm:hidden"> </span>
+            Results that actually last.
           </p>
 
           {welcomeVideoUrl?.trim() ? (
-            <div className="mt-8 flex flex-col items-center gap-2">
+            <div className="mt-5 flex flex-col items-center gap-1 sm:mt-6">
               <WelcomeVideoPopover welcomeVideoUrl={welcomeVideoUrl}>
                 Watch intro
               </WelcomeVideoPopover>
@@ -94,21 +107,23 @@ export default function LandingHero({
               </a>
             </div>
           ) : null}
-          
-          <div className="mt-10 flex flex-col items-center justify-center gap-4">
-            <Link
-              href="/signup?plan=explorer"
-              className="landing-hero-early-signup inline-flex h-12 items-center justify-center rounded-full px-10 text-sm font-bold shadow-lg transition-all hover:scale-[1.03] active:scale-[0.98]"
-            >
-              Early sign up
-            </Link>
-            <button
-              type="button"
-              onClick={scrollToTickets}
-              className="inline-flex h-14 items-center justify-center rounded-full bg-[#7c3aed] px-10 text-sm font-bold text-white shadow-lg shadow-[#7c3aed]/30 transition-all hover:bg-[#6d2dd6] hover:scale-[1.05] active:scale-[0.98]"
-            >
-              Pick your ticket ↓
-            </button>
+
+          <div className="mt-5 flex w-full max-w-md flex-col items-center gap-3 sm:mt-6">
+            <div className="flex w-full flex-col items-center gap-3 sm:flex-row sm:justify-center sm:flex-wrap">
+              <Link
+                href="/signup?plan=explorer"
+                className="landing-hero-early-signup inline-flex h-11 w-full items-center justify-center rounded-full px-8 text-sm font-bold shadow-lg transition-all hover:scale-[1.03] active:scale-[0.98] sm:h-12 sm:w-auto sm:px-10"
+              >
+                Early sign up
+              </Link>
+              <button
+                type="button"
+                onClick={scrollToTickets}
+                className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[#7c3aed] px-8 text-sm font-bold text-white shadow-lg shadow-[#7c3aed]/30 transition-all hover:scale-[1.05] hover:bg-[#6d2dd6] active:scale-[0.98] sm:h-12 sm:w-auto sm:px-10"
+              >
+                Pick your ticket ↓
+              </button>
+            </div>
             <Link
               href="/login"
               className="inline-flex h-11 w-full max-w-sm items-center justify-center rounded-full border border-white/35 px-6 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/10"
@@ -117,8 +132,10 @@ export default function LandingHero({
             </Link>
             <LandingSignInRow hideMemberSignIn />
           </div>
-          
-          <p className="mt-8 text-xs text-white/50 tracking-widest">4-WEEK PROGRAMS • LIVE SESSIONS • COMMUNITY</p>
+
+          <p className="mt-5 text-xs tracking-widest text-white/50 sm:mt-6">
+            4-WEEK PROGRAMS • LIVE SESSIONS • COMMUNITY
+          </p>
         </div>
       </div>
 

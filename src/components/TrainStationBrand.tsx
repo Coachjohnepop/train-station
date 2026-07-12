@@ -70,26 +70,27 @@ export default function TrainStationBrand({
   );
 
   if (variant === "hero") {
+    // Stacked circle + wordmark, left-aligned (hero places this in the left column).
     return (
-      <div className={`flex flex-col items-center ${className}`}>
+      <div className={`flex flex-col items-start ${className}`}>
         <div
-          className="flex items-center justify-center rounded-full bg-white/10 p-3 shadow-[0_20px_50px_rgba(0,0,0,0.45)] ring-2 ring-white/30 backdrop-blur-sm sm:p-4"
+          className="flex items-center justify-center rounded-full bg-white/10 p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)] ring-2 ring-white/30 backdrop-blur-sm sm:p-3"
           aria-hidden
         >
-          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full sm:h-24 sm:w-24 md:h-28 md:w-28">
+          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full sm:h-20 sm:w-20 md:h-24 md:w-24">
             <Image
               src={brand.logoIconUrl || src}
               alt=""
               width={224}
               height={224}
-              sizes="(max-width: 640px) 96px, 160px"
+              sizes="(max-width: 640px) 80px, 112px"
               className="h-full w-full object-contain"
               priority
             />
           </div>
         </div>
         <p
-          className="mt-4 text-center text-sm font-semibold uppercase tracking-[0.22em] text-white/95 sm:text-base md:text-lg"
+          className="mt-3 max-w-[11rem] text-left text-xs font-semibold uppercase tracking-[0.2em] text-white/95 sm:mt-4 sm:max-w-none sm:text-sm md:text-base"
           aria-label={brand.brandName}
         >
           {brand.brandName}

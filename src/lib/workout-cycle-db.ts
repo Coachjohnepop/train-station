@@ -427,3 +427,129 @@ export async function deployCycleToProgram(
   await syncCycleToProgramSchedule(deployed.id);
   return getWorkoutCycleById(deployed.id);
 }
+
+/**
+ * Snapshot a program's month (28-day block) into the **library** as a deep-cloned cycle.
+ * Always clones workouts so the library is independent of the live program.
+ */
+export async function snapshotProgramMonthToLibrary(input: {
+  programId?: string;
+  programSlug?: string;
+  cycleMonth?: number;
+  name: string;
+  description?: string | null;
+}) {
+  let programId = input.programId;
+  if (!programId && input.programSlug) {
+    const program = await prisma.program.findUnique({
+      where: { slug: input.programSlug },
+      select: { id: true, name: true },
+    });
+    if (!program) throw new Error("PROGRAM_NOT_FOUND");
+    programId = program.id;
+  }
+  if (!programId) throw new Error("PROGRAM_REQUIRED");
+
+  const cycleMonth = input.cycleMonth ?? 1;
+  await backfillProgramCycles(programId);
+
+  const source = await prisma.workoutCycle.findUnique({
+    where: { programId_cycleMonth: { programId, cycleMonth } },
+  });
+  if (!source) throw new Error("CYCLE_NOT_FOUND");
+
+  return copyWorkoutCycle(source.id, {
+    name: input.name.trim(),
+    programId: null,
+    cycleMonth: null,
+    deepCloneWorkouts: true,
+  });
+}
+
+/**
+ * True if a program month already has meaningful content (slots, day-off, notes).
+ */
+export async function programMonthHasContent(
+  programId: string,
+  cycleMonth: number,
+): Promise<{ hasContent: boolean; summary: string }> {
+  const existing = await prisma.workoutCycle.findUnique({
+    where: { programId_cycleMonth: { programId, cycleMonth } },
+    include: {
+      days: {
+        include: { slots: { select: { id: true } } },
+      },
+    },
+  });
+  if (!existing) {
+    return { hasContent: false, summary: "empty" };
+  }
+  let slotCount = 0;
+  let dayOffCount = 0;
+  let notedDays = 0;
+  for (const d of existing.days) {
+    slotCount += d.slots.length;
+    if (d.isDayOff) dayOffCount += 1;
+    if (d.notes?.trim()) notedDays += 1;
+  }
+  const hasContent = slotCount > 0 || dayOffCount > 0 || notedDays > 0;
+  return {
+    hasContent,
+    summary: hasContent
+      ? `${slotCount} workout slot(s), ${dayOffCount} day-off, ${notedDays} noted day(s)`
+      : "empty",
+  };
+}
+
+/**
+ * Paste a library (or any) cycle onto a program month by **day number** (1–28).
+ * Always deep-clones workouts. Refuses overwrite unless `force: true`.
+ */
+export async function pasteCycleOntoProgramMonth(input: {
+  sourceCycleId: string;
+  programId?: string;
+  programSlug?: string;
+  cycleMonth: number;
+  name?: string;
+  /** Required when target month already has content. */
+  force?: boolean;
+}) {
+  let programId = input.programId;
+  let programName = "Program";
+  if (!programId && input.programSlug) {
+    const program = await prisma.program.findUnique({
+      where: { slug: input.programSlug },
+      select: { id: true, name: true },
+    });
+    if (!program) throw new Error("PROGRAM_NOT_FOUND");
+    programId = program.id;
+    programName = program.name;
+  }
+  if (!programId) throw new Error("PROGRAM_REQUIRED");
+
+  const existing = await prisma.workoutCycle.findUnique({
+    where: {
+      programId_cycleMonth: { programId, cycleMonth: input.cycleMonth },
+    },
+  });
+
+  if (existing) {
+    const check = await programMonthHasContent(programId, input.cycleMonth);
+    if (check.hasContent && !input.force) {
+      const err = new Error("CONTENT_EXISTS");
+      (err as Error & { summary?: string }).summary = check.summary;
+      throw err;
+    }
+    // Remove prior month slot so copy can take the unique (programId, cycleMonth)
+    await prisma.workoutCycle.delete({ where: { id: existing.id } });
+  }
+
+  return copyWorkoutCycle(input.sourceCycleId, {
+    name:
+      input.name?.trim() ||
+      `${programName} · M${input.cycleMonth} (from template)`,
+    programId,
+    cycleMonth: input.cycleMonth,
+    deepCloneWorkouts: true,
+  });
+}

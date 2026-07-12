@@ -452,7 +452,15 @@ export default function WorkoutBuilder({
                 {formatPrescriptionSummary(item)} · {weightTierLabel(item.weightTier)}
               </p>
               {item.notes && (
-                <p className="mt-1 line-clamp-1 text-xs text-[var(--muted)]">{item.notes}</p>
+                <p
+                  className="mt-1 line-clamp-2 text-xs text-violet-300/90"
+                  title={item.notes}
+                >
+                  <span className="font-semibold uppercase tracking-wide text-violet-400/80">
+                    Coach note:{" "}
+                  </span>
+                  {item.notes}
+                </p>
               )}
             </div>
             <div className="flex shrink-0 gap-2">

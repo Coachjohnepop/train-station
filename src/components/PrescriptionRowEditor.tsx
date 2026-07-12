@@ -332,16 +332,20 @@ export default function PrescriptionRowEditor({
 
         <div className="space-y-3">
           <label className="block text-sm">
-            <span className="font-medium">Coach notes</span>
+            <span className="font-medium">Coach note for this workout</span>
+            <span className="mt-0.5 block text-xs font-normal text-[var(--muted)]">
+              Shown to members on this session only — not the library exercise description.
+            </span>
             <textarea
               className="input mt-1 min-h-[5rem]"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Optional cues for Jeremy or members"
+              placeholder="e.g. light band · 45s continuous · skip if knees hurt"
+              maxLength={500}
             />
           </label>
           <p className="text-xs text-[var(--muted)]">
-            Need another view later? We add a column to the right — same row, same edit flow.
+            Library description/video stay on the exercise. Use this for today&apos;s cue.
           </p>
         </div>
       </div>

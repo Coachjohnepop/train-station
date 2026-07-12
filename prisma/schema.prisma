@@ -117,6 +117,7 @@ model Workout {
   certifiedAt       DateTime?
   exportText        String?           @db.Text
   certifiedBy       String?
+  /// catalog | template | sms | …
   source            String            @default("catalog")
   restTimerEnabled  Boolean           @default(false)
   restTimerSeconds  Int?
@@ -127,6 +128,26 @@ model Workout {
   dayOptions  ProgramDayOption[]
   cycleSlots  WorkoutCycleDaySlot[]
   logs        WorkoutLog[]
+  /// Canonical row for coach template library (paste always clones this workout).
+  templateMeta      WorkoutTemplate?
+}
+
+/// Coach template library entry — paste always deep-clones `workoutId` (never shared by reference).
+model WorkoutTemplate {
+  id           String   @id @default(cuid())
+  name         String
+  /// Folder-style organization: adult, athletes, youth, general, …
+  category     String   @default("general")
+  /// Free-text version tag (e.g. v_adult, vyoungkids).
+  versionLabel String?
+  notes        String?  @db.Text
+  workoutId    String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  workout      Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  @@index([category, name])
+  @@index([updatedAt])
 }
 
 model WorkoutExercise {

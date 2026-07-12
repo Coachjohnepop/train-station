@@ -22,6 +22,10 @@ export type MemberExerciseBlock = {
   exerciseId: string;
   name: string;
   description: string | null;
+  /** Coach note on this workout line only (today's cue). */
+  coachNotes?: string | null;
+  /** Global library description for the exercise. */
+  libraryDescription?: string | null;
   videoUrl: string | null;
   setScheme: string;
   repPattern: string | null;
@@ -1194,10 +1198,24 @@ export default function MemberWorkoutConsole({
                   )}
                 </div>
 
-                {block.description && (
-                  <p className="mt-2 text-sm text-[var(--muted)]">
-                    {block.description}
-                  </p>
+                {(block.coachNotes || block.description) && (
+                  <div className="mt-2 space-y-1.5">
+                    {block.coachNotes ? (
+                      <p className="rounded-md border border-violet-500/25 bg-violet-500/10 px-2.5 py-1.5 text-sm text-violet-100">
+                        <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-wide text-violet-300/90">
+                          Coach
+                        </span>
+                        {block.coachNotes}
+                      </p>
+                    ) : block.description ? (
+                      <p className="text-sm text-[var(--muted)]">{block.description}</p>
+                    ) : null}
+                    {block.coachNotes &&
+                    block.libraryDescription &&
+                    block.libraryDescription !== block.coachNotes ? (
+                      <p className="text-xs text-[var(--muted)]">{block.libraryDescription}</p>
+                    ) : null}
+                  </div>
                 )}
 
                 <div className="mt-3">

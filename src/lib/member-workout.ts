@@ -50,11 +50,20 @@ export async function getMemberWorkoutById(
   const exercises = items.map((item: any) => {
     const ex = item.exercise?.id ? item.exercise : exById[item.exerciseId] || {};
     const rx = normalizePrescription(item);
+    const coachNotes =
+      typeof item.notes === "string" && item.notes.trim() ? item.notes.trim() : null;
+    const libraryDescription =
+      typeof ex.description === "string" && ex.description.trim()
+        ? ex.description.trim()
+        : null;
     return {
       id: item.id,
       exerciseId: item.exerciseId || ex.id,
       name: ex.name || "Exercise",
-      description: item.notes ?? ex.description,
+      // Prefer session coach note for the main cue; keep library text separately.
+      description: coachNotes ?? libraryDescription,
+      coachNotes,
+      libraryDescription,
       videoUrl: ex.videoUrl,
       setScheme: rx.approach,
       repPattern: rx.repPattern,

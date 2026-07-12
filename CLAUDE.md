@@ -34,8 +34,20 @@ This note is here so future steps (or a future session) do not forget the data s
 
 ---
 
+## Coach template / paste model (July 2026 — Jeremy stress-test)
+Jeremy builds content by **cloning**, never by shared mutable references:
+
+- **Always clone** on paste (Gym→Home, day→next week, template→day, 28-day pack→program). Source stays intact; edit the copy.
+- **Workout template library** (`WorkoutTemplate` + `source: "template"` workouts): promote any workout with **name**, **freeform category**, optional **version** tag (`v_adult`, `vyoungkids`), notes. Categories are **not** limited to adult/athletes — expect yoga, meditation, nutrition/eating, martial arts, dog training, and any future program type. Starter suggestions live in `TEMPLATE_CATEGORY_SUGGESTIONS`; coaches type new categories freely.
+- **Tracks:** paste Gym and/or Home (deselect either).
+- **Same day next week** and **Copy Gym → Home** on program calendar.
+- **Coach note on a workout line** (`WorkoutExercise.notes`) = session cue for members — distinct from library `Exercise.description` / YouTube video.
+- **28-day cycle packs** (`WorkoutCycle` library): snapshot program month → library; paste onto any program by **day number** (1–28). **Warn and require confirm if target month already has content** (`force: true` after confirm). Calendar-date alignment deferred.
+- UI entry: program calendar → **Templates & paste** panel. APIs under `/api/workout-templates/*` and `/api/workout-cycles/snapshot|paste`.
+- Migration: `prisma/migrations/20260712180000_workout_templates/` (table applied on prod when deploying).
+
 ## Deploy branches (June 2026)
-- **Production:** `main` only — currently tagged `prod-fallback-2026-06-14` (`64807c9`). Do not push WIP features to `main`.
+- **Production:** `main` only — currently tagged `prod-fallback-2026-06-14` (`64807c9`). Do not push WIP features to `main` unless John explicitly asks for prod.
 - **Preview:** `preview` branch — all new work (chat, SMS, Go to Today, etc.). Push → Vercel Preview URL → merge to `main` when stable.
 - See `DEPLOY.md` top section for full workflow + chat/SMS env vars.
 

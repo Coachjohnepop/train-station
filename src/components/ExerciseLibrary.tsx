@@ -711,8 +711,10 @@ export default function ExerciseLibrary() {
         {showAddForm && (
           <form onSubmit={handleAdd} className="card p-3 space-y-3 mt-2">
             <p className="text-xs text-[var(--muted)]">
-              Name, description, and demo video. Sets, weight, and workout-specific
-              notes are configured under Workouts.
+              Name, library description, and demo video (YouTube links are fine as
+              placeholders until your own videos are ready). Sets, weight, and
+              coach notes for a specific day live under Programs / Workouts — not
+              here.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
