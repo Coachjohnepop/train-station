@@ -14,10 +14,11 @@ import {
  * Mounted once in the root layout so it survives client-side navigation —
  * the song keeps playing uninterrupted as visitors move between pages.
  *
- * Fast-start strategy: try audible autoplay first; if the browser blocks it,
- * fall back to muted buffering until a real activation (click/tap/key — scroll
- * does not count). A floating toggle turns music on/off, remembered in
- * localStorage. First-time visitors see a guided hint pointing at the toggle.
+ * Autoplay strategy (best-effort under browser policies):
+ * 1. HTML autoPlay + try audible play as soon as the file can start
+ * 2. If blocked, keep muted playback buffered
+ * 3. On first real gesture (tap/click/key), unmute + play immediately
+ * User mute choice is remembered in localStorage.
  */
 
 const SRC = "/background-music.mp3";
@@ -25,18 +26,18 @@ const VOLUME = 0.5;
 const OFF_KEY = "ts-bg-music-muted"; // "1" = visitor turned music off
 /**
  * Guide “seen” flag. Bump when the finger should reappear for everyone once.
- * Hint is dismissed only by mute toggle or timeout — never by a random page tap
- * (that was making the finger vanish instantly in private windows).
+ * Hint is dismissed only by mute toggle or timeout — never by a random page tap.
  */
 const HINT_KEY = "ts-bg-music-hint-seen-v6";
 /** Keep the pointing finger on screen ~20s (mute toggle also dismisses). */
 const HINT_MS = 20_000;
 
 /** Browsers only honor audio from real activation — scroll does not count. */
-const ACTIVATION_EVENTS: (keyof DocumentEventMap)[] = [
+const ACTIVATION_EVENTS: (keyof WindowEventMap)[] = [
   "pointerdown",
   "keydown",
   "touchstart",
+  "click",
 ];
 
 /** Coach admin landing — keep the welcome track; deeper admin pages stay quiet. */
@@ -64,27 +65,70 @@ export default function BackgroundMusic() {
   const resumeAudible = (audio: HTMLAudioElement) => {
     audio.volume = VOLUME;
     audio.muted = false;
-    return audio.play().catch(() => {});
+    return audio.play().catch(() => false);
   };
 
+  /** Wait until the element can start playback (or timeout). */
+  const whenReady = (audio: HTMLAudioElement, ms = 4000) =>
+    new Promise<void>((resolve) => {
+      if (audio.readyState >= 2) {
+        resolve();
+        return;
+      }
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        audio.removeEventListener("canplay", finish);
+        audio.removeEventListener("canplaythrough", finish);
+        resolve();
+      };
+      audio.addEventListener("canplay", finish);
+      audio.addEventListener("canplaythrough", finish);
+      window.setTimeout(finish, ms);
+    });
+
+  /**
+   * Prefer audible autoplay. If the browser blocks sound, keep muted playback
+   * running so the first gesture can unmute without a second delay.
+   */
   const startMusic = async (audio: HTMLAudioElement) => {
+    audio.loop = true;
+    audio.preload = "auto";
+    audio.setAttribute("playsinline", "true");
+    // iOS quirk: playsInline as property where supported
+    try {
+      (audio as HTMLAudioElement & { playsInline?: boolean }).playsInline = true;
+    } catch {
+      /* ignore */
+    }
     audio.volume = VOLUME;
+
+    await whenReady(audio);
+
+    // Attempt 1: full audible autoplay (works on many desktop + returning visitors)
     audio.muted = false;
     try {
       await audio.play();
-      return;
+      return "audible" as const;
     } catch {
-      // Fall back to muted autoplay so the track buffers until a real gesture.
-      audio.muted = true;
-      await audio.play().catch(() => {});
+      /* blocked */
     }
+
+    // Attempt 2: muted autoplay (almost always allowed) — buffer until gesture
+    audio.muted = true;
+    try {
+      await audio.play();
+    } catch {
+      /* still blocked — activation handler will start from zero */
+    }
+    return "muted-or-blocked" as const;
   };
 
   // Duck when other trusted media plays (video controls, horn, etc.).
   useEffect(() => registerBackgroundMusicMediaDucking(), []);
 
-  // Try audible autoplay on load; fall back to muted buffering. Restore prior off.
-  // Show the purple finger guide unless this browser already dismissed it.
+  // Autoplay on mount / page show (bfcache restore).
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -94,7 +138,6 @@ export default function BackgroundMusic() {
     const wasOff = window.localStorage.getItem(OFF_KEY) === "1";
     if (wasOff) {
       setOff(true);
-      // Still show the guide once so people can find unmute
       if (window.localStorage.getItem(HINT_KEY) !== "1") setShowHint(true);
       return;
     }
@@ -104,31 +147,49 @@ export default function BackgroundMusic() {
     if (window.localStorage.getItem(HINT_KEY) !== "1") {
       setShowHint(true);
     }
+
+    // Retry when tab becomes visible again (common after mobile browser switch)
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (window.localStorage.getItem(OFF_KEY) === "1") return;
+      if (overlayPauseRef.current) return;
+      void resumeAudible(audio);
+    };
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) onVisible();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pageshow", onPageShow);
+    };
   }, []);
 
-  // Unmute on the first real user activation (click/tap/key — not scroll).
-  // Do NOT dismiss the finger here — any page tap was killing the guide instantly.
+  // Unmute + play on the first real user activation (click/tap/key).
+  // Do NOT dismiss the finger here.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     const onActivation = () => {
       if (window.localStorage.getItem(OFF_KEY) === "1") return;
+      if (overlayPauseRef.current) return;
+      audio.volume = VOLUME;
       audio.muted = false;
-      void audio
-        .play()
-        .then(() => {
-          remove();
-        })
-        .catch(() => {});
+      void audio.play().then(remove).catch(() => {
+        // Keep listening — some browsers need a second gesture
+      });
     };
 
+    const opts: AddEventListenerOptions = { capture: true, passive: true };
     const remove = () =>
       ACTIVATION_EVENTS.forEach((e) =>
-        window.removeEventListener(e, onActivation)
+        window.removeEventListener(e, onActivation, opts),
       );
+    // Capture phase so we win even if a child stops bubbling
     ACTIVATION_EVENTS.forEach((e) =>
-      window.addEventListener(e, onActivation, { passive: true })
+      window.addEventListener(e, onActivation, opts),
     );
 
     return remove;
@@ -193,7 +254,15 @@ export default function BackgroundMusic() {
 
   return (
     <>
-      <audio ref={audioRef} src={SRC} loop preload="auto" data-ts-bg-music="true" />
+      <audio
+        ref={audioRef}
+        src={SRC}
+        loop
+        autoPlay
+        preload="auto"
+        playsInline
+        data-ts-bg-music="true"
+      />
       {!adminSubPage ? (
         <div
           className={`bg-music-control-cluster fixed z-50 flex items-end overflow-visible ${
