@@ -207,7 +207,7 @@ export default function BackgroundMusic() {
                 Click to mute — or just enjoy as you surf.
               </p>
               <span className="bg-music-guide-pointer" aria-hidden>
-                👉
+                <PurplePointingFinger />
               </span>
             </div>
           ) : null}
@@ -223,6 +223,59 @@ export default function BackgroundMusic() {
         </div>
       ) : null}
     </>
+  );
+}
+
+/** Brand-purple pointer — emoji can’t be recolored reliably across browsers. */
+function PurplePointingFinger() {
+  return (
+    <svg
+      className="bg-music-guide-pointer-svg"
+      width="76"
+      height="76"
+      viewBox="0 0 64 64"
+      fill="none"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient
+          id="bg-music-finger-grad"
+          x1="8"
+          y1="6"
+          x2="56"
+          y2="58"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="var(--accent-hover, #a78bfa)" />
+          <stop offset="0.5" stopColor="var(--accent, #7c3aed)" />
+          <stop offset="1" stopColor="var(--accent-deep, #5b21b6)" />
+        </linearGradient>
+      </defs>
+      {/* Soft brand glow under the hand */}
+      <ellipse cx="34" cy="40" rx="22" ry="16" fill="var(--accent, #7c3aed)" opacity="0.18" />
+      {/*
+        Backhand pointing right — simplified silhouette readable at ~76px.
+        Index extended; other fingers curled into a soft fist.
+      */}
+      <path
+        d="M18 34.5c0-2.6 2.1-4.7 4.7-4.7h3.8V18.2c0-2.9 2.3-5.2 5.2-5.2 2.9 0 5.2 2.3 5.2 5.2V29.8h1.6V16.4c0-2.9 2.3-5.2 5.2-5.2 2.9 0 5.2 2.3 5.2 5.2v16.2l1.9-2.5c1.3-1.7 3.7-2.3 5.7-1.3 2.3 1.1 3.3 3.9 2.3 6.3L52.2 50.6c-1.5 3.8-5.2 6.4-9.3 6.4H30.4c-6.6 0-12-5.4-12-12V34.5z"
+        fill="url(#bg-music-finger-grad)"
+        stroke="color-mix(in srgb, var(--accent-light, #c4b5fd) 70%, white)"
+        strokeWidth="1.25"
+        strokeLinejoin="round"
+      />
+      {/* Index finger extended toward the speaker */}
+      <rect
+        x="40.5"
+        y="9"
+        width="14.5"
+        height="11.5"
+        rx="5.75"
+        fill="url(#bg-music-finger-grad)"
+        stroke="color-mix(in srgb, var(--accent-light, #c4b5fd) 70%, white)"
+        strokeWidth="1.25"
+      />
+    </svg>
   );
 }
 

@@ -1790,17 +1790,24 @@ input:-webkit-autofill {
 }
 
 .bg-music-guide-pointer {
-  display: block;
+  display: flex;
   flex-shrink: 0;
-  width: 1.15em;
-  font-size: 4.75rem;
+  align-items: center;
+  justify-content: center;
+  width: 4.75rem;
+  height: 4.75rem;
   line-height: 1;
-  text-align: center;
   /* Park left of the speaker; short nudge still points at it without overlapping */
   transform: translate3d(-12px, 0, 0);
   animation: bg-music-point-nudge 1.1s ease-in-out infinite;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 6px 14px color-mix(in srgb, var(--accent, #7c3aed) 45%, transparent));
   user-select: none;
+}
+
+.bg-music-guide-pointer-svg {
+  display: block;
+  width: 4.75rem;
+  height: 4.75rem;
 }
 
 @keyframes bg-music-point-nudge {
