@@ -23,8 +23,13 @@ import {
 const SRC = "/background-music.mp3";
 const VOLUME = 0.5;
 const OFF_KEY = "ts-bg-music-muted"; // "1" = visitor turned music off
-/** Bump when re-introducing the guide so returning visitors see the finger again. */
-const HINT_KEY = "ts-bg-music-hint-seen-v2";
+/**
+ * Guide “seen” flag. Bump when the finger should reappear for everyone once.
+ * Hint is dismissed only by mute toggle or timeout — never by a random page tap
+ * (that was making the finger vanish instantly in private windows).
+ */
+const HINT_KEY = "ts-bg-music-hint-seen-v3";
+const HINT_MS = 20_000;
 
 /** Browsers only honor audio from real activation — scroll does not count. */
 const ACTIVATION_EVENTS: (keyof DocumentEventMap)[] = [
@@ -78,6 +83,7 @@ export default function BackgroundMusic() {
   useEffect(() => registerBackgroundMusicMediaDucking(), []);
 
   // Try audible autoplay on load; fall back to muted buffering. Restore prior off.
+  // Show the purple finger guide unless this browser already dismissed it.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -87,16 +93,20 @@ export default function BackgroundMusic() {
     const wasOff = window.localStorage.getItem(OFF_KEY) === "1";
     if (wasOff) {
       setOff(true);
+      // Still show the guide once so people can find unmute
+      if (window.localStorage.getItem(HINT_KEY) !== "1") setShowHint(true);
       return;
     }
 
     void startMusic(audio);
 
-    const hintSeen = window.localStorage.getItem(HINT_KEY) === "1";
-    if (!hintSeen) setShowHint(true);
+    if (window.localStorage.getItem(HINT_KEY) !== "1") {
+      setShowHint(true);
+    }
   }, []);
 
   // Unmute on the first real user activation (click/tap/key — not scroll).
+  // Do NOT dismiss the finger here — any page tap was killing the guide instantly.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -107,7 +117,6 @@ export default function BackgroundMusic() {
       void audio
         .play()
         .then(() => {
-          dismissHint();
           remove();
         })
         .catch(() => {});
@@ -124,10 +133,10 @@ export default function BackgroundMusic() {
     return remove;
   }, []);
 
-  // Auto-dismiss the guided hint after a bit longer so the finger is easy to spot.
+  // Auto-dismiss only after enough time to notice (or when they use the mute button).
   useEffect(() => {
     if (!showHint) return;
-    const timer = window.setTimeout(dismissHint, 16_000);
+    const timer = window.setTimeout(dismissHint, HINT_MS);
     return () => window.clearTimeout(timer);
   }, [showHint]);
 

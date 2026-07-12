@@ -1761,6 +1761,8 @@ input:-webkit-autofill {
    Desktop/laptop (coach Jeremy): larger finger, roomier bubble, clear of CTAs. */
 .bg-music-control-cluster {
   overflow: visible;
+  /* Always above home FABs / memberships */
+  z-index: 60;
 }
 
 .bg-music-guide {
