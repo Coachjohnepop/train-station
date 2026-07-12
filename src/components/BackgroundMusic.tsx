@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   BG_MUSIC_OVERLAY_EVENT,
   markBackgroundMusicElement,
@@ -9,30 +9,19 @@ import {
 } from "@/lib/background-music-control";
 
 /**
- * Site-wide background music.
+ * Site-wide background music + pointing-finger guide.
  *
- * Mounted once in the root layout so it survives client-side navigation —
- * the song keeps playing uninterrupted as visitors move between pages.
- *
- * Autoplay strategy (best-effort under browser policies):
- * 1. HTML autoPlay + try audible play as soon as the file can start
- * 2. If blocked, keep muted playback buffered
- * 3. On first real gesture (tap/click/key), unmute + play immediately
- * User mute choice is remembered in localStorage.
+ * When the finger appears we also start music (autoplay best-effort).
+ * Finger stays up ~20s or until mute is tapped.
+ * Mute preference is remembered; the finger guide is NOT permanently
+ * suppressed by localStorage (that made it “disappear” for testers).
  */
 
 const SRC = "/background-music.mp3";
 const VOLUME = 0.5;
 const OFF_KEY = "ts-bg-music-muted"; // "1" = visitor turned music off
-/**
- * Guide “seen” flag. Bump when the finger should reappear for everyone once.
- * Hint is dismissed only by mute toggle or timeout — never by a random page tap.
- */
-const HINT_KEY = "ts-bg-music-hint-seen-v6";
-/** Keep the pointing finger on screen ~20s (mute toggle also dismisses). */
 const HINT_MS = 20_000;
 
-/** Browsers only honor audio from real activation — scroll does not count. */
 const ACTIVATION_EVENTS: (keyof WindowEventMap)[] = [
   "pointerdown",
   "keydown",
@@ -40,7 +29,6 @@ const ACTIVATION_EVENTS: (keyof WindowEventMap)[] = [
   "click",
 ];
 
-/** Coach admin landing — keep the welcome track; deeper admin pages stay quiet. */
 const ADMIN_MUSIC_LANDING = new Set(["/admin", "/admin/day"]);
 
 function isAdminSubPage(pathname: string): boolean {
@@ -52,24 +40,40 @@ export default function BackgroundMusic() {
   const adminSubPage = isAdminSubPage(pathname);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const overlayPauseRef = useRef(false);
-  // `off` = the visitor's on/off choice (not the same as the silent-buffering
-  // mute used purely for fast start). Default on; reconciled with storage below.
+  const hintTimerRef = useRef<number | null>(null);
+
   const [off, setOff] = useState(false);
-  const [showHint, setShowHint] = useState(false);
+  // Start true so the finger paints immediately; mount effect restarts the 20s window.
+  const [showHint, setShowHint] = useState(true);
 
-  const dismissHint = () => {
+  const clearHintTimer = useCallback(() => {
+    if (hintTimerRef.current != null) {
+      window.clearTimeout(hintTimerRef.current);
+      hintTimerRef.current = null;
+    }
+  }, []);
+
+  const showFingerForTwentySeconds = useCallback(() => {
+    setShowHint(true);
+    clearHintTimer();
+    hintTimerRef.current = window.setTimeout(() => {
+      setShowHint(false);
+      hintTimerRef.current = null;
+    }, HINT_MS);
+  }, [clearHintTimer]);
+
+  const dismissHint = useCallback(() => {
+    clearHintTimer();
     setShowHint(false);
-    window.localStorage.setItem(HINT_KEY, "1");
-  };
+  }, [clearHintTimer]);
 
-  const resumeAudible = (audio: HTMLAudioElement) => {
+  const resumeAudible = useCallback((audio: HTMLAudioElement) => {
     audio.volume = VOLUME;
     audio.muted = false;
     return audio.play().catch(() => false);
-  };
+  }, []);
 
-  /** Wait until the element can start playback (or timeout). */
-  const whenReady = (audio: HTMLAudioElement, ms = 4000) =>
+  const whenReady = (audio: HTMLAudioElement, ms = 5000) =>
     new Promise<void>((resolve) => {
       if (audio.readyState >= 2) {
         resolve();
@@ -80,75 +84,77 @@ export default function BackgroundMusic() {
         if (done) return;
         done = true;
         audio.removeEventListener("canplay", finish);
-        audio.removeEventListener("canplaythrough", finish);
+        audio.removeEventListener("loadeddata", finish);
         resolve();
       };
       audio.addEventListener("canplay", finish);
-      audio.addEventListener("canplaythrough", finish);
+      audio.addEventListener("loadeddata", finish);
+      // Kick load
+      try {
+        audio.load();
+      } catch {
+        /* ignore */
+      }
       window.setTimeout(finish, ms);
     });
 
   /**
-   * Prefer audible autoplay. If the browser blocks sound, keep muted playback
-   * running so the first gesture can unmute without a second delay.
+   * Start music in tandem with the finger. Audible first; muted buffer if blocked.
    */
-  const startMusic = async (audio: HTMLAudioElement) => {
-    audio.loop = true;
-    audio.preload = "auto";
-    audio.setAttribute("playsinline", "true");
-    // iOS quirk: playsInline as property where supported
-    try {
-      (audio as HTMLAudioElement & { playsInline?: boolean }).playsInline = true;
-    } catch {
-      /* ignore */
-    }
-    audio.volume = VOLUME;
+  const startMusicWithFinger = useCallback(
+    async (audio: HTMLAudioElement) => {
+      // Finger + music together
+      showFingerForTwentySeconds();
 
-    await whenReady(audio);
+      audio.loop = true;
+      audio.preload = "auto";
+      audio.setAttribute("playsinline", "true");
+      try {
+        (audio as HTMLAudioElement & { playsInline?: boolean }).playsInline = true;
+      } catch {
+        /* ignore */
+      }
+      audio.volume = VOLUME;
 
-    // Attempt 1: full audible autoplay (works on many desktop + returning visitors)
-    audio.muted = false;
-    try {
-      await audio.play();
-      return "audible" as const;
-    } catch {
-      /* blocked */
-    }
+      await whenReady(audio);
 
-    // Attempt 2: muted autoplay (almost always allowed) — buffer until gesture
-    audio.muted = true;
-    try {
-      await audio.play();
-    } catch {
-      /* still blocked — activation handler will start from zero */
-    }
-    return "muted-or-blocked" as const;
-  };
+      audio.muted = false;
+      try {
+        await audio.play();
+        return;
+      } catch {
+        /* browser blocked audible autoplay */
+      }
 
-  // Duck when other trusted media plays (video controls, horn, etc.).
+      // Keep track running muted so the next gesture can unmute instantly
+      audio.muted = true;
+      try {
+        await audio.play();
+      } catch {
+        /* activation handler will start cold */
+      }
+    },
+    [showFingerForTwentySeconds],
+  );
+
   useEffect(() => registerBackgroundMusicMediaDucking(), []);
 
-  // Autoplay on mount / page show (bfcache restore).
+  // Mount: restore mute preference; start music + finger together.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
     markBackgroundMusicElement(audio);
-    audio.volume = VOLUME;
 
     const wasOff = window.localStorage.getItem(OFF_KEY) === "1";
     if (wasOff) {
       setOff(true);
-      if (window.localStorage.getItem(HINT_KEY) !== "1") setShowHint(true);
+      // Still show finger so they know where unmute is
+      showFingerForTwentySeconds();
       return;
     }
 
-    void startMusic(audio);
+    void startMusicWithFinger(audio);
 
-    if (window.localStorage.getItem(HINT_KEY) !== "1") {
-      setShowHint(true);
-    }
-
-    // Retry when tab becomes visible again (common after mobile browser switch)
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
       if (window.localStorage.getItem(OFF_KEY) === "1") return;
@@ -156,53 +162,44 @@ export default function BackgroundMusic() {
       void resumeAudible(audio);
     };
     const onPageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) onVisible();
+      if (e.persisted) {
+        if (window.localStorage.getItem(OFF_KEY) === "1") return;
+        void startMusicWithFinger(audio);
+      } else {
+        onVisible();
+      }
     };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("pageshow", onPageShow);
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("pageshow", onPageShow);
+      clearHintTimer();
     };
-  }, []);
+  }, [startMusicWithFinger, showFingerForTwentySeconds, resumeAudible, clearHintTimer]);
 
-  // Unmute + play on the first real user activation (click/tap/key).
-  // Do NOT dismiss the finger here.
+  // First gesture → unmute + play (does not hide finger).
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
+    const opts: AddEventListenerOptions = { capture: true, passive: true };
     const onActivation = () => {
       if (window.localStorage.getItem(OFF_KEY) === "1") return;
       if (overlayPauseRef.current) return;
       audio.volume = VOLUME;
       audio.muted = false;
-      void audio.play().then(remove).catch(() => {
-        // Keep listening — some browsers need a second gesture
-      });
+      void audio.play().catch(() => {});
     };
 
-    const opts: AddEventListenerOptions = { capture: true, passive: true };
-    const remove = () =>
+    ACTIVATION_EVENTS.forEach((e) => window.addEventListener(e, onActivation, opts));
+    return () => {
       ACTIVATION_EVENTS.forEach((e) =>
         window.removeEventListener(e, onActivation, opts),
       );
-    // Capture phase so we win even if a child stops bubbling
-    ACTIVATION_EVENTS.forEach((e) =>
-      window.addEventListener(e, onActivation, opts),
-    );
-
-    return remove;
+    };
   }, []);
 
-  // Auto-dismiss only after enough time to notice (or when they use the mute button).
-  useEffect(() => {
-    if (!showHint) return;
-    const timer = window.setTimeout(dismissHint, HINT_MS);
-    return () => window.clearTimeout(timer);
-  }, [showHint]);
-
-  // Video overlays (free-ticket prank, etc.) duck the site music.
   useEffect(() => {
     const onOverlay = (e: Event) => {
       const audio = audioRef.current;
@@ -219,9 +216,9 @@ export default function BackgroundMusic() {
     };
     window.addEventListener(BG_MUSIC_OVERLAY_EVENT, onOverlay);
     return () => window.removeEventListener(BG_MUSIC_OVERLAY_EVENT, onOverlay);
-  }, [off]);
+  }, [off, resumeAudible]);
 
-  // Hide the control and pause on admin sub-pages (queue, members, settings, etc.).
+  // Admin sub-pages: pause. Leaving them: restart music + finger.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -229,28 +226,34 @@ export default function BackgroundMusic() {
       audio.pause();
       return;
     }
-    if (!off && window.localStorage.getItem(OFF_KEY) !== "1") {
-      void resumeAudible(audio);
+    if (window.localStorage.getItem(OFF_KEY) === "1") {
+      setOff(true);
+      return;
     }
-  }, [adminSubPage, off]);
+    setOff(false);
+    void startMusicWithFinger(audio);
+  }, [adminSubPage, startMusicWithFinger]);
 
   const toggle = () => {
     const audio = audioRef.current;
     if (!audio) return;
-    dismissHint();
     const next = !off;
     setOff(next);
     window.localStorage.setItem(OFF_KEY, next ? "1" : "0");
     if (next) {
+      dismissHint();
       audio.pause();
     } else {
-      void resumeAudible(audio);
+      // Turning music back on → finger + play together again
+      void startMusicWithFinger(audio);
     }
   };
 
   const onAdminLanding = ADMIN_MUSIC_LANDING.has(pathname);
-  /** Home has a floating “View memberships” pill at bottom-right — sit above it. */
   const onPublicHome = pathname === "/";
+
+  // Hide finger on admin sub-pages where the control is hidden
+  const fingerVisible = showHint && !adminSubPage;
 
   return (
     <>
@@ -269,8 +272,7 @@ export default function BackgroundMusic() {
             onAdminLanding
               ? "bottom-20 xl:bottom-6"
               : onPublicHome
-                ? /* Above View memberships: taller on phone for safe-area + FAB */
-                  "bottom-[5.75rem] sm:bottom-28"
+                ? "bottom-[5.75rem] sm:bottom-28"
                 : "bottom-6"
           }`}
           style={{
@@ -281,18 +283,19 @@ export default function BackgroundMusic() {
                 : "max(1.25rem, env(safe-area-inset-bottom, 0px))",
           }}
         >
-          {showHint && !off ? (
+          {fingerVisible ? (
             <div className="bg-music-guide" role="status" aria-live="polite">
               <p className="bg-music-guide-bubble">
-                <span className="sm:hidden">Tap to mute music</span>
+                <span className="sm:hidden">
+                  {off ? "Tap to play music" : "Music on — tap to mute"}
+                </span>
                 <span className="hidden sm:inline">
-                  Click to mute — or just enjoy as you surf.
+                  {off
+                    ? "Click the speaker to play music."
+                    : "Music is on — click to mute anytime."}
                 </span>
               </p>
-              {/*
-                Real emoji 👉 with medium-dark skin tone (tan, a shade darker).
-                U+1F449 + U+1F3FE → 👉🏾 — OS-rendered pointing hand.
-              */}
+              {/* Real emoji 👉 medium-dark tan, points right */}
               <span className="bg-music-guide-pointer" aria-hidden>
                 {"\u{1F449}\u{1F3FE}"}
               </span>
@@ -303,7 +306,7 @@ export default function BackgroundMusic() {
             onClick={toggle}
             aria-label={off ? "Unmute background music" : "Mute background music"}
             title={off ? "Play music" : "Mute music"}
-            className="bg-music-toggle relative z-10 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_90%,transparent)] text-[var(--text)] shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.985] sm:h-11 sm:w-11"
+            className="bg-music-toggle relative z-10 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_90%,transparent)] text-[var(--text)] shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.985]"
           >
             {off ? <SpeakerOffIcon /> : <SpeakerOnIcon />}
           </button>
