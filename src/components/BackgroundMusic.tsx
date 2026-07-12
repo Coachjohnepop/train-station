@@ -322,16 +322,17 @@ export default function BackgroundMusic() {
   // Honest icon: only “on” when sound is confirmed live
   const showAsPlaying = !off && soundLive;
 
+  // Emperor’s New Groove energy — short, clear, mobile-friendly
   const bubbleMobile = off
-    ? "Tap speaker for music"
+    ? "Theme Song — tap to play"
     : soundLive
-      ? "Music on — tap to mute"
-      : "Tap speaker or page for sound";
+      ? "Theme Song — tap to mute"
+      : "Theme Song — tap to play";
   const bubbleDesktop = off
-    ? "Click the speaker to play music."
+    ? "Theme Song — click the speaker to play"
     : soundLive
-      ? "Music is on — click to mute anytime."
-      : "Tap the speaker (or anywhere) to start the sound.";
+      ? "Theme Song — click to mute anytime"
+      : "Theme Song — click the speaker (or anywhere) to play";
 
   return (
     <>
