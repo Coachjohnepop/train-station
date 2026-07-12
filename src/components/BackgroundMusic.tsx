@@ -297,8 +297,6 @@ export default function BackgroundMusic() {
         autoPlay
         preload="auto"
         playsInline
-        // @ts-expect-error webkit attribute for older iOS
-        webkit-playsinline="true"
         data-ts-bg-music="true"
       />
       {!adminSubPage ? (
