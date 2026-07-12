@@ -2,6 +2,44 @@
 
 # Train Station - Claude / Project Context Notes
 
+## WHERE WE LEFT OFF (2026-07-12 evening PT) — take a break
+
+**Status:** Pausing. Resume from this section.
+
+### Shipped on `main` (prod)
+- **Exercise soft-archive** (same shelf model as templates/packs): `archivedAt` on `Exercise`, migration `20260712240000_archive_exercises` **already applied on prod**.
+  - Commit: `0ac0df5` — Archive shelf for catalog exercises before hard delete
+  - Prior: `f71efb6` templates/packs archive; Theme Song / muted speaker music UX commits before that
+- **APIs:** `GET /api/exercises?archive=active|archived|all` (default active); `DELETE` soft-archives; `PATCH { action: "restore" }`; `DELETE ?hard=1` only if archived
+- **UI:** Admin → Exercises — Archive button + Archive shelf (Restore / Delete forever)
+- **Pickers / text-upload matching:** active only; past workouts still resolve archived exercises by id
+- **Lib:** `src/lib/catalog-exercise-archive.ts`
+
+### Soak + trail (prod)
+- Jeremy **not active** in last 2h when we checked; ran soak marker **`MARSHMALLOW-BADGER`** (script `scripts/marshmallow-badger-soak.mjs`) — **89/89 checks, 2 rounds PASS** (archive/clone/restore/forever-delete for exercises + templates + packs)
+- **Coach-only easter-egg trail left for Jeremy** (NOT on member program days — do not put joke warm-ups on live sessions):
+  - Active exercise: `MARSHMALLOW-BADGER · toast the shoulders (coach egg)`
+  - Archived exercise (shelf demo): `MARSHMALLOW-BADGER · fluff on the archive shelf`
+  - Template: `MARSHMALLOW-BADGER · hello Jeremy` · category `marshmallow-badger` · `v_trail`
+  - Catalog workout: `MARSHMALLOW-BADGER · coach playground (not on schedule)` with that movement as a light warm-up line
+- Earlier funny markers also used this session: `CLONE-PARTY-SOAK`, `LASER-CHICKEN`, `CONFETTI-GOOSE`
+
+### Decision parked
+- **Do not** inject MARSHMALLOW-BADGER (or similar) as a warm-up into Jeremy’s live/member-facing created workouts. Coach library / template / archive shelf only.
+
+### Local env notes
+- Local `npm run dev` was killed after max runtime (~23h) — restart with `npm run dev` if needed (often :3000 or :3002)
+- Branch: **`main`** clean vs origin for code; untracked soak scripts/reports under `scripts/` (optional commit later)
+- Prod coach login for soaks: `john@thetrainstation.co` + soak password pattern used in scripts (see clone-party / marshmallow scripts)
+
+### Natural next steps when back
+1. See if Jeremy found the trail / used archive shelf; audit with `MINUTES=… npx tsx scripts/jeremy-post-audit-prodtest.mjs`
+2. Optional: commit `scripts/marshmallow-badger-soak.mjs` (+ clone-party) for reuse; clean leftover empty catalog shells if any
+3. More DEMO_SCRIPT / Jeremy workflow polish; keep publishing **data** (`prisma/seed-data.json` + `*.dev.json`) with code when content changes
+4. If Jeremy wants a playground warm-up pattern later: dedicated coach-only / never-enrolled program — not Adult live days
+
+---
+
 ## Publish / Deploy Reminder: Include ALL the data we are loading
 When we finish testing and get to the publish phase (GitHub push + Vercel deploy per DEPLOY.md, after more end-to-end runs against DEMO_SCRIPT.md):
 - **Remember to publish / commit all of the data the app loads**, not just the source code. This is essential for the live version to match the tested experience and will help stabilize things (no missing schedules, empty pasts, blank equipment/SMS, or schedule without green "done" rings).
@@ -53,8 +91,8 @@ Jeremy builds content by **cloning**, never by shared mutable references:
 - See `DEPLOY.md` top section for full workflow + chat/SMS env vars.
 
 ## Other quick notes
-- Current focus (as of latest): Set logging + green checks in MemberWorkoutConsole are working again after simplifying (removed per-click coach live save complexity that was interfering with local state → visual). Schedule green rings for done sessions, hybrid options, John & Steph floating player, equipment/SMS dashboard widgets, etc. all rely on the data files above being present on publish.
-- More testing (per DEMO_SCRIPT.md) then publish is the plan. Publishing with the full data committed will make the live experience match what you've been validating locally and reduce flakiness.
-- Dev server usually runs on :3002 in this env (check with lsof/curl if needed); hard refresh after changes.
-- User will return from testing/BBQ and give next signal.
+- **Latest handoff:** see **WHERE WE LEFT OFF** at top of this file (2026-07-12).
+- Set logging + green checks in MemberWorkoutConsole are working after simplifying. Schedule green rings, hybrid options, John & Steph floating player, equipment/SMS widgets rely on data files shipping with publish.
+- Dev server often :3000/:3002; hard refresh after changes. Local dev may need restart after long sessions.
+- Theme Song background music: muted-until-confirmed speaker, ~22s guide, dismiss only on mute/timeout (not any gesture).
 
