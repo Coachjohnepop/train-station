@@ -1602,8 +1602,20 @@ export default function ProgramCalendarBuilder({
     setSaving(true);
     try {
       await patchDay(focus.dayId, { publishedAt: new Date().toISOString() });
-      setMessage("Day published.");
-      setTimeout(() => setMessage(null), 2000);
+      setMessage("Day published — members can see it. You can still edit notes anytime.");
+      setTimeout(() => setMessage(null), 3000);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function unpublishDay() {
+    if (!focus) return;
+    setSaving(true);
+    try {
+      await patchDay(focus.dayId, { publishedAt: null });
+      setMessage("Unpublished — hidden from members until you Publish again.");
+      setTimeout(() => setMessage(null), 3000);
     } finally {
       setSaving(false);
     }
@@ -1715,15 +1727,17 @@ export default function ProgramCalendarBuilder({
           );
         }
 
+        // Never copy publishedAt — target week stays a draft so coach can edit
+        // day descriptions (e.g. "Welcome Day one…") before publishing again.
         const dayPatch: Record<string, unknown> = {
           options: clonedOpts,
           calendarDate: toCal,
           videoUrl: fromDay.videoUrl ?? null,
+          publishedAt: null,
         };
         if (fromDay.defaultSets != null) dayPatch.defaultSets = fromDay.defaultSets;
         if (fromDay.defaultReps != null) dayPatch.defaultReps = fromDay.defaultReps;
         if (fromDay.defaultRestSec != null) dayPatch.defaultRestSec = fromDay.defaultRestSec;
-        if (fromDay.publishedAt != null) dayPatch.publishedAt = fromDay.publishedAt;
         await patchDay(toDay.id, dayPatch);
       }
 
@@ -1741,8 +1755,10 @@ export default function ProgramCalendarBuilder({
     const ok = await copyWeek(activeWeek - 1, activeWeek);
     if (ok) {
       await sync();
-      setMessage(`Week ${activeWeek} copied — each day has its own workout copy.`);
-      setTimeout(() => setMessage(null), 3500);
+      setMessage(
+        `Week ${activeWeek} copied — independent workouts, draft (not published). Edit day notes, then Publish when ready.`,
+      );
+      setTimeout(() => setMessage(null), 4500);
     }
   }
 
@@ -2313,16 +2329,30 @@ export default function ProgramCalendarBuilder({
           }`}
         >
           {focusDay.publishedAt && (
-            <div className="flex items-center gap-2.5 rounded-md border-2 border-emerald-500/50 bg-emerald-950/50 px-3 py-2">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-base font-extrabold text-emerald-950">
-                ✓
-              </span>
-              <div className="min-w-0">
-                <p className="text-sm font-extrabold tracking-wide text-emerald-300">Published — complete</p>
-                <p className="text-[10px] text-emerald-400/90">
-                  This day is finished. You can still view or duplicate it.
-                </p>
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border-2 border-emerald-500/50 bg-emerald-950/50 px-3 py-2">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-base font-extrabold text-emerald-950">
+                  ✓
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-extrabold tracking-wide text-emerald-300">
+                    Published — live for members
+                  </p>
+                  <p className="text-[10px] text-emerald-400/90">
+                    Green means members can see this day. You can still edit the day description,
+                    title, and exercises. Use Unpublish to hide it from members.
+                  </p>
+                </div>
               </div>
+              <button
+                type="button"
+                className="btn-ghost shrink-0 px-2 py-1 text-xs text-emerald-200"
+                disabled={saving}
+                title="Hide this day from members until you publish again"
+                onClick={() => void unpublishDay()}
+              >
+                Unpublish
+              </button>
             </div>
           )}
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -2395,7 +2425,7 @@ export default function ProgramCalendarBuilder({
                   <input
                     className="input min-w-0 flex-1 py-1 text-xs text-[var(--text)]"
                     value={workoutTitle}
-                    disabled={saving || savingTitle || !!focusDay.publishedAt}
+                    disabled={saving || savingTitle}
                     placeholder="e.g. Full body"
                     onChange={(e) => setWorkoutTitle(e.target.value)}
                     onBlur={() => void saveWorkoutTitle()}
@@ -2454,19 +2484,27 @@ export default function ProgramCalendarBuilder({
               >
                 {saving ? "Saving…" : "Save"}
               </button>
-              <button
-                type="button"
-                className={
-                  focusDay.publishedAt
-                    ? "cursor-default rounded-md border-2 border-emerald-500/60 bg-emerald-950/40 px-2 py-1 text-xs font-extrabold text-emerald-300"
-                    : "btn-primary px-2 py-1 text-xs"
-                }
-                disabled={saving || !!focusDay.publishedAt}
-                title="Mark this day ready for members"
-                onClick={() => void publishDay()}
-              >
-                {focusDay.publishedAt ? "✓ Published" : "Publish"}
-              </button>
+              {focusDay.publishedAt ? (
+                <button
+                  type="button"
+                  className="rounded-md border-2 border-emerald-500/60 bg-emerald-950/40 px-2 py-1 text-xs font-extrabold text-emerald-300"
+                  disabled={saving}
+                  title="Already live for members — click Unpublish in the banner to hide"
+                  onClick={() => void unpublishDay()}
+                >
+                  ✓ Published · Unpublish?
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn-primary px-2 py-1 text-xs"
+                  disabled={saving}
+                  title="Mark this day ready for members"
+                  onClick={() => void publishDay()}
+                >
+                  Publish
+                </button>
+              )}
               <button
                 type="button"
                 className="btn-ghost px-2 py-1 text-xs"
@@ -2589,8 +2627,8 @@ export default function ProgramCalendarBuilder({
                 <textarea
                   className="input mt-1 min-h-[4.5rem] w-full resize-y py-2 text-xs"
                   value={optionNotes}
-                  disabled={saving || savingOptionNotes || !!focusDay.publishedAt}
-                  placeholder="Notes for this day only — won't carry to other days"
+                  disabled={saving || savingOptionNotes}
+                  placeholder="Notes for this day only — e.g. Welcome to week 2… Edit anytime, even after Publish"
                   onChange={(e) => {
                     setOptionNotes(e.target.value);
                     optionNotesDirtyRef.current = true;
