@@ -248,6 +248,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - Soak **MARSHMALLOW-BADGER** green; coach-only trail planted for Jeremy  
 - Commits of note: `0ac0df5` exercise archive · `f71efb6` template/pack archive · handoff `d5f0e28` · `CONTEXT.md` hub `b0cbdeb`  
 - Stripe: **test mode live on prod** (not Live money yet) — go-live still open  
+- **Jeremy video IMG_2662 (Jul 12):** Published day locked “Day one” notes after copy-week — fixed `42e122e` (edit notes while published; Unpublish; copy-week no longer copies published)
 
 ### Explicit decision
 No MARSHMALLOW warm-up on Jeremy’s **live/member** workouts — coach library / shelf / playground only.
