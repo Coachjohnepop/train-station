@@ -238,6 +238,33 @@ export default function ProgramCalendarBuilder({
   const [optionNotes, setOptionNotes] = useState("");
   const [savingOptionNotes, setSavingOptionNotes] = useState(false);
   const optionNotesDirtyRef = useRef(false);
+  /** When true, copy/paste/duplicate clears day descriptions (avoids "Welcome Day one…" on week 2). */
+  const [autoClearNotesOnCopy, setAutoClearNotesOnCopy] = useState(true);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("ts-auto-clear-notes-on-copy");
+      if (raw === "0") setAutoClearNotesOnCopy(false);
+      if (raw === "1") setAutoClearNotesOnCopy(true);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  function setAutoClearNotesOnCopyPersist(next: boolean) {
+    setAutoClearNotesOnCopy(next);
+    try {
+      localStorage.setItem("ts-auto-clear-notes-on-copy", next ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }
+
+  /** Day description for Gym/Home options — optional clear on copy. */
+  function notesForCopy(sourceNotes: string | null | undefined): string | null {
+    if (autoClearNotesOnCopy) return null;
+    return sourceNotes ?? null;
+  }
 
   const startMonday = useMemo(
     () => resolveProgramStartMonday(program.startDate),
@@ -934,10 +961,11 @@ export default function ProgramCalendarBuilder({
                 workoutId: cloned.id,
                 label: FASTED_CARDIO_LABEL,
                 trainingLocation: null,
-                notes: src.notes ?? null,
+                notes: notesForCopy(src.notes),
               },
             ],
-            notes: focusDay.notes ?? null,
+            notes: notesForCopy(focusDay.notes),
+            publishedAt: null,
           });
         }
       } else {
@@ -959,7 +987,7 @@ export default function ProgramCalendarBuilder({
             workoutId: cloned.id,
             label: opt.label,
             trainingLocation: opt.trainingLocation ?? trainingLocationFromLabel(opt.label),
-            notes: opt.notes ?? null,
+            notes: notesForCopy(opt.notes),
           });
           setAllWorkouts((prev) =>
             prev.some((w) => w.id === cloned.id)
@@ -968,11 +996,17 @@ export default function ProgramCalendarBuilder({
           );
           void loadWorkoutPreview(cloned.id);
         }
-        await setDayOptions(targetDay.id, clonedOpts, { silent: true });
+        await patchDay(targetDay.id, {
+          options: clonedOpts,
+          notes: notesForCopy(focusDay.notes),
+          publishedAt: null,
+        });
       }
 
       setMessage(
-        `Pasted week ${activeWeekData.weekNumber} day ${focusDay.dayNumber} → week ${nextWeek.weekNumber} (clones only).`,
+        autoClearNotesOnCopy
+          ? `Pasted → next week (clones, day notes cleared, draft).`
+          : `Pasted week ${activeWeekData.weekNumber} day ${focusDay.dayNumber} → week ${nextWeek.weekNumber} (clones only).`,
       );
       setTimeout(() => setMessage(null), 4000);
       setActiveWeek(nextWeek.weekNumber);
@@ -1720,7 +1754,7 @@ export default function ProgramCalendarBuilder({
           clonedOpts.push({
             workoutId: cloned.id,
             label: opt.label,
-            notes: opt.notes ?? null,
+            notes: notesForCopy(opt.notes),
           });
           setAllWorkouts((prev) =>
             prev.some((w) => w.id === cloned.id) ? prev : [...prev, { id: cloned.id, name: cloned.name }],
@@ -1734,6 +1768,7 @@ export default function ProgramCalendarBuilder({
           calendarDate: toCal,
           videoUrl: fromDay.videoUrl ?? null,
           publishedAt: null,
+          notes: notesForCopy(fromDay.notes),
         };
         if (fromDay.defaultSets != null) dayPatch.defaultSets = fromDay.defaultSets;
         if (fromDay.defaultReps != null) dayPatch.defaultReps = fromDay.defaultReps;
@@ -1756,7 +1791,9 @@ export default function ProgramCalendarBuilder({
     if (ok) {
       await sync();
       setMessage(
-        `Week ${activeWeek} copied — independent workouts, draft (not published). Edit day notes, then Publish when ready.`,
+        autoClearNotesOnCopy
+          ? `Week ${activeWeek} copied — independent workouts, draft, day notes cleared. Write new notes, then Publish.`
+          : `Week ${activeWeek} copied — independent workouts, draft (not published). Edit day notes, then Publish when ready.`,
       );
       setTimeout(() => setMessage(null), 4500);
     }
@@ -1824,7 +1861,7 @@ export default function ProgramCalendarBuilder({
         clonedOpts.push({
           workoutId: cloned.id,
           label: opt.label,
-          notes: opt.notes ?? null,
+          notes: notesForCopy(opt.notes),
         });
         setAllWorkouts((prev) =>
           prev.some((w) => w.id === cloned.id) ? prev : [...prev, { id: cloned.id, name: cloned.name }],
@@ -1838,6 +1875,8 @@ export default function ProgramCalendarBuilder({
           defaultReps: sourceDay.defaultReps ?? prescription.defaultReps,
           defaultRestSec: sourceDay.defaultRestSec ?? prescription.defaultRestSec,
           calendarDate: cal,
+          notes: notesForCopy(sourceDay.notes),
+          publishedAt: null,
         });
         copied++;
       }
@@ -1846,7 +1885,11 @@ export default function ProgramCalendarBuilder({
     setSaving(false);
     setShowDuplicate(false);
     setDuplicateTargets(new Set());
-    setMessage(`Copied to ${copied} day(s). Each has its own workout copy.`);
+    setMessage(
+      autoClearNotesOnCopy
+        ? `Copied to ${copied} day(s) — own workout copies, day notes cleared.`
+        : `Copied to ${copied} day(s). Each has its own workout copy.`,
+    );
     setTimeout(() => setMessage(null), 3000);
     await sync();
   }
@@ -2227,7 +2270,20 @@ export default function ProgramCalendarBuilder({
                 )}
               </span>
             </h2>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <label
+                className="flex cursor-pointer items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[10px] text-[var(--muted)]"
+                title="When checked, copy/duplicate/paste clears Day description so week 2 does not keep “Welcome Day one…” notes"
+              >
+                <input
+                  type="checkbox"
+                  className="accent-accent"
+                  checked={autoClearNotesOnCopy}
+                  disabled={saving}
+                  onChange={(e) => setAutoClearNotesOnCopyPersist(e.target.checked)}
+                />
+                <span className="font-medium text-[var(--text)]">Auto-clear notes on copy</span>
+              </label>
               {activeWeekData.weekNumber > 1 && (
                 <button
                   type="button"
