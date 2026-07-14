@@ -226,6 +226,23 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ---
 
+### Multi-part program days (military double/triple)
+
+**Schema (prod applied `20260714120000_program_day_sessions`):**
+
+| Layer | Role |
+|-------|------|
+| `ProgramDay` | Calendar day (+ `partCount` 1–5) |
+| `ProgramDaySession` | Ordered part: AM / midday / PM (`partIndex`, `label`, `sessionKind`, `timeSlot`) |
+| `ProgramDayOption` | Gym/Home **track under a session** (`sessionId` + legacy `dayId`) |
+
+- **Not** the same as Gym vs Home — those stay options *inside* a part.
+- Middle part of a 3-part day defaults to **cardio** (fasted cardio) via helpers in `src/lib/program-day-sessions.ts`.
+- Backfill: every existing day has one **Main** session; all options attached.
+- **UI next:** coach calendar “add part 2 / 3”, pick session kind, insert workouts per part. Members see multiple sessions on that day.
+
+---
+
 ### Shipped recently (not backlog)
 
 - Always-clone paste, freeform template categories, overwrite warnings  

@@ -335,40 +335,76 @@ model ProgramWeek {
 }
 
 model ProgramDay {
-  id             String             @id @default(cuid())
+  id             String              @id @default(cuid())
   weekId         String
   dayNumber      Int
   /// Month in the 28-day cycle (M in M1D28).
-  cycleMonth     Int                @default(1)
+  cycleMonth     Int                 @default(1)
   /// Day within the month cycle (1–28).
   cycleDay       Int?
-  workoutId      String?            // legacy / default option
+  workoutId      String?             // legacy / default option (first session primary)
   notes          String?
   videoUrl       String?
-  calendarDate   String?            // YYYY-MM-DD
+  calendarDate   String?             // YYYY-MM-DD
   defaultSets    Int?
   defaultReps    String?
   defaultRestSec Int?
   publishedAt    DateTime?
-  week           ProgramWeek        @relation(fields: [weekId], references: [id], onDelete: Cascade)
-  workout        Workout?           @relation(fields: [workoutId], references: [id])
+  /// How many sequential parts this day has (1 = normal; 2–3 = double/triple day).
+  partCount      Int                 @default(1)
+  week           ProgramWeek         @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  workout        Workout?            @relation(fields: [workoutId], references: [id])
+  /// Sequential sessions on this calendar day (AM / midday cardio / PM, etc.).
+  sessions       ProgramDaySession[]
+  /// Denormalized: all options across sessions (prefer session.options).
   options        ProgramDayOption[]
 
   @@unique([weekId, dayNumber])
 }
 
+/// One ordered part of a program day (military double/triple days, etc.).
+/// Gym vs Home tracks live on ProgramDayOption under this session — not as separate parts.
+model ProgramDaySession {
+  id          String             @id @default(cuid())
+  dayId       String
+  /// 1-based part index within the day (1, 2, 3…).
+  partIndex   Int
+  /// Coach-facing title: "AM Strength", "Fasted Cardio", "PM Conditioning".
+  label       String
+  /// strength | cardio | mobility | recovery | custom — not limited to weight training.
+  sessionKind String             @default("strength")
+  /// Optional time-of-day hint: morning | midday | afternoon | evening | free text.
+  timeSlot    String?
+  notes       String?            @db.Text
+  sortOrder   Int                @default(0)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  day         ProgramDay         @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  options     ProgramDayOption[]
+
+  @@unique([dayId, partIndex])
+  @@index([dayId, sortOrder])
+  @@index([sessionKind])
+}
+
 model ProgramDayOption {
-  id               String     @id @default(cuid())
+  id               String             @id @default(cuid())
   dayId            String
+  /// Parent session/part (required for multi-part days; backfilled for legacy rows).
+  sessionId        String?
   workoutId        String
-  label            String     // e.g. "Gym", "Home - Bodyweight", "Home - Dumbbells + Bands"
+  label            String // e.g. "Gym", "Home - Bodyweight", "Home - Dumbbells + Bands"
   /// Typed location — separate from workout name and label.
-  trainingLocation String?    // gym | home
-  /// Per-day coach note for this option — does not travel with the workout template.
-  notes            String?    @db.Text
-  sortOrder        Int        @default(0)
-  day              ProgramDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
-  workout          Workout    @relation(fields: [workoutId], references: [id])
+  trainingLocation String? // gym | home
+  /// Per-session coach note for this track — does not travel with the workout template.
+  notes            String?            @db.Text
+  sortOrder        Int                @default(0)
+  day              ProgramDay         @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  session          ProgramDaySession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  workout          Workout            @relation(fields: [workoutId], references: [id])
+
+  @@index([sessionId])
+  @@index([dayId, sessionId])
 }
 
 model ProgramEnrollment {
