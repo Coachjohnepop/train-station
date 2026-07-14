@@ -8,7 +8,20 @@ type DayOptionRow = {
   workoutId: string;
   label: string;
   notes?: string | null;
+  sessionId?: string | null;
+  trainingLocation?: string | null;
   workout?: { id: string; name: string; description?: string | null } | null;
+};
+
+type DaySessionRow = {
+  id: string;
+  partIndex: number;
+  label: string;
+  sessionKind?: string | null;
+  timeSlot?: string | null;
+  notes?: string | null;
+  sortOrder?: number;
+  options?: DayOptionRow[];
 };
 
 type DayRow = {
@@ -22,11 +35,15 @@ type DayRow = {
   defaultReps?: string | null;
   defaultRestSec?: number | null;
   publishedAt?: Date | null;
+  partCount?: number | null;
   workout?: { id: string; name: string; description?: string | null } | null;
+  sessions?: DaySessionRow[];
   options?: Array<{
     workoutId: string;
     label: string;
     notes?: string | null;
+    sessionId?: string | null;
+    trainingLocation?: string | null;
     workout?: { id: string; name: string; description?: string | null } | null;
   }>;
 };
@@ -36,6 +53,8 @@ function mapDayOptions(day: DayRow): DayOptionRow[] {
     workoutId: opt.workoutId,
     label: opt.label,
     notes: opt.notes ?? null,
+    sessionId: opt.sessionId ?? null,
+    trainingLocation: opt.trainingLocation ?? null,
     workout: opt.workout ?? null,
   }));
   if (fromOptions.length > 0) return fromOptions;
@@ -52,6 +71,30 @@ function mapDayOptions(day: DayRow): DayOptionRow[] {
 }
 
 function mapDay(day: DayRow) {
+  const sessions = (day.sessions || [])
+    .slice()
+    .sort((a, b) => (a.sortOrder ?? a.partIndex) - (b.sortOrder ?? b.partIndex))
+    .map((s) => ({
+      id: s.id,
+      partIndex: s.partIndex,
+      label: s.label,
+      sessionKind: s.sessionKind ?? "strength",
+      timeSlot: s.timeSlot ?? null,
+      notes: s.notes ?? null,
+      sortOrder: s.sortOrder ?? s.partIndex - 1,
+      options: (s.options || []).map((opt) => ({
+        workoutId: opt.workoutId,
+        label: opt.label,
+        notes: opt.notes ?? null,
+        sessionId: s.id,
+        trainingLocation: opt.trainingLocation ?? null,
+        workout: opt.workout ?? null,
+      })),
+    }));
+
+  const flatFromSessions = sessions.flatMap((s) => s.options || []);
+  const options = flatFromSessions.length > 0 ? flatFromSessions : mapDayOptions(day);
+
   return applyOverrideToDay({
     id: day.id,
     dayNumber: day.dayNumber,
@@ -63,8 +106,24 @@ function mapDay(day: DayRow) {
     defaultReps: day.defaultReps ?? null,
     defaultRestSec: day.defaultRestSec ?? null,
     publishedAt: day.publishedAt ? day.publishedAt.toISOString() : null,
+    partCount: day.partCount ?? Math.max(1, sessions.length || 1),
+    sessions:
+      sessions.length > 0
+        ? sessions
+        : [
+            {
+              id: `legacy-${day.id}`,
+              partIndex: 1,
+              label: "Main",
+              sessionKind: "strength",
+              timeSlot: null,
+              notes: null,
+              sortOrder: 0,
+              options,
+            },
+          ],
     workout: day.workout ?? null,
-    options: mapDayOptions(day),
+    options,
   });
 }
 
@@ -76,6 +135,15 @@ const programInclude = {
         orderBy: { dayNumber: "asc" as const },
         include: {
           workout: true,
+          sessions: {
+            orderBy: [{ sortOrder: "asc" as const }, { partIndex: "asc" as const }],
+            include: {
+              options: {
+                orderBy: { sortOrder: "asc" as const },
+                include: { workout: true },
+              },
+            },
+          },
           options: {
             orderBy: { sortOrder: "asc" as const },
             include: { workout: true },

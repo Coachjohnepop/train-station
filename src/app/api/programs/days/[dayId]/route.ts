@@ -9,6 +9,12 @@ import { BLOB_TOKEN } from "@/lib/demo-json-blob";
 import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { ensureDemoWorkoutInSeed } from "@/lib/demo-workout-items";
 import { requireCoachStaff } from "@/lib/api-auth";
+import {
+  ensureProgramDaySessions,
+  listDaySessionsWithOptions,
+  resolveSessionIdForPart,
+} from "@/lib/program-day-sessions-db";
+import { clampPartCount } from "@/lib/program-day-sessions";
 
 const patchSchema = z.object({
   workoutId: z.string().nullable().optional(),
@@ -19,6 +25,8 @@ const patchSchema = z.object({
   defaultReps: z.string().max(40).optional(),
   defaultRestSec: z.number().int().min(0).max(600).optional(),
   publishedAt: z.string().nullable().optional(),
+  /** 1–5 sequential parts (military double/triple days). */
+  partCount: z.number().int().min(1).max(5).optional(),
   options: z
     .array(
       z.object({
@@ -26,6 +34,9 @@ const patchSchema = z.object({
         label: z.string(),
         trainingLocation: z.enum(["gym", "home"]).optional().nullable(),
         notes: z.string().nullable().optional(),
+        sessionId: z.string().optional().nullable(),
+        /** 1-based part when sessionId not known yet. */
+        partIndex: z.number().int().min(1).max(5).optional(),
       }),
     )
     .optional(),
@@ -205,6 +216,10 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   try {
+    if (parsed.data.partCount !== undefined) {
+      await ensureProgramDaySessions(dayId, parsed.data.partCount);
+    }
+
     if (parsed.data.options !== undefined) {
       const materialized = parsed.data.options.filter((opt) => opt.workoutId?.trim());
       const restOnly =
@@ -221,26 +236,67 @@ export async function PATCH(request: Request, { params }: Params) {
         }
       }
 
+      const maxPart = Math.max(
+        1,
+        ...materialized.map((o) => o.partIndex || 1),
+        parsed.data.partCount ?? 1,
+      );
+      await ensureProgramDaySessions(dayId, maxPart);
+
       const day = await prisma.$transaction(async (tx) => {
-        await tx.programDayOption.deleteMany({ where: { dayId } });
-        if (materialized.length > 0) {
-          await tx.programDayOption.createMany({
-            data: materialized.map((opt, idx) => ({
-              dayId,
-              workoutId: opt.workoutId,
-              label: opt.label,
-              trainingLocation:
-                opt.trainingLocation ?? trainingLocationFromLabel(opt.label),
-              notes: opt.notes ?? null,
-              sortOrder: idx,
-            })),
+        // Build rows with resolved sessionIds first
+        const rows: Array<{
+          dayId: string;
+          sessionId: string;
+          workoutId: string;
+          label: string;
+          trainingLocation: string | null;
+          notes: string | null;
+          sortOrder: number;
+        }> = [];
+        for (let idx = 0; idx < materialized.length; idx++) {
+          const opt = materialized[idx]!;
+          const partIndex = opt.partIndex || 1;
+          const sessionId =
+            opt.sessionId ||
+            (await resolveSessionIdForPart(dayId, partIndex, maxPart));
+          rows.push({
+            dayId,
+            sessionId,
+            workoutId: opt.workoutId,
+            label: opt.label,
+            trainingLocation:
+              opt.trainingLocation ?? trainingLocationFromLabel(opt.label),
+            notes: opt.notes ?? null,
+            sortOrder: idx,
           });
+        }
+
+        // Replace only the parts we're writing; if empty list, clear all options.
+        if (rows.length === 0) {
+          await tx.programDayOption.deleteMany({ where: { dayId } });
+        } else {
+          const sessionIds = [...new Set(rows.map((r) => r.sessionId))];
+          await tx.programDayOption.deleteMany({
+            where: { dayId, sessionId: { in: sessionIds } },
+          });
+          // Legacy null-session options when writing part 1
+          if (rows.some((r) => r.sortOrder === 0)) {
+            const part1 = await resolveSessionIdForPart(dayId, 1, maxPart);
+            if (sessionIds.includes(part1)) {
+              await tx.programDayOption.deleteMany({
+                where: { dayId, sessionId: null },
+              });
+            }
+          }
+          await tx.programDayOption.createMany({ data: rows });
         }
 
         return tx.programDay.update({
           where: { id: dayId },
           data: {
-            workoutId: materialized.length > 0 ? materialized[0].workoutId : null,
+            workoutId: materialized.length > 0 ? materialized[0]!.workoutId : null,
+            partCount: clampPartCount(maxPart),
             ...(restOnly ? { notes: DAY_OFF_LABEL } : {}),
             ...(parsed.data.videoUrl !== undefined ? { videoUrl: parsed.data.videoUrl } : {}),
             ...(parsed.data.notes !== undefined ? { notes: parsed.data.notes } : {}),
@@ -266,6 +322,15 @@ export async function PATCH(request: Request, { params }: Params) {
           },
           include: {
             workout: true,
+            sessions: {
+              orderBy: [{ sortOrder: "asc" }, { partIndex: "asc" }],
+              include: {
+                options: {
+                  orderBy: { sortOrder: "asc" },
+                  include: { workout: true },
+                },
+              },
+            },
             options: {
               orderBy: { sortOrder: "asc" },
               include: { workout: true },
@@ -274,13 +339,34 @@ export async function PATCH(request: Request, { params }: Params) {
         });
       });
 
+      const sessions = day.sessions.map((s) => ({
+        id: s.id,
+        partIndex: s.partIndex,
+        label: s.label,
+        sessionKind: s.sessionKind,
+        timeSlot: s.timeSlot,
+        notes: s.notes,
+        sortOrder: s.sortOrder,
+        options: s.options.map((opt) => ({
+          workoutId: opt.workoutId,
+          label: opt.label,
+          trainingLocation: opt.trainingLocation ?? null,
+          notes: opt.notes ?? null,
+          sessionId: s.id,
+          workout: opt.workout,
+        })),
+      }));
+
       return NextResponse.json({
         ...day,
+        partCount: day.partCount,
+        sessions,
         options: day.options.map((opt) => ({
           workoutId: opt.workoutId,
           label: opt.label,
           trainingLocation: opt.trainingLocation ?? null,
           notes: opt.notes ?? null,
+          sessionId: opt.sessionId,
           workout: opt.workout,
         })),
       });
@@ -309,6 +395,9 @@ export async function PATCH(request: Request, { params }: Params) {
         ? new Date(parsed.data.publishedAt)
         : null;
     }
+    if (parsed.data.partCount !== undefined) {
+      dataUpdate.partCount = clampPartCount(parsed.data.partCount);
+    }
 
     if (Object.keys(dataUpdate).length > 0) {
       const day = await prisma.programDay.update({
@@ -316,16 +405,45 @@ export async function PATCH(request: Request, { params }: Params) {
         data: dataUpdate,
         include: {
           workout: true,
+          sessions: {
+            orderBy: [{ sortOrder: "asc" }, { partIndex: "asc" }],
+            include: {
+              options: {
+                orderBy: { sortOrder: "asc" },
+                include: { workout: true },
+              },
+            },
+          },
           options: { orderBy: { sortOrder: "asc" }, include: { workout: true } },
         },
       });
+      const sessions = await listDaySessionsWithOptions(dayId);
       return NextResponse.json({
         ...day,
+        partCount: day.partCount,
+        sessions: sessions.map((s) => ({
+          id: s.id,
+          partIndex: s.partIndex,
+          label: s.label,
+          sessionKind: s.sessionKind,
+          timeSlot: s.timeSlot,
+          notes: s.notes,
+          sortOrder: s.sortOrder,
+          options: s.options.map((opt) => ({
+            workoutId: opt.workoutId,
+            label: opt.label,
+            trainingLocation: opt.trainingLocation ?? null,
+            notes: opt.notes ?? null,
+            sessionId: s.id,
+            workout: opt.workout,
+          })),
+        })),
         options: day.options.map((opt) => ({
           workoutId: opt.workoutId,
           label: opt.label,
           trainingLocation: opt.trainingLocation ?? null,
           notes: opt.notes ?? null,
+          sessionId: opt.sessionId,
           workout: opt.workout,
         })),
       });
@@ -333,7 +451,8 @@ export async function PATCH(request: Request, { params }: Params) {
 
     const day = await assignWorkoutToDay(dayId, parsed.data.workoutId ?? null);
     return NextResponse.json(day);
-  } catch {
+  } catch (err) {
+    console.error("PATCH day failed", err);
     return NextResponse.json({ detail: "Day not found or update failed" }, { status: 404 });
   }
 }

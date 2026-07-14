@@ -70,6 +70,19 @@ type DayOption = {
   label: string;
   trainingLocation?: "gym" | "home" | null;
   notes?: string | null;
+  sessionId?: string | null;
+  partIndex?: number;
+};
+
+type DaySession = {
+  id: string;
+  partIndex: number;
+  label: string;
+  sessionKind?: string | null;
+  timeSlot?: string | null;
+  notes?: string | null;
+  sortOrder?: number;
+  options?: DayOption[];
 };
 
 type ProgramDay = {
@@ -83,6 +96,8 @@ type ProgramDay = {
   publishedAt?: string | null;
   videoUrl?: string | null;
   notes?: string | null;
+  partCount?: number;
+  sessions?: DaySession[];
   options?: DayOption[];
 };
 
@@ -116,18 +131,54 @@ type Focus = {
   label: string;
   weekNumber: number;
   dayNumber: number;
+  /** 1-based multi-part index (military double/triple days). */
+  partIndex?: number;
 };
 
-function getDayOptions(day: ProgramDay): DayOption[] {
-  if (day.options && day.options.length > 0) {
-    return normalizeDayOptions(day.options) as DayOption[];
+function daySessions(day: ProgramDay): DaySession[] {
+  if (day.sessions && day.sessions.length > 0) {
+    return [...day.sessions].sort(
+      (a, b) => (a.sortOrder ?? a.partIndex) - (b.sortOrder ?? b.partIndex),
+    );
   }
-  if (day.workoutId) return [{ workoutId: day.workoutId, label: "Gym" }];
+  const opts = day.options || [];
+  return [
+    {
+      id: `legacy-${day.id}`,
+      partIndex: 1,
+      label: "Main",
+      sessionKind: "strength",
+      options: opts,
+    },
+  ];
+}
+
+function getDayOptions(day: ProgramDay, partIndex = 1): DayOption[] {
+  const sessions = daySessions(day);
+  const session = sessions.find((s) => s.partIndex === partIndex) || sessions[0];
+  if (session?.options && session.options.length > 0) {
+    return normalizeDayOptions(session.options) as DayOption[];
+  }
+  // Flat options may include sessionId / partIndex
+  if (day.options && day.options.length > 0) {
+    const filtered = day.options.filter((o) => {
+      if (o.partIndex != null) return o.partIndex === partIndex;
+      if (session?.id && o.sessionId) return o.sessionId === session.id;
+      return partIndex === 1;
+    });
+    const list = filtered.length > 0 ? filtered : partIndex === 1 ? day.options : [];
+    return normalizeDayOptions(list) as DayOption[];
+  }
+  if (partIndex === 1 && day.workoutId) return [{ workoutId: day.workoutId, label: "Gym" }];
   return [];
 }
 
 function dayKindLabel(day: ProgramDay): string {
-  const opts = getDayOptions(day);
+  const parts = day.partCount ?? daySessions(day).length;
+  if (parts > 1) {
+    return `${parts}-part day`;
+  }
+  const opts = getDayOptions(day, 1);
   if (opts.some((o) => isDayOffLabel(o.label))) return "Day off";
   if (opts.some((o) => isFastedCardioLabel(o.label))) return "Fasted cardio";
   if (opts.some((o) => isGymLabel(o.label)) && opts.some((o) => isHomeLabel(o.label))) {
@@ -140,8 +191,8 @@ function dayKindLabel(day: ProgramDay): string {
 }
 
 /** Custom settings only — Gym/Home are always in the bean row. */
-function customSettingOptions(day: ProgramDay): DayOption[] {
-  return getDayOptions(day).filter(
+function customSettingOptions(day: ProgramDay, partIndex = 1): DayOption[] {
+  return getDayOptions(day, partIndex).filter(
     (o) =>
       !isGymLabel(o.label) &&
       !isHomeLabel(o.label) &&
@@ -373,6 +424,8 @@ export default function ProgramCalendarBuilder({
                 ...d,
                 ...patch,
                 options: updated.options ?? d.options,
+                sessions: updated.sessions ?? d.sessions,
+                partCount: updated.partCount ?? d.partCount,
                 workoutId: updated.workoutId ?? d.workoutId,
               }
             : d,
@@ -382,11 +435,20 @@ export default function ProgramCalendarBuilder({
     return updated;
   }
 
-  async function setDayOptions(dayId: string, options: DayOption[], opts?: { silent?: boolean }) {
+  async function setDayOptions(
+    dayId: string,
+    options: DayOption[],
+    opts?: { silent?: boolean; partIndex?: number },
+  ) {
     const silent = opts?.silent === true;
+    const partIndex = opts?.partIndex ?? focus?.partIndex ?? 1;
     if (!silent) setSaving(true);
     try {
-      await patchDay(dayId, { options: normalizeDayOptions(options) as DayOption[] });
+      const withPart = (normalizeDayOptions(options) as DayOption[]).map((o) => ({
+        ...o,
+        partIndex,
+      }));
+      await patchDay(dayId, { options: withPart });
       if (!silent) {
         setMessage("Saved.");
         setTimeout(() => setMessage(null), 1500);
@@ -395,6 +457,28 @@ export default function ProgramCalendarBuilder({
       if (!silent) setMessage("Could not save — try again.");
     } finally {
       if (!silent) setSaving(false);
+    }
+  }
+
+  async function setDayPartCount(dayId: string, partCount: number) {
+    setSaving(true);
+    try {
+      await patchDay(dayId, { partCount });
+      setFocus((f) =>
+        f && f.dayId === dayId
+          ? { ...f, partIndex: Math.min(f.partIndex ?? 1, partCount) }
+          : f,
+      );
+      setMessage(
+        partCount <= 1
+          ? "Single-part day."
+          : `${partCount}-part day — switch parts below to assign each session.`,
+      );
+      setTimeout(() => setMessage(null), 3500);
+    } catch {
+      setMessage("Could not update day parts — try again.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -635,12 +719,18 @@ export default function ProgramCalendarBuilder({
     }
   }, []);
 
-  async function openDayOption(day: ProgramDay, week: ProgramWeek, optIdx: number, label: string) {
+  async function openDayOption(
+    day: ProgramDay,
+    week: ProgramWeek,
+    optIdx: number,
+    label: string,
+    partIndex = 1,
+  ) {
     if (focus && optionNotesDirtyRef.current) {
       await saveOptionNotes({ silent: true });
     }
 
-    let opts = getDayOptions(day);
+    let opts = getDayOptions(day, partIndex);
     const optLabel = opts[optIdx]?.label || label;
     const rx = readDayPrescription(day);
 
@@ -656,6 +746,7 @@ export default function ProgramCalendarBuilder({
         label: DAY_OFF_LABEL,
         weekNumber: week.weekNumber,
         dayNumber: day.dayNumber,
+        partIndex,
       });
       resetSlotGrid();
       setSelectedSlotIdx(null);
@@ -671,6 +762,7 @@ export default function ProgramCalendarBuilder({
       label: optLabel,
       weekNumber: week.weekNumber,
       dayNumber: day.dayNumber,
+      partIndex,
     });
     scrollToEditor();
 
@@ -1171,10 +1263,10 @@ export default function ProgramCalendarBuilder({
     }
     const day = program.weeks.flatMap((w) => w.days).find((d) => d.id === focus.dayId);
     if (!day) return;
-    const opts = getDayOptions(day);
+    const opts = getDayOptions(day, focus.partIndex ?? 1);
     setOptionNotes(opts[focus.optIdx]?.notes ?? "");
     optionNotesDirtyRef.current = false;
-  }, [focus?.dayId, focus?.optIdx, program.weeks]);
+  }, [focus?.dayId, focus?.optIdx, focus?.partIndex, program.weeks]);
 
   useEffect(() => {
     if (!focus?.workoutId) {
@@ -1199,8 +1291,9 @@ export default function ProgramCalendarBuilder({
     const day = program.weeks.flatMap((w) => w.days).find((d) => d.id === focus.dayId);
     if (!day) return;
 
+    const partIndex = focus.partIndex ?? 1;
     const trimmed = optionNotes.trim();
-    const currentOpts = [...getDayOptions(day)];
+    const currentOpts = [...getDayOptions(day, partIndex)];
     const stored = currentOpts[focus.optIdx]?.notes ?? "";
     if (trimmed === (stored || "").trim()) {
       optionNotesDirtyRef.current = false;
@@ -1222,7 +1315,7 @@ export default function ProgramCalendarBuilder({
     if (!silent) setSaving(true);
     setSavingOptionNotes(true);
     try {
-      await patchDay(focus.dayId, { options: normalizeDayOptions(currentOpts) as DayOption[] });
+      await setDayOptions(focus.dayId, currentOpts, { silent: true, partIndex });
       optionNotesDirtyRef.current = false;
       if (!silent) {
         setMessage("Description saved.");
@@ -2570,6 +2663,76 @@ export default function ProgramCalendarBuilder({
                 Duplicate…
               </button>
             </div>
+          </div>
+
+          {/* Multi-part day (military double/triple): sessions before Gym/Home tracks */}
+          <div className="space-y-2 rounded-md border border-dashed border-sky-500/30 bg-sky-500/5 px-2 py-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-sky-200/90">
+                Day parts
+              </span>
+              {([1, 2, 3] as const).map((n) => {
+                const active = (focusDay.partCount ?? daySessions(focusDay).length ?? 1) === n;
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    disabled={saving}
+                    className={
+                      active
+                        ? "rounded-full bg-sky-500/30 px-2.5 py-1 text-[10px] font-bold text-sky-100 ring-1 ring-sky-400/50"
+                        : "rounded-full border border-[var(--border)] px-2.5 py-1 text-[10px] text-[var(--muted)] hover:text-[var(--text)]"
+                    }
+                    onClick={() => void setDayPartCount(focus.dayId, n)}
+                    title={
+                      n === 1
+                        ? "Single session day"
+                        : n === 2
+                          ? "Double day — AM + PM"
+                          : "Triple day — AM + midday (e.g. cardio) + PM"
+                    }
+                  >
+                    {n === 1 ? "1 part" : n === 2 ? "2 parts" : "3 parts"}
+                  </button>
+                );
+              })}
+            </div>
+            {(focusDay.partCount ?? 1) > 1 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {daySessions(focusDay).map((s) => {
+                  const active = (focus.partIndex ?? 1) === s.partIndex;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      disabled={saving}
+                      className={
+                        active
+                          ? "rounded-md bg-violet-500/30 px-2.5 py-1.5 text-[11px] font-bold text-violet-100 ring-1 ring-violet-400/50"
+                          : "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-[11px] text-[var(--muted)] hover:border-violet-400/40 hover:text-[var(--text)]"
+                      }
+                      onClick={() => {
+                        const week = program.weeks.find((w) => w.weekNumber === focus.weekNumber);
+                        if (!week) return;
+                        void openDayOption(focusDay, week, 0, "Gym", s.partIndex);
+                      }}
+                    >
+                      Part {s.partIndex}
+                      <span className="ml-1 font-normal opacity-80">
+                        · {s.label}
+                        {s.sessionKind && s.sessionKind !== "strength"
+                          ? ` (${s.sessionKind})`
+                          : ""}
+                      </span>
+                    </button>
+                  );
+                })}
+                <p className="w-full text-[10px] text-[var(--muted)]">
+                  Each part has its own workout (and Gym/Home tracks). Middle part of a 3-part day
+                  defaults to cardio (e.g. fasted cardio).
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
