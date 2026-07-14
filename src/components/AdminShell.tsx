@@ -12,6 +12,7 @@ import CoachHelpAssistant from "@/components/CoachHelpAssistant";
 import TrainStationBrand from "@/components/TrainStationBrand";
 import DevModeSwitcher from "@/components/DevModeSwitcher";
 import LogoutButton from "@/components/LogoutButton";
+import CoachJoinLiveNavStrip from "@/components/CoachJoinLiveNavStrip";
 import type { SessionUser } from "@/lib/auth-session";
 import {
   readAdminNavCollapsed,
@@ -73,14 +74,24 @@ export default function AdminShell({
   if (coachFloorFocus) {
     return (
       <div className="coach-floor-shell flex min-h-[100dvh] flex-col bg-[var(--bg)]">
-        <header className="flex min-h-[52px] shrink-0 items-center justify-between gap-2 border-b border-[var(--border)] px-3 py-2">
-          <Link href="/admin/day" className="btn-ghost min-h-[44px] px-3 text-sm font-semibold">
-            ← Dashboard
-          </Link>
-          <p className="text-sm font-bold tracking-tight">Go to Today</p>
-          <LogoutButton compact className="shrink-0" />
+        <header className="sticky top-0 z-40 shrink-0 border-b border-sky-500/30 bg-[var(--bg)]/95 backdrop-blur-sm">
+          <div className="flex min-h-[52px] items-center justify-between gap-2 px-2 py-2 sm:px-3">
+            <Link
+              href="/admin/day"
+              className="btn-ghost min-h-[40px] shrink-0 px-2 text-xs font-semibold sm:min-h-[44px] sm:px-3 sm:text-sm"
+            >
+              ← Dashboard
+            </Link>
+            <p className="min-w-0 truncate text-center text-xs font-bold tracking-tight sm:text-sm">
+              Go to Today
+            </p>
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              <CoachJoinLiveNavStrip />
+              <LogoutButton compact className="shrink-0" />
+            </div>
+          </div>
         </header>
-        <main className="min-h-0 flex-1 overflow-hidden px-2 py-2 sm:px-3">
+        <main className="min-h-0 flex-1 overflow-y-auto px-2 py-2 sm:px-3">
           {children}
         </main>
         <CoachHelpAssistant />

@@ -54,7 +54,7 @@ export default function LiveZoomJoinPrompt() {
       aria-labelledby="live-zoom-prompt-title"
     >
       <p id="live-zoom-prompt-title" className="text-base font-semibold text-sky-200">
-        Join Zoom?
+        Join Live Zoom Now?
       </p>
       <p className="mt-1 text-sm text-[var(--muted)]">
         {status.hostStarted
@@ -67,9 +67,9 @@ export default function LiveZoomJoinPrompt() {
             href={status.joinUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-primary px-4 py-2 text-sm"
+            className="btn-primary px-4 py-2 text-sm font-bold"
           >
-            Join Zoom
+            Join Live Zoom Now
           </a>
         ) : null}
         <Link href="/member/live" className="btn-ghost px-4 py-2 text-sm">

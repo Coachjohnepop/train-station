@@ -236,12 +236,14 @@ export async function memberLiveZoomStatus(input: {
       ? new Date(daySessions[0].scheduledAt).getTime()
       : new Date(`${date}T12:00:00`).getTime();
   const startsInMin = Math.round((scheduledAt - now) / 60_000);
-  const canJoin = startsInMin <= 15 && startsInMin >= -40;
+  // Window around class time, or anytime host has already started the room today.
+  const hostStarted = Boolean(record.hostStartedAt);
+  const canJoin = hostStarted || (startsInMin <= 15 && startsInMin >= -90);
 
   return {
     sessionDate: date,
     roomReady: true,
-    hostStarted: Boolean(record.hostStartedAt),
+    hostStarted,
     canJoin,
     joinUrl: record.joinUrl,
     livePageUrl,

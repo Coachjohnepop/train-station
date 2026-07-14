@@ -198,13 +198,15 @@ export default function CoachDayHub({
       <div
         className={`coach-dashboard space-y-3 ${isFloor ? "min-h-[calc(100dvh-3.5rem)] pb-2" : ""}`}
       >
+        {/* Primary Zoom CTA is sticky in AdminShell top bar (Join Live Now). Panel keeps embed/details. */}
         <CoachLiveFloorZoomPanel sessionDate={sessionDate} variant="floor" />
 
         <header className={isFloor ? "py-1" : "card border-accent/30 bg-accent/5 py-4"}>
-          <p className="text-xs font-semibold uppercase tracking-wider text-accent">Go to Today</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-accent">Live floor</p>
           <h1 className="mt-0.5 text-lg font-bold sm:text-xl">{dateLabel}</h1>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            Expand a card to count sets — live on member phones
+            Use <strong className="text-sky-200">Join Live Now</strong> in the top bar for Zoom —
+            expand a card below to count sets (live on member phones).
           </p>
         </header>
 

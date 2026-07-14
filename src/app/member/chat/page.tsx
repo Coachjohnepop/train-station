@@ -14,7 +14,13 @@ import { resolveMemberUserId } from "@/lib/current-user";
 
 export const dynamic = "force-dynamic";
 
-export default async function MemberChatPage() {
+type Props = {
+  searchParams: Promise<{ ping?: string }>;
+};
+
+export default async function MemberChatPage({ searchParams }: Props) {
+  const sp = await searchParams;
+  const pingZoom = sp.ping === "zoom";
   const [uid, session] = await Promise.all([resolveMemberUserId(), getSessionUser()]);
   await hydrateCoachChat({ preferFresh: true });
   await ensureMemberThread(uid);
@@ -38,6 +44,16 @@ export default async function MemberChatPage() {
           Community tab — coach posts, videos, and notes (Patreon-style). Coach tab — private 1:1 thread. Workouts with checklists are on Go to Today.
         </p>
       </div>
+
+      {pingZoom ? (
+        <div className="rounded-xl border border-sky-500/40 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+          <p className="font-semibold">Ping coach to start Zoom</p>
+          <p className="mt-1 text-xs text-sky-100/85">
+            Message your coach: <em>“Ready for live Zoom when you are.”</em> When they start the
+            room, use <strong>Join Live Zoom Now</strong> on the blue bar at the top of the app.
+          </p>
+        </div>
+      ) : null}
 
       {staffViewingSelf && (
         <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
