@@ -254,28 +254,26 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-07-12 evening PT  
-**Status:** Taking a break. Full open list → **OPEN BACKLOG** above.
+**Date:** 2026-07-14 PT  
+**Status:** Signing off — session solid. Full open list → **OPEN BACKLOG** above.
 
-### Done this stretch
-- Site hardening around admin/coach content durability  
-- Always-clone paste, freeform template categories, overwrite warnings  
-- Archive shelf for **templates, 28-day packs, exercises** — on **prod** (`main`)  
-- Theme Song / muted speaker honesty  
-- Soak **MARSHMALLOW-BADGER** green; coach-only trail planted for Jeremy  
-- Commits of note: `0ac0df5` exercise archive · `f71efb6` template/pack archive · handoff `d5f0e28` · `CONTEXT.md` hub `b0cbdeb`  
-- Stripe: **test mode live on prod** (not Live money yet) — go-live still open  
-- **Jeremy video IMG_2662 (Jul 12):** Published day locked “Day one” notes after copy-week — fixed `42e122e` (edit notes while published; Unpublish; copy-week no longer copies published)
+### Done this stretch (Jul 12–14)
+- Archive shelf (templates, packs, exercises); always-clone paste; Theme Song  
+- Published-day notes locked after copy-week → editable + Unpublish + auto-clear notes on copy  
+- Coach day/today ping-pong fix; sticky **Join Live Now** / member **Join Live Zoom Now**  
+- Program title clipping; multi-part days (**ProgramDaySession**) + calendar UI  
+- Jeremy script: `JEREMY_TRIPLE_DAY_SCRIPT.md` · soak **TRIPLEDAYS** 2/2 green (`f4b1dcf`)  
+- Live morning: class assign + set counting + Zoom join path worked  
 
-### Explicit decision
-No MARSHMALLOW warm-up on Jeremy’s **live/member** workouts — coach library / shelf / playground only.
+### Explicit decisions
+- No joke soak warm-ups on live member sessions  
+- Multi-part = sequential sessions; Gym/Home = tracks *inside* a part  
 
 ### When back
-1. **Stripe Live** (+ webhook + Venmo + optional Commission) — top money path  
-2. Jeremy content / did he use archive? (post-audit)  
-3. Optional: commit soak scripts; E2E money→member→Adult  
-4. Zoom / SMS / Go to Today phone verify  
-5. Infra as needed (seed export, blob migration)  
+1. **Stripe Live** (still test mode)  
+2. Optional: sweep **S1D-** soak leftovers (~126)  
+3. Jeremy content (Adult weeks, YouTubes); member multi-session schedule UI polish  
+4. SMS Twilio / Zoom embed polish as needed  
 
 ### Branch
-`main` · shipped archive work on origin; local untracked soak artifacts under `scripts/` OK to leave or commit later.
+`main` / origin · latest multi-part + TRIPLEDAYS docs/soak on prod path.
