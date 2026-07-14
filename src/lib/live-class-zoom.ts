@@ -223,11 +223,6 @@ export async function memberLiveZoomStatus(input: {
 }> {
   const date = normalizeLiveSessionDate(input.sessionDate);
   const record = await getLiveClassZoom(date);
-  const allowed = await memberHasLiveAccessOnDate({
-    memberEmail: input.memberEmail,
-    userId: input.userId,
-    sessionDate: date,
-  });
 
   const base = process.env.NEXT_PUBLIC_APP_URL || "https://www.thetrainstation.co";
   const livePageUrl = `${base}/member/live`;
@@ -243,31 +238,17 @@ export async function memberLiveZoomStatus(input: {
     };
   }
 
-  // Room exists — coach has created/started a class Zoom for today.
-  const hostStarted = Boolean(record.hostStartedAt);
-  // Members on today's class (or with live session) can join once host is live,
-  // or within the class-day window even before hostStarted for early join.
-  const now = Date.now();
-  await hydrateTodaySessions({ preferFresh: true });
-  const daySessions = getSessionsForDate(date);
-  const scheduledAt =
-    daySessions[0]?.scheduledAt != null
-      ? new Date(daySessions[0].scheduledAt).getTime()
-      : new Date(`${date}T12:00:00`).getTime();
-  const startsInMin = Math.round((scheduledAt - now) / 60_000);
-  const inClassWindow = startsInMin <= 30 && startsInMin >= -120;
-  // If not "allowed" via roster, still surface join when host is live (coach already running).
-  const canJoin =
-    Boolean(record.joinUrl) &&
-    !record.demo &&
-    (hostStarted || (allowed && inClassWindow));
+  // If coach created a real class Zoom for today, members see Join (not Ping).
+  // hostStartedAt refines copy; room existence is enough for the CTA.
+  const hasJoin = Boolean(record.joinUrl) && !record.demo;
+  const hostStarted = Boolean(record.hostStartedAt) || hasJoin;
 
   return {
     sessionDate: date,
-    roomReady: true,
+    roomReady: hasJoin,
     hostStarted,
-    canJoin,
-    joinUrl: record.demo ? null : record.joinUrl,
+    canJoin: hasJoin,
+    joinUrl: hasJoin ? record.joinUrl : null,
     livePageUrl,
   };
 }
