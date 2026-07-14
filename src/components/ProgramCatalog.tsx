@@ -203,7 +203,7 @@ export default function ProgramCatalog({ programs, enrolledSlugs }: Props) {
                             Enrolled
                           </div>
                         )}
-                        <h3 className="absolute bottom-3 left-3 right-3 text-lg font-semibold text-white">
+                        <h3 className="absolute bottom-3 left-3 right-3 text-lg font-semibold leading-snug tracking-tight text-white drop-shadow">
                           {program.name}
                         </h3>
                       </div>
@@ -284,7 +284,7 @@ export default function ProgramCatalog({ programs, enrolledSlugs }: Props) {
                       <img src={img} alt="" className="h-full w-full object-cover" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-sm truncate">{program.name}</p>
+                      <p className="text-sm font-medium leading-snug break-words">{program.name}</p>
                       <p className="text-[10px] text-[var(--muted)]">{categoryLabel(program.category)}</p>
                       <p className="text-xs text-accent mt-0.5">{price.label}</p>
                     </div>
