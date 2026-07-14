@@ -31,7 +31,7 @@ function stoplightClass(status: AttendanceStatus): string {
 function stoplightLabel(status: AttendanceStatus): string {
   if (status === "joined") return "In workout";
   if (status === "invited") return "Invited — waiting";
-  return "Not on today’s workout";
+  return "Not assigned — plan a class";
 }
 
 function attendanceStatus(
@@ -229,8 +229,13 @@ export default function CoachDashboard({
 
         <div className="space-y-1.5">
           <p className="text-[11px] text-[var(--muted)]">
-            Members follow their <Link href="/admin/programs" className="text-accent hover:underline">program schedule</Link> by default.
-            Use override only for a one-off SMS workout.
+            Members follow their{" "}
+            <Link href="/admin/programs" className="text-accent hover:underline">
+              program schedule
+            </Link>{" "}
+            by default. To put everyone on a shared class for this day (or SMS), use{" "}
+            <strong className="text-[var(--text)]">Plan / assign class</strong> below — not Go to
+            Today until someone is assigned.
           </p>
           <div className="flex flex-wrap gap-2">
             <button
@@ -239,9 +244,19 @@ export default function CoachDashboard({
                 if (showPlanWorkout) closePlanWorkout();
                 else openPlanWorkout();
               }}
-              className="btn-ghost min-h-[44px] w-full px-4 text-sm sm:w-auto"
+              className={
+                showPlanWorkout
+                  ? "btn-ghost min-h-[44px] w-full px-4 text-sm sm:w-auto"
+                  : openStudents.length > 0
+                    ? "btn-primary min-h-[44px] w-full px-4 text-sm sm:w-auto"
+                    : "btn-ghost min-h-[44px] w-full px-4 text-sm sm:w-auto"
+              }
             >
-              {showPlanWorkout ? "Cancel override" : "Override schedule (SMS)"}
+              {showPlanWorkout
+                ? "Cancel planning"
+                : openStudents.length > 0
+                  ? `Plan / assign class (${openStudents.length} need a workout)`
+                  : "Plan / assign class (override)"}
             </button>
           </div>
         </div>
@@ -308,18 +323,15 @@ export default function CoachDashboard({
             {students.map((student) => {
               const tile = tileByUser.get(student.id);
               const status = attendanceStatus(student, tile);
-              return (
-                <Link
-                  key={student.id}
-                  href="/admin/today"
-                  className={`flex min-h-[88px] items-center gap-3 rounded-xl border px-3 py-3 transition hover:border-accent/40 ${
-                    status === "joined"
-                      ? "border-emerald-500/35 bg-emerald-500/8"
-                      : status === "invited"
-                        ? "border-amber-500/30 bg-amber-500/5"
-                        : "border-[var(--border)] bg-[var(--surface)]"
-                  }`}
-                >
+              const cardClass = `flex min-h-[88px] items-center gap-3 rounded-xl border px-3 py-3 transition hover:border-accent/40 ${
+                status === "joined"
+                  ? "border-emerald-500/35 bg-emerald-500/8"
+                  : status === "invited"
+                    ? "border-amber-500/30 bg-amber-500/5"
+                    : "border-[var(--border)] bg-[var(--surface)]"
+              }`;
+              const body = (
+                <>
                   <span
                     className={`h-4 w-4 shrink-0 rounded-full ${stoplightClass(status)}`}
                     title={stoplightLabel(status)}
@@ -331,6 +343,24 @@ export default function CoachDashboard({
                       {student.workoutTitle || stoplightLabel(status)}
                     </p>
                   </div>
+                </>
+              );
+              // Unassigned: open plan builder — do NOT send coach to empty Go to Today (ping-pong).
+              if (status === "unassigned") {
+                return (
+                  <button
+                    key={student.id}
+                    type="button"
+                    className={`${cardClass} w-full text-left`}
+                    onClick={() => openPlanWorkout()}
+                  >
+                    {body}
+                  </button>
+                );
+              }
+              return (
+                <Link key={student.id} href="/admin/today" className={cardClass}>
+                  {body}
                 </Link>
               );
             })}

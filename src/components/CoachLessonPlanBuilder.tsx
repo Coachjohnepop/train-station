@@ -775,7 +775,10 @@ export default function CoachLessonPlanBuilder({
           )}
           <div className="flex flex-wrap gap-2">
             <Link href="/admin/today" className="btn-primary px-4 py-2 text-sm">
-              Go to Today →
+              Open floor (Go to Today) →
+            </Link>
+            <Link href="/admin/day" className="btn-ghost px-4 py-2 text-sm">
+              Stay on Dashboard
             </Link>
             <button
               type="button"

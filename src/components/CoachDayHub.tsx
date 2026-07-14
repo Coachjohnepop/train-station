@@ -319,10 +319,17 @@ export default function CoachDayHub({
           </div>
 
           {assignedStudents.length === 0 && (
-            <div className="card py-10 text-center">
-              <p className="text-sm font-medium">No workouts assigned for today yet.</p>
-              <Link href="/admin/day" className="mt-3 inline-block text-sm text-accent hover:underline">
-                ← Dashboard to publish a class
+            <div className="card space-y-3 py-10 text-center">
+              <p className="text-sm font-medium">No class assigned for today yet.</p>
+              <p className="mx-auto max-w-sm text-xs text-[var(--muted)]">
+                Go to Today is the live floor. First assign a workout on the Dashboard (Plan /
+                assign class), then come back here to count sets.
+              </p>
+              <Link
+                href="/admin/day?plan=1"
+                className="btn-primary mt-1 inline-flex min-h-[44px] items-center px-5 text-sm font-semibold"
+              >
+                Plan / assign class →
               </Link>
             </div>
           )}
