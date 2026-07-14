@@ -57,18 +57,18 @@ export default function ProgramAdminClient({
 
   return (
     <>
-      <div className="mt-1 flex flex-wrap items-baseline justify-between gap-2">
-        <div className="flex min-w-0 flex-wrap items-baseline gap-2">
+      <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1 space-y-0.5">
           <ProgramNameEditor
             slug={initial.slug}
             initialName={programName}
             onSaved={setProgramName}
           />
-          <span className="text-[10px] text-[var(--muted)]">
+          <p className="text-[10px] leading-snug text-[var(--muted)]">
             {initial.durationWeeks} weeks · calendar starts Monday
-          </span>
+          </p>
         </div>
-        <ExportSeedButton className="text-xs" />
+        <ExportSeedButton className="shrink-0 self-start text-xs" />
       </div>
 
       {initial.macroPhases && initial.macroPhases.length > 1 && (

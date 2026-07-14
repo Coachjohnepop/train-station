@@ -62,20 +62,25 @@ export default async function ProgramsAdminPage() {
             <li key={program.id}>
               <Link
                 href={`/admin/programs/${program.slug}`}
-                className="card flex flex-wrap items-center justify-between gap-4 transition hover-accent-border"
+                className="card flex flex-col gap-3 transition hover-accent-border sm:flex-row sm:items-start sm:justify-between sm:gap-6"
               >
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="text-xs text-[var(--muted)]">
                     #{program.sortOrder} · {program.slug}
                   </p>
-                  <p className="text-lg font-semibold">{program.name} <span className="text-xs align-middle font-normal text-[var(--muted)]">({program.category || "workout"})</span></p>
+                  <p className="mt-0.5 text-lg font-semibold leading-snug tracking-tight break-words">
+                    {program.name}
+                    <span className="ml-2 align-middle text-xs font-normal text-[var(--muted)]">
+                      ({program.category || "workout"})
+                    </span>
+                  </p>
                   {program.description && (
-                    <p className="mt-1 max-w-xl text-sm text-[var(--muted)]">
+                    <p className="mt-1 max-w-2xl text-sm leading-relaxed text-[var(--muted)]">
                       {program.description}
                     </p>
                   )}
                 </div>
-                <div className="text-right text-sm text-[var(--muted)]">
+                <div className="shrink-0 space-y-0.5 text-left text-sm leading-snug text-[var(--muted)] sm:text-right">
                   <p>
                     {assigned} / {totalSlots} slots assigned
                   </p>

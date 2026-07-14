@@ -40,13 +40,19 @@ export default function ProgramNameEditor({
     }
   }
 
+  // size + ch width so long names (…Conditioning) never clip the last letter
+  const ch = Math.min(Math.max(name.length + 3, 14), 48);
+
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 max-w-full flex-1">
       <input
-        className="w-full max-w-xl border-0 bg-transparent p-0 text-xl font-semibold tracking-tight outline-none focus:ring-0 disabled:opacity-60"
+        className="box-border max-w-full border-0 bg-transparent py-0.5 pl-0 pr-3 text-xl font-semibold leading-tight tracking-tight text-[var(--text)] outline-none ring-0 focus:ring-0 disabled:opacity-60"
+        style={{ width: `min(100%, ${ch}ch)` }}
+        size={ch}
         value={name}
         aria-label="Program name"
         disabled={saving}
+        spellCheck={false}
         onChange={(e) => setName(e.target.value)}
         onBlur={(e) => void save(e.target.value)}
         onKeyDown={(e) => {
