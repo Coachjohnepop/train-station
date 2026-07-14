@@ -36,12 +36,8 @@ export default function MemberLiveZoomStrip() {
     return () => clearInterval(id);
   }, [load]);
 
-  // Show join when room exists and we have a URL (even if host flag lagging)
-  const canJoinNow = Boolean(
-    status?.joinUrl && status.roomReady && (status.canJoin || status.hostStarted),
-  );
-  // Also allow join when room ready with URL regardless of 15-min window if host started
-  const showJoin = Boolean(status?.joinUrl && status.roomReady && (status.hostStarted || status.canJoin));
+  // Prefer API canJoin; also show join if host is live + we have a URL.
+  const showJoin = Boolean(status?.joinUrl && (status.canJoin || status.hostStarted));
 
   return (
     <div className="sticky top-0 z-40 border-b border-sky-500/30 bg-sky-950/95 backdrop-blur-sm">
@@ -77,8 +73,6 @@ export default function MemberLiveZoomStrip() {
           </Link>
         )}
       </div>
-      {/* canJoinNow reserved for future badge */}
-      {canJoinNow ? null : null}
     </div>
   );
 }

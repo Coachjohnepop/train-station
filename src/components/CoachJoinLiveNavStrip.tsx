@@ -61,36 +61,34 @@ export default function CoachJoinLiveNavStrip() {
     setBusy(true);
     setHint(null);
     try {
-      let hostUrl = room?.hostUrl;
-      if (!hostUrl) {
-        const res = await fetch("/api/admin/live-floor/zoom", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionDate }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setHint(data.error || "Could not start Zoom.");
-          return;
-        }
-        if (data.demo || !data.zoom?.hostUrl) {
-          setHint("Connect Zoom in Settings first.");
-          setReady(false);
-          return;
-        }
-        hostUrl = data.zoom.hostUrl as string;
-        setRoom({
-          hostUrl,
-          joinUrl: data.zoom.joinUrl,
-          topic: data.zoom.topic,
-        });
-        if (data.notified > 0) {
-          setHint(`Live — link sent to ${data.notified} member${data.notified === 1 ? "" : "s"}.`);
-        }
+      // Always POST so hostStarted is marked for members (even if room already exists).
+      const res = await fetch("/api/admin/live-floor/zoom", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionDate, startHost: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setHint(data.error || "Could not start Zoom.");
+        return;
       }
-      if (hostUrl) {
-        window.open(hostUrl, "_blank", "noopener,noreferrer");
+      if (data.demo || !data.zoom?.hostUrl) {
+        setHint("Connect Zoom in Settings first.");
+        setReady(false);
+        return;
       }
+      const hostUrl = data.zoom.hostUrl as string;
+      setRoom({
+        hostUrl,
+        joinUrl: data.zoom.joinUrl,
+        topic: data.zoom.topic,
+      });
+      if (data.notified > 0) {
+        setHint(`Live — link sent to ${data.notified} member${data.notified === 1 ? "" : "s"}.`);
+      } else {
+        setHint("You're live — members can Join Live Zoom Now.");
+      }
+      window.open(hostUrl, "_blank", "noopener,noreferrer");
     } catch {
       setHint("Could not open Zoom.");
     } finally {

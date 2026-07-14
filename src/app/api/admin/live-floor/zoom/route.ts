@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireCoachStaff } from "@/lib/api-auth";
-import { ensureLiveClassZoom } from "@/lib/live-class-zoom";
+import {
+  ensureLiveClassZoom,
+  markLiveClassHostStarted,
+  markLiveClassZoomNotified,
+  notifyLiveClassZoomAttendees,
+} from "@/lib/live-class-zoom";
 import { zoomReady } from "@/lib/zoom";
 import { ZOOM_FREE_MAX_DURATION_MIN } from "@/lib/zoom-oauth-flow";
 import { zoomMeetingSdkConfigured } from "@/lib/zoom-meeting-sdk-signature";
@@ -12,9 +17,12 @@ export async function POST(request: Request) {
   if (!auth.ok) return auth.response;
 
   let sessionDate: string | undefined;
+  /** Coach is opening the room as host (Join Live Now) — mark live for members. */
+  let startHost = true;
   try {
     const body = await request.json();
     sessionDate = typeof body?.sessionDate === "string" ? body.sessionDate : undefined;
+    if (body?.startHost === false) startHost = false;
   } catch {
     /* optional body */
   }
@@ -23,17 +31,18 @@ export async function POST(request: Request) {
     const { record, created } = await ensureLiveClassZoom(sessionDate);
     let notified = 0;
     if (created && !record.demo) {
-      const { notifyLiveClassZoomAttendees, markLiveClassZoomNotified } = await import(
-        "@/lib/live-class-zoom"
-      );
       const alert = await notifyLiveClassZoomAttendees(record.sessionDate, record.joinUrl);
       notified = alert.sent;
       await markLiveClassZoomNotified(record.sessionDate);
+    }
+    if (startHost && !record.demo) {
+      await markLiveClassHostStarted(record.sessionDate);
     }
     return NextResponse.json({
       ok: true,
       created,
       notified,
+      hostStarted: startHost && !record.demo,
       ready: await zoomReady(),
       sdkConfigured: zoomMeetingSdkConfigured(),
       maxDurationMin: ZOOM_FREE_MAX_DURATION_MIN,

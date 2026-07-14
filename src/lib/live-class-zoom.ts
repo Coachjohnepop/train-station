@@ -85,9 +85,24 @@ export async function memberHasLiveAccessOnDate(input: {
 
   await hydrateTodaySessions({ preferFresh: true });
   const daySessions = getSessionsForDate(date);
-  if (input.userId) {
-    return daySessions.some((s) => s.userIds.includes(input.userId!));
+  if (input.userId && daySessions.some((s) => s.userIds.includes(input.userId!))) {
+    return true;
   }
+
+  // Also allow if they have a LiveWorkoutSession row for this date (class deploy / floor).
+  if (input.userId) {
+    try {
+      const { prisma } = await import("@/lib/prisma");
+      const live = await prisma.liveWorkoutSession.findFirst({
+        where: { userId: input.userId, sessionDate: date },
+        select: { id: true },
+      });
+      if (live) return true;
+    } catch {
+      /* demo / no DB */
+    }
+  }
+
   return false;
 }
 
@@ -217,7 +232,7 @@ export async function memberLiveZoomStatus(input: {
   const base = process.env.NEXT_PUBLIC_APP_URL || "https://www.thetrainstation.co";
   const livePageUrl = `${base}/member/live`;
 
-  if (!allowed || !record) {
+  if (!record) {
     return {
       sessionDate: date,
       roomReady: false,
@@ -228,6 +243,10 @@ export async function memberLiveZoomStatus(input: {
     };
   }
 
+  // Room exists — coach has created/started a class Zoom for today.
+  const hostStarted = Boolean(record.hostStartedAt);
+  // Members on today's class (or with live session) can join once host is live,
+  // or within the class-day window even before hostStarted for early join.
   const now = Date.now();
   await hydrateTodaySessions({ preferFresh: true });
   const daySessions = getSessionsForDate(date);
@@ -236,16 +255,19 @@ export async function memberLiveZoomStatus(input: {
       ? new Date(daySessions[0].scheduledAt).getTime()
       : new Date(`${date}T12:00:00`).getTime();
   const startsInMin = Math.round((scheduledAt - now) / 60_000);
-  // Window around class time, or anytime host has already started the room today.
-  const hostStarted = Boolean(record.hostStartedAt);
-  const canJoin = hostStarted || (startsInMin <= 15 && startsInMin >= -90);
+  const inClassWindow = startsInMin <= 30 && startsInMin >= -120;
+  // If not "allowed" via roster, still surface join when host is live (coach already running).
+  const canJoin =
+    Boolean(record.joinUrl) &&
+    !record.demo &&
+    (hostStarted || (allowed && inClassWindow));
 
   return {
     sessionDate: date,
     roomReady: true,
     hostStarted,
     canJoin,
-    joinUrl: record.joinUrl,
+    joinUrl: record.demo ? null : record.joinUrl,
     livePageUrl,
   };
 }
