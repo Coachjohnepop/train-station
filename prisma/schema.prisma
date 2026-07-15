@@ -843,6 +843,10 @@ model Equipment {
   name        String             @unique
   category    String?            // e.g. "bodyweight", "dumbbells", "bands", "bench", "barbell", "pullup", "kettlebell"
   description String?
+  /** Shop / Amazon (etc.) product page — members open in a new tab. */
+  productUrl  String?
+  /** Preview image pulled from the product link (og:image) or set by coach. */
+  imageUrl    String?
   createdAt   DateTime           @default(now())
   exercises   ExerciseEquipment[]
   userItems   UserEquipment[]

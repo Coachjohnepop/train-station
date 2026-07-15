@@ -14,6 +14,8 @@ const patchSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   category: z.string().max(100).optional().nullable(),
   description: z.string().max(2000).optional().nullable(),
+  productUrl: z.string().max(2000).optional().nullable(),
+  imageUrl: z.string().max(2000).optional().nullable(),
 });
 
 export async function PATCH(request: Request, { params }: Params) {

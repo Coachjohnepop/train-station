@@ -18,6 +18,8 @@ export type EquipmentCatalogItem = {
   name: string;
   category: string | null;
   description: string | null;
+  productUrl: string | null;
+  imageUrl: string | null;
 };
 
 export type EquipmentWithUserStatus = EquipmentCatalogItem & {
@@ -34,19 +36,46 @@ export type EquipmentUpdateInput = {
   notes?: string;
 };
 
+export type EquipmentWriteInput = {
+  name: string;
+  category?: string | null;
+  description?: string | null;
+  productUrl?: string | null;
+  imageUrl?: string | null;
+};
+
 const BODYWEIGHT_EQUIPMENT_ID = "eq-bodyweightonly";
+
+function normalizeOptionalUrl(value?: string | null): string | null {
+  if (value === undefined || value === null) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    const u = new URL(trimmed);
+    if (u.protocol !== "http:" && u.protocol !== "https:") {
+      throw new Error("Product link must be http(s)");
+    }
+    return u.toString();
+  } catch {
+    throw new Error("Enter a valid product link (https://…)");
+  }
+}
 
 function mapCatalogRow(row: {
   id: string;
   name: string;
   category?: string | null;
   description?: string | null;
+  productUrl?: string | null;
+  imageUrl?: string | null;
 }): EquipmentCatalogItem {
   return {
     id: row.id,
     name: row.name,
     category: row.category ?? null,
     description: row.description ?? null,
+    productUrl: row.productUrl ?? null,
+    imageUrl: row.imageUrl ?? null,
   };
 }
 
@@ -60,19 +89,33 @@ export async function listEquipmentCatalog(): Promise<EquipmentCatalogItem[]> {
   return rows.map(mapCatalogRow);
 }
 
-export async function createEquipmentItem(data: {
-  name: string;
-  category?: string | null;
-  description?: string | null;
-}): Promise<EquipmentCatalogItem> {
+/** Items with a buy link — member gear shop. */
+export async function listEquipmentShopItems(): Promise<EquipmentCatalogItem[]> {
+  const all = await listEquipmentCatalog();
+  return all.filter((item) => Boolean(item.productUrl?.trim()));
+}
+
+export async function createEquipmentItem(
+  data: EquipmentWriteInput,
+): Promise<EquipmentCatalogItem> {
   const name = data.name.trim();
   if (!name) throw new Error("Equipment name is required");
+  const productUrl =
+    data.productUrl === undefined ? null : normalizeOptionalUrl(data.productUrl);
+  const imageUrl =
+    data.imageUrl === undefined
+      ? null
+      : data.imageUrl?.trim()
+        ? normalizeOptionalUrl(data.imageUrl)
+        : null;
 
   if (isDemoMode()) {
     const created = await createDemoEquipmentItem({
       name,
       category: data.category?.trim() || null,
       description: data.description?.trim() || null,
+      productUrl,
+      imageUrl,
     });
     return mapCatalogRow(created);
   }
@@ -82,6 +125,8 @@ export async function createEquipmentItem(data: {
       name,
       category: data.category?.trim() || null,
       description: data.description?.trim() || null,
+      productUrl,
+      imageUrl,
     },
   });
   return mapCatalogRow(created);
@@ -89,26 +134,32 @@ export async function createEquipmentItem(data: {
 
 export async function updateEquipmentItem(
   id: string,
-  data: { name?: string; category?: string | null; description?: string | null },
+  data: Partial<EquipmentWriteInput>,
 ): Promise<EquipmentCatalogItem> {
+  const patch: {
+    name?: string;
+    category?: string | null;
+    description?: string | null;
+    productUrl?: string | null;
+    imageUrl?: string | null;
+  } = {};
+
+  if (data.name !== undefined) patch.name = data.name.trim();
+  if (data.category !== undefined) patch.category = data.category?.trim() || null;
+  if (data.description !== undefined) patch.description = data.description?.trim() || null;
+  if (data.productUrl !== undefined) patch.productUrl = normalizeOptionalUrl(data.productUrl);
+  if (data.imageUrl !== undefined) {
+    patch.imageUrl = data.imageUrl?.trim() ? normalizeOptionalUrl(data.imageUrl) : null;
+  }
+
   if (isDemoMode()) {
-    const updated = await updateDemoEquipmentItem(id, {
-      name: data.name?.trim(),
-      category: data.category === undefined ? undefined : data.category?.trim() || null,
-      description: data.description === undefined ? undefined : data.description?.trim() || null,
-    });
+    const updated = await updateDemoEquipmentItem(id, patch);
     return mapCatalogRow(updated);
   }
 
   const updated = await prisma.equipment.update({
     where: { id },
-    data: {
-      ...(data.name !== undefined ? { name: data.name.trim() } : {}),
-      ...(data.category !== undefined ? { category: data.category?.trim() || null } : {}),
-      ...(data.description !== undefined
-        ? { description: data.description?.trim() || null }
-        : {}),
-    },
+    data: patch,
   });
   return mapCatalogRow(updated);
 }
@@ -134,6 +185,8 @@ export async function getMemberEquipmentWithStatus(
       name: item.name,
       category: item.category ?? null,
       description: item.description ?? null,
+      productUrl: item.productUrl ?? null,
+      imageUrl: item.imageUrl ?? null,
       hasAtHome: item.hasAtHome,
       quantity: item.quantity ?? 1,
       notes: item.notes ?? "",
@@ -154,6 +207,8 @@ export async function getMemberEquipmentWithStatus(
       name: eq.name,
       category: eq.category,
       description: eq.description,
+      productUrl: eq.productUrl,
+      imageUrl: eq.imageUrl,
       hasAtHome: userItem
         ? userItem.hasAtHome
         : eq.id === BODYWEIGHT_EQUIPMENT_ID,

@@ -14,6 +14,8 @@ export type DemoEquipmentCatalogItem = {
   name: string;
   category?: string | null;
   description?: string | null;
+  productUrl?: string | null;
+  imageUrl?: string | null;
   createdAt?: string;
 };
 
@@ -192,6 +194,8 @@ export async function createDemoEquipmentItem(data: {
   name: string;
   category?: string | null;
   description?: string | null;
+  productUrl?: string | null;
+  imageUrl?: string | null;
 }): Promise<DemoEquipmentCatalogItem> {
   const catalog = await loadEquipmentCatalogStore();
   const name = data.name.trim();
@@ -204,6 +208,8 @@ export async function createDemoEquipmentItem(data: {
     name,
     category: data.category ?? null,
     description: data.description ?? null,
+    productUrl: data.productUrl ?? null,
+    imageUrl: data.imageUrl ?? null,
     createdAt: new Date().toISOString(),
   };
 
@@ -215,7 +221,13 @@ export async function createDemoEquipmentItem(data: {
 
 export async function updateDemoEquipmentItem(
   id: string,
-  data: { name?: string; category?: string | null; description?: string | null },
+  data: {
+    name?: string;
+    category?: string | null;
+    description?: string | null;
+    productUrl?: string | null;
+    imageUrl?: string | null;
+  },
 ): Promise<DemoEquipmentCatalogItem> {
   const catalog = await loadEquipmentCatalogStore();
   const existing = catalog.find((item) => item.id === id);
@@ -236,6 +248,9 @@ export async function updateDemoEquipmentItem(
     category: data.category === undefined ? existing.category ?? null : data.category,
     description:
       data.description === undefined ? existing.description ?? null : data.description,
+    productUrl:
+      data.productUrl === undefined ? existing.productUrl ?? null : data.productUrl,
+    imageUrl: data.imageUrl === undefined ? existing.imageUrl ?? null : data.imageUrl,
   };
 
   const store = currentCatalogStore();

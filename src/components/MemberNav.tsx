@@ -41,6 +41,11 @@ const items: NavItem[] = [
     match: (p: string) => p.startsWith("/member/leaderboard"),
   },
   {
+    href: "/member/equipment",
+    label: "Gear",
+    match: (p: string) => p.startsWith("/member/equipment"),
+  },
+  {
     href: "/member/book",
     label: "Book Call",
     match: (p: string) => p.startsWith("/member/book"),
