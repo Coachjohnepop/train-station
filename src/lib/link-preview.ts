@@ -101,11 +101,12 @@ export async function fetchLinkPreview(rawUrl: string): Promise<LinkPreview> {
     throw new Error("Link must start with http:// or https://");
   }
 
-  const asin = extractAmazonAsin(url.toString());
+  let asin = extractAmazonAsin(url.toString());
   let title: string | null = null;
   let description: string | null = null;
   let imageUrl: string | null = asin ? amazonImageFallback(asin) : null;
   let siteName: string | null = url.hostname.replace(/^www\./, "");
+  let finalUrl = url.toString();
 
   try {
     const controller = new AbortController();
@@ -123,6 +124,21 @@ export async function fetchLinkPreview(rawUrl: string): Promise<LinkPreview> {
     });
     clearTimeout(timeout);
 
+    // a.co / amzn.to short links resolve here — ASIN lives on the final URL.
+    if (res.url) {
+      finalUrl = res.url;
+      const redirectedAsin = extractAmazonAsin(res.url);
+      if (redirectedAsin) {
+        asin = redirectedAsin;
+        if (!imageUrl) imageUrl = amazonImageFallback(asin);
+      }
+      try {
+        siteName = new URL(res.url).hostname.replace(/^www\./, "");
+      } catch {
+        /* keep */
+      }
+    }
+
     const contentType = res.headers.get("content-type") || "";
     if (res.ok && contentType.includes("text/html")) {
       const html = (await res.text()).slice(0, 400_000);
@@ -134,8 +150,10 @@ export async function fetchLinkPreview(rawUrl: string): Promise<LinkPreview> {
       title = cleanProductTitle(ogTitle || titleFromHtml(html), siteName);
       description = ogDesc?.slice(0, 500) || null;
       siteName = ogSite || siteName;
-      const absImage = absoluteUrl(url.toString(), ogImage);
+      const absImage = absoluteUrl(finalUrl, ogImage);
       if (absImage) imageUrl = absImage;
+      // Re-try ASIN image if OG missing
+      if (!imageUrl && asin) imageUrl = amazonImageFallback(asin);
     }
   } catch {
     // Keep ASIN / empty fallbacks — coach can still edit name after paste.
@@ -149,7 +167,7 @@ export async function fetchLinkPreview(rawUrl: string): Promise<LinkPreview> {
   }
 
   return {
-    url: url.toString(),
+    url: finalUrl || url.toString(),
     title,
     description,
     imageUrl,
