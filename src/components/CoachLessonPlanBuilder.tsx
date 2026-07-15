@@ -310,6 +310,23 @@ export default function CoachLessonPlanBuilder({
     );
   }, [interpretation?.normalizedText, rawText, savedSessions]);
 
+  const selectedForDeploy = useMemo(() => {
+    const ids = new Set([
+      ...cascadeIds,
+      ...individualDrafts.filter((d) => d.useCustom && d.rawSms.trim()).map((d) => d.userId),
+    ]);
+    return memberOptions.filter((m) => ids.has(m.id));
+  }, [cascadeIds, individualDrafts, memberOptions]);
+
+  const alreadyAssignedSelected = useMemo(() => {
+    const assignedIds = new Set(
+      savedSessions.flatMap((s) => (s.sessionDate === sessionDate ? s.userIds : [])),
+    );
+    return selectedForDeploy.filter((m) => assignedIds.has(m.id));
+  }, [savedSessions, sessionDate, selectedForDeploy]);
+
+  const isLiveReplace = alreadyAssignedSelected.length > 0;
+
   async function handleDeploy() {
     if (!draftWorkoutId && !matchingSavedSession?.workoutId) {
       setError(true);
@@ -325,6 +342,16 @@ export default function CoachLessonPlanBuilder({
       setError(true);
       setMessage("Pick who gets the cascade workout or mark students for individual plans.");
       return;
+    }
+
+    if (isLiveReplace) {
+      const names = alreadyAssignedSelected.map((m) => m.name).join(", ");
+      const ok = window.confirm(
+        `Replace the active class for ${names}?\n\n` +
+          "Their phone will switch to this updated workout within a few seconds. " +
+          "Prior set checkoffs on the old plan stay in history but the live board uses the new plan.",
+      );
+      if (!ok) return;
     }
 
     setSaving(true);
@@ -349,6 +376,7 @@ export default function CoachLessonPlanBuilder({
           sessionDate,
           scheduledAt: scheduled.toISOString(),
           sendSmsAlert,
+          replaceExisting: true,
           restTimer: restTimerEnabled
             ? { enabled: true, seconds: restTimerSeconds }
             : { enabled: false, seconds: restTimerSeconds },
@@ -561,8 +589,16 @@ export default function CoachLessonPlanBuilder({
             <h2 className="font-semibold text-lg">Assign class</h2>
             <p className="mt-1 text-xs text-[var(--muted)]">
               Cascade the same workout to a group, or mark students who need their own plan (injuries,
-              different goals).
+              different goals). You can fully replace an active live class — members get the new plan
+              on their phone within a few seconds.
             </p>
+            {isLiveReplace ? (
+              <p className="mt-2 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                <strong>Live replace:</strong>{" "}
+                {alreadyAssignedSelected.map((m) => m.name).join(", ")} already have a class
+                today. Deploy will pull them onto <em>this</em> workout and resend to their devices.
+              </p>
+            ) : null}
             {interpretation?.catalogPreview ? (
               <div className="mt-3">
                 <ExerciseCatalogMatchSummary preview={interpretation.catalogPreview} compact />
@@ -718,12 +754,16 @@ export default function CoachLessonPlanBuilder({
               className="btn-primary px-4 py-2 text-sm"
             >
               {saving
-                ? matchingSavedSession
-                  ? "Publishing…"
-                  : "Building workout…"
-                : matchingSavedSession
-                  ? "Publish saved class"
-                  : "Deploy to students"}
+                ? isLiveReplace
+                  ? "Replacing & sending…"
+                  : matchingSavedSession
+                    ? "Publishing…"
+                    : "Building workout…"
+                : isLiveReplace
+                  ? "Replace active workout & send"
+                  : matchingSavedSession
+                    ? "Publish saved class"
+                    : "Deploy to students"}
             </button>
           </div>
         </div>
@@ -732,10 +772,15 @@ export default function CoachLessonPlanBuilder({
       {step === 3 && deployResult && (
         <div className="card space-y-4 border-emerald-500/35 bg-emerald-500/10">
           <div>
-            <h2 className="font-semibold text-lg text-emerald-100">Published</h2>
+            <h2 className="font-semibold text-lg text-emerald-100">
+              {isLiveReplace ? "Replaced & sent" : "Published"}
+            </h2>
             <p className="mt-1 text-xs text-[var(--muted)]">
               Built {deployResult.built} workout{deployResult.built !== 1 ? "s" : ""} for{" "}
-              {viewDateLabel}. Students below should see it on Go to Today.
+              {viewDateLabel}. Students below should see it on Go to Today
+              {isLiveReplace
+                ? " — phones refresh automatically in a few seconds if they stay on Today."
+                : "."}
             </p>
             <NewExerciseReviewLink count={newExerciseCount} className="mt-2 inline-block text-xs font-medium text-accent hover:underline" />
           </div>

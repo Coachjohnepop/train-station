@@ -30,6 +30,7 @@ type LoadedWorkout = {
   memberName: string;
   instructorName: string;
   sessionDate: string;
+  workoutId?: string;
 };
 
 function statusLabel(status: LiveFloorTile["status"]): string {
@@ -85,6 +86,12 @@ export default function CoachLiveFloor({ initialDate }: { initialDate: string })
     void load();
   }, [load]);
 
+  // Mid-live reassign (new plan / workout id) does not always emit SSE — poll as backup.
+  useEffect(() => {
+    const id = setInterval(() => void load(), 5000);
+    return () => clearInterval(id);
+  }, [load]);
+
   useEffect(() => {
     const source = new EventSource(`/api/admin/live-floor/stream?date=${sessionDate}`);
     source.onmessage = (event) => {
@@ -118,6 +125,7 @@ export default function CoachLiveFloor({ initialDate }: { initialDate: string })
             memberName: data.memberName,
             instructorName: data.instructorName,
             sessionDate: data.sessionDate,
+            workoutId: tile.workoutId,
           },
         }));
       } finally {
@@ -127,13 +135,41 @@ export default function CoachLiveFloor({ initialDate }: { initialDate: string })
     [sessionDate],
   );
 
+  // When coach replaces the class mid-session, drop cached workout bodies and reload.
+  useEffect(() => {
+    if (!floor) return;
+    setWorkouts((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const tile of floor.tiles) {
+        const cached = next[tile.userId];
+        if (cached && cached.workoutId && cached.workoutId !== tile.workoutId) {
+          delete next[tile.userId];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [floor]);
+
+  useEffect(() => {
+    if (!expandedUserId || !floor) return;
+    const tile = floor.tiles.find((t) => t.userId === expandedUserId);
+    if (!tile) return;
+    const cached = workouts[expandedUserId];
+    if (!cached || cached.workoutId !== tile.workoutId) {
+      void loadWorkout(tile);
+    }
+  }, [expandedUserId, floor, workouts, loadWorkout]);
+
   async function toggleStudent(tile: LiveFloorTile) {
     if (expandedUserId === tile.userId) {
       setExpandedUserId(null);
       return;
     }
     setExpandedUserId(tile.userId);
-    if (!workouts[tile.userId]) {
+    const cached = workouts[tile.userId];
+    if (!cached || cached.workoutId !== tile.workoutId) {
       await loadWorkout(tile);
     }
   }

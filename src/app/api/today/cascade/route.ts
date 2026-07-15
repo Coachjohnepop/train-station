@@ -20,6 +20,8 @@ const schema = z.object({
   scheduledAt: z.string().min(1),
   programSlug: z.string().optional(),
   replacesSchedule: z.boolean().optional(),
+  /** Pull members off any other class that day (default true) — mid-live replace. */
+  replaceExisting: z.boolean().optional(),
   sendSmsAlert: z.boolean().optional(),
   restTimer: restTimerSchema.optional(),
   cascade: z
@@ -47,6 +49,7 @@ export async function POST(request: Request) {
     scheduledAt,
     programSlug = "adult",
     replacesSchedule = true,
+    replaceExisting = true,
     sendSmsAlert = false,
     restTimer,
     cascade,
@@ -74,6 +77,7 @@ export async function POST(request: Request) {
         programSlug,
         userIds: cascade.userIds,
         replacesSchedule,
+        replaceExisting,
         createdBy: "coach",
         title: cascade.title,
         workoutId: cascade.workoutId,
@@ -93,6 +97,7 @@ export async function POST(request: Request) {
             programSlug,
             userIds: [ind.userId],
             replacesSchedule,
+            replaceExisting,
             createdBy: "coach",
             title: ind.title,
             restTimer,

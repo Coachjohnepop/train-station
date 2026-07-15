@@ -173,6 +173,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
         viewDate={viewDate}
         sessionId={session?.id}
         workoutId={session?.workoutId || workout?.workoutId}
+        assignmentStamp={session?.createdAt ?? null}
       />
 
       {!asInstructor ? (

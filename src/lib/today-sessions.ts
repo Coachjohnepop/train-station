@@ -153,9 +153,43 @@ export function getSessionsForDate(sessionDate: string): TodaySession[] {
 }
 
 export function getSessionForUserOnDate(userId: string, sessionDate: string): TodaySession | null {
-  return (
-    getSessionsForDate(sessionDate).find((s) => s.userIds.includes(userId)) ?? null
-  );
+  // Prefer the most recently created assignment when a member was left on
+  // multiple sessions (legacy bug). Deploy paths now detach first.
+  const matches = getSessionsForDate(sessionDate)
+    .filter((s) => s.userIds.includes(userId))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return matches[0] ?? null;
+}
+
+/**
+ * Remove members from every class session on a date except `keepSessionId`.
+ * Deletes sessions that end up with zero members. Required for mid-class
+ * replace so the new plan is the only assignment.
+ */
+export function detachUsersFromSessionsOnDate(
+  store: TodaySessionStore,
+  userIds: string[],
+  sessionDate: string,
+  keepSessionId?: string,
+): { emptiedSessionIds: string[] } {
+  const targets = new Set(userIds);
+  if (targets.size === 0) return { emptiedSessionIds: [] };
+
+  const emptiedSessionIds: string[] = [];
+  for (const session of Object.values(store.sessions)) {
+    if (session.sessionDate !== sessionDate) continue;
+    if (keepSessionId && session.id === keepSessionId) continue;
+    if (!session.userIds.some((id) => targets.has(id))) continue;
+
+    session.userIds = session.userIds.filter((id) => !targets.has(id));
+    if (session.userIds.length === 0) {
+      emptiedSessionIds.push(session.id);
+      delete store.sessions[session.id];
+    } else {
+      store.sessions[session.id] = session;
+    }
+  }
+  return { emptiedSessionIds };
 }
 
 function sessionAppliesToUser(session: TodaySession, userId: string) {
@@ -200,11 +234,17 @@ export async function createTodaySessionFromSms(input: {
   /** Skip rebuild when the coach is republishing a saved class plan. */
   workoutId?: string;
   restTimer?: WorkoutRestTimerSettings;
+  /**
+   * When true (default), pull members off any other class that day so the
+   * new plan is the only active assignment — needed mid-live replace.
+   */
+  replaceExisting?: boolean;
 }) {
   await hydrateTodaySessions();
   const rawSms = input.rawSms.trim();
   const userIds = input.userIds?.length ? input.userIds : [];
   const parsed = parseSmsWorkout(rawSms);
+  const replaceExisting = input.replaceExisting !== false;
 
   const store = readStore();
   const samePlan = findSessionWithPlanOnDate(input.sessionDate, rawSms, store);
@@ -220,20 +260,50 @@ export async function createTodaySessionFromSms(input: {
     await updateWorkoutRestTimer(workoutId, input.restTimer);
   }
 
-  if (samePlan) {
-    const mergedIds = [...new Set([...samePlan.userIds, ...userIds])];
+  // Mid-live replace: members must leave their previous class session first.
+  // Keep the matching plan row (if any) so we can update it in place.
+  const emptiedBefore: string[] = [];
+  if (replaceExisting && userIds.length > 0) {
+    const { emptiedSessionIds } = detachUsersFromSessionsOnDate(
+      store,
+      userIds,
+      input.sessionDate,
+      samePlan?.id,
+    );
+    emptiedBefore.push(...emptiedSessionIds);
+  }
+
+  if (samePlan && store.sessions[samePlan.id]) {
+    const current = store.sessions[samePlan.id];
+    const mergedIds = [...new Set([...current.userIds, ...userIds])];
     const session: TodaySession = {
-      ...samePlan,
+      ...current,
       scheduledAt: input.scheduledAt,
-      title: input.title || samePlan.title || parsed.title,
+      title: input.title || current.title || parsed.title,
+      rawSms,
       workoutId,
       userIds: mergedIds,
-      replacesSchedule: input.replacesSchedule ?? samePlan.replacesSchedule,
-      createdBy: input.createdBy ?? samePlan.createdBy,
+      replacesSchedule: input.replacesSchedule ?? current.replacesSchedule,
+      createdBy: input.createdBy ?? current.createdBy,
+      // Bump createdAt so member poll + "latest assignment" prefer this push.
+      createdAt: new Date().toISOString(),
     };
     store.sessions[session.id] = session;
     await writeStore(store);
-    return { session, parsed, workoutId, newExerciseIds, reused: true as const };
+    // Clean emptied sessions from DB when not in demo (delete was memory-only above)
+    if (!isDemoMode()) {
+      for (const id of emptiedBefore) {
+        await deleteSessionFromDb(id);
+      }
+    }
+    return {
+      session,
+      parsed,
+      workoutId,
+      newExerciseIds,
+      reused: true as const,
+      replaced: true as const,
+    };
   }
 
   const assignKey = userIdsKey(userIds);
@@ -251,13 +321,26 @@ export async function createTodaySessionFromSms(input: {
     programSlug: input.programSlug || "adult",
     userIds,
     replacesSchedule: input.replacesSchedule ?? true,
-    createdAt: existing?.createdAt || new Date().toISOString(),
+    // Always stamp now so live clients detect the push even if workoutId is unchanged.
+    createdAt: new Date().toISOString(),
     createdBy: input.createdBy,
   };
 
   store.sessions[session.id] = session;
   await writeStore(store);
-  return { session, parsed, workoutId, newExerciseIds, reused: false as const };
+  if (!isDemoMode()) {
+    for (const id of emptiedBefore) {
+      await deleteSessionFromDb(id);
+    }
+  }
+  return {
+    session,
+    parsed,
+    workoutId,
+    newExerciseIds,
+    reused: false as const,
+    replaced: replaceExisting && userIds.length > 0,
+  };
 }
 
 export async function deleteTodaySession(sessionIdOrDate: string) {
@@ -297,7 +380,7 @@ export function getTodaySessionById(sessionId: string): TodaySession | null {
 export async function addMemberToTodaySession(
   sessionId: string,
   userId: string,
-  opts?: { preferFresh?: boolean },
+  opts?: { preferFresh?: boolean; replaceExisting?: boolean },
 ) {
   await hydrateTodaySessions(opts?.preferFresh ? { preferFresh: true } : undefined);
   const store = readStore();
@@ -306,34 +389,80 @@ export async function addMemberToTodaySession(
   if (session.userIds.includes(userId)) {
     return { session, alreadyAssigned: true as const };
   }
-  session.userIds = [...session.userIds, userId];
+  const emptied: string[] = [];
+  if (opts?.replaceExisting !== false) {
+    const result = detachUsersFromSessionsOnDate(
+      store,
+      [userId],
+      session.sessionDate,
+      sessionId,
+    );
+    emptied.push(...result.emptiedSessionIds);
+  }
+  const target = store.sessions[sessionId];
+  if (!target) throw new Error("Session not found");
+  target.userIds = [...target.userIds, userId];
+  target.createdAt = new Date().toISOString();
+  store.sessions[sessionId] = target;
   await writeStore(store);
-  return { session, alreadyAssigned: false as const };
+  if (!isDemoMode()) {
+    for (const id of emptied) await deleteSessionFromDb(id);
+  }
+  return { session: target, alreadyAssigned: false as const };
 }
 
 /** Add several members in one hydrate/write — faster when publishing a saved class. */
-export async function addMembersToTodaySession(sessionId: string, userIds: string[]) {
+export async function addMembersToTodaySession(
+  sessionId: string,
+  userIds: string[],
+  opts?: { replaceExisting?: boolean },
+) {
   await hydrateTodaySessions();
   const store = readStore();
   const session = store.sessions[sessionId];
   if (!session) throw new Error("Session not found");
 
+  const replaceExisting = opts?.replaceExisting !== false;
   const added: string[] = [];
   const skipped: string[] = [];
-  for (const userId of userIds) {
+  const toAttach = userIds.filter((userId) => {
     if (session.userIds.includes(userId)) {
       skipped.push(userId);
-      continue;
+      return false;
     }
-    session.userIds.push(userId);
-    added.push(userId);
+    return true;
+  });
+
+  const emptied: string[] = [];
+  if (replaceExisting && toAttach.length > 0) {
+    const result = detachUsersFromSessionsOnDate(
+      store,
+      toAttach,
+      session.sessionDate,
+      sessionId,
+    );
+    emptied.push(...result.emptiedSessionIds);
+  }
+
+  const target = store.sessions[sessionId];
+  if (!target) throw new Error("Session not found");
+  for (const userId of toAttach) {
+    if (!target.userIds.includes(userId)) {
+      target.userIds.push(userId);
+      added.push(userId);
+    }
   }
 
   if (added.length > 0) {
+    target.createdAt = new Date().toISOString();
+    store.sessions[sessionId] = target;
     await writeStore(store);
   }
+  if (!isDemoMode()) {
+    for (const id of emptied) await deleteSessionFromDb(id);
+  }
 
-  return { session, added, skipped };
+  return { session: target, added, skipped };
 }
 
 /** Copy one student's workout to others on the same day (joins shared session). */
@@ -341,32 +470,20 @@ export async function cascadeWorkoutFromMember(input: {
   sessionDate: string;
   sourceUserId: string;
   targetUserIds: string[];
+  /** When true (default), move members off a different plan onto this one. */
+  replaceExisting?: boolean;
 }) {
   await hydrateTodaySessions();
   const source = getSessionForUserOnDate(input.sourceUserId, input.sessionDate);
   if (!source) throw new Error("Source student has no workout for this day");
 
-  const added: string[] = [];
-  const skipped: string[] = [];
-
   const targets = input.targetUserIds.filter((userId) => userId !== input.sourceUserId);
-  const eligible: string[] = [];
-  for (const userId of targets) {
-    const existing = getSessionForUserOnDate(userId, input.sessionDate);
-    if (existing && existing.id !== source.id) {
-      skipped.push(userId);
-      continue;
-    }
-    eligible.push(userId);
-  }
-
-  if (eligible.length > 0) {
-    const batch = await addMembersToTodaySession(source.id, eligible);
-    added.push(...batch.added);
-  }
+  const batch = await addMembersToTodaySession(source.id, targets, {
+    replaceExisting: input.replaceExisting !== false,
+  });
 
   const session = getTodaySessionById(source.id)!;
-  return { session, added, skipped };
+  return { session, added: batch.added, skipped: batch.skipped };
 }
 
 /** Assign an open student to the day's most-used workout (largest group). */
