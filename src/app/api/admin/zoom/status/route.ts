@@ -9,10 +9,16 @@ export async function GET() {
   if (!auth.ok) return auth.response;
 
   const status = await getZoomCoachStatus();
-  return NextResponse.json(status, {
-    headers: {
-      "Cache-Control": "no-store, no-cache, must-revalidate",
-      Pragma: "no-cache",
+  return NextResponse.json(
+    {
+      ...status,
+      coachEmail: auth.session.email,
     },
-  });
+    {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        Pragma: "no-cache",
+      },
+    },
+  );
 }

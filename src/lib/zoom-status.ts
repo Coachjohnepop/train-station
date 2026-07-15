@@ -17,7 +17,12 @@ export type ZoomCoachStatus = {
   sdkConfigHint: string | null;
   maxDurationMin: number;
   coachStartsFirst: boolean;
-  account: { email: string; displayName: string; connectedAt: string } | null;
+  account: {
+    email: string;
+    displayName: string;
+    connectedAt: string;
+    connectedByEmail: string;
+  } | null;
 };
 
 export async function getZoomCoachStatus(): Promise<ZoomCoachStatus> {
@@ -39,6 +44,7 @@ export async function getZoomCoachStatus(): Promise<ZoomCoachStatus> {
           email: record.email,
           displayName: record.displayName,
           connectedAt: record.connectedAt,
+          connectedByEmail: record.connectedByEmail,
         }
       : null,
   };

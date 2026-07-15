@@ -7,10 +7,15 @@ import {
   zoomOAuthAppConfigured,
 } from "@/lib/zoom-oauth-flow";
 import { rememberZoomOAuthState } from "@/lib/zoom-oauth-pending";
+import { clearZoomOAuthRecord } from "@/lib/zoom-oauth-store";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+/**
+ * Start Zoom OAuth for the signed-in coach.
+ * ?switch=1 clears any existing linked Zoom first (use when changing accounts).
+ */
+export async function GET(request: Request) {
   const auth = await requireCoachStaff();
   if (!auth.ok) return auth.response;
 
@@ -19,6 +24,12 @@ export async function GET() {
       { error: "Set ZOOM_CLIENT_ID and ZOOM_CLIENT_SECRET in Vercel first." },
       { status: 503 },
     );
+  }
+
+  const url = new URL(request.url);
+  const switching = url.searchParams.get("switch") === "1";
+  if (switching) {
+    await clearZoomOAuthRecord(auth.session.email);
   }
 
   const state = createZoomOAuthState(auth.session.email);
