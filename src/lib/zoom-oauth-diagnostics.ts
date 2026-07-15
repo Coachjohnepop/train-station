@@ -1,7 +1,11 @@
 import "server-only";
 
 import { isDemoMode } from "@/lib/demo-enrollments";
-import { zoomOAuthCallbackUrl, ZOOM_OAUTH_SCOPES } from "@/lib/zoom-oauth-flow";
+import {
+  zoomOAuthCallbackUrl,
+  zoomOAuthScopes,
+  ZOOM_OAUTH_SCOPES_DEFAULT,
+} from "@/lib/zoom-oauth-flow";
 import { getZoomOAuthRecord } from "@/lib/zoom-oauth-store";
 import { probeZoomOAuthDb } from "@/lib/zoom-oauth-store-db";
 import { zoomClientId, zoomClientSecret } from "@/lib/zoom-env";
@@ -12,6 +16,7 @@ export type ZoomOAuthDiagnostics = {
   clientIdPrefix: string | null;
   redirectUri: string;
   scopes: string;
+  scopesMode: "explicit" | "app_defaults";
   tokenProbe: "invalid_client" | "invalid_grant" | "other" | "skipped";
   tokenProbeDetail: string | null;
   dbOk: boolean;
@@ -24,6 +29,7 @@ export async function getZoomOAuthDiagnostics(): Promise<ZoomOAuthDiagnostics> {
   const clientId = zoomClientId();
   const secret = zoomClientSecret();
   const redirectUri = zoomOAuthCallbackUrl();
+  const scopes = zoomOAuthScopes();
 
   let tokenProbe: ZoomOAuthDiagnostics["tokenProbe"] = "skipped";
   let tokenProbeDetail: string | null = null;
@@ -70,7 +76,8 @@ export async function getZoomOAuthDiagnostics(): Promise<ZoomOAuthDiagnostics> {
     secretPresent: Boolean(secret),
     clientIdPrefix: clientId ? `${clientId.slice(0, 4)}…${clientId.slice(-4)}` : null,
     redirectUri,
-    scopes: ZOOM_OAUTH_SCOPES,
+    scopes: scopes || ZOOM_OAUTH_SCOPES_DEFAULT,
+    scopesMode: scopes ? "explicit" : "app_defaults",
     tokenProbe,
     tokenProbeDetail,
     dbOk: dbProbe.ok,

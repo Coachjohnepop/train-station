@@ -5,6 +5,7 @@ import {
   createZoomOAuthState,
   ZOOM_OAUTH_STATE_COOKIE,
   zoomOAuthAppConfigured,
+  zoomOAuthCallbackUrl,
 } from "@/lib/zoom-oauth-flow";
 import { rememberZoomOAuthState } from "@/lib/zoom-oauth-pending";
 import { clearZoomOAuthRecord } from "@/lib/zoom-oauth-store";
@@ -32,9 +33,12 @@ export async function GET(request: Request) {
     await clearZoomOAuthRecord(auth.session.email);
   }
 
-  const state = createZoomOAuthState(auth.session.email);
+  // Bind redirect_uri to this request's host (www vs apex) so Zoom Marketplace
+  // allowlist + token exchange use the same URI the browser will hit.
+  const redirectUri = zoomOAuthCallbackUrl(request);
+  const state = createZoomOAuthState(auth.session.email, redirectUri);
   await rememberZoomOAuthState(state, auth.session.email);
-  const res = NextResponse.redirect(buildZoomAuthorizeUrl(state));
+  const res = NextResponse.redirect(buildZoomAuthorizeUrl(state, redirectUri));
   res.cookies.set(ZOOM_OAUTH_STATE_COOKIE, state, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

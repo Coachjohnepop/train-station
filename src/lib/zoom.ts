@@ -223,14 +223,18 @@ export async function fetchZoomZakToken(): Promise<string | null> {
   return (data.token as string) || null;
 }
 
-export async function exchangeZoomAuthCode(code: string): Promise<{
+export async function exchangeZoomAuthCode(
+  code: string,
+  redirectUri?: string,
+): Promise<{
   accessToken: string;
   refreshToken: string;
 }> {
   const params = new URLSearchParams({
     grant_type: "authorization_code",
     code,
-    redirect_uri: zoomOAuthCallbackUrl(),
+    // Must match the redirect_uri used in /oauth/authorize exactly.
+    redirect_uri: redirectUri || zoomOAuthCallbackUrl(),
   });
   const pair = getOAuthClientPair();
   if (!pair) throw new Error("Zoom OAuth app is not configured.");

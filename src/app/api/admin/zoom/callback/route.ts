@@ -3,8 +3,10 @@ import { NextResponse } from "next/server";
 import { requireCoachStaff } from "@/lib/api-auth";
 import { appBaseUrl } from "@/lib/oauth/config";
 import {
+  parseZoomOAuthState,
   verifyZoomOAuthState,
   ZOOM_OAUTH_STATE_COOKIE,
+  zoomOAuthCallbackUrl,
 } from "@/lib/zoom-oauth-flow";
 import { consumeZoomOAuthState } from "@/lib/zoom-oauth-pending";
 import { exchangeZoomAuthCode, fetchZoomUserProfile } from "@/lib/zoom";
@@ -16,17 +18,34 @@ import { saveZoomOAuthRecord } from "@/lib/zoom-oauth-store";
 
 export const dynamic = "force-dynamic";
 
-function redirectWithError(reason: string, detail?: string): NextResponse {
-  const settingsUrl = `${appBaseUrl()}/admin/settings`;
+function redirectWithError(
+  request: Request,
+  reason: string,
+  detail?: string,
+): NextResponse {
+  const settingsUrl = `${zoomSettingsBase(request)}/admin/settings`;
   const params = new URLSearchParams({ zoom: "error", reason });
   if (detail) params.set("detail", detail.slice(0, 180));
   return NextResponse.redirect(`${settingsUrl}?${params.toString()}`);
 }
 
+function zoomSettingsBase(request: Request): string {
+  // Prefer same host as callback so the coach lands back on their session.
+  try {
+    const url = new URL(request.url);
+    if (url.host) {
+      return `${url.protocol}//${url.host}`.replace(/\/$/, "");
+    }
+  } catch {
+    /* fall through */
+  }
+  return appBaseUrl();
+}
+
 export async function GET(request: Request) {
   const auth = await requireCoachStaff();
   if (!auth.ok) {
-    return redirectWithError("session");
+    return redirectWithError(request, "session");
   }
 
   const url = new URL(request.url);
@@ -37,7 +56,7 @@ export async function GET(request: Request) {
       /scope|invalid/i.test(zoomError) || /scope/i.test(zoomDescription)
         ? "scope"
         : "denied";
-    return redirectWithError(reason, zoomDescription || zoomError);
+    return redirectWithError(request, reason, zoomDescription || zoomError);
   }
 
   const code = url.searchParams.get("code");
@@ -46,7 +65,7 @@ export async function GET(request: Request) {
   const cookieState = cookieStore.get(ZOOM_OAUTH_STATE_COOKIE)?.value;
 
   if (!code || !rawState) {
-    return redirectWithError("missing_code");
+    return redirectWithError(request, "missing_code");
   }
 
   const state = (() => {
@@ -62,18 +81,24 @@ export async function GET(request: Request) {
     (await consumeZoomOAuthState(state, auth.session.email));
 
   if (!stateOk) {
-    return redirectWithError("state");
+    return redirectWithError(request, "state");
   }
 
+  const parsedState = parseZoomOAuthState(state);
+  // Prefer redirect stored at authorize time; fall back to this request's callback URL.
+  const redirectUri =
+    parsedState?.redirectUri || zoomOAuthCallbackUrl(request);
+
   try {
-    const tokens = await exchangeZoomAuthCode(code);
+    const tokens = await exchangeZoomAuthCode(code, redirectUri);
     const profile = await fetchZoomUserProfile(tokens.accessToken);
 
-    // Recordings + host identity must be Jeremy's Zoom, not a shared/staff login.
+    // Recordings + host identity must be the required coach Zoom account.
     if (!isAllowedZoomHostEmail(profile.email)) {
       const required = zoomRequiredHostEmail();
       const got = (profile.email || "unknown").trim() || "unknown";
       return redirectWithError(
+        request,
         "wrong_host",
         `Zoom signed in as ${got} — need ${required}. Sign out of Zoom, then Connect again.`,
       );
@@ -88,22 +113,19 @@ export async function GET(request: Request) {
       connectedByEmail: auth.session.email,
     });
 
-    const settingsUrl = `${appBaseUrl()}/admin/settings`;
-    const res = NextResponse.redirect(`${settingsUrl}?zoom=connected`);
+    const settingsUrl = `${zoomSettingsBase(request)}/admin/settings`;
+    const res = NextResponse.redirect(
+      saved
+        ? `${settingsUrl}?zoom=connected`
+        : `${settingsUrl}?${new URLSearchParams({ zoom: "connected", warn: "save" })}`,
+    );
     res.cookies.set(ZOOM_OAUTH_STATE_COOKIE, "", { path: "/", maxAge: 0 });
-    if (!saved) {
-      const params = new URLSearchParams({
-        zoom: "connected",
-        warn: "save",
-      });
-      return NextResponse.redirect(`${settingsUrl}?${params.toString()}`);
-    }
     return res;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    if (/scope/i.test(message)) return redirectWithError("scope", message);
-    if (/redirect/i.test(message)) return redirectWithError("redirect", message);
+    if (/scope/i.test(message)) return redirectWithError(request, "scope", message);
+    if (/redirect/i.test(message)) return redirectWithError(request, "redirect", message);
     console.error("Zoom OAuth callback failed:", message);
-    return redirectWithError("exchange", message);
+    return redirectWithError(request, "exchange", message);
   }
 }

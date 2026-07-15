@@ -98,15 +98,16 @@ export default function ZoomConnectPanel() {
     if (zoom === "error") {
       const messages: Record<string, string> = {
         scope:
-          "Zoom needs the user:read:token scope — in marketplace.zoom.us open your app → Scopes, add it, save, then Connect again.",
+          "Zoom rejected scopes. In marketplace.zoom.us → your app → Scopes, enable user:read:user, meeting:write:meeting, and user:read:token — then Connect again. Or set Vercel ZOOM_OAUTH_SCOPES=app to use the app’s defaults.",
         state:
-          "Connection timed out or Connect was clicked more than once — stay signed in, tap Connect once, then approve on Zoom immediately.",
+          "Connection timed out or Connect was clicked more than once — stay signed in as jeremy@thetrainstation.co, tap Connect once, then approve on Zoom immediately.",
         session: "Your coach session expired — sign in again, then Connect Zoom.",
         denied: "Zoom authorization was cancelled or denied — tap Connect when you are ready.",
         redirect:
-          "Redirect URL mismatch — in Zoom app settings, OAuth redirect must be https://www.thetrainstation.co/api/admin/zoom/callback",
-        exchange: "Zoom token exchange failed — confirm Client ID/Secret in Vercel match your Zoom app.",
-        missing_code: "Zoom did not return an authorization code — try Connect again.",
+          "Redirect URL mismatch — in Zoom app settings, OAuth redirect must be exactly https://www.thetrainstation.co/api/admin/zoom/callback (and optionally the non-www twin).",
+        exchange: "Zoom token exchange failed — confirm Client ID/Secret in Vercel match your Zoom app (Development vs Production).",
+        missing_code:
+          "Zoom did not return a code (Marketplace error page). Sign out of Zoom completely, sign in as jeremy@thetrainstation.co, ensure the app has him as a test user if still in Development, then Connect once.",
         wrong_host:
           "Wrong Zoom user. Live class must use jeremy@thetrainstation.co so recordings save on Jeremy’s account. Sign out of Zoom completely, then Connect again while signed into that Zoom.",
       };
