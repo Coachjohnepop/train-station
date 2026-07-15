@@ -31,6 +31,7 @@ export default function CoachLiveFloorZoomPanel({
   const [embedCreds, setEmbedCreds] = useState<ZoomEmbedCredentials | null>(null);
   const [embedVisible, setEmbedVisible] = useState(false);
   const [zoomReady, setZoomReady] = useState(false);
+  const [statusLoaded, setStatusLoaded] = useState(false);
   const [sdkConfigured, setSdkConfigured] = useState(false);
   const [messageIsError, setMessageIsError] = useState(false);
 
@@ -40,15 +41,17 @@ export default function CoachLiveFloorZoomPanel({
         fetch(`/api/admin/live-floor/zoom?date=${sessionDate}`, { cache: "no-store" }),
         fetch("/api/admin/zoom/status", { cache: "no-store" }),
       ]);
-      const data = await zoomRes.json();
+      const data = zoomRes.ok ? await zoomRes.json() : null;
       const status = statusRes.ok ? await statusRes.json() : null;
-      if (zoomRes.ok) {
-        setZoomReady(Boolean(data.ready));
-        setSdkConfigured(Boolean(status?.sdkConfigured ?? data.sdkConfigured));
-        if (data.zoom) setZoom(data.zoom);
-      }
+      // Prefer S2S-aware floor ready; fall back to coach status.
+      const ready = Boolean(data?.ready ?? status?.ready);
+      setZoomReady(ready);
+      setSdkConfigured(Boolean(status?.sdkConfigured ?? data?.sdkConfigured));
+      if (data?.zoom) setZoom(data.zoom);
     } catch {
       /* ignore */
+    } finally {
+      setStatusLoaded(true);
     }
   }, [sessionDate]);
 
@@ -180,16 +183,36 @@ export default function CoachLiveFloorZoomPanel({
             </>
           )}
         </div>
-        {isFloor && zoomReady ? (
-          <button
-            type="button"
-            className="btn-primary min-h-[48px] shrink-0 px-5 text-sm font-bold"
-            disabled={busy || embedVisible}
-            onClick={() => void startVideo()}
-          >
-            {busy ? "Starting…" : embedVisible ? "Video live" : "Start Video"}
-          </button>
-        ) : !isFloor ? (
+        {isFloor ? (
+          zoomReady ? (
+            <button
+              type="button"
+              className="btn-primary min-h-[48px] shrink-0 px-5 text-sm font-bold"
+              disabled={busy || embedVisible}
+              onClick={() => void startVideo()}
+            >
+              {busy ? "Starting…" : embedVisible ? "Video live" : "Start Video"}
+            </button>
+          ) : (
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <Link
+                href="/admin/settings"
+                className="btn-primary min-h-[48px] px-5 text-sm font-bold"
+              >
+                {statusLoaded ? "Connect Zoom to start" : "Checking Zoom…"}
+              </Link>
+              {/* Always offer start attempt — S2S may still work even if status is stale. */}
+              <button
+                type="button"
+                className="btn-ghost min-h-[48px] px-4 text-xs font-semibold"
+                disabled={busy}
+                onClick={() => void startVideo()}
+              >
+                {busy ? "Starting…" : "Try Start Video"}
+              </button>
+            </div>
+          )
+        ) : (
           <button
             type="button"
             className="btn-ghost min-h-[44px] px-3 py-2 text-xs"
@@ -197,7 +220,7 @@ export default function CoachLiveFloorZoomPanel({
           >
             {open ? "Hide video" : "Show video"}
           </button>
-        ) : null}
+        )}
       </div>
 
       {message ? (
@@ -210,12 +233,40 @@ export default function CoachLiveFloorZoomPanel({
 
       {!zoomReady ? (
         <p className="mt-2 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-          Connect Zoom once in{" "}
+          Zoom host not linked yet. Open{" "}
           <Link href="/admin/settings" className="font-semibold text-amber-50 underline">
             Settings
           </Link>{" "}
-          — then <strong>Start Video</strong> works here every class day.
+          → Connect as <strong>jeremy@thetrainstation.co</strong>, or tap{" "}
+          <strong>Try Start Video</strong> if server Zoom is configured.
         </p>
+      ) : null}
+
+      {/* Host link always visible once a room exists (floor + expanded). */}
+      {zoom && !zoom.demo && zoom.hostUrl ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2">
+          <a
+            href={zoom.hostUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-primary min-h-[44px] px-4 text-sm font-bold"
+          >
+            Open host Zoom link ↗
+          </a>
+          {zoom.joinUrl ? (
+            <button
+              type="button"
+              className="btn-ghost min-h-[40px] px-3 text-xs"
+              onClick={() => {
+                void navigator.clipboard.writeText(zoom.joinUrl);
+                showMessage("Member join link copied.");
+                setTimeout(() => setMessage(null), 2500);
+              }}
+            >
+              Copy member link
+            </button>
+          ) : null}
+        </div>
       ) : null}
 
       {(open || !isFloor) && zoomReady ? (
