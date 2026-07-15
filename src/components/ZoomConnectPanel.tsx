@@ -14,6 +14,8 @@ type ZoomStatus = {
   maxDurationMin: number;
   coachStartsFirst: boolean;
   coachEmail?: string;
+  requiredHostEmail?: string;
+  wrongHostAccount?: boolean;
   account: {
     email: string;
     displayName: string;
@@ -105,15 +107,18 @@ export default function ZoomConnectPanel() {
           "Redirect URL mismatch — in Zoom app settings, OAuth redirect must be https://www.thetrainstation.co/api/admin/zoom/callback",
         exchange: "Zoom token exchange failed — confirm Client ID/Secret in Vercel match your Zoom app.",
         missing_code: "Zoom did not return an authorization code — try Connect again.",
+        wrong_host:
+          "Wrong Zoom user. Live class must use jeremy@thetrainstation.co so recordings save on Jeremy’s account. Sign out of Zoom completely, then Connect again while signed into that Zoom.",
       };
       const base = messages[reason] || "Zoom connection failed — try Connect again.";
       setBanner({
         tone: "error",
         text:
-          detail && (reason === "exchange" || reason === "scope")
-            ? `${base} (${detail})`
+          detail && (reason === "exchange" || reason === "scope" || reason === "wrong_host")
+            ? `${base}${detail ? ` (${detail})` : ""}`
             : base,
       });
+      setManageOpen(true);
       router.replace("/admin/settings", { scroll: false });
     }
   }, [searchParams, load, router]);
@@ -203,22 +208,29 @@ export default function ZoomConnectPanel() {
   const canConnect = status.oauthAppConfigured && !status.connected;
   const showServerOnly = !status.oauthAppConfigured && status.s2sConfigured && !status.connected;
   const coachEmail = status.coachEmail || "";
+  const requiredHost =
+    status.requiredHostEmail || "jeremy@thetrainstation.co";
   const linkedEmail = status.account?.email || "";
+  const wrongHost = Boolean(status.wrongHostAccount) ||
+    (status.connected &&
+      Boolean(linkedEmail) &&
+      emailsDiffer(linkedEmail, requiredHost));
   const wrongAccount =
-    status.connected &&
-    Boolean(linkedEmail) &&
-    Boolean(coachEmail) &&
-    emailsDiffer(linkedEmail, coachEmail);
+    wrongHost ||
+    (status.connected &&
+      Boolean(linkedEmail) &&
+      Boolean(coachEmail) &&
+      emailsDiffer(linkedEmail, coachEmail));
 
   return (
     <section className="card space-y-4 p-5">
       <div>
         <h2 className="text-lg font-semibold">Live Zoom rooms (free plan)</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Connect <strong>your</strong> free Zoom account (Google sign-in works on Zoom&apos;s page).
-          Sessions cap at {status.maxDurationMin} minutes. You start the room — members join after
-          you&apos;re in. <strong>Local and cloud recordings save to the linked Zoom account</strong>{" "}
-          (usually the host laptop), so each coach should link their own Zoom.
+          Live class must host as <strong>{requiredHost}</strong> so recordings save on Jeremy&apos;s
+          Zoom / laptop. Sessions cap at {status.maxDurationMin} minutes. Coach starts the room —
+          members join after. Google sign-in on Zoom&apos;s page is fine as long as that Zoom user
+          is {requiredHost}.
         </p>
       </div>
 
@@ -256,7 +268,11 @@ export default function ZoomConnectPanel() {
               wrongAccount ? "text-amber-200" : "text-emerald-300"
             }`}
           >
-            {wrongAccount ? "Connected — different Zoom account" : "Connected"}
+            {wrongHost
+              ? "Connected — wrong Zoom host"
+              : wrongAccount
+                ? "Connected — different Zoom account"
+                : "Connected"}
           </p>
           <p className="mt-1 font-medium">{status.account.displayName}</p>
           <p className="text-xs text-[var(--muted)]">{status.account.email}</p>
@@ -272,17 +288,23 @@ export default function ZoomConnectPanel() {
               Linked {new Date(status.account.connectedAt).toLocaleString()}
             </p>
           )}
-          {wrongAccount ? (
+          {wrongHost ? (
+            <p className="mt-2 text-xs text-amber-100">
+              Required host is <strong>{requiredHost}</strong>, but Zoom is linked as{" "}
+              <strong>{linkedEmail}</strong>. Class will not treat this as ready until you switch.
+              Use <strong>Manage Zoom account</strong> — sign out of Zoom, then connect as{" "}
+              {requiredHost}.
+            </p>
+          ) : wrongAccount ? (
             <p className="mt-2 text-xs text-amber-100">
               You&apos;re signed in as <strong>{coachEmail}</strong>, but class video is using{" "}
               <strong>{linkedEmail}</strong>. Recordings will go to that Zoom user&apos;s account /
               laptop — not necessarily yours. Use <strong>Manage Zoom account</strong> below to
-              switch to your own Zoom.
+              switch.
             </p>
           ) : (
             <p className="mt-2 text-xs text-[var(--muted)]">
-              Recordings for live class save under this Zoom login. To use a different Zoom (another
-              coach or laptop), open Manage Zoom account.
+              Recordings for live class save under this Zoom login ({requiredHost}).
             </p>
           )}
         </div>
@@ -292,8 +314,8 @@ export default function ZoomConnectPanel() {
             Not connected
           </p>
           <p className="mt-1 text-[var(--muted)]">
-            Link <strong>your</strong> Zoom account to start live class video from Go to Today and
-            keep recordings on your machine.
+            Link Zoom as <strong>{requiredHost}</strong> to start live class from Go to Today.
+            Recordings will save on that Zoom account / host laptop.
           </p>
         </div>
       )}
@@ -365,11 +387,14 @@ export default function ZoomConnectPanel() {
         <div className="space-y-3 rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-4 text-sm">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="font-semibold text-sky-100">Switch to your Zoom account</p>
+              <p className="font-semibold text-sky-100">
+                Switch to {requiredHost}
+              </p>
               <p className="mt-1 text-xs text-[var(--muted)]">
                 Zoom keeps you logged in in the browser. If you only Disconnect and Connect, Zoom
-                often re-links the previous account (e.g. a teammate&apos;s). Sign out of Zoom first,
-                then connect as yourself so recordings land on your laptop.
+                often re-links the previous account (e.g. john@thetrainstation.co). Sign out of
+                Zoom first, then sign into Zoom as <strong>{requiredHost}</strong> so recordings
+                land on Jeremy&apos;s laptop. Train Station will reject any other Zoom user.
               </p>
             </div>
             <button
@@ -418,11 +443,10 @@ export default function ZoomConnectPanel() {
               ) : null}
             </li>
             <li>
-              <p className="font-medium">Connect YOUR Zoom</p>
+              <p className="font-medium">Connect as {requiredHost}</p>
               <p className="mt-0.5 text-xs text-[var(--muted)]">
-                Approve Zoom as the coach who should host and record (
-                {coachEmail ? <strong>{coachEmail}</strong> : "your coach login"}). Check the email
-                on Zoom&apos;s screen before allowing access.
+                On Zoom&apos;s page, sign in as <strong>{requiredHost}</strong> (not a personal Gmail
+                or john@). Approve access only when that email is shown.
               </p>
               {!status.connected && status.oauthAppConfigured ? (
                 <Link

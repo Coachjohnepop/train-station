@@ -8,6 +8,10 @@ import {
 } from "@/lib/zoom-oauth-flow";
 import { consumeZoomOAuthState } from "@/lib/zoom-oauth-pending";
 import { exchangeZoomAuthCode, fetchZoomUserProfile } from "@/lib/zoom";
+import {
+  isAllowedZoomHostEmail,
+  zoomRequiredHostEmail,
+} from "@/lib/zoom-env";
 import { saveZoomOAuthRecord } from "@/lib/zoom-oauth-store";
 
 export const dynamic = "force-dynamic";
@@ -64,6 +68,17 @@ export async function GET(request: Request) {
   try {
     const tokens = await exchangeZoomAuthCode(code);
     const profile = await fetchZoomUserProfile(tokens.accessToken);
+
+    // Recordings + host identity must be Jeremy's Zoom, not a shared/staff login.
+    if (!isAllowedZoomHostEmail(profile.email)) {
+      const required = zoomRequiredHostEmail();
+      const got = (profile.email || "unknown").trim() || "unknown";
+      return redirectWithError(
+        "wrong_host",
+        `Zoom signed in as ${got} — need ${required}. Sign out of Zoom, then Connect again.`,
+      );
+    }
+
     const { saved } = await saveZoomOAuthRecord({
       zoomUserId: profile.id,
       email: profile.email,
