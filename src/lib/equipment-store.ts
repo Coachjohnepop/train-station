@@ -13,6 +13,7 @@ import {
   type DemoEquipmentCatalogItem,
 } from "@/lib/demo-equipment";
 import { extractAmazonAsin } from "@/lib/link-preview";
+import { resolveWorkingEquipmentImage } from "@/lib/equipment-image";
 
 export type EquipmentCatalogItem = {
   id: string;
@@ -122,10 +123,15 @@ export async function listEquipmentCatalog(): Promise<EquipmentCatalogItem[]> {
   return rows.map(mapCatalogRow);
 }
 
-/** Items with a buy link — member gear shop. */
+/**
+ * Gear shop = product link + working photo only.
+ * Home equipment checklist items (no product URL) can exist without an image.
+ */
 export async function listEquipmentShopItems(): Promise<EquipmentCatalogItem[]> {
   const all = await listEquipmentCatalog();
-  return all.filter((item) => Boolean(item.productUrl?.trim()));
+  return all.filter(
+    (item) => Boolean(item.productUrl?.trim()) && Boolean(item.imageUrl?.trim()),
+  );
 }
 
 function amazonTileImage(productUrl: string | null): string | null {
@@ -133,6 +139,35 @@ function amazonTileImage(productUrl: string | null): string | null {
   const asin = extractAmazonAsin(productUrl);
   if (!asin) return null;
   return `https://images-na.ssl-images-amazon.com/images/P/${asin}.01.MAIN._SCRMZZZZZZ_.jpg`;
+}
+
+const PUBLISH_IMAGE_ERROR =
+  "Cannot publish to Gear without a working product photo. Paste a custom Image URL that loads in a browser, or fix the product link — then try again.";
+
+/**
+ * If this item has a shop product link, require a fetchable image and return
+ * the working URL to store. Home-only items (no productUrl) skip the check.
+ */
+async function enforcePublishablePhoto(
+  productUrl: string | null,
+  imageUrl: string | null,
+): Promise<string | null> {
+  if (!productUrl?.trim()) {
+    // Not on Gear shop — photo optional
+    return imageUrl;
+  }
+
+  // Seed Amazon MAIN tile when coach only set product link
+  let candidateImage = imageUrl;
+  if (!candidateImage) {
+    candidateImage = amazonTileImage(productUrl);
+  }
+
+  const resolved = await resolveWorkingEquipmentImage(candidateImage, productUrl);
+  if (!resolved) {
+    throw new Error(PUBLISH_IMAGE_ERROR);
+  }
+  return resolved.imageUrl;
 }
 
 export async function createEquipmentItem(
@@ -150,10 +185,8 @@ export async function createEquipmentItem(
       : data.imageUrl?.trim()
         ? normalizeOptionalImageUrl(data.imageUrl)
         : null;
-  // Prefer a resolvable product tile when coach only pasted a link
-  if (!imageUrl && productUrl) {
-    imageUrl = amazonTileImage(productUrl);
-  }
+
+  imageUrl = await enforcePublishablePhoto(productUrl, imageUrl);
 
   if (isDemoMode()) {
     const created = await createDemoEquipmentItem({
@@ -189,6 +222,12 @@ export async function updateEquipmentItem(
   id: string,
   data: Partial<EquipmentWriteInput>,
 ): Promise<EquipmentCatalogItem> {
+  const existing = isDemoMode()
+    ? (await listDemoEquipmentCatalog()).find((row) => row.id === id)
+    : await prisma.equipment.findUnique({ where: { id } });
+
+  if (!existing) throw new Error("Equipment not found");
+
   const patch: {
     name?: string;
     category?: string | null;
@@ -213,23 +252,17 @@ export async function updateEquipmentItem(
       : null;
   }
 
-  // If product link is set and image left empty on this save, seed Amazon tile
-  // (coach can still override imageUrl explicitly on a later save).
-  if (patch.imageUrl === null || patch.imageUrl === undefined) {
-    const productForTile =
-      patch.productUrl !== undefined
-        ? patch.productUrl
-        : data.productUrl === undefined
-          ? undefined
-          : normalizeOptionalUrl(data.productUrl, "product link");
-    if (
-      data.imageUrl !== undefined &&
-      !patch.imageUrl &&
-      productForTile
-    ) {
-      const tile = amazonTileImage(productForTile);
-      if (tile) patch.imageUrl = tile;
-    }
+  const nextProductUrl =
+    patch.productUrl !== undefined ? patch.productUrl : existing.productUrl ?? null;
+  const nextImageUrl =
+    patch.imageUrl !== undefined ? patch.imageUrl : existing.imageUrl ?? null;
+
+  // Always re-verify when publishing to Gear (product link present)
+  const verifiedImage = await enforcePublishablePhoto(nextProductUrl, nextImageUrl);
+  patch.imageUrl = verifiedImage;
+  if (patch.productUrl === undefined && nextProductUrl) {
+    // ensure imageUrl is written even if only name changed on a shop item
+    patch.imageUrl = verifiedImage;
   }
 
   if (isDemoMode()) {

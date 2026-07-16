@@ -103,6 +103,23 @@ export function resolveEquipmentImageCandidates(
 }
 
 /**
+ * Resolve a real, fetchable product photo (or null if none work).
+ * Used before publishing equipment to Gear.
+ */
+export async function resolveWorkingEquipmentImage(
+  imageUrl: string | null | undefined,
+  productUrl: string | null | undefined,
+): Promise<{ imageUrl: string; sourceUrl: string } | null> {
+  const candidates = resolveEquipmentImageCandidates(imageUrl, productUrl);
+  if (candidates.length === 0) return null;
+  const image = await fetchFirstWorkingImage(candidates, {
+    strictHostAllowlist: false,
+  });
+  if (!image) return null;
+  return { imageUrl: image.sourceUrl, sourceUrl: image.sourceUrl };
+}
+
+/**
  * Fetch first working image bytes from candidate URLs.
  * @param strictHostAllowlist when true (default for free-form ?url=), only known product CDNs.
  * Catalog items use false so any stored https imageUrl can load.

@@ -545,7 +545,8 @@ export default function AdminEquipmentCatalog() {
           </span>
         </span>
         <span className="text-[var(--muted)]">
-          Add · edit · save · delete all persist. Override any photo with a custom image URL.
+          Gear publish rule: a product link requires a working photo (auto or override). Save fails
+          until the image loads.
         </span>
       </div>
 
@@ -564,8 +565,8 @@ export default function AdminEquipmentCatalog() {
         <div>
           <h2 className="text-sm font-semibold">Add from product link</h2>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            Paste a store link → Get photo & title → <strong>Add equipment</strong> writes to the
-            database. Members see it on <strong>Gear</strong>.
+            Paste a store link → Get photo & title → <strong>Add equipment</strong>. We verify the
+            photo loads before publishing to <strong>Gear</strong>. No working image = blocked.
           </p>
         </div>
 
@@ -647,7 +648,8 @@ export default function AdminEquipmentCatalog() {
               placeholder="https://… — paste if auto photo fails"
             />
             <p className="mt-1 text-[10px] text-[var(--muted)]">
-              If Get photo fails, paste any public image link here before Add.
+              Required for Gear when you have a product link. If auto-photo fails, paste a public
+              image URL that works in your browser.
             </p>
           </div>
           <div>
@@ -746,7 +748,7 @@ export default function AdminEquipmentCatalog() {
                   />
                   <div>
                     <label className="text-[10px] font-medium text-[var(--muted)]">
-                      Override image URL
+                      Image URL {item.productUrl ? "(required for Gear)" : "(optional)"}
                     </label>
                     <div className="mt-0.5 flex gap-1">
                       <input

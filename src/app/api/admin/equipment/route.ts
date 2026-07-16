@@ -47,7 +47,10 @@ export async function POST(request: Request) {
     const message = err instanceof Error ? err.message : "Could not create equipment";
     const status = message.includes("already exists")
       ? 409
-      : message.includes("valid") || message.includes("required")
+      : message.includes("valid") ||
+          message.includes("required") ||
+          message.includes("Cannot publish") ||
+          message.includes("working product photo")
         ? 400
         : 500;
     return NextResponse.json({ error: message }, { status });
