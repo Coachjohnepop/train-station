@@ -254,26 +254,41 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-07-14 PT  
-**Status:** Signing off — session solid. Full open list → **OPEN BACKLOG** above.
+**Date:** 2026-07-15 PT (evening)  
+**Status:** Signing off — good for Jeremy’s next AM client (~11). Full open list → **OPEN BACKLOG** + **When back** below.
 
-### Done this stretch (Jul 12–14)
-- Archive shelf (templates, packs, exercises); always-clone paste; Theme Song  
-- Published-day notes locked after copy-week → editable + Unpublish + auto-clear notes on copy  
-- Coach day/today ping-pong fix; sticky **Join Live Now** / member **Join Live Zoom Now**  
-- Program title clipping; multi-part days (**ProgramDaySession**) + calendar UI  
-- Jeremy script: `JEREMY_TRIPLE_DAY_SCRIPT.md` · soak **TRIPLEDAYS** 2/2 green (`f4b1dcf`)  
-- Live morning: class assign + set counting + Zoom join path worked  
+### Done this stretch (Jul 15)
+- **Zoom OAuth:** Marketplace app under Jeremy; Vercel `ZOOM_CLIENT_ID` / `ZOOM_CLIENT_SECRET` (bare Dev credentials, not Secret Token / not authorize URL); Connect succeeded as **jeremy@thetrainstation.co** / Ready for class  
+- **Week 2 program write:** Jump-to-week opens Monday so editor matches grid (was stuck on week 1)  
+- **Per-exercise coach notes:** inline note under sets/reps on selected row; blur/Enter saves; no longer only top-bar field that disabled mid-save  
+- **Workout titles:** strip `S1D-timestamp W2 Sat Gym` noise; auto-repair garbage names in Postgres when day opens  
+- **Equipment / Gear:** category dropdown + freeform “Add category”; image proxy + Amazon MAIN tiles; multi-column catalog; single-column add form; DB CRUD with storage badge; **publish requires working product photo**  
+- **Member rest timer v1:** set complete → countdown from exercise `restSec` (fallback workout-level timer); beep (Cybertruck horn); Skip + Mute; last set skips timer  
+- **Coach nav:** resizable left sidebar (desktop, localStorage); badges inline next to label text (member tabs still corner)  
+- **Prod junk purge:** ~132 S1D/clone-party soak workouts + ~30 empty shells (marshmallow-badger, orphan Fasted/Rest/Workout); **kept** linked Day-N Home placeholders + anything with logs. Scripts: `cleanup-junk-workouts.ts`, `cleanup-empty-workout-shells.mjs`  
+- Jeremy feedback: week copy + editing good; first client next day **11:00** — will break more in morning  
 
 ### Explicit decisions
 - No joke soak warm-ups on live member sessions  
 - Multi-part = sequential sessions; Gym/Home = tracks *inside* a part  
+- Zoom host for recordings = **jeremy@thetrainstation.co** (`ZOOM_HOST_EMAIL`)  
+- Equipment with product link must have a **fetchable** image to publish to Gear  
+- Rest timer v1 = member app; per-exercise Rest; not yet live-floor-specific polish  
 
-### When back
-1. **Stripe Live** (still test mode)  
-2. Optional: sweep **S1D-** soak leftovers (~126)  
-3. Jeremy content (Adult weeks, YouTubes); member multi-session schedule UI polish  
-4. SMS Twilio / Zoom embed polish as needed  
+### When back (undone / next)
 
-### Branch
-`main` / origin · latest multi-part + TRIPLEDAYS docs/soak on prod path.
+1. **Stripe Live** — still test mode; multi-coach Stripe week goal when ready  
+2. **Zoom Marketplace publish** — needed so other coaches’ Zoom accounts can OAuth (today: Development / same-account)  
+3. **Rest timer follow-ups (optional)**  
+   - Ensure coach Rest defaults on more program lines (few seed rows had restSec)  
+   - Live floor parity / softer chime / +15s −15s  
+4. **Equipment follow-ups (optional)**  
+   - Persist images to Blob so less Amazon CDN dependency  
+   - Backfill any Gear rows still missing photos  
+5. **Member multi-session schedule UI** — multi-part days still need polish on member view  
+6. **Jeremy morning feedback** — notes/directions + rest clock + any breakages after 11am class  
+7. **Optional further prod hygiene** — empty Day-N Home shells still *linked* (Day 10/17/25/28); only touch if product wants them gone  
+8. **SMS Twilio** / Zoom embed polish as needed  
+
+### Branch / deploy
+`main` @ origin — latest includes rest timer v1, junk cleanups, nav/badge/title/equipment/notes fixes. Vercel Production auto-deploys from `main`.
