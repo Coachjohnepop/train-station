@@ -5,16 +5,15 @@ import { listCoachRosterMembers } from "@/lib/coach-roster";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { getAllSignInAccounts } from "@/lib/member-accounts-store";
 import { listMemberProfiles } from "@/lib/member-profiles-store";
-import { addDemoSmsLog, type DemoSmsLogEntry } from "@/lib/sms";
+import type { DemoSmsLogEntry } from "@/lib/sms";
+import { isDemoMode } from "@/lib/demo-enrollments";
+import { getDemoUserSettings } from "@/lib/demo-reminders";
+import { prisma } from "@/lib/prisma";
+import { sendResendEmail, transactionalSubject } from "@/lib/resend-mail";
 
 function appBaseUrl() {
   return process.env.NEXT_PUBLIC_APP_URL || "https://www.thetrainstation.co";
 }
-import { isDemoMode } from "@/lib/demo-enrollments";
-import { getDemoUserSettings } from "@/lib/demo-reminders";
-import { prisma } from "@/lib/prisma";
-
-import { sendResendEmail, transactionalSubject } from "@/lib/resend-mail";
 
 export type HubRecipient = {
   id: string;
@@ -155,28 +154,21 @@ function personalize(
 }
 
 async function logHubMessage(
-  entry: Omit<DemoSmsLogEntry, "sentAt"> & { sentAt?: string; category?: string },
-): Promise<{ sentAt: string }> {
-  const withChannel = {
-    ...entry,
+  entry: Omit<DemoSmsLogEntry, "sentAt"> & { sentAt?: string; category?: string; emailed?: boolean },
+): Promise<{ sentAt: string; smsLogId?: string }> {
+  const { deliverSmsAudited } = await import("@/lib/sms-delivery");
+  const result = await deliverSmsAudited({
+    phone: entry.phone || entry.userId || "hub",
+    message: entry.message,
+    userId: entry.userId,
     source: entry.source || "hub",
-    direction: entry.direction || ("outbound" as const),
-    phone: entry.phone || "hub",
-  };
-
-  if (isDemoMode()) {
-    const saved = await addDemoSmsLog(withChannel as DemoSmsLogEntry);
-    return { sentAt: saved.sentAt };
-  }
-
-  const log = await prisma.smsLog.create({
-    data: {
-      userId: entry.userId || "unknown",
-      phone: withChannel.phone,
-      message: entry.message,
-    },
+    category: entry.category,
+    channel: "email_hub",
+    skipProvider: true,
+    externalStatus: entry.emailed === false ? "failed" : "sent",
+    metadata: { emailed: entry.emailed !== false },
   });
-  return { sentAt: log.sentAt.toISOString() };
+  return { sentAt: result.sentAt, smsLogId: result.smsLogId };
 }
 
 export async function sendHubNotification(params: {
@@ -216,6 +208,7 @@ export async function sendHubNotification(params: {
     source: params.source || "hub",
     category: params.category,
     direction: "outbound",
+    emailed,
   });
 
   return { emailed, sentAt };

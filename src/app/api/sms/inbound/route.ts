@@ -2,6 +2,23 @@ import { NextResponse } from "next/server";
 import twilio from "twilio";
 import { appendMemberSmsToChat } from "@/lib/coach-chat";
 import { findUserByPhone, logInboundMemberSms, twilioConfigured } from "@/lib/sms";
+import {
+  deliverSmsAudited,
+  setUserSmsOptIn,
+  setUserSmsOptOut,
+} from "@/lib/sms-delivery";
+import { recordAuditEvent } from "@/lib/audit-event";
+
+const STOP_KEYWORDS = new Set([
+  "STOP",
+  "STOPALL",
+  "UNSUBSCRIBE",
+  "CANCEL",
+  "END",
+  "QUIT",
+]);
+const START_KEYWORDS = new Set(["START", "YES", "UNSTOP"]);
+const HELP_KEYWORDS = new Set(["HELP", "INFO"]);
 
 function validateTwilioSignature(
   request: Request,
@@ -21,13 +38,31 @@ function validateTwilioSignature(
   return twilio.validateRequest(authToken, signature, webhookUrl, params);
 }
 
+function twimlResponse(message?: string) {
+  if (message) {
+    const escaped = message
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    return new NextResponse(`<Response><Message>${escaped}</Message></Response>`, {
+      headers: { "Content-Type": "text/xml" },
+    });
+  }
+  return new NextResponse("<Response></Response>", {
+    headers: { "Content-Type": "text/xml" },
+  });
+}
+
 export async function POST(request: Request) {
   const contentType = request.headers.get("content-type") || "";
   let from = "";
   let body = "";
   let formParams: Record<string, string> | null = null;
 
-  if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
+  if (
+    contentType.includes("application/x-www-form-urlencoded") ||
+    contentType.includes("multipart/form-data")
+  ) {
     const form = await request.formData();
     formParams = {};
     for (const [key, value] of form.entries()) {
@@ -41,7 +76,10 @@ export async function POST(request: Request) {
       from = String(json.From || json.from || "");
       body = String(json.Body || json.body || "").trim();
       if (twilioConfigured()) {
-        return NextResponse.json({ error: "JSON payloads not accepted when Twilio is configured" }, { status: 400 });
+        return NextResponse.json(
+          { error: "JSON payloads not accepted when Twilio is configured" },
+          { status: 400 },
+        );
       }
     } catch {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
@@ -50,6 +88,11 @@ export async function POST(request: Request) {
 
   if (twilioConfigured() && formParams && !validateTwilioSignature(request, formParams)) {
     console.warn("Inbound SMS rejected: invalid Twilio signature");
+    await recordAuditEvent({
+      action: "sms.inbound",
+      outcome: "denied",
+      metadata: { reason: "invalid_signature" },
+    });
     return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
   }
 
@@ -57,30 +100,65 @@ export async function POST(request: Request) {
     return twimlResponse();
   }
 
+  const keyword = body.trim().toUpperCase();
   const user = await findUserByPhone(from);
-  if (!user) {
-    console.warn("Inbound SMS from unknown phone", from);
+
+  // Always durable-log inbound when we can attribute (or as unknown)
+  if (user) {
+    const log = await logInboundMemberSms({
+      userId: user.id,
+      phone: from,
+      message: body,
+    });
+
+    if (STOP_KEYWORDS.has(keyword)) {
+      await setUserSmsOptOut({ userId: user.id, phone: from, source: "keyword" });
+      return twimlResponse(
+        "You are unsubscribed from The Train Station texts. Reply START to re-subscribe.",
+      );
+    }
+
+    if (START_KEYWORDS.has(keyword)) {
+      await setUserSmsOptIn({ userId: user.id, phone: from, source: "keyword" });
+      return twimlResponse(
+        "You are re-subscribed to The Train Station texts. Reply STOP to unsubscribe.",
+      );
+    }
+
+    if (HELP_KEYWORDS.has(keyword)) {
+      return twimlResponse(
+        "The Train Station coaching texts. Reply STOP to unsubscribe. Help: support@thetrainstation.co",
+      );
+    }
+
+    await appendMemberSmsToChat({
+      memberId: user.id,
+      body,
+      phone: from,
+      smsLogId: log.smsLogId,
+    });
+
     return twimlResponse();
   }
 
-  const log = await logInboundMemberSms({
-    userId: user.id,
+  // Unknown number — still audit for diligence; no chat thread
+  console.warn("Inbound SMS from unknown phone", from);
+  await deliverSmsAudited({
     phone: from,
     message: body,
+    userId: null,
+    source: "member-reply-unknown",
+    direction: "inbound",
+    recordOnly: true,
+    metadata: { unknownMember: true, keyword },
   });
-
-  await appendMemberSmsToChat({
-    memberId: user.id,
-    body,
-    phone: from,
-    smsLogId: log.smsLogId,
+  await recordAuditEvent({
+    action: "sms.inbound",
+    outcome: "info",
+    entityType: "Phone",
+    entityId: from,
+    metadata: { unknownMember: true, bodyPreview: body.slice(0, 80) },
   });
 
   return twimlResponse();
-}
-
-function twimlResponse() {
-  return new NextResponse("<Response></Response>", {
-    headers: { "Content-Type": "text/xml" },
-  });
 }

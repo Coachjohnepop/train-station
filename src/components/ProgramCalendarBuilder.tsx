@@ -958,7 +958,48 @@ export default function ProgramCalendarBuilder({
     return { ok: false, error };
   }
 
-  async function saveSelectedSlot(opts?: { manageSaving?: boolean }) {
+  /** Persist one exercise field patch; always use event values for notes to avoid stale React state. */
+  async function persistExercisePatch(
+    slotIdx: number,
+    data: { sets?: number; reps?: string; restSec?: number; notes?: string | null },
+  ): Promise<boolean> {
+    if (!focus) return false;
+    const slot = slots[slotIdx];
+    if (!slot) return false;
+    const result = await patchExerciseItem(slot.id, data);
+    if (!result.ok) {
+      setMessage(result.error || "Could not save exercise note.");
+      setTimeout(() => setMessage(null), 4000);
+      return false;
+    }
+    setSlots((prev) => {
+      const next = [...prev];
+      const current = next[slotIdx];
+      if (current) {
+        next[slotIdx] = {
+          ...current,
+          ...(data.sets !== undefined ? { sets: data.sets } : {}),
+          ...(data.reps !== undefined ? { reps: data.reps } : {}),
+          ...(data.restSec !== undefined ? { restSec: data.restSec } : {}),
+          ...(data.notes !== undefined ? { notes: data.notes } : {}),
+        };
+      }
+      return next;
+    });
+    if (data.notes !== undefined && selectedSlotIdx === slotIdx) {
+      setEditorNotes(data.notes ?? "");
+    }
+    return true;
+  }
+
+  async function saveSelectedSlot(opts?: {
+    manageSaving?: boolean;
+    /** Prefer the live input value (blur event) so notes never save empty from a stale render. */
+    notesOverride?: string;
+    setsOverride?: number;
+    repsOverride?: string;
+    restOverride?: number;
+  }) {
     if (!focus || selectedSlotIdx === null) return;
     const slot = slots[selectedSlotIdx];
     // Notes/sets saves should not flip global `saving` — that disables the note field
@@ -981,34 +1022,37 @@ export default function ProgramCalendarBuilder({
         return;
       }
 
-      const notesValue = editorNotes.trim() || null;
-      const result = await patchExerciseItem(slot.id, {
-        sets: editorSets,
-        reps: editorReps,
-        restSec: editorRest,
+      const notesValue = (opts?.notesOverride ?? editorNotes).trim() || null;
+      const setsValue = opts?.setsOverride ?? editorSets;
+      const repsValue = opts?.repsOverride ?? editorReps;
+      const restValue = opts?.restOverride ?? editorRest;
+      const ok = await persistExercisePatch(selectedSlotIdx, {
+        sets: setsValue,
+        reps: repsValue,
+        restSec: restValue,
         notes: notesValue,
       });
-      if (result.ok) {
-        setSlots((prev) => {
-          const next = [...prev];
-          const current = next[selectedSlotIdx];
-          if (current) {
-            next[selectedSlotIdx] = {
-              ...current,
-              sets: editorSets,
-              reps: editorReps,
-              restSec: editorRest,
-              notes: notesValue,
-            };
-          }
-          return next;
-        });
-      } else {
-        setMessage(result.error || "Could not save exercise note.");
-        setTimeout(() => setMessage(null), 4000);
+      if (ok && opts?.notesOverride !== undefined) {
+        setMessage("Note saved.");
+        setTimeout(() => setMessage(null), 1500);
       }
     } finally {
       if (manageSaving) setSaving(false);
+    }
+  }
+
+  /** Save note for any row (selected or not) from the input's live value. */
+  async function saveSlotNoteFromInput(slotIdx: number, rawNotes: string) {
+    if (!focus) return;
+    const slot = slots[slotIdx];
+    if (!slot) return;
+    const notesValue = rawNotes.trim() || null;
+    const current = (slot.notes ?? "").trim() || null;
+    if (notesValue === current) return;
+    const ok = await persistExercisePatch(slotIdx, { notes: notesValue });
+    if (ok) {
+      setMessage(notesValue ? "Note saved." : "Note cleared.");
+      setTimeout(() => setMessage(null), 1500);
     }
   }
 
@@ -2144,10 +2188,12 @@ export default function ProgramCalendarBuilder({
     const canMoveDown = slot != null && posInList >= 0 && posInList < filled - 1;
     const isDropTarget = dragOverIdx === idx && dragFromIdx.current !== null;
 
+    const noteDisplayValue = isSelected ? editorNotes : slot?.notes ?? "";
+
     return (
       <div
         key={idx}
-        className={`flex items-center gap-1.5 rounded-md border px-2 py-1 transition ${
+        className={`flex items-start gap-1.5 rounded-md border px-2 py-1.5 transition ${
           isDropTarget
             ? "border-sky-400 bg-sky-500/15 ring-1 ring-sky-400/50"
             : isChecked
@@ -2159,6 +2205,12 @@ export default function ProgramCalendarBuilder({
         draggable={!!slot && !saving}
         onDragStart={(e) => {
           if (!slot) return;
+          // Don't start drag from form fields (breaks typing notes)
+          const t = e.target as HTMLElement;
+          if (t.closest("input, textarea, select, button, a, [role='listbox']")) {
+            e.preventDefault();
+            return;
+          }
           dragFromIdx.current = idx;
           e.dataTransfer.effectAllowed = "move";
           e.dataTransfer.setData("text/plain", String(idx));
@@ -2186,23 +2238,17 @@ export default function ProgramCalendarBuilder({
           setDragOverIdx(null);
           if (from !== null && from !== idx) void moveSlot(from, idx);
         }}
-        onDoubleClick={(e) => {
-          if (!slot) return;
-          e.preventDefault();
-          e.stopPropagation();
-          selectSlot(idx, slots, prescription, { focusEditor: true });
-        }}
       >
         {slot ? (
           <>
             <span
-              className="shrink-0 select-none text-[10px] text-[var(--muted)]"
+              className="mt-1 shrink-0 select-none text-[10px] text-[var(--muted)]"
               title="Drag row to reorder"
               aria-hidden
             >
               ⠿
             </span>
-            <div className="flex shrink-0 flex-col gap-0.5">
+            <div className="mt-0.5 flex shrink-0 flex-col gap-0.5">
               <button
                 type="button"
                 className="rounded px-0.5 text-[9px] leading-none text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--text)] disabled:opacity-25"
@@ -2232,29 +2278,25 @@ export default function ProgramCalendarBuilder({
             </div>
             <input
               type="checkbox"
-              className="h-3.5 w-3.5 shrink-0"
+              className="mt-1.5 h-3.5 w-3.5 shrink-0"
               checked={isChecked}
               onChange={(e) => toggleSlotChecked(idx, e.target.checked)}
               onClick={(e) => e.stopPropagation()}
             />
-            <button
-              type="button"
-              className="min-w-0 flex-1 text-left"
-              onClick={() => selectSlot(idx, slots, prescription)}
-            >
-              <span
-                className={`block truncate text-xs font-medium ${
-                  /unknown/i.test(slot.name) ? "text-amber-300" : ""
-                }`}
+            {/* Not a <button> — nested inputs inside buttons break typing (Safari / Jeremy notes). */}
+            <div className="min-w-0 flex-1 space-y-1">
+              <button
+                type="button"
+                className="block w-full truncate text-left text-xs font-medium hover:text-accent"
+                onClick={() => selectSlot(idx, slots, prescription)}
               >
-                {slot.name}
-              </span>
-              {isSelected ? (
-                <span
-                  className="mt-0.5 flex w-full flex-col gap-1 text-[10px]"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <span className="flex flex-wrap items-center gap-1">
+                <span className={/unknown/i.test(slot.name) ? "text-amber-300" : ""}>
+                  {slot.name}
+                </span>
+              </button>
+              <div className="flex flex-wrap items-center gap-1 text-[10px]">
+                {isSelected ? (
+                  <>
                     <input
                       type="number"
                       min={1}
@@ -2265,6 +2307,7 @@ export default function ProgramCalendarBuilder({
                         const v = parseInt(e.target.value, 10);
                         if (!Number.isNaN(v)) setEditorSets(Math.max(1, v));
                       }}
+                      onFocus={() => selectSlot(idx, slots, prescription)}
                       onBlur={() => void saveSelectedSlot()}
                       aria-label={`Sets for ${slot.name}`}
                     />
@@ -2273,51 +2316,55 @@ export default function ProgramCalendarBuilder({
                       className="input h-6 w-14 px-1 text-[10px]"
                       value={editorReps}
                       onChange={(e) => setEditorReps(e.target.value)}
+                      onFocus={() => selectSlot(idx, slots, prescription)}
                       onBlur={() => void saveSelectedSlot()}
                       aria-label={`Reps for ${slot.name}`}
                     />
                     {slot.restSec != null ? (
-                      <span className="text-[var(--muted)]">· {slot.restSec}s</span>
+                      <span className="text-[var(--muted)]">· {slot.restSec}s rest</span>
                     ) : null}
-                  </span>
-                  <input
-                    className="input h-7 w-full min-w-0 px-1.5 text-[10px] text-violet-100"
-                    value={editorNotes}
-                    placeholder="Note for this exercise (this workout only)…"
-                    maxLength={500}
-                    onChange={(e) => setEditorNotes(e.target.value)}
-                    onBlur={() => void saveSelectedSlot()}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        (e.target as HTMLInputElement).blur();
-                      }
-                    }}
-                    aria-label={`Coach note for ${slot.name}`}
-                  />
-                </span>
-              ) : (
-                <>
-                  <span className="text-[10px] text-[var(--muted)]">
-                    {slot.sets ?? editorSets} × {slot.reps ?? editorReps}
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="text-left text-[10px] text-[var(--muted)] hover:text-[var(--text)]"
+                    onClick={() => selectSlot(idx, slots, prescription)}
+                  >
+                    {slot.sets ?? prescription.defaultSets} × {slot.reps ?? prescription.defaultReps}
                     {slot.restSec != null ? ` · ${slot.restSec}s` : ""}
-                  </span>
-                  {slot.notes?.trim() ? (
-                    <span
-                      className="mt-0.5 block truncate text-[10px] text-violet-300/90"
-                      title={slot.notes}
-                    >
-                      Note: {slot.notes}
-                    </span>
-                  ) : (
-                    <span className="mt-0.5 block text-[10px] text-[var(--muted)] opacity-70">
-                      Click to add note…
-                    </span>
-                  )}
-                </>
-              )}
-            </button>
-            <div className="w-24 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <span className="ml-1 text-accent/80">· edit sets</span>
+                  </button>
+                )}
+              </div>
+              <label className="block">
+                <span className="sr-only">Coach note for {slot.name}</span>
+                <input
+                  type="text"
+                  className="input h-8 w-full min-w-0 border-violet-500/30 bg-violet-500/5 px-2 text-xs text-violet-100 placeholder:text-violet-200/40"
+                  value={noteDisplayValue}
+                  placeholder="Note for this exercise (members see this)…"
+                  maxLength={500}
+                  onFocus={() => {
+                    if (!isSelected) selectSlot(idx, slots, prescription);
+                  }}
+                  onChange={(e) => {
+                    if (!isSelected) selectSlot(idx, slots, prescription);
+                    setEditorNotes(e.target.value);
+                  }}
+                  onBlur={(e) => {
+                    void saveSlotNoteFromInput(idx, e.target.value);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  }}
+                  aria-label={`Coach note for ${slot.name}`}
+                />
+              </label>
+            </div>
+            <div className="mt-0.5 w-24 shrink-0">
               <SearchableExerciseSelect
                 library={library}
                 value=""
@@ -2328,7 +2375,7 @@ export default function ProgramCalendarBuilder({
             </div>
             <button
               type="button"
-              className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold text-[var(--danger)] hover:bg-[var(--danger)]/10"
+              className="mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold text-[var(--danger)] hover:bg-[var(--danger)]/10"
               title="Remove exercise (Delete)"
               aria-label={`Remove ${slot.name}`}
               disabled={saving}
@@ -3085,9 +3132,9 @@ export default function ProgramCalendarBuilder({
                     />
                   </label>
                   <label className="min-w-[12rem] flex-1 text-[10px]">
-                    Coach note (selected exercise)
+                    Coach note (same as field under each exercise)
                     <input
-                      className="input mt-0.5 h-7 w-full min-w-[10rem] px-1.5 text-xs"
+                      className="input mt-0.5 h-7 w-full min-w-[10rem] border-violet-500/30 px-1.5 text-xs text-violet-100"
                       value={editorNotes}
                       disabled={
                         selectedSlotIdx === null || !slots[selectedSlotIdx ?? -1]
@@ -3095,11 +3142,14 @@ export default function ProgramCalendarBuilder({
                       placeholder="e.g. light band · skip if knees hurt"
                       maxLength={500}
                       onChange={(e) => setEditorNotes(e.target.value)}
-                      onBlur={() => void saveSelectedSlot()}
+                      onBlur={(e) => {
+                        if (selectedSlotIdx === null) return;
+                        void saveSlotNoteFromInput(selectedSlotIdx, e.target.value);
+                      }}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
-                          void saveSelectedSlot();
+                          (e.target as HTMLInputElement).blur();
                         }
                       }}
                     />
@@ -3123,10 +3173,10 @@ export default function ProgramCalendarBuilder({
                 </div>
 
                 <p className="text-[10px] text-[var(--muted)]">
-                  Click an exercise → edit sets/reps and the{" "}
-                  <strong className="text-violet-200/90">note field under the name</strong> (this
-                  workout only, not the library). Enter or blur to save · Gym→Home clones · Delete
-                  removes · drag or ▲▼ to reorder.
+                  Each exercise has a{" "}
+                  <strong className="text-violet-200/90">violet note field</strong> always visible —
+                  type a cue for members, then click away (auto-saves). Sets/reps: click the
+                  exercise name · Gym→Home clones · Delete removes · drag handle or ▲▼ to reorder.
                 </p>
 
                 {loadingSlots ? (

@@ -1,5 +1,4 @@
 import path from "path";
-import twilio from "twilio";
 import { prisma } from "@/lib/prisma";
 import { isDemoMode } from "./demo-enrollments";
 import { DEMO_USER_DIRECTORY, resolveDemoUser, resolveDemoUserByEmail } from "@/lib/demo-user-directory";
@@ -114,26 +113,19 @@ export async function addDemoSmsLog(entry: Omit<DemoSmsLogEntry, "sentAt"> & { s
   return withMeta;
 }
 
-export function normalizePhoneDigits(phone: string): string {
-  return phone.replace(/\D/g, "");
-}
+import {
+  normalizePhoneDigits,
+  phonesMatch,
+  toE164,
+  twilioConfigured,
+} from "@/lib/sms-phone";
 
-export function phonesMatch(a: string, b: string): boolean {
-  const da = normalizePhoneDigits(a);
-  const db = normalizePhoneDigits(b);
-  if (!da || !db) return false;
-  if (da === db) return true;
-  return da.slice(-10) === db.slice(-10);
-}
-
-export function toE164(phone: string): string {
-  const digits = normalizePhoneDigits(phone);
-  if (!digits) return phone;
-  if (digits.length === 10) return `+1${digits}`;
-  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
-  if (phone.startsWith("+")) return phone;
-  return `+${digits}`;
-}
+export {
+  normalizePhoneDigits,
+  phonesMatch,
+  toE164,
+  twilioConfigured,
+};
 
 export async function getUsersWithPhones() {
   if (isDemoMode()) {
@@ -167,16 +159,14 @@ function personalize(message: string, user: { name?: string | null; email: strin
     .replace(/\{phone\}/gi, user.phone);
 }
 
-export function twilioConfigured() {
-  return !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM);
-}
-
 export type CoachSmsResult = {
   sent: number;
   phone?: string;
   sentAt?: string;
   simulated?: boolean;
-  reason?: "no_phone" | "delivery_failed";
+  reason?: "no_phone" | "delivery_failed" | "opt_out" | "paused" | "invalid_phone";
+  smsLogId?: string;
+  status?: string;
 };
 
 async function buildDemoPhoneUsers(): Promise<
@@ -253,30 +243,19 @@ async function buildDemoPhoneUsers(): Promise<
   return [...byId.values()].filter((u): u is typeof u & { phone: string } => Boolean(u.phone?.trim()));
 }
 
-export async function deliverSms(phone: string, message: string): Promise<boolean> {
-  const { isOutboundMessagingEnabled } = await import("@/lib/messaging-gate");
-  if (!(await isOutboundMessagingEnabled())) {
-    console.log(`[SMS — paused] -> ${phone}: ${message.slice(0, 80)}…`);
-    return false;
-  }
-
-  const to = toE164(phone);
-  if (twilioConfigured()) {
-    try {
-      const client = twilio(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!);
-      await client.messages.create({
-        from: process.env.TWILIO_FROM!,
-        to,
-        body: message,
-      });
-      return true;
-    } catch (e) {
-      console.error("Twilio send failed", e);
-      return false;
-    }
-  }
-  console.log(`[SMS SIMULATED — set TWILIO_* envs] -> ${to}: ${message}`);
-  return true;
+/**
+ * Legacy boolean send. Prefer deliverSmsAudited for full ledger + audit.
+ * When userId is known, pass it via deliverSmsForUser for opt-out + durable log.
+ */
+export async function deliverSms(phone: string, message: string, opts?: { userId?: string; source?: string }): Promise<boolean> {
+  const { deliverSmsAudited } = await import("@/lib/sms-delivery");
+  const result = await deliverSmsAudited({
+    phone,
+    message,
+    userId: opts?.userId,
+    source: opts?.source || "deliverSms",
+  });
+  return result.ok;
 }
 
 export function appBaseUrl() {
@@ -328,26 +307,30 @@ export async function sendWelcomeSms(params: {
 
   const first = (params.name || "there").trim().split(/\s+/)[0] || "there";
   const body = welcomeSmsBody({ firstName: first, programSlug: params.programSlug });
-  const ok = await deliverSms(phone, body);
-  if (!ok) return { sent: 0, reason: "delivery_failed" as const };
-
-  const logEntry = {
-    userId: params.userId,
+  const { deliverSmsAudited } = await import("@/lib/sms-delivery");
+  const result = await deliverSmsAudited({
     phone,
     message: body,
+    userId: params.userId,
     source: "welcome",
-    direction: "outbound" as const,
-  };
-
-  if (isDemoMode()) {
-    const saved = await addDemoSmsLog(logEntry);
-    return { sent: 1, phone, sentAt: saved.sentAt };
-  }
-
-  const log = await prisma.smsLog.create({
-    data: { userId: params.userId, phone, message: body },
+    metadata: { programSlug: params.programSlug },
   });
-  return { sent: 1, phone, sentAt: log.sentAt.toISOString(), smsLogId: log.id };
+  if (!result.ok) {
+    return {
+      sent: 0,
+      reason: (result.reason || "delivery_failed") as CoachSmsResult["reason"],
+      smsLogId: result.smsLogId,
+      status: result.status,
+    };
+  }
+  return {
+    sent: 1,
+    phone: result.phoneE164 || phone,
+    sentAt: result.sentAt,
+    smsLogId: result.smsLogId,
+    simulated: result.simulated,
+    status: result.status,
+  };
 }
 
 export async function sendCoachReplySms(params: {
@@ -382,31 +365,30 @@ export async function sendCoachReplySms(params: {
 
   const first = (user.name || user.email.split("@")[0]).split(" ")[0];
   const body = coachReplySmsBody(params.message, first, params.coachName);
-  const simulated = !twilioConfigured();
-  const ok = await deliverSms(user.phone, body);
-  if (!ok) return { sent: 0, reason: "delivery_failed" };
-
-  const logEntry = {
-    userId: user.id,
+  const { deliverSmsAudited } = await import("@/lib/sms-delivery");
+  const result = await deliverSmsAudited({
     phone: user.phone,
     message: body,
+    userId: user.id,
     source: "coach-reply",
-    direction: "outbound" as const,
-  };
-
-  if (isDemoMode()) {
-    const saved = await addDemoSmsLog(logEntry);
-    return { sent: 1, phone: user.phone, sentAt: saved.sentAt, simulated };
-  }
-
-  const log = await prisma.smsLog.create({
-    data: { userId: user.id, phone: user.phone, message: body },
+    metadata: { coachName: params.coachName },
   });
+  if (!result.ok) {
+    return {
+      sent: 0,
+      reason: (result.reason || "delivery_failed") as CoachSmsResult["reason"],
+      simulated: result.simulated,
+      smsLogId: result.smsLogId,
+      status: result.status,
+    };
+  }
   return {
     sent: 1,
-    phone: user.phone,
-    sentAt: log.sentAt.toISOString(),
-    simulated,
+    phone: result.phoneE164 || user.phone,
+    sentAt: result.sentAt,
+    simulated: result.simulated,
+    smsLogId: result.smsLogId,
+    status: result.status,
   };
 }
 
@@ -462,6 +444,7 @@ export async function sendCoachChatAlert(params: {
 
   const allWithPhones = await getUsersWithPhones();
   const targets = allWithPhones.filter((u) => idSet.has(u.id) && u.phone);
+  const { deliverSmsAudited } = await import("@/lib/sms-delivery");
 
   const results: any[] = [];
   for (const u of targets) {
@@ -474,26 +457,23 @@ export async function sendCoachChatAlert(params: {
         coachName: params.coachName,
       });
     const personalized = personalize(body, { name: u.name, email: u.email, phone: u.phone });
-    const ok = await deliverSms(u.phone, personalized);
-    if (!ok) continue;
-
-    const logEntry: any = {
-      userId: u.id,
+    const result = await deliverSmsAudited({
       phone: u.phone,
       message: personalized,
+      userId: u.id,
       source: "coach-chat-alert",
-      direction: "outbound",
-    };
-
-    if (isDemoMode()) {
-      const saved = await addDemoSmsLog(logEntry);
-      results.push({ userId: u.id, phone: u.phone, message: personalized, sentAt: saved.sentAt });
-    } else {
-      const log = await prisma.smsLog.create({
-        data: { userId: u.id, phone: u.phone, message: personalized },
-      });
-      results.push({ userId: u.id, phone: u.phone, message: personalized, sentAt: log.sentAt, smsLogId: log.id });
-    }
+      metadata: { sessionDate: params.sessionDate, coachName: params.coachName },
+    });
+    if (!result.ok) continue;
+    results.push({
+      userId: u.id,
+      phone: result.phoneE164 || u.phone,
+      message: personalized,
+      sentAt: result.sentAt,
+      smsLogId: result.smsLogId,
+      simulated: result.simulated,
+      status: result.status,
+    });
   }
 
   return { sent: results.length, logs: results };
@@ -504,26 +484,24 @@ export async function logInboundMemberSms(params: {
   phone: string;
   message: string;
 }) {
-  const logEntry = {
-    userId: params.userId,
+  const { deliverSmsAudited } = await import("@/lib/sms-delivery");
+  const result = await deliverSmsAudited({
     phone: params.phone,
+    message: params.message,
+    userId: params.userId,
+    source: "member-reply",
+    direction: "inbound",
+    recordOnly: true,
+  });
+  return {
+    userId: params.userId,
+    phone: result.phoneE164 || params.phone,
     message: params.message,
     source: "member-reply",
     direction: "inbound" as const,
+    sentAt: result.sentAt,
+    smsLogId: result.smsLogId,
   };
-
-  if (isDemoMode()) {
-    return addDemoSmsLog(logEntry);
-  }
-
-  const log = await prisma.smsLog.create({
-    data: {
-      userId: params.userId,
-      phone: params.phone,
-      message: params.message,
-    },
-  });
-  return { ...logEntry, sentAt: log.sentAt.toISOString(), smsLogId: log.id };
 }
 
 export async function sendSmsBroadcast(params: {
@@ -562,54 +540,53 @@ export async function sendSmsBroadcast(params: {
     targets = allWithPhones.filter((u) => idSet.has(u.id));
   }
 
+  const { deliverSmsAudited } = await import("@/lib/sms-delivery");
   const results: any[] = [];
   for (const u of targets) {
     if (!u.phone) continue;
     const personalized = personalize(message, { name: u.name, email: u.email, phone: u.phone });
-    const ok = await deliverSms(u.phone, personalized);
-    if (!ok) continue;
-
-    const logEntry: any = {
-      userId: u.id,
+    const result = await deliverSmsAudited({
       phone: u.phone,
       message: personalized,
+      userId: u.id,
       source: "broadcast",
       category,
-      taskDetails: taskDetails || null,
-      direction: "outbound",
-    };
-
-    if (isDemoMode()) {
-      const saved = await addDemoSmsLog(logEntry);
-      results.push({ user: u.email, phone: u.phone, message: personalized, sentAt: saved.sentAt, category, taskDetails });
-    } else {
-      const log = await prisma.smsLog.create({
-        data: {
-          userId: u.id,
-          phone: u.phone,
-          message: personalized,
-        },
-      });
-      results.push({ user: u.email, phone: u.phone, message: personalized, sentAt: log.sentAt, category, taskDetails });
-    }
+      metadata: taskDetails ? { taskDetails } : null,
+    });
+    if (!result.ok) continue;
+    results.push({
+      user: u.email,
+      phone: result.phoneE164 || u.phone,
+      message: personalized,
+      sentAt: result.sentAt,
+      category,
+      taskDetails,
+      smsLogId: result.smsLogId,
+      status: result.status,
+      simulated: result.simulated,
+    });
   }
 
   return { sent: results.length, logs: results };
 }
 
 export async function createReminderLogForUser(user: any, message: string) {
-  if (isDemoMode()) {
-    const saved = await addDemoSmsLog({
-      userId: user.id,
-      phone: user.phone,
-      message,
-      source: "reminder",
-      direction: "outbound",
-    });
-    return { user: user.email, phone: user.phone, message, sentAt: saved.sentAt };
-  }
-  const log = await prisma.smsLog.create({ data: { userId: user.id, phone: user.phone, message } });
-  return { user: user.email, phone: user.phone, message, sentAt: log.sentAt };
+  const { deliverSmsAudited } = await import("@/lib/sms-delivery");
+  const result = await deliverSmsAudited({
+    phone: user.phone,
+    message,
+    userId: user.id,
+    source: "reminder",
+  });
+  return {
+    user: user.email,
+    phone: result.phoneE164 || user.phone,
+    message,
+    sentAt: result.sentAt,
+    smsLogId: result.smsLogId,
+    ok: result.ok,
+    status: result.status,
+  };
 }
 
 export async function listCoachMembersForUi(): Promise<

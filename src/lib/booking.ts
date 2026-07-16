@@ -519,14 +519,23 @@ export async function sendDailyReminders() {
 
     const message = `Good morning! Time for your Day ${enrollment.currentDay} activities in ${enrollment.program.name}. Start here: ${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}${link}`;
 
-    const log = await prisma.smsLog.create({
-      data: {
-        userId: user.id,
-        phone: user.phone,
-        message,
-      },
+    const { deliverSmsAudited } = await import("@/lib/sms-delivery");
+    const result = await deliverSmsAudited({
+      phone: user.phone,
+      message,
+      userId: user.id,
+      source: "reminder",
+      metadata: { programSlug: enrollment.program.slug, currentDay: enrollment.currentDay },
     });
-    logs.push({ user: user.email, phone: user.phone, message, sentAt: log.sentAt });
+    if (result.ok) {
+      logs.push({
+        user: user.email,
+        phone: result.phoneE164 || user.phone,
+        message,
+        sentAt: result.sentAt,
+        smsLogId: result.smsLogId,
+      });
+    }
   }
 
   return logs;

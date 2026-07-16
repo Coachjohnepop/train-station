@@ -39,7 +39,15 @@ model User {
   email              String              @unique
   name               String?
   phone              String?
+  /** Normalized E.164 when known (e.g. +15551234567). Prefer for match/send. */
+  phoneE164          String?
   dailyReminderTime  String?             // e.g. "07:30" in 24h format
+  /** Explicit SMS marketing/coaching consent timestamp (TCPA / carrier readiness). */
+  smsConsentAt       DateTime?
+  /** Last carrier/keyword or in-app opt-out. */
+  smsOptOutAt        DateTime?
+  /** Last re-opt-in (START or settings). Effective opt-out when smsOptOutAt > smsOptInAt. */
+  smsOptInAt         DateTime?
   city               String?
   state              String?
   heightCm           Int?
@@ -72,6 +80,7 @@ model User {
   analyticsEvents    AnalyticsEvent[]
   subscriptionPayments FactSubscriptionPayment[]
   memberDailySnapshots MartMemberDailySnapshot[]
+  auditEventsAsActor AuditEvent[]        @relation("AuditActor")
 }
 
 model SubscriptionTier {
@@ -477,13 +486,91 @@ model Booking {
   user          User?    @relation(fields: [userId], references: [id])
 }
 
+/**
+ * Durable SMS / messaging ledger (M&A / compliance).
+ * Prefer this over demo JSON whenever Postgres is configured.
+ * Append delivery lifecycle via SmsDeliveryEvent; never delete for audit retention.
+ */
 model SmsLog {
-  id        String   @id @default(cuid())
-  userId    String
-  phone     String
-  message   String
-  sentAt    DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
+  id             String    @id @default(cuid())
+  userId         String?
+  phone          String
+  message        String    @db.Text
+  /** outbound | inbound */
+  direction      String    @default("outbound")
+  /** welcome | coach-reply | coach-chat-alert | broadcast | reminder | member-reply | hub | booking | ... */
+  source         String    @default("unknown")
+  /** sms | email_hub | simulated */
+  channel        String    @default("sms")
+  /**
+   * queued | sent | delivered | failed | undelivered | received |
+   * blocked_opt_out | skipped_paused | skipped_no_phone | skipped_invalid_phone
+   */
+  status         String    @default("sent")
+  provider       String? // twilio | resend | none
+  providerSid    String?
+  providerStatus String?
+  errorCode      String?
+  errorMessage   String?   @db.Text
+  category       String?
+  simulated      Boolean   @default(false)
+  /** Free-form structured context (taskDetails, coachId, sessionDate, etc.). */
+  metadata       Json?
+  sentAt         DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deliveredAt    DateTime?
+  user           User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  events         SmsDeliveryEvent[]
+
+  @@index([userId, sentAt])
+  @@index([providerSid])
+  @@index([status, sentAt])
+  @@index([direction, sentAt])
+  @@index([source, sentAt])
+  @@index([phone, sentAt])
+}
+
+/** Append-only status trail for a single SmsLog row (Twilio callbacks, gate blocks, etc.). */
+model SmsDeliveryEvent {
+  id         String   @id @default(cuid())
+  smsLogId   String
+  eventType  String // created | provider_accepted | status_callback | blocked | failed | note
+  status     String?
+  detail     String?  @db.Text
+  rawPayload Json?
+  createdAt  DateTime @default(now())
+  smsLog     SmsLog   @relation(fields: [smsLogId], references: [id], onDelete: Cascade)
+
+  @@index([smsLogId, createdAt])
+  @@index([createdAt])
+}
+
+/**
+ * Append-only system audit log for diligence / SOC2-minded M&A readiness.
+ * Write on security-sensitive and compliance-sensitive actions (SMS, auth admin, billing later).
+ */
+model AuditEvent {
+  id          String   @id @default(cuid())
+  occurredAt  DateTime @default(now())
+  actorUserId String?
+  actorEmail  String?
+  actorRole   String?
+  /** e.g. sms.send | sms.inbound | sms.opt_out | sms.opt_in | messaging.pause */
+  action      String
+  entityType  String?
+  entityId    String?
+  /** success | failure | denied | info */
+  outcome     String   @default("info")
+  ip          String?
+  userAgent   String?  @db.Text
+  metadata    Json?
+  actor       User?    @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([occurredAt])
+  @@index([action, occurredAt])
+  @@index([entityType, entityId])
+  @@index([actorUserId, occurredAt])
+  @@index([outcome, occurredAt])
 }
 
 /** Coach-assigned daily workouts (SMS / lesson plan). workoutId may reference catalog or SMS blob workouts. */

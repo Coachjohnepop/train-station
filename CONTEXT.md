@@ -198,7 +198,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 | Zoom → member SMS join | E2E after coach Start Video |
 | Nav cleanup | Live Floor vs Go to Today overlap; mobile bottom nav simplification |
 | Chat | Routes exist; Blob for short video uploads; coach/member chat polish as needed |
-| SMS (Twilio) | Real outbound/inbound when `TWILIO_*` set; else simulated |
+| SMS (Twilio) | **M&A audit path in progress:** Postgres `SmsLog` + `SmsDeliveryEvent` + `AuditEvent` when DB configured; STOP/START; status webhook `/api/sms/status`; real Twilio when `TWILIO_*` set |
 | Publish speed | Smoke republish saved class → open students |
 | Optional: commit soak scripts | `scripts/marshmallow-badger-soak.mjs`, `clone-party-soak.mjs`, etc. |
 
@@ -283,16 +283,42 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - **Ops still required for external Zoom accounts:** Marketplace app **Publish** (Development = same Zoom org as app owner only). After publish, put Production Client ID/Secret in Vercel if different.
 - Prod row migrated: `jeremy@thetrainstation.co` keeps existing tokens.
 
+### SMS / Twilio deep polish + M&A audit (started — John sleeping)
+
+**Why it matters (business):** member trust, coach ops, TCPA/carrier readiness, acquisition diligence (who was messaged, when, delivery outcome, consent/opt-out).
+
+**Principle:** **Postgres everywhere durable state is needed** — no demo JSON for SMS when `DATABASE_URL` is real.
+
+**Shipped in code (local; not necessarily deployed):**
+- Migration `20260716120000_sms_audit_mna` — expand `SmsLog`; `SmsDeliveryEvent`; `AuditEvent`; User `phoneE164` / `smsConsentAt` / `smsOptOutAt` / `smsOptInAt`
+- `src/lib/sms-delivery.ts` — single audited send path (`deliverSmsAudited`)
+- `src/lib/audit-event.ts` — append-only `AuditEvent`
+- Inbound: STOP/START/HELP + unknown-number ledger
+- Status callback: `POST /api/sms/status`
+- Hub logs read from ledger API
+
+**When back — SMS next steps:**
+1. Apply migration on prod (`prisma migrate deploy`)
+2. Set `TWILIO_INBOUND_WEBHOOK_URL` + `TWILIO_STATUS_CALLBACK_URL` exact public URLs
+3. E2E: send → SID on `SmsLog` → status delivered → STOP blocks
+4. Coach hub UX: Live/Simulated/Paused chip + status column
+5. Consent capture on onboard (timestamp `smsConsentAt`)
+6. Continue replacing any remaining JSON message stores with DB
+
+### Jeremy AM Jul 16 — per-exercise notes
+- He still “can’t add little notes to each exercise” (felt unchanged overnight).
+- Root cause: note inputs were nested inside a `<button>` (invalid HTML) → typing/focus flaky; also notes only appeared after click (“Click to add note…”).
+- **Fix local (not shipped until deploy):** always-visible violet note field per exercise row, outside any button; save from input blur value; “Note saved” toast. File: `ProgramCalendarBuilder.tsx`.
+
 ### When back (undone / next)
 
-1. **Stripe Live** — still test mode  
-2. **Zoom Marketplace publish** — required before a second coach on a *different* personal Zoom can authorize  
-3. **Invite second INSTRUCTOR** staff account when named coach is ready  
-4. **Rest timer follow-ups (optional)** — more default restSec; live floor polish  
-5. **Equipment** — Blob image storage; photo backfill  
-6. **Member multi-session schedule UI**  
-7. **Jeremy feedback** after live classes  
-8. **SMS Twilio** / Zoom embed polish  
+1. **Ship Jeremy notes fix** — commit + deploy `ProgramCalendarBuilder` notes UX  
+2. **SMS M&A path** — migrate prod + E2E (above)  
+3. **Stripe Live** — still test mode  
+4. **Zoom Marketplace publish** — required before a second coach on a *different* personal Zoom can authorize  
+5. **Invite second INSTRUCTOR** staff account when named coach is ready  
+6. **Rest timer / equipment / multi-session** as before  
+7. **Jeremy feedback** after he re-tests notes on a program day  
 
 ### Branch / deploy
-`main` @ origin — multi-coach Zoom + prior Jul 15 work. Vercel Production auto-deploys from `main`.
+`main` @ origin — multi-coach Zoom shipped. **SMS audit foundation is local uncommitted** until John reviews / deploys.

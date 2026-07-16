@@ -32,10 +32,12 @@ Verified on live prod (Jun 2026):
 | Variable | Purpose |
 |----------|---------|
 | `NEXT_PUBLIC_APP_URL` | SMS deep links (`https://www.thetrainstation.co`) |
-| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | Real outbound SMS + inbound webhook at `/api/sms/inbound` |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | Real outbound SMS |
+| `TWILIO_INBOUND_WEBHOOK_URL` | Exact URL for `/api/sms/inbound` (signature validation) |
+| `TWILIO_STATUS_CALLBACK_URL` | Exact URL for `/api/sms/status` (delivery receipts → `SmsLog`) |
 | `BLOB_READ_WRITE_TOKEN` | Short (≤60s) chat video uploads on Vercel |
 
-Without Twilio, SMS is **simulated** (logged to console / demo logs). Without Blob, use **YouTube links** for video in chat.
+**SMS / M&A audit:** When Postgres is configured, every send/inbound writes `SmsLog` + `SmsDeliveryEvent` + `AuditEvent` (not demo JSON). STOP/START keywords update `User.smsOptOutAt` / `smsOptInAt`. Without Twilio, outbound is **simulated** but still ledgered when DB is up. Without Blob, use **YouTube links** for video in chat.
 
 **Demo data files to commit with chat/SMS features:** `prisma/coach-chat.dev.json`, `prisma/today-sessions.dev.json`, `prisma/sms-workouts.dev.json`.
 
