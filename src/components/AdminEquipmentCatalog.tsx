@@ -590,7 +590,7 @@ export default function AdminEquipmentCatalog() {
           <p className="text-xs text-[var(--muted)]">
             {items.length} item{items.length === 1 ? "" : "s"}
             {shopCount > 0 ? ` · ${shopCount} with shop link` : ""}
-            <span className="hidden sm:inline"> · 2–3 columns on wider screens</span>
+            <span className="hidden sm:inline"> · multi-column layout</span>
           </p>
         </div>
 
@@ -599,7 +599,13 @@ export default function AdminEquipmentCatalog() {
             No equipment yet. Paste a product link above to add the first piece.
           </p>
         ) : (
-          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          /* auto-fill: 1 col on phones, 2–3 as soon as width allows (not stuck waiting for xl) */
+          <ul
+            className="equipment-catalog-grid grid w-full gap-3"
+            style={{
+              gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr))",
+            }}
+          >
             {items.map((item) => (
               <li
                 key={item.id}
