@@ -32,6 +32,8 @@ export type MemberExerciseBlock = {
   reps: string | null;
   setCount: number;
   weightTier: string;
+  /** Rest between sets (seconds) from coach prescription — drives v1 rest clock. */
+  restSec?: number | null;
   past: {
     setScheme: string;
     repPattern: string | null;
@@ -49,10 +51,12 @@ export type MemberWorkoutView = {
   workoutName: string;
   memberName: string;
   exercises: MemberExerciseBlock[];
-  /** Coach preset: auto countdown between sets for this workout. */
+  /** Legacy workout-level rest timer (fallback if exercise has no restSec). */
   restTimerEnabled?: boolean;
   restTimerSeconds?: number;
 };
+
+const REST_MUTE_KEY = "ts-rest-timer-mute";
 
 type ActiveRestTimer = {
   blockId: string;
@@ -150,9 +154,30 @@ export default function MemberWorkoutConsole({
   const [loggedDetailsOpen, setLoggedDetailsOpen] = useState(false);
   const [restTimer, setRestTimer] = useState<ActiveRestTimer | null>(null);
   const [restSecondsLeft, setRestSecondsLeft] = useState(0);
+  const [restMuted, setRestMuted] = useState(false);
   const [coachExpandedBlockId, setCoachExpandedBlockId] = useState<string | null>(null);
   const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
   const restHornPlayedRef = useRef(false);
+
+  useEffect(() => {
+    try {
+      setRestMuted(localStorage.getItem(REST_MUTE_KEY) === "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const toggleRestMute = useCallback(() => {
+    setRestMuted((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(REST_MUTE_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
 
   const LIVE_POLL_MS = coachFloorMode ? 900 : 200;
   const liveSessionScope = progressMode === "live" && !!liveSyncUserId && !reviewMode;
@@ -500,7 +525,6 @@ export default function MemberWorkoutConsole({
 
   const maybeStartRestTimer = useCallback(
     (blockId: string, setNum: number) => {
-      if (!workout.restTimerEnabled || !workout.restTimerSeconds) return;
       const block = workout.exercises.find((e) => e.id === blockId);
       if (!block) return;
       const prescription = normalizePrescription({
@@ -511,9 +535,21 @@ export default function MemberWorkoutConsole({
       });
       const isTimed = isTimedApproach(prescription.approach);
       const totalSets = isTimed ? 1 : block.setCount;
+      // No rest after the last set of this exercise
       if (setNum >= totalSets) return;
 
-      const seconds = workout.restTimerSeconds;
+      // v1: prefer per-exercise restSec from coach program; fall back to workout-level timer
+      const fromExercise =
+        typeof block.restSec === "number" && block.restSec > 0 ? block.restSec : null;
+      const fromWorkout =
+        workout.restTimerEnabled &&
+        typeof workout.restTimerSeconds === "number" &&
+        workout.restTimerSeconds > 0
+          ? workout.restTimerSeconds
+          : null;
+      const seconds = fromExercise ?? fromWorkout;
+      if (!seconds || seconds <= 0) return;
+
       setRestTimer({
         blockId,
         completedSetNum: setNum,
@@ -537,7 +573,9 @@ export default function MemberWorkoutConsole({
       if (left <= 0) {
         if (!restHornPlayedRef.current) {
           restHornPlayedRef.current = true;
-          playCybertruckHorn();
+          if (!restMuted) {
+            playCybertruckHorn();
+          }
         }
         setRestTimer(null);
       }
@@ -545,7 +583,7 @@ export default function MemberWorkoutConsole({
     tick();
     const id = window.setInterval(tick, 250);
     return () => window.clearInterval(id);
-  }, [restTimer]);
+  }, [restTimer, restMuted]);
 
   const toggleSet = useCallback(
     (blockId: string, setNum: number, originEl?: HTMLElement) => {
@@ -598,12 +636,24 @@ export default function MemberWorkoutConsole({
 
   const restTimerUi =
     restTimer && restSecondsLeft > 0 ? (
-      <WorkoutRestTimer
-        secondsLeft={restSecondsLeft}
-        totalSeconds={restTimer.totalSeconds}
-        onSkip={clearRestTimer}
-        compact={coachFloorMode}
-      />
+      <div className="space-y-1">
+        <WorkoutRestTimer
+          secondsLeft={restSecondsLeft}
+          totalSeconds={restTimer.totalSeconds}
+          onSkip={clearRestTimer}
+          compact={coachFloorMode}
+        />
+        <div className="flex justify-end">
+          <button
+            type="button"
+            className="text-[10px] font-medium text-[var(--muted)] hover:text-[var(--text)]"
+            onClick={toggleRestMute}
+            aria-pressed={restMuted}
+          >
+            {restMuted ? "Unmute beep" : "Mute beep"}
+          </button>
+        </div>
+      </div>
     ) : null;
 
   const openVideo = useCallback((blockId: string) => {

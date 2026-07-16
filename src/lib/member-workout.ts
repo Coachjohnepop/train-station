@@ -1,6 +1,5 @@
 import type { MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import { normalizePrescription } from "@/lib/workout-schemes";
-import { DEMO_MEMBER_EMAIL } from "@/lib/demo-workout";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { getPastsForWorkoutExercises } from "@/lib/workout-logs-store";
 import { resolveUserId } from "@/lib/current-user";
@@ -10,24 +9,154 @@ import {
   buildDemoWorkoutExerciseItems,
   findDemoWorkoutRecord,
 } from "@/lib/demo-workout-items";
+import { prisma } from "@/lib/prisma";
+
+function mapItemToBlock(item: {
+  id: string;
+  exerciseId?: string;
+  exercise?: {
+    id?: string;
+    name?: string;
+    description?: string | null;
+    videoUrl?: string | null;
+  };
+  setScheme?: string | null;
+  repPattern?: string | null;
+  reps?: string | null;
+  sets?: number | null;
+  weightTier?: string | null;
+  notes?: string | null;
+  restSec?: number | null;
+  restBetweenSetsSec?: number | null;
+}) {
+  const ex = item.exercise?.id ? item.exercise : {};
+  const rx = normalizePrescription(item);
+  const coachNotes =
+    typeof item.notes === "string" && item.notes.trim() ? item.notes.trim() : null;
+  const libraryDescription =
+    typeof ex.description === "string" && ex.description.trim()
+      ? ex.description.trim()
+      : null;
+  const restRaw = item.restBetweenSetsSec ?? item.restSec ?? null;
+  const restSec =
+    typeof restRaw === "number" && restRaw > 0 ? Math.min(600, Math.floor(restRaw)) : null;
+
+  return {
+    id: item.id,
+    exerciseId: item.exerciseId || ex.id || item.id,
+    name: ex.name || "Exercise",
+    description: coachNotes ?? libraryDescription,
+    coachNotes,
+    libraryDescription,
+    videoUrl: ex.videoUrl ?? null,
+    setScheme: rx.approach,
+    repPattern: rx.repPattern,
+    reps: rx.reps,
+    setCount: rx.sets ?? 3,
+    weightTier: item.weightTier ?? "light",
+    restSec,
+    past: null as MemberWorkoutView["exercises"][0]["past"],
+  };
+}
+
+async function attachPasts(
+  exercises: MemberWorkoutView["exercises"],
+  userId?: string,
+): Promise<MemberWorkoutView["exercises"]> {
+  const uid = userId || (await resolveUserId());
+  const pastByBlockId: Record<string, any> = {};
+  try {
+    Object.assign(pastByBlockId, await getPastsForWorkoutExercises(exercises, uid));
+  } catch {
+    /* non-fatal */
+  }
+  return exercises.map((ex) => ({
+    ...ex,
+    past: pastByBlockId[ex.id] ?? null,
+  }));
+}
+
+async function getMemberWorkoutFromPrisma(
+  workoutId: string,
+  opts?: { userId?: string; memberName?: string },
+): Promise<MemberWorkoutView | null> {
+  const workout = await prisma.workout.findUnique({
+    where: { id: workoutId },
+    include: {
+      exercises: {
+        orderBy: { sortOrder: "asc" },
+        include: {
+          exercise: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              videoUrl: true,
+            },
+          },
+        },
+      },
+    },
+  });
+  if (!workout) return null;
+
+  const exercises = await attachPasts(
+    workout.exercises.map((item) =>
+      mapItemToBlock({
+        id: item.id,
+        exerciseId: item.exerciseId,
+        exercise: item.exercise,
+        setScheme: item.setScheme,
+        repPattern: item.repPattern,
+        reps: item.reps,
+        sets: item.sets,
+        weightTier: item.weightTier,
+        notes: item.notes,
+        restSec: item.restSec,
+        restBetweenSetsSec: item.restBetweenSetsSec,
+      }),
+    ),
+    opts?.userId,
+  );
+
+  return {
+    workoutId: workout.id,
+    workoutName: workout.name || "Workout",
+    memberName: opts?.memberName || "Member",
+    exercises,
+    restTimerEnabled: Boolean(workout.restTimerEnabled),
+    restTimerSeconds: workout.restTimerSeconds ?? undefined,
+  };
+}
 
 export async function getMemberWorkoutById(
   workoutId: string,
   opts?: { userId?: string; memberName?: string },
 ): Promise<MemberWorkoutView | null> {
+  if (!isDemoMode()) {
+    try {
+      const fromDb = await getMemberWorkoutFromPrisma(workoutId, opts);
+      if (fromDb) return fromDb;
+    } catch {
+      /* fall through to seed */
+    }
+  }
+
   const data = (await getDemoSeed({ preferFresh: true })) as any;
   if (isDemoMode()) {
     await hydrateDemoExercises();
   }
   const workoutExercises = (data.workoutExercises || []) as any[];
-  const workout = findDemoWorkoutRecord((data.workouts || []) as any[], workoutId, workoutExercises);
+  const workout = findDemoWorkoutRecord(
+    (data.workouts || []) as any[],
+    workoutId,
+    workoutExercises,
+  );
   if (!workout) return null;
 
-  // Use loadDemoExercises() in demo mode so that name changes performed in the
-  // admin Exercise Library are reflected in member workout views too.
-  const exList = isDemoMode() ? loadDemoExercises() : (data.exercises || []);
+  const exList = isDemoMode() ? loadDemoExercises() : data.exercises || [];
   const exById: Record<string, any> = Object.fromEntries(
-    exList.map((e: any) => [e.id, e])
+    exList.map((e: any) => [e.id, e]),
   );
 
   const items = isDemoMode()
@@ -45,54 +174,34 @@ export async function getMemberWorkoutById(
           sets: item.sets,
           weightTier: item.weightTier,
           notes: item.notes,
+          restSec: item.restSec,
+          restBetweenSetsSec: item.restBetweenSetsSec,
         }));
 
-  const exercises = items.map((item: any) => {
-    const ex = item.exercise?.id ? item.exercise : exById[item.exerciseId] || {};
-    const rx = normalizePrescription(item);
-    const coachNotes =
-      typeof item.notes === "string" && item.notes.trim() ? item.notes.trim() : null;
-    const libraryDescription =
-      typeof ex.description === "string" && ex.description.trim()
-        ? ex.description.trim()
-        : null;
-    return {
-      id: item.id,
-      exerciseId: item.exerciseId || ex.id,
-      name: ex.name || "Exercise",
-      // Prefer session coach note for the main cue; keep library text separately.
-      description: coachNotes ?? libraryDescription,
-      coachNotes,
-      libraryDescription,
-      videoUrl: ex.videoUrl,
-      setScheme: rx.approach,
-      repPattern: rx.repPattern,
-      reps: rx.reps,
-      setCount: rx.sets ?? 3,
-      weightTier: item.weightTier ?? "light",
-      past: null,
-    };
-  });
+  const exercises = await attachPasts(
+    items.map((item: any) => {
+      const ex = item.exercise?.id ? item.exercise : exById[item.exerciseId] || {};
+      return mapItemToBlock({
+        ...item,
+        exercise: ex,
+      });
+    }),
+    opts?.userId,
+  );
 
-  // Attach latest past performance (silhouette) for each exercise block.
-  // Uses current joined user (cookie) when available; falls back to demo-user in legacy demo mode.
-  const uid = opts?.userId || (await resolveUserId());
-  const pastByBlockId: Record<string, any> = {};
-  try {
-    Object.assign(pastByBlockId, await getPastsForWorkoutExercises(exercises, uid));
-  } catch {
-    // non-fatal; silhouettes just won't show this time
-  }
-
-  const exercisesWithPast = exercises.map((ex: any) => ({
-    ...ex,
-    past: pastByBlockId[ex.id] ?? null,
-  }));
+  const seedWorkout = workout as {
+    id: string;
+    name?: string;
+    restTimerEnabled?: boolean;
+    restTimerSeconds?: number | null;
+  };
 
   return {
-    workoutId: workout.id,
-    workoutName: workout.name || "Workout",
+    workoutId: seedWorkout.id,
+    workoutName: seedWorkout.name || "Workout",
     memberName: opts?.memberName || "Demo Member",
-    exercises: exercisesWithPast,
+    exercises,
+    restTimerEnabled: Boolean(seedWorkout.restTimerEnabled),
+    restTimerSeconds: seedWorkout.restTimerSeconds ?? undefined,
   };
 }

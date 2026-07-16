@@ -16,6 +16,8 @@ type WorkoutExerciseRow = {
   sets?: number | null;
   weightTier?: string | null;
   notes?: string | null;
+  restSec?: number | null;
+  restBetweenSetsSec?: number | null;
 };
 
 export function resolveDemoExercise(
@@ -43,6 +45,8 @@ export function buildDemoWorkoutExerciseItems(
       sets: we.sets,
       weightTier: we.weightTier,
       notes: we.notes,
+      restSec: we.restSec,
+      restBetweenSetsSec: we.restBetweenSetsSec,
       exercise: resolveDemoExercise(we.exerciseId, exList),
     }));
 }
