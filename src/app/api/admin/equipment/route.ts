@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireCoachStaff } from "@/lib/api-auth";
 import {
   createEquipmentItem,
+  equipmentCatalogStorage,
   listEquipmentCatalog,
 } from "@/lib/equipment-store";
 
@@ -21,7 +22,10 @@ export async function GET() {
   if (!auth.ok) return auth.response;
 
   const equipment = await listEquipmentCatalog();
-  return NextResponse.json({ equipment });
+  return NextResponse.json({
+    equipment,
+    storage: equipmentCatalogStorage(),
+  });
 }
 
 export async function POST(request: Request) {
@@ -35,10 +39,17 @@ export async function POST(request: Request) {
 
   try {
     const equipment = await createEquipmentItem(parsed.data);
-    return NextResponse.json(equipment, { status: 201 });
+    return NextResponse.json(
+      { ...equipment, storage: equipmentCatalogStorage() },
+      { status: 201 },
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not create equipment";
-    const status = message.includes("already exists") ? 409 : 500;
+    const status = message.includes("already exists")
+      ? 409
+      : message.includes("valid") || message.includes("required")
+        ? 400
+        : 500;
     return NextResponse.json({ error: message }, { status });
   }
 }

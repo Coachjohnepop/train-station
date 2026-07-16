@@ -251,14 +251,28 @@ function EquipmentCategorySelect({
   );
 }
 
+function toCatalogItem(data: Record<string, unknown>): EquipmentItem {
+  return {
+    id: String(data.id ?? ""),
+    name: String(data.name ?? ""),
+    category: (data.category as string | null) ?? null,
+    description: (data.description as string | null) ?? null,
+    productUrl: (data.productUrl as string | null) ?? null,
+    imageUrl: (data.imageUrl as string | null) ?? null,
+  };
+}
+
 export default function AdminEquipmentCatalog() {
   const [items, setItems] = useState<EquipmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [storage, setStorage] = useState<"postgres" | "demo" | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [previewing, setPreviewing] = useState(false);
+  const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set());
 
   const [pasteUrl, setPasteUrl] = useState("");
   const [newName, setNewName] = useState("");
@@ -269,16 +283,25 @@ export default function AdminEquipmentCatalog() {
   /** Coach-created category names not yet on any item (or still only in form). */
   const [extraCategories, setExtraCategories] = useState<string[]>([]);
 
+  const flashSuccess = useCallback((msg: string) => {
+    setSuccess(msg);
+    setTimeout(() => setSuccess(""), 4000);
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
-    const res = await fetch("/api/admin/equipment");
+    const res = await fetch("/api/admin/equipment", { cache: "no-store" });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(data.error || "Could not load equipment catalog.");
       setItems([]);
     } else {
       setItems(data.equipment || []);
+      if (data.storage === "postgres" || data.storage === "demo") {
+        setStorage(data.storage);
+      }
+      setDirtyIds(new Set());
     }
     setLoading(false);
   }, []);
@@ -326,6 +349,11 @@ export default function AdminEquipmentCatalog() {
       if (!newCategory.trim() && /amazon/i.test(url)) {
         setNewCategory("accessory");
       }
+      if (!data.imageUrl) {
+        setSuccess(
+          "Link read — no auto photo. Paste an Image URL below if you want a custom picture, then Add.",
+        );
+      }
     } catch {
       setError("Could not read that link — check the URL and try again.");
     } finally {
@@ -338,6 +366,7 @@ export default function AdminEquipmentCatalog() {
     if (!newName.trim()) return;
     setCreating(true);
     setError("");
+    setSuccess("");
     const res = await fetch("/api/admin/equipment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -355,18 +384,28 @@ export default function AdminEquipmentCatalog() {
       setError(data.error || formatApiError(data.detail) || "Could not add equipment.");
       return;
     }
-    setItems((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    if (data.storage === "postgres" || data.storage === "demo") {
+      setStorage(data.storage);
+    }
+    // Re-load from server so coach sees the DB row, not just local optimistic UI
+    await load();
     setPasteUrl("");
     setNewName("");
     setNewCategory("");
     setNewDescription("");
     setNewProductUrl("");
     setNewImageUrl("");
+    flashSuccess(
+      data.storage === "postgres"
+        ? `Saved “${data.name}” to the database. Edit or delete anytime below.`
+        : `Saved “${data.name}” (demo storage).`,
+    );
   }
 
   async function saveItem(item: EquipmentItem) {
     setSavingId(item.id);
     setError("");
+    setSuccess("");
     const res = await fetch(`/api/admin/equipment/${encodeURIComponent(item.id)}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -385,17 +424,31 @@ export default function AdminEquipmentCatalog() {
       await load();
       return;
     }
+    if (data.storage === "postgres" || data.storage === "demo") {
+      setStorage(data.storage);
+    }
+    const saved = toCatalogItem(data);
     setItems((prev) =>
       prev
-        .map((row) => (row.id === item.id ? data : row))
+        .map((row) => (row.id === item.id ? saved : row))
         .sort((a, b) => a.name.localeCompare(b.name)),
+    );
+    setDirtyIds((prev) => {
+      const next = new Set(prev);
+      next.delete(item.id);
+      return next;
+    });
+    flashSuccess(
+      data.storage === "postgres"
+        ? `Updated “${saved.name}” in the database.`
+        : `Updated “${saved.name}”.`,
     );
   }
 
   async function refreshImageFromLink(item: EquipmentItem) {
     const url = item.productUrl?.trim();
     if (!url) {
-      setError("Add a product link first, then refresh the photo.");
+      setError("Add a product link first, then refresh the photo — or paste a custom Image URL.");
       return;
     }
     setSavingId(item.id);
@@ -408,26 +461,41 @@ export default function AdminEquipmentCatalog() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || "Could not refresh photo from link.");
+        setError(
+          data.error ||
+            "Could not pull photo from link. Paste a custom Image URL and Save instead.",
+        );
+        setSavingId(null);
+        return;
+      }
+      if (!data.imageUrl) {
+        setError("No photo found on that page. Paste a custom Image URL and Save.");
         setSavingId(null);
         return;
       }
       const next: EquipmentItem = {
         ...item,
-        imageUrl: data.imageUrl || item.imageUrl,
+        imageUrl: data.imageUrl,
         name: item.name.trim() || data.title || item.name,
       };
       await saveItem(next);
     } catch {
-      setError("Could not refresh photo from link.");
+      setError("Could not refresh photo. Paste a custom Image URL and Save.");
       setSavingId(null);
     }
   }
 
   async function removeItem(id: string, name: string) {
-    if (!window.confirm(`Remove "${name}" from the equipment catalog?`)) return;
+    if (
+      !window.confirm(
+        `Delete “${name}” from the catalog permanently? Members will lose this gear link.`,
+      )
+    ) {
+      return;
+    }
     setDeletingId(id);
     setError("");
+    setSuccess("");
     const res = await fetch(`/api/admin/equipment/${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
@@ -438,10 +506,21 @@ export default function AdminEquipmentCatalog() {
       return;
     }
     setItems((prev) => prev.filter((row) => row.id !== id));
+    setDirtyIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    flashSuccess(
+      data.storage === "postgres"
+        ? `Deleted “${name}” from the database.`
+        : `Deleted “${name}”.`,
+    );
   }
 
   function updateDraft(id: string, patch: Partial<EquipmentItem>) {
     setItems((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+    setDirtyIds((prev) => new Set(prev).add(id));
   }
 
   if (loading) {
@@ -449,17 +528,44 @@ export default function AdminEquipmentCatalog() {
   }
 
   const shopCount = items.filter((i) => i.productUrl).length;
+  const storageLabel =
+    storage === "postgres"
+      ? "Postgres database"
+      : storage === "demo"
+        ? "Demo file storage"
+        : "Catalog";
 
   return (
     <div className="w-full max-w-none space-y-6">
-      {error && <p className="text-sm text-amber-400">{error}</p>}
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 font-medium text-[var(--muted)]">
+          Storage:{" "}
+          <span className={storage === "postgres" ? "text-emerald-300" : "text-[var(--text)]"}>
+            {storageLabel}
+          </span>
+        </span>
+        <span className="text-[var(--muted)]">
+          Add · edit · save · delete all persist. Override any photo with a custom image URL.
+        </span>
+      </div>
+
+      {error && (
+        <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+          {error}
+        </p>
+      )}
+      {success && (
+        <p className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+          {success}
+        </p>
+      )}
 
       <form onSubmit={createItem} className="card max-w-xl space-y-3 p-4 sm:p-5">
         <div>
           <h2 className="text-sm font-semibold">Add from product link</h2>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            Paste an Amazon (or other store) link → get photo & title → add. Members see it on{" "}
-            <strong>Gear</strong> and open the store in a new tab.
+            Paste a store link → Get photo & title → <strong>Add equipment</strong> writes to the
+            database. Members see it on <strong>Gear</strong>.
           </p>
         </div>
 
@@ -531,15 +637,18 @@ export default function AdminEquipmentCatalog() {
           </div>
           <div>
             <label htmlFor="eq-img" className="text-xs font-medium text-[var(--muted)]">
-              Image URL (optional)
+              Image URL (optional override)
             </label>
             <input
               id="eq-img"
               className="input mt-1 w-full"
               value={newImageUrl}
               onChange={(e) => setNewImageUrl(e.target.value)}
-              placeholder="Auto-filled from link"
+              placeholder="https://… — paste if auto photo fails"
             />
+            <p className="mt-1 text-[10px] text-[var(--muted)]">
+              If Get photo fails, paste any public image link here before Add.
+            </p>
           </div>
           <div>
             <label htmlFor="eq-desc" className="text-xs font-medium text-[var(--muted)]">
@@ -569,8 +678,19 @@ export default function AdminEquipmentCatalog() {
           <h2 className="text-sm font-semibold">Catalog</h2>
           <p className="text-xs text-[var(--muted)]">
             {items.length} item{items.length === 1 ? "" : "s"}
-            {shopCount > 0 ? ` · ${shopCount} with shop link` : ""}
-            <span className="hidden sm:inline"> · multi-column layout</span>
+            {shopCount > 0 ? ` · ${shopCount} on Gear shop` : ""}
+            {dirtyIds.size > 0 ? (
+              <span className="ml-1 font-semibold text-amber-300">
+                · {dirtyIds.size} unsaved
+              </span>
+            ) : null}
+            <button
+              type="button"
+              className="ml-2 text-accent hover:underline"
+              onClick={() => void load()}
+            >
+              Reload from DB
+            </button>
           </p>
         </div>
 
@@ -624,15 +744,32 @@ export default function AdminEquipmentCatalog() {
                     placeholder="Product link (Amazon…)"
                     aria-label="Product link"
                   />
-                  <input
-                    className="input w-full text-xs"
-                    value={item.imageUrl || ""}
-                    onChange={(e) =>
-                      updateDraft(item.id, { imageUrl: e.target.value || null })
-                    }
-                    placeholder="Image URL"
-                    aria-label="Image URL"
-                  />
+                  <div>
+                    <label className="text-[10px] font-medium text-[var(--muted)]">
+                      Override image URL
+                    </label>
+                    <div className="mt-0.5 flex gap-1">
+                      <input
+                        className="input min-w-0 flex-1 text-xs"
+                        value={item.imageUrl || ""}
+                        onChange={(e) =>
+                          updateDraft(item.id, { imageUrl: e.target.value || null })
+                        }
+                        placeholder="https://… custom photo if auto fails"
+                        aria-label="Override image URL"
+                      />
+                      {item.imageUrl ? (
+                        <button
+                          type="button"
+                          className="btn-ghost shrink-0 px-2 text-[10px]"
+                          title="Clear image URL"
+                          onClick={() => updateDraft(item.id, { imageUrl: null })}
+                        >
+                          Clear
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
                   <textarea
                     className="input w-full min-h-[52px] flex-1 text-xs"
                     value={item.description || ""}
@@ -645,18 +782,24 @@ export default function AdminEquipmentCatalog() {
                   <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
                     <button
                       type="button"
-                      className="btn-primary min-h-[40px] flex-1 px-2 text-xs sm:flex-none sm:px-3"
+                      className={`min-h-[40px] flex-1 px-2 text-xs sm:flex-none sm:px-3 ${
+                        dirtyIds.has(item.id) ? "btn-primary" : "btn-ghost ring-1 ring-[var(--border)]"
+                      }`}
                       disabled={savingId === item.id}
                       onClick={() => void saveItem(item)}
                     >
-                      {savingId === item.id ? "Saving…" : "Save"}
+                      {savingId === item.id
+                        ? "Saving…"
+                        : dirtyIds.has(item.id)
+                          ? "Save to DB"
+                          : "Save"}
                     </button>
                     <button
                       type="button"
                       className="btn-ghost min-h-[40px] px-2 text-xs sm:px-3"
                       disabled={savingId === item.id || !item.productUrl}
                       onClick={() => void refreshImageFromLink(item)}
-                      title="Refresh photo from product link"
+                      title="Pull photo from product link, then save"
                     >
                       Refresh photo
                     </button>
@@ -679,6 +822,11 @@ export default function AdminEquipmentCatalog() {
                       </a>
                     ) : null}
                   </div>
+                  {dirtyIds.has(item.id) ? (
+                    <p className="text-[10px] font-medium text-amber-300">
+                      Unsaved changes — click Save to DB
+                    </p>
+                  ) : null}
                 </div>
               </li>
             ))}

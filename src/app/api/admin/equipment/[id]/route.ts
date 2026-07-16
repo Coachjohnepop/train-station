@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireCoachStaff } from "@/lib/api-auth";
 import {
   deleteEquipmentItem,
+  equipmentCatalogStorage,
   updateEquipmentItem,
 } from "@/lib/equipment-store";
 
@@ -30,14 +31,19 @@ export async function PATCH(request: Request, { params }: Params) {
 
   try {
     const equipment = await updateEquipmentItem(id, parsed.data);
-    return NextResponse.json(equipment);
+    return NextResponse.json({
+      ...equipment,
+      storage: equipmentCatalogStorage(),
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not update equipment";
     const status = message.includes("not found")
       ? 404
       : message.includes("already exists")
         ? 409
-        : 500;
+        : message.includes("valid") || message.includes("required")
+          ? 400
+          : 500;
     return NextResponse.json({ error: message }, { status });
   }
 }
@@ -50,7 +56,10 @@ export async function DELETE(_request: Request, { params }: Params) {
 
   try {
     await deleteEquipmentItem(id);
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      storage: equipmentCatalogStorage(),
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not delete equipment";
     const status = message.includes("not found") ? 404 : 500;

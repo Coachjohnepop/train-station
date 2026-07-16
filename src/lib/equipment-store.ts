@@ -47,19 +47,51 @@ export type EquipmentWriteInput = {
 
 const BODYWEIGHT_EQUIPMENT_ID = "eq-bodyweightonly";
 
-function normalizeOptionalUrl(value?: string | null): string | null {
+function normalizeOptionalUrl(
+  value?: string | null,
+  label = "link",
+): string | null {
   if (value === undefined || value === null) return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
   try {
     const u = new URL(trimmed);
     if (u.protocol !== "http:" && u.protocol !== "https:") {
-      throw new Error("Product link must be http(s)");
+      throw new Error(`${label} must be http(s)`);
     }
     return u.toString();
-  } catch {
-    throw new Error("Enter a valid product link (https://…)");
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("must be http")) throw err;
+    throw new Error(`Enter a valid ${label} (https://…)`);
   }
+}
+
+/** Coach image override — any public http(s) image URL. */
+function normalizeOptionalImageUrl(value?: string | null): string | null {
+  return normalizeOptionalUrl(value, "image URL");
+}
+
+function isPrismaUniqueError(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    (err as { code?: string }).code === "P2002"
+  );
+}
+
+function isPrismaNotFoundError(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    (err as { code?: string }).code === "P2025"
+  );
+}
+
+/** Where the catalog is stored — UI can show "saved to database". */
+export function equipmentCatalogStorage(): "postgres" | "demo" {
+  return isDemoMode() ? "demo" : "postgres";
 }
 
 function mapCatalogRow(row: {
@@ -109,12 +141,14 @@ export async function createEquipmentItem(
   const name = data.name.trim();
   if (!name) throw new Error("Equipment name is required");
   const productUrl =
-    data.productUrl === undefined ? null : normalizeOptionalUrl(data.productUrl);
+    data.productUrl === undefined
+      ? null
+      : normalizeOptionalUrl(data.productUrl, "product link");
   let imageUrl =
     data.imageUrl === undefined
       ? null
       : data.imageUrl?.trim()
-        ? normalizeOptionalUrl(data.imageUrl)
+        ? normalizeOptionalImageUrl(data.imageUrl)
         : null;
   // Prefer a resolvable product tile when coach only pasted a link
   if (!imageUrl && productUrl) {
@@ -132,16 +166,23 @@ export async function createEquipmentItem(
     return mapCatalogRow(created);
   }
 
-  const created = await prisma.equipment.create({
-    data: {
-      name,
-      category: data.category?.trim() || null,
-      description: data.description?.trim() || null,
-      productUrl,
-      imageUrl,
-    },
-  });
-  return mapCatalogRow(created);
+  try {
+    const created = await prisma.equipment.create({
+      data: {
+        name,
+        category: data.category?.trim() || null,
+        description: data.description?.trim() || null,
+        productUrl,
+        imageUrl,
+      },
+    });
+    return mapCatalogRow(created);
+  } catch (err) {
+    if (isPrismaUniqueError(err)) {
+      throw new Error("Equipment with that name already exists");
+    }
+    throw err;
+  }
 }
 
 export async function updateEquipmentItem(
@@ -156,17 +197,39 @@ export async function updateEquipmentItem(
     imageUrl?: string | null;
   } = {};
 
-  if (data.name !== undefined) patch.name = data.name.trim();
+  if (data.name !== undefined) {
+    const n = data.name.trim();
+    if (!n) throw new Error("Equipment name is required");
+    patch.name = n;
+  }
   if (data.category !== undefined) patch.category = data.category?.trim() || null;
   if (data.description !== undefined) patch.description = data.description?.trim() || null;
-  if (data.productUrl !== undefined) patch.productUrl = normalizeOptionalUrl(data.productUrl);
-  if (data.imageUrl !== undefined) {
-    patch.imageUrl = data.imageUrl?.trim() ? normalizeOptionalUrl(data.imageUrl) : null;
+  if (data.productUrl !== undefined) {
+    patch.productUrl = normalizeOptionalUrl(data.productUrl, "product link");
   }
-  // When saving a product link with no photo, seed an Amazon tile URL for the proxy.
-  if (data.imageUrl !== undefined && !patch.imageUrl && patch.productUrl) {
-    const tile = amazonTileImage(patch.productUrl);
-    if (tile) patch.imageUrl = tile;
+  if (data.imageUrl !== undefined) {
+    patch.imageUrl = data.imageUrl?.trim()
+      ? normalizeOptionalImageUrl(data.imageUrl)
+      : null;
+  }
+
+  // If product link is set and image left empty on this save, seed Amazon tile
+  // (coach can still override imageUrl explicitly on a later save).
+  if (patch.imageUrl === null || patch.imageUrl === undefined) {
+    const productForTile =
+      patch.productUrl !== undefined
+        ? patch.productUrl
+        : data.productUrl === undefined
+          ? undefined
+          : normalizeOptionalUrl(data.productUrl, "product link");
+    if (
+      data.imageUrl !== undefined &&
+      !patch.imageUrl &&
+      productForTile
+    ) {
+      const tile = amazonTileImage(productForTile);
+      if (tile) patch.imageUrl = tile;
+    }
   }
 
   if (isDemoMode()) {
@@ -174,11 +237,19 @@ export async function updateEquipmentItem(
     return mapCatalogRow(updated);
   }
 
-  const updated = await prisma.equipment.update({
-    where: { id },
-    data: patch,
-  });
-  return mapCatalogRow(updated);
+  try {
+    const updated = await prisma.equipment.update({
+      where: { id },
+      data: patch,
+    });
+    return mapCatalogRow(updated);
+  } catch (err) {
+    if (isPrismaNotFoundError(err)) throw new Error("Equipment not found");
+    if (isPrismaUniqueError(err)) {
+      throw new Error("Equipment with that name already exists");
+    }
+    throw err;
+  }
 }
 
 export async function deleteEquipmentItem(id: string): Promise<void> {
@@ -187,9 +258,14 @@ export async function deleteEquipmentItem(id: string): Promise<void> {
     return;
   }
 
-  await prisma.userEquipment.deleteMany({ where: { equipmentId: id } });
-  await prisma.exerciseEquipment.deleteMany({ where: { equipmentId: id } });
-  await prisma.equipment.delete({ where: { id } });
+  try {
+    await prisma.userEquipment.deleteMany({ where: { equipmentId: id } });
+    await prisma.exerciseEquipment.deleteMany({ where: { equipmentId: id } });
+    await prisma.equipment.delete({ where: { id } });
+  } catch (err) {
+    if (isPrismaNotFoundError(err)) throw new Error("Equipment not found");
+    throw err;
+  }
 }
 
 export async function getMemberEquipmentWithStatus(
