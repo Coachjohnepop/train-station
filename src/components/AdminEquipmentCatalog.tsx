@@ -52,17 +52,16 @@ function ProductThumb({
   imageUrl,
   productUrl,
   equipmentId,
-  compact,
+  /** compact = small square; card = full-width tile on multi-column grid */
+  variant = "compact",
 }: {
   name: string;
   imageUrl: string | null;
   productUrl?: string | null;
   equipmentId?: string | null;
-  /** Half-size thumb for denser catalog rows */
-  compact?: boolean;
+  variant?: "compact" | "card";
 }) {
   const [failed, setFailed] = useState(false);
-  const box = compact ? "h-12 w-12" : "h-14 w-14";
 
   let src: string | null = null;
   if (!failed) {
@@ -76,12 +75,19 @@ function ProductThumb({
     }
   }
 
-  const shellClass = `${box} shrink-0 overflow-hidden rounded-md border border-[var(--border)] bg-white`;
+  const shellClass =
+    variant === "card"
+      ? "block aspect-[4/3] w-full overflow-hidden rounded-t-lg border-b border-[var(--border)] bg-white"
+      : "h-14 w-14 shrink-0 overflow-hidden rounded-md border border-[var(--border)] bg-white";
 
   if (!src) {
     return (
       <div
-        className={`flex ${box} shrink-0 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface-2)] text-[8px] text-[var(--muted)]`}
+        className={
+          variant === "card"
+            ? "flex aspect-[4/3] w-full items-center justify-center rounded-t-lg border-b border-[var(--border)] bg-[var(--surface-2)] text-[10px] text-[var(--muted)]"
+            : "flex h-14 w-14 shrink-0 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface-2)] text-[8px] text-[var(--muted)]"
+        }
       >
         No photo
       </div>
@@ -93,7 +99,11 @@ function ProductThumb({
     <img
       src={src}
       alt={name}
-      className="h-full w-full object-contain p-0.5"
+      className={
+        variant === "card"
+          ? "h-full w-full object-contain p-2"
+          : "h-full w-full object-contain p-0.5"
+      }
       loading="lazy"
       onError={() => setFailed(true)}
     />
@@ -105,7 +115,7 @@ function ProductThumb({
         href={productUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className={`block ${shellClass}`}
+        className={shellClass}
         title="Open product (new tab)"
       >
         {img}
@@ -441,11 +451,14 @@ export default function AdminEquipmentCatalog() {
   const shopCount = items.filter((i) => i.productUrl).length;
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-none space-y-6">
       {error && <p className="text-sm text-amber-400">{error}</p>}
 
-      <form onSubmit={createItem} className="card space-y-4 p-4">
-        <div>
+      <form
+        onSubmit={createItem}
+        className="card space-y-4 p-4 sm:p-5"
+      >
+        <div className="max-w-3xl">
           <h2 className="text-sm font-semibold">Add from product link</h2>
           <p className="mt-1 text-xs text-[var(--muted)]">
             Paste an Amazon (or other store) link. We pull the title and a photo when the site
@@ -454,106 +467,120 @@ export default function AdminEquipmentCatalog() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <div className="min-w-0 flex-1">
-            <label htmlFor="eq-paste" className="text-xs font-medium text-[var(--muted)]">
-              Product link
-            </label>
-            <input
-              id="eq-paste"
-              className="input mt-1 w-full"
-              value={pasteUrl}
-              onChange={(e) => setPasteUrl(e.target.value)}
-              placeholder="https://www.amazon.com/dp/…"
-              inputMode="url"
-            />
-          </div>
-          <button
-            type="button"
-            className="btn-ghost min-h-[44px] shrink-0 px-4 text-sm"
-            disabled={previewing || !pasteUrl.trim()}
-            onClick={() => void previewFromLink()}
-          >
-            {previewing ? "Reading link…" : "Get photo & title"}
-          </button>
-        </div>
-
-        {(newImageUrl || newName || newProductUrl) && (
-          <div className="flex flex-wrap items-start gap-3 rounded-lg border border-accent/25 bg-accent/5 p-3">
-            <ProductThumb
-              name={newName || "Preview"}
-              imageUrl={newImageUrl || null}
-              productUrl={newProductUrl || pasteUrl || null}
-            />
-            <div className="min-w-0 flex-1 text-xs text-[var(--muted)]">
-              <p className="font-medium text-[var(--text)]">Preview</p>
-              <p className="mt-1 break-words">{newName || "—"}</p>
-              {(newProductUrl || pasteUrl) && (
-                <p className="mt-1 truncate text-[10px] opacity-80">
-                  {newProductUrl || pasteUrl}
-                </p>
-              )}
+        {/* Mobile: stack · sm+: link + action · lg+: 3-col workspace */}
+        <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+          <div className="space-y-3 lg:col-span-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <div className="min-w-0 flex-1">
+                <label htmlFor="eq-paste" className="text-xs font-medium text-[var(--muted)]">
+                  Product link
+                </label>
+                <input
+                  id="eq-paste"
+                  className="input mt-1 w-full"
+                  value={pasteUrl}
+                  onChange={(e) => setPasteUrl(e.target.value)}
+                  placeholder="https://www.amazon.com/dp/…"
+                  inputMode="url"
+                />
+              </div>
+              <button
+                type="button"
+                className="btn-ghost min-h-[44px] w-full shrink-0 px-4 text-sm sm:w-auto"
+                disabled={previewing || !pasteUrl.trim()}
+                onClick={() => void previewFromLink()}
+              >
+                {previewing ? "Reading link…" : "Get photo & title"}
+              </button>
             </div>
-          </div>
-        )}
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label htmlFor="eq-name" className="text-xs font-medium text-[var(--muted)]">
-              Name
-            </label>
-            <input
-              id="eq-name"
-              className="input mt-1 w-full"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="e.g. Adjustable dumbbells"
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="eq-cat" className="text-xs font-medium text-[var(--muted)]">
-              Category
-            </label>
-            <EquipmentCategorySelect
-              id="eq-cat"
-              value={newCategory}
-              options={categoryOptions}
-              onChange={setNewCategory}
-              onCategoryCreated={rememberCategory}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label htmlFor="eq-name" className="text-xs font-medium text-[var(--muted)]">
+                  Name
+                </label>
+                <input
+                  id="eq-name"
+                  className="input mt-1 w-full"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="e.g. Adjustable dumbbells"
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="eq-cat" className="text-xs font-medium text-[var(--muted)]">
+                  Category
+                </label>
+                <EquipmentCategorySelect
+                  id="eq-cat"
+                  value={newCategory}
+                  options={categoryOptions}
+                  onChange={setNewCategory}
+                  onCategoryCreated={rememberCategory}
+                  disabled={creating}
+                />
+              </div>
+              <div>
+                <label htmlFor="eq-img" className="text-xs font-medium text-[var(--muted)]">
+                  Image URL (optional)
+                </label>
+                <input
+                  id="eq-img"
+                  className="input mt-1 w-full"
+                  value={newImageUrl}
+                  onChange={(e) => setNewImageUrl(e.target.value)}
+                  placeholder="Auto-filled from link"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="eq-desc" className="text-xs font-medium text-[var(--muted)]">
+                  Notes for members (optional)
+                </label>
+                <textarea
+                  id="eq-desc"
+                  className="input mt-1 w-full min-h-[64px]"
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  placeholder="Why you recommend this, size tips…"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="btn-primary min-h-[44px] w-full px-4 text-sm sm:w-auto"
               disabled={creating}
-            />
+            >
+              {creating ? "Adding…" : "Add equipment"}
+            </button>
           </div>
-          <div>
-            <label htmlFor="eq-img" className="text-xs font-medium text-[var(--muted)]">
-              Image URL (optional override)
-            </label>
-            <input
-              id="eq-img"
-              className="input mt-1 w-full"
-              value={newImageUrl}
-              onChange={(e) => setNewImageUrl(e.target.value)}
-              placeholder="Auto-filled from link"
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <label htmlFor="eq-desc" className="text-xs font-medium text-[var(--muted)]">
-              Notes for members (optional)
-            </label>
-            <textarea
-              id="eq-desc"
-              className="input mt-1 w-full min-h-[72px]"
-              value={newDescription}
-              onChange={(e) => setNewDescription(e.target.value)}
-              placeholder="Why you recommend this, size tips…"
-            />
-          </div>
-        </div>
 
-        <div className="flex flex-wrap gap-2">
-          <button type="submit" className="btn-primary min-h-[44px] px-4 text-sm" disabled={creating}>
-            {creating ? "Adding…" : "Add equipment"}
-          </button>
+          <div className="lg:col-span-1">
+            {newImageUrl || newName || newProductUrl || pasteUrl ? (
+              <div className="overflow-hidden rounded-lg border border-accent/25 bg-accent/5">
+                <ProductThumb
+                  name={newName || "Preview"}
+                  imageUrl={newImageUrl || null}
+                  productUrl={newProductUrl || pasteUrl || null}
+                  variant="card"
+                />
+                <div className="space-y-1 p-3 text-xs text-[var(--muted)]">
+                  <p className="font-medium text-[var(--text)]">Preview</p>
+                  <p className="line-clamp-3 break-words">{newName || "—"}</p>
+                  {(newProductUrl || pasteUrl) && (
+                    <p className="truncate text-[10px] opacity-80">
+                      {newProductUrl || pasteUrl}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="hidden rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface-2)] p-4 text-center text-xs text-[var(--muted)] lg:block">
+                Photo preview appears here after you paste a link.
+              </div>
+            )}
+          </div>
         </div>
       </form>
 
@@ -563,6 +590,7 @@ export default function AdminEquipmentCatalog() {
           <p className="text-xs text-[var(--muted)]">
             {items.length} item{items.length === 1 ? "" : "s"}
             {shopCount > 0 ? ` · ${shopCount} with shop link` : ""}
+            <span className="hidden sm:inline"> · 2–3 columns on wider screens</span>
           </p>
         </div>
 
@@ -571,99 +599,99 @@ export default function AdminEquipmentCatalog() {
             No equipment yet. Paste a product link above to add the first piece.
           </p>
         ) : (
-          <ul className="space-y-3">
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {items.map((item) => (
-              <li key={item.id} className="card space-y-3 p-4">
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <ProductThumb
-                    name={item.name}
-                    imageUrl={item.imageUrl}
-                    productUrl={item.productUrl}
-                    equipmentId={item.id}
-                    compact
+              <li
+                key={item.id}
+                className="card flex h-full min-w-0 flex-col overflow-hidden p-0"
+              >
+                <ProductThumb
+                  name={item.name}
+                  imageUrl={item.imageUrl}
+                  productUrl={item.productUrl}
+                  equipmentId={item.id}
+                  variant="card"
+                />
+                <div className="flex min-w-0 flex-1 flex-col gap-2 p-3">
+                  <input
+                    className="input w-full text-sm font-medium"
+                    value={item.name}
+                    onChange={(e) => updateDraft(item.id, { name: e.target.value })}
+                    aria-label="Name"
                   />
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <input
-                      className="input w-full font-medium"
-                      value={item.name}
-                      onChange={(e) => updateDraft(item.id, { name: e.target.value })}
-                      aria-label="Name"
-                    />
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <EquipmentCategorySelect
-                        value={item.category || ""}
-                        options={categoryOptions}
-                        className="input w-full text-sm"
-                        onChange={(category) =>
-                          updateDraft(item.id, { category: category || null })
-                        }
-                        onCategoryCreated={rememberCategory}
-                        disabled={savingId === item.id}
-                      />
-                      <input
-                        className="input w-full text-sm"
-                        value={item.productUrl || ""}
-                        onChange={(e) =>
-                          updateDraft(item.id, { productUrl: e.target.value || null })
-                        }
-                        placeholder="Product link (Amazon…)"
-                        aria-label="Product link"
-                      />
-                    </div>
-                    <input
-                      className="input w-full text-sm"
-                      value={item.imageUrl || ""}
-                      onChange={(e) =>
-                        updateDraft(item.id, { imageUrl: e.target.value || null })
-                      }
-                      placeholder="Image URL"
-                      aria-label="Image URL"
-                    />
-                    <textarea
-                      className="input w-full min-h-[60px] text-sm"
-                      value={item.description || ""}
-                      onChange={(e) =>
-                        updateDraft(item.id, { description: e.target.value || null })
-                      }
-                      placeholder="Notes for members"
-                      aria-label="Description"
-                    />
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        className="btn-primary min-h-[40px] px-3 text-xs"
-                        disabled={savingId === item.id}
-                        onClick={() => void saveItem(item)}
+                  <EquipmentCategorySelect
+                    value={item.category || ""}
+                    options={categoryOptions}
+                    className="input w-full text-sm"
+                    onChange={(category) =>
+                      updateDraft(item.id, { category: category || null })
+                    }
+                    onCategoryCreated={rememberCategory}
+                    disabled={savingId === item.id}
+                  />
+                  <input
+                    className="input w-full text-xs"
+                    value={item.productUrl || ""}
+                    onChange={(e) =>
+                      updateDraft(item.id, { productUrl: e.target.value || null })
+                    }
+                    placeholder="Product link (Amazon…)"
+                    aria-label="Product link"
+                  />
+                  <input
+                    className="input w-full text-xs"
+                    value={item.imageUrl || ""}
+                    onChange={(e) =>
+                      updateDraft(item.id, { imageUrl: e.target.value || null })
+                    }
+                    placeholder="Image URL"
+                    aria-label="Image URL"
+                  />
+                  <textarea
+                    className="input w-full min-h-[52px] flex-1 text-xs"
+                    value={item.description || ""}
+                    onChange={(e) =>
+                      updateDraft(item.id, { description: e.target.value || null })
+                    }
+                    placeholder="Notes for members"
+                    aria-label="Description"
+                  />
+                  <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      className="btn-primary min-h-[40px] flex-1 px-2 text-xs sm:flex-none sm:px-3"
+                      disabled={savingId === item.id}
+                      onClick={() => void saveItem(item)}
+                    >
+                      {savingId === item.id ? "Saving…" : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost min-h-[40px] px-2 text-xs sm:px-3"
+                      disabled={savingId === item.id || !item.productUrl}
+                      onClick={() => void refreshImageFromLink(item)}
+                      title="Refresh photo from product link"
+                    >
+                      Refresh photo
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost min-h-[40px] px-2 text-xs text-red-300 sm:px-3"
+                      disabled={deletingId === item.id}
+                      onClick={() => void removeItem(item.id, item.name)}
+                    >
+                      {deletingId === item.id ? "…" : "Delete"}
+                    </button>
+                    {item.productUrl ? (
+                      <a
+                        href={item.productUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-ghost min-h-[40px] px-2 text-xs sm:px-3"
                       >
-                        {savingId === item.id ? "Saving…" : "Save"}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-ghost min-h-[40px] px-3 text-xs"
-                        disabled={savingId === item.id || !item.productUrl}
-                        onClick={() => void refreshImageFromLink(item)}
-                      >
-                        Refresh photo from link
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-ghost min-h-[40px] px-3 text-xs text-red-300"
-                        disabled={deletingId === item.id}
-                        onClick={() => void removeItem(item.id, item.name)}
-                      >
-                        {deletingId === item.id ? "Removing…" : "Delete"}
-                      </button>
-                      {item.productUrl ? (
-                        <a
-                          href={item.productUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn-ghost min-h-[40px] px-3 text-xs"
-                        >
-                          Open link ↗
-                        </a>
-                      ) : null}
-                    </div>
+                        Store ↗
+                      </a>
+                    ) : null}
                   </div>
                 </div>
               </li>
