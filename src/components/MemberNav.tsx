@@ -198,7 +198,9 @@ export default function MemberNav({
                 {scorePoints}
               </span>
             ) : null}
-            {"badge" in item && item.badge ? <ChatNavBadge role="member" /> : null}
+            {"badge" in item && item.badge ? (
+              <ChatNavBadge role="member" placement="corner" />
+            ) : null}
           </Link>
         );
       })}
