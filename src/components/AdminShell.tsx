@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import AdminAreaNav from "@/components/AdminAreaNav";
 import AdminPersistenceBanner from "@/components/AdminPersistenceBanner";
 import ResumePathTracker from "@/components/ResumePathTracker";
@@ -18,6 +25,13 @@ import {
   readAdminNavCollapsed,
   writeAdminNavCollapsed,
 } from "@/lib/admin-nav-collapsed";
+import {
+  ADMIN_NAV_WIDTH_COLLAPSED,
+  ADMIN_NAV_WIDTH_DEFAULT,
+  clampAdminNavWidth,
+  readAdminNavWidth,
+  writeAdminNavWidth,
+} from "@/lib/admin-nav-width";
 
 type Props = {
   children: React.ReactNode;
@@ -42,12 +56,17 @@ export default function AdminShell({
   const coachFloorFocus = pathname.startsWith("/admin/today");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [navCollapsed, setNavCollapsed] = useState(false);
+  const [navWidth, setNavWidth] = useState(ADMIN_NAV_WIDTH_DEFAULT);
+  const [navResizing, setNavResizing] = useState(false);
+  const resizeStartX = useRef(0);
+  const resizeStartW = useRef(ADMIN_NAV_WIDTH_DEFAULT);
 
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
   const openDrawer = useCallback(() => setDrawerOpen(true), []);
 
   useEffect(() => {
     setNavCollapsed(readAdminNavCollapsed());
+    setNavWidth(readAdminNavWidth());
   }, []);
 
   const toggleNavCollapsed = useCallback(() => {
@@ -57,6 +76,53 @@ export default function AdminShell({
       return next;
     });
   }, []);
+
+  const onNavResizePointerDown = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (navCollapsed) return;
+      e.preventDefault();
+      resizeStartX.current = e.clientX;
+      resizeStartW.current = navWidth;
+      setNavResizing(true);
+      e.currentTarget.setPointerCapture(e.pointerId);
+    },
+    [navCollapsed, navWidth],
+  );
+
+  const onNavResizePointerMove = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (!navResizing) return;
+      const delta = e.clientX - resizeStartX.current;
+      setNavWidth(clampAdminNavWidth(resizeStartW.current + delta));
+    },
+    [navResizing],
+  );
+
+  const endNavResize = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (!navResizing) return;
+      setNavResizing(false);
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        /* already released */
+      }
+      const delta = e.clientX - resizeStartX.current;
+      const next = clampAdminNavWidth(resizeStartW.current + delta);
+      setNavWidth(next);
+      writeAdminNavWidth(next);
+    },
+    [navResizing],
+  );
+
+  const resetNavWidth = useCallback(() => {
+    setNavWidth(ADMIN_NAV_WIDTH_DEFAULT);
+    writeAdminNavWidth(ADMIN_NAV_WIDTH_DEFAULT);
+    if (navCollapsed) {
+      setNavCollapsed(false);
+      writeAdminNavCollapsed(false);
+    }
+  }, [navCollapsed]);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -188,11 +254,14 @@ export default function AdminShell({
         </div>
       ) : null}
 
-      {/* Desktop sidebar — wide screens only */}
+      {/* Desktop sidebar — wide screens only; drag right edge to resize */}
       <aside
-        className={`app-shell-header admin-sidebar hidden xl:sticky xl:top-0 xl:flex xl:h-screen xl:shrink-0 xl:flex-col xl:border-r xl:border-[var(--border)] xl:transition-[width] xl:duration-200 ${
-          navCollapsed ? "xl:w-[4.25rem]" : "xl:w-56"
+        className={`app-shell-header admin-sidebar relative hidden xl:sticky xl:top-0 xl:flex xl:h-screen xl:shrink-0 xl:flex-col xl:border-r xl:border-[var(--border)] ${
+          navResizing ? "" : "xl:transition-[width] xl:duration-200"
         }`}
+        style={{
+          width: navCollapsed ? ADMIN_NAV_WIDTH_COLLAPSED : navWidth,
+        }}
       >
         <div className="flex h-full min-h-0 flex-col gap-4 px-2 py-5">
           {showDevSwitcher ? (
@@ -229,9 +298,9 @@ export default function AdminShell({
             )}
           </div>
           {!navCollapsed ? (
-            <div className="px-1">
-              <p className="text-sm font-medium">{session?.name || "Coach"}</p>
-              <p className="text-[10px] text-[var(--muted)]">
+            <div className="min-w-0 px-1">
+              <p className="truncate text-sm font-medium">{session?.name || "Coach"}</p>
+              <p className="truncate text-[10px] text-[var(--muted)]">
                 {areaLabel}
                 {session?.email ? ` · ${session.email}` : ""}
               </p>
@@ -241,7 +310,7 @@ export default function AdminShell({
               {session?.name || "Coach"} · {areaLabel}
             </p>
           )}
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
             <AdminAreaNav
               dualWorkspace={dualWorkspace}
               canCoach={canCoach}
@@ -263,7 +332,39 @@ export default function AdminShell({
             {!navCollapsed ? <span>Collapse</span> : null}
           </button>
         </div>
+
+        {/* Resize handle — desktop only; double-click resets width */}
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize navigation"
+          aria-valuenow={navCollapsed ? ADMIN_NAV_WIDTH_COLLAPSED : navWidth}
+          aria-valuemin={ADMIN_NAV_WIDTH_COLLAPSED}
+          title={
+            navCollapsed
+              ? "Expand navigation to resize"
+              : "Drag to resize · double-click to reset"
+          }
+          className={`absolute inset-y-0 right-0 z-20 hidden w-1.5 cursor-col-resize touch-none xl:block ${
+            navCollapsed
+              ? "pointer-events-none opacity-0"
+              : "hover:bg-accent/40 active:bg-accent/50"
+          } ${navResizing ? "bg-accent/50" : ""}`}
+          onPointerDown={onNavResizePointerDown}
+          onPointerMove={onNavResizePointerMove}
+          onPointerUp={endNavResize}
+          onPointerCancel={endNavResize}
+          onDoubleClick={(e) => {
+            e.preventDefault();
+            resetNavWidth();
+          }}
+        />
       </aside>
+
+      {/* Prevent text selection while dragging the nav */}
+      {navResizing ? (
+        <div className="fixed inset-0 z-[60] cursor-col-resize" aria-hidden />
+      ) : null}
 
       <div className="flex min-w-0 flex-1 flex-col">
         <main className="admin-main mx-auto w-full max-w-6xl flex-1 px-3 py-4 pb-[max(6rem,env(safe-area-inset-bottom))] md:max-w-7xl md:px-6 md:py-6 xl:max-w-[min(100%,96rem)] xl:px-8 xl:pb-8">
