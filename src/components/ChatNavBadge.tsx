@@ -40,7 +40,7 @@ export default function ChatNavBadge({ role }: { role: "coach" | "member" }) {
 
   return (
     <span
-      className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[10px] font-bold leading-none text-white shadow-sm ring-2 ring-[var(--surface)]"
+      className="inline-flex h-[18px] min-w-[18px] shrink-0 translate-y-[-1px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[10px] font-bold leading-none text-white shadow-sm ring-2 ring-[var(--surface)]"
       aria-label={`${unread} unread messages`}
     >
       {unread > 99 ? "99+" : unread > 9 ? "9+" : unread}

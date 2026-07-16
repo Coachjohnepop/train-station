@@ -59,7 +59,7 @@ export default function AdminSectionNav({
                     href={item.href}
                     title={collapsed ? item.label : undefined}
                     onClick={() => handleNavClick(item.href)}
-                    className={`relative flex min-h-[44px] items-center rounded-lg text-sm font-medium transition ${
+                    className={`flex min-h-[44px] items-center rounded-lg text-sm font-medium transition ${
                       collapsed ? "justify-center px-2 py-2.5" : "px-3 py-2.5"
                     } ${
                       active
@@ -67,17 +67,22 @@ export default function AdminSectionNav({
                         : "text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
                     }`}
                   >
-                    {collapsed ? (
-                      <span className="text-[11px] font-bold tracking-wide">
-                        {navShortLabel(item.label)}
+                    {/* Badge sits right after the last letter of the label (not far-right of the row) */}
+                    <span className="inline-flex max-w-full items-center gap-1.5">
+                      <span
+                        className={
+                          collapsed
+                            ? "text-[11px] font-bold tracking-wide"
+                            : "min-w-0 truncate"
+                        }
+                      >
+                        {collapsed ? navShortLabel(item.label) : item.label}
                       </span>
-                    ) : (
-                      item.label
-                    )}
-                    {item.badge === "chat" ? <ChatNavBadge role="coach" /> : null}
-                    {item.leadsBadge ? <LeadsNavBadge /> : null}
-                    {item.queueBadge ? <QueueNavBadge /> : null}
-                    {item.coachSuggestionsBadge ? <CoachSuggestionsNavBadge /> : null}
+                      {item.badge === "chat" ? <ChatNavBadge role="coach" /> : null}
+                      {item.leadsBadge ? <LeadsNavBadge /> : null}
+                      {item.queueBadge ? <QueueNavBadge /> : null}
+                      {item.coachSuggestionsBadge ? <CoachSuggestionsNavBadge /> : null}
+                    </span>
                   </Link>
                 </li>
               );

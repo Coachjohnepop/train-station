@@ -31,7 +31,7 @@ export default function QueueNavBadge() {
 
   return (
     <span
-      className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold leading-none text-black shadow-sm ring-2 ring-[var(--surface)]"
+      className="inline-flex h-[18px] min-w-[18px] shrink-0 translate-y-[-1px] items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold leading-none text-black shadow-sm ring-2 ring-[var(--surface)]"
       aria-label={`${count} queue items`}
     >
       {count > 99 ? "99+" : count}
