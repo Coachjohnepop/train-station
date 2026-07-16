@@ -308,17 +308,19 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ### Jeremy AM Jul 16 — per-exercise notes
 - He still “can’t add little notes to each exercise” (felt unchanged overnight).
 - Root cause: note inputs were nested inside a `<button>` (invalid HTML) → typing/focus flaky; also notes only appeared after click (“Click to add note…”).
-- **Fix local (not shipped until deploy):** always-visible violet note field per exercise row, outside any button; save from input blur value; “Note saved” toast. File: `ProgramCalendarBuilder.tsx`.
+- **Shipped `ebcc168` to prod** — always-visible violet note field per exercise; blur saves; “Note saved.” Hard-refresh program day builder.
+
+### SMS audit (same ship)
+- Migration `20260716120000_sms_audit_mna` **applied on prod Postgres**
+- Also applied pending `20260716010000_zoom_oauth_per_coach` if it was waiting
 
 ### When back (undone / next)
 
-1. **Ship Jeremy notes fix** — commit + deploy `ProgramCalendarBuilder` notes UX  
-2. **SMS M&A path** — migrate prod + E2E (above)  
+1. **Jeremy re-test** — violet note under each exercise on a program day  
+2. **SMS E2E** — send → SID → STOP; set exact Twilio webhook URL envs if not set  
 3. **Stripe Live** — still test mode  
-4. **Zoom Marketplace publish** — required before a second coach on a *different* personal Zoom can authorize  
-5. **Invite second INSTRUCTOR** staff account when named coach is ready  
-6. **Rest timer / equipment / multi-session** as before  
-7. **Jeremy feedback** after he re-tests notes on a program day  
+4. **Zoom Marketplace publish** — second coach on external Zoom  
+5. **Rest timer / equipment / multi-session** as before  
 
 ### Branch / deploy
-`main` @ origin — multi-coach Zoom shipped. **SMS audit foundation is local uncommitted** until John reviews / deploys.
+`main` @ `ebcc168` — notes UX + SMS audit ledger. Vercel Production auto-deploys from `main`. Prod DB migrations applied.
