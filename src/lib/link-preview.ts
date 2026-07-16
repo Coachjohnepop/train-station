@@ -70,8 +70,9 @@ export function extractAmazonAsin(url: string): string | null {
 }
 
 function amazonImageFallback(asin: string): string {
-  // Public product image pattern — works for many ASINs without scraping.
-  return `https://images-na.ssl-images-amazon.com/images/P/${asin}.01._SCLZZZZZZZ_SX500_.jpg`;
+  // Ads widget is more reliable than the old images/P/{ASIN} pattern (often 404).
+  const a = asin.toUpperCase();
+  return `https://ws-na.amazon-adsystem.com/widgets/q?_encoding=UTF8&MarketPlace=US&ASIN=${a}&ServiceVersion=20070822&ID=AsinImage&WS=1&Format=_SL500_`;
 }
 
 function cleanProductTitle(title: string | null, host: string): string | null {

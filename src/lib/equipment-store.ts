@@ -12,6 +12,7 @@ import {
   deleteDemoEquipmentItem,
   type DemoEquipmentCatalogItem,
 } from "@/lib/demo-equipment";
+import { extractAmazonAsin } from "@/lib/link-preview";
 
 export type EquipmentCatalogItem = {
   id: string;
@@ -95,6 +96,13 @@ export async function listEquipmentShopItems(): Promise<EquipmentCatalogItem[]> 
   return all.filter((item) => Boolean(item.productUrl?.trim()));
 }
 
+function amazonTileImage(productUrl: string | null): string | null {
+  if (!productUrl) return null;
+  const asin = extractAmazonAsin(productUrl);
+  if (!asin) return null;
+  return `https://ws-na.amazon-adsystem.com/widgets/q?_encoding=UTF8&MarketPlace=US&ASIN=${asin}&ServiceVersion=20070822&ID=AsinImage&WS=1&Format=_SL500_`;
+}
+
 export async function createEquipmentItem(
   data: EquipmentWriteInput,
 ): Promise<EquipmentCatalogItem> {
@@ -102,12 +110,16 @@ export async function createEquipmentItem(
   if (!name) throw new Error("Equipment name is required");
   const productUrl =
     data.productUrl === undefined ? null : normalizeOptionalUrl(data.productUrl);
-  const imageUrl =
+  let imageUrl =
     data.imageUrl === undefined
       ? null
       : data.imageUrl?.trim()
         ? normalizeOptionalUrl(data.imageUrl)
         : null;
+  // Prefer a resolvable product tile when coach only pasted a link
+  if (!imageUrl && productUrl) {
+    imageUrl = amazonTileImage(productUrl);
+  }
 
   if (isDemoMode()) {
     const created = await createDemoEquipmentItem({
@@ -150,6 +162,11 @@ export async function updateEquipmentItem(
   if (data.productUrl !== undefined) patch.productUrl = normalizeOptionalUrl(data.productUrl);
   if (data.imageUrl !== undefined) {
     patch.imageUrl = data.imageUrl?.trim() ? normalizeOptionalUrl(data.imageUrl) : null;
+  }
+  // When saving a product link with no photo, seed an Amazon tile URL for the proxy.
+  if (data.imageUrl !== undefined && !patch.imageUrl && patch.productUrl) {
+    const tile = amazonTileImage(patch.productUrl);
+    if (tile) patch.imageUrl = tile;
   }
 
   if (isDemoMode()) {

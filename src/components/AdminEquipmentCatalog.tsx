@@ -1,7 +1,8 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { formatApiError } from "@/lib/api-errors";
+import { equipmentImageProxyPath } from "@/lib/equipment-image-url";
 
 type EquipmentItem = {
   id: string;
@@ -12,6 +13,7 @@ type EquipmentItem = {
   imageUrl: string | null;
 };
 
+/** Built-in suggestions; coaches can add freeform categories via "Add category…". */
 const CATEGORY_SUGGESTIONS = [
   "bodyweight",
   "dumbbells",
@@ -24,33 +26,78 @@ const CATEGORY_SUGGESTIONS = [
   "accessory",
 ];
 
+const ADD_CATEGORY_VALUE = "__add_category__";
+const NONE_CATEGORY_VALUE = "";
+
+function mergeCategoryOptions(
+  items: EquipmentItem[],
+  extra: string[] = [],
+): string[] {
+  const set = new Set<string>();
+  for (const c of CATEGORY_SUGGESTIONS) {
+    if (c.trim()) set.add(c.trim());
+  }
+  for (const item of items) {
+    const c = item.category?.trim();
+    if (c) set.add(c);
+  }
+  for (const c of extra) {
+    if (c.trim()) set.add(c.trim());
+  }
+  return [...set].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+}
+
 function ProductThumb({
   name,
   imageUrl,
   productUrl,
+  equipmentId,
+  compact,
 }: {
   name: string;
   imageUrl: string | null;
   productUrl?: string | null;
+  equipmentId?: string | null;
+  /** Half-size thumb for denser catalog rows */
+  compact?: boolean;
 }) {
-  const img = (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={imageUrl || ""}
-      alt={name}
-      className="h-full w-full object-contain"
-      loading="lazy"
-      referrerPolicy="no-referrer"
-    />
-  );
+  const [failed, setFailed] = useState(false);
+  const box = compact ? "h-12 w-12" : "h-14 w-14";
 
-  if (!imageUrl) {
+  let src: string | null = null;
+  if (!failed) {
+    if (equipmentId) {
+      src = equipmentImageProxyPath({ equipmentId });
+    } else if (imageUrl) {
+      src = equipmentImageProxyPath({ imageUrl });
+    } else if (productUrl) {
+      // Unsaved Amazon (etc.) link — proxy resolves ASIN photo from product URL
+      src = equipmentImageProxyPath({ imageUrl: productUrl });
+    }
+  }
+
+  const shellClass = `${box} shrink-0 overflow-hidden rounded-md border border-[var(--border)] bg-white`;
+
+  if (!src) {
     return (
-      <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-[10px] text-[var(--muted)]">
+      <div
+        className={`flex ${box} shrink-0 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface-2)] text-[8px] text-[var(--muted)]`}
+      >
         No photo
       </div>
     );
   }
+
+  const img = (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={name}
+      className="h-full w-full object-contain p-0.5"
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  );
 
   if (productUrl) {
     return (
@@ -58,7 +105,7 @@ function ProductThumb({
         href={productUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="block h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-[var(--border)] bg-white"
+        className={`block ${shellClass}`}
         title="Open product (new tab)"
       >
         {img}
@@ -66,9 +113,130 @@ function ProductThumb({
     );
   }
 
+  return <div className={shellClass}>{img}</div>;
+}
+
+/**
+ * Category dropdown with built-in + catalog values, plus "Add category…" for freeform.
+ */
+function EquipmentCategorySelect({
+  id,
+  value,
+  options,
+  onChange,
+  onCategoryCreated,
+  disabled,
+  className,
+}: {
+  id?: string;
+  value: string;
+  options: string[];
+  onChange: (category: string) => void;
+  /** Called when coach adds a brand-new category name (so lists update). */
+  onCategoryCreated?: (category: string) => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  const selectValue = adding
+    ? ADD_CATEGORY_VALUE
+    : value && options.includes(value)
+      ? value
+      : value
+        ? value
+        : NONE_CATEGORY_VALUE;
+
+  // Ensure current custom value appears even if not in options yet
+  const listOptions =
+    value && !options.includes(value) ? [...options, value].sort((a, b) => a.localeCompare(b)) : options;
+
+  function commitNewCategory() {
+    const next = draft.trim();
+    if (!next) {
+      setAdding(false);
+      setDraft("");
+      return;
+    }
+    onChange(next);
+    onCategoryCreated?.(next);
+    setAdding(false);
+    setDraft("");
+  }
+
   return (
-    <div className="h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-[var(--border)] bg-white">
-      {img}
+    <div className="space-y-1.5">
+      <select
+        id={id}
+        className={className ?? "input mt-1 w-full"}
+        value={selectValue}
+        disabled={disabled}
+        aria-label="Category"
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === ADD_CATEGORY_VALUE) {
+            setAdding(true);
+            setDraft(value || "");
+            return;
+          }
+          setAdding(false);
+          setDraft("");
+          onChange(v);
+        }}
+      >
+        <option value={NONE_CATEGORY_VALUE}>No category</option>
+        {listOptions.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+        <option value={ADD_CATEGORY_VALUE}>+ Add category…</option>
+      </select>
+      {adding && (
+        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
+          <input
+            className="input w-full flex-1 text-sm"
+            value={draft}
+            autoFocus
+            placeholder="New category name"
+            aria-label="New category name"
+            disabled={disabled}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commitNewCategory();
+              }
+              if (e.key === "Escape") {
+                setAdding(false);
+                setDraft("");
+              }
+            }}
+          />
+          <div className="flex shrink-0 gap-1.5">
+            <button
+              type="button"
+              className="btn-primary min-h-[36px] px-3 text-xs"
+              disabled={disabled || !draft.trim()}
+              onClick={() => commitNewCategory()}
+            >
+              Add
+            </button>
+            <button
+              type="button"
+              className="btn-ghost min-h-[36px] px-3 text-xs"
+              disabled={disabled}
+              onClick={() => {
+                setAdding(false);
+                setDraft("");
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -88,6 +256,8 @@ export default function AdminEquipmentCatalog() {
   const [newDescription, setNewDescription] = useState("");
   const [newProductUrl, setNewProductUrl] = useState("");
   const [newImageUrl, setNewImageUrl] = useState("");
+  /** Coach-created category names not yet on any item (or still only in form). */
+  const [extraCategories, setExtraCategories] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -106,6 +276,17 @@ export default function AdminEquipmentCatalog() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const categoryOptions = useMemo(
+    () => mergeCategoryOptions(items, extraCategories),
+    [items, extraCategories],
+  );
+
+  function rememberCategory(category: string) {
+    const c = category.trim();
+    if (!c) return;
+    setExtraCategories((prev) => (prev.includes(c) ? prev : [...prev, c]));
+  }
 
   async function previewFromLink() {
     const url = pasteUrl.trim();
@@ -334,19 +515,14 @@ export default function AdminEquipmentCatalog() {
             <label htmlFor="eq-cat" className="text-xs font-medium text-[var(--muted)]">
               Category
             </label>
-            <input
+            <EquipmentCategorySelect
               id="eq-cat"
-              className="input mt-1 w-full"
-              list="eq-cat-suggestions"
               value={newCategory}
-              onChange={(e) => setNewCategory(e.target.value)}
-              placeholder="dumbbells, bands…"
+              options={categoryOptions}
+              onChange={setNewCategory}
+              onCategoryCreated={rememberCategory}
+              disabled={creating}
             />
-            <datalist id="eq-cat-suggestions">
-              {CATEGORY_SUGGESTIONS.map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
           </div>
           <div>
             <label htmlFor="eq-img" className="text-xs font-medium text-[var(--muted)]">
@@ -403,6 +579,8 @@ export default function AdminEquipmentCatalog() {
                     name={item.name}
                     imageUrl={item.imageUrl}
                     productUrl={item.productUrl}
+                    equipmentId={item.id}
+                    compact
                   />
                   <div className="min-w-0 flex-1 space-y-2">
                     <input
@@ -412,15 +590,15 @@ export default function AdminEquipmentCatalog() {
                       aria-label="Name"
                     />
                     <div className="grid gap-2 sm:grid-cols-2">
-                      <input
-                        className="input w-full text-sm"
+                      <EquipmentCategorySelect
                         value={item.category || ""}
-                        onChange={(e) =>
-                          updateDraft(item.id, { category: e.target.value || null })
+                        options={categoryOptions}
+                        className="input w-full text-sm"
+                        onChange={(category) =>
+                          updateDraft(item.id, { category: category || null })
                         }
-                        placeholder="Category"
-                        list="eq-cat-suggestions"
-                        aria-label="Category"
+                        onCategoryCreated={rememberCategory}
+                        disabled={savingId === item.id}
                       />
                       <input
                         className="input w-full text-sm"

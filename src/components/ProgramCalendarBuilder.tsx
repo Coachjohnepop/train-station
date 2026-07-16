@@ -793,7 +793,11 @@ export default function ProgramCalendarBuilder({
     }
 
     const ensured = await ensureWorkoutForOption(day.id, optIdx, optLabel, day);
-    if (!ensured) return;
+    if (!ensured) {
+      setMessage("Could not open this day to write — try Refresh, then click the day again.");
+      setTimeout(() => setMessage(null), 3500);
+      return;
+    }
     const { workoutId, created } = ensured;
 
     setFocus((prev) =>
@@ -1396,6 +1400,31 @@ export default function ProgramCalendarBuilder({
     await openDayOption(day, week, gymIdx >= 0 ? gymIdx : 0, "Gym");
   }
 
+  /**
+   * Jump to a program week and open Mon so the coach can write immediately.
+   * Without this, "Jump to week 2" only swapped the grid while the editor stayed
+   * on week 1 — felt like week 2 could not be written.
+   */
+  async function jumpToWeek(weekNumber: number) {
+    const week = weeks.find((w) => w.weekNumber === weekNumber);
+    if (!week) {
+      setMessage(
+        `Week ${weekNumber} is not on this program yet. Tap Refresh, or check the program length.`,
+      );
+      setTimeout(() => setMessage(null), 4000);
+      return;
+    }
+    setActiveWeek(weekNumber);
+    const day = [...week.days].sort((a, b) => a.dayNumber - b.dayNumber)[0];
+    if (!day) {
+      setFocus(null);
+      setMessage(`Week ${weekNumber} has no days — tap Refresh.`);
+      setTimeout(() => setMessage(null), 3500);
+      return;
+    }
+    await selectDay(day, week);
+  }
+
   const adjacentDayNav = useMemo(() => {
     if (!focus) return { prev: null, next: null };
     const prevCoord = adjacentProgramDay(
@@ -1880,13 +1909,15 @@ export default function ProgramCalendarBuilder({
 
   async function copyWeekToThisWeek() {
     if (activeWeek <= 1) return;
-    const ok = await copyWeek(activeWeek - 1, activeWeek);
+    const targetWeek = activeWeek;
+    const ok = await copyWeek(activeWeek - 1, targetWeek);
     if (ok) {
       await sync();
+      await jumpToWeek(targetWeek);
       setMessage(
         autoClearNotesOnCopy
-          ? `Week ${activeWeek} copied — independent workouts, draft, day notes cleared. Write new notes, then Publish.`
-          : `Week ${activeWeek} copied — independent workouts, draft (not published). Edit day notes, then Publish when ready.`,
+          ? `Week ${targetWeek} copied — independent workouts, draft, day notes cleared. Write new notes, then Publish.`
+          : `Week ${targetWeek} copied — independent workouts, draft (not published). Edit day notes, then Publish when ready.`,
       );
       setTimeout(() => setMessage(null), 4500);
     }
@@ -2288,19 +2319,20 @@ export default function ProgramCalendarBuilder({
       {contentAlert && (
         <ProgramContentReadinessBanner
           alert={contentAlert}
-          onJumpToWeek={(weekNumber) => setActiveWeek(weekNumber)}
+          onJumpToWeek={(weekNumber) => void jumpToWeek(weekNumber)}
           onTextUpload={scrollToUploadPanel}
           onCopyPrevWeek={async (toWeek, fromWeek) => {
             const ok = await copyWeek(fromWeek, toWeek);
             if (ok) {
               await sync();
-              setActiveWeek(toWeek);
-              setMessage(`Week ${fromWeek} copied to week ${toWeek}.`);
+              await jumpToWeek(toWeek);
+              setMessage(`Week ${fromWeek} copied to week ${toWeek} — edit below.`);
               setTimeout(() => setMessage(null), 3500);
             }
           }}
           onCopyWeek1Remaining={async () => {
             await copyWeekToRemaining(1);
+            await jumpToWeek(2);
           }}
         />
       )}
@@ -2335,7 +2367,7 @@ export default function ProgramCalendarBuilder({
                   ? "bg-amber-500/15 text-amber-200 ring-1 ring-amber-500/50"
                   : "bg-[var(--surface-2)] text-[var(--muted)]"
             }`}
-            onClick={() => setActiveWeek(w.weekNumber)}
+            onClick={() => void jumpToWeek(w.weekNumber)}
           >
             Week {w.weekNumber}
             {attentionWeeks.has(w.weekNumber) && !contentAlert?.readiness.isCurrentWithClients ? " ⚠" : ""}
@@ -2380,9 +2412,10 @@ export default function ProgramCalendarBuilder({
               {activeWeekData.weekNumber > 1 && (
                 <button
                   type="button"
-                  className="btn-ghost text-xs"
+                  className="btn-primary text-xs"
                   disabled={saving}
                   onClick={() => void copyWeekToThisWeek()}
+                  title={`Clone week ${activeWeekData.weekNumber - 1} into week ${activeWeekData.weekNumber}, then edit`}
                 >
                   Copy from week {activeWeekData.weekNumber - 1}
                 </button>
@@ -2399,6 +2432,13 @@ export default function ProgramCalendarBuilder({
               )}
             </div>
           </div>
+
+          <p className="mb-2 text-[11px] text-[var(--muted)]">
+            Click a day (Mon–Sun) to write or edit its Gym/Home workout
+            {activeWeekData.weekNumber > 1
+              ? ` — or use Copy from week ${activeWeekData.weekNumber - 1} to seed, then tweak.`
+              : "."}
+          </p>
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
             {[...activeWeekData.days]
