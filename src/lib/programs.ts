@@ -134,9 +134,15 @@ export function isJunkWorkoutName(name: string): boolean {
   if (/copy-week/i.test(n)) return true;
   if (/^gym$/i.test(n)) return true;
   if (/day test showing/i.test(n)) return true;
-  if (/^adult strength conditioning ·/i.test(n)) return true;
+  // Soak / builder-loop markers (not real coach content)
+  if (/\bjerdog\b/i.test(n)) return true;
+  if (/\bbuilder-soak\b/i.test(n)) return true;
+  if (/\bclone-party-soak\b/i.test(n)) return true;
+  if (/\btestingsilly\b/i.test(n)) return true;
   if (/^totally fake/i.test(n)) return true;
   if (/^qa workout/i.test(n)) return true;
+  // Do NOT treat "Adult Strength Conditioning · … Fasted cardio" as junk —
+  // those are real program-day titles Jeremy uses.
 
   return false;
 }

@@ -98,10 +98,29 @@ async function clearWorkoutReferences(prisma: PrismaClient, workoutIds: string[]
   const removedLogs = await prisma.workoutLog.deleteMany({
     where: { workoutId: { in: workoutIds } },
   });
+  // Cycle slots + templates block Workout delete if left hanging
+  const removedCycleSlots = await prisma.workoutCycleDaySlot.deleteMany({
+    where: { workoutId: { in: workoutIds } },
+  });
+  let removedTemplates = 0;
+  try {
+    const t = await prisma.workoutTemplate.deleteMany({
+      where: { workoutId: { in: workoutIds } },
+    });
+    removedTemplates = t.count;
+  } catch {
+    /* model may not exist on older schema */
+  }
+  // Lines go with the workout via Cascade once parent is free
+  await prisma.workoutExercise.deleteMany({
+    where: { workoutId: { in: workoutIds } },
+  });
   return {
     programDayOptions: removedOptions.count,
     programDays: clearedDays.count,
     workoutLogs: removedLogs.count,
+    cycleSlots: removedCycleSlots.count,
+    templates: removedTemplates,
   };
 }
 
