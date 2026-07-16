@@ -8,11 +8,10 @@ export async function GET() {
   const auth = await requireCoachStaff();
   if (!auth.ok) return auth.response;
 
-  const status = await getZoomCoachStatus();
+  const status = await getZoomCoachStatus(auth.session.email);
   return NextResponse.json(
     {
       ...status,
-      coachEmail: auth.session.email,
     },
     {
       headers: {

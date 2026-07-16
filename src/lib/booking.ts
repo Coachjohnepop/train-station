@@ -392,7 +392,10 @@ export async function getMemberLiveSessions(input: {
     });
 }
 
-export async function ensureBookingZoomLink(bookingId: string) {
+export async function ensureBookingZoomLink(
+  bookingId: string,
+  opts?: { coachEmail?: string | null },
+) {
   const { createZoomMeeting } = await import("@/lib/zoom");
   const booking = await getBookingById(bookingId);
   if (!booking) return { error: "Booking not found." as const };
@@ -414,6 +417,7 @@ export async function ensureBookingZoomLink(bookingId: string) {
     topic: `Train Station — ${memberLabel}`,
     scheduledAt: new Date(booking.scheduledAt),
     durationMin: booking.durationMin || 15,
+    coachEmail: opts?.coachEmail,
   });
 
   const updated = await attachZoomToBooking(booking.id, zoom);

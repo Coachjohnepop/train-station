@@ -100,16 +100,16 @@ export default function ZoomConnectPanel() {
         scope:
           "Zoom rejected scopes. In marketplace.zoom.us → your app → Scopes, enable user:read:user, meeting:write:meeting, and user:read:token — then Connect again. Or set Vercel ZOOM_OAUTH_SCOPES=app to use the app’s defaults.",
         state:
-          "Connection timed out or Connect was clicked more than once — stay signed in as jeremy@thetrainstation.co, tap Connect once, then approve on Zoom immediately.",
+          "Connection timed out or Connect was clicked more than once — stay signed in as this coach, tap Connect once, then approve on Zoom immediately.",
         session: "Your coach session expired — sign in again, then Connect Zoom.",
         denied: "Zoom authorization was cancelled or denied — tap Connect when you are ready.",
         redirect:
           "Redirect URL mismatch — in Zoom app settings, OAuth redirect must be exactly https://www.thetrainstation.co/api/admin/zoom/callback (and optionally the non-www twin).",
         exchange: "Zoom token exchange failed — confirm Client ID/Secret in Vercel match your Zoom app (Development vs Production).",
         missing_code:
-          "Zoom did not return a code (Marketplace error page). Sign out of Zoom completely, sign in as jeremy@thetrainstation.co, ensure the app has him as a test user if still in Development, then Connect once.",
+          "Zoom did not return a code (Marketplace error page). Sign out of Zoom completely, sign back into your coach Zoom user (same email as this coach login when possible), then Connect once. Development apps only work for the app owner’s Zoom account until published.",
         wrong_host:
-          "Wrong Zoom user. Live class must use jeremy@thetrainstation.co so recordings save on Jeremy’s account. Sign out of Zoom completely, then Connect again while signed into that Zoom.",
+          "Wrong Zoom user for this coach. Sign into Zoom with your coach login email (or an allowlisted host), sign out of any other Zoom session, then Connect again.",
       };
       const base = messages[reason] || "Zoom connection failed — try Connect again.";
       setBanner({
@@ -226,12 +226,12 @@ export default function ZoomConnectPanel() {
   return (
     <section className="card space-y-4 p-5">
       <div>
-        <h2 className="text-lg font-semibold">Live Zoom rooms (free plan)</h2>
+        <h2 className="text-lg font-semibold">Your Zoom (live class host)</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Live class must host as <strong>{requiredHost}</strong> so recordings save on Jeremy&apos;s
-          Zoom / laptop. Sessions cap at {status.maxDurationMin} minutes. Coach starts the room —
-          members join after. Google sign-in on Zoom&apos;s page is fine as long as that Zoom user
-          is {requiredHost}.
+          Each coach connects <strong>their own</strong> Zoom. Prefer signing into Zoom as{" "}
+          <strong>{requiredHost}</strong> so this account hosts and recordings land there. Sessions
+          cap at {status.maxDurationMin} minutes. You start the room — members join after. Other
+          coaches keep their own Connect (they do not overwrite yours).
         </p>
       </div>
 

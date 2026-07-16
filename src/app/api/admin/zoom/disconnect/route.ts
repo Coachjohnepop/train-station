@@ -10,7 +10,7 @@ export async function POST() {
   if (!auth.ok) return auth.response;
 
   const { saved } = await clearZoomOAuthRecord(auth.session.email);
-  const status = await getZoomCoachStatus();
+  const status = await getZoomCoachStatus(auth.session.email);
 
   return NextResponse.json(
     {

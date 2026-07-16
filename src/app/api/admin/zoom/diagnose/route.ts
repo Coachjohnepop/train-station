@@ -10,8 +10,8 @@ export async function GET() {
   if (!auth.ok) return auth.response;
 
   const [status, diagnostics] = await Promise.all([
-    getZoomCoachStatus(),
-    getZoomOAuthDiagnostics(),
+    getZoomCoachStatus(auth.session.email),
+    getZoomOAuthDiagnostics(auth.session.email),
   ]);
 
   return NextResponse.json(

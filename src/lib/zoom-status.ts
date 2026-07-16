@@ -4,8 +4,8 @@ import { ZOOM_FREE_MAX_DURATION_MIN, zoomOAuthAppConfigured } from "@/lib/zoom-o
 import { zoomReady, zoomS2SConfigured } from "@/lib/zoom";
 import { getZoomOAuthRecord } from "@/lib/zoom-oauth-store";
 import {
-  isAllowedZoomHostEmail,
-  zoomRequiredHostEmail,
+  expectedZoomHostForCoach,
+  isAllowedZoomHostForCoach,
 } from "@/lib/zoom-env";
 import {
   zoomMeetingSdkConfigHint,
@@ -21,10 +21,12 @@ export type ZoomCoachStatus = {
   sdkConfigHint: string | null;
   maxDurationMin: number;
   coachStartsFirst: boolean;
-  /** Zoom login that must host class / hold recordings. */
+  /** Expected Zoom login for this coach (their TS email or env host). */
   requiredHostEmail: string;
-  /** Connected but not the required host (should reconnect). */
+  /** Connected Zoom profile is not allowed for this coach. */
   wrongHostAccount: boolean;
+  /** Multi-coach: status is scoped to this coach email. */
+  coachEmail: string | null;
   account: {
     email: string;
     displayName: string;
@@ -33,21 +35,21 @@ export type ZoomCoachStatus = {
   } | null;
 };
 
-export async function getZoomCoachStatus(): Promise<ZoomCoachStatus> {
-  const record = await getZoomOAuthRecord({ preferFresh: true });
+export async function getZoomCoachStatus(coachEmail: string): Promise<ZoomCoachStatus> {
+  const email = coachEmail.trim().toLowerCase();
+  const record = email
+    ? await getZoomOAuthRecord({ coachEmail: email, preferFresh: true })
+    : null;
   const connected = Boolean(record?.refreshToken);
   const s2sConfigured = zoomS2SConfigured();
-  // Room start works via S2S *or* coach OAuth — do not require OAuth alone.
-  const canCreateRooms = await zoomReady();
-  const requiredHostEmail = zoomRequiredHostEmail();
+  const canCreateRooms = await zoomReady({ coachEmail: email || undefined });
+  const requiredHostEmail = expectedZoomHostForCoach(email);
   const wrongHostAccount =
-    connected && record ? !isAllowedZoomHostEmail(record.email) : false;
+    connected && record
+      ? !isAllowedZoomHostForCoach(record.email, email)
+      : false;
 
-  // Only block class start when the *only* path is a wrong OAuth user.
-  // S2S can still host; coach should reconnect OAuth for recordings identity.
-  const ready =
-    canCreateRooms &&
-    !(wrongHostAccount && !s2sConfigured);
+  const ready = canCreateRooms && !(wrongHostAccount && !s2sConfigured);
 
   return {
     oauthAppConfigured: zoomOAuthAppConfigured(),
@@ -60,13 +62,15 @@ export async function getZoomCoachStatus(): Promise<ZoomCoachStatus> {
     coachStartsFirst: true,
     requiredHostEmail,
     wrongHostAccount,
-    account: connected && record
-      ? {
-          email: record.email,
-          displayName: record.displayName,
-          connectedAt: record.connectedAt,
-          connectedByEmail: record.connectedByEmail,
-        }
-      : null,
+    coachEmail: email || null,
+    account:
+      connected && record
+        ? {
+            email: record.email,
+            displayName: record.displayName,
+            connectedAt: record.connectedAt,
+            connectedByEmail: record.connectedByEmail,
+          }
+        : null,
   };
 }

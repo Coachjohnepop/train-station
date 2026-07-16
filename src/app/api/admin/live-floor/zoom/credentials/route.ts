@@ -35,9 +35,10 @@ export async function GET(request: Request) {
   const ensure = searchParams.get("ensure") === "1";
 
   try {
+    const coachEmail = auth.session.email;
     let record = await getLiveClassZoom(sessionDate);
     if (!record && ensure) {
-      const ensured = await ensureLiveClassZoom(sessionDate);
+      const ensured = await ensureLiveClassZoom(sessionDate, { coachEmail });
       record = ensured.record;
     }
     if (!record) {
@@ -59,7 +60,7 @@ export async function GET(request: Request) {
 
     let zak: string | null = null;
     try {
-      zak = await fetchZoomZakToken();
+      zak = await fetchZoomZakToken({ coachEmail });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Could not fetch ZAK token.";
       return NextResponse.json({ error: message }, { status: 502 });

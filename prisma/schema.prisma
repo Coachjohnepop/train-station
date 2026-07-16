@@ -504,7 +504,10 @@ model CoachTodaySession {
   @@index([scheduledAt])
 }
 
-/** Coach Zoom OAuth connection (singleton row, id = "coach"). */
+/**
+ * Per-coach Zoom OAuth connection.
+ * `id` = lower-case Train Station coach login email (was singleton "coach").
+ */
 model CoachZoomOAuth {
   id               String   @id
   zoomUserId       String
@@ -514,6 +517,9 @@ model CoachZoomOAuth {
   connectedAt      DateTime
   connectedByEmail String
   updatedAt        DateTime @updatedAt
+
+  @@index([email])
+  @@index([connectedByEmail])
 }
 
 /** Short-lived Zoom OAuth state backup when the state cookie is missing. */

@@ -11,8 +11,8 @@ import {
 import { consumeZoomOAuthState } from "@/lib/zoom-oauth-pending";
 import { exchangeZoomAuthCode, fetchZoomUserProfile } from "@/lib/zoom";
 import {
-  isAllowedZoomHostEmail,
-  zoomRequiredHostEmail,
+  expectedZoomHostForCoach,
+  isAllowedZoomHostForCoach,
 } from "@/lib/zoom-env";
 import { saveZoomOAuthRecord } from "@/lib/zoom-oauth-store";
 
@@ -93,14 +93,15 @@ export async function GET(request: Request) {
     const tokens = await exchangeZoomAuthCode(code, redirectUri);
     const profile = await fetchZoomUserProfile(tokens.accessToken);
 
-    // Recordings + host identity must be the required coach Zoom account.
-    if (!isAllowedZoomHostEmail(profile.email)) {
-      const required = zoomRequiredHostEmail();
+    // Multi-coach: Zoom profile must match this coach's login (or global allowlist).
+    const coachEmail = auth.session.email;
+    if (!isAllowedZoomHostForCoach(profile.email, coachEmail)) {
+      const required = expectedZoomHostForCoach(coachEmail);
       const got = (profile.email || "unknown").trim() || "unknown";
       return redirectWithError(
         request,
         "wrong_host",
-        `Zoom signed in as ${got} — need ${required}. Sign out of Zoom, then Connect again.`,
+        `Zoom signed in as ${got} — use ${required} (your coach login) or add that Zoom email to ZOOM_HOST_EMAILS. Sign out of Zoom, then Connect again.`,
       );
     }
 
@@ -110,7 +111,7 @@ export async function GET(request: Request) {
       displayName: profile.displayName,
       refreshToken: tokens.refreshToken,
       connectedAt: new Date().toISOString(),
-      connectedByEmail: auth.session.email,
+      connectedByEmail: coachEmail,
     });
 
     const settingsUrl = `${zoomSettingsBase(request)}/admin/settings`;

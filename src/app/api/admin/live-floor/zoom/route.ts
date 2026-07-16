@@ -28,7 +28,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { record, created } = await ensureLiveClassZoom(sessionDate);
+    const coachEmail = auth.session.email;
+    const { record, created } = await ensureLiveClassZoom(sessionDate, { coachEmail });
     let notified = 0;
     if (created && !record.demo) {
       const alert = await notifyLiveClassZoomAttendees(record.sessionDate, record.joinUrl);
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
       created,
       notified,
       hostStarted: startHost && !record.demo,
-      ready: await zoomReady(),
+      ready: await zoomReady({ coachEmail }),
       sdkConfigured: zoomMeetingSdkConfigured(),
       maxDurationMin: ZOOM_FREE_MAX_DURATION_MIN,
       coachStartsFirst: true,
@@ -69,13 +70,14 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const sessionDate = searchParams.get("date") ?? undefined;
+  const coachEmail = auth.session.email;
 
   const { getLiveClassZoom } = await import("@/lib/live-class-zoom");
   const record = await getLiveClassZoom(sessionDate);
 
   return NextResponse.json({
     ok: true,
-    ready: await zoomReady(),
+    ready: await zoomReady({ coachEmail }),
     sdkConfigured: zoomMeetingSdkConfigured(),
     maxDurationMin: ZOOM_FREE_MAX_DURATION_MIN,
     zoom: record

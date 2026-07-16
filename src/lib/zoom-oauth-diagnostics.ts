@@ -23,9 +23,12 @@ export type ZoomOAuthDiagnostics = {
   dbDetail: string | null;
   oauthRecord: "connected" | "cleared" | "missing";
   oauthEmail: string | null;
+  coachEmail: string | null;
 };
 
-export async function getZoomOAuthDiagnostics(): Promise<ZoomOAuthDiagnostics> {
+export async function getZoomOAuthDiagnostics(
+  coachEmail?: string | null,
+): Promise<ZoomOAuthDiagnostics> {
   const clientId = zoomClientId();
   const secret = zoomClientSecret();
   const redirectUri = zoomOAuthCallbackUrl();
@@ -69,7 +72,9 @@ export async function getZoomOAuthDiagnostics(): Promise<ZoomOAuthDiagnostics> {
   const dbProbe = isDemoMode()
     ? { ok: true, message: "demo_mode_local_file" }
     : await probeZoomOAuthDb();
-  const record = await getZoomOAuthRecord({ preferFresh: true });
+  const record = coachEmail
+    ? await getZoomOAuthRecord({ coachEmail, preferFresh: true })
+    : null;
 
   return {
     clientIdPresent: Boolean(clientId),
@@ -84,5 +89,6 @@ export async function getZoomOAuthDiagnostics(): Promise<ZoomOAuthDiagnostics> {
     dbDetail: dbProbe.ok ? null : dbProbe.message,
     oauthRecord: record?.refreshToken ? "connected" : "missing",
     oauthEmail: record?.email || null,
+    coachEmail: coachEmail || null,
   };
 }

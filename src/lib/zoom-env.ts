@@ -46,3 +46,24 @@ export function isAllowedZoomHostEmail(email: string | null | undefined): boolea
   }
   return false;
 }
+
+/**
+ * Multi-coach host rule: Zoom profile email may match the coach's Train Station
+ * login, or appear on the global ZOOM_HOST_EMAIL(S) allowlist / domain flag.
+ */
+export function isAllowedZoomHostForCoach(
+  zoomEmail: string | null | undefined,
+  coachEmail: string | null | undefined,
+): boolean {
+  const z = (zoomEmail || "").trim().toLowerCase();
+  const c = (coachEmail || "").trim().toLowerCase();
+  if (z && c && z === c) return true;
+  return isAllowedZoomHostEmail(z);
+}
+
+/** Primary expected host for UI: coach's own login when multi-coach. */
+export function expectedZoomHostForCoach(coachEmail: string | null | undefined): string {
+  const c = (coachEmail || "").trim().toLowerCase();
+  if (c) return c;
+  return zoomRequiredHostEmail();
+}

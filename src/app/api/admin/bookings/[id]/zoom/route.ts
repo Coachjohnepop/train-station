@@ -14,13 +14,14 @@ export async function POST(_request: Request, { params }: Params) {
 
   const { id } = await params;
   try {
-    const result = await ensureBookingZoomLink(id);
+    const coachEmail = auth.session.email;
+    const result = await ensureBookingZoomLink(id, { coachEmail });
     if ("error" in result) {
       return NextResponse.json({ error: result.error }, { status: 404 });
     }
     return NextResponse.json({
       ok: true,
-      ready: await zoomReady(),
+      ready: await zoomReady({ coachEmail }),
       maxDurationMin: ZOOM_FREE_MAX_DURATION_MIN,
       coachStartsFirst: true,
       reused: result.reused,

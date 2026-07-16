@@ -18,6 +18,11 @@ export type ZoomMeetingResult = {
   demo?: boolean;
 };
 
+export type ZoomCoachContext = {
+  /** Train Station coach login email — scopes OAuth tokens. */
+  coachEmail?: string | null;
+};
+
 export { ZOOM_FREE_MAX_DURATION_MIN };
 
 type ZoomCredentials = {
@@ -27,7 +32,8 @@ type ZoomCredentials = {
 };
 
 let cachedS2SToken: { value: string; expiresAt: number } | null = null;
-let cachedUserToken: { value: string; expiresAt: number } | null = null;
+/** Per-coach OAuth access tokens (key = lower-case coach email). */
+const cachedUserTokens = new Map<string, { value: string; expiresAt: number }>();
 
 export function zoomS2SConfigured(): boolean {
   return Boolean(zoomAccountId() && zoomClientId() && zoomClientSecret());
@@ -37,9 +43,17 @@ export function zoomConfigured(): boolean {
   return zoomS2SConfigured() || zoomOAuthAppConfigured();
 }
 
-export async function zoomReady(): Promise<boolean> {
+export async function zoomReady(ctx?: ZoomCoachContext): Promise<boolean> {
   if (zoomS2SConfigured()) return true;
-  if (zoomOAuthAppConfigured() && (await isZoomCoachConnected())) return true;
+  const coachEmail = ctx?.coachEmail?.trim();
+  if (zoomOAuthAppConfigured() && coachEmail && (await isZoomCoachConnected(coachEmail))) {
+    return true;
+  }
+  // Member / anonymous: ready if any path exists (S2S already returned true)
+  if (zoomOAuthAppConfigured() && !coachEmail) {
+    // Prefer S2S for unscoped checks; OAuth alone without coach is not multi-coach ready
+    return false;
+  }
   return false;
 }
 
@@ -115,13 +129,17 @@ async function getZoomS2SAccessToken(): Promise<string> {
   return token;
 }
 
-async function getZoomUserAccessToken(): Promise<string | null> {
-  const record = await getZoomOAuthRecord();
+async function getZoomUserAccessToken(coachEmail: string): Promise<string | null> {
+  const key = coachEmail.trim().toLowerCase();
+  if (!key) return null;
+
+  const record = await getZoomOAuthRecord({ coachEmail: key });
   if (!record?.refreshToken) return null;
 
   const now = Date.now();
-  if (cachedUserToken && cachedUserToken.expiresAt > now + 60_000) {
-    return cachedUserToken.value;
+  const cached = cachedUserTokens.get(key);
+  if (cached && cached.expiresAt > now + 60_000) {
+    return cached.value;
   }
 
   const params = new URLSearchParams({
@@ -130,13 +148,16 @@ async function getZoomUserAccessToken(): Promise<string | null> {
   });
 
   const token = await exchangeZoomToken(params);
-  cachedUserToken = { value: token, expiresAt: now + 3500 * 1000 };
+  cachedUserTokens.set(key, { value: token, expiresAt: now + 3500 * 1000 });
   return token;
 }
 
-async function resolveZoomAccessToken(): Promise<string | null> {
-  const userToken = await getZoomUserAccessToken();
-  if (userToken) return userToken;
+async function resolveZoomAccessToken(ctx?: ZoomCoachContext): Promise<string | null> {
+  const coachEmail = ctx?.coachEmail?.trim();
+  if (coachEmail) {
+    const userToken = await getZoomUserAccessToken(coachEmail);
+    if (userToken) return userToken;
+  }
   if (zoomS2SConfigured()) return getZoomS2SAccessToken();
   return null;
 }
@@ -170,9 +191,11 @@ export async function createZoomMeeting(input: {
   scheduledAt: Date;
   durationMin: number;
   timezone?: string;
+  /** Coach whose Zoom OAuth hosts the meeting (multi-coach). */
+  coachEmail?: string | null;
 }): Promise<ZoomMeetingResult> {
   const durationMin = capZoomDurationMin(input.durationMin);
-  const token = await resolveZoomAccessToken();
+  const token = await resolveZoomAccessToken({ coachEmail: input.coachEmail });
   if (!token) return { ...demoMeeting(input.bookingId), durationMin };
 
   const timezone = input.timezone || process.env.ZOOM_TIMEZONE?.trim() || "America/Los_Angeles";
@@ -208,8 +231,8 @@ export async function createZoomMeeting(input: {
   };
 }
 
-export async function fetchZoomZakToken(): Promise<string | null> {
-  const token = await resolveZoomAccessToken();
+export async function fetchZoomZakToken(ctx?: ZoomCoachContext): Promise<string | null> {
+  const token = await resolveZoomAccessToken(ctx);
   if (!token) return null;
 
   const res = await fetch("https://api.zoom.us/v2/users/me/token?type=zak", {

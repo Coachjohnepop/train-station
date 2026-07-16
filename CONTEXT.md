@@ -275,20 +275,24 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - Equipment with product link must have a **fetchable** image to publish to Gear  
 - Rest timer v1 = member app; per-exercise Rest; not yet live-floor-specific polish  
 
+### Multi-coach Zoom (shipped Jul 16)
+- **Per-coach OAuth:** `CoachZoomOAuth.id` = lower-case coach login email (not singleton `coach`).
+- Each coach Connects **their** Zoom; disconnect only clears that coach.
+- Host rule: Zoom profile email **matches coach login** OR `ZOOM_HOST_EMAIL` / `ZOOM_HOST_EMAILS` / domain flag.
+- Meetings / ZAK use the **logged-in coach’s** tokens.
+- **Ops still required for external Zoom accounts:** Marketplace app **Publish** (Development = same Zoom org as app owner only). After publish, put Production Client ID/Secret in Vercel if different.
+- Prod row migrated: `jeremy@thetrainstation.co` keeps existing tokens.
+
 ### When back (undone / next)
 
-1. **Stripe Live** — still test mode; multi-coach Stripe week goal when ready  
-2. **Zoom Marketplace publish** — needed so other coaches’ Zoom accounts can OAuth (today: Development / same-account)  
-3. **Rest timer follow-ups (optional)**  
-   - Ensure coach Rest defaults on more program lines (few seed rows had restSec)  
-   - Live floor parity / softer chime / +15s −15s  
-4. **Equipment follow-ups (optional)**  
-   - Persist images to Blob so less Amazon CDN dependency  
-   - Backfill any Gear rows still missing photos  
-5. **Member multi-session schedule UI** — multi-part days still need polish on member view  
-6. **Jeremy morning feedback** — notes/directions + rest clock + any breakages after 11am class  
-7. **Optional further prod hygiene** — empty Day-N Home shells still *linked* (Day 10/17/25/28); only touch if product wants them gone  
-8. **SMS Twilio** / Zoom embed polish as needed  
+1. **Stripe Live** — still test mode  
+2. **Zoom Marketplace publish** — required before a second coach on a *different* personal Zoom can authorize  
+3. **Invite second INSTRUCTOR** staff account when named coach is ready  
+4. **Rest timer follow-ups (optional)** — more default restSec; live floor polish  
+5. **Equipment** — Blob image storage; photo backfill  
+6. **Member multi-session schedule UI**  
+7. **Jeremy feedback** after live classes  
+8. **SMS Twilio** / Zoom embed polish  
 
 ### Branch / deploy
-`main` @ origin — latest includes rest timer v1, junk cleanups, nav/badge/title/equipment/notes fixes. Vercel Production auto-deploys from `main`.
+`main` @ origin — multi-coach Zoom + prior Jul 15 work. Vercel Production auto-deploys from `main`.

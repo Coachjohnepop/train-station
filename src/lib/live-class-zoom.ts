@@ -106,7 +106,10 @@ export async function memberHasLiveAccessOnDate(input: {
   return false;
 }
 
-export async function ensureLiveClassZoom(sessionDate?: string): Promise<{
+export async function ensureLiveClassZoom(
+  sessionDate?: string,
+  opts?: { coachEmail?: string | null },
+): Promise<{
   record: LiveClassZoomRecord;
   created: boolean;
 }> {
@@ -129,6 +132,7 @@ export async function ensureLiveClassZoom(sessionDate?: string): Promise<{
     topic: `Train Station Live — ${date}`,
     scheduledAt,
     durationMin: 40,
+    coachEmail: opts?.coachEmail,
   });
 
   const record: LiveClassZoomRecord = {
