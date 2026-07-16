@@ -100,7 +100,7 @@ function amazonTileImage(productUrl: string | null): string | null {
   if (!productUrl) return null;
   const asin = extractAmazonAsin(productUrl);
   if (!asin) return null;
-  return `https://ws-na.amazon-adsystem.com/widgets/q?_encoding=UTF8&MarketPlace=US&ASIN=${asin}&ServiceVersion=20070822&ID=AsinImage&WS=1&Format=_SL500_`;
+  return `https://images-na.ssl-images-amazon.com/images/P/${asin}.01.MAIN._SCRMZZZZZZ_.jpg`;
 }
 
 export async function createEquipmentItem(

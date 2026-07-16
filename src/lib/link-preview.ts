@@ -70,9 +70,9 @@ export function extractAmazonAsin(url: string): string | null {
 }
 
 function amazonImageFallback(asin: string): string {
-  // Ads widget is more reliable than the old images/P/{ASIN} pattern (often 404).
+  // MAIN tile path — verified to return real JPEGs (ads-widget / SCLZZZZZZZ often dead).
   const a = asin.toUpperCase();
-  return `https://ws-na.amazon-adsystem.com/widgets/q?_encoding=UTF8&MarketPlace=US&ASIN=${a}&ServiceVersion=20070822&ID=AsinImage&WS=1&Format=_SL500_`;
+  return `https://images-na.ssl-images-amazon.com/images/P/${a}.01.MAIN._SCRMZZZZZZ_.jpg`;
 }
 
 function cleanProductTitle(title: string | null, host: string): string | null {

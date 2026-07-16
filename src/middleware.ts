@@ -30,6 +30,8 @@ const PUBLIC_API_PREFIXES = [
   "/api/stripe/webhook",
   "/api/sms/inbound",
   "/api/analytics",
+  // Product photos for <img> — same-origin proxy; no secrets, catalog ids only
+  "/api/equipment/image",
 ];
 
 function isPublicPage(pathname: string): boolean {

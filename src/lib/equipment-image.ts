@@ -33,17 +33,29 @@ export function isAllowedEquipmentImageHost(hostname: string): boolean {
 
 /**
  * Candidate image URLs for an Amazon ASIN.
- * Old `images/P/{ASIN}.01…` patterns often 404; try several CDNs.
+ * Prefer `.01.MAIN…` paths — the old `.01._SCLZZZZZZZ_` and ads-widget
+ * URLs often return a 43-byte placeholder GIF or fail DNS.
  */
 export function amazonImageCandidates(asin: string): string[] {
   const a = asin.toUpperCase();
   return [
-    // Ads widget — historically reliable for product tiles
-    `https://ws-na.amazon-adsystem.com/widgets/q?_encoding=UTF8&MarketPlace=US&ASIN=${a}&ServiceVersion=20070822&ID=AsinImage&WS=1&Format=_SL300_`,
-    `https://m.media-amazon.com/images/P/${a}.01._SCLZZZZZZZ_SX300_.jpg`,
-    `https://images-na.ssl-images-amazon.com/images/P/${a}.01._SCLZZZZZZZ_SX300_.jpg`,
+    `https://images-na.ssl-images-amazon.com/images/P/${a}.01.MAIN._SCRMZZZZZZ_.jpg`,
+    `https://m.media-amazon.com/images/P/${a}.01.MAIN._AC_SL500_.jpg`,
+    `https://m.media-amazon.com/images/P/${a}._AC_SL500_.jpg`,
+    `https://images.amazon.com/images/P/${a}.01.LZZZZZZZ.jpg`,
+    `https://images-na.ssl-images-amazon.com/images/P/${a}.01.MAIN.jpg`,
     `https://images-na.ssl-images-amazon.com/images/P/${a}.01.LZZZZZZZ.jpg`,
   ];
+}
+
+/** True when a stored imageUrl is a known-broken Amazon pattern we should skip. */
+export function isLikelyBrokenAmazonImageUrl(url: string): boolean {
+  const u = url.toLowerCase();
+  return (
+    u.includes("amazon-adsystem.com") ||
+    u.includes("._sclzzzzzzz_") ||
+    u.includes(".01._sclzzzzzzz_")
+  );
 }
 
 /** Ordered candidates: stored image first, then Amazon ASIN fallbacks. */
@@ -66,10 +78,26 @@ export function resolveEquipmentImageCandidates(
     }
   };
 
-  push(imageUrl);
-  const asin = productUrl ? extractAmazonAsin(productUrl) : null;
+  // Skip known-dead Amazon tile URLs so ASIN MAIN patterns can win.
+  if (imageUrl?.trim() && !isLikelyBrokenAmazonImageUrl(imageUrl)) {
+    push(imageUrl);
+  }
+
+  const asinFromImage = (url: string | null | undefined): string | null => {
+    if (!url) return null;
+    const m = url.match(/\/images\/P\/([A-Z0-9]{10})/i);
+    if (m?.[1]) return m[1].toUpperCase();
+    return extractAmazonAsin(url);
+  };
+
+  const asin =
+    (productUrl ? extractAmazonAsin(productUrl) : null) || asinFromImage(imageUrl);
   if (asin) {
     for (const c of amazonImageCandidates(asin)) push(c);
+  }
+  // Last resort: try stored URL even if it looked broken
+  if (imageUrl?.trim() && isLikelyBrokenAmazonImageUrl(imageUrl)) {
+    push(imageUrl);
   }
   return out;
 }
@@ -117,7 +145,8 @@ export async function fetchFirstWorkingImage(
         continue;
       }
       const body = await res.arrayBuffer();
-      if (body.byteLength < 200) continue; // tiny error GIF / empty
+      // Amazon serves a ~43-byte placeholder GIF when the ASIN path is wrong
+      if (body.byteLength < 500) continue;
       // Cap proxy payload (~2.5MB)
       if (body.byteLength > 2_500_000) continue;
       return {
