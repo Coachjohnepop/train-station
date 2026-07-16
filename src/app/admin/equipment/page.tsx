@@ -7,9 +7,8 @@ export default function AdminEquipmentPage() {
       <div>
         <h1 className="text-2xl font-bold">Equipment</h1>
         <p className="mt-2 max-w-3xl text-sm text-[var(--muted)]">
-          Paste product links (Amazon, etc.) to pull a photo and title for members on{" "}
-          <strong>Gear</strong> — they open the store in a new tab. Catalog fills{" "}
-          <strong>as many columns as fit</strong> (~1 phone · 2 tablet · 3 desktop).
+          Paste a product link to add gear for members on <strong>Gear</strong>. The catalog
+          below uses multiple columns on wider screens.
         </p>
       </div>
       <AdminEquipmentCatalog />

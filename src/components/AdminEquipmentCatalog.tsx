@@ -454,134 +454,114 @@ export default function AdminEquipmentCatalog() {
     <div className="w-full max-w-none space-y-6">
       {error && <p className="text-sm text-amber-400">{error}</p>}
 
-      <form
-        onSubmit={createItem}
-        className="card space-y-4 p-4 sm:p-5"
-      >
-        <div className="max-w-3xl">
+      <form onSubmit={createItem} className="card max-w-xl space-y-3 p-4 sm:p-5">
+        <div>
           <h2 className="text-sm font-semibold">Add from product link</h2>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            Paste an Amazon (or other store) link. We pull the title and a photo when the site
-            allows. Members see the image on <strong>Gear</strong> and open the store in a{" "}
-            <strong>new tab</strong> only.
+            Paste an Amazon (or other store) link → get photo & title → add. Members see it on{" "}
+            <strong>Gear</strong> and open the store in a new tab.
           </p>
         </div>
 
-        {/* Mobile: stack · sm+: link + action · lg+: 3-col workspace */}
-        <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
-          <div className="space-y-3 lg:col-span-2">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-              <div className="min-w-0 flex-1">
-                <label htmlFor="eq-paste" className="text-xs font-medium text-[var(--muted)]">
-                  Product link
-                </label>
-                <input
-                  id="eq-paste"
-                  className="input mt-1 w-full"
-                  value={pasteUrl}
-                  onChange={(e) => setPasteUrl(e.target.value)}
-                  placeholder="https://www.amazon.com/dp/…"
-                  inputMode="url"
-                />
-              </div>
-              <button
-                type="button"
-                className="btn-ghost min-h-[44px] w-full shrink-0 px-4 text-sm sm:w-auto"
-                disabled={previewing || !pasteUrl.trim()}
-                onClick={() => void previewFromLink()}
-              >
-                {previewing ? "Reading link…" : "Get photo & title"}
-              </button>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label htmlFor="eq-name" className="text-xs font-medium text-[var(--muted)]">
-                  Name
-                </label>
-                <input
-                  id="eq-name"
-                  className="input mt-1 w-full"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="e.g. Adjustable dumbbells"
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="eq-cat" className="text-xs font-medium text-[var(--muted)]">
-                  Category
-                </label>
-                <EquipmentCategorySelect
-                  id="eq-cat"
-                  value={newCategory}
-                  options={categoryOptions}
-                  onChange={setNewCategory}
-                  onCategoryCreated={rememberCategory}
-                  disabled={creating}
-                />
-              </div>
-              <div>
-                <label htmlFor="eq-img" className="text-xs font-medium text-[var(--muted)]">
-                  Image URL (optional)
-                </label>
-                <input
-                  id="eq-img"
-                  className="input mt-1 w-full"
-                  value={newImageUrl}
-                  onChange={(e) => setNewImageUrl(e.target.value)}
-                  placeholder="Auto-filled from link"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label htmlFor="eq-desc" className="text-xs font-medium text-[var(--muted)]">
-                  Notes for members (optional)
-                </label>
-                <textarea
-                  id="eq-desc"
-                  className="input mt-1 w-full min-h-[64px]"
-                  value={newDescription}
-                  onChange={(e) => setNewDescription(e.target.value)}
-                  placeholder="Why you recommend this, size tips…"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="btn-primary min-h-[44px] w-full px-4 text-sm sm:w-auto"
-              disabled={creating}
-            >
-              {creating ? "Adding…" : "Add equipment"}
-            </button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="min-w-0 flex-1">
+            <label htmlFor="eq-paste" className="text-xs font-medium text-[var(--muted)]">
+              Product link
+            </label>
+            <input
+              id="eq-paste"
+              className="input mt-1 w-full"
+              value={pasteUrl}
+              onChange={(e) => setPasteUrl(e.target.value)}
+              placeholder="https://www.amazon.com/dp/…"
+              inputMode="url"
+            />
           </div>
+          <button
+            type="button"
+            className="btn-ghost min-h-[44px] w-full shrink-0 px-4 text-sm sm:w-auto"
+            disabled={previewing || !pasteUrl.trim()}
+            onClick={() => void previewFromLink()}
+          >
+            {previewing ? "Reading link…" : "Get photo & title"}
+          </button>
+        </div>
 
-          <div className="lg:col-span-1">
-            {newImageUrl || newName || newProductUrl || pasteUrl ? (
-              <div className="overflow-hidden rounded-lg border border-accent/25 bg-accent/5">
-                <ProductThumb
-                  name={newName || "Preview"}
-                  imageUrl={newImageUrl || null}
-                  productUrl={newProductUrl || pasteUrl || null}
-                  variant="card"
-                />
-                <div className="space-y-1 p-3 text-xs text-[var(--muted)]">
-                  <p className="font-medium text-[var(--text)]">Preview</p>
-                  <p className="line-clamp-3 break-words">{newName || "—"}</p>
-                  {(newProductUrl || pasteUrl) && (
-                    <p className="truncate text-[10px] opacity-80">
-                      {newProductUrl || pasteUrl}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="hidden rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface-2)] p-4 text-center text-xs text-[var(--muted)] lg:block">
-                Photo preview appears here after you paste a link.
-              </div>
-            )}
+        {(newImageUrl || newName || newProductUrl) && (
+          <div className="flex items-start gap-3 rounded-lg border border-accent/25 bg-accent/5 p-3">
+            <ProductThumb
+              name={newName || "Preview"}
+              imageUrl={newImageUrl || null}
+              productUrl={newProductUrl || pasteUrl || null}
+              variant="compact"
+            />
+            <div className="min-w-0 flex-1 text-xs text-[var(--muted)]">
+              <p className="font-medium text-[var(--text)]">Preview</p>
+              <p className="mt-0.5 line-clamp-2 break-words">{newName || "—"}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <div>
+            <label htmlFor="eq-name" className="text-xs font-medium text-[var(--muted)]">
+              Name
+            </label>
+            <input
+              id="eq-name"
+              className="input mt-1 w-full"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="e.g. Adjustable dumbbells"
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="eq-cat" className="text-xs font-medium text-[var(--muted)]">
+              Category
+            </label>
+            <EquipmentCategorySelect
+              id="eq-cat"
+              value={newCategory}
+              options={categoryOptions}
+              onChange={setNewCategory}
+              onCategoryCreated={rememberCategory}
+              disabled={creating}
+            />
+          </div>
+          <div>
+            <label htmlFor="eq-img" className="text-xs font-medium text-[var(--muted)]">
+              Image URL (optional)
+            </label>
+            <input
+              id="eq-img"
+              className="input mt-1 w-full"
+              value={newImageUrl}
+              onChange={(e) => setNewImageUrl(e.target.value)}
+              placeholder="Auto-filled from link"
+            />
+          </div>
+          <div>
+            <label htmlFor="eq-desc" className="text-xs font-medium text-[var(--muted)]">
+              Notes for members (optional)
+            </label>
+            <textarea
+              id="eq-desc"
+              className="input mt-1 w-full min-h-[64px]"
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              placeholder="Why you recommend this, size tips…"
+            />
           </div>
         </div>
+
+        <button
+          type="submit"
+          className="btn-primary min-h-[44px] w-full px-4 text-sm sm:w-auto"
+          disabled={creating}
+        >
+          {creating ? "Adding…" : "Add equipment"}
+        </button>
       </form>
 
       <div>
