@@ -17,6 +17,7 @@ import {
   cloneWorkoutContentName,
   defaultTrackWorkoutTitle,
   findCatalogHomeForProgramDay,
+  isGarbageWorkoutTitle,
   workoutContentTitle,
   workoutsMatchByContentTitle,
 } from "@/lib/workout-content-name";
@@ -1286,15 +1287,41 @@ export default function ProgramCalendarBuilder({
       setWorkoutTitle("");
       return;
     }
-    const cached = allWorkouts.find((w) => w.id === focus.workoutId);
+    const workoutId = focus.workoutId;
+    const applyTitle = (rawName: string) => {
+      const clean = workoutContentTitle(rawName);
+      setWorkoutTitle(clean);
+      // Silent DB repair when schedule/tech IDs leaked into the title (e.g. "S1D-… W2 Sat Gym")
+      if (isGarbageWorkoutTitle(rawName) || clean !== String(rawName || "").trim()) {
+        if (clean && clean !== String(rawName || "").trim()) {
+          void fetch(`/api/workouts/${workoutId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: clean }),
+          })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((updated) => {
+              if (!updated?.name) return;
+              const fixed = workoutContentTitle(updated.name);
+              setWorkoutTitle(fixed);
+              setAllWorkouts((prev) =>
+                prev.map((w) => (w.id === workoutId ? { ...w, name: updated.name } : w)),
+              );
+            })
+            .catch(() => {});
+        }
+      }
+    };
+
+    const cached = allWorkouts.find((w) => w.id === workoutId);
     if (cached) {
-      setWorkoutTitle(workoutContentTitle(cached.name));
+      applyTitle(cached.name);
       return;
     }
-    fetch(`/api/workouts/${focus.workoutId}`, { cache: "no-store" })
+    fetch(`/api/workouts/${workoutId}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (data?.name) setWorkoutTitle(workoutContentTitle(data.name));
+        if (data?.name) applyTitle(data.name);
       })
       .catch(() => {});
   }, [focus?.workoutId, allWorkouts]);

@@ -129,6 +129,7 @@ export function isJunkWorkoutName(name: string): boolean {
   if (/^s1b-workout/i.test(n)) return true;
   if (/^s2-\d+/i.test(n)) return true;
   if (/^s1c-/i.test(n)) return true;
+  if (/^s1d-\d+/i.test(n)) return true; // leaked session/tech ids (S1D-timestamp …)
   if (/^s34-/i.test(n)) return true;
   if (/copy-week/i.test(n)) return true;
   if (/^gym$/i.test(n)) return true;

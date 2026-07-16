@@ -1,6 +1,33 @@
 import { isGymLabel, isHomeLabel } from "@/lib/program-calendar";
 
 /**
+ * Strip technical IDs / schedule tokens that sometimes leak into Workout.name
+ * (e.g. "S1D-1783785459241 W2 Sat Gym" → empty → display as "Workout").
+ * Day, week, and Gym/Home belong on ProgramDay / option labels — not the title.
+ */
+export function stripTechnicalNoiseFromWorkoutName(name: string): string {
+  let result = String(name || "").trim();
+  if (!result) return result;
+
+  // Auto-generated / demo IDs that should never be coach-facing titles
+  result = result.replace(/^s\d+d-\d+\s*/i, "");
+  result = result.replace(/^(new-w|w-upload|demo-w|sms-w|demo-we)-\d+(?:-[a-z0-9]+)?\s*/i, "");
+  result = result.replace(/\b\d{10,}\b/g, ""); // raw timestamps
+  // Week / cycle schedule tokens
+  result = result.replace(/\bw(?:eek)?\s*\d+\b/gi, "");
+  result = result.replace(/\bm\d+d\d+\b/gi, "");
+  result = result.replace(/\bw\d+d\d+\b/gi, "");
+  // Weekday names (Mon…Sunday) — shown in the day picker, not the title
+  result = result.replace(
+    /\b(mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi,
+    "",
+  );
+  result = result.replace(/\s{2,}/g, " ").trim();
+  result = result.replace(/^[-–—:·|,]+|[-–—:·|,]+$/g, "").trim();
+  return result;
+}
+
+/**
  * Remove schedule day index from a workout title — day lives on ProgramDay, not Workout.name.
  * "Day 1 Upper Body Workout (Gym)" → "Upper Body Workout (Gym)"
  */
@@ -24,20 +51,38 @@ export function stripLocationSuffixFromWorkoutName(name: string): string {
   let result = String(name || "").trim();
   if (!result) return result;
 
+  // Whole title is only the track label (after schedule noise stripped)
+  if (/^(gym|home)$/i.test(result)) return "";
+
   result = result.replace(/\s*\((gym|home)\)\s*$/i, "");
   result = result.replace(/\s*[-–—]\s*(gym|home)\s*$/i, "");
   result = result.replace(/\s+(gym|home)\s*$/i, "");
   result = result.replace(/\s{2,}/g, " ").trim();
+  if (/^(gym|home)$/i.test(result)) return "";
 
   return result;
 }
 
-/** Display / library title — content only, no day index or location. */
+/** Display / library title — content only, no day index, location, or technical IDs. */
 export function workoutContentTitle(name: string | null | undefined): string {
   return (
-    stripLocationSuffixFromWorkoutName(stripDayPrefixFromWorkoutName(name || "")) ||
-    "Workout"
+    stripLocationSuffixFromWorkoutName(
+      stripDayPrefixFromWorkoutName(stripTechnicalNoiseFromWorkoutName(name || "")),
+    ) || "Workout"
   );
+}
+
+/** True when the stored name is schedule/ID noise that should be repaired in the DB. */
+export function isGarbageWorkoutTitle(name: string | null | undefined): boolean {
+  const raw = String(name || "").trim();
+  if (!raw) return true;
+  if (/^s\d+d-\d+/i.test(raw)) return true;
+  if (/^(new-w|w-upload|demo-w|sms-w)-\d+/i.test(raw)) return true;
+  if (/\b\d{10,}\b/.test(raw) && /w\d+|sat|sun|mon|gym|home/i.test(raw)) return true;
+  const cleaned = workoutContentTitle(raw);
+  // Entire title was noise (e.g. only "W2 Sat Gym" or "Gym")
+  if (cleaned === "Workout" && raw.toLowerCase() !== "workout") return true;
+  return false;
 }
 
 /** Case-insensitive key for matching workout titles in the library. */
