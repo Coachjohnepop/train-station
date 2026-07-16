@@ -941,20 +941,28 @@ export default function ProgramCalendarBuilder({
   async function patchExerciseItem(
     itemId: string,
     data: { sets?: number; reps?: string; restSec?: number; notes?: string | null },
-  ) {
-    if (!focus) return false;
+  ): Promise<{ ok: boolean; error?: string }> {
+    if (!focus) return { ok: false, error: "No day selected." };
     const res = await fetch(`/api/workouts/${focus.workoutId}/exercises`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ itemId, ...data }),
     });
-    return res.ok;
+    if (res.ok) return { ok: true };
+    const body = await res.json().catch(() => ({}));
+    const error =
+      (typeof body.detail === "string" && body.detail) ||
+      (typeof body.error === "string" && body.error) ||
+      `Save failed (${res.status})`;
+    return { ok: false, error };
   }
 
   async function saveSelectedSlot(opts?: { manageSaving?: boolean }) {
     if (!focus || selectedSlotIdx === null) return;
     const slot = slots[selectedSlotIdx];
-    const manageSaving = opts?.manageSaving !== false;
+    // Notes/sets saves should not flip global `saving` — that disables the note field
+    // mid-edit and made it feel like notes couldn't be typed (Jeremy week-2 feedback).
+    const manageSaving = opts?.manageSaving === true;
 
     if (manageSaving) setSaving(true);
     try {
@@ -973,13 +981,13 @@ export default function ProgramCalendarBuilder({
       }
 
       const notesValue = editorNotes.trim() || null;
-      const ok = await patchExerciseItem(slot.id, {
+      const result = await patchExerciseItem(slot.id, {
         sets: editorSets,
         reps: editorReps,
         restSec: editorRest,
         notes: notesValue,
       });
-      if (ok) {
+      if (result.ok) {
         setSlots((prev) => {
           const next = [...prev];
           const current = next[selectedSlotIdx];
@@ -995,7 +1003,8 @@ export default function ProgramCalendarBuilder({
           return next;
         });
       } else {
-        setMessage("Could not save exercise.");
+        setMessage(result.error || "Could not save exercise note.");
+        setTimeout(() => setMessage(null), 4000);
       }
     } finally {
       if (manageSaving) setSaving(false);
@@ -1235,12 +1244,12 @@ export default function ProgramCalendarBuilder({
       for (const idx of checkedSlots) {
         const slot = slots[idx];
         if (!slot) continue;
-        const ok = await patchExerciseItem(slot.id, {
+        const result = await patchExerciseItem(slot.id, {
           sets: editorSets,
           reps: editorReps,
           restSec: editorRest,
         });
-        if (ok) applied++;
+        if (result.ok) applied++;
       }
 
       await loadSlots(focus.workoutId, {
@@ -2215,48 +2224,71 @@ export default function ProgramCalendarBuilder({
               </span>
               {isSelected ? (
                 <span
-                  className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px]"
+                  className="mt-0.5 flex w-full flex-col gap-1 text-[10px]"
                   onClick={(e) => e.stopPropagation()}
                 >
+                  <span className="flex flex-wrap items-center gap-1">
+                    <input
+                      type="number"
+                      min={1}
+                      max={20}
+                      className="input h-6 w-10 px-1 text-[10px]"
+                      value={editorSets}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value, 10);
+                        if (!Number.isNaN(v)) setEditorSets(Math.max(1, v));
+                      }}
+                      onBlur={() => void saveSelectedSlot()}
+                      aria-label={`Sets for ${slot.name}`}
+                    />
+                    <span className="text-[var(--muted)]">×</span>
+                    <input
+                      className="input h-6 w-14 px-1 text-[10px]"
+                      value={editorReps}
+                      onChange={(e) => setEditorReps(e.target.value)}
+                      onBlur={() => void saveSelectedSlot()}
+                      aria-label={`Reps for ${slot.name}`}
+                    />
+                    {slot.restSec != null ? (
+                      <span className="text-[var(--muted)]">· {slot.restSec}s</span>
+                    ) : null}
+                  </span>
                   <input
-                    type="number"
-                    min={1}
-                    max={20}
-                    className="input h-6 w-10 px-1 text-[10px]"
-                    value={editorSets}
-                    disabled={saving}
-                    onChange={(e) => {
-                      const v = parseInt(e.target.value, 10);
-                      if (!Number.isNaN(v)) setEditorSets(Math.max(1, v));
+                    className="input h-7 w-full min-w-0 px-1.5 text-[10px] text-violet-100"
+                    value={editorNotes}
+                    placeholder="Note for this exercise (this workout only)…"
+                    maxLength={500}
+                    onChange={(e) => setEditorNotes(e.target.value)}
+                    onBlur={() => void saveSelectedSlot()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        (e.target as HTMLInputElement).blur();
+                      }
                     }}
-                    onBlur={() => void saveSelectedSlot()}
+                    aria-label={`Coach note for ${slot.name}`}
                   />
-                  <span className="text-[var(--muted)]">×</span>
-                  <input
-                    className="input h-6 w-14 px-1 text-[10px]"
-                    value={editorReps}
-                    disabled={saving}
-                    onChange={(e) => setEditorReps(e.target.value)}
-                    onBlur={() => void saveSelectedSlot()}
-                  />
-                  {slot.restSec != null ? (
-                    <span className="text-[var(--muted)]">· {slot.restSec}s</span>
-                  ) : null}
                 </span>
               ) : (
-                <span className="text-[10px] text-[var(--muted)]">
-                  {slot.sets ?? editorSets} × {slot.reps ?? editorReps}
-                  {slot.restSec != null ? ` · ${slot.restSec}s` : ""}
-                </span>
+                <>
+                  <span className="text-[10px] text-[var(--muted)]">
+                    {slot.sets ?? editorSets} × {slot.reps ?? editorReps}
+                    {slot.restSec != null ? ` · ${slot.restSec}s` : ""}
+                  </span>
+                  {slot.notes?.trim() ? (
+                    <span
+                      className="mt-0.5 block truncate text-[10px] text-violet-300/90"
+                      title={slot.notes}
+                    >
+                      Note: {slot.notes}
+                    </span>
+                  ) : (
+                    <span className="mt-0.5 block text-[10px] text-[var(--muted)] opacity-70">
+                      Click to add note…
+                    </span>
+                  )}
+                </>
               )}
-              {slot.notes?.trim() ? (
-                <span
-                  className="mt-0.5 block truncate text-[10px] text-violet-300/90"
-                  title={slot.notes}
-                >
-                  Note: {slot.notes}
-                </span>
-              ) : null}
             </button>
             <div className="w-24 shrink-0" onClick={(e) => e.stopPropagation()}>
               <SearchableExerciseSelect
@@ -3026,14 +3058,12 @@ export default function ProgramCalendarBuilder({
                     />
                   </label>
                   <label className="min-w-[12rem] flex-1 text-[10px]">
-                    Coach note (this workout only)
+                    Coach note (selected exercise)
                     <input
                       className="input mt-0.5 h-7 w-full min-w-[10rem] px-1.5 text-xs"
                       value={editorNotes}
                       disabled={
-                        selectedSlotIdx === null ||
-                        saving ||
-                        !slots[selectedSlotIdx ?? -1]
+                        selectedSlotIdx === null || !slots[selectedSlotIdx ?? -1]
                       }
                       placeholder="e.g. light band · skip if knees hurt"
                       maxLength={500}
@@ -3066,9 +3096,9 @@ export default function ProgramCalendarBuilder({
                 </div>
 
                 <p className="text-[10px] text-[var(--muted)]">
-                  Click a row to edit sets/reps/notes ·{" "}
-                  <strong className="font-medium text-violet-200/90">Copy Gym → Home</strong> makes
-                  a Home copy to tweak · notes are for this workout only (not the library) · Delete
+                  Click an exercise → edit sets/reps and the{" "}
+                  <strong className="text-violet-200/90">note field under the name</strong> (this
+                  workout only, not the library). Enter or blur to save · Gym→Home clones · Delete
                   removes · drag or ▲▼ to reorder.
                 </p>
 
