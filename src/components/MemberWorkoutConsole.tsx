@@ -1,1 +1,1583 @@
-PLACEHOLDER_LOAD_FROM_DISK
+"use client";
+
+import { useCallback, useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import {
+  approachLabel,
+  formatPastPerformance,
+  formatPrescriptionSummary,
+  isTimedApproach,
+  normalizePrescription,
+  weightTierLabel,
+} from "@/lib/workout-schemes";
+import MemberExerciseVideoModal from "@/components/MemberExerciseVideoModal";
+import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
+import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
+import WorkoutRestTimer from "@/components/WorkoutRestTimer";
+import { playRestComplete, playRestStart, playRestTick } from "@/lib/rest-audio";
+import { resolveRestSeconds } from "@/lib/rest-timer";
+import { confettiOriginFromElement, fireWorkoutConfetti } from "@/lib/workout-confetti";
+
+export type MemberExerciseBlock = {
+  id: string;
+  exerciseId: string;
+  name: string;
+  description: string | null;
+  /** Coach note on this workout line only (today's cue). */
+  coachNotes?: string | null;
+  /** Global library description for the exercise. */
+  libraryDescription?: string | null;
+  videoUrl: string | null;
+  setScheme: string;
+  repPattern: string | null;
+  reps: string | null;
+  setCount: number;
+  weightTier: string;
+  /** Rest between sets (seconds) from coach prescription — drives v1 rest clock. */
+  restSec?: number | null;
+  past: {
+    setScheme: string;
+    repPattern: string | null;
+    reps: string | null;
+    sets: number | null;
+    setsCompleted?: number | null;
+    weightTier: string;
+    startingWeightLbs: number | null;
+    performedAt: string;
+  } | null;
+};
+
+export type MemberWorkoutView = {
+  workoutId: string;
+  workoutName: string;
+  memberName: string;
+  exercises: MemberExerciseBlock[];
+  /** Legacy workout-level rest timer (fallback if exercise has no restSec). */
+  restTimerEnabled?: boolean;
+  restTimerSeconds?: number;
+};
+
+const REST_MUTE_KEY = "ts-rest-timer-mute";
+
+type ActiveRestTimer = {
+  blockId: string;
+  completedSetNum: number;
+  endsAt: number;
+  totalSeconds: number;
+};
+
+function sortedSet(nums: number[]): number[] {
+  return nums.slice().sort((a, b) => a - b);
+}
+
+function completedSetsEqual(
+  local: Record<string, Set<number>>,
+  remote: Record<string, number[]>,
+): boolean {
+  const localKeys = Object.keys(local);
+  const remoteKeys = Object.keys(remote);
+  if (localKeys.length !== remoteKeys.length) return false;
+  for (const key of localKeys) {
+    const a = sortedSet(Array.from(local[key] ?? []));
+    const b = sortedSet(remote[key] ?? []);
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+function finishedExercisesEqual(local: Set<string>, remote: string[]): boolean {
+  if (local.size !== remote.length) return false;
+  for (const id of remote) if (!local.has(id)) return false;
+  return true;
+}
+
+export default function MemberWorkoutConsole({
+  workout,
+  backHref = "/member",
+  backLabel = "← Dashboard",
+  programSlug,
+  targetUserId,
+  instructorName,
+  reviewMode = false,
+  calendarDateLabel,
+  scheduleLabel,
+  liveSyncUserId,
+  liveSessionDate,
+  progressMode = "live",
+  hideLogButton = false,
+  headerNote,
+  embedded = false,
+  coachFloorMode = false,
+  onCoachFloorFinished,
+}: {
+  workout: MemberWorkoutView;
+  backHref?: string;
+  backLabel?: string;
+  programSlug?: string;
+  targetUserId?: string;
+  instructorName?: string;
+  reviewMode?: boolean;
+  /** e.g. "Tuesday, June 23, 2026" */
+  calendarDateLabel?: string;
+  /** e.g. "Week 1 · Tue" */
+  scheduleLabel?: string;
+  /** Member id for live coach ↔ member checkoff sync */
+  liveSyncUserId?: string;
+  liveSessionDate?: string;
+  /** Persist checkoffs to warmup-progress API (pre-intake warm-ups). */
+  progressMode?: "live" | "warmup";
+  hideLogButton?: boolean;
+  headerNote?: string;
+  /** Hide title block when nested inside warm-up day navigator */
+  embedded?: boolean;
+  /** Coach live floor: exercise names + set buttons only (live sync to member). */
+  coachFloorMode?: boolean;
+  /** Called after coach taps Finished on live floor (collapse tile, etc.). */
+  onCoachFloorFinished?: () => void;
+}) {
+  const [weights, setWeights] = useState<Record<string, string>>({});
+  const [activeId, setActiveId] = useState(workout.exercises[0]?.id ?? "");
+  const [completedSets, setCompletedSets] = useState<Record<string, Set<number>>>(
+    {},
+  );
+  const [finishedExercises, setFinishedExercises] = useState<Set<string>>(
+    new Set(),
+  );
+  const [videoModalBlockId, setVideoModalBlockId] = useState<string | null>(
+    null,
+  );
+  const [isLogging, setIsLogging] = useState(false);
+  const [logResult, setLogResult] = useState<null | { performedAt: string; count: number; progress?: number }>(null);
+  const [finishedListExpanded, setFinishedListExpanded] = useState(false);
+  const [coachLive, setCoachLive] = useState(false);
+  const [partnerLive, setPartnerLive] = useState(false);
+  const [loggedDetailsOpen, setLoggedDetailsOpen] = useState(false);
+  const [restTimer, setRestTimer] = useState<ActiveRestTimer | null>(null);
+  const [restSecondsLeft, setRestSecondsLeft] = useState(0);
+  const [restMuted, setRestMuted] = useState(false);
+  const [coachExpandedBlockId, setCoachExpandedBlockId] = useState<string | null>(null);
+  const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
+  const restHornPlayedRef = useRef(false);
+  const restTickAnnouncedRef = useRef<Set<number>>(new Set());
+  const prevCompletedSetsRef = useRef<Record<string, Set<number>> | null>(null);
+  /** When true, next completedSets change came from live partner (coach↔member). */
+  const pendingRemoteRestRef = useRef(false);
+  /** Skip rest on first remote snapshot (history), only fire on live checkoffs after that. */
+  const liveRestBaselineReadyRef = useRef(false);
+
+  useEffect(() => {
+    try {
+      setRestMuted(localStorage.getItem(REST_MUTE_KEY) === "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const toggleRestMute = useCallback(() => {
+    setRestMuted((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(REST_MUTE_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+
+  const LIVE_POLL_MS = coachFloorMode ? 900 : 200;
+  const liveSessionScope = progressMode === "live" && !!liveSyncUserId && !reviewMode;
+  const warmupSyncEnabled = progressMode === "warmup" && !!liveSyncUserId && !reviewMode;
+  const [liveSessionHydrated, setLiveSessionHydrated] = useState(false);
+  const livePushEnabled = liveSessionScope && liveSessionHydrated;
+  const lastAppliedRevision = useRef(0);
+  const lastAppliedRemoteAt = useRef<string | null>(null);
+  const applyingRemote = useRef(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveChain = useRef(Promise.resolve());
+  const lastPushedRevision = useRef(0);
+  const stateRef = useRef({
+    completedSets,
+    finishedExercises,
+    weights,
+    activeId,
+  });
+
+  const serializeCompletedSets = useCallback(
+    (sets: Record<string, Set<number>>) => {
+      const out: Record<string, number[]> = {};
+      for (const [blockId, nums] of Object.entries(sets)) {
+        out[blockId] = Array.from(nums).sort((a, b) => a - b);
+      }
+      return out;
+    },
+    [],
+  );
+
+  useEffect(() => {
+    stateRef.current = { completedSets, finishedExercises, weights, activeId };
+  }, [completedSets, finishedExercises, weights, activeId]);
+
+  const applyRemoteSession = useCallback(
+    (session: {
+      completedSets: Record<string, number[]>;
+      finishedExercises: string[];
+      weights?: Record<string, string>;
+      activeId?: string;
+      updatedBy: "coach" | "member";
+      revision?: number;
+      updatedAt?: string;
+    }) => {
+      if (typeof session.revision === "number") {
+        if (session.revision <= lastAppliedRevision.current) return;
+        lastAppliedRevision.current = session.revision;
+      } else if (session.updatedAt) {
+        if (
+          lastAppliedRemoteAt.current &&
+          session.updatedAt <= lastAppliedRemoteAt.current
+        ) {
+          return;
+        }
+        lastAppliedRemoteAt.current = session.updatedAt;
+      } else {
+        return;
+      }
+
+      const sets: Record<string, Set<number>> = {};
+      for (const [blockId, nums] of Object.entries(session.completedSets)) {
+        sets[blockId] = new Set(nums);
+      }
+      const remoteFinished = new Set(session.finishedExercises);
+      const setsSame = completedSetsEqual(completedSets, session.completedSets);
+      const finishedSame = finishedExercisesEqual(finishedExercises, session.finishedExercises);
+      const weightsSame =
+        !session.weights ||
+        JSON.stringify(session.weights) === JSON.stringify(weights);
+      const activeSame =
+        coachFloorMode ||
+        !session.activeId ||
+        session.activeId === activeId;
+
+      if (setsSame && finishedSame && weightsSame && activeSame) {
+        return;
+      }
+
+      applyingRemote.current = true;
+      if (!setsSame) {
+        // After baseline is ready, partner checkoffs start rest for both coach + member.
+        pendingRemoteRestRef.current = liveRestBaselineReadyRef.current;
+        setCompletedSets(sets);
+      }
+      if (!finishedSame) setFinishedExercises(remoteFinished);
+      if (session.weights && !weightsSame) setWeights(session.weights);
+      if (!coachFloorMode && session.activeId && session.activeId !== activeId) {
+        const localIdx = workout.exercises.findIndex((e) => e.id === activeId);
+        const remoteIdx = workout.exercises.findIndex((e) => e.id === session.activeId);
+        const localAhead = localIdx >= 0 && remoteIdx >= 0 && localIdx > remoteIdx;
+        if (!localAhead) setActiveId(session.activeId);
+      }
+
+      const fromCoach = session.updatedBy === "coach";
+      if (instructorName) {
+        setPartnerLive(!fromCoach);
+      } else {
+        setCoachLive(fromCoach);
+      }
+      applyingRemote.current = false;
+    },
+    [instructorName, coachFloorMode, completedSets, finishedExercises, weights, activeId, workout.exercises],
+  );
+
+  const flushWarmupSave = useCallback(() => {
+    if (!warmupSyncEnabled || !liveSyncUserId || !liveSessionDate) return;
+
+    saveChain.current = saveChain.current.catch(() => {}).then(async () => {
+      const snap = stateRef.current;
+      const res = await fetch("/api/member/warmup-progress", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionDate: liveSessionDate,
+          completedSets: serializeCompletedSets(snap.completedSets),
+          finishedExercises: Array.from(snap.finishedExercises),
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (typeof data.totalPoints === "number") {
+          dispatchMemberScoreCelebrate({
+            pointsEarned: data.pointsEarned ?? 0,
+            totalPoints: data.totalPoints,
+            label: "Warm-ups before live",
+          });
+        }
+      }
+    });
+
+    return saveChain.current;
+  }, [warmupSyncEnabled, liveSyncUserId, liveSessionDate, serializeCompletedSets]);
+
+  const flushLiveSave = useCallback(() => {
+    if (!livePushEnabled || !liveSyncUserId) return;
+
+    saveChain.current = saveChain.current.catch(() => {}).then(async () => {
+      const snap = stateRef.current;
+      const payload: Record<string, unknown> = {
+        userId: liveSyncUserId,
+        sessionDate: liveSessionDate,
+        completedSets: serializeCompletedSets(snap.completedSets),
+        finishedExercises: Array.from(snap.finishedExercises),
+        weights: snap.weights,
+        updatedBy: instructorName ? ("coach" as const) : ("member" as const),
+      };
+      if (!coachFloorMode) payload.activeId = snap.activeId;
+      const res = await fetch(`/api/workouts/${workout.workoutId}/live-session`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.session && !(coachFloorMode && instructorName)) {
+        applyRemoteSession(data.session);
+      } else if (data.session?.revision != null) {
+        lastAppliedRevision.current = Math.max(
+          lastAppliedRevision.current,
+          data.session.revision,
+        );
+      }
+      const rev = data.session?.revision;
+      if (typeof rev === "number") {
+        lastPushedRevision.current = rev;
+      }
+    });
+
+    return saveChain.current;
+  }, [
+    livePushEnabled,
+    liveSyncUserId,
+    liveSessionDate,
+    instructorName,
+    workout.workoutId,
+    serializeCompletedSets,
+    applyRemoteSession,
+    coachFloorMode,
+  ]);
+
+  const queueLiveSave = useCallback(
+    (immediate = false) => {
+      if (!livePushEnabled && !warmupSyncEnabled) return;
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      const delay = immediate ? 0 : instructorName ? 30 : 100;
+      saveTimer.current = setTimeout(() => {
+        if (warmupSyncEnabled) void flushWarmupSave();
+        else void flushLiveSave();
+      }, delay);
+    },
+    [livePushEnabled, warmupSyncEnabled, instructorName, flushLiveSave, flushWarmupSave],
+  );
+
+  useEffect(() => {
+    setLiveSessionHydrated(false);
+    lastAppliedRevision.current = 0;
+    lastPushedRevision.current = 0;
+    lastAppliedRemoteAt.current = null;
+    setEditingExerciseId(null);
+  }, [liveSyncUserId, liveSessionDate, workout.workoutId]);
+
+  useEffect(() => {
+    if (!warmupSyncEnabled || !liveSessionDate) return;
+    void fetch(`/api/member/warmup-progress?date=${liveSessionDate}`, { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data?.progress) return;
+        const sets: Record<string, Set<number>> = {};
+        for (const [blockId, nums] of Object.entries(
+          data.progress.completedSets as Record<string, number[]>,
+        )) {
+          sets[blockId] = new Set(nums);
+        }
+        setCompletedSets(sets);
+        setFinishedExercises(new Set(data.progress.finishedExercises || []));
+      })
+      .catch(() => {});
+  }, [warmupSyncEnabled, liveSessionDate]);
+
+  const clearLiveSession = useCallback(async () => {
+    if (!liveSyncUserId) return;
+    try {
+      await fetch(`/api/workouts/${workout.workoutId}/live-session`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: liveSyncUserId,
+          sessionDate: liveSessionDate,
+          clear: true,
+          completedSets: {},
+          finishedExercises: [],
+          updatedBy: instructorName ? "coach" : "member",
+        }),
+      });
+    } catch {
+      // ignore
+    }
+  }, [liveSyncUserId, liveSessionDate, workout.workoutId, instructorName]);
+
+  // Push local checkoffs to shared store (coach ↔ member).
+  useEffect(() => {
+    if (!livePushEnabled) return;
+    queueLiveSave();
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+  }, [
+    livePushEnabled,
+    completedSets,
+    finishedExercises,
+    weights,
+    activeId,
+    queueLiveSave,
+  ]);
+
+  // Live read via SSE (in-memory hot cache) + fast poll fallback for other instances.
+  useEffect(() => {
+    if (!liveSessionScope) return;
+
+    const q = new URLSearchParams({ userId: liveSyncUserId! });
+    if (liveSessionDate) q.set("date", liveSessionDate);
+    const query = q.toString();
+
+    const poll = async () => {
+      if (document.visibilityState === "hidden") return;
+      try {
+        const res = await fetch(
+          `/api/workouts/${workout.workoutId}/live-session?${query}`,
+          { cache: "no-store" },
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.session) applyRemoteSession(data.session);
+        setLiveSessionHydrated(true);
+      } catch {
+        /* ignore */
+      }
+    };
+
+    void poll();
+
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource(
+        `/api/workouts/${workout.workoutId}/live-session/stream?${query}`,
+      );
+      es.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data) as { session?: Parameters<typeof applyRemoteSession>[0] };
+          if (data.session) applyRemoteSession(data.session);
+        } catch {
+          /* ignore */
+        }
+      };
+    } catch {
+      /* EventSource unavailable */
+    }
+
+    const pollId = setInterval(poll, LIVE_POLL_MS);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void poll();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      es?.close();
+      clearInterval(pollId);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [
+    liveSessionScope,
+    liveSyncUserId,
+    liveSessionDate,
+    workout.workoutId,
+    applyRemoteSession,
+  ]);
+
+  // Seed local completedSets from past when opening in (pure) review mode.
+  // Pre-render completed sets with gold checkmarks (member-set-btn--done)
+  // matching the previously logged setsCompleted. For active member or instructor sessions
+  // we start empty so clicks immediately drive the green visual state.
+  useEffect(() => {
+    if (reviewMode && !instructorName) {
+      const seed: Record<string, Set<number>> = {};
+      for (const b of workout.exercises) {
+        const n = b.past?.setsCompleted ?? b.past?.sets ?? 0;
+        if (n > 0) {
+          seed[b.id] = new Set(Array.from({ length: n }, (_, k) => k + 1));
+        }
+      }
+      if (Object.keys(seed).length > 0) {
+        setCompletedSets((prev) => ({ ...prev, ...seed }));
+      }
+    }
+  }, [reviewMode, instructorName, workout]);
+
+  const videoModalBlock = workout.exercises.find(
+    (b) => b.id === videoModalBlockId && b.videoUrl,
+  );
+
+  // For peeking next exercise (space efficient)
+  const activeIdx = workout.exercises.findIndex((e) => e.id === activeId);
+  const nextExercise = workout.exercises
+    .slice(activeIdx + 1)
+    .find((e) => !finishedExercises.has(e.id));
+
+  const clearRestTimer = useCallback(() => setRestTimer(null), []);
+
+  const maybeStartRestTimer = useCallback(
+    (blockId: string, setNum: number, opts?: { fromRemote?: boolean; silentStart?: boolean }) => {
+      const block = workout.exercises.find((e) => e.id === blockId);
+      if (!block) return;
+      const prescription = normalizePrescription({
+        setScheme: block.setScheme,
+        repPattern: block.repPattern,
+        reps: block.reps,
+        sets: block.setCount,
+      });
+      const isTimed = isTimedApproach(prescription.approach);
+      const totalSets = isTimed ? 1 : block.setCount;
+      // No rest after the last set of this exercise
+      if (setNum >= totalSets) return;
+
+      const seconds = resolveRestSeconds({
+        exerciseRestSec: block.restSec,
+        workoutRestEnabled: workout.restTimerEnabled,
+        workoutRestSeconds: workout.restTimerSeconds,
+      });
+      if (!seconds || seconds <= 0) return;
+
+      setRestTimer({
+        blockId,
+        completedSetNum: setNum,
+        endsAt: Date.now() + seconds * 1000,
+        totalSeconds: seconds,
+      });
+      restTickAnnouncedRef.current = new Set();
+      if (!opts?.silentStart && !restMuted) {
+        playRestStart();
+      }
+    },
+    [workout, restMuted],
+  );
+
+  useEffect(() => {
+    if (!restTimer) {
+      setRestSecondsLeft(0);
+      restHornPlayedRef.current = false;
+      restTickAnnouncedRef.current = new Set();
+      return;
+    }
+    restHornPlayedRef.current = false;
+    restTickAnnouncedRef.current = new Set();
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((restTimer.endsAt - Date.now()) / 1000));
+      setRestSecondsLeft(left);
+      // Quiet click once per whole second remaining (including full rest, not only last 5s)
+      if (left > 0 && !restMuted && !restTickAnnouncedRef.current.has(left)) {
+        restTickAnnouncedRef.current.add(left);
+        playRestTick(left <= 5);
+      }
+      if (left <= 0) {
+        if (!restHornPlayedRef.current) {
+          restHornPlayedRef.current = true;
+          if (!restMuted) {
+            playRestComplete();
+          }
+        }
+        setRestTimer(null);
+      }
+    };
+    tick();
+    const id = window.setInterval(tick, 200);
+    return () => window.clearInterval(id);
+  }, [restTimer, restMuted]);
+
+  // When coach or member marks a set on the other side, start rest locally so both see/hear it.
+  useEffect(() => {
+    // Seed baseline on first hydrate so we don't treat history as "new" checkoffs.
+    if (prevCompletedSetsRef.current == null) {
+      prevCompletedSetsRef.current = Object.fromEntries(
+        Object.entries(completedSets).map(([id, set]) => [id, new Set(set)]),
+      );
+      pendingRemoteRestRef.current = false;
+      liveRestBaselineReadyRef.current = true;
+      return;
+    }
+    const prev = prevCompletedSetsRef.current;
+    const newlyCompleted: Array<{ blockId: string; setNum: number }> = [];
+    for (const [blockId, nums] of Object.entries(completedSets)) {
+      const before = prev[blockId] ?? new Set<number>();
+      for (const n of nums) {
+        if (!before.has(n)) newlyCompleted.push({ blockId, setNum: n });
+      }
+    }
+    prevCompletedSetsRef.current = Object.fromEntries(
+      Object.entries(completedSets).map(([id, set]) => [id, new Set(set)]),
+    );
+    if (newlyCompleted.length === 0) {
+      pendingRemoteRestRef.current = false;
+      return;
+    }
+    // Large history sync after empty local state — re-baseline, don't start rest.
+    if (newlyCompleted.length > 1 && !liveRestBaselineReadyRef.current) {
+      pendingRemoteRestRef.current = false;
+      liveRestBaselineReadyRef.current = true;
+      return;
+    }
+    if (!pendingRemoteRestRef.current) return;
+    pendingRemoteRestRef.current = false;
+    liveRestBaselineReadyRef.current = true;
+    // Only start for a single new checkoff (one set at a time).
+    if (newlyCompleted.length !== 1) return;
+    const latest = newlyCompleted[0];
+    maybeStartRestTimer(latest.blockId, latest.setNum, { fromRemote: true });
+  }, [completedSets, maybeStartRestTimer]);
+
+  const toggleSet = useCallback(
+    (blockId: string, setNum: number, originEl?: HTMLElement) => {
+      const wasDone = completedSets[blockId]?.has(setNum) ?? false;
+
+      if (wasDone && restTimer?.blockId === blockId) {
+        setRestTimer(null);
+      }
+
+      setCompletedSets((prev) => {
+        const next = new Set(prev[blockId] ?? []);
+        if (wasDone) next.delete(setNum);
+        else next.add(setNum);
+        const updated = { ...prev, [blockId]: next };
+        stateRef.current = { ...stateRef.current, completedSets: updated };
+        return updated;
+      });
+
+      if (!wasDone) {
+        maybeStartRestTimer(blockId, setNum);
+        if (coachFloorMode && originEl) {
+          const block = workout.exercises.find((e) => e.id === blockId);
+          if (block) {
+            const prescription = normalizePrescription({
+              setScheme: block.setScheme,
+              repPattern: block.repPattern,
+              reps: block.reps,
+              sets: block.setCount,
+            });
+            const isTimed = isTimedApproach(prescription.approach);
+            const isLastSet = isTimed ? setNum === 1 : setNum === block.setCount;
+            if (isLastSet) {
+              fireWorkoutConfetti(confettiOriginFromElement(originEl));
+              setCoachExpandedBlockId((open) => (open === blockId ? null : open));
+            }
+          }
+        }
+      }
+      queueLiveSave(true);
+    },
+    [
+      queueLiveSave,
+      completedSets,
+      restTimer?.blockId,
+      maybeStartRestTimer,
+      coachFloorMode,
+      workout.exercises,
+    ],
+  );
+
+  const restBlockName =
+    restTimer != null
+      ? workout.exercises.find((e) => e.id === restTimer.blockId)?.name ?? null
+      : null;
+
+  const restTimerUi =
+    restTimer && restSecondsLeft > 0 ? (
+      <WorkoutRestTimer
+        secondsLeft={restSecondsLeft}
+        totalSeconds={restTimer.totalSeconds}
+        onSkip={clearRestTimer}
+        compact={coachFloorMode}
+        sticky
+        exerciseName={restBlockName}
+        completedSetNum={restTimer.completedSetNum}
+        muted={restMuted}
+        onToggleMute={toggleRestMute}
+      />
+    ) : null;
+
+  const openVideo = useCallback((blockId: string) => {
+    setVideoModalBlockId(blockId);
+  }, []);
+
+  const scrollMemberToExercise = useCallback(
+    (blockId: string) => {
+      if (coachFloorMode || instructorName || reviewMode) return;
+
+      const scroll = () => {
+        const el = document.getElementById(`member-exercise-${blockId}`);
+        if (!el) return false;
+        const top = el.getBoundingClientRect().top + window.scrollY - 80;
+        window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+        return true;
+      };
+
+      // Wait for finished exercise to collapse before measuring next card.
+      window.setTimeout(() => {
+        if (!scroll()) window.setTimeout(scroll, 120);
+      }, 60);
+    },
+    [coachFloorMode, instructorName, reviewMode],
+  );
+
+  const advanceToNextExercise = useCallback(
+    (blockId: string, finished: Set<string>) => {
+      const idx = workout.exercises.findIndex((e) => e.id === blockId);
+      const upcoming = workout.exercises.slice(idx + 1).find((e) => !finished.has(e.id));
+      if (!upcoming) return;
+      setActiveId(upcoming.id);
+      stateRef.current = { ...stateRef.current, activeId: upcoming.id };
+      scrollMemberToExercise(upcoming.id);
+    },
+    [workout.exercises, scrollMemberToExercise],
+  );
+
+  const markExerciseFinished = useCallback(
+    (blockId: string) => {
+      setVideoModalBlockId((openId) => (openId === blockId ? null : openId));
+      const next = new Set(finishedExercises);
+      next.add(blockId);
+      setFinishedExercises(next);
+      stateRef.current = { ...stateRef.current, finishedExercises: next };
+      advanceToNextExercise(blockId, next);
+      queueLiveSave(true);
+    },
+    [finishedExercises, advanceToNextExercise, queueLiveSave],
+  );
+
+  const closeExerciseEdit = useCallback(() => {
+    setEditingExerciseId(null);
+    queueLiveSave(true);
+  }, [queueLiveSave]);
+
+  const reopenExercise = useCallback(
+    (blockId: string) => {
+      setEditingExerciseId(blockId);
+      setActiveId(blockId);
+      stateRef.current = { ...stateRef.current, activeId: blockId };
+      scrollMemberToExercise(blockId);
+    },
+    [scrollMemberToExercise],
+  );
+
+  // Auto-finish exercises when all sets are marked — batch into one state update so
+  // multiple exercises finishing together all land in finishedExercises (live floor balls).
+  useEffect(() => {
+    if (reviewMode && !instructorName) return;
+    const toFinish: string[] = [];
+    for (const block of workout.exercises) {
+      if (finishedExercises.has(block.id)) continue;
+      const doneForBlock = completedSets[block.id] ?? new Set<number>();
+      const prescription = normalizePrescription({
+        setScheme: block.setScheme,
+        repPattern: block.repPattern,
+        reps: block.reps,
+        sets: block.setCount,
+      });
+      const isTimedBlock = isTimedApproach(prescription.approach);
+      const allSetsDoneForBlock = isTimedBlock
+        ? doneForBlock.has(1)
+        : doneForBlock.size >= block.setCount;
+      if (allSetsDoneForBlock) toFinish.push(block.id);
+    }
+    if (toFinish.length === 0) return;
+
+    const next = new Set(finishedExercises);
+    for (const id of toFinish) next.add(id);
+    const lastFinished = toFinish[toFinish.length - 1];
+    setFinishedExercises(next);
+    stateRef.current = { ...stateRef.current, finishedExercises: next };
+    if (lastFinished) advanceToNextExercise(lastFinished, next);
+    queueLiveSave(true);
+  }, [
+    completedSets,
+    finishedExercises,
+    workout.exercises,
+    reviewMode,
+    instructorName,
+    queueLiveSave,
+    advanceToNextExercise,
+  ]);
+
+  const markWorkoutFinished = useCallback(() => {
+    const allIds = workout.exercises.map((e) => e.id);
+    const next = new Set(allIds);
+    setFinishedExercises(next);
+    stateRef.current = { ...stateRef.current, finishedExercises: next };
+    queueLiveSave(true);
+    onCoachFloorFinished?.();
+  }, [workout.exercises, queueLiveSave, onCoachFloorFinished]);
+
+  const totalExercises = workout.exercises.length;
+  const allExercisesFinished =
+    !reviewMode && totalExercises > 0 && finishedExercises.size === totalExercises;
+
+  useEffect(() => {
+    if (allExercisesFinished) setFinishedListExpanded(false);
+  }, [allExercisesFinished]);
+
+  const handleLogComplete = useCallback(async () => {
+    if (logResult || isLogging) return;
+
+    // Collect all exercises that were explicitly finished OR have per-set progress marked.
+    // This ensures the "log your sets" buttons (per-set toggles) actually contribute setsCompleted to the log.
+    const blocksWithSets = Object.keys(completedSets).filter(id => (completedSets[id]?.size ?? 0) > 0);
+    let idsToLog = Array.from(new Set([...finishedExercises, ...blocksWithSets]));
+
+    const total = workout.exercises.length;
+    const progress = total > 0 ? Math.round((idsToLog.length / total) * 100) : 0;
+
+    // Log whatever the current state is (supports 0% partial or "just noting progress")
+    setIsLogging(true);
+    try {
+      const exercisesPayload = idsToLog.map((blockId) => {
+        const block = workout.exercises.find((b) => b.id === blockId)!;
+        const w = weights[blockId];
+        const startingWeightLbs = w ? parseFloat(w) : (block.past?.startingWeightLbs ?? null);
+        const doneForBlock = completedSets[blockId] ?? new Set<number>();
+        const setsCompleted = doneForBlock.size;
+        let repsCompleted = setsCompleted * 5; // default ~5 reps/set
+        if (block.reps) {
+          const repNum = parseInt(block.reps, 10) || 5;
+          repsCompleted = setsCompleted * repNum;
+        }
+        // treat timed as ~12 "rep equiv" if the set was completed
+        if (block.setScheme?.toLowerCase().includes("time") || block.setScheme?.toLowerCase().includes("timed")) {
+          repsCompleted = setsCompleted > 0 ? 12 : 0;
+        }
+        return {
+          workoutExerciseId: block.id,
+          exerciseId: block.exerciseId,
+          setScheme: block.setScheme,
+          repPattern: block.repPattern,
+          reps: block.reps,
+          sets: block.setCount,
+          weightTier: block.weightTier,
+          startingWeightLbs: Number.isFinite(startingWeightLbs) ? startingWeightLbs : null,
+          repsCompleted,
+          setsCompleted,
+        };
+      });
+
+      const payload: any = { exercises: exercisesPayload, progress };
+      if (programSlug) payload.programSlug = programSlug;
+      if (targetUserId) payload.targetUserId = targetUserId;
+      if (liveSessionDate) payload.sessionDate = liveSessionDate;
+      const res = await fetch(`/api/workouts/${workout.workoutId}/log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const detail = err?.detail;
+        const message =
+          typeof detail === "string"
+            ? detail
+            : typeof detail === "object" && detail !== null
+              ? "Failed to log workout"
+              : "Failed to log workout";
+        throw new Error(message);
+      }
+
+      const data = await res.json();
+      await clearLiveSession();
+      setLogResult({
+        performedAt: data.performedAt,
+        count: data.performances || idsToLog.length,
+        progress: data.progress ?? progress,
+      });
+      const gamification = data.gamification;
+      const fullWorkout =
+        progress >= 100 ||
+        (total > 0 && finishedExercises.size >= total && idsToLog.length >= total);
+      if (gamification && typeof gamification.totalPoints === "number") {
+        const pointsEarned = gamification.awarded
+          ? gamification.pointsEarned ?? GAMIFICATION_POINTS.workout_logged
+          : 0;
+        dispatchMemberScoreCelebrate({
+          pointsEarned,
+          totalPoints: gamification.totalPoints,
+          label: fullWorkout ? "Workout complete!" : "Workout logged",
+          celebration: fullWorkout ? "workout-complete" : "standard",
+        });
+      }
+      requestAnimationFrame(() => {
+        document.getElementById("workout-logged-success")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    } catch (e: any) {
+      const msg = e?.message || "Could not save. Check connection and try again.";
+      if (!/gamification points/i.test(msg)) {
+        alert(msg);
+      }
+    } finally {
+      setIsLogging(false);
+    }
+  }, [
+    finishedExercises,
+    workout,
+    weights,
+    completedSets,
+    activeId,
+    programSlug,
+    targetUserId,
+    liveSessionDate,
+    clearLiveSession,
+    logResult,
+    isLogging,
+  ]);
+
+  const showLoggedSuccess = !reviewMode && !hideLogButton && !!logResult;
+
+  if (coachFloorMode) {
+    return (
+      <div className="coach-live-checkoff w-full space-y-2">
+        {restTimerUi}
+        {partnerLive && instructorName ? (
+          <p className="text-[10px] font-medium text-[var(--success)]">
+            Member is logging — updates sync here.
+          </p>
+        ) : null}
+        {workout.exercises.map((block) => {
+          const prescription = normalizePrescription({
+            setScheme: block.setScheme,
+            repPattern: block.repPattern,
+            reps: block.reps,
+            sets: block.setCount,
+          });
+          const isTimed = isTimedApproach(prescription.approach);
+          const doneForBlock = completedSets[block.id] ?? new Set<number>();
+          const allSetsDone = isTimed
+            ? doneForBlock.has(1)
+            : doneForBlock.size >= block.setCount;
+          const exerciseDone = finishedExercises.has(block.id) || allSetsDone;
+          const showCompactSets = allSetsDone && coachExpandedBlockId !== block.id;
+          const doneLabel = isTimed
+            ? "Done"
+            : `${block.setCount} set${block.setCount === 1 ? "" : "s"} done`;
+
+          return (
+            <div
+              key={block.id}
+              className={`coach-floor-exercise rounded-lg border ${
+                exerciseDone
+                  ? `coach-floor-exercise--complete border-[var(--ramp-gold)]/45 bg-[var(--ramp-gold)]/8${
+                      showCompactSets ? "" : " px-2 py-1.5"
+                    }`
+                  : "border-[var(--border)] bg-[var(--surface)] px-2 py-1.5"
+              }`}
+            >
+              {showCompactSets ? (
+                <button
+                  type="button"
+                  className="coach-floor-exercise__compact"
+                  aria-label={`${block.name}, ${doneLabel}. Tap to edit sets.`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCoachExpandedBlockId(block.id);
+                  }}
+                >
+                  <span className="coach-floor-exercise__compact-name">{block.name}</span>
+                  <span className="coach-floor-exercise__compact-status">{doneLabel}</span>
+                </button>
+              ) : (
+                <>
+                  <p
+                    className={`text-xs font-semibold leading-snug ${
+                      exerciseDone ? "text-[var(--ramp-gold-light)]" : ""
+                    }`}
+                  >
+                    {block.name}
+                  </p>
+                  <div className="mt-1" onClick={(e) => e.stopPropagation()}>
+                    {isTimed ? (
+                      <div className="coach-floor-set-grid">
+                        <button
+                          type="button"
+                          data-coach-last-set={block.id}
+                          aria-pressed={allSetsDone}
+                          className={`coach-floor-set-btn ${allSetsDone ? "coach-floor-set-btn--done" : ""}`}
+                          onClick={(e) => toggleSet(block.id, 1, e.currentTarget)}
+                        >
+                          <span className="coach-floor-set-btn__num">
+                            {allSetsDone ? "✓" : "▶"}
+                          </span>
+                          <span className="coach-floor-set-btn__label">
+                            {allSetsDone ? "Done" : "Mark"}
+                          </span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="coach-floor-set-grid">
+                        {Array.from({ length: block.setCount }, (_, i) => {
+                          const setNum = i + 1;
+                          const done = doneForBlock.has(setNum);
+                          return (
+                            <button
+                              key={setNum}
+                              type="button"
+                              {...(setNum === block.setCount ? { "data-coach-last-set": block.id } : {})}
+                              aria-pressed={done}
+                              aria-label={`Set ${setNum}${done ? ", completed" : ""}`}
+                              className={`coach-floor-set-btn ${done ? "coach-floor-set-btn--done" : ""}`}
+                              onClick={(e) => toggleSet(block.id, setNum, e.currentTarget)}
+                            >
+                              <span className="coach-floor-set-btn__num">
+                                {done ? "✓" : setNum}
+                              </span>
+                              <span className="coach-floor-set-btn__label">Set</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {(() => {
+                      const restS = resolveRestSeconds({
+                        exerciseRestSec: block.restSec,
+                        workoutRestEnabled: workout.restTimerEnabled,
+                        workoutRestSeconds: workout.restTimerSeconds,
+                      });
+                      if (!restS || isTimed) return null;
+                      return (
+                        <p className="mt-1 text-[10px] font-medium text-[var(--muted)]">
+                          Rest {restS}s between sets · countdown + sound after each check
+                        </p>
+                      );
+                    })()}
+                  </div>
+                  {allSetsDone ? (
+                    <button
+                      type="button"
+                      className="coach-floor-exercise__collapse"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCoachExpandedBlockId(null);
+                      }}
+                    >
+                      Collapse
+                    </button>
+                  ) : null}
+                </>
+              )}
+            </div>
+          );
+        })}
+        <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className="btn-primary min-h-[44px] w-full rounded-xl py-2.5 text-sm font-semibold"
+            onClick={() => markWorkoutFinished()}
+          >
+            Finished
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`mx-auto w-full max-w-md md:max-w-2xl lg:max-w-2xl xl:max-w-2xl ${
+        embedded ? "px-0 py-2 md:px-2" : showLoggedSuccess ? "px-4 py-2 md:px-6" : "px-4 py-6 md:px-6"
+      }`}
+    >
+      {showLoggedSuccess ? (
+        <div
+          id="workout-logged-success"
+          className="rounded-xl border border-[var(--success)]/35 bg-[var(--success)]/8 px-3 py-2.5"
+        >
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="flex min-w-0 flex-1 items-center gap-2 text-left"
+              onClick={() => setLoggedDetailsOpen((open) => !open)}
+              aria-expanded={loggedDetailsOpen}
+            >
+              <span
+                className={`shrink-0 text-[10px] text-[var(--success)] transition-transform duration-200 ${
+                  loggedDetailsOpen ? "rotate-90" : ""
+                }`}
+                aria-hidden
+              >
+                ▶
+              </span>
+              <span className="truncate text-sm font-semibold text-[var(--success)]">Workout logged</span>
+            </button>
+            <button
+              type="button"
+              className="btn-ghost shrink-0 px-3 py-1.5 text-xs font-semibold"
+              onClick={() => window.location.reload()}
+            >
+              Open
+            </button>
+          </div>
+          {loggedDetailsOpen && (
+            <div className="mt-2 space-y-1 border-t border-[var(--success)]/20 pt-2 text-xs text-[var(--muted)]">
+              <p className="font-medium text-white">{workout.workoutName}</p>
+              <p>
+                {logResult.count > 0
+                  ? `${logResult.count} exercise${logResult.count === 1 ? "" : "s"} saved — silhouettes updated.`
+                  : "Session progress noted."}
+              </p>
+              {logResult.progress != null && (
+                <p className="text-[var(--success)]">
+                  {logResult.progress}% complete
+                  {logResult.progress < 100 ? " (partial)" : ""}
+                </p>
+              )}
+              <p>Logged {new Date(logResult.performedAt).toLocaleString()}</p>
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {!showLoggedSuccess && !embedded && (
+        <>
+          <p className="text-xs font-semibold uppercase tracking-widest text-accent">
+            {calendarDateLabel ? "Scheduled workout" : "Today\u2019s workout"}
+          </p>
+          {calendarDateLabel && (
+            <p className="mt-1 text-sm font-medium text-white">{calendarDateLabel}</p>
+          )}
+          {scheduleLabel && (
+            <p className="mt-0.5 text-xs text-[var(--muted)]">{scheduleLabel}</p>
+          )}
+          <h1 className={`${calendarDateLabel ? "mt-2" : "mt-1"} text-2xl font-bold`}>
+            {workout.workoutName}
+          </h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            {headerNote ||
+              `Hi ${workout.memberName} — follow each exercise. Your last session appears as a faint silhouette behind the active card.`}
+          </p>
+        </>
+      )}
+      {!showLoggedSuccess && coachLive && !instructorName && (
+        <p className="mt-2 text-xs font-medium text-[var(--success)]">
+          Coach is marking your workout live — updates appear almost instantly.
+        </p>
+      )}
+      {!showLoggedSuccess && partnerLive && instructorName && (
+        <p className="mt-2 text-xs font-medium text-[var(--success)]">
+          Member is logging live — their checkoffs sync here automatically.
+        </p>
+      )}
+
+      {!showLoggedSuccess ? (
+      <>
+      {restTimerUi}
+      <div className="mt-3 flex items-center gap-2 text-xs">
+        <div className="flex-1 h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-[var(--ramp-gold-light)] to-[var(--ramp-gold)] transition-all"
+            style={{ width: `${Math.round((finishedExercises.size / workout.exercises.length) * 100)}%` }}
+          />
+        </div>
+        <span className="font-medium text-accent">
+          {finishedExercises.size}/{workout.exercises.length}
+        </span>
+      </div>
+
+      {allExercisesFinished ? (
+        <button
+          type="button"
+          className="member-workout-finished-collapse mt-4 w-full"
+          onClick={() => setFinishedListExpanded((open) => !open)}
+          aria-expanded={finishedListExpanded}
+        >
+          <span
+            className={`member-workout-finished-collapse__chev ${finishedListExpanded ? "is-open" : ""}`}
+            aria-hidden
+          >
+            ▶
+          </span>
+          <span className="member-workout-finished-collapse__label">
+            {finishedExercises.size} exercises complete
+          </span>
+          <span className="member-workout-finished-collapse__hint">
+            {finishedListExpanded ? "Tap to collapse" : "Tap to review"}
+          </span>
+        </button>
+      ) : null}
+
+      <div className="mt-4 space-y-3">
+        {workout.exercises.map((block) => {
+          const isFinished =
+            finishedExercises.has(block.id) && !reviewMode && editingExerciseId !== block.id;
+          const isEditingFinished = editingExerciseId === block.id;
+
+          if (isFinished) {
+            if (allExercisesFinished && !finishedListExpanded) return null;
+            const loggedWeight = weights[block.id]?.trim();
+            return (
+              <div
+                key={block.id}
+                id={`member-exercise-${block.id}`}
+                className="member-exercise-anchor"
+              >
+                <button
+                  type="button"
+                  className="member-exercise-done w-full text-left"
+                  onClick={() => reopenExercise(block.id)}
+                  aria-label={`${block.name} completed. Tap to edit weight.`}
+                >
+                  <span className="member-exercise-done__check" aria-hidden="true">
+                    ✓
+                  </span>
+                  <span className="member-exercise-done__body">
+                    <span className="member-exercise-done__name">{block.name}</span>
+                    <span className="member-exercise-done__hint">
+                      {loggedWeight
+                        ? `${loggedWeight} lbs · tap to edit`
+                        : "Tap to add or edit weight"}
+                    </span>
+                  </span>
+                </button>
+              </div>
+            );
+          }
+
+          const isActive = block.id === activeId;
+          const prescription = normalizePrescription({
+            setScheme: block.setScheme,
+            repPattern: block.repPattern,
+            reps: block.reps,
+            sets: block.setCount,
+          });
+          const isTimed = isTimedApproach(prescription.approach);
+          const summary = formatPrescriptionSummary({
+            setScheme: block.setScheme,
+            repPattern: block.repPattern,
+            reps: block.reps,
+            sets: block.setCount,
+          });
+          const doneForBlock = completedSets[block.id] ?? new Set<number>();
+          const allSetsDone = isTimed
+            ? doneForBlock.has(1)
+            : doneForBlock.size >= block.setCount;
+
+          return (
+            <section
+              key={block.id}
+              id={`member-exercise-${block.id}`}
+              className="member-exercise-anchor relative"
+            >
+              {block.past && (
+                <div className="member-silhouette" aria-hidden="true">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                    Past performance
+                  </p>
+                  <p className="mt-2 text-sm leading-snug">
+                    {formatPastPerformance({
+                      weightTier: block.past.weightTier,
+                      setScheme: block.past.setScheme,
+                      repPattern: block.past.repPattern,
+                      reps: block.past.reps,
+                      sets: block.past.sets,
+                      startingWeightLbs: block.past.startingWeightLbs,
+                      performedAt: block.past.performedAt,
+                    })}
+                  </p>
+                  <p className="mt-3 text-xs text-[var(--muted)]">
+                    {formatPrescriptionSummary(block.past)} ·{" "}
+                    {weightTierLabel(block.past.weightTier)}
+                  </p>
+                </div>
+              )}
+
+              <div
+                className={`member-active-card ${isActive ? "ring-2 ring-accent" : ""}`}
+                onClick={() => setActiveId(block.id)}
+                onKeyDown={(e) => e.key === "Enter" && setActiveId(block.id)}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <h2 className="text-lg font-semibold">{block.name}</h2>
+                  {isActive && (
+                    <span className="rounded-full bg-accent-muted px-2 py-0.5 text-[10px] font-semibold uppercase text-accent">
+                      Now
+                    </span>
+                  )}
+                </div>
+
+                {(block.coachNotes || block.description) && (
+                  <div className="mt-2 space-y-1.5">
+                    {block.coachNotes ? (
+                      <p className="rounded-md border border-violet-500/25 bg-violet-500/10 px-2.5 py-1.5 text-sm text-violet-100">
+                        <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-wide text-violet-300/90">
+                          Coach
+                        </span>
+                        {block.coachNotes}
+                      </p>
+                    ) : block.description ? (
+                      <p className="text-sm text-[var(--muted)]">{block.description}</p>
+                    ) : null}
+                    {block.coachNotes &&
+                    block.libraryDescription &&
+                    block.libraryDescription !== block.coachNotes ? (
+                      <p className="text-xs text-[var(--muted)]">{block.libraryDescription}</p>
+                    ) : null}
+                  </div>
+                )}
+
+                <div className="mt-3">
+                  {block.videoUrl ? (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        className="badge-accent inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition hover:brightness-110"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openVideo(block.id);
+                        }}
+                      >
+                        <span
+                          className="flex h-6 w-6 items-center justify-center rounded-full bg-accent-muted text-xs"
+                          aria-hidden="true"
+                        >
+                          ▶
+                        </span>
+                        Watch demo
+                      </button>
+                      <a
+                        href={block.videoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-accent hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        YouTube link →
+                      </a>
+                    </div>
+                  ) : (
+                    <p className="text-xs italic text-[var(--muted)]">
+                      No demo video linked yet — tell your instructor to add one in the exercise library.
+                    </p>
+                  )}
+                </div>
+
+                {/* Weight input — moved here and made more prominent per client feedback: "the first thing you do on the exercise" */}
+                <label className="mt-3 block" onClick={(e) => e.stopPropagation()}>
+                  <span className="text-sm font-medium text-[var(--text)]">Starting weight (lbs)</span>
+                  <input
+                    className="input mt-1 text-base py-2 w-full"
+                    type="number"
+                    placeholder={
+                      block.past?.startingWeightLbs != null
+                        ? `Last: ${block.past.startingWeightLbs}`
+                        : "e.g. 30 — enter first"
+                    }
+                    value={reviewMode && block.past?.startingWeightLbs != null 
+                      ? block.past.startingWeightLbs.toString() 
+                      : (weights[block.id] ?? "")}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setWeights((w) => {
+                        const updated = { ...w, [block.id]: value };
+                        stateRef.current = { ...stateRef.current, weights: updated };
+                        return updated;
+                      });
+                      queueLiveSave();
+                    }}
+                    disabled={reviewMode && !instructorName}
+                  />
+                  <p className="mt-0.5 text-[10px] text-[var(--muted)]">
+                    {isEditingFinished
+                      ? "Update weight anytime — your sets stay logged."
+                      : "Enter weight before logging sets (becomes your silhouette next time)."}
+                  </p>
+                </label>
+
+                {/* Compact two-column: scheme info (left) + log sets (right) for better space use */}
+                <div className="mt-3 flex gap-3 text-sm">
+                  {/* Left: Approach / Prescription / Weight tier - tighter */}
+                  <div className="w-5/12 space-y-1 rounded-lg bg-[var(--surface-2)] p-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-[var(--muted)]">Approach</span>
+                      <span className="font-medium text-accent-deep">{approachLabel(prescription.approach)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[var(--muted)]">Prescription</span>
+                      <span className="font-medium">{summary}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[var(--muted)]">Weight tier</span>
+                      <span className="font-medium">{weightTierLabel(block.weightTier)}</span>
+                    </div>
+                  </div>
+
+                  {/* Right: Log your sets - now side-by-side */}
+                  <div
+                    className="flex-1"
+                    onClick={(e) => e.stopPropagation()}
+                    role="group"
+                    aria-label={`${block.name} ${isTimed ? "timed set" : "set"} completion`}
+                  >
+                    {isTimed ? (
+                      <>
+                        <p className="text-xs font-semibold">Timed set</p>
+                        <p className="mt-0.5 text-[10px] text-[var(--muted)]">
+                          Train for {summary}, then mark.
+                        </p>
+                        <button
+                          type="button"
+                          aria-pressed={allSetsDone}
+                          className={`member-set-btn mt-2 w-full text-xs py-1 ${allSetsDone ? "member-set-btn--done" : ""}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSet(block.id, 1);
+                          }}
+                          disabled={reviewMode && !instructorName}
+                        >
+                          <span className="member-set-btn__num text-sm">
+                            {allSetsDone ? "✓" : "▶"}
+                          </span>
+                          <span className="member-set-btn__label text-[9px]">
+                            {allSetsDone ? "Done" : "Mark complete"}
+                          </span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-baseline justify-between gap-1">
+                          <p className="text-xs font-semibold">Log your sets</p>
+                          <p className="text-[10px] text-[var(--muted)]">
+                            {doneForBlock.size}/{block.setCount}
+                          </p>
+                        </div>
+                        <div className="mt-1 grid grid-cols-5 gap-1">
+                          {Array.from({ length: block.setCount }, (_, i) => {
+                            const setNum = i + 1;
+                            const done = doneForBlock.has(setNum);
+                            return (
+                              <button
+                                key={setNum}
+                                type="button"
+                                aria-pressed={done}
+                                aria-label={`Set ${setNum}${done ? ", completed" : ""}`}
+                                className={`member-set-btn text-xs py-0.5 ${done ? "member-set-btn--done" : ""}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleSet(block.id, setNum);
+                                }}
+                                disabled={reviewMode && !instructorName}
+                              >
+                                <span className="member-set-btn__num text-sm">
+                                  {done ? "✓" : setNum}
+                                </span>
+                                <span className="member-set-btn__label text-[8px]">Set</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {(() => {
+                          const restS = resolveRestSeconds({
+                            exerciseRestSec: block.restSec,
+                            workoutRestEnabled: workout.restTimerEnabled,
+                            workoutRestSeconds: workout.restTimerSeconds,
+                          });
+                          if (!restS) return null;
+                          return (
+                            <p className="mt-1 text-[10px] text-[var(--muted)]">
+                              Rest {restS}s after each set (countdown + sound)
+                            </p>
+                          );
+                        })()}
+                      </>
+                    )}
+                    {allSetsDone && (
+                      <p className="mt-1 text-center text-[10px] font-medium text-[var(--ramp-gold-light)]">
+                        {isTimed ? "Timed complete" : "Sets logged"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* (weight input moved above the sets grid for prominence) */}
+
+                {/* Peek next exercise - space efficient teaser */}
+                {nextExercise && isActive && (
+                  <div className="mt-1 text-[10px] text-[var(--muted)] flex items-center gap-1">
+                    <span>Next:</span>{" "}
+                    <span className="font-medium text-[var(--text)] truncate">{nextExercise.name}</span>
+                  </div>
+                )}
+
+                {isEditingFinished ? (
+                  <button
+                    type="button"
+                    className="btn-primary mt-3 w-full text-sm py-1.5"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      closeExerciseEdit();
+                    }}
+                    disabled={reviewMode && !instructorName}
+                  >
+                    Done editing
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-primary mt-3 w-full text-sm py-1.5"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      markExerciseFinished(block.id);
+                    }}
+                    disabled={reviewMode && !instructorName}
+                  >
+                    {reviewMode && !instructorName
+                      ? "Session already logged (review)"
+                      : instructorName
+                        ? "Mark done for member"
+                        : "Exercise finished"}
+                  </button>
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+      </>
+      ) : null}
+
+      {!showLoggedSuccess && !reviewMode && !hideLogButton ? (
+        <button
+          type="button"
+          className="btn-primary mt-10 w-full"
+          onClick={handleLogComplete}
+          disabled={isLogging}
+        >
+          {isLogging ? "Saving your session..." : "Log workout complete"}
+        </button>
+      ) : null}
+
+      {videoModalBlock?.videoUrl && (
+        <MemberExerciseVideoModal
+          exerciseName={videoModalBlock.name}
+          videoUrl={videoModalBlock.videoUrl}
+          onClose={() => setVideoModalBlockId(null)}
+        />
+      )}
+    </div>
+  );
+}
