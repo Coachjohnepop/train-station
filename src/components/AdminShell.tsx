@@ -19,6 +19,7 @@ import CoachHelpAssistant from "@/components/CoachHelpAssistant";
 import TrainStationBrand from "@/components/TrainStationBrand";
 import DevModeSwitcher from "@/components/DevModeSwitcher";
 import LogoutButton from "@/components/LogoutButton";
+import ChatNavBadge from "@/components/ChatNavBadge";
 import CoachJoinLiveNavStrip from "@/components/CoachJoinLiveNavStrip";
 import type { SessionUser } from "@/lib/auth-session";
 import {
@@ -139,8 +140,9 @@ export default function AdminShell({
 
   if (coachFloorFocus) {
     return (
-      <div className="coach-floor-shell flex min-h-[100dvh] flex-col bg-[var(--bg)]">
-        <header className="sticky top-0 z-40 shrink-0 border-b border-sky-500/30 bg-[var(--bg)]/95 backdrop-blur-sm">
+      <div className="coach-floor-shell flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-[var(--bg)]">
+        {/* Frozen top bar: Messages stay reachable while the live floor / sets scroll */}
+        <header className="coach-floor-sticky-chrome sticky top-0 z-40 shrink-0 border-b border-sky-500/30 bg-[var(--bg)]/95 backdrop-blur-sm">
           <div className="flex min-h-[52px] items-center justify-between gap-2 px-2 py-2 sm:px-3">
             <Link
               href="/admin/day"
@@ -152,6 +154,16 @@ export default function AdminShell({
               Go to Today
             </p>
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              <Link
+                href="/admin/chat"
+                className="relative inline-flex min-h-[40px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs font-semibold text-[var(--text)] transition hover:border-accent hover:text-accent sm:min-h-[44px] sm:px-3 sm:text-sm"
+                title="Messages — chat with members while coaching"
+                aria-label="Messages"
+              >
+                <span className="sm:hidden">Msgs</span>
+                <span className="hidden sm:inline">Messages</span>
+                <ChatNavBadge role="coach" placement="corner" />
+              </Link>
               <CoachJoinLiveNavStrip />
               <LogoutButton compact className="shrink-0" />
             </div>

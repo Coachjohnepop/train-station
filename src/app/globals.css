@@ -164,6 +164,26 @@ body {
   backdrop-filter: blur(10px);
 }
 
+/* Frozen member top chrome (greeting + Messages nav + live strip) while Today/session scrolls */
+.member-sticky-chrome {
+  background: color-mix(in srgb, var(--bg) 92%, var(--surface));
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+/* Rest countdown sits under frozen chrome, not under the fold of the sticky nav */
+body:has(.member-sticky-chrome) .workout-rest-timer-sticky-shell {
+  /* greeting + nav ≈ 7.25rem; live zoom strip often adds ~3rem — use a safe default */
+  top: calc(var(--member-sticky-chrome-offset, 10.5rem) + 0.35rem);
+  z-index: 30;
+}
+
+/* Coach live floor: rest timer sticks inside the scrollable main under the thin top bar */
+.coach-floor-shell .workout-rest-timer-sticky-shell {
+  top: 0.5rem;
+  z-index: 30;
+}
+
 .app-shell-subbar {
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg) 88%, var(--surface-2));

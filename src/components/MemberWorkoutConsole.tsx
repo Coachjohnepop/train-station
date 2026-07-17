@@ -723,7 +723,10 @@ export default function MemberWorkoutConsole({
       const scroll = () => {
         const el = document.getElementById(`member-exercise-${blockId}`);
         if (!el) return false;
-        const top = el.getBoundingClientRect().top + window.scrollY - 80;
+        // Offset for frozen member chrome (greeting + nav + optional live strip)
+        const chrome = document.querySelector(".member-sticky-chrome");
+        const chromeH = chrome instanceof HTMLElement ? chrome.offsetHeight : 120;
+        const top = el.getBoundingClientRect().top + window.scrollY - chromeH - 12;
         window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
         return true;
       };
