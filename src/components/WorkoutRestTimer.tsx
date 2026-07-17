@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { formatRestCountdown } from "@/lib/rest-timer";
 
 type Props = {
@@ -8,10 +9,7 @@ type Props = {
   totalSeconds: number;
   onSkip: () => void;
   compact?: boolean;
-  /**
-   * YouTube-style floating player (centered modal). Default for session rest.
-   * When false, renders as an inline card only.
-   */
+  /** Centered modal (default). When false, inline card only. */
   sticky?: boolean;
   exerciseName?: string | null;
   completedSetNum?: number | null;
@@ -40,14 +38,18 @@ export default function WorkoutRestTimer({
   const urgent = !completing && secondsLeft > 0 && secondsLeft <= 5;
   const done = completing || secondsLeft <= 0;
 
-  // Escape / backdrop click closes (coach administer close)
   useEffect(() => {
-    if (!sticky) return;
+    if (!sticky || typeof document === "undefined") return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onSkip();
     }
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
   }, [sticky, onSkip]);
 
   const player = (
@@ -57,11 +59,7 @@ export default function WorkoutRestTimer({
       } ${done ? "workout-rest-player--done" : ""}`}
       role="timer"
       aria-live="polite"
-      aria-label={
-        done
-          ? "Rest complete"
-          : `Rest ${formatRestCountdown(secondsLeft)} remaining`
-      }
+      aria-label={done ? "Rest complete" : `Rest ${formatRestCountdown(secondsLeft)} remaining`}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="workout-rest-player__chrome">
@@ -80,19 +78,13 @@ export default function WorkoutRestTimer({
         </button>
       </div>
 
-      {exerciseName ? (
-        <p className="workout-rest-player__exercise">{exerciseName}</p>
-      ) : null}
+      {exerciseName ? <p className="workout-rest-player__exercise">{exerciseName}</p> : null}
 
       <p className="workout-rest-player__time">
-        {done ? "0:00" : formatRestCountdown(secondsLeft)}
+        {done ? "0:00" : formatRestCountdown(Math.max(0, secondsLeft))}
       </p>
       <p className="workout-rest-player__hint">
-        {done
-          ? "Buzz — next set"
-          : urgent
-            ? "Get ready…"
-            : "Countdown · auto-closes when done"}
+        {done ? "Buzz — closing…" : urgent ? "Get ready…" : "Auto-opens on set · closes when it buzzes"}
       </p>
 
       <div className="workout-rest-player__track" aria-hidden>
@@ -113,7 +105,11 @@ export default function WorkoutRestTimer({
             {muted ? "Unmute" : "Mute"}
           </button>
         ) : null}
-        <button type="button" className="workout-rest-player__btn workout-rest-player__btn--primary" onClick={onSkip}>
+        <button
+          type="button"
+          className="workout-rest-player__btn workout-rest-player__btn--primary"
+          onClick={onSkip}
+        >
           {done ? "Close" : "Skip rest"}
         </button>
       </div>
@@ -124,7 +120,7 @@ export default function WorkoutRestTimer({
     return <div className="workout-rest-player-inline">{player}</div>;
   }
 
-  return (
+  const overlay = (
     <div
       className="workout-rest-player-overlay"
       role="dialog"
@@ -140,4 +136,7 @@ export default function WorkoutRestTimer({
       <div className="workout-rest-player-stage">{player}</div>
     </div>
   );
+
+  if (typeof document === "undefined") return null;
+  return createPortal(overlay, document.body);
 }

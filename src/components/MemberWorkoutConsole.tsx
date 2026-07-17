@@ -171,6 +171,8 @@ export default function MemberWorkoutConsole({
   const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
   const restHornPlayedRef = useRef(false);
   const restTickAnnouncedRef = useRef<Set<number>>(new Set());
+  const restMutedRef = useRef(restMuted);
+  restMutedRef.current = restMuted;
   const prevCompletedSetsRef = useRef<Record<string, Set<number>> | null>(null);
   /** When true, next completedSets change came from live partner (coach↔member). */
   const pendingRemoteRestRef = useRef(false);
@@ -586,22 +588,13 @@ export default function MemberWorkoutConsole({
     (blockId: string, setNum: number, opts?: { fromRemote?: boolean; silentStart?: boolean }) => {
       const block = workout.exercises.find((e) => e.id === blockId);
       if (!block) return;
-      const prescription = normalizePrescription({
-        setScheme: block.setScheme,
-        repPattern: block.repPattern,
-        reps: block.reps,
-        sets: block.setCount,
-      });
-      const isTimed = isTimedApproach(prescription.approach);
-      const totalSets = isTimed ? 1 : Math.max(1, block.setCount);
-      // No rest after the last set of this exercise
-      if (setNum >= totalSets) return;
 
       const seconds = resolveSecondsForBlock(block);
       if (!seconds || seconds <= 0) return;
 
+      // Auto-open popup on every set check (including last set / timed mark).
       const endsAt = Date.now() + seconds * 1000;
-      // Set seconds immediately so the banner paints on the same click (no one-frame flash of empty).
+      setRestCompleting(false);
       setRestSecondsLeft(seconds);
       setRestTimer({
         blockId,
@@ -639,47 +632,56 @@ export default function MemberWorkoutConsole({
     [canCoachRestSettings, workout.workoutId],
   );
 
+  // Countdown while popup is open; on 0 → buzz → auto-close.
+  // Depend only on endsAt so mute toggles don't cancel the auto-close timer.
   useEffect(() => {
-    if (!restTimer) {
-      setRestSecondsLeft(0);
-      setRestCompleting(false);
-      restHornPlayedRef.current = false;
-      restTickAnnouncedRef.current = new Set();
-      return;
-    }
+    if (!restTimer) return;
+
+    let cancelled = false;
+    let closeTimer: number | null = null;
+    const endsAt = restTimer.endsAt;
     restHornPlayedRef.current = false;
     restTickAnnouncedRef.current = new Set();
     setRestCompleting(false);
-    let closeTimer: number | null = null;
+
+    const finishAndClose = () => {
+      if (cancelled || restHornPlayedRef.current) return;
+      restHornPlayedRef.current = true;
+      setRestCompleting(true);
+      setRestSecondsLeft(0);
+      if (!restMutedRef.current) {
+        playRestComplete();
+      }
+      closeTimer = window.setTimeout(() => {
+        if (cancelled) return;
+        setRestTimer(null);
+        setRestSecondsLeft(0);
+        setRestCompleting(false);
+      }, 900);
+    };
+
     const tick = () => {
-      const left = Math.max(0, Math.ceil((restTimer.endsAt - Date.now()) / 1000));
+      if (cancelled) return;
+      const left = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+      if (left <= 0) {
+        finishAndClose();
+        return;
+      }
       setRestSecondsLeft(left);
-      // Quiet click once per whole second remaining (including full rest, not only last 5s)
-      if (left > 0 && !restMuted && !restTickAnnouncedRef.current.has(left)) {
+      if (!restMutedRef.current && !restTickAnnouncedRef.current.has(left)) {
         restTickAnnouncedRef.current.add(left);
         playRestTick(left <= 5);
       }
-      if (left <= 0 && !restHornPlayedRef.current) {
-        restHornPlayedRef.current = true;
-        setRestCompleting(true);
-        if (!restMuted) {
-          playRestComplete();
-        }
-        // Buzz finishes (~0.75s) then auto-close the popup (YouTube-style)
-        closeTimer = window.setTimeout(() => {
-          setRestTimer(null);
-          setRestSecondsLeft(0);
-          setRestCompleting(false);
-        }, 900);
-      }
     };
+
     tick();
     const id = window.setInterval(tick, 200);
     return () => {
+      cancelled = true;
       window.clearInterval(id);
       if (closeTimer != null) window.clearTimeout(closeTimer);
     };
-  }, [restTimer, restMuted]);
+  }, [restTimer?.endsAt]);
 
   // When coach or member marks a set on the other side, start rest locally so both see/hear it.
   useEffect(() => {
@@ -1185,12 +1187,11 @@ export default function MemberWorkoutConsole({
                       </div>
                     )}
                     {(() => {
-                      if (isTimed || block.setCount <= 1) return null;
                       const restS = resolveSecondsForBlock(block);
                       if (!restS) return null;
                       return (
                         <p className="mt-1 text-[10px] font-medium text-[var(--muted)]">
-                          Rest {restS}s after sets 1–{block.setCount - 1}
+                          Rest {restS}s — popup opens on set check, closes when it buzzes
                         </p>
                       );
                     })()}
@@ -1623,12 +1624,11 @@ export default function MemberWorkoutConsole({
                           })}
                         </div>
                         {(() => {
-                          if (block.setCount <= 1) return null;
                           const restS = resolveSecondsForBlock(block);
                           if (!restS) return null;
                           return (
                             <p className="mt-1 text-[10px] text-[var(--muted)]">
-                              Rest {restS}s after each set (countdown + sound)
+                              Rest {restS}s — opens on set, closes when it buzzes
                             </p>
                           );
                         })()}
