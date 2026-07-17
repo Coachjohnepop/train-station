@@ -3,6 +3,7 @@ import {
   ensureCohortThread,
   ensureMemberThread,
   getUnreadCountsByThreadForCoach,
+  getUnreadCountsByThreadForMember,
   hydrateCoachChat,
   listThreadsForCoach,
   listThreadsForMember,
@@ -64,7 +65,10 @@ export async function GET(request: Request) {
   await ensureCohortThread(COMMUNITY_FEED_PROGRAM_SLUG, COMMUNITY_FEED_TITLE);
   const slugs = [...new Set([COMMUNITY_FEED_PROGRAM_SLUG, ...programSlugs])];
   return NextResponse.json(
-    { threads: listThreadsForMember(uid, slugs) },
+    {
+      threads: listThreadsForMember(uid, slugs),
+      unreadByThread: getUnreadCountsByThreadForMember(uid, slugs),
+    },
     { headers: { "Cache-Control": "no-store" } },
   );
 }

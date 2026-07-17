@@ -125,10 +125,13 @@ export function messageKindLabel(kind: ChatMessageKind): string | null {
   }
 }
 
+/**
+ * Bubble colors by message kind + author.
+ * Layout convention: coach always left, members/group always right.
+ */
 export function bubbleColorsForMessage(
   kind: ChatMessageKind,
-  outgoing: boolean,
-  viewerRole: "coach" | "member",
+  authorRole: "coach" | "member" | "system" = "coach",
 ) {
   if (kind === "member_sms") return CHAT_KIND_COLORS.member_sms;
   if (kind === "workout_update") return CHAT_KIND_COLORS.workout_update;
@@ -136,7 +139,6 @@ export function bubbleColorsForMessage(
   if (kind === "video_upload") return CHAT_KIND_COLORS.video_upload;
   if (kind === "image") return CHAT_KIND_COLORS.image;
   if (kind === "system") return CHAT_KIND_COLORS.system;
-  if (outgoing) return CHAT_KIND_COLORS.coach_text;
-  if (viewerRole === "coach") return CHAT_KIND_COLORS.member_text;
+  if (authorRole === "member") return CHAT_KIND_COLORS.member_text;
   return CHAT_KIND_COLORS.coach_text;
 }
