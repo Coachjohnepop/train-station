@@ -41,7 +41,7 @@ export default async function MemberChatPage({ searchParams }: Props) {
       <div>
         <h1 className="text-2xl font-bold">Messages</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Community tab — coach posts, videos, and notes (Patreon-style). Coach tab — private 1:1 thread. Workouts with checklists are on Go to Today.
+          Coach tab (default) — private 1:1 with your coach. Group tab — community posts with the sender&apos;s name on every message. Workouts with checklists are on Go to Today.
         </p>
       </div>
 

@@ -299,6 +299,24 @@ function isMessageUnreadForViewer(
   return !message.readByUserIds.includes(viewerId);
 }
 
+function senderDisplayName(
+  message: ChatMessage,
+  threadKind: ChatThread["kind"] | undefined,
+): string {
+  const name = (message.authorName || "").trim();
+  if (message.authorRole === "coach") {
+    return name ? `${name} · Coach` : "Coach";
+  }
+  // Group / community: always show who posted (no generic "Member" only)
+  if (threadKind === "cohort") {
+    return name || "Member";
+  }
+  if (message.kind === "member_sms") {
+    return name ? `${name} · SMS` : "via SMS";
+  }
+  return name || "Member";
+}
+
 function MessageBubble({
   message,
   viewerRole,
@@ -306,6 +324,7 @@ function MessageBubble({
   unread,
   onToggleReaction,
   mediaAutoplay = false,
+  threadKind,
 }: {
   message: ChatMessage;
   viewerRole: "coach" | "member";
@@ -313,11 +332,14 @@ function MessageBubble({
   unread?: boolean;
   onToggleReaction?: (messageId: string, emoji: string) => void;
   mediaAutoplay?: boolean;
+  threadKind?: ChatThread["kind"];
 }) {
   // Coach always left; member/group always right (not viewer-relative).
   const onLeft = isCoachSide(message.authorRole);
   const onRight = !onLeft;
-  const label = message.kind === "member_sms" ? "via SMS" : null;
+  const isGroup = threadKind === "cohort";
+  const label = message.kind === "member_sms" && !isGroup ? "via SMS" : null;
+  const sender = senderDisplayName(message, threadKind);
   const isRich =
     message.kind === "workout_update" ||
     message.kind === "youtube" ||
@@ -333,9 +355,14 @@ function MessageBubble({
         }`}
       >
         <div className={`mb-0.5 flex flex-wrap items-center gap-1.5 px-0.5 ${onRight ? "justify-end" : "justify-start"}`}>
-          <p className="text-[10px] font-medium text-[var(--muted)]">
-            {message.authorName}
-            {onLeft ? " · Coach" : " · Member"}
+          <p
+            className={`text-[11px] font-semibold ${
+              isGroup && message.authorRole !== "coach"
+                ? "text-[var(--text)]"
+                : "text-[var(--muted)]"
+            }`}
+          >
+            {sender}
             {label ? ` · ${label}` : ""}
           </p>
           {unread ? <UnreadBadge /> : null}
@@ -373,6 +400,7 @@ function FeedItem({
   unread,
   onToggleReaction,
   mediaAutoplay = false,
+  threadKind,
 }: {
   message: ChatMessage;
   viewerRole: "coach" | "member";
@@ -380,6 +408,7 @@ function FeedItem({
   unread?: boolean;
   onToggleReaction?: (messageId: string, emoji: string) => void;
   mediaAutoplay?: boolean;
+  threadKind?: ChatThread["kind"];
 }) {
   if (message.authorRole === "system") {
     return (
@@ -398,6 +427,7 @@ function FeedItem({
       unread={unread}
       onToggleReaction={onToggleReaction}
       mediaAutoplay={mediaAutoplay}
+      threadKind={threadKind}
     />
   );
 }
@@ -449,7 +479,7 @@ export default function ChatFeed({
     );
   }
 
-  const threadKindLabel = thread.kind === "cohort" ? "Community" : "Direct";
+  const threadKindLabel = thread.kind === "cohort" ? "Group" : "Coach";
   const unreadFlags = messages.map((m) => isMessageUnreadForViewer(m, viewerRole, viewerId));
   const unreadCount = unreadFlags.filter(Boolean).length;
   const firstUnreadIndex = unreadFlags.findIndex(Boolean);
@@ -467,7 +497,9 @@ export default function ChatFeed({
             )}
           </div>
           <p className="text-[11px] text-[var(--muted)]">
-            {thread.kind === "cohort" ? `Community feed · ${COMMUNITY_NO_BROADCAST_NOTE}` : "Direct messages with your coach"}
+            {thread.kind === "cohort"
+              ? `Group feed · names on every post · ${COMMUNITY_NO_BROADCAST_NOTE}`
+              : "Direct messages with your coach"}
             {" · "}
             <span className="text-[var(--muted)]">Coach left · you / group right</span>
           </p>
@@ -521,6 +553,7 @@ export default function ChatFeed({
                   unread={unreadFlags[index]}
                   onToggleReaction={toggleReaction}
                   mediaAutoplay={mediaAutoplay}
+                  threadKind={thread.kind}
                 />
               </div>
             ))}

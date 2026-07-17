@@ -335,7 +335,9 @@ export default function AdminChatWorkspace({
         >
           <div className="border-b border-[var(--border)] bg-violet-950/25 px-4 py-3">
             <p className="text-xs font-bold uppercase tracking-wide text-violet-200">Inbox</p>
-            <p className="text-[11px] text-[var(--muted)]">Tap a member — colors show Live vs Asynch</p>
+            <p className="text-[11px] text-[var(--muted)]">
+              Members first (1:1 with coach) · group feeds below · colors show Live vs Asynch
+            </p>
           </div>
           <InboxLegend />
           <div className="min-h-0 flex-1 overflow-y-auto p-2 max-h-[min(50vh,420px)] lg:max-h-none">
@@ -349,9 +351,11 @@ export default function AdminChatWorkspace({
             {cohortThreads.length > 0 && (
               <div className={`mt-3 rounded-lg border px-1 pt-1 ${CHAT_COHORT_COLORS.section}`}>
                 <p className={`px-2 py-2 text-xs font-bold uppercase tracking-wide ${CHAT_COHORT_COLORS.chipText}`}>
-                  Community feed
+                  Group messages
                 </p>
-                <p className="px-2 pb-2 text-[10px] text-[var(--muted)]">{COMMUNITY_NO_BROADCAST_NOTE}</p>
+                <p className="px-2 pb-2 text-[10px] text-[var(--muted)]">
+                  Sender name on every post · {COMMUNITY_NO_BROADCAST_NOTE}
+                </p>
                 <div className="px-1 pb-1">
                   {cohortThreads.map((t) => {
                     const cohortUnread = unreadByThread[t.id] || 0;

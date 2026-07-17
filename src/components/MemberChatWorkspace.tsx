@@ -12,15 +12,16 @@ import {
   useStoredPanelSize,
 } from "@/lib/chat-panel-resize";
 
+/** Coach 1:1 first (default board), then community / group feeds. */
 function orderThreads(threads: ChatThread[]) {
-  const cohorts = threads.filter((t) => t.kind === "cohort");
   const direct = threads.filter((t) => t.kind === "member");
-  return [...cohorts, ...direct];
+  const cohorts = threads.filter((t) => t.kind === "cohort");
+  return [...direct, ...cohorts];
 }
 
 function threadLabel(thread: ChatThread) {
-  if (thread.kind === "cohort") return `${thread.title} · Community`;
-  return DEMO_COACH.displayName;
+  if (thread.kind === "cohort") return `${thread.title} · Group`;
+  return `Coach · ${DEMO_COACH.displayName}`;
 }
 
 function displayThread(thread: ChatThread | null): ChatThread | null {
@@ -39,14 +40,15 @@ export default function MemberChatWorkspace({
   memberId: string;
 }) {
   const orderedInitial = useMemo(() => orderThreads(initialThreads), [initialThreads]);
-  const defaultCommunity = orderedInitial.find((t) => t.kind === "cohort");
   const defaultDirect = orderedInitial.find((t) => t.kind === "member");
+  const defaultCommunity = orderedInitial.find((t) => t.kind === "cohort");
 
   const tabStorageKey = `ts-member-chat-tab:${memberId}`;
 
   const [threads, setThreads] = useState(orderedInitial);
+  // Default to coach board (not community)
   const [activeId, setActiveId] = useState(
-    defaultCommunity?.id || defaultDirect?.id || orderedInitial[0]?.id || "",
+    defaultDirect?.id || defaultCommunity?.id || orderedInitial[0]?.id || "",
   );
   const [unreadByThread, setUnreadByThread] = useState<Record<string, number>>({});
   const [tabReady, setTabReady] = useState(false);
