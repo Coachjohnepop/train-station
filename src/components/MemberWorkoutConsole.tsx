@@ -161,6 +161,8 @@ export default function MemberWorkoutConsole({
   const [restTimer, setRestTimer] = useState<ActiveRestTimer | null>(null);
   const [restSecondsLeft, setRestSecondsLeft] = useState(0);
   const [restMuted, setRestMuted] = useState(false);
+  /** True while buzzer plays and popup is about to auto-close. */
+  const [restCompleting, setRestCompleting] = useState(false);
   /** Session override so coach can set rest on the floor without rebuilding the workout. */
   const [sessionRestEnabled, setSessionRestEnabled] = useState(true);
   const [sessionRestSeconds, setSessionRestSeconds] = useState(DEFAULT_REST_TIMER_SECONDS);
@@ -564,6 +566,7 @@ export default function MemberWorkoutConsole({
   const clearRestTimer = useCallback(() => {
     setRestTimer(null);
     setRestSecondsLeft(0);
+    setRestCompleting(false);
   }, []);
 
   const resolveSecondsForBlock = useCallback(
@@ -639,12 +642,15 @@ export default function MemberWorkoutConsole({
   useEffect(() => {
     if (!restTimer) {
       setRestSecondsLeft(0);
+      setRestCompleting(false);
       restHornPlayedRef.current = false;
       restTickAnnouncedRef.current = new Set();
       return;
     }
     restHornPlayedRef.current = false;
     restTickAnnouncedRef.current = new Set();
+    setRestCompleting(false);
+    let closeTimer: number | null = null;
     const tick = () => {
       const left = Math.max(0, Math.ceil((restTimer.endsAt - Date.now()) / 1000));
       setRestSecondsLeft(left);
@@ -653,19 +659,26 @@ export default function MemberWorkoutConsole({
         restTickAnnouncedRef.current.add(left);
         playRestTick(left <= 5);
       }
-      if (left <= 0) {
-        if (!restHornPlayedRef.current) {
-          restHornPlayedRef.current = true;
-          if (!restMuted) {
-            playRestComplete();
-          }
+      if (left <= 0 && !restHornPlayedRef.current) {
+        restHornPlayedRef.current = true;
+        setRestCompleting(true);
+        if (!restMuted) {
+          playRestComplete();
         }
-        setRestTimer(null);
+        // Buzz finishes (~0.75s) then auto-close the popup (YouTube-style)
+        closeTimer = window.setTimeout(() => {
+          setRestTimer(null);
+          setRestSecondsLeft(0);
+          setRestCompleting(false);
+        }, 900);
       }
     };
     tick();
     const id = window.setInterval(tick, 200);
-    return () => window.clearInterval(id);
+    return () => {
+      window.clearInterval(id);
+      if (closeTimer != null) window.clearTimeout(closeTimer);
+    };
   }, [restTimer, restMuted]);
 
   // When coach or member marks a set on the other side, start rest locally so both see/hear it.
@@ -769,7 +782,7 @@ export default function MemberWorkoutConsole({
       : 0;
 
   const restTimerUi =
-    restTimer != null && displayRestSeconds >= 0 ? (
+    restTimer != null ? (
       <WorkoutRestTimer
         secondsLeft={displayRestSeconds > 0 ? displayRestSeconds : restSecondsLeft}
         totalSeconds={restTimer.totalSeconds}
@@ -780,6 +793,7 @@ export default function MemberWorkoutConsole({
         completedSetNum={restTimer.completedSetNum}
         muted={restMuted}
         onToggleMute={toggleRestMute}
+        completing={restCompleting || displayRestSeconds <= 0}
       />
     ) : null;
 

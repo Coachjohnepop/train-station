@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { formatRestCountdown } from "@/lib/rest-timer";
 
 type Props = {
@@ -7,12 +8,17 @@ type Props = {
   totalSeconds: number;
   onSkip: () => void;
   compact?: boolean;
-  /** Sticky floating banner so coach + member always see it while scrolling. */
+  /**
+   * YouTube-style floating player (centered modal). Default for session rest.
+   * When false, renders as an inline card only.
+   */
   sticky?: boolean;
   exerciseName?: string | null;
   completedSetNum?: number | null;
   muted?: boolean;
   onToggleMute?: () => void;
+  /** True for the brief 0:00 / buzz window before auto-close. */
+  completing?: boolean;
 };
 
 export default function WorkoutRestTimer({
@@ -20,63 +26,118 @@ export default function WorkoutRestTimer({
   totalSeconds,
   onSkip,
   compact = false,
-  sticky = false,
+  sticky = true,
   exerciseName,
   completedSetNum,
   muted,
   onToggleMute,
+  completing = false,
 }: Props) {
   const progress =
-    totalSeconds > 0 ? Math.min(100, ((totalSeconds - secondsLeft) / totalSeconds) * 100) : 100;
-  const urgent = secondsLeft > 0 && secondsLeft <= 5;
+    totalSeconds > 0
+      ? Math.min(100, ((totalSeconds - Math.max(0, secondsLeft)) / totalSeconds) * 100)
+      : 100;
+  const urgent = !completing && secondsLeft > 0 && secondsLeft <= 5;
+  const done = completing || secondsLeft <= 0;
 
-  const body = (
+  // Escape / backdrop click closes (coach administer close)
+  useEffect(() => {
+    if (!sticky) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onSkip();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sticky, onSkip]);
+
+  const player = (
     <div
-      className={`workout-rest-timer ${compact ? "workout-rest-timer--compact" : ""} ${
-        sticky ? "workout-rest-timer--sticky" : ""
-      } ${urgent ? "workout-rest-timer--urgent" : ""}`}
+      className={`workout-rest-player ${compact ? "workout-rest-player--compact" : ""} ${
+        urgent ? "workout-rest-player--urgent" : ""
+      } ${done ? "workout-rest-player--done" : ""}`}
       role="timer"
       aria-live="polite"
-      aria-label={`Rest ${formatRestCountdown(secondsLeft)} remaining`}
+      aria-label={
+        done
+          ? "Rest complete"
+          : `Rest ${formatRestCountdown(secondsLeft)} remaining`
+      }
+      onClick={(e) => e.stopPropagation()}
     >
-      <div className="workout-rest-timer__bar" aria-hidden>
-        <div className="workout-rest-timer__bar-fill" style={{ width: `${progress}%` }} />
+      <div className="workout-rest-player__chrome">
+        <p className="workout-rest-player__eyebrow">
+          {done ? "Rest complete" : "Rest timer"}
+          {completedSetNum != null && !done ? ` · after set ${completedSetNum}` : ""}
+        </p>
+        <button
+          type="button"
+          className="workout-rest-player__close"
+          onClick={onSkip}
+          aria-label="Close rest timer"
+          title="Close"
+        >
+          ✕
+        </button>
       </div>
-      <div className="workout-rest-timer__body">
-        <div className="min-w-0">
-          <p className="workout-rest-timer__label">
-            Rest
-            {completedSetNum != null ? ` · after set ${completedSetNum}` : ""}
-          </p>
-          {exerciseName ? (
-            <p className="workout-rest-timer__exercise">{exerciseName}</p>
-          ) : null}
-          <p className="workout-rest-timer__time">{formatRestCountdown(secondsLeft)}</p>
-        </div>
-        <div className="workout-rest-timer__actions">
-          {onToggleMute ? (
-            <button
-              type="button"
-              className="workout-rest-timer__mute"
-              onClick={onToggleMute}
-              aria-pressed={Boolean(muted)}
-            >
-              {muted ? "Unmute" : "Mute"}
-            </button>
-          ) : null}
-          <button type="button" className="workout-rest-timer__skip" onClick={onSkip}>
-            Skip
+
+      {exerciseName ? (
+        <p className="workout-rest-player__exercise">{exerciseName}</p>
+      ) : null}
+
+      <p className="workout-rest-player__time">
+        {done ? "0:00" : formatRestCountdown(secondsLeft)}
+      </p>
+      <p className="workout-rest-player__hint">
+        {done
+          ? "Buzz — next set"
+          : urgent
+            ? "Get ready…"
+            : "Countdown · auto-closes when done"}
+      </p>
+
+      <div className="workout-rest-player__track" aria-hidden>
+        <div
+          className="workout-rest-player__track-fill"
+          style={{ width: `${done ? 100 : progress}%` }}
+        />
+      </div>
+
+      <div className="workout-rest-player__actions">
+        {onToggleMute ? (
+          <button
+            type="button"
+            className="workout-rest-player__btn"
+            onClick={onToggleMute}
+            aria-pressed={Boolean(muted)}
+          >
+            {muted ? "Unmute" : "Mute"}
           </button>
-        </div>
+        ) : null}
+        <button type="button" className="workout-rest-player__btn workout-rest-player__btn--primary" onClick={onSkip}>
+          {done ? "Close" : "Skip rest"}
+        </button>
       </div>
     </div>
   );
 
-  if (!sticky) return body;
+  if (!sticky) {
+    return <div className="workout-rest-player-inline">{player}</div>;
+  }
 
   return (
-    <div className="workout-rest-timer-sticky-shell" aria-hidden={false}>
-      {body}
+    <div
+      className="workout-rest-player-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Rest timer"
+    >
+      <button
+        type="button"
+        className="workout-rest-player-backdrop"
+        aria-label="Close rest timer"
+        onClick={onSkip}
+      />
+      <div className="workout-rest-player-stage">{player}</div>
     </div>
   );
 }
