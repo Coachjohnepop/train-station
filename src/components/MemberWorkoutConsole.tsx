@@ -15,7 +15,12 @@ import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
 import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
 import WorkoutRestTimer from "@/components/WorkoutRestTimer";
 import { playRestComplete, playRestStart, playRestTick } from "@/lib/rest-audio";
-import { resolveRestSeconds } from "@/lib/rest-timer";
+import {
+  DEFAULT_REST_TIMER_SECONDS,
+  REST_TIMER_PRESETS,
+  normalizeRestTimerSeconds,
+  resolveRestSeconds,
+} from "@/lib/rest-timer";
 import { confettiOriginFromElement, fireWorkoutConfetti } from "@/lib/workout-confetti";
 
 export type MemberExerciseBlock = {
@@ -156,6 +161,10 @@ export default function MemberWorkoutConsole({
   const [restTimer, setRestTimer] = useState<ActiveRestTimer | null>(null);
   const [restSecondsLeft, setRestSecondsLeft] = useState(0);
   const [restMuted, setRestMuted] = useState(false);
+  /** Session override so coach can set rest on the floor without rebuilding the workout. */
+  const [sessionRestEnabled, setSessionRestEnabled] = useState(true);
+  const [sessionRestSeconds, setSessionRestSeconds] = useState(DEFAULT_REST_TIMER_SECONDS);
+  const [restSettingsSaving, setRestSettingsSaving] = useState(false);
   const [coachExpandedBlockId, setCoachExpandedBlockId] = useState<string | null>(null);
   const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
   const restHornPlayedRef = useRef(false);
@@ -165,6 +174,7 @@ export default function MemberWorkoutConsole({
   const pendingRemoteRestRef = useRef(false);
   /** Skip rest on first remote snapshot (history), only fire on live checkoffs after that. */
   const liveRestBaselineReadyRef = useRef(false);
+  const canCoachRestSettings = Boolean(instructorName || coachFloorMode);
 
   useEffect(() => {
     try {
@@ -173,6 +183,25 @@ export default function MemberWorkoutConsole({
       /* ignore */
     }
   }, []);
+
+  // Seed rest settings from workout prescription (coach can change mid-session).
+  useEffect(() => {
+    const fromWorkout =
+      workout.restTimerEnabled && typeof workout.restTimerSeconds === "number"
+        ? normalizeRestTimerSeconds(workout.restTimerSeconds)
+        : null;
+    const firstExerciseRest = workout.exercises.find(
+      (e) => typeof e.restSec === "number" && e.restSec > 0,
+    )?.restSec;
+    const seeded =
+      fromWorkout ??
+      (typeof firstExerciseRest === "number"
+        ? normalizeRestTimerSeconds(firstExerciseRest)
+        : DEFAULT_REST_TIMER_SECONDS);
+    setSessionRestSeconds(seeded);
+    // Default ON so checkoffs always run a countdown unless coach turns it off.
+    setSessionRestEnabled(true);
+  }, [workout.workoutId, workout.restTimerEnabled, workout.restTimerSeconds, workout.exercises]);
 
   const toggleRestMute = useCallback(() => {
     setRestMuted((prev) => {
@@ -532,7 +561,23 @@ export default function MemberWorkoutConsole({
     .slice(activeIdx + 1)
     .find((e) => !finishedExercises.has(e.id));
 
-  const clearRestTimer = useCallback(() => setRestTimer(null), []);
+  const clearRestTimer = useCallback(() => {
+    setRestTimer(null);
+    setRestSecondsLeft(0);
+  }, []);
+
+  const resolveSecondsForBlock = useCallback(
+    (block: MemberExerciseBlock): number | null => {
+      if (!sessionRestEnabled) return null;
+      // Prefer per-exercise rest when set; otherwise session/workout seconds (coach can change mid-session).
+      return resolveRestSeconds({
+        exerciseRestSec: block.restSec,
+        workoutRestEnabled: true,
+        workoutRestSeconds: sessionRestSeconds,
+      });
+    },
+    [sessionRestEnabled, sessionRestSeconds],
+  );
 
   const maybeStartRestTimer = useCallback(
     (blockId: string, setNum: number, opts?: { fromRemote?: boolean; silentStart?: boolean }) => {
@@ -545,29 +590,50 @@ export default function MemberWorkoutConsole({
         sets: block.setCount,
       });
       const isTimed = isTimedApproach(prescription.approach);
-      const totalSets = isTimed ? 1 : block.setCount;
+      const totalSets = isTimed ? 1 : Math.max(1, block.setCount);
       // No rest after the last set of this exercise
       if (setNum >= totalSets) return;
 
-      const seconds = resolveRestSeconds({
-        exerciseRestSec: block.restSec,
-        workoutRestEnabled: workout.restTimerEnabled,
-        workoutRestSeconds: workout.restTimerSeconds,
-      });
+      const seconds = resolveSecondsForBlock(block);
       if (!seconds || seconds <= 0) return;
 
+      const endsAt = Date.now() + seconds * 1000;
+      // Set seconds immediately so the banner paints on the same click (no one-frame flash of empty).
+      setRestSecondsLeft(seconds);
       setRestTimer({
         blockId,
         completedSetNum: setNum,
-        endsAt: Date.now() + seconds * 1000,
+        endsAt,
         totalSeconds: seconds,
       });
       restTickAnnouncedRef.current = new Set();
+      restHornPlayedRef.current = false;
       if (!opts?.silentStart && !restMuted) {
         playRestStart();
       }
     },
-    [workout, restMuted],
+    [workout.exercises, restMuted, resolveSecondsForBlock],
+  );
+
+  const saveCoachRestSettings = useCallback(
+    async (enabled: boolean, seconds: number) => {
+      setSessionRestEnabled(enabled);
+      setSessionRestSeconds(normalizeRestTimerSeconds(seconds));
+      if (!canCoachRestSettings || !workout.workoutId) return;
+      setRestSettingsSaving(true);
+      try {
+        await fetch(`/api/workouts/${workout.workoutId}/rest-timer`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled, seconds: normalizeRestTimerSeconds(seconds) }),
+        });
+      } catch {
+        /* local override still works */
+      } finally {
+        setRestSettingsSaving(false);
+      }
+    },
+    [canCoachRestSettings, workout.workoutId],
   );
 
   useEffect(() => {
@@ -697,10 +763,15 @@ export default function MemberWorkoutConsole({
       ? workout.exercises.find((e) => e.id === restTimer.blockId)?.name ?? null
       : null;
 
+  const displayRestSeconds =
+    restTimer != null
+      ? Math.max(restSecondsLeft, Math.max(0, Math.ceil((restTimer.endsAt - Date.now()) / 1000)))
+      : 0;
+
   const restTimerUi =
-    restTimer && restSecondsLeft > 0 ? (
+    restTimer != null && displayRestSeconds >= 0 ? (
       <WorkoutRestTimer
-        secondsLeft={restSecondsLeft}
+        secondsLeft={displayRestSeconds > 0 ? displayRestSeconds : restSecondsLeft}
         totalSeconds={restTimer.totalSeconds}
         onSkip={clearRestTimer}
         compact={coachFloorMode}
@@ -710,6 +781,53 @@ export default function MemberWorkoutConsole({
         muted={restMuted}
         onToggleMute={toggleRestMute}
       />
+    ) : null;
+
+  const coachRestControls =
+    canCoachRestSettings && !reviewMode ? (
+      <div className="coach-rest-controls rounded-xl border border-accent/35 bg-accent/10 px-3 py-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label className="flex items-center gap-2 text-xs font-semibold text-[var(--text)]">
+            <input
+              type="checkbox"
+              checked={sessionRestEnabled}
+              onChange={(e) => void saveCoachRestSettings(e.target.checked, sessionRestSeconds)}
+              className="rounded border-[var(--border)]"
+            />
+            Rest timer after each set
+          </label>
+          {restSettingsSaving ? (
+            <span className="text-[10px] text-[var(--muted)]">Saving…</span>
+          ) : (
+            <span className="text-[10px] text-[var(--muted)]">
+              {sessionRestEnabled
+                ? `${sessionRestSeconds}s · starts when you check a set`
+                : "Off"}
+            </span>
+          )}
+        </div>
+        {sessionRestEnabled ? (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {REST_TIMER_PRESETS.map((preset) => {
+              const active = sessionRestSeconds === preset.seconds;
+              return (
+                <button
+                  key={preset.seconds}
+                  type="button"
+                  className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                    active
+                      ? "border-accent bg-accent/25 text-accent"
+                      : "border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:border-accent/50 hover:text-[var(--text)]"
+                  }`}
+                  onClick={() => void saveCoachRestSettings(true, preset.seconds)}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
     ) : null;
 
   const openVideo = useCallback((blockId: string) => {
@@ -952,6 +1070,7 @@ export default function MemberWorkoutConsole({
   if (coachFloorMode) {
     return (
       <div className="coach-live-checkoff w-full space-y-2">
+        {coachRestControls}
         {restTimerUi}
         {partnerLive && instructorName ? (
           <p className="text-[10px] font-medium text-[var(--success)]">
@@ -1052,15 +1171,12 @@ export default function MemberWorkoutConsole({
                       </div>
                     )}
                     {(() => {
-                      const restS = resolveRestSeconds({
-                        exerciseRestSec: block.restSec,
-                        workoutRestEnabled: workout.restTimerEnabled,
-                        workoutRestSeconds: workout.restTimerSeconds,
-                      });
-                      if (!restS || isTimed) return null;
+                      if (isTimed || block.setCount <= 1) return null;
+                      const restS = resolveSecondsForBlock(block);
+                      if (!restS) return null;
                       return (
                         <p className="mt-1 text-[10px] font-medium text-[var(--muted)]">
-                          Rest {restS}s between sets · countdown + sound after each check
+                          Rest {restS}s after sets 1–{block.setCount - 1}
                         </p>
                       );
                     })()}
@@ -1184,8 +1300,9 @@ export default function MemberWorkoutConsole({
 
       {!showLoggedSuccess ? (
       <>
+      {coachRestControls}
       {restTimerUi}
-      <div className="mt-3 flex items-center gap-2 text-xs">
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
         <div className="flex-1 h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-[var(--ramp-gold-light)] to-[var(--ramp-gold)] transition-all"
@@ -1492,11 +1609,8 @@ export default function MemberWorkoutConsole({
                           })}
                         </div>
                         {(() => {
-                          const restS = resolveRestSeconds({
-                            exerciseRestSec: block.restSec,
-                            workoutRestEnabled: workout.restTimerEnabled,
-                            workoutRestSeconds: workout.restTimerSeconds,
-                          });
+                          if (block.setCount <= 1) return null;
+                          const restS = resolveSecondsForBlock(block);
                           if (!restS) return null;
                           return (
                             <p className="mt-1 text-[10px] text-[var(--muted)]">

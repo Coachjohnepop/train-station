@@ -171,19 +171,6 @@ body {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
-/* Rest countdown sits under frozen chrome, not under the fold of the sticky nav */
-body:has(.member-sticky-chrome) .workout-rest-timer-sticky-shell {
-  /* greeting + nav ≈ 7.25rem; live zoom strip often adds ~3rem — use a safe default */
-  top: calc(var(--member-sticky-chrome-offset, 10.5rem) + 0.35rem);
-  z-index: 30;
-}
-
-/* Coach live floor: rest timer sticks inside the scrollable main under the thin top bar */
-.coach-floor-shell .workout-rest-timer-sticky-shell {
-  top: 0.5rem;
-  z-index: 30;
-}
-
 .app-shell-subbar {
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg) 88%, var(--surface-2));
@@ -1990,12 +1977,30 @@ input:-webkit-autofill {
   }
 }
 
-/* Rest timer — auto countdown after each logged set (coach + member) */
+/* Rest timer — fixed so coach + member always see countdown after a set click */
 .workout-rest-timer-sticky-shell {
-  position: sticky;
-  top: 0.5rem;
-  z-index: 40;
-  margin-bottom: 0.5rem;
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  top: max(0.65rem, env(safe-area-inset-top));
+  z-index: 70;
+  width: min(calc(100vw - 1rem), 28rem);
+  margin: 0;
+  pointer-events: auto;
+}
+
+/* Sit below frozen member chrome when present */
+body:has(.member-sticky-chrome) .workout-rest-timer-sticky-shell {
+  top: calc(var(--member-sticky-chrome-offset, 7.5rem) + 0.35rem);
+}
+
+.coach-floor-shell .workout-rest-timer-sticky-shell {
+  top: max(3.75rem, calc(env(safe-area-inset-top) + 3.25rem));
+}
+
+.coach-rest-controls {
+  position: relative;
+  z-index: 5;
 }
 
 .workout-rest-timer {
