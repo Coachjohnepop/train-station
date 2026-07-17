@@ -414,6 +414,23 @@ export function getUnreadCountsByThreadForCoach(): Record<string, number> {
   return counts;
 }
 
+/** Per-thread unread coach messages for a member (tab / body badges). */
+export function getUnreadCountsByThreadForMember(
+  memberId: string,
+  programSlugs: string[] = [],
+): Record<string, number> {
+  const threads = listThreadsForMember(memberId, programSlugs);
+  const threadIds = new Set(threads.map((t) => t.id));
+  const counts: Record<string, number> = {};
+  for (const m of readStore().messages) {
+    if (!threadIds.has(m.threadId)) continue;
+    if (m.authorRole !== "coach") continue;
+    if (m.readByUserIds.includes(memberId)) continue;
+    counts[m.threadId] = (counts[m.threadId] || 0) + 1;
+  }
+  return counts;
+}
+
 export async function appendMemberSmsToChat(params: {
   memberId: string;
   body: string;
