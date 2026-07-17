@@ -17,7 +17,12 @@ type LiveZoomStatus = {
   livePageUrl: string;
 };
 
-export default function MemberLiveZoomStrip() {
+type Props = {
+  /** When true, strip is nested in sticky chrome (no own sticky). */
+  embedded?: boolean;
+};
+
+export default function MemberLiveZoomStrip({ embedded = false }: Props) {
   const [status, setStatus] = useState<LiveZoomStatus | null>(null);
 
   const load = useCallback(async () => {
@@ -40,7 +45,11 @@ export default function MemberLiveZoomStrip() {
   const showJoin = Boolean(status?.joinUrl && (status.canJoin || status.hostStarted));
 
   return (
-    <div className="sticky top-0 z-40 border-b border-sky-500/30 bg-sky-950/95 backdrop-blur-sm">
+    <div
+      className={`border-b border-sky-500/30 bg-sky-950/95 backdrop-blur-sm ${
+        embedded ? "" : "sticky top-0 z-40"
+      }`}
+    >
       <div className="mx-auto flex w-full max-w-lg items-center justify-between gap-2 px-4 py-2 md:max-w-3xl lg:max-w-6xl xl:max-w-7xl md:px-6 lg:px-8">
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-sky-300/90">
