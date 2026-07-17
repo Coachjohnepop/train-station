@@ -6,6 +6,7 @@ import {
   memberCanPostToThread,
   resolveThreadById,
 } from "@/lib/coach-chat";
+import { isAllowedChatMediaUrl } from "@/lib/chat-compose-auth";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
 
 import { coachDisplayName } from "@/lib/demo-coach";
@@ -19,9 +20,15 @@ export async function POST(request: Request) {
   const role = body.role === "coach" ? "coach" : "member";
   const threadId = typeof body.threadId === "string" ? body.threadId : "";
   const sendSms = body.sendSms !== false;
+  const imageUrlRaw = typeof body.imageUrl === "string" ? body.imageUrl.trim() : "";
+  const imageUrl = imageUrlRaw && isAllowedChatMediaUrl(imageUrlRaw) ? imageUrlRaw : "";
 
-  if (message.length < 1) {
-    return NextResponse.json({ error: "Message is required" }, { status: 400 });
+  if (imageUrlRaw && !imageUrl) {
+    return NextResponse.json({ error: "Invalid image URL — upload the photo in Messages first." }, { status: 400 });
+  }
+
+  if (message.length < 1 && !imageUrl) {
+    return NextResponse.json({ error: "Message or image is required" }, { status: 400 });
   }
 
   if (role === "coach") {
@@ -44,8 +51,9 @@ export async function POST(request: Request) {
         authorRole: "coach",
         authorId: COACH_READER_ID,
         authorName: coachDisplayName(coachSession),
-        kind: "text",
-        body: message,
+        kind: imageUrl ? "image" : "text",
+        body: message || undefined,
+        mediaUrl: imageUrl || undefined,
         readByUserIds: [COACH_READER_ID],
       });
     } catch (e: unknown) {
@@ -55,11 +63,14 @@ export async function POST(request: Request) {
 
     let smsResult = { sent: 0 } as Awaited<ReturnType<typeof sendCoachReplySms>>;
     if (sendSms && thread.kind === "member" && thread.memberId) {
-      smsResult = await sendCoachReplySms({
-        memberId: thread.memberId,
-        message,
-        coachName: coachDisplayName(coachSession),
-      });
+      const smsBody = message || (imageUrl ? "Sent a photo in Messages" : "");
+      if (smsBody) {
+        smsResult = await sendCoachReplySms({
+          memberId: thread.memberId,
+          message: smsBody,
+          coachName: coachDisplayName(coachSession),
+        });
+      }
     }
 
     return NextResponse.json({
@@ -99,8 +110,9 @@ export async function POST(request: Request) {
     authorRole: "member",
     authorId: uid,
     authorName,
-    kind: "text",
-    body: message,
+    kind: imageUrl ? "image" : "text",
+    body: message || undefined,
+    mediaUrl: imageUrl || undefined,
   });
 
   return NextResponse.json({ ok: true, message: created });
