@@ -187,10 +187,27 @@ export default function CoachChatComposer({
         <span className="text-[var(--muted)]">Message (optional)</span>
         <textarea
           className="input mt-1 h-20 w-full resize-y text-sm"
-          placeholder="Note for this member..."
+          placeholder="Note for this member… paste a screenshot here too"
           value={body}
           onChange={(e) => setBody(e.target.value)}
+          onPaste={(e) => {
+            const items = e.clipboardData?.items;
+            if (!items) return;
+            for (const item of Array.from(items)) {
+              if (item.kind === "file" && item.type.startsWith("image/")) {
+                const file = item.getAsFile();
+                if (file) {
+                  e.preventDefault();
+                  void handleImagePick(file);
+                }
+                return;
+              }
+            }
+          }}
         />
+        <p className="mt-1 text-[10px] text-[var(--muted)]">
+          Paste an image into this box (Ctrl/⌘+V) or use Photo below.
+        </p>
       </label>
 
       <details className="group rounded border border-amber-500/30 bg-amber-500/5 p-3">
@@ -227,7 +244,13 @@ export default function CoachChatComposer({
             className="input mt-1 w-full text-xs"
             onChange={(e) => handleImagePick(e.target.files?.[0] || null)}
           />
-          {imageUrl && <p className="mt-1 text-[10px] text-[var(--success)]">Photo ready</p>}
+          {imageUrl && (
+            <div className="mt-1.5 flex items-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={imageUrl} alt="" className="h-12 w-12 rounded border border-[var(--border)] object-cover" />
+              <p className="text-[10px] text-[var(--success)]">Photo ready</p>
+            </div>
+          )}
         </label>
         <label className="block text-xs">
           <span className="text-[var(--muted)]">Short video (≤{CHAT_VIDEO_MAX_DURATION_SEC}s, max 20MB)</span>
