@@ -48,6 +48,7 @@ export default function MemberChatWorkspace({
   const [activeId, setActiveId] = useState(
     defaultCommunity?.id || defaultDirect?.id || orderedInitial[0]?.id || "",
   );
+  const [unreadByThread, setUnreadByThread] = useState<Record<string, number>>({});
   const [tabReady, setTabReady] = useState(false);
 
   useEffect(() => {
@@ -115,9 +116,32 @@ export default function MemberChatWorkspace({
     [],
   );
 
+  const refreshUnread = useCallback(async () => {
+    try {
+      const res = await fetch("/api/chat/threads?role=member", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (Array.isArray(data.threads)) setThreads(orderThreads(data.threads));
+      setUnreadByThread(data.unreadByThread || {});
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   useEffect(() => {
     setThreads(orderThreads(initialThreads));
   }, [initialThreads]);
+
+  useEffect(() => {
+    void refreshUnread();
+    const id = setInterval(() => void refreshUnread(), 12000);
+    const onRefresh = () => void refreshUnread();
+    window.addEventListener("chat-unread-refresh", onRefresh);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("chat-unread-refresh", onRefresh);
+    };
+  }, [refreshUnread]);
 
   useEffect(() => {
     if (!activeId) return;
@@ -145,20 +169,28 @@ export default function MemberChatWorkspace({
     <div className="space-y-4">
       {orderedThreads.length > 1 && (
         <div className="flex flex-wrap gap-2">
-          {orderedThreads.map((t) => (
+          {orderedThreads.map((t) => {
+            const count = unreadByThread[t.id] || 0;
+            return (
             <button
               key={t.id}
               type="button"
               onClick={() => setActiveId(t.id)}
-              className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
+              className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition ${
                 t.id === activeId
                   ? "bg-accent/20 text-accent ring-1 ring-accent/50"
                   : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"
               }`}
             >
               {threadLabel(t)}
+              {count > 0 && (
+                <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[9px] font-bold text-white">
+                  {count > 9 ? "9+" : count}
+                </span>
+              )}
             </button>
-          ))}
+            );
+          })}
         </div>
       )}
 

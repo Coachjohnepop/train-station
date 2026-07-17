@@ -353,7 +353,9 @@ export default function AdminChatWorkspace({
                 </p>
                 <p className="px-2 pb-2 text-[10px] text-[var(--muted)]">{COMMUNITY_NO_BROADCAST_NOTE}</p>
                 <div className="px-1 pb-1">
-                  {cohortThreads.map((t) => (
+                  {cohortThreads.map((t) => {
+                    const cohortUnread = unreadByThread[t.id] || 0;
+                    return (
                     <button
                       key={t.id}
                       type="button"
@@ -369,8 +371,14 @@ export default function AdminChatWorkspace({
                           {previews[t.id] || "No posts yet"}
                         </span>
                       </span>
+                      {cohortUnread > 0 && (
+                        <span className="ml-1 flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-[#ff3b30] px-1.5 text-[10px] font-bold text-white">
+                          {cohortUnread > 9 ? "9+" : cohortUnread}
+                        </span>
+                      )}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -406,22 +414,40 @@ export default function AdminChatWorkspace({
                 className="lg:hidden rounded-lg bg-[var(--surface-2)] px-2.5 py-1.5 text-xs font-semibold text-[var(--muted)]"
               >
                 ← Inbox
+                {totalUnread > 0 && (
+                  <span className="ml-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[9px] font-bold text-white">
+                    {totalUnread > 9 ? "9+" : totalUnread}
+                  </span>
+                )}
               </button>
               {activeMember && activeThread?.kind === "member" && (
                 <span
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${memberAvatarColor(activeMember.id)}`}
+                  className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${memberAvatarColor(activeMember.id)}`}
                 >
                   {memberInitials(activeMember.name)}
+                  {(activeId && unreadByThread[activeId] ? unreadByThread[activeId] : 0) > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[10px] font-bold text-white ring-2 ring-[var(--surface)]">
+                      {(unreadByThread[activeId] || 0) > 9 ? "9+" : unreadByThread[activeId]}
+                    </span>
+                  )}
                 </span>
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-base font-semibold">{conversationTitle}</p>
+                <div className="flex min-w-0 items-center gap-2">
+                  <p className="truncate text-base font-semibold">{conversationTitle}</p>
+                  {activeId && (unreadByThread[activeId] || 0) > 0 && (
+                    <span className="inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-[#ff3b30] px-1.5 text-[10px] font-bold text-white">
+                      {(unreadByThread[activeId] || 0) > 9 ? "9+" : unreadByThread[activeId]}
+                    </span>
+                  )}
+                </div>
                 <p className="text-[11px] text-[var(--muted)]">
                   {activeThread?.kind === "cohort"
                     ? COMMUNITY_NO_BROADCAST_NOTE
                     : activeMode === "live"
                       ? "Live member · 1:1 thread"
                       : "Asynch member · 1:1 thread"}
+                  {" · Coach left · member right"}
                 </p>
               </div>
             </div>

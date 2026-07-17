@@ -21,14 +21,15 @@ function formatWhen(iso: string) {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-function isOutgoing(authorRole: ChatMessage["authorRole"], viewerRole: "coach" | "member") {
-  return authorRole === viewerRole;
+/** Coach always left; member / group always right. */
+function isCoachSide(authorRole: ChatMessage["authorRole"]) {
+  return authorRole === "coach";
 }
 
-function KindBadge({ kind }: { kind: ChatMessage["kind"] }) {
+function KindBadge({ kind, authorRole }: { kind: ChatMessage["kind"]; authorRole: ChatMessage["authorRole"] }) {
   const label = messageKindLabel(kind);
   if (!label) return null;
-  const colors = bubbleColorsForMessage(kind, false, "coach");
+  const colors = bubbleColorsForMessage(kind, authorRole);
   return (
     <span className={`mb-1 inline-block rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${colors.badge} ${colors.badgeText}`}>
       {label}
@@ -36,17 +37,26 @@ function KindBadge({ kind }: { kind: ChatMessage["kind"] }) {
   );
 }
 
+function UnreadBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-[#ff3b30] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm">
+      <span className="h-1.5 w-1.5 rounded-full bg-white" aria-hidden />
+      New
+    </span>
+  );
+}
+
 function MessageMeta({
   message,
-  outgoing,
+  onRight,
   label,
 }: {
   message: ChatMessage;
-  outgoing: boolean;
+  onRight: boolean;
   label?: string | null;
 }) {
   return (
-    <p className={`mt-0.5 px-0.5 text-[10px] text-[var(--muted)] ${outgoing ? "text-right" : "text-left"}`}>
+    <p className={`mt-0.5 px-0.5 text-[10px] text-[var(--muted)] ${onRight ? "text-right" : "text-left"}`}>
       {formatWhen(message.createdAt)}
       {label ? ` · ${label}` : ""}
     </p>
@@ -151,16 +161,16 @@ function MediaBubble({
 function TextBubble({
   message,
   colors,
-  outgoing,
+  onRight,
 }: {
   message: ChatMessage;
   colors: ReturnType<typeof bubbleColorsForMessage>;
-  outgoing: boolean;
+  onRight: boolean;
 }) {
   return (
     <div
       className={`overflow-hidden text-sm text-left whitespace-pre-wrap leading-relaxed px-3 py-2 rounded-2xl ${
-        outgoing ? "rounded-br-md" : "rounded-bl-md"
+        onRight ? "rounded-br-md" : "rounded-bl-md"
       } ${colors.bubble} break-words`}
     >
       {linkifyText(message.body)}
@@ -274,52 +284,75 @@ function MessageReactions({
   );
 }
 
+function isMessageUnreadForViewer(
+  message: ChatMessage,
+  viewerRole: "coach" | "member",
+  viewerId: string,
+): boolean {
+  if (message.authorRole === "system") return false;
+  // Only show NEW on the other party's messages
+  if (viewerRole === "coach") {
+    if (message.authorRole !== "member") return false;
+    return !message.readByUserIds.includes(viewerId);
+  }
+  if (message.authorRole !== "coach") return false;
+  return !message.readByUserIds.includes(viewerId);
+}
+
 function MessageBubble({
   message,
   viewerRole,
   viewerId,
+  unread,
   onToggleReaction,
   mediaAutoplay = false,
 }: {
   message: ChatMessage;
   viewerRole: "coach" | "member";
   viewerId: string;
+  unread?: boolean;
   onToggleReaction?: (messageId: string, emoji: string) => void;
   mediaAutoplay?: boolean;
 }) {
-  const outgoing = isOutgoing(message.authorRole, viewerRole);
+  // Coach always left; member/group always right (not viewer-relative).
+  const onLeft = isCoachSide(message.authorRole);
+  const onRight = !onLeft;
   const label = message.kind === "member_sms" ? "via SMS" : null;
   const isRich =
     message.kind === "workout_update" ||
     message.kind === "youtube" ||
     message.kind === "video_upload" ||
     message.kind === "image";
-  const colors = bubbleColorsForMessage(message.kind, outgoing, viewerRole);
+  const colors = bubbleColorsForMessage(message.kind, message.authorRole);
 
   return (
-    <div className={`flex w-full ${outgoing ? "justify-end" : "justify-start"}`}>
+    <div className={`flex w-full ${onRight ? "justify-end" : "justify-start"}`}>
       <div
-        className={`flex max-w-[min(78%,22rem)] flex-col ${outgoing ? "items-end" : "items-start"} ${
+        className={`flex max-w-[min(78%,22rem)] flex-col ${onRight ? "items-end" : "items-start"} ${
           isRich ? "max-w-[min(88%,28rem)]" : ""
         }`}
       >
-        {!outgoing && (
-          <p className="mb-0.5 px-0.5 text-[10px] font-medium text-[var(--muted)]">
+        <div className={`mb-0.5 flex flex-wrap items-center gap-1.5 px-0.5 ${onRight ? "justify-end" : "justify-start"}`}>
+          <p className="text-[10px] font-medium text-[var(--muted)]">
             {message.authorName}
+            {onLeft ? " · Coach" : " · Member"}
             {label ? ` · ${label}` : ""}
           </p>
-        )}
-        {isRich && <KindBadge kind={message.kind} />}
+          {unread ? <UnreadBadge /> : null}
+        </div>
+        {isRich && <KindBadge kind={message.kind} authorRole={message.authorRole} />}
 
-        {message.kind === "workout_update" ? (
-          <WorkoutUpdateBubble message={message} viewerRole={viewerRole} colors={colors} />
-        ) : message.kind === "youtube" || message.kind === "video_upload" || message.kind === "image" ? (
-          <MediaBubble message={message} colors={colors} mediaAutoplay={mediaAutoplay} />
-        ) : (
-          <TextBubble message={message} colors={colors} outgoing={outgoing} />
-        )}
+        <div className={unread ? "rounded-2xl ring-2 ring-[#ff3b30]/50 ring-offset-1 ring-offset-[var(--surface)]" : undefined}>
+          {message.kind === "workout_update" ? (
+            <WorkoutUpdateBubble message={message} viewerRole={viewerRole} colors={colors} />
+          ) : message.kind === "youtube" || message.kind === "video_upload" || message.kind === "image" ? (
+            <MediaBubble message={message} colors={colors} mediaAutoplay={mediaAutoplay} />
+          ) : (
+            <TextBubble message={message} colors={colors} onRight={onRight} />
+          )}
+        </div>
 
-        <MessageMeta message={message} outgoing={outgoing} label={outgoing ? label : null} />
+        <MessageMeta message={message} onRight={onRight} label={onRight ? label : null} />
         {onToggleReaction && message.authorRole !== "system" && (
           <MessageReactions
             message={message}
@@ -337,12 +370,14 @@ function FeedItem({
   message,
   viewerRole,
   viewerId,
+  unread,
   onToggleReaction,
   mediaAutoplay = false,
 }: {
   message: ChatMessage;
   viewerRole: "coach" | "member";
   viewerId: string;
+  unread?: boolean;
   onToggleReaction?: (messageId: string, emoji: string) => void;
   mediaAutoplay?: boolean;
 }) {
@@ -360,6 +395,7 @@ function FeedItem({
       message={message}
       viewerRole={viewerRole}
       viewerId={viewerId}
+      unread={unread}
       onToggleReaction={onToggleReaction}
       mediaAutoplay={mediaAutoplay}
     />
@@ -414,14 +450,37 @@ export default function ChatFeed({
   }
 
   const threadKindLabel = thread.kind === "cohort" ? "Community" : "Direct";
+  const unreadFlags = messages.map((m) => isMessageUnreadForViewer(m, viewerRole, viewerId));
+  const unreadCount = unreadFlags.filter(Boolean).length;
+  const firstUnreadIndex = unreadFlags.findIndex(Boolean);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {!hideHeader && (
         <div className={`shrink-0 border-b border-[var(--border)] px-4 py-2.5 ${headerAccent || ""}`}>
-          <h2 className="text-sm font-semibold">{thread.title}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold">{thread.title}</h2>
+            {unreadCount > 0 && (
+              <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#ff3b30] px-1.5 text-[10px] font-bold text-white">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </div>
           <p className="text-[11px] text-[var(--muted)]">
             {thread.kind === "cohort" ? `Community feed · ${COMMUNITY_NO_BROADCAST_NOTE}` : "Direct messages with your coach"}
+            {" · "}
+            <span className="text-[var(--muted)]">Coach left · you / group right</span>
+          </p>
+        </div>
+      )}
+
+      {hideHeader && unreadCount > 0 && (
+        <div className="shrink-0 border-b border-rose-500/30 bg-rose-500/10 px-4 py-2">
+          <p className="flex items-center gap-2 text-xs font-semibold text-rose-100">
+            <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#ff3b30] px-1.5 text-[10px] font-bold text-white">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+            Unread in this thread
           </p>
         </div>
       )}
@@ -443,15 +502,27 @@ export default function ChatFeed({
           </div>
         ) : (
           <div className="space-y-2">
-            {messages.map((m) => (
-              <FeedItem
-                key={m.id}
-                message={m}
-                viewerRole={viewerRole}
-                viewerId={viewerId}
-                onToggleReaction={toggleReaction}
-                mediaAutoplay={mediaAutoplay}
-              />
+            {messages.map((m, index) => (
+              <div key={m.id}>
+                {index === firstUnreadIndex && (
+                  <div className="my-3 flex items-center gap-2 px-1" role="separator" aria-label="Unread messages">
+                    <div className="h-px flex-1 bg-rose-500/50" />
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[#ff3b30] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+                      <span className="h-1.5 w-1.5 rounded-full bg-white" aria-hidden />
+                      {unreadCount} unread
+                    </span>
+                    <div className="h-px flex-1 bg-rose-500/50" />
+                  </div>
+                )}
+                <FeedItem
+                  message={m}
+                  viewerRole={viewerRole}
+                  viewerId={viewerId}
+                  unread={unreadFlags[index]}
+                  onToggleReaction={toggleReaction}
+                  mediaAutoplay={mediaAutoplay}
+                />
+              </div>
             ))}
           </div>
         )}

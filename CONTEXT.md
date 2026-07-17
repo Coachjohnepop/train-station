@@ -273,7 +273,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - Multi-part = sequential sessions; Gym/Home = tracks *inside* a part  
 - Zoom host for recordings = **jeremy@thetrainstation.co** (`ZOOM_HOST_EMAIL`)  
 - Equipment with product link must have a **fetchable** image to publish to Gear  
-- Rest timer v1 = member app; per-exercise Rest; not yet live-floor-specific polish  
+- Rest timer: coach + member sticky countdown (default 90s); ticks last 5s + horn at 0; live partner set-check starts rest on both sides  
 
 ### Multi-coach Zoom (shipped Jul 16)
 - **Per-coach OAuth:** `CoachZoomOAuth.id` = lower-case coach login email (not singleton `coach`).
