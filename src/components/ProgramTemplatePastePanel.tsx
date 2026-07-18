@@ -102,11 +102,13 @@ export default function ProgramTemplatePastePanel({
     }
   }, [open, load]);
 
+  // Always follow the open day title so coaches don't save 10 copies as "Chest"
+  // after switching days. They can still edit the field before Save.
   useEffect(() => {
-    if (focusWorkoutLabel) {
-      setPromoName((prev) => prev || focusWorkoutLabel);
+    if (focusWorkoutLabel?.trim()) {
+      setPromoName(focusWorkoutLabel.trim());
     }
-  }, [focusWorkoutLabel]);
+  }, [focusWorkoutLabel, focusWorkoutId]);
 
   const filteredTemplates = useMemo(() => {
     if (!category) return templates;
