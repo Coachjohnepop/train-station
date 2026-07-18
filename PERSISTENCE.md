@@ -1,15 +1,24 @@
 # Persistence model (Stripe era)
 
-## Principle
+## Principle (non-negotiable)
 
-**Never hard-delete accounts or payment-related data during testing.** Hide test users instead so Stripe customer IDs, subscriptions, enrollments, and commission ledger entries keep valid foreign keys.
+**Always use PostgreSQL (Prisma) for durable app data** — programs, workouts, members, enrollments, SMS, payments, chat, coach settings, analytics, audit logs.
+
+- **Prod / real multi-user:** database only. Blob/JSON facades exist only while migrating legacy stores.
+- **Do not add new JSON- or Blob-only stores.** New tables + migrations instead.
+- **Object storage (Blob)** is fine for **binary media** (images, short videos); **rows that point at them live in the DB**.
+- **Seed / `*.dev.json`:** snapshots for shipping content with git — not the runtime source of truth when DB is configured.
+
+If a coach or member would lose work after a redeploy, it must be in Postgres.
+
+**Also:** **Never hard-delete accounts or payment-related data during testing.** Hide test users instead so Stripe customer IDs, subscriptions, enrollments, and commission ledger entries keep valid foreign keys.
 
 ## Demo vs database
 
 | `DATABASE_URL` / `POSTGRES_PRISMA_URL` | Mode | Where saves go |
 |----------------------------------------|------|----------------|
-| unset, `dummy`, or placeholder only | **Demo** | `prisma/*.dev.json` locally; Vercel Blob in preview/prod without Postgres |
-| Real Supabase / Postgres URL | **Database** | Prisma → PostgreSQL (durable by default) |
+| unset, `dummy`, or placeholder only | **Demo (local fallback only)** | `prisma/*.dev.json` locally; Vercel Blob only if no Postgres — **not for real coach content** |
+| Real Supabase / Postgres URL | **Database (required for prod)** | Prisma → PostgreSQL |
 
 `resolveDatabaseUrl()` skips dummy `DATABASE_URL` when a real `POSTGRES_PRISMA_URL` is present (common with Vercel env pulls).
 

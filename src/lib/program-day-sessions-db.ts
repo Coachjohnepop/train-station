@@ -35,6 +35,21 @@ export async function ensureProgramDaySessions(
   for (let partIndex = 1; partIndex <= total; partIndex++) {
     const found = existing.get(partIndex);
     if (found) {
+      // When growing 1 → 2/3 parts, rename generic "Main" shells to AM/PM defaults.
+      if (
+        total > 1 &&
+        (found.label === "Main" || !found.label?.trim())
+      ) {
+        await prisma.programDaySession.update({
+          where: { id: found.id },
+          data: {
+            label: defaultPartLabel(partIndex, total),
+            sessionKind: found.sessionKind || defaultPartKind(partIndex, total),
+            timeSlot: found.timeSlot || defaultPartTimeSlot(partIndex, total),
+            sortOrder: partIndex - 1,
+          },
+        });
+      }
       sessionIds.push(found.id);
       continue;
     }

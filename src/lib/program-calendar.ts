@@ -344,6 +344,7 @@ export function programDaysUsingWorkout(
         id: string;
         workoutId?: string | null;
         options?: DayOptionLike[];
+        sessions?: Array<{ options?: DayOptionLike[] }>;
       }>;
     }>;
   },
@@ -360,6 +361,14 @@ export function programDaysUsingWorkout(
         continue;
       }
       if ((day.options || []).some((o) => o.workoutId === workoutId)) {
+        hits.push(day.id);
+        continue;
+      }
+      if (
+        (day.sessions || []).some((s) =>
+          (s.options || []).some((o) => o.workoutId === workoutId),
+        )
+      ) {
         hits.push(day.id);
       }
     }

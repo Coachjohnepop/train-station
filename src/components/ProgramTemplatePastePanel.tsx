@@ -87,7 +87,16 @@ export default function ProgramTemplatePastePanel({
   }, []);
 
   useEffect(() => {
-    if (open) void load();
+    if (open) {
+      void load();
+      // Panel sits low on the builder — scroll it into view so coaches can see the fields.
+      requestAnimationFrame(() => {
+        document.getElementById("templates-paste-panel")?.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
+      });
+    }
   }, [open, load]);
 
   useEffect(() => {
@@ -98,17 +107,35 @@ export default function ProgramTemplatePastePanel({
 
   const filteredTemplates = useMemo(() => {
     if (!category) return templates;
-    return templates.filter((t) => t.category === category);
+    return templates.filter(
+      (t) => (t.category || "").trim().toLowerCase() === category.toLowerCase(),
+    );
   }, [templates, category]);
 
-  /** Freeform: suggestions + any category already used (yoga, dog-training, …). */
-  const categories = useMemo(() => {
-    const set = new Set<string>([...TEMPLATE_CATEGORY_SUGGESTIONS]);
+  /** Categories that actually have templates — used in the Pick filter (not the full suggestion list). */
+  const usedCategories = useMemo(() => {
+    const set = new Set<string>();
     for (const t of templates) {
       if (t.category?.trim()) set.add(t.category.trim().toLowerCase());
     }
     return [...set].sort();
   }, [templates]);
+
+  /** Freeform suggestions when *saving* a template (type any). */
+  const categories = useMemo(() => {
+    const set = new Set<string>([...TEMPLATE_CATEGORY_SUGGESTIONS, ...usedCategories]);
+    return [...set].sort();
+  }, [usedCategories]);
+
+  // If coach filters to a category with zero templates, the pick list looks "broken".
+  useEffect(() => {
+    if (category && filteredTemplates.length === 0 && templates.length > 0) {
+      // keep filter; empty-state copy handles it
+    }
+    if (templateId && !filteredTemplates.some((t) => t.id === templateId)) {
+      setTemplateId("");
+    }
+  }, [category, filteredTemplates, templateId, templates.length]);
 
   function msg(text: string) {
     onMessage?.(text);
@@ -365,19 +392,33 @@ export default function ProgramTemplatePastePanel({
     );
   }
 
+  const templateEmptyAll = templates.length === 0;
+  const templateEmptyFilter = !templateEmptyAll && filteredTemplates.length === 0;
+
   return (
-    <div className="mt-2 space-y-3 rounded-lg border border-violet-500/30 bg-[var(--surface)] p-3 text-xs">
+    <div
+      id="templates-paste-panel"
+      className="mt-2 max-h-[min(70vh,36rem)] space-y-3 overflow-y-auto rounded-lg border-2 border-violet-400/50 bg-[var(--surface)] p-3 text-xs shadow-[0_0_0_1px_rgba(167,139,250,0.15)]"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="font-semibold text-violet-100">Templates & paste</p>
         <button type="button" className="btn-ghost px-2 py-0.5 text-[10px]" onClick={() => setOpen(false)}>
           Close
         </button>
       </div>
-      <p className="text-[10px] text-[var(--muted)]">
-        Paste always clones — source stays safe. Open the copy in the editor to tweak. Deselect Gym or
-        Home to paste one track only. Categories are freeform (yoga, meditation, eating, martial arts,
-        dog training, …) — type any label when saving a template.
-      </p>
+      <ol className="list-decimal space-y-1 pl-4 text-[11px] leading-snug text-violet-100/95">
+        <li>
+          <strong className="text-[var(--text)]">Save</strong> the workout open above as a template
+          (step A).
+        </li>
+        <li>
+          Open the <strong className="text-[var(--text)]">destination day</strong> (e.g. Athletes W3
+          Mon) — paste only hits the day you have open.
+        </li>
+        <li>
+          <strong className="text-[var(--text)]">Paste as copy</strong> from the library (step B).
+        </li>
+      </ol>
 
       {error && (
         <p className="rounded border border-[var(--danger)]/40 bg-[var(--surface-2)] px-2 py-1 text-[var(--danger)]">
@@ -385,11 +426,87 @@ export default function ProgramTemplatePastePanel({
         </p>
       )}
 
-      {/* Paste workout */}
-      <div className="space-y-2 rounded-md border border-[var(--border)] p-2">
-        <p className="text-[11px] font-semibold">Paste workout → this day</p>
+      {/* A — Save first (this is what coaches need for Adult → Athletes) */}
+      <div className="space-y-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 p-2">
+        <p className="text-[11px] font-bold text-emerald-100">
+          A · Save current workout as template
+        </p>
+        {!focusWorkoutId ? (
+          <p className="rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-100">
+            Open a day and tap <strong>Gym Workout</strong> (or Home) so a workout is loaded above —
+            then you can save it here.
+          </p>
+        ) : (
+          <p className="text-[10px] text-emerald-100/80">
+            Saving: <span className="font-semibold text-[var(--text)]">{focusWorkoutLabel || "current workout"}</span>
+            {" · "}always a fresh copy when you paste later.
+          </p>
+        )}
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label className="block text-[var(--text)]">
+            Name
+            <input
+              className="input mt-0.5 h-9 w-full text-xs text-[var(--text)]"
+              value={promoName}
+              onChange={(e) => setPromoName(e.target.value)}
+              placeholder="e.g. A2A · W3 Mon Gym"
+            />
+          </label>
+          <label className="block text-[var(--text)]">
+            Category (type any)
+            <input
+              className="input mt-0.5 h-9 w-full text-xs text-[var(--text)]"
+              list="template-category-suggestions"
+              value={promoCategory}
+              onChange={(e) => setPromoCategory(e.target.value)}
+              placeholder="adult, athletes, military…"
+            />
+            <datalist id="template-category-suggestions">
+              {categories.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
+          </label>
+          <label className="block text-[var(--text)]">
+            Version tag (optional)
+            <input
+              className="input mt-0.5 h-9 w-full text-xs text-[var(--text)]"
+              value={promoVersion}
+              onChange={(e) => setPromoVersion(e.target.value)}
+              placeholder="v_adult"
+            />
+          </label>
+          <label className="block text-[var(--text)]">
+            Notes (optional)
+            <input
+              className="input mt-0.5 h-9 w-full text-xs text-[var(--text)]"
+              value={promoNotes}
+              onChange={(e) => setPromoNotes(e.target.value)}
+              placeholder="Your notes"
+            />
+          </label>
+        </div>
+        <button
+          type="button"
+          className="btn-primary h-9 px-4 text-[12px] font-semibold"
+          disabled={busy || disabled || !focusWorkoutId || !promoName.trim()}
+          onClick={() => void promoteFocus()}
+        >
+          Save to template library
+        </button>
+      </div>
+
+      {/* B — Paste onto the day open above */}
+      <div className="space-y-2 rounded-md border border-violet-400/40 bg-violet-500/10 p-2">
+        <p className="text-[11px] font-bold text-violet-100">
+          B · Paste onto the day open above
+        </p>
+        <p className="text-[10px] text-[var(--muted)]">
+          Destination = the calendar day/workout you already selected. Switch to Athletes (or
+          Military) first if that&apos;s where you want the copy.
+        </p>
         <div className="flex flex-wrap gap-2">
-          <label className="flex items-center gap-1">
+          <label className="flex items-center gap-1 text-[var(--text)]">
             <input
               type="radio"
               checked={sourceMode === "template"}
@@ -397,7 +514,7 @@ export default function ProgramTemplatePastePanel({
             />
             Template library
           </label>
-          <label className="flex items-center gap-1">
+          <label className="flex items-center gap-1 text-[var(--text)]">
             <input
               type="radio"
               checked={sourceMode === "workout"}
@@ -408,51 +525,97 @@ export default function ProgramTemplatePastePanel({
         </div>
 
         {sourceMode === "template" ? (
-          <div className="flex flex-wrap gap-2">
-            <select
-              className="input h-8 min-w-[7rem] text-xs"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              <option value="">All categories</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              <select
+                className="input h-9 min-w-[8rem] text-xs text-[var(--text)]"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                aria-label="Filter by category"
+              >
+                <option value="">All templates ({templates.length})</option>
+                {usedCategories.map((c) => {
+                  const n = templates.filter(
+                    (t) => (t.category || "").toLowerCase() === c,
+                  ).length;
+                  return (
+                    <option key={c} value={c}>
+                      {c} ({n})
+                    </option>
+                  );
+                })}
+              </select>
+              <select
+                className="input h-9 min-w-[14rem] flex-1 text-xs text-[var(--text)]"
+                value={templateId}
+                onChange={(e) => setTemplateId(e.target.value)}
+                aria-label="Pick template"
+              >
+                <option value="">
+                  {templateEmptyAll
+                    ? "No templates yet — use step A first"
+                    : templateEmptyFilter
+                      ? "None in this filter — choose All templates"
+                      : `Pick template… (${filteredTemplates.length})`}
                 </option>
-              ))}
-            </select>
-            <select
-              className="input h-8 min-w-[12rem] flex-1 text-xs"
-              value={templateId}
-              onChange={(e) => setTemplateId(e.target.value)}
-            >
-              <option value="">Pick template…</option>
-              {filteredTemplates.map((t) => (
-                <option key={t.id} value={t.id}>
-                  [{t.category}] {t.name}
-                  {t.versionLabel ? ` · ${t.versionLabel}` : ""} (
-                  {t.exerciseCount ?? "?"} ex)
-                </option>
-              ))}
-            </select>
+                {filteredTemplates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    [{t.category}] {t.name}
+                    {t.versionLabel ? ` · ${t.versionLabel}` : ""} (
+                    {t.exerciseCount ?? "?"} ex)
+                  </option>
+                ))}
+              </select>
+            </div>
+            {templateEmptyAll && (
+              <p className="rounded border border-amber-400/50 bg-amber-500/15 px-2 py-2 text-[11px] font-medium text-amber-50">
+                Library is empty (or you haven&apos;t saved any yet). Use{" "}
+                <strong>A · Save</strong> above on an Adult day first, then come back here on the
+                Athletes day to paste.
+              </p>
+            )}
+            {templateEmptyFilter && (
+              <p className="rounded border border-amber-400/50 bg-amber-500/15 px-2 py-2 text-[11px] font-medium text-amber-50">
+                No templates in &quot;{category}&quot;. Switch the filter to{" "}
+                <strong>All templates ({templates.length})</strong> — you should see them in the
+                second dropdown.
+              </p>
+            )}
+            {!templateEmptyAll && !templateEmptyFilter && (
+              <p className="text-[10px] text-[var(--muted)]">
+                {filteredTemplates.length} template{filteredTemplates.length === 1 ? "" : "s"}{" "}
+                visible — open the second dropdown to pick one.
+              </p>
+            )}
           </div>
         ) : (
-          <select
-            className="input h-8 w-full text-xs"
-            value={workoutId}
-            onChange={(e) => setWorkoutId(e.target.value)}
-          >
-            <option value="">Pick workout…</option>
-            {workouts.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name} ({w._count?.exercises ?? "?"} ex)
+          <div className="space-y-1">
+            <select
+              className="input h-9 w-full text-xs text-[var(--text)]"
+              value={workoutId}
+              onChange={(e) => setWorkoutId(e.target.value)}
+            >
+              <option value="">
+                {workouts.length === 0
+                  ? "No workouts loaded"
+                  : `Pick workout… (${workouts.length})`}
               </option>
-            ))}
-          </select>
+              {workouts.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name} ({w._count?.exercises ?? "?"} ex)
+                </option>
+              ))}
+            </select>
+            {workouts.length === 0 && (
+              <p className="text-[10px] text-amber-200">
+                Workout list empty — hard refresh, then reopen this panel.
+              </p>
+            )}
+          </div>
         )}
 
         <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-1.5">
+          <label className="flex items-center gap-1.5 text-[var(--text)]">
             <input
               type="checkbox"
               checked={trackGym}
@@ -460,7 +623,7 @@ export default function ProgramTemplatePastePanel({
             />
             Gym track
           </label>
-          <label className="flex items-center gap-1.5">
+          <label className="flex items-center gap-1.5 text-[var(--text)]">
             <input
               type="checkbox"
               checked={trackHome}
@@ -470,73 +633,23 @@ export default function ProgramTemplatePastePanel({
           </label>
           <button
             type="button"
-            className="btn-primary h-8 px-3 text-[11px]"
-            disabled={busy || disabled || !dayId}
+            className="btn-primary h-9 px-4 text-[12px] font-semibold"
+            disabled={
+              busy ||
+              disabled ||
+              !dayId ||
+              (sourceMode === "template" ? !templateId : !workoutId)
+            }
             onClick={() => void pasteWorkout()}
           >
-            Paste as copy
+            Paste as copy onto this day
           </button>
         </div>
         {!dayId && (
-          <p className="text-[10px] text-amber-300/90">Select a day (Gym/Home) in the calendar first.</p>
+          <p className="text-[11px] font-medium text-amber-200">
+            Select a day (Gym/Home) in the calendar first — paste needs a destination day open.
+          </p>
         )}
-      </div>
-
-      {/* Promote */}
-      <div className="space-y-2 rounded-md border border-[var(--border)] p-2">
-        <p className="text-[11px] font-semibold">Save current workout as template</p>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <label className="block">
-            Name
-            <input
-              className="input mt-0.5 h-8 w-full text-xs"
-              value={promoName}
-              onChange={(e) => setPromoName(e.target.value)}
-              placeholder="Upper body"
-            />
-          </label>
-          <label className="block">
-            Category (type any — yoga, dog-training, …)
-            <input
-              className="input mt-0.5 h-8 w-full text-xs"
-              list="template-category-suggestions"
-              value={promoCategory}
-              onChange={(e) => setPromoCategory(e.target.value)}
-              placeholder="e.g. yoga, martial-arts, nutrition"
-            />
-            <datalist id="template-category-suggestions">
-              {categories.map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
-          </label>
-          <label className="block">
-            Version tag (optional)
-            <input
-              className="input mt-0.5 h-8 w-full text-xs"
-              value={promoVersion}
-              onChange={(e) => setPromoVersion(e.target.value)}
-              placeholder="v_adult, vyoungkids…"
-            />
-          </label>
-          <label className="block">
-            Notes (optional)
-            <input
-              className="input mt-0.5 h-8 w-full text-xs"
-              value={promoNotes}
-              onChange={(e) => setPromoNotes(e.target.value)}
-              placeholder="Your notes"
-            />
-          </label>
-        </div>
-        <button
-          type="button"
-          className="btn-ghost h-8 px-3 text-[11px]"
-          disabled={busy || disabled || !focusWorkoutId}
-          onClick={() => void promoteFocus()}
-        >
-          Promote to template library
-        </button>
       </div>
 
       {/* Archive shelf — look back before permanent delete */}

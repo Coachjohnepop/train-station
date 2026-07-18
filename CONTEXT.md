@@ -35,6 +35,23 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 
 ## Durable product rules (don’t forget)
 
+### Always use the database (Postgres) for app data
+**Production and any multi-user / coach content path stores durable state in PostgreSQL (Prisma).**  
+Do not add new features that write only to JSON files, Vercel Blob, or in-memory maps.
+
+| Rule | Meaning |
+|------|---------|
+| **Default storage** | Prisma models + migrations — programs, workouts, members, SMS, payments, chat, settings, logs |
+| **New features** | Design the schema first; ship API that reads/writes DB when `DATABASE_URL` / `POSTGRES_PRISMA_URL` is real |
+| **No new blob/JSON stores** | Legacy `*-store.ts` / `prisma/*.dev.json` / Blob paths are **migration debt only** — do not grow them |
+| **Local without DB** | Demo/JSON is a **dev fallback** when DB is unset/dummy — never the product-of-record for prod |
+| **Seed files** | `prisma/seed-data.json` / `*.dev.json` are **export/import snapshots** for shipping content with code — not the runtime store on prod |
+| **Secrets / media** | Env vars for keys; Blob/object storage OK for **files** (images, short chat video) — metadata still in DB |
+
+When in doubt: **if a coach or member would lose work when a deploy restarts, it belongs in Postgres.**
+
+See `PERSISTENCE.md` for demo-vs-DB matrix and blob→Postgres cutover.
+
 ### Always clone
 Jeremy builds by **cloning**, never shared mutable refs:
 - Paste Gym→Home, day→next week, template→day, 28-day pack→program → **always deep clone**
@@ -208,11 +225,12 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 | Item | Notes |
 |------|--------|
-| **Always ship data** with content | `prisma/seed-data.json` + `*.dev.json` |
+| **DB is source of truth** | Prod always Postgres; finish any remaining blob/JSON stores → Prisma |
+| **Always ship data** with content | `prisma/seed-data.json` + `*.dev.json` (snapshots — not prod runtime) |
 | Export seed after coach content sessions | `npm run db:export-seed` (or admin export) |
-| Blob → Postgres migration | Phased stores (`DEPLOY.md`) — dual-write / backfill / parity |
-| Demo vs real DB consistency | Dummy URL = demo JSON; prod Postgres path for durable multi-user |
-| Local dev | Restart `npm run dev` (:3000 / :3002) after long sessions |
+| Blob → Postgres migration | Phased stores (`DEPLOY.md`) — dual-write / backfill / parity; **no new stores** |
+| Demo vs real DB consistency | Dummy URL = local demo only; prod Postgres for durable multi-user |
+| Local dev | Prefer real local Postgres when testing multi-part / SMS / payments; restart `npm run dev` after long sessions |
 
 ---
 
@@ -221,6 +239,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - Eating / food logging (“coming soon”)  
 - Store section (placeholder by design)  
 - Coming-soon programs: military, glute, yoga, nutrition, stretching waitlists  
+- **Nutrition guidance (Jeremy, Jul 18):** After intro Zoom, coach captures weight + goals, then sends **individual** guidelines + macros via **in-app messaging** (not a public Nutrition page dump). **Yes — product fits:** Admin chat → that member. Member Nutrition stays sample tiers / landing copy until personal plans exist. Later optional: save macros on member profile in **Postgres**, reusable message templates, pin plan in thread.  
 - AB tests, extra coach tools from old `PROJECT_BUILD_PLAN.md`  
 - **Coss family story** (separate repo) — live Speechify free tier (~50k chars/mo hard cap) OK for rare use; pre-record later if binge listening  
 

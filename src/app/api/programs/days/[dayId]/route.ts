@@ -221,13 +221,19 @@ export async function PATCH(request: Request, { params }: Params) {
     }
 
     if (parsed.data.options !== undefined) {
-      const materialized = parsed.data.options.filter((opt) => opt.workoutId?.trim());
+      const incoming = parsed.data.options;
+      const materialized = incoming.filter((opt) => opt.workoutId?.trim());
       const restOnly =
-        parsed.data.options.length > 0 &&
+        incoming.length > 0 &&
         materialized.length === 0 &&
-        parsed.data.options.every(
+        incoming.every(
           (opt) => !opt.workoutId?.trim() && /^day\s*off$/i.test(opt.label?.trim() || ""),
         );
+      // Empty Gym/Home shells (no workoutId yet) — must NOT wipe the day.
+      const emptyShellsOnly =
+        incoming.length > 0 &&
+        materialized.length === 0 &&
+        !restOnly;
 
       for (const opt of materialized) {
         const workout = await prisma.workout.findUnique({ where: { id: opt.workoutId } });
@@ -236,9 +242,15 @@ export async function PATCH(request: Request, { params }: Params) {
         }
       }
 
+      const existingDay = await prisma.programDay.findUnique({
+        where: { id: dayId },
+        select: { partCount: true, workoutId: true },
+      });
       const maxPart = Math.max(
         1,
+        existingDay?.partCount ?? 1,
         ...materialized.map((o) => o.partIndex || 1),
+        ...incoming.map((o) => o.partIndex || 1),
         parsed.data.partCount ?? 1,
       );
       await ensureProgramDaySessions(dayId, maxPart);
@@ -272,30 +284,52 @@ export async function PATCH(request: Request, { params }: Params) {
           });
         }
 
-        // Replace only the parts we're writing; if empty list, clear all options.
-        if (rows.length === 0) {
+        if (incoming.length === 0) {
+          // Explicit clear of all tracks/parts
           await tx.programDayOption.deleteMany({ where: { dayId } });
-        } else {
+        } else if (rows.length === 0 && emptyShellsOnly) {
+          // No-op: coach opened Part 2 before adding exercises — keep other parts intact.
+        } else if (rows.length === 0 && restOnly) {
+          const partIndex = incoming[0]?.partIndex || 1;
+          const sessionId = await resolveSessionIdForPart(dayId, partIndex, maxPart);
+          await tx.programDayOption.deleteMany({
+            where: { dayId, sessionId },
+          });
+          if (partIndex === 1) {
+            await tx.programDayOption.deleteMany({
+              where: { dayId, sessionId: null },
+            });
+          }
+        } else if (rows.length > 0) {
+          // Replace only the parts (sessions) present in this write.
           const sessionIds = [...new Set(rows.map((r) => r.sessionId))];
           await tx.programDayOption.deleteMany({
             where: { dayId, sessionId: { in: sessionIds } },
           });
           // Legacy null-session options when writing part 1
-          if (rows.some((r) => r.sortOrder === 0)) {
-            const part1 = await resolveSessionIdForPart(dayId, 1, maxPart);
-            if (sessionIds.includes(part1)) {
-              await tx.programDayOption.deleteMany({
-                where: { dayId, sessionId: null },
-              });
-            }
+          const part1 = await resolveSessionIdForPart(dayId, 1, maxPart);
+          if (sessionIds.includes(part1)) {
+            await tx.programDayOption.deleteMany({
+              where: { dayId, sessionId: null },
+            });
           }
           await tx.programDayOption.createMany({ data: rows });
+        }
+
+        // Prefer part 1 option for legacy day.workoutId; never clear it when only writing part 2+.
+        let nextWorkoutId: string | null | undefined = undefined;
+        if (incoming.length === 0) {
+          nextWorkoutId = null;
+        } else if (rows.length > 0) {
+          const part1SessionId = await resolveSessionIdForPart(dayId, 1, maxPart);
+          const part1Opt = rows.find((r) => r.sessionId === part1SessionId);
+          if (part1Opt) nextWorkoutId = part1Opt.workoutId;
         }
 
         return tx.programDay.update({
           where: { id: dayId },
           data: {
-            workoutId: materialized.length > 0 ? materialized[0]!.workoutId : null,
+            ...(nextWorkoutId !== undefined ? { workoutId: nextWorkoutId } : {}),
             partCount: clampPartCount(maxPart),
             ...(restOnly ? { notes: DAY_OFF_LABEL } : {}),
             ...(parsed.data.videoUrl !== undefined ? { videoUrl: parsed.data.videoUrl } : {}),

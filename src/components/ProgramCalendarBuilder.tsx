@@ -156,19 +156,31 @@ function daySessions(day: ProgramDay): DaySession[] {
 
 function getDayOptions(day: ProgramDay, partIndex = 1): DayOption[] {
   const sessions = daySessions(day);
-  const session = sessions.find((s) => s.partIndex === partIndex) || sessions[0];
+  // Never fall back to another part's session — that made Part 2 show Part 1 workouts.
+  const session = sessions.find((s) => s.partIndex === partIndex);
   if (session?.options && session.options.length > 0) {
-    return normalizeDayOptions(session.options) as DayOption[];
+    return normalizeDayOptions(
+      session.options.map((o) => ({ ...o, partIndex, sessionId: session.id })),
+    ) as DayOption[];
   }
   // Flat options may include sessionId / partIndex
   if (day.options && day.options.length > 0) {
     const filtered = day.options.filter((o) => {
       if (o.partIndex != null) return o.partIndex === partIndex;
       if (session?.id && o.sessionId) return o.sessionId === session.id;
-      return partIndex === 1;
+      // Legacy rows without part/session only belong to part 1
+      return partIndex === 1 && !o.sessionId && o.partIndex == null;
     });
-    const list = filtered.length > 0 ? filtered : partIndex === 1 ? day.options : [];
-    return normalizeDayOptions(list) as DayOption[];
+    if (filtered.length > 0) {
+      return normalizeDayOptions(
+        filtered.map((o) => ({ ...o, partIndex })),
+      ) as DayOption[];
+    }
+    // Part 1 only: legacy flat options with no part metadata
+    if (partIndex === 1) {
+      const legacy = day.options.filter((o) => o.partIndex == null && !o.sessionId);
+      if (legacy.length > 0) return normalizeDayOptions(legacy) as DayOption[];
+    }
   }
   if (partIndex === 1 && day.workoutId) return [{ workoutId: day.workoutId, label: "Gym" }];
   return [];
@@ -498,10 +510,11 @@ export default function ProgramCalendarBuilder({
     day: ProgramDay,
     label: string,
     sharedWorkoutId: string,
+    partIndex = 1,
   ): string {
     if (!isHomeLabel(label)) return sharedWorkoutId;
 
-    const gymOpt = getDayOptions(day).find((o) => isGymLabel(o.label) && o.workoutId);
+    const gymOpt = getDayOptions(day, partIndex).find((o) => isGymLabel(o.label) && o.workoutId);
     const gymWorkout = gymOpt ? allWorkouts.find((w) => w.id === gymOpt.workoutId) : null;
     const sharedWorkout = allWorkouts.find((w) => w.id === sharedWorkoutId);
     if (gymWorkout && sharedWorkout) {
@@ -518,18 +531,37 @@ export default function ProgramCalendarBuilder({
     return sharedWorkoutId;
   }
 
+  /** Same workout used on another part of this day (or another day) — must clone before edit. */
+  function workoutSharedOnDayParts(
+    day: ProgramDay,
+    workoutId: string,
+    exceptPartIndex: number,
+  ): boolean {
+    if (!workoutId?.trim()) return false;
+    const parts = day.partCount ?? daySessions(day).length;
+    for (let p = 1; p <= Math.max(parts, daySessions(day).length); p++) {
+      if (p === exceptPartIndex) continue;
+      if (getDayOptions(day, p).some((o) => o.workoutId === workoutId)) return true;
+    }
+    return false;
+  }
+
   async function detachSharedWorkoutForOption(
     dayId: string,
     optIdx: number,
     label: string,
     day: ProgramDay,
     workoutId: string,
+    partIndex = 1,
   ): Promise<string> {
-    if (!isWorkoutSharedAcrossProgramDays(program, workoutId, dayId)) {
+    const sharedElsewhere =
+      isWorkoutSharedAcrossProgramDays(program, workoutId, dayId) ||
+      workoutSharedOnDayParts(day, workoutId, partIndex);
+    if (!sharedElsewhere) {
       return workoutId;
     }
 
-    const cloneSourceId = resolveDetachCloneSourceId(day, label, workoutId);
+    const cloneSourceId = resolveDetachCloneSourceId(day, label, workoutId, partIndex);
     const sourceWorkout = allWorkouts.find((w) => w.id === cloneSourceId);
     const cloneRes = await fetch(`/api/workouts/${cloneSourceId}/clone`, {
       method: "POST",
@@ -541,16 +573,16 @@ export default function ProgramCalendarBuilder({
     if (!cloneRes.ok) return workoutId;
 
     const cloned = await cloneRes.json();
-    const opts = [...getDayOptions(day)];
+    const opts = [...getDayOptions(day, partIndex)];
     while (opts.length <= optIdx) {
       opts.push({ workoutId: "", label: DEFAULT_DAY_OPTIONS[opts.length] || "Custom" });
     }
     opts[optIdx] = { workoutId: cloned.id, label: opts[optIdx].label || label };
-    await setDayOptions(dayId, opts, { silent: true });
+    await setDayOptions(dayId, opts, { silent: true, partIndex });
     setAllWorkouts((prev) =>
       prev.some((w) => w.id === cloned.id) ? prev : [...prev, { id: cloned.id, name: cloned.name }],
     );
-    setMessage("This day now has its own workout — edits won't affect other days.");
+    setMessage("This session now has its own workout — edits won't affect other parts/days.");
     setTimeout(() => setMessage(null), 3000);
     return cloned.id as string;
   }
@@ -560,12 +592,14 @@ export default function ProgramCalendarBuilder({
     optIdx: number,
     label: string,
     dayOverride?: ProgramDay,
+    partIndex = 1,
   ): Promise<{ workoutId: string; created: boolean } | null> {
     const week = program.weeks.find((w) => w.days.some((d) => d.id === dayId));
     const day = dayOverride ?? week?.days.find((d) => d.id === dayId);
     if (!week || !day) return null;
 
-    const opts = [...getDayOptions(day)];
+    // Critical: scope to this part only — part 2 must never read/write part 1 options.
+    const opts = [...getDayOptions(day, partIndex)];
     if (opts[optIdx]?.workoutId) {
       const workoutId = await detachSharedWorkoutForOption(
         dayId,
@@ -573,6 +607,7 @@ export default function ProgramCalendarBuilder({
         label,
         day,
         opts[optIdx].workoutId,
+        partIndex,
       );
       return { workoutId, created: false };
     }
@@ -580,7 +615,12 @@ export default function ProgramCalendarBuilder({
     const cal =
       day.calendarDate ||
       calendarDateForProgramDay(startMonday, week.weekNumber, day.dayNumber);
-    const suggestedName = defaultTrackWorkoutTitle(label);
+    const partLabel =
+      daySessions(day).find((s) => s.partIndex === partIndex)?.label ||
+      (partIndex > 1 ? `Part ${partIndex}` : "");
+    const suggestedName = partLabel
+      ? `${defaultTrackWorkoutTitle(label)} · ${partLabel}`
+      : defaultTrackWorkoutTitle(label);
 
     const createRes = await fetch("/api/workouts", {
       method: "POST",
@@ -595,7 +635,7 @@ export default function ProgramCalendarBuilder({
     }
     opts[optIdx] = { workoutId: created.id, label: opts[optIdx].label || label };
 
-    await setDayOptions(dayId, opts, { silent: true });
+    await setDayOptions(dayId, opts, { silent: true, partIndex });
     setAllWorkouts((prev) =>
       prev.some((w) => w.id === created.id) ? prev : [...prev, { id: created.id, name: created.name }],
     );
@@ -771,29 +811,31 @@ export default function ProgramCalendarBuilder({
     setSelectedSlotIdx(0);
     syncEditorFromSlot(null, rx);
 
-    if (dayOptionsNeedCleanup(day)) {
+    // Only clean flat options on part 1 — multi-part options live under sessions.
+    if (partIndex === 1 && dayOptionsNeedCleanup(day)) {
       const cleaned = normalizeDayOptions(day.options || []) as DayOption[];
-      void patchDay(day.id, { options: cleaned }).then(() => {
+      void patchDay(day.id, { options: cleaned.map((o) => ({ ...o, partIndex: 1 })) }).then(() => {
         day = { ...day, options: cleaned };
       });
     }
 
     if (opts.length === 0) {
+      // Explicit partIndex — do not rely on focus state (setState is async).
       void setDayOptions(
         day.id,
         [
-          { workoutId: "", label: "Gym" },
-          { workoutId: "", label: "Home" },
+          { workoutId: "", label: "Gym", partIndex },
+          { workoutId: "", label: "Home", partIndex },
         ],
-        { silent: true },
+        { silent: true, partIndex },
       );
       opts = [
-        { workoutId: "", label: "Gym" },
-        { workoutId: "", label: "Home" },
+        { workoutId: "", label: "Gym", partIndex },
+        { workoutId: "", label: "Home", partIndex },
       ];
     }
 
-    const ensured = await ensureWorkoutForOption(day.id, optIdx, optLabel, day);
+    const ensured = await ensureWorkoutForOption(day.id, optIdx, optLabel, day, partIndex);
     if (!ensured) {
       setMessage("Could not open this day to write — try Refresh, then click the day again.");
       setTimeout(() => setMessage(null), 3500);
@@ -802,7 +844,9 @@ export default function ProgramCalendarBuilder({
     const { workoutId, created } = ensured;
 
     setFocus((prev) =>
-      prev?.dayId === day.id && prev.optIdx === optIdx ? { ...prev, workoutId } : prev,
+      prev?.dayId === day.id && prev.optIdx === optIdx && (prev.partIndex ?? 1) === partIndex
+        ? { ...prev, workoutId }
+        : prev,
     );
 
     void loadSlots(workoutId, rx);
@@ -826,22 +870,28 @@ export default function ProgramCalendarBuilder({
 
   async function applyDayOff() {
     if (!focus || !focusDay || !activeWeekData) return;
+    const partIndex = focus.partIndex ?? 1;
     setSaving(true);
     try {
       await patchDay(focus.dayId, {
-        options: [{ workoutId: "", label: DAY_OFF_LABEL }],
-        notes: "Rest day",
+        options: [{ workoutId: "", label: DAY_OFF_LABEL, partIndex }],
+        notes: partIndex === 1 ? "Rest day" : undefined,
       });
       setFocus({
         ...focus,
         optIdx: 0,
         workoutId: "",
         label: DAY_OFF_LABEL,
+        partIndex,
       });
       resetSlotGrid();
       setCheckedSlots(new Set());
       setSelectedSlotIdx(null);
-      setMessage("Day Off — rest day.");
+      setMessage(
+        partIndex > 1
+          ? `Part ${partIndex} — day off for this session.`
+          : "Day Off — rest day.",
+      );
       setTimeout(() => setMessage(null), 2000);
     } catch {
       setMessage("Could not save day off.");
@@ -858,6 +908,7 @@ export default function ProgramCalendarBuilder({
       return;
     }
 
+    const partIndex = focus.partIndex ?? 1;
     setSaving(true);
     try {
       const week = program.weeks.find((w) => w.days.some((d) => d.id === focus.dayId));
@@ -865,10 +916,12 @@ export default function ProgramCalendarBuilder({
       const cal =
         day?.calendarDate ||
         calendarDateForProgramDay(startMonday, focus.weekNumber, focus.dayNumber);
-      const suggestedName = `${program.name} · ${formatShortDate(cal)} ${FASTED_CARDIO_LABEL}`;
+      const partTag = partIndex > 1 ? ` · Part ${partIndex}` : "";
+      const suggestedName = `${program.name} · ${formatShortDate(cal)} ${FASTED_CARDIO_LABEL}${partTag}`;
 
       let workoutId =
-        getDayOptions(day || focusDay).find((o) => isFastedCardioLabel(o.label))?.workoutId || "";
+        getDayOptions(day || focusDay, partIndex).find((o) => isFastedCardioLabel(o.label))
+          ?.workoutId || "";
 
       if (!workoutId) {
         const createRes = await fetch("/api/workouts", {
@@ -888,8 +941,9 @@ export default function ProgramCalendarBuilder({
       }
 
       await patchDay(focus.dayId, {
-        options: [{ workoutId, label: FASTED_CARDIO_LABEL }],
-        notes: `${minutes} minutes fasted cardio`,
+        options: [{ workoutId, label: FASTED_CARDIO_LABEL, partIndex }],
+        notes:
+          partIndex === 1 ? `${minutes} minutes fasted cardio` : undefined,
         calendarDate: cal,
       });
 
@@ -928,9 +982,14 @@ export default function ProgramCalendarBuilder({
         optIdx: 0,
         workoutId,
         label: FASTED_CARDIO_LABEL,
+        partIndex,
       });
       await loadSlots(workoutId, prescription);
-      setMessage(`${minutes} min fasted cardio set.`);
+      setMessage(
+        partIndex > 1
+          ? `Part ${partIndex}: ${minutes} min fasted cardio.`
+          : `${minutes} min fasted cardio set.`,
+      );
       setTimeout(() => setMessage(null), 2000);
     } catch {
       setMessage("Could not save fasted cardio.");
@@ -1175,12 +1234,13 @@ export default function ProgramCalendarBuilder({
     if (!focusDay || !activeWeekData) return;
 
     const day = focusDay;
-    const refreshed = await ensureGymHomeOptions(day);
-    const opts = [...getDayOptions(refreshed)];
+    const partIndex = focus?.dayId === day.id ? (focus.partIndex ?? 1) : 1;
+    const refreshed = await ensureGymHomeOptions(day, partIndex);
+    const opts = [...getDayOptions(refreshed, partIndex)];
     const gymIdx = opts.findIndex((o) => isGymLabel(o.label));
     const homeIdx = opts.findIndex((o) => isHomeLabel(o.label));
     if (gymIdx < 0 || homeIdx < 0) {
-      setMessage("This day needs Gym and Home options first.");
+      setMessage("This session needs Gym and Home options first.");
       return;
     }
 
@@ -1231,8 +1291,9 @@ export default function ProgramCalendarBuilder({
         label: "Home",
         trainingLocation: "home",
         notes: opts[homeIdx]?.notes ?? null,
+        partIndex,
       };
-      await setDayOptions(day.id, opts, { silent: true });
+      await setDayOptions(day.id, opts, { silent: true, partIndex });
       setAllWorkouts((prev) =>
         prev.some((w) => w.id === cloned.id)
           ? prev
@@ -1240,9 +1301,12 @@ export default function ProgramCalendarBuilder({
       );
       void loadWorkoutPreview(cloned.id);
 
-      const dayWithHome: ProgramDay = { ...refreshed, options: opts };
-      await openDayOption(dayWithHome, activeWeekData, homeIdx, "Home");
-      setMessage("Gym copied to Home — tweak Home only, then Save.");
+      await openDayOption(refreshed, activeWeekData, homeIdx, "Home", partIndex);
+      setMessage(
+        partIndex > 1
+          ? `Part ${partIndex}: Gym copied to Home — tweak Home only, then Save.`
+          : "Gym copied to Home — tweak Home only, then Save.",
+      );
       setTimeout(() => setMessage(null), 4000);
     } catch {
       setMessage("Could not copy Gym → Home — try again.");
@@ -1615,12 +1679,17 @@ export default function ProgramCalendarBuilder({
       ...day,
       ...patch,
       options: (updated.options as DayOption[] | undefined) ?? (patch.options as DayOption[] | undefined) ?? day.options,
+      sessions: (updated.sessions as DaySession[] | undefined) ?? day.sessions,
+      partCount: (updated.partCount as number | undefined) ?? day.partCount,
       workoutId: (updated.workoutId as string | null | undefined) ?? day.workoutId,
     };
   }
 
-  async function ensureGymHomeOptions(day: ProgramDay): Promise<ProgramDay> {
-    const stored = getDayOptions(day);
+  async function ensureGymHomeOptions(
+    day: ProgramDay,
+    partIndex = 1,
+  ): Promise<ProgramDay> {
+    const stored = getDayOptions(day, partIndex);
     const gym = stored.find((o) => isGymLabel(o.label));
     const home = stored.find((o) => isHomeLabel(o.label));
     const workoutOpts: DayOption[] = [
@@ -1629,12 +1698,14 @@ export default function ProgramCalendarBuilder({
         label: "Gym",
         trainingLocation: "gym",
         notes: gym?.notes ?? null,
+        partIndex,
       },
       {
         workoutId: home?.workoutId || "",
         label: "Home",
         trainingLocation: "home",
         notes: home?.notes ?? null,
+        partIndex,
       },
     ];
     const needsPatch =
@@ -1642,15 +1713,22 @@ export default function ProgramCalendarBuilder({
       !home ||
       stored.some((o) => isDayOffLabel(o.label)) ||
       stored.some((o) => isFastedCardioLabel(o.label));
-    if (!needsPatch) return { ...day, options: workoutOpts };
-    const updated = await patchDay(day.id, { options: workoutOpts, notes: null });
-    return mergeDayFromPatch(day, { options: workoutOpts, notes: null }, updated);
+    if (!needsPatch) {
+      // Keep existing day shape; part-scoped options live under sessions after save.
+      return day;
+    }
+    const updated = await patchDay(day.id, {
+      options: workoutOpts,
+      ...(partIndex === 1 ? { notes: null } : {}),
+    });
+    return mergeDayFromPatch(day, { options: workoutOpts }, updated);
   }
 
   async function selectDayMode(
     mode: "day-off" | "fasted-cardio" | "gym" | "home" | DayOption,
   ) {
     if (!focus || !focusDay || !activeWeekData) return;
+    const partIndex = focus.partIndex ?? 1;
 
     if (mode === "day-off") {
       await applyDayOff();
@@ -1662,15 +1740,21 @@ export default function ProgramCalendarBuilder({
     }
     if (mode === "gym" || mode === "home") {
       const label = mode === "gym" ? "Gym" : "Home";
-      const refreshed = await ensureGymHomeOptions(focusDay);
-      const optIdx = mode === "home" ? 1 : 0;
-      await openDayOption(refreshed, activeWeekData, optIdx, label);
+      const refreshed = await ensureGymHomeOptions(focusDay, partIndex);
+      const partOpts = getDayOptions(refreshed, partIndex);
+      const optIdx = Math.max(
+        0,
+        partOpts.findIndex((o) =>
+          mode === "home" ? isHomeLabel(o.label) : isGymLabel(o.label),
+        ),
+      );
+      await openDayOption(refreshed, activeWeekData, optIdx, label, partIndex);
       return;
     }
 
-    const stored = getDayOptions(focusDay);
+    const stored = getDayOptions(focusDay, partIndex);
     const idx = stored.findIndex((o) => o.label === mode.label);
-    await openDayOption(focusDay, activeWeekData, idx >= 0 ? idx : 0, mode.label);
+    await openDayOption(focusDay, activeWeekData, idx >= 0 ? idx : 0, mode.label, partIndex);
   }
 
   async function shiftSortOrdersFrom(insertAt: number) {
@@ -1866,27 +1950,33 @@ export default function ProgramCalendarBuilder({
     const day = week?.days.find((d) => d.id === focus.dayId);
     if (!day) return;
 
-    const opts = [...getDayOptions(day)];
+    const partIndex = focus.partIndex ?? 1;
+    const opts = [...getDayOptions(day, partIndex)];
     while (opts.length <= focus.optIdx) {
-      opts.push({ workoutId: "", label: focus.label || DEFAULT_DAY_OPTIONS[opts.length] || "Gym" });
+      opts.push({
+        workoutId: "",
+        label: focus.label || DEFAULT_DAY_OPTIONS[opts.length] || "Gym",
+        partIndex,
+      });
     }
     opts[focus.optIdx] = {
       workoutId,
       label: opts[focus.optIdx]?.label || focus.label,
       trainingLocation: trainingLocationFromLabel(focus.label) ?? opts[focus.optIdx]?.trainingLocation,
+      partIndex,
     };
 
-    await setDayOptions(focus.dayId, opts, { silent: true });
+    await setDayOptions(focus.dayId, opts, { silent: true, partIndex });
     const workoutName = (data.workoutName as string) || "Workout";
     setAllWorkouts((prev) =>
       prev.some((w) => w.id === workoutId) ? prev : [...prev, { id: workoutId, name: workoutName }],
     );
-    setFocus({ ...focus, workoutId });
+    setFocus({ ...focus, workoutId, partIndex });
     await loadSlots(workoutId, prescription);
     void loadWorkoutPreview(workoutId);
     const count = data.exerciseCount as number | undefined;
     setMessage(
-      `Upload translation saved${count != null ? ` — ${count} block${count === 1 ? "" : "s"}` : ""} on ${focus.label}.`,
+      `Upload translation saved${count != null ? ` — ${count} block${count === 1 ? "" : "s"}` : ""} on ${focus.label}${partIndex > 1 ? ` (part ${partIndex})` : ""}.`,
     );
     setTimeout(() => setMessage(null), 3500);
     scrollToEditor();
@@ -1902,10 +1992,12 @@ export default function ProgramCalendarBuilder({
     const week = program.weeks.find((w) => w.days.some((d) => d.id === dayId));
     const day = week?.days.find((d) => d.id === dayId);
     if (!day) return;
-    const opts = [...getDayOptions(day)];
+    const partIndex =
+      focus?.dayId === dayId ? (focus.partIndex ?? 1) : 1;
+    const opts = [...getDayOptions(day, partIndex)];
     const label = `Setting ${opts.length + 1}`;
-    opts.push({ workoutId: "", label });
-    await setDayOptions(dayId, opts);
+    opts.push({ workoutId: "", label, partIndex });
+    await setDayOptions(dayId, opts, { partIndex });
   }
 
   async function copyWeek(
@@ -1928,13 +2020,30 @@ export default function ProgramCalendarBuilder({
         const fromDay = fromWeek.days.find((d) => d.dayNumber === toDay.dayNumber);
         if (!fromDay) continue;
 
-        const fromOpts = getDayOptions(fromDay).filter((o) => o.workoutId);
+        const partCount = Math.max(
+          1,
+          fromDay.partCount ?? daySessions(fromDay).length,
+          ...daySessions(fromDay).map((s) => s.partIndex),
+        );
+        // Collect Gym/Home (etc.) from every part so multi-part military days copy fully.
+        const fromOpts: DayOption[] = [];
+        for (let p = 1; p <= partCount; p++) {
+          for (const o of getDayOptions(fromDay, p)) {
+            if (!o.workoutId) continue;
+            fromOpts.push({ ...o, partIndex: p });
+          }
+        }
         const toCal =
           toDay.calendarDate ||
           calendarDateForProgramDay(startMonday, toWeekNumber, toDay.dayNumber);
 
         if (fromOpts.length === 0) {
-          await patchDay(toDay.id, { options: [], calendarDate: toCal });
+          await patchDay(toDay.id, {
+            options: [],
+            calendarDate: toCal,
+            partCount: 1,
+            publishedAt: null,
+          });
           continue;
         }
 
@@ -1957,6 +2066,7 @@ export default function ProgramCalendarBuilder({
             workoutId: cloned.id,
             label: opt.label,
             notes: notesForCopy(opt.notes),
+            partIndex: opt.partIndex ?? 1,
           });
           setAllWorkouts((prev) =>
             prev.some((w) => w.id === cloned.id) ? prev : [...prev, { id: cloned.id, name: cloned.name }],
@@ -1971,6 +2081,7 @@ export default function ProgramCalendarBuilder({
           videoUrl: fromDay.videoUrl ?? null,
           publishedAt: null,
           notes: notesForCopy(fromDay.notes),
+          partCount,
         };
         if (fromDay.defaultSets != null) dayPatch.defaultSets = fromDay.defaultSets;
         if (fromDay.defaultReps != null) dayPatch.defaultReps = fromDay.defaultReps;
