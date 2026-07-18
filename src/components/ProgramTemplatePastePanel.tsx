@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatApiErrorDetail } from "@/lib/api-errors";
-import { TEMPLATE_CATEGORY_SUGGESTIONS } from "@/lib/workout-template-constants";
+import {
+  TEMPLATE_CATEGORY_SUGGESTIONS,
+  TEMPLATE_DAY_NAME_SUGGESTIONS,
+} from "@/lib/workout-template-constants";
 
 type TemplateRow = {
   id: string;
@@ -442,6 +445,32 @@ export default function ProgramTemplatePastePanel({
             {" · "}always a fresh copy when you paste later.
           </p>
         )}
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-medium text-emerald-100/90">
+            Quick name (tap one — or keep the title from the day above):
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {TEMPLATE_DAY_NAME_SUGGESTIONS.map((name) => {
+              const active = promoName.trim().toLowerCase() === name.toLowerCase();
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  disabled={busy || disabled}
+                  className={
+                    active
+                      ? "rounded-full bg-emerald-500/40 px-2.5 py-1 text-[10px] font-semibold text-emerald-50 ring-1 ring-emerald-300/60"
+                      : "rounded-full border border-emerald-500/30 bg-[var(--surface)] px-2.5 py-1 text-[10px] font-medium text-[var(--text)] hover:border-emerald-400/60 hover:bg-emerald-500/15"
+                  }
+                  onClick={() => setPromoName(name)}
+                  title={`Use template name “${name}”`}
+                >
+                  {name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label className="block text-[var(--text)]">
             Name
@@ -449,8 +478,14 @@ export default function ProgramTemplatePastePanel({
               className="input mt-0.5 h-9 w-full text-xs text-[var(--text)]"
               value={promoName}
               onChange={(e) => setPromoName(e.target.value)}
-              placeholder="e.g. A2A · W3 Mon Gym"
+              list="template-day-name-suggestions"
+              placeholder="e.g. Upper Body Workout · Leg Day · Fasted Cardio"
             />
+            <datalist id="template-day-name-suggestions">
+              {TEMPLATE_DAY_NAME_SUGGESTIONS.map((n) => (
+                <option key={n} value={n} />
+              ))}
+            </datalist>
           </label>
           <label className="block text-[var(--text)]">
             Category (type any)
