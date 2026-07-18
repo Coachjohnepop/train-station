@@ -362,13 +362,24 @@ export async function pasteWorkoutOntoProgramDay(input: {
 
   // Resolve day options from DB (prod path) or demo
   if (!isCoachCatalogDemo()) {
+    const { resolveSessionIdForPart } = await import("@/lib/program-day-sessions-db");
+
     const day = await prisma.programDay.findUnique({
       where: { id: input.dayId },
       include: {
         options: { orderBy: { sortOrder: "asc" } },
+        sessions: { orderBy: { partIndex: "asc" } },
       },
     });
     if (!day) throw new Error("DAY_NOT_FOUND");
+
+    // Paste onto part 1 (Main/AM) by default — multi-part paste can expand later.
+    const partIndex = 1;
+    const sessionId = await resolveSessionIdForPart(
+      day.id,
+      partIndex,
+      Math.max(day.partCount || 1, day.sessions?.length || 1),
+    );
 
     type Opt = {
       workoutId: string;
@@ -376,13 +387,19 @@ export async function pasteWorkoutOntoProgramDay(input: {
       trainingLocation?: string | null;
       notes?: string | null;
       sortOrder?: number;
+      sessionId?: string | null;
     };
-    const opts: Opt[] = day.options.map((o) => ({
+    // Prefer options already on this session / part 1 (incl. legacy null session).
+    const partOpts = day.options.filter(
+      (o) => o.sessionId === sessionId || o.sessionId == null,
+    );
+    const opts: Opt[] = (partOpts.length ? partOpts : day.options).map((o) => ({
       workoutId: o.workoutId,
       label: o.label,
       trainingLocation: o.trainingLocation,
       notes: o.notes,
       sortOrder: o.sortOrder,
+      sessionId: o.sessionId,
     }));
 
     const ensureTrack = async (
@@ -400,6 +417,7 @@ export async function pasteWorkoutOntoProgramDay(input: {
           label,
           trainingLocation: loc,
           sortOrder: loc === "gym" ? 0 : 1,
+          sessionId,
         });
         idx = opts.length - 1;
       }
@@ -419,6 +437,7 @@ export async function pasteWorkoutOntoProgramDay(input: {
         workoutId: clonedW.id,
         label,
         trainingLocation: loc,
+        sessionId,
       };
       if (loc === "gym") gymWorkoutId = clonedW.id;
       else homeWorkoutId = clonedW.id;
@@ -434,13 +453,20 @@ export async function pasteWorkoutOntoProgramDay(input: {
       return true;
     });
 
-    await prisma.programDayOption.deleteMany({ where: { dayId: day.id } });
+    // Only replace options on this session (and legacy null) — leave part 2+ intact.
+    await prisma.programDayOption.deleteMany({
+      where: {
+        dayId: day.id,
+        OR: [{ sessionId }, { sessionId: null }],
+      },
+    });
     if (cleaned.length) {
       await prisma.programDayOption.createMany({
         data: cleaned
           .filter((o) => o.workoutId)
           .map((o, i) => ({
             dayId: day.id,
+            sessionId,
             workoutId: o.workoutId,
             label: o.label,
             trainingLocation: o.trainingLocation ?? null,
@@ -452,8 +478,7 @@ export async function pasteWorkoutOntoProgramDay(input: {
     await prisma.programDay.update({
       where: { id: day.id },
       data: {
-        workoutId: gymWorkoutId || homeWorkoutId || null,
-        notes: null,
+        workoutId: gymWorkoutId || homeWorkoutId || day.workoutId || null,
       },
     });
 

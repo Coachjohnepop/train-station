@@ -1692,31 +1692,75 @@ export default function ProgramCalendarBuilder({
     const stored = getDayOptions(day, partIndex);
     const gym = stored.find((o) => isGymLabel(o.label));
     const home = stored.find((o) => isHomeLabel(o.label));
+
+    // workoutId is required in DB — empty shells never persist, so Home never appeared
+    // when only Gym existed (Military day 1). Create real empty workouts for missing tracks.
+    async function ensureTrackWorkout(
+      existingId: string | undefined,
+      label: "Gym" | "Home",
+    ): Promise<string> {
+      if (existingId?.trim()) return existingId;
+      const createRes = await fetch("/api/workouts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name:
+            partIndex > 1
+              ? `${defaultTrackWorkoutTitle(label)} · Part ${partIndex}`
+              : defaultTrackWorkoutTitle(label),
+        }),
+      });
+      if (!createRes.ok) {
+        throw new Error(`Could not create ${label} workout`);
+      }
+      const created = (await createRes.json()) as { id: string; name: string };
+      setAllWorkouts((prev) =>
+        prev.some((w) => w.id === created.id)
+          ? prev
+          : [...prev, { id: created.id, name: created.name }],
+      );
+      return created.id;
+    }
+
+    let gymId = gym?.workoutId || "";
+    let homeId = home?.workoutId || "";
+    const needsHome = !home || !homeId;
+    const needsGym = !gym || !gymId;
+    const needsPatch =
+      needsGym ||
+      needsHome ||
+      stored.some((o) => isDayOffLabel(o.label)) ||
+      stored.some((o) => isFastedCardioLabel(o.label));
+
+    if (!needsPatch) {
+      return day;
+    }
+
+    try {
+      if (needsGym) gymId = await ensureTrackWorkout(gymId, "Gym");
+      if (needsHome) homeId = await ensureTrackWorkout(homeId, "Home");
+    } catch {
+      setMessage("Could not open Gym/Home tracks — try Refresh.");
+      setTimeout(() => setMessage(null), 3500);
+      return day;
+    }
+
     const workoutOpts: DayOption[] = [
       {
-        workoutId: gym?.workoutId || "",
+        workoutId: gymId,
         label: "Gym",
         trainingLocation: "gym",
         notes: gym?.notes ?? null,
         partIndex,
       },
       {
-        workoutId: home?.workoutId || "",
+        workoutId: homeId,
         label: "Home",
         trainingLocation: "home",
         notes: home?.notes ?? null,
         partIndex,
       },
     ];
-    const needsPatch =
-      !gym ||
-      !home ||
-      stored.some((o) => isDayOffLabel(o.label)) ||
-      stored.some((o) => isFastedCardioLabel(o.label));
-    if (!needsPatch) {
-      // Keep existing day shape; part-scoped options live under sessions after save.
-      return day;
-    }
     const updated = await patchDay(day.id, {
       options: workoutOpts,
       ...(partIndex === 1 ? { notes: null } : {}),
@@ -1740,15 +1784,26 @@ export default function ProgramCalendarBuilder({
     }
     if (mode === "gym" || mode === "home") {
       const label = mode === "gym" ? "Gym" : "Home";
-      const refreshed = await ensureGymHomeOptions(focusDay, partIndex);
-      const partOpts = getDayOptions(refreshed, partIndex);
-      const optIdx = Math.max(
-        0,
-        partOpts.findIndex((o) =>
+      setSaving(true);
+      try {
+        const refreshed = await ensureGymHomeOptions(focusDay, partIndex);
+        const partOpts = getDayOptions(refreshed, partIndex);
+        const optIdx = partOpts.findIndex((o) =>
           mode === "home" ? isHomeLabel(o.label) : isGymLabel(o.label),
-        ),
-      );
-      await openDayOption(refreshed, activeWeekData, optIdx, label, partIndex);
+        );
+        if (optIdx < 0) {
+          setMessage(
+            mode === "home"
+              ? "Home track still missing — hard refresh, then try Home Workout again."
+              : "Gym track still missing — hard refresh, then try Gym Workout again.",
+          );
+          setTimeout(() => setMessage(null), 4000);
+          return;
+        }
+        await openDayOption(refreshed, activeWeekData, optIdx, label, partIndex);
+      } finally {
+        setSaving(false);
+      }
       return;
     }
 

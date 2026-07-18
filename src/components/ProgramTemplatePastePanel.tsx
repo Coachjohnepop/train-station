@@ -188,8 +188,11 @@ export default function ProgramTemplatePastePanel({
         setError(formatApiErrorDetail(data.detail) || "Paste failed");
         return;
       }
+      const tracksLabel = [trackGym && "Gym", trackHome && "Home"]
+        .filter(Boolean)
+        .join(" + ");
       msg(
-        `Pasted as new ${[trackGym && "Gym", trackHome && "Home"].filter(Boolean).join(" + ")} copy — source unchanged.`,
+        `Pasted ${tracksLabel} onto this day (fresh copies). Scroll up — you should see the exercises. Source template unchanged.`,
       );
       await onPasted();
     } finally {
@@ -676,15 +679,25 @@ export default function ProgramTemplatePastePanel({
               (sourceMode === "template" ? !templateId : !workoutId)
             }
             onClick={() => void pasteWorkout()}
+            title="Clones the selected template onto the calendar day open above"
           >
             Paste as copy onto this day
           </button>
         </div>
+        {sourceMode === "template" && !templateId && !templateEmptyAll && (
+          <p className="text-[11px] font-medium text-amber-100">
+            Pick a template in the second dropdown first — then this button turns on.
+          </p>
+        )}
         {!dayId && (
           <p className="text-[11px] font-medium text-amber-200">
             Select a day (Gym/Home) in the calendar first — paste needs a destination day open.
           </p>
         )}
+        <p className="text-[10px] text-[var(--muted)]">
+          Not the same as <strong className="text-[var(--text)]">Save to template library</strong>{" "}
+          (that only stores a copy for later). Paste is the purple button in this section.
+        </p>
       </div>
 
       {/* Archive shelf — look back before permanent delete */}
