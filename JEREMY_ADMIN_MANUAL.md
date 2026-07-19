@@ -220,8 +220,18 @@ Change amounts in **Admin → Pricing** (and Stripe product prices). Fee type st
 | Landing | `/admin/landing` | Venmo QR backup |
 
 **Test vs Live:** If the site is still on **Test mode**, cards do **not** move real money. Live money requires Live products + Live keys in Vercel (John).  
-**Backup:** Venmo QR on checkout + **Members → Mark paid**.  
-**Deep training:** `STRIPE_COMMISSION_SETUP.md`, `STRIPE_DEMO_SCRIPT.md`, `PAYMENT_ADMIN_DEMO_SCRIPT.md`, `STRIPE_PRODUCT_CATALOG.md`.
+
+**Venmo backup (real money without Live Stripe):**
+1. **Admin → Landing** → Venmo QR image URL (default site asset:  
+   `https://www.thetrainstation.co/images/venmo-jeremy-qr.png`), handle, instructions → Save.  
+2. Member checkout shows **Or pay with Venmo** (works even while Stripe is Test).  
+3. Member pays you on Venmo (business / same bank destination as your Stripe payouts).  
+4. **Admin → Members** (or Queue) → **Mark paid** → method **Venmo** → Confirm.  
+5. Member access unlocks like a Stripe payment.
+
+**Important:** Venmo and Stripe card charges both fund the **same Train Station business bank story** — Venmo is not a second company; it is just a different rail until Stripe Live is on (or for members who prefer Venmo).  
+
+**Deep training:** `STRIPE_COMMISSION_SETUP.md`, `STRIPE_DEMO_SCRIPT.md`, `PAYMENT_ADMIN_DEMO_SCRIPT.md`, `STRIPE_PRODUCT_CATALOG.md`, `JEREMY_S5_PAYMENTS_TEST.md`.
 
 ---
 

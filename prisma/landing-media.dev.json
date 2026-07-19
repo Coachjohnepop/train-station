@@ -1,0 +1,9 @@
+{
+  "welcomeVideoUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  "welcomeVideosByPlan": {},
+  "freeChastiseVideoUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  "venmoQrUrl": "https://www.thetrainstation.co/images/venmo-jeremy-qr.png",
+  "venmoHandle": "@JeremyByrdCSCS",
+  "venmoInstructions": "Scan to pay membership (same Train Station business account as Stripe bank deposits). Include your full name in the Venmo note. Coach marks you paid in Admin → Members after the payment posts.",
+  "updatedAt": "2026-07-19T20:32:01.296Z"
+}

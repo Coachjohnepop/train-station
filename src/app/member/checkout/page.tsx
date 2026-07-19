@@ -248,6 +248,9 @@ function MemberCheckoutInner() {
                 <p className="text-center text-xs font-semibold uppercase tracking-[2px] text-accent">
                   Or pay with Venmo
                 </p>
+                <p className="text-center text-[11px] text-[var(--muted)]">
+                  Same Train Station business bank account as Stripe deposits — pick card or Venmo.
+                </p>
                 {payments.venmo.handle && (
                   <p className="text-center text-sm font-medium">{payments.venmo.handle}</p>
                 )}
@@ -257,7 +260,7 @@ function MemberCheckoutInner() {
                 </div>
                 <p className="text-center text-xs text-[var(--muted)]">
                   {payments.venmo.instructions ||
-                    "Scan to pay and include your name in the note. Jeremy will confirm and unlock your account."}
+                    "Scan to pay and include your full name in the note. Coach marks you paid in Admin → Members after the payment posts."}
                 </p>
               </div>
             )}

@@ -1,18 +1,24 @@
 # Jeremy — S5 Payments test (5 min)
 
-**What shipped:** Stripe checkout for Coach Class ($25/mo) and 1st Class ($50/mo), Venmo QR on checkout, and **Mark paid** in Admin → Members for Venmo/cash.
+**What shipped:** Stripe checkout (subscription + one-time), Venmo QR on checkout, and **Mark paid** in Admin → Members for Venmo/cash.
+
+**Money destination:** Venmo payments and Stripe payouts both go to the **Train Station business** (same bank account story as your Stripe merchant account). Venmo is a **backup rail**, not a second company.
 
 ---
 
 ## 1. Paste your Venmo QR (one time)
 
-1. Screenshot your Venmo QR (or export from the Venmo app).
-2. Upload the image somewhere public (Imgur, your site, Google Drive direct link).
-3. Admin → **Landing** (or `/admin/landing`).
-4. Paste the image URL in **Venmo QR image**.
-5. Optional: add your `@handle` and a short note (“include your name”).
+1. Preferred site asset (already on the server):  
+   `https://www.thetrainstation.co/images/venmo-jeremy-qr.png`  
+   Or screenshot your Venmo QR and host any **https** image URL.
+2. Admin → **Landing** (or `/admin/landing`).
+3. Paste the image URL in **Venmo QR image**.
+4. Handle: e.g. `@JeremyByrdCSCS` (whatever members should search).
+5. Instructions: e.g. “Include your full name. Same business account as Stripe.”
 6. **Save landing media**.
-7. Open **Preview checkout** link at the bottom — you should see your QR under “Or pay with Venmo”.
+7. Open **Preview checkout** or `/member/checkout?plan=business` — **Or pay with Venmo** + QR.
+
+John can also run: `npx tsx scripts/set-venmo-landing-prod.mjs` (uses Blob landing store).
 
 ---
 

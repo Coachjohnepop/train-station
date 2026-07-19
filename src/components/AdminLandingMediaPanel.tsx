@@ -120,13 +120,19 @@ export default function AdminLandingMediaPanel({
             mutes automatically.
           </li>
           <li>
-            <strong className="text-white">Venmo QR</strong> — member checkout page as an alternative
-            to Stripe. After they pay, mark them paid in Admin → Members.
+            <strong className="text-white">Venmo QR</strong> — member checkout backup when Stripe is
+            still Test or the member prefers Venmo. Funds go to the{" "}
+            <strong className="text-white">same business bank account</strong> as Stripe payouts
+            (Jeremy’s Train Station business). After they pay,{" "}
+            <strong className="text-white">Admin → Members → Mark paid (Venmo)</strong>.
           </li>
         </ul>
         <p className="mt-3 text-xs text-[#9d8ab8]">
-          Upload clips to YouTube (public or unlisted). For Venmo, screenshot your QR, upload to
-          Imgur or your site, paste the image URL here.
+          Upload clips to YouTube (public or unlisted). Venmo QR can be the site asset{" "}
+          <code className="text-[10px] text-[#c4b5fd]">
+            https://www.thetrainstation.co/images/venmo-jeremy-qr.png
+          </code>{" "}
+          or any https image URL of your QR.
         </p>
       </div>
 

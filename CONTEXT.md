@@ -219,7 +219,7 @@ Audit Jeremy: `MINUTES=120 npx tsx scripts/jeremy-post-audit-prodtest.mjs`
 | `STRIPE_PRICE_MEMBER` / `BUSINESS` / `PRO` | All three on Live env |
 | `STRIPE_AUTO_APPROVE` | Optional — auto-approve member after pay |
 | Full `STRIPE_DEMO_SCRIPT.md` pass/fail | Signup → paid → Adult Start → Admin Members shows Stripe |
-| **Venmo backup** | Landing QR + Admin → Members **Mark paid** (`JEREMY_S5_PAYMENTS_TEST.md`) |
+| **Venmo backup** | Landing QR + Admin → Members **Mark paid**. **Same business bank as Stripe** (not a second merchant). Asset: `/images/venmo-jeremy-qr.png`. Script: `npx tsx scripts/set-venmo-landing-prod.mjs`. Docs: `JEREMY_S5_PAYMENTS_TEST.md` |
 | **Commission / Connect** | Not auto-at-checkout. Enable Connect on **Jeremy’s** Stripe → John Express onboard → Admin → Commission → Preview/Run payout. Envs: `STRIPE_COMMISSION_*` |
 | Referral promos | Optional coupons / `promo_…` in commission panel |
 | Per-program Stripe products | **Not planned** — Adult unlocks with membership only |
