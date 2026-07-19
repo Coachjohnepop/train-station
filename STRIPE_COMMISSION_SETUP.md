@@ -82,6 +82,7 @@ STRIPE_COMMISSION_MODE=milestone
 STRIPE_COMMISSION_TIER1_CAP_DOLLARS=5000
 STRIPE_COMMISSION_TIER1_RATE=0.05
 STRIPE_COMMISSION_TIER2_RATE=0.30
+STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS=400   # min partner pool before Connect pays out (covers platform fees)
 STRIPE_COMPANY_FEED_LABEL=The Train Station LLC
 
 # Auto-seed John as sole pool recipient on first Commission load:
@@ -105,6 +106,7 @@ Redeploy after saving.
 3. John → **Connect** → Stripe Express onboarding (bank + identity)
 4. **Revenue feeds** card shows: John’s est. payout + company retained %
 5. After live signups: **Preview payout** → **Run payout now**
+6. **Payout minimum $400** (partner pool total) — Run payout stays blocked until the pool is ≥ $400 so platform/admin fees are covered first. Change with `STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS`.
 
 ### Adding shareholders later
 

@@ -17,9 +17,11 @@ import {
 } from "@/lib/commission-ledger-store";
 import {
   commissionFromMrr,
+  commissionPayoutMinCentsFromEnv,
   commissionSplitMode,
   commissionUsesPoolSplit,
   fetchActiveMrrCents,
+  formatUsdFromCents,
   isCommissionEnabled,
   revenueSplitFromMrr,
 } from "@/lib/stripe-commission";
@@ -36,13 +38,18 @@ function payoutStatusFromLines(lines: PartnerPayoutLine[]): CommissionPayoutReco
 export async function runCommissionPayout(input?: {
   period?: string;
   dryRun?: boolean;
+  /** Bypass $400 (default) minimum — staff only emergency. */
+  force?: boolean;
 }): Promise<
   | {
       ok: true;
       dryRun: boolean;
       record: CommissionPayoutRecord;
+      belowMinimum?: boolean;
+      payoutMinCents?: number;
+      message?: string;
     }
-  | { error: string }
+  | { error: string; belowMinimum?: boolean; payoutMinCents?: number }
 > {
   if (!isCommissionEnabled()) {
     return { error: "Commission payouts are disabled (STRIPE_COMMISSION_ENABLED=false)." };
@@ -102,6 +109,48 @@ export async function runCommissionPayout(input?: {
 
   if (amount <= 0) {
     return { error: "Commission amount is zero — no active MRR to pay against." };
+  }
+
+  const payoutMinCents = commissionPayoutMinCentsFromEnv();
+  const belowMinimum = amount < payoutMinCents;
+  if (belowMinimum && !input?.force) {
+    const msg = `Partner pool is ${formatUsdFromCents(amount)} — minimum before payout is ${formatUsdFromCents(payoutMinCents)} (covers platform / admin fees). Let more memberships bill, then Preview again.`;
+    if (input?.dryRun) {
+      // Still return a preview record so Admin can see the math, but flag the gate.
+      const splitLinesPreview = commissionUsesPoolSplit(mode)
+        ? splitCommissionAmongPartners(amount, partners)
+        : splitRevenueAmongPartners(mrrCents, partners);
+      const previewLines: PartnerPayoutLine[] = splitLinesPreview.map((line) => ({
+        partnerId: line.partnerId,
+        partnerName: line.partnerName,
+        sharePercent: line.sharePercent,
+        amountCents: line.amountCents,
+        transferId: null,
+        status: "skipped",
+        error: "Below payout minimum",
+      }));
+      return {
+        ok: true,
+        dryRun: true,
+        belowMinimum: true,
+        payoutMinCents,
+        message: msg,
+        record: {
+          id: existing?.id || randomUUID(),
+          period,
+          mrrCents: recordMrrCents,
+          ...tierFields,
+          totalCommissionCents: amount,
+          transferId: null,
+          partnerLines: previewLines,
+          status: "pending",
+          createdAt: existing?.createdAt ?? new Date().toISOString(),
+          paidAt: null,
+          error: msg,
+        },
+      };
+    }
+    return { error: msg, belowMinimum: true, payoutMinCents };
   }
 
   const splitLines = commissionUsesPoolSplit(mode)

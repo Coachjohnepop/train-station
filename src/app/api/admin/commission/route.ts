@@ -9,6 +9,7 @@ import { listCommissionPayouts } from "@/lib/commission-ledger-store";
 import {
   commissionConfigFromEnv,
   commissionFromMrr,
+  commissionPayoutMinCentsFromEnv,
   commissionSplitMode,
   commissionUsesPoolSplit,
   fetchActiveMrrCents,
@@ -60,26 +61,31 @@ export async function GET() {
   }));
 
   const connectById = new Map(connectStatuses.map((s) => [s.partnerId, s]));
+  const poolTotalCents =
+    mode === "flat"
+      ? (flatSplit?.totalPartnerPayoutCents ?? 0)
+      : (poolBreakdown?.totalCommissionCents ?? 0);
+  const payoutMinCents = commissionPayoutMinCentsFromEnv();
 
   return NextResponse.json({
     enabled: isCommissionEnabled(),
     mode,
     periodSuggested: previousCommissionPeriod(),
+    payoutMinimum: {
+      cents: payoutMinCents,
+      label: formatUsdFromCents(payoutMinCents),
+      met: poolTotalCents >= payoutMinCents,
+      shortfallCents: Math.max(0, payoutMinCents - poolTotalCents),
+      shortfallLabel: formatUsdFromCents(Math.max(0, payoutMinCents - poolTotalCents)),
+    },
     mrr: {
       cents: mrr.mrrCents,
       label: formatUsdFromCents(mrr.mrrCents),
       activeSubscriptions: mrr.activeSubscriptions,
     },
     commission: {
-      totalCommissionCents:
-        mode === "flat"
-          ? (flatSplit?.totalPartnerPayoutCents ?? 0)
-          : (poolBreakdown?.totalCommissionCents ?? 0),
-      totalLabel: formatUsdFromCents(
-        mode === "flat"
-          ? (flatSplit?.totalPartnerPayoutCents ?? 0)
-          : (poolBreakdown?.totalCommissionCents ?? 0),
-      ),
+      totalCommissionCents: poolTotalCents,
+      totalLabel: formatUsdFromCents(poolTotalCents),
       tier1BaseCents: poolBreakdown?.tier1BaseCents ?? 0,
       tier1CommissionCents: poolBreakdown?.tier1CommissionCents ?? 0,
       tier2BaseCents: poolBreakdown?.tier2BaseCents ?? 0,

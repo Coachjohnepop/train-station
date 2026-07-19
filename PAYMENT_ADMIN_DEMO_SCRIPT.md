@@ -13,7 +13,7 @@
 | **Master Stripe account** | **Jeremy’s Train Station business Stripe** — merchant of record. Login = that Dashboard’s **owner email** (Stripe has no “username”). |
 | **Card charge** | Full amount → **Jeremy’s Stripe** (minus fees) → business bank on payout. |
 | **Venmo charge** | Member pays **@JeremyByrdCSCS** (QR on checkout) → same business bank. Access only after **Mark paid**. |
-| **John’s share** | **Not at swipe.** Admin → Commission + **Connect Express**; partner pool 5%→30% of MRR (milestone); John seeded 100% of pool. |
+| **John’s share** | **Not at swipe.** Admin → Commission + **Connect Express**; partner pool 5%→30% of MRR (milestone); John seeded 100% of pool. **Min $400 pool** before Run payout. |
 | **Fee types** | **Monthly subscription** (Coach $25/mo, Business $50/mo) or **one-time** (1st Class $850, custom, merch). |
 | **Test vs Live (cards)** | Test keys = fake cards only. **Venmo is real money** even while Stripe is Test. Live keys required for real Amex/Visa. |
 
@@ -55,6 +55,7 @@ STRIPE_COMMISSION_ENABLED=true
 STRIPE_COMMISSION_TIER1_CAP_DOLLARS=5000
 STRIPE_COMMISSION_TIER1_RATE=0.05
 STRIPE_COMMISSION_TIER2_RATE=0.30
+STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS=400  # floor before Connect transfer (platform fees)
 STRIPE_COMMISSION_CRON_SECRET=…      # optional — automated monthly payout
 ```
 

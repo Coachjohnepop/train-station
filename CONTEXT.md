@@ -45,6 +45,7 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 | 3. Company keeps | Most revenue on platform (“company feed”) |
 | 4. Partner split | **Not** at swipe. Later: Admin → **Commission** + **Connect Express** |
 | 5. John’s share | **100% of partner pool** until shareholders change (5% MRR → 30% after $5k goal) |
+| 5b. **Payout minimum** | Partner pool must reach **$400** before **Run payout** (covers platform/admin fees). Env: `STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS` (default 400). Preview always OK. |
 | 6. Test vs Live | **`sk_test_`** = fake money. Real cards only after Live keys + live `price_…` |
 
 #### B. Venmo (backup — **live on prod**)
@@ -240,7 +241,7 @@ Audit Jeremy: `MINUTES=120 npx tsx scripts/jeremy-post-audit-prodtest.mjs`
 | `STRIPE_AUTO_APPROVE` | Optional — auto-approve member after pay |
 | Full `STRIPE_DEMO_SCRIPT.md` pass/fail | Signup → paid → Adult Start → Admin Members shows Stripe |
 | **Venmo backup** | **LIVE on prod** (`hasQr: true`, `@JeremyByrdCSCS`). Same business bank as Stripe. Mark paid for access. Asset + script + docs under Money flow § B above |
-| **Commission / Connect** | Not auto-at-checkout. Enable Connect on **Jeremy’s** Stripe → John Express onboard → Admin → Commission → Preview/Run payout. Envs: `STRIPE_COMMISSION_*` |
+| **Commission / Connect** | Not auto-at-checkout. Connect on Jeremy’s Stripe → John Express → Admin → Commission. **Min pool $400** before Run payout (`STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS`). Envs: `STRIPE_COMMISSION_*` |
 | Referral promos | Optional coupons / `promo_…` in commission panel |
 | Per-program Stripe products | **Not planned** — Adult unlocks with membership only |
 
@@ -341,6 +342,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - **Jeremy script:** `JEREMY_VENMO_SCRIPT.md` (see checkout QR + Mark paid in 2–3 min).
 - **Re-seed:** `npx tsx scripts/set-venmo-landing-prod.mjs`. Docs: this file (Money flow § B), `JEREMY_ADMIN_MANUAL.md`, `JEREMY_S5_PAYMENTS_TEST.md`, `PAYMENT_ADMIN_DEMO_SCRIPT.md`, checkout UI copy.
 - **Stripe cards:** still `stripeTestMode: true` until Jeremy Live + Vercel live keys. Use Venmo for real $ now, or `4242…` for test card E2E.
+- **Commission payout min $400:** partner pool must reach $400 before **Run payout** (platform fees floor). `STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS` default 400.
 - **Earlier Jul 19 ships:** fee types subscription vs one-time; join picker fix; rest/equipment/program paste; multi-coach Zoom checklist; Messages Macros chips; multi-part Today; Twilio PARKED.
 
 ### Prior stretch (Jul 15–16) — still true

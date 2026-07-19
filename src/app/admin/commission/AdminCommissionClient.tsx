@@ -81,6 +81,14 @@ type CommissionResponse = {
     weekday: number;
     weekdayLabel: string;
   };
+  /** Partner-pool floor before Connect transfers (default $400). */
+  payoutMinimum?: {
+    cents: number;
+    label: string;
+    met: boolean;
+    shortfallCents: number;
+    shortfallLabel: string;
+  };
   connectPlatform?: {
     ready: boolean;
     message: string | null;
@@ -530,6 +538,24 @@ export default function AdminCommissionClient() {
                 </div>
               </div>
             </div>
+            {data.payoutMinimum ? (
+              <div
+                className={`rounded-lg border px-3 py-2 text-sm ${
+                  data.payoutMinimum.met
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
+                    : "border-amber-500/40 bg-amber-500/10 text-amber-100"
+                }`}
+              >
+                <p className="font-semibold">
+                  Payout minimum: {data.payoutMinimum.label}
+                </p>
+                <p className="mt-1 text-xs opacity-90">
+                  {data.payoutMinimum.met
+                    ? "Partner pool is at or above the floor — Run payout can transfer via Connect."
+                    : `Need ${data.payoutMinimum.shortfallLabel} more in the partner pool before Connect transfers (covers platform / admin fees). Preview still works.`}
+                </p>
+              </div>
+            ) : null}
             {data.companyFeed ? (
               <div className="grid gap-3 sm:grid-cols-3">
                 {data.projectedSplits.map((split) => (
@@ -683,6 +709,9 @@ export default function AdminCommissionClient() {
               {data.mode === "flat"
                 ? " Company share stays on the platform account — no transfer needed."
                 : " Enabled partner shares must total 100% of the partner pool."}
+              {data.payoutMinimum
+                ? ` Minimum pool before transfer: ${data.payoutMinimum.label}.`
+                : ""}
             </p>
             <div className="flex flex-wrap gap-2">
               <button
@@ -696,7 +725,16 @@ export default function AdminCommissionClient() {
               <button
                 type="button"
                 className="btn-primary text-sm"
-                disabled={busy !== null || !data.shareValid}
+                disabled={
+                  busy !== null ||
+                  !data.shareValid ||
+                  data.payoutMinimum?.met === false
+                }
+                title={
+                  data.payoutMinimum?.met === false
+                    ? `Need ${data.payoutMinimum.shortfallLabel} more before payout`
+                    : undefined
+                }
                 onClick={() => void runPayout(false)}
               >
                 {busy === "payout" ? "Transferring…" : "Run payout now"}

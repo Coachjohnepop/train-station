@@ -11,6 +11,8 @@ export const dynamic = "force-dynamic";
 const schema = z.object({
   period: z.string().regex(/^\d{4}-\d{2}$/).optional(),
   dryRun: z.boolean().optional(),
+  /** Staff-only: bypass payout minimum (default $400). Cron cannot force. */
+  force: z.boolean().optional(),
 });
 
 function cronAuthorized(request: Request): boolean {
@@ -48,10 +50,19 @@ export async function POST(request: Request) {
   const result = await runCommissionPayout({
     period: parsed.data.period || previousCommissionPeriod(),
     dryRun: parsed.data.dryRun,
+    // Cron must never force below-minimum transfers.
+    force: staffOk && !cronOk ? parsed.data.force === true : false,
   });
 
   if ("error" in result) {
-    return NextResponse.json({ error: result.error }, { status: 409 });
+    return NextResponse.json(
+      {
+        error: result.error,
+        belowMinimum: result.belowMinimum,
+        payoutMinCents: result.payoutMinCents,
+      },
+      { status: 409 },
+    );
   }
 
   return NextResponse.json(result);

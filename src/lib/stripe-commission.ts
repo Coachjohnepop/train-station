@@ -61,6 +61,21 @@ export function isCommissionEnabled(): boolean {
   return process.env.STRIPE_COMMISSION_ENABLED !== "false";
 }
 
+/**
+ * Minimum partner-pool total before Connect transfers run.
+ * Covers platform / admin costs so we don't pay out tiny amounts.
+ * Default $400 — override with STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS or _CENTS.
+ */
+export function commissionPayoutMinCentsFromEnv(): number {
+  const centsRaw = process.env.STRIPE_COMMISSION_PAYOUT_MIN_CENTS?.trim();
+  if (centsRaw) {
+    const n = Number(centsRaw);
+    if (Number.isFinite(n) && n >= 0) return Math.round(n);
+  }
+  const dollars = Number(process.env.STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS ?? "400");
+  return Math.round((Number.isFinite(dollars) ? Math.max(0, dollars) : 400) * 100);
+}
+
 /** Flat mode: partner sharePercents are % of gross MRR; remainder stays on the platform account. */
 export function revenueSplitFromMrr(
   mrrCents: number,

@@ -200,7 +200,8 @@ Use this every time a new coach should host live class.
 2. **100% of the payment** (minus Stripe fees) → **your master Stripe balance**.  
 3. Most of it stays there as the **company / business** money.  
 4. **Division is not instant at checkout.** Partner share is calculated from membership revenue (MRR rules) and paid out through **Stripe Connect** when you (or John) run **Admin → Platform → Payments / Commission** (Preview → Run payout).  
-5. **John’s cut (default model):** of a **partner pool** (5% of MRR under $5k goal, then 30% of MRR), John is seeded at **100% of that pool** until you add other shareholders. He must finish **Connect Express** (bank + identity) before a transfer can succeed.
+5. **John’s cut (default model):** of a **partner pool** (5% of MRR under $5k goal, then 30% of MRR), John is seeded at **100% of that pool** until you add other shareholders. He must finish **Connect Express** (bank + identity) before a transfer can succeed.  
+6. **Payout minimum $400:** Connect transfers do **not** run until the partner pool is at least **$400** (so platform/admin fees are covered first). Admin shows shortfall until then.
 
 **Only two fee types (dollar amounts can change):**
 
