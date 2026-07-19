@@ -322,6 +322,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - **Live money still needs:** Live `sk`/`pk`/`whsec` + live `STRIPE_PRICE_*` + Connect Ready for division.
 - **Rest / equipment / program paste polish** as above.
 - **Also earlier Jul 19:** Twilio PARKED, `VENDOR_COSTS.md`, `JEREMY_ADMIN_MANUAL.md`.
+- **Zoom multi-coach (Jul 19 evening):** Jeremy hosts OK in prod. Confirmed per-coach isolation in code + prod DB (only Jeremy token row). Full **add coach 2…n** checklist written into `JEREMY_ADMIN_MANUAL.md`; no extra product work required unless Marketplace Publish for external Zoom orgs.
 
 ### Prior stretch (Jul 15–16) — still true
 Signing-off notes from Jeremy’s first AM client era; SMS audit migration **applied on prod**; per-exercise notes shipped `ebcc168`.
@@ -344,13 +345,15 @@ Signing-off notes from Jeremy’s first AM client era; SMS audit migration **app
 - Equipment with product link must have a **fetchable** image to publish to Gear  
 - Rest timer: sticky countdown (default 90s); **skip last set**; ticks **last 5s** + soft complete buzz; live partner checkoff starts rest on both sides
 
-### Multi-coach Zoom (shipped Jul 16)
+### Multi-coach Zoom (shipped Jul 16 · verified Jul 19)
 - **Per-coach OAuth:** `CoachZoomOAuth.id` = lower-case coach login email (not singleton `coach`).
-- Each coach Connects **their** Zoom; disconnect only clears that coach.
+- Each coach Connects **their** Zoom; disconnect only clears that coach (`clearZoomOAuthRecord(session.email)` — not global wipe).
 - Host rule: Zoom profile email **matches coach login** OR `ZOOM_HOST_EMAIL` / `ZOOM_HOST_EMAILS` / domain flag.
 - Meetings / ZAK use the **logged-in coach’s** tokens.
 - **Ops still required for external Zoom accounts:** Marketplace app **Publish** (Development = same Zoom org as app owner only). After publish, put Production Client ID/Secret in Vercel if different.
-- Prod row migrated: `jeremy@thetrainstation.co` keeps existing tokens.
+- **Prod (Jul 19):** only `jeremy@thetrainstation.co` row with tokens; pending OAuth state rows for jeremy + john are leftover, not second connections.
+- **Isolation proof (code):** save/upsert is `where: { id: coachEmailKey }`; disconnect deletes only that key / that coach’s `connectedByEmail` / legacy singleton if it belonged to them — **John Connect cannot overwrite Jeremy’s id**.
+- **Coach checklist:** `JEREMY_ADMIN_MANUAL.md` → **Checklist: add coach 2…n (Zoom)**.
 
 ### SMS / Twilio deep polish + M&A audit (started — John sleeping)
 

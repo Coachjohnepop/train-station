@@ -126,12 +126,66 @@ Nothing below is “inside the workout calendar.” These are the services that 
 - Today, **SMS Hub** may still show email-hub / non-Twilio logs (no carrier SID).
 
 ### Zoom specifics (read once)
-- Connect: **Admin → Settings → Zoom**  
-- Your connected profile should match **`jeremy@thetrainstation.co`** (or an allowed host John configures).  
-- Recordings land on the **Zoom account that hosts** the meeting.  
-- If Connect fails with “credentials” / redirect errors → John restores `ZOOM_CLIENT_ID` / `ZOOM_CLIENT_SECRET` and checks Marketplace redirect URL:  
-  `https://www.thetrainstation.co/api/admin/zoom/callback`  
-- Second coach on a **different** Zoom org may need the Marketplace app **published** (John).
+
+**How it works (multi-coach):** Each coach has their **own** Zoom connection in the database, keyed by their Train Station login email. When **you** (Jeremy) start class, **your** Zoom launches — not John’s. When coach N starts class while signed in as themselves, **their** Zoom launches. Disconnect only clears **that** coach’s row.
+
+**You (Jeremy) day-to-day:**
+1. Sign in as `jeremy@thetrainstation.co`
+2. **Admin → Settings → Zoom** → Connect if not already **Ready for class**
+3. Prefer Zoom profile email = `jeremy@thetrainstation.co` (recordings land on the host Zoom)
+4. **Go to Today** / Live Floor → start video as usual
+
+**If Connect fails:** John checks Vercel `ZOOM_CLIENT_ID` / `ZOOM_CLIENT_SECRET` and Marketplace OAuth redirect exactly:  
+`https://www.thetrainstation.co/api/admin/zoom/callback`
+
+---
+
+### Checklist: add coach 2…n (Zoom)
+
+Use this every time a new coach should host live class.
+
+#### A. Train Station account
+- [ ] Create / confirm a **staff coach** login for them (email they will use daily, e.g. `name@thetrainstation.co` or their work email).
+- [ ] They can sign in at https://www.thetrainstation.co/login and open **Admin → Settings**.
+
+#### B. Host email rule (pick one)
+- [ ] **Best:** Their Zoom account email **exactly matches** their Train Station login email.  
+- [ ] **Or** John adds their Zoom email to Vercel `ZOOM_HOST_EMAILS` (comma list), e.g.  
+  `jeremy@thetrainstation.co,john@thetrainstation.co,newcoach@…`  
+- [ ] **Or** (all coaches on brand domain) set `ZOOM_ALLOW_TRAIN_STATION_DOMAIN=1` so any `@thetrainstation.co` Zoom is allowed.
+
+#### C. Marketplace app (only if Connect fails for them)
+- [ ] Same Zoom company/org as the Marketplace app owner (often Jeremy) → Development app is usually enough.  
+- [ ] **Different Zoom org** (personal Zoom, other company) → Marketplace app must be **Published**; if Zoom shows separate **Production** Client ID/Secret, John puts those on Vercel and redeploys.  
+- [ ] Redirect URL still: `https://www.thetrainstation.co/api/admin/zoom/callback` (and optional non-www twin if used).
+
+#### D. They Connect (while logged in as **themselves**)
+- [ ] Coach N signs into The Train Station as **their** email (not Jeremy).  
+- [ ] **Admin → Settings → Zoom** → **Connect Zoom**.  
+- [ ] Approve Zoom OAuth as **their** Zoom user.  
+- [ ] Status shows connected / Ready; Zoom email matches expectation (or allowlist).  
+- [ ] **Go to Today** → start a short test meeting — host should be **coach N’s** Zoom, not Jeremy’s.
+
+#### E. Safety checks (do not skip)
+- [ ] Jeremy still **Ready** under **his** login (his connection was not wiped).  
+- [ ] **Disconnect** under coach N only removes coach N — Jeremy’s Settings still show connected.  
+- [ ] Recordings for N’s session land on **N’s** Zoom account.
+
+#### F. Optional env (John / Vercel)
+| Variable | Purpose |
+|----------|---------|
+| `ZOOM_CLIENT_ID` / `ZOOM_CLIENT_SECRET` | Marketplace OAuth app (shared by all coaches) |
+| `ZOOM_HOST_EMAIL` | Primary expected host (default Jeremy) |
+| `ZOOM_HOST_EMAILS` | Extra allowed Zoom emails |
+| `ZOOM_ALLOW_TRAIN_STATION_DOMAIN=1` | Allow any `@thetrainstation.co` Zoom host |
+| `ZOOM_MEETING_SDK_KEY` / `SECRET` | Only if embedded Meeting SDK needs them |
+
+#### G. What you do **not** need
+- Re-Connect Jeremy when adding coach N  
+- A second Stripe or Twilio step for Zoom  
+- Sharing Jeremy’s Zoom password with other coaches (each Connects their own)
+
+**Deep / engineering:** `CONTEXT.md` (multi-coach Zoom) · code: `CoachZoomOAuth` per email · `src/lib/zoom-env.ts` host rules.
 
 ### Stripe specifics (read carefully — money)
 
@@ -182,6 +236,8 @@ Change amounts in **Admin → Pricing** (and Stripe product prices). Fee type st
 | Member can’t log in / pay | Admin → **Members** + Stripe Dashboard (John if Live keys) |
 | Texts not arriving | Admin → **SMS Hub** logs → then Twilio (John: balance, From number, webhooks) |
 | Zoom “not connected” / no embed | Admin → **Settings** → Connect Zoom; then **Go to Today** / Live Floor |
+| Add another coach’s Zoom | See **Checklist: add coach 2…n (Zoom)** above — they Connect under **their** login |
+| New coach Connect wiped Jeremy | Should not happen (per-email rows). If it did, Jeremy re-Connect; tell John to check DB `CoachZoomOAuth` |
 | Member needs personal macros | **Messages** (chat) to that person — not a public Nutrition dump |
 | Gear image won’t publish | Admin → **Equipment** — product needs a working photo URL |
 | Site 500 / blank | John (Vercel + DB) |
