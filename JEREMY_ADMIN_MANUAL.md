@@ -9,6 +9,7 @@ Use it when something breaks, when you need a password reset on a third-party to
 
 **Related (content / checklists):**
 - `JEREMY_REMAINING_CHECKLIST.md` — your content + 5‑min verify list  
+- **`JEREMY_VENMO_SCRIPT.md`** — **2–3 min: see Venmo on checkout + Mark paid**  
 - **`VENDOR_COSTS.md`** — every app we use + monthly cost / retainers (Twilio, Vercel, etc.)  
 - `JEREMY_*_TEST.md` / `DEMO_SCRIPT.md` — guided walkthroughs  
 - `CONTEXT.md` — engineering handoff (John + agents; not required reading)

@@ -28,7 +28,7 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 | **Vercel / GitHub / Postgres** | John | Deploys, env, DB. |
 
 **Jeremy-facing tech map:** → **`JEREMY_ADMIN_MANUAL.md`**  
-**Payments training:** → **`STRIPE_COMMISSION_SETUP.md`**, **`STRIPE_DEMO_SCRIPT.md`**, **`PAYMENT_ADMIN_DEMO_SCRIPT.md`**, **`JEREMY_S5_PAYMENTS_TEST.md`**, **`STRIPE_PRODUCT_CATALOG.md`**
+**Payments training:** → **`JEREMY_VENMO_SCRIPT.md`** (2‑min see Venmo) · **`JEREMY_S5_PAYMENTS_TEST.md`** · **`STRIPE_COMMISSION_SETUP.md`** · **`STRIPE_DEMO_SCRIPT.md`** · **`PAYMENT_ADMIN_DEMO_SCRIPT.md`** · **`STRIPE_PRODUCT_CATALOG.md`**
 
 ### Money flow (durable — train every agent/human)
 
@@ -338,6 +338,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ### Jul 19 — Venmo LIVE + money manuals
 - **Venmo on prod:** Blob landing media set — QR `…/images/venmo-jeremy-qr.png`, handle `@JeremyByrdCSCS`, instructions note **same Train Station business account as Stripe bank deposits**. `/api/payments/public` → `venmo.hasQr: true`.
 - **Ops:** Member pays Venmo → coach **Mark paid (Venmo)** → access. No Stripe webhook for Venmo.
+- **Jeremy script:** `JEREMY_VENMO_SCRIPT.md` (see checkout QR + Mark paid in 2–3 min).
 - **Re-seed:** `npx tsx scripts/set-venmo-landing-prod.mjs`. Docs: this file (Money flow § B), `JEREMY_ADMIN_MANUAL.md`, `JEREMY_S5_PAYMENTS_TEST.md`, `PAYMENT_ADMIN_DEMO_SCRIPT.md`, checkout UI copy.
 - **Stripe cards:** still `stripeTestMode: true` until Jeremy Live + Vercel live keys. Use Venmo for real $ now, or `4242…` for test card E2E.
 - **Earlier Jul 19 ships:** fee types subscription vs one-time; join picker fix; rest/equipment/program paste; multi-coach Zoom checklist; Messages Macros chips; multi-part Today; Twilio PARKED.
