@@ -13,6 +13,10 @@ type ZoomSummary = {
   hostUrl: string;
   topic: string;
   demo?: boolean;
+  openUrl?: string;
+  openAs?: "host" | "participant";
+  isHost?: boolean;
+  hostCoachEmail?: string | null;
 };
 
 export default function CoachLiveFloorZoomPanel({
