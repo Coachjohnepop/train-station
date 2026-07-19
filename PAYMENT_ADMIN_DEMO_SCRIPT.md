@@ -5,19 +5,32 @@
 **Time:** ~20 min full pass; ~8 min if Stripe keys already live  
 **Sign in:** Coach account at `/login` → **Admin**
 
+## Money map (open with this)
+
+| | |
+|--|--|
+| **Master Stripe account** | **Jeremy’s Train Station business Stripe** — merchant of record. Login = that Dashboard’s **owner email** (Stripe has no “username”). |
+| **Card charge** | Full amount → **Jeremy’s Stripe** (minus Stripe fees). |
+| **John’s share** | **Not at swipe.** Admin → Commission + **Connect Express**; partner pool 5%→30% of MRR (milestone); John seeded 100% of pool. |
+| **Fee types** | **Monthly subscription** (Coach $25/mo, Business $50/mo) or **one-time** (1st Class $850, custom, merch). |
+| **Test vs Live** | Test keys = fake money. Live keys required for real bank money. |
+
+Deep docs: `STRIPE_COMMISSION_SETUP.md`, `STRIPE_DEMO_SCRIPT.md`, `JEREMY_ADMIN_MANUAL.md`, `CONTEXT.md`.
+
 This script covers **all payment admin** in one place:
 
 | Admin area | Path | Purpose |
 |------------|------|---------|
 | **Landing** | `/admin/landing` | Venmo QR, handle, instructions on member checkout |
 | **Members** | `/admin/members` | Who signed up, payment status, **Mark paid**, approve |
-| **Commission** | `/admin/commission` | Partner roster, share splits, Connect, monthly payouts |
+| **Pricing** | `/admin/pricing` | Display amounts + sync Stripe prices (subscription vs one-time) |
+| **Commission** | `/admin/commission` | Partner roster, share splits, Connect, monthly/on-demand payouts |
 
 Member money paths (for context during demo):
 
-- **Stripe** — Coach Class $25/mo, 1st Class $50/mo (auto **paid** via webhook)
+- **Stripe** — Coach Class $25/mo, Business Class $50/mo, 1st Class **$850 one-time** (auto **paid** via webhook + confirm)
 - **Venmo** — QR on checkout; Jeremy **Mark paid** in Members
-- **Commission** — Tiered split from membership MRR to partners (John + future hires)
+- **Commission** — Partner pool from membership MRR → Connect transfer to John (not auto at checkout)
 
 ---
 
@@ -28,8 +41,9 @@ Member money paths (for context during demo):
 ```bash
 STRIPE_SECRET_KEY=sk_test_…          # or sk_live_…
 STRIPE_WEBHOOK_SECRET=whsec_…
-STRIPE_PRICE_MEMBER=price_…          # Coach Class $25/mo
-STRIPE_PRICE_PRO=price_…             # 1st Class $50/mo
+STRIPE_PRICE_MEMBER=price_…          # Coach Class $25/mo (subscription)
+STRIPE_PRICE_BUSINESS=price_…        # Business Class $50/mo (subscription)
+STRIPE_PRICE_PRO=price_…             # 1st Class $850 one-time
 STRIPE_AUTO_APPROVE=true             # optional — paid members skip manual approval
 
 STRIPE_COMMISSION_ENABLED=true
@@ -39,12 +53,12 @@ STRIPE_COMMISSION_TIER2_RATE=0.30
 STRIPE_COMMISSION_CRON_SECRET=…      # optional — automated monthly payout
 ```
 
-### One-time (Jeremy — Stripe Dashboard)
+### One-time (Jeremy — **your** master Stripe Dashboard)
 
-1. Products: **Coach Class** $25/mo recurring, **1st Class** $50/mo recurring  
+1. Products on **this** account only: **Coach Class** $25/mo recurring, **Business Class** $50/mo recurring, **1st Class** $850 **one-time**  
 2. Webhook → `https://www.thetrainstation.co/api/stripe/webhook`  
-   Events: `checkout.session.completed`, `invoice.paid`, `customer.subscription.deleted`  
-3. **Connect** enabled (for commission transfers to partners)
+   Events: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`  
+3. **Connect** enabled on **this same account** (platform) so partner transfers to John can run
 
 ### Demo prep
 

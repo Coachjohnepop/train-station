@@ -23,10 +23,28 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 |--------|---------------|--------|
 | **Twilio** (carrier SMS) | **`john@thetrainstation.co`** · account phone = **John’s personal cell** | **PARKED (Jul 19)** — Jeremy weighing cost vs **Messages + email hub** already built. Account started under John; address wait is optional until un-parked. Do **not** put tokens here. Cost sheet: **`VENDOR_COSTS.md`**. |
 | **Zoom** (live class) | Coach Connect as **`jeremy@thetrainstation.co`** · Marketplace app credentials on Vercel (John) | Host / recordings = Jeremy’s Zoom when he Connects. |
-| **Stripe** | Jeremy business (merchant of record) · keys on Vercel (John) | Live cutover still open (often still Test mode). |
+| **Stripe** | **Master / merchant = Jeremy’s Train Station business Stripe** · API keys on Vercel (John wires) | Full money-flow below. Live cutover still open (prod often still Test mode). |
 | **Vercel / GitHub / Postgres** | John | Deploys, env, DB. |
 
-**Jeremy-facing tech map:** → **`JEREMY_ADMIN_MANUAL.md`** (where Admin screens + third-party systems live).
+**Jeremy-facing tech map:** → **`JEREMY_ADMIN_MANUAL.md`**  
+**Stripe training:** → **`STRIPE_COMMISSION_SETUP.md`**, **`STRIPE_DEMO_SCRIPT.md`**, **`STRIPE_PRODUCT_CATALOG.md`**, **`PAYMENT_ADMIN_DEMO_SCRIPT.md`**
+
+### Stripe money flow (durable — train every agent/human)
+
+**Master Stripe account (merchant of record):** Jeremy’s **business Stripe account** for The Train Station — the Dashboard that owns products, customers, and bank payouts for the platform. Login is the **email that owns that Stripe account** (not a social “username”; confirm in Dashboard → Settings / Team). Vercel `STRIPE_SECRET_KEY` / publishable key / webhook secret **must belong to this same account**.
+
+| Step | What happens |
+|------|----------------|
+| 1. Member pays | Card checkout (subscription **or** one-time — only two fee shapes) |
+| 2. Money lands | **100% of the charge** (minus Stripe processing fees) hits **Jeremy’s master Stripe balance** |
+| 3. Company keeps | Most revenue stays on that platform account (“company feed”) |
+| 4. Partner split | **Not** at the moment of charge. Later: Admin → **Commission** (`/admin/commission`) + **Stripe Connect Express** transfers to partners |
+| 5. John’s share | Seeded as **100% of the partner pool** (`john@thetrainstation.co`). Pool = **5% of MRR** until $5k goal, then **30% of MRR** (milestone mode). John must complete Connect onboarding before transfers. |
+| 6. Test vs Live | **`sk_test_` / Test mode** = fake money only. Real dollars only after Live keys + live `price_…` IDs. |
+
+**Fee types (product):** every paid package is **monthly subscription** or **one-time fee** (amounts can vary). See `STRIPE_PRODUCT_CATALOG.md`.
+
+**Do not:** put a second merchant secret on Vercel for John; do not assume checkout auto-splits to John’s bank.
 
 ---
 
@@ -151,6 +169,9 @@ Audit Jeremy: `MINUTES=120 npx tsx scripts/jeremy-post-audit-prodtest.mjs`
 | **`CONTEXT.md`** | **You are here** — living handoff |
 | **`JEREMY_ADMIN_MANUAL.md`** | **Jeremy’s admin + tech map** — Admin screens, vendors (Twilio/Zoom/Stripe/Vercel), who owns what |
 | **`VENDOR_COSTS.md`** | **All apps + monthly cost sheet** — retainer (🔴) vs usage vs parked (Twilio) |
+| **`STRIPE_COMMISSION_SETUP.md`** | **Master Stripe + revenue split** (Jeremy merchant, John Connect, milestone %) |
+| **`STRIPE_DEMO_SCRIPT.md`** / **`PAYMENT_ADMIN_DEMO_SCRIPT.md`** | Training walkthroughs (money flow at top) |
+| **`STRIPE_PRODUCT_CATALOG.md`** | Products + subscription vs one-time fee types |
 | `CLAUDE.md` | Thin pointer + Claude Code `@AGENTS.md` hook |
 | `SESSION_STATUS.md` | Older Jul 2 snapshot (Go to Today/Zoom era) — historical |
 | `AGENTS.md` | Next.js agent rules (breaking changes; read next dist docs) |
@@ -184,23 +205,26 @@ Audit Jeremy: `MINUTES=120 npx tsx scripts/jeremy-post-audit-prodtest.mjs`
 
 ### 1. Stripe — finalize money
 
-**Live probe (Jul 12):** `/api/payments/public` → `stripeEnabled: true`, **`stripeTestMode: true`**. Prices exist: **$25/mo**, **$50/mo**, **$850** one-time. Not Live money yet.
+**Money model (always true):** Master account = **Jeremy’s business Stripe**. Charge → full amount there → **Commission / Connect** later for John (and future partners). Details: **Stripe money flow** under People & roles above + `STRIPE_COMMISSION_SETUP.md`.
+
+**Live probe:** `/api/payments/public` → `stripeEnabled: true`, often **`stripeTestMode: true`**. Test prices: **$25/mo**, **$50/mo**, **$850** one-time. Not Live money until Live keys.
 
 | Item | Status / notes |
 |------|----------------|
 | Products/prices in **Test** | Done (member / business / pro) |
 | Checkout + webhook code paths | Shipped; prove on Live |
+| Fee types only two | **Subscription** vs **one-time** (`product-offers` / catalog / join picker fixed Jul 19) |
 | **Go Live checklist** | Flip Dashboard Live · new live `price_…` · live `sk`/`pk`/`whsec` in Vercel · redeploy · one real $25 (or refund) |
 | Live webhook **200** | `checkout.session.completed`, invoice paid/failed, subscription updated/deleted |
 | `STRIPE_PRICE_MEMBER` / `BUSINESS` / `PRO` | All three on Live env |
 | `STRIPE_AUTO_APPROVE` | Optional — auto-approve member after pay |
 | Full `STRIPE_DEMO_SCRIPT.md` pass/fail | Signup → paid → Adult Start → Admin Members shows Stripe |
 | **Venmo backup** | Landing QR + Admin → Members **Mark paid** (`JEREMY_S5_PAYMENTS_TEST.md`) |
-| **Commission / Connect** | `STRIPE_COMMISSION_*` envs · Connect Express for John · Admin → Commission · optional monthly cron |
+| **Commission / Connect** | Not auto-at-checkout. Enable Connect on **Jeremy’s** Stripe → John Express onboard → Admin → Commission → Preview/Run payout. Envs: `STRIPE_COMMISSION_*` |
 | Referral promos | Optional coupons / `promo_…` in commission panel |
 | Per-program Stripe products | **Not planned** — Adult unlocks with membership only |
 
-Docs: `STRIPE_DEMO_SCRIPT.md`, `STRIPE_COMMISSION_SETUP.md`, `STRIPE_PRODUCT_CATALOG.md`, `PAYMENT_ADMIN_DEMO_SCRIPT.md`
+Docs: `STRIPE_DEMO_SCRIPT.md`, `STRIPE_COMMISSION_SETUP.md`, `STRIPE_PRODUCT_CATALOG.md`, `PAYMENT_ADMIN_DEMO_SCRIPT.md`, `JEREMY_ADMIN_MANUAL.md` § Stripe
 
 ---
 
@@ -293,11 +317,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ### Jul 19 — Stripe fee types + rest / equipment / program polish
 - **Fee model:** only two paid shapes — **subscription** (Coach $25/mo, Business $50/mo) and **one-time** (1st Class $850, custom training, merch). Admin → Pricing + `/api/payments/public` expose `feeCategory` / labels. Checkout UI shows fee type.
-- **Purchase path:** `/join` plan picker fixed (was $50/mo Pro, no Business) → `/signup?plan=…` → embedded Stripe. Prod **test mode** already has all three memberships `stripeReady: true`.
-- **Live money still needs:** Live `sk`/`pk`/`whsec` + live `STRIPE_PRICE_*` (John / Stripe Dashboard).
-- **Rest timer:** skip after last set of exercise; audio ticks only last 5s; honor workout `restTimerEnabled`.
-- **Equipment:** Admin cards — On Gear / Home checklist only / Blocked needs photo; member Gear **I have this** syncs home checklist.
-- **Program paste:** targets **focused part**; 409 confirm before overwriting Gym/Home.
+- **Money docs (same day):** Master Stripe = **Jeremy’s business account**; full charge lands there; John via **Connect later** — written into `CONTEXT.md`, `JEREMY_ADMIN_MANUAL.md`, `STRIPE_COMMISSION_SETUP.md`, `STRIPE_DEMO_SCRIPT.md`, `PAYMENT_ADMIN_DEMO_SCRIPT.md`, `STRIPE_PRODUCT_CATALOG.md`, `VENDOR_COSTS.md`.
+- **Purchase path:** `/join` plan picker fixed → `/signup?plan=…` → Stripe. Shipped `f2a303a` to `main`.
+- **Live money still needs:** Live `sk`/`pk`/`whsec` + live `STRIPE_PRICE_*` + Connect Ready for division.
+- **Rest / equipment / program paste polish** as above.
 - **Also earlier Jul 19:** Twilio PARKED, `VENDOR_COSTS.md`, `JEREMY_ADMIN_MANUAL.md`.
 
 ### Prior stretch (Jul 15–16) — still true

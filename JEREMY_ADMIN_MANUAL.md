@@ -23,7 +23,7 @@ Use it when something breaks, when you need a password reset on a third-party to
 | **Code, deploys, database, env secrets** | **John** | Vercel, GitHub, Postgres, API keys |
 | **Twilio (carrier SMS)** | **John** | Account email `john@thetrainstation.co`; signed up with **John’s cell** for the Twilio account phone |
 | **Zoom live rooms (coach Connect)** | **You** for your Zoom login · **John** for app credentials in Vercel | You Connect Zoom inside the app; Marketplace app credentials sit on the server |
-| **Stripe (membership money)** | **Jeremy’s business** (merchant) · John wires code/env | Live vs Test mode is a Stripe Dashboard + Vercel setting |
+| **Stripe (membership money)** | **You (Jeremy) = master merchant account** · John wires Vercel keys + Connect payouts | Card money lands in **your** Stripe first; John’s share is a later transfer (see Stripe section) |
 | **Domain / site uptime** | John (Vercel + DNS) | Report outages to John |
 
 **Rule of thumb**
@@ -109,7 +109,7 @@ Nothing below is “inside the workout calendar.” These are the services that 
 | **GitHub** | Source code | `Coachjohnepop/train-station` | John | Feature requests → John |
 | **Twilio** | Real carrier SMS + delivery receipts | console.twilio.com | **John** — email `john@thetrainstation.co`, account phone = **John’s cell** | You send/test from **SMS Hub** / automations; John owns number, balance, webhooks |
 | **Zoom** | Live class rooms + recordings | zoom.us + marketplace.zoom.us | Your Zoom: **you** · App credentials in Vercel: **John** | **Settings → Connect Zoom** as `jeremy@…`; keep that Zoom account the class host |
-| **Stripe** | Membership checkout, webhooks | dashboard.stripe.com | Jeremy business account (merchant of record) | John wires Live/Test keys; you track members + “mark paid” if Venmo |
+| **Stripe** | Membership checkout, webhooks, bank for the business | dashboard.stripe.com | **Master = your Train Station business Stripe** (login = that account’s owner email — not a “username”) | You own products + Dashboard; John puts keys on Vercel; commission to John via Connect later |
 | **Resend** | Transactional email (alerts, message hub email path) | resend.com | John | If email alerts stop, tell John |
 | **Vercel Blob** | Short chat video files only | (token on Vercel) | John | Metadata still in DB |
 | **Domain** | `thetrainstation.co` | DNS + Vercel | John | Site down? John |
@@ -133,10 +133,41 @@ Nothing below is “inside the workout calendar.” These are the services that 
   `https://www.thetrainstation.co/api/admin/zoom/callback`  
 - Second coach on a **different** Zoom org may need the Marketplace app **published** (John).
 
-### Stripe specifics (read once)
-- Plans are membership products (e.g. Coach Class / Business / 1st Class) — **not** one Stripe product per training program.  
-- **Test mode** may still be on until John flips Live keys.  
-- Backup path: landing Venmo + **Members → Mark paid**.
+### Stripe specifics (read carefully — money)
+
+**Master account:** Your **business Stripe account** for The Train Station is the **merchant of record**. Every paid member charge settles into **that** account (after Stripe’s card fees). There is no separate “John’s merchant checkout” — John is paid later, not as the card merchant.
+
+**Login:** Stripe uses the **email that owns the Dashboard** for that business (Settings → Team / account email). We do not treat it as a social username; use whatever email you created the business Stripe with. Keys on the website (`sk_…` / `pk_…`) must be from **this same account**.
+
+**Where the dollars go (order matters):**
+
+1. Member chooses a package and pays with card.  
+2. **100% of the payment** (minus Stripe fees) → **your master Stripe balance**.  
+3. Most of it stays there as the **company / business** money.  
+4. **Division is not instant at checkout.** Partner share is calculated from membership revenue (MRR rules) and paid out through **Stripe Connect** when you (or John) run **Admin → Platform → Payments / Commission** (Preview → Run payout).  
+5. **John’s cut (default model):** of a **partner pool** (5% of MRR under $5k goal, then 30% of MRR), John is seeded at **100% of that pool** until you add other shareholders. He must finish **Connect Express** (bank + identity) before a transfer can succeed.
+
+**Only two fee types (dollar amounts can change):**
+
+| Fee type | Examples |
+|----------|----------|
+| **Monthly subscription** | Coach Class (~$25/mo), Business Class (~$50/mo) |
+| **One-time fee** | 1st Class (~$850), custom training offer, merch |
+
+Change amounts in **Admin → Pricing** (and Stripe product prices). Fee type stays subscription vs one-time.
+
+**In-app money screens:**
+
+| Screen | URL | Use |
+|--------|-----|-----|
+| Members | `/admin/members` | Paid / pending; **Mark paid** for Venmo |
+| Pricing | `/admin/pricing` | Display + sync Stripe prices |
+| Commission / Payments | `/admin/commission` | Partners, Connect, payouts |
+| Landing | `/admin/landing` | Venmo QR backup |
+
+**Test vs Live:** If the site is still on **Test mode**, cards do **not** move real money. Live money requires Live products + Live keys in Vercel (John).  
+**Backup:** Venmo QR on checkout + **Members → Mark paid**.  
+**Deep training:** `STRIPE_COMMISSION_SETUP.md`, `STRIPE_DEMO_SCRIPT.md`, `PAYMENT_ADMIN_DEMO_SCRIPT.md`, `STRIPE_PRODUCT_CATALOG.md`.
 
 ---
 

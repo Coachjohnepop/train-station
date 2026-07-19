@@ -1,13 +1,34 @@
 # Stripe revenue share — John + Jeremy + Company
 
-**Model (milestone mode, default):** All member subscriptions bill on **Jeremy’s Train Station Stripe account**. Each month:
+**Also in:** `CONTEXT.md` (Stripe money flow) · `JEREMY_ADMIN_MANUAL.md` · `PAYMENT_ADMIN_DEMO_SCRIPT.md` · `STRIPE_DEMO_SCRIPT.md`
+
+---
+
+## Master Stripe account (read this first)
+
+| Question | Answer |
+|----------|--------|
+| **Who is the master / merchant account?** | **Jeremy’s Train Station business Stripe account** — merchant of record for every member charge |
+| **“Username”?** | Stripe has **no social username**. Login = **the email that owns that Stripe Dashboard** (confirm under Dashboard → Settings / Team). |
+| **Where does real money land on charge?** | **100%** (minus Stripe card fees) → **Jeremy’s master Stripe balance** |
+| **Does John get money at checkout?** | **No.** Division is **later** via **Stripe Connect** transfers from that master account |
+| **Who puts API keys on the website?** | **John** (Vercel). Keys **must** be from Jeremy’s master account |
+| **Test vs Live** | Test keys = fake money. Live keys = real bank settlement to the master account’s payout bank |
+
+**Fee types members buy:** only **monthly subscription** or **one-time fee** (see `STRIPE_PRODUCT_CATALOG.md`). Commission math below is driven mainly by **subscription MRR**; one-time packages still land on the master account.
+
+---
+
+## Partner division model (milestone mode, default)
+
+All member payments bill on **Jeremy’s Train Station Stripe account**. Partner payouts are **not** applied at the moment of sale. Each period:
 
 | Phase | When | Partner pool | Company keeps |
 |-------|------|--------------|---------------|
 | **Early** | MRR below goal ($5,000 default) | **5%** of gross MRR | 95% on platform account |
 | **Unlocked** | MRR at or above goal | **30%** of gross MRR | 70% on platform account |
 
-The partner pool is **split by share %** among payout partners (Stripe Connect). For now that’s just **John at 100%** — when you sell company shares, add partners and adjust shares (must total **100%** of the pool).
+The partner pool is **split by share %** among payout partners (Stripe Connect). For now that’s just **John at 100%** of the pool — when you sell company shares, add partners and adjust shares (must total **100%** of the pool).
 
 **Examples**
 
@@ -17,7 +38,7 @@ The partner pool is **split by share %** among payout partners (Stripe Connect).
 | $5,000 | 30% (goal hit) | $1,500 | $1,500 | $3,500 |
 | $8,000 | 30% | $2,400 | $2,400 | $5,600 |
 
-Jeremy’s business balance stays on the platform Stripe account (company feed). Only partners with Connect onboarding receive transfers.
+Jeremy’s business balance stays on the platform Stripe account (company feed). Only partners with **Connect onboarding complete** receive transfers. **You cannot “do the division right away” at card swipe** until Connect is Ready and someone runs **Preview → Run payout** (or cron).
 
 ---
 

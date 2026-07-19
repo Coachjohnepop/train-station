@@ -4,13 +4,24 @@
 **Who this is for:** John (setup + demo to Jeremy) or Jeremy (follow along on a screen share)  
 **Time:** ~15 min first time (includes Stripe Dashboard setup); ~5 min after keys are live  
 
+**Money flow (always teach this first):**
+
+| | |
+|--|--|
+| **Master Stripe account** | **Jeremy’s business Stripe** (merchant of record). Login = that Dashboard’s **owner email** (not a “username”). |
+| **On card charge** | Full payment → **Jeremy’s Stripe** (minus Stripe fees). |
+| **Division to John** | **Not at checkout.** Later: Connect + Admin → Commission payout. See `STRIPE_COMMISSION_SETUP.md`. |
+| **Test mode** | Fake money. Live keys required for real bank money. |
+
+**Fee types:** only **monthly subscription** or **one-time fee**.
+
 **Plans wired today:**
 
-| Landing ticket | Internal plan | Price | Stripe env var |
-|----------------|---------------|-------|----------------|
-| Coach Class | `member` | $25/mo | `STRIPE_PRICE_MEMBER` |
-| Business Class | `business` | $50/mo | `STRIPE_PRICE_BUSINESS` |
-| 1st Class | `pro` | $850 one-time (8×1hr / 30 days + full access) | `STRIPE_PRICE_PRO` |
+| Landing ticket | Internal plan | Fee type | Price | Stripe env var |
+|----------------|---------------|----------|-------|----------------|
+| Coach Class | `member` | Monthly subscription | $25/mo | `STRIPE_PRICE_MEMBER` |
+| Business Class | `business` | Monthly subscription | $50/mo | `STRIPE_PRICE_BUSINESS` |
+| 1st Class | `pro` | One-time fee | $850 (8×1hr / 30 days + full access) | `STRIPE_PRICE_PRO` |
 
 Adult Strength and other included programs unlock **after** membership is paid — no separate Stripe product yet.
 

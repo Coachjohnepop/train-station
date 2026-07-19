@@ -2,6 +2,8 @@
 
 Create these in **Stripe Dashboard → Product catalog** (test mode first). Copy each **Price ID** (`price_…`) into Vercel.
 
+**Master account:** create products on **Jeremy’s business Stripe** (merchant of record). Charges settle there first; partner division is Connect/commission later — see `STRIPE_COMMISSION_SETUP.md`, `CONTEXT.md` (Stripe money flow), `JEREMY_ADMIN_MANUAL.md`.
+
 ## Fee types (only two)
 
 Every paid package is one of:
