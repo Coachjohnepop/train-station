@@ -343,6 +343,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - **Re-seed:** `npx tsx scripts/set-venmo-landing-prod.mjs`. Docs: this file (Money flow § B), `JEREMY_ADMIN_MANUAL.md`, `JEREMY_S5_PAYMENTS_TEST.md`, `PAYMENT_ADMIN_DEMO_SCRIPT.md`, checkout UI copy.
 - **Stripe cards:** still `stripeTestMode: true` until Jeremy Live + Vercel live keys. Use Venmo for real $ now, or `4242…` for test card E2E.
 - **Commission payout min $400:** partner pool must reach $400 before **Run payout** (platform fees floor). `STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS` default 400.
+- **Zoom co-coach join:** Live room prefers Jeremy’s OAuth; non-host coaches open **join_url** (participant), not host start_url — avoids Zoom host/member login trap.
 - **Earlier Jul 19 ships:** fee types subscription vs one-time; join picker fix; rest/equipment/program paste; multi-coach Zoom checklist; Messages Macros chips; multi-part Today; Twilio PARKED.
 
 ### Prior stretch (Jul 15–16) — still true
