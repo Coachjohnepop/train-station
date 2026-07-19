@@ -4,7 +4,7 @@
 **Coach login:** `jeremy@thetrainstation.co` (blank password)
 
 **Tech map (where Admin + Twilio/Zoom/Stripe live):** → [`JEREMY_ADMIN_MANUAL.md`](./JEREMY_ADMIN_MANUAL.md)  
-**Stripe money:** master account = **your business Stripe**; charges land there; John paid later via Commission/Connect — [`STRIPE_COMMISSION_SETUP.md`](./STRIPE_COMMISSION_SETUP.md)
+**Money:** master Stripe = **your business Stripe**; **Venmo LIVE** to the **same business bank** (`@JeremyByrdCSCS` + QR on checkout → **Mark paid**). John paid later via Commission/Connect — [`STRIPE_COMMISSION_SETUP.md`](./STRIPE_COMMISSION_SETUP.md) · [`JEREMY_S5_PAYMENTS_TEST.md`](./JEREMY_S5_PAYMENTS_TEST.md)
 
 Your written feedback and the July 5 screen recording are **built and on prod**. What’s left is mostly **your content** and a few **tap-to-verify** checks on your phone.
 

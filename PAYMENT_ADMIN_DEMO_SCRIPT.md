@@ -9,13 +9,18 @@
 
 | | |
 |--|--|
+| **One business** | Stripe **and** Venmo fund the **same Train Station business bank** (not two companies). |
 | **Master Stripe account** | **Jeremy’s Train Station business Stripe** — merchant of record. Login = that Dashboard’s **owner email** (Stripe has no “username”). |
-| **Card charge** | Full amount → **Jeremy’s Stripe** (minus Stripe fees). |
+| **Card charge** | Full amount → **Jeremy’s Stripe** (minus fees) → business bank on payout. |
+| **Venmo charge** | Member pays **@JeremyByrdCSCS** (QR on checkout) → same business bank. Access only after **Mark paid**. |
 | **John’s share** | **Not at swipe.** Admin → Commission + **Connect Express**; partner pool 5%→30% of MRR (milestone); John seeded 100% of pool. |
 | **Fee types** | **Monthly subscription** (Coach $25/mo, Business $50/mo) or **one-time** (1st Class $850, custom, merch). |
-| **Test vs Live** | Test keys = fake money. Live keys required for real bank money. |
+| **Test vs Live (cards)** | Test keys = fake cards only. **Venmo is real money** even while Stripe is Test. Live keys required for real Amex/Visa. |
 
-Deep docs: `STRIPE_COMMISSION_SETUP.md`, `STRIPE_DEMO_SCRIPT.md`, `JEREMY_ADMIN_MANUAL.md`, `CONTEXT.md`.
+**Prod Venmo (already live Jul 19):**  
+QR `https://www.thetrainstation.co/images/venmo-jeremy-qr.png` · handle `@JeremyByrdCSCS` · `/api/payments/public` → `venmo.hasQr: true`.
+
+Deep docs: `STRIPE_COMMISSION_SETUP.md`, `STRIPE_DEMO_SCRIPT.md`, `JEREMY_ADMIN_MANUAL.md`, `JEREMY_S5_PAYMENTS_TEST.md`, `CONTEXT.md`.
 
 This script covers **all payment admin** in one place:
 
@@ -28,9 +33,9 @@ This script covers **all payment admin** in one place:
 
 Member money paths (for context during demo):
 
-- **Stripe** — Coach Class $25/mo, Business Class $50/mo, 1st Class **$850 one-time** (auto **paid** via webhook + confirm)
-- **Venmo** — QR on checkout; Jeremy **Mark paid** in Members
-- **Commission** — Partner pool from membership MRR → Connect transfer to John (not auto at checkout)
+- **Stripe (Test or Live)** — Coach $25/mo, Business $50/mo, 1st Class **$850 one-time** (auto **paid** via webhook + confirm when card succeeds)
+- **Venmo (LIVE for real $)** — QR + `@JeremyByrdCSCS` on checkout; **same business bank as Stripe**; Jeremy **Mark paid** in Members (required for access)
+- **Commission** — Partner pool from membership MRR → Connect transfer to John (not auto at checkout; cards/Live first)
 
 ---
 
@@ -72,21 +77,21 @@ STRIPE_COMMISSION_CRON_SECRET=…      # optional — automated monthly payout
 
 **Nav:** Admin → **Landing** (`/admin/landing`)
 
-### 1.1 Configure Venmo (Jeremy)
+### 1.1 Configure Venmo (Jeremy) — **already live on prod**
 
-1. Scroll to **Venmo QR image**.
-2. Paste (already deployed asset):
+Skip re-save unless QR/handle changes. Current prod values:
+
+1. **Venmo QR image:**
 
    ```
    https://www.thetrainstation.co/images/venmo-jeremy-qr.png
    ```
 
-3. **Venmo handle:** `@JeremyByrdCSCS`
-4. **Instructions:** `Scan to pay. Include your full name in the Venmo note.`
-5. Click **Save landing media**.
-6. Confirm preview thumbnail shows the QR.
+2. **Venmo handle:** `@JeremyByrdCSCS`
+3. **Instructions:** include full name; same business account as Stripe bank deposits.
+4. If blank on a new environment: paste above → **Save landing media** (or John: `npx tsx scripts/set-venmo-landing-prod.mjs`).
 
-**Expected:** Green “Saved — live on the site now.”
+**Expected:** Checkout shows **Or pay with Venmo** + QR. Money → business bank; access after **Mark paid**.
 
 ### 1.2 Verify on checkout (anyone)
 

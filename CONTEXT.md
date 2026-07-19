@@ -23,28 +23,48 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 |--------|---------------|--------|
 | **Twilio** (carrier SMS) | **`john@thetrainstation.co`** · account phone = **John’s personal cell** | **PARKED (Jul 19)** — Jeremy weighing cost vs **Messages + email hub** already built. Account started under John; address wait is optional until un-parked. Do **not** put tokens here. Cost sheet: **`VENDOR_COSTS.md`**. |
 | **Zoom** (live class) | Coach Connect as **`jeremy@thetrainstation.co`** · Marketplace app credentials on Vercel (John) | Host / recordings = Jeremy’s Zoom when he Connects. |
-| **Stripe** | **Master / merchant = Jeremy’s Train Station business Stripe** · API keys on Vercel (John wires) | Full money-flow below. Live cutover still open (prod often still Test mode). |
+| **Stripe** | **Master / merchant = Jeremy’s Train Station business Stripe** · API keys on Vercel (John wires) | Full money-flow below. **Card Live cutover still open** (prod often still Test mode). |
+| **Venmo** | **Jeremy’s business Venmo** (`@JeremyByrdCSCS`) · QR on Landing store | **LIVE on prod (Jul 19)** as real-money backup. **Same Train Station business bank story as Stripe** — not a second company. Coach **Mark paid** unlocks access. |
 | **Vercel / GitHub / Postgres** | John | Deploys, env, DB. |
 
 **Jeremy-facing tech map:** → **`JEREMY_ADMIN_MANUAL.md`**  
-**Stripe training:** → **`STRIPE_COMMISSION_SETUP.md`**, **`STRIPE_DEMO_SCRIPT.md`**, **`STRIPE_PRODUCT_CATALOG.md`**, **`PAYMENT_ADMIN_DEMO_SCRIPT.md`**
+**Payments training:** → **`STRIPE_COMMISSION_SETUP.md`**, **`STRIPE_DEMO_SCRIPT.md`**, **`PAYMENT_ADMIN_DEMO_SCRIPT.md`**, **`JEREMY_S5_PAYMENTS_TEST.md`**, **`STRIPE_PRODUCT_CATALOG.md`**
 
-### Stripe money flow (durable — train every agent/human)
+### Money flow (durable — train every agent/human)
 
-**Master Stripe account (merchant of record):** Jeremy’s **business Stripe account** for The Train Station — the Dashboard that owns products, customers, and bank payouts for the platform. Login is the **email that owns that Stripe account** (not a social “username”; confirm in Dashboard → Settings / Team). Vercel `STRIPE_SECRET_KEY` / publishable key / webhook secret **must belong to this same account**.
+**One business.** Stripe card deposits and Venmo membership payments both fund the **Train Station business** (Jeremy’s merchant / bank story). Venmo is a **rail**, not a second merchant.
+
+#### A. Stripe (card)
+
+**Master Stripe account (merchant of record):** Jeremy’s **business Stripe account** — products, customers, bank payouts. Login = **owner email** of that Dashboard (not a social “username”). Vercel `STRIPE_*` keys **must** be from this account.
 
 | Step | What happens |
 |------|----------------|
 | 1. Member pays | Card checkout (subscription **or** one-time — only two fee shapes) |
-| 2. Money lands | **100% of the charge** (minus Stripe processing fees) hits **Jeremy’s master Stripe balance** |
-| 3. Company keeps | Most revenue stays on that platform account (“company feed”) |
-| 4. Partner split | **Not** at the moment of charge. Later: Admin → **Commission** (`/admin/commission`) + **Stripe Connect Express** transfers to partners |
-| 5. John’s share | Seeded as **100% of the partner pool** (`john@thetrainstation.co`). Pool = **5% of MRR** until $5k goal, then **30% of MRR** (milestone mode). John must complete Connect onboarding before transfers. |
-| 6. Test vs Live | **`sk_test_` / Test mode** = fake money only. Real dollars only after Live keys + live `price_…` IDs. |
+| 2. Money lands | **100%** (minus Stripe fees) → **Jeremy’s master Stripe balance** → business bank on payout schedule |
+| 3. Company keeps | Most revenue on platform (“company feed”) |
+| 4. Partner split | **Not** at swipe. Later: Admin → **Commission** + **Connect Express** |
+| 5. John’s share | **100% of partner pool** until shareholders change (5% MRR → 30% after $5k goal) |
+| 6. Test vs Live | **`sk_test_`** = fake money. Real cards only after Live keys + live `price_…` |
+
+#### B. Venmo (backup — **live on prod**)
+
+| Step | What happens |
+|------|----------------|
+| 1. Member pays | Checkout **Or pay with Venmo** — scan QR / use `@JeremyByrdCSCS` |
+| 2. Money lands | **Jeremy’s Venmo** → **same business bank account story as Stripe** |
+| 3. Access unlock | **Not automatic.** Coach **Admin → Members** (or Queue) → **Mark paid** → method **Venmo** |
+| 4. App state | Same `paymentStatus: paid` path as Stripe (no Stripe webhook for Venmo) |
+
+**Prod Venmo config (Landing Blob `demo/landing-media.json`):**
+- QR: `https://www.thetrainstation.co/images/venmo-jeremy-qr.png` (also `public/images/venmo-jeremy-qr.png`)
+- Handle: `@JeremyByrdCSCS`
+- Re-seed: `npx tsx scripts/set-venmo-landing-prod.mjs`
+- Verify: `/api/payments/public` → `venmo.hasQr: true`
 
 **Fee types (product):** every paid package is **monthly subscription** or **one-time fee** (amounts can vary). See `STRIPE_PRODUCT_CATALOG.md`.
 
-**Do not:** put a second merchant secret on Vercel for John; do not assume checkout auto-splits to John’s bank.
+**Do not:** put a second merchant secret on Vercel for John; do not assume checkout auto-splits to John’s bank; do not treat Venmo as a different company entity.
 
 ---
 
@@ -191,12 +211,12 @@ Audit Jeremy: `MINUTES=120 npx tsx scripts/jeremy-post-audit-prodtest.mjs`
 *Last expanded: 2026-07-12. Reorder when priorities change; tick mental boxes here when done.*
 
 ### Suggested stack order
-1. **Stripe Live + webhook + one real payment** (+ Venmo path)  
+1. **Stripe Live** + webhook + one real card payment (Venmo real-money path already live)  
 2. **Commission / Connect** if John payouts matter before revenue grows  
 3. **Jeremy content** (YouTube + real Adult W1/W2)  
-4. **E2E money + member path** (ticket → pay → onboard → Adult → log sets)  
-5. **Zoom / Go to Today** phone verify (embed, host Connect) — **not** blocked on SMS  
-6. **Messages polish** (in-app + email hub) — preferred channel while Twilio **PARKED**  
+4. **E2E money + member path** (ticket → pay Stripe **or** Venmo → Mark paid → Adult → log sets)  
+5. **Zoom / Go to Today** — working for Jeremy; coach 2…n ops checklist as needed  
+6. **Messages** — quick-replies shipped; more polish only if Jeremy asks  
 7. **Infra hygiene** (blob→Postgres pace, seed commits, soak scripts)  
 8. **Twilio carrier SMS** — only if Jeremy decides texts are worth retainer + usage (`VENDOR_COSTS.md`)  
 9. **Parked product** only when Jeremy asks (food, store, more programs)
@@ -219,7 +239,7 @@ Audit Jeremy: `MINUTES=120 npx tsx scripts/jeremy-post-audit-prodtest.mjs`
 | `STRIPE_PRICE_MEMBER` / `BUSINESS` / `PRO` | All three on Live env |
 | `STRIPE_AUTO_APPROVE` | Optional — auto-approve member after pay |
 | Full `STRIPE_DEMO_SCRIPT.md` pass/fail | Signup → paid → Adult Start → Admin Members shows Stripe |
-| **Venmo backup** | Landing QR + Admin → Members **Mark paid**. **Same business bank as Stripe** (not a second merchant). Asset: `/images/venmo-jeremy-qr.png`. Script: `npx tsx scripts/set-venmo-landing-prod.mjs`. Docs: `JEREMY_S5_PAYMENTS_TEST.md` |
+| **Venmo backup** | **LIVE on prod** (`hasQr: true`, `@JeremyByrdCSCS`). Same business bank as Stripe. Mark paid for access. Asset + script + docs under Money flow § B above |
 | **Commission / Connect** | Not auto-at-checkout. Enable Connect on **Jeremy’s** Stripe → John Express onboard → Admin → Commission → Preview/Run payout. Envs: `STRIPE_COMMISSION_*` |
 | Referral promos | Optional coupons / `promo_…` in commission panel |
 | Per-program Stripe products | **Not planned** — Adult unlocks with membership only |

@@ -53,7 +53,8 @@ Adult Strength is **included** with Coach Class or 1st Class — no separate pro
 
 | Check | Pass? |
 |-------|-------|
-| Venmo QR visible on checkout after save | ☐ |
-| Mark paid unlocks a Venmo signup | ☐ |
-| Stripe checkout opens when keys are live | ☐ |
-| Members list shows payment method (Venmo/Stripe) | ☐ |
+| Venmo QR visible on checkout (`hasQr` on `/api/payments/public`) | ☑ live Jul 19 |
+| Mark paid unlocks a Venmo signup | ☐ smoke with Jeremy |
+| Same-bank story understood (Venmo ≈ Stripe business bank) | ☑ docs |
+| Stripe checkout opens when keys are live | ☐ after Live cutover |
+| Members list shows payment method (Venmo/Stripe) | ☐ smoke |

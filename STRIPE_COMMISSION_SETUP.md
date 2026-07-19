@@ -14,8 +14,9 @@
 | **Does John get money at checkout?** | **No.** Division is **later** via **Stripe Connect** transfers from that master account |
 | **Who puts API keys on the website?** | **John** (Vercel). Keys **must** be from Jeremy’s master account |
 | **Test vs Live** | Test keys = fake money. Live keys = real bank settlement to the master account’s payout bank |
+| **Venmo (same business)** | Real-money backup on checkout (`@JeremyByrdCSCS` + QR). **Same Train Station bank story** as Stripe — not a second merchant. Access via **Mark paid** (no Stripe webhook). See `CONTEXT.md` Money flow § B / `JEREMY_S5_PAYMENTS_TEST.md`. |
 
-**Fee types members buy:** only **monthly subscription** or **one-time fee** (see `STRIPE_PRODUCT_CATALOG.md`). Commission math below is driven mainly by **subscription MRR**; one-time packages still land on the master account.
+**Fee types members buy:** only **monthly subscription** or **one-time fee** (see `STRIPE_PRODUCT_CATALOG.md`). Commission math below is driven mainly by **subscription MRR**; one-time packages still land on the master account. Venmo Mark-paid memberships may need manual inclusion in commission ops until card Live is primary.
 
 ---
 

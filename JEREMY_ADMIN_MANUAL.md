@@ -221,15 +221,23 @@ Change amounts in **Admin → Pricing** (and Stripe product prices). Fee type st
 
 **Test vs Live:** If the site is still on **Test mode**, cards do **not** move real money. Live money requires Live products + Live keys in Vercel (John).  
 
-**Venmo backup (real money without Live Stripe):**
-1. **Admin → Landing** → Venmo QR image URL (default site asset:  
-   `https://www.thetrainstation.co/images/venmo-jeremy-qr.png`), handle, instructions → Save.  
-2. Member checkout shows **Or pay with Venmo** (works even while Stripe is Test).  
-3. Member pays you on Venmo (business / same bank destination as your Stripe payouts).  
-4. **Admin → Members** (or Queue) → **Mark paid** → method **Venmo** → Confirm.  
-5. Member access unlocks like a Stripe payment.
+**Venmo backup — LIVE on production (Jul 19):**
 
-**Important:** Venmo and Stripe card charges both fund the **same Train Station business bank story** — Venmo is not a second company; it is just a different rail until Stripe Live is on (or for members who prefer Venmo).  
+| | |
+|--|--|
+| **Where money goes** | **Same Train Station business bank account** as Stripe payouts (not a second company) |
+| **Handle** | `@JeremyByrdCSCS` |
+| **QR image** | `https://www.thetrainstation.co/images/venmo-jeremy-qr.png` |
+| **Checkout** | Member signup → `/member/checkout` → **Or pay with Venmo** (works while Stripe is still Test) |
+| **Unlock access** | **Admin → Members** or **Queue** → **Mark paid** → method **Venmo** → Confirm |
+
+**Day-to-day (you):**
+1. Member says they paid on Venmo (or you see the deposit).  
+2. **Admin → Members** → find them → **Mark paid** → Venmo + optional note.  
+3. They reload → onboarding / Today unlocks.  
+4. To change QR/handle: **Admin → Landing** → Venmo fields → Save (or ask John to re-run `set-venmo-landing-prod.mjs`).
+
+**Stripe cards** still need Live keys for real Amex; until then prefer Venmo for real money and test cards (`4242…`) for demos.
 
 **Deep training:** `STRIPE_COMMISSION_SETUP.md`, `STRIPE_DEMO_SCRIPT.md`, `PAYMENT_ADMIN_DEMO_SCRIPT.md`, `STRIPE_PRODUCT_CATALOG.md`, `JEREMY_S5_PAYMENTS_TEST.md`.
 
@@ -243,7 +251,8 @@ Change amounts in **Admin → Pricing** (and Stripe product prices). Fee type st
 | Adult Strength days wrong | Admin → **Programs** → Adult Strength |
 | Exercise missing from pickers | Admin → **Exercises** (check **archive shelf**) |
 | Paste overwrote a month | Templates & paste always **clones**; overwrite of a full pack needs confirm — tell John if that failed |
-| Member can’t log in / pay | Admin → **Members** + Stripe Dashboard (John if Live keys) |
+| Member can’t log in / pay | Admin → **Members** (Mark paid if Venmo); Stripe Dashboard only if Live cards (John) |
+| Venmo QR missing on checkout | Admin → **Landing** → save QR URL `…/images/venmo-jeremy-qr.png` + handle; hard-refresh checkout |
 | Texts not arriving | Admin → **SMS Hub** logs → then Twilio (John: balance, From number, webhooks) |
 | Zoom “not connected” / no embed | Admin → **Settings** → Connect Zoom; then **Go to Today** / Live Floor |
 | Add another coach’s Zoom | See **Checklist: add coach 2…n (Zoom)** above — they Connect under **their** login |
