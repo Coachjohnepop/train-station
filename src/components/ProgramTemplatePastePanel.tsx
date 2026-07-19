@@ -24,6 +24,8 @@ type Props = {
   programSlug: string;
   /** Focused program day id */
   dayId: string | null;
+  /** Multi-part day part currently open in the builder (1 = Main/AM). */
+  partIndex?: number;
   /** Focused workout to promote (optional) */
   focusWorkoutId: string | null;
   focusWorkoutLabel?: string;
@@ -35,6 +37,7 @@ type Props = {
 export default function ProgramTemplatePastePanel({
   programSlug,
   dayId,
+  partIndex = 1,
   focusWorkoutId,
   focusWorkoutLabel,
   disabled,
@@ -158,20 +161,6 @@ export default function ProgramTemplatePastePanel({
     setBusy(true);
     setError(null);
     try {
-      const body =
-        sourceMode === "template"
-          ? {
-              templateId,
-              dayId,
-              tracks: { gym: trackGym, home: trackHome },
-              replace: true,
-            }
-          : {
-              sourceWorkoutId: workoutId,
-              dayId,
-              tracks: { gym: trackGym, home: trackHome },
-              replace: true,
-            };
       if (sourceMode === "template" && !templateId) {
         setError("Pick a template.");
         return;
@@ -180,21 +169,65 @@ export default function ProgramTemplatePastePanel({
         setError("Pick a workout.");
         return;
       }
-      const res = await fetch("/api/workout-templates/paste", {
+
+      const bodyBase =
+        sourceMode === "template"
+          ? {
+              templateId,
+              dayId,
+              tracks: { gym: trackGym, home: trackHome },
+              replace: true,
+              partIndex,
+              force: false as boolean,
+            }
+          : {
+              sourceWorkoutId: workoutId,
+              dayId,
+              tracks: { gym: trackGym, home: trackHome },
+              replace: true,
+              partIndex,
+              force: false as boolean,
+            };
+
+      let res = await fetch("/api/workout-templates/paste", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(bodyBase),
       });
-      const data = await res.json().catch(() => ({}));
+      let data = await res.json().catch(() => ({}));
+
+      if (res.status === 409 && (data.needsConfirm || data.detail === "NEEDS_CONFIRM")) {
+        const occupied = Array.isArray(data.occupiedTracks)
+          ? data.occupiedTracks.join(" + ")
+          : "Gym/Home";
+        const partLabel =
+          partIndex > 1 ? `part ${partIndex}` : "this day";
+        const ok = window.confirm(
+          `${occupied} on ${partLabel} already has content.\n\nReplace with a fresh clone? Source template stays intact.`,
+        );
+        if (!ok) {
+          setError("Paste canceled — existing content kept.");
+          return;
+        }
+        bodyBase.force = true;
+        res = await fetch("/api/workout-templates/paste", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(bodyBase),
+        });
+        data = await res.json().catch(() => ({}));
+      }
+
       if (!res.ok) {
-        setError(formatApiErrorDetail(data.detail) || "Paste failed");
+        setError(formatApiErrorDetail(data.detail) || data.message || "Paste failed");
         return;
       }
       const tracksLabel = [trackGym && "Gym", trackHome && "Home"]
         .filter(Boolean)
         .join(" + ");
+      const partNote = partIndex > 1 ? ` · part ${partIndex}` : "";
       msg(
-        `Pasted ${tracksLabel} onto this day (fresh copies). Scroll up — you should see the exercises. Source template unchanged.`,
+        `Pasted ${tracksLabel}${partNote} (fresh copies). Scroll up — you should see the exercises. Source template unchanged.`,
       );
       await onPasted();
     } finally {

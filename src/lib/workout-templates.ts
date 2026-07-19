@@ -334,11 +334,25 @@ export async function pasteWorkoutOntoProgramDay(input: {
   tracks: { gym?: boolean; home?: boolean };
   /** When true, replace existing track workouts; when false, only fill empty tracks. */
   replace?: boolean;
+  /**
+   * Multi-part day: paste onto this part (1 = Main/AM).
+   * Defaults to 1. Clamped to the day's partCount.
+   */
+  partIndex?: number;
+  /**
+   * When true and tracks already have workouts, throw NEEDS_CONFIRM instead of replacing
+   * unless replace was explicitly forced after coach confirm.
+   * Callers use replace:false first, then replace:true after confirm.
+   */
+  requireConfirmIfOccupied?: boolean;
 }): Promise<{
   dayId: string;
   gymWorkoutId?: string;
   homeWorkoutId?: string;
   cloned: string[];
+  partIndex: number;
+  needsConfirm?: boolean;
+  occupiedTracks?: string[];
 }> {
   const gym = input.tracks.gym === true;
   const home = input.tracks.home === true;
@@ -373,13 +387,10 @@ export async function pasteWorkoutOntoProgramDay(input: {
     });
     if (!day) throw new Error("DAY_NOT_FOUND");
 
-    // Paste onto part 1 (Main/AM) by default — multi-part paste can expand later.
-    const partIndex = 1;
-    const sessionId = await resolveSessionIdForPart(
-      day.id,
-      partIndex,
-      Math.max(day.partCount || 1, day.sessions?.length || 1),
-    );
+    const maxParts = Math.max(day.partCount || 1, day.sessions?.length || 1, 1);
+    const rawPart = typeof input.partIndex === "number" ? input.partIndex : 1;
+    const partIndex = Math.min(Math.max(1, Math.round(rawPart)), maxParts);
+    const sessionId = await resolveSessionIdForPart(day.id, partIndex, maxParts);
 
     type Opt = {
       workoutId: string;
@@ -389,18 +400,47 @@ export async function pasteWorkoutOntoProgramDay(input: {
       sortOrder?: number;
       sessionId?: string | null;
     };
-    // Prefer options already on this session / part 1 (incl. legacy null session).
-    const partOpts = day.options.filter(
-      (o) => o.sessionId === sessionId || o.sessionId == null,
-    );
-    const opts: Opt[] = (partOpts.length ? partOpts : day.options).map((o) => ({
+    // Prefer options already on this session / part (legacy null session only for part 1).
+    const partOpts = day.options.filter((o) => {
+      if (o.sessionId === sessionId) return true;
+      if (partIndex === 1 && o.sessionId == null) return true;
+      return false;
+    });
+    const opts: Opt[] = (partOpts.length ? partOpts : []).map((o) => ({
       workoutId: o.workoutId,
       label: o.label,
       trainingLocation: o.trainingLocation,
       notes: o.notes,
       sortOrder: o.sortOrder,
-      sessionId: o.sessionId,
+      sessionId: o.sessionId ?? sessionId,
     }));
+
+    // Soft confirm when selected tracks already have workouts
+    if (replace && input.requireConfirmIfOccupied) {
+      const occupied: string[] = [];
+      for (const track of [
+        { want: gym, label: "Gym", loc: "gym" as const },
+        { want: home, label: "Home", loc: "home" as const },
+      ]) {
+        if (!track.want) continue;
+        const hit = opts.find(
+          (o) =>
+            o.workoutId &&
+            (o.label.toLowerCase() === track.label.toLowerCase() ||
+              o.trainingLocation === track.loc),
+        );
+        if (hit) occupied.push(track.label);
+      }
+      if (occupied.length > 0) {
+        const err = new Error("NEEDS_CONFIRM") as Error & {
+          occupiedTracks?: string[];
+          partIndex?: number;
+        };
+        err.occupiedTracks = occupied;
+        err.partIndex = partIndex;
+        throw err;
+      }
+    }
 
     const ensureTrack = async (
       label: "Gym" | "Home",
@@ -453,11 +493,14 @@ export async function pasteWorkoutOntoProgramDay(input: {
       return true;
     });
 
-    // Only replace options on this session (and legacy null) — leave part 2+ intact.
+    // Only replace options on this session (legacy null only when pasting part 1).
     await prisma.programDayOption.deleteMany({
       where: {
         dayId: day.id,
-        OR: [{ sessionId }, { sessionId: null }],
+        OR:
+          partIndex === 1
+            ? [{ sessionId }, { sessionId: null }]
+            : [{ sessionId }],
       },
     });
     if (cleaned.length) {
@@ -475,14 +518,17 @@ export async function pasteWorkoutOntoProgramDay(input: {
           })),
       });
     }
-    await prisma.programDay.update({
-      where: { id: day.id },
-      data: {
-        workoutId: gymWorkoutId || homeWorkoutId || day.workoutId || null,
-      },
-    });
+    // Only update day.workoutId for part 1 (legacy primary).
+    if (partIndex === 1) {
+      await prisma.programDay.update({
+        where: { id: day.id },
+        data: {
+          workoutId: gymWorkoutId || homeWorkoutId || day.workoutId || null,
+        },
+      });
+    }
 
-    return { dayId: day.id, gymWorkoutId, homeWorkoutId, cloned };
+    return { dayId: day.id, gymWorkoutId, homeWorkoutId, cloned, partIndex };
   }
 
   // Demo catalog mode: clone workouts + patch program days in seed if present
@@ -496,6 +542,8 @@ export async function pasteWorkoutOntoProgramDay(input: {
     cloned.push(c.id);
     homeWorkoutId = c.id;
   }
+
+  const demoPartIndex = Math.max(1, Math.round(input.partIndex ?? 1));
 
   await mutateDemoSeed((data) => {
     // Best-effort: find day in programs[].weeks[].days[]
@@ -511,6 +559,7 @@ export async function pasteWorkoutOntoProgramDay(input: {
               label: "Gym",
               trainingLocation: "gym",
               sortOrder: 0,
+              partIndex: demoPartIndex,
             });
           }
           if (home && homeWorkoutId) {
@@ -519,6 +568,7 @@ export async function pasteWorkoutOntoProgramDay(input: {
               label: "Home",
               trainingLocation: "home",
               sortOrder: 1,
+              partIndex: demoPartIndex,
             });
           }
           // Preserve other tracks if not replacing fully
@@ -539,7 +589,13 @@ export async function pasteWorkoutOntoProgramDay(input: {
     }
   }, { preferFresh: true });
 
-  return { dayId: input.dayId, gymWorkoutId, homeWorkoutId, cloned };
+  return {
+    dayId: input.dayId,
+    gymWorkoutId,
+    homeWorkoutId,
+    cloned,
+    partIndex: demoPartIndex,
+  };
 }
 
 async function resolveSourceWorkoutName(workoutId: string): Promise<string> {

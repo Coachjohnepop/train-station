@@ -8,7 +8,28 @@ export type OfferCheckoutMode =
   | "quote"
   | "custom_offer";
 
+/**
+ * Business fee type (what Jeremy/John bill).
+ * All paid packages map to one of these two — dollar amounts vary, shape does not.
+ */
+export type FeeCategory = "subscription" | "one_time";
+
 export type OfferCategory = "membership" | "package" | "service" | "merchandise";
+
+/** Map checkout mode → business fee category for paid card checkout. */
+export function feeCategoryForCheckoutMode(
+  mode: OfferCheckoutMode,
+): FeeCategory | null {
+  if (mode === "subscription") return "subscription";
+  if (mode === "one_time" || mode === "custom_offer") return "one_time";
+  return null;
+}
+
+export function feeCategoryLabel(fee: FeeCategory | null | undefined): string {
+  if (fee === "subscription") return "Monthly subscription";
+  if (fee === "one_time") return "One-time fee";
+  return "Not card checkout";
+}
 
 export type CustomTrainingParameters = {
   daysPerWeek: number;

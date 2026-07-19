@@ -28,10 +28,16 @@ Do this in **Stripe Test mode** first. Toggle **Test mode** on in the Stripe Das
    - Description: `The Train Station — Coach Class membership`
    - Pricing: **Recurring**, **Monthly**, **$25.00 USD**
    - Save → open the price → copy **Price ID** (`price_…`)
-3. **1st Class**
-   - Name: `1st Class`
+3. **Business Class**
+   - Name: `Business Class`
    - Pricing: **Recurring**, **Monthly**, **$50.00 USD**
-   - Copy **Price ID**
+   - Copy **Price ID** → `STRIPE_PRICE_BUSINESS`
+4. **1st Class** (one-time package — not monthly)
+   - Name: `1st Class`
+   - Pricing: **One time**, **$850.00 USD**
+   - Copy **Price ID** → `STRIPE_PRICE_PRO`
+
+All paid packages fall under two fee types only: **monthly subscription** (`member`, `business`) or **one-time fee** (`pro`, custom training, merch).
 
 ### A2. API keys
 

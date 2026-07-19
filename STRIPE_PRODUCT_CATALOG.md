@@ -2,6 +2,17 @@
 
 Create these in **Stripe Dashboard → Product catalog** (test mode first). Copy each **Price ID** (`price_…`) into Vercel.
 
+## Fee types (only two)
+
+Every paid package is one of:
+
+| Fee type | Stripe Checkout `mode` | Examples |
+|----------|------------------------|----------|
+| **Monthly subscription** | `subscription` | Coach Class, Business Class |
+| **One-time fee** | `payment` | 1st Class $850, custom training offer, merch |
+
+Dollar amounts can change (Admin → Pricing). The fee type does not.
+
 ## Membership
 
 | Product | Stripe type | Price | Vercel env var |

@@ -15,6 +15,10 @@ const pasteSchema = z.object({
     home: z.boolean().optional(),
   }),
   replace: z.boolean().optional(),
+  /** Multi-part day part (1–5). Defaults to 1 (Main/AM). */
+  partIndex: z.number().int().min(1).max(5).optional(),
+  /** When true with replace, first call returns 409 if tracks already have content. */
+  force: z.boolean().optional(),
 });
 
 export async function POST(request: Request) {
@@ -75,15 +79,34 @@ export async function POST(request: Request) {
   }
 
   try {
+    const replace = parsed.data.replace !== false;
+    const force = parsed.data.force === true;
     const result = await pasteWorkoutOntoProgramDay({
       sourceWorkoutId,
       dayId: parsed.data.dayId,
       tracks: parsed.data.tracks,
-      replace: parsed.data.replace,
+      replace,
+      partIndex: parsed.data.partIndex,
+      // Soft confirm on overwrite unless coach already confirmed (force).
+      requireConfirmIfOccupied: replace && !force,
     });
     return NextResponse.json(result, { status: 201 });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Paste failed";
+    if (msg === "NEEDS_CONFIRM") {
+      const err = e as Error & { occupiedTracks?: string[]; partIndex?: number };
+      return NextResponse.json(
+        {
+          detail: "NEEDS_CONFIRM",
+          needsConfirm: true,
+          occupiedTracks: err.occupiedTracks || [],
+          partIndex: err.partIndex ?? parsed.data.partIndex ?? 1,
+          message:
+            "This day/part already has Gym or Home content. Confirm to replace with a fresh clone.",
+        },
+        { status: 409 },
+      );
+    }
     const status =
       msg === "DAY_NOT_FOUND"
         ? 404

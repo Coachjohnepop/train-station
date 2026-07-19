@@ -84,7 +84,11 @@ export default function WorkoutRestTimer({
         {done ? "0:00" : formatRestCountdown(Math.max(0, secondsLeft))}
       </p>
       <p className="workout-rest-player__hint">
-        {done ? "Buzz — closing…" : urgent ? "Get ready…" : "Auto-opens on set · closes when it buzzes"}
+        {done
+          ? "Buzz — closing…"
+          : urgent
+            ? "Get ready…"
+            : "After each set (skips last set) · closes when it buzzes"}
       </p>
 
       <div className="workout-rest-player__track" aria-hidden>

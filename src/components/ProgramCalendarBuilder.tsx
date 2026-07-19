@@ -3182,6 +3182,7 @@ export default function ProgramCalendarBuilder({
           <ProgramTemplatePastePanel
             programSlug={program.slug}
             dayId={focus.dayId}
+            partIndex={focus.partIndex ?? 1}
             focusWorkoutId={focus.workoutId || null}
             focusWorkoutLabel={
               focus.workoutId

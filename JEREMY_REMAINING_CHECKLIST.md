@@ -3,6 +3,8 @@
 **Site:** https://www.thetrainstation.co  
 **Coach login:** `jeremy@thetrainstation.co` (blank password)
 
+**Tech map (where Admin + Twilio/Zoom/Stripe live):** → [`JEREMY_ADMIN_MANUAL.md`](./JEREMY_ADMIN_MANUAL.md)
+
 Your written feedback and the July 5 screen recording are **built and on prod**. What’s left is mostly **your content** and a few **tap-to-verify** checks on your phone.
 
 ---

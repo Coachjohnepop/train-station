@@ -23,6 +23,8 @@ type PaymentsPublic = {
     label: string;
     priceLabel: string;
     checkoutMode: string;
+    feeCategory?: "subscription" | "one_time" | null;
+    feeCategoryLabel?: string;
     stripeReady: boolean;
   }>;
   merchandise: Array<{
@@ -43,6 +45,16 @@ function planPriceLabel(plan: string, payments: PaymentsPublic | null): string {
   if (!payments) return "";
   const match = payments.memberships?.find((m) => m.plan === plan);
   return match?.priceLabel || "";
+}
+
+function planFeeLabel(plan: string, payments: PaymentsPublic | null): string {
+  if (!payments) return "";
+  const match = payments.memberships?.find((m) => m.plan === plan);
+  if (match?.feeCategoryLabel) return match.feeCategoryLabel;
+  if (match?.checkoutMode === "subscription") return "Monthly subscription";
+  if (match?.checkoutMode === "one_time") return "One-time fee";
+  if (plan === "custom_training" || plan === "merchandise") return "One-time fee";
+  return "";
 }
 
 function MemberCheckoutInner() {
@@ -99,6 +111,7 @@ function MemberCheckoutInner() {
 
   const venmoReady = Boolean(payments?.venmo?.hasQr);
   const priceLabel = planPriceLabel(plan, payments);
+  const feeLabel = planFeeLabel(plan, payments);
 
   const handleCheckoutComplete = useCallback(async (completedSessionId: string) => {
     setConfirming(true);
@@ -180,6 +193,12 @@ function MemberCheckoutInner() {
       <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-10">
         {showMembershipCard ? (
           <MembershipPaymentCard plan={plan as SignupPlan} priceLabel={priceLabel || undefined}>
+            {feeLabel ? (
+              <p className="text-xs font-medium uppercase tracking-wide text-[#c4b5fd]">
+                {feeLabel}
+                {priceLabel ? ` · ${priceLabel}` : ""}
+              </p>
+            ) : null}
             {canceled && (
               <p className="text-sm text-amber-300">
                 Checkout was canceled. You can try Stripe again or use Venmo below.

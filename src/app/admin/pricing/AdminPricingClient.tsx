@@ -129,12 +129,17 @@ export default function AdminPricingClient() {
   return (
     <div className="space-y-6">
       <div className="rounded-lg border border-[#7c3aed]/30 bg-[#7c3aed]/5 p-4 text-sm text-[var(--muted)]">
-        <p className="font-medium text-white">Change prices without logging into Stripe</p>
+        <p className="font-medium text-white">Membership packages — two fee types</p>
         <p className="mt-2">
-          Update what visitors see on the landing page. Use{" "}
-          <span className="text-white">Save display only</span> for label/price text, or{" "}
+          Every paid package is either a{" "}
+          <span className="text-white">monthly subscription</span> (recurring) or a{" "}
+          <span className="text-white">one-time fee</span> (pay once). Dollar amounts can
+          change; the fee type stays the same for checkout (Stripe subscription vs payment mode).
+        </p>
+        <p className="mt-2">
+          Use <span className="text-white">Save display only</span> for landing labels, or{" "}
           <span className="text-white">Save &amp; sync Stripe</span> to create a new Stripe price
-          and point checkout at it automatically.
+          and point checkout at it.
         </p>
         <p className="mt-2">
           Stripe status:{" "}
@@ -166,10 +171,21 @@ export default function AdminPricingClient() {
             <div key={offer.id} className="card space-y-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h2 className="font-semibold">{offer.shortLabel}</h2>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="font-semibold">{offer.shortLabel}</h2>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                        isSubscription
+                          ? "bg-sky-500/20 text-sky-200"
+                          : "bg-amber-500/20 text-amber-100"
+                      }`}
+                    >
+                      {isSubscription ? "Monthly subscription" : "One-time fee"}
+                    </span>
+                  </div>
                   <p className="mt-1 text-sm text-[var(--muted)]">{offer.description}</p>
                   <p className="mt-2 text-xs text-[var(--muted)]">
-                    Checkout: {isSubscription ? "Monthly subscription" : "One-time payment"} · Live
+                    Stripe checkout mode: {isSubscription ? "subscription" : "payment"} · Live
                     display: {offer.priceDisplay}
                   </p>
                 </div>

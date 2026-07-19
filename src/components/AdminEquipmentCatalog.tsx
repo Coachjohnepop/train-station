@@ -47,6 +47,34 @@ function mergeCategoryOptions(
   return [...set].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
 }
 
+/** Publish state for coach: Gear shop vs home checklist only vs blocked. */
+function equipmentPublishStatus(item: {
+  productUrl: string | null;
+  imageUrl: string | null;
+}): { label: string; className: string; title: string } {
+  const hasProduct = Boolean(item.productUrl?.trim());
+  const hasImage = Boolean(item.imageUrl?.trim());
+  if (hasProduct && hasImage) {
+    return {
+      label: "On Gear ✓",
+      className: "bg-emerald-500/20 text-emerald-100",
+      title: "Members see this in Gear shop (product link + photo).",
+    };
+  }
+  if (hasProduct && !hasImage) {
+    return {
+      label: "Blocked: needs photo",
+      className: "bg-amber-500/20 text-amber-100",
+      title: "Product link without photo cannot publish to Gear. Refresh photo or paste Image URL.",
+    };
+  }
+  return {
+    label: "Home checklist only",
+    className: "bg-white/10 text-[var(--muted)]",
+    title: "No store link — members can mark it on home equipment, not Gear shop.",
+  };
+}
+
 function ProductThumb({
   name,
   imageUrl,
@@ -721,6 +749,17 @@ export default function AdminEquipmentCatalog() {
                   variant="card"
                 />
                 <div className="flex min-w-0 flex-1 flex-col gap-2 p-3">
+                  {(() => {
+                    const status = equipmentPublishStatus(item);
+                    return (
+                      <span
+                        className={`inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${status.className}`}
+                        title={status.title}
+                      >
+                        {status.label}
+                      </span>
+                    );
+                  })()}
                   <input
                     className="input w-full text-sm font-medium"
                     value={item.name}

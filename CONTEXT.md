@@ -17,6 +17,17 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 | **Grok** (xAI) | Coding agent in this TUI | Not Claude — may share this file |
 | **Claude** | Separate agent (e.g. Claude Code) | May read `CLAUDE.md` / this file |
 
+### Vendor account ownership (ops)
+
+| Vendor | Login / owner | Notes |
+|--------|---------------|--------|
+| **Twilio** (carrier SMS) | **`john@thetrainstation.co`** · account phone = **John’s personal cell** | **PARKED (Jul 19)** — Jeremy weighing cost vs **Messages + email hub** already built. Account started under John; address wait is optional until un-parked. Do **not** put tokens here. Cost sheet: **`VENDOR_COSTS.md`**. |
+| **Zoom** (live class) | Coach Connect as **`jeremy@thetrainstation.co`** · Marketplace app credentials on Vercel (John) | Host / recordings = Jeremy’s Zoom when he Connects. |
+| **Stripe** | Jeremy business (merchant of record) · keys on Vercel (John) | Live cutover still open (often still Test mode). |
+| **Vercel / GitHub / Postgres** | John | Deploys, env, DB. |
+
+**Jeremy-facing tech map:** → **`JEREMY_ADMIN_MANUAL.md`** (where Admin screens + third-party systems live).
+
 ---
 
 ## Production & deploy
@@ -138,6 +149,8 @@ Audit Jeremy: `MINUTES=120 npx tsx scripts/jeremy-post-audit-prodtest.mjs`
 | File | What |
 |------|------|
 | **`CONTEXT.md`** | **You are here** — living handoff |
+| **`JEREMY_ADMIN_MANUAL.md`** | **Jeremy’s admin + tech map** — Admin screens, vendors (Twilio/Zoom/Stripe/Vercel), who owns what |
+| **`VENDOR_COSTS.md`** | **All apps + monthly cost sheet** — retainer (🔴) vs usage vs parked (Twilio) |
 | `CLAUDE.md` | Thin pointer + Claude Code `@AGENTS.md` hook |
 | `SESSION_STATUS.md` | Older Jul 2 snapshot (Go to Today/Zoom era) — historical |
 | `AGENTS.md` | Next.js agent rules (breaking changes; read next dist docs) |
@@ -161,9 +174,11 @@ Audit Jeremy: `MINUTES=120 npx tsx scripts/jeremy-post-audit-prodtest.mjs`
 2. **Commission / Connect** if John payouts matter before revenue grows  
 3. **Jeremy content** (YouTube + real Adult W1/W2)  
 4. **E2E money + member path** (ticket → pay → onboard → Adult → log sets)  
-5. **Zoom / Go to Today / SMS** phone verify  
-6. **Infra hygiene** (blob→Postgres pace, seed commits, soak scripts)  
-7. **Parked product** only when Jeremy asks (food, store, more programs)
+5. **Zoom / Go to Today** phone verify (embed, host Connect) — **not** blocked on SMS  
+6. **Messages polish** (in-app + email hub) — preferred channel while Twilio **PARKED**  
+7. **Infra hygiene** (blob→Postgres pace, seed commits, soak scripts)  
+8. **Twilio carrier SMS** — only if Jeremy decides texts are worth retainer + usage (`VENDOR_COSTS.md`)  
+9. **Parked product** only when Jeremy asks (food, store, more programs)
 
 ---
 
@@ -215,7 +230,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 | Zoom → member SMS join | E2E after coach Start Video |
 | Nav cleanup | Live Floor vs Go to Today overlap; mobile bottom nav simplification |
 | Chat | Routes exist; Blob for short video uploads; coach/member chat polish as needed |
-| SMS (Twilio) | **M&A audit path in progress:** Postgres `SmsLog` + `SmsDeliveryEvent` + `AuditEvent` when DB configured; STOP/START; status webhook `/api/sms/status`; real Twilio when `TWILIO_*` set |
+| SMS (Twilio) | **PARKED (Jul 19)** — code/ledger ready; prefer **Messages + Resend hub**. Un-park only with budget buy-in. Costs: `VENDOR_COSTS.md` |
 | Publish speed | Smoke republish saved class → open students |
 | Optional: commit soak scripts | `scripts/marshmallow-badger-soak.mjs`, `clone-party-soak.mjs`, etc. |
 
@@ -273,8 +288,20 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-07-15 PT (evening)  
-**Status:** Signing off — good for Jeremy’s next AM client (~11). Full open list → **OPEN BACKLOG** + **When back** below.
+**Date:** 2026-07-19  
+**Status:** SMS **PARKED**. Stripe packages = **monthly subscription vs one-time fee** (amounts vary). Join pricing + rest/equipment/program paste polish in working tree — **deploy when ready**. Zoom Vercel creds still empty. Full open list → **OPEN BACKLOG**.
+
+### Jul 19 — Stripe fee types + rest / equipment / program polish
+- **Fee model:** only two paid shapes — **subscription** (Coach $25/mo, Business $50/mo) and **one-time** (1st Class $850, custom training, merch). Admin → Pricing + `/api/payments/public` expose `feeCategory` / labels. Checkout UI shows fee type.
+- **Purchase path:** `/join` plan picker fixed (was $50/mo Pro, no Business) → `/signup?plan=…` → embedded Stripe. Prod **test mode** already has all three memberships `stripeReady: true`.
+- **Live money still needs:** Live `sk`/`pk`/`whsec` + live `STRIPE_PRICE_*` (John / Stripe Dashboard).
+- **Rest timer:** skip after last set of exercise; audio ticks only last 5s; honor workout `restTimerEnabled`.
+- **Equipment:** Admin cards — On Gear / Home checklist only / Blocked needs photo; member Gear **I have this** syncs home checklist.
+- **Program paste:** targets **focused part**; 409 confirm before overwriting Gym/Home.
+- **Also earlier Jul 19:** Twilio PARKED, `VENDOR_COSTS.md`, `JEREMY_ADMIN_MANUAL.md`.
+
+### Prior stretch (Jul 15–16) — still true
+Signing-off notes from Jeremy’s first AM client era; SMS audit migration **applied on prod**; per-exercise notes shipped `ebcc168`.
 
 ### Done this stretch (Jul 15)
 - **Zoom OAuth:** Marketplace app under Jeremy; Vercel `ZOOM_CLIENT_ID` / `ZOOM_CLIENT_SECRET` (bare Dev credentials, not Secret Token / not authorize URL); Connect succeeded as **jeremy@thetrainstation.co** / Ready for class  
@@ -292,7 +319,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - Multi-part = sequential sessions; Gym/Home = tracks *inside* a part  
 - Zoom host for recordings = **jeremy@thetrainstation.co** (`ZOOM_HOST_EMAIL`)  
 - Equipment with product link must have a **fetchable** image to publish to Gear  
-- Rest timer: coach + member sticky countdown (default 90s); ticks last 5s + horn at 0; live partner set-check starts rest on both sides  
+- Rest timer: sticky countdown (default 90s); **skip last set**; ticks **last 5s** + soft complete buzz; live partner checkoff starts rest on both sides
 
 ### Multi-coach Zoom (shipped Jul 16)
 - **Per-coach OAuth:** `CoachZoomOAuth.id` = lower-case coach login email (not singleton `coach`).

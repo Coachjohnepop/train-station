@@ -203,8 +203,8 @@ export default function MemberWorkoutConsole({
         ? normalizeRestTimerSeconds(firstExerciseRest)
         : DEFAULT_REST_TIMER_SECONDS);
     setSessionRestSeconds(seeded);
-    // Default ON so checkoffs always run a countdown unless coach turns it off.
-    setSessionRestEnabled(true);
+    // Honor workout-level rest toggle when set; otherwise default ON for the floor.
+    setSessionRestEnabled(workout.restTimerEnabled !== false);
   }, [workout.workoutId, workout.restTimerEnabled, workout.restTimerSeconds, workout.exercises]);
 
   const toggleRestMute = useCallback(() => {
@@ -592,7 +592,17 @@ export default function MemberWorkoutConsole({
       const seconds = resolveSecondsForBlock(block);
       if (!seconds || seconds <= 0) return;
 
-      // Auto-open popup on every set check (including last set / timed mark).
+      // Skip rest after the last set of this exercise (gym flow: move on).
+      const prescription = normalizePrescription({
+        setScheme: block.setScheme,
+        repPattern: block.repPattern,
+        reps: block.reps,
+        sets: block.setCount,
+      });
+      const isTimed = isTimedApproach(prescription.approach);
+      const isLastSet = isTimed ? setNum === 1 : setNum === block.setCount;
+      if (isLastSet) return;
+
       const endsAt = Date.now() + seconds * 1000;
       setRestCompleting(false);
       setRestSecondsLeft(seconds);
@@ -668,9 +678,14 @@ export default function MemberWorkoutConsole({
         return;
       }
       setRestSecondsLeft(left);
-      if (!restMutedRef.current && !restTickAnnouncedRef.current.has(left)) {
+      // Soft ticks only in the final 5 seconds (less gym noise).
+      if (
+        left <= 5 &&
+        !restMutedRef.current &&
+        !restTickAnnouncedRef.current.has(left)
+      ) {
         restTickAnnouncedRef.current.add(left);
-        playRestTick(left <= 5);
+        playRestTick(left <= 3);
       }
     };
 

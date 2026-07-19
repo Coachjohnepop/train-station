@@ -6,7 +6,11 @@ import { getEffectiveMembershipOffers, resolveStripePriceId } from "@/lib/pricin
 import { diagnoseMembershipStripePrices } from "@/lib/stripe-price-diagnostics";
 import { getStripePublishableKey } from "@/lib/stripe";
 import { isStripeTestMode } from "@/lib/stripe-price-ids";
-import { SERVICE_OFFERS } from "@/lib/product-offers";
+import {
+  SERVICE_OFFERS,
+  feeCategoryForCheckoutMode,
+  feeCategoryLabel,
+} from "@/lib/product-offers";
 
 export const dynamic = "force-dynamic";
 
@@ -18,16 +22,22 @@ export async function GET() {
   const effectiveOffers = await getEffectiveMembershipOffers();
   const memberships = effectiveOffers
     .filter((o) => o.checkoutMode !== "free")
-    .map((offer) => ({
-      plan: offer.id,
-      label: offer.label,
-      priceLabel: offer.priceDisplay,
-      checkoutMode: offer.checkoutMode,
-      stripeReady:
-        stripeEnabled &&
-        (offer.checkoutMode === "subscription" || offer.checkoutMode === "one_time") &&
-        Boolean(offer.stripePriceId),
-    }));
+    .map((offer) => {
+      const feeCategory = feeCategoryForCheckoutMode(offer.checkoutMode);
+      return {
+        plan: offer.id,
+        label: offer.label,
+        priceLabel: offer.priceDisplay,
+        checkoutMode: offer.checkoutMode,
+        /** Business fee shape: monthly subscription vs one-time (amounts vary). */
+        feeCategory,
+        feeCategoryLabel: feeCategoryLabel(feeCategory),
+        stripeReady:
+          stripeEnabled &&
+          (offer.checkoutMode === "subscription" || offer.checkoutMode === "one_time") &&
+          Boolean(offer.stripePriceId),
+      };
+    });
 
   const memberPriceId = await resolveStripePriceId("member");
   const stripeDiag = isStripeTestMode() ? await diagnoseMembershipStripePrices() : null;
@@ -44,18 +54,30 @@ export async function GET() {
         }
       : {}),
     memberships,
-    services: SERVICE_OFFERS.map((o) => ({
-      plan: o.id,
-      label: o.label,
-      priceLabel: o.priceLabel,
-      checkoutMode: o.checkoutMode,
-    })),
+    services: SERVICE_OFFERS.map((o) => {
+      const feeCategory = feeCategoryForCheckoutMode(o.checkoutMode);
+      return {
+        plan: o.id,
+        label: o.label,
+        priceLabel: o.priceLabel,
+        checkoutMode: o.checkoutMode,
+        feeCategory,
+        feeCategoryLabel: feeCategoryLabel(feeCategory),
+      };
+    }),
     merchandise: merchandise.map((sku) => ({
       id: sku.id,
       name: sku.name,
       priceLabel: sku.priceLabel,
+      feeCategory: "one_time" as const,
+      feeCategoryLabel: feeCategoryLabel("one_time"),
       stripeReady: stripeEnabled && Boolean(sku.stripePriceId),
     })),
+    /** All paid packages fall under one of these two fee types. */
+    feeCategories: [
+      { id: "subscription", label: "Monthly subscription" },
+      { id: "one_time", label: "One-time fee" },
+    ],
     venmo: {
       qrUrl: config.venmoQrUrl,
       handle: config.venmoHandle,

@@ -29,6 +29,7 @@ const PUBLIC_API_PREFIXES = [
   "/api/pricing/public",
   "/api/stripe/webhook",
   "/api/sms/inbound",
+  "/api/sms/status", // Twilio delivery receipts (signed)
   "/api/analytics",
   // Product photos for <img> — same-origin proxy; no secrets, catalog ids only
   "/api/equipment/image",

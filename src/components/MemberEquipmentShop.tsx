@@ -12,6 +12,8 @@ type ShopItem = {
   imageUrl: string | null;
 };
 
+type OwnedMap = Record<string, boolean>;
+
 function ShopThumb({ item }: { item: ShopItem }) {
   const [failed, setFailed] = useState(false);
   const src =
@@ -41,20 +43,33 @@ function ShopThumb({ item }: { item: ShopItem }) {
 
 export default function MemberEquipmentShop() {
   const [items, setItems] = useState<ShopItem[]>([]);
+  const [owned, setOwned] = useState<OwnedMap>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/equipment/shop", { cache: "no-store" });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data.error || "Could not load gear.");
+      const [shopRes, homeRes] = await Promise.all([
+        fetch("/api/equipment/shop", { cache: "no-store" }),
+        fetch("/api/equipment", { cache: "no-store" }),
+      ]);
+      const shopData = await shopRes.json().catch(() => ({}));
+      const homeData = await homeRes.json().catch(() => ({}));
+      if (!shopRes.ok) {
+        setError(shopData.error || "Could not load gear.");
         setItems([]);
       } else {
-        setItems(data.equipment || []);
+        setItems(shopData.equipment || []);
+      }
+      if (homeRes.ok && Array.isArray(homeData.equipment)) {
+        const map: OwnedMap = {};
+        for (const row of homeData.equipment) {
+          if (row?.id) map[row.id] = Boolean(row.hasAtHome);
+        }
+        setOwned(map);
       }
     } catch {
       setError("Could not load gear.");
@@ -67,6 +82,52 @@ export default function MemberEquipmentShop() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  async function markIHaveThis(itemId: string) {
+    const nextOwned = !owned[itemId];
+    setTogglingId(itemId);
+    // Optimistic
+    setOwned((prev) => ({ ...prev, [itemId]: nextOwned }));
+    try {
+      // Merge with full checklist so we don't wipe other gear
+      const resGet = await fetch("/api/equipment", { cache: "no-store" });
+      const dataGet = await resGet.json().catch(() => ({}));
+      const current = Array.isArray(dataGet.equipment) ? dataGet.equipment : [];
+      const payload = current.map(
+        (row: {
+          id: string;
+          hasAtHome: boolean;
+          quantity?: number | null;
+          notes?: string | null;
+        }) => ({
+          equipmentId: row.id,
+          hasAtHome: row.id === itemId ? nextOwned : Boolean(row.hasAtHome),
+          quantity: row.quantity ?? 1,
+          notes: row.notes ?? null,
+        }),
+      );
+      if (!payload.some((p: { equipmentId: string }) => p.equipmentId === itemId)) {
+        payload.push({
+          equipmentId: itemId,
+          hasAtHome: nextOwned,
+          quantity: 1,
+          notes: null,
+        });
+      }
+      const res = await fetch("/api/equipment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ equipment: payload }),
+      });
+      if (!res.ok) {
+        setOwned((prev) => ({ ...prev, [itemId]: !nextOwned }));
+      }
+    } catch {
+      setOwned((prev) => ({ ...prev, [itemId]: !nextOwned }));
+    } finally {
+      setTogglingId(null);
+    }
+  }
 
   if (loading) {
     return <p className="text-sm text-[var(--muted)]">Loading recommended gear…</p>;
@@ -91,13 +152,14 @@ export default function MemberEquipmentShop() {
     <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
       {items.map((item) => {
         const href = item.productUrl!;
+        const hasIt = Boolean(owned[item.id]);
         return (
-          <li key={item.id}>
+          <li key={item.id} className="card flex h-full flex-col overflow-hidden">
             <a
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="card group flex h-full flex-col overflow-hidden transition hover:border-accent/50 active:scale-[0.99]"
+              className="group flex flex-1 flex-col transition hover:border-accent/50 active:scale-[0.99]"
             >
               <div className="relative aspect-square w-full bg-white">
                 <ShopThumb item={item} />
@@ -117,6 +179,24 @@ export default function MemberEquipmentShop() {
                 <p className="mt-auto pt-1 text-[10px] font-medium text-accent">Store ↗</p>
               </div>
             </a>
+            <div className="border-t border-[var(--border)] p-2">
+              <button
+                type="button"
+                className={`w-full rounded-lg px-2 py-1.5 text-[10px] font-semibold transition ${
+                  hasIt
+                    ? "bg-emerald-500/20 text-emerald-100"
+                    : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--text)]"
+                }`}
+                disabled={togglingId === item.id}
+                onClick={() => void markIHaveThis(item.id)}
+              >
+                {togglingId === item.id
+                  ? "Saving…"
+                  : hasIt
+                    ? "✓ I have this"
+                    : "Mark: I have this"}
+              </button>
+            </div>
           </li>
         );
       })}
