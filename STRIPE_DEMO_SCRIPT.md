@@ -145,12 +145,12 @@ Repeat B1 with **1st Class** ticket and a new email.
 2. On Stripe page click **← Back** or close.
 3. **Expected:** Return to checkout with “Checkout was canceled…” and **Pay with Stripe** still available.
 
-### B5. Optional — Venmo backup (already live)
+### B5. Venmo backup (real money — LIVE on prod)
 
-> “If someone prefers Venmo, they use the QR on the same checkout page. You mark them paid in Members — same access as Stripe.”
+> “If someone prefers Venmo — or cards are still in Stripe Test — they use the QR on checkout. Money goes to the same Train Station business bank as Stripe. You mark them paid in Members — same access as a card payment.”
 
-1. Admin → **Landing** → Venmo QR saved.
-2. Signup without paying Stripe.
+1. Confirm checkout shows **Or pay with Venmo** + `@JeremyByrdCSCS` (prod QR already set).  
+2. Member pays on Venmo (include full name in the note).  
 3. Admin → **Members** → **Mark paid** → method **Venmo**.
 
 ---

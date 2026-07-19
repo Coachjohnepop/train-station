@@ -333,17 +333,14 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ## WHERE WE LEFT OFF
 
 **Date:** 2026-07-19  
-**Status:** SMS **PARKED**. Stripe packages = **monthly subscription vs one-time fee** (amounts vary). Join pricing + rest/equipment/program paste polish in working tree — **deploy when ready**. Zoom Vercel creds still empty. Full open list → **OPEN BACKLOG**.
+**Status:** **Venmo real-money path LIVE** on prod (same business bank as Stripe). Stripe still **Test** for cards. SMS **PARKED**. Zoom Jeremy OK. Messages quick-replies + multi-part Today shipped. Full open list → **OPEN BACKLOG**.
 
-### Jul 19 — Stripe fee types + rest / equipment / program polish
-- **Fee model:** only two paid shapes — **subscription** (Coach $25/mo, Business $50/mo) and **one-time** (1st Class $850, custom training, merch). Admin → Pricing + `/api/payments/public` expose `feeCategory` / labels. Checkout UI shows fee type.
-- **Money docs (same day):** Master Stripe = **Jeremy’s business account**; full charge lands there; John via **Connect later** — written into `CONTEXT.md`, `JEREMY_ADMIN_MANUAL.md`, `STRIPE_COMMISSION_SETUP.md`, `STRIPE_DEMO_SCRIPT.md`, `PAYMENT_ADMIN_DEMO_SCRIPT.md`, `STRIPE_PRODUCT_CATALOG.md`, `VENDOR_COSTS.md`.
-- **Purchase path:** `/join` plan picker fixed → `/signup?plan=…` → Stripe. Shipped `f2a303a` to `main`.
-- **Live money still needs:** Live `sk`/`pk`/`whsec` + live `STRIPE_PRICE_*` + Connect Ready for division.
-- **Rest / equipment / program paste polish** as above.
-- **Also earlier Jul 19:** Twilio PARKED, `VENDOR_COSTS.md`, `JEREMY_ADMIN_MANUAL.md`.
-- **Zoom multi-coach (Jul 19 evening):** Jeremy hosts OK in prod. Confirmed per-coach isolation in code + prod DB (only Jeremy token row). Full **add coach 2…n** checklist written into `JEREMY_ADMIN_MANUAL.md`; no extra product work required unless Marketplace Publish for external Zoom orgs.
-- **Tracks 2/3/5 (same session):** Coach Messages **quick-replies** (Macros / Welcome / Check-in / Rest / Great job); member Today **multi-part** list (`?part=`); Programs + Landing content rails for Jeremy.
+### Jul 19 — Venmo LIVE + money manuals
+- **Venmo on prod:** Blob landing media set — QR `…/images/venmo-jeremy-qr.png`, handle `@JeremyByrdCSCS`, instructions note **same Train Station business account as Stripe bank deposits**. `/api/payments/public` → `venmo.hasQr: true`.
+- **Ops:** Member pays Venmo → coach **Mark paid (Venmo)** → access. No Stripe webhook for Venmo.
+- **Re-seed:** `npx tsx scripts/set-venmo-landing-prod.mjs`. Docs: this file (Money flow § B), `JEREMY_ADMIN_MANUAL.md`, `JEREMY_S5_PAYMENTS_TEST.md`, `PAYMENT_ADMIN_DEMO_SCRIPT.md`, checkout UI copy.
+- **Stripe cards:** still `stripeTestMode: true` until Jeremy Live + Vercel live keys. Use Venmo for real $ now, or `4242…` for test card E2E.
+- **Earlier Jul 19 ships:** fee types subscription vs one-time; join picker fix; rest/equipment/program paste; multi-coach Zoom checklist; Messages Macros chips; multi-part Today; Twilio PARKED.
 
 ### Prior stretch (Jul 15–16) — still true
 Signing-off notes from Jeremy’s first AM client era; SMS audit migration **applied on prod**; per-exercise notes shipped `ebcc168`.
