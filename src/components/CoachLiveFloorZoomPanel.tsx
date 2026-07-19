@@ -146,9 +146,16 @@ export default function CoachLiveFloorZoomPanel({
       await startEmbedded();
       return;
     }
-    if (room.hostUrl) {
-      window.open(room.hostUrl, "_blank", "noopener,noreferrer");
-      if (wideEnough && !sdkConfigured) {
+    const openUrl =
+      (room as { openUrl?: string }).openUrl ||
+      ((room as { isHost?: boolean }).isHost === false ? room.joinUrl : room.hostUrl) ||
+      room.hostUrl ||
+      room.joinUrl;
+    if (openUrl) {
+      window.open(openUrl, "_blank", "noopener,noreferrer");
+      if ((room as { isHost?: boolean }).isHost === false) {
+        showMessage("Opened as participant — join Jeremy’s class (guest is OK if Zoom asks to sign in).");
+      } else if (wideEnough && !sdkConfigured) {
         showMessage("Zoom opened in a new tab — connect Zoom in Settings to embed video on this page.");
       }
     }

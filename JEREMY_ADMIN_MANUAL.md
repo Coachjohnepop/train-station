@@ -134,7 +134,13 @@ Nothing below is “inside the workout calendar.” These are the services that 
 1. Sign in as `jeremy@thetrainstation.co`
 2. **Admin → Settings → Zoom** → Connect if not already **Ready for class**
 3. Prefer Zoom profile email = `jeremy@thetrainstation.co` (recordings land on the host Zoom)
-4. **Go to Today** / Live Floor → start video as usual
+4. **Go to Today** / Live Floor → **Start Live Zoom** (you are the host)
+
+**Other coaches (John, etc.) joining your class:**
+- The shared live room is created under **Jeremy’s Zoom** when he is connected (`ZOOM_LIVE_CLASS_HOST_EMAIL` / `ZOOM_HOST_EMAIL`, default `jeremy@thetrainstation.co`).
+- Non-host coaches get the **member join link** (participant), not the host start link — so Zoom should **not** force them to log in as host/member of their own Zoom org.
+- In Zoom’s join UI they can enter as **guest** (or their own Zoom user as attendee). They should **not** use Train Station **Member** login for class video.
+- Button labels: host → “Join Live Now / Start”; others → **“Join class Zoom”**.
 
 **If Connect fails:** John checks Vercel `ZOOM_CLIENT_ID` / `ZOOM_CLIENT_SECRET` and Marketplace OAuth redirect exactly:  
 `https://www.thetrainstation.co/api/admin/zoom/callback`

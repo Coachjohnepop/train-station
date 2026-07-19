@@ -10,6 +10,10 @@ import { useCallback, useEffect, useState } from "react";
 type ZoomRoom = {
   hostUrl: string;
   joinUrl: string;
+  openUrl?: string;
+  openAs?: "host" | "participant";
+  isHost?: boolean;
+  hostCoachEmail?: string | null;
   topic?: string;
   demo?: boolean;
 };
@@ -38,10 +42,14 @@ export default function CoachJoinLiveNavStrip() {
       }
       if (zoomRes.ok) {
         const z = await zoomRes.json();
-        if (z.zoom?.hostUrl) {
+        if (z.zoom?.hostUrl || z.zoom?.joinUrl) {
           setRoom({
             hostUrl: z.zoom.hostUrl,
             joinUrl: z.zoom.joinUrl,
+            openUrl: z.zoom.openUrl || z.zoom.hostUrl || z.zoom.joinUrl,
+            openAs: z.zoom.openAs,
+            isHost: z.zoom.isHost,
+            hostCoachEmail: z.zoom.hostCoachEmail,
             topic: z.zoom.topic,
             demo: z.zoom.demo,
           });
@@ -76,24 +84,33 @@ export default function CoachJoinLiveNavStrip() {
         setHint(data.error || "Could not start Zoom.");
         return;
       }
-      if (data.demo || !data.zoom?.hostUrl) {
-        setHint("Connect Zoom in Settings first.");
+      if (data.demo || !(data.zoom?.openUrl || data.zoom?.hostUrl || data.zoom?.joinUrl)) {
+        setHint("Connect Zoom in Settings first (class host should be ready).");
         setReady(false);
         return;
       }
-      const hostUrl = data.zoom.hostUrl as string;
+      const openUrl = (data.zoom.openUrl || data.zoom.hostUrl || data.zoom.joinUrl) as string;
+      const asHost = data.zoom.openAs === "host" || data.zoom.isHost === true;
       setRoom({
-        hostUrl,
+        hostUrl: data.zoom.hostUrl,
         joinUrl: data.zoom.joinUrl,
+        openUrl,
+        openAs: asHost ? "host" : "participant",
+        isHost: asHost,
+        hostCoachEmail: data.zoom.hostCoachEmail,
         topic: data.zoom.topic,
       });
       if (typeof data.ready === "boolean") setReady(data.ready);
-      if (data.notified > 0) {
-        setHint(`Live — link sent to ${data.notified} member${data.notified === 1 ? "" : "s"}.`);
+      if (asHost) {
+        if (data.notified > 0) {
+          setHint(`Live as host — link sent to ${data.notified} member${data.notified === 1 ? "" : "s"}.`);
+        } else {
+          setHint("You're hosting — members can Join Live Zoom Now.");
+        }
       } else {
-        setHint("You're live — members can Join Live Zoom Now.");
+        setHint("Joining as participant (host is the class coach). Enter as guest if Zoom asks to log in.");
       }
-      window.open(hostUrl, "_blank", "noopener,noreferrer");
+      window.open(openUrl, "_blank", "noopener,noreferrer");
     } catch {
       setHint("Could not open Zoom.");
     } finally {
@@ -129,9 +146,19 @@ export default function CoachJoinLiveNavStrip() {
             className="btn-primary min-h-[40px] px-3 py-1.5 text-xs font-bold shadow-md shadow-sky-500/20 sm:min-h-[44px] sm:px-4 sm:text-sm"
             disabled={busy}
             onClick={() => void joinLiveNow()}
-            title="Create today's class room (if needed) and open Zoom as host"
+            title={
+              room?.isHost === false
+                ? "Open the class Zoom as a participant (host is Jeremy / class coach)"
+                : "Create today's class room if needed and open Zoom as host"
+            }
           >
-            {busy ? "Starting…" : room?.hostUrl ? "Join Live Now" : "Start Live Zoom"}
+            {busy
+              ? "Opening…"
+              : room?.isHost === false
+                ? "Join class Zoom"
+                : room?.openUrl || room?.hostUrl
+                  ? "Join Live Now"
+                  : "Start Live Zoom"}
           </button>
         ) : (
           <Link
@@ -143,14 +170,14 @@ export default function CoachJoinLiveNavStrip() {
           </Link>
         )}
       </div>
-      {room?.hostUrl && ready ? (
+      {(room?.openUrl || room?.hostUrl || room?.joinUrl) && ready ? (
         <a
-          href={room.hostUrl}
+          href={room.openUrl || (room.isHost === false ? room.joinUrl : room.hostUrl)}
           target="_blank"
           rel="noopener noreferrer"
           className="text-[10px] font-semibold text-sky-200 underline-offset-2 hover:underline"
         >
-          Open host link ↗
+          {room.isHost === false ? "Open join link ↗" : "Open host link ↗"}
         </a>
       ) : null}
       {hint ? (

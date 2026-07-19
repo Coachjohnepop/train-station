@@ -19,6 +19,8 @@ export type LiveClassZoomRecord = {
   notifiedAt?: string;
   hostStartedAt?: string;
   demo?: boolean;
+  /** Train Station coach login that owns this room's Zoom host (start_url). */
+  hostCoachEmail?: string | null;
 };
 
 type LiveClassZoomStore = Record<string, LiveClassZoomRecord>;
@@ -106,6 +108,66 @@ export async function memberHasLiveAccessOnDate(input: {
   return false;
 }
 
+/**
+ * Prefer the primary host (Jeremy) OAuth for the shared class room so other coaches
+ * join as participants instead of creating a second host meeting.
+ */
+export async function resolveLiveClassHostCoachEmail(
+  requestingCoachEmail?: string | null,
+): Promise<string | null> {
+  const request = (requestingCoachEmail || "").trim().toLowerCase() || null;
+  const preferred =
+    process.env.ZOOM_LIVE_CLASS_HOST_EMAIL?.trim().toLowerCase() ||
+    process.env.ZOOM_HOST_EMAIL?.trim().toLowerCase() ||
+    "jeremy@thetrainstation.co";
+
+  const { getZoomOAuthRecord } = await import("@/lib/zoom-oauth-store");
+  const preferredRec = await getZoomOAuthRecord({
+    coachEmail: preferred,
+    preferFresh: true,
+  });
+  if (preferredRec?.refreshToken) return preferred;
+
+  if (request) {
+    const reqRec = await getZoomOAuthRecord({
+      coachEmail: request,
+      preferFresh: true,
+    });
+    if (reqRec?.refreshToken) return request;
+  }
+  return request || preferred;
+}
+
+/** True when this coach should open start_url; others use join_url to enter as guests. */
+export function isLiveClassHostForCoach(
+  record: LiveClassZoomRecord | null | undefined,
+  coachEmail?: string | null,
+): boolean {
+  if (!record || !coachEmail) return false;
+  const coach = coachEmail.trim().toLowerCase();
+  const host =
+    (record.hostCoachEmail || "").trim().toLowerCase() ||
+    process.env.ZOOM_LIVE_CLASS_HOST_EMAIL?.trim().toLowerCase() ||
+    process.env.ZOOM_HOST_EMAIL?.trim().toLowerCase() ||
+    "jeremy@thetrainstation.co";
+  return coach === host;
+}
+
+export function liveClassOpenUrlForCoach(
+  record: LiveClassZoomRecord,
+  coachEmail?: string | null,
+): { openUrl: string; openAs: "host" | "participant"; isHost: boolean } {
+  const isHost = isLiveClassHostForCoach(record, coachEmail);
+  if (isHost && record.hostUrl) {
+    return { openUrl: record.hostUrl, openAs: "host", isHost: true };
+  }
+  return {
+    openUrl: record.joinUrl || record.hostUrl,
+    openAs: "participant",
+    isHost: false,
+  };
+}
+
 export async function ensureLiveClassZoom(
   sessionDate?: string,
   opts?: { coachEmail?: string | null },
@@ -127,12 +189,15 @@ export async function ensureLiveClassZoom(
       ? new Date(daySessions[0].scheduledAt)
       : new Date(`${date}T12:00:00`);
 
+  const hostCoachEmail = await resolveLiveClassHostCoachEmail(opts?.coachEmail);
+
   const zoom = await createZoomMeeting({
     bookingId: `live-class-${date}`,
     topic: `Train Station Live — ${date}`,
     scheduledAt,
     durationMin: 40,
-    coachEmail: opts?.coachEmail,
+    // Always create under preferred host when connected so co-coaches join Jeremy.
+    coachEmail: hostCoachEmail,
   });
 
   const record: LiveClassZoomRecord = {
@@ -145,6 +210,7 @@ export async function ensureLiveClassZoom(
     topic: `Train Station Live — ${date}`,
     createdAt: new Date().toISOString(),
     demo: zoom.demo,
+    hostCoachEmail,
   };
 
   store[date] = record;
