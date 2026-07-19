@@ -503,6 +503,7 @@ export default function AdminChatWorkspace({
                   threadId={replyThreadId}
                   role="coach"
                   threadKind={activeThread?.kind}
+                  memberName={activeMember?.name || activeThread?.title || null}
                   placeholder={activeThread?.kind === "cohort" ? "Reply in community feed…" : "Quick reply…"}
                   onSent={(message) => {
                     if (!message) return;

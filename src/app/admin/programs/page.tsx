@@ -23,6 +23,29 @@ export default async function ProgramsAdminPage() {
         <ExportSeedButton />
       </div>
 
+      <div className="mt-4 rounded-xl border border-violet-500/30 bg-violet-500/5 px-4 py-3 text-sm text-[var(--muted)]">
+        <p className="font-semibold text-violet-100">Jeremy content rails</p>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-xs">
+          <li>
+            <strong className="text-[var(--text)]">Adult Strength</strong> — fill Week 1 Gym + Home for
+            Mon–Sun, then <strong className="text-[var(--text)]">Copy week → Week 2</strong> and tweak.
+          </li>
+          <li>
+            Multi-part days (AM / midday / PM): open a day → set parts → members see a part list on{" "}
+            <strong className="text-[var(--text)]">Today</strong>.
+          </li>
+          <li>
+            Templates & paste: always clones. Overwrite confirm if the day already has Gym/Home content.
+          </li>
+          <li>
+            Landing YouTube (welcome / free ticket / weekly / dinner):{" "}
+            <Link href="/admin/landing" className="text-accent hover:underline">
+              Admin → Landing
+            </Link>
+          </li>
+        </ul>
+      </div>
+
       <ul className="mt-8 space-y-3">
         {programs.map((program: any) => {
           const assigned = program.weeks.reduce(

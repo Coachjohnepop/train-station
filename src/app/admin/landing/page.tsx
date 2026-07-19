@@ -23,6 +23,22 @@ export default async function AdminLandingPage() {
         Logo, name, and tagline for white-label resale — plus YouTube links and Venmo QR for the
         home page.
       </p>
+      <div className="mt-4 rounded-xl border border-violet-500/30 bg-violet-500/5 px-4 py-3 text-xs text-[var(--muted)]">
+        <p className="font-semibold text-violet-100">Video checklist (Jeremy)</p>
+        <ol className="mt-2 list-decimal space-y-1 pl-5">
+          <li>Welcome (default + per ticket if you want different intros)</li>
+          <li>Free-ticket / chastise clip after the short free-ticket open</li>
+          <li>Weekly coach video + dinner video (member Today strip below)</li>
+          <li>Venmo QR if you take money outside Stripe</li>
+        </ol>
+        <p className="mt-2">
+          Personal macros go in{" "}
+          <a href="/admin/chat" className="text-accent hover:underline">
+            Messages
+          </a>{" "}
+          (Macros quick-reply) — not the public Nutrition sample page.
+        </p>
+      </div>
       <div className="mt-8 space-y-12">
         <AdminSiteBrandPanel
           initialBrandName={brandConfig.brandName}

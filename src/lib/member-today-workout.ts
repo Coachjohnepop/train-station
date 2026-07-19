@@ -16,7 +16,11 @@ import {
 } from "@/lib/today-sessions";
 import { resolveCoachMemberName } from "@/lib/coach-roster";
 import { parseEnrollmentDayKey } from "@/lib/member-enrollment-day";
-import { resolveDayWorkoutForEnrollment } from "@/lib/member-program-workout";
+import {
+  resolveDayPartsForEnrollment,
+  resolveDayWorkoutForEnrollment,
+} from "@/lib/member-program-workout";
+import type { ResolvedDayPart } from "@/lib/program-day-sessions";
 import { memberScheduleLabel } from "@/lib/member-day-window";
 import { localTodayIso } from "@/lib/program-calendar";
 import { resolveProgramBlock } from "@/lib/member-program-block";
@@ -31,6 +35,9 @@ export type TodayPageWorkout = {
   programSlug: string;
   source: TodayWorkoutSource;
   scheduleLabel?: string;
+  /** Multi-part day sessions (AM/mid/PM). Length 0–1 means single-workout UI. */
+  parts?: ResolvedDayPart[];
+  activePartIndex?: number;
 };
 
 async function enrollmentSlugsForUser(userId: string): Promise<string[]> {
@@ -54,6 +61,7 @@ async function resolveEnrollmentProgramWorkout(
   weekNumber: number,
   dayNumber: number,
   session: TodaySession | null,
+  preferredPartIndex?: number,
 ): Promise<TodayPageWorkout | null> {
   const program = await getProgramBySlug(slug);
   if (!program) return null;
@@ -100,15 +108,57 @@ async function resolveEnrollmentProgramWorkout(
     }
   }
 
-  const resolved = resolveDayWorkoutForEnrollment(
+  const multi = resolveDayPartsForEnrollment(
     program,
     slug,
     effectiveEnrollment,
     dayNumber,
   );
-  if (!resolved?.workoutId) return null;
+  const parts = multi?.parts ?? [];
+  if (!parts.length) {
+    const resolved = resolveDayWorkoutForEnrollment(
+      program,
+      slug,
+      effectiveEnrollment,
+      dayNumber,
+    );
+    if (!resolved?.workoutId) return null;
+    const workout = await getMemberWorkoutById(resolved.workoutId, {
+      userId,
+      memberName,
+    });
+    if (!workout) return null;
+    return {
+      session,
+      workout,
+      programSlug: slug,
+      source: "program",
+      scheduleLabel: memberScheduleLabel(
+        program.name,
+        resolved.phaseWeekNumber ?? weekNumber,
+        dayNumber,
+      ),
+      parts: [
+        {
+          sessionId: "main",
+          partIndex: 1,
+          label: "Main",
+          workoutId: resolved.workoutId,
+          workoutName: resolved.workoutName,
+          optionLabel: resolved.option,
+        },
+      ],
+      activePartIndex: 1,
+    };
+  }
 
-  const workout = await getMemberWorkoutById(resolved.workoutId, {
+  const want =
+    preferredPartIndex && parts.some((p) => p.partIndex === preferredPartIndex)
+      ? preferredPartIndex
+      : parts[0].partIndex;
+  const active = parts.find((p) => p.partIndex === want) || parts[0];
+
+  const workout = await getMemberWorkoutById(active.workoutId, {
     userId,
     memberName,
   });
@@ -119,7 +169,9 @@ async function resolveEnrollmentProgramWorkout(
     workout,
     programSlug: slug,
     source: "program",
-    scheduleLabel: memberScheduleLabel(program.name, resolved.phaseWeekNumber ?? weekNumber, dayNumber),
+    scheduleLabel: memberScheduleLabel(program.name, multi!.weekNumber, dayNumber),
+    parts: parts.length > 1 ? parts : parts,
+    activePartIndex: active.partIndex,
   };
 }
 
@@ -128,6 +180,7 @@ export async function resolveTodayPageWorkout(
   userId: string,
   viewDate: string,
   nameFallback = "Member",
+  opts?: { partIndex?: number },
 ): Promise<TodayPageWorkout> {
   await Promise.all([
     hydrateTodaySessions({ preferFresh: true }),
@@ -151,6 +204,7 @@ export async function resolveTodayPageWorkout(
         enrollmentCoord.weekNumber,
         enrollmentCoord.dayNumber,
         null,
+        opts?.partIndex,
       );
       if (resolved) return resolved;
     }
@@ -216,6 +270,7 @@ export async function resolveTodayPageWorkout(
     enrollment.currentWeek,
     enrollment.currentDay,
     null,
+    opts?.partIndex,
   );
 
   if (resolved) return resolved;

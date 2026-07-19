@@ -323,6 +323,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - **Rest / equipment / program paste polish** as above.
 - **Also earlier Jul 19:** Twilio PARKED, `VENDOR_COSTS.md`, `JEREMY_ADMIN_MANUAL.md`.
 - **Zoom multi-coach (Jul 19 evening):** Jeremy hosts OK in prod. Confirmed per-coach isolation in code + prod DB (only Jeremy token row). Full **add coach 2…n** checklist written into `JEREMY_ADMIN_MANUAL.md`; no extra product work required unless Marketplace Publish for external Zoom orgs.
+- **Tracks 2/3/5 (same session):** Coach Messages **quick-replies** (Macros / Welcome / Check-in / Rest / Great job); member Today **multi-part** list (`?part=`); Programs + Landing content rails for Jeremy.
 
 ### Prior stretch (Jul 15–16) — still true
 Signing-off notes from Jeremy’s first AM client era; SMS audit migration **applied on prod**; per-exercise notes shipped `ebcc168`.

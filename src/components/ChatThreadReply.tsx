@@ -3,6 +3,10 @@
 import { useCallback, useRef, useState, type ClipboardEvent, type ChangeEvent } from "react";
 import type { ChatMessage, ChatThreadKind } from "@/lib/coach-chat";
 import { CHAT_IMAGE_MAX_BYTES } from "@/lib/chat-video-constants";
+import {
+  COACH_QUICK_REPLIES,
+  fillCoachQuickReply,
+} from "@/lib/coach-chat-quick-replies";
 
 type SmsResult = {
   sent?: number;
@@ -46,6 +50,7 @@ export default function ChatThreadReply({
   threadKind,
   destinationLabel,
   placeholder,
+  memberName,
   onSent,
 }: {
   threadId: string;
@@ -53,6 +58,8 @@ export default function ChatThreadReply({
   threadKind?: ChatThreadKind;
   destinationLabel?: string;
   placeholder?: string;
+  /** For coach quick-replies {name} fill */
+  memberName?: string | null;
   onSent?: (message?: ChatMessage) => void;
 }) {
   const [message, setMessage] = useState("");
@@ -158,6 +165,16 @@ export default function ChatThreadReply({
       : "border-t border-[var(--border)] bg-[var(--surface)]";
 
   const canSend = (Boolean(message.trim()) || Boolean(imageUrl)) && !uploading && !sending;
+  const showQuickReplies = role === "coach" && threadKind !== "cohort";
+
+  function applyQuickReply(body: string) {
+    const filled = fillCoachQuickReply(body, { name: memberName });
+    setMessage((prev) => {
+      const t = prev.trim();
+      if (!t) return filled;
+      return `${t}\n\n${filled}`;
+    });
+  }
 
   return (
     <div className={`${barClass} px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]`}>
@@ -165,6 +182,26 @@ export default function ChatThreadReply({
         <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
           {destinationLabel}
         </p>
+      ) : null}
+
+      {showQuickReplies ? (
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {COACH_QUICK_REPLIES.map((q) => (
+            <button
+              key={q.id}
+              type="button"
+              title={q.title}
+              className="rounded-full border border-violet-500/40 bg-violet-500/10 px-2.5 py-1 text-[10px] font-semibold text-violet-100 transition hover:bg-violet-500/25"
+              disabled={sending || uploading}
+              onClick={() => applyQuickReply(q.body)}
+            >
+              {q.label}
+            </button>
+          ))}
+          <span className="self-center text-[9px] text-[var(--muted)]">
+            Insert · edit blanks · send
+          </span>
+        </div>
       ) : null}
 
       {(imagePreview || imageUrl) && (

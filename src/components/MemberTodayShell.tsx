@@ -15,6 +15,7 @@ import {
   formatProgramStartOption,
   type ResolvedProgramBlock,
 } from "@/lib/member-program-block";
+import type { ResolvedDayPart } from "@/lib/program-day-sessions";
 
 type Props = {
   todayIso: string;
@@ -31,6 +32,9 @@ type Props = {
   scheduleLabel?: string;
   calendarDateLabel: string;
   subtitle: string;
+  /** Multi-part day sessions (AM / midday / PM). When length > 1, show part picker. */
+  dayParts?: ResolvedDayPart[];
+  activePartIndex?: number;
   hasCoachSession: boolean;
   intakeComplete: boolean;
   warmupWorkout: MemberWorkoutView | null;
@@ -159,6 +163,8 @@ export default function MemberTodayShell({
   scheduleLabel,
   calendarDateLabel,
   subtitle,
+  dayParts,
+  activePartIndex = 1,
   hasCoachSession,
   intakeComplete,
   warmupWorkout,
@@ -173,6 +179,7 @@ export default function MemberTodayShell({
   const searchParams = useSearchParams();
   const isToday = selectedDate === todayIso;
   const showFullWorkout = isToday && !!workout && (intakeComplete || hasCoachSession);
+  const multiPart = Boolean(dayParts && dayParts.length > 1);
   const showWarmupFlow =
     !intakeComplete && !!warmupWorkout && days.length > 0 && !hasCoachSession;
 
@@ -181,10 +188,22 @@ export default function MemberTodayShell({
       const q = new URLSearchParams(searchParams.toString());
       if (iso === todayIso) q.delete("date");
       else q.set("date", iso);
+      q.delete("part");
       const suffix = q.toString() ? `?${q.toString()}` : "";
       router.replace(`/member/today${suffix}`, { scroll: false });
     },
     [router, searchParams, todayIso],
+  );
+
+  const selectPart = useCallback(
+    (partIndex: number) => {
+      const q = new URLSearchParams(searchParams.toString());
+      if (selectedDate !== todayIso) q.set("date", selectedDate);
+      q.set("part", String(partIndex));
+      const suffix = q.toString() ? `?${q.toString()}` : "";
+      router.replace(`/member/today${suffix}`, { scroll: false });
+    },
+    [router, searchParams, selectedDate, todayIso],
   );
 
   useEffect(() => {
@@ -335,6 +354,54 @@ export default function MemberTodayShell({
               />
             </div>
           )}
+
+          {multiPart && dayParts ? (
+            <div className="card mb-3 space-y-2 p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+                {dayParts.length}-part day — open each session
+              </p>
+              <ul className="space-y-1.5">
+                {dayParts.map((part) => {
+                  const active = part.partIndex === activePartIndex;
+                  return (
+                    <li key={part.sessionId || part.partIndex}>
+                      <button
+                        type="button"
+                        onClick={() => selectPart(part.partIndex)}
+                        className={`flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition ${
+                          active
+                            ? "border-accent bg-accent/10 text-[var(--text)]"
+                            : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)] hover:border-accent/50 hover:text-[var(--text)]"
+                        }`}
+                      >
+                        <span className="min-w-0">
+                          <span className="font-semibold text-[var(--text)]">{part.label}</span>
+                          {part.optionLabel ? (
+                            <span className="ml-1.5 text-[10px] uppercase tracking-wide text-[var(--muted)]">
+                              {part.optionLabel}
+                            </span>
+                          ) : null}
+                          {part.workoutName ? (
+                            <span className="mt-0.5 block truncate text-xs text-[var(--muted)]">
+                              {part.workoutName}
+                            </span>
+                          ) : null}
+                        </span>
+                        <span
+                          className={`shrink-0 text-[10px] font-semibold uppercase tracking-wide ${
+                            active ? "text-accent" : "text-[var(--muted)]"
+                          }`}
+                        >
+                          {active ? "Open" : "Open →"}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+
           <MemberWorkoutConsole
             workout={workout}
             backHref="/member/today"
@@ -342,7 +409,13 @@ export default function MemberTodayShell({
             targetUserId={targetUserId}
             liveSyncUserId={targetUserId}
             liveSessionDate={selectedDate}
-            scheduleLabel={scheduleLabel}
+            scheduleLabel={
+              multiPart && dayParts
+                ? `${dayParts.find((p) => p.partIndex === activePartIndex)?.label || "Session"}${
+                    scheduleLabel ? ` · ${scheduleLabel}` : ""
+                  }`
+                : scheduleLabel
+            }
             calendarDateLabel={calendarDateLabel}
           />
         </div>

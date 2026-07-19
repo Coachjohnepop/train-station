@@ -41,7 +41,13 @@ import { formatProgramStartOption } from "@/lib/member-program-block";
 export const dynamic = "force-dynamic";
 
 type Props = {
-  searchParams: Promise<{ asInstructor?: string; forUser?: string; date?: string }>;
+  searchParams: Promise<{
+    asInstructor?: string;
+    forUser?: string;
+    date?: string;
+    /** 1-based multi-part day index (AM/mid/PM) */
+    part?: string;
+  }>;
 };
 
 function formatDateLabel(dateKey: string) {
@@ -101,8 +107,16 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const programBlock = dayWindow?.block ?? null;
   const programTodayKey = dayWindow?.programTodayKey ?? calendarToday;
   const viewDate = sp.date || programTodayKey;
-  const todayWorkout = await resolveTodayPageWorkout(uid, viewDate, memberName);
-  const { session, workout, programSlug, source, scheduleLabel } = todayWorkout;
+  const partIndexRaw = sp.part ? Number(sp.part) : undefined;
+  const partIndex =
+    partIndexRaw && Number.isFinite(partIndexRaw) && partIndexRaw >= 1
+      ? Math.floor(partIndexRaw)
+      : undefined;
+  const todayWorkout = await resolveTodayPageWorkout(uid, viewDate, memberName, {
+    partIndex,
+  });
+  const { session, workout, programSlug, source, scheduleLabel, parts, activePartIndex } =
+    todayWorkout;
   const hasWorkout = !!workout;
   const coachMembers = asInstructor
     ? (await listCoachMembersForUi()).map((m) => ({
@@ -196,6 +210,8 @@ export default async function MemberTodayPage({ searchParams }: Props) {
               scheduleLabel={scheduleLabel}
               calendarDateLabel={formatDateLabel(viewDate)}
               subtitle={subtitle}
+              dayParts={parts && parts.length > 1 ? parts : undefined}
+              activePartIndex={activePartIndex}
               hasCoachSession={!!session}
               intakeComplete={intakeComplete}
               warmupWorkout={warmupWorkout}

@@ -14,6 +14,13 @@ import {
 import { normalizeProgramSlug } from "@/lib/programs";
 import { localTodayIso } from "@/lib/program-calendar";
 import { resolveProgramBlock } from "@/lib/member-program-block";
+import {
+  normalizeDaySessions,
+  type DayWithSessionsLike,
+  type ResolvedDayPart,
+} from "@/lib/program-day-sessions";
+
+export type { ResolvedDayPart };
 
 export type ResolvedProgramWorkout = {
   workoutId: string;
@@ -24,6 +31,15 @@ export type ResolvedProgramWorkout = {
   phaseWeekNumber?: number;
   trainingLocation?: TrainingLocation;
   workoutName?: string;
+};
+
+export type ResolvedProgramDayParts = {
+  dayId?: string;
+  weekNumber: number;
+  dayNumber: number;
+  partCount: number;
+  trainingLocation: TrainingLocation;
+  parts: ResolvedDayPart[];
 };
 
 export function dayWorkoutOptions(day: {
@@ -99,24 +115,96 @@ export function resolveDayWorkoutForEnrollment(
   dayNumber = enrollment.currentDay,
 ): Omit<ResolvedProgramWorkout, "workoutName"> & { workoutName?: string; dayId?: string } | null {
   const phases = macroPhasesForProgramSlug(programSlug);
+  const week = findEnrollmentWeek(program.weeks, enrollment, phases);
+  const multi = resolveDayPartsForEnrollment(program, programSlug, enrollment, dayNumber);
+  if (!multi?.parts.length) return null;
+  const primary = multi.parts[0];
+  return {
+    workoutId: primary.workoutId,
+    option: primary.optionLabel,
+    weekNumber: multi.weekNumber,
+    dayNumber: multi.dayNumber,
+    macroPhaseIndex: week?.macroPhaseIndex ?? enrollment.currentPhase ?? 1,
+    phaseWeekNumber: week?.phaseWeekNumber ?? enrollment.currentWeek,
+    trainingLocation: multi.trainingLocation,
+    workoutName: primary.workoutName,
+    dayId: multi.dayId,
+  };
+}
+
+/**
+ * Resolve all programmed parts for a member day (Gym/Home pick per part).
+ * Empty shells are omitted. Single-part days return one entry.
+ */
+export function resolveDayPartsForEnrollment(
+  program: { weeks: ProgramWeekLike[] },
+  programSlug: string,
+  enrollment: EnrollmentSlice,
+  dayNumber = enrollment.currentDay,
+): ResolvedProgramDayParts | null {
+  const phases = macroPhasesForProgramSlug(programSlug);
   const location = normalizeTrainingLocation(enrollment.trainingLocation);
   const week = findEnrollmentWeek(program.weeks, enrollment, phases);
   const day = week?.days?.find((d) => d.dayNumber === dayNumber);
   if (!week || !day) return null;
 
-  const pick = pickWorkoutOptionByLocation(dayWorkoutOptions(day), location);
-  if (!pick?.workoutId) return null;
+  const dayAny = day as {
+    id?: string;
+    partCount?: number;
+    workout?: { id?: string; name?: string } | null;
+    sessions?: DayWithSessionsLike["sessions"];
+    options?: DayWithSessionsLike["options"];
+  };
+  const dayLike: DayWithSessionsLike = {
+    id: dayAny.id || `day-${week.weekNumber}-${day.dayNumber}`,
+    partCount: dayAny.partCount,
+    sessions: dayAny.sessions,
+    options: dayWorkoutOptions(day).map((o) => ({
+      workoutId: o.workoutId,
+      label: o.label || "Gym",
+      trainingLocation: (o as { trainingLocation?: string | null }).trainingLocation,
+    })),
+  };
+  const normalized = normalizeDaySessions(dayLike);
+
+  const parts: ResolvedDayPart[] = [];
+  for (const session of normalized.sessions) {
+    const opts = (session.options || []).map((o) => ({
+      workoutId: o.workoutId,
+      label: o.label,
+      trainingLocation: o.trainingLocation,
+      workout: undefined as { id: string; name?: string } | undefined,
+    }));
+    // Fall back to flat day options only when session has no options but is part 1
+    const pool =
+      opts.length > 0
+        ? opts
+        : session.partIndex === 1
+          ? dayWorkoutOptions(day)
+          : [];
+    const pick = pickWorkoutOptionByLocation(pool, location);
+    if (!pick?.workoutId) continue;
+    parts.push({
+      sessionId: session.id,
+      partIndex: session.partIndex,
+      label: session.label || `Part ${session.partIndex}`,
+      sessionKind: session.sessionKind,
+      timeSlot: session.timeSlot,
+      optionLabel: pick.label,
+      workoutId: pick.workoutId,
+      workoutName: pick.workout?.name || dayAny.workout?.name,
+    });
+  }
+
+  if (!parts.length) return null;
 
   return {
-    workoutId: pick.workoutId,
-    option: pick.label,
+    dayId: dayAny.id,
     weekNumber: week.weekNumber,
     dayNumber: day.dayNumber,
-    macroPhaseIndex: week.macroPhaseIndex ?? enrollment.currentPhase ?? 1,
-    phaseWeekNumber: week.phaseWeekNumber ?? enrollment.currentWeek,
+    partCount: Math.max(normalized.partCount, parts.length),
     trainingLocation: location,
-    workoutName: pick.workout?.name || day.workout?.name,
-    dayId: (day as { id?: string }).id,
+    parts,
   };
 }
 

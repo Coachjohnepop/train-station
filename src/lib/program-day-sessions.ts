@@ -43,6 +43,18 @@ export type ProgramDaySessionInput = {
   sortOrder?: number;
 };
 
+/** Member-facing resolved part (safe for client components). */
+export type ResolvedDayPart = {
+  sessionId: string;
+  partIndex: number;
+  label: string;
+  sessionKind?: string | null;
+  timeSlot?: string | null;
+  optionLabel?: string;
+  workoutId: string;
+  workoutName?: string;
+};
+
 /** Default labels when coach adds part 1/2/3 without custom names. */
 export function defaultPartLabel(partIndex: number, totalParts: number): string {
   if (totalParts <= 1) return "Main";

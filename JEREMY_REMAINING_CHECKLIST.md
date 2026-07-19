@@ -21,6 +21,8 @@ Your written feedback and the July 5 screen recording are **built and on prod**.
 
 Save each section after pasting. Use full YouTube URLs (`https://www.youtube.com/watch?v=…`).
 
+**Personal macros / nutrition for a client:** Admin → **Messages** → open that member → tap **Macros** quick-reply → fill blanks → send. (Public Nutrition page stays sample tiers only.)
+
 ---
 
 ## 2. Load real Adult Strength content
