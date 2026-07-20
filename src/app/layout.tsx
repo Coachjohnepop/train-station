@@ -11,22 +11,57 @@ import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
 
+/** Link-preview / social share image — First Class seat (not free-ticket rundown chair). */
+const SITE_OG_IMAGE = {
+  url: "/images/tickets/first-class.jpg",
+  width: 1024,
+  height: 683,
+  alt: "The Train Station — First Class",
+} as const;
+
+function siteOrigin(): string {
+  return (
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+    "https://www.thetrainstation.co"
+  );
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const brand = await getResolvedSiteBrand();
+  const title = brand.brandName || BRAND_NAME;
+  const description = brand.brandTagline || BRAND_TAGLINE;
+  const origin = siteOrigin();
+
   return {
-    title: brand.brandName || BRAND_NAME,
-    description: brand.brandTagline || BRAND_TAGLINE,
-    applicationName: brand.brandName || BRAND_NAME,
+    metadataBase: new URL(origin),
+    title,
+    description,
+    applicationName: title,
     manifest: "/manifest.webmanifest",
     appleWebApp: {
       capable: true,
       statusBarStyle: "black-translucent",
-      title: brand.brandName || BRAND_NAME,
+      title,
     },
     icons: {
       icon: brand.faviconUrl,
       shortcut: brand.faviconUrl,
       apple: brand.logoIconUrl,
+    },
+    openGraph: {
+      type: "website",
+      locale: "en_US",
+      url: origin,
+      siteName: title,
+      title,
+      description,
+      images: [SITE_OG_IMAGE],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [SITE_OG_IMAGE.url],
     },
   };
 }
