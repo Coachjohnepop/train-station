@@ -21,6 +21,8 @@ import DevModeSwitcher from "@/components/DevModeSwitcher";
 import LogoutButton from "@/components/LogoutButton";
 import ChatNavBadge from "@/components/ChatNavBadge";
 import CoachJoinLiveNavStrip from "@/components/CoachJoinLiveNavStrip";
+import UnreadAppBadge from "@/components/UnreadAppBadge";
+import PwaInstallHint from "@/components/PwaInstallHint";
 import type { SessionUser } from "@/lib/auth-session";
 import {
   readAdminNavCollapsed,
@@ -183,6 +185,7 @@ export default function AdminShell({
         <main className="min-h-0 flex-1 overflow-y-auto px-2 py-2 sm:px-3">
           {children}
         </main>
+        <UnreadAppBadge role="coach" />
         <CoachHelpAssistant />
       </div>
     );
@@ -216,9 +219,13 @@ export default function AdminShell({
           </div>
         </header>
         <main className="coach-messages-main min-h-0 flex-1 overflow-y-auto px-2 py-2 pb-[max(5.5rem,env(safe-area-inset-bottom))] sm:px-3 xl:pb-4">
+          <div className="mb-2">
+            <PwaInstallHint compact />
+          </div>
           {children}
         </main>
         <AdminMobileCoachNav onOpenMenu={openDrawer} />
+        <UnreadAppBadge role="coach" />
         {/* Drawer still available via More on bottom nav */}
         {drawerOpen ? (
           <div className="fixed inset-0 z-[60] xl:hidden" role="dialog" aria-modal="true">
@@ -466,6 +473,7 @@ export default function AdminShell({
       </div>
 
       <AdminMobileCoachNav onOpenMenu={openDrawer} />
+      <UnreadAppBadge role="coach" />
       <CoachHelpAssistant />
     </div>
   );

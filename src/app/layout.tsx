@@ -16,6 +16,13 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: brand.brandName || BRAND_NAME,
     description: brand.brandTagline || BRAND_TAGLINE,
+    applicationName: brand.brandName || BRAND_NAME,
+    manifest: "/manifest.webmanifest",
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "black-translucent",
+      title: brand.brandName || BRAND_NAME,
+    },
     icons: {
       icon: brand.faviconUrl,
       shortcut: brand.faviconUrl,

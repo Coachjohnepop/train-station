@@ -3,6 +3,8 @@ import IntakeBookingCelebrate from "@/components/IntakeBookingCelebrate";
 import LiveZoomJoinPrompt from "@/components/LiveZoomJoinPrompt";
 import MemberLiveZoomStrip from "@/components/MemberLiveZoomStrip";
 import ResumePathTracker from "@/components/ResumePathTracker";
+import UnreadAppBadge from "@/components/UnreadAppBadge";
+import PwaInstallHint from "@/components/PwaInstallHint";
 
 import MemberNav from "@/components/MemberNav";
 import MemberHeaderHomeLink from "@/components/MemberHeaderHomeLink";
@@ -84,11 +86,18 @@ export default function MemberShell({
         ) : null}
       </div>
 
-      <main className="mx-auto w-full min-w-0 max-w-lg overflow-x-clip md:max-w-3xl lg:max-w-6xl xl:max-w-7xl flex-1 px-4 py-6 md:px-6 lg:px-8">{children}</main>
+      <main className="mx-auto w-full min-w-0 max-w-lg overflow-x-clip md:max-w-3xl lg:max-w-6xl xl:max-w-7xl flex-1 px-4 py-6 md:px-6 lg:px-8">
+        <div className="mb-3">
+          <PwaInstallHint compact />
+        </div>
+        {children}
+      </main>
       <Suspense fallback={null}>
         <LiveZoomJoinPrompt />
       </Suspense>
       <IntakeBookingCelebrate />
+      {/* Home-screen icon badge + whistle when unread increases */}
+      <UnreadAppBadge role="member" />
     </div>
   );
 }
