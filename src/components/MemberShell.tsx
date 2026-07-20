@@ -11,6 +11,8 @@ import MemberNav from "@/components/MemberNav";
 import MemberHeaderHomeLink from "@/components/MemberHeaderHomeLink";
 import LogoutButton from "@/components/LogoutButton";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
+import UserBicepAvatar from "@/components/UserBicepAvatar";
+import Link from "next/link";
 
 import {
   MEMBERSHIP_THEME_LABELS,
@@ -50,12 +52,21 @@ export default function MemberShell({
       <div className="member-sticky-chrome sticky top-0 z-50">
         <header className="app-shell-header header-theme-clearance">
           <div className="mx-auto flex w-full max-w-lg md:max-w-3xl lg:max-w-6xl xl:max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-6 lg:px-8">
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
               <MemberHeaderHomeLink />
-              <div>
-                <p className="text-sm font-medium">Hi, {memberName}</p>
-                {memberEmail && <p className="text-[10px] text-[var(--muted)]">{memberEmail}</p>}
-              </div>
+              <Link
+                href="/member/account"
+                className="flex min-w-0 items-center gap-2 rounded-lg transition hover:opacity-90"
+                title="Account & settings"
+              >
+                <UserBicepAvatar size={34} title="Account" />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">Hi, {memberName}</p>
+                  {memberEmail && (
+                    <p className="truncate text-[10px] text-[var(--muted)]">{memberEmail}</p>
+                  )}
+                </div>
+              </Link>
             </div>
             <div className="flex flex-col items-end gap-1">
               <div className="flex items-center gap-2">

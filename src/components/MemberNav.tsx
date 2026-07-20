@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import ChatNavBadge from "@/components/ChatNavBadge";
+import UserBicepAvatar from "@/components/UserBicepAvatar";
 import { goMemberTodayHome } from "@/lib/member-today-home";
 import { memberCheckoutPath } from "@/lib/member-route-gates";
 import type { SignupPlan } from "@/lib/signup-plans";
@@ -175,6 +176,8 @@ export default function MemberNav({
           );
         }
 
+        const isAccountTab = item.href === "/member/account";
+
         return (
           <Link
             key={item.href}
@@ -185,6 +188,11 @@ export default function MemberNav({
               isScoresTab && scorePulse ? "member-nav-score-pulse" : ""
             } ${locked ? "opacity-75" : ""}`}
           >
+            {isAccountTab ? (
+              <span className="mb-0.5 inline-flex">
+                <UserBicepAvatar size={22} title="Account" />
+              </span>
+            ) : null}
             {item.label}
             {locked ? (
               <span className="absolute -right-0.5 -top-0.5 text-[8px] leading-none opacity-70" aria-hidden>

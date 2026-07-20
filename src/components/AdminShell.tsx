@@ -24,6 +24,7 @@ import CoachJoinLiveNavStrip from "@/components/CoachJoinLiveNavStrip";
 import UnreadAppBadge from "@/components/UnreadAppBadge";
 import PwaInstallHint from "@/components/PwaInstallHint";
 import PushAlertEnable from "@/components/PushAlertEnable";
+import UserBicepAvatar from "@/components/UserBicepAvatar";
 import type { SessionUser } from "@/lib/auth-session";
 import {
   readAdminNavCollapsed,
@@ -323,12 +324,15 @@ export default function AdminShell({
           />
           <aside className="absolute bottom-0 left-0 right-0 flex max-h-[85vh] flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--bg)] shadow-xl">
             <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-4 py-4">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{session?.name || "Coach"}</p>
-                <p className="truncate text-[10px] text-[var(--muted)]">
-                  {areaLabel}
-                  {session?.email ? ` · ${session.email}` : ""}
-                </p>
+              <div className="flex min-w-0 items-center gap-2.5">
+                <UserBicepAvatar size={36} title={session?.name || "Coach"} />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{session?.name || "Coach"}</p>
+                  <p className="truncate text-[10px] text-[var(--muted)]">
+                    {areaLabel}
+                    {session?.email ? ` · ${session.email}` : ""}
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
@@ -399,17 +403,23 @@ export default function AdminShell({
             )}
           </div>
           {!navCollapsed ? (
-            <div className="min-w-0 px-1">
-              <p className="truncate text-sm font-medium">{session?.name || "Coach"}</p>
-              <p className="truncate text-[10px] text-[var(--muted)]">
-                {areaLabel}
-                {session?.email ? ` · ${session.email}` : ""}
-              </p>
+            <div className="flex min-w-0 items-center gap-2.5 px-1">
+              <UserBicepAvatar size={36} title={session?.name || "Coach"} />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{session?.name || "Coach"}</p>
+                <p className="truncate text-[10px] text-[var(--muted)]">
+                  {areaLabel}
+                  {session?.email ? ` · ${session.email}` : ""}
+                </p>
+              </div>
             </div>
           ) : (
-            <p className="sr-only">
-              {session?.name || "Coach"} · {areaLabel}
-            </p>
+            <div className="flex justify-center px-0" title={session?.name || "Coach"}>
+              <UserBicepAvatar size={32} title={session?.name || "Coach"} />
+              <span className="sr-only">
+                {session?.name || "Coach"} · {areaLabel}
+              </span>
+            </div>
           )}
           <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
             <AdminAreaNav

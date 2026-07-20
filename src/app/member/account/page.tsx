@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import MemberAccountClient from "@/components/MemberAccountClient";
+import UserBicepAvatar from "@/components/UserBicepAvatar";
 import { getSessionUser } from "@/lib/auth";
 import {
   formatMembershipPaymentStatus,
@@ -23,11 +24,14 @@ export default async function MemberAccountPage() {
 
   return (
     <div className="space-y-4">
-      <section>
-        <h1 className="text-xl font-bold">Account &amp; settings</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Plan, password, notifications, and billing — all in one place.
-        </p>
+      <section className="flex items-start gap-3">
+        <UserBicepAvatar size={48} title={session.name || "Account"} />
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold">Account &amp; settings</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Plan, password, notifications, and billing — all in one place.
+          </p>
+        </div>
       </section>
       <MemberAccountClient membership={membership} email={session.email} />
     </div>
