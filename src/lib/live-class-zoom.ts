@@ -269,14 +269,44 @@ export async function markLiveClassZoomNotified(sessionDate?: string): Promise<v
   await saveStore(store);
 }
 
+/** How long members keep seeing "Join Live" after the coach starts hosting. */
+export const LIVE_CLASS_HOST_ACTIVE_MS = 2 * 60 * 60 * 1000; // 2 hours
+
 export async function markLiveClassHostStarted(sessionDate?: string): Promise<void> {
   const date = normalizeLiveSessionDate(sessionDate);
   const store = await loadStore({ preferFresh: true });
   const record = store[date];
   if (!record) return;
-  if (record.hostStartedAt) return;
+  // Always refresh start time when coach re-starts so members get a fresh window.
   store[date] = { ...record, hostStartedAt: new Date().toISOString() };
   await saveStore(store);
+}
+
+/** Clear the member-facing "coach is live" flag (room link may remain for re-start). */
+export async function clearLiveClassHostStarted(sessionDate?: string): Promise<void> {
+  const date = normalizeLiveSessionDate(sessionDate);
+  const store = await loadStore({ preferFresh: true });
+  const record = store[date];
+  if (!record || !record.hostStartedAt) return;
+  const { hostStartedAt: _drop, ...rest } = record;
+  store[date] = rest as LiveClassZoomRecord;
+  await saveStore(store);
+}
+
+/**
+ * True only while the coach has marked themselves live and the window hasn't expired.
+ * Creating a meeting alone is NOT enough — members must not see Join until host starts.
+ */
+export function isLiveClassHostActive(
+  record: LiveClassZoomRecord | null | undefined,
+  nowMs = Date.now(),
+): boolean {
+  if (!record?.hostStartedAt) return false;
+  if (record.demo) return false;
+  if (!record.joinUrl) return false;
+  const started = new Date(record.hostStartedAt).getTime();
+  if (Number.isNaN(started)) return false;
+  return nowMs - started < LIVE_CLASS_HOST_ACTIVE_MS;
 }
 
 export async function memberLiveZoomStatus(input: {
@@ -292,7 +322,7 @@ export async function memberLiveZoomStatus(input: {
   livePageUrl: string;
 }> {
   const date = normalizeLiveSessionDate(input.sessionDate);
-  const record = await getLiveClassZoom(date);
+  let record = await getLiveClassZoom(date);
 
   const base = process.env.NEXT_PUBLIC_APP_URL || "https://www.thetrainstation.co";
   const livePageUrl = `${base}/member/live`;
@@ -308,17 +338,24 @@ export async function memberLiveZoomStatus(input: {
     };
   }
 
-  // If coach created a real class Zoom for today, members see Join (not Ping).
-  // hostStartedAt refines copy; room existence is enough for the CTA.
+  // Auto-clear a stale host-started flag so Join doesn't stick all day.
+  if (record.hostStartedAt && !isLiveClassHostActive(record)) {
+    await clearLiveClassHostStarted(date);
+    record = (await getLiveClassZoom(date)) || record;
+  }
+
   const hasJoin = Boolean(record.joinUrl) && !record.demo;
-  const hostStarted = Boolean(record.hostStartedAt) || hasJoin;
+  const hostStarted = isLiveClassHostActive(record);
+  // Members may join only while the coach is actively hosting — not merely because
+  // a Zoom meeting object exists for today's date.
+  const canJoin = hasJoin && hostStarted;
 
   return {
     sessionDate: date,
     roomReady: hasJoin,
     hostStarted,
-    canJoin: hasJoin,
-    joinUrl: hasJoin ? record.joinUrl : null,
+    canJoin,
+    joinUrl: canJoin ? record.joinUrl : null,
     livePageUrl,
   };
 }

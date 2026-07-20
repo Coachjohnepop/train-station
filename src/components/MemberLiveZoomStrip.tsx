@@ -5,7 +5,6 @@
  * - Room ready / joinable → "Join Live Zoom Now"
  * - Otherwise → "Ping Coach to Start Zoom" (opens coach chat)
  */
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 type LiveZoomStatus = {
@@ -41,8 +40,16 @@ export default function MemberLiveZoomStrip({ embedded = false }: Props) {
     return () => clearInterval(id);
   }, [load]);
 
-  // Prefer API canJoin; also show join if host is live + we have a URL.
-  const showJoin = Boolean(status?.joinUrl && (status.canJoin || status.hostStarted));
+  // Only show Join when the API says the coach is actively hosting (not just "room exists").
+  const showJoin = Boolean(status?.canJoin && status?.joinUrl && status?.hostStarted);
+
+  // Hide the whole strip when nothing is live — no false "Join Live Zoom Now".
+  // Keep a quiet "Ping coach" only if we already know the status and coach isn't live.
+  if (!status) return null;
+  if (!showJoin) {
+    // Collapsed: don't nag every page load with a big blue bar when class isn't running.
+    return null;
+  }
 
   return (
     <div
@@ -55,32 +62,16 @@ export default function MemberLiveZoomStrip({ embedded = false }: Props) {
           <p className="text-[10px] font-semibold uppercase tracking-wider text-sky-300/90">
             Live class
           </p>
-          <p className="truncate text-xs text-sky-100/80">
-            {showJoin
-              ? status?.hostStarted
-                ? "Coach is live — join the room"
-                : "Zoom room ready"
-              : "Waiting for coach to open Zoom"}
-          </p>
+          <p className="truncate text-xs text-sky-100/80">Coach is live — join the room</p>
         </div>
-        {showJoin && status?.joinUrl ? (
-          <a
-            href={status.joinUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-primary shrink-0 px-3 py-2 text-xs font-bold sm:px-4 sm:text-sm"
-          >
-            Join Live Zoom Now
-          </a>
-        ) : (
-          <Link
-            href="/member/chat?ping=zoom"
-            className="btn-ghost shrink-0 border border-sky-400/40 bg-sky-500/15 px-3 py-2 text-xs font-bold text-sky-100 hover:bg-sky-500/25 sm:px-4 sm:text-sm"
-            title="Message your coach to start the live Zoom"
-          >
-            Ping Coach to Start Zoom
-          </Link>
-        )}
+        <a
+          href={status.joinUrl!}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-primary shrink-0 px-3 py-2 text-xs font-bold sm:px-4 sm:text-sm"
+        >
+          Join Live Zoom Now
+        </a>
       </div>
     </div>
   );

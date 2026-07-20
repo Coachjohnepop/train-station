@@ -27,7 +27,9 @@ export default function LiveZoomJoinPrompt() {
       if (!res.ok) return;
       setStatus(data);
       const dismissed = sessionStorage.getItem(dismissKey(data.sessionDate)) === "1";
-      const shouldShow = data.roomReady && data.canJoin && !dismissed;
+      // Only when coach has actually started hosting — not merely because a room exists.
+      const shouldShow =
+        Boolean(data.hostStarted && data.canJoin && data.joinUrl) && !dismissed;
       setVisible(shouldShow);
     } catch {
       /* ignore */

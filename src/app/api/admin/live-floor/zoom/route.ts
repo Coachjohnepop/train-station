@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireCoachStaff } from "@/lib/api-auth";
 import {
+  clearLiveClassHostStarted,
   ensureLiveClassZoom,
+  getLiveClassZoom,
+  isLiveClassHostActive,
   liveClassOpenUrlForCoach,
   markLiveClassHostStarted,
   markLiveClassZoomNotified,
@@ -86,7 +89,6 @@ export async function GET(request: Request) {
   const sessionDate = searchParams.get("date") ?? undefined;
   const coachEmail = auth.session.email;
 
-  const { getLiveClassZoom } = await import("@/lib/live-class-zoom");
   const record = await getLiveClassZoom(sessionDate);
 
   return NextResponse.json({
@@ -94,6 +96,32 @@ export async function GET(request: Request) {
     ready: await zoomReady({ coachEmail }),
     sdkConfigured: zoomMeetingSdkConfigured(),
     maxDurationMin: ZOOM_FREE_MAX_DURATION_MIN,
+    hostStarted: isLiveClassHostActive(record),
+    hostStartedAt: record?.hostStartedAt ?? null,
+    zoom: zoomPayload(record, coachEmail),
+  });
+}
+
+/** End member-facing "live" flag (coach finished class / false start). */
+export async function DELETE(request: Request) {
+  const auth = await requireCoachStaff();
+  if (!auth.ok) return auth.response;
+
+  let sessionDate: string | undefined;
+  try {
+    const body = await request.json();
+    sessionDate = typeof body?.sessionDate === "string" ? body.sessionDate : undefined;
+  } catch {
+    /* optional */
+  }
+
+  await clearLiveClassHostStarted(sessionDate);
+  const coachEmail = auth.session.email;
+  const record = await getLiveClassZoom(sessionDate);
+
+  return NextResponse.json({
+    ok: true,
+    hostStarted: false,
     zoom: zoomPayload(record, coachEmail),
   });
 }

@@ -25,6 +25,7 @@ export default function CoachJoinLiveNavStrip() {
   const [room, setRoom] = useState<ZoomRoom | null>(null);
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
+  const [hostStarted, setHostStarted] = useState(false);
 
   const sessionDate = new Date().toISOString().slice(0, 10);
 
@@ -56,6 +57,7 @@ export default function CoachJoinLiveNavStrip() {
         } else {
           setRoom(null);
         }
+        setHostStarted(Boolean(z.hostStarted));
         // Prefer floor API ready (S2S-aware) when present.
         if (typeof z.ready === "boolean") setReady(z.ready);
       }
@@ -102,6 +104,7 @@ export default function CoachJoinLiveNavStrip() {
       });
       if (typeof data.ready === "boolean") setReady(data.ready);
       if (asHost) {
+        setHostStarted(true);
         if (data.notified > 0) {
           setHint(`Live as host — link sent to ${data.notified} member${data.notified === 1 ? "" : "s"}.`);
         } else {
@@ -116,6 +119,31 @@ export default function CoachJoinLiveNavStrip() {
     } finally {
       setBusy(false);
       setTimeout(() => setHint(null), 5000);
+    }
+  }
+
+  async function endLiveForMembers() {
+    setBusy(true);
+    setHint(null);
+    try {
+      const res = await fetch("/api/admin/live-floor/zoom", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionDate }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setHint((data as { error?: string }).error || "Could not end live flag.");
+        return;
+      }
+      setHostStarted(false);
+      setHint("Members no longer see Join Live Zoom.");
+      void refresh();
+    } catch {
+      setHint("Could not end live flag.");
+    } finally {
+      setBusy(false);
+      setTimeout(() => setHint(null), 4000);
     }
   }
 
@@ -170,6 +198,17 @@ export default function CoachJoinLiveNavStrip() {
           </Link>
         )}
       </div>
+      {hostStarted && room?.isHost !== false ? (
+        <button
+          type="button"
+          className="text-[10px] font-semibold text-amber-200/90 underline-offset-2 hover:underline disabled:opacity-50"
+          disabled={busy}
+          onClick={() => void endLiveForMembers()}
+          title="Hide Join Live Zoom for members (class finished)"
+        >
+          End live for members
+        </button>
+      ) : null}
       {(room?.openUrl || room?.hostUrl || room?.joinUrl) && ready ? (
         <a
           href={room.openUrl || (room.isHost === false ? room.joinUrl : room.hostUrl)}
