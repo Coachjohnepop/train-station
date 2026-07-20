@@ -14,6 +14,7 @@ import { useEffect, useRef } from "react";
 import { clearHomeScreenBadge, setHomeScreenBadge } from "@/lib/app-badge";
 import { playMessageAlert } from "@/lib/play-message-alert";
 import { ensureServiceWorker, setBadgeViaServiceWorker } from "@/lib/push-client";
+// ensureServiceWorker pulls latest /sw.js?v=… so push handler is present when app is closed
 
 type Props = {
   role: "coach" | "member";

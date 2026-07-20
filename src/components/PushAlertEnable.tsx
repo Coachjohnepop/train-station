@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * One-tap enable for phone notifications + home-screen badge.
- * Required on iPhone: Add to Home Screen first, then grant Notifications.
+ * Enable / re-enable phone notifications + home-screen badge.
+ * iPhone: must open Home Screen app (not Safari), then Enable / Send test.
  */
 
 import { useEffect, useState } from "react";
@@ -11,6 +11,7 @@ import {
   getPushPermission,
   isPushSupported,
   isStandalonePwa,
+  sendTestPushAlert,
 } from "@/lib/push-client";
 
 const DISMISS_KEY = "ts-push-enable-dismissed";
@@ -20,47 +21,82 @@ export default function PushAlertEnable({ compact = false }: { compact?: boolean
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [standalone, setStandalone] = useState(false);
+  const [permission, setPermission] = useState<NotificationPermission | "unsupported" | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!isPushSupported()) return;
-    try {
-      if (window.localStorage.getItem(DISMISS_KEY) === "1") return;
-    } catch {
-      /* ignore */
-    }
-
     const installed = isStandalonePwa();
     setStandalone(installed);
 
     void (async () => {
       const perm = await getPushPermission();
-      if (perm === "granted") {
-        // Already allowed — quietly re-sync subscription
+      setPermission(perm);
+
+      // Always show controls when installed but not granted, or not installed.
+      // If already granted, show a slim "test / re-enable" strip (iOS often needs re-bind).
+      if (perm === "granted" && installed) {
+        // Quiet re-sync of SW + subscription
         void enablePushAlerts();
+        setVisible(true);
         return;
       }
+
+      try {
+        if (window.localStorage.getItem(DISMISS_KEY) === "1" && perm !== "denied") {
+          // Still show if not standalone — they need the install tip
+          if (installed) return;
+        }
+      } catch {
+        /* ignore */
+      }
+
       if (perm === "denied") {
-        setStatus("Notifications blocked in Settings.");
+        setStatus("Notifications blocked in Settings → Train Station.");
       }
       setVisible(true);
     })();
   }, []);
 
-  async function onEnable() {
+  async function onEnable(force: boolean) {
     setBusy(true);
     setStatus(null);
-    const result = await enablePushAlerts();
+    const result = await enablePushAlerts({ forceResubscribe: force });
     setBusy(false);
     if (result.ok) {
-      setStatus("Alerts on — you’ll get a badge + notification for new messages.");
+      setPermission("granted");
+      setStandalone(true);
+      setStatus("Alerts on. Tap Send test, then lock the phone — you should get a banner.");
       try {
         window.localStorage.setItem(DISMISS_KEY, "1");
       } catch {
         /* ignore */
       }
-      window.setTimeout(() => setVisible(false), 2200);
     } else {
       setStatus(result.error || "Could not enable.");
+      if (result.standalone === false) setStandalone(false);
+    }
+  }
+
+  async function onTest() {
+    setBusy(true);
+    setStatus(null);
+    // Ensure sub is fresh for this login before testing
+    const en = await enablePushAlerts({ forceResubscribe: false });
+    if (!en.ok) {
+      setBusy(false);
+      setStatus(en.error || "Enable alerts first.");
+      return;
+    }
+    const result = await sendTestPushAlert();
+    setBusy(false);
+    if (result.ok) {
+      setStatus(
+        `Test sent to ${result.sent} device(s). Lock the phone now — look for banner + badge.`,
+      );
+    } else {
+      setStatus(result.error || "Test failed.");
     }
   }
 
@@ -75,6 +111,8 @@ export default function PushAlertEnable({ compact = false }: { compact?: boolean
 
   if (!visible) return null;
 
+  const granted = permission === "granted";
+
   return (
     <div
       className={`rounded-xl border border-amber-400/40 bg-amber-500/10 text-amber-50 ${
@@ -85,26 +123,51 @@ export default function PushAlertEnable({ compact = false }: { compact?: boolean
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1 space-y-1">
           <p className="font-semibold leading-snug">
-            {standalone
-              ? "Turn on message alerts"
-              : "Add to Home Screen, then enable alerts"}
+            {!standalone
+              ? "Add to Home Screen for phone alerts"
+              : granted
+                ? "Phone alerts"
+                : "Turn on message alerts"}
           </p>
           <p className="leading-snug text-amber-100/85">
-            {standalone
-              ? "Allow notifications so new coach messages show a red badge and ping your phone — even when the app is closed."
-              : "iPhone: Share → Add to Home Screen. Open the app icon, then tap Enable alerts here. Android: Install app from the browser menu."}
+            {!standalone
+              ? "iPhone: Share → Add to Home Screen → open that icon (not Safari). Then Enable alerts. Safari tabs cannot badge when closed."
+              : granted
+                ? "If you got no badge earlier: tap Re-enable, then Send test, then lock the phone."
+                : "Allow notifications so new messages ping your phone and show a red badge when the app is closed."}
           </p>
-          {status && <p className="text-[10px] text-amber-100/90">{status}</p>}
+          {status && <p className="text-[10px] font-medium text-amber-50">{status}</p>}
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void onEnable()}
-            className="rounded-lg bg-amber-400/90 px-2.5 py-1.5 text-[11px] font-bold text-amber-950 hover:bg-amber-300 disabled:opacity-60"
-          >
-            {busy ? "…" : "Enable alerts"}
-          </button>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+          {!granted ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void onEnable(true)}
+              className="rounded-lg bg-amber-400/90 px-2.5 py-1.5 text-[11px] font-bold text-amber-950 hover:bg-amber-300 disabled:opacity-60"
+            >
+              {busy ? "…" : "Enable alerts"}
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void onTest()}
+                className="rounded-lg bg-amber-400/90 px-2.5 py-1.5 text-[11px] font-bold text-amber-950 hover:bg-amber-300 disabled:opacity-60"
+              >
+                {busy ? "…" : "Send test"}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void onEnable(true)}
+                className="rounded-lg border border-amber-300/40 px-2 py-1.5 text-[10px] font-semibold text-amber-100 hover:bg-amber-500/20 disabled:opacity-60"
+              >
+                Re-enable
+              </button>
+            </>
+          )}
           <button
             type="button"
             onClick={dismiss}

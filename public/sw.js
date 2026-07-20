@@ -1,11 +1,13 @@
-/* Train Station PWA service worker
+/* Train Station PWA service worker v3
  * - Installability
- * - Web Push → notification + home-screen badge
- * - Network-first (no offline cache; keeps coach/member data fresh)
+ * - Web Push → notification + home-screen badge (must showNotification for iOS)
+ * - Network-first (no offline cache)
  */
+const SW_VERSION = "ts-sw-v3";
 
-self.addEventListener("install", () => {
+self.addEventListener("install", (event) => {
   self.skipWaiting();
+  event.waitUntil(Promise.resolve(SW_VERSION));
 });
 
 self.addEventListener("activate", (event) => {
@@ -16,7 +18,6 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(fetch(event.request));
 });
 
-/** Home-screen badge from SW (works when app is backgrounded after a push). */
 async function setBadge(count) {
   try {
     if (typeof self.registration.setAppBadge === "function") {
@@ -27,7 +28,7 @@ async function setBadge(count) {
       }
     }
   } catch {
-    /* unsupported */
+    /* badge optional */
   }
 }
 
@@ -35,7 +36,7 @@ self.addEventListener("push", (event) => {
   let data = {
     title: "Train Station",
     body: "New message",
-    url: "/",
+    url: "/member/chat",
     unread: 1,
     tag: "train-station-chat",
   };
@@ -47,7 +48,7 @@ self.addEventListener("push", (event) => {
     }
   } catch {
     try {
-      const text = event.data?.text();
+      const text = event.data && event.data.text && event.data.text();
       if (text) data.body = text;
     } catch {
       /* ignore */
@@ -56,26 +57,39 @@ self.addEventListener("push", (event) => {
 
   const unread = Math.max(1, Math.floor(Number(data.unread) || 1));
 
+  // iOS: showNotification is required for the push to surface when the app is closed.
+  // Do notification first; badge second so a badge failure never drops the alert.
   event.waitUntil(
     (async () => {
+      try {
+        await self.registration.showNotification(data.title || "Train Station", {
+          body: data.body || "New message",
+          icon: "/images/logo-icon.png",
+          badge: "/images/logo-icon.png",
+          tag: data.tag || "train-station-chat",
+          renotify: true,
+          requireInteraction: false,
+          data: { url: data.url || "/member/chat" },
+        });
+      } catch (err) {
+        // Last-resort empty notification so iOS still delivers something
+        try {
+          await self.registration.showNotification("Train Station", {
+            body: "New message",
+            tag: "train-station-chat-fallback",
+          });
+        } catch {
+          /* ignore */
+        }
+      }
       await setBadge(unread);
-      await self.registration.showNotification(data.title || "Train Station", {
-        body: data.body || "New message",
-        icon: "/images/logo-icon.png",
-        badge: "/images/logo-icon.png",
-        tag: data.tag || "train-station-chat",
-        renotify: true,
-        data: { url: data.url || "/" },
-        // iOS uses system sound; vibrate helps Android
-        vibrate: [120, 60, 120],
-      });
     })(),
   );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || "/";
+  const url = (event.notification.data && event.notification.data.url) || "/member/chat";
   event.waitUntil(
     (async () => {
       const all = await self.clients.matchAll({
@@ -89,7 +103,7 @@ self.addEventListener("notificationclick", (event) => {
             try {
               await client.navigate(url);
             } catch {
-              /* navigate may fail on older engines */
+              /* older engines */
             }
           }
           return;
@@ -102,7 +116,6 @@ self.addEventListener("notificationclick", (event) => {
   );
 });
 
-/** Page can ask SW to set badge (e.g. after poll while still open). */
 self.addEventListener("message", (event) => {
   const msg = event.data || {};
   if (msg.type === "SET_BADGE") {
@@ -110,5 +123,8 @@ self.addEventListener("message", (event) => {
   }
   if (msg.type === "CLEAR_BADGE") {
     event.waitUntil(setBadge(0));
+  }
+  if (msg.type === "PING") {
+    event.ports && event.ports[0] && event.ports[0].postMessage({ ok: true, version: SW_VERSION });
   }
 });
