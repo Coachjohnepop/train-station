@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import PrescriptionExamplesReview from "@/components/PrescriptionExamplesReview";
 import { getSessionUser } from "@/lib/auth";
-import { canAccessPlatformAdmin, defaultCoachAdminPath } from "@/lib/staff-access";
+import { defaultCoachAdminPath } from "@/lib/admin-nav-sections";
+import { canAccessPlatformAdmin } from "@/lib/staff-access";
 
 /**
  * Super-admin / platform catalog tool — prescription pattern variables.
