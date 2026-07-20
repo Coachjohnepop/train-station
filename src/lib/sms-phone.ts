@@ -1,8 +1,8 @@
 /** Phone normalization / display format / Twilio env helpers (no server-only). */
 
 /**
- * Train Station display format: (area.prefix.suffix)
- * Example: (916.284.1994)
+ * Train Station display format: area.prefix.suffix
+ * Example: 916.284.1994
  */
 export function normalizePhoneDigits(phone: string): string {
   return String(phone || "").replace(/\D/g, "");
@@ -17,7 +17,8 @@ export function nationalPhoneDigits(phone: string): string {
 }
 
 /**
- * Format any phone-ish input as (AAA.PPP.SSSS).
+ * Format any phone-ish input as AAA.PPP.SSSS (no parentheses).
+ * Example: 916.284.1994
  * Partial entry formats progressively while typing.
  * Empty / non-digit → "".
  */
@@ -29,11 +30,9 @@ export function formatPhoneDisplay(phone: string | null | undefined): string {
   const prefix = d.slice(3, 6);
   const suffix = d.slice(6, 10);
 
-  if (d.length <= 3) return `(${area}`;
-  if (d.length <= 6) return `(${area}.${prefix}`;
-  // Close the paren only when we have a full 10-digit national number.
-  if (d.length < 10) return `(${area}.${prefix}.${suffix}`;
-  return `(${area}.${prefix}.${suffix})`;
+  if (d.length <= 3) return area;
+  if (d.length <= 6) return `${area}.${prefix}`;
+  return `${area}.${prefix}.${suffix}`;
 }
 
 /**

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Phone input that always displays Train Station format: (916.284.1994)
+ * Phone input that always displays Train Station format: 916.284.1994
  */
 
 import { formatPhoneInputValue } from "@/lib/sms-phone";
@@ -26,7 +26,7 @@ export default function PhoneInput({
   onBlur,
   name = "phone",
   id,
-  placeholder = "(916.284.1994)",
+  placeholder = "916.284.1994",
   className = "input mt-1 w-full",
   autoComplete = "tel",
   disabled,
