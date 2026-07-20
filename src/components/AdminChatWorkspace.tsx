@@ -21,45 +21,38 @@ import {
 } from "@/lib/chat-panel-resize";
 
 /**
- * Stick thread strip under frozen coach chrome:
- * - mobile/tablet: sticky app header
- * - desktop: top of main scroll (sidebar is separate column)
- * Also accounts for AdminPersistenceBanner when present.
+ * Stick jelly-bean strip under slim Messages chrome (coach-messages-sticky-chrome)
+ * or under the generic mobile app header when not in messages-focus shell.
  */
 function useCoachChromeOffset(): number {
   const [offset, setOffset] = useState(0);
   useEffect(() => {
     const sync = () => {
+      // Prefer the slim Messages focus header when present.
+      const messagesChrome = document.querySelector(".coach-messages-sticky-chrome");
+      if (messagesChrome instanceof HTMLElement) {
+        // Main scrolls under a sticky header outside main → sticky top: 0 inside main.
+        setOffset(0);
+        return;
+      }
       let top = 0;
-      // Mobile / tablet sticky header only (hidden on xl).
       if (!window.matchMedia("(min-width: 1280px)").matches) {
         const header = document.querySelector("header.app-shell-header");
         if (header instanceof HTMLElement) {
           top += Math.ceil(header.getBoundingClientRect().height);
         }
       }
-      // Persistence banner sits above page content when visible.
-      const banner = document.querySelector("[data-admin-persistence-banner]");
-      if (banner instanceof HTMLElement) {
-        const r = banner.getBoundingClientRect();
-        // Only add if it's still in the sticky/top zone
-        if (r.bottom > 0 && r.top < 120) {
-          top += Math.ceil(r.height);
-        }
-      }
       setOffset(top);
     };
     sync();
     window.addEventListener("resize", sync);
-    window.addEventListener("scroll", sync, { passive: true });
-    const header = document.querySelector("header.app-shell-header");
-    const banner = document.querySelector("[data-admin-persistence-banner]");
     const ro = new ResizeObserver(sync);
-    if (header instanceof HTMLElement) ro.observe(header);
-    if (banner instanceof HTMLElement) ro.observe(banner);
+    const el =
+      document.querySelector(".coach-messages-sticky-chrome") ||
+      document.querySelector("header.app-shell-header");
+    if (el instanceof HTMLElement) ro.observe(el);
     return () => {
       window.removeEventListener("resize", sync);
-      window.removeEventListener("scroll", sync);
       ro.disconnect();
     };
   }, []);
@@ -383,144 +376,113 @@ export default function AdminChatWorkspace({
   return (
     <div className="space-y-0">
       {/*
-        Sticky outside overflow-hidden shell (same pattern as member Messages).
-        All threads + badges stay visible while the conversation scrolls.
+        Jelly-bean strip: sticky + large touch targets so coaches can always tap a member.
+        Slim messages shell keeps this under a short header (top: 0).
       */}
       <div
-        className="admin-chat-threads-lock sticky z-40 -mx-0.5 mb-2 rounded-xl border border-violet-400/40 bg-[color-mix(in_srgb,var(--bg)_90%,var(--surface))] px-0 shadow-[0_10px_28px_rgba(0,0,0,0.22)] backdrop-blur-md"
+        className="admin-chat-threads-lock sticky z-40 mb-2 rounded-xl border border-violet-400/50 bg-[color-mix(in_srgb,var(--bg)_88%,var(--surface))] shadow-[0_10px_28px_rgba(0,0,0,0.28)] backdrop-blur-md"
         style={{ top: Math.max(0, chromeOffset) }}
       >
-        <div className="flex border-b border-[var(--border)] lg:hidden">
+        <div className="flex items-center gap-1 border-b border-[var(--border)]/80 px-2 py-1">
           <button
             type="button"
             onClick={() => setMobilePanel("inbox")}
-            className={`flex flex-1 items-center justify-center gap-2 py-3 text-sm font-semibold transition ${
+            className={`min-h-[40px] rounded-lg px-2.5 text-[11px] font-semibold lg:hidden ${
               mobilePanel === "inbox"
-                ? "border-b-2 border-violet-400 bg-violet-500/10 text-violet-200"
+                ? "bg-violet-500/20 text-violet-100"
                 : "text-[var(--muted)]"
             }`}
           >
-            Inbox
-            {totalUnread > 0 && (
-              <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white">
-                {totalUnread}
+            List
+            {totalUnread > 0 ? (
+              <span className="ml-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[9px] font-bold text-white">
+                {totalUnread > 9 ? "9+" : totalUnread}
               </span>
-            )}
+            ) : null}
           </button>
+          <p className="min-w-0 flex-1 truncate text-[10px] font-bold uppercase tracking-wide text-violet-200/90">
+            Tap a member
+          </p>
+          {totalUnread > 0 ? (
+            <button
+              type="button"
+              onClick={() => void clearAllBadges()}
+              className="min-h-[40px] shrink-0 rounded-lg border border-violet-400/40 bg-violet-500/15 px-2 text-[10px] font-semibold text-violet-100"
+            >
+              Clear badges
+            </button>
+          ) : null}
           <button
             type="button"
-            onClick={() => activeId && setMobilePanel("chat")}
-            disabled={!activeId}
-            className={`flex flex-1 items-center justify-center gap-2 py-3 text-sm font-semibold transition ${
-              mobilePanel === "chat"
-                ? "border-b-2 border-emerald-400 bg-emerald-500/10 text-emerald-200"
-                : "text-[var(--muted)] disabled:opacity-40"
-            }`}
+            onClick={() => void refreshThreads()}
+            className="min-h-[40px] shrink-0 px-2 text-[10px] font-medium text-violet-300"
           >
-            Chat
+            ↻
           </button>
         </div>
 
-        <div className="bg-violet-950/25 px-3 py-2.5">
-          <div className="mb-1.5 flex items-center justify-between gap-2">
-            <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-violet-200">
-              All threads
-              {totalUnread > 0 ? (
-                <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[9px] font-bold normal-case tracking-normal text-white">
-                  {totalUnread > 99 ? "99+" : totalUnread}
-                </span>
-              ) : (
-                <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold normal-case tracking-normal text-[var(--muted)]">
-                  clear
-                </span>
-              )}
-            </p>
-            <div className="flex items-center gap-2">
-              <p className="hidden text-[10px] text-[var(--muted)] sm:block">
-                Locked top · badges always visible
-              </p>
-              {totalUnread > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => void clearAllBadges()}
-                  className="shrink-0 rounded-lg border border-violet-400/40 bg-violet-500/15 px-2 py-1 text-[10px] font-semibold text-violet-100 hover:bg-violet-500/25"
-                  title="Clear every inbox badge (messages stay — badge returns on new replies)"
-                >
-                  Clear all badges
-                </button>
-              ) : null}
+        {/* Jelly beans — primary control, always tappable */}
+        <div className="flex gap-2 overflow-x-auto px-2 py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {memberRows.map((m) => {
+            const unread = m.threadId ? unreadByThread[m.threadId] || 0 : 0;
+            const active = m.id === activeMemberId;
+            const modeColors = CHAT_MODE_COLORS[m.coachingMode];
+            return (
               <button
+                key={m.id}
                 type="button"
-                onClick={() => void refreshThreads()}
-                className="text-[10px] font-medium text-violet-300 hover:underline"
+                onClick={() => selectMember(m.id, m.threadId)}
+                className={`inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-sm font-semibold transition active:scale-[0.98] ${
+                  active
+                    ? `${modeColors.chip} ring-2 ring-offset-1 ring-offset-[var(--bg)] ${modeColors.chipText}`
+                    : unread > 0
+                      ? "bg-rose-500/15 text-[var(--text)] ring-2 ring-rose-400/50"
+                      : "bg-[var(--surface-2)] text-[var(--muted)] ring-1 ring-[var(--border)] hover:text-[var(--foreground)]"
+                }`}
+                title={m.name}
               >
-                Refresh
-              </button>
-            </div>
-          </div>
-          <InboxLegend />
-          <div className="mt-1.5 flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {memberRows.map((m) => {
-              const unread = m.threadId ? unreadByThread[m.threadId] || 0 : 0;
-              const active = m.id === activeMemberId;
-              const modeColors = CHAT_MODE_COLORS[m.coachingMode];
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => selectMember(m.id, m.threadId)}
-                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                    active
-                      ? `${modeColors.chip} ring-1 ${modeColors.chipText}`
-                      : unread > 0
-                        ? "bg-rose-500/10 text-[var(--text)] ring-1 ring-rose-400/40"
-                        : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"
-                  }`}
-                  title={m.name}
+                <span
+                  className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold text-white ${memberAvatarColor(m.id)}`}
                 >
-                  <span
-                    className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white ${memberAvatarColor(m.id)}`}
-                  >
-                    {memberInitials(m.name)}
+                  {memberInitials(m.name)}
+                </span>
+                <span className="max-w-[8rem] truncate">{m.name.split(" ")[0]}</span>
+                {unread > 0 ? (
+                  <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#ff3b30] px-1.5 text-[10px] font-bold text-white">
+                    {unread > 9 ? "9+" : unread}
                   </span>
-                  <span className="max-w-[7rem] truncate">{m.name.split(" ")[0]}</span>
-                  {unread > 0 ? (
-                    <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[9px] font-bold text-white">
-                      {unread > 9 ? "9+" : unread}
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
-            {cohortThreads.map((t) => {
-              const unread = unreadByThread[t.id] || 0;
-              const active = t.id === activeId && !activeMemberId;
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => selectCohort(t.id)}
-                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                    active
-                      ? `${CHAT_COHORT_COLORS.chip} ring-1 ${CHAT_COHORT_COLORS.chipText}`
-                      : unread > 0
-                        ? "bg-rose-500/10 text-[var(--text)] ring-1 ring-rose-400/40"
-                        : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"
-                  }`}
-                >
-                  {t.title}
-                  {unread > 0 ? (
-                    <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[9px] font-bold text-white">
-                      {unread > 9 ? "9+" : unread}
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
-            {memberRows.length === 0 && cohortThreads.length === 0 ? (
-              <p className="px-1 text-xs text-[var(--muted)]">No threads yet.</p>
-            ) : null}
-          </div>
+                ) : null}
+              </button>
+            );
+          })}
+          {cohortThreads.map((t) => {
+            const unread = unreadByThread[t.id] || 0;
+            const active = t.id === activeId && !activeMemberId;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => selectCohort(t.id)}
+                className={`inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-sm font-semibold transition active:scale-[0.98] ${
+                  active
+                    ? `${CHAT_COHORT_COLORS.chip} ring-2 ${CHAT_COHORT_COLORS.chipText}`
+                    : unread > 0
+                      ? "bg-rose-500/15 text-[var(--text)] ring-2 ring-rose-400/50"
+                      : "bg-[var(--surface-2)] text-[var(--muted)] ring-1 ring-[var(--border)]"
+                }`}
+              >
+                {t.title}
+                {unread > 0 ? (
+                  <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#ff3b30] px-1.5 text-[10px] font-bold text-white">
+                    {unread > 9 ? "9+" : unread}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+          {memberRows.length === 0 && cohortThreads.length === 0 ? (
+            <p className="px-2 py-2 text-xs text-[var(--muted)]">No threads yet.</p>
+          ) : null}
         </div>
       </div>
 

@@ -55,7 +55,18 @@ export default function AdminShell({
 }: Props) {
   const pathname = usePathname();
   const coachFloorFocus = pathname.startsWith("/admin/today");
+  /** Slim chrome on phone/tablet Messages so jelly beans stay sticky and tappable. Desktop keeps full nav. */
+  const [coachMessagesFocus, setCoachMessagesFocus] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1279px)");
+    const sync = () =>
+      setCoachMessagesFocus(mq.matches && pathname.startsWith("/admin/chat"));
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, [pathname]);
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [navWidth, setNavWidth] = useState(ADMIN_NAV_WIDTH_DEFAULT);
   const [navResizing, setNavResizing] = useState(false);
@@ -172,6 +183,74 @@ export default function AdminShell({
         <main className="min-h-0 flex-1 overflow-y-auto px-2 py-2 sm:px-3">
           {children}
         </main>
+        <CoachHelpAssistant />
+      </div>
+    );
+  }
+
+  // Messages: slim top chrome so member jelly-bean chips freeze and stay tappable.
+  if (coachMessagesFocus) {
+    return (
+      <div className="coach-messages-shell flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-[var(--bg)]">
+        <header className="coach-messages-sticky-chrome sticky top-0 z-50 shrink-0 border-b border-violet-500/30 bg-[var(--bg)]/95 backdrop-blur-sm">
+          <div className="flex min-h-[44px] items-center justify-between gap-2 px-2 py-1.5 sm:px-3">
+            <Link
+              href="/admin/day"
+              className="btn-ghost min-h-[40px] shrink-0 px-2 text-xs font-semibold"
+            >
+              ← Board
+            </Link>
+            <p className="min-w-0 truncate text-center text-xs font-bold tracking-tight">
+              Messages
+            </p>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <Link
+                href="/admin/today"
+                className="btn-ghost min-h-[40px] px-2 text-xs font-semibold"
+              >
+                Today
+              </Link>
+              <LogoutButton compact className="shrink-0" />
+            </div>
+          </div>
+        </header>
+        <main className="coach-messages-main min-h-0 flex-1 overflow-y-auto px-2 py-2 pb-[max(5.5rem,env(safe-area-inset-bottom))] sm:px-3 xl:pb-4">
+          {children}
+        </main>
+        <AdminMobileCoachNav onOpenMenu={openDrawer} />
+        {/* Drawer still available via More on bottom nav */}
+        {drawerOpen ? (
+          <div className="fixed inset-0 z-[60] xl:hidden" role="dialog" aria-modal="true">
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/60"
+              aria-label="Close menu"
+              onClick={closeDrawer}
+            />
+            <aside className="absolute bottom-0 left-0 right-0 flex max-h-[85vh] flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--bg)] shadow-xl">
+              <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-4 py-3">
+                <p className="text-sm font-medium">Menu</p>
+                <button
+                  type="button"
+                  onClick={closeDrawer}
+                  className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--muted)]"
+                  aria-label="Close menu"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="overflow-y-auto px-3 py-4">
+                <AdminAreaNav
+                  dualWorkspace={dualWorkspace}
+                  canCoach={canCoach}
+                  canPlatform={canPlatform}
+                  onNavClick={closeDrawer}
+                  preferDashboardStorageKey="ts-admin-prefer-dashboard"
+                />
+              </div>
+            </aside>
+          </div>
+        ) : null}
         <CoachHelpAssistant />
       </div>
     );
