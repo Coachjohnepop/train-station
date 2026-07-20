@@ -333,8 +333,19 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-07-19  
-**Status:** **Venmo real-money path LIVE** on prod (same business bank as Stripe). Stripe still **Test** for cards. SMS **PARKED**. Zoom Jeremy OK. Messages quick-replies + multi-part Today shipped. Full open list → **OPEN BACKLOG**.
+**Date:** 2026-07-20  
+**Status:** **Venmo LIVE** · Stripe **Test** · SMS **PARKED**. Push/badge + community targeting + member Account hub shipped. Book Call hang fixed. Full open list → **OPEN BACKLOG**.
+
+### Jul 20 — checklist pass + fixes
+- **Book Call hang:** members were calling staff-only `/api/admin/contact` → stuck on “Loading booking info…”. Now `/api/bookings/contact` + Calendly fallback (`calendly.com/jeremy-thetrainstation/new-meeting`).
+- **Web Push / PWA badge:** VAPID on Vercel; SW v3; Enable alerts is **one-time**; manage under Account / Settings. Only **john@bcxvoice.com** device subscribed so far — Jeremy still needs Enable once.
+- **Community:** Everyone (`station`) vs by-program cohorts; coach multi-select post.
+- **Zoom Join Live:** only when host actually started (not merely room exists); 2h window + End live for members.
+- **Phone format:** `916.284.1994` (dots, no parens) on inputs + Leads display.
+- **Member Account:** password reset, notifications, seat-art **upgrades only**, downgrade + confirm in Membership, smaller plan pill, flexed-bicep avatar for all users.
+- **Loop-test fixes:** `localTodayIso` uses `APP_TIMEZONE` default **America/Los_Angeles** (Vercel UTC was shifting “today”); chat SMS defaults **off** unless explicit; ensure MemberProfile so Account doesn’t 404.
+- **Content audit:** Adult has linked days through today; 4 live day templates; 0 junk workouts left; leads = Jayden (615.636.2074), Lemon, Gator, bcxvoice.
+- **Money:** `/api/payments/public` → `venmo.hasQr: true`, `@JeremyByrdCSCS`; `stripeTestMode: true`.
 
 ### Jul 19 — Venmo LIVE + money manuals
 - **Venmo on prod:** Blob landing media set — QR `…/images/venmo-jeremy-qr.png`, handle `@JeremyByrdCSCS`, instructions note **same Train Station business account as Stripe bank deposits**. `/api/payments/public` → `venmo.hasQr: true`.
