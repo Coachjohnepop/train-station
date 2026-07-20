@@ -72,13 +72,17 @@ export default async function AdminLeadsPage() {
                       {lead.email}
                     </a>
                   </td>
-                  <td className="px-4 py-3 text-[var(--muted)]">
+                  <td className="px-4 py-3 font-mono text-[var(--text)]">
                     {lead.phone ? (
-                      <a href={`tel:${lead.phone}`} className="hover:underline">
-                        {formatPhoneDisplay(lead.phone)}
+                      <a
+                        href={`tel:${toE164(lead.phone)}`}
+                        className="hover:text-accent hover:underline"
+                        title={lead.phone}
+                      >
+                        {formatPhoneDisplay(lead.phone) || lead.phone}
                       </a>
                     ) : (
-                      "—"
+                      <span className="text-[var(--muted)]">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-[var(--muted)]">
