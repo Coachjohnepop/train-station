@@ -128,15 +128,16 @@ export default function MemberAccountClient({
 
   const paidPlan = membership.plan !== "explorer";
   const currentPlan = membership.plan as SignupPlan;
+  const hasSeatArt = Boolean(seatArtForPlan(currentPlan));
 
   return (
     <div className="space-y-4">
       {/* Current plan */}
-      <div className={`${paidPlan ? "card payment-seat-card" : "card"} space-y-3`}>
-        {paidPlan && (
+      <div className={`${hasSeatArt ? "card payment-seat-card" : "card"} space-y-3`}>
+        {hasSeatArt && (
           <MembershipSeatArt plan={currentPlan} className="w-full" alt={`${membership.planLabel} seating`} />
         )}
-        <div className={paidPlan ? "payment-seat-card__body space-y-3 !pt-0" : "space-y-3"}>
+        <div className={hasSeatArt ? "payment-seat-card__body space-y-3 !pt-0" : "space-y-3"}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-wide text-[var(--muted)]">Your ticket</p>

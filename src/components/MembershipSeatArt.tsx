@@ -25,13 +25,15 @@ export default function MembershipSeatArt({
   const src =
     (ticketId ? seatArtForTicketId(ticketId) : null) ||
     (plan ? seatArtForPlan(plan) : null) ||
-    (membershipTier && membershipTier !== "explorer"
+    (membershipTier
       ? seatArtForPlan(
           membershipTier === "member"
             ? "member"
             : membershipTier === "business"
               ? "business"
-              : "pro",
+              : membershipTier === "pro"
+                ? "pro"
+                : "explorer",
         )
       : null);
 
@@ -39,13 +41,15 @@ export default function MembershipSeatArt({
 
   const label =
     alt ||
-    (ticketId === "coach-class"
-      ? "Coach Class train seating"
-      : ticketId === "business-class"
-        ? "Business Class train seating"
-        : ticketId === "first-class"
-          ? "1st Class train seating"
-          : "Train seating");
+    (ticketId === "free"
+      ? "Explorer free ticket seating"
+      : ticketId === "coach-class"
+        ? "Coach Class train seating"
+        : ticketId === "business-class"
+          ? "Business Class train seating"
+          : ticketId === "first-class"
+            ? "1st Class train seating"
+            : "Train seating");
 
   return (
     <div className={`membership-seat-art ${className}`.trim()}>

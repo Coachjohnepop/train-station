@@ -47,14 +47,16 @@ export const MEMBERSHIP_THEME_LABELS: Record<MembershipThemeTier, string> = {
   pro: "1st Class",
 };
 
-/** Train car seat photography — one per paid ticket tier. */
+/** Train car seat photography — all membership ticket tiers. */
 export const TICKET_SEAT_ART: Partial<Record<TicketTierId, string>> = {
+  free: "/images/tickets/free.jpg",
   "coach-class": "/images/tickets/coach-class.jpg",
   "business-class": "/images/tickets/business-class.jpg",
   "first-class": "/images/tickets/first-class.jpg",
 };
 
 const PLAN_TO_TICKET: Partial<Record<SignupPlan, TicketTierId>> = {
+  explorer: "free",
   member: "coach-class",
   business: "business-class",
   pro: "first-class",
