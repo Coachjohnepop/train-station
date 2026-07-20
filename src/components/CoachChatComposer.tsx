@@ -29,7 +29,7 @@ export default function CoachChatComposer({
   const [videoDurationSec, setVideoDurationSec] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [sendSmsAlert, setSendSmsAlert] = useState(true);
+
   const [message, setMessage] = useState<string | null>(null);
   const [newExerciseCount, setNewExerciseCount] = useState(0);
   const [error, setError] = useState<string | null>(null);

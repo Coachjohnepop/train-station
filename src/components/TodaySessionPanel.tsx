@@ -69,7 +69,7 @@ export default function TodaySessionPanel({
     defaultUserIds?.length ? defaultUserIds : asInstructor ? DEFAULT_COACH_MEMBERS : [],
   );
   const [preview, setPreview] = useState<{ title: string; exercises: ParsedExercise[] } | null>(null);
-  const [sendSmsAlert, setSendSmsAlert] = useState(false);
+
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageIsError, setMessageIsError] = useState(false);

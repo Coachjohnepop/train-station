@@ -73,7 +73,7 @@ export default function CoachLessonPlanBuilder({
   const [individualDrafts, setIndividualDrafts] = useState<IndividualDraft[]>([]);
   const [interpretation, setInterpretation] = useState<InterpretResponse | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [sendSmsAlert, setSendSmsAlert] = useState(false);
+
   const [restTimerEnabled, setRestTimerEnabled] = useState(true);
   const [restTimerSeconds, setRestTimerSeconds] = useState(DEFAULT_REST_TIMER_SECONDS);
   const [loading, setLoading] = useState(false);
