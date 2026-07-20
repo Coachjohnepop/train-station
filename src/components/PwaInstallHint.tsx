@@ -48,21 +48,24 @@ export default function PwaInstallHint({
 
   return (
     <div
-      className={`rounded-xl border border-violet-400/35 bg-violet-500/10 text-violet-50 ${
+      className={`rounded-xl border border-violet-600/40 bg-violet-500/15 ${
         compact ? "px-3 py-2 text-[11px]" : "px-3 py-2.5 text-xs"
       }`}
       role="status"
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="min-w-0 leading-snug">
-          <strong className="font-semibold">Add to Home Screen</strong> for a red badge when
-          coach messages you. iPhone: Share → Add to Home Screen. Android: browser menu → Install
-          app.
+        <p className="min-w-0 leading-snug text-[var(--text)]">
+          <strong className="font-semibold text-[var(--text)]">Add to Home Screen</strong>
+          <span className="text-[var(--muted)]">
+            {" "}
+            for a red badge when coach messages you. iPhone: Share → Add to Home Screen. Android:
+            browser menu → Install app.
+          </span>
         </p>
         <button
           type="button"
           onClick={dismiss}
-          className="shrink-0 rounded-lg px-2 py-1 text-[10px] font-semibold text-violet-200/90 hover:bg-violet-500/20"
+          className="shrink-0 rounded-lg border border-violet-600/35 bg-[var(--surface)] px-2 py-1 text-[10px] font-semibold text-[var(--text)] hover:bg-violet-500/20"
         >
           Got it
         </button>

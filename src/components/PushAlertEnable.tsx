@@ -3,6 +3,7 @@
 /**
  * Enable / re-enable phone notifications + home-screen badge.
  * iPhone: must open Home Screen app (not Safari), then Enable / Send test.
+ * Colors use theme tokens so light mode stays readable.
  */
 
 import { useEffect, useState } from "react";
@@ -34,10 +35,7 @@ export default function PushAlertEnable({ compact = false }: { compact?: boolean
       const perm = await getPushPermission();
       setPermission(perm);
 
-      // Always show controls when installed but not granted, or not installed.
-      // If already granted, show a slim "test / re-enable" strip (iOS often needs re-bind).
       if (perm === "granted" && installed) {
-        // Quiet re-sync of SW + subscription
         void enablePushAlerts();
         setVisible(true);
         return;
@@ -45,7 +43,6 @@ export default function PushAlertEnable({ compact = false }: { compact?: boolean
 
       try {
         if (window.localStorage.getItem(DISMISS_KEY) === "1" && perm !== "denied") {
-          // Still show if not standalone — they need the install tip
           if (installed) return;
         }
       } catch {
@@ -82,7 +79,6 @@ export default function PushAlertEnable({ compact = false }: { compact?: boolean
   async function onTest() {
     setBusy(true);
     setStatus(null);
-    // Ensure sub is fresh for this login before testing
     const en = await enablePushAlerts({ forceResubscribe: false });
     if (!en.ok) {
       setBusy(false);
@@ -115,28 +111,30 @@ export default function PushAlertEnable({ compact = false }: { compact?: boolean
 
   return (
     <div
-      className={`rounded-xl border border-amber-400/40 bg-amber-500/10 text-amber-50 ${
+      className={`rounded-xl border border-amber-600/45 bg-amber-500/20 ${
         compact ? "px-3 py-2 text-[11px]" : "px-3 py-2.5 text-xs"
       }`}
       role="status"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="font-semibold leading-snug">
+          <p className="font-semibold leading-snug text-[var(--text)]">
             {!standalone
               ? "Add to Home Screen for phone alerts"
               : granted
                 ? "Phone alerts"
                 : "Turn on message alerts"}
           </p>
-          <p className="leading-snug text-amber-100/85">
+          <p className="leading-snug text-[var(--muted)]">
             {!standalone
               ? "iPhone: Share → Add to Home Screen → open that icon (not Safari). Then Enable alerts. Safari tabs cannot badge when closed."
               : granted
                 ? "If you got no badge earlier: tap Re-enable, then Send test, then lock the phone."
                 : "Allow notifications so new messages ping your phone and show a red badge when the app is closed."}
           </p>
-          {status && <p className="text-[10px] font-medium text-amber-50">{status}</p>}
+          {status && (
+            <p className="text-[10px] font-semibold text-[var(--text)]">{status}</p>
+          )}
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
           {!granted ? (
@@ -144,7 +142,7 @@ export default function PushAlertEnable({ compact = false }: { compact?: boolean
               type="button"
               disabled={busy}
               onClick={() => void onEnable(true)}
-              className="rounded-lg bg-amber-400/90 px-2.5 py-1.5 text-[11px] font-bold text-amber-950 hover:bg-amber-300 disabled:opacity-60"
+              className="rounded-lg bg-amber-500 px-2.5 py-1.5 text-[11px] font-bold text-amber-950 hover:bg-amber-400 disabled:opacity-60"
             >
               {busy ? "…" : "Enable alerts"}
             </button>
@@ -154,7 +152,7 @@ export default function PushAlertEnable({ compact = false }: { compact?: boolean
                 type="button"
                 disabled={busy}
                 onClick={() => void onTest()}
-                className="rounded-lg bg-amber-400/90 px-2.5 py-1.5 text-[11px] font-bold text-amber-950 hover:bg-amber-300 disabled:opacity-60"
+                className="rounded-lg bg-amber-500 px-2.5 py-1.5 text-[11px] font-bold text-amber-950 hover:bg-amber-400 disabled:opacity-60"
               >
                 {busy ? "…" : "Send test"}
               </button>
@@ -162,7 +160,7 @@ export default function PushAlertEnable({ compact = false }: { compact?: boolean
                 type="button"
                 disabled={busy}
                 onClick={() => void onEnable(true)}
-                className="rounded-lg border border-amber-300/40 px-2 py-1.5 text-[10px] font-semibold text-amber-100 hover:bg-amber-500/20 disabled:opacity-60"
+                className="rounded-lg border border-amber-700/50 bg-[var(--surface)] px-2 py-1.5 text-[10px] font-semibold text-[var(--text)] hover:bg-amber-500/25 disabled:opacity-60"
               >
                 Re-enable
               </button>
@@ -171,7 +169,7 @@ export default function PushAlertEnable({ compact = false }: { compact?: boolean
           <button
             type="button"
             onClick={dismiss}
-            className="rounded-lg px-2 py-1.5 text-[10px] font-semibold text-amber-100/80 hover:bg-amber-500/20"
+            className="rounded-lg px-2 py-1.5 text-[10px] font-semibold text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
           >
             Later
           </button>
