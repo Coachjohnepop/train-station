@@ -158,7 +158,7 @@ export default function MemberBookPage() {
               className="input mt-1 w-full"
               value={memberPhone}
               onChange={setMemberPhone}
-              placeholder="(916.284.1994)"
+              placeholder="916.284.1994"
             />
           </div>
 

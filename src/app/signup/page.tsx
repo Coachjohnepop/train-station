@@ -303,7 +303,7 @@ function SignupForm() {
                 name="tel"
                 value={phone}
                 onChange={setPhone}
-                placeholder="(916.284.1994)"
+                placeholder="916.284.1994"
                 className="w-full rounded-full border border-[#3d2660] bg-[#0a0612] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
               />
             </div>

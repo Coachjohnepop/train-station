@@ -346,7 +346,7 @@ export default function CoachSettingsPanel() {
               className="input mt-1 w-full"
               value={settings.coachPhone || ""}
               onChange={(phone) => setSettings({ ...settings, coachPhone: phone || null })}
-              placeholder="(916.284.1994)"
+              placeholder="916.284.1994"
             />
           </label>
         </div>

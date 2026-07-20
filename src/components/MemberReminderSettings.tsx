@@ -139,7 +139,7 @@ export default function MemberReminderSettings() {
                   save(latestSettingsRef.current);
                 }
               }}
-              placeholder="(916.284.1994)"
+              placeholder="916.284.1994"
               className="input text-sm w-full"
             />
           </div>

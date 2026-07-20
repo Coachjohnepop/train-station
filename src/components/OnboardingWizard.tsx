@@ -333,7 +333,7 @@ export default function OnboardingWizard({
                 <PhoneInput
                   value={sms.phone}
                   onChange={(phone) => setSms({ ...sms, phone })}
-                  placeholder="(916.284.1994)"
+                  placeholder="916.284.1994"
                   className="input w-full"
                 />
               </div>

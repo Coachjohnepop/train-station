@@ -503,7 +503,7 @@ export default function AdminUsersPage() {
                   value={form.phone}
                   onChange={(phone) => setForm({ ...form, phone })}
                   className="input mt-1 w-full"
-                  placeholder="(916.284.1994)"
+                  placeholder="916.284.1994"
                 />
               </label>
               <label className="block">
