@@ -495,6 +495,279 @@ export async function deployCycleToProgram(
  * Snapshot a program's month (28-day block) into the **library** as a deep-cloned cycle.
  * Always clones workouts so the library is independent of the live program.
  */
+/**
+ * Snapshot a program **calendar week** (days 1–7) into the library as a deep-cloned
+ * cycle pack. Days are stored as cycle dayNumber 1–7 (Mon–Sun). Description is tagged
+ * `[week-pack]` so the UI can list week templates separately from 28-day months.
+ */
+export async function snapshotProgramWeekToLibrary(input: {
+  programSlug: string;
+  weekNumber: number;
+  name: string;
+  description?: string | null;
+}) {
+  const weekNumber = Math.max(1, Math.floor(input.weekNumber || 1));
+  const program = await prisma.program.findUnique({
+    where: { slug: input.programSlug },
+    select: {
+      id: true,
+      name: true,
+      weeks: {
+        where: { weekNumber },
+        include: {
+          days: {
+            orderBy: { dayNumber: "asc" },
+            include: {
+              options: { orderBy: { sortOrder: "asc" } },
+              sessions: {
+                orderBy: { partIndex: "asc" },
+                include: {
+                  options: { orderBy: { sortOrder: "asc" } },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+  if (!program) throw new Error("PROGRAM_NOT_FOUND");
+  const week = program.weeks[0];
+  if (!week) throw new Error("WEEK_NOT_FOUND");
+
+  const cycle = await prisma.workoutCycle.create({
+    data: {
+      name: input.name.trim(),
+      description:
+        (input.description?.trim() ||
+          `Week pack from ${program.name} · week ${weekNumber}`) + " [week-pack]",
+      programId: null,
+      cycleMonth: null,
+      published: false,
+    },
+  });
+  await ensureCycleDays(cycle.id);
+
+  let slotsWritten = 0;
+  for (const day of week.days) {
+    const dayNumber = day.dayNumber; // 1–7
+    if (dayNumber < 1 || dayNumber > 7) continue;
+    const cycleDay = await prisma.workoutCycleDay.findUnique({
+      where: { cycleId_dayNumber: { cycleId: cycle.id, dayNumber } },
+    });
+    if (!cycleDay) continue;
+
+    const notes = day.notes || null;
+    const isOff = /^day\s*off$/i.test(notes || "");
+    await prisma.workoutCycleDay.update({
+      where: { id: cycleDay.id },
+      data: { isDayOff: isOff, notes, publishedAt: null },
+    });
+    await prisma.workoutCycleDaySlot.deleteMany({ where: { cycleDayId: cycleDay.id } });
+    if (isOff) continue;
+
+    // Prefer session options (multi-part); fall back to flat day options.
+    type Opt = {
+      workoutId: string;
+      label: string;
+      trainingLocation?: string | null;
+      sortOrder?: number;
+    };
+    const rawOpts: Opt[] = [];
+    if (day.sessions?.length) {
+      for (const session of day.sessions) {
+        for (const o of session.options || []) {
+          if (o.workoutId) {
+            rawOpts.push({
+              workoutId: o.workoutId,
+              label: o.label,
+              trainingLocation: o.trainingLocation,
+              sortOrder: o.sortOrder,
+            });
+          }
+        }
+      }
+    }
+    if (!rawOpts.length) {
+      for (const o of day.options || []) {
+        if (o.workoutId) {
+          rawOpts.push({
+            workoutId: o.workoutId,
+            label: o.label,
+            trainingLocation: o.trainingLocation,
+            sortOrder: o.sortOrder,
+          });
+        }
+      }
+    }
+
+    // Cycle slots only support gym|home uniqueness — keep first of each location.
+    const byLoc = new Map<string, Opt>();
+    for (const opt of rawOpts) {
+      const loc =
+        opt.trainingLocation ||
+        (/^home/i.test(opt.label) ? "home" : /^gym/i.test(opt.label) ? "gym" : null);
+      if (!loc || byLoc.has(loc)) continue;
+      byLoc.set(loc, opt);
+    }
+
+    let sortOrder = 0;
+    for (const [loc, opt] of byLoc) {
+      const cloned = await cloneWorkout(
+        opt.workoutId,
+        workoutContentTitle(
+          (
+            await prisma.workout.findUnique({
+              where: { id: opt.workoutId },
+              select: { name: true },
+            })
+          )?.name || opt.label,
+        ),
+      );
+      await prisma.workoutCycleDaySlot.create({
+        data: {
+          cycleDayId: cycleDay.id,
+          workoutId: cloned.id,
+          trainingLocation: loc,
+          sortOrder: sortOrder++,
+        },
+      });
+      slotsWritten += 1;
+    }
+  }
+
+  if (slotsWritten === 0) {
+    await prisma.workoutCycle.delete({ where: { id: cycle.id } });
+    throw new Error("WEEK_EMPTY");
+  }
+
+  return getWorkoutCycleById(cycle.id);
+}
+
+/**
+ * Paste a library week pack (days 1–7) onto a program calendar week.
+ * Always deep-clones workouts onto ProgramDay options (Gym/Home).
+ */
+export async function pasteWeekPackOntoProgramWeek(input: {
+  sourceCycleId: string;
+  programSlug: string;
+  targetWeekNumber: number;
+  force?: boolean;
+}): Promise<{ weekNumber: number; daysUpdated: number; slotsCloned: number }> {
+  const targetWeekNumber = Math.max(1, Math.floor(input.targetWeekNumber || 1));
+  const source = await getWorkoutCycleById(input.sourceCycleId);
+  if (!source) throw new Error("CYCLE_NOT_FOUND");
+
+  const program = await prisma.program.findUnique({
+    where: { slug: input.programSlug },
+    include: {
+      weeks: {
+        where: { weekNumber: targetWeekNumber },
+        include: {
+          days: {
+            orderBy: { dayNumber: "asc" },
+            include: {
+              options: true,
+              sessions: { include: { options: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+  if (!program) throw new Error("PROGRAM_NOT_FOUND");
+  const week = program.weeks[0];
+  if (!week) throw new Error("WEEK_NOT_FOUND");
+
+  let occupied = 0;
+  for (const d of week.days) {
+    const n =
+      (d.options?.length || 0) +
+      (d.sessions || []).reduce((s, sess) => s + (sess.options?.length || 0), 0);
+    if (n > 0) occupied += 1;
+  }
+  if (occupied > 0 && !input.force) {
+    const err = new Error("CONTENT_EXISTS") as Error & { summary?: string };
+    err.summary = `${occupied} day(s) already have workouts`;
+    throw err;
+  }
+
+  let daysUpdated = 0;
+  let slotsCloned = 0;
+
+  for (const day of week.days) {
+    const dayNumber = day.dayNumber;
+    if (dayNumber < 1 || dayNumber > 7) continue;
+    const srcDay = source.days.find((d) => d.dayNumber === dayNumber);
+    if (!srcDay) continue;
+
+    // Clear existing options on this program day (all sessions / flat).
+    await prisma.programDayOption.deleteMany({ where: { dayId: day.id } });
+    await prisma.programDay.update({
+      where: { id: day.id },
+      data: {
+        notes: srcDay.notes,
+        publishedAt: null,
+        partCount: 1,
+        workoutId: null,
+      },
+    });
+
+    if (srcDay.isDayOff || !srcDay.slots?.length) {
+      daysUpdated += 1;
+      continue;
+    }
+
+    // Ensure one Main session for options
+    let session = await prisma.programDaySession.findFirst({
+      where: { dayId: day.id, partIndex: 1 },
+    });
+    if (!session) {
+      session = await prisma.programDaySession.create({
+        data: {
+          dayId: day.id,
+          partIndex: 1,
+          label: "Main",
+          sessionKind: "strength",
+          sortOrder: 0,
+        },
+      });
+    }
+
+    let sortOrder = 0;
+    let firstWorkoutId: string | null = null;
+    for (const slot of srcDay.slots) {
+      const loc = slot.trainingLocation === "home" ? "home" : "gym";
+      const label = loc === "home" ? "Home" : "Gym";
+      const cloned = await cloneWorkout(
+        slot.workoutId,
+        workoutContentTitle(slot.workout?.name || label),
+      );
+      await prisma.programDayOption.create({
+        data: {
+          dayId: day.id,
+          sessionId: session.id,
+          workoutId: cloned.id,
+          label,
+          trainingLocation: loc,
+          sortOrder: sortOrder++,
+        },
+      });
+      if (!firstWorkoutId) firstWorkoutId = cloned.id;
+      slotsCloned += 1;
+    }
+    if (firstWorkoutId) {
+      await prisma.programDay.update({
+        where: { id: day.id },
+        data: { workoutId: firstWorkoutId },
+      });
+    }
+    daysUpdated += 1;
+  }
+
+  return { weekNumber: targetWeekNumber, daysUpdated, slotsCloned };
+}
+
 export async function snapshotProgramMonthToLibrary(input: {
   programId?: string;
   programSlug?: string;

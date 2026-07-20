@@ -2169,6 +2169,73 @@ export default function ProgramCalendarBuilder({
     }
   }
 
+  /** Copy the week you're viewing into the next week (clone workouts). */
+  async function copyCurrentWeekToNext() {
+    const from = activeWeekData.weekNumber;
+    const to = from + 1;
+    if (to > program.durationWeeks) {
+      setMessage(`No week ${to} — this program only has ${program.durationWeeks} weeks.`);
+      setTimeout(() => setMessage(null), 3500);
+      return;
+    }
+    const ok = await copyWeek(from, to);
+    if (ok) {
+      await sync();
+      await jumpToWeek(to);
+      setMessage(
+        autoClearNotesOnCopy
+          ? `Copied week ${from} → week ${to} (notes cleared on target). Edit, then Publish.`
+          : `Copied week ${from} → week ${to}. Independent workouts, draft until you Publish.`,
+      );
+      setTimeout(() => setMessage(null), 4500);
+    }
+  }
+
+  /** Save Mon–Sun of the open week into the Template Library as a week pack. */
+  async function postCurrentWeekToLibrary() {
+    const weekNumber = activeWeekData.weekNumber;
+    const defaultName = `${program.name} · Week ${weekNumber}`;
+    const name = window.prompt(
+      "Name for this week pack in the Template Library:",
+      defaultName,
+    );
+    if (name == null) return;
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setMessage("Name required to post week pack.");
+      setTimeout(() => setMessage(null), 3000);
+      return;
+    }
+    setSaving(true);
+    setMessage(`Saving week ${weekNumber} to Template Library…`);
+    try {
+      const res = await fetch("/api/workout-cycles/week-snapshot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          programSlug: program.slug,
+          weekNumber,
+          name: trimmed,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessage(data.message || data.detail || "Could not save week pack.");
+        setTimeout(() => setMessage(null), 4500);
+        return;
+      }
+      setMessage(
+        `Posted “${trimmed}” to Template Library (week pack). Paste it from Templates & paste → Week packs.`,
+      );
+      setTimeout(() => setMessage(null), 5000);
+    } catch {
+      setMessage("Could not save week pack — try again.");
+      setTimeout(() => setMessage(null), 3500);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function copyWeekToRemaining(fromWeekNumber: number) {
     const later = [...program.weeks]
       .filter((w) => w.weekNumber > fromWeekNumber)
@@ -2681,10 +2748,35 @@ export default function ProgramCalendarBuilder({
                 />
                 <span className="font-medium text-[var(--text)]">Auto-clear notes on copy</span>
               </label>
+              <button
+                type="button"
+                className="btn-primary text-xs font-semibold"
+                disabled={saving || activeWeekData.weekNumber >= program.durationWeeks}
+                onClick={() => void copyCurrentWeekToNext()}
+                title={
+                  activeWeekData.weekNumber >= program.durationWeeks
+                    ? "Already on the last week"
+                    : `Clone this week’s Mon–Sun into week ${activeWeekData.weekNumber + 1}`
+                }
+              >
+                Copy current week
+                {activeWeekData.weekNumber < program.durationWeeks
+                  ? ` → W${activeWeekData.weekNumber + 1}`
+                  : ""}
+              </button>
+              <button
+                type="button"
+                className="btn-ghost text-xs font-semibold ring-1 ring-violet-400/50"
+                disabled={saving}
+                onClick={() => void postCurrentWeekToLibrary()}
+                title="Save this week’s Mon–Sun (Gym/Home clones) into the Template Library as a week pack"
+              >
+                Post current week to Template Library
+              </button>
               {activeWeekData.weekNumber > 1 && (
                 <button
                   type="button"
-                  className="btn-primary text-xs"
+                  className="btn-ghost text-xs"
                   disabled={saving}
                   onClick={() => void copyWeekToThisWeek()}
                   title={`Clone week ${activeWeekData.weekNumber - 1} into week ${activeWeekData.weekNumber}, then edit`}
@@ -2706,10 +2798,10 @@ export default function ProgramCalendarBuilder({
           </div>
 
           <p className="mb-2 text-[11px] text-[var(--muted)]">
-            Click a day (Mon–Sun) to write or edit its Gym/Home workout
-            {activeWeekData.weekNumber > 1
-              ? ` — or use Copy from week ${activeWeekData.weekNumber - 1} to seed, then tweak.`
-              : "."}
+            Click a day (Mon–Sun) to write or edit its Gym/Home workout.{" "}
+            <strong className="text-[var(--text)]">Copy current week</strong> seeds the next week;{" "}
+            <strong className="text-[var(--text)]">Post to Template Library</strong> saves a reusable
+            week pack.
           </p>
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
@@ -3183,6 +3275,8 @@ export default function ProgramCalendarBuilder({
             programSlug={program.slug}
             dayId={focus.dayId}
             partIndex={focus.partIndex ?? 1}
+            activeWeekNumber={activeWeekData.weekNumber}
+            durationWeeks={program.durationWeeks}
             focusWorkoutId={focus.workoutId || null}
             focusWorkoutLabel={
               focus.workoutId

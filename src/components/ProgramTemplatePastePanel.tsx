@@ -20,12 +20,27 @@ type TemplateRow = {
 
 type WorkoutRow = { id: string; name: string; _count?: { exercises: number } };
 
+type LibraryCycleRow = {
+  id: string;
+  name: string;
+  description?: string | null;
+  programId?: string | null;
+};
+
+function isWeekPack(c: LibraryCycleRow): boolean {
+  return /\[week-pack\]/i.test(c.description || "") || /week pack/i.test(c.name || "");
+}
+
 type Props = {
   programSlug: string;
   /** Focused program day id */
   dayId: string | null;
   /** Multi-part day part currently open in the builder (1 = Main/AM). */
   partIndex?: number;
+  /** Week currently open in the program calendar (for week-pack paste default). */
+  activeWeekNumber?: number;
+  /** Max weeks on this program (paste target bound). */
+  durationWeeks?: number;
   /** Focused workout to promote (optional) */
   focusWorkoutId: string | null;
   focusWorkoutLabel?: string;
@@ -38,6 +53,8 @@ export default function ProgramTemplatePastePanel({
   programSlug,
   dayId,
   partIndex = 1,
+  activeWeekNumber = 1,
+  durationWeeks = 12,
   focusWorkoutId,
   focusWorkoutLabel,
   disabled,
@@ -62,13 +79,13 @@ export default function ProgramTemplatePastePanel({
   const [promoVersion, setPromoVersion] = useState("");
   const [promoNotes, setPromoNotes] = useState("");
 
-  // 28-day cycle
+  // 28-day cycle + week packs (both live in workout_cycles library)
   const [cycleName, setCycleName] = useState("");
-  const [libraryCycles, setLibraryCycles] = useState<
-    { id: string; name: string; programId?: string | null }[]
-  >([]);
+  const [libraryCycles, setLibraryCycles] = useState<LibraryCycleRow[]>([]);
   const [pasteCycleId, setPasteCycleId] = useState("");
   const [pasteCycleMonth, setPasteCycleMonth] = useState(1);
+  const [pasteWeekPackId, setPasteWeekPackId] = useState("");
+  const [pasteWeekNumber, setPasteWeekNumber] = useState(1);
   const [showArchivedTemplates, setShowArchivedTemplates] = useState(false);
   const [archivedTemplates, setArchivedTemplates] = useState<TemplateRow[]>([]);
 
@@ -85,7 +102,7 @@ export default function ProgramTemplatePastePanel({
       const cycles = await cRes.json();
       setLibraryCycles(
         (Array.isArray(cycles) ? cycles : []).filter(
-          (c: { programId?: string | null }) => !c.programId,
+          (c: LibraryCycleRow) => !c.programId,
         ),
       );
     }
@@ -105,6 +122,11 @@ export default function ProgramTemplatePastePanel({
     }
   }, [open, load]);
 
+  // Default paste target to the week the coach is viewing.
+  useEffect(() => {
+    setPasteWeekNumber(Math.max(1, Math.min(durationWeeks, activeWeekNumber || 1)));
+  }, [activeWeekNumber, durationWeeks]);
+
   // Always follow the open day title so coaches don't save 10 copies as "Chest"
   // after switching days. They can still edit the field before Save.
   useEffect(() => {
@@ -112,6 +134,15 @@ export default function ProgramTemplatePastePanel({
       setPromoName(focusWorkoutLabel.trim());
     }
   }, [focusWorkoutLabel, focusWorkoutId]);
+
+  const weekPacks = useMemo(
+    () => libraryCycles.filter(isWeekPack),
+    [libraryCycles],
+  );
+  const monthPacks = useMemo(
+    () => libraryCycles.filter((c) => !isWeekPack(c)),
+    [libraryCycles],
+  );
 
   const filteredTemplates = useMemo(() => {
     if (!category) return templates;
@@ -419,6 +450,57 @@ export default function ProgramTemplatePastePanel({
     }
   }
 
+  async function pasteWeekPack() {
+    if (!pasteWeekPackId) {
+      setError("Pick a library week pack.");
+      return;
+    }
+    const targetWeek = Math.max(1, Math.min(durationWeeks, pasteWeekNumber || 1));
+    setBusy(true);
+    setError(null);
+    try {
+      const body = {
+        sourceCycleId: pasteWeekPackId,
+        programSlug,
+        targetWeekNumber: targetWeek,
+        force: false as boolean,
+      };
+      let res = await fetch("/api/workout-cycles/week-paste", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      let data = await res.json().catch(() => ({}));
+      if (res.status === 409 || data.detail === "CONTENT_EXISTS" || data.needsConfirm) {
+        const summary = data.summary || "existing workouts on this week";
+        const ok = window.confirm(
+          `Week ${targetWeek} already has content (${summary}).\n\nReplace it with a fresh clone from the week pack? This cannot be undone.`,
+        );
+        if (!ok) {
+          setError("Paste cancelled — existing week left unchanged.");
+          return;
+        }
+        body.force = true;
+        res = await fetch("/api/workout-cycles/week-paste", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        data = await res.json().catch(() => ({}));
+      }
+      if (!res.ok) {
+        setError(formatApiErrorDetail(data.detail) || data.message || "Paste week pack failed");
+        return;
+      }
+      msg(
+        `Pasted week pack onto week ${targetWeek} (${data.slotsCloned ?? "?"} Gym/Home slots cloned).`,
+      );
+      await onPasted();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (!open) {
     return (
       <button
@@ -426,7 +508,7 @@ export default function ProgramTemplatePastePanel({
         className="btn-ghost px-2 py-1 text-xs font-semibold text-violet-200"
         disabled={disabled}
         onClick={() => setOpen(true)}
-        title="Paste templates, save templates, 28-day packs"
+        title="Paste templates, save templates, week packs, 28-day packs"
       >
         Templates & paste
       </button>
@@ -800,6 +882,54 @@ export default function ProgramTemplatePastePanel({
         )}
       </div>
 
+      {/* Week pack (Mon–Sun) */}
+      <div className="space-y-2 rounded-md border border-violet-400/40 p-2">
+        <p className="text-[11px] font-semibold">Week packs</p>
+        <p className="text-[10px] text-[var(--muted)]">
+          Paste a saved Mon–Sun week (Gym/Home clones) onto a program week. Save weeks from the
+          calendar header: <strong className="text-[var(--text)]">Post current week to Template Library</strong>.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <select
+            className="input h-8 min-w-[12rem] flex-1 text-xs"
+            value={pasteWeekPackId}
+            onChange={(e) => setPasteWeekPackId(e.target.value)}
+          >
+            <option value="">
+              {weekPacks.length === 0 ? "No week packs yet…" : "Week pack…"}
+            </option>
+            {weekPacks.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <label className="flex items-center gap-1 text-[10px]">
+            Onto W
+            <input
+              type="number"
+              min={1}
+              max={durationWeeks}
+              className="input h-8 w-12 text-xs"
+              value={pasteWeekNumber}
+              onChange={(e) =>
+                setPasteWeekNumber(
+                  Math.max(1, Math.min(durationWeeks, parseInt(e.target.value, 10) || 1)),
+                )
+              }
+            />
+          </label>
+          <button
+            type="button"
+            className="btn-primary h-8 px-3 text-[11px]"
+            disabled={busy || disabled || !pasteWeekPackId}
+            onClick={() => void pasteWeekPack()}
+          >
+            Paste week pack
+          </button>
+        </div>
+      </div>
+
       {/* 28-day pack */}
       <div className="space-y-2 rounded-md border border-[var(--border)] p-2">
         <p className="text-[11px] font-semibold">28-day cycle pack</p>
@@ -830,7 +960,7 @@ export default function ProgramTemplatePastePanel({
             onChange={(e) => setPasteCycleId(e.target.value)}
           >
             <option value="">Library pack…</option>
-            {libraryCycles.map((c) => (
+            {monthPacks.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
