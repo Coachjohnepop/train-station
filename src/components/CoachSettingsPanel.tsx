@@ -12,6 +12,7 @@ import {
 } from "@/lib/gamification-types";
 import { PROGRAM_START_WEEKDAYS } from "@/lib/program-start-settings";
 import PhoneInput from "@/components/PhoneInput";
+import PushAlertSettings from "@/components/PushAlertSettings";
 import { formatPhoneInputValue } from "@/lib/sms-phone";
 
 type CoachSettings = {
@@ -321,6 +322,17 @@ export default function CoachSettingsPanel() {
             </select>
           </label>
         )}
+      </section>
+
+      <section className="card space-y-4 p-5">
+        <div>
+          <h2 className="text-lg font-semibold">Phone app alerts</h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Home-screen badge and notifications for this coach device. One-time enable in the app;
+            manage here to test or turn off.
+          </p>
+        </div>
+        <PushAlertSettings />
       </section>
 
       <section className="card space-y-4 p-5">

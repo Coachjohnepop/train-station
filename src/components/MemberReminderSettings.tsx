@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
 import PhoneInput from "@/components/PhoneInput";
+import PushAlertSettings from "@/components/PushAlertSettings";
 import { formatPhoneInputValue } from "@/lib/sms-phone";
 
 type ReminderSettings = {
@@ -125,6 +126,8 @@ export default function MemberReminderSettings() {
             </a>
             . Your coach never sees your phone number.
           </p>
+
+          <PushAlertSettings />
 
           <div>
             <label className="block text-[10px] text-[var(--muted)] mb-0.5">

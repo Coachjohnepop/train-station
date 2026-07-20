@@ -7,6 +7,7 @@ import { paymentBillingSummary } from "@/lib/membership-theme";
 import type { SignupPlan } from "@/lib/signup-plans";
 import { signupPlanLabel } from "@/lib/signup-plans";
 import QuickAuthSettings from "@/components/QuickAuthSettings";
+import PushAlertSettings from "@/components/PushAlertSettings";
 
 type MembershipData = {
   plan: string;
@@ -144,6 +145,15 @@ export default function MemberAccountClient({
       </div>
 
       <QuickAuthSettings email={email} />
+
+      <div className="card space-y-2">
+        <h3 className="text-sm font-semibold">Notifications</h3>
+        <p className="text-[11px] text-[var(--muted)]">
+          Phone banners and home-screen badge — one-time enable; manage here if you need to turn them
+          off or re-test.
+        </p>
+        <PushAlertSettings />
+      </div>
 
       <div className="card space-y-3">
         <h3 className="font-semibold">Manage membership</h3>

@@ -6,6 +6,34 @@
 /** Bump when public/sw.js changes so clients re-register. */
 export const SW_SCRIPT = "/sw.js?v=3";
 
+/** Permanent: user completed Enable alerts — never show the banner again. */
+export const PUSH_ALERTS_ENABLED_KEY = "ts-push-alerts-enabled";
+
+export function isPushAlertsPermanentlyEnabled(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(PUSH_ALERTS_ENABLED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function markPushAlertsPermanentlyEnabled(): void {
+  try {
+    window.localStorage.setItem(PUSH_ALERTS_ENABLED_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearPushAlertsPermanentlyEnabled(): void {
+  try {
+    window.localStorage.removeItem(PUSH_ALERTS_ENABLED_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
