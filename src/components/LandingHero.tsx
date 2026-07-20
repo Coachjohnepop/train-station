@@ -127,7 +127,7 @@ export default function LandingHero({
               <div className="mt-4 flex flex-col items-center gap-1">
                 <WelcomeVideoPopover
                   welcomeVideoUrl={welcomeVideoUrl}
-                  className="inline-flex h-10 items-center justify-center rounded-full border border-white/35 bg-black/20 px-5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/10 active:scale-[0.98]"
+                  buttonClassName="inline-flex h-10 items-center justify-center rounded-full border border-white/35 bg-black/20 px-5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/10 active:scale-[0.98]"
                 >
                   Watch intro
                 </WelcomeVideoPopover>

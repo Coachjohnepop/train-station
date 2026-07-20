@@ -4,13 +4,19 @@ import Link from "next/link";
 import { useCallback, useEffect, useId, useState } from "react";
 import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
 
+const DEFAULT_TRIGGER =
+  "inline-flex h-14 items-center justify-center rounded-full bg-[#7c3aed] px-10 text-sm font-bold text-white shadow-lg shadow-[#7c3aed]/30 transition-all hover:bg-[#6d2dd6] hover:scale-[1.05] active:scale-[0.98]";
+
 export default function WelcomeVideoPopover({
   children,
   className = "",
+  buttonClassName,
   welcomeVideoUrl = null,
 }: {
   children: React.ReactNode;
   className?: string;
+  /** Styles the trigger button (defaults to large purple pill). */
+  buttonClassName?: string;
   welcomeVideoUrl?: string | null;
 }) {
   const [open, setOpen] = useState(false);
@@ -56,7 +62,7 @@ export default function WelcomeVideoPopover({
       >
         <button
           type="button"
-          className="inline-flex h-14 items-center justify-center rounded-full bg-[#7c3aed] px-10 text-sm font-bold text-white shadow-lg shadow-[#7c3aed]/30 transition-all hover:bg-[#6d2dd6] hover:scale-[1.05] active:scale-[0.98]"
+          className={buttonClassName || DEFAULT_TRIGGER}
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           aria-haspopup="dialog"
