@@ -20,6 +20,36 @@ import {
   useStoredPanelSize,
 } from "@/lib/chat-panel-resize";
 
+/** Stick thread strip under the frozen coach mobile header (xl sidebar has no sticky bar). */
+function useCoachChromeOffset(): number {
+  const [offset, setOffset] = useState(0);
+  useEffect(() => {
+    const sync = () => {
+      // Mobile/tablet coach header is sticky; desktop uses left sidebar (offset 0).
+      if (window.matchMedia("(min-width: 1280px)").matches) {
+        setOffset(0);
+        return;
+      }
+      const header = document.querySelector("header.app-shell-header");
+      if (header instanceof HTMLElement) {
+        setOffset(Math.ceil(header.getBoundingClientRect().height));
+        return;
+      }
+      setOffset(0);
+    };
+    sync();
+    window.addEventListener("resize", sync);
+    const header = document.querySelector("header.app-shell-header");
+    const ro = header instanceof HTMLElement ? new ResizeObserver(sync) : null;
+    if (header instanceof HTMLElement) ro?.observe(header);
+    return () => {
+      window.removeEventListener("resize", sync);
+      ro?.disconnect();
+    };
+  }, []);
+  return offset;
+}
+
 function threadPreview(messages: ChatMessage[]) {
   const last = messages[messages.length - 1];
   if (!last) return "No messages yet";
@@ -327,6 +357,7 @@ export default function AdminChatWorkspace({
   }
 
   const totalUnread = Object.values(unreadByThread).reduce((n, c) => n + c, 0);
+  const chromeOffset = useCoachChromeOffset();
 
   const conversationTitle =
     activeThread?.kind === "cohort"
@@ -334,70 +365,58 @@ export default function AdminChatWorkspace({
       : activeMember?.name || activeThread?.title || "Conversation";
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
-      {/* Mobile tab bar */}
-      <div className="flex border-b border-[var(--border)] lg:hidden">
-        <button
-          type="button"
-          onClick={() => setMobilePanel("inbox")}
-          className={`flex flex-1 items-center justify-center gap-2 py-3 text-sm font-semibold transition ${
-            mobilePanel === "inbox"
-              ? "border-b-2 border-violet-400 bg-violet-500/10 text-violet-200"
-              : "text-[var(--muted)]"
-          }`}
-        >
-          Inbox
-          {totalUnread > 0 && (
-            <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white">
-              {totalUnread}
-            </span>
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={() => activeId && setMobilePanel("chat")}
-          disabled={!activeId}
-          className={`flex flex-1 items-center justify-center gap-2 py-3 text-sm font-semibold transition ${
-            mobilePanel === "chat"
-              ? "border-b-2 border-emerald-400 bg-emerald-500/10 text-emerald-200"
-              : "text-[var(--muted)] disabled:opacity-40"
-          }`}
-        >
-          Chat
-        </button>
-      </div>
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+      {/* Locked top: Inbox/Chat tabs + all threads with badges stay on screen while messages scroll */}
+      <div
+        className="admin-chat-threads-lock sticky z-30 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_94%,var(--bg))] shadow-[0_8px_20px_rgba(0,0,0,0.16)] backdrop-blur-md"
+        style={{ top: chromeOffset }}
+      >
+        <div className="flex border-b border-[var(--border)] lg:hidden">
+          <button
+            type="button"
+            onClick={() => setMobilePanel("inbox")}
+            className={`flex flex-1 items-center justify-center gap-2 py-3 text-sm font-semibold transition ${
+              mobilePanel === "inbox"
+                ? "border-b-2 border-violet-400 bg-violet-500/10 text-violet-200"
+                : "text-[var(--muted)]"
+            }`}
+          >
+            Inbox
+            {totalUnread > 0 && (
+              <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                {totalUnread}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => activeId && setMobilePanel("chat")}
+            disabled={!activeId}
+            className={`flex flex-1 items-center justify-center gap-2 py-3 text-sm font-semibold transition ${
+              mobilePanel === "chat"
+                ? "border-b-2 border-emerald-400 bg-emerald-500/10 text-emerald-200"
+                : "text-[var(--muted)] disabled:opacity-40"
+            }`}
+          >
+            Chat
+          </button>
+        </div>
 
-      <div className="chat-thread-shell flex flex-col">
-        <div
-          className="flex min-h-[min(70vh,560px)] flex-col lg:min-h-0 lg:flex-row"
-          style={isDesktopChat ? { height: workspaceHeight } : undefined}
-        >
-        {/* Inbox — full screen on mobile when selected */}
-        <aside
-          className={`flex min-h-0 w-full flex-col border-b border-[var(--border)] lg:shrink-0 lg:border-b-0 lg:border-r ${
-            mobilePanel === "inbox" ? "flex" : "hidden lg:flex"
-          }`}
-          style={isDesktopChat ? { width: inboxWidth } : undefined}
-        >
-          <div className="border-b border-[var(--border)] bg-violet-950/25 px-4 py-3">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-violet-200">
-                  Inbox
-                  {totalUnread > 0 ? (
-                    <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#ff3b30] px-1.5 text-[10px] font-bold normal-case tracking-normal text-white">
-                      {totalUnread > 99 ? "99+" : totalUnread}
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold normal-case tracking-normal text-[var(--muted)]">
-                      clear
-                    </span>
-                  )}
-                </p>
-                <p className="text-[11px] text-[var(--muted)]">
-                  Badges stay until you clear or reply · unread sorted first
-                </p>
-              </div>
+        <div className="border-b border-[var(--border)] bg-violet-950/20 px-3 py-2">
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-violet-200">
+              All threads
+              {totalUnread > 0 ? (
+                <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[9px] font-bold normal-case tracking-normal text-white">
+                  {totalUnread > 99 ? "99+" : totalUnread}
+                </span>
+              ) : (
+                <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold normal-case tracking-normal text-[var(--muted)]">
+                  clear
+                </span>
+              )}
+            </p>
+            <div className="flex items-center gap-2">
               {totalUnread > 0 ? (
                 <button
                   type="button"
@@ -408,9 +427,95 @@ export default function AdminChatWorkspace({
                   Clear all badges
                 </button>
               ) : null}
+              <button
+                type="button"
+                onClick={() => void refreshThreads()}
+                className="text-[10px] font-medium text-violet-300 hover:underline"
+              >
+                Refresh
+              </button>
             </div>
           </div>
           <InboxLegend />
+          <div className="mt-1.5 flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {memberRows.map((m) => {
+              const unread = m.threadId ? unreadByThread[m.threadId] || 0 : 0;
+              const active = m.id === activeMemberId;
+              const modeColors = CHAT_MODE_COLORS[m.coachingMode];
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => selectMember(m.id, m.threadId)}
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                    active
+                      ? `${modeColors.chip} ring-1 ${modeColors.chipText}`
+                      : unread > 0
+                        ? "bg-rose-500/10 text-[var(--text)] ring-1 ring-rose-400/40"
+                        : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"
+                  }`}
+                  title={m.name}
+                >
+                  <span
+                    className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white ${memberAvatarColor(m.id)}`}
+                  >
+                    {memberInitials(m.name)}
+                  </span>
+                  <span className="max-w-[7rem] truncate">{m.name.split(" ")[0]}</span>
+                  {unread > 0 ? (
+                    <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[9px] font-bold text-white">
+                      {unread > 9 ? "9+" : unread}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+            {cohortThreads.map((t) => {
+              const unread = unreadByThread[t.id] || 0;
+              const active = t.id === activeId && !activeMemberId;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => selectCohort(t.id)}
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                    active
+                      ? `${CHAT_COHORT_COLORS.chip} ring-1 ${CHAT_COHORT_COLORS.chipText}`
+                      : unread > 0
+                        ? "bg-rose-500/10 text-[var(--text)] ring-1 ring-rose-400/40"
+                        : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"
+                  }`}
+                >
+                  {t.title}
+                  {unread > 0 ? (
+                    <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[9px] font-bold text-white">
+                      {unread > 9 ? "9+" : unread}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="chat-thread-shell flex flex-col overflow-hidden">
+        <div
+          className="flex min-h-[min(70vh,560px)] flex-col lg:min-h-0 lg:flex-row"
+          style={isDesktopChat ? { height: workspaceHeight } : undefined}
+        >
+        {/* Inbox — full screen on mobile when selected (detailed list) */}
+        <aside
+          className={`flex min-h-0 w-full flex-col border-b border-[var(--border)] lg:shrink-0 lg:border-b-0 lg:border-r ${
+            mobilePanel === "inbox" ? "flex" : "hidden lg:flex"
+          }`}
+          style={isDesktopChat ? { width: inboxWidth } : undefined}
+        >
+          <div className="border-b border-[var(--border)] bg-violet-950/25 px-4 py-2">
+            <p className="text-[11px] text-[var(--muted)]">
+              Detailed inbox · badges stay until you clear or reply · unread sorted first
+            </p>
+          </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-2 max-h-[min(50vh,420px)] lg:max-h-none">
             <CoachMemberChatPicker
               members={memberRows}
@@ -458,13 +563,6 @@ export default function AdminChatWorkspace({
               </div>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => void refreshThreads()}
-            className="w-full border-t border-[var(--border)] py-2.5 text-xs font-medium text-violet-300 hover:underline"
-          >
-            Refresh inbox
-          </button>
         </aside>
 
         {isDesktopChat ? (
@@ -548,15 +646,6 @@ export default function AdminChatWorkspace({
                   )}
                 </div>
               ) : null}
-            </div>
-            <div className="mt-2 hidden lg:block">
-              <CoachMemberChatPicker
-                members={memberRows}
-                activeMemberId={activeMemberId}
-                onSelect={selectMember}
-                layout="header"
-                unreadByThread={unreadByThread}
-              />
             </div>
           </div>
 

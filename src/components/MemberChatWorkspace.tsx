@@ -12,6 +12,25 @@ import {
   useStoredPanelSize,
 } from "@/lib/chat-panel-resize";
 
+/** Stick thread tabs just under the frozen MemberShell chrome. */
+function useMemberChromeOffset(): number {
+  const [offset, setOffset] = useState(0);
+  useEffect(() => {
+    const chrome = document.querySelector(".member-sticky-chrome");
+    if (!(chrome instanceof HTMLElement)) return;
+    const sync = () => setOffset(Math.ceil(chrome.getBoundingClientRect().height));
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(chrome);
+    window.addEventListener("resize", sync);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", sync);
+    };
+  }, []);
+  return offset;
+}
+
 /** Coach 1:1 first (default board), then community / group feeds. */
 function orderThreads(threads: ChatThread[]) {
   const direct = threads.filter((t) => t.kind === "member");
@@ -167,43 +186,75 @@ export default function MemberChatWorkspace({
       ? "Posting to · Community feed"
       : "Posting to · Direct message with coach";
 
+  const totalUnread = Object.values(unreadByThread).reduce((n, c) => n + c, 0);
+  const chromeOffset = useMemberChromeOffset();
+
   return (
-    <div className="space-y-4">
-      {orderedThreads.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          {orderedThreads.map((t) => {
-            const count = unreadByThread[t.id] || 0;
-            return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setActiveId(t.id)}
-              className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition ${
-                t.id === activeId
-                  ? "bg-accent/20 text-accent ring-1 ring-accent/50"
-                  : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"
-              }`}
-            >
-              {threadLabel(t)}
-              {count > 0 && (
-                <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[9px] font-bold text-white">
-                  {count > 9 ? "9+" : count}
-                </span>
-              )}
-            </button>
-            );
-          })}
+    <div className="space-y-3">
+      {/*
+        Sticky under MemberShell chrome: all threads + badges stay on screen while
+        page title / message feed scroll. Outside overflow-hidden shell so sticky works.
+      */}
+      <div
+        className="member-chat-threads-lock sticky z-40 -mx-1 rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,var(--surface))] px-3 py-2.5 shadow-[0_10px_28px_rgba(0,0,0,0.22)] backdrop-blur-md"
+        style={{ top: chromeOffset > 0 ? chromeOffset : 0 }}
+      >
+        <div className="mb-1.5 flex items-center justify-between gap-2">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--muted)]">
+            Threads
+            {totalUnread > 0 ? (
+              <span className="ml-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[9px] font-bold normal-case tracking-normal text-white">
+                {totalUnread > 9 ? "9+" : totalUnread}
+              </span>
+            ) : null}
+          </p>
+          <p className="text-[10px] text-[var(--muted)]">Locked top · badges always visible</p>
         </div>
-      )}
+        <div className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {orderedThreads.length === 0 ? (
+            <p className="px-1 text-xs text-[var(--muted)]">No threads yet.</p>
+          ) : (
+            orderedThreads.map((t) => {
+              const count = unreadByThread[t.id] || 0;
+              const active = t.id === activeId;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setActiveId(t.id)}
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition ${
+                    active
+                      ? "bg-accent/20 text-accent ring-1 ring-accent/50"
+                      : count > 0
+                        ? "bg-rose-500/10 text-[var(--text)] ring-1 ring-rose-400/40"
+                        : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"
+                  }`}
+                >
+                  {threadLabel(t)}
+                  {count > 0 ? (
+                    <span className="inline-flex h-5 min-w-[18px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[10px] font-bold text-white">
+                      {count > 9 ? "9+" : count}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
 
       <div className="chat-thread-shell flex flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
         <div
-          className="flex min-h-[520px] flex-col lg:min-h-0"
-          style={isDesktopChat ? { height: workspaceHeight } : undefined}
+          className="flex min-h-[min(58dvh,480px)] flex-col lg:min-h-0"
+          style={
+            isDesktopChat
+              ? { height: workspaceHeight }
+              : { height: "min(68dvh, calc(100dvh - 12.5rem))" }
+          }
         >
           <div
-            className="flex min-h-0 flex-col overflow-hidden lg:shrink-0"
-            style={isDesktopChat ? { height: feedHeight } : undefined}
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
+            style={isDesktopChat ? { height: feedHeight, flex: "none" } : undefined}
           >
             {loading && visibleMessages.length === 0 && (
               <p className="shrink-0 border-b border-[var(--border)] px-4 py-2 text-xs text-[var(--muted)]">
@@ -236,7 +287,7 @@ export default function MemberChatWorkspace({
           ) : null}
 
           {replyThreadId ? (
-            <div className="shrink-0">
+            <div className="shrink-0 border-t border-[var(--border)]">
               <ChatThreadReply
                 threadId={replyThreadId}
                 role="member"
