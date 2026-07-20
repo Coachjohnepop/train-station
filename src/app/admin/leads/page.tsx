@@ -1,6 +1,6 @@
 import { listLeads } from "@/lib/waitlist";
 import LeadsSeenMarker from "@/components/LeadsSeenMarker";
-import { formatPhoneDisplay } from "@/lib/sms-phone";
+import { formatPhoneDisplay, toE164 } from "@/lib/sms-phone";
 
 export const dynamic = "force-dynamic";
 
