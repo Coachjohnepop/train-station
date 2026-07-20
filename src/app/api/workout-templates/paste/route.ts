@@ -19,6 +19,11 @@ const pasteSchema = z.object({
   partIndex: z.number().int().min(1).max(5).optional(),
   /** When true with replace, first call returns 409 if tracks already have content. */
   force: z.boolean().optional(),
+  /**
+   * Name for the cloned workout on the destination day.
+   * Required when pasting from the template library (must differ from the template name).
+   */
+  contentName: z.string().max(200).optional().nullable(),
 });
 
 export async function POST(request: Request) {
@@ -31,12 +36,14 @@ export async function POST(request: Request) {
   }
 
   let sourceWorkoutId = parsed.data.sourceWorkoutId;
+  let sourceTemplateName: string | null = null;
+  const fromTemplate = Boolean(parsed.data.templateId);
 
   if (parsed.data.templateId) {
     if (!isCoachCatalogDemo()) {
       const tmpl = await prisma.workoutTemplate.findUnique({
         where: { id: parsed.data.templateId },
-        select: { workoutId: true, archivedAt: true },
+        select: { workoutId: true, archivedAt: true, name: true },
       });
       if (!tmpl) {
         return NextResponse.json({ detail: "Template not found" }, { status: 404 });
@@ -48,12 +55,14 @@ export async function POST(request: Request) {
         );
       }
       sourceWorkoutId = tmpl.workoutId;
+      sourceTemplateName = tmpl.name;
     } else {
       const { getDemoSeed } = await import("@/lib/demo-seed-store");
       const seed = await getDemoSeed({ preferFresh: true });
       const list =
         (seed.workoutTemplates as {
           id: string;
+          name?: string;
           workoutId: string;
           archivedAt?: string | null;
         }[]) || [];
@@ -68,6 +77,7 @@ export async function POST(request: Request) {
         );
       }
       sourceWorkoutId = tmpl.workoutId;
+      sourceTemplateName = tmpl.name || null;
     }
   }
 
@@ -89,6 +99,10 @@ export async function POST(request: Request) {
       partIndex: parsed.data.partIndex,
       // Soft confirm on overwrite unless coach already confirmed (force).
       requireConfirmIfOccupied: replace && !force,
+      contentName: parsed.data.contentName,
+      sourceTemplateName,
+      // Template pastes must get a new title (different week / day usage).
+      requireRename: fromTemplate,
     });
     return NextResponse.json(result, { status: 201 });
   } catch (e) {
@@ -105,6 +119,16 @@ export async function POST(request: Request) {
             "This day/part already has Gym or Home content. Confirm to replace with a fresh clone.",
         },
         { status: 409 },
+      );
+    }
+    if (msg === "RENAME_REQUIRED") {
+      return NextResponse.json(
+        {
+          detail: msg,
+          message:
+            "Give this copy a new name (different from the template title) before pasting onto another week/day.",
+        },
+        { status: 400 },
       );
     }
     const status =

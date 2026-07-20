@@ -26,7 +26,12 @@ export async function GET(request: Request) {
 
 const promoteSchema = z.object({
   sourceWorkoutId: z.string().min(1),
-  name: z.string().min(1).max(200),
+  /** Coach-facing title — required; empty/whitespace rejected. */
+  name: z
+    .string()
+    .trim()
+    .min(2, "Template title required (at least 2 characters)")
+    .max(200),
   category: z.string().max(40).optional(),
   versionLabel: z.string().max(80).optional().nullable(),
   notes: z.string().max(2000).optional().nullable(),
@@ -38,7 +43,13 @@ export async function POST(request: Request) {
 
   const parsed = promoteSchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) {
-    return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json(
+      {
+        detail: parsed.error.flatten(),
+        message: "Template title required — type a name before saving.",
+      },
+      { status: 400 },
+    );
   }
 
   try {
@@ -52,6 +63,15 @@ export async function POST(request: Request) {
         : msg === "NAME_REQUIRED"
           ? 400
           : 500;
-    return NextResponse.json({ detail: msg }, { status });
+    return NextResponse.json(
+      {
+        detail: msg,
+        message:
+          msg === "NAME_REQUIRED"
+            ? "Template title required — type a name before saving."
+            : msg,
+      },
+      { status },
+    );
   }
 }

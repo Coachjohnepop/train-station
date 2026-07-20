@@ -75,7 +75,8 @@ export async function listWorkoutTemplates(opts?: {
 
   const rows = await prisma.workoutTemplate.findMany({
     where,
-    orderBy: [{ category: "asc" }, { name: "asc" }],
+    // Newest first so coaches see what they just saved at the top of the picker.
+    orderBy: [{ createdAt: "desc" }, { updatedAt: "desc" }],
     include: {
       workout: {
         select: {
@@ -111,7 +112,7 @@ export async function promoteWorkoutToTemplate(input: {
   notes?: string | null;
 }): Promise<WorkoutTemplateRecord> {
   const name = input.name.trim();
-  if (!name) throw new Error("NAME_REQUIRED");
+  if (!name || name.length < 2) throw new Error("NAME_REQUIRED");
   const category = normalizeTemplateCategory(input.category);
   const versionLabel = input.versionLabel?.trim() || null;
   const notes = input.notes?.trim() || null;
@@ -345,6 +346,15 @@ export async function pasteWorkoutOntoProgramDay(input: {
    * Callers use replace:false first, then replace:true after confirm.
    */
   requireConfirmIfOccupied?: boolean;
+  /**
+   * Required when pasting from the template library: coach must give the copy a new title
+   * (different from the source template / workout name) so weeks don't share identical labels.
+   */
+  contentName?: string | null;
+  /** Source template display name (for rename check). */
+  sourceTemplateName?: string | null;
+  /** When true, contentName is required and must differ from source. */
+  requireRename?: boolean;
 }): Promise<{
   dayId: string;
   gymWorkoutId?: string;
@@ -361,7 +371,24 @@ export async function pasteWorkoutOntoProgramDay(input: {
   }
 
   const sourceName = await resolveSourceWorkoutName(input.sourceWorkoutId);
-  const baseTitle = workoutContentTitle(sourceName) || "Workout";
+  const sourceTitle = workoutContentTitle(
+    input.sourceTemplateName?.trim() || sourceName,
+  );
+  const requestedTitle = (input.contentName || "").trim();
+  let baseTitle = workoutContentTitle(requestedTitle || sourceName) || "Workout";
+
+  if (input.requireRename) {
+    if (!requestedTitle) {
+      throw new Error("RENAME_REQUIRED");
+    }
+    const next = workoutContentTitle(requestedTitle);
+    const prev = sourceTitle;
+    if (!next || next.toLowerCase() === (prev || "").toLowerCase()) {
+      throw new Error("RENAME_REQUIRED");
+    }
+    baseTitle = next;
+  }
+
   const replace = input.replace !== false;
   const cloned: string[] = [];
   let gymWorkoutId: string | undefined;

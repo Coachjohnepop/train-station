@@ -16,7 +16,19 @@ type TemplateRow = {
   workoutId: string;
   exerciseCount?: number;
   workoutName?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
+
+function templateRecency(t: TemplateRow): number {
+  const raw = t.createdAt || t.updatedAt || "";
+  const ms = Date.parse(raw);
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function namesMatch(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
 
 type WorkoutRow = { id: string; name: string; _count?: { exercises: number } };
 
@@ -73,11 +85,14 @@ export default function ProgramTemplatePastePanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Promote form
+  // Promote form — name must be typed (not auto-copied from the open day).
   const [promoName, setPromoName] = useState("");
   const [promoCategory, setPromoCategory] = useState("general");
   const [promoVersion, setPromoVersion] = useState("");
   const [promoNotes, setPromoNotes] = useState("");
+
+  // Paste rename — template copies must get a new title for the destination week/day.
+  const [pasteContentName, setPasteContentName] = useState("");
 
   // 28-day cycle + week packs (both live in workout_cycles library)
   const [cycleName, setCycleName] = useState("");
@@ -96,7 +111,14 @@ export default function ProgramTemplatePastePanel({
       fetch("/api/workout-cycles?library=1&archive=active", { cache: "no-store" }),
       fetch("/api/workout-templates?archive=archived", { cache: "no-store" }),
     ]);
-    if (tRes.ok) setTemplates(await tRes.json());
+    if (tRes.ok) {
+      const list = (await tRes.json()) as TemplateRow[];
+      setTemplates(
+        [...(Array.isArray(list) ? list : [])].sort(
+          (a, b) => templateRecency(b) - templateRecency(a),
+        ),
+      );
+    }
     if (wRes.ok) setWorkouts(await wRes.json());
     if (cRes.ok) {
       const cycles = await cRes.json();
@@ -106,7 +128,14 @@ export default function ProgramTemplatePastePanel({
         ),
       );
     }
-    if (archRes.ok) setArchivedTemplates(await archRes.json());
+    if (archRes.ok) {
+      const list = (await archRes.json()) as TemplateRow[];
+      setArchivedTemplates(
+        [...(Array.isArray(list) ? list : [])].sort(
+          (a, b) => templateRecency(b) - templateRecency(a),
+        ),
+      );
+    }
   }, []);
 
   useEffect(() => {
@@ -127,13 +156,10 @@ export default function ProgramTemplatePastePanel({
     setPasteWeekNumber(Math.max(1, Math.min(durationWeeks, activeWeekNumber || 1)));
   }, [activeWeekNumber, durationWeeks]);
 
-  // Always follow the open day title so coaches don't save 10 copies as "Chest"
-  // after switching days. They can still edit the field before Save.
+  // Clear promote name when switching the open workout — coach must enter a title deliberately.
   useEffect(() => {
-    if (focusWorkoutLabel?.trim()) {
-      setPromoName(focusWorkoutLabel.trim());
-    }
-  }, [focusWorkoutLabel, focusWorkoutId]);
+    setPromoName("");
+  }, [focusWorkoutId]);
 
   const weekPacks = useMemo(
     () => libraryCycles.filter(isWeekPack),
@@ -145,11 +171,25 @@ export default function ProgramTemplatePastePanel({
   );
 
   const filteredTemplates = useMemo(() => {
-    if (!category) return templates;
-    return templates.filter(
-      (t) => (t.category || "").trim().toLowerCase() === category.toLowerCase(),
-    );
+    const base = !category
+      ? templates
+      : templates.filter(
+          (t) => (t.category || "").trim().toLowerCase() === category.toLowerCase(),
+        );
+    // Newest → oldest (API already sorts; keep stable if client filters).
+    return [...base].sort((a, b) => templateRecency(b) - templateRecency(a));
   }, [templates, category]);
+
+  const selectedTemplate = useMemo(
+    () => filteredTemplates.find((t) => t.id === templateId) || templates.find((t) => t.id === templateId),
+    [filteredTemplates, templates, templateId],
+  );
+
+  const pasteRenameOk =
+    sourceMode !== "template" ||
+    (Boolean(pasteContentName.trim()) &&
+      Boolean(selectedTemplate) &&
+      !namesMatch(pasteContentName, selectedTemplate?.name || ""));
 
   /** Categories that actually have templates — used in the Pick filter (not the full suggestion list). */
   const usedCategories = useMemo(() => {
@@ -173,8 +213,18 @@ export default function ProgramTemplatePastePanel({
     }
     if (templateId && !filteredTemplates.some((t) => t.id === templateId)) {
       setTemplateId("");
+      setPasteContentName("");
     }
   }, [category, filteredTemplates, templateId, templates.length]);
+
+  // When a template is picked, seed a week-scoped name suggestion — coach can edit but must change from source.
+  useEffect(() => {
+    if (!templateId || sourceMode !== "template") return;
+    const t = templates.find((row) => row.id === templateId);
+    if (!t) return;
+    const suggestion = `W${activeWeekNumber} · ${t.name}`.slice(0, 200);
+    setPasteContentName(suggestion);
+  }, [templateId, sourceMode, templates, activeWeekNumber]);
 
   function msg(text: string) {
     onMessage?.(text);
@@ -189,18 +239,30 @@ export default function ProgramTemplatePastePanel({
       setError("Select Gym and/or Home track.");
       return;
     }
+    if (sourceMode === "template" && !templateId) {
+      setError("Pick a template.");
+      return;
+    }
+    if (sourceMode === "workout" && !workoutId) {
+      setError("Pick a workout.");
+      return;
+    }
+    if (sourceMode === "template") {
+      const rename = pasteContentName.trim();
+      if (!rename) {
+        setError("Name required for this copy (different from the template title).");
+        return;
+      }
+      if (selectedTemplate && namesMatch(rename, selectedTemplate.name)) {
+        setError(
+          `Change the name — cannot reuse “${selectedTemplate.name}” on another week/day. Add week, day, or version.`,
+        );
+        return;
+      }
+    }
     setBusy(true);
     setError(null);
     try {
-      if (sourceMode === "template" && !templateId) {
-        setError("Pick a template.");
-        return;
-      }
-      if (sourceMode === "workout" && !workoutId) {
-        setError("Pick a workout.");
-        return;
-      }
-
       const bodyBase =
         sourceMode === "template"
           ? {
@@ -210,6 +272,7 @@ export default function ProgramTemplatePastePanel({
               replace: true,
               partIndex,
               force: false as boolean,
+              contentName: pasteContentName.trim(),
             }
           : {
               sourceWorkoutId: workoutId,
@@ -218,6 +281,7 @@ export default function ProgramTemplatePastePanel({
               replace: true,
               partIndex,
               force: false as boolean,
+              contentName: pasteContentName.trim() || undefined,
             };
 
       let res = await fetch("/api/workout-templates/paste", {
@@ -257,8 +321,12 @@ export default function ProgramTemplatePastePanel({
         .filter(Boolean)
         .join(" + ");
       const partNote = partIndex > 1 ? ` · part ${partIndex}` : "";
+      const nameNote =
+        sourceMode === "template" && pasteContentName.trim()
+          ? ` as “${pasteContentName.trim()}”`
+          : "";
       msg(
-        `Pasted ${tracksLabel}${partNote} (fresh copies). Scroll up — you should see the exercises. Source template unchanged.`,
+        `Pasted ${tracksLabel}${partNote}${nameNote} (fresh copies). Source template unchanged.`,
       );
       await onPasted();
     } finally {
@@ -273,7 +341,11 @@ export default function ProgramTemplatePastePanel({
     }
     const name = promoName.trim();
     if (!name) {
-      setError("Template name required.");
+      setError("Template title required — type a name before saving.");
+      return;
+    }
+    if (name.length < 2) {
+      setError("Template title must be at least 2 characters.");
       return;
     }
     setBusy(true);
@@ -292,12 +364,18 @@ export default function ProgramTemplatePastePanel({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(formatApiErrorDetail(data.detail) || "Could not save template");
+        setError(
+          formatApiErrorDetail(data.detail) ||
+            (data.detail === "NAME_REQUIRED"
+              ? "Template title required."
+              : "Could not save template"),
+        );
         return;
       }
       msg(`Saved template “${name}” — paste anytime (always a fresh copy).`);
       setSourceMode("template");
       setTemplateId(data.id);
+      setPromoName("");
       await load();
     } finally {
       setBusy(false);
@@ -561,13 +639,17 @@ export default function ProgramTemplatePastePanel({
           </p>
         ) : (
           <p className="text-[10px] text-emerald-100/80">
-            Saving: <span className="font-semibold text-[var(--text)]">{focusWorkoutLabel || "current workout"}</span>
-            {" · "}always a fresh copy when you paste later.
+            Source workout:{" "}
+            <span className="font-semibold text-[var(--text)]">
+              {focusWorkoutLabel || "current workout"}
+            </span>
+            {" · "}you must enter a <strong className="text-[var(--text)]">template title</strong>{" "}
+            below (not auto-filled).
           </p>
         )}
         <div className="space-y-1.5">
           <p className="text-[10px] font-medium text-emerald-100/90">
-            Quick name (tap one — or keep the title from the day above):
+            Quick title (tap one) or type your own — required to save:
           </p>
           <div className="flex flex-wrap gap-1.5">
             {TEMPLATE_DAY_NAME_SUGGESTIONS.map((name) => {
@@ -593,13 +675,19 @@ export default function ProgramTemplatePastePanel({
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label className="block text-[var(--text)]">
-            Name
+            Template title <span className="text-amber-200">(required)</span>
             <input
               className="input mt-0.5 h-9 w-full text-xs text-[var(--text)]"
               value={promoName}
               onChange={(e) => setPromoName(e.target.value)}
               list="template-day-name-suggestions"
-              placeholder="e.g. Upper Body Workout · Leg Day · Fasted Cardio"
+              placeholder={
+                focusWorkoutLabel?.trim()
+                  ? `e.g. ${focusWorkoutLabel.trim()} (type a title)`
+                  : "e.g. Upper Body Workout · Leg Day · Fasted Cardio"
+              }
+              required
+              aria-required
             />
             <datalist id="template-day-name-suggestions">
               {TEMPLATE_DAY_NAME_SUGGESTIONS.map((n) => (
@@ -644,11 +732,21 @@ export default function ProgramTemplatePastePanel({
         <button
           type="button"
           className="btn-primary h-9 px-4 text-[12px] font-semibold"
-          disabled={busy || disabled || !focusWorkoutId || !promoName.trim()}
+          disabled={busy || disabled || !focusWorkoutId || promoName.trim().length < 2}
           onClick={() => void promoteFocus()}
+          title={
+            promoName.trim().length < 2
+              ? "Enter a template title first"
+              : "Save a deep clone into the template library"
+          }
         >
           Save to template library
         </button>
+        {focusWorkoutId && promoName.trim().length < 2 && (
+          <p className="text-[10px] font-medium text-amber-100">
+            Enter a template title (or tap a quick name) — Save stays off until you do.
+          </p>
+        )}
       </div>
 
       {/* B — Paste onto the day open above */}
@@ -704,14 +802,14 @@ export default function ProgramTemplatePastePanel({
                 className="input h-9 min-w-[14rem] flex-1 text-xs text-[var(--text)]"
                 value={templateId}
                 onChange={(e) => setTemplateId(e.target.value)}
-                aria-label="Pick template"
+                aria-label="Pick template (newest first)"
               >
                 <option value="">
                   {templateEmptyAll
                     ? "No templates yet — use step A first"
                     : templateEmptyFilter
                       ? "None in this filter — choose All templates"
-                      : `Pick template… (${filteredTemplates.length})`}
+                      : `Pick template… newest first (${filteredTemplates.length})`}
                 </option>
                 {filteredTemplates.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -722,6 +820,31 @@ export default function ProgramTemplatePastePanel({
                 ))}
               </select>
             </div>
+            {templateId && selectedTemplate && (
+              <label className="block text-[var(--text)]">
+                Name for this copy{" "}
+                <span className="text-amber-200">(required — must differ from template)</span>
+                <input
+                  className="input mt-0.5 h-9 w-full text-xs text-[var(--text)]"
+                  value={pasteContentName}
+                  onChange={(e) => setPasteContentName(e.target.value)}
+                  placeholder={`e.g. W${activeWeekNumber} · ${selectedTemplate.name}`}
+                  required
+                  aria-required
+                />
+                <span className="mt-0.5 block text-[10px] text-[var(--muted)]">
+                  Template is “{selectedTemplate.name}”. Suggested name includes the open week so
+                  W1 and W2 copies stay distinct — edit freely, but don&apos;t reuse the template
+                  title alone.
+                </span>
+                {pasteContentName.trim() &&
+                  namesMatch(pasteContentName, selectedTemplate.name) && (
+                    <span className="mt-0.5 block text-[10px] font-medium text-amber-100">
+                      Change this name — cannot paste with the same title as the template.
+                    </span>
+                  )}
+              </label>
+            )}
             {templateEmptyAll && (
               <p className="rounded border border-amber-400/50 bg-amber-500/15 px-2 py-2 text-[11px] font-medium text-amber-50">
                 Library is empty (or you haven&apos;t saved any yet). Use{" "}
@@ -739,7 +862,7 @@ export default function ProgramTemplatePastePanel({
             {!templateEmptyAll && !templateEmptyFilter && (
               <p className="text-[10px] text-[var(--muted)]">
                 {filteredTemplates.length} template{filteredTemplates.length === 1 ? "" : "s"}{" "}
-                visible — open the second dropdown to pick one.
+                (newest → oldest) — open the second dropdown to pick one.
               </p>
             )}
           </div>
@@ -793,17 +916,26 @@ export default function ProgramTemplatePastePanel({
               busy ||
               disabled ||
               !dayId ||
-              (sourceMode === "template" ? !templateId : !workoutId)
+              (sourceMode === "template" ? !templateId || !pasteRenameOk : !workoutId)
             }
             onClick={() => void pasteWorkout()}
-            title="Clones the selected template onto the calendar day open above"
+            title={
+              sourceMode === "template" && !pasteRenameOk
+                ? "Give this copy a new name (different from the template) first"
+                : "Clones the selected template onto the calendar day open above"
+            }
           >
             Paste as copy onto this day
           </button>
         </div>
         {sourceMode === "template" && !templateId && !templateEmptyAll && (
           <p className="text-[11px] font-medium text-amber-100">
-            Pick a template in the second dropdown first — then this button turns on.
+            Pick a template in the second dropdown first — then name the copy and paste.
+          </p>
+        )}
+        {sourceMode === "template" && templateId && !pasteRenameOk && (
+          <p className="text-[11px] font-medium text-amber-100">
+            Name this copy differently from the template title before paste turns on.
           </p>
         )}
         {!dayId && (
