@@ -125,7 +125,7 @@ export default function MemberChatWorkspace({
       if (!opts?.quiet) setLoading(true);
       try {
         const res = await fetch(
-          `/api/chat/messages?threadId=${encodeURIComponent(threadId)}&role=member`,
+          `/api/chat/messages?threadId=${encodeURIComponent(threadId)}&role=${asCoach ? "coach" : "member"}`,
           { cache: "no-store" },
         );
         if (!res.ok) return;
@@ -137,7 +137,7 @@ export default function MemberChatWorkspace({
         if (!opts?.quiet) setLoading(false);
       }
     },
-    [],
+    [asCoach],
   );
 
   const refreshUnread = useCallback(async () => {
