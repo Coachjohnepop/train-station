@@ -336,6 +336,13 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 **Date:** 2026-07-20 (PM residual pass)  
 **Status:** **Venmo LIVE** · Stripe **Test** · SMS **PARKED**. Residual five-item pass in progress (phone-pass code OK; whistle + downgrade + Live checklist shipped).
 
+### Jul 20 PM — full site page review
+- **HTTP:** 0 route 404s; all admin/member pages gate to login (307); public pages 200; nav anchors `#tickets/#services/#coming-soon-programs` OK; join `#plans` OK.
+- **Internal hrefs:** static scan — no dead app paths from Link/href.
+- **Fixed:** join/login stale “waitlist / coming soon” copy; middleware public allowlist for `/api/landing-media`, `/api/brand/public`, `/api/push/vapid-public-key`; removed rickroll **fallback** + join plan placeholder YouTube; scrubbed **prod Blob** welcome/free-chastise that had `dQw4w9WgXcQ` (Venmo kept); Calendly placeholder → real Jeremy URL.
+- **Content still for Jeremy:** real welcome + free-ticket YouTube via Admin → Landing.
+- **Intentional:** `/admin/sms-hub` exists but hidden from nav (SMS parked); `/landing` → `/join`.
+
 ### Jul 20 PM — residual five (one at a time)
 1. **Phone-pass surfaces** — Book Call API + Calendly, SW v3, payments/Venmo, Zoom host-only join logic verified in code/public APIs. **You still do 5-min phone pass** (Book Call UI, Account, badge, Messages, no false Join Live).
 2. **Jeremy Enable alerts** — steps in Admin → Settings + `JEREMY_ADMIN_MANUAL.md`. Only **john@bcxvoice.com** subscribed until he enables once.

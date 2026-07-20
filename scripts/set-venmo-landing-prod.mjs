@@ -31,28 +31,27 @@ async function main() {
     process.exit(1);
   }
 
-  const payload = {
-    welcomeVideoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    welcomeVideosByPlan: {},
-    freeChastiseVideoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  // Venmo only — never invent joke/default YouTube URLs (no rickroll).
+  const existing = await readBlobJson("demo/landing-media.json");
+  const prev = existing && typeof existing === "object" ? existing : {};
+  const scrubJoke = (url) => {
+    const u = typeof url === "string" ? url.trim() : "";
+    if (!u) return null;
+    if (/dQw4w9WgXcQ/i.test(u)) return null;
+    return u;
+  };
+  const merged = {
+    ...prev,
+    welcomeVideoUrl: scrubJoke(prev.welcomeVideoUrl),
+    welcomeVideosByPlan:
+      prev.welcomeVideosByPlan && typeof prev.welcomeVideosByPlan === "object"
+        ? prev.welcomeVideosByPlan
+        : {},
+    freeChastiseVideoUrl: scrubJoke(prev.freeChastiseVideoUrl),
     venmoQrUrl: QR_URL,
     venmoHandle: HANDLE,
     venmoInstructions: INSTRUCTIONS,
     updatedAt: new Date().toISOString(),
-  };
-
-  // Merge with existing blob if present (don't clobber welcome videos)
-  const existing = await readBlobJson("demo/landing-media.json");
-  const merged = {
-    ...(existing && typeof existing === "object" ? existing : {}),
-    ...payload,
-    welcomeVideoUrl:
-      (existing && existing.welcomeVideoUrl) || payload.welcomeVideoUrl,
-    welcomeVideosByPlan:
-      (existing && existing.welcomeVideosByPlan) || payload.welcomeVideosByPlan,
-    freeChastiseVideoUrl:
-      (existing && existing.freeChastiseVideoUrl) || payload.freeChastiseVideoUrl,
-    updatedAt: payload.updatedAt,
   };
 
   const ok = await writeBlobJson("demo/landing-media.json", merged);

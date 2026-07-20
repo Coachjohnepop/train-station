@@ -220,7 +220,7 @@ export default function AdminBookingsPage() {
             <input
               className="input mt-1 w-full"
               value={contact.calendlyUrl || ""}
-              placeholder="https://calendly.com/jeremy/15min"
+              placeholder="https://calendly.com/jeremy-thetrainstation/new-meeting"
               onChange={(e) => setContact({ ...contact, calendlyUrl: e.target.value })}
             />
           </label>

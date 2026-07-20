@@ -24,7 +24,8 @@ const PLANS = [
     muted: ["Limited coach access", "No priority review"],
     quote:
       "Starting here is how every great athlete began. Build the habit small and watch it compound.",
-    video: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    /** Optional coach video — leave null until Admin → Landing has a real URL. */
+    video: null as string | null,
     popular: false,
   },
   {
@@ -43,7 +44,7 @@ const PLANS = [
     muted: [] as string[],
     quote:
       "This is the plan where real accountability kicks in. The structure here turns effort into lasting results.",
-    video: "https://www.youtube.com/watch?v=3JZ_9j6z8fQ",
+    video: null as string | null,
     popular: true,
   },
   {
@@ -60,7 +61,7 @@ const PLANS = [
     ],
     muted: [] as string[],
     quote: "Corporate and team memberships with full Train Station access.",
-    video: "https://www.youtube.com/watch?v=3JZ_9j6z8fQ",
+    video: null as string | null,
     popular: false,
   },
   {
@@ -79,7 +80,7 @@ const PLANS = [
     muted: [] as string[],
     quote:
       "Eight focused sessions plus full access — the deepest level of support for serious athletes.",
-    video: "https://www.youtube.com/watch?v=fJ9rUzIMcZQ",
+    video: null as string | null,
     popular: false,
   },
 ] as const;
@@ -164,15 +165,17 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
                   A message from the instructor
                 </p>
                 <p className="mb-3 text-sm italic text-[#9d8ab8]">&ldquo;{plan.quote}&rdquo;</p>
-                <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
-                  <YoutubeAutoplayFrame
-                    className="h-full w-full"
-                    videoUrl={plan.video}
-                    title={`Instructor message for ${plan.title}`}
-                    autoplay
-                    kickPlayback
-                  />
-                </div>
+                {plan.video ? (
+                  <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
+                    <YoutubeAutoplayFrame
+                      className="h-full w-full"
+                      videoUrl={plan.video}
+                      title={`Instructor message for ${plan.title}`}
+                      autoplay
+                      kickPlayback
+                    />
+                  </div>
+                ) : null}
               </div>
 
               <button

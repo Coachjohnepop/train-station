@@ -346,7 +346,7 @@ function LoginForm() {
             <p className="text-center text-xs text-[var(--muted)]">
               New here?{" "}
               <Link href="/signup" className="text-accent hover:underline">
-                Join the waitlist
+                Create an account
               </Link>
             </p>
           </form>

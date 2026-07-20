@@ -33,6 +33,11 @@ const PUBLIC_API_PREFIXES = [
   "/api/analytics",
   // Product photos for <img> — same-origin proxy; no secrets, catalog ids only
   "/api/equipment/image",
+  // Safe read-only public config (no secrets)
+  "/api/landing-media",
+  "/api/brand/public",
+  // Web Push VAPID public key is meant to be public (private key stays server-side)
+  "/api/push/vapid-public-key",
 ];
 
 function isPublicPage(pathname: string): boolean {

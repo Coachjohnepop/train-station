@@ -31,17 +31,17 @@ export default async function JoinPage({
         <div className="uppercase tracking-[3px] text-xs font-semibold text-[#7c3aed] mb-3">MEMBERSHIPS</div>
         <h1 className="text-5xl font-semibold tracking-[-1.8px] mb-4">Join The Train Station</h1>
         <p className="text-xl text-[#9d8ab8] max-w-xl mx-auto">
-          Professional programs, real accountability, and the tools coaches actually use — now available for members.
+          Professional programs, real accountability, and the tools coaches actually use — available for members now.
         </p>
         <div className="mt-6 text-sm text-[#9d8ab8]">
-          The full member app is coming soon. Sign up below and we&apos;ll notify you when your spot opens.
+          Pick a ticket below, create your account, and you&apos;re in — train on your phone or in the gym with coach support.
         </div>
         <div className="mt-4">
           <Link
             href="/signup"
             className="inline-flex h-10 items-center justify-center rounded-full bg-[#7c3aed] px-6 text-sm font-semibold text-white hover:bg-[#6d2dd6] transition"
           >
-            Join the waitlist →
+            Create your account →
           </Link>
         </div>
       </div>

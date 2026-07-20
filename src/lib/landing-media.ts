@@ -79,13 +79,10 @@ export const WELCOME_VIDEO_PLAN_OPTIONS = MEMBERSHIP_PLANS.map((plan) => ({
   label: signupPlanLabel(plan),
 }));
 
-const FREE_CHASTISE_FALLBACK_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-
+/** No joke/default YouTube — only play when coach or env configures a real URL. */
 export function freeChastiseVideoUrlFromConfig(stored: string | null | undefined) {
-  return (
-    resolveLandingVideoUrl(stored, [
-      "NEXT_PUBLIC_FREE_CHASTISE_VIDEO_URL",
-      "NEXT_PUBLIC_FREE_CHASTISE_VIDEO_YT",
-    ]) ?? FREE_CHASTISE_FALLBACK_URL
-  );
+  return resolveLandingVideoUrl(stored, [
+    "NEXT_PUBLIC_FREE_CHASTISE_VIDEO_URL",
+    "NEXT_PUBLIC_FREE_CHASTISE_VIDEO_YT",
+  ]);
 }
