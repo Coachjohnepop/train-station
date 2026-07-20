@@ -53,8 +53,7 @@ Sign in → left sidebar. Paths below are full URLs on prod.
 ### Talk
 | Screen | URL | What lives here |
 |--------|-----|-----------------|
-| **Messages** | `/admin/chat` | **Primary coach inbox.** Sticky **jelly-bean chips** across the top = **every member + community** (swipe sideways). **Tap a chip** to open that chat. **Red badges** on chips / left nav / top “Messages” / bottom **Msgs** = unread. **Clear badge** / **Clear all badges** when handled; **Badge for later** re-flags. Community feed + “Post to individual” sit **below** (collapsed). |
-| **SMS Hub** | `/admin/sms-hub` | Text-style hub: recipients, logs, broadcast. **Until Twilio is fully live, many sends are email hub / simulated, not carrier SMS.** |
+| **Messages** | `/admin/chat` | **Primary coach inbox (only messaging path for clients).** Sticky **jelly-bean chips** = every member + community. **Tap a chip** → message them. **Red badges** in-app + **home-screen badge** (if they installed the app) when you send. **No phone SMS** from Messages. **Clear badge** / **Clear all badges** / **Badge for later**. Community + “Post to individual” sit below. |
 
 ### Live
 | Screen | URL | What lives here |
@@ -303,7 +302,7 @@ Change amounts in **Admin → Pricing** (and Stripe product prices). Fee type st
 |-----|------|
 | Build the week | Programs → day → edit Gym/Home → Save / Publish |
 | Run class | Settings (Zoom connected) → **Go to Today** or Live Floor |
-| Text a client | Messages (or SMS Hub when carrier SMS is live) |
+| Text a client | **Messages only** (in-app + app badge) — no phone SMS from the product |
 | Onboard paid member | Members + Queue; confirm plan / mark paid if needed |
 | Update marketing videos | Landing |
 

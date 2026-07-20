@@ -69,7 +69,7 @@ export default function TodaySessionPanel({
     defaultUserIds?.length ? defaultUserIds : asInstructor ? DEFAULT_COACH_MEMBERS : [],
   );
   const [preview, setPreview] = useState<{ title: string; exercises: ParsedExercise[] } | null>(null);
-  const [sendSmsAlert, setSendSmsAlert] = useState(true);
+  const [sendSmsAlert, setSendSmsAlert] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageIsError, setMessageIsError] = useState(false);
@@ -168,7 +168,7 @@ export default function TodaySessionPanel({
           userIds: asInstructor ? selectedUserIds : defaultUserIds?.length ? defaultUserIds : selectedUserIds,
           replacesSchedule: true,
           createdBy: asInstructor ? "coach" : "member",
-          sendSmsAlert: asInstructor ? sendSmsAlert : false,
+          sendSmsAlert: false,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -181,16 +181,13 @@ export default function TodaySessionPanel({
         .filter((m) => selectedUserIds.includes(m.id))
         .map((m) => m.name)
         .join(", ");
-      const smsNote =
-        asInstructor && sendSmsAlert && data.alerts?.sent
-          ? ` · SMS sent to ${data.alerts.sent}`
-          : asInstructor && sendSmsAlert
-            ? " · SMS alert queued"
-            : "";
+      const badgeNote = asInstructor
+        ? " · members see it on Go to Today"
+        : "";
       const created = Array.isArray(data.newExerciseIds) ? data.newExerciseIds.length : 0;
       setNewExerciseCount(created);
       setMessage(
-        `Built "${data.session?.title || "workout"}" for ${saveDate}${names ? ` · ${names}` : ""} (${data.parsed?.exercises?.length || 0} blocks)${smsNote}.`,
+        `Built "${data.session?.title || "workout"}" for ${saveDate}${names ? ` · ${names}` : ""} (${data.parsed?.exercises?.length || 0} blocks)${badgeNote}.`,
       );
       setMessageIsError(false);
       router.refresh();
@@ -203,7 +200,7 @@ export default function TodaySessionPanel({
       const timedOut = e?.name === "AbortError";
       setMessage(
         timedOut
-          ? "Build timed out — try again. If it keeps hanging, uncheck Send SMS alert and retry."
+          ? "Build timed out — try again."
           : `Save failed: ${e?.message || "network error"}`,
       );
     } finally {
@@ -289,12 +286,11 @@ export default function TodaySessionPanel({
         onChange={(e) => setRawSms(e.target.value)}
       />
 
-      {asInstructor && (
-        <label className="flex items-center gap-2 text-xs cursor-pointer">
-          <input type="checkbox" checked={sendSmsAlert} onChange={(e) => setSendSmsAlert(e.target.checked)} />
-          Send SMS alert to selected members with link to Go to Today
-        </label>
-      )}
+      {asInstructor ? (
+        <p className="text-[10px] text-[var(--muted)]">
+          Members see this on Go to Today; open Messages if you want an in-app badge ping.
+        </p>
+      ) : null}
 
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={handleParse} disabled={!rawSms.trim()} className="btn-ghost text-sm px-3 py-1">

@@ -33,7 +33,7 @@ export default function MemberChatReply() {
   return (
     <div className="card space-y-2">
       <p className="text-xs text-[var(--muted)]">
-        Reply in chat here, or text your coach from your phone — SMS replies show up in this thread too.
+        Reply in chat here — your coach sees it under Messages with a badge.
       </p>
       <textarea
         className="input h-16 w-full resize-y text-sm"

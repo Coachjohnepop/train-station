@@ -20,8 +20,8 @@ export default function GoToTodayCard({
   const cardTitle = title ?? "Go to Today";
   const defaultSubtitle =
     variant === "coach"
-      ? "Appointments & SMS workouts"
-      : "Coach SMS workout & checkoffs";
+      ? "Appointments & coach workouts"
+      : "Coach workout & checkoffs";
 
   const detail =
     subtitle ||
@@ -67,8 +67,8 @@ export default function GoToTodayCard({
           <p className="mt-1 text-sm text-[var(--muted)]">
             {subtitle ||
               (variant === "coach"
-                ? "Today's appointments, SMS workouts, and live sessions."
-                : "Your coach SMS workout overrides the schedule — check off sets here.")}
+                ? "Today's appointments, coach workouts, and live sessions."
+                : "Your coach workout for today — check off sets here.")}
           </p>
         </div>
         <div className="text-right shrink-0">

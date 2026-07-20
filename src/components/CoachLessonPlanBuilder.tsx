@@ -73,7 +73,7 @@ export default function CoachLessonPlanBuilder({
   const [individualDrafts, setIndividualDrafts] = useState<IndividualDraft[]>([]);
   const [interpretation, setInterpretation] = useState<InterpretResponse | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [sendSmsAlert, setSendSmsAlert] = useState(true);
+  const [sendSmsAlert, setSendSmsAlert] = useState(false);
   const [restTimerEnabled, setRestTimerEnabled] = useState(true);
   const [restTimerSeconds, setRestTimerSeconds] = useState(DEFAULT_REST_TIMER_SECONDS);
   const [loading, setLoading] = useState(false);
@@ -375,7 +375,7 @@ export default function CoachLessonPlanBuilder({
         body: JSON.stringify({
           sessionDate,
           scheduledAt: scheduled.toISOString(),
-          sendSmsAlert,
+          sendSmsAlert: false,
           replaceExisting: true,
           restTimer: restTimerEnabled
             ? { enabled: true, seconds: restTimerSeconds }
@@ -734,14 +734,9 @@ export default function CoachLessonPlanBuilder({
             </p>
           </div>
 
-          <label className="flex items-center gap-2 text-xs cursor-pointer">
-            <input
-              type="checkbox"
-              checked={sendSmsAlert}
-              onChange={(e) => setSendSmsAlert(e.target.checked)}
-            />
-            SMS alert with link to Go to Today
-          </label>
+          <p className="text-[10px] text-[var(--muted)]">
+            Deploy to schedule only — use Messages for an in-app badge to members.
+          </p>
 
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setStep(1)} className="btn-ghost text-sm px-3 py-1">

@@ -479,7 +479,7 @@ export default function MemberTodayShell({
 
       {isToday && !showFullWorkout && !hasCoachSession && (
         <div className="card p-3 text-sm text-[var(--muted)]">
-          <p>Your coach can assign a workout via SMS — it will show here on the day.</p>
+          <p>Your coach can assign a workout — it will show here on the day.</p>
           <Link href="/member/chat" className="mt-2 inline-block text-xs font-medium text-accent hover:underline">
             Message your coach →
           </Link>

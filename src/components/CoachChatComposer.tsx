@@ -134,7 +134,7 @@ export default function CoachChatComposer({
           mediaUrl: mediaUrl || undefined,
           imageUrl: imageUrl || undefined,
           videoDurationSec: videoDurationSec || undefined,
-          sendSmsAlert,
+          sendSmsAlert: false,
         }),
       });
       const data = await res.json();
@@ -143,7 +143,7 @@ export default function CoachChatComposer({
       const created = Array.isArray(data.newExerciseIds) ? data.newExerciseIds.length : 0;
       setNewExerciseCount(created);
       setMessage(
-        `Posted to ${selectedIds.length} member thread${selectedIds.length === 1 ? "" : "s"}${data.alerts?.sent ? ` · SMS sent to ${data.alerts.sent}` : ""}.`,
+        `Posted to ${selectedIds.length} member thread${selectedIds.length === 1 ? "" : "s"} — in-app badge will show on their Messages.`,
       );
       setBody("");
       setRawSms("");
@@ -274,10 +274,9 @@ export default function CoachChatComposer({
         </label>
       </div>
 
-      <label className="flex items-center gap-2 text-xs cursor-pointer">
-        <input type="checkbox" checked={sendSmsAlert} onChange={(e) => setSendSmsAlert(e.target.checked)} />
-        Also text member&apos;s phone (message preview + link to Messages)
-      </label>
+      <p className="text-[10px] text-[var(--muted)]">
+        Delivers in-app Messages only (red badge on Messages / home screen if installed). No phone texts.
+      </p>
 
       <div className="flex flex-wrap items-center gap-3">
         <button

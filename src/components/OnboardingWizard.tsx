@@ -323,7 +323,7 @@ export default function OnboardingWizard({
           <>
             <h2 className="text-lg font-semibold">Daily workout texts</h2>
             <p className="text-sm text-[var(--muted)]">
-              Get a morning SMS with a direct link to that day&apos;s workout. On your dashboard next,
+              Get a morning reminder in Messages (and a home-screen badge if you installed the app). On your dashboard next,
               you&apos;ll book your 15-minute coach intro and start your guided warm-ups.
             </p>
             <div className="space-y-3 pt-1">

@@ -96,10 +96,10 @@ export const MEMBERSHIP_OFFERS: ProductOfferDefinition[] = [
     checkoutMode: "subscription",
     priceLabel: "$25",
     priceNote: "/mo",
-    description: "All programs, coach Zoom, and SMS accountability.",
+    description: "All programs, coach Zoom, and in-app coach messages.",
     stripePriceEnv: "STRIPE_PRICE_MEMBER",
     accessTier: "coach",
-    perks: ["All programs — 4-week blocks", "15-min coach Zoom", "SMS accountability texts"],
+    perks: ["All programs — 4-week blocks", "15-min coach Zoom", "Coach Messages + app badges"],
   },
   {
     id: "business",

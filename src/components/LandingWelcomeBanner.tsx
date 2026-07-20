@@ -79,7 +79,7 @@ export default function LandingWelcomeBanner({
               Ready for the full ride?
             </p>
             <p className="mt-2 text-sm leading-relaxed text-[var(--text)]">
-              Coach Class adds daily SMS workouts, your private coach thread, and scheduling with
+              Coach Class adds daily workouts, your private coach Messages thread (app badge), and scheduling with
               Jeremy. Business Class and 1st Class unlock more live coaching and priority support.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">

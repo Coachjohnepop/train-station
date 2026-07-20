@@ -69,11 +69,7 @@ export const COACH_NAV_GROUPS: AdminNavGroup[] = [
         match: (p) => p.startsWith("/admin/chat"),
         badge: "chat",
       },
-      {
-        href: "/admin/sms-hub",
-        label: "SMS Hub",
-        match: (p) => p.startsWith("/admin/sms-hub"),
-      },
+      // SMS Hub hidden from coach nav — messaging is in-app + app badge only (carrier SMS parked).
     ],
   },
   {
