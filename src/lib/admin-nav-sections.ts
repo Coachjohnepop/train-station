@@ -163,7 +163,7 @@ export const PLATFORM_NAV_GROUPS: AdminNavGroup[] = [
       },
       {
         href: "/admin/commission",
-        label: "Commission",
+        label: "Dev & partnership",
         match: (p) => p.startsWith("/admin/commission"),
       },
       {

@@ -127,7 +127,7 @@ export default function AdminCommissionClient() {
     const res = await fetch("/api/admin/commission");
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setError(body.error || "Could not load commission data.");
+      setError(body.error || "Could not load development & partnership fee data.");
       setData(null);
     } else {
       setData(body);
@@ -202,7 +202,7 @@ export default function AdminCommissionClient() {
   }
 
   async function removePartner(partner: Partner) {
-    if (!confirm(`Remove ${partner.name} from commission partners?`)) return;
+    if (!confirm(`Remove ${partner.name} from development & partnership fee partners?`)) return;
     setBusy(`del-${partner.id}`);
     setError("");
     const res = await fetch(
@@ -307,25 +307,28 @@ export default function AdminCommissionClient() {
   return (
     <div className="max-w-4xl space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Commission admin</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Development &amp; partnership fees
+        </h1>
         <p className="mt-2 text-sm text-[var(--muted)]">
           {data?.mode === "milestone" ? (
             <>
-              Milestone revenue share: {data?.commission.tier1RatePercent ?? 5}% of gross MRR until{" "}
-              {data?.commission.tier1CapLabel ?? "$5,000"} MRR, then{" "}
+              Development and partnership fee pool: {data?.commission.tier1RatePercent ?? 5}% of
+              gross MRR until {data?.commission.tier1CapLabel ?? "$5,000"} MRR, then{" "}
               {data?.commission.tier2RatePercent ?? 30}% of all MRR. Partners split that pool by
-              share % — add future shareholders here when you sell company shares.
+              share % (Connect payouts) — add future partners when ownership expands.
             </>
           ) : data?.mode === "tiered" ? (
             <>
-              Tiered commission pool: {data?.commission.tier1RatePercent ?? 5}% on first{" "}
+              Tiered fee pool: {data?.commission.tier1RatePercent ?? 5}% on first{" "}
               {data?.commission.tier1CapLabel ?? "$5,000"} MRR, then{" "}
-              {data?.commission.tier2RatePercent ?? 30}% above — partners split that pool.
+              {data?.commission.tier2RatePercent ?? 30}% above — partners split that pool via
+              Connect.
             </>
           ) : (
             <>
-              Flat revenue split: each partner&apos;s share is a % of gross MRR. The remainder stays
-              on the platform Stripe account (company feed).
+              Flat development &amp; partnership fees: each partner&apos;s share is a % of gross
+              MRR. The remainder stays on the platform Stripe account (company feed).
             </>
           )}
         </p>
@@ -371,14 +374,14 @@ export default function AdminCommissionClient() {
                     : ` — company keeps ${Math.max(0, 100 - data.shareTotal)}%`
                   : !data.shareValid
                     ? " — must equal 100% of pool"
-                    : " — of commission pool"}
+                    : " — of fee pool"}
               </span>
             </div>
 
             {data.partners.length === 0 ? (
               <p className="text-sm text-[var(--muted)]">
                 No partners yet. Use the form below to add someone who receives a share of the
-                commission pool.
+                development &amp; partnership fee pool.
               </p>
             ) : (
               <div className="overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--surface-2)]">

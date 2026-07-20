@@ -335,9 +335,9 @@ export default function AdminBillingClient() {
           <h1 className="text-2xl font-semibold tracking-tight">Billing</h1>
           <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
             Stripe transactions, full &amp; partial refunds, discount codes, and subscription
-            health. Commission partner payouts stay under{" "}
+            health. Development &amp; partnership fee payouts stay under{" "}
             <Link href="/admin/commission" className="text-accent hover:underline">
-              Commission
+              Dev &amp; partnership
             </Link>
             .
           </p>
@@ -428,7 +428,7 @@ export default function AdminBillingClient() {
               </li>
               <li>
                 <Link href="/admin/commission" className="text-accent hover:underline">
-                  Partner commission &amp; Connect payouts
+                  Development &amp; partnership fees (Connect)
                 </Link>
               </li>
               <li>
@@ -793,7 +793,7 @@ export default function AdminBillingClient() {
             <p className="text-xs text-[var(--muted)]">
               Referral ID map (manual Stripe IDs) still lives under{" "}
               <Link href="/admin/commission" className="text-accent hover:underline">
-                Commission → Referral discounts
+                Dev &amp; partnership → Referral discounts
               </Link>
               .
             </p>

@@ -18,9 +18,10 @@ const cards = [
   },
   {
     href: "/admin/commission",
-    title: "Commission",
-    description: "Partner splits, Connect onboarding, referral ID map, payout floor.",
-    cta: "Open commission →",
+    title: "Development & partnership fees",
+    description:
+      "Dev and partner fee pool, Connect onboarding, referral map, payout floor.",
+    cta: "Open fees →",
   },
   {
     href: "/admin/pricing",

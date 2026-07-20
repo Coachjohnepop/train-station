@@ -43,9 +43,9 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 | 1. Member pays | Card checkout (subscription **or** one-time — only two fee shapes) |
 | 2. Money lands | **100%** (minus Stripe fees) → **Jeremy’s master Stripe balance** → business bank on payout schedule |
 | 3. Company keeps | Most revenue on platform (“company feed”) |
-| 4. Partner split | **Not** at swipe. Later: Admin → **Commission** + **Connect Express** |
-| 5. John’s share | **100% of partner pool** until shareholders change (5% MRR → 30% after $5k goal) |
-| 5b. **Payout minimum** | Partner pool must reach **$400** before **Run payout** (covers platform/admin fees). Env: `STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS` (default 400). Preview always OK. |
+| 4. **Dev & partnership fees** | **Not** at swipe. Later: Admin → **Dev & partnership** + **Connect Express** |
+| 5. John’s share | **100% of fee pool** until partners change (5% MRR → 30% after $5k goal) — development & partnership fees |
+| 5b. **Payout minimum** | Fee pool must reach **$400** before **Run payout**. Env: `STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS` (default 400). Preview always OK. |
 | 6. Test vs Live | **`sk_test_`** = fake money. Real cards only after Live keys + live `price_…` |
 
 #### B. Venmo (backup — **live on prod**)
@@ -213,7 +213,7 @@ Audit Jeremy: `MINUTES=120 npx tsx scripts/jeremy-post-audit-prodtest.mjs`
 
 ### Suggested stack order
 1. **Stripe Live** + webhook + one real card payment (Venmo real-money path already live)  
-2. **Commission / Connect** if John payouts matter before revenue grows  
+2. **Dev & partnership fees / Connect** if John payouts matter before revenue grows  
 3. **Jeremy content** (YouTube + real Adult W1/W2)  
 4. **E2E money + member path** (ticket → pay Stripe **or** Venmo → Mark paid → Adult → log sets)  
 5. **Zoom / Go to Today** — working for Jeremy; coach 2…n ops checklist as needed  
@@ -226,7 +226,7 @@ Audit Jeremy: `MINUTES=120 npx tsx scripts/jeremy-post-audit-prodtest.mjs`
 
 ### 1. Stripe — finalize money
 
-**Money model (always true):** Master account = **Jeremy’s business Stripe**. Charge → full amount there → **Commission / Connect** later for John (and future partners). Details: **Stripe money flow** under People & roles above + `STRIPE_COMMISSION_SETUP.md`.
+**Money model (always true):** Master account = **Jeremy’s business Stripe**. Charge → full amount there → **development & partnership fees** via **Connect** later for John (and future partners). Details: **Stripe money flow** under People & roles above + `STRIPE_COMMISSION_SETUP.md`.
 
 **Live probe:** `/api/payments/public` → `stripeEnabled: true`, often **`stripeTestMode: true`**. Test prices: **$25/mo**, **$50/mo**, **$850** one-time. Not Live money until Live keys.
 
@@ -241,7 +241,7 @@ Audit Jeremy: `MINUTES=120 npx tsx scripts/jeremy-post-audit-prodtest.mjs`
 | `STRIPE_AUTO_APPROVE` | Optional — auto-approve member after pay |
 | Full `STRIPE_DEMO_SCRIPT.md` pass/fail | Signup → paid → Adult Start → Admin Members shows Stripe |
 | **Venmo backup** | **LIVE on prod** (`hasQr: true`, `@JeremyByrdCSCS`). Same business bank as Stripe. Mark paid for access. Asset + script + docs under Money flow § B above |
-| **Commission / Connect** | Not auto-at-checkout. Connect on Jeremy’s Stripe → John Express → Admin → Commission. **Min pool $400** before Run payout (`STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS`). Envs: `STRIPE_COMMISSION_*` |
+| **Dev & partnership fees / Connect** | Not auto-at-checkout. Connect on Jeremy’s Stripe → John Express → Admin → **Dev & partnership**. **Min pool $400** before Run payout (`STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS`). Envs still `STRIPE_COMMISSION_*` |
 | Referral promos | Optional coupons / `promo_…` in commission panel |
 | Per-program Stripe products | **Not planned** — Adult unlocks with membership only |
 
@@ -340,7 +340,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - **New:** Platform **Admin → Billing** (`/admin/billing`) — Overview KPIs (30d net/gross, MRR, balance), Transactions (search + full/partial refund), Refunds ledger, Discounts (create Stripe coupon + promo code, enable/disable, optional app referral map), Subscriptions list.
 - APIs: `/api/admin/billing/{overview,transactions,refunds,discounts,subscriptions}` (platform staff).
 - Checkout: `allow_promotion_codes` when no pre-applied referral discount.
-- Commission nav label split from “Payments” → **Commission**; Billing is the money desk.
+- Billing is the money desk; partner cut UI is **Dev & partnership** (development & partnership fees; route still `/admin/commission`).
 
 ### Jul 20 PM — process-flow review (checkout / gates / coach CRUD)
 - **S5 payments public smoke:** 6/6 on prod (Stripe labels, Venmo, mark-paid auth).
@@ -380,7 +380,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - **Jeremy script:** `JEREMY_VENMO_SCRIPT.md` (see checkout QR + Mark paid in 2–3 min).
 - **Re-seed:** `npx tsx scripts/set-venmo-landing-prod.mjs`. Docs: this file (Money flow § B), `JEREMY_ADMIN_MANUAL.md`, `JEREMY_S5_PAYMENTS_TEST.md`, `PAYMENT_ADMIN_DEMO_SCRIPT.md`, checkout UI copy.
 - **Stripe cards:** still `stripeTestMode: true` until Jeremy Live + Vercel live keys. Use Venmo for real $ now, or `4242…` for test card E2E.
-- **Commission payout min $400:** partner pool must reach $400 before **Run payout** (platform fees floor). `STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS` default 400.
+- **Dev & partnership fee payout min $400:** fee pool must reach $400 before **Run payout**. `STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS` default 400.
 - **Zoom co-coach join:** Live room prefers Jeremy’s OAuth; non-host coaches open **join_url** (participant), not host start_url — avoids Zoom host/member login trap.
 - **Earlier Jul 19 ships:** fee types subscription vs one-time; join picker fix; rest/equipment/program paste; multi-coach Zoom checklist; Messages Macros chips; multi-part Today; Twilio PARKED.
 

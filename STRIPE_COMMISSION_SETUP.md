@@ -1,4 +1,7 @@
-# Stripe revenue share — John + Jeremy + Company
+# Development & partnership fees — John + Jeremy + Company
+
+**Product name:** development & partnership fees (UI: **Admin → Dev & partnership**).  
+Internal code/env still says `commission` / `STRIPE_COMMISSION_*` / `/admin/commission` — same system.
 
 **Also in:** `CONTEXT.md` (Stripe money flow) · `JEREMY_ADMIN_MANUAL.md` · `PAYMENT_ADMIN_DEMO_SCRIPT.md` · `STRIPE_DEMO_SCRIPT.md`
 
@@ -11,7 +14,7 @@
 | **Who is the master / merchant account?** | **Jeremy’s Train Station business Stripe account** — merchant of record for every member charge |
 | **“Username”?** | Stripe has **no social username**. Login = **the email that owns that Stripe Dashboard** (confirm under Dashboard → Settings / Team). |
 | **Where does real money land on charge?** | **100%** (minus Stripe card fees) → **Jeremy’s master Stripe balance** |
-| **Does John get money at checkout?** | **No.** Division is **later** via **Stripe Connect** transfers from that master account |
+| **Does John get money at checkout?** | **No.** Development & partnership fees pay out **later** via **Stripe Connect** from that master account |
 | **Who puts API keys on the website?** | **John** (Vercel). Keys **must** be from Jeremy’s master account |
 | **Test vs Live** | Test keys = fake money. Live keys = real bank settlement to the master account’s payout bank |
 | **Venmo (same business)** | Real-money backup on checkout (`@JeremyByrdCSCS` + QR). **Same Train Station bank story** as Stripe — not a second merchant. Access via **Mark paid** (no Stripe webhook). See `CONTEXT.md` Money flow § B / `JEREMY_S5_PAYMENTS_TEST.md`. |
@@ -99,14 +102,14 @@ Redeploy after saving.
 
 ---
 
-## Step 3 — Admin → Commission
+## Step 3 — Admin → Dev & partnership (fees)
 
-1. Open **https://www.thetrainstation.co/admin/commission**
+1. Open **https://www.thetrainstation.co/admin/commission** (nav label: **Dev & partnership**)
 2. Confirm **John** appears at **100%** share (or add manually)
 3. John → **Connect** → Stripe Express onboarding (bank + identity)
-4. **Revenue feeds** card shows: John’s est. payout + company retained %
+4. **Revenue feeds** card shows: John’s est. fee payout + company retained %
 5. After live signups: **Preview payout** → **Run payout now**
-6. **Payout minimum $400** (partner pool total) — Run payout stays blocked until the pool is ≥ $400 so platform/admin fees are covered first. Change with `STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS`.
+6. **Payout minimum $400** (fee pool total) — Run payout stays blocked until the pool is ≥ $400. Change with `STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS`.
 
 ### Adding shareholders later
 

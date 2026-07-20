@@ -12,15 +12,15 @@ Coach admin (mobile bottom nav):
 - Dashboard (/admin/day) — plan today's workout (paste + Grok), roster stoplights, Go to Today
 - Live (/admin/live) — live floor view during class
 - Messages (/admin/chat) — member chat
-- More (menu) — Members, Bookings, Programs, Commission, Coach settings
+- More (menu) — Members, Bookings, Programs, Dev & partnership fees, Coach settings
 
 Key flows:
 - Assign workout: Class → New workout (paste text) or Plan → save → members see it on /member/today same date
 - Saturday or another day: use ?date=YYYY-MM-DD in the URL or date arrows on Class
 - Member phones: Today tab, tap exercises to check off sets; coach sees dots update on Class
 - Book a call prompts: off by default — Coach settings → Book-a-call prompts
-- Partner payouts: Commission → Pay on demand (manual Run payout now) vs weekly cron
-- Stripe member payments: separate from partner payouts; checkout on signup
+- Development & partnership fees: Admin → Dev & partnership → Pay on demand (Run payout now) vs weekly cron — Connect transfers to partners (not member checkout)
+- Stripe member payments: separate from partnership fees; checkout on signup
 
 Member view:
 - /member/today — day wheel (5 days), workout console, Messages tab
