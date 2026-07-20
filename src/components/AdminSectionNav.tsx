@@ -59,7 +59,7 @@ export default function AdminSectionNav({
                     href={item.href}
                     title={collapsed ? item.label : undefined}
                     onClick={() => handleNavClick(item.href)}
-                    className={`flex min-h-[44px] items-center rounded-lg text-sm font-medium transition ${
+                    className={`relative flex min-h-[44px] items-center rounded-lg text-sm font-medium transition ${
                       collapsed ? "justify-center px-2 py-2.5" : "px-3 py-2.5"
                     } ${
                       active
@@ -68,7 +68,11 @@ export default function AdminSectionNav({
                     }`}
                   >
                     {/* Badge sits right after the last letter of the label (not far-right of the row) */}
-                    <span className="inline-flex max-w-full items-center gap-1.5">
+                    <span
+                      className={`inline-flex max-w-full items-center gap-1.5 ${
+                        collapsed && item.badge === "chat" ? "relative pr-1" : ""
+                      }`}
+                    >
                       <span
                         className={
                           collapsed
@@ -78,7 +82,12 @@ export default function AdminSectionNav({
                       >
                         {collapsed ? navShortLabel(item.label) : item.label}
                       </span>
-                      {item.badge === "chat" ? <ChatNavBadge role="coach" /> : null}
+                      {item.badge === "chat" ? (
+                        <ChatNavBadge
+                          role="coach"
+                          placement={collapsed ? "corner" : "inline"}
+                        />
+                      ) : null}
                       {item.leadsBadge ? <LeadsNavBadge /> : null}
                       {item.queueBadge ? <QueueNavBadge /> : null}
                       {item.coachSuggestionsBadge ? <CoachSuggestionsNavBadge /> : null}

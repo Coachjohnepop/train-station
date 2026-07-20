@@ -387,7 +387,7 @@ export default function AdminChatWorkspace({
           <button
             type="button"
             onClick={() => setMobilePanel("inbox")}
-            className={`min-h-[40px] rounded-lg px-2.5 text-[11px] font-semibold lg:hidden ${
+            className={`relative min-h-[40px] rounded-lg px-2.5 text-[11px] font-semibold lg:hidden ${
               mobilePanel === "inbox"
                 ? "bg-violet-500/20 text-violet-100"
                 : "text-[var(--muted)]"
@@ -395,13 +395,18 @@ export default function AdminChatWorkspace({
           >
             List
             {totalUnread > 0 ? (
-              <span className="ml-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[9px] font-bold text-white">
-                {totalUnread > 9 ? "9+" : totalUnread}
+              <span className="ml-1 inline-flex h-5 min-w-[18px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[10px] font-bold text-white">
+                {totalUnread > 99 ? "99+" : totalUnread}
               </span>
             ) : null}
           </button>
-          <p className="min-w-0 flex-1 truncate text-[10px] font-bold uppercase tracking-wide text-violet-200/90">
+          <p className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[10px] font-bold uppercase tracking-wide text-violet-200/90">
             Tap a member
+            {totalUnread > 0 ? (
+              <span className="inline-flex h-5 min-w-[18px] items-center justify-center rounded-full bg-[#ff3b30] px-1.5 text-[10px] font-bold normal-case tracking-normal text-white">
+                {totalUnread > 99 ? "99+" : totalUnread}
+              </span>
+            ) : null}
           </p>
           {totalUnread > 0 ? (
             <button
@@ -421,30 +426,44 @@ export default function AdminChatWorkspace({
           </button>
         </div>
 
-        {/* Jelly beans — primary control, always tappable */}
+        {/* Jelly beans — red badge on every unread thread (avatar corner + count) */}
         <div className="flex gap-2 overflow-x-auto px-2 py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {memberRows.map((m) => {
-            const unread = m.threadId ? unreadByThread[m.threadId] || 0 : 0;
+            const threadId =
+              m.threadId ||
+              threads.find((t) => t.kind === "member" && t.memberId === m.id)?.id;
+            const unread = threadId ? unreadByThread[threadId] || 0 : 0;
             const active = m.id === activeMemberId;
             const modeColors = CHAT_MODE_COLORS[m.coachingMode];
             return (
               <button
                 key={m.id}
                 type="button"
-                onClick={() => selectMember(m.id, m.threadId)}
-                className={`inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-sm font-semibold transition active:scale-[0.98] ${
+                onClick={() => selectMember(m.id, threadId)}
+                className={`relative inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-sm font-semibold transition active:scale-[0.98] ${
                   active
                     ? `${modeColors.chip} ring-2 ring-offset-1 ring-offset-[var(--bg)] ${modeColors.chipText}`
                     : unread > 0
-                      ? "bg-rose-500/15 text-[var(--text)] ring-2 ring-rose-400/50"
+                      ? "bg-rose-500/15 text-[var(--text)] ring-2 ring-rose-400/60"
                       : "bg-[var(--surface-2)] text-[var(--muted)] ring-1 ring-[var(--border)] hover:text-[var(--foreground)]"
                 }`}
-                title={m.name}
+                title={
+                  unread > 0
+                    ? `${m.name} · ${unread} unread`
+                    : m.name
+                }
               >
-                <span
-                  className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold text-white ${memberAvatarColor(m.id)}`}
-                >
-                  {memberInitials(m.name)}
+                <span className="relative">
+                  <span
+                    className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold text-white ${memberAvatarColor(m.id)}`}
+                  >
+                    {memberInitials(m.name)}
+                  </span>
+                  {unread > 0 ? (
+                    <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[10px] font-bold text-white shadow ring-2 ring-[var(--bg)]">
+                      {unread > 9 ? "9+" : unread}
+                    </span>
+                  ) : null}
                 </span>
                 <span className="max-w-[8rem] truncate">{m.name.split(" ")[0]}</span>
                 {unread > 0 ? (
@@ -463,15 +482,26 @@ export default function AdminChatWorkspace({
                 key={t.id}
                 type="button"
                 onClick={() => selectCohort(t.id)}
-                className={`inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-sm font-semibold transition active:scale-[0.98] ${
+                className={`relative inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-sm font-semibold transition active:scale-[0.98] ${
                   active
                     ? `${CHAT_COHORT_COLORS.chip} ring-2 ${CHAT_COHORT_COLORS.chipText}`
                     : unread > 0
-                      ? "bg-rose-500/15 text-[var(--text)] ring-2 ring-rose-400/50"
+                      ? "bg-rose-500/15 text-[var(--text)] ring-2 ring-rose-400/60"
                       : "bg-[var(--surface-2)] text-[var(--muted)] ring-1 ring-[var(--border)]"
                 }`}
+                title={unread > 0 ? `${t.title} · ${unread} unread` : t.title}
               >
-                {t.title}
+                <span className="relative">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-600 text-[10px] font-bold text-white">
+                    G
+                  </span>
+                  {unread > 0 ? (
+                    <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[10px] font-bold text-white shadow ring-2 ring-[var(--bg)]">
+                      {unread > 9 ? "9+" : unread}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="max-w-[9rem] truncate">{t.title}</span>
                 {unread > 0 ? (
                   <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#ff3b30] px-1.5 text-[10px] font-bold text-white">
                     {unread > 9 ? "9+" : unread}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import ChatNavBadge from "@/components/ChatNavBadge";
 import { openCoachHelpPanel } from "@/lib/coach-help-events";
 
 type Props = {
@@ -10,7 +11,7 @@ type Props = {
 };
 
 function tabClass(active: boolean): string {
-  return `coach-quick-nav-tab flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-[10px] font-semibold transition-colors ${
+  return `coach-quick-nav-tab relative flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-[10px] font-semibold transition-colors ${
     active ? "coach-quick-nav-tab--active" : ""
   }`;
 }
@@ -59,8 +60,11 @@ export default function AdminMobileCoachNav({ onOpenMenu }: Props) {
           Live
         </Link>
         <Link href="/admin/chat" className={tabClass(onChat)}>
-          <span className="coach-quick-nav-icon leading-none" aria-hidden>
-            ✉
+          <span className="relative inline-flex">
+            <span className="coach-quick-nav-icon leading-none" aria-hidden>
+              ✉
+            </span>
+            <ChatNavBadge role="coach" placement="corner" />
           </span>
           Msgs
         </Link>

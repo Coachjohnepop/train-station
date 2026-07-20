@@ -200,8 +200,9 @@ export default function AdminShell({
             >
               ← Board
             </Link>
-            <p className="min-w-0 truncate text-center text-xs font-bold tracking-tight">
+            <p className="inline-flex min-w-0 items-center justify-center gap-1.5 truncate text-center text-xs font-bold tracking-tight">
               Messages
+              <ChatNavBadge role="coach" placement="inline" />
             </p>
             <div className="flex shrink-0 items-center gap-1.5">
               <Link

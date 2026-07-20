@@ -49,7 +49,7 @@ export default function ChatNavBadge({
     <span
       className={
         placement === "corner"
-          ? "absolute -right-1 -top-1 flex h-[20px] min-w-[20px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[10px] font-bold leading-none text-white shadow-md ring-2 ring-[var(--surface)]"
+          ? "absolute -right-1.5 -top-1.5 z-10 flex h-[20px] min-w-[20px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[10px] font-bold leading-none text-white shadow-md ring-2 ring-[var(--bg)]"
           : "inline-flex h-[20px] min-w-[20px] shrink-0 translate-y-[-1px] items-center justify-center rounded-full bg-[#ff3b30] px-1.5 text-[11px] font-bold leading-none text-white shadow-md ring-2 ring-[var(--surface)]"
       }
       aria-label={`${unread} unread messages`}
