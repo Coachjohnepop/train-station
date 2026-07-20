@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   addChatMessage,
   COACH_READER_ID,
+  ensureMemberThread,
   hydrateCoachChat,
   memberCanPostToThread,
   resolveThreadById,
@@ -19,7 +20,8 @@ export async function POST(request: Request) {
   const message = typeof body.message === "string" ? body.message.trim() : "";
   let role: "coach" | "member" = body.role === "coach" ? "coach" : "member";
   const threadId = typeof body.threadId === "string" ? body.threadId : "";
-  const sendSms = body.sendSms !== false;
+  // Default OFF — SMS is parked; only send when client explicitly sets true.
+  const sendSms = body.sendSms === true;
   const imageUrlRaw = typeof body.imageUrl === "string" ? body.imageUrl.trim() : "";
   const imageUrl = imageUrlRaw && isAllowedChatMediaUrl(imageUrlRaw) ? imageUrlRaw : "";
 
@@ -95,10 +97,6 @@ export async function POST(request: Request) {
   }
   const memberSession = session;
 
-  if (!threadId) {
-    return NextResponse.json({ error: "threadId is required" }, { status: 400 });
-  }
-
   await hydrateCoachChat({ preferFresh: true });
   const uid = memberSession.id;
   const user = resolveDemoUser(uid);
@@ -106,7 +104,14 @@ export async function POST(request: Request) {
   const authorName =
     user?.name || registered?.account.name || registered?.email || "Member";
 
-  const thread = await resolveThreadById(threadId, { preferFresh: true });
+  // Allow legacy/simple clients that omit threadId — post to this member's coach 1:1.
+  let resolvedThreadId = threadId;
+  if (!resolvedThreadId) {
+    const ensured = await ensureMemberThread(uid);
+    resolvedThreadId = ensured.id;
+  }
+
+  const thread = await resolveThreadById(resolvedThreadId, { preferFresh: true });
   if (!thread) {
     return NextResponse.json({ error: "Thread not found" }, { status: 404 });
   }

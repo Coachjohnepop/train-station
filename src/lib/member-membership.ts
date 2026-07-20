@@ -64,7 +64,29 @@ export async function getMemberMembershipSnapshot(
   userId: string,
 ): Promise<MemberMembershipSnapshot | null> {
   await repairMemberStripeBillingState(userId);
-  const profile = await getMemberProfile(userId);
+  let profile = await getMemberProfile(userId);
+  // Older accounts may exist as User rows without a MemberProfile — ensure one so
+  // Account settings does not 404.
+  if (!profile) {
+    try {
+      const { prisma } = await import("@/lib/prisma");
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, phone: true, name: true },
+      });
+      if (user?.email) {
+        const { ensureMemberProfile } = await import("@/lib/member-profiles-store");
+        profile = await ensureMemberProfile({
+          userId: user.id,
+          email: user.email,
+          plan: "explorer",
+          phone: user.phone,
+        });
+      }
+    } catch {
+      /* demo / no DB */
+    }
+  }
   if (!profile) return null;
 
   const plan = profile.plan;

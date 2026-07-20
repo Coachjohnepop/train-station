@@ -17,7 +17,11 @@ export default function MemberChatReply() {
       const res = await fetch("/api/chat/reply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: message.trim() }),
+        body: JSON.stringify({
+          message: message.trim(),
+          role: "member",
+          // threadId optional — API ensures the member's coach 1:1 thread
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Send failed");

@@ -114,9 +114,30 @@ export function adjacentProgramDay(
   return { weekNumber: w, dayNumber: d };
 }
 
-/** Local calendar date YYYY-MM-DD (not UTC). */
+/**
+ * App business timezone for "today" on the server (Vercel is UTC).
+ * Override with APP_TIMEZONE (IANA), e.g. America/New_York.
+ */
+export function appTimeZone(): string {
+  return (
+    process.env.APP_TIMEZONE?.trim() ||
+    process.env.NEXT_PUBLIC_APP_TIMEZONE?.trim() ||
+    "America/Los_Angeles"
+  );
+}
+
+/**
+ * Calendar date YYYY-MM-DD for the Train Station business day.
+ * Server: uses APP_TIMEZONE (default America/Los_Angeles) so Vercel UTC does not
+ * flip "today" at 5pm PT. Browser: still correct for that zone.
+ */
 export function localTodayIso(reference = new Date()): string {
-  return toIsoDate(reference);
+  try {
+    // en-CA → YYYY-MM-DD
+    return reference.toLocaleDateString("en-CA", { timeZone: appTimeZone() });
+  } catch {
+    return toIsoDate(reference);
+  }
 }
 
 /** Today's week/day on the program calendar (local date), or null if before anchor. */

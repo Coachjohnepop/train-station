@@ -220,7 +220,8 @@ export async function POST(request: Request) {
     }
 
     let alertResult = { sent: 0, logs: [] as any[] };
-    if (!isCohort && input.sendSmsAlert !== false && memberIds.length > 0) {
+    // Default OFF — only send carrier SMS when coach explicitly opts in.
+    if (!isCohort && input.sendSmsAlert === true && memberIds.length > 0) {
       if (hasText && !isCohort) {
         const smsLogs: any[] = [];
         for (const memberId of memberIds) {
