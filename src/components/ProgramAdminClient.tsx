@@ -65,7 +65,9 @@ export default function ProgramAdminClient({
             onSaved={setProgramName}
           />
           <p className="text-[10px] leading-snug text-[var(--muted)]">
-            {initial.durationWeeks} weeks · calendar starts Monday
+            {initial.durationWeeks} weeks · design calendar Week 1 Monday
+            {initial.startDate ? ` · ${initial.startDate}` : " · defaults to this week"}
+            {" · use “Use this week” below if labels still show last month"}
           </p>
         </div>
         <ExportSeedButton className="shrink-0 self-start text-xs" />

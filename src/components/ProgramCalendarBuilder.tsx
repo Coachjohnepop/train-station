@@ -40,8 +40,10 @@ import {
   isHomeLabel,
   isWorkoutSharedAcrossProgramDays,
   isWorkoutDayLabel,
+  mondayOfWeek,
   normalizeDayOptions,
   parseFastedCardioMinutes,
+  parseIsoDate,
   resolveProgramStartMonday,
   slotIndicesForTimeColumn,
   timeBlockLabel,
@@ -349,6 +351,11 @@ export default function ProgramCalendarBuilder({
     () => resolveProgramStartMonday(program.startDate),
     [program.startDate],
   );
+  const thisWeekMondayIso = useMemo(() => toIsoDate(mondayOfWeek(new Date())), []);
+  const anchorIsStale = useMemo(() => {
+    // Flag when Week 1 Monday is not this calendar week (design page still shows last month).
+    return toIsoDate(startMonday) !== thisWeekMondayIso;
+  }, [startMonday, thisWeekMondayIso]);
 
   const weeks = useMemo(
     () => [...program.weeks].sort((a, b) => a.weekNumber - b.weekNumber),
@@ -2300,6 +2307,45 @@ export default function ProgramCalendarBuilder({
     }
   }
 
+  /** Snap Week 1 Monday to a date and rewrite every day.calendarDate (fixes stale June labels in July). */
+  async function reanchorCalendar(startDateIso: string) {
+    setSaving(true);
+    setMessage("Updating program calendar dates…");
+    try {
+      const res = await fetch(`/api/programs/${program.slug}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ startDate: startDateIso, reanchorCalendar: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessage(data.detail || "Could not update calendar dates.");
+        setTimeout(() => setMessage(null), 4000);
+        return;
+      }
+      if (data.weeks) {
+        setProgram((prev) => ({
+          ...prev,
+          ...data,
+          startDate: data.startDate ?? startDateIso,
+          weeks: data.weeks,
+        }));
+      } else {
+        await sync();
+        setProgram((prev) => ({ ...prev, startDate: startDateIso }));
+      }
+      setMessage(
+        `Calendar re-anchored to week of ${formatShortDate(toIsoDate(mondayOfWeek(parseIsoDate(startDateIso))))}. Day labels now use the new dates.`,
+      );
+      setTimeout(() => setMessage(null), 5000);
+    } catch {
+      setMessage("Could not update calendar dates — try again.");
+      setTimeout(() => setMessage(null), 3500);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function duplicateToTargets() {
     if (!focus) return;
     const sourceDay = program.weeks.flatMap((w) => w.days).find((d) => d.id === focus.dayId);
@@ -2680,10 +2726,17 @@ export default function ProgramCalendarBuilder({
     );
   }
 
+  const week1MondayIso = toIsoDate(startMonday);
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--muted)]">
-        <span>Mon-anchored calendar · Today/SMS unchanged</span>
+        <span>
+          Week 1 starts{" "}
+          <strong className="text-[var(--text)]">{formatShortDate(week1MondayIso)}</strong>
+          {" · "}
+          Mon-anchored design calendar
+        </span>
         <div className="flex gap-1">
           <Link href="/admin/exercises" className="btn-ghost px-2 py-0.5 text-[10px]">
             Library
@@ -2693,6 +2746,44 @@ export default function ProgramCalendarBuilder({
           </button>
         </div>
       </div>
+
+      {anchorIsStale ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2.5 text-sm">
+          <div className="min-w-0">
+            <p className="font-semibold text-amber-100">Calendar still on an older week</p>
+            <p className="text-[11px] text-amber-100/80">
+              Week 1 is {formatShortDate(week1MondayIso)}
+              {program.startDate ? ` (saved start ${program.startDate})` : ""}. Today is{" "}
+              {formatShortDate(localTodayIso())} — day chips may still say last month until you
+              re-anchor.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="btn-primary px-3 py-1.5 text-xs font-semibold"
+              disabled={saving}
+              onClick={() => void reanchorCalendar(thisWeekMondayIso)}
+              title={`Set Week 1 Monday to ${formatShortDate(thisWeekMondayIso)} and refresh every day label`}
+            >
+              Use this week ({formatShortDate(thisWeekMondayIso)})
+            </button>
+            <label className="flex items-center gap-1.5 text-[10px] text-[var(--muted)]">
+              Or pick Monday
+              <input
+                type="date"
+                className="input h-8 w-auto text-xs"
+                disabled={saving}
+                defaultValue={thisWeekMondayIso}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v) void reanchorCalendar(v);
+                }}
+              />
+            </label>
+          </div>
+        </div>
+      ) : null}
 
       {message && <p className="text-sm text-[var(--success)]">{message}</p>}
 
@@ -2850,7 +2941,7 @@ export default function ProgramCalendarBuilder({
               .sort((a, b) => a.dayNumber - b.dayNumber)
               .map((day) => {
                 const cal =
-                  day.calendarDate ||
+                  // Prefer live anchor math so labels follow startDate (not a stale stamped June date).
                   calendarDateForProgramDay(startMonday, activeWeekData.weekNumber, day.dayNumber);
                 const isSelected = focus?.dayId === day.id;
                 const isExpanded = expandedDays.has(day.id);
