@@ -15,6 +15,8 @@ export type LandingVideoEmbedOptions = {
   mute?: boolean;
   /** Required for YouTube iframe postMessage commands (enablejsapi). */
   origin?: string;
+  /** Jump to second on load (YouTube `start=`). Also read from URL `t=` / `start=`. */
+  startSeconds?: number;
 };
 
 export function landingVideoEmbedSrc(
@@ -30,6 +32,7 @@ export function landingVideoEmbedSrc(
     mute: options.mute ?? (shouldAutoplay ? false : undefined),
     enableJsApi: true,
     origin: options.origin,
+    startSeconds: options.startSeconds,
   });
   if (!base && /^[A-Za-z0-9_-]{6,}$/.test(trimmed)) {
     base = youtubeEmbedUrl(`https://www.youtube.com/watch?v=${trimmed}`, {
@@ -37,6 +40,7 @@ export function landingVideoEmbedSrc(
       mute: options.mute ?? (shouldAutoplay ? false : undefined),
       enableJsApi: true,
       origin: options.origin,
+      startSeconds: options.startSeconds,
     });
   }
   return base;
@@ -79,10 +83,22 @@ export const WELCOME_VIDEO_PLAN_OPTIONS = MEMBERSHIP_PLANS.map((plan) => ({
   label: signupPlanLabel(plan),
 }));
 
-/** No joke/default YouTube — only play when coach or env configures a real URL. */
+/**
+ * Free / Explorer ticket gag: Rick Astley starting at the chorus (~0:43).
+ * Share format: youtube.com/watch?v=…&t=43s  (or right-click → Copy URL at current time).
+ * Override via Admin → Landing free-chastise URL or env; keep `&t=43s` (or any start) on the URL.
+ */
+export const FREE_TICKET_RICKROLL_URL =
+  "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=43s";
+
+/** Chorus start second for Never Gonna Give You Up (fallback if URL has no t=). */
+export const FREE_TICKET_RICKROLL_CHORUS_START_SEC = 43;
+
 export function freeChastiseVideoUrlFromConfig(stored: string | null | undefined) {
-  return resolveLandingVideoUrl(stored, [
-    "NEXT_PUBLIC_FREE_CHASTISE_VIDEO_URL",
-    "NEXT_PUBLIC_FREE_CHASTISE_VIDEO_YT",
-  ]);
+  return (
+    resolveLandingVideoUrl(stored, [
+      "NEXT_PUBLIC_FREE_CHASTISE_VIDEO_URL",
+      "NEXT_PUBLIC_FREE_CHASTISE_VIDEO_YT",
+    ]) ?? FREE_TICKET_RICKROLL_URL
+  );
 }

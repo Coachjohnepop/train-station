@@ -3,8 +3,13 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { setBackgroundMusicOverlay } from "@/lib/background-music-control";
-import { landingVideoEmbedSrc } from "@/lib/landing-media";
+import {
+  FREE_TICKET_RICKROLL_CHORUS_START_SEC,
+  FREE_TICKET_RICKROLL_URL,
+  landingVideoEmbedSrc,
+} from "@/lib/landing-media";
 import { postYoutubeEmbedCommand } from "@/lib/youtube-embed-control";
+import { youtubeStartSecondsFromUrl } from "@/lib/youtube";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 
 const RICKROLL_MS = 20_000;
@@ -35,11 +40,20 @@ export default function FreeTicketModal({
   const jeremyRef = useRef<HTMLIFrameElement>(null);
 
   const embedOrigin = typeof window !== "undefined" ? window.location.origin : undefined;
-  const hasRickroll = Boolean(freeChastiseVideoUrl?.trim());
+  // Always play free-tier gag (default Rickroll at chorus) unless admin clears with empty override.
+  const freeVideoUrl = freeChastiseVideoUrl?.trim() || FREE_TICKET_RICKROLL_URL;
+  const hasRickroll = Boolean(freeVideoUrl);
   const hasJeremy = Boolean(welcomeVideoUrl?.trim());
+  const freeStartSec =
+    youtubeStartSecondsFromUrl(freeVideoUrl) ?? FREE_TICKET_RICKROLL_CHORUS_START_SEC;
 
   const rickrollSrc = hasRickroll
-    ? landingVideoEmbedSrc(freeChastiseVideoUrl, true, { mute: false, origin: embedOrigin })
+    ? landingVideoEmbedSrc(freeVideoUrl, true, {
+        mute: false,
+        origin: embedOrigin,
+        // Force chorus if URL has no t= (e.g. bare rickroll id stored in admin)
+        startSeconds: freeStartSec,
+      })
     : null;
   const jeremySrc =
     loadJeremy && hasJeremy
