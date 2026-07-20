@@ -42,6 +42,9 @@ export default async function AdminChatPage({ searchParams }: Props) {
         <h1 className="text-2xl font-bold">Messages</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
           Community feed for station-wide posts; direct inbox for 1:1 member threads.
+          Red badges stay until you <strong className="text-[var(--text)]">Clear badge</strong> or
+          reply — use <strong className="text-[var(--text)]">Badge for later</strong> to put a
+          reminder back on a thread.
         </p>
       </div>
 

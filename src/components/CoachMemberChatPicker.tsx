@@ -57,9 +57,11 @@ function MemberButton({
           {memberInitials(member.name)}
         </span>
         {member.name.split(" ")[0]}
-        {unread > 0 && (
-          <span className="rounded-full bg-rose-500 px-1.5 py-0.5 text-[9px] font-bold text-white">{unread}</span>
-        )}
+        {unread > 0 ? (
+          <span className="rounded-full bg-[#ff3b30] px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm ring-1 ring-white/30">
+            {unread > 9 ? "9+" : unread}
+          </span>
+        ) : null}
       </button>
     );
   }
@@ -71,22 +73,31 @@ function MemberButton({
       className={`relative mb-1.5 flex w-full min-h-[52px] items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
         active
           ? `${modeColors.section} ring-1 ring-inset`
-          : "hover:bg-[var(--surface-2)]"
+          : unread > 0
+            ? "bg-rose-500/5 ring-1 ring-inset ring-rose-500/25 hover:bg-rose-500/10"
+            : "hover:bg-[var(--surface-2)]"
       }`}
     >
       <span
-        className={`absolute left-0 top-2 bottom-2 w-1 rounded-full ${modeColors.stripe} ${
-          active ? "opacity-100" : "opacity-40"
-        }`}
+        className={`absolute left-0 top-2 bottom-2 w-1 rounded-full ${
+          unread > 0 ? "bg-[#ff3b30] opacity-100" : modeColors.stripe
+        } ${active || unread > 0 ? "opacity-100" : "opacity-40"}`}
       />
       <span
-        className={`ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${avatarBg}`}
+        className={`relative ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${avatarBg}`}
       >
         {memberInitials(member.name)}
+        {unread > 0 ? (
+          <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[9px] font-bold text-white ring-2 ring-[var(--surface)]">
+            {unread > 9 ? "9+" : unread}
+          </span>
+        ) : null}
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
-          <span className="truncate text-sm font-semibold">{member.name}</span>
+          <span className={`truncate text-sm font-semibold ${unread > 0 ? "text-[var(--text)]" : ""}`}>
+            {member.name}
+          </span>
           <span
             className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ring-1 ${modeColors.chip} ${modeColors.chipText}`}
           >
@@ -94,14 +105,20 @@ function MemberButton({
           </span>
         </span>
         {member.preview && (
-          <span className="mt-0.5 block truncate text-[11px] text-[var(--muted)]">{member.preview}</span>
+          <span
+            className={`mt-0.5 block truncate text-[11px] ${
+              unread > 0 ? "font-medium text-[var(--text)]/80" : "text-[var(--muted)]"
+            }`}
+          >
+            {member.preview}
+          </span>
         )}
       </span>
-      {unread > 0 && (
-        <span className="flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white">
+      {unread > 0 ? (
+        <span className="flex h-6 min-w-[24px] shrink-0 items-center justify-center rounded-full bg-[#ff3b30] px-1.5 text-[11px] font-bold text-white shadow-sm">
           {unread > 9 ? "9+" : unread}
         </span>
-      )}
+      ) : null}
     </button>
   );
 }

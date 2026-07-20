@@ -128,18 +128,64 @@ export default function AdminChatWorkspace({
   );
   const isDesktopChat = useDesktopChatLayout();
 
-  const memberRows: CoachChatMember[] = useMemo(
-    () =>
-      members.map((m) => {
-        const thread = threadForMember(threads, m.id);
-        return {
-          ...m,
-          threadId: thread?.id,
-          preview: thread ? previews[thread.id] : "No messages yet",
-        };
-      }),
-    [members, threads, previews],
+  const memberRows: CoachChatMember[] = useMemo(() => {
+    const rows = members.map((m) => {
+      const thread = threadForMember(threads, m.id);
+      return {
+        ...m,
+        threadId: thread?.id,
+        preview: thread ? previews[thread.id] : "No messages yet",
+      };
+    });
+    // Unread first — liberal badge use means coaches see who needs attention.
+    return rows.sort((a, b) => {
+      const ua = a.threadId ? unreadByThread[a.threadId] || 0 : 0;
+      const ub = b.threadId ? unreadByThread[b.threadId] || 0 : 0;
+      if (ub !== ua) return ub - ua;
+      return a.name.localeCompare(b.name);
+    });
+  }, [members, threads, previews, unreadByThread]);
+
+  const clearThreadBadge = useCallback(
+    async (threadId: string) => {
+      if (!threadId) return;
+      const res = await fetch("/api/chat/mark-read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ threadId }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setUnreadByThread(data.unreadByThread || {});
+      window.dispatchEvent(new CustomEvent("chat-unread-refresh"));
+    },
+    [],
   );
+
+  const clearAllBadges = useCallback(async () => {
+    const res = await fetch("/api/chat/mark-read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ all: true }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    setUnreadByThread(data.unreadByThread || {});
+    window.dispatchEvent(new CustomEvent("chat-unread-refresh"));
+  }, []);
+
+  const reflagThreadBadge = useCallback(async (threadId: string) => {
+    if (!threadId) return;
+    const res = await fetch("/api/chat/mark-read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ threadId, reflag: true }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    setUnreadByThread(data.unreadByThread || {});
+    window.dispatchEvent(new CustomEvent("chat-unread-refresh"));
+  }, []);
 
   const activeThread =
     threads.find((t) => t.id === activeId) ||
@@ -334,10 +380,35 @@ export default function AdminChatWorkspace({
           style={isDesktopChat ? { width: inboxWidth } : undefined}
         >
           <div className="border-b border-[var(--border)] bg-violet-950/25 px-4 py-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-violet-200">Inbox</p>
-            <p className="text-[11px] text-[var(--muted)]">
-              Members first (1:1 with coach) · group feeds below · colors show Live vs Asynch
-            </p>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-violet-200">
+                  Inbox
+                  {totalUnread > 0 ? (
+                    <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#ff3b30] px-1.5 text-[10px] font-bold normal-case tracking-normal text-white">
+                      {totalUnread > 99 ? "99+" : totalUnread}
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold normal-case tracking-normal text-[var(--muted)]">
+                      clear
+                    </span>
+                  )}
+                </p>
+                <p className="text-[11px] text-[var(--muted)]">
+                  Badges stay until you clear or reply · unread sorted first
+                </p>
+              </div>
+              {totalUnread > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => void clearAllBadges()}
+                  className="shrink-0 rounded-lg border border-violet-400/40 bg-violet-500/15 px-2 py-1 text-[10px] font-semibold text-violet-100 hover:bg-violet-500/25"
+                  title="Clear every inbox badge (messages stay — badge returns on new replies)"
+                >
+                  Clear all badges
+                </button>
+              ) : null}
+            </div>
           </div>
           <InboxLegend />
           <div className="min-h-0 flex-1 overflow-y-auto p-2 max-h-[min(50vh,420px)] lg:max-h-none">
@@ -454,6 +525,29 @@ export default function AdminChatWorkspace({
                   {" · Coach left · member right"}
                 </p>
               </div>
+              {replyThreadId ? (
+                <div className="flex shrink-0 flex-col gap-1">
+                  {(unreadByThread[replyThreadId] || 0) > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => void clearThreadBadge(replyThreadId)}
+                      className="rounded-lg border border-rose-400/40 bg-rose-500/15 px-2.5 py-1.5 text-[10px] font-bold text-rose-100 hover:bg-rose-500/25"
+                      title="Clear badge now — messages stay. New member replies badge again."
+                    >
+                      Clear badge
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void reflagThreadBadge(replyThreadId)}
+                      className="rounded-lg border border-amber-400/40 bg-amber-500/10 px-2.5 py-1.5 text-[10px] font-semibold text-amber-100 hover:bg-amber-500/20"
+                      title="Put the badge back so you remember to follow up later"
+                    >
+                      Badge for later
+                    </button>
+                  )}
+                </div>
+              ) : null}
             </div>
             <div className="mt-2 hidden lg:block">
               <CoachMemberChatPicker

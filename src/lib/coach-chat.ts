@@ -388,6 +388,53 @@ export async function markThreadRead(threadId: string, readerId: string) {
   if (changed) await persistStore(store, "Chat read state");
 }
 
+/** Mark every unread member message as read by the coach (clear all inbox badges). */
+export async function markAllCoachThreadsRead(): Promise<{ threads: number; messages: number }> {
+  await hydrateCoachChat({ preferFresh: true });
+  const counts = getUnreadCountsByThreadForCoach();
+  const threadIds = Object.keys(counts).filter((id) => counts[id] > 0);
+  let messages = 0;
+  for (const id of threadIds) {
+    const before = counts[id] || 0;
+    await markThreadRead(id, COACH_READER_ID);
+    messages += before;
+  }
+  await hydrateCoachChat({ preferFresh: true });
+  return { threads: threadIds.length, messages };
+}
+
+/**
+ * Put the badge back on a thread for later (un-read the latest member messages).
+ * Used when coach wants a reminder without a new member reply.
+ */
+export async function flagThreadUnreadForCoach(threadId: string): Promise<number> {
+  await hydrateForWrite();
+  const store = readStore();
+  let changed = 0;
+  for (const m of store.messages) {
+    if (m.threadId !== threadId) continue;
+    if (m.authorRole !== "member") continue;
+    if (!m.readByUserIds.includes(COACH_READER_ID)) continue;
+    m.readByUserIds = m.readByUserIds.filter((id) => id !== COACH_READER_ID);
+    changed += 1;
+  }
+  if (changed === 0) {
+    // No prior member messages: add a lightweight coach note? Skip — need real member traffic.
+    return 0;
+  }
+  if (!isDemoMode()) {
+    for (const m of store.messages) {
+      if (m.threadId !== threadId || m.authorRole !== "member") continue;
+      await updateCoachChatMessageInDb(m);
+    }
+    setMemory(store);
+    await hydrateCoachChat({ preferFresh: true });
+    return changed;
+  }
+  await persistStore(store, "Chat reflag unread");
+  return changed;
+}
+
 export function getUnreadCountForMember(memberId: string, programSlugs: string[] = []): number {
   const threads = listThreadsForMember(memberId, programSlugs);
   const threadIds = new Set(threads.map((t) => t.id));

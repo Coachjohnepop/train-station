@@ -30,7 +30,16 @@ export async function GET(request: Request) {
     role === "coach" && isStaffRole(access.session.role)
       ? COACH_READER_ID
       : access.memberId;
-  await markThreadRead(threadId, readerId);
+  // Coaches keep badges until they explicitly Clear badge (markRead=1) or reply.
+  // Members still auto-clear when they open a thread.
+  const markReadParam = searchParams.get("markRead");
+  const shouldMarkRead =
+    role === "member"
+      ? markReadParam !== "0"
+      : markReadParam === "1";
+  if (shouldMarkRead) {
+    await markThreadRead(threadId, readerId);
+  }
 
   const messages = getMessagesForThread(threadId);
 

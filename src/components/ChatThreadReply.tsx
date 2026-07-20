@@ -151,6 +151,16 @@ export default function ChatThreadReply({
       setMessage("");
       clearImage();
       setSmsNote(smsStatusLine(data.sms as SmsResult, data.twilioLive));
+      // Coach reply clears this thread's badge (handled later or done).
+      if (role === "coach" && threadId) {
+        void fetch("/api/chat/mark-read", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ threadId }),
+        }).then(() => {
+          window.dispatchEvent(new CustomEvent("chat-unread-refresh"));
+        });
+      }
       onSent?.(data.message as ChatMessage | undefined);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Send failed");

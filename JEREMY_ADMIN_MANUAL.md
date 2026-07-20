@@ -53,7 +53,7 @@ Sign in → left sidebar. Paths below are full URLs on prod.
 ### Talk
 | Screen | URL | What lives here |
 |--------|-----|-----------------|
-| **Messages** | `/admin/chat` | In-app coach ↔ member chat (short video via Blob when enabled) |
+| **Messages** | `/admin/chat` | In-app coach ↔ member chat. **Red badges** = unread member replies (sorted first). **Clear badge** / **Clear all badges** dismiss for later; **Badge for later** puts a reminder back. New replies re-badge. |
 | **SMS Hub** | `/admin/sms-hub` | Text-style hub: recipients, logs, broadcast. **Until Twilio is fully live, many sends are email hub / simulated, not carrier SMS.** |
 
 ### Live

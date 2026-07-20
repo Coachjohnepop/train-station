@@ -18,7 +18,14 @@ export async function GET(request: Request) {
     if (!isStaffRole(session.role)) {
       return NextResponse.json({ error: "Coach access required." }, { status: 403 });
     }
-    return NextResponse.json({ unread: getUnreadCountForCoach() });
+    const { getUnreadCountsByThreadForCoach } = await import("@/lib/coach-chat");
+    const unreadByThread = getUnreadCountsByThreadForCoach();
+    return NextResponse.json({
+      unread: getUnreadCountForCoach(),
+      unreadByThread,
+      threadsWithUnread: Object.keys(unreadByThread).filter((id) => unreadByThread[id] > 0)
+        .length,
+    });
   }
 
   if (session.role !== "MEMBER") {
