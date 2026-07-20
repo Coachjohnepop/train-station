@@ -77,7 +77,19 @@ Sign in → left sidebar. Paths below are full URLs on prod.
 | Screen | URL | What lives here |
 |--------|-----|-----------------|
 | **Landing** | `/admin/landing` | Public landing copy, **YouTube links** (welcome, free-ticket chastise, weekly coach, dinner) |
-| **Settings** | `/admin/settings` | Coach prefs, warm-up, **Zoom Connect / disconnect**, messaging toggles |
+| **Settings** | `/admin/settings` | Coach prefs, warm-up, **Zoom Connect / disconnect**, messaging toggles, **Phone app alerts** |
+
+### One-time: phone alerts on *your* iPhone (home-screen badge)
+
+Do this once so messages ping your phone when the app is closed:
+
+1. Safari → https://www.thetrainstation.co → **Share → Add to Home Screen**
+2. Open the **home-screen icon** (not a Safari tab) and sign in
+3. Tap the amber **Enable alerts** strip once (or **Admin → Settings → Phone app alerts → Enable alerts**)
+4. Allow Notifications when iOS asks
+5. Optional: **Send test** → lock phone → confirm banner + badge
+
+Each coach device enables separately. John already enabled on his; **Jeremy still needs this once**.
 
 ### Platform (staff / business — if your role sees it)
 | Screen | URL | What lives here |

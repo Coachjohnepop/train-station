@@ -178,19 +178,57 @@ Quick path:
 
 ---
 
-## Part E — Go live checklist
+## Part E — Go live checklist (card money)
 
-When ready for real money:
+**Status as of Jul 20:** prod still **`stripeTestMode: true`**. **Venmo is already live** for real money (`@JeremyByrdCSCS` + Mark paid). Cards need this cutover.
 
-- [ ] Flip Stripe Dashboard to **Live mode**
-- [ ] Recreate (or copy) products/prices in **Live** — new `price_…` IDs
-- [ ] Live **Secret key** + **Webhook signing secret** in Vercel
-- [ ] Update `STRIPE_PRICE_MEMBER` and `STRIPE_PRICE_PRO` to live price IDs
-- [ ] Redeploy
-- [ ] One real $25 signup (or refund immediately after verifying)
-- [ ] Confirm webhook **200** in Live mode
+Do **with Jeremy** on a shared call when his business Stripe is ready.
 
-Jeremy does **not** need to log into the website for Stripe — only Dashboard access if he wants to see payouts (or invite John as team member).
+### E1. Stripe Dashboard (Live mode)
+
+1. [ ] Open [dashboard.stripe.com](https://dashboard.stripe.com) as **Jeremy’s business account**
+2. [ ] Toggle **Test mode OFF** (Live)
+3. [ ] **Product catalog** — create Live products/prices (new IDs; test prices do not work in Live):
+   - Coach Class — recurring monthly **$25** → `STRIPE_PRICE_MEMBER`
+   - Business Class — recurring monthly **$50** → `STRIPE_PRICE_BUSINESS`
+   - 1st Class — one-time **$850** → `STRIPE_PRICE_PRO`
+4. [ ] **Developers → API keys** — copy **Live** secret `sk_live_…` and publishable `pk_live_…`
+5. [ ] **Developers → Webhooks → Add endpoint**
+   - URL: `https://www.thetrainstation.co/api/stripe/webhook`
+   - Events: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`
+   - Copy Live signing secret `whsec_…`
+
+### E2. Vercel (Production)
+
+| Variable | Live value |
+|----------|------------|
+| `STRIPE_SECRET_KEY` | `sk_live_…` |
+| `STRIPE_PUBLISHABLE_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_live_…` (whichever the app uses) |
+| `STRIPE_WEBHOOK_SECRET` | Live `whsec_…` |
+| `STRIPE_PRICE_MEMBER` | Live `price_…` $25/mo |
+| `STRIPE_PRICE_BUSINESS` | Live `price_…` $50/mo |
+| `STRIPE_PRICE_PRO` | Live `price_…` $850 |
+| `STRIPE_AUTO_APPROVE` | optional `true` |
+
+1. [ ] Save vars for **Production** (and Preview if you want)
+2. [ ] **Redeploy** Production from `main`
+3. [ ] Check `/api/payments/public` → **`stripeTestMode: false`**, all three memberships `stripeReady: true`
+
+### E3. Prove one real payment
+
+1. [ ] Fresh member email → Coach Class → pay with **real card** (small $25)
+2. [ ] Webhook **200** in Live Dashboard
+3. [ ] Admin → Members shows **paid / Stripe**
+4. [ ] Refund in Stripe if it was only a smoke charge
+5. [ ] Confirm Venmo path still works as backup (Mark paid)
+
+### E4. Safety
+
+- Do **not** leave `sk_test_` on Production after cutover
+- Commission / Connect is **separate** (`STRIPE_COMMISSION_SETUP.md`) — not required for first live member charge
+- Master merchant stays **Jeremy’s business Stripe**
+
+Jeremy does **not** need website admin for Stripe keys — Vercel is John’s. He needs Dashboard for products/payouts (or invite John as team member).
 
 ---
 

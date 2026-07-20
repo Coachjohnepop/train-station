@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
 import { paymentBillingSummary, seatArtForPlan } from "@/lib/membership-theme";
 import type { SignupPlan } from "@/lib/signup-plans";
@@ -96,6 +96,19 @@ export default function MemberAccountClient({
     // Checkout handles plan change; Stripe portal also available for cancel.
     window.location.href = `/member/checkout?plan=${encodeURIComponent(plan)}&intent=downgrade`;
   }
+
+  function cancelDowngrade() {
+    setDowngradeTarget(null);
+  }
+
+  useEffect(() => {
+    if (!downgradeTarget) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setDowngradeTarget(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [downgradeTarget]);
 
   const paidDate = membership.paidAt
     ? new Date(membership.paidAt).toLocaleDateString(undefined, {
@@ -357,31 +370,53 @@ export default function MemberAccountClient({
           role="dialog"
           aria-modal="true"
           aria-labelledby="downgrade-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) cancelDowngrade();
+          }}
         >
-          <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl">
-            <h2 id="downgrade-title" className="text-lg font-semibold text-[var(--text)]">
+          <div className="w-full max-w-md rounded-2xl border border-rose-500/30 bg-[var(--surface)] p-5 shadow-xl">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-rose-400">
+              Confirm downgrade
+            </p>
+            <h2 id="downgrade-title" className="mt-1 text-lg font-semibold text-[var(--text)]">
               Switch to {signupPlanLabel(downgradeTarget)}?
             </h2>
-            <p className="mt-2 text-sm text-[var(--muted)]">
-              You&apos;re currently on <strong className="text-[var(--text)]">{membership.planLabel}</strong>.
-              Moving to a lower ticket may reduce access. This can&apos;t be undone without upgrading
-              again.
+            <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm text-[var(--muted)]">
+              <li>
+                You&apos;re on{" "}
+                <strong className="text-[var(--text)]">{membership.planLabel}</strong> now.
+              </li>
+              <li>Lower tickets can remove perks that came with your current seat.</li>
+              <li>
+                To go back up later, use <strong className="text-[var(--text)]">Upgrade</strong> on
+                this Account page (or checkout).
+              </li>
+              {membership.canManageBilling && (
+                <li>
+                  Prefer to cancel entirely? Use{" "}
+                  <strong className="text-[var(--text)]">Manage billing</strong> instead — no plan
+                  switch.
+                </li>
+              )}
+            </ul>
+            <p className="mt-3 text-xs text-[var(--muted)]">
+              Next step opens checkout for {signupPlanLabel(downgradeTarget)}. You can still back out
+              there.
             </p>
-            <p className="mt-2 text-xs text-[var(--muted)]">Are you sure you want to continue?</p>
             <div className="mt-4 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
                 className="btn-ghost px-4 py-2 text-sm"
-                onClick={() => setDowngradeTarget(null)}
+                onClick={cancelDowngrade}
               >
-                Cancel
+                Keep {membership.planLabel}
               </button>
               <button
                 type="button"
                 className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-500"
                 onClick={confirmDowngrade}
               >
-                Yes, change plan
+                Yes, switch to {signupPlanLabel(downgradeTarget)}
               </button>
             </div>
           </div>

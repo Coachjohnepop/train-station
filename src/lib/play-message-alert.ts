@@ -1,11 +1,11 @@
 /**
  * Short alert when unread messages increase while the app is open.
- * Uses train-station alert asset (cybertruck horn for now — swap file for whistle).
+ * Train whistle (message alerts). Rest-timer still uses cybertruck horn separately.
  */
 
 import { holdBackgroundMusicForMedia } from "@/lib/background-music-control";
 
-const ALERT_SRC = "/audio/cybertruck-horn.mp3";
+const ALERT_SRC = "/audio/train-whistle.mp3";
 const SOUND_OFF_KEY = "ts-message-alert-muted";
 
 let alertAudio: HTMLAudioElement | null = null;
@@ -36,14 +36,14 @@ export async function playMessageAlert(): Promise<void> {
     if (!alertAudio) {
       alertAudio = new Audio(ALERT_SRC);
       alertAudio.preload = "auto";
-      alertAudio.volume = 0.85;
+      alertAudio.volume = 0.9;
     }
     alertAudio.currentTime = 0;
     await alertAudio.play();
   } catch {
     /* autoplay blocked until user gesture — silent fail */
   } finally {
-    // Release duck after short delay so horn can play
-    window.setTimeout(() => release?.(), 1200);
+    // Release duck after whistle finishes (~1.5s)
+    window.setTimeout(() => release?.(), 1600);
   }
 }

@@ -333,8 +333,15 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-07-20  
-**Status:** **Venmo LIVE** · Stripe **Test** · SMS **PARKED**. Push/badge + community targeting + member Account hub shipped. Book Call hang fixed. Full open list → **OPEN BACKLOG**.
+**Date:** 2026-07-20 (PM residual pass)  
+**Status:** **Venmo LIVE** · Stripe **Test** · SMS **PARKED**. Residual five-item pass in progress (phone-pass code OK; whistle + downgrade + Live checklist shipped).
+
+### Jul 20 PM — residual five (one at a time)
+1. **Phone-pass surfaces** — Book Call API + Calendly, SW v3, payments/Venmo, Zoom host-only join logic verified in code/public APIs. **You still do 5-min phone pass** (Book Call UI, Account, badge, Messages, no false Join Live).
+2. **Jeremy Enable alerts** — steps in Admin → Settings + `JEREMY_ADMIN_MANUAL.md`. Only **john@bcxvoice.com** subscribed until he enables once.
+3. **Train whistle** — in-app message alert uses `/audio/train-whistle.mp3` (rest timer still cybertruck horn).
+4. **Stripe Live prep** — expanded **Part E** in `STRIPE_DEMO_SCRIPT.md` (products, Vercel vars, one real $25). Cutover still needs Jeremy + live keys.
+5. **Downgrade polish** — stronger confirm modal (Esc / backdrop), checkout `intent=downgrade` banner + CTA + cancel back to Account.
 
 ### Jul 20 — checklist pass + fixes
 - **Book Call hang:** members were calling staff-only `/api/admin/contact` → stuck on “Loading booking info…”. Now `/api/bookings/contact` + Calendly fallback (`calendly.com/jeremy-thetrainstation/new-meeting`).

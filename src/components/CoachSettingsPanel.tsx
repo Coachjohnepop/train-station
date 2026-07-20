@@ -328,10 +328,24 @@ export default function CoachSettingsPanel() {
         <div>
           <h2 className="text-lg font-semibold">Phone app alerts</h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Home-screen badge and notifications for this coach device. One-time enable in the app;
-            manage here to test or turn off.
+            Home-screen badge and notifications for <strong>this phone</strong>. Each coach enables
+            once on their own device (Jeremy, John, …).
           </p>
         </div>
+        <ol className="list-decimal space-y-1.5 pl-5 text-sm text-[var(--muted)]">
+          <li>
+            On iPhone: open Safari → Share → <strong>Add to Home Screen</strong> → open that icon
+            (not a browser tab).
+          </li>
+          <li>
+            Tap <strong>Enable alerts</strong> below (or the amber strip once) and allow
+            Notifications.
+          </li>
+          <li>
+            Optional: <strong>Send test</strong>, then lock the phone — you should see a Train
+            Station notification and badge.
+          </li>
+        </ol>
         <PushAlertSettings />
       </section>
 

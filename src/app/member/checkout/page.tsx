@@ -63,6 +63,7 @@ function MemberCheckoutInner() {
   const customOfferId = searchParams.get("offerId") || "";
   const merchandiseSkuId = searchParams.get("sku") || "";
   const canceled = searchParams.get("canceled") === "1";
+  const isDowngradeIntent = searchParams.get("intent") === "downgrade";
   const [loading, setLoading] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -185,14 +186,35 @@ function MemberCheckoutInner() {
   const showMembershipCard = isPaidOffer(plan);
   const publishableKey = payments?.stripePublishableKey || "";
   const isSignupCheckout = paymentStatus !== "paid";
+  // Never offer upgrades while intentionally downgrading from Account.
   const upgradePlans =
-    isSignupCheckout && isMembershipPlan(plan) ? upgradeMembershipPlansFrom(plan) : [];
+    !isDowngradeIntent && isSignupCheckout && isMembershipPlan(plan)
+      ? upgradeMembershipPlansFrom(plan)
+      : [];
+  const payCta = isDowngradeIntent
+    ? `Confirm ${signupPlanLabel(plan)}`
+    : "Get your Ticket";
 
   return (
     <>
       <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-10">
         {showMembershipCard ? (
           <MembershipPaymentCard plan={plan as SignupPlan} priceLabel={priceLabel || undefined}>
+            {isDowngradeIntent && (
+              <div className="rounded-lg border border-rose-500/35 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
+                <p className="font-semibold">Downgrade checkout</p>
+                <p className="mt-1 text-xs text-rose-100/90">
+                  You chose a lower ticket from Account. Confirm payment below, or go back and keep
+                  your current plan.
+                </p>
+                <Link
+                  href="/member/account"
+                  className="mt-2 inline-block text-xs font-semibold text-accent hover:underline"
+                >
+                  ← Back to Account
+                </Link>
+              </div>
+            )}
             {feeLabel ? (
               <p className="text-xs font-medium uppercase tracking-wide text-[#c4b5fd]">
                 {feeLabel}
@@ -227,7 +249,7 @@ function MemberCheckoutInner() {
                         ? "Preparing checkout…"
                         : checkoutOpen
                           ? "Payment window open"
-                          : "Get your Ticket"}
+                          : payCta}
                 </button>
                 <p className="text-center text-[11px] text-[var(--muted)]">
                   {hasSavedCard
@@ -272,14 +294,22 @@ function MemberCheckoutInner() {
               />
             )}
             <div className="flex flex-col items-center gap-2 text-xs text-[var(--muted)]">
-              {!isSignupCheckout && (
-                <Link href="/#tickets" className="hover:text-accent">
-                  Compare train seats
+              {isDowngradeIntent ? (
+                <Link href="/member/account" className="hover:text-accent">
+                  Cancel — keep current plan
                 </Link>
+              ) : (
+                <>
+                  {!isSignupCheckout && (
+                    <Link href="/#tickets" className="hover:text-accent">
+                      Compare train seats
+                    </Link>
+                  )}
+                  <Link href="/" className="hover:text-accent">
+                    Back to home
+                  </Link>
+                </>
               )}
-              <Link href="/" className="hover:text-accent">
-                Back to home
-              </Link>
             </div>
           </MembershipPaymentCard>
         ) : (
