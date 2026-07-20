@@ -267,6 +267,8 @@ export default function AdminChatWorkspace({
     if (!res.ok) return;
     const data = await res.json();
     setUnreadByThread(data.unreadByThread || {});
+    // Keep left-nav / bottom Msgs / top Messages badges in sync with jelly beans.
+    window.dispatchEvent(new CustomEvent("chat-unread-refresh"));
   }, []);
 
   const selectMember = useCallback(
