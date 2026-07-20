@@ -351,7 +351,7 @@ export default function BackgroundMusic() {
             onAdminLanding
               ? "bottom-20 xl:bottom-6"
               : onPublicHome
-                ? "bottom-[5.75rem] sm:bottom-28"
+                ? "bottom-5 sm:bottom-8"
                 : "bottom-6"
           }`}
           style={{

@@ -87,10 +87,11 @@ export default async function HomePage() {
         welcomeVideoUrl={landingVideos.welcomeVideoUrl}
       />
 
-      <div className="home-memberships-fab fixed z-30 flex flex-col items-end gap-2">
+      {/* Desktop only — hero already has View memberships on phones */}
+      <div className="home-memberships-fab fixed z-30 hidden flex-col items-end gap-2 md:flex">
         <Link
           href="#tickets"
-          className="group inline-flex max-w-[calc(100vw-5.5rem)] items-center gap-2 rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_90%,transparent)] px-4 py-2.5 text-sm font-semibold text-[var(--text)] shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:shadow-2xl active:scale-[0.985] sm:max-w-none sm:px-5"
+          className="group inline-flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_90%,transparent)] px-5 py-2.5 text-sm font-semibold text-[var(--text)] shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:shadow-2xl active:scale-[0.985]"
         >
           View memberships
           <span className="text-[var(--accent)] transition group-hover:translate-x-0.5">→</span>

@@ -77,11 +77,11 @@ export default function LandingNav({
   }
 
   return (
-    <header className="landing-nav header-theme-clearance sticky top-0 z-40 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_82%,transparent)] backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+    <header className="landing-nav header-theme-clearance sticky top-0 z-40 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] backdrop-blur-md">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
         <Link
           href="/"
-          className="flex shrink-0 items-center gap-2 transition hover:opacity-90"
+          className="flex min-w-0 shrink items-center gap-2 transition hover:opacity-90"
           onClick={closeMenus}
         >
           <span className="md:hidden">
@@ -90,7 +90,8 @@ export default function LandingNav({
           <span className="hidden md:block">
             <TrainStationBrand variant="header" />
           </span>
-          <span className="max-w-[10.5rem] text-[11px] font-semibold uppercase leading-tight tracking-[0.14em] text-[var(--text)] md:hidden">
+          {/* Wordmark only from sm — frees mobile header space */}
+          <span className="hidden max-w-[10.5rem] text-[11px] font-semibold uppercase leading-tight tracking-[0.14em] text-[var(--text)] sm:inline md:hidden">
             The Train Station
           </span>
         </Link>
@@ -169,33 +170,37 @@ export default function LandingNav({
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           {variant === "welcome" && purchaseAuth.signedIn ? (
             purchaseAuth.role && isStaffRole(purchaseAuth.role) ? (
               <Link
                 href="/admin"
                 className="btn-primary px-3 py-1.5 text-[11px] font-semibold md:hidden"
               >
-                Open Dashboard
+                Dashboard
               </Link>
             ) : (
               <MemberDashboardLink className="btn-primary px-3 py-1.5 text-[11px] font-semibold md:hidden">
-                Open Dashboard
+                Dashboard
               </MemberDashboardLink>
             )
           ) : null}
+          {/* Desktop / tablet only — mobile uses ☰ so we don’t stack weird jelly beans */}
           {variant === "public" ? (
             <>
-              <Link href="/login" className="landing-nav__link hidden sm:inline-flex">
+              <Link href="/login" className="landing-nav__link hidden md:inline-flex">
                 Member sign in
               </Link>
-              <Link href="/signup?plan=explorer" className="btn-primary hidden px-4 py-2 text-xs sm:inline-flex">
+              <Link
+                href="/signup?plan=explorer"
+                className="btn-primary hidden px-4 py-2 text-xs md:inline-flex"
+              >
                 Early sign up
               </Link>
             </>
           ) : (
             <>
-              <Link href="/#tickets" className="landing-nav__link hidden sm:inline-flex">
+              <Link href="/#tickets" className="landing-nav__link hidden md:inline-flex">
                 Memberships
               </Link>
               <button
@@ -203,7 +208,7 @@ export default function LandingNav({
                 onClick={() => {
                   window.location.href = logoutUrl();
                 }}
-                className="landing-nav__link hidden sm:inline-flex"
+                className="landing-nav__link hidden md:inline-flex"
               >
                 Sign out
               </button>
@@ -213,7 +218,7 @@ export default function LandingNav({
             type="button"
             className="landing-nav__menu-btn md:hidden"
             aria-expanded={mobileOpen}
-            aria-label="Open menu"
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
             onClick={() => setMobileOpen((v) => !v)}
           >
             {mobileOpen ? "✕" : "☰"}
