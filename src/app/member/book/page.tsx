@@ -29,29 +29,59 @@ export default function MemberBookPage() {
   const [calendlyBooked, setCalendlyBooked] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
-      const [cRes, sRes, sessionRes] = await Promise.all([
-        fetch("/api/admin/contact"),
-        fetch("/api/bookings?slots=true"),
-        fetch("/api/auth/session"),
-      ]);
-      if (cRes.ok) setContact(await cRes.json());
-      if (sessionRes.ok) {
-        const session = await sessionRes.json();
-        if (session.signedIn && session.user?.email) {
-          setMemberEmail(session.user.email);
+      try {
+        // Members must NOT call /api/admin/contact (staff-only) — that hung the page.
+        const [cRes, sRes, sessionRes] = await Promise.all([
+          fetch("/api/bookings/contact", { cache: "no-store" }),
+          fetch("/api/bookings?slots=true", { cache: "no-store" }),
+          fetch("/api/auth/session", { cache: "no-store" }),
+        ]);
+        if (cancelled) return;
+
+        if (cRes.ok) {
+          const c = await cRes.json();
+          setContact({
+            email: c.email || "jeremy@thetrainstation.co",
+            phone: c.phone || undefined,
+            calendlyUrl: c.calendlyUrl || COACH_CALENDLY_URL,
+          });
+        } else {
+          // Always unblock UI with brand Calendly fallback
+          setContact({
+            email: "jeremy@thetrainstation.co",
+            calendlyUrl: COACH_CALENDLY_URL,
+          });
+        }
+
+        if (sessionRes.ok) {
+          const session = await sessionRes.json();
+          if (session.signedIn && session.user?.email) {
+            setMemberEmail(session.user.email);
+          }
+        }
+        if (sRes.ok) {
+          const raw = await sRes.json();
+          setSlots(
+            (raw as Slot[]).map((s) => ({
+              start: typeof s.start === "string" ? s.start : new Date(s.start).toISOString(),
+              end: typeof s.end === "string" ? s.end : new Date(s.end).toISOString(),
+            })),
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setContact({
+            email: "jeremy@thetrainstation.co",
+            calendlyUrl: COACH_CALENDLY_URL,
+          });
         }
       }
-      if (sRes.ok) {
-        const raw = await sRes.json();
-        setSlots(
-          (raw as Slot[]).map((s) => ({
-            start: typeof s.start === "string" ? s.start : new Date(s.start).toISOString(),
-            end: typeof s.end === "string" ? s.end : new Date(s.end).toISOString(),
-          })),
-        );
-      }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const dates = useMemo(
@@ -89,7 +119,9 @@ export default function MemberBookPage() {
     }
   }
 
-  if (!contact) return <p className="mt-6 text-center text-[var(--muted)]">Loading booking info…</p>;
+  if (!contact) {
+    return <p className="mt-6 text-center text-[var(--muted)]">Loading booking info…</p>;
+  }
 
   const calendly = contact.calendlyUrl || COACH_CALENDLY_URL;
 

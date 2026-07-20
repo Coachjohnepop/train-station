@@ -41,7 +41,7 @@ export default function MemberIntakeIntroCard({
   useEffect(() => {
     (async () => {
       const [contactRes, sessionRes, statusRes] = await Promise.all([
-        fetch("/api/admin/contact"),
+        fetch("/api/bookings/contact", { cache: "no-store" }),
         fetch("/api/auth/session"),
         initialStatus ? Promise.resolve(null) : fetch("/api/member/intake-status", { cache: "no-store" }),
       ]);
