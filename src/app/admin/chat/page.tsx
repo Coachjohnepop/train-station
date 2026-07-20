@@ -37,41 +37,41 @@ export default async function AdminChatPage({ searchParams }: Props) {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold">Messages</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Community feed for station-wide posts; direct inbox for 1:1 member threads.
-          Red badges stay until you <strong className="text-[var(--text)]">Clear badge</strong> or
-          reply — use <strong className="text-[var(--text)]">Badge for later</strong> to put a
-          reminder back on a thread.
+          Threads stay locked at the top with badges. Clear a badge when done, or use Badge for
+          later. Community broadcast is below.
         </p>
       </div>
 
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-lg font-semibold">Community feed</h2>
-          <p className="text-[11px] text-[var(--muted)]">{COMMUNITY_NO_BROADCAST_NOTE}</p>
-        </div>
-        <CommunityComposer embedded />
-      </section>
+      {/* Inbox first — sticky thread strip lives inside the workspace */}
+      <AdminChatWorkspace
+        initialThreads={threads}
+        members={members}
+        initialUnreadByThread={getUnreadCountsByThreadForCoach()}
+        initialMemberId={sp.member}
+      />
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Inbox</h2>
-        <p className="text-sm text-[var(--muted)]">
-          Color-coded — green Live, blue Asynch, violet Community. On phone, use Inbox / Chat tabs.
-        </p>
-        <AdminChatWorkspace
-          initialThreads={threads}
-          members={members}
-          initialUnreadByThread={getUnreadCountsByThreadForCoach()}
-          initialMemberId={sp.member}
-        />
-      </section>
+      <details className="group rounded-xl border border-violet-400/30 bg-violet-500/5">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-semibold">
+          <span className="text-violet-300 transition-transform group-open:rotate-90 text-xs">
+            ▶
+          </span>
+          Community feed
+          <span className="text-[10px] font-normal text-[var(--muted)]">
+            — station-wide posts · {COMMUNITY_NO_BROADCAST_NOTE}
+          </span>
+        </summary>
+        <div className="space-y-3 border-t border-violet-400/20 px-3 pb-3 pt-2">
+          <CommunityComposer embedded />
+        </div>
+      </details>
 
       <details className="group rounded-xl border border-accent/25 bg-accent/5">
-        <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 font-semibold text-sm">
-          <span className="text-accent group-open:rotate-90 transition-transform text-xs">▶</span>
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-semibold">
+          <span className="text-accent transition-transform group-open:rotate-90 text-xs">▶</span>
           Post to individual member(s)
           <span className="text-[10px] font-normal text-[var(--muted)]">— private 1:1 thread</span>
         </summary>

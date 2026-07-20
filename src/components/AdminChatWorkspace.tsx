@@ -20,31 +20,47 @@ import {
   useStoredPanelSize,
 } from "@/lib/chat-panel-resize";
 
-/** Stick thread strip under the frozen coach mobile header (xl sidebar has no sticky bar). */
+/**
+ * Stick thread strip under frozen coach chrome:
+ * - mobile/tablet: sticky app header
+ * - desktop: top of main scroll (sidebar is separate column)
+ * Also accounts for AdminPersistenceBanner when present.
+ */
 function useCoachChromeOffset(): number {
   const [offset, setOffset] = useState(0);
   useEffect(() => {
     const sync = () => {
-      // Mobile/tablet coach header is sticky; desktop uses left sidebar (offset 0).
-      if (window.matchMedia("(min-width: 1280px)").matches) {
-        setOffset(0);
-        return;
+      let top = 0;
+      // Mobile / tablet sticky header only (hidden on xl).
+      if (!window.matchMedia("(min-width: 1280px)").matches) {
+        const header = document.querySelector("header.app-shell-header");
+        if (header instanceof HTMLElement) {
+          top += Math.ceil(header.getBoundingClientRect().height);
+        }
       }
-      const header = document.querySelector("header.app-shell-header");
-      if (header instanceof HTMLElement) {
-        setOffset(Math.ceil(header.getBoundingClientRect().height));
-        return;
+      // Persistence banner sits above page content when visible.
+      const banner = document.querySelector("[data-admin-persistence-banner]");
+      if (banner instanceof HTMLElement) {
+        const r = banner.getBoundingClientRect();
+        // Only add if it's still in the sticky/top zone
+        if (r.bottom > 0 && r.top < 120) {
+          top += Math.ceil(r.height);
+        }
       }
-      setOffset(0);
+      setOffset(top);
     };
     sync();
     window.addEventListener("resize", sync);
+    window.addEventListener("scroll", sync, { passive: true });
     const header = document.querySelector("header.app-shell-header");
-    const ro = header instanceof HTMLElement ? new ResizeObserver(sync) : null;
-    if (header instanceof HTMLElement) ro?.observe(header);
+    const banner = document.querySelector("[data-admin-persistence-banner]");
+    const ro = new ResizeObserver(sync);
+    if (header instanceof HTMLElement) ro.observe(header);
+    if (banner instanceof HTMLElement) ro.observe(banner);
     return () => {
       window.removeEventListener("resize", sync);
-      ro?.disconnect();
+      window.removeEventListener("scroll", sync);
+      ro.disconnect();
     };
   }, []);
   return offset;
@@ -365,11 +381,14 @@ export default function AdminChatWorkspace({
       : activeMember?.name || activeThread?.title || "Conversation";
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
-      {/* Locked top: Inbox/Chat tabs + all threads with badges stay on screen while messages scroll */}
+    <div className="space-y-0">
+      {/*
+        Sticky outside overflow-hidden shell (same pattern as member Messages).
+        All threads + badges stay visible while the conversation scrolls.
+      */}
       <div
-        className="admin-chat-threads-lock sticky z-30 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_94%,var(--bg))] shadow-[0_8px_20px_rgba(0,0,0,0.16)] backdrop-blur-md"
-        style={{ top: chromeOffset }}
+        className="admin-chat-threads-lock sticky z-40 -mx-0.5 mb-2 rounded-xl border border-violet-400/40 bg-[color-mix(in_srgb,var(--bg)_90%,var(--surface))] px-0 shadow-[0_10px_28px_rgba(0,0,0,0.22)] backdrop-blur-md"
+        style={{ top: Math.max(0, chromeOffset) }}
       >
         <div className="flex border-b border-[var(--border)] lg:hidden">
           <button
@@ -402,7 +421,7 @@ export default function AdminChatWorkspace({
           </button>
         </div>
 
-        <div className="border-b border-[var(--border)] bg-violet-950/20 px-3 py-2">
+        <div className="bg-violet-950/25 px-3 py-2.5">
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-violet-200">
               All threads
@@ -417,6 +436,9 @@ export default function AdminChatWorkspace({
               )}
             </p>
             <div className="flex items-center gap-2">
+              <p className="hidden text-[10px] text-[var(--muted)] sm:block">
+                Locked top · badges always visible
+              </p>
               {totalUnread > 0 ? (
                 <button
                   type="button"
@@ -495,14 +517,21 @@ export default function AdminChatWorkspace({
                 </button>
               );
             })}
+            {memberRows.length === 0 && cohortThreads.length === 0 ? (
+              <p className="px-1 text-xs text-[var(--muted)]">No threads yet.</p>
+            ) : null}
           </div>
         </div>
       </div>
 
-      <div className="chat-thread-shell flex flex-col overflow-hidden">
+      <div className="chat-thread-shell overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
         <div
           className="flex min-h-[min(70vh,560px)] flex-col lg:min-h-0 lg:flex-row"
-          style={isDesktopChat ? { height: workspaceHeight } : undefined}
+          style={
+            isDesktopChat
+              ? { height: workspaceHeight }
+              : { height: "min(68dvh, calc(100dvh - 12rem))" }
+          }
         >
         {/* Inbox — full screen on mobile when selected (detailed list) */}
         <aside
