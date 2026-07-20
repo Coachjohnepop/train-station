@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import AdminBookingZoomActions from "@/components/AdminBookingZoomActions";
 import SmsWorkoutOverridePanel from "@/components/SmsWorkoutOverridePanel";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
+import PhoneInput from "@/components/PhoneInput";
+import { formatPhoneDisplay } from "@/lib/sms-phone";
 
 type Contact = { email: string; phone?: string | null; calendlyUrl?: string | null };
 type Availability = { id: string; weekday: number; startHour: number; startMinute: number; endHour: number; endMinute: number; slotDurationMin: number };
@@ -207,10 +209,10 @@ export default function AdminBookingsPage() {
           </label>
           <label className="block">
             <span className="text-xs text-[var(--muted)]">Phone</span>
-            <input
+            <PhoneInput
               className="input mt-1 w-full"
               value={contact.phone || ""}
-              onChange={(e) => setContact({ ...contact, phone: e.target.value })}
+              onChange={(phone) => setContact({ ...contact, phone })}
             />
           </label>
           <label className="block sm:col-span-2">
@@ -275,7 +277,10 @@ export default function AdminBookingsPage() {
             {bookings.map((b) => (
               <div key={b.id} className="card text-sm">
                 <div className="flex flex-wrap gap-x-6 gap-y-1">
-                  <div><strong>Member:</strong> {b.memberEmail} {b.memberPhone && `• ${b.memberPhone}`}</div>
+                  <div>
+                    <strong>Member:</strong> {b.memberEmail}{" "}
+                    {b.memberPhone && `• ${formatPhoneDisplay(b.memberPhone)}`}
+                  </div>
                   <div><strong>When:</strong> {new Date(b.scheduledAt).toLocaleString()}</div>
                   <div><strong>Status:</strong> {b.status}</div>
                   {b.user?.dailyReminderTime && <div><strong>Daily SMS reminder:</strong> {b.user.dailyReminderTime}</div>}
@@ -370,7 +375,10 @@ export default function AdminBookingsPage() {
                     disabled={!r.phone}
                   />
                   <span className={!r.phone ? "text-[var(--muted)]" : ""}>
-                    {r.name || r.email} <span className="font-mono text-[var(--muted)]">{r.phone || "(no phone)"}</span>
+                    {r.name || r.email}{" "}
+                    <span className="font-mono text-[var(--muted)]">
+                      {r.phone ? formatPhoneDisplay(r.phone) : "(no phone)"}
+                    </span>
                   </span>
                 </label>
               ))}
@@ -424,7 +432,8 @@ export default function AdminBookingsPage() {
                 {new Date(log.sentAt).toLocaleString()} 
                 {log.source === "broadcast" && <span className="ml-1 rounded bg-violet-500/20 px-1 text-violet-400">BROADCAST{log.category ? ` (${log.category})` : ""}</span>}
                 {log.source === "member-reply" && <span className="ml-1 rounded bg-emerald-500/20 px-1 text-emerald-400">MEMBER REPLY</span>}
-                to {log.phone || log.user?.email}: {log.message?.substring(0, 90)}...
+                to {log.phone ? formatPhoneDisplay(log.phone) : log.user?.email}:{" "}
+                {log.message?.substring(0, 90)}...
               </li>
             ))}
           </ul>
@@ -446,7 +455,9 @@ export default function AdminBookingsPage() {
             <ul className="text-xs space-y-1 max-h-32 overflow-auto">
               {smsLogs.filter((l: any) => l.source === "member-reply").slice(0, 6).map((log: any, i: number) => (
                 <li key={i} className="border-b pb-1 text-[10px] text-emerald-600">
-                  {new Date(log.sentAt).toLocaleString()} from {log.phone}: {log.message?.replace("[Member reply] ", "")}
+                  {new Date(log.sentAt).toLocaleString()} from{" "}
+                  {log.phone ? formatPhoneDisplay(log.phone) : "—"}:{" "}
+                  {log.message?.replace("[Member reply] ", "")}
                 </li>
               ))}
             </ul>

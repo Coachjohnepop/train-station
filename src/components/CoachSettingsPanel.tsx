@@ -11,6 +11,8 @@ import {
   type GamificationPointsMap,
 } from "@/lib/gamification-types";
 import { PROGRAM_START_WEEKDAYS } from "@/lib/program-start-settings";
+import PhoneInput from "@/components/PhoneInput";
+import { formatPhoneInputValue } from "@/lib/sms-phone";
 
 type CoachSettings = {
   coachPhone: string | null;
@@ -44,7 +46,14 @@ export default function CoachSettingsPanel() {
     setLoading(true);
     const res = await fetch("/api/admin/coach-settings");
     const data = await res.json().catch(() => ({}));
-    if (res.ok) setSettings(data.settings);
+    if (res.ok && data.settings) {
+      setSettings({
+        ...data.settings,
+        coachPhone: data.settings.coachPhone
+          ? formatPhoneInputValue(data.settings.coachPhone)
+          : null,
+      });
+    }
     else setMessage(data.error || "Could not load settings.");
     setLoading(false);
   }
@@ -76,8 +85,13 @@ export default function CoachSettingsPanel() {
       }),
     });
     const data = await res.json().catch(() => ({}));
-    if (res.ok) {
-      setSettings(data.settings);
+    if (res.ok && data.settings) {
+      setSettings({
+        ...data.settings,
+        coachPhone: data.settings.coachPhone
+          ? formatPhoneInputValue(data.settings.coachPhone)
+          : null,
+      });
       setMessage("Settings saved.");
     } else {
       setMessage(data.error || "Save failed.");
@@ -328,11 +342,11 @@ export default function CoachSettingsPanel() {
           </label>
           <label className="block text-sm">
             <span className="text-[var(--muted)]">Coach SMS phone</span>
-            <input
+            <PhoneInput
               className="input mt-1 w-full"
               value={settings.coachPhone || ""}
-              onChange={(e) => setSettings({ ...settings, coachPhone: e.target.value || null })}
-              placeholder="+1 555 123 4567"
+              onChange={(phone) => setSettings({ ...settings, coachPhone: phone || null })}
+              placeholder="(916.284.1994)"
             />
           </label>
         </div>

@@ -10,6 +10,8 @@ import {
   slotLocalDateKey,
 } from "@/lib/booking-slot-format";
 import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
+import PhoneInput from "@/components/PhoneInput";
+import { formatPhoneDisplay } from "@/lib/sms-phone";
 
 type Slot = { start: string; end: string; label?: string };
 
@@ -123,7 +125,7 @@ export default function MemberBookPage() {
         )}
         <p className="text-xs text-[var(--muted)]">
           Coach contact: {contact.email}
-          {contact.phone ? ` · ${contact.phone}` : ""}
+          {contact.phone ? ` · ${formatPhoneDisplay(contact.phone)}` : ""}
         </p>
       </div>
 
@@ -152,11 +154,11 @@ export default function MemberBookPage() {
           </div>
           <div>
             <label className="block text-sm font-medium">Your phone (optional)</label>
-            <input
+            <PhoneInput
               className="input mt-1 w-full"
               value={memberPhone}
-              onChange={(e) => setMemberPhone(e.target.value)}
-              placeholder="(555) 555-5555"
+              onChange={setMemberPhone}
+              placeholder="(916.284.1994)"
             />
           </div>
 

@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 import EmailInput, { rememberEmail } from "@/components/EmailInput";
 import PasswordInput from "@/components/PasswordInput";
+import PhoneInput from "@/components/PhoneInput";
+import { formatPhoneInputValue } from "@/lib/sms-phone";
 import { offerSavePassword, offerSavePasswordFromForm } from "@/lib/browser-credentials";
 import { useFormAutofillSync } from "@/hooks/useFormAutofillSync";
 import OAuthButtons from "@/components/OAuthButtons";
@@ -44,7 +46,7 @@ function SignupForm() {
       const savedLast = localStorage.getItem("ts-signup-last");
       if (savedLast) setLastName(savedLast);
       const savedPhone = localStorage.getItem("ts-signup-phone");
-      if (savedPhone) setPhone(savedPhone);
+      if (savedPhone) setPhone(formatPhoneInputValue(savedPhone));
     } catch {
       /* ignore */
     }
@@ -297,13 +299,11 @@ function SignupForm() {
               <label className="block text-xs text-[#9d8ab8] mb-1">
                 Phone <span className="text-[#6b5b86]">(optional — used for workout texts)</span>
               </label>
-              <input
-                type="tel"
+              <PhoneInput
                 name="tel"
-                autoComplete="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="(555) 123-4567"
+                onChange={setPhone}
+                placeholder="(916.284.1994)"
                 className="w-full rounded-full border border-[#3d2660] bg-[#0a0612] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
               />
             </div>

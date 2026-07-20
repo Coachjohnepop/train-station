@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
+import PhoneInput from "@/components/PhoneInput";
+import { formatPhoneInputValue } from "@/lib/sms-phone";
 
 type ReminderSettings = {
   phone: string;
@@ -27,7 +29,7 @@ export default function MemberReminderSettings() {
       const res = await fetch("/api/member/reminder-settings");
       const json = await res.json();
       setSettings({
-        phone: json.phone || "",
+        phone: formatPhoneInputValue(json.phone || ""),
         dailyReminderTime: json.dailyReminderTime || "",
       });
     } catch {
@@ -51,7 +53,7 @@ export default function MemberReminderSettings() {
         const current = latestSettingsRef.current;
         if (current.phone === nextSettings.phone && current.dailyReminderTime === nextSettings.dailyReminderTime) {
           setSettings({
-            phone: json.phone || "",
+            phone: formatPhoneInputValue(json.phone || ""),
             dailyReminderTime: json.dailyReminderTime || "",
           });
         }
@@ -128,19 +130,16 @@ export default function MemberReminderSettings() {
             <label className="block text-[10px] text-[var(--muted)] mb-0.5">
               Mobile (optional — only if we add carrier texts later)
             </label>
-            <input
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
+            <PhoneInput
               value={settings.phone}
-              onChange={(e) => handleChange("phone", e.target.value)}
+              onChange={(phone) => handleChange("phone", phone)}
               onBlur={() => {
                 if (saveTimerRef.current) {
                   clearTimeout(saveTimerRef.current);
                   save(latestSettingsRef.current);
                 }
               }}
-              placeholder="Optional"
+              placeholder="(916.284.1994)"
               className="input text-sm w-full"
             />
           </div>

@@ -8,6 +8,8 @@ import PasswordInput from "@/components/PasswordInput";
 import FormUsernameBridge from "@/components/FormUsernameBridge";
 import AdminUserQuickAuthControls from "@/components/AdminUserQuickAuthControls";
 import AdminMemberProgramPositionPanel from "@/components/AdminMemberProgramPositionPanel";
+import PhoneInput from "@/components/PhoneInput";
+import { formatPhoneDisplay } from "@/lib/sms-phone";
 
 type Role = "ADMIN" | "INSTRUCTOR" | "PLATFORM_ADMIN" | "MEMBER" | "PROSPECTIVE_INSTRUCTOR";
 
@@ -108,7 +110,7 @@ export default function AdminUsersPage() {
       role: u.role,
       status: u.status,
       notes: u.notes || "",
-      phone: u.phone || "",
+      phone: formatPhoneDisplay(u.phone || ""),
       dailyReminderTime: u.dailyReminderTime || "",
       password: "",
     });
@@ -339,7 +341,7 @@ export default function AdminUsersPage() {
                   <td className="py-3 pr-4 text-xs">
                     {u.phone ? (
                       <div>
-                        <span className="font-mono">{u.phone}</span>
+                        <span className="font-mono">{formatPhoneDisplay(u.phone)}</span>
                         {u.dailyReminderTime && <div className="text-[10px] text-[var(--muted)]">remind {u.dailyReminderTime}</div>}
                       </div>
                     ) : (
@@ -497,12 +499,11 @@ export default function AdminUsersPage() {
 
               <label className="block">
                 <span className="text-xs text-[var(--muted)]">Phone (for SMS)</span>
-                <input
-                  type="tel"
+                <PhoneInput
                   value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  onChange={(phone) => setForm({ ...form, phone })}
                   className="input mt-1 w-full"
-                  placeholder="(555) 123-4567"
+                  placeholder="(916.284.1994)"
                 />
               </label>
               <label className="block">

@@ -1,5 +1,6 @@
 import { listLeads } from "@/lib/waitlist";
 import LeadsSeenMarker from "@/components/LeadsSeenMarker";
+import { formatPhoneDisplay } from "@/lib/sms-phone";
 
 export const dynamic = "force-dynamic";
 
@@ -74,7 +75,7 @@ export default async function AdminLeadsPage() {
                   <td className="px-4 py-3 text-[var(--muted)]">
                     {lead.phone ? (
                       <a href={`tel:${lead.phone}`} className="hover:underline">
-                        {lead.phone}
+                        {formatPhoneDisplay(lead.phone)}
                       </a>
                     ) : (
                       "—"

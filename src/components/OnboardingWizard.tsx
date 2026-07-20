@@ -7,6 +7,7 @@ import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
 import { welcomeVideoUrlForPlan } from "@/lib/landing-media";
 import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
+import PhoneInput from "@/components/PhoneInput";
 import QuickAuthSetupPrompt from "@/components/QuickAuthSetupPrompt";
 import CityStateInput from "@/components/CityStateInput";
 import ProgramStartDatePicker from "@/components/ProgramStartDatePicker";
@@ -329,12 +330,10 @@ export default function OnboardingWizard({
             <div className="space-y-3 pt-1">
               <div>
                 <label className="text-xs text-[var(--muted)] block mb-1">Mobile number</label>
-                <input
-                  type="tel"
-                  autoComplete="tel"
+                <PhoneInput
                   value={sms.phone}
-                  onChange={(e) => setSms({ ...sms, phone: e.target.value })}
-                  placeholder="(555) 123-4567"
+                  onChange={(phone) => setSms({ ...sms, phone })}
+                  placeholder="(916.284.1994)"
                   className="input w-full"
                 />
               </div>

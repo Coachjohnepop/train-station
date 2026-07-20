@@ -8,6 +8,7 @@ import {
   type MemberCoachingMode,
 } from "@/lib/member-coaching-mode";
 import { signupPlanLabel } from "@/lib/signup-plans";
+import { formatPhoneDisplay } from "@/lib/sms-phone";
 
 type MemberFilter = "all" | "pending" | "unpaid" | "intake" | "meeting";
 
@@ -362,7 +363,9 @@ export default function AdminMembersPage() {
                       {member.email}
                     </a>
                     {member.phone && (
-                      <div className="text-xs text-[var(--muted)]">{member.phone}</div>
+                      <div className="text-xs text-[var(--muted)]">
+                        {formatPhoneDisplay(member.phone)}
+                      </div>
                     )}
                   </td>
                   <td className="px-4 py-3 text-[var(--muted)]">

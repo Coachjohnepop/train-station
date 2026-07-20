@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { formatPhoneDisplay } from "@/lib/sms-phone";
 
 type QueueAction = "approve" | "mark_paid" | "intake" | "meeting" | "message";
 
@@ -238,7 +239,7 @@ export default function AdminQueuePanel() {
                   <p className="text-lg font-semibold">{item.name}</p>
                   <p className="text-xs text-[var(--muted)]">{item.email}</p>
                   {item.phone && (
-                    <p className="text-xs text-[var(--muted)]">{item.phone}</p>
+                    <p className="text-xs text-[var(--muted)]">{formatPhoneDisplay(item.phone)}</p>
                   )}
                   <span className="mt-2 inline-block rounded-full bg-amber-500/15 px-3 py-1 text-[10px] font-semibold uppercase text-amber-200">
                     {item.reason}
