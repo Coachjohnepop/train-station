@@ -12,7 +12,18 @@ export default function LogoutButton({
   return (
     <button
       type="button"
-      className={`text-xs text-[var(--muted)] hover:text-accent transition ${className}`}
+      className={[
+        // Clear browser hover target: color shift + 10% grow
+        "inline-flex items-center justify-center rounded-md text-xs font-medium",
+        "text-[var(--muted)] transition-all duration-150 ease-out",
+        "hover:scale-110 hover:text-rose-200 hover:bg-rose-500/20",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/60",
+        "active:scale-105",
+        compact ? "p-1.5" : "px-2 py-1",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
       onClick={() => {
         window.location.href = logoutUrl();
       }}
