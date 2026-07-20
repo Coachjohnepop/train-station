@@ -53,7 +53,7 @@ Sign in → left sidebar. Paths below are full URLs on prod.
 ### Talk
 | Screen | URL | What lives here |
 |--------|-----|-----------------|
-| **Messages** | `/admin/chat` | In-app coach ↔ member chat. **Red badges** = unread member replies (sorted first). **Clear badge** / **Clear all badges** dismiss for later; **Badge for later** puts a reminder back. New replies re-badge. |
+| **Messages** | `/admin/chat` | **Primary coach inbox.** Sticky **jelly-bean chips** across the top = **every member + community** (swipe sideways). **Tap a chip** to open that chat. **Red badges** on chips / left nav / top “Messages” / bottom **Msgs** = unread. **Clear badge** / **Clear all badges** when handled; **Badge for later** re-flags. Community feed + “Post to individual” sit **below** (collapsed). |
 | **SMS Hub** | `/admin/sms-hub` | Text-style hub: recipients, logs, broadcast. **Until Twilio is fully live, many sends are email hub / simulated, not carrier SMS.** |
 
 ### Live
@@ -66,11 +66,13 @@ Sign in → left sidebar. Paths below are full URLs on prod.
 ### Content
 | Screen | URL | What lives here |
 |--------|-----|-----------------|
-| **Programs** | `/admin/programs` | Calendar builder, Gym/Home tracks, templates & paste (**always clones**, never share-by-reference) |
+| **Programs** | `/admin/programs` | Calendar builder, Gym/Home tracks, **Templates & paste** on a day (**always clones**). Week header: **Copy current week**, **Post current week to Template Library**. |
+| **Templates** | `/admin/templates` | **Day / Week / Month** library (tabs at top). Newest first. Archive shelf. Paste onto a program from the calendar. |
 | **Workouts** | `/admin/workouts` | Workout library / shells |
 | **Exercises** | `/admin/exercises` | Exercise catalog + **archive shelf** (soft delete → restore → hard delete) |
-| **Prescriptions** | `/admin/prescriptions` | Prescription examples / scheme helpers |
 | **Equipment** | `/admin/equipment` | Gear catalog (product photo required to publish) |
+
+**Prescriptions** are **not** in coach Content nav anymore — platform / super-admin only (`/admin/prescriptions` under Platform → System).
 
 ### Site
 | Screen | URL | What lives here |
