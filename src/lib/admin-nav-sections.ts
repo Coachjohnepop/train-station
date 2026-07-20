@@ -120,11 +120,6 @@ export const COACH_NAV_GROUPS: AdminNavGroup[] = [
         match: (p) => p.startsWith("/admin/exercises"),
       },
       {
-        href: "/admin/prescriptions",
-        label: "Prescriptions",
-        match: (p) => p.startsWith("/admin/prescriptions"),
-      },
-      {
         href: "/admin/equipment",
         label: "Equipment",
         match: (p) => p.startsWith("/admin/equipment"),
@@ -208,6 +203,17 @@ export const PLATFORM_NAV_GROUPS: AdminNavGroup[] = [
       },
     ],
   },
+  {
+    /** Super-admin catalog knobs — not day-to-day coach UI. */
+    label: "System",
+    items: [
+      {
+        href: "/admin/prescriptions",
+        label: "Prescription vars",
+        match: (p) => p.startsWith("/admin/prescriptions"),
+      },
+    ],
+  },
 ];
 
 export const PLATFORM_NAV_ITEMS: AdminNavItem[] = PLATFORM_NAV_GROUPS.flatMap((g) => g.items);
@@ -221,6 +227,7 @@ const PLATFORM_PATH_PREFIXES = [
   "/admin/reports",
   "/admin/insights",
   "/admin/coach-suggestions",
+  "/admin/prescriptions",
 ];
 
 export function isPlatformAdminPath(pathname: string): boolean {
