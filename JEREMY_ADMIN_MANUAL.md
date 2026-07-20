@@ -95,7 +95,8 @@ Each coach device enables separately. John already enabled on his; **Jeremy stil
 | Screen | URL | What lives here |
 |--------|-----|-----------------|
 | **Platform dashboard** | `/admin/platform` | Platform overview |
-| **Payments** | `/admin/commission` | Stripe commission / referral UI |
+| **Billing** | `/admin/billing` | **Money desk:** transactions, full/partial refunds, discount codes, subscriptions, volume KPIs |
+| **Commission** | `/admin/commission` | Partner splits, Connect, referral ID map, payouts |
 | **Pricing** | `/admin/pricing` | Plan prices catalog (wired to Stripe price IDs in env) |
 | **Offers** | `/admin/offers` | Promos / offers |
 | **Users** | `/admin/users` | Broader user admin |
@@ -237,7 +238,8 @@ Change amounts in **Admin → Pricing** (and Stripe product prices). Fee type st
 |--------|-----|-----|
 | Members | `/admin/members` | Paid / pending; **Mark paid** for Venmo |
 | Pricing | `/admin/pricing` | Display + sync Stripe prices |
-| Commission / Payments | `/admin/commission` | Partners, Connect, payouts |
+| Billing | `/admin/billing` | Charges, refunds, discount codes |
+| Commission | `/admin/commission` | Partners, Connect, payouts |
 | Landing | `/admin/landing` | Venmo QR backup |
 
 **Test vs Live:** If the site is still on **Test mode**, cards do **not** move real money. Live money requires Live products + Live keys in Vercel (John).  
