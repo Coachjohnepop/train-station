@@ -27,6 +27,11 @@ const patchSchema = z.object({
   publishedAt: z.string().nullable().optional(),
   /** 1–5 sequential parts (military double/triple days). */
   partCount: z.number().int().min(1).max(5).optional(),
+  /**
+   * When true with `options`, wipe every track/part on the day then write the payload.
+   * Used by week copy so leftover multi-part sessions (and their Day descriptions) cannot stick.
+   */
+  replaceAllOptions: z.boolean().optional(),
   options: z
     .array(
       z.object({
@@ -284,9 +289,14 @@ export async function PATCH(request: Request, { params }: Params) {
           });
         }
 
-        if (incoming.length === 0) {
-          // Explicit clear of all tracks/parts
+        const fullReplace = parsed.data.replaceAllOptions === true;
+
+        if (incoming.length === 0 || fullReplace) {
+          // Explicit clear of all tracks/parts (week copy uses fullReplace so notes/tracks don't stick)
           await tx.programDayOption.deleteMany({ where: { dayId } });
+          if (rows.length > 0) {
+            await tx.programDayOption.createMany({ data: rows });
+          }
         } else if (rows.length === 0 && emptyShellsOnly) {
           // No-op: coach opened Part 2 before adding exercises — keep other parts intact.
         } else if (rows.length === 0 && restOnly) {

@@ -304,12 +304,20 @@ export default function ProgramCalendarBuilder({
   const optionNotesDirtyRef = useRef(false);
   /** When true, copy/paste/duplicate clears day descriptions (avoids "Welcome Day one…" on week 2). */
   const [autoClearNotesOnCopy, setAutoClearNotesOnCopy] = useState(true);
+  /** Ref so long week-copy loops always see the checkbox value (no stale closure). */
+  const autoClearNotesOnCopyRef = useRef(true);
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem("ts-auto-clear-notes-on-copy");
-      if (raw === "0") setAutoClearNotesOnCopy(false);
-      if (raw === "1") setAutoClearNotesOnCopy(true);
+      if (raw === "0") {
+        setAutoClearNotesOnCopy(false);
+        autoClearNotesOnCopyRef.current = false;
+      }
+      if (raw === "1") {
+        setAutoClearNotesOnCopy(true);
+        autoClearNotesOnCopyRef.current = true;
+      }
     } catch {
       /* ignore */
     }
@@ -317,6 +325,7 @@ export default function ProgramCalendarBuilder({
 
   function setAutoClearNotesOnCopyPersist(next: boolean) {
     setAutoClearNotesOnCopy(next);
+    autoClearNotesOnCopyRef.current = next;
     try {
       localStorage.setItem("ts-auto-clear-notes-on-copy", next ? "1" : "0");
     } catch {
@@ -324,10 +333,16 @@ export default function ProgramCalendarBuilder({
     }
   }
 
-  /** Day description for Gym/Home options — optional clear on copy. */
+  /**
+   * Day description (Gym/Home option notes + program day.notes) for copy/paste.
+   * When auto-clear is on → always null so week 2+ never keeps “Welcome Day one…”.
+   */
   function notesForCopy(sourceNotes: string | null | undefined): string | null {
-    if (autoClearNotesOnCopy) return null;
-    return sourceNotes ?? null;
+    if (autoClearNotesOnCopyRef.current) return null;
+    const raw = sourceNotes ?? null;
+    if (raw == null) return null;
+    const trimmed = String(raw).trim();
+    return trimmed ? trimmed : null;
   }
 
   const startMonday = useMemo(
@@ -1141,7 +1156,10 @@ export default function ProgramCalendarBuilder({
       if (isDayOffLabel(focus.label)) {
         await patchDay(targetDay.id, {
           options: [{ workoutId: "", label: DAY_OFF_LABEL }],
-          notes: "Rest day",
+          replaceAllOptions: true,
+          // Respect auto-clear — don't force “Rest day” text onto every week.
+          notes: notesForCopy(focusDay.notes ?? "Rest day"),
+          publishedAt: null,
         });
       } else if (isFastedCardioLabel(focus.label)) {
         // Clone underlying workout if present
@@ -1173,6 +1191,7 @@ export default function ProgramCalendarBuilder({
                 notes: notesForCopy(src.notes),
               },
             ],
+            replaceAllOptions: true,
             notes: notesForCopy(focusDay.notes),
             publishedAt: null,
           });
@@ -1207,6 +1226,7 @@ export default function ProgramCalendarBuilder({
         }
         await patchDay(targetDay.id, {
           options: clonedOpts,
+          replaceAllOptions: true,
           notes: notesForCopy(focusDay.notes),
           publishedAt: null,
         });
@@ -2092,12 +2112,19 @@ export default function ProgramCalendarBuilder({
           toDay.calendarDate ||
           calendarDateForProgramDay(startMonday, toWeekNumber, toDay.dayNumber);
 
+        // Day description: always set (null when auto-clear) so leftovers never stick.
+        const clearedDayNotes = notesForCopy(fromDay.notes);
+
         if (fromOpts.length === 0) {
+          // Also clear rest/empty days — wipe every track + description.
           await patchDay(toDay.id, {
             options: [],
+            replaceAllOptions: true,
             calendarDate: toCal,
             partCount: 1,
             publishedAt: null,
+            notes: clearedDayNotes,
+            videoUrl: null,
           });
           continue;
         }
@@ -2120,6 +2147,9 @@ export default function ProgramCalendarBuilder({
           clonedOpts.push({
             workoutId: cloned.id,
             label: opt.label,
+            trainingLocation:
+              opt.trainingLocation ?? trainingLocationFromLabel(opt.label),
+            // Explicit null when auto-clear — do not omit the field.
             notes: notesForCopy(opt.notes),
             partIndex: opt.partIndex ?? 1,
           });
@@ -2130,12 +2160,14 @@ export default function ProgramCalendarBuilder({
 
         // Never copy publishedAt — target week stays a draft so coach can edit
         // day descriptions (e.g. "Welcome Day one…") before publishing again.
+        // replaceAllOptions: wipe leftover multi-part tracks so old Day descriptions cannot remain.
         const dayPatch: Record<string, unknown> = {
           options: clonedOpts,
+          replaceAllOptions: true,
           calendarDate: toCal,
           videoUrl: fromDay.videoUrl ?? null,
           publishedAt: null,
-          notes: notesForCopy(fromDay.notes),
+          notes: clearedDayNotes,
           partCount,
         };
         if (fromDay.defaultSets != null) dayPatch.defaultSets = fromDay.defaultSets;
@@ -2143,6 +2175,10 @@ export default function ProgramCalendarBuilder({
         if (fromDay.defaultRestSec != null) dayPatch.defaultRestSec = fromDay.defaultRestSec;
         await patchDay(toDay.id, dayPatch);
       }
+
+      // Refresh focused Day description field if it still points at a day we may have overwritten.
+      optionNotesDirtyRef.current = false;
+      setOptionNotes("");
 
       return true;
     } catch {
@@ -2253,7 +2289,11 @@ export default function ProgramCalendarBuilder({
         }
       }
       await sync();
-      setMessage(`Week ${fromWeekNumber} copied to all remaining weeks.`);
+      setMessage(
+        autoClearNotesOnCopyRef.current
+          ? `Week ${fromWeekNumber} copied to all remaining weeks (day notes cleared).`
+          : `Week ${fromWeekNumber} copied to all remaining weeks.`,
+      );
       setTimeout(() => setMessage(null), 3500);
     } finally {
       setSaving(false);
@@ -2308,6 +2348,7 @@ export default function ProgramCalendarBuilder({
       if (clonedOpts.length > 0) {
         await patchDay(targetId, {
           options: clonedOpts,
+          replaceAllOptions: true,
           defaultSets: sourceDay.defaultSets ?? prescription.defaultSets,
           defaultReps: sourceDay.defaultReps ?? prescription.defaultReps,
           defaultRestSec: sourceDay.defaultRestSec ?? prescription.defaultRestSec,

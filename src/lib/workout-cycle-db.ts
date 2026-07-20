@@ -703,10 +703,11 @@ export async function pasteWeekPackOntoProgramWeek(input: {
 
     // Clear existing options on this program day (all sessions / flat).
     await prisma.programDayOption.deleteMany({ where: { dayId: day.id } });
+    // Week-pack paste always starts clean day descriptions (same intent as auto-clear on week copy).
     await prisma.programDay.update({
       where: { id: day.id },
       data: {
-        notes: srcDay.notes,
+        notes: null,
         publishedAt: null,
         partCount: 1,
         workoutId: null,
