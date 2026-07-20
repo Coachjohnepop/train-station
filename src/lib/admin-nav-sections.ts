@@ -157,8 +157,13 @@ export const PLATFORM_NAV_GROUPS: AdminNavGroup[] = [
     label: "Commerce",
     items: [
       {
+        href: "/admin/billing",
+        label: "Billing",
+        match: (p) => p.startsWith("/admin/billing"),
+      },
+      {
         href: "/admin/commission",
-        label: "Payments",
+        label: "Commission",
         match: (p) => p.startsWith("/admin/commission"),
       },
       {
@@ -216,6 +221,7 @@ export const PLATFORM_NAV_ITEMS: AdminNavItem[] = PLATFORM_NAV_GROUPS.flatMap((g
 
 const PLATFORM_PATH_PREFIXES = [
   "/admin/platform",
+  "/admin/billing",
   "/admin/commission",
   "/admin/pricing",
   "/admin/offers",

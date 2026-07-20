@@ -207,13 +207,17 @@ function applyReferralDiscounts(
   sessionParams: import("stripe").Stripe.Checkout.SessionCreateParams,
   discount?: CheckoutDiscount | null,
 ) {
-  if (!referralDiscountsEnabled()) return;
-  if (discount?.promotionCode) {
+  // Stripe: cannot combine pre-applied discounts[] with allow_promotion_codes.
+  if (referralDiscountsEnabled() && discount?.promotionCode) {
     sessionParams.discounts = [{ promotion_code: discount.promotionCode }];
-  } else if (discount?.coupon) {
-    sessionParams.discounts = [{ coupon: discount.coupon }];
+    return;
   }
-  // Promo code entry on Stripe Checkout disabled for now — re-enable when we ship referrals.
+  if (referralDiscountsEnabled() && discount?.coupon) {
+    sessionParams.discounts = [{ coupon: discount.coupon }];
+    return;
+  }
+  // Members can enter promo codes created in Admin → Billing.
+  sessionParams.allow_promotion_codes = true;
 }
 
 export async function createSignupCheckoutSession(input: {

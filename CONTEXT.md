@@ -336,6 +336,12 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 **Date:** 2026-07-20 (PM residual pass)  
 **Status:** **Venmo LIVE** · Stripe **Test** · SMS **PARKED**. Residual five-item pass in progress (phone-pass code OK; whistle + downgrade + Live checklist shipped).
 
+### Jul 20 PM — Admin Billing desk
+- **New:** Platform **Admin → Billing** (`/admin/billing`) — Overview KPIs (30d net/gross, MRR, balance), Transactions (search + full/partial refund), Refunds ledger, Discounts (create Stripe coupon + promo code, enable/disable, optional app referral map), Subscriptions list.
+- APIs: `/api/admin/billing/{overview,transactions,refunds,discounts,subscriptions}` (platform staff).
+- Checkout: `allow_promotion_codes` when no pre-applied referral discount.
+- Commission nav label split from “Payments” → **Commission**; Billing is the money desk.
+
 ### Jul 20 PM — process-flow review (checkout / gates / coach CRUD)
 - **S5 payments public smoke:** 6/6 on prod (Stripe labels, Venmo, mark-paid auth).
 - **Flow APIs unauthenticated:** workouts/exercises/templates/paste/enroll/checkout/onboard → **401** (signup 400 on empty body).

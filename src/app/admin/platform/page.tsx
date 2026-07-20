@@ -4,6 +4,13 @@ export const dynamic = "force-dynamic";
 
 const cards = [
   {
+    href: "/admin/billing",
+    title: "Billing desk",
+    description:
+      "Transactions, full & partial refunds, discount codes, subscriptions, and volume KPIs.",
+    cta: "Open billing →",
+  },
+  {
     href: "/admin/offers",
     title: "Offers & merchandise",
     description: "Custom training packages, merch SKUs, and coach-set pricing.",
@@ -11,9 +18,9 @@ const cards = [
   },
   {
     href: "/admin/commission",
-    title: "Payments & commission",
-    description: "Stripe payouts, partner splits, referral discounts, Connect onboarding.",
-    cta: "Open payments →",
+    title: "Commission",
+    description: "Partner splits, Connect onboarding, referral ID map, payout floor.",
+    cta: "Open commission →",
   },
   {
     href: "/admin/pricing",
