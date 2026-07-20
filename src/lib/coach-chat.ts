@@ -295,6 +295,17 @@ export function getMessagesForThread(threadId: string, limit = 200): ChatMessage
     .slice(-limit);
 }
 
+async function firePushForSavedMessage(message: ChatMessage) {
+  try {
+    const { notifyPushForChatMessage } = await import("@/lib/web-push");
+    const thread =
+      readStore().threads.find((t) => t.id === message.threadId) ?? null;
+    void notifyPushForChatMessage(message, thread).catch(() => null);
+  } catch {
+    /* push optional */
+  }
+}
+
 export async function addChatMessage(input: Omit<ChatMessage, "id" | "createdAt" | "readByUserIds"> & {
   readByUserIds?: string[];
 }): Promise<ChatMessage> {
@@ -317,6 +328,7 @@ export async function addChatMessage(input: Omit<ChatMessage, "id" | "createdAt"
       setMemory(store);
 
       if (await coachChatMessageExistsInDb(message.id)) {
+        void firePushForSavedMessage(message);
         return message;
       }
 
@@ -337,6 +349,7 @@ export async function addChatMessage(input: Omit<ChatMessage, "id" | "createdAt"
 
     await hydrateCoachChat({ preferFresh: Boolean(BLOB_TOKEN) });
     if (readStore().messages.some((m) => m.id === message.id)) {
+      void firePushForSavedMessage(message);
       return message;
     }
 

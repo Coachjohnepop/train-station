@@ -741,6 +741,20 @@ model CoachChatMessage {
   @@index([authorId])
 }
 
+/** Browser/PWA Web Push endpoint for home-screen badge + phone alerts. */
+model WebPushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
 model LiveWorkoutSession {
   id                String   @id @default(cuid())
   userId            String

@@ -5,19 +5,23 @@
  * 1) Sets the home-screen PWA badge (iOS 16.4+ / Android installed)
  * 2) Plays a short alert when the count increases (while app is open)
  * 3) Registers the service worker once for installability
+ *
+ * Note: badge/sound while the app is *closed* requires Web Push
+ * (see PushAlertEnable + /public/sw.js).
  */
 
 import { useEffect, useRef } from "react";
 import { clearHomeScreenBadge, setHomeScreenBadge } from "@/lib/app-badge";
 import { playMessageAlert } from "@/lib/play-message-alert";
+import { ensureServiceWorker, setBadgeViaServiceWorker } from "@/lib/push-client";
 
 type Props = {
   role: "coach" | "member";
-  /** Poll interval ms */
+  /** Poll interval ms when app is visible */
   intervalMs?: number;
 };
 
-export default function UnreadAppBadge({ role, intervalMs = 15_000 }: Props) {
+export default function UnreadAppBadge({ role, intervalMs = 12_000 }: Props) {
   const lastCountRef = useRef<number | null>(null);
   const armedRef = useRef(false);
 
@@ -30,15 +34,7 @@ export default function UnreadAppBadge({ role, intervalMs = 15_000 }: Props) {
     window.addEventListener("keydown", arm, { once: true });
 
     let cancelled = false;
-
-    async function registerSw() {
-      if (!("serviceWorker" in navigator)) return;
-      try {
-        await navigator.serviceWorker.register("/sw.js", { scope: "/" });
-      } catch {
-        /* ignore */
-      }
-    }
+    let id: number | null = null;
 
     async function loadUnread() {
       try {
@@ -48,6 +44,7 @@ export default function UnreadAppBadge({ role, intervalMs = 15_000 }: Props) {
         const count = Math.max(0, Math.floor(Number(data.unread) || 0));
 
         await setHomeScreenBadge(count);
+        void setBadgeViaServiceWorker(count);
 
         const prev = lastCountRef.current;
         lastCountRef.current = count;
@@ -61,32 +58,49 @@ export default function UnreadAppBadge({ role, intervalMs = 15_000 }: Props) {
       }
     }
 
-    void registerSw();
+    function schedule() {
+      if (id != null) window.clearInterval(id);
+      // Faster poll when visible; slower when hidden (phones throttle anyway)
+      const ms =
+        typeof document !== "undefined" && document.visibilityState === "hidden"
+          ? Math.max(intervalMs, 45_000)
+          : intervalMs;
+      id = window.setInterval(() => void loadUnread(), ms);
+    }
+
+    void ensureServiceWorker();
     void loadUnread();
-    const id = window.setInterval(() => void loadUnread(), intervalMs);
+    schedule();
 
     function onRefresh() {
       void loadUnread();
     }
+    function onVisibility() {
+      if (document.visibilityState === "visible") {
+        void loadUnread();
+      }
+      schedule();
+    }
+    function onFocus() {
+      void loadUnread();
+    }
+
     window.addEventListener("chat-unread-refresh", onRefresh);
     window.addEventListener("coach-chat-posted", onRefresh);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onFocus);
 
     return () => {
       cancelled = true;
-      window.clearInterval(id);
+      if (id != null) window.clearInterval(id);
       window.removeEventListener("pointerdown", arm);
       window.removeEventListener("keydown", arm);
       window.removeEventListener("chat-unread-refresh", onRefresh);
       window.removeEventListener("coach-chat-posted", onRefresh);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onFocus);
     };
   }, [role, intervalMs]);
-
-  // Clear badge when leaving the app tab entirely is handled by OS; when count hits 0 we clear.
-  useEffect(() => {
-    return () => {
-      // Don't clear on unmount — next open should still show unread until read.
-    };
-  }, []);
 
   return null;
 }

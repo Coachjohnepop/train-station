@@ -5,6 +5,7 @@ import MemberLiveZoomStrip from "@/components/MemberLiveZoomStrip";
 import ResumePathTracker from "@/components/ResumePathTracker";
 import UnreadAppBadge from "@/components/UnreadAppBadge";
 import PwaInstallHint from "@/components/PwaInstallHint";
+import PushAlertEnable from "@/components/PushAlertEnable";
 
 import MemberNav from "@/components/MemberNav";
 import MemberHeaderHomeLink from "@/components/MemberHeaderHomeLink";
@@ -87,8 +88,9 @@ export default function MemberShell({
       </div>
 
       <main className="mx-auto w-full min-w-0 max-w-lg overflow-x-clip md:max-w-3xl lg:max-w-6xl xl:max-w-7xl flex-1 px-4 py-6 md:px-6 lg:px-8">
-        <div className="mb-3">
+        <div className="mb-3 space-y-2">
           <PwaInstallHint compact />
+          <PushAlertEnable compact />
         </div>
         {children}
       </main>
