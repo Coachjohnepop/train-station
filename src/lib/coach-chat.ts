@@ -236,9 +236,11 @@ export async function memberCanPostToThread(memberId: string, thread: ChatThread
     return thread.memberId === memberId;
   }
   if (thread.kind === "cohort") {
+    const { alwaysOnCommunitySlugs } = await import("@/lib/community-feed");
     const slug = thread.programSlug || COMMUNITY_FEED_PROGRAM_SLUG;
+    if (alwaysOnCommunitySlugs().includes(slug)) return true;
     const enrolled = Object.keys(await getUserEnrollments(memberId));
-    return slug === COMMUNITY_FEED_PROGRAM_SLUG || enrolled.includes(slug);
+    return enrolled.includes(slug);
   }
   return false;
 }
@@ -249,7 +251,10 @@ export function listThreadsForMember(memberId: string, programSlugs: string[] = 
   const cohorts: ChatThread[] = [];
   const memberThread = store.threads.find((t) => t.kind === "member" && t.memberId === memberId);
   if (memberThread) direct.push(memberThread);
+  const seen = new Set<string>();
   for (const slug of programSlugs) {
+    if (seen.has(slug)) continue;
+    seen.add(slug);
     const cohort = store.threads.find((t) => t.kind === "cohort" && t.programSlug === slug);
     if (cohort) cohorts.push(cohort);
   }

@@ -5,6 +5,10 @@ import {
   COMMUNITY_FEED_PROGRAM_SLUG,
   COMMUNITY_FEED_TITLE,
   COMMUNITY_NO_BROADCAST_NOTE,
+  STATION_COMMUNITY_SLUG,
+  STATION_COMMUNITY_TITLE,
+  communityProgramTargets,
+  cohortTitleForSlug,
 } from "@/lib/community-feed";
 import {
   ensureCohortThread,
@@ -24,7 +28,11 @@ type Props = {
 export default async function AdminChatPage({ searchParams }: Props) {
   const sp = await searchParams;
   await hydrateCoachChat({ preferFresh: true });
+  await ensureCohortThread(STATION_COMMUNITY_SLUG, STATION_COMMUNITY_TITLE);
   await ensureCohortThread(COMMUNITY_FEED_PROGRAM_SLUG, COMMUNITY_FEED_TITLE);
+  for (const p of communityProgramTargets()) {
+    await ensureCohortThread(p.slug, cohortTitleForSlug(p.slug));
+  }
   const threads = listThreadsForCoach();
   const roster = await listCoachChatMembers(threads);
   const members = await Promise.all(

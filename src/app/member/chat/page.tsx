@@ -7,7 +7,14 @@ import {
   hydrateCoachChat,
   listThreadsForMember,
 } from "@/lib/coach-chat";
-import { COMMUNITY_FEED_PROGRAM_SLUG, COMMUNITY_FEED_TITLE } from "@/lib/community-feed";
+import {
+  COMMUNITY_FEED_PROGRAM_SLUG,
+  COMMUNITY_FEED_TITLE,
+  STATION_COMMUNITY_SLUG,
+  STATION_COMMUNITY_TITLE,
+  alwaysOnCommunitySlugs,
+  cohortTitleForSlug,
+} from "@/lib/community-feed";
 import { getUserEnrollments } from "@/lib/data/user-data";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 import { resolveMemberUserId } from "@/lib/current-user";
@@ -24,10 +31,14 @@ export default async function MemberChatPage({ searchParams }: Props) {
   const [uid, session] = await Promise.all([resolveMemberUserId(), getSessionUser()]);
   await hydrateCoachChat({ preferFresh: true });
   await ensureMemberThread(uid);
-  const communitySlug = COMMUNITY_FEED_PROGRAM_SLUG;
-  await ensureCohortThread(communitySlug, COMMUNITY_FEED_TITLE);
+  // Station-wide + legacy community + every enrolled program group
+  await ensureCohortThread(STATION_COMMUNITY_SLUG, STATION_COMMUNITY_TITLE);
+  await ensureCohortThread(COMMUNITY_FEED_PROGRAM_SLUG, COMMUNITY_FEED_TITLE);
   const enrolledSlugs = Object.keys(await getUserEnrollments(uid));
-  const programSlugs = [...new Set([communitySlug, ...enrolledSlugs])];
+  for (const slug of enrolledSlugs) {
+    await ensureCohortThread(slug, cohortTitleForSlug(slug));
+  }
+  const programSlugs = [...new Set([...alwaysOnCommunitySlugs(), ...enrolledSlugs])];
   const threads = listThreadsForMember(uid, programSlugs);
 
   const staffViewingSelf =

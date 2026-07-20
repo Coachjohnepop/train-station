@@ -9,6 +9,9 @@ import {
 import {
   COMMUNITY_FEED_PROGRAM_SLUG,
   COMMUNITY_FEED_TITLE,
+  STATION_COMMUNITY_SLUG,
+  STATION_COMMUNITY_TITLE,
+  cohortTitleForSlug,
 } from "@/lib/community-feed";
 import { requireCoachChatAccess } from "@/lib/chat-compose-auth";
 import { createTodaySessionFromSms } from "@/lib/today-sessions";
@@ -19,8 +22,11 @@ import { youtubeVideoId } from "@/lib/youtube";
 const schema = z.object({
   audience: z.enum(["member", "cohort", "members"]),
   memberIds: z.array(z.string()).optional(),
+  /** Single program (legacy). Prefer programSlugs for multi-target community. */
   programSlug: z.string().optional(),
   programName: z.string().optional(),
+  /** Cohort targets: "station" = everyone, or program slugs e.g. adult, boot-camp-preparation. */
+  programSlugs: z.array(z.string().min(1)).optional(),
   body: z.string().optional(),
   rawSms: z.string().optional(),
   sessionDate: z.string().optional(),
@@ -60,26 +66,48 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Select at least one member." }, { status: 400 });
     }
 
+    let cohortSlugs: string[] = [];
+    if (isCohort) {
+      const fromArray = (input.programSlugs || []).map((s) => s.trim()).filter(Boolean);
+      if (fromArray.length) {
+        cohortSlugs = [...new Set(fromArray)];
+      } else if (input.programSlug?.trim()) {
+        cohortSlugs = [input.programSlug.trim()];
+      } else {
+        // Default: whole station
+        cohortSlugs = [STATION_COMMUNITY_SLUG];
+      }
+    }
+
     const threads = isCohort
-      ? [
-          await ensureCohortThread(
-            COMMUNITY_FEED_PROGRAM_SLUG,
-            COMMUNITY_FEED_TITLE,
+      ? await Promise.all(
+          cohortSlugs.map((slug) =>
+            ensureCohortThread(
+              slug,
+              slug === STATION_COMMUNITY_SLUG
+                ? STATION_COMMUNITY_TITLE
+                : slug === COMMUNITY_FEED_PROGRAM_SLUG
+                  ? COMMUNITY_FEED_TITLE
+                  : cohortTitleForSlug(slug),
+            ),
           ),
-        ]
+        )
       : await Promise.all(memberIds.map((id) => ensureMemberThread(id)));
 
     let sessionResult: Awaited<ReturnType<typeof createTodaySessionFromSms>> | null = null;
     if (input.rawSms?.trim() && input.sessionDate) {
-      sessionResult = await createTodaySessionFromSms({
-        sessionDate: input.sessionDate,
-        scheduledAt: resolveScheduledIso(input.sessionDate, input.scheduledTime),
-        rawSms: input.rawSms.trim(),
-        programSlug: input.programSlug || "adult",
-        userIds: memberIds,
-        replacesSchedule: true,
-        createdBy: "coach",
-      });
+      // Workout override needs real member ids — skip for pure cohort posts.
+      if (!isCohort && memberIds.length > 0) {
+        sessionResult = await createTodaySessionFromSms({
+          sessionDate: input.sessionDate,
+          scheduledAt: resolveScheduledIso(input.sessionDate, input.scheduledTime),
+          rawSms: input.rawSms.trim(),
+          programSlug: input.programSlug || cohortSlugs[0] || "adult",
+          userIds: memberIds,
+          replacesSchedule: true,
+          createdBy: "coach",
+        });
+      }
     }
 
     const youtubeId = input.youtubeUrl ? youtubeVideoId(input.youtubeUrl) : null;

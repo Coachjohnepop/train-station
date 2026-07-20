@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getUnreadCountForCoach, getUnreadCountForMember, hydrateCoachChat } from "@/lib/coach-chat";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
+import { alwaysOnCommunitySlugs } from "@/lib/community-feed";
+import { getUserEnrollments } from "@/lib/data/user-data";
 
 export async function GET(request: Request) {
   const session = await getSessionUser();
@@ -10,7 +12,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const role = searchParams.get("role") || "member";
-  const programs = searchParams.get("programs")?.split(",").filter(Boolean) || ["adult"];
+  const queryPrograms = searchParams.get("programs")?.split(",").filter(Boolean) || [];
 
   await hydrateCoachChat();
 
@@ -33,5 +35,7 @@ export async function GET(request: Request) {
   }
 
   const uid = session.id;
+  const enrolled = Object.keys(await getUserEnrollments(uid));
+  const programs = [...new Set([...alwaysOnCommunitySlugs(), ...queryPrograms, ...enrolled])];
   return NextResponse.json({ unread: getUnreadCountForMember(uid, programs) });
 }
