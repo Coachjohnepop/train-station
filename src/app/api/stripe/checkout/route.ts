@@ -74,30 +74,34 @@ export async function POST(request: Request) {
 
     if (
       existingProfile?.paymentStatus === "paid" &&
-      existingProfile.stripeSubscriptionId &&
       plan !== existingProfile.plan &&
       getOfferDefinition(plan)?.checkoutMode === "subscription"
     ) {
-      const changed = await changeMemberSubscriptionPlan({
-        userId: session.id,
-        subscriptionId: existingProfile.stripeSubscriptionId,
-        newPlan: plan,
-      });
-      if ("error" in changed) {
-        return NextResponse.json({ error: changed.error }, { status: 400 });
+      // Subscription ↔ subscription switch (proration) when we have a Stripe sub id.
+      if (existingProfile.stripeSubscriptionId) {
+        const changed = await changeMemberSubscriptionPlan({
+          userId: session.id,
+          subscriptionId: existingProfile.stripeSubscriptionId,
+          newPlan: plan,
+        });
+        if ("error" in changed) {
+          return NextResponse.json({ error: changed.error }, { status: 400 });
+        }
+        const updated = await getMemberProfile(session.id);
+        const res = NextResponse.json({
+          ok: true,
+          planChanged: true,
+          redirectTo: "/member/account",
+          plan: changed.plan,
+        });
+        syncMemberGateCookies(res, {
+          userId: session.id,
+          profile: updated,
+        });
+        return res;
       }
-      const updated = await getMemberProfile(session.id);
-      const res = NextResponse.json({
-        ok: true,
-        planChanged: true,
-        redirectTo: "/member/account",
-        plan: changed.plan,
-      });
-      syncMemberGateCookies(res, {
-        userId: session.id,
-        profile: updated,
-      });
-      return res;
+      // Paid via Venmo / one-time / missing sub id: fall through to a real Checkout
+      // session for the new plan (plan stamped only after payment confirms).
     }
 
     const profile = await ensureMemberProfile({
@@ -132,9 +136,11 @@ export async function POST(request: Request) {
 
     let updatedProfile = profile;
     try {
+      // Do not flip `plan` for already-paid members until confirm/webhook succeeds —
+      // otherwise an abandoned upgrade/downgrade checkout changes their ticket early.
+      // Unpaid signup still stamps the intended plan + pending payment.
       updatedProfile = await updateMemberProfile(session.id, {
-        plan,
-        ...(keepPaidStatus ? {} : { paymentStatus: "pending" as const }),
+        ...(keepPaidStatus ? {} : { plan, paymentStatus: "pending" as const }),
         stripeCheckoutSessionId: checkout.sessionId,
         ...(parsed.data.customOfferId ? { customTrainingOfferId: parsed.data.customOfferId } : {}),
         ...(referral?.referralCode

@@ -336,6 +336,13 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 **Date:** 2026-07-20 (PM residual pass)  
 **Status:** **Venmo LIVE** · Stripe **Test** · SMS **PARKED**. Residual five-item pass in progress (phone-pass code OK; whistle + downgrade + Live checklist shipped).
 
+### Jul 20 PM — process-flow review (checkout / gates / coach CRUD)
+- **S5 payments public smoke:** 6/6 on prod (Stripe labels, Venmo, mark-paid auth).
+- **Flow APIs unauthenticated:** workouts/exercises/templates/paste/enroll/checkout/onboard → **401** (signup 400 on empty body).
+- **HIGH fixed:** `memberNeedsPayment` no longer clears when `onboardingComplete` — unpaid paid-plan members who finished setup could unlock Today. Post-onboard now routes to **checkout** if still unpaid. Login deep-links cannot skip payment/onboard/pending.
+- **Checkout:** already-paid plan stamp deferred until confirm/webhook (abandoned upgrade no longer mutates ticket early). Sub switch still uses proration when `stripeSubscriptionId` present; Venmo/one-time fall through to new Checkout.
+- **Coach create path (code):** workout create → exercise add → template promote (title required) → paste clone with overwrite confirm — staff-gated, always-clone model intact.
+
 ### Jul 20 PM — full site page review
 - **HTTP:** 0 route 404s; all admin/member pages gate to login (307); public pages 200; nav anchors `#tickets/#services/#coming-soon-programs` OK; join `#plans` OK.
 - **Internal hrefs:** static scan — no dead app paths from Link/href.

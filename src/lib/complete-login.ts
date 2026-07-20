@@ -23,9 +23,9 @@ import {
   memberNeedsApproval,
   memberNeedsPayment,
 } from "@/lib/member-gates";
+import { isMemberPathExemptFromPaymentGate } from "@/lib/member-route-gates";
 import { memberOnboardPath, memberTodayPath } from "@/lib/member-destinations";
 import { getMemberProfile } from "@/lib/member-profiles-store";
-
 
 export async function resolveLoginDestination(
   user: SessionUser,
@@ -39,23 +39,40 @@ export async function resolveLoginDestination(
     const needsOnboard =
       (profile && !profile.onboardingComplete) ||
       (!profile && user.id.startsWith("member-"));
+    const needsPayment = memberNeedsPayment(profile, user.id);
+    const needsApproval = memberNeedsApproval(profile, user.id);
 
-    if (memberNeedsPayment(profile, user.id)) {
+    if (needsPayment) {
       destination = memberCheckoutPath(plan);
     } else if (needsOnboard) {
-      destination = memberOnboardPath();
-      if (plan) destination = `/member/onboard?plan=${encodeURIComponent(plan)}`;
-    } else if (memberNeedsApproval(profile, user.id)) {
+      destination = plan
+        ? `/member/onboard?plan=${encodeURIComponent(plan)}`
+        : memberOnboardPath();
+    } else if (needsApproval) {
       destination = MEMBER_PENDING_PATH;
     }
-  }
 
-  if (redirect && redirect.startsWith("/") && !redirect.startsWith("//")) {
-    if (isStaffRole(user.role) && redirect.startsWith("/admin")) {
+    if (redirect && redirect.startsWith("/") && !redirect.startsWith("//") && redirect.startsWith("/member")) {
+      // Never let a deep link skip payment, onboard, or pending gates.
+      // Exempt surfaces (checkout, book, chat, account, onboard) stay reachable.
+      if (needsPayment && !isMemberPathExemptFromPaymentGate(redirect)) {
+        // keep checkout
+      } else if (
+        needsOnboard &&
+        !redirect.startsWith("/member/onboard") &&
+        !redirect.startsWith("/member/checkout")
+      ) {
+        // keep onboard
+      } else if (needsApproval && !redirect.startsWith("/member/pending")) {
+        // keep pending
+      } else {
+        destination = redirect;
+      }
+    }
+  } else if (redirect && redirect.startsWith("/") && !redirect.startsWith("//")) {
+    if (redirect.startsWith("/admin")) {
       destination = normalizeCoachLoginRedirect(redirect);
     }
-    else if (!isStaffRole(user.role) && redirect.startsWith("/member")) destination = redirect;
-    else if (redirect.startsWith("/member/chat")) destination = redirect;
   }
 
   return destination;

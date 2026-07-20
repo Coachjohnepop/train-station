@@ -1,5 +1,10 @@
 import type { MemberProfile } from "@/lib/member-profiles-store";
-import { MEMBER_PENDING_PATH, memberNeedsApproval } from "@/lib/member-gates";
+import {
+  MEMBER_PENDING_PATH,
+  memberCheckoutPath,
+  memberNeedsApproval,
+  memberNeedsPayment,
+} from "@/lib/member-gates";
 
 /** Member dashboard entry — routes to the Today hub. */
 export function memberDashboardPath(): string {
@@ -21,6 +26,10 @@ export function memberPostOnboardPath(
   userId: string,
   _programSlug: string,
 ): string {
+  // Unpaid paid-plan members finish setup → checkout (not free Today access).
+  if (memberNeedsPayment(profile, userId)) {
+    return memberCheckoutPath(profile?.plan);
+  }
   if (memberNeedsApproval(profile, userId)) return MEMBER_PENDING_PATH;
   return memberDashboardPath();
 }

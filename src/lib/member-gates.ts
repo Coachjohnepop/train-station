@@ -65,7 +65,10 @@ export function memberNeedsPayment(
   profile: Pick<MemberProfile, "plan" | "paymentStatus" | "onboardingComplete"> | null,
   userId: string,
 ): boolean {
-  if (profile?.onboardingComplete) return false;
+  // Payment is independent of onboarding. Members may complete profile setup while
+  // still unpaid (onboard/chat/book stay open), but training routes stay gated
+  // until paymentStatus === "paid". Do NOT clear the payment gate when
+  // onboardingComplete flips true — that previously unlocked Today for free.
   if (!isSelfRegisteredMember(userId)) return false;
   if (!isStripePaymentsEnabled()) {
     if (!stripeRequiredInProduction()) return false;
