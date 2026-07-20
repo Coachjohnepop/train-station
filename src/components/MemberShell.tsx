@@ -59,7 +59,7 @@ export default function MemberShell({
             </div>
             <div className="flex flex-col items-end gap-1">
               <div className="flex items-center gap-2">
-                <span className="badge-accent inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold">
+                <span className="badge-accent inline-block rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-tight tracking-wide">
                   {tierLabel}
                 </span>
               </div>

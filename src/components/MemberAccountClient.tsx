@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
-import { paymentBillingSummary } from "@/lib/membership-theme";
+import { paymentBillingSummary, seatArtForPlan } from "@/lib/membership-theme";
 import type { SignupPlan } from "@/lib/signup-plans";
 import { signupPlanLabel } from "@/lib/signup-plans";
 import QuickAuthSettings from "@/components/QuickAuthSettings";
@@ -24,6 +24,8 @@ type MembershipData = {
   canCompleteCheckout: boolean;
   hasSavedPaymentMethod: boolean;
   switchablePlans: SignupPlan[];
+  upgradePlans?: SignupPlan[];
+  downgradePlans?: SignupPlan[];
   intensive: {
     sessionsTotal: number | null;
     sessionsRemaining: number | null;
@@ -40,6 +42,12 @@ export default function MemberAccountClient({
 }) {
   const [billingBusy, setBillingBusy] = useState(false);
   const [billingError, setBillingError] = useState("");
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetMsg, setResetMsg] = useState<string | null>(null);
+  const [downgradeTarget, setDowngradeTarget] = useState<SignupPlan | null>(null);
+
+  const upgradePlans = membership.upgradePlans ?? membership.switchablePlans ?? [];
+  const downgradePlans = membership.downgradePlans ?? [];
 
   async function openBillingPortal() {
     setBillingBusy(true);
@@ -59,6 +67,36 @@ export default function MemberAccountClient({
     }
   }
 
+  async function emailPasswordReset() {
+    setResetBusy(true);
+    setResetMsg(null);
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setResetMsg(body.error || "Could not send reset email.");
+      } else {
+        setResetMsg(body.message || "Check your email for a reset link.");
+      }
+    } catch {
+      setResetMsg("Could not send reset email.");
+    } finally {
+      setResetBusy(false);
+    }
+  }
+
+  function confirmDowngrade() {
+    if (!downgradeTarget) return;
+    const plan = downgradeTarget;
+    setDowngradeTarget(null);
+    // Checkout handles plan change; Stripe portal also available for cancel.
+    window.location.href = `/member/checkout?plan=${encodeURIComponent(plan)}&intent=downgrade`;
+  }
+
   const paidDate = membership.paidAt
     ? new Date(membership.paidAt).toLocaleDateString(undefined, {
         month: "short",
@@ -76,87 +114,164 @@ export default function MemberAccountClient({
     : null;
 
   const paidPlan = membership.plan !== "explorer";
+  const currentPlan = membership.plan as SignupPlan;
 
   return (
     <div className="space-y-4">
+      {/* Current plan */}
       <div className={`${paidPlan ? "card payment-seat-card" : "card"} space-y-3`}>
-        {paidPlan && <MembershipSeatArt plan={membership.plan as SignupPlan} className="w-full" />}
+        {paidPlan && (
+          <MembershipSeatArt plan={currentPlan} className="w-full" alt={`${membership.planLabel} seating`} />
+        )}
         <div className={paidPlan ? "payment-seat-card__body space-y-3 !pt-0" : "space-y-3"}>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Current plan</p>
-            <h2 className="text-xl font-semibold">{membership.planLabel}</h2>
-            {membership.priceDisplay && (
-              <p className="mt-1 text-sm text-[var(--muted)]">{membership.priceDisplay}</p>
-            )}
-            {paidPlan && (
-              <p className="mt-2 text-xs text-[var(--muted)]">
-                {paymentBillingSummary(membership.plan as SignupPlan, membership.priceDisplay)}
-              </p>
-            )}
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-wide text-[var(--muted)]">Your ticket</p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-semibold">{membership.planLabel}</h2>
+                <span className="badge-accent inline-block rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-tight">
+                  Current
+                </span>
+              </div>
+              {membership.priceDisplay && (
+                <p className="mt-1 text-sm text-[var(--muted)]">{membership.priceDisplay}</p>
+              )}
+              {paidPlan && (
+                <p className="mt-2 text-xs text-[var(--muted)]">
+                  {paymentBillingSummary(currentPlan, membership.priceDisplay)}
+                </p>
+              )}
+            </div>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                membership.paymentStatus === "paid"
+                  ? "bg-emerald-500/15 text-emerald-300"
+                  : membership.paymentStatus === "pending"
+                    ? "bg-amber-500/15 text-amber-200"
+                    : "bg-[var(--surface-2)] text-[var(--muted)]"
+              }`}
+            >
+              {membership.statusLabel}
+            </span>
           </div>
-          <span
-            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-              membership.paymentStatus === "paid"
-                ? "bg-emerald-500/15 text-emerald-300"
-                : membership.paymentStatus === "pending"
-                  ? "bg-amber-500/15 text-amber-200"
-                  : "bg-[var(--surface-2)] text-[var(--muted)]"
-            }`}
-          >
-            {membership.statusLabel}
-          </span>
-        </div>
 
-        {paidDate && (
-          <p className="text-sm text-[var(--muted)]">
-            Member since {paidDate}
-            {membership.paymentMethod ? ` · Paid via ${membership.paymentMethod}` : ""}
-          </p>
-        )}
-
-        {membership.approvalStatus === "pending" && (
-          <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
-            Coach approval is still pending — you&apos;ll get full access once Jeremy approves your
-            account.
-          </p>
-        )}
-
-        {membership.intensive && (
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm">
-            <p className="font-medium">1-on-1 package</p>
-            <p className="mt-1 text-[var(--muted)]">
-              {membership.intensive.sessionsRemaining ?? membership.intensive.sessionsTotal} of{" "}
-              {membership.intensive.sessionsTotal} sessions remaining
-              {intensiveExpiry ? ` · use by ${intensiveExpiry}` : ""}
+          {paidDate && (
+            <p className="text-sm text-[var(--muted)]">
+              Member since {paidDate}
+              {membership.paymentMethod ? ` · Paid via ${membership.paymentMethod}` : ""}
             </p>
-          </div>
-        )}
+          )}
 
-        {membership.referralCode && (
-          <p className="text-sm text-[var(--muted)]">
-            Your referral code:{" "}
-            <code className="rounded bg-black/20 px-1.5 py-0.5 text-[var(--foreground)]">
-              {membership.referralCode}
-            </code>
-          </p>
-        )}
+          {membership.approvalStatus === "pending" && (
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+              Coach approval is still pending — you&apos;ll get full access once Jeremy approves your
+              account.
+            </p>
+          )}
+
+          {membership.intensive && (
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm">
+              <p className="font-medium">1-on-1 package</p>
+              <p className="mt-1 text-[var(--muted)]">
+                {membership.intensive.sessionsRemaining ?? membership.intensive.sessionsTotal} of{" "}
+                {membership.intensive.sessionsTotal} sessions remaining
+                {intensiveExpiry ? ` · use by ${intensiveExpiry}` : ""}
+              </p>
+            </div>
+          )}
+
+          {membership.referralCode && (
+            <p className="text-sm text-[var(--muted)]">
+              Your referral code:{" "}
+              <code className="rounded bg-black/20 px-1.5 py-0.5 text-[var(--foreground)]">
+                {membership.referralCode}
+              </code>
+            </p>
+          )}
         </div>
       </div>
 
-      <QuickAuthSettings email={email} />
+      {/* Upgrades only — seat art cards; never show lower tiers here */}
+      {upgradePlans.length > 0 && (
+        <div className="card space-y-3">
+          <div>
+            <h3 className="font-semibold">Upgrade your ticket</h3>
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              Higher classes only — you already have {membership.planLabel}
+              {paidPlan ? ", so lower tickets stay hidden." : "."}
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {upgradePlans.map((switchPlan) => {
+              const hasSeat = Boolean(seatArtForPlan(switchPlan));
+              return (
+                <Link
+                  key={switchPlan}
+                  href={`/member/checkout?plan=${encodeURIComponent(switchPlan)}`}
+                  className="group relative block overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-2)] transition hover:border-accent/50"
+                >
+                  {hasSeat ? (
+                    <div className="relative h-40 w-full">
+                      <MembershipSeatArt
+                        plan={switchPlan}
+                        className="!h-full !rounded-none"
+                        alt={`${signupPlanLabel(switchPlan)} seating`}
+                      />
+                      <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/85 via-black/35 to-transparent p-3">
+                        <p className="text-sm font-bold text-white drop-shadow">
+                          {signupPlanLabel(switchPlan)}
+                        </p>
+                        <p className="text-[11px] font-medium text-white/90">Upgrade →</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3">
+                      <p className="text-sm font-semibold">{signupPlanLabel(switchPlan)}</p>
+                      <p className="text-[11px] text-accent">Upgrade →</p>
+                    </div>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
+      {/* Security */}
+      <div className="card space-y-3">
+        <h3 className="font-semibold">Security</h3>
+        <p className="text-xs text-[var(--muted)]">Signed in as {email}</p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="btn-secondary text-xs"
+            disabled={resetBusy}
+            onClick={() => void emailPasswordReset()}
+          >
+            {resetBusy ? "Sending…" : "Email password reset"}
+          </button>
+          <Link href="/forgot-password" className="btn-ghost text-xs">
+            Reset password page
+          </Link>
+        </div>
+        {resetMsg && <p className="text-xs text-[var(--muted)]">{resetMsg}</p>}
+        <div className="border-t border-[var(--border)] pt-3">
+          <QuickAuthSettings email={email} />
+        </div>
+      </div>
+
+      {/* Notifications */}
       <div className="card space-y-2">
         <h3 className="text-sm font-semibold">Notifications</h3>
         <p className="text-[11px] text-[var(--muted)]">
-          Phone banners and home-screen badge — one-time enable; manage here if you need to turn them
-          off or re-test.
+          Phone banners and home-screen badge. Turn off anytime here.
         </p>
         <PushAlertSettings />
       </div>
 
+      {/* Membership manage — billing + downgrade with confirm */}
       <div className="card space-y-3">
-        <h3 className="font-semibold">Manage membership</h3>
+        <h3 className="font-semibold">Membership</h3>
 
         {membership.hasSavedPaymentMethod && (
           <p className="text-sm text-[var(--muted)]">
@@ -165,25 +280,11 @@ export default function MemberAccountClient({
           </p>
         )}
 
-        {membership.switchablePlans.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm text-[var(--muted)]">Upgrade your subscription (no re-signup needed):</p>
-            <div className="flex flex-wrap gap-2">
-              {membership.switchablePlans.map((switchPlan) => (
-                <Link
-                  key={switchPlan}
-                  href={`/member/checkout?plan=${encodeURIComponent(switchPlan)}`}
-                  className="btn-secondary text-xs"
-                >
-                  Upgrade to {signupPlanLabel(switchPlan)}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
         {membership.canCompleteCheckout && (
-          <Link href={`/member/checkout?plan=${encodeURIComponent(membership.plan)}`} className="btn-primary inline-block text-sm">
+          <Link
+            href={`/member/checkout?plan=${encodeURIComponent(membership.plan)}`}
+            className="btn-primary inline-block text-sm"
+          >
             Complete checkout
           </Link>
         )}
@@ -191,8 +292,7 @@ export default function MemberAccountClient({
         {membership.canManageBilling && (
           <div className="space-y-2">
             <p className="text-sm text-[var(--muted)]">
-              Update your card, view invoices, change to a lower tier, or cancel your subscription
-              in Stripe&apos;s secure billing portal.
+              Update your card, view invoices, or cancel in Stripe&apos;s secure billing portal.
             </p>
             <button
               type="button"
@@ -206,21 +306,23 @@ export default function MemberAccountClient({
           </div>
         )}
 
-        {membership.plan === "explorer" && (
-          <div className="space-y-2">
-            <p className="text-sm text-[var(--muted)]">
-              Upgrade without creating a new account:
+        {downgradePlans.length > 0 && (
+          <div className="space-y-2 border-t border-[var(--border)] pt-3">
+            <p className="text-sm font-medium text-[var(--text)]">Change to a lower ticket</p>
+            <p className="text-xs text-[var(--muted)]">
+              Downgrades only live here (not on upgrade cards). We&apos;ll ask you to confirm first.
             </p>
             <div className="flex flex-wrap gap-2">
-              <Link href="/member/checkout?plan=member" className="btn-secondary text-xs">
-                Coach Class
-              </Link>
-              <Link href="/member/checkout?plan=business" className="btn-secondary text-xs">
-                Business Class
-              </Link>
-              <Link href="/member/checkout?plan=pro" className="btn-secondary text-xs">
-                1st Class
-              </Link>
+              {downgradePlans.map((plan) => (
+                <button
+                  key={plan}
+                  type="button"
+                  className="btn-ghost text-xs border border-[var(--border)]"
+                  onClick={() => setDowngradeTarget(plan)}
+                >
+                  Switch to {signupPlanLabel(plan)}
+                </button>
+              ))}
             </div>
           </div>
         )}
@@ -247,6 +349,44 @@ export default function MemberAccountClient({
             </p>
           )}
       </div>
+
+      {/* Downgrade confirm modal */}
+      {downgradeTarget && (
+        <div
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="downgrade-title"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl">
+            <h2 id="downgrade-title" className="text-lg font-semibold text-[var(--text)]">
+              Switch to {signupPlanLabel(downgradeTarget)}?
+            </h2>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              You&apos;re currently on <strong className="text-[var(--text)]">{membership.planLabel}</strong>.
+              Moving to a lower ticket may reduce access. This can&apos;t be undone without upgrading
+              again.
+            </p>
+            <p className="mt-2 text-xs text-[var(--muted)]">Are you sure you want to continue?</p>
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className="btn-ghost px-4 py-2 text-sm"
+                onClick={() => setDowngradeTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-500"
+                onClick={confirmDowngrade}
+              >
+                Yes, change plan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

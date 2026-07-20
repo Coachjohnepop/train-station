@@ -10,6 +10,7 @@ import {
 } from "@/lib/stripe-customer";
 import { promoteCustomerPaymentMethodsForCheckout } from "@/lib/stripe-payment-method-persist";
 import {
+  downgradeMembershipPlansFrom,
   signupPlanLabel,
   upgradeMembershipPlansFrom,
   type MembershipPlan,
@@ -33,7 +34,12 @@ export type MemberMembershipSnapshot = {
   canManageBilling: boolean;
   canCompleteCheckout: boolean;
   hasSavedPaymentMethod: boolean;
+  /** @deprecated Prefer upgradePlans — higher tiers only. */
   switchablePlans: SignupPlan[];
+  /** Paid tiers above current (never show lower once upgraded). */
+  upgradePlans: SignupPlan[];
+  /** Paid tiers below current — Account membership only + confirm. */
+  downgradePlans: SignupPlan[];
   intensive: {
     sessionsTotal: number | null;
     sessionsRemaining: number | null;
@@ -84,10 +90,23 @@ export async function getMemberMembershipSnapshot(
       )
     : false;
 
-  const switchablePlans: SignupPlan[] =
-    profile.paymentStatus === "paid" && profile.stripeSubscriptionId
-      ? upgradeMembershipPlansFrom(plan)
-      : [];
+  const paidActive = profile.paymentStatus === "paid";
+  // Upgrades: paid subscribers, or explorer/pending who can checkout higher tiers.
+  const upgradePlans: SignupPlan[] =
+    plan === "explorer" || !paidActive
+      ? upgradeMembershipPlansFrom(plan === "explorer" ? "explorer" : plan)
+      : profile.stripeSubscriptionId || offer?.checkoutMode === "subscription"
+        ? upgradeMembershipPlansFrom(plan)
+        : upgradeMembershipPlansFrom(plan);
+
+  // Explorer sees all paid as "upgrades"
+  const explorerUpgrades: SignupPlan[] =
+    plan === "explorer" ? (["member", "business", "pro"] as SignupPlan[]) : upgradePlans;
+
+  const finalUpgrades = plan === "explorer" ? explorerUpgrades : upgradePlans;
+
+  // Downgrades only for active paid members (settings + confirm)
+  const downgradePlans: SignupPlan[] = paidActive ? downgradeMembershipPlansFrom(plan) : [];
 
   return {
     plan,
@@ -111,7 +130,9 @@ export async function getMemberMembershipSnapshot(
       isPaidSignupPlan(plan) && profile.paymentStatus !== "paid" && stripeReady,
     ),
     hasSavedPaymentMethod,
-    switchablePlans,
+    switchablePlans: finalUpgrades,
+    upgradePlans: finalUpgrades,
+    downgradePlans,
     intensive:
       plan === "pro" && profile.intensiveSessionsTotal
         ? {

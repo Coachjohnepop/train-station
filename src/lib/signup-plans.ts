@@ -30,6 +30,18 @@ export function upgradeMembershipPlansFrom(plan: SignupPlan): MembershipPlan[] {
   return PAID_MEMBERSHIP_PLANS.filter((candidate) => MEMBERSHIP_PLAN_RANK[candidate] > rank);
 }
 
+/**
+ * Lower paid tiers only (never free Explorer).
+ * Downgrades are Account → Membership only, with confirm UI.
+ */
+export function downgradeMembershipPlansFrom(plan: SignupPlan): MembershipPlan[] {
+  const rank = membershipPlanRank(plan);
+  if (rank === null || rank <= 1) return [];
+  return PAID_MEMBERSHIP_PLANS.filter(
+    (candidate) => MEMBERSHIP_PLAN_RANK[candidate] < rank && MEMBERSHIP_PLAN_RANK[candidate] >= 1,
+  );
+}
+
 export const SIGNUP_PLANS = [...MEMBERSHIP_PLANS, ...SERVICE_OFFER_IDS] as const;
 export type SignupPlan = (typeof SIGNUP_PLANS)[number];
 

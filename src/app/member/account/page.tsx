@@ -24,9 +24,9 @@ export default async function MemberAccountPage() {
   return (
     <div className="space-y-4">
       <section>
-        <h1 className="text-xl font-bold">Account &amp; membership</h1>
+        <h1 className="text-xl font-bold">Account &amp; settings</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Your plan, payment status, and billing tools.
+          Plan, password, notifications, and billing — all in one place.
         </p>
       </section>
       <MemberAccountClient membership={membership} email={session.email} />
