@@ -54,9 +54,12 @@ function displayThread(thread: ChatThread | null): ChatThread | null {
 export default function MemberChatWorkspace({
   initialThreads,
   memberId,
+  /** Staff (John/Jeremy) post as coach so group sends work from this UI. */
+  asCoach = false,
 }: {
   initialThreads: ChatThread[];
   memberId: string;
+  asCoach?: boolean;
 }) {
   const orderedInitial = useMemo(() => orderThreads(initialThreads), [initialThreads]);
   const defaultDirect = orderedInitial.find((t) => t.kind === "member");
@@ -177,12 +180,19 @@ export default function MemberChatWorkspace({
 
   const activeReplyThread = threads.find((t) => t.id === activeId);
   const replyThreadId = activeId;
-  const replyPlaceholder =
-    activeReplyThread?.kind === "cohort"
+  const replyRole = asCoach ? "coach" : "member";
+  const replyPlaceholder = asCoach
+    ? activeReplyThread?.kind === "cohort"
+      ? "Post to this group as coach..."
+      : "Message as coach..."
+    : activeReplyThread?.kind === "cohort"
       ? "Comment on this post..."
       : "Message your coach...";
-  const replyDestination =
-    activeReplyThread?.kind === "cohort"
+  const replyDestination = asCoach
+    ? activeReplyThread?.kind === "cohort"
+      ? "Posting as coach · Group feed"
+      : "Posting as coach · Direct thread"
+    : activeReplyThread?.kind === "cohort"
       ? "Posting to · Community feed"
       : "Posting to · Direct message with coach";
 
@@ -290,7 +300,7 @@ export default function MemberChatWorkspace({
             <div className="shrink-0 border-t border-[var(--border)]">
               <ChatThreadReply
                 threadId={replyThreadId}
-                role="member"
+                role={replyRole}
                 threadKind={activeReplyThread?.kind}
                 destinationLabel={replyDestination}
                 placeholder={replyPlaceholder}

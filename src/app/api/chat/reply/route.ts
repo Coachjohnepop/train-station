@@ -17,7 +17,7 @@ import { sendCoachReplySms } from "@/lib/sms";
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const message = typeof body.message === "string" ? body.message.trim() : "";
-  const role = body.role === "coach" ? "coach" : "member";
+  let role: "coach" | "member" = body.role === "coach" ? "coach" : "member";
   const threadId = typeof body.threadId === "string" ? body.threadId : "";
   const sendSms = body.sendSms !== false;
   const imageUrlRaw = typeof body.imageUrl === "string" ? body.imageUrl.trim() : "";
@@ -31,9 +31,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Message or image is required" }, { status: 400 });
   }
 
+  const session = await getSessionUser();
+  if (!session) {
+    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+  }
+
+  // Staff using member Messages UI still posts as coach (John + Jeremy same powers).
+  if (role === "member" && isStaffRole(session.role)) {
+    role = "coach";
+  }
+
   if (role === "coach") {
-    const coachSession = await getSessionUser();
-    if (!coachSession || !isStaffRole(coachSession.role)) {
+    if (!isStaffRole(session.role)) {
       return NextResponse.json({ error: "Coach access required." }, { status: 403 });
     }
 
@@ -50,7 +59,7 @@ export async function POST(request: Request) {
         threadId: thread.id,
         authorRole: "coach",
         authorId: COACH_READER_ID,
-        authorName: coachDisplayName(coachSession),
+        authorName: coachDisplayName(session),
         kind: imageUrl ? "image" : "text",
         body: message || undefined,
         mediaUrl: imageUrl || undefined,
@@ -68,7 +77,7 @@ export async function POST(request: Request) {
         smsResult = await sendCoachReplySms({
           memberId: thread.memberId,
           message: smsBody,
-          coachName: coachDisplayName(coachSession),
+          coachName: coachDisplayName(session),
         });
       }
     }
@@ -81,10 +90,10 @@ export async function POST(request: Request) {
     });
   }
 
-  const memberSession = await getSessionUser();
-  if (!memberSession || memberSession.role !== "MEMBER") {
+  if (session.role !== "MEMBER") {
     return NextResponse.json({ error: "Member access required." }, { status: 403 });
   }
+  const memberSession = session;
 
   if (!threadId) {
     return NextResponse.json({ error: "threadId is required" }, { status: 400 });

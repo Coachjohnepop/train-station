@@ -5,6 +5,7 @@ import {
   ensureCohortThread,
   ensureMemberThread,
   hydrateCoachChat,
+  listThreadsForCoach,
   listThreadsForMember,
 } from "@/lib/coach-chat";
 import {
@@ -14,6 +15,7 @@ import {
   STATION_COMMUNITY_TITLE,
   alwaysOnCommunitySlugs,
   cohortTitleForSlug,
+  communityProgramTargets,
 } from "@/lib/community-feed";
 import { getUserEnrollments } from "@/lib/data/user-data";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
@@ -29,6 +31,7 @@ export default async function MemberChatPage({ searchParams }: Props) {
   const sp = await searchParams;
   const pingZoom = sp.ping === "zoom";
   const [uid, session] = await Promise.all([resolveMemberUserId(), getSessionUser()]);
+  const staff = Boolean(session && isStaffRole(session.role));
   await hydrateCoachChat({ preferFresh: true });
   await ensureMemberThread(uid);
   // Station-wide + legacy community + every enrolled program group
@@ -38,11 +41,25 @@ export default async function MemberChatPage({ searchParams }: Props) {
   for (const slug of enrolledSlugs) {
     await ensureCohortThread(slug, cohortTitleForSlug(slug));
   }
+  // Coaches (John + Jeremy) get every program group so they can post anywhere while testing.
+  if (staff) {
+    for (const p of communityProgramTargets()) {
+      await ensureCohortThread(p.slug, cohortTitleForSlug(p.slug));
+    }
+  }
   const programSlugs = [...new Set([...alwaysOnCommunitySlugs(), ...enrolledSlugs])];
-  const threads = listThreadsForMember(uid, programSlugs);
+  let threads = listThreadsForMember(uid, programSlugs);
+  if (staff) {
+    const byId = new Map(threads.map((t) => [t.id, t]));
+    for (const t of listThreadsForCoach()) {
+      if (t.kind === "cohort" && !byId.has(t.id)) byId.set(t.id, t);
+    }
+    threads = [...byId.values()].sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
+  }
 
-  const staffViewingSelf =
-    session && isStaffRole(session.role) && uid === session.id;
+  const staffViewingSelf = staff && uid === session?.id;
 
   return (
     <div className="space-y-4">
@@ -68,8 +85,10 @@ export default async function MemberChatPage({ searchParams }: Props) {
 
       {staffViewingSelf && (
         <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-          You&apos;re signed in as <strong>{session?.name || "Coach"}</strong> — this is not a member inbox.
-          Tap <strong>Chad</strong> (or the member you messaged) in the bar above, then open Messages again.
+          You&apos;re signed in as <strong>{session?.name || "Coach"}</strong> — posts go out{" "}
+          <strong>as coach</strong> (same as Jeremy). Use group tabs for Everyone / program feeds,
+          or open <a href="/admin/chat" className="underline">Coach Messages</a> for the full coach
+          desk.
         </div>
       )}
 
@@ -79,7 +98,7 @@ export default async function MemberChatPage({ searchParams }: Props) {
         </p>
       )}
 
-      <MemberChatWorkspace initialThreads={threads} memberId={uid} />
+      <MemberChatWorkspace initialThreads={threads} memberId={uid} asCoach={staff} />
     </div>
   );
 }

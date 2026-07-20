@@ -70,7 +70,8 @@ export async function GET(request: Request) {
     });
   }
 
-  if (session.role !== "MEMBER") {
+  // Real members + staff previewing member Messages (Coach John testing, etc.)
+  if (session.role !== "MEMBER" && !isStaffRole(session.role)) {
     return NextResponse.json({ error: "Member access required." }, { status: 403 });
   }
 
@@ -83,6 +84,27 @@ export async function GET(request: Request) {
     if (slug === STATION_COMMUNITY_SLUG || slug === COMMUNITY_FEED_PROGRAM_SLUG) continue;
     await ensureCohortThread(slug, cohortTitleForSlug(slug));
   }
+
+  // Staff testing: also surface all cohort threads so John can post to any group.
+  if (isStaffRole(session.role)) {
+    const all = listThreadsForCoach();
+    const memberish = listThreadsForMember(uid, slugs);
+    const byId = new Map(memberish.map((t) => [t.id, t]));
+    for (const t of all) {
+      if (t.kind === "cohort" && !byId.has(t.id)) byId.set(t.id, t);
+    }
+    const threads = [...byId.values()].sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
+    return NextResponse.json(
+      {
+        threads,
+        unreadByThread: getUnreadCountsByThreadForMember(uid, slugs),
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
   return NextResponse.json(
     {
       threads: listThreadsForMember(uid, slugs),

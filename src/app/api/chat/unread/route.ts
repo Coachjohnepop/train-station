@@ -30,8 +30,13 @@ export async function GET(request: Request) {
     });
   }
 
-  if (session.role !== "MEMBER") {
+  // Staff may open member Messages to test; badge as coach inbox when role=member.
+  if (session.role !== "MEMBER" && !isStaffRole(session.role)) {
     return NextResponse.json({ error: "Member access required." }, { status: 403 });
+  }
+
+  if (isStaffRole(session.role)) {
+    return NextResponse.json({ unread: getUnreadCountForCoach() });
   }
 
   const uid = session.id;
