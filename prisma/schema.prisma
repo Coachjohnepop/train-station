@@ -770,6 +770,8 @@ model LiveWorkoutSession {
   restTimerEnabled  Boolean?
   restTimerSeconds  Int?
   restTimerSound    String?
+  /// Active rest popup { blockId, completedSetNum, endsAt, totalSeconds, startedBy }
+  restActive        Json?
   updatedBy         String
   revision          Int      @default(0)
   updatedAt         DateTime @updatedAt

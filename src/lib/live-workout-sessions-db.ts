@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { LiveWorkoutSession } from "@/lib/live-workout-session";
+import type { LiveRestActive, LiveWorkoutSession } from "@/lib/live-workout-session";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -33,6 +33,24 @@ function parseWeights(raw: unknown): Record<string, string> {
   return out;
 }
 
+function parseRestActive(raw: unknown): LiveRestActive | null | undefined {
+  if (raw === null) return null;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const o = raw as Record<string, unknown>;
+  if (typeof o.blockId !== "string") return undefined;
+  if (typeof o.completedSetNum !== "number") return undefined;
+  if (typeof o.endsAt !== "number") return undefined;
+  if (typeof o.totalSeconds !== "number") return undefined;
+  const startedBy = o.startedBy === "member" ? "member" : "coach";
+  return {
+    blockId: o.blockId,
+    completedSetNum: o.completedSetNum,
+    endsAt: o.endsAt,
+    totalSeconds: o.totalSeconds,
+    startedBy,
+  };
+}
+
 function rowToSession(row: {
   userId: string;
   workoutId: string;
@@ -44,10 +62,12 @@ function rowToSession(row: {
   restTimerEnabled?: boolean | null;
   restTimerSeconds?: number | null;
   restTimerSound?: string | null;
+  restActive?: unknown;
   updatedBy: string;
   revision: number;
   updatedAt: Date;
 }): LiveWorkoutSession {
+  const restActive = parseRestActive(row.restActive);
   return {
     userId: row.userId,
     workoutId: row.workoutId,
@@ -61,6 +81,7 @@ function rowToSession(row: {
     restTimerSeconds:
       typeof row.restTimerSeconds === "number" ? row.restTimerSeconds : undefined,
     restTimerSound: row.restTimerSound ?? undefined,
+    restActive: restActive === undefined ? undefined : restActive,
     updatedAt: toIso(row.updatedAt),
     updatedBy: row.updatedBy === "member" ? "member" : "coach",
     revision: row.revision,
@@ -79,6 +100,7 @@ function sessionToRow(session: LiveWorkoutSession) {
     restTimerEnabled: session.restTimerEnabled ?? null,
     restTimerSeconds: session.restTimerSeconds ?? null,
     restTimerSound: session.restTimerSound ?? null,
+    restActive: (session.restActive ?? null) as Prisma.InputJsonValue,
     updatedBy: session.updatedBy,
     revision: session.revision,
     updatedAt: new Date(session.updatedAt),
@@ -121,6 +143,7 @@ export async function upsertLiveWorkoutSessionToDb(session: LiveWorkoutSession):
       restTimerEnabled: data.restTimerEnabled,
       restTimerSeconds: data.restTimerSeconds,
       restTimerSound: data.restTimerSound,
+      restActive: data.restActive,
       updatedBy: data.updatedBy,
       revision: data.revision,
       updatedAt: data.updatedAt,

@@ -9,6 +9,16 @@ import {
 import { getHotLiveSession, setHotLiveSession } from "@/lib/live-session-hot";
 import { localTodayIso } from "@/lib/program-calendar";
 
+/** Shared rest popup so coach checkoff spins the same timer on the member. */
+export type LiveRestActive = {
+  blockId: string;
+  completedSetNum: number;
+  /** Epoch ms when countdown hits zero */
+  endsAt: number;
+  totalSeconds: number;
+  startedBy: "coach" | "member";
+};
+
 export type LiveWorkoutSession = {
   userId: string;
   workoutId: string;
@@ -21,6 +31,8 @@ export type LiveWorkoutSession = {
   restTimerEnabled?: boolean;
   restTimerSeconds?: number;
   restTimerSound?: string;
+  /** Active rest popup (both sides show the same countdown). */
+  restActive?: LiveRestActive | null;
   updatedAt: string;
   updatedBy: "coach" | "member";
   revision: number;
@@ -106,6 +118,17 @@ async function persistSession(session: LiveWorkoutSession): Promise<boolean> {
   return persistSessionToBlob(session);
 }
 
+function pickNewerSession(
+  a: LiveWorkoutSession | null,
+  b: LiveWorkoutSession | null,
+): LiveWorkoutSession | null {
+  if (!a) return b;
+  if (!b) return a;
+  if (a.revision !== b.revision) return a.revision > b.revision ? a : b;
+  // Same revision — prefer more recent updatedAt.
+  return a.updatedAt >= b.updatedAt ? a : b;
+}
+
 export async function getLiveWorkoutSession(input: {
   userId: string;
   workoutId: string;
@@ -113,21 +136,23 @@ export async function getLiveWorkoutSession(input: {
 }): Promise<LiveWorkoutSession | null> {
   const key = liveSessionKey(input.userId, input.workoutId, input.sessionDate);
   const hot = getHotLiveSession(key);
-  if (hot) return hot;
 
+  // Always reconcile with durable store so coach checkoffs on another instance
+  // are not hidden behind a stale in-memory revision on this instance.
+  let durable: LiveWorkoutSession | null = null;
   if (!isDemoMode()) {
     const sessionDate = normalizeLiveSessionDate(input.sessionDate);
-    const session = await getLiveWorkoutSessionFromDb({
+    durable = await getLiveWorkoutSessionFromDb({
       userId: input.userId,
       workoutId: input.workoutId,
       sessionDate,
     });
-    if (session) setHotLiveSession(key, session);
-    return session;
+  } else {
+    const store = await loadStore(true);
+    durable = store.sessions[key] ?? null;
   }
 
-  const store = await loadStore(true);
-  const session = store.sessions[key] ?? null;
+  const session = pickNewerSession(hot, durable);
   if (session) setHotLiveSession(key, session);
   return session;
 }
@@ -144,24 +169,19 @@ export async function upsertLiveWorkoutSession(input: {
   restTimerEnabled?: boolean;
   restTimerSeconds?: number;
   restTimerSound?: string;
+  /** When provided (including null), replaces shared rest popup state. */
+  restActive?: LiveRestActive | null;
+  restActiveProvided?: boolean;
   updatedBy: "coach" | "member";
 }): Promise<{ session: LiveWorkoutSession; blobSaved: boolean }> {
   const sessionDate = normalizeLiveSessionDate(input.sessionDate);
   const key = liveSessionKey(input.userId, input.workoutId, sessionDate);
-  let existing = getHotLiveSession(key);
-  if (!existing) {
-    if (!isDemoMode()) {
-      existing = await getLiveWorkoutSessionFromDb({
-        userId: input.userId,
-        workoutId: input.workoutId,
-        sessionDate,
-      });
-    } else {
-      const store = await loadStore(true);
-      existing = store.sessions[key] ?? null;
-    }
-    if (existing) setHotLiveSession(key, existing);
-  }
+  // Prefer newer of hot vs durable so concurrent writers don't base on a stale rev.
+  let existing = await getLiveWorkoutSession({
+    userId: input.userId,
+    workoutId: input.workoutId,
+    sessionDate,
+  });
 
   // Coach may push rest settings; members omit them so we keep the last coach values.
   const restTimerEnabled =
@@ -176,6 +196,9 @@ export async function upsertLiveWorkoutSession(input: {
     typeof input.restTimerSound === "string" && input.restTimerSound.trim()
       ? input.restTimerSound.trim()
       : existing?.restTimerSound;
+  const restActive = input.restActiveProvided
+    ? input.restActive ?? null
+    : (existing?.restActive ?? null);
 
   const session: LiveWorkoutSession = {
     userId: input.userId,
@@ -191,6 +214,7 @@ export async function upsertLiveWorkoutSession(input: {
     restTimerEnabled,
     restTimerSeconds,
     restTimerSound,
+    restActive,
     updatedAt: new Date().toISOString(),
     updatedBy: input.updatedBy,
     revision: (existing?.revision ?? 0) + 1,

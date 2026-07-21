@@ -27,6 +27,7 @@ import {
   type RestTimerSoundId,
 } from "@/lib/rest-timer-sound";
 import { confettiOriginFromElement, fireWorkoutConfetti } from "@/lib/workout-confetti";
+import type { LiveRestActive } from "@/lib/live-workout-session";
 
 export type MemberExerciseBlock = {
   id: string;
@@ -251,8 +252,8 @@ export default function MemberWorkoutConsole({
     });
   }, []);
 
-  // Keep coach + member nearly in lockstep (SSE hot path + fast poll across instances).
-  const LIVE_POLL_MS = 200;
+  // Keep coach + member nearly in lockstep (SSE hot path + very fast poll across instances).
+  const LIVE_POLL_MS = 150;
   const liveSessionScope = progressMode === "live" && !!liveSyncUserId && !reviewMode;
   const warmupSyncEnabled = progressMode === "warmup" && !!liveSyncUserId && !reviewMode;
   const [liveSessionHydrated, setLiveSessionHydrated] = useState(false);
@@ -264,6 +265,9 @@ export default function MemberWorkoutConsole({
     seconds: DEFAULT_REST_TIMER_SECONDS,
     sound: DEFAULT_REST_TIMER_SOUND as RestTimerSoundId,
   });
+  /** Shared rest popup (epoch endsAt) — pushed so partner spins up the same timer. */
+  const restActiveRef = useRef<LiveRestActive | null>(null);
+  const lastAppliedRestEndsAt = useRef(0);
   const lastAppliedRevision = useRef(0);
   const lastAppliedRemoteAt = useRef<string | null>(null);
   const applyingRemote = useRef(false);
@@ -292,6 +296,37 @@ export default function MemberWorkoutConsole({
     stateRef.current = { completedSets, finishedExercises, weights, activeId };
   }, [completedSets, finishedExercises, weights, activeId]);
 
+  const applyRemoteRestActive = useCallback((rest: LiveRestActive | null | undefined) => {
+    if (rest === undefined) return;
+    if (rest === null) {
+      lastAppliedRestEndsAt.current = 0;
+      restActiveRef.current = null;
+      setRestTimer(null);
+      setRestSecondsLeft(0);
+      setRestCompleting(false);
+      return;
+    }
+    // Ignore expired or already-applied rest windows.
+    if (rest.endsAt <= Date.now() + 250) return;
+    if (rest.endsAt <= lastAppliedRestEndsAt.current) return;
+    lastAppliedRestEndsAt.current = rest.endsAt;
+    restActiveRef.current = rest;
+    const left = Math.max(0, Math.ceil((rest.endsAt - Date.now()) / 1000));
+    setRestCompleting(false);
+    setRestSecondsLeft(left);
+    setRestTimer({
+      blockId: rest.blockId,
+      completedSetNum: rest.completedSetNum,
+      endsAt: rest.endsAt,
+      totalSeconds: rest.totalSeconds,
+    });
+    restTickAnnouncedRef.current = new Set();
+    restHornPlayedRef.current = false;
+    if (!restMutedRef.current) {
+      playRestStart();
+    }
+  }, []);
+
   const applyRemoteSession = useCallback(
     (session: {
       completedSets: Record<string, number[]>;
@@ -301,12 +336,19 @@ export default function MemberWorkoutConsole({
       restTimerEnabled?: boolean;
       restTimerSeconds?: number;
       restTimerSound?: string;
+      restActive?: LiveRestActive | null;
       updatedBy: "coach" | "member";
       revision?: number;
       updatedAt?: string;
     }) => {
       if (typeof session.revision === "number") {
-        if (session.revision <= lastAppliedRevision.current) return;
+        if (session.revision <= lastAppliedRevision.current) {
+          // Still allow a newer shared rest popup on the same revision edge cases.
+          if (session.restActive && session.restActive.endsAt > lastAppliedRestEndsAt.current) {
+            applyRemoteRestActive(session.restActive);
+          }
+          return;
+        }
         lastAppliedRevision.current = session.revision;
       } else if (session.updatedAt) {
         if (
@@ -323,42 +365,51 @@ export default function MemberWorkoutConsole({
       // Always apply coach rest controls so member matches floor mid-session.
       if (typeof session.restTimerEnabled === "boolean") {
         setSessionRestEnabled(session.restTimerEnabled);
+        restSettingsRef.current = {
+          ...restSettingsRef.current,
+          enabled: session.restTimerEnabled,
+        };
       }
       if (typeof session.restTimerSeconds === "number" && session.restTimerSeconds > 0) {
         const secs = normalizeRestTimerSeconds(session.restTimerSeconds);
         setSessionRestSeconds(secs);
-        // If a countdown is already running, retarget it to the new duration.
-        setRestTimer((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            totalSeconds: secs,
-            endsAt: Date.now() + secs * 1000,
-          };
-        });
-        setRestSecondsLeft(secs);
+        restSettingsRef.current = { ...restSettingsRef.current, seconds: secs };
       }
       if (typeof session.restTimerSound === "string" && session.restTimerSound) {
         const sound = normalizeRestTimerSound(session.restTimerSound);
         setSessionRestSound(sound);
         restSoundRef.current = sound;
+        restSettingsRef.current = { ...restSettingsRef.current, sound };
         preloadRestCompleteSound(sound);
       }
 
+      const localSnap = stateRef.current;
       const sets: Record<string, Set<number>> = {};
       for (const [blockId, nums] of Object.entries(session.completedSets)) {
         sets[blockId] = new Set(nums);
       }
       const remoteFinished = new Set(session.finishedExercises);
-      const setsSame = completedSetsEqual(completedSets, session.completedSets);
-      const finishedSame = finishedExercisesEqual(finishedExercises, session.finishedExercises);
+      const setsSame = completedSetsEqual(localSnap.completedSets, session.completedSets);
+      const finishedSame = finishedExercisesEqual(
+        localSnap.finishedExercises,
+        session.finishedExercises,
+      );
       const weightsSame =
         !session.weights ||
-        JSON.stringify(session.weights) === JSON.stringify(weights);
+        JSON.stringify(session.weights) === JSON.stringify(localSnap.weights);
       const activeSame =
         coachFloorMode ||
         !session.activeId ||
-        session.activeId === activeId;
+        session.activeId === localSnap.activeId;
+
+      // Shared rest popup — apply immediately (coach checkoff → member timer).
+      // Prefer this over the delayed completedSets effect so the timer spins now.
+      if ("restActive" in session) {
+        applyRemoteRestActive(session.restActive);
+        if (session.restActive) {
+          pendingRemoteRestRef.current = false;
+        }
+      }
 
       if (setsSame && finishedSame && weightsSame && activeSame) {
         return;
@@ -366,28 +417,40 @@ export default function MemberWorkoutConsole({
 
       applyingRemote.current = true;
       if (!setsSame) {
-        // After baseline is ready, partner checkoffs start rest for both coach + member.
-        pendingRemoteRestRef.current = liveRestBaselineReadyRef.current;
+        // Fallback rest start if restActive missing (older clients / race).
+        if (!session.restActive) {
+          pendingRemoteRestRef.current = liveRestBaselineReadyRef.current;
+        }
         setCompletedSets(sets);
+        stateRef.current = { ...stateRef.current, completedSets: sets };
       }
-      if (!finishedSame) setFinishedExercises(remoteFinished);
-      if (session.weights && !weightsSame) setWeights(session.weights);
-      if (!coachFloorMode && session.activeId && session.activeId !== activeId) {
-        const localIdx = workout.exercises.findIndex((e) => e.id === activeId);
+      if (!finishedSame) {
+        setFinishedExercises(remoteFinished);
+        stateRef.current = { ...stateRef.current, finishedExercises: remoteFinished };
+      }
+      if (session.weights && !weightsSame) {
+        setWeights(session.weights);
+        stateRef.current = { ...stateRef.current, weights: session.weights };
+      }
+      if (!coachFloorMode && session.activeId && session.activeId !== localSnap.activeId) {
+        const localIdx = workout.exercises.findIndex((e) => e.id === localSnap.activeId);
         const remoteIdx = workout.exercises.findIndex((e) => e.id === session.activeId);
         const localAhead = localIdx >= 0 && remoteIdx >= 0 && localIdx > remoteIdx;
-        if (!localAhead) setActiveId(session.activeId);
+        if (!localAhead) {
+          setActiveId(session.activeId);
+          stateRef.current = { ...stateRef.current, activeId: session.activeId };
+        }
       }
 
       const fromCoach = session.updatedBy === "coach";
-      if (instructorName) {
+      if (instructorName || coachFloorMode) {
         setPartnerLive(!fromCoach);
       } else {
         setCoachLive(fromCoach);
       }
       applyingRemote.current = false;
     },
-    [instructorName, coachFloorMode, completedSets, finishedExercises, weights, activeId, workout.exercises],
+    [instructorName, coachFloorMode, workout.exercises, applyRemoteRestActive],
   );
 
   const flushWarmupSave = useCallback(() => {
@@ -424,17 +487,20 @@ export default function MemberWorkoutConsole({
 
     saveChain.current = saveChain.current.catch(() => {}).then(async () => {
       const snap = stateRef.current;
+      const asCoach = Boolean(instructorName || coachFloorMode);
       const payload: Record<string, unknown> = {
         userId: liveSyncUserId,
         sessionDate: liveSessionDate,
         completedSets: serializeCompletedSets(snap.completedSets),
         finishedExercises: Array.from(snap.finishedExercises),
         weights: snap.weights,
-        updatedBy: instructorName ? ("coach" as const) : ("member" as const),
+        updatedBy: asCoach ? ("coach" as const) : ("member" as const),
+        // Shared rest popup (null clears).
+        restActive: restActiveRef.current,
       };
       if (!coachFloorMode) payload.activeId = snap.activeId;
       // Coach floor pushes rest controls so member countdown matches mid-session.
-      if (instructorName || coachFloorMode) {
+      if (asCoach) {
         const rest = restSettingsRef.current;
         payload.restTimerEnabled = rest.enabled;
         payload.restTimerSeconds = normalizeRestTimerSeconds(rest.seconds);
@@ -670,16 +736,21 @@ export default function MemberWorkoutConsole({
     setRestTimer(null);
     setRestSecondsLeft(0);
     setRestCompleting(false);
-  }, []);
+    restActiveRef.current = null;
+    lastAppliedRestEndsAt.current = 0;
+    // Push clear so partner closes the shared rest popup.
+    if (livePushEnabled) queueLiveSave(true);
+  }, [livePushEnabled, queueLiveSave]);
 
   const resolveSecondsForBlock = useCallback(
     (_block: MemberExerciseBlock): number | null => {
-      if (!sessionRestEnabled) return null;
+      const rest = restSettingsRef.current;
+      if (!rest.enabled) return null;
       // Session/floor rest always wins so coach can retune mid-session
       // even when the workout was deployed with a different duration.
-      return normalizeRestTimerSeconds(sessionRestSeconds);
+      return normalizeRestTimerSeconds(rest.seconds);
     },
-    [sessionRestEnabled, sessionRestSeconds],
+    [],
   );
 
   const maybeStartRestTimer = useCallback(
@@ -691,22 +762,53 @@ export default function MemberWorkoutConsole({
       if (!seconds || seconds <= 0) return;
 
       // Rest after every set including the last set of the exercise.
-      const endsAt = Date.now() + seconds * 1000;
+      // If partner already pushed a shared restActive, prefer that endsAt.
+      const shared = restActiveRef.current;
+      const endsAt =
+        opts?.fromRemote && shared && shared.blockId === blockId && shared.endsAt > Date.now()
+          ? shared.endsAt
+          : Date.now() + seconds * 1000;
+      const totalSeconds =
+        opts?.fromRemote && shared && shared.blockId === blockId
+          ? shared.totalSeconds
+          : seconds;
+
       setRestCompleting(false);
-      setRestSecondsLeft(seconds);
+      setRestSecondsLeft(Math.max(0, Math.ceil((endsAt - Date.now()) / 1000)));
       setRestTimer({
         blockId,
         completedSetNum: setNum,
         endsAt,
-        totalSeconds: seconds,
+        totalSeconds,
       });
       restTickAnnouncedRef.current = new Set();
       restHornPlayedRef.current = false;
+      lastAppliedRestEndsAt.current = endsAt;
+
+      if (!opts?.fromRemote) {
+        restActiveRef.current = {
+          blockId,
+          completedSetNum: setNum,
+          endsAt,
+          totalSeconds,
+          startedBy: instructorName || coachFloorMode ? "coach" : "member",
+        };
+        // Push set + restActive together so partner timer spins immediately.
+        queueLiveSave(true);
+      }
+
       if (!opts?.silentStart && !restMuted) {
         playRestStart();
       }
     },
-    [workout.exercises, restMuted, resolveSecondsForBlock],
+    [
+      workout.exercises,
+      restMuted,
+      resolveSecondsForBlock,
+      instructorName,
+      coachFloorMode,
+      queueLiveSave,
+    ],
   );
 
   const saveCoachRestSettings = useCallback(
@@ -871,7 +973,10 @@ export default function MemberWorkoutConsole({
       const wasDone = completedSets[blockId]?.has(setNum) ?? false;
 
       if (wasDone && restTimer?.blockId === blockId) {
+        restActiveRef.current = null;
+        lastAppliedRestEndsAt.current = 0;
         setRestTimer(null);
+        setRestSecondsLeft(0);
       }
 
       setCompletedSets((prev) => {
@@ -884,6 +989,7 @@ export default function MemberWorkoutConsole({
       });
 
       if (!wasDone) {
+        // Starts rest + pushes set checkoff + restActive in one live save.
         maybeStartRestTimer(blockId, setNum);
         if (coachFloorMode && originEl) {
           const block = workout.exercises.find((e) => e.id === blockId);
@@ -902,8 +1008,9 @@ export default function MemberWorkoutConsole({
             }
           }
         }
+      } else {
+        queueLiveSave(true);
       }
-      queueLiveSave(true);
     },
     [
       queueLiveSave,

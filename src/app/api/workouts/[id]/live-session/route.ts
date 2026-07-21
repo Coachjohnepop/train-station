@@ -9,6 +9,16 @@ import {
   upsertLiveWorkoutSession,
 } from "@/lib/live-workout-session";
 
+const restActiveSchema = z
+  .object({
+    blockId: z.string().min(1),
+    completedSetNum: z.number().int().positive(),
+    endsAt: z.number().int().positive(),
+    totalSeconds: z.number().int().min(1).max(600),
+    startedBy: z.enum(["coach", "member"]),
+  })
+  .nullable();
+
 const putSchema = z.object({
   userId: z.string().min(1),
   sessionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -19,6 +29,7 @@ const putSchema = z.object({
   restTimerEnabled: z.boolean().optional(),
   restTimerSeconds: z.number().int().min(15).max(600).optional(),
   restTimerSound: z.string().min(1).max(40).optional(),
+  restActive: restActiveSchema.optional(),
   updatedBy: z.enum(["coach", "member"]),
   clear: z.boolean().optional(),
 });
@@ -81,6 +92,7 @@ export async function PUT(request: Request, { params }: Params) {
     return NextResponse.json({ ok: true, cleared: true });
   }
 
+  const restActiveProvided = Object.prototype.hasOwnProperty.call(data, "restActive");
   const result = await upsertLiveWorkoutSession({
     userId: data.userId,
     workoutId,
@@ -93,6 +105,9 @@ export async function PUT(request: Request, { params }: Params) {
     restTimerEnabled: isStaffRole(auth.session.role) ? data.restTimerEnabled : undefined,
     restTimerSeconds: isStaffRole(auth.session.role) ? data.restTimerSeconds : undefined,
     restTimerSound: isStaffRole(auth.session.role) ? data.restTimerSound : undefined,
+    // Either side can start/clear the shared rest popup.
+    restActiveProvided,
+    restActive: restActiveProvided ? data.restActive ?? null : undefined,
     updatedBy: data.updatedBy,
   });
 
