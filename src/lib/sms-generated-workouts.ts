@@ -21,6 +21,11 @@ import { matchExerciseInCatalog, sanitizeSmsExerciseName } from "@/lib/exercise-
 import { isCoachCatalogDemo } from "@/lib/catalog-mode";
 import { hintVideoUrlForExerciseName, resolveExerciseVideoUrl } from "@/lib/exercise-video-hints";
 import { DEFAULT_REST_TIMER_SECONDS, normalizeRestTimerSeconds } from "@/lib/rest-timer";
+import {
+  DEFAULT_REST_TIMER_SOUND,
+  normalizeRestTimerSound,
+  type RestTimerSoundId,
+} from "@/lib/rest-timer-sound";
 import { loadSmsWorkoutsFromDb, persistSmsWorkoutStoreToDb } from "@/lib/sms-workouts-db";
 import {
   emptySmsWorkoutStore,
@@ -33,6 +38,8 @@ const BLOB_PATH = "demo/sms-workouts.json";
 export type WorkoutRestTimerSettings = {
   enabled: boolean;
   seconds: number;
+  /** End-of-rest sample; default train whistle. */
+  sound?: RestTimerSoundId | string | null;
 };
 
 let memoryStore: SmsWorkoutStore | null = null;
@@ -175,6 +182,9 @@ export async function updateWorkoutRestTimer(
   workout.restTimerSeconds = restTimer.enabled
     ? normalizeRestTimerSeconds(restTimer.seconds)
     : undefined;
+  workout.restTimerSound = restTimer.enabled
+    ? normalizeRestTimerSound(restTimer.sound ?? workout.restTimerSound)
+    : workout.restTimerSound;
   await writeSmsWorkoutStore(store);
 }
 
@@ -201,6 +211,9 @@ export async function buildWorkoutFromParsedSms(
     restTimerEnabled: restTimer?.enabled ?? false,
     restTimerSeconds: restTimer?.enabled
       ? normalizeRestTimerSeconds(restTimer.seconds)
+      : undefined,
+    restTimerSound: restTimer?.enabled
+      ? normalizeRestTimerSound(restTimer.sound ?? DEFAULT_REST_TIMER_SOUND)
       : undefined,
   });
 
@@ -314,5 +327,8 @@ export async function getSmsGeneratedWorkout(
     restTimerSeconds: workout.restTimerEnabled
       ? normalizeRestTimerSeconds(workout.restTimerSeconds ?? DEFAULT_REST_TIMER_SECONDS)
       : undefined,
+    restTimerSound: normalizeRestTimerSound(
+      workout.restTimerSound ?? DEFAULT_REST_TIMER_SOUND,
+    ),
   };
 }

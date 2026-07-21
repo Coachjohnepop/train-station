@@ -14,6 +14,7 @@ function rowToWorkout(row: {
   source: string;
   restTimerEnabled: boolean;
   restTimerSeconds: number | null;
+  restTimerSound?: string | null;
   exportText: string | null;
   certifiedAt: Date | null;
   createdAt: Date;
@@ -26,6 +27,7 @@ function rowToWorkout(row: {
     createdAt: row.createdAt.toISOString(),
     restTimerEnabled: row.restTimerEnabled,
     restTimerSeconds: row.restTimerSeconds ?? undefined,
+    restTimerSound: row.restTimerSound ?? undefined,
     exportText: row.exportText,
     certifiedAt: row.certifiedAt?.toISOString() ?? null,
   };
@@ -104,6 +106,7 @@ export async function persistSmsWorkoutStoreToDb(store: SmsWorkoutStore): Promis
           source: "sms",
           restTimerEnabled: Boolean(workout.restTimerEnabled),
           restTimerSeconds: workout.restTimerSeconds ?? null,
+          restTimerSound: workout.restTimerSound ?? null,
           exportText: workout.exportText ?? null,
           certifiedAt: workout.certifiedAt ? new Date(workout.certifiedAt) : null,
           createdAt: new Date(workout.createdAt),
@@ -114,6 +117,7 @@ export async function persistSmsWorkoutStoreToDb(store: SmsWorkoutStore): Promis
           source: "sms",
           restTimerEnabled: Boolean(workout.restTimerEnabled),
           restTimerSeconds: workout.restTimerSeconds ?? null,
+          restTimerSound: workout.restTimerSound ?? null,
           exportText: workout.exportText ?? null,
           certifiedAt: workout.certifiedAt ? new Date(workout.certifiedAt) : null,
         },

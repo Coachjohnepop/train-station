@@ -17,6 +17,12 @@ import {
   DEFAULT_REST_TIMER_SECONDS,
   REST_TIMER_PRESETS,
 } from "@/lib/rest-timer";
+import {
+  DEFAULT_REST_TIMER_SOUND,
+  REST_TIMER_SOUND_OPTIONS,
+  type RestTimerSoundId,
+} from "@/lib/rest-timer-sound";
+import { playRestComplete } from "@/lib/rest-audio";
 
 
 type ParsedExercise = {
@@ -76,6 +82,7 @@ export default function CoachLessonPlanBuilder({
 
   const [restTimerEnabled, setRestTimerEnabled] = useState(true);
   const [restTimerSeconds, setRestTimerSeconds] = useState(DEFAULT_REST_TIMER_SECONDS);
+  const [restTimerSound, setRestTimerSound] = useState<RestTimerSoundId>(DEFAULT_REST_TIMER_SOUND);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -378,8 +385,8 @@ export default function CoachLessonPlanBuilder({
           sendSmsAlert: false,
           replaceExisting: true,
           restTimer: restTimerEnabled
-            ? { enabled: true, seconds: restTimerSeconds }
-            : { enabled: false, seconds: restTimerSeconds },
+            ? { enabled: true, seconds: restTimerSeconds, sound: restTimerSound }
+            : { enabled: false, seconds: restTimerSeconds, sound: restTimerSound },
           cascade:
             cascadeIds.length > 0
               ? {
@@ -713,24 +720,44 @@ export default function CoachLessonPlanBuilder({
               Rest timer between sets
             </label>
             {restTimerEnabled ? (
-              <label className="block text-xs">
-                <span className="text-[var(--muted)]">Countdown after each set (whole workout)</span>
-                <select
-                  className="input mt-1 w-full text-sm"
-                  value={restTimerSeconds}
-                  onChange={(e) => setRestTimerSeconds(Number(e.target.value))}
-                >
-                  {REST_TIMER_PRESETS.map((preset) => (
-                    <option key={preset.seconds} value={preset.seconds}>
-                      {preset.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <>
+                <label className="block text-xs">
+                  <span className="text-[var(--muted)]">Countdown after each set (whole workout)</span>
+                  <select
+                    className="input mt-1 w-full text-sm"
+                    value={restTimerSeconds}
+                    onChange={(e) => setRestTimerSeconds(Number(e.target.value))}
+                  >
+                    {REST_TIMER_PRESETS.map((preset) => (
+                      <option key={preset.seconds} value={preset.seconds}>
+                        {preset.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-xs">
+                  <span className="text-[var(--muted)]">Sound when rest ends</span>
+                  <select
+                    className="input mt-1 w-full text-sm"
+                    value={restTimerSound}
+                    onChange={(e) => {
+                      const next = e.target.value as RestTimerSoundId;
+                      setRestTimerSound(next);
+                      playRestComplete(next);
+                    }}
+                  >
+                    {REST_TIMER_SOUND_OPTIONS.map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        {opt.label} — {opt.hint}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </>
             ) : null}
             <p className="text-[10px] text-[var(--muted)]">
               When on, coach and member see an automatic countdown on Go to Today after each set
-              is checked off.
+              is checked off. Default end sound is a loud train whistle.
             </p>
           </div>
 

@@ -13,6 +13,7 @@ const individualSchema = z.object({
 const restTimerSchema = z.object({
   enabled: z.boolean(),
   seconds: z.number().int().min(15).max(600),
+  sound: z.enum(["whistle", "bell", "buzzer", "cybertruck"]).optional(),
 });
 
 const schema = z.object({

@@ -134,6 +134,8 @@ model Workout {
   source            String            @default("catalog")
   restTimerEnabled  Boolean           @default(false)
   restTimerSeconds  Int?
+  /// End-of-rest alert: whistle | bell | buzzer | cybertruck
+  restTimerSound    String?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   exercises         WorkoutExercise[]

@@ -126,6 +126,7 @@ async function getMemberWorkoutFromPrisma(
     exercises,
     restTimerEnabled: Boolean(workout.restTimerEnabled),
     restTimerSeconds: workout.restTimerSeconds ?? undefined,
+    restTimerSound: workout.restTimerSound ?? undefined,
   };
 }
 
@@ -194,6 +195,7 @@ export async function getMemberWorkoutById(
     name?: string;
     restTimerEnabled?: boolean;
     restTimerSeconds?: number | null;
+    restTimerSound?: string | null;
   };
 
   return {
@@ -203,5 +205,6 @@ export async function getMemberWorkoutById(
     exercises,
     restTimerEnabled: Boolean(seedWorkout.restTimerEnabled),
     restTimerSeconds: seedWorkout.restTimerSeconds ?? undefined,
+    restTimerSound: seedWorkout.restTimerSound ?? undefined,
   };
 }

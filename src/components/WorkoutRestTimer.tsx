@@ -85,10 +85,10 @@ export default function WorkoutRestTimer({
       </p>
       <p className="workout-rest-player__hint">
         {done
-          ? "Buzz — closing…"
+          ? "Alert — closing…"
           : urgent
             ? "Get ready…"
-            : "After each set (skips last set) · closes when it buzzes"}
+            : "After each set (skips last set) · closes on rest-end sound"}
       </p>
 
       <div className="workout-rest-player__track" aria-hidden>

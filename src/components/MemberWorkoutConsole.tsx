@@ -14,13 +14,19 @@ import MemberExerciseVideoModal from "@/components/MemberExerciseVideoModal";
 import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
 import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
 import WorkoutRestTimer from "@/components/WorkoutRestTimer";
-import { playRestComplete, playRestStart, playRestTick } from "@/lib/rest-audio";
+import { playRestComplete, playRestStart, playRestTick, preloadRestCompleteSound } from "@/lib/rest-audio";
 import {
   DEFAULT_REST_TIMER_SECONDS,
   REST_TIMER_PRESETS,
   normalizeRestTimerSeconds,
   resolveRestSeconds,
 } from "@/lib/rest-timer";
+import {
+  DEFAULT_REST_TIMER_SOUND,
+  REST_TIMER_SOUND_OPTIONS,
+  normalizeRestTimerSound,
+  type RestTimerSoundId,
+} from "@/lib/rest-timer-sound";
 import { confettiOriginFromElement, fireWorkoutConfetti } from "@/lib/workout-confetti";
 
 export type MemberExerciseBlock = {
@@ -60,6 +66,8 @@ export type MemberWorkoutView = {
   /** Legacy workout-level rest timer (fallback if exercise has no restSec). */
   restTimerEnabled?: boolean;
   restTimerSeconds?: number;
+  /** End-of-rest sample: whistle | bell | buzzer | cybertruck */
+  restTimerSound?: string;
 };
 
 const REST_MUTE_KEY = "ts-rest-timer-mute";
@@ -166,6 +174,8 @@ export default function MemberWorkoutConsole({
   /** Session override so coach can set rest on the floor without rebuilding the workout. */
   const [sessionRestEnabled, setSessionRestEnabled] = useState(true);
   const [sessionRestSeconds, setSessionRestSeconds] = useState(DEFAULT_REST_TIMER_SECONDS);
+  const [sessionRestSound, setSessionRestSound] = useState<RestTimerSoundId>(DEFAULT_REST_TIMER_SOUND);
+  const restSoundRef = useRef<RestTimerSoundId>(DEFAULT_REST_TIMER_SOUND);
   const [restSettingsSaving, setRestSettingsSaving] = useState(false);
   const [coachExpandedBlockId, setCoachExpandedBlockId] = useState<string | null>(null);
   const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
@@ -205,7 +215,22 @@ export default function MemberWorkoutConsole({
     setSessionRestSeconds(seeded);
     // Honor workout-level rest toggle when set; otherwise default ON for the floor.
     setSessionRestEnabled(workout.restTimerEnabled !== false);
-  }, [workout.workoutId, workout.restTimerEnabled, workout.restTimerSeconds, workout.exercises]);
+    const sound = normalizeRestTimerSound(workout.restTimerSound);
+    setSessionRestSound(sound);
+    restSoundRef.current = sound;
+    preloadRestCompleteSound(sound);
+  }, [
+    workout.workoutId,
+    workout.restTimerEnabled,
+    workout.restTimerSeconds,
+    workout.restTimerSound,
+    workout.exercises,
+  ]);
+
+  useEffect(() => {
+    restSoundRef.current = sessionRestSound;
+    preloadRestCompleteSound(sessionRestSound);
+  }, [sessionRestSound]);
 
   const toggleRestMute = useCallback(() => {
     setRestMuted((prev) => {
@@ -622,16 +647,27 @@ export default function MemberWorkoutConsole({
   );
 
   const saveCoachRestSettings = useCallback(
-    async (enabled: boolean, seconds: number) => {
+    async (
+      enabled: boolean,
+      seconds: number,
+      sound: RestTimerSoundId = restSoundRef.current,
+    ) => {
       setSessionRestEnabled(enabled);
       setSessionRestSeconds(normalizeRestTimerSeconds(seconds));
+      const nextSound = normalizeRestTimerSound(sound);
+      setSessionRestSound(nextSound);
+      restSoundRef.current = nextSound;
       if (!canCoachRestSettings || !workout.workoutId) return;
       setRestSettingsSaving(true);
       try {
         await fetch(`/api/workouts/${workout.workoutId}/rest-timer`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ enabled, seconds: normalizeRestTimerSeconds(seconds) }),
+          body: JSON.stringify({
+            enabled,
+            seconds: normalizeRestTimerSeconds(seconds),
+            sound: nextSound,
+          }),
         });
       } catch {
         /* local override still works */
@@ -660,7 +696,7 @@ export default function MemberWorkoutConsole({
       setRestCompleting(true);
       setRestSecondsLeft(0);
       if (!restMutedRef.current) {
-        playRestComplete();
+        playRestComplete(restSoundRef.current);
       }
       closeTimer = window.setTimeout(() => {
         if (cancelled) return;
@@ -838,25 +874,56 @@ export default function MemberWorkoutConsole({
           )}
         </div>
         {sessionRestEnabled ? (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {REST_TIMER_PRESETS.map((preset) => {
-              const active = sessionRestSeconds === preset.seconds;
-              return (
-                <button
-                  key={preset.seconds}
-                  type="button"
-                  className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
-                    active
-                      ? "border-accent bg-accent/25 text-accent"
-                      : "border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:border-accent/50 hover:text-[var(--text)]"
-                  }`}
-                  onClick={() => void saveCoachRestSettings(true, preset.seconds)}
-                >
-                  {preset.label}
-                </button>
-              );
-            })}
-          </div>
+          <>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {REST_TIMER_PRESETS.map((preset) => {
+                const active = sessionRestSeconds === preset.seconds;
+                return (
+                  <button
+                    key={preset.seconds}
+                    type="button"
+                    className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                      active
+                        ? "border-accent bg-accent/25 text-accent"
+                        : "border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:border-accent/50 hover:text-[var(--text)]"
+                    }`}
+                    onClick={() => void saveCoachRestSettings(true, preset.seconds, sessionRestSound)}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2.5 border-t border-accent/20 pt-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+                Rest end sound
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {REST_TIMER_SOUND_OPTIONS.map((opt) => {
+                  const active = sessionRestSound === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      title={opt.hint}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                        active
+                          ? "border-sky-400/60 bg-sky-500/25 text-sky-100"
+                          : "border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:border-sky-400/40 hover:text-[var(--text)]"
+                      }`}
+                      onClick={() => {
+                        void saveCoachRestSettings(true, sessionRestSeconds, opt.id);
+                        // Preview so coach hears the pick immediately.
+                        playRestComplete(opt.id);
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
         ) : null}
       </div>
     ) : null;

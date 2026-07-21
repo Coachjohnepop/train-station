@@ -8,11 +8,17 @@ import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { prisma } from "@/lib/prisma";
 import { isSmsWorkoutId } from "@/lib/sms-workout-builder-api";
 import { normalizeRestTimerSeconds } from "@/lib/rest-timer";
+import {
+  DEFAULT_REST_TIMER_SOUND,
+  normalizeRestTimerSound,
+  REST_TIMER_SOUND_IDS,
+} from "@/lib/rest-timer-sound";
 import { updateWorkoutRestTimer } from "@/lib/sms-generated-workouts";
 
 const bodySchema = z.object({
   enabled: z.boolean(),
   seconds: z.number().int().min(15).max(600).optional(),
+  sound: z.enum(REST_TIMER_SOUND_IDS).optional(),
 });
 
 type Params = { params: Promise<{ id: string }> };
@@ -28,17 +34,17 @@ export async function PUT(request: Request, { params }: Params) {
   }
 
   const enabled = parsed.data.enabled;
-  const seconds = normalizeRestTimerSeconds(
-    parsed.data.seconds ?? 90,
-  );
+  const seconds = normalizeRestTimerSeconds(parsed.data.seconds ?? 90);
+  const sound = normalizeRestTimerSound(parsed.data.sound ?? DEFAULT_REST_TIMER_SOUND);
 
   if (isSmsWorkoutId(id)) {
     try {
-      await updateWorkoutRestTimer(id, { enabled, seconds });
+      await updateWorkoutRestTimer(id, { enabled, seconds, sound });
       return NextResponse.json({
         ok: true,
         restTimerEnabled: enabled,
         restTimerSeconds: enabled ? seconds : null,
+        restTimerSound: sound,
       });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Could not save rest timer";
@@ -56,6 +62,7 @@ export async function PUT(request: Request, { params }: Params) {
           ...workouts[idx],
           restTimerEnabled: enabled,
           restTimerSeconds: enabled ? seconds : null,
+          restTimerSound: sound,
           updatedAt: new Date().toISOString(),
         };
         data.workouts = workouts;
@@ -70,6 +77,7 @@ export async function PUT(request: Request, { params }: Params) {
         ok: true,
         restTimerEnabled: Boolean(w.restTimerEnabled),
         restTimerSeconds: w.restTimerSeconds ?? null,
+        restTimerSound: normalizeRestTimerSound(w.restTimerSound),
       });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Could not save rest timer";
@@ -83,17 +91,20 @@ export async function PUT(request: Request, { params }: Params) {
       data: {
         restTimerEnabled: enabled,
         restTimerSeconds: enabled ? seconds : null,
+        restTimerSound: sound,
       },
       select: {
         id: true,
         restTimerEnabled: true,
         restTimerSeconds: true,
+        restTimerSound: true,
       },
     });
     return NextResponse.json({
       ok: true,
       restTimerEnabled: updated.restTimerEnabled,
       restTimerSeconds: updated.restTimerSeconds,
+      restTimerSound: normalizeRestTimerSound(updated.restTimerSound),
     });
   } catch {
     return NextResponse.json({ error: "Workout not found" }, { status: 404 });

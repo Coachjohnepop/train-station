@@ -6,6 +6,8 @@ export type SmsWorkoutRecord = {
   createdAt: string;
   restTimerEnabled?: boolean;
   restTimerSeconds?: number;
+  /** whistle | bell | buzzer | cybertruck */
+  restTimerSound?: string;
   exportText?: string | null;
   certifiedAt?: string | null;
 };
