@@ -41,6 +41,9 @@ function rowToSession(row: {
   finishedExercises: string[];
   weights: unknown;
   activeId: string | null;
+  restTimerEnabled?: boolean | null;
+  restTimerSeconds?: number | null;
+  restTimerSound?: string | null;
   updatedBy: string;
   revision: number;
   updatedAt: Date;
@@ -53,6 +56,11 @@ function rowToSession(row: {
     finishedExercises: row.finishedExercises,
     weights: parseWeights(row.weights),
     activeId: row.activeId ?? undefined,
+    restTimerEnabled:
+      typeof row.restTimerEnabled === "boolean" ? row.restTimerEnabled : undefined,
+    restTimerSeconds:
+      typeof row.restTimerSeconds === "number" ? row.restTimerSeconds : undefined,
+    restTimerSound: row.restTimerSound ?? undefined,
     updatedAt: toIso(row.updatedAt),
     updatedBy: row.updatedBy === "member" ? "member" : "coach",
     revision: row.revision,
@@ -68,6 +76,9 @@ function sessionToRow(session: LiveWorkoutSession) {
     finishedExercises: session.finishedExercises,
     weights: session.weights as Prisma.InputJsonValue,
     activeId: session.activeId ?? null,
+    restTimerEnabled: session.restTimerEnabled ?? null,
+    restTimerSeconds: session.restTimerSeconds ?? null,
+    restTimerSound: session.restTimerSound ?? null,
     updatedBy: session.updatedBy,
     revision: session.revision,
     updatedAt: new Date(session.updatedAt),
@@ -107,6 +118,9 @@ export async function upsertLiveWorkoutSessionToDb(session: LiveWorkoutSession):
       finishedExercises: data.finishedExercises,
       weights: data.weights,
       activeId: data.activeId,
+      restTimerEnabled: data.restTimerEnabled,
+      restTimerSeconds: data.restTimerSeconds,
+      restTimerSound: data.restTimerSound,
       updatedBy: data.updatedBy,
       revision: data.revision,
       updatedAt: data.updatedAt,

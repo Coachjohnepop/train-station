@@ -766,6 +766,10 @@ model LiveWorkoutSession {
   finishedExercises String[]
   weights           Json
   activeId          String?
+  /// Coach floor rest controls mirrored to member mid-session.
+  restTimerEnabled  Boolean?
+  restTimerSeconds  Int?
+  restTimerSound    String?
   updatedBy         String
   revision          Int      @default(0)
   updatedAt         DateTime @updatedAt

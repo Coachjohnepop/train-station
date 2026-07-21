@@ -88,7 +88,7 @@ export default function WorkoutRestTimer({
           ? "Alert — closing…"
           : urgent
             ? "Get ready…"
-            : "After each set (skips last set) · closes on rest-end sound"}
+            : "After each set (including last) · closes on rest-end sound"}
       </p>
 
       <div className="workout-rest-player__track" aria-hidden>

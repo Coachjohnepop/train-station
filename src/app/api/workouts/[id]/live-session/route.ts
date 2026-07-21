@@ -16,6 +16,9 @@ const putSchema = z.object({
   finishedExercises: z.array(z.string()),
   weights: z.record(z.string(), z.string()).optional().default({}),
   activeId: z.string().optional(),
+  restTimerEnabled: z.boolean().optional(),
+  restTimerSeconds: z.number().int().min(15).max(600).optional(),
+  restTimerSound: z.string().min(1).max(40).optional(),
   updatedBy: z.enum(["coach", "member"]),
   clear: z.boolean().optional(),
 });
@@ -86,6 +89,10 @@ export async function PUT(request: Request, { params }: Params) {
     finishedExercises: data.finishedExercises,
     weights: data.weights,
     activeId: data.activeId,
+    // Only staff may set rest controls; members never overwrite coach rest.
+    restTimerEnabled: isStaffRole(auth.session.role) ? data.restTimerEnabled : undefined,
+    restTimerSeconds: isStaffRole(auth.session.role) ? data.restTimerSeconds : undefined,
+    restTimerSound: isStaffRole(auth.session.role) ? data.restTimerSound : undefined,
     updatedBy: data.updatedBy,
   });
 

@@ -17,6 +17,10 @@ export type LiveWorkoutSession = {
   finishedExercises: string[];
   weights: Record<string, string>;
   activeId?: string;
+  /** Coach floor rest controls — mirrored so member uses the same countdown. */
+  restTimerEnabled?: boolean;
+  restTimerSeconds?: number;
+  restTimerSound?: string;
   updatedAt: string;
   updatedBy: "coach" | "member";
   revision: number;
@@ -136,6 +140,10 @@ export async function upsertLiveWorkoutSession(input: {
   finishedExercises: string[];
   weights: Record<string, string>;
   activeId?: string;
+  /** Coach-only: rest controls for this live session (member inherits). */
+  restTimerEnabled?: boolean;
+  restTimerSeconds?: number;
+  restTimerSound?: string;
   updatedBy: "coach" | "member";
 }): Promise<{ session: LiveWorkoutSession; blobSaved: boolean }> {
   const sessionDate = normalizeLiveSessionDate(input.sessionDate);
@@ -154,6 +162,21 @@ export async function upsertLiveWorkoutSession(input: {
     }
     if (existing) setHotLiveSession(key, existing);
   }
+
+  // Coach may push rest settings; members omit them so we keep the last coach values.
+  const restTimerEnabled =
+    typeof input.restTimerEnabled === "boolean"
+      ? input.restTimerEnabled
+      : existing?.restTimerEnabled;
+  const restTimerSeconds =
+    typeof input.restTimerSeconds === "number"
+      ? input.restTimerSeconds
+      : existing?.restTimerSeconds;
+  const restTimerSound =
+    typeof input.restTimerSound === "string" && input.restTimerSound.trim()
+      ? input.restTimerSound.trim()
+      : existing?.restTimerSound;
+
   const session: LiveWorkoutSession = {
     userId: input.userId,
     workoutId: input.workoutId,
@@ -165,18 +188,27 @@ export async function upsertLiveWorkoutSession(input: {
     ),
     weights: { ...(existing?.weights ?? {}), ...input.weights },
     activeId: input.activeId ?? existing?.activeId,
+    restTimerEnabled,
+    restTimerSeconds,
+    restTimerSound,
     updatedAt: new Date().toISOString(),
     updatedBy: input.updatedBy,
     revision: (existing?.revision ?? 0) + 1,
   };
 
+  // Hot cache first so SSE subscribers on this instance get the checkoff immediately.
   setHotLiveSession(key, session);
 
-  void persistSession(session).catch((err) => {
+  // Await durable write so the other device's poll (other serverless instance) can read it.
+  let blobSaved = true;
+  try {
+    blobSaved = await persistSession(session);
+  } catch (err) {
     console.warn("live session persist failed", err);
-  });
+    blobSaved = false;
+  }
 
-  return { session, blobSaved: true };
+  return { session, blobSaved };
 }
 
 export async function clearLiveWorkoutSession(input: {

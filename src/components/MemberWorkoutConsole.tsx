@@ -19,7 +19,6 @@ import {
   DEFAULT_REST_TIMER_SECONDS,
   REST_TIMER_PRESETS,
   normalizeRestTimerSeconds,
-  resolveRestSeconds,
 } from "@/lib/rest-timer";
 import {
   DEFAULT_REST_TIMER_SOUND,
@@ -232,6 +231,14 @@ export default function MemberWorkoutConsole({
     preloadRestCompleteSound(sessionRestSound);
   }, [sessionRestSound]);
 
+  useEffect(() => {
+    restSettingsRef.current = {
+      enabled: sessionRestEnabled,
+      seconds: sessionRestSeconds,
+      sound: sessionRestSound,
+    };
+  }, [sessionRestEnabled, sessionRestSeconds, sessionRestSound]);
+
   const toggleRestMute = useCallback(() => {
     setRestMuted((prev) => {
       const next = !prev;
@@ -244,11 +251,19 @@ export default function MemberWorkoutConsole({
     });
   }, []);
 
-  const LIVE_POLL_MS = coachFloorMode ? 900 : 200;
+  // Keep coach + member nearly in lockstep (SSE hot path + fast poll across instances).
+  const LIVE_POLL_MS = 200;
   const liveSessionScope = progressMode === "live" && !!liveSyncUserId && !reviewMode;
   const warmupSyncEnabled = progressMode === "warmup" && !!liveSyncUserId && !reviewMode;
   const [liveSessionHydrated, setLiveSessionHydrated] = useState(false);
+  /** Wait for first remote snapshot so we don't overwrite partner history with empty local state. */
   const livePushEnabled = liveSessionScope && liveSessionHydrated;
+  const pendingImmediatePushRef = useRef(false);
+  const restSettingsRef = useRef({
+    enabled: true,
+    seconds: DEFAULT_REST_TIMER_SECONDS,
+    sound: DEFAULT_REST_TIMER_SOUND as RestTimerSoundId,
+  });
   const lastAppliedRevision = useRef(0);
   const lastAppliedRemoteAt = useRef<string | null>(null);
   const applyingRemote = useRef(false);
@@ -283,6 +298,9 @@ export default function MemberWorkoutConsole({
       finishedExercises: string[];
       weights?: Record<string, string>;
       activeId?: string;
+      restTimerEnabled?: boolean;
+      restTimerSeconds?: number;
+      restTimerSound?: string;
       updatedBy: "coach" | "member";
       revision?: number;
       updatedAt?: string;
@@ -300,6 +318,31 @@ export default function MemberWorkoutConsole({
         lastAppliedRemoteAt.current = session.updatedAt;
       } else {
         return;
+      }
+
+      // Always apply coach rest controls so member matches floor mid-session.
+      if (typeof session.restTimerEnabled === "boolean") {
+        setSessionRestEnabled(session.restTimerEnabled);
+      }
+      if (typeof session.restTimerSeconds === "number" && session.restTimerSeconds > 0) {
+        const secs = normalizeRestTimerSeconds(session.restTimerSeconds);
+        setSessionRestSeconds(secs);
+        // If a countdown is already running, retarget it to the new duration.
+        setRestTimer((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            totalSeconds: secs,
+            endsAt: Date.now() + secs * 1000,
+          };
+        });
+        setRestSecondsLeft(secs);
+      }
+      if (typeof session.restTimerSound === "string" && session.restTimerSound) {
+        const sound = normalizeRestTimerSound(session.restTimerSound);
+        setSessionRestSound(sound);
+        restSoundRef.current = sound;
+        preloadRestCompleteSound(sound);
       }
 
       const sets: Record<string, Set<number>> = {};
@@ -390,6 +433,13 @@ export default function MemberWorkoutConsole({
         updatedBy: instructorName ? ("coach" as const) : ("member" as const),
       };
       if (!coachFloorMode) payload.activeId = snap.activeId;
+      // Coach floor pushes rest controls so member countdown matches mid-session.
+      if (instructorName || coachFloorMode) {
+        const rest = restSettingsRef.current;
+        payload.restTimerEnabled = rest.enabled;
+        payload.restTimerSeconds = normalizeRestTimerSeconds(rest.seconds);
+        payload.restTimerSound = rest.sound;
+      }
       const res = await fetch(`/api/workouts/${workout.workoutId}/live-session`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -426,16 +476,42 @@ export default function MemberWorkoutConsole({
 
   const queueLiveSave = useCallback(
     (immediate = false) => {
-      if (!livePushEnabled && !warmupSyncEnabled) return;
+      if (!livePushEnabled && !warmupSyncEnabled) {
+        if (immediate && liveSessionScope) pendingImmediatePushRef.current = true;
+        return;
+      }
       if (saveTimer.current) clearTimeout(saveTimer.current);
-      const delay = immediate ? 0 : instructorName ? 30 : 100;
+      if (immediate) {
+        // Fire on the next microtask so React state/stateRef settle first.
+        saveTimer.current = setTimeout(() => {
+          if (warmupSyncEnabled) void flushWarmupSave();
+          else void flushLiveSave();
+        }, 0);
+        return;
+      }
+      // Tiny debounce for continuous weight typing; set checkoffs use immediate.
+      const delay = instructorName ? 40 : 60;
       saveTimer.current = setTimeout(() => {
         if (warmupSyncEnabled) void flushWarmupSave();
         else void flushLiveSave();
       }, delay);
     },
-    [livePushEnabled, warmupSyncEnabled, instructorName, flushLiveSave, flushWarmupSave],
+    [
+      livePushEnabled,
+      warmupSyncEnabled,
+      liveSessionScope,
+      instructorName,
+      flushLiveSave,
+      flushWarmupSave,
+    ],
   );
+
+  // Flush any set checkoff that happened before the first remote hydrate.
+  useEffect(() => {
+    if (!livePushEnabled || !pendingImmediatePushRef.current) return;
+    pendingImmediatePushRef.current = false;
+    queueLiveSave(true);
+  }, [livePushEnabled, queueLiveSave]);
 
   useEffect(() => {
     setLiveSessionHydrated(false);
@@ -597,14 +673,11 @@ export default function MemberWorkoutConsole({
   }, []);
 
   const resolveSecondsForBlock = useCallback(
-    (block: MemberExerciseBlock): number | null => {
+    (_block: MemberExerciseBlock): number | null => {
       if (!sessionRestEnabled) return null;
-      // Prefer per-exercise rest when set; otherwise session/workout seconds (coach can change mid-session).
-      return resolveRestSeconds({
-        exerciseRestSec: block.restSec,
-        workoutRestEnabled: true,
-        workoutRestSeconds: sessionRestSeconds,
-      });
+      // Session/floor rest always wins so coach can retune mid-session
+      // even when the workout was deployed with a different duration.
+      return normalizeRestTimerSeconds(sessionRestSeconds);
     },
     [sessionRestEnabled, sessionRestSeconds],
   );
@@ -617,17 +690,7 @@ export default function MemberWorkoutConsole({
       const seconds = resolveSecondsForBlock(block);
       if (!seconds || seconds <= 0) return;
 
-      // Skip rest after the last set of this exercise (gym flow: move on).
-      const prescription = normalizePrescription({
-        setScheme: block.setScheme,
-        repPattern: block.repPattern,
-        reps: block.reps,
-        sets: block.setCount,
-      });
-      const isTimed = isTimedApproach(prescription.approach);
-      const isLastSet = isTimed ? setNum === 1 : setNum === block.setCount;
-      if (isLastSet) return;
-
+      // Rest after every set including the last set of the exercise.
       const endsAt = Date.now() + seconds * 1000;
       setRestCompleting(false);
       setRestSecondsLeft(seconds);
@@ -652,11 +715,37 @@ export default function MemberWorkoutConsole({
       seconds: number,
       sound: RestTimerSoundId = restSoundRef.current,
     ) => {
-      setSessionRestEnabled(enabled);
-      setSessionRestSeconds(normalizeRestTimerSeconds(seconds));
+      const nextSeconds = normalizeRestTimerSeconds(seconds);
       const nextSound = normalizeRestTimerSound(sound);
+      setSessionRestEnabled(enabled);
+      setSessionRestSeconds(nextSeconds);
       setSessionRestSound(nextSound);
       restSoundRef.current = nextSound;
+      restSettingsRef.current = {
+        enabled,
+        seconds: nextSeconds,
+        sound: nextSound,
+      };
+
+      // Live: retarget the open countdown so coach doesn't wait for the next set.
+      if (enabled) {
+        setRestTimer((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            totalSeconds: nextSeconds,
+            endsAt: Date.now() + nextSeconds * 1000,
+          };
+        });
+        setRestSecondsLeft(nextSeconds);
+        setRestCompleting(false);
+        restHornPlayedRef.current = false;
+      } else {
+        setRestTimer(null);
+        setRestSecondsLeft(0);
+        setRestCompleting(false);
+      }
+
       if (!canCoachRestSettings || !workout.workoutId) return;
       setRestSettingsSaving(true);
       try {
@@ -665,17 +754,19 @@ export default function MemberWorkoutConsole({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             enabled,
-            seconds: normalizeRestTimerSeconds(seconds),
+            seconds: nextSeconds,
             sound: nextSound,
           }),
         });
+        // Push to live session so the member picks up the new duration immediately.
+        queueLiveSave(true);
       } catch {
         /* local override still works */
       } finally {
         setRestSettingsSaving(false);
       }
     },
-    [canCoachRestSettings, workout.workoutId],
+    [canCoachRestSettings, workout.workoutId, queueLiveSave],
   );
 
   // Countdown while popup is open; on 0 → buzz → auto-close.
@@ -868,7 +959,7 @@ export default function MemberWorkoutConsole({
           ) : (
             <span className="text-[10px] text-[var(--muted)]">
               {sessionRestEnabled
-                ? `${sessionRestSeconds}s · starts when you check a set`
+                ? `${sessionRestSeconds}s · after every set · live for member`
                 : "Off"}
             </span>
           )}
