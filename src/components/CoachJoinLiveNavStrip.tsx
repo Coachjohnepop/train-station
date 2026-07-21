@@ -70,8 +70,19 @@ export default function CoachJoinLiveNavStrip() {
 
   useEffect(() => {
     void refresh();
-    const id = setInterval(() => void refresh(), 15_000);
-    return () => clearInterval(id);
+    // Keep host/live flag in sync quickly with member Join strip.
+    const id = setInterval(() => void refresh(), 5_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    const onFocus = () => void refresh();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onFocus);
+    };
   }, [refresh]);
 
   async function joinLiveNow() {

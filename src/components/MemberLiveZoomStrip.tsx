@@ -5,6 +5,8 @@
  * - Coach actively hosting → "Join Live Zoom Now"
  * - Otherwise always show a Zoom affordance → "Ping Coach to Start Zoom"
  *   (never hide the whole strip — notifications must not replace Zoom).
+ *
+ * Polls fast so members see Join within a few seconds of coach Join Live Now.
  */
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -23,6 +25,9 @@ type Props = {
   embedded?: boolean;
 };
 
+/** How often members re-check live Zoom status while the app is open. */
+const POLL_MS = 3_000;
+
 export default function MemberLiveZoomStrip({ embedded = false }: Props) {
   const [status, setStatus] = useState<LiveZoomStatus | null>(null);
 
@@ -38,8 +43,21 @@ export default function MemberLiveZoomStrip({ embedded = false }: Props) {
 
   useEffect(() => {
     void load();
-    const id = setInterval(() => void load(), 20_000);
-    return () => clearInterval(id);
+    const id = setInterval(() => void load(), POLL_MS);
+
+    // Immediate refresh when member returns to the tab / app.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    const onFocus = () => void load();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onFocus);
+    };
   }, [load]);
 
   // Join only while coach is actively hosting (not merely because a room object exists).

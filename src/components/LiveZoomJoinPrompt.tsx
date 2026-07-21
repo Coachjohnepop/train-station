@@ -16,6 +16,9 @@ function dismissKey(sessionDate: string) {
   return `ts-zoom-prompt-dismissed:${sessionDate}`;
 }
 
+/** Match sticky strip — members should see Join within a few seconds of coach start. */
+const POLL_MS = 3_000;
+
 export default function LiveZoomJoinPrompt() {
   const [status, setStatus] = useState<LiveZoomStatus | null>(null);
   const [visible, setVisible] = useState(false);
@@ -38,8 +41,18 @@ export default function LiveZoomJoinPrompt() {
 
   useEffect(() => {
     void load();
-    const id = setInterval(() => void load(), 45_000);
-    return () => clearInterval(id);
+    const id = setInterval(() => void load(), POLL_MS);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    const onFocus = () => void load();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onFocus);
+    };
   }, [load]);
 
   function dismiss() {
