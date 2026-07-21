@@ -2,11 +2,11 @@
 
 import { holdBackgroundMusicForMedia } from "@/lib/background-music-control";
 
-const HORN_SRC = "/audio/rest-cybertruck-horn.mp3";
+const HORN_SRC = "/audio/rest-cybertruck-horn-v2.mp3";
 
 let hornAudio: HTMLAudioElement | null = null;
 
-/** Pure dual-tone horn SFX (no speech) — rest timer / legacy callers. */
+/** Real Cybertruck horn sample — rest timer / legacy callers. */
 export function playCybertruckHorn(): void {
   if (typeof window === "undefined") return;
   try {

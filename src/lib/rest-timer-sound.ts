@@ -49,8 +49,8 @@ export const REST_TIMER_SOUND_OPTIONS: RestTimerSoundOption[] = [
   {
     id: "cybertruck",
     label: "Cybertruck honk",
-    hint: "Dual-tone horn blast",
-    src: "/audio/rest-cybertruck-horn.mp3",
+    hint: "Real Cybertruck horn sample",
+    src: "/audio/rest-cybertruck-horn-v2.mp3",
   },
 ];
 
