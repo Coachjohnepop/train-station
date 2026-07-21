@@ -1,9 +1,10 @@
 # The Train Station — Apps, vendors & monthly costs
 
 **Purpose:** One place for John + Jeremy to see **what we use**, **why**, and **what it costs**.  
-**Last updated:** 2026-07-19  
+**Last updated:** 2026-07-21  
 **Currency:** USD. List prices change — treat as a planning sheet, not an invoice.  
-**Actual bills:** fill the **Our plan / ~$/mo** column from Vercel / Stripe / Supabase dashboards when you open them.
+**Actual bills:** fill the **Our plan / ~$/mo** column from Vercel / Stripe / Supabase dashboards when you open them.  
+**John confirmed:** **Grok (xAI) plan = $200/mo** (on John’s card) — include in platform admin fee to reimburse from Jeremy/Stripe.
 
 **Related:** `JEREMY_ADMIN_MANUAL.md` (where tech lives) · `CONTEXT.md` (ops handoff)
 
@@ -25,8 +26,10 @@
 
 | Status | Rough fixed floor | Notes |
 |--------|-------------------|--------|
-| **Today (lean, SMS off)** | **~$0–45/mo** if still on free hosting/DB tiers | + Stripe % on real charges; + domain yearly |
-| **Comfortable prod** | **~$45–80/mo** | e.g. Vercel Pro seat + Supabase Pro, still no Twilio |
+| **Grok alone (John’s plan)** | **$200/mo** | Confirmed 2026-07-21 — SuperGrok / $200 plan on John’s card |
+| **Lean stack + Grok** | **~$200–245/mo** | Grok $200 + free/Hobby hosting/DB + domain ~$1–2 |
+| **Comfortable prod + Grok** | **~$245–280/mo** | Grok $200 + Vercel Pro ~$20 + Supabase Pro ~$25 + domain |
+| **Suggested platform admin → John** | **$275/mo** starting (or **$200** pure Grok reimbursement) | Separate from 5% membership fee pool; true-up quarterly |
 | **+ Twilio live** | **+~$1–5 retainer** + **USAGE** per segment | Number rental + A2P/carrier fees can raise effective $/text |
 | **+ Zoom paid** | **+$0–160/mo** | Only if free 40‑min host isn’t enough |
 
@@ -51,7 +54,7 @@
 - **Venmo** (LIVE) → Jeremy’s business Venmo (`@JeremyByrdCSCS`) → **same business bank story**.  
 - John’s share is **not** a second merchant and **not** auto-split at checkout — Connect later (`STRIPE_COMMISSION_SETUP.md` / `CONTEXT.md` / `JEREMY_ADMIN_MANUAL.md`).
 | **Zoom** | Live class embed / host | FREE or 🔴 **RETAINER** | Basic free (often **40 min** group limits); Pro/Business paid plans higher | Free host assumed unless upgraded | Jeremy account · John app credentials | **Connect path live**; Marketplace creds need restore on Vercel |
-| **xAI (Grok API)** | Optional AI (coach help / lesson-plan style features) | USAGE | Per-token API pricing (see x.ai) | **$0** if unused; usage when keyed | John | **Optional** (`XAI_API_KEY`) |
+| **xAI (Grok)** | Build agent + optional in-app AI | 🔴 **RETAINER** (+ API usage if keyed) | **$200/mo** plan (John confirmed) | **$200/mo** | John | **Live — $200/mo on John’s card** |
 | **Twilio** | Carrier SMS in/out, delivery receipts | 🔴 **RETAINER** (number) + **USAGE** (segments) + possible A2P fees | US long code ~**$1.15/mo**; SMS ~**$0.0079–0.0083**/segment + **carrier** fees; toll-free ~**$2.15/mo** | **$0 now — PARKED** | John (`john@thetrainstation.co`, John’s cell on account) | **PARKED** — prefer Messages / email hub |
 
 ---
