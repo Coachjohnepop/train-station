@@ -102,6 +102,22 @@ Redeploy after saving.
 
 ---
 
+## Platform admin fee (ops reimbursement — separate from 5% MRR)
+
+**Agreed 2026-07-21:** **$275/month** from Jeremy’s business (Stripe) → John.
+
+| What | Detail |
+|------|--------|
+| **Amount** | **$275/mo** |
+| **Covers** | Grok **$200/mo** (John’s plan) + Vercel/Supabase/Resend/domain buffer |
+| **Not** | Membership 5%/30% fee pool · tips · Stripe card processing fees |
+| **How** | Monthly Connect transfer (or invoice) labeled “Platform admin (Grok + infra)” once John’s Express is Ready |
+| **Docs** | `VENDOR_COSTS.md` · Desktop PDF `Train-Station-Platform-Costs-and-Admin-Fee.pdf` |
+
+True-up quarterly against real invoices. Raise if Twilio un-parked or Grok tier changes.
+
+---
+
 ## Step 3 — Admin → Dev & partnership (fees)
 
 1. Open **https://www.thetrainstation.co/admin/commission** (nav label: **Dev & partnership**)
@@ -110,6 +126,7 @@ Redeploy after saving.
 4. **Revenue feeds** card shows: John’s est. fee payout + company retained %
 5. After live signups: **Preview payout** → **Run payout now**
 6. **Payout minimum $400** (fee pool total) — Run payout stays blocked until the pool is ≥ $400. Change with `STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS`.
+7. **Also track $275 platform admin** (ops) as a separate monthly transfer — not the same button as MRR fee pool unless product adds a dedicated “Admin fee” action.
 
 ### Adding shareholders later
 

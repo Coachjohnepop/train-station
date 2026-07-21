@@ -29,7 +29,7 @@
 | **Grok alone (John’s plan)** | **$200/mo** | Confirmed 2026-07-21 — SuperGrok / $200 plan on John’s card |
 | **Lean stack + Grok** | **~$200–245/mo** | Grok $200 + free/Hobby hosting/DB + domain ~$1–2 |
 | **Comfortable prod + Grok** | **~$245–280/mo** | Grok $200 + Vercel Pro ~$20 + Supabase Pro ~$25 + domain |
-| **Suggested platform admin → John** | **$275/mo** starting (or **$200** pure Grok reimbursement) | Separate from 5% membership fee pool; true-up quarterly |
+| **Platform admin → John (AGREED)** | **$275/mo** | Locked 2026-07-21: Grok $200 + infra buffer. Separate from 5% MRR fee pool; true-up quarterly vs invoices |
 | **+ Twilio live** | **+~$1–5 retainer** + **USAGE** per segment | Number rental + A2P/carrier fees can raise effective $/text |
 | **+ Zoom paid** | **+$0–160/mo** | Only if free 40‑min host isn’t enough |
 

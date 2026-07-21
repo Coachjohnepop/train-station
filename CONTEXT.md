@@ -333,8 +333,14 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-07-20 (PM residual pass)  
-**Status:** **Venmo LIVE** · Stripe **Test** · SMS **PARKED**. Residual five-item pass in progress (phone-pass code OK; whistle + downgrade + Live checklist shipped).
+**Date:** 2026-07-21  
+**Status:** **Venmo LIVE** · Stripe **Live activation in progress** (Jeremy unregistered business onboarding; products Coach $25 / Business $50 / 1st Class $850 created on Live acct) · SMS **PARKED**.
+
+### Jul 21 — Money agreements (John + Jeremy)
+- **Platform admin fee → John: $275/mo AGREED** — reimburses Grok **$200/mo** (John’s card) + Vercel/Supabase/Resend/domain buffer. **Separate** from 5% membership Dev & partnership pool. PDF on John’s Desktop: `Train-Station-Platform-Costs-and-Admin-Fee.pdf`. Source sheet: `VENDOR_COSTS.md`.
+- **Membership split (product):** 100% card money → Jeremy master Stripe; partner fee pool **5% of MRR** (milestone → 30% after $5k) with John **100% of pool** via Connect later. Not auto-split at swipe.
+- **In-app tips** (planned): custom amount, one-time Checkout, default 100% to Jeremy.
+- **Next Stripe Live:** Live `sk`/`pk`/`whsec` + three Live `price_…` on Vercel Production → redeploy → one real $25 → Connect for John.
 
 ### Jul 20 PM — Admin Billing desk
 - **New:** Platform **Admin → Billing** (`/admin/billing`) — Overview KPIs (30d net/gross, MRR, balance), Transactions (search + full/partial refund), Refunds ledger, Discounts (create Stripe coupon + promo code, enable/disable, optional app referral map), Subscriptions list.
