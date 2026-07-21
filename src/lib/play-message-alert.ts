@@ -1,11 +1,11 @@
 /**
  * Short alert when unread messages increase while the app is open.
- * Train whistle (message alerts). Rest-timer still uses cybertruck horn separately.
+ * Pure dual-tone train-whistle SFX (no speech / no vocal sample).
  */
 
 import { holdBackgroundMusicForMedia } from "@/lib/background-music-control";
 
-const ALERT_SRC = "/audio/train-whistle.mp3";
+const ALERT_SRC = "/audio/rest-train-whistle.mp3";
 const SOUND_OFF_KEY = "ts-message-alert-muted";
 
 let alertAudio: HTMLAudioElement | null = null;

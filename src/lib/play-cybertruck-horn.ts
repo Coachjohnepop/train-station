@@ -2,11 +2,11 @@
 
 import { holdBackgroundMusicForMedia } from "@/lib/background-music-control";
 
-const HORN_SRC = "/audio/cybertruck-horn.mp3";
+const HORN_SRC = "/audio/rest-cybertruck-horn.mp3";
 
 let hornAudio: HTMLAudioElement | null = null;
 
-/** Tesla Cybertruck-style horn — plays when the rest timer hits zero. */
+/** Pure dual-tone horn SFX (no speech) — rest timer / legacy callers. */
 export function playCybertruckHorn(): void {
   if (typeof window === "undefined") return;
   try {

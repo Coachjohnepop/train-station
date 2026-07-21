@@ -23,30 +23,34 @@ export type RestTimerSoundOption = {
   src: string;
 };
 
+/**
+ * All clips are pure instrument / effect synthesis — no speech or vocal samples.
+ * Filenames are rest-*-v SFX so clients don't keep an old talking clip cached.
+ */
 export const REST_TIMER_SOUND_OPTIONS: RestTimerSoundOption[] = [
   {
     id: "whistle",
     label: "Train whistle",
-    hint: "Loud station blast (default)",
-    src: "/audio/train-whistle.mp3",
+    hint: "Dual-tone station blast (default)",
+    src: "/audio/rest-train-whistle.mp3",
   },
   {
     id: "bell",
     label: "Bell",
-    hint: "Two-tone ding",
+    hint: "Bright ding + ring",
     src: "/audio/rest-bell.mp3",
   },
   {
     id: "buzzer",
     label: "Buzzer",
-    hint: "Game-show buzz",
+    hint: "Harsh game-show buzz",
     src: "/audio/rest-buzzer.mp3",
   },
   {
     id: "cybertruck",
     label: "Cybertruck honk",
-    hint: "Tesla-style horn",
-    src: "/audio/cybertruck-horn.mp3",
+    hint: "Dual-tone horn blast",
+    src: "/audio/rest-cybertruck-horn.mp3",
   },
 ];
 
