@@ -7,6 +7,7 @@ import { listCoachMembersForUi } from "@/lib/sms";
 import { getSessionUser } from "@/lib/auth";
 import { canAccessCoachAdmin } from "@/lib/staff-access";
 import { addDaysIso } from "@/lib/workout-day-visibility";
+import { localTodayIso } from "@/lib/program-calendar";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ export default async function AdminDayPage({ searchParams }: Props) {
 
   const sp = await searchParams;
   await Promise.all([hydrateTodaySessions(), hydrateSmsWorkouts()]);
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = localTodayIso();
   const sessionDate = parseSessionDate(sp.date, todayKey);
   const dayPlan = await buildCoachDayPlan(sessionDate);
   const coachMembers = (await listCoachMembersForUi()).map((m) => ({

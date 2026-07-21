@@ -4,6 +4,7 @@ import { hydrateTodaySessions } from "@/lib/today-sessions";
 import { hydrateSmsWorkouts } from "@/lib/sms-generated-workouts";
 import { getSessionUser } from "@/lib/auth";
 import { canAccessCoachAdmin } from "@/lib/staff-access";
+import { localTodayIso } from "@/lib/program-calendar";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,7 @@ export default async function AdminTodayPage() {
   }
 
   await Promise.all([hydrateTodaySessions(), hydrateSmsWorkouts()]);
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = localTodayIso();
   const dayPlan = await buildCoachDayPlan(todayKey);
 
   return (

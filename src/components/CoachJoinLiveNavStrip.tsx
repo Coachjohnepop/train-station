@@ -6,6 +6,7 @@
  */
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { localTodayIso } from "@/lib/program-calendar";
 
 type ZoomRoom = {
   hostUrl: string;
@@ -27,7 +28,8 @@ export default function CoachJoinLiveNavStrip() {
   const [hint, setHint] = useState<string | null>(null);
   const [hostStarted, setHostStarted] = useState(false);
 
-  const sessionDate = new Date().toISOString().slice(0, 10);
+  // Must match member live-zoom status (APP_TIMEZONE / America/Los_Angeles) — not UTC.
+  const sessionDate = localTodayIso();
 
   const refresh = useCallback(async () => {
     try {

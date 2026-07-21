@@ -1,4 +1,5 @@
 import CoachLiveFloor from "@/components/CoachLiveFloor";
+import { localTodayIso } from "@/lib/program-calendar";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +9,7 @@ type Props = {
 
 export default async function AdminLiveFloorPage({ searchParams }: Props) {
   const sp = await searchParams;
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = localTodayIso();
   const sessionDate = sp.date || todayKey;
 
   return (
