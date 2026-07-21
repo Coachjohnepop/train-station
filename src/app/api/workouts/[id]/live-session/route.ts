@@ -101,10 +101,10 @@ export async function PUT(request: Request, { params }: Params) {
     finishedExercises: data.finishedExercises,
     weights: data.weights,
     activeId: data.activeId,
-    // Only staff may set rest controls; members never overwrite coach rest.
-    restTimerEnabled: isStaffRole(auth.session.role) ? data.restTimerEnabled : undefined,
-    restTimerSeconds: isStaffRole(auth.session.role) ? data.restTimerSeconds : undefined,
-    restTimerSound: isStaffRole(auth.session.role) ? data.restTimerSound : undefined,
+    // Either side may push rest controls (coach floor or member after coach enabled).
+    restTimerEnabled: data.restTimerEnabled,
+    restTimerSeconds: data.restTimerSeconds,
+    restTimerSound: data.restTimerSound,
     // Either side can start/clear the shared rest popup.
     restActiveProvided,
     restActive: restActiveProvided ? data.restActive ?? null : undefined,

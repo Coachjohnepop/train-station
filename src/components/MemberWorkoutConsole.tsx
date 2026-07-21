@@ -213,11 +213,17 @@ export default function MemberWorkoutConsole({
         ? normalizeRestTimerSeconds(firstExerciseRest)
         : DEFAULT_REST_TIMER_SECONDS);
     setSessionRestSeconds(seeded);
-    // Honor workout-level rest toggle when set; otherwise default ON for the floor.
-    setSessionRestEnabled(workout.restTimerEnabled !== false);
+    // Live floor defaults rest ON so set checkoffs always spin a timer unless coach turns it off.
+    const enabled = workout.restTimerEnabled !== false;
+    setSessionRestEnabled(enabled);
     const sound = normalizeRestTimerSound(workout.restTimerSound);
     setSessionRestSound(sound);
     restSoundRef.current = sound;
+    restSettingsRef.current = {
+      enabled,
+      seconds: seeded,
+      sound,
+    };
     preloadRestCompleteSound(sound);
   }, [
     workout.workoutId,
@@ -267,6 +273,8 @@ export default function MemberWorkoutConsole({
   });
   /** Shared rest popup (epoch endsAt) — pushed so partner spins up the same timer. */
   const restActiveRef = useRef<LiveRestActive | null>(null);
+  /** Only push restActive when we start/clear it — never wipe partner rest with accidental null. */
+  const restActiveDirtyRef = useRef(false);
   const lastAppliedRestEndsAt = useRef(0);
   const lastAppliedRevision = useRef(0);
   const lastAppliedRemoteAt = useRef<string | null>(null);
@@ -495,12 +503,19 @@ export default function MemberWorkoutConsole({
         finishedExercises: Array.from(snap.finishedExercises),
         weights: snap.weights,
         updatedBy: asCoach ? ("coach" as const) : ("member" as const),
-        // Shared rest popup (null clears).
-        restActive: restActiveRef.current,
       };
+      // Only send restActive when we intentionally started/cleared it.
+      // Omitting keeps the partner's countdown from being wiped by a null save.
+      if (restActiveDirtyRef.current) {
+        payload.restActive = restActiveRef.current;
+        restActiveDirtyRef.current = false;
+      } else if (restActiveRef.current) {
+        payload.restActive = restActiveRef.current;
+      }
       if (!coachFloorMode) payload.activeId = snap.activeId;
       // Coach floor pushes rest controls so member countdown matches mid-session.
-      if (asCoach) {
+      // Members also echo rest controls once known so both stay aligned.
+      {
         const rest = restSettingsRef.current;
         payload.restTimerEnabled = rest.enabled;
         payload.restTimerSeconds = normalizeRestTimerSeconds(rest.seconds);
@@ -737,6 +752,7 @@ export default function MemberWorkoutConsole({
     setRestSecondsLeft(0);
     setRestCompleting(false);
     restActiveRef.current = null;
+    restActiveDirtyRef.current = true;
     lastAppliedRestEndsAt.current = 0;
     // Push clear so partner closes the shared rest popup.
     if (livePushEnabled) queueLiveSave(true);
@@ -745,10 +761,11 @@ export default function MemberWorkoutConsole({
   const resolveSecondsForBlock = useCallback(
     (_block: MemberExerciseBlock): number | null => {
       const rest = restSettingsRef.current;
-      if (!rest.enabled) return null;
+      // Live sessions default rest ON — only skip when coach explicitly disabled.
+      if (rest.enabled === false) return null;
       // Session/floor rest always wins so coach can retune mid-session
       // even when the workout was deployed with a different duration.
-      return normalizeRestTimerSeconds(rest.seconds);
+      return normalizeRestTimerSeconds(rest.seconds || DEFAULT_REST_TIMER_SECONDS);
     },
     [],
   );
@@ -757,6 +774,18 @@ export default function MemberWorkoutConsole({
     (blockId: string, setNum: number, opts?: { fromRemote?: boolean; silentStart?: boolean }) => {
       const block = workout.exercises.find((e) => e.id === blockId);
       if (!block) return;
+
+      // Ensure rest is on for live set checkoffs unless coach turned it off.
+      if (restSettingsRef.current.enabled !== false) {
+        restSettingsRef.current = {
+          ...restSettingsRef.current,
+          enabled: true,
+          seconds: normalizeRestTimerSeconds(
+            restSettingsRef.current.seconds || DEFAULT_REST_TIMER_SECONDS,
+          ),
+        };
+        setSessionRestEnabled(true);
+      }
 
       const seconds = resolveSecondsForBlock(block);
       if (!seconds || seconds <= 0) return;
@@ -793,6 +822,7 @@ export default function MemberWorkoutConsole({
           totalSeconds,
           startedBy: instructorName || coachFloorMode ? "coach" : "member",
         };
+        restActiveDirtyRef.current = true;
         // Push set + restActive together so partner timer spins immediately.
         queueLiveSave(true);
       }
