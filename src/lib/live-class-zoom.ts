@@ -3,6 +3,14 @@ import "server-only";
 import path from "path";
 import { getBookings } from "@/lib/booking";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import {
+  getLiveClassZoomFromDb,
+  upsertLiveClassZoomToDb,
+} from "@/lib/live-class-zoom-db";
+import {
+  getHotLiveClassZoom,
+  setHotLiveClassZoom,
+} from "@/lib/live-class-zoom-hot";
 import { normalizeLiveSessionDate } from "@/lib/live-workout-session";
 import { getSessionsForDate, hydrateTodaySessions } from "@/lib/today-sessions";
 import { createZoomMeeting } from "@/lib/zoom";
@@ -46,6 +54,10 @@ async function loadStore(opts?: { preferFresh?: boolean }): Promise<LiveClassZoo
 }
 
 async function saveStore(store: LiveClassZoomStore): Promise<void> {
+  // Publish hot immediately so SSE members flip to Join without waiting on Blob CDN.
+  for (const [date, record] of Object.entries(store)) {
+    setHotLiveClassZoom(date, record);
+  }
   await persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
@@ -56,10 +68,30 @@ async function saveStore(store: LiveClassZoomStore): Promise<void> {
   });
 }
 
+async function publishRecord(record: LiveClassZoomRecord): Promise<void> {
+  setHotLiveClassZoom(record.sessionDate, record);
+  void upsertLiveClassZoomToDb(record.sessionDate, record);
+}
+
 export async function getLiveClassZoom(sessionDate?: string): Promise<LiveClassZoomRecord | null> {
   const date = normalizeLiveSessionDate(sessionDate);
+
+  const hot = getHotLiveClassZoom(date);
+  if (hot) return hot;
+
+  const fromDb = await getLiveClassZoomFromDb(date);
+  if (fromDb) {
+    setHotLiveClassZoom(date, fromDb);
+    return fromDb;
+  }
+
   const store = await loadStore({ preferFresh: true });
-  return store[date] ?? null;
+  const record = store[date] ?? null;
+  if (record) {
+    setHotLiveClassZoom(date, record);
+    void upsertLiveClassZoomToDb(date, record);
+  }
+  return record;
 }
 
 function sessionDateFromIso(iso: string): string {
@@ -215,6 +247,7 @@ export async function ensureLiveClassZoom(
 
   store[date] = record;
   await saveStore(store);
+  await publishRecord(record);
   return { record, created: true };
 }
 
@@ -263,9 +296,12 @@ export async function notifyLiveClassZoomAttendees(
 export async function markLiveClassZoomNotified(sessionDate?: string): Promise<void> {
   const date = normalizeLiveSessionDate(sessionDate);
   const store = await loadStore({ preferFresh: true });
-  const record = store[date];
+  const record = store[date] ?? getHotLiveClassZoom(date);
   if (!record || record.notifiedAt) return;
-  store[date] = { ...record, notifiedAt: new Date().toISOString() };
+  const next = { ...record, notifiedAt: new Date().toISOString() };
+  store[date] = next;
+  // Hot first — members listening on SSE flip immediately.
+  await publishRecord(next);
   await saveStore(store);
 }
 
@@ -275,10 +311,13 @@ export const LIVE_CLASS_HOST_ACTIVE_MS = 2 * 60 * 60 * 1000; // 2 hours
 export async function markLiveClassHostStarted(sessionDate?: string): Promise<void> {
   const date = normalizeLiveSessionDate(sessionDate);
   const store = await loadStore({ preferFresh: true });
-  const record = store[date];
+  const record = store[date] ?? getHotLiveClassZoom(date);
   if (!record) return;
   // Always refresh start time when coach re-starts so members get a fresh window.
-  store[date] = { ...record, hostStartedAt: new Date().toISOString() };
+  const next = { ...record, hostStartedAt: new Date().toISOString() };
+  store[date] = next;
+  // Hot + DB first so member Join is instant; Blob follows.
+  await publishRecord(next);
   await saveStore(store);
 }
 
@@ -286,10 +325,12 @@ export async function markLiveClassHostStarted(sessionDate?: string): Promise<vo
 export async function clearLiveClassHostStarted(sessionDate?: string): Promise<void> {
   const date = normalizeLiveSessionDate(sessionDate);
   const store = await loadStore({ preferFresh: true });
-  const record = store[date];
+  const record = store[date] ?? getHotLiveClassZoom(date);
   if (!record || !record.hostStartedAt) return;
   const { hostStartedAt: _drop, ...rest } = record;
-  store[date] = rest as LiveClassZoomRecord;
+  const next = rest as LiveClassZoomRecord;
+  store[date] = next;
+  await publishRecord(next);
   await saveStore(store);
 }
 

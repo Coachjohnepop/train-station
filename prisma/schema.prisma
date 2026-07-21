@@ -778,6 +778,14 @@ model LiveWorkoutSession {
   @@index([userId, sessionDate])
 }
 
+/// Shared class Zoom room for a business day — durable host/join state for instant member Join.
+model LiveClassZoomDay {
+  sessionDate String   @id
+  /// Full LiveClassZoomRecord JSON
+  record      Json
+  updatedAt   DateTime @updatedAt
+}
+
 model CoachSettings {
   id                        String   @id @default("default")
   coachPhone                String?

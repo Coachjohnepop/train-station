@@ -1,59 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-
-type LiveZoomStatus = {
-  sessionDate: string;
-  roomReady: boolean;
-  hostStarted: boolean;
-  canJoin: boolean;
-  joinUrl: string | null;
-  livePageUrl: string;
-};
+import { useEffect, useState } from "react";
+import { useMemberLiveZoomStatus } from "@/lib/use-member-live-zoom-status";
 
 function dismissKey(sessionDate: string) {
   return `ts-zoom-prompt-dismissed:${sessionDate}`;
 }
 
-/** Match sticky strip — members should see Join within a few seconds of coach start. */
-const POLL_MS = 3_000;
-
 export default function LiveZoomJoinPrompt() {
-  const [status, setStatus] = useState<LiveZoomStatus | null>(null);
+  const status = useMemberLiveZoomStatus();
   const [visible, setVisible] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch("/api/member/live-zoom/status", { cache: "no-store" });
-      const data = (await res.json()) as LiveZoomStatus;
-      if (!res.ok) return;
-      setStatus(data);
-      const dismissed = sessionStorage.getItem(dismissKey(data.sessionDate)) === "1";
-      // Only when coach has actually started hosting — not merely because a room exists.
-      const shouldShow =
-        Boolean(data.hostStarted && data.canJoin && data.joinUrl) && !dismissed;
-      setVisible(shouldShow);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
   useEffect(() => {
-    void load();
-    const id = setInterval(() => void load(), POLL_MS);
-    const onVisible = () => {
-      if (document.visibilityState === "visible") void load();
-    };
-    const onFocus = () => void load();
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", onFocus);
-    return () => {
-      clearInterval(id);
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", onFocus);
-    };
-  }, [load]);
+    if (!status) {
+      setVisible(false);
+      return;
+    }
+    const dismissed = sessionStorage.getItem(dismissKey(status.sessionDate)) === "1";
+    const shouldShow =
+      Boolean(status.hostStarted && status.canJoin && status.joinUrl) && !dismissed;
+    setVisible(shouldShow);
+  }, [status]);
 
   function dismiss() {
     if (status) sessionStorage.setItem(dismissKey(status.sessionDate), "1");

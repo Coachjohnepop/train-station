@@ -60,20 +60,24 @@ export async function POST(request: Request) {
       await markLiveClassZoomNotified(record.sessionDate);
     }
     // Only the real Zoom host marks the room "live" for members.
+    let hostStarted = false;
     if (startHost && open.isHost && !record.demo) {
       await markLiveClassHostStarted(record.sessionDate);
+      hostStarted = true;
     }
+    // Re-read so response (and any follow-up) includes hostStartedAt.
+    const fresh = (await getLiveClassZoom(record.sessionDate)) || record;
     return NextResponse.json({
       ok: true,
       created,
       notified,
-      hostStarted: startHost && open.isHost && !record.demo,
+      hostStarted,
       ready: await zoomReady({ coachEmail }),
       sdkConfigured: zoomMeetingSdkConfigured(),
       maxDurationMin: ZOOM_FREE_MAX_DURATION_MIN,
       coachStartsFirst: true,
-      demo: record.demo === true,
-      zoom: zoomPayload(record, coachEmail),
+      demo: fresh.demo === true,
+      zoom: zoomPayload(fresh, coachEmail),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not create live class Zoom room.";

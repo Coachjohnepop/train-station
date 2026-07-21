@@ -4,66 +4,23 @@
  * Sticky top strip for members:
  * - Coach actively hosting → "Join Live Zoom Now"
  * - Otherwise always show a Zoom affordance → "Ping Coach to Start Zoom"
- *   (never hide the whole strip — notifications must not replace Zoom).
  *
- * Polls fast so members see Join within a few seconds of coach Join Live Now.
+ * Uses SSE + 500ms poll so Join flips nearly instantly when coach starts Zoom.
  */
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-
-type LiveZoomStatus = {
-  sessionDate: string;
-  roomReady: boolean;
-  hostStarted: boolean;
-  canJoin: boolean;
-  joinUrl: string | null;
-  livePageUrl: string;
-};
+import { useMemberLiveZoomStatus } from "@/lib/use-member-live-zoom-status";
 
 type Props = {
   /** When true, strip is nested in sticky chrome (no own sticky). */
   embedded?: boolean;
 };
 
-/** How often members re-check live Zoom status while the app is open. */
-const POLL_MS = 3_000;
-
 export default function MemberLiveZoomStrip({ embedded = false }: Props) {
-  const [status, setStatus] = useState<LiveZoomStatus | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch("/api/member/live-zoom/status", { cache: "no-store" });
-      if (!res.ok) return;
-      setStatus((await res.json()) as LiveZoomStatus);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-    const id = setInterval(() => void load(), POLL_MS);
-
-    // Immediate refresh when member returns to the tab / app.
-    const onVisible = () => {
-      if (document.visibilityState === "visible") void load();
-    };
-    const onFocus = () => void load();
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", onFocus);
-
-    return () => {
-      clearInterval(id);
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", onFocus);
-    };
-  }, [load]);
+  const status = useMemberLiveZoomStatus();
 
   // Join only while coach is actively hosting (not merely because a room object exists).
   const showJoin = Boolean(status?.canJoin && status?.joinUrl && status?.hostStarted);
 
-  // Quiet loading — avoid flashing a false Join before the first status response.
   if (!status) {
     return (
       <div
