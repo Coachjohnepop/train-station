@@ -23,6 +23,7 @@ import {
   customerSavedCardReadyForCheckoutPrefill,
   promoteCustomerPaymentMethodsForCheckout,
 } from "@/lib/stripe-payment-method-persist";
+import { buildMembershipTipOptionalItems } from "@/lib/stripe-checkout-tips";
 
 type StripeClient = import("stripe").default;
 
@@ -220,6 +221,19 @@ function applyReferralDiscounts(
   sessionParams.allow_promotion_codes = true;
 }
 
+/** Optional coach tips at membership Checkout (fixed presets and/or $1 adjustable). */
+function applyMembershipTipOptionalItems(
+  sessionParams: import("stripe").Stripe.Checkout.SessionCreateParams,
+) {
+  const tips = buildMembershipTipOptionalItems();
+  if (tips.length === 0) return;
+  sessionParams.optional_items = tips;
+  sessionParams.metadata = {
+    ...(sessionParams.metadata || {}),
+    tipsEnabled: "true",
+  };
+}
+
 export async function createSignupCheckoutSession(input: {
   userId: string;
   email: string;
@@ -348,6 +362,7 @@ export async function createSignupCheckoutSession(input: {
       },
     };
     applyReferralDiscounts(sessionParams, input.discount);
+    applyMembershipTipOptionalItems(sessionParams);
     const session = await createCheckoutSession(stripe, sessionParams);
     if ("error" in session) return session;
     return { ...session, hasSavedCard: customer.hasSavedCard };
@@ -376,6 +391,8 @@ export async function createSignupCheckoutSession(input: {
       },
     };
     applyReferralDiscounts(sessionParams, input.discount);
+    // One-time tip add-ons alongside the subscription (optional at Checkout).
+    applyMembershipTipOptionalItems(sessionParams);
     const session = await createCheckoutSession(stripe, sessionParams);
     if ("error" in session) return session;
     return { ...session, hasSavedCard: customer.hasSavedCard };

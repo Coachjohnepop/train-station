@@ -49,3 +49,44 @@ STRIPE_PRICE_MERCH_DEFAULT=price_…    # optional
 ```
 
 See also: `STRIPE_DEMO_SCRIPT.md`, `STRIPE_COMMISSION_SETUP.md`
+
+---
+
+## Coach tip (optional cross-sell at Checkout)
+
+Tips are **one-time** optional add-ons on membership Checkout (Coach / Business / 1st Class).  
+Money still lands on **Jeremy’s master Stripe**. Does **not** change membership ticket.
+
+### Stripe Dashboard (Live)
+
+1. **Product catalog → + Create product**
+   - Name: **Tip your coach** (or “Support the Train Station”)
+   - Description: Optional tip — thank you!
+2. Add **one-time** prices (recommended presets):
+   - **$5**, **$10**, **$25**, **$50** (one time each)
+3. Optional **custom amount** style:
+   - One-time price **$1.00** named “Custom tip ($1 units)”
+   - In app, quantity is adjustable 1–200 → tip $1–$200
+4. Copy each **Price ID** (`price_…`).
+5. (Optional) On **Coach Class** / **Business Class** product pages → **Cross-sells** → add “Tip your coach”.  
+   That helps Payment Links; **our embedded Checkout uses `optional_items` + env** below.
+
+### Vercel env (Production)
+
+```bash
+# Fixed tip chips (any subset)
+STRIPE_PRICE_TIP_5=price_…
+STRIPE_PRICE_TIP_10=price_…
+STRIPE_PRICE_TIP_25=price_…
+STRIPE_PRICE_TIP_50=price_…
+
+# Optional: $1 unit adjustable custom tip
+STRIPE_PRICE_TIP_CUSTOM=price_…
+
+# Or comma list:
+# STRIPE_PRICE_TIPS=price_a,price_b,price_c
+```
+
+Redeploy after saving. Membership Checkout will offer tips as optional line items.
+
+**Webhook:** membership still marks paid from the subscription/session; tip amounts are extra one-time charges on the same Checkout (no plan change).
