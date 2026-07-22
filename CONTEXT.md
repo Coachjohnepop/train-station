@@ -333,14 +333,29 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-07-21  
-**Status:** **Venmo LIVE** · Stripe **Live activation in progress** (Jeremy unregistered business onboarding; products Coach $25 / Business $50 / 1st Class $850 created on Live acct) · SMS **PARKED**.
+**Date:** 2026-07-21 (EOD — pick up tomorrow)  
+**Status:** **Venmo LIVE** · Stripe **Live account onboarding** (unregistered business; Live products exist) · prod site still **`stripeTestMode: true`** · SMS **PARKED**.
+
+### Jul 21 EOD — pick up tomorrow (Stripe Live + tips)
+
+**Do next (in order):**
+1. **Tip product in Live Stripe** — run on John’s Mac (agent cannot read `sk_live` from Vercel):
+   ```bash
+   cd ~/projects/train-station
+   STRIPE_SECRET_KEY='sk_live_…' npx tsx scripts/create-stripe-tip-products.mjs
+   ```
+   Paste only the printed `STRIPE_PRICE_TIP_*=price_…` lines into Vercel Production (or hand to agent). Code already supports Checkout `optional_items` (`src/lib/stripe-checkout-tips.ts`).
+2. **Membership Live prices** — open each Live product → copy **`price_…`** (not `prod_…`) for Coach $25/mo, Business $50/mo, 1st Class $850 one-time → Vercel `STRIPE_PRICE_MEMBER` / `BUSINESS` / `PRO`.
+3. **Live keys on Vercel Production** — `sk_live_`, `pk_live_`, Live webhook `whsec_` for `https://www.thetrainstation.co/api/stripe/webhook` → redeploy.
+4. **Verify** `/api/payments/public` → `stripeTestMode: false` → real Amex $25 smoke (refund OK).
+5. **John Connect Express** for 5% MRR pool + **$275/mo platform admin** transfer path.
+
+**Live Stripe account id (Jeremy / The Train Station):** `acct_1TmKSWQWWnajU9uyk` (not sandbox `acct_1TmKT3…`).
 
 ### Jul 21 — Money agreements (John + Jeremy)
-- **Platform admin fee → John: $275/mo AGREED** — reimburses Grok **$200/mo** (John’s card) + Vercel/Supabase/Resend/domain buffer. **Separate** from 5% membership Dev & partnership pool. PDF on John’s Desktop: `Train-Station-Platform-Costs-and-Admin-Fee.pdf`. Source sheet: `VENDOR_COSTS.md`.
-- **Membership split (product):** 100% card money → Jeremy master Stripe; partner fee pool **5% of MRR** (milestone → 30% after $5k) with John **100% of pool** via Connect later. Not auto-split at swipe.
-- **In-app tips** (planned): custom amount, one-time Checkout, default 100% to Jeremy.
-- **Next Stripe Live:** Live `sk`/`pk`/`whsec` + three Live `price_…` on Vercel Production → redeploy → one real $25 → Connect for John.
+- **Platform admin fee → John: $275/mo AGREED** — Grok **$200/mo** + infra buffer. Separate from 5% MRR fee pool. PDF: Desktop `Train-Station-Platform-Costs-and-Admin-Fee.pdf` · `VENDOR_COSTS.md`.
+- **Membership split:** 100% → Jeremy master Stripe; **5% of MRR** partner pool (John 100% of pool) via Connect later. Not auto-split at swipe.
+- **Tips:** Dashboard tip product + env price IDs; optional add-on at membership Checkout (not a plan change).
 
 ### Jul 20 PM — Admin Billing desk
 - **New:** Platform **Admin → Billing** (`/admin/billing`) — Overview KPIs (30d net/gross, MRR, balance), Transactions (search + full/partial refund), Refunds ledger, Discounts (create Stripe coupon + promo code, enable/disable, optional app referral map), Subscriptions list.
