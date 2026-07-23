@@ -188,6 +188,7 @@ Audit Jeremy: `MINUTES=120 npx tsx scripts/jeremy-post-audit-prodtest.mjs`
 | File | What |
 |------|------|
 | **`CONTEXT.md`** | **You are here** — living handoff |
+| **`MA_AUDIT.md`** | **M&A / diligence readiness** — money, auth, audit, PII, hardening roadmap |
 | **`JEREMY_ADMIN_MANUAL.md`** | **Jeremy’s admin + tech map** — Admin screens, vendors (Twilio/Zoom/Stripe/Vercel), who owns what |
 | **`VENDOR_COSTS.md`** | **All apps + monthly cost sheet** — retainer (🔴) vs usage vs parked (Twilio) |
 | **`STRIPE_COMMISSION_SETUP.md`** | **Master Stripe + revenue split** (Jeremy merchant, John Connect, milestone %) |
@@ -371,12 +372,13 @@ STRIPE_PRICE_MEMBER='price_…' STRIPE_PRICE_BUSINESS='price_…' \
 |---|------|--------|
 | F1 | **Stripe Live cutover** | Create Live tip + membership `price_…`; Vercel Live keys; webhook 200; real $25 smoke (refund OK). Account `acct_1TmKSWQWWnajU9uyk`. Script: `create-stripe-tip-products.mjs`. |
 | F2 | **Workout floor polish** | Weight seeds last/guess shipped; optional later: per-set weight. |
-| F3 | **Gamification on prod** | Recompute/import after cutover; free-pool flags; free-member claim walkthrough. Docs: `GAMIFICATION_DESIGN.md`. |
-| F4 | **Multi-part day UI** | Schema exists; coach calendar “add part 2/3” still open. |
-| F5 | **Jeremy content** | Real YouTube (welcome / free chastise); real Adult W1/W2. `JEREMY_REMAINING_CHECKLIST.md`. |
+| F3 | **Gamification free-pool / access gaps** | Recompute ran; still close freePool flags + legacy access helpers. `GAMIFICATION_MNA_AUDIT.md`. |
+| F4 | **Multi-part day UI** | **Shipped** on calendar (1/2/3 parts). Polish only if Jeremy asks. |
+| F5 | **Jeremy content** | Real YouTube (welcome / free-tier intro after gag); real Adult W1/W2. |
 | F6 | **Phone 5‑min pass** | Book Call, Messages, no false Join Live; Enable alerts once on home-screen app. |
 | F7 | **Parked product** | Twilio SMS, food/store, public nutrition page, coach 2 Zoom Marketplace publish — only if asked. |
-| F8 | **Discount ops** | After Live keys: create `FEEDBACK50` (50% × 3 mo, recurring); share with first testers. |
+| F8 | **Discount/tip ops** | Run `setup-tips-and-feedback-discount.mjs` with `sk_test_`; Vercel tip prices; FEEDBACK50. |
+| F9 | **M&A hardening Phase A** | `MA_AUDIT.md` — unify AuditEvent on money/staff mutations, DSAR export v1, demo-persistence snapshot for data room. |
 
 ### Jul 23 — Coach tips (product homes)
 
