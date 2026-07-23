@@ -378,7 +378,7 @@ STRIPE_PRICE_MEMBER='price_…' STRIPE_PRICE_BUSINESS='price_…' \
 | F6 | **Phone 5‑min pass** | Book Call, Messages, no false Join Live; Enable alerts once on home-screen app. |
 | F7 | **Parked product** | Twilio SMS, food/store, public nutrition page, coach 2 Zoom Marketplace publish — only if asked. |
 | F8 | **Discount/tip ops** | Run `setup-tips-and-feedback-discount.mjs` with `sk_test_`; Vercel tip prices; FEEDBACK50. |
-| F9 | **M&A hardening Phase A** | `MA_AUDIT.md` — unify AuditEvent on money/staff mutations, DSAR export v1, demo-persistence snapshot for data room. |
+| F9 | **M&A hardening Phase A** | **Shipped** `90fe541` — audit wiring, `/admin/audit`, DSAR export + persistence snapshot scripts. Ops: security env flags + tip/FEEDBACK50 still open. |
 
 ### Jul 23 — Coach tips (product homes)
 
