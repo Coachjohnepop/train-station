@@ -61,8 +61,10 @@ export default async function JoinPage({
         </div>
       </div>
 
-      {/* Pricing overview with inline signup after choosing a plan */}
-      <div id="plans" className="mx-auto max-w-6xl px-6 pb-16">
+      {/* Pricing overview with inline signup after choosing a plan.
+          Dual anchors: #plans (join copy) and #tickets (shared landing nav / /join#tickets). */}
+      <div id="plans" className="mx-auto max-w-6xl scroll-mt-20 px-6 pb-16">
+        <div id="tickets" className="h-0 scroll-mt-20" aria-hidden tabIndex={-1} />
         <PricingWithInlineSignup recParam={recParam} />
       </div>
 

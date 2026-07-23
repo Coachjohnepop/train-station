@@ -11,17 +11,24 @@ const cards = [
     cta: "Open billing →",
   },
   {
+    href: "/admin/commission",
+    title: "Development & partnership fees",
+    description:
+      "Dev and partner fee pool, Connect onboarding, platform admin $275, referral map, payout floor.",
+    cta: "Open fees →",
+  },
+  {
+    href: "/admin/gamification",
+    title: "Gamification",
+    description:
+      "Points levers, free-pool curation, promo free weeks, prize hall of fame, recompute, audit log.",
+    cta: "Open gamification →",
+  },
+  {
     href: "/admin/offers",
     title: "Offers & merchandise",
     description: "Custom training packages, merch SKUs, and coach-set pricing.",
     cta: "Manage offers →",
-  },
-  {
-    href: "/admin/commission",
-    title: "Development & partnership fees",
-    description:
-      "Dev and partner fee pool, Connect onboarding, referral map, payout floor.",
-    cta: "Open fees →",
   },
   {
     href: "/admin/pricing",

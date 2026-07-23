@@ -65,6 +65,8 @@ export default function LandingTicketPicker({
       id="tickets"
       className="relative z-20 isolate scroll-mt-20 bg-[var(--bg)] px-3 py-10 shadow-[0_-12px_32px_var(--bg)] sm:px-6 sm:py-14"
     >
+      {/* Alias for /#plans (join + shared CTAs); #tickets remains primary. */}
+      <div id="plans" className="h-0 scroll-mt-20" aria-hidden tabIndex={-1} />
       <div className="mx-auto max-w-4xl text-center">
         <TrainStationBrand variant="compact" className="mb-6" />
         <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--accent)]">Pick your ticket</p>
