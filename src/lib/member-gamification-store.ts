@@ -15,6 +15,11 @@ import { getGamificationLevers } from "@/lib/gamification-config-store";
 import { currentSeasonKey, recomputeUserSeasonScore } from "@/lib/gamification-season";
 import { divisionForPlan } from "@/lib/gamification-levers";
 import { getMemberProfile } from "@/lib/member-profiles-store";
+import {
+  ensureUserBlobImported,
+  loadBlobUserEvents,
+  mergeGamificationEvents,
+} from "@/lib/gamification-import";
 
 type GamificationStore = Record<string, UserGamification>;
 
@@ -22,6 +27,8 @@ const BLOB_PATH = "demo/member-gamification.json";
 const DEV_FILE = path.join(process.cwd(), "prisma", "member-gamification.dev.json");
 
 let memoryStore: GamificationStore | null = null;
+/** Avoid hammering blob import on every request for the same user. */
+const blobImportAttempted = new Set<string>();
 
 function sumEventPoints(events: GamificationEvent[]): number {
   return events.reduce((sum, e) => sum + e.points, 0);
@@ -105,7 +112,26 @@ async function getUserGamificationDb(userId: string): Promise<UserGamification> 
 export async function getUserGamification(userId: string): Promise<UserGamification> {
   if (isDatabaseConfigured()) {
     try {
-      return await getUserGamificationDb(userId);
+      // Lazy one-shot import of legacy Blob ledger so cutover doesn't zero the board.
+      if (!blobImportAttempted.has(userId)) {
+        blobImportAttempted.add(userId);
+        await ensureUserBlobImported(userId);
+      }
+      const db = await getUserGamificationDb(userId);
+      // Union with any remaining blob-only events (read path safety net).
+      const blobEvents = await loadBlobUserEvents(userId);
+      if (blobEvents.length) {
+        const events = mergeGamificationEvents(db.events, blobEvents);
+        return {
+          userId,
+          totalPoints: sumEventPoints(events),
+          events,
+          updatedAt: events.length
+            ? events[events.length - 1].at
+            : db.updatedAt,
+        };
+      }
+      return db;
     } catch (e) {
       console.error("getUserGamification db", e);
       // fall through to blob for local/demo
@@ -118,6 +144,14 @@ export async function getUserGamification(userId: string): Promise<UserGamificat
 export async function listAllGamification(): Promise<UserGamification[]> {
   if (isDatabaseConfigured()) {
     try {
+      // Full blob import once per process if board is empty (prod cutover).
+      const dbCount = await prisma.gamificationEvent.count();
+      if (dbCount === 0 && !blobImportAttempted.has("__all__")) {
+        blobImportAttempted.add("__all__");
+        const { importBlobGamificationToDb } = await import("@/lib/gamification-import");
+        await importBlobGamificationToDb();
+      }
+
       const rows = await prisma.gamificationEvent.findMany({ orderBy: { at: "asc" } });
       const byUser = new Map<string, GamificationEvent[]>();
       for (const row of rows) {
@@ -125,6 +159,20 @@ export async function listAllGamification(): Promise<UserGamification[]> {
         list.push(rowToEvent(row));
         byUser.set(row.userId, list);
       }
+
+      // Merge blob users not yet fully in DB
+      try {
+        const store = await getStore({ preferFresh: true });
+        for (const [userId, raw] of Object.entries(store)) {
+          const blobUser = normalizeUser(raw, userId);
+          if (!blobUser.events.length) continue;
+          const existing = byUser.get(userId) || [];
+          byUser.set(userId, mergeGamificationEvents(existing, blobUser.events));
+        }
+      } catch {
+        /* ignore blob merge failures */
+      }
+
       return [...byUser.entries()].map(([userId, events]) => ({
         userId,
         totalPoints: sumEventPoints(events),

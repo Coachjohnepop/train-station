@@ -37,6 +37,8 @@ import { buildWarmupWorkoutView } from "@/lib/warmup-template";
 import { getUserEnrollments } from "@/lib/data/user-data";
 import { normalizeTrainingLocation } from "@/lib/program-macro-cycle";
 import { formatProgramStartOption } from "@/lib/member-program-block";
+import { resolveContentAccess } from "@/lib/gamification-content-access";
+import FreeContentLockCard from "@/components/FreeContentLockCard";
 
 export const dynamic = "force-dynamic";
 
@@ -180,6 +182,25 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const tomorrowDay = memberDays.length ? nextMemberDay(memberDays, programTodayKey) : null;
   const memberWorkout = viewDate === programTodayKey ? workout : null;
 
+  const enrollSlug = primaryProgram?.slug ?? "adult";
+  const enrollPos = enrollments[enrollSlug];
+  let enrollmentDayLinear: number | null = selectedSummary?.enrollmentDayNumber ?? null;
+  if (enrollmentDayLinear == null && enrollPos) {
+    const { linearEnrollmentDay } = await import("@/lib/member-enrollment-day");
+    enrollmentDayLinear = linearEnrollmentDay(
+      enrollPos.currentWeek || 1,
+      enrollPos.currentDay || 1,
+    );
+  }
+
+  const contentAccess = await resolveContentAccess({
+    userId: uid,
+    profilePlan: profile?.plan,
+    enrollmentDay: enrollmentDayLinear ?? undefined,
+    bypass: Boolean(asInstructor),
+  });
+  const showFreeLock = contentAccess.locked && !asInstructor;
+
   return (
     <div className="space-y-4">
       <TodayPageLiveRefresh
@@ -194,35 +215,39 @@ export default async function MemberTodayPage({ searchParams }: Props) {
         <>
           <MemberCoachMediaStrip content={memberContent} />
 
-          <Suspense fallback={<div className="card h-40 animate-pulse p-4" />}>
-            <MemberTodayShell
-              todayIso={programTodayKey}
-              selectedDate={viewDate}
-              days={memberDays}
-              rollup={memberRollup}
-              selectedSummary={selectedSummary}
-              nextStretchPreview={stretchPreview}
-              tomorrowDay={tomorrowDay}
-              workout={memberWorkout}
-              programSlug={programSlug}
-              trainingLocation={trainingLocation}
-              targetUserId={uid}
-              scheduleLabel={scheduleLabel}
-              calendarDateLabel={formatDateLabel(viewDate)}
-              subtitle={subtitle}
-              dayParts={parts && parts.length > 1 ? parts : undefined}
-              activePartIndex={activePartIndex}
-              hasCoachSession={!!session}
-              intakeComplete={intakeComplete}
-              warmupWorkout={warmupWorkout}
-              introBookedAt={profile?.introBookedAt ?? null}
-              coachMeetingRequestedAt={profile?.coachMeetingRequestedAt ?? null}
-              coachMeetingRequestNote={profile?.coachMeetingRequestNote ?? null}
-              autoPromptIntroBooking={coachSettings.autoPromptIntroBooking}
-              autoPromptFollowUpBooking={coachSettings.autoPromptFollowUpBooking}
-              programBlock={programBlock}
-            />
-          </Suspense>
+          {showFreeLock ? (
+            <FreeContentLockCard access={contentAccess} />
+          ) : (
+            <Suspense fallback={<div className="card h-40 animate-pulse p-4" />}>
+              <MemberTodayShell
+                todayIso={programTodayKey}
+                selectedDate={viewDate}
+                days={memberDays}
+                rollup={memberRollup}
+                selectedSummary={selectedSummary}
+                nextStretchPreview={stretchPreview}
+                tomorrowDay={tomorrowDay}
+                workout={memberWorkout}
+                programSlug={programSlug}
+                trainingLocation={trainingLocation}
+                targetUserId={uid}
+                scheduleLabel={scheduleLabel}
+                calendarDateLabel={formatDateLabel(viewDate)}
+                subtitle={subtitle}
+                dayParts={parts && parts.length > 1 ? parts : undefined}
+                activePartIndex={activePartIndex}
+                hasCoachSession={!!session}
+                intakeComplete={intakeComplete}
+                warmupWorkout={warmupWorkout}
+                introBookedAt={profile?.introBookedAt ?? null}
+                coachMeetingRequestedAt={profile?.coachMeetingRequestedAt ?? null}
+                coachMeetingRequestNote={profile?.coachMeetingRequestNote ?? null}
+                autoPromptIntroBooking={coachSettings.autoPromptIntroBooking}
+                autoPromptFollowUpBooking={coachSettings.autoPromptFollowUpBooking}
+                programBlock={programBlock}
+              />
+            </Suspense>
+          )}
 
           {upcoming.length > 0 && (
             <details className="card py-2 px-3 text-sm">

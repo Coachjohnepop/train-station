@@ -57,10 +57,11 @@ Each row: `actorId`, `actorRole`, `ip`, `userAgent`, `targetId`, structured `det
 
 ## Known gaps (honest backlog)
 
-- Content free-pool % gating not fully wired to Today yet  
-- Effective plan helper exists; not every content route consumes it yet  
+- Free-pool gate is cycle-day based (~first N days of 28), not coach-curated freePool flags yet  
+- Effective plan override used for content lock + division board; not every legacy access helper  
 - No automated PII export/delete pack for gamification tables (use member wipe scripts + `removeGamificationForUsers`)  
 - Cron auth fails closed in production without secret  
+- After Postgres cutover, run Admin → Gamification → **Recompute** (imports Blob + offers free weeks) or `npx tsx scripts/import-gamification-blob-prod.ts`
 
 ## Related
 

@@ -20,13 +20,15 @@ export async function GET(request: Request) {
   if (!isDatabaseConfigured()) {
     return NextResponse.json({ ok: false, detail: "no database" });
   }
+  const { importBlobGamificationToDb } = await import("@/lib/gamification-import");
+  const imported = await importBlobGamificationToDb({ actorId: "cron" });
   const expired = await expireStalePromos();
   await recomputeAllDivisions();
   let offered = 0;
   for (const d of ["explorer", "member", "business"] as GamificationDivision[]) {
     offered += (await offerTopPercentPromos(d)).offered;
   }
-  return NextResponse.json({ ok: true, expired, offered });
+  return NextResponse.json({ ok: true, expired, offered, imported });
 }
 
 export async function POST(request: Request) {

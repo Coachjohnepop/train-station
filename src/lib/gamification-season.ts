@@ -126,12 +126,13 @@ export async function recomputeDivisionRanks(
     const eligIdx = eligible.findIndex((e) => e.userId === r.userId);
     const eligibleRank = eligIdx >= 0 ? eligIdx + 1 : 0;
     const n = eligible.length;
+    // Full board: topPercentile cut. Small board: still reward #1 so free-week loop works in early launch.
     const cut =
-      n >= L.minDivisionSizeForTopCut
-        ? Math.max(1, Math.ceil((L.topPercentile / 100) * n))
-        : n >= 2
-          ? Math.min(2, n)
-          : 0;
+      n <= 0
+        ? 0
+        : n >= L.minDivisionSizeForTopCut
+          ? Math.max(1, Math.ceil((L.topPercentile / 100) * n))
+          : Math.max(1, Math.min(2, n));
     const topPercent = eligibleRank > 0 && eligibleRank <= cut;
     const percentile =
       n > 0 && eligibleRank > 0 ? Math.round((100 * (n - eligibleRank + 1)) / n) : 0;

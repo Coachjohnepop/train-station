@@ -99,11 +99,18 @@ export async function getMemberDashboard() {
 
   let totalWorkouts = 0;
   let strengthScore = 0;
+  let dayStreak = 0;
   try {
     totalWorkouts = await getWorkoutLogCount(uid);
     strengthScore = await getStrengthScore(uid);
   } catch {
     // non-fatal; dashboard shows zeros
+  }
+  try {
+    const { getWorkoutDayStreak } = await import("@/lib/workout-streak");
+    dayStreak = await getWorkoutDayStreak(uid);
+  } catch {
+    dayStreak = 0;
   }
 
   // Support doing workouts + yoga + journeys in parallel: provide per-program continues
@@ -173,7 +180,7 @@ export async function getMemberDashboard() {
       workoutCount: p.weeks?.reduce((n: number, w: any) => n + (w.days?.length || 0), 0) || 0,
     })),
     stats: {
-      dayStreak: totalWorkouts > 0 ? Math.min(5, Math.max(1, totalWorkouts)) : 0,
+      dayStreak,
       totalWorkouts,
       strengthScore,
     },

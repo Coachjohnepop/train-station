@@ -95,8 +95,13 @@ export default function AdminGamificationClient() {
       const res = await fetch("/api/admin/gamification/recompute", { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.detail || "Recompute failed");
+      const imp = data.imported;
       setMessage(
-        `Recomputed seasons · expired ${data.expired ?? 0} promos · offered ${data.offered ?? 0} free weeks.`,
+        `Recomputed seasons · expired ${data.expired ?? 0} promos · offered ${data.offered ?? 0} free weeks` +
+          (imp
+            ? ` · imported ${imp.imported ?? 0} events from ${imp.users ?? 0} blob users (${imp.skipped ?? 0} skipped)`
+            : "") +
+          ".",
       );
       await loadPromos();
     } catch (e) {
