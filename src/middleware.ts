@@ -71,6 +71,17 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
+    // Ops bootstrap: Bearer OPS_BOOTSTRAP_SECRET / CRON_SECRET (no session cookie).
+    if (pathname === "/api/admin/ops/stripe-bootstrap") {
+      const secret =
+        process.env.OPS_BOOTSTRAP_SECRET?.trim() || process.env.CRON_SECRET?.trim() || "";
+      const header = request.headers.get("authorization") || "";
+      if (secret && header === `Bearer ${secret}`) {
+        return NextResponse.next();
+      }
+      // else fall through — staff session still allowed
+    }
+
     const session = await sessionFromRequest(request);
     if (!session) {
       return NextResponse.json({ error: "Sign in required." }, { status: 401 });
