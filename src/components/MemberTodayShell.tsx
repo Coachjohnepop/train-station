@@ -16,6 +16,8 @@ import {
   type ResolvedProgramBlock,
 } from "@/lib/member-program-block";
 import type { ResolvedDayPart } from "@/lib/program-day-sessions";
+import FreeContentLockCard from "@/components/FreeContentLockCard";
+import type { ContentAccessResult } from "@/lib/gamification-content-access";
 
 type Props = {
   todayIso: string;
@@ -44,6 +46,8 @@ type Props = {
   autoPromptIntroBooking?: boolean;
   autoPromptFollowUpBooking?: boolean;
   programBlock?: ResolvedProgramBlock | null;
+  /** Free-ticket content gate — keep day wheel; lock only the player. */
+  contentAccess?: ContentAccessResult | null;
 };
 
 function DaySummaryCard({
@@ -173,6 +177,7 @@ export default function MemberTodayShell({
   coachMeetingRequestNote = null,
   autoPromptIntroBooking = false,
   autoPromptFollowUpBooking = false,
+  contentAccess = null,
   programBlock = null,
 }: Props) {
   const router = useRouter();
@@ -402,22 +407,26 @@ export default function MemberTodayShell({
             </div>
           ) : null}
 
-          <MemberWorkoutConsole
-            workout={workout}
-            backHref="/member/today"
-            programSlug={programSlug}
-            targetUserId={targetUserId}
-            liveSyncUserId={targetUserId}
-            liveSessionDate={selectedDate}
-            scheduleLabel={
-              multiPart && dayParts
-                ? `${dayParts.find((p) => p.partIndex === activePartIndex)?.label || "Session"}${
-                    scheduleLabel ? ` · ${scheduleLabel}` : ""
-                  }`
-                : scheduleLabel
-            }
-            calendarDateLabel={calendarDateLabel}
-          />
+          {contentAccess?.locked ? (
+            <FreeContentLockCard access={contentAccess} />
+          ) : (
+            <MemberWorkoutConsole
+              workout={workout}
+              backHref="/member/today"
+              programSlug={programSlug}
+              targetUserId={targetUserId}
+              liveSyncUserId={targetUserId}
+              liveSessionDate={selectedDate}
+              scheduleLabel={
+                multiPart && dayParts
+                  ? `${dayParts.find((p) => p.partIndex === activePartIndex)?.label || "Session"}${
+                      scheduleLabel ? ` · ${scheduleLabel}` : ""
+                    }`
+                  : scheduleLabel
+              }
+              calendarDateLabel={calendarDateLabel}
+            />
+          )}
         </div>
       )}
 

@@ -16,6 +16,9 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   }
   const { id } = await params;
+  // Expire stale first so claim message is accurate
+  const { expireStalePromos } = await import("@/lib/gamification-promos");
+  await expireStalePromos();
   const result = await claimPromo(session.id, id);
   if (!result.ok) {
     return NextResponse.json({ detail: result.error }, { status: 400 });

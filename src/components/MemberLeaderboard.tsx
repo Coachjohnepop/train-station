@@ -11,6 +11,7 @@ import {
 } from "@/lib/gamification-types";
 import type { MemberScoreProgress } from "@/lib/gamification-types";
 import { signupPlanLabel, type SignupPlan } from "@/lib/signup-plans";
+import { formatApiErrorDetail } from "@/lib/api-errors";
 
 type ScoresTab = "mine" | "high";
 type BoardMode = "division" | "legacy";
@@ -148,6 +149,7 @@ export default function MemberLeaderboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [claimBusy, setClaimBusy] = useState(false);
+  const [claimMsg, setClaimMsg] = useState<string | null>(null);
 
   const loadProgress = useCallback(async () => {
     try {
@@ -156,24 +158,16 @@ export default function MemberLeaderboard() {
       const json = await res.json();
       if (json.progress) setProgress(json.progress);
       if (json.pointValues) setPointValues(json.pointValues);
-      if (typeof json.totalPoints === "number" && data?.viewer) {
-        setData((prev) =>
-          prev
-            ? {
-                ...prev,
-                viewer: { ...prev.viewer, points: json.totalPoints },
-              }
-            : prev,
-        );
-      }
     } catch {
       /* ignore */
     }
-  }, [data?.viewer]);
+  }, []);
 
-  const loadDivision = useCallback(async () => {
-    setLoading(true);
-    setError("");
+  const loadDivision = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) {
+      setLoading(true);
+      setError("");
+    }
     const [boardRes, scoreRes] = await Promise.all([
       fetch("/api/member/gamification/division", { cache: "no-store" }),
       fetch("/api/member/gamification", { cache: "no-store" }),
@@ -181,14 +175,20 @@ export default function MemberLeaderboard() {
     const json = await boardRes.json().catch(() => ({}));
     const scoreJson = await scoreRes.json().catch(() => ({}));
     if (!boardRes.ok) {
-      setError(json.error || "Could not load division board.");
+      if (!opts?.silent) {
+        setError(
+          typeof json.error === "string"
+            ? json.error
+            : formatApiErrorDetail(json.detail) || "Could not load division board.",
+        );
+      }
       setDivision(null);
     } else {
       setDivision(json as DivisionBoard);
     }
     if (scoreJson.progress) setProgress(scoreJson.progress);
     if (scoreJson.pointValues) setPointValues(scoreJson.pointValues);
-    setLoading(false);
+    if (!opts?.silent) setLoading(false);
   }, []);
 
   const load = useCallback(async (nextScope: LeaderboardScope) => {
@@ -223,29 +223,43 @@ export default function MemberLeaderboard() {
     } else if (scoresTab === "high") {
       void load(scope);
     } else {
+      // My scores: progress + promo/rank strip without full-board loading spinner
       void loadProgress();
-      void loadDivision();
+      void loadDivision({ silent: true });
     }
   }, [scoresTab, boardMode, scope, load, loadDivision, loadProgress]);
 
   useEffect(() => {
     function onScoreUpdated() {
       void loadProgress();
-      if (boardMode === "division") void loadDivision();
+      if (boardMode === "division" || scoresTab === "mine") {
+        void loadDivision({ silent: true });
+      }
     }
     window.addEventListener("member-score-updated", onScoreUpdated);
     return () => window.removeEventListener("member-score-updated", onScoreUpdated);
-  }, [loadProgress, loadDivision, boardMode]);
+  }, [loadProgress, loadDivision, boardMode, scoresTab]);
 
   async function claimPromo(id: string) {
     setClaimBusy(true);
+    setError("");
+    setClaimMsg(null);
     try {
       const res = await fetch(`/api/member/gamification/promos/${encodeURIComponent(id)}/claim`, {
         method: "POST",
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.detail || "Could not claim");
-      await loadDivision();
+      if (!res.ok) {
+        throw new Error(
+          formatApiErrorDetail(json.detail) ||
+            (typeof json.error === "string" ? json.error : "Could not claim"),
+        );
+      }
+      const plan = json.promo?.toPlan
+        ? signupPlanLabel(json.promo.toPlan as SignupPlan)
+        : "the next class";
+      setClaimMsg(`Free week of ${plan} unlocked. Enjoy — then keep it at checkout.`);
+      await loadDivision({ silent: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Claim failed");
     } finally {
@@ -277,6 +291,12 @@ export default function MemberLeaderboard() {
       </div>
 
       <ScoresTabBar active={scoresTab} onChange={setScoresTab} />
+
+      {claimMsg ? (
+        <p className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+          {claimMsg}
+        </p>
+      ) : null}
 
       {scoresTab === "mine" ? (
         <div className="space-y-5">

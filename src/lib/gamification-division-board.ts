@@ -163,19 +163,26 @@ export async function loadDivisionBoard(
     });
   }
 
-  const rows: DivisionBoardPayload["rows"] = await Promise.all(
-    ranked.map(async (r) => ({
-      rank: r.rank,
-      userId: r.userId,
-      displayName: displayNameForUser(r.userId, names.get(r.userId)),
-      points: r.points,
-      bestMove: await bestMove(r.userId),
-      isSelf: r.userId === viewerId,
-      percentile: r.percentile,
-      topPercent: r.topPercent,
-      eligible: r.eligible,
-    })),
+  // Cap expensive best-move lookups (leaderboard is arcade, not a report).
+  const rankedForMoves = ranked.slice(0, 40);
+  const moveByUser = new Map<string, string | null>();
+  await Promise.all(
+    rankedForMoves.map(async (r) => {
+      moveByUser.set(r.userId, await bestMove(r.userId));
+    }),
   );
+
+  const rows: DivisionBoardPayload["rows"] = ranked.map((r) => ({
+    rank: r.rank,
+    userId: r.userId,
+    displayName: displayNameForUser(r.userId, names.get(r.userId)),
+    points: r.points,
+    bestMove: moveByUser.get(r.userId) ?? null,
+    isSelf: r.userId === viewerId,
+    percentile: r.percentile,
+    topPercent: r.topPercent,
+    eligible: r.eligible,
+  }));
 
   const self = ranked.find((r) => r.userId === viewerId);
   const viewerRow = rows.find((r) => r.isSelf);
@@ -229,8 +236,22 @@ export async function loadDivisionBoard(
   let activeTrial: DivisionBoardPayload["activeTrial"] = null;
   if (isDatabaseConfigured()) {
     try {
+      // Soft-expire stale offers so UI never shows a dead claim button
+      await prisma.gamificationPromo.updateMany({
+        where: {
+          userId: viewerId,
+          status: "offered",
+          claimBy: { lt: new Date() },
+        },
+        data: { status: "expired" },
+      });
+
       const promo = await prisma.gamificationPromo.findFirst({
-        where: { userId: viewerId, status: "offered" },
+        where: {
+          userId: viewerId,
+          status: "offered",
+          OR: [{ claimBy: null }, { claimBy: { gt: new Date() } }],
+        },
         orderBy: { offeredAt: "desc" },
       });
       if (promo) {

@@ -38,7 +38,6 @@ import { getUserEnrollments } from "@/lib/data/user-data";
 import { normalizeTrainingLocation } from "@/lib/program-macro-cycle";
 import { formatProgramStartOption } from "@/lib/member-program-block";
 import { resolveContentAccess } from "@/lib/gamification-content-access";
-import FreeContentLockCard from "@/components/FreeContentLockCard";
 
 export const dynamic = "force-dynamic";
 
@@ -199,8 +198,6 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     enrollmentDay: enrollmentDayLinear ?? undefined,
     bypass: Boolean(asInstructor),
   });
-  const showFreeLock = contentAccess.locked && !asInstructor;
-
   return (
     <div className="space-y-4">
       <TodayPageLiveRefresh
@@ -215,39 +212,36 @@ export default async function MemberTodayPage({ searchParams }: Props) {
         <>
           <MemberCoachMediaStrip content={memberContent} />
 
-          {showFreeLock ? (
-            <FreeContentLockCard access={contentAccess} />
-          ) : (
-            <Suspense fallback={<div className="card h-40 animate-pulse p-4" />}>
-              <MemberTodayShell
-                todayIso={programTodayKey}
-                selectedDate={viewDate}
-                days={memberDays}
-                rollup={memberRollup}
-                selectedSummary={selectedSummary}
-                nextStretchPreview={stretchPreview}
-                tomorrowDay={tomorrowDay}
-                workout={memberWorkout}
-                programSlug={programSlug}
-                trainingLocation={trainingLocation}
-                targetUserId={uid}
-                scheduleLabel={scheduleLabel}
-                calendarDateLabel={formatDateLabel(viewDate)}
-                subtitle={subtitle}
-                dayParts={parts && parts.length > 1 ? parts : undefined}
-                activePartIndex={activePartIndex}
-                hasCoachSession={!!session}
-                intakeComplete={intakeComplete}
-                warmupWorkout={warmupWorkout}
-                introBookedAt={profile?.introBookedAt ?? null}
-                coachMeetingRequestedAt={profile?.coachMeetingRequestedAt ?? null}
-                coachMeetingRequestNote={profile?.coachMeetingRequestNote ?? null}
-                autoPromptIntroBooking={coachSettings.autoPromptIntroBooking}
-                autoPromptFollowUpBooking={coachSettings.autoPromptFollowUpBooking}
-                programBlock={programBlock}
-              />
-            </Suspense>
-          )}
+          <Suspense fallback={<div className="card h-40 animate-pulse p-4" />}>
+            <MemberTodayShell
+              todayIso={programTodayKey}
+              selectedDate={viewDate}
+              days={memberDays}
+              rollup={memberRollup}
+              selectedSummary={selectedSummary}
+              nextStretchPreview={stretchPreview}
+              tomorrowDay={tomorrowDay}
+              workout={memberWorkout}
+              programSlug={programSlug}
+              trainingLocation={trainingLocation}
+              targetUserId={uid}
+              scheduleLabel={scheduleLabel}
+              calendarDateLabel={formatDateLabel(viewDate)}
+              subtitle={subtitle}
+              dayParts={parts && parts.length > 1 ? parts : undefined}
+              activePartIndex={activePartIndex}
+              hasCoachSession={!!session}
+              intakeComplete={intakeComplete}
+              warmupWorkout={warmupWorkout}
+              introBookedAt={profile?.introBookedAt ?? null}
+              coachMeetingRequestedAt={profile?.coachMeetingRequestedAt ?? null}
+              coachMeetingRequestNote={profile?.coachMeetingRequestNote ?? null}
+              autoPromptIntroBooking={coachSettings.autoPromptIntroBooking}
+              autoPromptFollowUpBooking={coachSettings.autoPromptFollowUpBooking}
+              programBlock={programBlock}
+              contentAccess={asInstructor ? null : contentAccess}
+            />
+          </Suspense>
 
           {upcoming.length > 0 && (
             <details className="card py-2 px-3 text-sm">
