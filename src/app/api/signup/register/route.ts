@@ -145,10 +145,10 @@ export async function POST(request: Request) {
       readEmailHistoryFromRequestCookies((name) => cookieStore.get(name)),
     );
     if (needsCheckout) {
-      syncMemberGateCookies(res, { userId: account.userId, profile });
+      await syncMemberGateCookies(res, { userId: account.userId, profile });
     } else {
       applyNewMemberOnboardingCookie(res, plan);
-      syncMemberGateCookies(res, { userId: account.userId, profile });
+      await syncMemberGateCookies(res, { userId: account.userId, profile });
     }
     return res;
   } catch (e: unknown) {

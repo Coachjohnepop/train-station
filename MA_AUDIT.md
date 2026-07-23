@@ -23,10 +23,10 @@ Domain packs already written:
 | **Money of record** | Strong story / partial proof | Jeremy master Stripe + Venmo rails documented; card Live cutover still open; commission + platform admin fee paths coded |
 | **Data of record** | Strong direction / mixed | Postgres principle is non-negotiable; many dual stores still exist as migration debt |
 | **AuthZ** | Good | Staff / platform / member helpers; money admin uses `requirePlatformStaff` |
-| **Auditability** | Partial | `AuditEvent` + SMS + gamification audit strong; **not** wired across payments/admin CRUD |
-| **PII / privacy** | Partial | Soft-hide users; wipe scripts exist; **no** formal DSAR export pack |
+| **Auditability** | Good / Phase A | Money + staff mutations on `AuditEvent`; Admin → Audit log; SMS + gamification audits remain |
+| **PII / privacy** | Good / Phase A | Soft-hide users; wipe scripts; DSAR export `scripts/export-member-dsar.ts` |
 | **IP / clean room** | Good hygiene | No live secrets grepped in tracked source; seed/soak scripts separate |
-| **Ops readiness** | Mid | Vercel + Supabase + docs; tip/discount/Connect still need env + human onboarding |
+| **Ops readiness** | Mid-high | Tips + FEEDBACK50 + security flags on Test prod; **Connect Express (John)** still human browser |
 | **Demo / prod isolation** | Needs vigilance | Dev switcher fails closed when disabled; demo JSON must never be prod SoR |
 
 **Buyer headline:** Modern coaching SaaS on Postgres + Stripe with clear merchant-of-record story, soft-delete culture, and emerging append-only audit. Diligence will focus on **blob residual stores**, **incomplete global audit**, **PII export/delete**, and **proving Live payment controls**.
@@ -68,16 +68,16 @@ Domain packs already written:
 |----|---------|------|------------|
 | **P0-1** | **Stripe still Test mode** on prod | Real GMV / refund / tip / commission paths unproven on Live | Live cutover checklist (F1); one real $ + webhook 200 |
 | **P0-2** | **Dual storage facades** (~28 `*-store.ts`) | Buyer fears “which system of truth?” and data loss on cutover | Finish blob→Postgres phases; publish `GET /api/admin/demo-persistence` snapshot in data room |
-| **P0-3** | **Global `AuditEvent` underused** | SMS/gami audited; mark-paid, refunds, role changes, tip, discount create may lack unified audit | Extend `recordAuditEvent` to money + staff mutations; admin audit UI |
-| **P0-4** | **No formal DSAR / member data export package** | Privacy counsel red flag | Export script: User + profile + logs + chat + gami + payments facts; document retention |
+| **P0-3** | ~~**Global `AuditEvent` underused**~~ | **Mitigated Phase A** — money/staff wired + `/admin/audit` | Keep extending as new money paths ship |
+| **P0-4** | ~~**No formal DSAR / member data export package**~~ | **Mitigated Phase A** — `export-member-dsar.ts` + sample under `exports/` | Wire self-serve DSAR later if buyer asks |
 
 ### P1 — high (fix before LOI if possible)
 
 | ID | Finding | Risk | Mitigation |
 |----|---------|------|------------|
 | **P1-1** | **John Connect not linked** | Platform fee / commission cannot transfer | Express onboarding; sample transfer in test |
-| **P1-2** | **Tips / FEEDBACK50 env incomplete** | Revenue features half-live | `setup-tips-and-feedback-discount.mjs` + Vercel tip prices |
-| **P1-3** | **Gamification free pool / access helpers incomplete** | Promo access may not match all gates | Close gaps in `GAMIFICATION_MNA_AUDIT.md` known gaps |
+| **P1-2** | ~~**Tips / FEEDBACK50 env incomplete**~~ | **Done on Test prod** — tip prices + FEEDBACK50 + `tips.enabled` | Live cutover still Phase B |
+| **P1-3** | **Gamification free pool / access helpers** | Free-week + free-pool UI existed; API/log gate + payment-async now ship | Keep sampling freePool curation on Adult |
 | **P1-4** | **Impersonation / demo switcher** | If misconfigured on prod, session confusion | Confirm `ALLOW_DEV_SWITCHER=false` + `SECURITY_ENFORCED` on prod; sample denied `GET /api/dev/switch-user` |
 | **P1-5** | **Venmo Mark paid is manual** | Access fraud / disputed access without paper trail | Require note + audit event on Mark paid; optional dual-approval later |
 | **P1-6** | **Staff vs platform boundary** | Coach staff may reach too much or too little | Matrix: who can refund, who can wipe, who can change prices |
@@ -206,6 +206,12 @@ Domain packs already written:
 - `/admin/audit` UI + API.  
 - `scripts/export-member-dsar.ts`, `scripts/snapshot-demo-persistence-prod.mjs`.  
 - Ops remaining: confirm Vercel security flags; run tip/FEEDBACK50 setup with `sk_test_`.
+
+### 2026-07-23 — Phase A ops + free-access hardening
+
+- **Ops done:** `SECURITY_ENFORCED` / `ALLOW_DEV_SWITCHER=false` / `STRIPE_REQUIRED=true`; tip prices on Vercel; FEEDBACK50 on Test Stripe; `tips.enabled: true` via `/api/admin/ops/stripe-bootstrap`.  
+- **Still human:** Connect Express for John (`has_connect: false`); Stripe Live; Jeremy intro YouTube.  
+- **Free-access (F3 partial):** `memberNeedsPaymentAsync` / `memberHasFullAccessAsync` honor claimed free-week; workout log API enforces `assertMemberCanLogWorkout` (free-pool + content tier) so explorers cannot bypass Today UI lock.
 
 ---
 

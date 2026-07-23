@@ -13,7 +13,7 @@ import { isDemoMode, updateDemoUserSettings } from "@/lib/demo-reminders";
 
 import { notifyNewLead } from "@/lib/lead-notify";
 import { syncMemberGateCookies } from "@/lib/auth";
-import { memberPostOnboardPath } from "@/lib/member-destinations";
+import { memberPostOnboardPathAsync } from "@/lib/member-destinations";
 import { sendMemberWelcomeEmail } from "@/lib/member-welcome";
 import { sendWelcomeSms } from "@/lib/sms";
 import { notifyCoachNewMember } from "@/lib/coach-member-notify";
@@ -200,11 +200,11 @@ Coach intro booking: on dashboard after setup
 
   const res = NextResponse.json({
     success: true,
-    redirectTo: memberPostOnboardPath(latestProfile, session.id, enrolledSlug),
+    redirectTo: await memberPostOnboardPathAsync(latestProfile, session.id, enrolledSlug),
     profile: latestProfile,
   });
   clearNewMemberOnboardingCookie(res);
-  syncMemberGateCookies(res, { userId: session.id, profile: latestProfile });
+  await syncMemberGateCookies(res, { userId: session.id, profile: latestProfile });
 
   if (location?.city && location?.state) {
     res.cookies.set("ts_city", location.city, { path: "/", maxAge: 365 * 24 * 60 * 60 });

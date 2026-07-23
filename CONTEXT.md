@@ -352,10 +352,15 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - Bootstrap route: `POST /api/admin/ops/stripe-bootstrap` (staff or `OPS_BOOTSTRAP_SECRET`).
 - DSAR sample exports written under `exports/` (local only). Persistence snapshot: Postgres durable.
 
+**Agent hardening (same day, free-access):**
+- Free-week promos clear payment gate (`memberNeedsPaymentAsync` / login + cookies + `requireMemberAccess`).
+- Workout log API enforces free-pool / content-tier (`assertMemberCanLogWorkout`) — not UI-only.
+
 **Still needs a human browser:**
 - **Connect Express** for John (`has_connect: false`) — Admin → Dev & partnership → Connect. Required before platform admin $275 transfer.
 - **Stripe Live** — later (parked).
 - Landing / free-tier **Jeremy intro** YouTube — later (parked); 10s gag works alone.
+- Optional verify: Account tip chip · checkout `FEEDBACK50` · Admin → Audit after Mark paid.
 
 ### Jul 23 — Discount codes (shipped in code)
 
@@ -372,13 +377,13 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 |---|------|--------|
 | F1 | **Stripe Live cutover** | Create Live tip + membership `price_…`; Vercel Live keys; webhook 200; real $25 smoke (refund OK). Account `acct_1TmKSWQWWnajU9uyk`. Script: `create-stripe-tip-products.mjs`. |
 | F2 | **Workout floor polish** | Weight seeds last/guess shipped; optional later: per-set weight. |
-| F3 | **Gamification free-pool / access gaps** | Recompute ran; still close freePool flags + legacy access helpers. `GAMIFICATION_MNA_AUDIT.md`. |
+| F3 | **Gamification free-pool / access gaps** | **Mostly closed** — free-week async gates + log API free-pool enforce. Coach still curates Adult freePool pins if wanted. |
 | F4 | **Multi-part day UI** | **Shipped** on calendar (1/2/3 parts). Polish only if Jeremy asks. |
 | F5 | **Jeremy content** | Real YouTube (welcome / free-tier intro after gag); real Adult W1/W2. |
 | F6 | **Phone 5‑min pass** | Book Call, Messages, no false Join Live; Enable alerts once on home-screen app. |
 | F7 | **Parked product** | Twilio SMS, food/store, public nutrition page, coach 2 Zoom Marketplace publish — only if asked. |
-| F8 | **Discount/tip ops** | Run `setup-tips-and-feedback-discount.mjs` with `sk_test_`; Vercel tip prices; FEEDBACK50. |
-| F9 | **M&A hardening Phase A** | **Shipped** `90fe541` — audit wiring, `/admin/audit`, DSAR export + persistence snapshot scripts. Ops: security env flags + tip/FEEDBACK50 still open. |
+| F8 | **Discount/tip ops** | **Done on Test** — tip prices + FEEDBACK50 + tips.enabled. Live = F1. |
+| F9 | **M&A hardening Phase A** | **Shipped** code + ops (security flags, tips, FEEDBACK50, DSAR samples). Remaining: Connect (browser) + Phase B Live. |
 
 ### Jul 23 — Coach tips (product homes)
 

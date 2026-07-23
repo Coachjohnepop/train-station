@@ -4,6 +4,7 @@ import {
   memberCheckoutPath,
   memberNeedsApproval,
   memberNeedsPayment,
+  memberNeedsPaymentAsync,
 } from "@/lib/member-gates";
 
 /** Member dashboard entry — routes to the Today hub. */
@@ -27,7 +28,21 @@ export function memberPostOnboardPath(
   _programSlug: string,
 ): string {
   // Unpaid paid-plan members finish setup → checkout (not free Today access).
+  // Sync path ignores free-week; prefer memberPostOnboardPathAsync on server.
   if (memberNeedsPayment(profile, userId)) {
+    return memberCheckoutPath(profile?.plan);
+  }
+  if (memberNeedsApproval(profile, userId)) return MEMBER_PENDING_PATH;
+  return memberDashboardPath();
+}
+
+/** Post-onboard redirect that honors claimed free-week promos. */
+export async function memberPostOnboardPathAsync(
+  profile: MemberProfile | null,
+  userId: string,
+  _programSlug: string,
+): Promise<string> {
+  if (await memberNeedsPaymentAsync(profile, userId)) {
     return memberCheckoutPath(profile?.plan);
   }
   if (memberNeedsApproval(profile, userId)) return MEMBER_PENDING_PATH;

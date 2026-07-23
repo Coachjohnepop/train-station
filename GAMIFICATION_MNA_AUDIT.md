@@ -57,9 +57,9 @@ Each row: `actorId`, `actorRole`, `ip`, `userAgent`, `targetId`, structured `det
 
 ## Known gaps (honest backlog)
 
-- Free-pool gate is cycle-day based (~first N days of 28), not coach-curated freePool flags yet  
-- Effective plan override used for content lock + division board; not every legacy access helper  
-- No automated PII export/delete pack for gamification tables (use member wipe scripts + `removeGamificationForUsers`)  
+- Free-pool: **percent-of-cycle** by default; **curated mode** when coach pins any `freePool` day (Admin → Gamification → Free pool). Today UI + **workout log API** both honor flags.  
+- Effective plan override (free-week) now used for content lock, division board, **payment gate cookies**, `requireMemberAccess`, and login destination (`memberNeedsPaymentAsync`). Legacy `getMemberAccess` / `MEMBER_ACCESS_MODE` still preview-oriented for old tier labels only.  
+- No automated PII export/delete pack for gamification tables alone (use `export-member-dsar.ts` + member wipe + `removeGamificationForUsers`)  
 - Cron auth fails closed in production without secret  
 - After Postgres cutover, run Admin → Gamification → **Recompute** (imports Blob + offers free weeks) or `npx tsx scripts/import-gamification-blob-prod.ts`
 

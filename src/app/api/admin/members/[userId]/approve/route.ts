@@ -27,6 +27,6 @@ export async function POST(_request: Request, context: RouteContext) {
   });
 
   const res = NextResponse.json({ ok: true, profile: updated });
-  syncMemberGateCookies(res, { userId, profile: updated });
+  await syncMemberGateCookies(res, { userId, profile: updated });
   return res;
 }

@@ -52,6 +52,6 @@ export async function POST(request: Request, context: RouteContext) {
   });
 
   const res = NextResponse.json({ ok: true, profile: updated });
-  attachPaidMemberCookies(res, userId, updated);
+  await attachPaidMemberCookies(res, userId, updated);
   return res;
 }

@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       redirectTo: "/member/account?tipped=1",
     });
     if (profile) {
-      syncMemberGateCookies(res, { userId: sessionUser.id, profile });
+      await syncMemberGateCookies(res, { userId: sessionUser.id, profile });
     }
     return res;
   }
@@ -94,8 +94,8 @@ export async function POST(request: Request) {
     ok: true,
     redirectTo: `/member/onboard?plan=${encodeURIComponent(plan)}`,
   });
-  syncMemberGateCookies(res, { userId: sessionUser.id, profile: updated });
-  attachPaidMemberCookies(res, sessionUser.id, updated);
+  await syncMemberGateCookies(res, { userId: sessionUser.id, profile: updated });
+  await attachPaidMemberCookies(res, sessionUser.id, updated);
   applyNewMemberOnboardingCookie(res, plan);
   return res;
 }

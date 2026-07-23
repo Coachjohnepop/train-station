@@ -181,10 +181,10 @@ async function provisionNewOAuthMember(
     readEmailHistoryFromRequestCookies((name) => cookieStore.get(name)),
   );
   if (needsCheckout) {
-    syncMemberGateCookies(res, { userId: account.userId, profile: memberProfile });
+    await syncMemberGateCookies(res, { userId: account.userId, profile: memberProfile });
   } else {
     applyNewMemberOnboardingCookie(res, plan);
-    syncMemberGateCookies(res, { userId: account.userId, profile: memberProfile });
+    await syncMemberGateCookies(res, { userId: account.userId, profile: memberProfile });
   }
   return res;
 }
@@ -208,15 +208,15 @@ async function redirectWithSession(
 
   if (!isStaffRole(sessionUser.role)) {
     const { getMemberProfile } = await import("@/lib/member-profiles-store");
-    const { memberNeedsPayment } = await import("@/lib/member-gates");
+    const { memberNeedsPaymentAsync } = await import("@/lib/member-gates");
     const profile = await getMemberProfile(sessionUser.id);
     const needsOnboard =
       (profile && !profile.onboardingComplete) || sessionUser.id.startsWith("member-");
-    const needsPayment = memberNeedsPayment(profile, sessionUser.id);
+    const needsPayment = await memberNeedsPaymentAsync(profile, sessionUser.id);
     if (needsOnboard && !needsPayment) {
       applyNewMemberOnboardingCookie(res, profile?.plan);
     }
-    syncMemberGateCookies(res, { userId: sessionUser.id, profile });
+    await syncMemberGateCookies(res, { userId: sessionUser.id, profile });
   }
 
   return res;

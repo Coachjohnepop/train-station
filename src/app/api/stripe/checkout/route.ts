@@ -97,7 +97,7 @@ export async function POST(request: Request) {
           redirectTo: "/member/account",
           plan: changed.plan,
         });
-        syncMemberGateCookies(res, {
+        await syncMemberGateCookies(res, {
           userId: session.id,
           profile: updated,
         });
@@ -177,7 +177,7 @@ export async function POST(request: Request) {
       sessionId: checkout.sessionId,
       hasSavedCard: checkout.hasSavedCard,
     });
-    syncMemberGateCookies(res, {
+    await syncMemberGateCookies(res, {
       userId: session.id,
       profile: updatedProfile,
     });

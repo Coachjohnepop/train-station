@@ -17,10 +17,7 @@ import {
   type UserRole,
 } from "@/lib/auth-session";
 import type { MemberProfile } from "@/lib/member-profiles-store";
-import {
-  memberNeedsApproval,
-  memberNeedsPayment,
-} from "@/lib/member-gates";
+import { memberNeedsApproval } from "@/lib/member-gates";
 import { allowBlankPasswordLogin } from "@/lib/security-config";
 
 export type { SessionUser, UserRole };
@@ -233,14 +230,15 @@ function gateCookieOptions() {
 }
 
 /** Keep payment + approval gate cookies aligned with the member profile. */
-export function syncMemberGateCookies(
+export async function syncMemberGateCookies(
   res: CookieWriter,
   input: { userId: string; profile: MemberProfile | null },
 ) {
   const clear = { path: "/", maxAge: 0 };
   const opts = gateCookieOptions();
+  const { memberNeedsPaymentAsync } = await import("@/lib/member-gates");
 
-  if (memberNeedsPayment(input.profile, input.userId)) {
+  if (await memberNeedsPaymentAsync(input.profile, input.userId)) {
     res.cookies.set(NEEDS_PAYMENT_COOKIE, "1", opts);
   } else {
     res.cookies.set(NEEDS_PAYMENT_COOKIE, "", clear);

@@ -50,6 +50,18 @@ export async function POST(request: Request, { params }: Params) {
   const scopeErr = assertUserScope(auth.session, uid);
   if (scopeErr) return scopeErr;
 
+  // Free-pool / content-tier: block explorer bypass of the Today UI lock.
+  if (!isStaffRole(auth.session.role)) {
+    const { assertMemberCanLogWorkout } = await import("@/lib/gamification-content-access");
+    const canLog = await assertMemberCanLogWorkout({
+      userId: uid,
+      programSlug: parsed.data.programSlug,
+    });
+    if (!canLog.ok) {
+      return NextResponse.json({ detail: canLog.reason, locked: true }, { status: 403 });
+    }
+  }
+
   try {
     const result = await createWorkoutLogAndPerformances({
       workoutId,

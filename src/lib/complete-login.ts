@@ -21,7 +21,7 @@ import {
   memberCheckoutPath,
   MEMBER_PENDING_PATH,
   memberNeedsApproval,
-  memberNeedsPayment,
+  memberNeedsPaymentAsync,
 } from "@/lib/member-gates";
 import { isMemberPathExemptFromPaymentGate } from "@/lib/member-route-gates";
 import { memberOnboardPath, memberTodayPath } from "@/lib/member-destinations";
@@ -39,7 +39,7 @@ export async function resolveLoginDestination(
     const needsOnboard =
       (profile && !profile.onboardingComplete) ||
       (!profile && user.id.startsWith("member-"));
-    const needsPayment = memberNeedsPayment(profile, user.id);
+    const needsPayment = await memberNeedsPaymentAsync(profile, user.id);
     const needsApproval = memberNeedsApproval(profile, user.id);
 
     if (needsPayment) {
@@ -102,11 +102,11 @@ export async function buildLoginResponse(
     const needsOnboard =
       (profile && !profile.onboardingComplete) ||
       (!profile && user.id.startsWith("member-"));
-    const needsPayment = memberNeedsPayment(profile, user.id);
+    const needsPayment = await memberNeedsPaymentAsync(profile, user.id);
     if (needsOnboard && !needsPayment) {
       applyNewMemberOnboardingCookie(res, profile?.plan);
     }
-    syncMemberGateCookies(res, { userId: user.id, profile });
+    await syncMemberGateCookies(res, { userId: user.id, profile });
   }
 
   return res;

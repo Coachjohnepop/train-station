@@ -7,7 +7,7 @@ import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import { isCoachIntakeComplete } from "@/lib/member-intake";
 import { membershipThemeTierFromPlan } from "@/lib/membership-theme";
-import { memberNeedsPayment } from "@/lib/member-gates";
+import { memberNeedsPaymentAsync } from "@/lib/member-gates";
 import type { SignupPlan } from "@/lib/signup-plans";
 
 export default async function MemberLayout({
@@ -42,8 +42,9 @@ export default async function MemberLayout({
     !!profileUserId &&
     profileUserId.startsWith("member-") &&
     !isCoachIntakeComplete(profile);
+  // Free-week promos unlock training without a paid stamp.
   const paymentGateActive = profileUserId
-    ? memberNeedsPayment(profile, profileUserId)
+    ? await memberNeedsPaymentAsync(profile, profileUserId)
     : false;
   const checkoutPlan = (profile?.plan ?? "member") as SignupPlan;
 

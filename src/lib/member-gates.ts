@@ -69,6 +69,7 @@ export function memberNeedsPayment(
   // still unpaid (onboard/chat/book stay open), but training routes stay gated
   // until paymentStatus === "paid". Do NOT clear the payment gate when
   // onboardingComplete flips true — that previously unlocked Today for free.
+  // Prefer memberNeedsPaymentAsync when free-week promos should also unlock.
   if (!isSelfRegisteredMember(userId)) return false;
   if (!isStripePaymentsEnabled()) {
     if (!stripeRequiredInProduction()) return false;
@@ -76,6 +77,25 @@ export function memberNeedsPayment(
   const plan = profile?.plan ?? "explorer";
   if (!isPaidSignupPlan(plan)) return false;
   return (profile?.paymentStatus ?? "pending") !== "paid";
+}
+
+/**
+ * Same as memberNeedsPayment, but claimed free-week promos grant access without a
+ * paid Stripe/Venmo stamp (product access only — not money).
+ */
+export async function memberNeedsPaymentAsync(
+  profile: Pick<MemberProfile, "plan" | "paymentStatus" | "onboardingComplete"> | null,
+  userId: string,
+): Promise<boolean> {
+  if (!memberNeedsPayment(profile, userId)) return false;
+  try {
+    const { getActiveAccessOverride } = await import("@/lib/gamification-promos");
+    const override = await getActiveAccessOverride(userId);
+    if (override) return false;
+  } catch {
+    /* keep payment gate */
+  }
+  return true;
 }
 
 export function memberNeedsApproval(
@@ -91,6 +111,18 @@ export function memberNeedsApproval(
 export function memberHasFullAccess(profile: MemberProfile | null, userId: string): boolean {
   if (!isSelfRegisteredMember(userId)) return true;
   if (memberNeedsPayment(profile, userId)) return false;
+  if (profile?.approvalStatus === "rejected") return false;
+  if (memberNeedsApproval(profile, userId)) return false;
+  return true;
+}
+
+/** Full access including free-week promo override. Use on server request paths. */
+export async function memberHasFullAccessAsync(
+  profile: MemberProfile | null,
+  userId: string,
+): Promise<boolean> {
+  if (!isSelfRegisteredMember(userId)) return true;
+  if (await memberNeedsPaymentAsync(profile, userId)) return false;
   if (profile?.approvalStatus === "rejected") return false;
   if (memberNeedsApproval(profile, userId)) return false;
   return true;

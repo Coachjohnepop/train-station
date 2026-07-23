@@ -9,7 +9,7 @@ import {
 } from "@/lib/staff-access";
 import type { SessionUser } from "@/lib/auth-session";
 import { getMemberProfile } from "@/lib/member-profiles-store";
-import { memberHasFullAccess } from "@/lib/member-gates";
+import { memberHasFullAccessAsync } from "@/lib/member-gates";
 
 export type AuthResult =
   | { ok: true; session: SessionUser }
@@ -71,7 +71,7 @@ export async function requireMemberAccess(): Promise<AuthResult> {
   }
 
   const profile = await getMemberProfile(session.id);
-  if (!memberHasFullAccess(profile, session.id)) {
+  if (!(await memberHasFullAccessAsync(profile, session.id))) {
     return forbidden("Complete payment or wait for coach approval.");
   }
 

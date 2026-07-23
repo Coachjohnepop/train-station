@@ -95,12 +95,12 @@ export async function markMemberPaid(input: {
   return updated;
 }
 
-export function attachPaidMemberCookies(
+export async function attachPaidMemberCookies(
   res: NextResponse,
   userId: string,
   profile: Awaited<ReturnType<typeof markMemberPaid>>,
 ) {
   if (profile) {
-    syncMemberGateCookies(res, { userId, profile });
+    await syncMemberGateCookies(res, { userId, profile });
   }
 }

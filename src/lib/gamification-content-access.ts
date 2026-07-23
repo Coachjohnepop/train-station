@@ -175,3 +175,73 @@ export async function resolveContentAccess(input: {
     mode: "percent",
   };
 }
+
+/**
+ * Server-side gate for workout log (and similar write paths).
+ * Mirrors member Today free-pool / content-tier rules so explorers cannot bypass the UI lock.
+ */
+export async function assertMemberCanLogWorkout(input: {
+  userId: string;
+  programSlug?: string | null;
+  /** Staff logging for a member */
+  staffBypass?: boolean;
+}): Promise<{ ok: true } | { ok: false; reason: string }> {
+  if (input.staffBypass) return { ok: true };
+
+  const slug = (input.programSlug || "adult").trim() || "adult";
+  let enrollmentDay: number | null = null;
+  let freePoolPinned: boolean | undefined;
+  let curatedMode: boolean | undefined;
+  let contentTierMin: string | null | undefined;
+  let profilePlan: string | null | undefined;
+
+  try {
+    const { getMemberProfile } = await import("@/lib/member-profiles-store");
+    const profile = await getMemberProfile(input.userId);
+    profilePlan = profile?.plan ?? null;
+  } catch {
+    /* continue with defaults */
+  }
+
+  try {
+    const { getEnrollmentsMapForUser } = await import("@/lib/enrollment-db");
+    const { linearEnrollmentDay } = await import("@/lib/member-enrollment-day");
+    const enrollments = await getEnrollmentsMapForUser(input.userId);
+    const pos = enrollments[slug];
+    if (pos) {
+      enrollmentDay = linearEnrollmentDay(pos.currentWeek || 1, pos.currentDay || 1);
+      try {
+        const { getDayFreePoolFlags } = await import("@/lib/gamification-free-pool");
+        const flags = await getDayFreePoolFlags(
+          slug,
+          pos.currentWeek || 1,
+          pos.currentDay || 1,
+        );
+        freePoolPinned = flags.freePoolPinned;
+        curatedMode = flags.curatedMode;
+        contentTierMin = flags.contentTierMin;
+      } catch {
+        /* percent mode only */
+      }
+    }
+  } catch {
+    /* no enrollment → resolveContentAccess stays open for explorers without day */
+  }
+
+  const access = await resolveContentAccess({
+    userId: input.userId,
+    profilePlan,
+    enrollmentDay: enrollmentDay ?? undefined,
+    freePoolPinned,
+    curatedMode,
+    contentTierMin,
+  });
+
+  if (access.locked) {
+    return {
+      ok: false,
+      reason: access.reason || "This workout is locked for free-ticket members. Upgrade to unlock.",
+    };
+  }
+  return { ok: true };
+}
