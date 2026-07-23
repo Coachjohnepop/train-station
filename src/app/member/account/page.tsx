@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import MemberAccountClient from "@/components/MemberAccountClient";
 import UserBicepAvatar from "@/components/UserBicepAvatar";
@@ -29,11 +30,13 @@ export default async function MemberAccountPage() {
         <div className="min-w-0">
           <h1 className="text-xl font-bold">Account &amp; settings</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Plan, password, notifications, and billing — all in one place.
+            Plan, password, notifications, billing, and tipping — all in one place.
           </p>
         </div>
       </section>
-      <MemberAccountClient membership={membership} email={session.email} />
+      <Suspense fallback={<p className="text-sm text-[var(--muted)]">Loading account…</p>}>
+        <MemberAccountClient membership={membership} email={session.email} />
+      </Suspense>
     </div>
   );
 }

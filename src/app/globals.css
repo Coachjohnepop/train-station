@@ -593,12 +593,83 @@ table.data th {
   border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
 }
 
+/* Member set row: weight box + set buttons (same layout live & on-demand) */
+.member-set-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: stretch;
+}
+
+.member-set-weight-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.0625rem;
+  flex: 0 0 calc((100% - 1rem) / 5);
+  max-width: calc((100% - 1rem) / 5);
+  min-height: 2.75rem;
+  padding: 0.25rem 0.125rem;
+  border-radius: 10px;
+  border: 2px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-2));
+  cursor: text;
+}
+
+.member-set-weight-box:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.member-set-weight-box__input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text);
+  padding: 0;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.member-set-weight-box__input::-webkit-outer-spin-button,
+.member-set-weight-box__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.member-set-weight-box__input:focus {
+  outline: none;
+}
+
+.member-set-weight-box__input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.member-set-weight-box__label {
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  color: var(--muted);
+  pointer-events: none;
+}
+
 .member-set-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.0625rem;
+  flex: 0 0 calc((100% - 1rem) / 5);
+  max-width: calc((100% - 1rem) / 5);
   min-height: 2.75rem;
   padding: 0.25rem 0.125rem;
   border-radius: 10px;
@@ -705,6 +776,70 @@ table.data th {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
+}
+
+/* Weight cell — same footprint as a set checkoff, far left of the row */
+.coach-live-checkoff .coach-floor-weight-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.05rem;
+  flex: 0 0 calc((100% - 1.25rem) / 6);
+  max-width: calc((100% - 1.25rem) / 6);
+  aspect-ratio: 1;
+  min-height: 0;
+  padding: 0.1rem;
+  border-radius: 6px;
+  border: 1.5px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-2));
+  cursor: text;
+}
+
+.coach-live-checkoff .coach-floor-weight-box:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.coach-live-checkoff .coach-floor-weight-box__input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  text-align: center;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text);
+  padding: 0;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.coach-live-checkoff .coach-floor-weight-box__input::-webkit-outer-spin-button,
+.coach-live-checkoff .coach-floor-weight-box__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.coach-live-checkoff .coach-floor-weight-box__input:focus {
+  outline: none;
+}
+
+.coach-live-checkoff .coach-floor-weight-box__input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.coach-live-checkoff .coach-floor-weight-box__label {
+  font-size: 0.4rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  line-height: 1;
+  color: var(--muted);
+  pointer-events: none;
 }
 
 .coach-live-checkoff .coach-floor-set-btn {

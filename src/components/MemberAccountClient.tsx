@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
+import CoachTipPanel from "@/components/CoachTipPanel";
 import { paymentBillingSummary, seatArtForPlan } from "@/lib/membership-theme";
 import type { SignupPlan } from "@/lib/signup-plans";
 import { signupPlanLabel } from "@/lib/signup-plans";
@@ -40,6 +42,8 @@ export default function MemberAccountClient({
   membership: MembershipData;
   email: string;
 }) {
+  const searchParams = useSearchParams();
+  const justTipped = searchParams.get("tipped") === "1";
   const [billingBusy, setBillingBusy] = useState(false);
   const [billingError, setBillingError] = useState("");
   const [resetBusy, setResetBusy] = useState(false);
@@ -205,6 +209,9 @@ export default function MemberAccountClient({
         </div>
       </div>
 
+      {/* Tip coach — evergreen primary home (not mid-workout) */}
+      <CoachTipPanel justTipped={justTipped} />
+
       {/* Upgrades only — seat art cards; never show lower tiers here */}
       {upgradePlans.length > 0 && (
         <div className="card space-y-3">
@@ -274,8 +281,8 @@ export default function MemberAccountClient({
         </div>
       </div>
 
-      {/* Notifications */}
-      <div className="card space-y-2">
+      {/* Notifications — phone / home-screen only (hidden on desktop browser) */}
+      <div className="card space-y-2 hidden max-[899px]:block">
         <h3 className="text-sm font-semibold">Notifications</h3>
         <p className="text-[11px] text-[var(--muted)]">
           Phone banners and home-screen badge. Turn off anytime here.

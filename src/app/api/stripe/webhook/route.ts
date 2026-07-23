@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { updateMemberProfile } from "@/lib/member-profiles-store";
+import { isCoachTipCheckoutMetadata } from "@/lib/coach-tips";
 import { markMemberPaid } from "@/lib/mark-member-paid";
 import { getStripe } from "@/lib/stripe";
 import {
@@ -50,6 +51,39 @@ export async function POST(request: Request) {
 
       const userId = session.metadata?.userId || session.client_reference_id;
       if (!userId) break;
+
+      // Standalone coach tip — money on Jeremy’s Stripe; do not change membership.
+      if (isCoachTipCheckoutMetadata(session.metadata)) {
+        await persistCheckoutPaymentMethod(session);
+        const tipCents =
+          Number(session.metadata?.tipAmountCents) ||
+          session.amount_total ||
+          0;
+        await recordSubscriptionPaymentFact({
+          userId,
+          stripePaymentIntentId: (() => {
+            const pi = session.payment_intent;
+            return typeof pi === "string" ? pi : pi && typeof pi === "object" && "id" in pi
+              ? String((pi as { id: string }).id)
+              : null;
+          })(),
+          stripeCustomerId: checkoutCustomerId(session),
+          amountCents: tipCents,
+          currency: session.currency ?? "usd",
+          status: "paid",
+          planId: "coach_tip",
+          tierSlug: "coach_tip",
+          billingReason: "coach_tip",
+          paidAt: new Date(),
+          stripeEventId: event.id,
+          properties: {
+            kind: "coach_tip",
+            checkoutSessionId: session.id,
+            tipLabel: session.metadata?.tipLabel ?? null,
+          },
+        });
+        break;
+      }
 
       const subscriptionId = checkoutSubscriptionId(session);
       if (subscriptionId) {

@@ -111,6 +111,7 @@ export default function AdminCommissionClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [adminFeeMsg, setAdminFeeMsg] = useState<string | null>(null);
   const [addForm, setAddForm] = useState(emptyPartnerForm);
   const [editPartner, setEditPartner] = useState<Partner | null>(null);
   const [editForm, setEditForm] = useState({
@@ -288,6 +289,35 @@ export default function AdminCommissionClient() {
       setError(body.error || "Payout failed.");
     } else {
       await load();
+    }
+    setBusy(null);
+  }
+
+  async function runPlatformAdminFee(dryRun: boolean) {
+    setBusy(dryRun ? "admin-dry" : "admin-pay");
+    setError("");
+    setAdminFeeMsg(null);
+    const res = await fetch("/api/stripe/commission/platform-admin-fee", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dryRun }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(body.error || "Platform admin fee failed.");
+      setBusy(null);
+      return;
+    }
+    if (body.dryRun && body.preview) {
+      setAdminFeeMsg(
+        `Preview: ${body.preview.amountLabel} → ${body.preview.partnerName} (${body.preview.period}). Connect ${body.preview.connectReady ? "ready" : "not ready"}.`,
+      );
+    } else if (body.transferId) {
+      setAdminFeeMsg(
+        `Paid ${body.preview?.amountLabel ?? "platform admin"} to ${body.preview?.partnerName ?? "partner"} · ${body.transferId}`,
+      );
+    } else {
+      setAdminFeeMsg("Platform admin fee updated.");
     }
     setBusy(null);
   }
@@ -518,6 +548,59 @@ export default function AdminCommissionClient() {
             >
               {busy === "add" ? "Adding…" : "Add partner"}
             </button>
+          </div>
+
+          {/* Platform admin fee — $275/mo Grok + infra; separate from MRR pool */}
+          <div className="card space-y-3 p-5 border border-violet-500/25">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-[2px] text-violet-300">
+                  Platform admin fee
+                </h2>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  Agreed <strong className="text-[var(--text)]">$275/mo</strong> → John (Grok $200 +
+                  infra). <em>Not</em> the 5%/30% membership fee pool. Requires John’s Connect
+                  Express Ready, then transfer from Jeremy’s master Stripe.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn-secondary text-sm"
+                disabled={busy !== null}
+                onClick={() => void runPlatformAdminFee(true)}
+              >
+                {busy === "admin-dry" ? "Previewing…" : "Preview $275"}
+              </button>
+              <button
+                type="button"
+                className="btn-primary text-sm"
+                disabled={busy !== null}
+                onClick={() => {
+                  if (
+                    !confirm(
+                      "Transfer platform admin fee ($275 default) to John via Connect? This uses live/test Stripe balance on the master account.",
+                    )
+                  ) {
+                    return;
+                  }
+                  void runPlatformAdminFee(false);
+                }}
+              >
+                {busy === "admin-pay" ? "Paying…" : "Pay platform admin now"}
+              </button>
+            </div>
+            {adminFeeMsg && (
+              <p className="text-sm text-violet-100/90 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-2">
+                {adminFeeMsg}
+              </p>
+            )}
+            <p className="text-[11px] text-[var(--muted)]">
+              Env: <code className="text-[10px]">STRIPE_PLATFORM_ADMIN_FEE_DOLLARS</code> (default
+              275) · partner email match{" "}
+              <code className="text-[10px]">STRIPE_PLATFORM_ADMIN_PARTNER_EMAIL</code>
+            </p>
           </div>
 
           <div className="card space-y-4 p-5">

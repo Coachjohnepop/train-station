@@ -43,6 +43,22 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return out;
 }
 
+/**
+ * Phone alerts are for real phones (home-screen PWA / mobile Safari), not desktop
+ * browser chrome. Matches PwaInstallHint (~900px) + touch-primary devices.
+ */
+export function isMobilePushSurface(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    if (window.matchMedia("(max-width: 899px)").matches) return true;
+    // iPad landscape can be wide but still a tablet
+    if (window.matchMedia("(hover: none) and (pointer: coarse)").matches) return true;
+  } catch {
+    /* ignore */
+  }
+  return false;
+}
+
 export function isPushSupported(): boolean {
   if (typeof window === "undefined") return false;
   return (

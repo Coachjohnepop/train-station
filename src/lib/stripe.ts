@@ -23,7 +23,11 @@ import {
   customerSavedCardReadyForCheckoutPrefill,
   promoteCustomerPaymentMethodsForCheckout,
 } from "@/lib/stripe-payment-method-persist";
-import { buildMembershipTipOptionalItems } from "@/lib/stripe-checkout-tips";
+import { COACH_TIP_METADATA_KIND } from "@/lib/coach-tips";
+import {
+  buildMembershipTipOptionalItems,
+  resolveCoachTipLineItem,
+} from "@/lib/stripe-checkout-tips";
 
 type StripeClient = import("stripe").default;
 
@@ -399,6 +403,67 @@ export async function createSignupCheckoutSession(input: {
   }
 
   return { error: `${signupPlanLabel(input.plan)} requires a quote — contact the coach.` };
+}
+
+/**
+ * Standalone one-time coach tip (Account, Messages soft link, etc.).
+ * Does not change membership plan or paymentStatus.
+ */
+export async function createCoachTipCheckoutSession(input: {
+  userId: string;
+  email: string;
+  name: string;
+  amountCents: number;
+}): Promise<
+  { clientSecret: string; sessionId: string; hasSavedCard: boolean; amountCents: number } | { error: string }
+> {
+  const stripe = getStripe();
+  if (!stripe) return { error: "Stripe is not configured." };
+
+  const line = resolveCoachTipLineItem(input.amountCents);
+  if ("error" in line) return line;
+
+  const customer = await checkoutCustomerFields({
+    userId: input.userId,
+    email: input.email,
+    name: input.name,
+  });
+
+  const base = appBaseUrl();
+  const sessionParams: import("stripe").Stripe.Checkout.SessionCreateParams = {
+    mode: "payment",
+    ...embeddedCheckoutFields(base),
+    ...customer.fields,
+    client_reference_id: input.userId,
+    metadata: {
+      kind: COACH_TIP_METADATA_KIND,
+      userId: input.userId,
+      tipAmountCents: String(line.amountCents),
+      tipLabel: line.label,
+    },
+    line_items: [
+      {
+        price: line.price,
+        quantity: line.quantity,
+      },
+    ],
+    payment_intent_data: {
+      setup_future_usage: "off_session",
+      metadata: {
+        kind: COACH_TIP_METADATA_KIND,
+        userId: input.userId,
+        tipAmountCents: String(line.amountCents),
+      },
+    },
+  };
+
+  const session = await createCheckoutSession(stripe, sessionParams);
+  if ("error" in session) return session;
+  return {
+    ...session,
+    hasSavedCard: customer.hasSavedCard,
+    amountCents: line.amountCents,
+  };
 }
 
 export async function changeMemberSubscriptionPlan(input: {

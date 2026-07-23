@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import {
   enablePushAlerts,
   getPushPermission,
+  isMobilePushSurface,
   isPushAlertsPermanentlyEnabled,
   isPushSupported,
   isStandalonePwa,
@@ -24,6 +25,8 @@ export default function PushAlertEnable({ compact = false }: { compact?: boolean
   const [standalone, setStandalone] = useState(false);
 
   useEffect(() => {
+    // Desktop browser: never show the amber strip (phone / home-screen only).
+    if (!isMobilePushSurface()) return;
     if (!isPushSupported()) return;
 
     // Already enabled once — permanent, no banner (quiet re-sync only).

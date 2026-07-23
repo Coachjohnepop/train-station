@@ -998,6 +998,32 @@ export default function MemberWorkoutConsole({
     maybeStartRestTimer(latest.blockId, latest.setNum, { fromRemote: true });
   }, [completedSets, maybeStartRestTimer]);
 
+  const weightValueForBlock = useCallback(
+    (block: MemberWorkoutView["exercises"][number]) => {
+      if (weights[block.id] != null && weights[block.id] !== "") {
+        return weights[block.id];
+      }
+      // Review / past silhouette seed (don't write into state until edited).
+      if (reviewMode && block.past?.startingWeightLbs != null) {
+        return String(block.past.startingWeightLbs);
+      }
+      return weights[block.id] ?? "";
+    },
+    [weights, reviewMode],
+  );
+
+  const updateWeight = useCallback(
+    (blockId: string, value: string) => {
+      setWeights((w) => {
+        const updated = { ...w, [blockId]: value };
+        stateRef.current = { ...stateRef.current, weights: updated };
+        return updated;
+      });
+      queueLiveSave();
+    },
+    [queueLiveSave],
+  );
+
   const toggleSet = useCallback(
     (blockId: string, setNum: number, originEl?: HTMLElement) => {
       const wasDone = completedSets[blockId]?.has(setNum) ?? false;
@@ -1417,9 +1443,37 @@ export default function MemberWorkoutConsole({
             : doneForBlock.size >= block.setCount;
           const exerciseDone = finishedExercises.has(block.id) || allSetsDone;
           const showCompactSets = allSetsDone && coachExpandedBlockId !== block.id;
+          const loggedWeight = weights[block.id]?.trim();
           const doneLabel = isTimed
-            ? "Done"
-            : `${block.setCount} set${block.setCount === 1 ? "" : "s"} done`;
+            ? loggedWeight
+              ? `${loggedWeight} lbs · Done`
+              : "Done"
+            : loggedWeight
+              ? `${loggedWeight} lbs · ${block.setCount} set${block.setCount === 1 ? "" : "s"}`
+              : `${block.setCount} set${block.setCount === 1 ? "" : "s"} done`;
+          const weightPlaceholder =
+            block.past?.startingWeightLbs != null
+              ? String(block.past.startingWeightLbs)
+              : "—";
+          const weightCell = (
+            <label
+              className="coach-floor-weight-box"
+              title="Weight used (lbs)"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <input
+                className="coach-floor-weight-box__input"
+                type="number"
+                inputMode="decimal"
+                aria-label={`${block.name} weight in pounds`}
+                placeholder={weightPlaceholder}
+                value={weightValueForBlock(block)}
+                onChange={(e) => updateWeight(block.id, e.target.value)}
+                onFocus={(e) => e.target.select()}
+              />
+              <span className="coach-floor-weight-box__label">lbs</span>
+            </label>
+          );
 
           return (
             <div
@@ -1436,7 +1490,7 @@ export default function MemberWorkoutConsole({
                 <button
                   type="button"
                   className="coach-floor-exercise__compact"
-                  aria-label={`${block.name}, ${doneLabel}. Tap to edit sets.`}
+                  aria-label={`${block.name}, ${doneLabel}. Tap to edit weight and sets.`}
                   onClick={(e) => {
                     e.stopPropagation();
                     setCoachExpandedBlockId(block.id);
@@ -1457,6 +1511,7 @@ export default function MemberWorkoutConsole({
                   <div className="mt-1" onClick={(e) => e.stopPropagation()}>
                     {isTimed ? (
                       <div className="coach-floor-set-grid">
+                        {weightCell}
                         <button
                           type="button"
                           data-coach-last-set={block.id}
@@ -1474,6 +1529,7 @@ export default function MemberWorkoutConsole({
                       </div>
                     ) : (
                       <div className="coach-floor-set-grid">
+                        {weightCell}
                         {Array.from({ length: block.setCount }, (_, i) => {
                           const setNum = i + 1;
                           const done = doneForBlock.has(setNum);
@@ -1819,39 +1875,7 @@ export default function MemberWorkoutConsole({
                   )}
                 </div>
 
-                {/* Weight input — moved here and made more prominent per client feedback: "the first thing you do on the exercise" */}
-                <label className="mt-3 block" onClick={(e) => e.stopPropagation()}>
-                  <span className="text-sm font-medium text-[var(--text)]">Starting weight (lbs)</span>
-                  <input
-                    className="input mt-1 text-base py-2 w-full"
-                    type="number"
-                    placeholder={
-                      block.past?.startingWeightLbs != null
-                        ? `Last: ${block.past.startingWeightLbs}`
-                        : "e.g. 30 — enter first"
-                    }
-                    value={reviewMode && block.past?.startingWeightLbs != null 
-                      ? block.past.startingWeightLbs.toString() 
-                      : (weights[block.id] ?? "")}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setWeights((w) => {
-                        const updated = { ...w, [block.id]: value };
-                        stateRef.current = { ...stateRef.current, weights: updated };
-                        return updated;
-                      });
-                      queueLiveSave();
-                    }}
-                    disabled={reviewMode && !instructorName}
-                  />
-                  <p className="mt-0.5 text-[10px] text-[var(--muted)]">
-                    {isEditingFinished
-                      ? "Update weight anytime — your sets stay logged."
-                      : "Enter weight before logging sets (becomes your silhouette next time)."}
-                  </p>
-                </label>
-
-                {/* Compact two-column: scheme info (left) + log sets (right) for better space use */}
+                {/* Compact two-column: scheme info (left) + weight + sets (right) — same row as live floor */}
                 <div className="mt-3 flex gap-3 text-sm">
                   {/* Left: Approach / Prescription / Weight tier - tighter */}
                   <div className="w-5/12 space-y-1 rounded-lg bg-[var(--surface-2)] p-2 text-xs">
@@ -1869,46 +1893,92 @@ export default function MemberWorkoutConsole({
                     </div>
                   </div>
 
-                  {/* Right: Log your sets - now side-by-side */}
+                  {/* Right: Weight (far left) + set checkoffs — coach live floor uses the same pattern */}
                   <div
                     className="flex-1"
                     onClick={(e) => e.stopPropagation()}
                     role="group"
-                    aria-label={`${block.name} ${isTimed ? "timed set" : "set"} completion`}
+                    aria-label={`${block.name} weight and ${isTimed ? "timed set" : "set"} completion`}
                   >
                     {isTimed ? (
                       <>
-                        <p className="text-xs font-semibold">Timed set</p>
-                        <p className="mt-0.5 text-[10px] text-[var(--muted)]">
-                          Train for {summary}, then mark.
-                        </p>
-                        <button
-                          type="button"
-                          aria-pressed={allSetsDone}
-                          className={`member-set-btn mt-2 w-full text-xs py-1 ${allSetsDone ? "member-set-btn--done" : ""}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleSet(block.id, 1);
-                          }}
-                          disabled={reviewMode && !instructorName}
-                        >
-                          <span className="member-set-btn__num text-sm">
-                            {allSetsDone ? "✓" : "▶"}
-                          </span>
-                          <span className="member-set-btn__label text-[9px]">
-                            {allSetsDone ? "Done" : "Mark complete"}
-                          </span>
-                        </button>
+                        <div className="flex items-baseline justify-between gap-1">
+                          <p className="text-xs font-semibold">Weight &amp; timed set</p>
+                          <p className="text-[10px] text-[var(--muted)]">
+                            {allSetsDone ? "Done" : summary}
+                          </p>
+                        </div>
+                        <div className="member-set-row mt-1">
+                          <label
+                            className="member-set-weight-box"
+                            title="Weight used (lbs)"
+                          >
+                            <input
+                              className="member-set-weight-box__input"
+                              type="number"
+                              inputMode="decimal"
+                              aria-label={`${block.name} weight in pounds`}
+                              placeholder={
+                                block.past?.startingWeightLbs != null
+                                  ? String(block.past.startingWeightLbs)
+                                  : "—"
+                              }
+                              value={weightValueForBlock(block)}
+                              onChange={(e) => updateWeight(block.id, e.target.value)}
+                              onFocus={(e) => e.target.select()}
+                              disabled={reviewMode && !instructorName}
+                            />
+                            <span className="member-set-weight-box__label">lbs</span>
+                          </label>
+                          <button
+                            type="button"
+                            aria-pressed={allSetsDone}
+                            className={`member-set-btn text-xs py-0.5 ${allSetsDone ? "member-set-btn--done" : ""}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleSet(block.id, 1);
+                            }}
+                            disabled={reviewMode && !instructorName}
+                          >
+                            <span className="member-set-btn__num text-sm">
+                              {allSetsDone ? "✓" : "▶"}
+                            </span>
+                            <span className="member-set-btn__label text-[8px]">
+                              {allSetsDone ? "Done" : "Mark"}
+                            </span>
+                          </button>
+                        </div>
                       </>
                     ) : (
                       <>
                         <div className="flex items-baseline justify-between gap-1">
-                          <p className="text-xs font-semibold">Log your sets</p>
+                          <p className="text-xs font-semibold">Weight &amp; sets</p>
                           <p className="text-[10px] text-[var(--muted)]">
                             {doneForBlock.size}/{block.setCount}
                           </p>
                         </div>
-                        <div className="mt-1 grid grid-cols-5 gap-1">
+                        <div className="member-set-row mt-1">
+                          <label
+                            className="member-set-weight-box"
+                            title="Weight used (lbs)"
+                          >
+                            <input
+                              className="member-set-weight-box__input"
+                              type="number"
+                              inputMode="decimal"
+                              aria-label={`${block.name} weight in pounds`}
+                              placeholder={
+                                block.past?.startingWeightLbs != null
+                                  ? String(block.past.startingWeightLbs)
+                                  : "—"
+                              }
+                              value={weightValueForBlock(block)}
+                              onChange={(e) => updateWeight(block.id, e.target.value)}
+                              onFocus={(e) => e.target.select()}
+                              disabled={reviewMode && !instructorName}
+                            />
+                            <span className="member-set-weight-box__label">lbs</span>
+                          </label>
                           {Array.from({ length: block.setCount }, (_, i) => {
                             const setNum = i + 1;
                             const done = doneForBlock.has(setNum);

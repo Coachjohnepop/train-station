@@ -11,6 +11,7 @@ import {
   disablePushAlerts,
   enablePushAlerts,
   getPushPermission,
+  isMobilePushSurface,
   isPushAlertsPermanentlyEnabled,
   isPushSupported,
   isStandalonePwa,
@@ -29,7 +30,8 @@ export default function PushAlertSettings() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isPushSupported()) {
+    // Desktop browser: hide phone-alert controls entirely.
+    if (!isMobilePushSurface() || !isPushSupported()) {
       setSupported(false);
       return;
     }

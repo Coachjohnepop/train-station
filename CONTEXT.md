@@ -333,22 +333,43 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-07-21 (EOD — pick up tomorrow)  
-**Status:** **Venmo LIVE** · Stripe **Live account onboarding** (unregistered business; Live products exist) · prod site still **`stripeTestMode: true`** · SMS **PARKED**.
+**Date:** 2026-07-23  
+**Status:** **Venmo LIVE** · Stripe still **test mode** on prod · tips + coach weight + mobile-only alerts + platform-admin fee UI **shipped to main** · SMS **PARKED**.
 
-### Jul 21 EOD — pick up tomorrow (Stripe Live + tips)
+### Jul 23 ship (done)
 
-**Do next (in order):**
-1. **Tip product in Live Stripe** — run on John’s Mac (agent cannot read `sk_live` from Vercel):
-   ```bash
-   cd ~/projects/train-station
-   STRIPE_SECRET_KEY='sk_live_…' npx tsx scripts/create-stripe-tip-products.mjs
-   ```
-   Paste only the printed `STRIPE_PRICE_TIP_*=price_…` lines into Vercel Production (or hand to agent). Code already supports Checkout `optional_items` (`src/lib/stripe-checkout-tips.ts`).
-2. **Membership Live prices** — open each Live product → copy **`price_…`** (not `prod_…`) for Coach $25/mo, Business $50/mo, 1st Class $850 one-time → Vercel `STRIPE_PRICE_MEMBER` / `BUSINESS` / `PRO`.
-3. **Live keys on Vercel Production** — `sk_live_`, `pk_live_`, Live webhook `whsec_` for `https://www.thetrainstation.co/api/stripe/webhook` → redeploy.
-4. **Verify** `/api/payments/public` → `stripeTestMode: false` → real Amex $25 smoke (refund OK).
-5. **John Connect Express** for 5% MRR pool + **$275/mo platform admin** transfer path.
+1. **Deploy batch** — coach tips (Account / Checkout / Messages soft link), mobile-only Enable alerts, coach+member set-row weight box (live floor = on-demand), tip Checkout API + webhook/confirm skip for `kind=coach_tip`.
+2. **Platform admin $275** — Admin → **Dev & partnership** → **Platform admin fee** card: Preview / Pay now via Connect (`src/lib/platform-admin-fee.ts`, `POST /api/stripe/commission/platform-admin-fee`). Not the MRR pool; not gated by $400 min. Env: `STRIPE_PLATFORM_ADMIN_FEE_DOLLARS` (default 275), `STRIPE_PLATFORM_ADMIN_PARTNER_EMAIL`.
+
+**Ops still needed (John / Jeremy keys — not blocked on code):**
+- John completes **Connect Express** on his partner row when Stripe is ready (Test or Live).
+- Live keys tonight: tip prices + membership prices + `sk_live`/`pk_live`/`whsec` on Vercel.
+- First real **Pay platform admin** only after Connect Ready + balance on master account.
+
+### FUTURE WORK (parked from Jul 23 planning)
+
+*Do not lose these — reorder when priorities change.*
+
+| # | Item | Notes |
+|---|------|--------|
+| F1 | **Stripe Live cutover** | Create Live tip + membership `price_…`; Vercel Live keys; webhook 200; real $25 smoke (refund OK). Account `acct_1TmKSWQWWnajU9uyk`. Script: `create-stripe-tip-products.mjs`. |
+| F2 | **Workout floor polish** | After weight box: per-set weight? auto-fill past lbs into box? compact collapse copy with weight. |
+| F3 | **Gamification on prod** | Recompute/import after cutover; free-pool flags; free-member claim walkthrough. Docs: `GAMIFICATION_DESIGN.md`. |
+| F4 | **Multi-part day UI** | Schema exists; coach calendar “add part 2/3” still open. |
+| F5 | **Jeremy content** | Real YouTube (welcome / free chastise); real Adult W1/W2. `JEREMY_REMAINING_CHECKLIST.md`. |
+| F6 | **Phone 5‑min pass** | Book Call, Messages, no false Join Live; Enable alerts once on home-screen app. |
+| F7 | **Parked product** | Twilio SMS, food/store, public nutrition page, coach 2 Zoom Marketplace publish — only if asked. |
+
+### Jul 23 — Coach tips (product homes)
+
+| Surface | Role |
+|---------|------|
+| **Account → Tip Coach Jeremy** | Primary evergreen home (`#tip-coach`) |
+| **Membership Checkout** | One optional tip line (prefer $10; qty min 0 to skip) |
+| **Messages (coach 1:1)** | Soft link → Account |
+| **Not on** | Live floor, mid-workout, bottom nav |
+
+### Jul 21 EOD — Stripe Live cutover (still open — see F1)
 
 **Live Stripe account id (Jeremy / The Train Station):** `acct_1TmKSWQWWnajU9uyk` (not sandbox `acct_1TmKT3…`).
 

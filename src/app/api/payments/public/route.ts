@@ -11,6 +11,7 @@ import {
   feeCategoryForCheckoutMode,
   feeCategoryLabel,
 } from "@/lib/product-offers";
+import { publicTipConfig } from "@/lib/stripe-checkout-tips";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export async function GET() {
   const config = await getLandingMedia();
   const stripeEnabled = isStripePaymentsEnabled();
   const merchandise = await listMerchandiseSkus();
+  const tips = publicTipConfig();
 
   const effectiveOffers = await getEffectiveMembershipOffers();
   const memberships = effectiveOffers
@@ -83,6 +85,14 @@ export async function GET() {
       handle: config.venmoHandle,
       instructions: config.venmoInstructions,
       hasQr: Boolean(config.venmoQrUrl?.trim()),
+    },
+    /** Optional coach tips (membership Checkout optional_items + Account tip card). */
+    tips: {
+      enabled: tips.enabled,
+      presets: tips.presets,
+      customEnabled: tips.customEnabled,
+      minCustomDollars: tips.minCustomDollars,
+      maxCustomDollars: tips.maxCustomDollars,
     },
   });
 }

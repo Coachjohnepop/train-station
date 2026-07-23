@@ -58,3 +58,7 @@ scripts/.database-prodtest-results-*.json
 scripts/.jerdog-manifest-*.json
 scripts/.jerdog-loop-state.json
 scripts/.jerdog-loop.log
+
+# local tip/sandbox secrets
+.env.tip*
+.env.tip.pull

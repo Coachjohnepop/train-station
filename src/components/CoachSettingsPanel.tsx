@@ -324,7 +324,8 @@ export default function CoachSettingsPanel() {
         )}
       </section>
 
-      <section className="card space-y-4 p-5">
+      {/* Phone alerts only matter on mobile / home-screen — hide on desktop browser */}
+      <section className="card hidden max-[899px]:block space-y-4 p-5">
         <div>
           <h2 className="text-lg font-semibold">Phone app alerts</h2>
           <p className="mt-1 text-sm text-[var(--muted)]">

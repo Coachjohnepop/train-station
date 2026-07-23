@@ -5,7 +5,9 @@ import {
   getSessionUser,
   syncMemberGateCookies,
 } from "@/lib/auth";
+import { isCoachTipCheckoutMetadata } from "@/lib/coach-tips";
 import { markMemberPaid, attachPaidMemberCookies } from "@/lib/mark-member-paid";
+import { getMemberProfile } from "@/lib/member-profiles-store";
 import { getStripe } from "@/lib/stripe";
 import {
   checkoutCustomerId,
@@ -49,6 +51,22 @@ export async function POST(request: Request) {
   }
 
   await persistCheckoutPaymentMethod(checkout);
+
+  // Standalone coach tip — never flip membership / plan.
+  if (isCoachTipCheckoutMetadata(checkout.metadata)) {
+    const tipCents = checkout.metadata?.tipAmountCents;
+    const profile = await getMemberProfile(sessionUser.id);
+    const res = NextResponse.json({
+      ok: true,
+      tip: true,
+      tipAmountCents: tipCents ? Number(tipCents) : checkout.amount_total ?? null,
+      redirectTo: "/member/account?tipped=1",
+    });
+    if (profile) {
+      syncMemberGateCookies(res, { userId: sessionUser.id, profile });
+    }
+    return res;
+  }
 
   const updated = await markMemberPaid({
     userId: sessionUser.id,

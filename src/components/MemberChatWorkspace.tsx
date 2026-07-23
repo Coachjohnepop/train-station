@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ChatFeed from "@/components/ChatFeed";
 import ChatThreadReply from "@/components/ChatThreadReply";
@@ -327,6 +328,20 @@ export default function MemberChatWorkspace({
           />
         ) : null}
       </div>
+
+      {/* Soft tip entry — never mid-workout; gratitude moment near coach 1:1 */}
+      {activeReplyThread?.kind === "member" && !asCoach ? (
+        <p className="px-1 text-center text-[11px] text-[var(--muted)]">
+          Grateful for coaching?{" "}
+          <Link
+            href="/member/account#tip-coach"
+            className="font-medium text-accent hover:underline"
+          >
+            Tip Coach Jeremy
+          </Link>{" "}
+          (optional · Account)
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -111,10 +111,12 @@ Redeploy after saving.
 | **Amount** | **$275/mo** |
 | **Covers** | Grok **$200/mo** (John’s plan) + Vercel/Supabase/Resend/domain buffer |
 | **Not** | Membership 5%/30% fee pool · tips · Stripe card processing fees |
-| **How** | Monthly Connect transfer (or invoice) labeled “Platform admin (Grok + infra)” once John’s Express is Ready |
+| **How** | Admin → **Dev & partnership** → **Platform admin fee** → Preview → **Pay platform admin now** (Connect transfer once John’s Express is Ready) |
+| **Env** | `STRIPE_PLATFORM_ADMIN_FEE_DOLLARS=275` · optional `STRIPE_PLATFORM_ADMIN_PARTNER_EMAIL=john@thetrainstation.co` |
+| **Code** | `src/lib/platform-admin-fee.ts` · `POST /api/stripe/commission/platform-admin-fee` |
 | **Docs** | `VENDOR_COSTS.md` · Desktop PDF `Train-Station-Platform-Costs-and-Admin-Fee.pdf` |
 
-True-up quarterly against real invoices. Raise if Twilio un-parked or Grok tier changes.
+True-up quarterly against real invoices. Raise if Twilio un-parked or Grok tier changes. **Not** gated by the $400 MRR pool minimum.
 
 ---
 

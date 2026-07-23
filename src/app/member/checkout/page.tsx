@@ -39,6 +39,11 @@ type PaymentsPublic = {
     instructions: string | null;
     hasQr: boolean;
   };
+  tips?: {
+    enabled: boolean;
+    presets: number[];
+    customEnabled: boolean;
+  };
 };
 
 function planPriceLabel(plan: string, payments: PaymentsPublic | null): string {
@@ -232,6 +237,17 @@ function MemberCheckoutInner() {
             {error && <p className="text-sm text-amber-400">{error}</p>}
             {confirming && (
               <p className="text-sm text-[var(--muted)]">Confirming payment…</p>
+            )}
+            {stripeReady && payments?.tips?.enabled && !isDowngradeIntent && (
+              <p className="rounded-lg border border-accent/25 bg-accent/10 px-3 py-2 text-xs text-[var(--muted)]">
+                Checkout may show an optional{" "}
+                <strong className="text-[var(--text)]">tip for Coach Jeremy</strong> (you can set
+                quantity to 0 to skip). More tip amounts anytime under{" "}
+                <Link href="/member/account#tip-coach" className="text-accent hover:underline">
+                  Account → Tip Coach
+                </Link>
+                .
+              </p>
             )}
             {stripeReady && (
               <div className="space-y-3">

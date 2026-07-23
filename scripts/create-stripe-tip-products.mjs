@@ -9,13 +9,19 @@
  * Idempotent: reuses existing product named "Tip your coach" if present.
  */
 import dotenv from "dotenv";
+
+// Prefer an already-exported key (e.g. STRIPE_SECRET_KEY=sk_… npx tsx …).
+// Local .env files often have empty Stripe placeholders that would blank it.
+const keyFromShell = process.env.STRIPE_SECRET_KEY?.trim();
 dotenv.config({ path: ".env" });
 dotenv.config({ path: ".env.local", override: true });
 dotenv.config({ path: ".env.go-prod", override: true });
+dotenv.config({ path: ".env.tip.sandbox", override: true });
+if (keyFromShell) process.env.STRIPE_SECRET_KEY = keyFromShell;
 
 const key = process.env.STRIPE_SECRET_KEY?.trim();
 if (!key) {
-  console.error("Missing STRIPE_SECRET_KEY");
+  console.error("Missing STRIPE_SECRET_KEY (export it or put a real value in .env.local / .env.tip.sandbox)");
   process.exit(1);
 }
 const mode = key.startsWith("sk_live") ? "live" : key.startsWith("sk_test") ? "test" : "unknown";
@@ -85,8 +91,16 @@ async function findOrCreatePrice(productId, amountCents, nickname) {
 }
 
 async function main() {
-  const acct = await stripe.accounts.retrieve();
-  console.log(`Account: ${acct.id} ${acct.settings?.dashboard?.display_name || acct.business_profile?.name || ""}`);
+  // Claimable sandbox keys (rkcs_test_…) often block accounts.retrieve but allow catalog.
+  try {
+    const acct = await stripe.accounts.retrieve();
+    console.log(
+      `Account: ${acct.id} ${acct.settings?.dashboard?.display_name || acct.business_profile?.name || ""}`,
+    );
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.log(`Account: (skipped — ${msg.slice(0, 80)})`);
+  }
 
   const product = await findOrCreateProduct();
   const envLines = [];

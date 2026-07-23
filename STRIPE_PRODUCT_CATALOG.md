@@ -52,24 +52,28 @@ See also: `STRIPE_DEMO_SCRIPT.md`, `STRIPE_COMMISSION_SETUP.md`
 
 ---
 
-## Coach tip (optional cross-sell at Checkout)
+## Coach tip (optional — one-time)
 
-Tips are **one-time** optional add-ons on membership Checkout (Coach / Business / 1st Class).  
-Money still lands on **Jeremy’s master Stripe**. Does **not** change membership ticket.
+Tips are **one-time** support for Coach Jeremy / The Train Station.  
+Money lands on **Jeremy’s master Stripe**. Does **not** change membership ticket or `paymentStatus`.
 
-### Stripe Dashboard (Live)
+### Where it lives in the app (smart homes)
 
-1. **Product catalog → + Create product**
-   - Name: **Tip your coach** (or “Support the Train Station”)
-   - Description: Optional tip — thank you!
-2. Add **one-time** prices (recommended presets):
-   - **$5**, **$10**, **$25**, **$50** (one time each)
-3. Optional **custom amount** style:
-   - One-time price **$1.00** named “Custom tip ($1 units)”
-   - In app, quantity is adjustable 1–200 → tip $1–$200
-4. Copy each **Price ID** (`price_…`).
-5. (Optional) On **Coach Class** / **Business Class** product pages → **Cross-sells** → add “Tip your coach”.  
-   That helps Payment Links; **our embedded Checkout uses `optional_items` + env** below.
+| Surface | Behavior |
+|---------|----------|
+| **Account → Tip Coach Jeremy** | **Primary evergreen home** — chips $5/$10/$25/$50 + custom; embedded Checkout |
+| **Membership Checkout** | One optional tip line (prefer $10 chip; qty min 0 to skip) when wallet is open |
+| **Messages (coach 1:1)** | Soft text link → Account tip card (gratitude moment, not a modal) |
+| **Not on** | Live floor, mid-workout, nav chrome (no nagging) |
+
+### Stripe Dashboard (Live or Test)
+
+1. Run (idempotent):
+   ```bash
+   STRIPE_SECRET_KEY='sk_…' npx tsx scripts/create-stripe-tip-products.mjs
+   ```
+   Or create product **Tip your coach** with one-time prices **$5 / $10 / $25 / $50** and optional **$1** custom units.
+2. Copy each **Price ID** (`price_…`) into Vercel.
 
 ### Vercel env (Production)
 
@@ -87,6 +91,8 @@ STRIPE_PRICE_TIP_CUSTOM=price_…
 # STRIPE_PRICE_TIPS=price_a,price_b,price_c
 ```
 
-Redeploy after saving. Membership Checkout will offer tips as optional line items.
+Redeploy after saving.
 
-**Webhook:** membership still marks paid from the subscription/session; tip amounts are extra one-time charges on the same Checkout (no plan change).
+**APIs:** `POST /api/stripe/tip` (standalone) · membership Checkout still gets `optional_items` via `src/lib/stripe-checkout-tips.ts`.
+
+**Webhook / confirm:** sessions with `metadata.kind=coach_tip` **never** call `markMemberPaid` (plan stays put). Optional ledger row via `factSubscriptionPayment` with `planId=coach_tip`.
