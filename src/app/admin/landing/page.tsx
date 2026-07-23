@@ -27,7 +27,9 @@ export default async function AdminLandingPage() {
         <p className="font-semibold text-violet-100">Video checklist (Jeremy)</p>
         <ol className="mt-2 list-decimal space-y-1 pl-5">
           <li>Welcome (default + per ticket if you want different intros)</li>
-          <li>Free-ticket / chastise clip after the short free-ticket open</li>
+          <li>
+            Free-ticket intro (Jeremy) — after the built-in 10s chorus gag when someone taps Free
+          </li>
           <li>Weekly coach video + dinner video (member Today strip below)</li>
           <li>Venmo QR if you take money outside Stripe</li>
         </ol>

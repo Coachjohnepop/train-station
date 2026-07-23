@@ -5,17 +5,20 @@ import { useEffect, useRef, useState } from "react";
 import { setBackgroundMusicOverlay } from "@/lib/background-music-control";
 import {
   FREE_TICKET_RICKROLL_CHORUS_START_SEC,
+  FREE_TICKET_RICKROLL_DURATION_MS,
+  FREE_TICKET_RICKROLL_FADE_MS,
   FREE_TICKET_RICKROLL_URL,
+  isRickrollVideoUrl,
   landingVideoEmbedSrc,
 } from "@/lib/landing-media";
 import { postYoutubeEmbedCommand } from "@/lib/youtube-embed-control";
-import { youtubeStartSecondsFromUrl } from "@/lib/youtube";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 
-const RICKROLL_MS = 20_000;
-const FADE_MS = 1_500;
-const JEREMY_PRELOAD_MS = 17_000;
-
+/**
+ * Free / Explorer ticket open:
+ * 1) Always play Rickroll from the chorus for ~10s (hard-coded gag).
+ * 2) Crossfade to Jeremy’s free-tier intro (admin free-chastise URL, else welcome).
+ */
 export default function FreeTicketModal({
   open,
   onClose,
@@ -27,6 +30,7 @@ export default function FreeTicketModal({
   open: boolean;
   onClose: () => void;
   onUpgrade: () => void;
+  /** Jeremy free-tier intro (after gag). Not the rickroll. */
   freeChastiseVideoUrl?: string | null;
   welcomeVideoUrl?: string | null;
   purchaseAuth?: PurchaseAuth;
@@ -40,25 +44,30 @@ export default function FreeTicketModal({
   const jeremyRef = useRef<HTMLIFrameElement>(null);
 
   const embedOrigin = typeof window !== "undefined" ? window.location.origin : undefined;
-  // Always play free-tier gag (default Rickroll at chorus) unless admin clears with empty override.
-  const freeVideoUrl = freeChastiseVideoUrl?.trim() || FREE_TICKET_RICKROLL_URL;
-  const hasRickroll = Boolean(freeVideoUrl);
-  const hasJeremy = Boolean(welcomeVideoUrl?.trim());
-  const freeStartSec =
-    youtubeStartSecondsFromUrl(freeVideoUrl) ?? FREE_TICKET_RICKROLL_CHORUS_START_SEC;
 
-  const rickrollSrc = hasRickroll
-    ? landingVideoEmbedSrc(freeVideoUrl, true, {
-        mute: false,
-        origin: embedOrigin,
-        // Force chorus if URL has no t= (e.g. bare rickroll id stored in admin)
-        startSeconds: freeStartSec,
-      })
-    : null;
+  // Prefer free-ticket intro; fall back to general welcome (never use rickroll as Jeremy).
+  const jeremyVideoUrl = (() => {
+    const free = freeChastiseVideoUrl?.trim();
+    if (free && !isRickrollVideoUrl(free)) return free;
+    const welcome = welcomeVideoUrl?.trim();
+    if (welcome && !isRickrollVideoUrl(welcome)) return welcome;
+    return null;
+  })();
+  const hasJeremy = Boolean(jeremyVideoUrl);
+
+  const rickrollSrc = landingVideoEmbedSrc(FREE_TICKET_RICKROLL_URL, true, {
+    mute: false,
+    origin: embedOrigin,
+    startSeconds: FREE_TICKET_RICKROLL_CHORUS_START_SEC,
+  });
+
   const jeremySrc =
     loadJeremy && hasJeremy
-      ? landingVideoEmbedSrc(welcomeVideoUrl, true, { mute: false, origin: embedOrigin })
+      ? landingVideoEmbedSrc(jeremyVideoUrl, true, { mute: false, origin: embedOrigin })
       : null;
+
+  // Preload Jeremy iframe a few seconds before the crossfade.
+  const preloadMs = Math.max(0, FREE_TICKET_RICKROLL_DURATION_MS - 3_000);
 
   useEffect(() => {
     timersRef.current.forEach((id) => window.clearTimeout(id));
@@ -74,32 +83,49 @@ export default function FreeTicketModal({
     }
 
     setBackgroundMusicOverlay(true);
-
-    if (!hasJeremy) return;
+    setShowJeremy(false);
+    setFadeJeremyIn(false);
+    setHideRickroll(false);
+    setLoadJeremy(false);
 
     const schedule = (fn: () => void, ms: number) => {
       timersRef.current.push(window.setTimeout(fn, ms));
     };
 
-    schedule(() => setLoadJeremy(true), JEREMY_PRELOAD_MS);
+    if (hasJeremy) {
+      schedule(() => setLoadJeremy(true), preloadMs);
+    }
+
+    // 10s gag → crossfade to Jeremy (or empty state copy).
     schedule(() => {
       setShowJeremy(true);
       requestAnimationFrame(() => setFadeJeremyIn(true));
-    }, RICKROLL_MS);
-    schedule(() => setHideRickroll(true), RICKROLL_MS + FADE_MS);
+    }, FREE_TICKET_RICKROLL_DURATION_MS);
+
+    schedule(
+      () => setHideRickroll(true),
+      FREE_TICKET_RICKROLL_DURATION_MS + FREE_TICKET_RICKROLL_FADE_MS,
+    );
 
     return () => {
       timersRef.current.forEach((id) => window.clearTimeout(id));
       timersRef.current = [];
       setBackgroundMusicOverlay(false);
     };
-  }, [open, hasJeremy]);
+  }, [open, hasJeremy, preloadMs]);
 
   useEffect(() => {
     if (!open || !rickrollSrc) return;
     const kick = () => {
       postYoutubeEmbedCommand(rickrollRef.current, "playVideo");
       postYoutubeEmbedCommand(rickrollRef.current, "unMute");
+      // Seek to chorus in case embed ignored start= on some devices.
+      postYoutubeEmbedCommand(
+        rickrollRef.current,
+        "seekTo",
+        FREE_TICKET_RICKROLL_CHORUS_START_SEC,
+        true,
+      );
     };
     const t1 = window.setTimeout(kick, 200);
     const t2 = window.setTimeout(kick, 1000);
@@ -110,7 +136,7 @@ export default function FreeTicketModal({
   }, [open, rickrollSrc]);
 
   useEffect(() => {
-    if (!fadeJeremyIn) return;
+    if (!fadeJeremyIn || !hasJeremy) return;
     const kick = () => {
       postYoutubeEmbedCommand(jeremyRef.current, "playVideo");
       postYoutubeEmbedCommand(jeremyRef.current, "unMute");
@@ -121,7 +147,7 @@ export default function FreeTicketModal({
       window.clearTimeout(t1);
       window.clearTimeout(t2);
     };
-  }, [fadeJeremyIn]);
+  }, [fadeJeremyIn, hasJeremy]);
 
   if (!open) return null;
 
@@ -137,7 +163,9 @@ export default function FreeTicketModal({
         className="flex h-[min(92vh,720px)] w-full max-w-lg flex-col rounded-2xl border border-amber-500/30 bg-[#140a22] p-3 sm:p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400">Explorer ticket</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400">
+          Explorer ticket
+        </p>
         <h2 id="free-ticket-title" className="mt-1 text-lg font-semibold text-white sm:text-xl">
           {showJeremy ? (
             <>
@@ -151,8 +179,10 @@ export default function FreeTicketModal({
         </h2>
         <p className="mt-1 text-xs text-[#9d8ab8] leading-relaxed sm:text-sm">
           {showJeremy
-            ? "Explorer is real access to starter programs — no homework, no follow-up calls required."
-            : "You tapped Free. Enjoy the ride… then hear from your coach."}
+            ? hasJeremy
+              ? "Explorer is real access to starter programs — no homework, no follow-up calls required."
+              : "Paste Jeremy’s free-tier intro under Admin → Landing (free-ticket video)."
+            : "You tapped Free. Enjoy the chorus… then hear from your coach."}
         </p>
 
         <div className="relative mt-3 min-h-0 flex-1 overflow-hidden rounded-xl bg-black ring-1 ring-amber-500/20">
@@ -160,9 +190,10 @@ export default function FreeTicketModal({
             <iframe
               ref={rickrollRef}
               key="rickroll"
-              className={`absolute inset-0 h-full w-full transition-opacity duration-[1500ms] ease-in-out ${
+              className={`absolute inset-0 h-full w-full transition-opacity ease-in-out ${
                 fadeJeremyIn ? "pointer-events-none opacity-0" : "opacity-100"
               }`}
+              style={{ transitionDuration: `${FREE_TICKET_RICKROLL_FADE_MS}ms` }}
               src={rickrollSrc}
               title="You picked free"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -174,9 +205,10 @@ export default function FreeTicketModal({
             <iframe
               ref={jeremyRef}
               key="jeremy"
-              className={`absolute inset-0 h-full w-full transition-opacity duration-[1500ms] ease-in-out ${
+              className={`absolute inset-0 h-full w-full transition-opacity ease-in-out ${
                 fadeJeremyIn ? "opacity-100" : "pointer-events-none opacity-0"
               }`}
+              style={{ transitionDuration: `${FREE_TICKET_RICKROLL_FADE_MS}ms` }}
               src={jeremySrc}
               title="Coach Jeremy"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -184,14 +216,14 @@ export default function FreeTicketModal({
             />
           )}
 
-          {!hasRickroll && !hasJeremy && (
-            <div className="flex h-full min-h-[200px] flex-col items-center justify-center p-4 text-center text-xs text-[#9d8ab8]">
-              <p>Coach video coming soon.</p>
-              <p className="mt-2 text-[#7c3aed]">
-                <Link href="/admin/landing" className="underline">
-                  Admin → Landing videos
+          {showJeremy && !hasJeremy && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 p-4 text-center text-xs text-[#9d8ab8]">
+              <p className="font-medium text-white">Coach intro not set yet</p>
+              <p className="mt-2">
+                <Link href="/admin/landing" className="text-[#7c3aed] underline">
+                  Admin → Landing
                 </Link>{" "}
-                to paste your YouTube links.
+                → free-ticket video (Jeremy&apos;s free-tier intro). The 10s chorus gag is built-in.
               </p>
             </div>
           )}

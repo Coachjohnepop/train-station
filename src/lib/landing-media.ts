@@ -84,21 +84,36 @@ export const WELCOME_VIDEO_PLAN_OPTIONS = MEMBERSHIP_PLANS.map((plan) => ({
 }));
 
 /**
- * Free / Explorer ticket gag: Rick Astley starting at the chorus (~0:43).
- * Share format: youtube.com/watch?v=…&t=43s  (or right-click → Copy URL at current time).
- * Override via Admin → Landing free-chastise URL or env; keep `&t=43s` (or any start) on the URL.
+ * Free / Explorer ticket gag: always Rick Astley from the chorus, ~10s, then fade to
+ * Jeremy’s free-tier intro (Admin → Landing free-ticket video — not this URL).
  */
 export const FREE_TICKET_RICKROLL_URL =
   "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=43s";
 
-/** Chorus start second for Never Gonna Give You Up (fallback if URL has no t=). */
+/** Chorus start second for Never Gonna Give You Up. */
 export const FREE_TICKET_RICKROLL_CHORUS_START_SEC = 43;
 
+/** How long the gag plays before crossfading to Jeremy. */
+export const FREE_TICKET_RICKROLL_DURATION_MS = 10_000;
+
+/** Crossfade length (must match FreeTicketModal CSS transition). */
+export const FREE_TICKET_RICKROLL_FADE_MS = 1_500;
+
+export function isRickrollVideoUrl(url: string | null | undefined): boolean {
+  if (!url?.trim()) return false;
+  return /dQw4w9WgXcQ/i.test(url) || /rick.?roll/i.test(url);
+}
+
+/**
+ * Jeremy free-tier intro after the gag.
+ * Does **not** fall back to Rickroll — the gag is always hard-coded in FreeTicketModal.
+ * Legacy admin values that stored the rickroll URL are treated as empty.
+ */
 export function freeChastiseVideoUrlFromConfig(stored: string | null | undefined) {
-  return (
-    resolveLandingVideoUrl(stored, [
-      "NEXT_PUBLIC_FREE_CHASTISE_VIDEO_URL",
-      "NEXT_PUBLIC_FREE_CHASTISE_VIDEO_YT",
-    ]) ?? FREE_TICKET_RICKROLL_URL
-  );
+  const resolved = resolveLandingVideoUrl(stored, [
+    "NEXT_PUBLIC_FREE_CHASTISE_VIDEO_URL",
+    "NEXT_PUBLIC_FREE_CHASTISE_VIDEO_YT",
+  ]);
+  if (!resolved || isRickrollVideoUrl(resolved)) return null;
+  return resolved;
 }

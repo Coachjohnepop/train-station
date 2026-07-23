@@ -115,8 +115,9 @@ export default function AdminLandingMediaPanel({
             (Free Explorer, Coach Class, Business Class, 1st Class). Falls back to the default clip.
           </li>
           <li>
-            <strong className="text-white">Free-ticket video</strong> — plays first when someone taps{" "}
-            <span className="text-[#c4b5fd]">Free</span> (20s, then fades to Welcome video). Site music
+            <strong className="text-white">Free-ticket video</strong> — Jeremy&apos;s free-tier intro
+            after the built-in 10s chorus gag when someone taps{" "}
+            <span className="text-[#c4b5fd]">Free</span>. Site music
             mutes automatically.
           </li>
           <li>
@@ -179,8 +180,8 @@ export default function AdminLandingMediaPanel({
 
       <VideoField
         id="free"
-        label="Free-ticket video"
-        hint="Prank clip (e.g. Rick Roll) — plays 20 seconds, then crossfades to Welcome video."
+        label="Free-ticket intro (Jeremy)"
+        hint="Coach free-tier intro YouTube URL. App always plays a 10s chorus gag first, then fades into this clip (falls back to Welcome if empty). Don’t paste Rickroll here — that’s built-in."
         value={freeUrl}
         onChange={setFreeUrl}
         previewUrl={freeUrl}
