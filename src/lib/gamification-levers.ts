@@ -31,8 +31,9 @@ export const DEFAULT_GAMIFICATION_LEVERS: GamificationLevers = {
   seasonDays: 28,
   crossDivisionPeek: true,
   prizeBandEnabled: true,
-  minActiveDaysForPercentile: 4,
-  minSeasonPointsForPercentile: 100,
+  /** Early launch: 2 days is enough to prove activity without killing free-week loop. */
+  minActiveDaysForPercentile: 2,
+  minSeasonPointsForPercentile: 50,
   minDivisionSizeForTopCut: 8,
   dailyPointCap: 150,
   cooldownDaysPerEdge: 90,
