@@ -11,6 +11,13 @@ const cards = [
     cta: "Open billing →",
   },
   {
+    href: "/admin/audit",
+    title: "Audit log",
+    description:
+      "M&A diligence trail — mark-paid, refunds, discounts, tips, role changes, platform admin fee.",
+    cta: "Open audit →",
+  },
+  {
     href: "/admin/commission",
     title: "Development & partnership fees",
     description:

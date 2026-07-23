@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePlatformStaff } from "@/lib/api-auth";
+import { actorFromSession, auditFromRequest } from "@/lib/audit-request";
 import {
   createBillingDiscount,
   listBillingCouponsAndPromos,
@@ -79,6 +80,12 @@ export async function POST(request: Request) {
   });
 
   if (!created.ok) {
+    await auditFromRequest(request, {
+      action: "billing.discount.create",
+      outcome: "failure",
+      actor: actorFromSession(auth.session),
+      metadata: { error: created.error, code: parsed.data.code },
+    });
     return NextResponse.json({ error: created.error }, { status: 400 });
   }
 
@@ -100,6 +107,25 @@ export async function POST(request: Request) {
       console.warn("[admin/billing/discounts] referral map save failed", e);
     }
   }
+
+  await auditFromRequest(request, {
+    action: "billing.discount.create",
+    outcome: "success",
+    actor: actorFromSession(auth.session),
+    entityType: "stripe_coupon",
+    entityId: created.couponId,
+    metadata: {
+      code: created.code,
+      promotionCodeId: created.promotionCodeId,
+      appliesTo: created.appliesTo,
+      percentOff: parsed.data.percentOff ?? null,
+      amountOffCents: parsed.data.amountOffCents ?? null,
+      duration: parsed.data.duration,
+      durationInMonths: parsed.data.durationInMonths ?? null,
+      referralSaved,
+      warning: created.warning ?? null,
+    },
+  });
 
   return NextResponse.json({
     ok: true,
@@ -126,5 +152,13 @@ export async function PATCH(request: Request) {
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
+  await auditFromRequest(request, {
+    action: "billing.discount.toggle",
+    outcome: "success",
+    actor: actorFromSession(auth.session),
+    entityType: "stripe_promotion_code",
+    entityId: parsed.data.promotionCodeId,
+    metadata: { active: parsed.data.active },
+  });
   return NextResponse.json({ ok: true });
 }

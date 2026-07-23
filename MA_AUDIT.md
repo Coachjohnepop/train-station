@@ -144,13 +144,15 @@ Domain packs already written:
 
 ### Phase A — Data room ready (2–4 weeks)
 
-- [ ] Publish this file + domain packs in a private diligence folder  
-- [ ] Prod snapshot: schema migrate list, demo-persistence JSON, payment public JSON (redact)  
-- [ ] Confirm security env flags  
-- [ ] Wire `recordAuditEvent` for: mark-paid, refund, discount create, role change, tip checkout complete, platform admin fee  
-- [ ] Admin **Audit** page (filter by action / actor / date)  
-- [ ] Member export script v1 (JSON zip)  
-- [ ] Document free-ticket gag + tips/discounts ops status honestly  
+- [x] Publish this file + domain packs (`MA_AUDIT.md` on main)  
+- [x] Prod snapshot helper: `npx tsx scripts/snapshot-demo-persistence-prod.mjs --url https://www.thetrainstation.co`  
+- [ ] Confirm security env flags on Vercel (`SECURITY_ENFORCED`, `ALLOW_DEV_SWITCHER=false`) — **ops checklist**  
+- [x] Wire `recordAuditEvent` for: mark-paid, refund, discount create/toggle, role/status change, tip paid, platform admin fee, user hide  
+- [x] Admin **Audit log** page: `/admin/audit` + `GET /api/admin/audit` (platform staff)  
+- [x] Member export script v1: `npx tsx scripts/export-member-dsar.ts --email user@x.com`  
+- [x] Free-ticket gag documented in product + MA notes; tips/discounts ops in CONTEXT  
+
+**Audit action names:** `member.mark_paid` · `payment.tip` · `billing.refund` · `billing.discount.create` · `billing.discount.toggle` · `billing.platform_admin_fee` · `user.staff_update` · `user.hide` (+ existing SMS actions)
 
 ### Phase B — Money proof (blocked on Live when you choose)
 
@@ -197,7 +199,13 @@ Domain packs already written:
 - **John Connect** partner row exists, `has_connect: false`.  
 - **Gamification** recompute run on prod; open promos present.  
 - **Stripe secrets** not pullable via agent CLI (sensitive redaction) — operational friction, not a product bug.  
-- Next hardening sprint candidate: **Phase A audit wiring + DSAR export v1**.
+
+### 2026-07-23 — Phase A shipped (code)
+
+- `src/lib/audit-request.ts` + mark-paid / refund / discount / tip / platform-admin / user staff mutations.  
+- `/admin/audit` UI + API.  
+- `scripts/export-member-dsar.ts`, `scripts/snapshot-demo-persistence-prod.mjs`.  
+- Ops remaining: confirm Vercel security flags; run tip/FEEDBACK50 setup with `sk_test_`.
 
 ---
 

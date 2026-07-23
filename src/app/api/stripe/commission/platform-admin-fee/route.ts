@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { actorFromSession, auditFromRequest } from "@/lib/audit-request";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
 import {
   platformAdminFeeCentsFromEnv,
@@ -52,8 +53,29 @@ export async function POST(request: Request) {
 
   const result = await runPlatformAdminFee({ dryRun: parsed.data.dryRun === true });
   if ("error" in result) {
+    await auditFromRequest(request, {
+      action: "billing.platform_admin_fee",
+      outcome: "failure",
+      actor: actorFromSession(staff),
+      metadata: { error: result.error, dryRun: parsed.data.dryRun === true },
+    });
     return NextResponse.json({ error: result.error }, { status: 409 });
   }
+
+  await auditFromRequest(request, {
+    action: "billing.platform_admin_fee",
+    outcome: "success",
+    actor: actorFromSession(staff),
+    entityType: "commission_partner",
+    entityId: result.preview.partnerId,
+    metadata: {
+      dryRun: result.dryRun,
+      amountCents: result.preview.amountCents,
+      period: result.preview.period,
+      transferId: result.transferId ?? null,
+      partnerEmail: result.preview.partnerEmail,
+    },
+  });
 
   return NextResponse.json(result);
 }

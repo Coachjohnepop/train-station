@@ -82,6 +82,20 @@ export async function POST(request: Request) {
             tipLabel: session.metadata?.tipLabel ?? null,
           },
         });
+        const { recordAuditEvent } = await import("@/lib/audit-event");
+        await recordAuditEvent({
+          action: "payment.tip",
+          outcome: "success",
+          actorRole: "system",
+          entityType: "user",
+          entityId: userId,
+          metadata: {
+            source: "stripe.webhook",
+            tipAmountCents: tipCents,
+            checkoutSessionId: session.id,
+            stripeEventId: event.id,
+          },
+        });
         break;
       }
 
@@ -101,6 +115,8 @@ export async function POST(request: Request) {
         stripeCustomerId: checkoutCustomerId(session),
         stripeSubscriptionId: subscriptionId,
         stripeCheckoutSessionId: session.id,
+        actor: { role: "system" },
+        auditSource: "stripe.webhook.checkout.session.completed",
       });
       break;
     }
@@ -121,6 +137,8 @@ export async function POST(request: Request) {
           method: "stripe",
           stripeCustomerId: typeof invoice.customer === "string" ? invoice.customer : null,
           stripeSubscriptionId: sub.id,
+          actor: { role: "system" },
+          auditSource: "stripe.webhook.invoice.paid",
         });
       }
 
@@ -194,6 +212,8 @@ export async function POST(request: Request) {
           method: "stripe",
           stripeCustomerId: typeof sub.customer === "string" ? sub.customer : null,
           stripeSubscriptionId: sub.id,
+          actor: { role: "system" },
+          auditSource: "stripe.webhook.subscription.updated",
         });
       } else if (sub.status === "past_due" || sub.status === "unpaid") {
         await updateMemberProfile(userId, {

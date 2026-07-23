@@ -76,6 +76,12 @@ export async function POST(request: Request) {
     stripeCustomerId: checkoutCustomerId(checkout),
     stripeSubscriptionId: checkoutSubscriptionId(checkout),
     stripeCheckoutSessionId: checkout.id,
+    actor: {
+      userId: sessionUser.id,
+      email: sessionUser.email,
+      role: sessionUser.role,
+    },
+    auditSource: "stripe.confirm",
   });
 
   if (!updated) {

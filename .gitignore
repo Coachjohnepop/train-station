@@ -62,3 +62,7 @@ scripts/.jerdog-loop.log
 # local tip/sandbox secrets
 .env.tip*
 .env.tip.pull
+
+# Diligence / DSAR dumps
+exports/
+

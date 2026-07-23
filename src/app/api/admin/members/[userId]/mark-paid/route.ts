@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { actorFromSession, clientIpFromRequest, userAgentFromRequest } from "@/lib/audit-request";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import { attachPaidMemberCookies, markMemberPaid } from "@/lib/mark-member-paid";
@@ -44,6 +45,10 @@ export async function POST(request: Request, context: RouteContext) {
     userId,
     method,
     note: parsed.data.note ?? null,
+    actor: actorFromSession(session),
+    auditSource: "admin.mark_paid",
+    ip: clientIpFromRequest(request),
+    userAgent: userAgentFromRequest(request),
   });
 
   const res = NextResponse.json({ ok: true, profile: updated });

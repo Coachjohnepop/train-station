@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePlatformStaff } from "@/lib/api-auth";
+import { actorFromSession, auditFromRequest } from "@/lib/audit-request";
 import { createBillingRefund, listBillingRefunds } from "@/lib/stripe-billing-admin";
 
 export const dynamic = "force-dynamic";
@@ -48,8 +49,31 @@ export async function POST(request: Request) {
   });
 
   if (!result.ok) {
+    await auditFromRequest(request, {
+      action: "billing.refund",
+      outcome: "failure",
+      actor: actorFromSession(auth.session),
+      entityType: "stripe_charge",
+      entityId: parsed.data.chargeId,
+      metadata: { error: result.error, amountCents: parsed.data.amountCents ?? null },
+    });
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
+
+  await auditFromRequest(request, {
+    action: "billing.refund",
+    outcome: "success",
+    actor: actorFromSession(auth.session),
+    entityType: "stripe_refund",
+    entityId: result.refund?.id ?? parsed.data.chargeId,
+    metadata: {
+      chargeId: parsed.data.chargeId,
+      amountCents: parsed.data.amountCents ?? null,
+      reason: parsed.data.reason ?? "requested_by_customer",
+      note: parsed.data.note ?? null,
+      refund: result.refund ?? null,
+    },
+  });
 
   return NextResponse.json({ ok: true, refund: result.refund });
 }

@@ -27,6 +27,7 @@ import {
 } from "@/lib/users-admin-annotations";
 import { canAccessPlatformAdmin } from "@/lib/staff-access";
 import { assertUserScope, requireCoachStaff, requirePlatformStaff, requireSession } from "@/lib/api-auth";
+import { actorFromSession, auditFromRequest } from "@/lib/audit-request";
 
 const ROLES = ["ADMIN", "INSTRUCTOR", "PLATFORM_ADMIN", "MEMBER", "PROSPECTIVE_INSTRUCTOR"] as const;
 
@@ -287,6 +288,10 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   try {
+    const before = await prisma.user.findUnique({
+      where: { id: prismaUserId },
+      select: { role: true, status: true, hidden: true, email: true },
+    });
     const user = await prisma.user.update({
       where: { id: prismaUserId },
       data: updateFields,
@@ -304,6 +309,34 @@ export async function PATCH(request: Request, { params }: Params) {
           | "PROSPECTIVE_INSTRUCTOR",
         name: user.name || user.email.split("@")[0],
         phone: user.phone,
+      });
+    }
+
+    if (
+      before &&
+      (before.role !== user.role ||
+        before.status !== user.status ||
+        before.hidden !== user.hidden)
+    ) {
+      await auditFromRequest(request, {
+        action: "user.staff_update",
+        outcome: "success",
+        actor: actorFromSession(session),
+        entityType: "user",
+        entityId: user.id,
+        metadata: {
+          email: user.email,
+          before: {
+            role: before.role,
+            status: before.status,
+            hidden: before.hidden,
+          },
+          after: {
+            role: user.role,
+            status: user.status,
+            hidden: user.hidden,
+          },
+        },
       });
     }
 
@@ -329,7 +362,7 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(request: Request, { params }: Params) {
   const staff = await requirePlatformStaff();
   if (!staff.ok) return staff.response;
 
@@ -347,5 +380,13 @@ export async function DELETE(_req: Request, { params }: Params) {
   if (!result.ok) {
     return NextResponse.json({ detail: "User not found" }, { status: 404 });
   }
+  await auditFromRequest(request, {
+    action: "user.hide",
+    outcome: "success",
+    actor: actorFromSession(session),
+    entityType: "user",
+    entityId: id,
+    metadata: { mode: result.mode },
+  });
   return NextResponse.json({ hidden: true, id });
 }
