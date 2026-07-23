@@ -7,10 +7,20 @@ type Props = {
 };
 
 export default function MemberTodayHub({ dashboard }: Props) {
-  const { enrollments, stats } = dashboard;
+  const { enrollments, stats, trialEndsAt, effectivePlan } = dashboard;
 
   return (
     <div className="space-y-3">
+      {trialEndsAt ? (
+        <div className="rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs">
+          <span className="font-semibold text-accent">Free-week trial</span>
+          {effectivePlan ? ` · ${effectivePlan}` : ""} until{" "}
+          {new Date(trialEndsAt).toLocaleString()}.{" "}
+          <Link href="/member/account" className="font-semibold text-accent underline">
+            Keep access →
+          </Link>
+        </div>
+      ) : null}
       <div className="grid gap-2 sm:grid-cols-3">
         <Link
           href="/member/chat"

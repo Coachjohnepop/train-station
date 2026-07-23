@@ -15,7 +15,7 @@ type Promo = {
   trialEndsAt: string | null;
 };
 
-type Tab = "levers" | "promos" | "overview" | "audit";
+type Tab = "levers" | "promos" | "overview" | "audit" | "free-pool" | "prizes";
 
 type AuditEntry = {
   id: string;
@@ -28,17 +28,43 @@ type AuditEntry = {
   ip: string | null;
 };
 
+type FreePoolDay = {
+  dayId: string;
+  weekNumber: number;
+  dayNumber: number;
+  enrollmentDayNumber: number;
+  freePool: boolean;
+  contentTierMin: string | null;
+  label: string;
+  hasWorkout: boolean;
+};
+
+type Prize = {
+  id: string;
+  userId: string;
+  label: string;
+  freeDays: number | null;
+  seasonKey: string;
+  awardedAt: string;
+};
+
 export default function AdminGamificationClient() {
   const [tab, setTab] = useState<Tab>("levers");
   const [levers, setLevers] = useState<GamificationLevers>({ ...DEFAULT_GAMIFICATION_LEVERS });
   const [database, setDatabase] = useState(false);
   const [promos, setPromos] = useState<Promo[]>([]);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
+  const [freeDays, setFreeDays] = useState<FreePoolDay[]>([]);
+  const [curatedCount, setCuratedCount] = useState(0);
+  const [prizes, setPrizes] = useState<Prize[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [grantUserId, setGrantUserId] = useState("");
   const [grantFrom, setGrantFrom] = useState("explorer");
   const [grantTo, setGrantTo] = useState("member");
+  const [prizeUserId, setPrizeUserId] = useState("");
+  const [prizeLabel, setPrizeLabel] = useState("Season champion");
+  const [prizeDays, setPrizeDays] = useState(7);
 
   const loadConfig = useCallback(async () => {
     const res = await fetch("/api/admin/gamification/config", { cache: "no-store" });
@@ -59,6 +85,21 @@ export default function AdminGamificationClient() {
     if (res.ok) setAudit(data.entries || []);
   }, []);
 
+  const loadFreePool = useCallback(async () => {
+    const res = await fetch("/api/admin/gamification/free-pool?program=adult", { cache: "no-store" });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setFreeDays(data.days || []);
+      setCuratedCount(data.curatedCount || 0);
+    }
+  }, []);
+
+  const loadPrizes = useCallback(async () => {
+    const res = await fetch("/api/admin/gamification/prizes", { cache: "no-store" });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) setPrizes(data.prizes || []);
+  }, []);
+
   useEffect(() => {
     void loadConfig();
     void loadPromos();
@@ -66,7 +107,9 @@ export default function AdminGamificationClient() {
 
   useEffect(() => {
     if (tab === "audit") void loadAudit();
-  }, [tab, loadAudit]);
+    if (tab === "free-pool") void loadFreePool();
+    if (tab === "prizes") void loadPrizes();
+  }, [tab, loadAudit, loadFreePool, loadPrizes]);
 
   async function saveLevers() {
     setBusy(true);
@@ -158,6 +201,82 @@ export default function AdminGamificationClient() {
     setLevers((prev) => ({ ...prev, [key]: value }));
   }
 
+  async function toggleFreePool(day: FreePoolDay) {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/admin/gamification/free-pool", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dayId: day.dayId, freePool: !day.freePool }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(formatDetail(data.detail) || "Update failed");
+      await loadFreePool();
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function seedFreeTenPercent() {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const target = Math.max(1, Math.ceil((28 * (levers.freeContentPercent || 10)) / 100));
+      let flipped = 0;
+      for (const day of freeDays) {
+        const want = day.enrollmentDayNumber <= target;
+        if (day.freePool !== want) {
+          const res = await fetch("/api/admin/gamification/free-pool", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ dayId: day.dayId, freePool: want }),
+          });
+          if (res.ok) flipped += 1;
+        }
+      }
+      await loadFreePool();
+      setMessage(`Pinned free sample days 1–${target} (${flipped} updates).`);
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Seed failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function awardPrize() {
+    if (!prizeUserId.trim() || !prizeLabel.trim()) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/admin/gamification/prizes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: prizeUserId.trim(),
+          label: prizeLabel.trim(),
+          freeDays: prizeDays || null,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(formatDetail(data.detail) || "Award failed");
+      setMessage("Prize awarded — shows on member Hall of Fame.");
+      setPrizeUserId("");
+      await loadPrizes();
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Award failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function formatDetail(detail: unknown): string {
+    if (typeof detail === "string") return detail;
+    return "";
+  }
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <header className="space-y-1">
@@ -179,7 +298,9 @@ export default function AdminGamificationClient() {
         {(
           [
             ["levers", "Levers"],
+            ["free-pool", "Free pool"],
             ["promos", "Promos"],
+            ["prizes", "Prizes"],
             ["overview", "Actions"],
             ["audit", "Audit log"],
           ] as const
@@ -276,6 +397,117 @@ export default function AdminGamificationClient() {
           <button type="button" className="btn-primary" disabled={busy} onClick={() => void saveLevers()}>
             Save levers
           </button>
+        </section>
+      ) : null}
+
+      {tab === "free-pool" ? (
+        <section className="card space-y-4 p-5">
+          <h2 className="text-lg font-semibold">Free sample days (Adult)</h2>
+          <p className="text-sm text-[var(--muted)]">
+            Pin which program days Free Explorers can open. Once any day is pinned,{" "}
+            <strong>curated mode</strong> is on (percent fallback is off).{" "}
+            {curatedCount > 0
+              ? `${curatedCount} day(s) pinned.`
+              : "No pins yet — free access uses percent-of-cycle (days 1–3 by default)."}
+          </p>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={busy || !database || freeDays.length === 0}
+            onClick={() => void seedFreeTenPercent()}
+          >
+            Seed ~{levers.freeContentPercent}% free days
+          </button>
+          <ul className="max-h-96 space-y-1 overflow-y-auto text-sm">
+            {freeDays.length === 0 ? (
+              <li className="text-[var(--muted)]">No Adult program days found.</li>
+            ) : (
+              freeDays.map((d) => (
+                <li
+                  key={d.dayId}
+                  className="flex items-center justify-between gap-2 rounded border border-[var(--border)] px-2 py-1.5"
+                >
+                  <span>
+                    <span className="font-mono text-xs text-[var(--muted)]">
+                      D{d.enrollmentDayNumber}
+                    </span>{" "}
+                    {d.label}
+                    {!d.hasWorkout ? (
+                      <span className="ml-1 text-[10px] text-amber-400">no workout</span>
+                    ) : null}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
+                      d.freePool
+                        ? "bg-emerald-500/20 text-emerald-200"
+                        : "bg-[var(--surface-2)] text-[var(--muted)]"
+                    }`}
+                    onClick={() => void toggleFreePool(d)}
+                  >
+                    {d.freePool ? "Free sample" : "Locked for free"}
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        </section>
+      ) : null}
+
+      {tab === "prizes" ? (
+        <section className="card space-y-4 p-5">
+          <h2 className="text-lg font-semibold">Prize theater</h2>
+          <p className="text-sm text-[var(--muted)]">
+            Award season trophies / free membership days. Shows on member High scores Hall of Fame.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <input
+              className="input sm:col-span-1"
+              placeholder="userId"
+              value={prizeUserId}
+              onChange={(e) => setPrizeUserId(e.target.value)}
+            />
+            <input
+              className="input sm:col-span-1"
+              placeholder="Label"
+              value={prizeLabel}
+              onChange={(e) => setPrizeLabel(e.target.value)}
+            />
+            <input
+              className="input"
+              type="number"
+              min={0}
+              max={90}
+              value={prizeDays}
+              onChange={(e) => setPrizeDays(Number(e.target.value) || 0)}
+              title="Free days"
+            />
+          </div>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={busy || !database}
+            onClick={() => void awardPrize()}
+          >
+            Award prize
+          </button>
+          <ul className="divide-y divide-[var(--border)] text-sm">
+            {prizes.length === 0 ? (
+              <li className="py-2 text-[var(--muted)]">No prizes yet.</li>
+            ) : (
+              prizes.map((p) => (
+                <li key={p.id} className="py-2">
+                  <span className="font-semibold text-amber-200">{p.label}</span>
+                  <span className="text-[var(--muted)]">
+                    {" "}
+                    · {p.userId.slice(0, 18)}
+                    {p.freeDays ? ` · ${p.freeDays} free days` : ""}
+                  </span>
+                </li>
+              ))
+            )}
+          </ul>
         </section>
       ) : null}
 

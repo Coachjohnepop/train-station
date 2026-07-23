@@ -192,11 +192,33 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     );
   }
 
+  let freePoolPinned: boolean | undefined;
+  let curatedMode: boolean | undefined;
+  let contentTierMin: string | null | undefined;
+  if (primaryProgram && selectedSummary) {
+    try {
+      const { getDayFreePoolFlags } = await import("@/lib/gamification-free-pool");
+      const flags = await getDayFreePoolFlags(
+        primaryProgram.slug,
+        selectedSummary.weekNumber,
+        selectedSummary.dayNumber,
+      );
+      freePoolPinned = flags.freePoolPinned;
+      curatedMode = flags.curatedMode;
+      contentTierMin = flags.contentTierMin;
+    } catch {
+      /* ignore */
+    }
+  }
+
   const contentAccess = await resolveContentAccess({
     userId: uid,
     profilePlan: profile?.plan,
     enrollmentDay: enrollmentDayLinear ?? undefined,
     bypass: Boolean(asInstructor),
+    freePoolPinned,
+    curatedMode,
+    contentTierMin,
   });
   return (
     <div className="space-y-4">

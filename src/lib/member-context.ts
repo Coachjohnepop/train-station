@@ -162,11 +162,25 @@ export async function getMemberDashboard() {
   }
 
   const profile = uid ? await getMemberProfile(uid) : null;
-  const accessTier = signupPlanToMemberTier(profile?.plan ?? "explorer");
+  let effectivePlan = profile?.plan ?? "explorer";
+  let trialEndsAt: string | null = null;
+  try {
+    const { getEffectiveMembershipPlan, getActiveAccessOverride } = await import(
+      "@/lib/gamification-promos"
+    );
+    effectivePlan = await getEffectiveMembershipPlan(uid, profile?.plan);
+    const trial = await getActiveAccessOverride(uid);
+    if (trial) trialEndsAt = trial.trialEndsAt.toISOString();
+  } catch {
+    /* keep profile plan */
+  }
+  const accessTier = signupPlanToMemberTier(effectivePlan);
 
   return {
     user: { id: effectiveUser.id, name: displayName, email: effectiveUser.email || DEMO_MEMBER_EMAIL, dailyReminderTime: reminderSettings.dailyReminderTime as string | null, phone: reminderSettings.phone as string | null },
     access: getMemberAccess(accessTier),
+    effectivePlan,
+    trialEndsAt,
     enrollments: mockEnrollments,
     programs: programs.map((p: any) => ({
       id: p.id,
@@ -194,6 +208,9 @@ export async function getMemberDashboard() {
 export type MemberDashboardData = {
   user: { id: string; name: string; email: string };
   access: MemberAccess;
+  /** Plan used for gates (includes free-week trial override). */
+  effectivePlan?: string;
+  trialEndsAt?: string | null;
   enrollments: {
     id: string;
     program: {

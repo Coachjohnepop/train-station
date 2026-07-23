@@ -26,6 +26,8 @@ export type MemberDaySummary = {
   visibilityTier: DayVisibilityTier;
   /** Theme-only label for far-future days (e.g. "Leg day"). */
   themeLabel: string | null;
+  /** Coach pinned free sample day */
+  freePool?: boolean;
 };
 
 export type MemberDayWindowRollup = {

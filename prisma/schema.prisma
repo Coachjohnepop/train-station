@@ -363,6 +363,10 @@ model ProgramDay {
   publishedAt    DateTime?
   /// How many sequential parts this day has (1 = normal; 2–3 = double/triple day).
   partCount      Int                 @default(1)
+  /// Free Explorer sample day — coach-curated free pool (gamification content gate).
+  freePool       Boolean             @default(false)
+  /// Minimum ticket for this day: explorer | member | business | pro (null = inherit plan rules).
+  contentTierMin String?
   week           ProgramWeek         @relation(fields: [weekId], references: [id], onDelete: Cascade)
   workout        Workout?            @relation(fields: [workoutId], references: [id])
   /// Sequential sessions on this calendar day (AM / midday cardio / PM, etc.).
@@ -371,6 +375,7 @@ model ProgramDay {
   options        ProgramDayOption[]
 
   @@unique([weekId, dayNumber])
+  @@index([freePool])
 }
 
 /// One ordered part of a program day (military double/triple days, etc.).

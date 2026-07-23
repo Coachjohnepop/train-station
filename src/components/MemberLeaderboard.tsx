@@ -150,6 +150,9 @@ export default function MemberLeaderboard() {
   const [error, setError] = useState("");
   const [claimBusy, setClaimBusy] = useState(false);
   const [claimMsg, setClaimMsg] = useState<string | null>(null);
+  const [hall, setHall] = useState<
+    Array<{ id: string; userId: string; label: string; freeDays: number | null; awardedAt: string }>
+  >([]);
 
   const loadProgress = useCallback(async () => {
     try {
@@ -168,12 +171,14 @@ export default function MemberLeaderboard() {
       setLoading(true);
       setError("");
     }
-    const [boardRes, scoreRes] = await Promise.all([
+    const [boardRes, scoreRes, prizeRes] = await Promise.all([
       fetch("/api/member/gamification/division", { cache: "no-store" }),
       fetch("/api/member/gamification", { cache: "no-store" }),
+      fetch("/api/member/gamification/prizes", { cache: "no-store" }),
     ]);
     const json = await boardRes.json().catch(() => ({}));
     const scoreJson = await scoreRes.json().catch(() => ({}));
+    const prizeJson = await prizeRes.json().catch(() => ({}));
     if (!boardRes.ok) {
       if (!opts?.silent) {
         setError(
@@ -188,6 +193,7 @@ export default function MemberLeaderboard() {
     }
     if (scoreJson.progress) setProgress(scoreJson.progress);
     if (scoreJson.pointValues) setPointValues(scoreJson.pointValues);
+    if (Array.isArray(prizeJson.hall)) setHall(prizeJson.hall);
     if (!opts?.silent) setLoading(false);
   }, []);
 
@@ -486,6 +492,25 @@ export default function MemberLeaderboard() {
               >
                 Claim free week
               </button>
+            </div>
+          ) : null}
+
+          {hall.length > 0 ? (
+            <div className="space-y-2 rounded-xl border border-amber-500/35 bg-amber-500/10 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-200">
+                Hall of Fame
+              </p>
+              <ul className="space-y-1 text-sm">
+                {hall.slice(0, 6).map((p) => (
+                  <li key={p.id} className="flex justify-between gap-2">
+                    <span className="font-semibold text-amber-100">{p.label}</span>
+                    <span className="text-xs text-[var(--muted)]">
+                      {p.freeDays ? `${p.freeDays}d free · ` : ""}
+                      {new Date(p.awardedAt).toLocaleDateString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
           ) : null}
 
