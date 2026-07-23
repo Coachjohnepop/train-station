@@ -8,7 +8,8 @@ import {
   membershipPlanRank,
   normalizeSignupPlan,
 } from "@/lib/signup-plans";
-import { resolveReferralDiscount } from "@/lib/referral-discounts";
+import { resolveReferralDiscount, type CheckoutDiscount } from "@/lib/referral-discounts";
+import { resolveStripePromotionCode } from "@/lib/stripe-discount-codes";
 import { getOfferDefinition } from "@/lib/product-offers";
 import {
   changeMemberSubscriptionPlan,
@@ -19,6 +20,8 @@ import {
 const schema = z.object({
   plan: z.string().max(40).optional(),
   referralCode: z.string().max(40).optional(),
+  /** Human promo code (e.g. FEEDBACK50) or promo_… / coupon_… id */
+  promoCode: z.string().max(40).optional(),
   customOfferId: z.string().max(80).optional(),
   merchandiseSkuId: z.string().max(80).optional(),
   quantity: z.number().int().min(1).max(99).optional(),
@@ -114,13 +117,27 @@ export async function POST(request: Request) {
     const referralInput = parsed.data.referralCode?.trim() || profile?.referralCode || null;
     const referral = referralInput ? await resolveReferralDiscount(referralInput) : null;
 
+    // Explicit promo field wins over referral map discount (still can store referral for attribution).
+    let discount: CheckoutDiscount | null = referral?.discount ?? null;
+    const promoRaw = parsed.data.promoCode?.trim();
+    if (promoRaw) {
+      const fromStripe = await resolveStripePromotionCode(promoRaw);
+      if (!fromStripe) {
+        return NextResponse.json(
+          { error: "That discount code isn’t valid or has expired." },
+          { status: 400 },
+        );
+      }
+      discount = fromStripe;
+    }
+
     const checkout = await createSignupCheckoutSession({
       userId: session.id,
       email: session.email,
       name: session.name,
       plan,
       referralCode: referral?.referralCode ?? null,
-      discount: referral?.discount ?? null,
+      discount,
       customOfferId: parsed.data.customOfferId,
       merchandiseSkuId: parsed.data.merchandiseSkuId,
       quantity: parsed.data.quantity,

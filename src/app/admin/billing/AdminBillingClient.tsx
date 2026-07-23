@@ -145,16 +145,17 @@ export default function AdminBillingClient() {
   const [refundNote, setRefundNote] = useState("");
   const [refundMsg, setRefundMsg] = useState("");
 
-  // Discount form
+  // Discount form — default = early-member feedback offer (50% × 3 months, recurring only)
   const [discountForm, setDiscountForm] = useState({
     code: "",
     name: "",
     kind: "percent" as "percent" | "amount",
-    percentOff: "20",
+    percentOff: "50",
     amountDollars: "5",
-    duration: "once" as "once" | "repeating" | "forever",
+    duration: "repeating" as "once" | "repeating" | "forever",
     durationInMonths: "3",
     maxRedemptions: "",
+    appliesTo: "subscription" as "subscription" | "one_time" | "all",
     saveAsAppReferral: true,
   });
   const [discountMsg, setDiscountMsg] = useState("");
@@ -282,6 +283,7 @@ export default function AdminBillingClient() {
       maxRedemptions: discountForm.maxRedemptions
         ? Number(discountForm.maxRedemptions)
         : null,
+      appliesTo: discountForm.appliesTo,
       saveAsAppReferral: discountForm.saveAsAppReferral,
     };
     const res = await fetch("/api/admin/billing/discounts", {
@@ -295,10 +297,16 @@ export default function AdminBillingClient() {
       setDiscountMsg(body.error || "Could not create discount");
       return;
     }
+    const scope =
+      body.appliesTo === "subscription"
+        ? "recurring memberships"
+        : body.appliesTo === "one_time"
+          ? "one-time packages"
+          : "all products";
     setDiscountMsg(
-      `Created ${body.code || payload.code} · coupon ${body.couponId}${
-        body.referralSaved ? " · saved to app referral map" : ""
-      }`,
+      `Created ${body.code || payload.code} · coupon ${body.couponId} · ${scope}${
+        body.referralSaved ? " · app map" : ""
+      }${body.warning ? ` · ⚠ ${body.warning}` : ""}`,
     );
     setDiscountForm((f) => ({ ...f, code: "", name: "" }));
     await loadDiscounts();
@@ -588,16 +596,76 @@ export default function AdminBillingClient() {
           <div className="card space-y-3 p-4">
             <h2 className="font-semibold">Create discount code</h2>
             <p className="text-xs text-[var(--muted)]">
-              Creates a Stripe coupon + promotion code members can type at checkout. Optionally
-              maps into the app referral list for signup <code className="text-[10px]">?ref=</code>.
+              Stripe coupon + promotion code. Members enter it on{" "}
+              <strong className="text-[var(--text)]">Checkout</strong> (or{" "}
+              <code className="text-[10px]">?promo=CODE</code>). Primary use:{" "}
+              <strong className="text-[var(--text)]">% off for N months</strong> on recurring
+              memberships (e.g. feedback guests — 50% × 3 months).
             </p>
+
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                className="btn-ghost text-[10px] ring-1 ring-violet-500/40"
+                onClick={() =>
+                  setDiscountForm({
+                    ...discountForm,
+                    kind: "percent",
+                    percentOff: "50",
+                    duration: "repeating",
+                    durationInMonths: "3",
+                    appliesTo: "subscription",
+                    name: "Feedback · 50% × 3 months",
+                    code: discountForm.code || "FEEDBACK50",
+                  })
+                }
+              >
+                Preset: 50% × 3 mo (recurring)
+              </button>
+              <button
+                type="button"
+                className="btn-ghost text-[10px]"
+                onClick={() =>
+                  setDiscountForm({
+                    ...discountForm,
+                    kind: "percent",
+                    percentOff: "100",
+                    duration: "repeating",
+                    durationInMonths: "1",
+                    appliesTo: "subscription",
+                    name: "First month free",
+                    code: discountForm.code || "FIRSTFREE",
+                  })
+                }
+              >
+                Preset: 100% × 1 mo
+              </button>
+              <button
+                type="button"
+                className="btn-ghost text-[10px]"
+                onClick={() =>
+                  setDiscountForm({
+                    ...discountForm,
+                    kind: "percent",
+                    percentOff: "20",
+                    duration: "once",
+                    appliesTo: "one_time",
+                    name: "One-time package 20% off",
+                    code: discountForm.code || "ONETIME20",
+                  })
+                }
+              >
+                Preset: 20% one-time (ready, unused)
+              </button>
+            </div>
+
             <label className="block text-sm">
               <span className="text-[var(--muted)]">Code</span>
               <input
                 className="input mt-1 w-full uppercase"
                 value={discountForm.code}
                 onChange={(e) => setDiscountForm({ ...discountForm, code: e.target.value })}
-                placeholder="SPRING20"
+                placeholder="FEEDBACK50"
               />
             </label>
             <label className="block text-sm">
@@ -606,9 +674,38 @@ export default function AdminBillingClient() {
                 className="input mt-1 w-full"
                 value={discountForm.name}
                 onChange={(e) => setDiscountForm({ ...discountForm, name: e.target.value })}
-                placeholder="Spring promo"
+                placeholder="Feedback · 50% × 3 months"
               />
             </label>
+
+            <div>
+              <p className="text-xs text-[var(--muted)] mb-1.5">Applies to</p>
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    ["subscription", "Recurring only"],
+                    ["one_time", "One-time only"],
+                    ["all", "All products"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`btn-ghost text-xs ${
+                      discountForm.appliesTo === id ? "ring-1 ring-accent" : ""
+                    }`}
+                    onClick={() => setDiscountForm({ ...discountForm, appliesTo: id })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 text-[10px] text-[var(--muted)]">
+                Recurring = Coach + Business. One-time = 1st Class package (built, not required
+                yet).
+              </p>
+            </div>
+
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -662,14 +759,14 @@ export default function AdminBillingClient() {
                   })
                 }
               >
-                <option value="once">Once (first invoice / charge)</option>
-                <option value="repeating">Repeating (N months)</option>
+                <option value="once">Once (first invoice / one-time charge)</option>
+                <option value="repeating">Repeating (N months of subscription)</option>
                 <option value="forever">Forever</option>
               </select>
             </label>
             {discountForm.duration === "repeating" && (
               <label className="block text-sm">
-                <span className="text-[var(--muted)]">Months</span>
+                <span className="text-[var(--muted)]">Months at discount</span>
                 <input
                   className="input mt-1 w-full"
                   type="number"
@@ -680,6 +777,9 @@ export default function AdminBillingClient() {
                     setDiscountForm({ ...discountForm, durationInMonths: e.target.value })
                   }
                 />
+                <span className="mt-0.5 block text-[10px] text-[var(--muted)]">
+                  e.g. 3 = first three monthly invoices at the discounted rate, then full price.
+                </span>
               </label>
             )}
             <label className="block text-sm">
@@ -701,7 +801,7 @@ export default function AdminBillingClient() {
                   setDiscountForm({ ...discountForm, saveAsAppReferral: e.target.checked })
                 }
               />
-              Save to app referral map (for signup checkout pre-apply)
+              Save to app referral map (also works with <code className="text-[10px]">?promo=</code>)
             </label>
             <button
               type="button"

@@ -16,10 +16,12 @@ const createSchema = z.object({
   percentOff: z.number().min(0.01).max(100).optional().nullable(),
   amountOffCents: z.number().int().positive().optional().nullable(),
   currency: z.string().length(3).optional(),
-  duration: z.enum(["once", "repeating", "forever"]).default("once"),
+  duration: z.enum(["once", "repeating", "forever"]).default("repeating"),
   durationInMonths: z.number().int().min(1).max(36).optional().nullable(),
   maxRedemptions: z.number().int().positive().optional().nullable(),
   expiresAtIso: z.string().optional().nullable(),
+  /** Restrict to recurring memberships, one-time packages, or all. */
+  appliesTo: z.enum(["subscription", "one_time", "all"]).default("subscription"),
   /** Also save into app referral map for ?ref= / signup checkout */
   saveAsAppReferral: z.boolean().optional(),
   notes: z.string().max(500).optional().nullable(),
@@ -72,6 +74,7 @@ export async function POST(request: Request) {
     durationInMonths: parsed.data.durationInMonths,
     maxRedemptions: parsed.data.maxRedemptions,
     expiresAtIso: parsed.data.expiresAtIso,
+    appliesTo: parsed.data.appliesTo,
     createPromotionCode: true,
   });
 
@@ -87,7 +90,9 @@ export async function POST(request: Request) {
         label: (parsed.data.name || parsed.data.code).trim(),
         stripePromotionCodeId: created.promotionCodeId,
         stripeCouponId: created.couponId,
-        notes: parsed.data.notes || "Created from Admin → Billing discounts",
+        notes:
+          parsed.data.notes ||
+          `Created from Admin → Billing · applies ${parsed.data.appliesTo}`,
       });
       referralSaved = true;
     } catch (e: unknown) {
@@ -101,6 +106,9 @@ export async function POST(request: Request) {
     couponId: created.couponId,
     promotionCodeId: created.promotionCodeId,
     code: created.code,
+    appliesTo: created.appliesTo,
+    productIds: created.productIds,
+    warning: created.warning,
     referralSaved,
   });
 }

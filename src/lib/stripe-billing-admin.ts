@@ -441,12 +441,22 @@ export async function createBillingDiscount(input: {
   maxRedemptions?: number | null;
   expiresAtIso?: string | null;
   createPromotionCode?: boolean;
+  /**
+   * Restrict coupon to product set:
+   * - subscription: Coach + Business (recurring)
+   * - one_time: 1st Class package etc.
+   * - all: any product
+   */
+  appliesTo?: "subscription" | "one_time" | "all";
 }): Promise<
   | {
       ok: true;
       couponId: string;
       promotionCodeId: string | null;
       code: string | null;
+      appliesTo: "subscription" | "one_time" | "all";
+      productIds: string[];
+      warning?: string;
     }
   | { ok: false; error: string }
 > {
@@ -469,7 +479,18 @@ export async function createBillingDiscount(input: {
     return { ok: false, error: "Amount off must be greater than zero." };
   }
   if (input.duration === "repeating" && (!input.durationInMonths || input.durationInMonths < 1)) {
-    return { ok: false, error: "Repeating coupons need duration in months." };
+    return { ok: false, error: "Repeating coupons need duration in months (e.g. 3 for first 3 months)." };
+  }
+
+  const appliesTo = input.appliesTo || "subscription";
+  const { stripeProductIdsForDiscountScope } = await import("@/lib/stripe-discount-codes");
+  const productIds = await stripeProductIdsForDiscountScope(appliesTo);
+  let warning: string | undefined;
+  if (appliesTo !== "all" && productIds.length === 0) {
+    warning =
+      appliesTo === "subscription"
+        ? "No subscription product IDs found (set STRIPE_PRICE_MEMBER / BUSINESS). Coupon created unrestricted — re-create after prices are live."
+        : "No one-time product IDs found (set STRIPE_PRICE_PRO). Coupon created unrestricted — re-create after prices are live.";
   }
 
   try {
@@ -489,7 +510,12 @@ export async function createBillingDiscount(input: {
       ...(input.expiresAtIso
         ? { redeem_by: Math.floor(new Date(input.expiresAtIso).getTime() / 1000) }
         : {}),
-      metadata: { source: "train-station-admin-billing", code },
+      ...(productIds.length > 0 ? { applies_to: { products: productIds } } : {}),
+      metadata: {
+        source: "train-station-admin-billing",
+        code,
+        applies_to: appliesTo,
+      },
     });
 
     let promotionCodeId: string | null = null;
@@ -504,7 +530,10 @@ export async function createBillingDiscount(input: {
         ...(input.expiresAtIso
           ? { expires_at: Math.floor(new Date(input.expiresAtIso).getTime() / 1000) }
           : {}),
-        metadata: { source: "train-station-admin-billing" },
+        metadata: {
+          source: "train-station-admin-billing",
+          applies_to: appliesTo,
+        },
       });
       promotionCodeId = promo.id;
       promoCode = promo.code;
@@ -515,6 +544,9 @@ export async function createBillingDiscount(input: {
       couponId: coupon.id,
       promotionCodeId,
       code: promoCode,
+      appliesTo,
+      productIds,
+      warning,
     };
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Could not create discount.";

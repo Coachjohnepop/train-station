@@ -99,6 +99,59 @@ function completedSetsEqual(
   return true;
 }
 
+/**
+ * Prefer last logged weight for this exercise (any prior session).
+ * First time on the movement → light/medium/heavy tier guess so coach/member
+ * aren't staring at a blank box.
+ */
+function suggestedWeightLbs(block: MemberExerciseBlock): number | null {
+  const past = block.past?.startingWeightLbs;
+  if (past != null && Number.isFinite(past) && past > 0) {
+    return past;
+  }
+  const tier = (block.weightTier || "").toLowerCase().trim();
+  if (tier === "light") return 15;
+  if (tier === "medium") return 25;
+  if (tier === "heavy") return 45;
+  return null;
+}
+
+/** True when value is last-session log (not tier guess). */
+function hasLoggedPastWeight(block: MemberExerciseBlock): boolean {
+  const past = block.past?.startingWeightLbs;
+  return past != null && Number.isFinite(past) && past > 0;
+}
+
+function buildSeededWeights(
+  exercises: MemberExerciseBlock[],
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const block of exercises) {
+    const lbs = suggestedWeightLbs(block);
+    if (lbs != null) out[block.id] = String(lbs);
+  }
+  return out;
+}
+
+/** Merge: non-empty remote wins; otherwise keep local; then seed blanks. */
+function mergeWeightsWithSeeds(
+  exercises: MemberExerciseBlock[],
+  local: Record<string, string>,
+  remote?: Record<string, string> | null,
+): Record<string, string> {
+  const seeds = buildSeededWeights(exercises);
+  const next: Record<string, string> = { ...seeds };
+  for (const [k, v] of Object.entries(local)) {
+    if (typeof v === "string" && v.trim() !== "") next[k] = v;
+  }
+  if (remote) {
+    for (const [k, v] of Object.entries(remote)) {
+      if (typeof v === "string" && v.trim() !== "") next[k] = v;
+    }
+  }
+  return next;
+}
+
 function finishedExercisesEqual(local: Set<string>, remote: string[]): boolean {
   if (local.size !== remote.length) return false;
   for (const id of remote) if (!local.has(id)) return false;
@@ -149,7 +202,9 @@ export default function MemberWorkoutConsole({
   /** Called after coach taps Finished on live floor (collapse tile, etc.). */
   onCoachFloorFinished?: () => void;
 }) {
-  const [weights, setWeights] = useState<Record<string, string>>({});
+  const [weights, setWeights] = useState<Record<string, string>>(() =>
+    buildSeededWeights(workout.exercises),
+  );
   const [activeId, setActiveId] = useState(workout.exercises[0]?.id ?? "");
   const [completedSets, setCompletedSets] = useState<Record<string, Set<number>>>(
     {},
@@ -437,8 +492,14 @@ export default function MemberWorkoutConsole({
         stateRef.current = { ...stateRef.current, finishedExercises: remoteFinished };
       }
       if (session.weights && !weightsSame) {
-        setWeights(session.weights);
-        stateRef.current = { ...stateRef.current, weights: session.weights };
+        // Partner non-empty weights win; keep last-session seeds for blanks.
+        const merged = mergeWeightsWithSeeds(
+          workout.exercises,
+          localSnap.weights,
+          session.weights,
+        );
+        setWeights(merged);
+        stateRef.current = { ...stateRef.current, weights: merged };
       }
       if (!coachFloorMode && session.activeId && session.activeId !== localSnap.activeId) {
         const localIdx = workout.exercises.findIndex((e) => e.id === localSnap.activeId);
@@ -998,18 +1059,48 @@ export default function MemberWorkoutConsole({
     maybeStartRestTimer(latest.blockId, latest.setNum, { fromRemote: true });
   }, [completedSets, maybeStartRestTimer]);
 
+  // Re-seed when the workout / past logs change. Keep any in-session edits.
+  const weightSeedKey = workout.exercises
+    .map(
+      (e) =>
+        `${e.id}:${e.exerciseId}:${e.past?.startingWeightLbs ?? ""}:${e.weightTier}`,
+    )
+    .join("|");
+  useEffect(() => {
+    setWeights((prev) => {
+      const next = mergeWeightsWithSeeds(workout.exercises, prev, null);
+      stateRef.current = { ...stateRef.current, weights: next };
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by weightSeedKey
+  }, [workout.workoutId, weightSeedKey]);
+
   const weightValueForBlock = useCallback(
+    (block: MemberWorkoutView["exercises"][number]) => weights[block.id] ?? "",
+    [weights],
+  );
+
+  /** Micro-label under the lbs input: last session vs first-time tier guess. */
+  const weightBoxLabel = useCallback(
     (block: MemberWorkoutView["exercises"][number]) => {
-      if (weights[block.id] != null && weights[block.id] !== "") {
-        return weights[block.id];
+      const current = (weights[block.id] ?? "").trim();
+      if (!current) return "lbs";
+      if (
+        hasLoggedPastWeight(block) &&
+        current === String(block.past!.startingWeightLbs)
+      ) {
+        return "last";
       }
-      // Review / past silhouette seed (don't write into state until edited).
-      if (reviewMode && block.past?.startingWeightLbs != null) {
-        return String(block.past.startingWeightLbs);
+      if (
+        !hasLoggedPastWeight(block) &&
+        suggestedWeightLbs(block) != null &&
+        current === String(suggestedWeightLbs(block))
+      ) {
+        return "guess";
       }
-      return weights[block.id] ?? "";
+      return "lbs";
     },
-    [weights, reviewMode],
+    [weights],
   );
 
   const updateWeight = useCallback(
@@ -1451,14 +1542,14 @@ export default function MemberWorkoutConsole({
             : loggedWeight
               ? `${loggedWeight} lbs · ${block.setCount} set${block.setCount === 1 ? "" : "s"}`
               : `${block.setCount} set${block.setCount === 1 ? "" : "s"} done`;
-          const weightPlaceholder =
-            block.past?.startingWeightLbs != null
-              ? String(block.past.startingWeightLbs)
-              : "—";
           const weightCell = (
             <label
               className="coach-floor-weight-box"
-              title="Weight used (lbs)"
+              title={
+                hasLoggedPastWeight(block)
+                  ? "Last logged weight for this exercise (edit if needed)"
+                  : "Starting guess from weight tier (edit if needed)"
+              }
               onClick={(e) => e.stopPropagation()}
             >
               <input
@@ -1466,12 +1557,14 @@ export default function MemberWorkoutConsole({
                 type="number"
                 inputMode="decimal"
                 aria-label={`${block.name} weight in pounds`}
-                placeholder={weightPlaceholder}
+                placeholder="—"
                 value={weightValueForBlock(block)}
                 onChange={(e) => updateWeight(block.id, e.target.value)}
                 onFocus={(e) => e.target.select()}
               />
-              <span className="coach-floor-weight-box__label">lbs</span>
+              <span className="coach-floor-weight-box__label">
+                {weightBoxLabel(block)}
+              </span>
             </label>
           );
 
@@ -1911,24 +2004,26 @@ export default function MemberWorkoutConsole({
                         <div className="member-set-row mt-1">
                           <label
                             className="member-set-weight-box"
-                            title="Weight used (lbs)"
+                            title={
+                              hasLoggedPastWeight(block)
+                                ? "Last logged weight for this exercise (edit if needed)"
+                                : "Starting guess from weight tier (edit if needed)"
+                            }
                           >
                             <input
                               className="member-set-weight-box__input"
                               type="number"
                               inputMode="decimal"
                               aria-label={`${block.name} weight in pounds`}
-                              placeholder={
-                                block.past?.startingWeightLbs != null
-                                  ? String(block.past.startingWeightLbs)
-                                  : "—"
-                              }
+                              placeholder="—"
                               value={weightValueForBlock(block)}
                               onChange={(e) => updateWeight(block.id, e.target.value)}
                               onFocus={(e) => e.target.select()}
                               disabled={reviewMode && !instructorName}
                             />
-                            <span className="member-set-weight-box__label">lbs</span>
+                            <span className="member-set-weight-box__label">
+                              {weightBoxLabel(block)}
+                            </span>
                           </label>
                           <button
                             type="button"
@@ -1960,24 +2055,26 @@ export default function MemberWorkoutConsole({
                         <div className="member-set-row mt-1">
                           <label
                             className="member-set-weight-box"
-                            title="Weight used (lbs)"
+                            title={
+                              hasLoggedPastWeight(block)
+                                ? "Last logged weight for this exercise (edit if needed)"
+                                : "Starting guess from weight tier (edit if needed)"
+                            }
                           >
                             <input
                               className="member-set-weight-box__input"
                               type="number"
                               inputMode="decimal"
                               aria-label={`${block.name} weight in pounds`}
-                              placeholder={
-                                block.past?.startingWeightLbs != null
-                                  ? String(block.past.startingWeightLbs)
-                                  : "—"
-                              }
+                              placeholder="—"
                               value={weightValueForBlock(block)}
                               onChange={(e) => updateWeight(block.id, e.target.value)}
                               onFocus={(e) => e.target.select()}
                               disabled={reviewMode && !instructorName}
                             />
-                            <span className="member-set-weight-box__label">lbs</span>
+                            <span className="member-set-weight-box__label">
+                              {weightBoxLabel(block)}
+                            </span>
                           </label>
                           {Array.from({ length: block.setCount }, (_, i) => {
                             const setNum = i + 1;

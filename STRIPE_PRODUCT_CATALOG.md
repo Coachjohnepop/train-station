@@ -52,6 +52,27 @@ See also: `STRIPE_DEMO_SCRIPT.md`, `STRIPE_COMMISSION_SETUP.md`
 
 ---
 
+## Discount / promo codes
+
+**Admin:** Billing → **Discounts** (`/admin/billing` → Discounts tab).  
+**Member:** Checkout field + `?promo=CODE` (or `?code=` / `?ref=`).
+
+| Lever | Notes |
+|-------|--------|
+| **% off** or **$ off** | Percent is the primary path for early feedback guests |
+| **Duration** | `once` · `repeating` (N months) · `forever` |
+| **Months** | When repeating — e.g. **50% for 3 months**, then full price |
+| **Applies to** | **Recurring only** (Coach + Business) · **One-time only** (1st Class) · **All** |
+| **Max redemptions** | Optional cap for early-cohort codes |
+
+**Recommended early offer:** preset **50% × 3 mo (recurring)** → code e.g. `FEEDBACK50`.
+
+Stripe Checkout also allows typing a code when no pre-applied promo (`allow_promotion_codes`). Pre-applied codes use `discounts[]` (no double field).
+
+**Code path:** `createBillingDiscount` · `resolveStripePromotionCode` · checkout `promoCode`.
+
+---
+
 ## Coach tip (optional — one-time)
 
 Tips are **one-time** support for Coach Jeremy / The Train Station.  

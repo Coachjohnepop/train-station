@@ -69,6 +69,8 @@ function MemberCheckoutInner() {
   const merchandiseSkuId = searchParams.get("sku") || "";
   const canceled = searchParams.get("canceled") === "1";
   const isDowngradeIntent = searchParams.get("intent") === "downgrade";
+  const promoFromUrl =
+    searchParams.get("promo") || searchParams.get("code") || searchParams.get("ref") || "";
   const [loading, setLoading] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +80,10 @@ function MemberCheckoutInner() {
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
   const [planChanging, setPlanChanging] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [promoCode, setPromoCode] = useState(promoFromUrl.toUpperCase());
+  const [promoHint, setPromoHint] = useState<string | null>(
+    promoFromUrl ? `Code ${promoFromUrl.toUpperCase()} will apply at checkout.` : null,
+  );
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
@@ -161,6 +167,8 @@ function MemberCheckoutInner() {
           plan,
           customOfferId: customOfferId || undefined,
           merchandiseSkuId: merchandiseSkuId || undefined,
+          promoCode: promoCode.trim() || undefined,
+          referralCode: promoCode.trim() || undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -237,6 +245,35 @@ function MemberCheckoutInner() {
             {error && <p className="text-sm text-amber-400">{error}</p>}
             {confirming && (
               <p className="text-sm text-[var(--muted)]">Confirming payment…</p>
+            )}
+            {stripeReady && !isDowngradeIntent && (
+              <div className="space-y-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+                <label className="block text-xs font-semibold text-[var(--text)]" htmlFor="promo-code">
+                  Discount code
+                </label>
+                <p className="text-[11px] text-[var(--muted)]">
+                  Early members / feedback guests — enter the code Jeremy shared (e.g. 50% off first
+                  months). Leave blank if you don’t have one.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    id="promo-code"
+                    className="input flex-1 uppercase tracking-wide"
+                    autoComplete="off"
+                    spellCheck={false}
+                    placeholder="FEEDBACK50"
+                    value={promoCode}
+                    onChange={(e) => {
+                      setPromoCode(e.target.value.toUpperCase());
+                      setPromoHint(null);
+                    }}
+                    disabled={loading || confirming || checkoutOpen}
+                  />
+                </div>
+                {promoHint && (
+                  <p className="text-[11px] font-medium text-emerald-300/90">{promoHint}</p>
+                )}
+              </div>
             )}
             {stripeReady && payments?.tips?.enabled && !isDowngradeIntent && (
               <p className="rounded-lg border border-accent/25 bg-accent/10 px-3 py-2 text-xs text-[var(--muted)]">

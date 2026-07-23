@@ -346,6 +346,13 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - Live keys tonight: tip prices + membership prices + `sk_live`/`pk_live`/`whsec` on Vercel.
 - First real **Pay platform admin** only after Connect Ready + balance on master account.
 
+### Jul 23 — Discount codes (shipped in code)
+
+- **Admin → Billing → Discounts:** % / $ · duration (once / repeating N months / forever) · **applies to** recurring | one-time | all · presets (50%×3 mo feedback, first month free, one-time 20%).
+- **Member checkout:** discount field + `?promo=CODE`.
+- Recurring is the real use case; one-time scope built, not required for launch.
+- Create first early-cohort code after Stripe prices exist (Test or Live).
+
 ### FUTURE WORK (parked from Jul 23 planning)
 
 *Do not lose these — reorder when priorities change.*
@@ -353,12 +360,13 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 | # | Item | Notes |
 |---|------|--------|
 | F1 | **Stripe Live cutover** | Create Live tip + membership `price_…`; Vercel Live keys; webhook 200; real $25 smoke (refund OK). Account `acct_1TmKSWQWWnajU9uyk`. Script: `create-stripe-tip-products.mjs`. |
-| F2 | **Workout floor polish** | After weight box: per-set weight? auto-fill past lbs into box? compact collapse copy with weight. |
+| F2 | **Workout floor polish** | Weight seeds last/guess shipped; optional later: per-set weight. |
 | F3 | **Gamification on prod** | Recompute/import after cutover; free-pool flags; free-member claim walkthrough. Docs: `GAMIFICATION_DESIGN.md`. |
 | F4 | **Multi-part day UI** | Schema exists; coach calendar “add part 2/3” still open. |
 | F5 | **Jeremy content** | Real YouTube (welcome / free chastise); real Adult W1/W2. `JEREMY_REMAINING_CHECKLIST.md`. |
 | F6 | **Phone 5‑min pass** | Book Call, Messages, no false Join Live; Enable alerts once on home-screen app. |
 | F7 | **Parked product** | Twilio SMS, food/store, public nutrition page, coach 2 Zoom Marketplace publish — only if asked. |
+| F8 | **Discount ops** | After Live keys: create `FEEDBACK50` (50% × 3 mo, recurring); share with first testers. |
 
 ### Jul 23 — Coach tips (product homes)
 
