@@ -485,6 +485,10 @@ export function timeBlockLabel(column: number): string {
   return `${start}–${start + DAY_TIME_BLOCK_MINUTES} min`;
 }
 
+/**
+ * @deprecated Prefer coach Settings warmupBlocks + server seedWarmupsIntoWorkout.
+ * Kept for any older scripts that import the name list.
+ */
 export const WARMUP_EXERCISE_NAMES = [
   "Warm up well 5 min bike",
   "Upper body warm up",

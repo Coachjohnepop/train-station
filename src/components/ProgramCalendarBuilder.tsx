@@ -54,7 +54,6 @@ import {
   toIsoDate,
   totalSlotsFromColumnCounts,
   DAY_TIME_BLOCK_COUNT,
-  WARMUP_EXERCISE_NAMES,
 } from "@/lib/program-calendar";
 import {
   DEFAULT_DAY_PRESCRIPTION,
@@ -666,39 +665,16 @@ export default function ProgramCalendarBuilder({
       await patchDay(dayId, { calendarDate: cal });
     }
 
-    return { workoutId: created.id as string, created: true };
-  }
-
-  async function seedWarmups(workoutId: string, rx: DayPrescription) {
-    const res = await fetch(`/api/workouts/${workoutId}`);
-    if (!res.ok) return;
-    const w = await res.json();
-    const existing = (w.exercises || []) as Array<{ exercise?: { name?: string } }>;
-    // Only seed a brand-new workout — re-opening a day must not re-inject warmups after deletes.
-    if (existing.length > 0) return;
-
-    const existingNames = new Set(existing.map((e) => e.exercise?.name?.toLowerCase()));
-
-    for (let i = 0; i < WARMUP_EXERCISE_NAMES.length; i++) {
-      const targetName = WARMUP_EXERCISE_NAMES[i];
-      if (existingNames.has(targetName.toLowerCase())) continue;
-      const ex = library.find((e) => e.name.toLowerCase() === targetName.toLowerCase());
-      if (!ex) continue;
-      await fetch(`/api/workouts/${workoutId}/exercises`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          exerciseId: ex.id,
-          setScheme: "standard",
-          repPattern: null,
-          reps: rx.defaultReps,
-          sets: rx.defaultSets,
-          weightTier: "light",
-          restSec: rx.defaultRestSec,
-          notes: i === 0 ? "Warm-up" : "Mobility warm-up",
-        }),
-      });
+    const warmupSeed = created.warmupSeed as
+      | { added?: number; message?: string; missing?: string[] }
+      | null
+      | undefined;
+    if (warmupSeed?.message) {
+      setMessage(warmupSeed.message);
+      setTimeout(() => setMessage(null), warmupSeed.added === 0 ? 4500 : 2500);
     }
+
+    return { workoutId: created.id as string, created: true };
   }
 
   function syncEditorFromSlot(slot: SlotItem | null, rx: DayPrescription) {
@@ -863,7 +839,7 @@ export default function ProgramCalendarBuilder({
       setTimeout(() => setMessage(null), 3500);
       return;
     }
-    const { workoutId, created } = ensured;
+    const { workoutId } = ensured;
 
     setFocus((prev) =>
       prev?.dayId === day.id && prev.optIdx === optIdx && (prev.partIndex ?? 1) === partIndex
@@ -871,11 +847,8 @@ export default function ProgramCalendarBuilder({
         : prev,
     );
 
+    // Warm-ups are seeded server-side on POST /api/workouts (empty workouts only).
     void loadSlots(workoutId, rx);
-    // Only seed warmups on a brand-new workout — re-opening a day after deletes must not re-inject.
-    if (created && isWorkoutDayLabel(optLabel)) {
-      void seedWarmups(workoutId, rx).then(() => loadSlots(workoutId, rx));
-    }
   }
 
   async function clearWorkoutExercises(workoutId: string) {
@@ -949,7 +922,7 @@ export default function ProgramCalendarBuilder({
         const createRes = await fetch("/api/workouts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: suggestedName }),
+          body: JSON.stringify({ name: suggestedName, seedWarmups: false }),
         });
         if (!createRes.ok) {
           setMessage("Could not create fasted cardio workout.");

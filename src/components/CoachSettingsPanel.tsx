@@ -419,7 +419,9 @@ export default function CoachSettingsPanel() {
         <div>
           <h2 className="text-lg font-semibold">Warm-up template</h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            New members see these before intake sign-off — with set checkoffs.
+            Auto-added to new empty workouts (program calendar, workout list). New members also see
+            these before intake sign-off — with set checkoffs. Existing workouts are never
+            re-seeded after you delete lines.
           </p>
         </div>
         <div className="space-y-3">

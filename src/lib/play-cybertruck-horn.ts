@@ -13,12 +13,13 @@ export function playCybertruckHorn(): void {
     if (!hornAudio) {
       hornAudio = new Audio(HORN_SRC);
       hornAudio.preload = "auto";
-      hornAudio.volume = 0.9;
       hornAudio.addEventListener("ended", () => {
         hornRelease?.();
         hornRelease = null;
       });
     }
+    // 0.9 * 0.85 ≈ 15% quieter than prior level
+    hornAudio.volume = 0.765;
     hornRelease?.();
     hornRelease = holdBackgroundMusicForMedia();
     hornAudio.currentTime = 0;

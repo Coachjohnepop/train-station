@@ -5,12 +5,15 @@ import {
   DEFAULT_REST_TIMER_SOUND,
   normalizeRestTimerSound,
   restTimerSoundSrc,
+  restTimerSoundVolume,
   type RestTimerSoundId,
 } from "@/lib/rest-timer-sound";
 
 let audioCtx: AudioContext | null = null;
+/** One reusable element per src — recreated if a load/play errors. */
 const sampleCache = new Map<string, HTMLAudioElement>();
 let sampleRelease: (() => void) | null = null;
+let sampleReleaseToken = 0;
 
 function getCtx(): AudioContext | null {
   if (typeof window === "undefined") return null;
@@ -112,36 +115,93 @@ function playRestCompleteFallback(): void {
   }
 }
 
+function releaseSampleHold(token: number): void {
+  if (token !== sampleReleaseToken) return;
+  sampleRelease?.();
+  sampleRelease = null;
+}
+
+function getOrCreateSample(src: string): HTMLAudioElement {
+  let audio = sampleCache.get(src);
+  if (audio) return audio;
+  audio = new Audio(src);
+  audio.preload = "auto";
+  audio.addEventListener("error", () => {
+    // Drop broken cache entry so the next try fetches a fresh element.
+    if (sampleCache.get(src) === audio) sampleCache.delete(src);
+  });
+  sampleCache.set(src, audio);
+  return audio;
+}
+
 /**
  * End-of-rest alert — coach-selected sample at near-max volume.
  * Default is train whistle so the gym floor hears it.
  */
-export function playRestComplete(sound: RestTimerSoundId | string | null | undefined = DEFAULT_REST_TIMER_SOUND): void {
+export function playRestComplete(
+  sound: RestTimerSoundId | string | null | undefined = DEFAULT_REST_TIMER_SOUND,
+): void {
   if (typeof window === "undefined") return;
   const id = normalizeRestTimerSound(sound);
   const src = restTimerSoundSrc(id);
+  const volume = restTimerSoundVolume(id);
 
   try {
-    let audio = sampleCache.get(src);
-    if (!audio) {
-      audio = new Audio(src);
-      audio.preload = "auto";
-      sampleCache.set(src, audio);
-    }
-    // Loud on purpose — coach wants the floor to hear rest end.
-    audio.volume = 1;
+    // Resume audio context early (iOS) — helps after mute/unlock.
+    getCtx();
+
+    const audio = getOrCreateSample(src);
+    audio.volume = volume;
+
     sampleRelease?.();
+    const token = ++sampleReleaseToken;
     sampleRelease = holdBackgroundMusicForMedia();
-    audio.onended = () => {
-      sampleRelease?.();
-      sampleRelease = null;
-    };
-    audio.currentTime = 0;
-    void audio.play().catch(() => {
-      sampleRelease?.();
-      sampleRelease = null;
+
+    const fail = () => {
+      releaseSampleHold(token);
+      sampleCache.delete(src);
       playRestCompleteFallback();
-    });
+    };
+
+    audio.onended = () => releaseSampleHold(token);
+    audio.onpause = () => {
+      // Only release if fully finished (not a seek pause).
+      if (audio.ended) releaseSampleHold(token);
+    };
+
+    const start = () => {
+      try {
+        audio.currentTime = 0;
+      } catch {
+        /* ignore seek-before-load */
+      }
+      void audio.play().then(() => {
+        // Some browsers report play success with 0 duration if decode failed.
+        if (!Number.isFinite(audio.duration) || audio.duration === 0) {
+          // Give metadata a beat; if still dead, fall back.
+          window.setTimeout(() => {
+            if (!Number.isFinite(audio.duration) || audio.duration === 0) fail();
+          }, 120);
+        }
+      }).catch(fail);
+    };
+
+    if (audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      start();
+    } else {
+      const onReady = () => {
+        audio.removeEventListener("canplay", onReady);
+        audio.removeEventListener("loadeddata", onReady);
+        start();
+      };
+      audio.addEventListener("canplay", onReady);
+      audio.addEventListener("loadeddata", onReady);
+      audio.load();
+      // Safety: if events never fire, try play anyway then fallback.
+      window.setTimeout(() => {
+        if (audio.paused && !audio.ended) start();
+      }, 500);
+    }
   } catch {
     playRestCompleteFallback();
   }
@@ -154,10 +214,8 @@ export function preloadRestCompleteSound(
   if (typeof window === "undefined") return;
   try {
     const src = restTimerSoundSrc(sound);
-    if (sampleCache.has(src)) return;
-    const audio = new Audio(src);
-    audio.preload = "auto";
-    sampleCache.set(src, audio);
+    const audio = getOrCreateSample(src);
+    audio.load();
   } catch {
     /* ignore */
   }

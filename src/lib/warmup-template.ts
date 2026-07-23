@@ -17,7 +17,8 @@ export const DEFAULT_WARMUP_BLOCKS: WarmupBlockTemplate[] = [
   {
     id: "wu-cardio",
     name: "Warm up well 5 min bike",
-    exerciseId: "ex_fba6bb97ed534562b2d638c964ffbe9f",
+    // Low Intensity Cardio Warmup / bike — not Upper body (was wrong ID)
+    exerciseId: "ex_8cdc7b709d784cccbbd7ddb3260ff062",
     setCount: 1,
     setScheme: "timed",
     repPattern: null,
@@ -30,7 +31,7 @@ export const DEFAULT_WARMUP_BLOCKS: WarmupBlockTemplate[] = [
     name: "Upper body warm up",
     exerciseId: "ex_fba6bb97ed534562b2d638c964ffbe9f",
     setCount: 2,
-    setScheme: "reps",
+    setScheme: "standard",
     repPattern: null,
     reps: "10",
     weightTier: "light",
@@ -41,7 +42,7 @@ export const DEFAULT_WARMUP_BLOCKS: WarmupBlockTemplate[] = [
     name: "Shoulder mobility warm",
     exerciseId: "ex_516ddb6929424c8c82e1c634ae0ba8fd",
     setCount: 2,
-    setScheme: "reps",
+    setScheme: "standard",
     repPattern: null,
     reps: "10",
     weightTier: "light",
@@ -50,9 +51,10 @@ export const DEFAULT_WARMUP_BLOCKS: WarmupBlockTemplate[] = [
   {
     id: "wu-bands",
     name: "Up with bands",
+    // Band Rear Delt Extensions — "Up with bands" is often missing from catalog
     exerciseId: "cmpzjajeu000195rzcjo4p43p",
     setCount: 2,
-    setScheme: "reps",
+    setScheme: "standard",
     repPattern: null,
     reps: "15",
     weightTier: "light",
@@ -105,6 +107,15 @@ export function buildWarmupWorkoutView(
   };
 }
 
+/** Map legacy coach-settings values onto valid set approaches. */
+function normalizeWarmupSetScheme(raw: unknown): string {
+  if (typeof raw !== "string" || !raw.trim()) return "standard";
+  const s = raw.trim().toLowerCase();
+  if (s === "reps" || s === "rep") return "standard";
+  if (s === "timed_sets" || s === "time") return "timed";
+  return raw.trim();
+}
+
 export function normalizeWarmupBlocks(raw: unknown): WarmupBlockTemplate[] {
   if (!Array.isArray(raw) || raw.length === 0) return DEFAULT_WARMUP_BLOCKS.map((b) => ({ ...b }));
   const out: WarmupBlockTemplate[] = [];
@@ -117,7 +128,7 @@ export function normalizeWarmupBlocks(raw: unknown): WarmupBlockTemplate[] {
       name: b.name,
       exerciseId: typeof b.exerciseId === "string" ? b.exerciseId : null,
       setCount: typeof b.setCount === "number" && b.setCount > 0 ? b.setCount : 1,
-      setScheme: typeof b.setScheme === "string" ? b.setScheme : "reps",
+      setScheme: normalizeWarmupSetScheme(b.setScheme),
       repPattern: b.repPattern ?? null,
       reps: b.reps ?? null,
       weightTier: typeof b.weightTier === "string" ? b.weightTier : "light",

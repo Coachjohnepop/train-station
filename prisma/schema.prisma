@@ -1209,3 +1209,104 @@ model MartMemberDailySnapshot {
   @@index([snapshotDate])
   @@index([snapshotDate, isPaying])
 }
+// ---------------------------------------------------------------------------
+// Gamification (v2) — ledger, seasons, promos, config levers
+// ---------------------------------------------------------------------------
+
+model GamificationConfig {
+  id        String   @id @default("default")
+  /// Levers JSON — freeContentPercent, topPercentile, freeWeekDays, etc.
+  levers    Json
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
+model GamificationEvent {
+  id          String   @id
+  userId      String
+  type        String
+  points      Int
+  label       String
+  at          DateTime
+  programSlug String?
+  seasonKey   String?
+  meta        Json?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, at])
+  @@index([seasonKey, userId])
+  @@index([type, at])
+  @@index([userId, type])
+}
+
+model GamificationSeasonScore {
+  userId      String
+  seasonKey   String
+  division    String
+  points      Int      @default(0)
+  activeDays  Int      @default(0)
+  lastEventAt DateTime?
+  rank        Int?
+  percentile  Float?
+  updatedAt   DateTime @updatedAt
+
+  @@id([userId, seasonKey])
+  @@index([seasonKey, division, points])
+  @@index([seasonKey, division, rank])
+}
+
+model GamificationPromo {
+  id          String    @id @default(cuid())
+  userId      String
+  kind        String    @default("free_week_upgrade")
+  fromPlan    String
+  toPlan      String
+  status      String    @default("offered")
+  offeredAt   DateTime  @default(now())
+  claimBy     DateTime?
+  claimedAt   DateTime?
+  trialEndsAt DateTime?
+  convertedAt DateTime?
+  revokedAt   DateTime?
+  notes       String?
+
+  @@index([userId, status])
+  @@index([status, claimBy])
+  @@index([status, trialEndsAt])
+}
+
+model GamificationPrizeAward {
+  id        String   @id @default(cuid())
+  userId    String
+  seasonKey String
+  label     String
+  freeDays  Int?
+  notes     String?
+  awardedAt DateTime @default(now())
+  awardedBy String?
+
+  @@index([userId, seasonKey])
+  @@index([seasonKey])
+}
+
+/// Append-only audit trail for M&A / compliance (config, promos, ranks, claims).
+model GamificationAuditLog {
+  id         String   @id @default(cuid())
+  at         DateTime @default(now())
+  /// actor user id (staff or member)
+  actorId    String
+  actorRole  String?
+  /// e.g. config.patch | promo.offer | promo.claim | promo.revoke | season.recompute
+  action     String
+  /// optional subject member / promo / config id
+  targetId   String?
+  /// free-form structured payload (before/after, amounts) — no secrets
+  detail     Json?
+  ip         String?
+  userAgent  String?
+
+  @@index([at])
+  @@index([actorId, at])
+  @@index([action, at])
+  @@index([targetId, at])
+}

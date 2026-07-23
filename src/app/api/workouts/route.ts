@@ -11,11 +11,14 @@ import {
   canonicalWorkoutContentName,
   findWorkoutByContentTitle,
 } from "@/lib/workout-catalog";
+import { seedWarmupsIntoWorkout } from "@/lib/seed-workout-warmups";
 
 
 const createSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
+  /** Default true — inject coach Settings warm-up blocks onto empty new workouts. */
+  seedWarmups: z.boolean().optional().default(true),
 });
 
 export async function GET() {
@@ -55,6 +58,8 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
   }
+  const wantWarmups = parsed.data.seedWarmups !== false;
+
   if (isCoachCatalogDemo()) {
     try {
       const name = canonicalWorkoutContentName(parsed.data.name);
@@ -63,7 +68,11 @@ export async function POST(request: Request) {
         (w) => canonicalWorkoutContentName(w.name) === name,
       );
       if (existing) {
-        return NextResponse.json({ ...existing, reused: true });
+        let warmupSeed = null;
+        if (wantWarmups) {
+          warmupSeed = await seedWarmupsIntoWorkout(existing.id);
+        }
+        return NextResponse.json({ ...existing, reused: true, warmupSeed });
       }
 
       const now = new Date().toISOString();
@@ -85,7 +94,10 @@ export async function POST(request: Request) {
 
         const seed = await getDemoSeed({ preferFresh: Boolean(BLOB_TOKEN) });
         if ((seed.workouts as any[])?.some((w) => w.id === workout.id)) {
-          return NextResponse.json(workout, { status: 201 });
+          const warmupSeed = wantWarmups
+            ? await seedWarmupsIntoWorkout(workout.id)
+            : null;
+          return NextResponse.json({ ...workout, warmupSeed }, { status: 201 });
         }
         await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
       }
@@ -101,7 +113,11 @@ export async function POST(request: Request) {
   const name = canonicalWorkoutContentName(parsed.data.name);
   const existing = await findWorkoutByContentTitle(name);
   if (existing) {
-    return NextResponse.json({ ...existing, reused: true });
+    let warmupSeed = null;
+    if (wantWarmups) {
+      warmupSeed = await seedWarmupsIntoWorkout(existing.id);
+    }
+    return NextResponse.json({ ...existing, reused: true, warmupSeed });
   }
 
   const workout = await prisma.workout.create({
@@ -110,5 +126,8 @@ export async function POST(request: Request) {
       description: parsed.data.description?.trim() || null,
     },
   });
-  return NextResponse.json(workout, { status: 201 });
+  const warmupSeed = wantWarmups
+    ? await seedWarmupsIntoWorkout(workout.id)
+    : null;
+  return NextResponse.json({ ...workout, warmupSeed }, { status: 201 });
 }

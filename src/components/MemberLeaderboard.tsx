@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import MemberScoreProgressPanel from "@/components/MemberScoreProgress";
 import {
   DEFAULT_GAMIFICATION_POINTS,
@@ -9,8 +10,41 @@ import {
   type LeaderboardScope,
 } from "@/lib/gamification-types";
 import type { MemberScoreProgress } from "@/lib/gamification-types";
+import { signupPlanLabel, type SignupPlan } from "@/lib/signup-plans";
 
 type ScoresTab = "mine" | "high";
+type BoardMode = "division" | "legacy";
+
+type DivisionBoard = {
+  division: string;
+  divisionLabel: string;
+  seasonKey: string;
+  seasonDays: number;
+  viewer: LeaderboardPayload["viewer"] & {
+    percentile: number;
+    topPercent: boolean;
+    eligible: boolean;
+    seasonPoints: number;
+  };
+  rows: Array<
+    LeaderboardPayload["rows"][number] & {
+      percentile: number;
+      topPercent: boolean;
+      eligible: boolean;
+    }
+  >;
+  peek: {
+    enabled: boolean;
+    divisions: Array<{
+      division: string;
+      label: string;
+      rows: Array<{ rank: number; displayName: string; points: number }>;
+    }>;
+  } | null;
+  openPromo: { id: string; toPlan: string; claimBy: string | null } | null;
+  activeTrial: { plan: string; trialEndsAt: string } | null;
+  updatedAt: string;
+};
 
 function rankLabel(rank: number): string {
   if (rank === 1) return "1ST";
@@ -105,12 +139,15 @@ function ScoresTabBar({
 
 export default function MemberLeaderboard() {
   const [scoresTab, setScoresTab] = useState<ScoresTab>("mine");
+  const [boardMode, setBoardMode] = useState<BoardMode>("division");
   const [scope, setScope] = useState<LeaderboardScope>("program");
   const [data, setData] = useState<LeaderboardPayload | null>(null);
+  const [division, setDivision] = useState<DivisionBoard | null>(null);
   const [progress, setProgress] = useState<MemberScoreProgress | null>(null);
   const [pointValues, setPointValues] = useState<GamificationPointsMap>(DEFAULT_GAMIFICATION_POINTS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [claimBusy, setClaimBusy] = useState(false);
 
   const loadProgress = useCallback(async () => {
     try {
@@ -133,6 +170,26 @@ export default function MemberLeaderboard() {
       /* ignore */
     }
   }, [data?.viewer]);
+
+  const loadDivision = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    const [boardRes, scoreRes] = await Promise.all([
+      fetch("/api/member/gamification/division", { cache: "no-store" }),
+      fetch("/api/member/gamification", { cache: "no-store" }),
+    ]);
+    const json = await boardRes.json().catch(() => ({}));
+    const scoreJson = await scoreRes.json().catch(() => ({}));
+    if (!boardRes.ok) {
+      setError(json.error || "Could not load division board.");
+      setDivision(null);
+    } else {
+      setDivision(json as DivisionBoard);
+    }
+    if (scoreJson.progress) setProgress(scoreJson.progress);
+    if (scoreJson.pointValues) setPointValues(scoreJson.pointValues);
+    setLoading(false);
+  }, []);
 
   const load = useCallback(async (nextScope: LeaderboardScope) => {
     setLoading(true);
@@ -161,16 +218,40 @@ export default function MemberLeaderboard() {
   }, []);
 
   useEffect(() => {
-    void load(scope);
-  }, [scope, load]);
+    if (scoresTab === "high" && boardMode === "division") {
+      void loadDivision();
+    } else if (scoresTab === "high") {
+      void load(scope);
+    } else {
+      void loadProgress();
+      void loadDivision();
+    }
+  }, [scoresTab, boardMode, scope, load, loadDivision, loadProgress]);
 
   useEffect(() => {
     function onScoreUpdated() {
       void loadProgress();
+      if (boardMode === "division") void loadDivision();
     }
     window.addEventListener("member-score-updated", onScoreUpdated);
     return () => window.removeEventListener("member-score-updated", onScoreUpdated);
-  }, [loadProgress]);
+  }, [loadProgress, loadDivision, boardMode]);
+
+  async function claimPromo(id: string) {
+    setClaimBusy(true);
+    try {
+      const res = await fetch(`/api/member/gamification/promos/${encodeURIComponent(id)}/claim`, {
+        method: "POST",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.detail || "Could not claim");
+      await loadDivision();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Claim failed");
+    } finally {
+      setClaimBusy(false);
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -205,12 +286,70 @@ export default function MemberLeaderboard() {
             <div className="card h-32 animate-pulse" />
           )}
 
-          {data?.viewer ? (
+          {division?.viewer ? (
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
+                Your {division.divisionLabel} rank · {division.seasonDays}d season
+              </p>
+              <LeaderboardRowView
+                row={{
+                  rank: division.viewer.rank,
+                  userId: division.viewer.userId,
+                  displayName: division.viewer.displayName,
+                  points: division.viewer.seasonPoints,
+                  bestMove: division.viewer.bestMove,
+                  isSelf: true,
+                }}
+                highlight="self"
+              />
+              {division.viewer.topPercent ? (
+                <p className="text-xs font-semibold text-amber-300">
+                  Top band — you&apos;re in the free-week / upstairs zone.
+                </p>
+              ) : null}
+            </div>
+          ) : data?.viewer ? (
             <div className="space-y-2">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
                 Your rank
               </p>
               <LeaderboardRowView row={data.viewer} highlight="self" />
+            </div>
+          ) : null}
+
+          {division?.openPromo ? (
+            <div className="card space-y-2 border-amber-500/40 bg-amber-500/10 p-4">
+              <p className="text-sm font-semibold text-amber-100">
+                Free week of {signupPlanLabel(division.openPromo.toPlan as SignupPlan)} unlocked
+              </p>
+              <p className="text-xs text-[var(--muted)]">
+                You&apos;re crushing your division. Claim a sample of the next class
+                {division.openPromo.claimBy
+                  ? ` before ${new Date(division.openPromo.claimBy).toLocaleString()}`
+                  : ""}
+                .
+              </p>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={claimBusy}
+                onClick={() => void claimPromo(division.openPromo!.id)}
+              >
+                Claim free week
+              </button>
+            </div>
+          ) : null}
+
+          {division?.activeTrial ? (
+            <div className="card border-accent/40 bg-accent/10 p-3 text-sm">
+              Trial:{" "}
+              <span className="font-semibold">
+                {signupPlanLabel(division.activeTrial.plan as SignupPlan)}
+              </span>{" "}
+              until {new Date(division.activeTrial.trialEndsAt).toLocaleString()}.{" "}
+              <Link href="/member/account" className="font-semibold text-accent underline">
+                Keep it → checkout
+              </Link>
             </div>
           ) : null}
 
@@ -230,36 +369,127 @@ export default function MemberLeaderboard() {
           <div className="flex rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-1">
             <button
               type="button"
-              onClick={() => setScope("program")}
+              onClick={() => setBoardMode("division")}
               className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold transition ${
-                scope === "program" ? "nav-tab-active text-accent" : "text-[var(--muted)]"
+                boardMode === "division" ? "nav-tab-active text-accent" : "text-[var(--muted)]"
               }`}
             >
-              My program
+              My division
             </button>
             <button
               type="button"
-              onClick={() => setScope("site")}
+              onClick={() => setBoardMode("legacy")}
               className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold transition ${
-                scope === "site" ? "nav-tab-active text-accent" : "text-[var(--muted)]"
+                boardMode === "legacy" ? "nav-tab-active text-accent" : "text-[var(--muted)]"
               }`}
             >
-              All station
+              Program / station
             </button>
           </div>
 
-          {scope === "program" && data?.programName ? (
+          {boardMode === "legacy" ? (
+            <div className="flex rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-1">
+              <button
+                type="button"
+                onClick={() => setScope("program")}
+                className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold transition ${
+                  scope === "program" ? "nav-tab-active text-accent" : "text-[var(--muted)]"
+                }`}
+              >
+                My program
+              </button>
+              <button
+                type="button"
+                onClick={() => setScope("site")}
+                className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold transition ${
+                  scope === "site" ? "nav-tab-active text-accent" : "text-[var(--muted)]"
+                }`}
+              >
+                All station
+              </button>
+            </div>
+          ) : null}
+
+          {boardMode === "division" && division ? (
+            <p className="text-center text-xs text-[var(--muted)]">
+              <span className="font-medium text-[var(--text)]">{division.divisionLabel}</span>
+              {" · "}
+              {division.seasonDays}-day season ({division.seasonKey})
+            </p>
+          ) : null}
+
+          {boardMode === "legacy" && scope === "program" && data?.programName ? (
             <p className="text-center text-xs text-[var(--muted)]">
               Racers in <span className="font-medium text-[var(--text)]">{data.programName}</span>
             </p>
           ) : null}
 
-          {data?.viewer ? (
+          {boardMode === "division" && division?.viewer ? (
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
+                You on the board
+                {division.viewer.topPercent ? " · TOP BAND" : ""}
+              </p>
+              <LeaderboardRowView
+                row={{
+                  rank: division.viewer.rank,
+                  userId: division.viewer.userId,
+                  displayName: division.viewer.displayName,
+                  points: division.viewer.seasonPoints,
+                  bestMove: division.viewer.bestMove,
+                  isSelf: true,
+                }}
+                highlight="self"
+              />
+            </div>
+          ) : null}
+
+          {boardMode === "legacy" && data?.viewer ? (
             <div className="space-y-2">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
                 You on the board
               </p>
               <LeaderboardRowView row={data.viewer} highlight="self" />
+            </div>
+          ) : null}
+
+          {boardMode === "division" && division?.openPromo ? (
+            <div className="card space-y-2 border-amber-500/40 bg-amber-500/10 p-4">
+              <p className="text-sm font-semibold text-amber-100">
+                Free week of {signupPlanLabel(division.openPromo.toPlan as SignupPlan)}
+              </p>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={claimBusy}
+                onClick={() => void claimPromo(division.openPromo!.id)}
+              >
+                Claim free week
+              </button>
+            </div>
+          ) : null}
+
+          {boardMode === "division" && division?.peek?.enabled ? (
+            <div className="space-y-3 rounded-xl border border-sky-500/30 bg-sky-500/5 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-sky-300">
+                Upstairs peek — how Business & 1st Class stack
+              </p>
+              {division.peek.divisions.map((d) => (
+                <div key={d.division} className="space-y-1">
+                  <p className="text-xs font-semibold text-[var(--text)]">{d.label}</p>
+                  {d.rows.slice(0, 5).map((r) => (
+                    <div
+                      key={`${d.division}-${r.rank}`}
+                      className="flex justify-between text-xs text-[var(--muted)]"
+                    >
+                      <span>
+                        #{r.rank} {r.displayName}
+                      </span>
+                      <span className="font-mono text-accent">{r.points.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
             </div>
           ) : null}
 
@@ -270,7 +500,17 @@ export default function MemberLeaderboard() {
                 <div key={i} className="h-14 animate-pulse rounded-lg bg-[var(--surface-2)]" />
               ))}
             </div>
-          ) : data?.rows.length ? (
+          ) : boardMode === "division" && division?.rows.length ? (
+            <div className="space-y-2">
+              {division.rows.map((row) => (
+                <LeaderboardRowView
+                  key={row.userId}
+                  row={row}
+                  highlight={row.isSelf ? "self" : row.rank <= 3 ? "podium" : undefined}
+                />
+              ))}
+            </div>
+          ) : boardMode === "legacy" && data?.rows.length ? (
             <div className="space-y-2">
               <div className="hidden grid-cols-[4rem_1fr_1fr_auto] gap-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--muted)] sm:grid">
                 <span>Rank</span>
