@@ -340,11 +340,21 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 1. **Deploy batch** — coach tips (Account / Checkout / Messages soft link), mobile-only Enable alerts, coach+member set-row weight box (live floor = on-demand), tip Checkout API + webhook/confirm skip for `kind=coach_tip`.
 2. **Platform admin $275** — Admin → **Dev & partnership** → **Platform admin fee** card: Preview / Pay now via Connect (`src/lib/platform-admin-fee.ts`, `POST /api/stripe/commission/platform-admin-fee`). Not the MRR pool; not gated by $400 min. Env: `STRIPE_PLATFORM_ADMIN_FEE_DOLLARS` (default 275), `STRIPE_PLATFORM_ADMIN_PARTNER_EMAIL`.
+3. **Discounts** — Admin Billing %/duration/applies-to + member checkout field; free-ticket 10s chorus → Jeremy intro.
+4. **Gamification prod** — Blob import + season recompute ran (Jul 23). Open claim promos exist (demo + member). Feature enabled in levers.
+5. **Multi-part day UI** — already on program calendar (1/2/3 parts + part picker); not missing.
 
-**Ops still needed (John / Jeremy keys — not blocked on code):**
-- John completes **Connect Express** on his partner row when Stripe is ready (Test or Live).
-- Live keys tonight: tip prices + membership prices + `sk_live`/`pk_live`/`whsec` on Vercel.
-- First real **Pay platform admin** only after Connect Ready + balance on master account.
+**Ops still needed (John — Stripe secret cannot be read by agent CLI):**
+```bash
+# Tips + FEEDBACK50 on Jeremy Test Stripe (or Live later):
+STRIPE_SECRET_KEY='sk_test_…' \
+STRIPE_PRICE_MEMBER='price_…' STRIPE_PRICE_BUSINESS='price_…' \
+  npx tsx scripts/setup-tips-and-feedback-discount.mjs
+# → paste printed STRIPE_PRICE_TIP_* into Vercel Production → redeploy
+```
+- **Connect Express:** partner **John Popham** (`john@thetrainstation.co`) is seeded 100% share but **`has_connect: false`**. Admin → Dev & partnership → **Connect** as John.
+- **Stripe Live** — later (user parked).
+- Landing videos — later (user parked); free gag works without them.
 
 ### Jul 23 — Discount codes (shipped in code)
 
