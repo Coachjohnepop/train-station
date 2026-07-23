@@ -345,17 +345,17 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 4. **Gamification prod** — Blob import + season recompute ran (Jul 23). Open claim promos exist (demo + member). Feature enabled in levers.
 5. **Multi-part day UI** — already on program calendar (1/2/3 parts + part picker); not missing.
 
-**Ops still needed (John — Stripe secret cannot be read by agent CLI):**
-```bash
-# Tips + FEEDBACK50 on Jeremy Test Stripe (or Live later):
-STRIPE_SECRET_KEY='sk_test_…' \
-STRIPE_PRICE_MEMBER='price_…' STRIPE_PRICE_BUSINESS='price_…' \
-  npx tsx scripts/setup-tips-and-feedback-discount.mjs
-# → paste printed STRIPE_PRICE_TIP_* into Vercel Production → redeploy
-```
-- **Connect Express:** partner **John Popham** (`john@thetrainstation.co`) is seeded 100% share but **`has_connect: false`**. Admin → Dev & partnership → **Connect** as John.
-- **Stripe Live** — later (user parked).
-- Landing videos — later (user parked); free gag works without them.
+**Ops completed (2026-07-23, Test Stripe):**
+- Tips **enabled** on prod (`tips.enabled: true`, presets 5/10/25/50 + custom) via server bootstrap + Vercel `STRIPE_PRICE_TIP_*`.
+- **FEEDBACK50** live on Test Stripe (50% × 3 months, applies to Coach + Business products).
+- Security: `SECURITY_ENFORCED=true`, `ALLOW_DEV_SWITCHER=false`, `STRIPE_REQUIRED=true` (still `ALLOW_BLANK_PASSWORD=true` for coach email login until passwords set).
+- Bootstrap route: `POST /api/admin/ops/stripe-bootstrap` (staff or `OPS_BOOTSTRAP_SECRET`).
+- DSAR sample exports written under `exports/` (local only). Persistence snapshot: Postgres durable.
+
+**Still needs a human browser:**
+- **Connect Express** for John (`has_connect: false`) — Admin → Dev & partnership → Connect. Required before platform admin $275 transfer.
+- **Stripe Live** — later (parked).
+- Landing / free-tier **Jeremy intro** YouTube — later (parked); 10s gag works alone.
 
 ### Jul 23 — Discount codes (shipped in code)
 

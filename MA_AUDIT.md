@@ -146,7 +146,7 @@ Domain packs already written:
 
 - [x] Publish this file + domain packs (`MA_AUDIT.md` on main)  
 - [x] Prod snapshot helper: `npx tsx scripts/snapshot-demo-persistence-prod.mjs --url https://www.thetrainstation.co`  
-- [ ] Confirm security env flags on Vercel (`SECURITY_ENFORCED`, `ALLOW_DEV_SWITCHER=false`) — **ops checklist**  
+- [x] Confirm security env flags on Vercel (`SECURITY_ENFORCED=true`, `ALLOW_DEV_SWITCHER=false`, `STRIPE_REQUIRED=true`; blank-password still true for coach login)
 - [x] Wire `recordAuditEvent` for: mark-paid, refund, discount create/toggle, role/status change, tip paid, platform admin fee, user hide  
 - [x] Admin **Audit log** page: `/admin/audit` + `GET /api/admin/audit` (platform staff)  
 - [x] Member export script v1: `npx tsx scripts/export-member-dsar.ts --email user@x.com`  
