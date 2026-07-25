@@ -23,35 +23,42 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const result = await runStripeOpsBootstrap();
-  if ("error" in result) {
+  try {
+    const result = await runStripeOpsBootstrap();
+    if ("error" in result) {
+      if (staff.ok) {
+        await auditFromRequest(request, {
+          action: "ops.stripe_bootstrap",
+          outcome: "failure",
+          actor: actorFromSession(staff.session),
+          metadata: { error: result.error },
+        });
+      }
+      return NextResponse.json({ error: result.error }, { status: 503 });
+    }
+
     if (staff.ok) {
       await auditFromRequest(request, {
         action: "ops.stripe_bootstrap",
-        outcome: "failure",
+        outcome: "success",
         actor: actorFromSession(staff.session),
-        metadata: { error: result.error },
+        metadata: {
+          mode: result.mode,
+          accountId: result.accountId,
+          tipProductId: result.tipProductId,
+          feedbackCode: result.feedback.code,
+          tipKeys: Object.keys(result.tipEnv),
+          membershipKeys: Object.keys(result.membershipEnv || {}),
+        },
       });
     }
-    return NextResponse.json({ error: result.error }, { status: 503 });
-  }
 
-  if (staff.ok) {
-    await auditFromRequest(request, {
-      action: "ops.stripe_bootstrap",
-      outcome: "success",
-      actor: actorFromSession(staff.session),
-      metadata: {
-        mode: result.mode,
-        accountId: result.accountId,
-        tipProductId: result.tipProductId,
-        feedbackCode: result.feedback.code,
-        tipKeys: Object.keys(result.tipEnv),
-      },
-    });
+    return NextResponse.json({ ok: true, ...result });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Bootstrap crashed";
+    console.error("[ops/stripe-bootstrap]", message, e);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  return NextResponse.json({ ok: true, ...result });
 }
 
 export async function GET(request: Request) {
