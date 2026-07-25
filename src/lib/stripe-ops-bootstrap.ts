@@ -246,17 +246,20 @@ export async function runStripeOpsBootstrap(): Promise<
 
   let accountId: string | null = null;
   try {
-    // Platform account — avoid retrieve("") which can 500 on some SDK/key combos.
-    const acct = await stripe.accounts.retrieve();
-    accountId = acct.id ?? null;
+    // Prefer balance (works with many restricted keys); avoid accounts.retrieve("") crashes.
+    await stripe.balance.retrieve();
+    accountId = "platform";
   } catch {
-    try {
-      // Fallback: any list call returns account-scoped data
-      const bal = await stripe.balance.retrieve();
-      accountId = (bal as { available?: unknown }) ? "platform" : null;
-    } catch {
-      /* claimable / restricted keys may block both */
-    }
+    /* claimable / restricted keys may block */
+  }
+  try {
+    // If key can read account, capture real id (optional).
+    const acct = await (stripe as unknown as {
+      accounts: { retrieve: (id?: string) => Promise<{ id: string }> };
+    }).accounts.retrieve(undefined as unknown as string);
+    if (acct?.id) accountId = acct.id;
+  } catch {
+    /* ok */
   }
 
   const pub =
