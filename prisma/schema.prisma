@@ -645,6 +645,10 @@ model MemberProfile {
   paidAt                      DateTime?
   paymentMethod               String?
   paymentNote                 String?   @db.Text
+  /// Manual staff grant: access ends at this time (typically 1st of next month); reapprove in Admin → Members.
+  staffGrantExpiresAt         DateTime?
+  staffGrantedAt              DateTime?
+  staffGrantedBy              String?
   stripeCustomerId            String?
   stripeSubscriptionId        String?
   stripeCheckoutSessionId     String?

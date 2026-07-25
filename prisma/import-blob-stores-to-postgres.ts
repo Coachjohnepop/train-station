@@ -287,6 +287,13 @@ function normalizeImportedProfile(raw: unknown, userId: string): MemberProfile |
         ? data.paymentMethod
         : null,
     paymentNote: typeof data.paymentNote === "string" ? data.paymentNote : null,
+    staffGrantExpiresAt:
+      typeof data.staffGrantExpiresAt === "string" ? data.staffGrantExpiresAt : null,
+    staffGrantedAt: typeof data.staffGrantedAt === "string" ? data.staffGrantedAt : null,
+    staffGrantedBy:
+      typeof data.staffGrantedBy === "string" && data.staffGrantedBy.trim()
+        ? data.staffGrantedBy.trim()
+        : null,
     stripeCustomerId: data.stripeCustomerId ?? null,
     stripeSubscriptionId: data.stripeSubscriptionId ?? null,
     stripeCheckoutSessionId: data.stripeCheckoutSessionId ?? null,

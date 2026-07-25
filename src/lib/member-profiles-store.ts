@@ -59,6 +59,9 @@ function emptyProfile(userId: string, email: string, plan: SignupPlan): MemberPr
     paidAt: null,
     paymentMethod: null,
     paymentNote: null,
+    staffGrantExpiresAt: null,
+    staffGrantedAt: null,
+    staffGrantedBy: null,
     stripeCustomerId: null,
     stripeSubscriptionId: null,
     stripeCheckoutSessionId: null,
@@ -113,6 +116,13 @@ function normalizeProfile(raw: unknown, userId: string): MemberProfile | null {
     paidAt: data.paidAt ?? null,
     paymentMethod: normalizePaymentMethod(data.paymentMethod),
     paymentNote: typeof data.paymentNote === "string" ? data.paymentNote : null,
+    staffGrantExpiresAt:
+      typeof data.staffGrantExpiresAt === "string" ? data.staffGrantExpiresAt : null,
+    staffGrantedAt: typeof data.staffGrantedAt === "string" ? data.staffGrantedAt : null,
+    staffGrantedBy:
+      typeof data.staffGrantedBy === "string" && data.staffGrantedBy.trim()
+        ? data.staffGrantedBy.trim()
+        : null,
     stripeCustomerId: data.stripeCustomerId ?? null,
     stripeSubscriptionId: data.stripeSubscriptionId ?? null,
     stripeCheckoutSessionId: data.stripeCheckoutSessionId ?? null,

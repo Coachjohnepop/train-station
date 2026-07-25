@@ -5,14 +5,16 @@ import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { getMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
 import { attachPaidMemberCookies, markMemberPaid } from "@/lib/mark-member-paid";
 import { PAID_MEMBERSHIP_PLANS, signupPlanLabel } from "@/lib/signup-plans";
+import {
+  nextStaffGrantExpiryIso,
+  notifyStaffGrantAdmins,
+} from "@/lib/staff-grants";
 
 type RouteContext = { params: Promise<{ userId: string }> };
 
 const schema = z.object({
-  /** Coach Class | Business Class | 1st Class */
   plan: z.enum(["member", "business", "pro"]),
   note: z.string().max(500).optional(),
-  /** Default true — unlock Today / training without forcing full onboard wizard again. */
   completeOnboarding: z.boolean().optional().default(true),
 });
 
@@ -24,7 +26,7 @@ async function requireStaff() {
 
 /**
  * Staff grant: set membership tier + mark paid (manual) without Stripe.
- * Used for comps, beta, “grey maintain” Coach Class, Business+ previews, etc.
+ * Expires on the 1st of next month — reapprove via this same endpoint.
  */
 export async function POST(request: Request, context: RouteContext) {
   const session = await requireStaff();
@@ -53,9 +55,12 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const planLabel = signupPlanLabel(plan);
+  const actorEmail = session.email || session.id;
+  const expiresAt = nextStaffGrantExpiryIso();
+  const reapprove = Boolean(profile.staffGrantedAt || profile.staffGrantExpiresAt);
   const note =
     parsed.data.note?.trim() ||
-    `Staff grant · ${planLabel} · ${session.email || session.id}`;
+    `Staff grant · ${planLabel} · ${actorEmail} · reapprove by 1st of month`;
 
   let updated = await markMemberPaid({
     userId,
@@ -63,7 +68,7 @@ export async function POST(request: Request, context: RouteContext) {
     method: "manual",
     note,
     actor: actorFromSession(session),
-    auditSource: "admin.staff_grant",
+    auditSource: reapprove ? "admin.staff_grant_reapprove" : "admin.staff_grant",
     ip: clientIpFromRequest(request),
     userAgent: userAgentFromRequest(request),
   });
@@ -72,19 +77,41 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Could not apply staff grant." }, { status: 500 });
   }
 
-  if (parsed.data.completeOnboarding && !updated.onboardingComplete) {
-    updated = await updateMemberProfile(userId, {
-      onboardingComplete: true,
-      completedAt: updated.completedAt || new Date().toISOString(),
-      approvalStatus: "approved",
-      approvedAt: updated.approvedAt || new Date().toISOString(),
-    });
-  }
+  const nowIso = new Date().toISOString();
+  updated = await updateMemberProfile(userId, {
+    staffGrantExpiresAt: expiresAt,
+    staffGrantedAt: nowIso,
+    staffGrantedBy: actorEmail,
+    paymentNote: note,
+    ...(parsed.data.completeOnboarding && !updated.onboardingComplete
+      ? {
+          onboardingComplete: true,
+          completedAt: updated.completedAt || nowIso,
+          approvalStatus: "approved" as const,
+          approvedAt: updated.approvedAt || nowIso,
+        }
+      : {}),
+  });
 
+  const notify = await notifyStaffGrantAdmins({
+    event: reapprove ? "reapproved" : "granted",
+    memberName: updated.email.split("@")[0] || updated.email,
+    memberEmail: updated.email,
+    plan: updated.plan,
+    expiresAt: updated.staffGrantExpiresAt,
+    note: updated.paymentNote,
+    actorEmail,
+  });
+
+  // Prefer display name from accounts if we only have email
   const res = NextResponse.json({
     ok: true,
     profile: updated,
-    message: `Granted ${planLabel} (manual / staff).`,
+    message: reapprove
+      ? `Reapproved ${planLabel} through ${new Date(expiresAt).toLocaleDateString()}.`
+      : `Granted ${planLabel} (manual). Reapprove on the 1st of each month.`,
+    notify,
+    expiresAt,
   });
   await attachPaidMemberCookies(res, userId, updated);
   return res;

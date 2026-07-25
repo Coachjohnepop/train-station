@@ -62,7 +62,15 @@ export function normalizePaymentStatus(raw: unknown, plan?: SignupPlan): Payment
 }
 
 export function memberNeedsPayment(
-  profile: Pick<MemberProfile, "plan" | "paymentStatus" | "onboardingComplete"> | null,
+  profile: Pick<
+    MemberProfile,
+    | "plan"
+    | "paymentStatus"
+    | "onboardingComplete"
+    | "paymentMethod"
+    | "staffGrantExpiresAt"
+    | "staffGrantedAt"
+  > | null,
   userId: string,
 ): boolean {
   // Payment is independent of onboarding. Members may complete profile setup while
@@ -76,7 +84,17 @@ export function memberNeedsPayment(
   }
   const plan = profile?.plan ?? "explorer";
   if (!isPaidSignupPlan(plan)) return false;
-  return (profile?.paymentStatus ?? "pending") !== "paid";
+  if ((profile?.paymentStatus ?? "pending") !== "paid") return true;
+
+  // Manual staff grants expire monthly (1st) until reapproved.
+  if (
+    profile?.paymentMethod === "manual" &&
+    profile.staffGrantExpiresAt &&
+    new Date(profile.staffGrantExpiresAt).getTime() <= Date.now()
+  ) {
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -84,7 +102,15 @@ export function memberNeedsPayment(
  * paid Stripe/Venmo stamp (product access only — not money).
  */
 export async function memberNeedsPaymentAsync(
-  profile: Pick<MemberProfile, "plan" | "paymentStatus" | "onboardingComplete"> | null,
+  profile: Pick<
+    MemberProfile,
+    | "plan"
+    | "paymentStatus"
+    | "onboardingComplete"
+    | "paymentMethod"
+    | "staffGrantExpiresAt"
+    | "staffGrantedAt"
+  > | null,
   userId: string,
 ): Promise<boolean> {
   if (!memberNeedsPayment(profile, userId)) return false;

@@ -21,6 +21,10 @@ export type MemberProfile = {
   paidAt: string | null;
   paymentMethod: PaymentMethod | null;
   paymentNote: string | null;
+  /** ISO — staff grant must be reapproved by this time (usually 1st of next month). */
+  staffGrantExpiresAt: string | null;
+  staffGrantedAt: string | null;
+  staffGrantedBy: string | null;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   stripeCheckoutSessionId: string | null;
@@ -73,6 +77,9 @@ export type MemberProfilePatch = Partial<
     | "paidAt"
     | "paymentMethod"
     | "paymentNote"
+    | "staffGrantExpiresAt"
+    | "staffGrantedAt"
+    | "staffGrantedBy"
     | "stripeCustomerId"
     | "stripeSubscriptionId"
     | "stripeCheckoutSessionId"

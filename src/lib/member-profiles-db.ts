@@ -57,6 +57,14 @@ function rowToMemberProfile(
     paidAt: toIso(row.paidAt),
     paymentMethod: normalizePaymentMethod(row.paymentMethod),
     paymentNote: row.paymentNote,
+    staffGrantExpiresAt: toIso(
+      (row as DbMemberProfile & { staffGrantExpiresAt?: Date | null }).staffGrantExpiresAt,
+    ),
+    staffGrantedAt: toIso(
+      (row as DbMemberProfile & { staffGrantedAt?: Date | null }).staffGrantedAt,
+    ),
+    staffGrantedBy:
+      (row as DbMemberProfile & { staffGrantedBy?: string | null }).staffGrantedBy ?? null,
     stripeCustomerId: row.stripeCustomerId,
     stripeSubscriptionId: row.stripeSubscriptionId,
     stripeCheckoutSessionId: row.stripeCheckoutSessionId,
@@ -97,6 +105,9 @@ function profileToDbFields(profile: MemberProfile) {
     paidAt: parseOptionalDate(profile.paidAt) ?? null,
     paymentMethod: profile.paymentMethod,
     paymentNote: profile.paymentNote,
+    staffGrantExpiresAt: parseOptionalDate(profile.staffGrantExpiresAt) ?? null,
+    staffGrantedAt: parseOptionalDate(profile.staffGrantedAt) ?? null,
+    staffGrantedBy: profile.staffGrantedBy,
     stripeCustomerId: profile.stripeCustomerId,
     stripeSubscriptionId: profile.stripeSubscriptionId,
     stripeCheckoutSessionId: profile.stripeCheckoutSessionId,

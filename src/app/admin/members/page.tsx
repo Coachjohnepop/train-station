@@ -10,7 +10,7 @@ import {
 import { signupPlanLabel } from "@/lib/signup-plans";
 import { formatPhoneDisplay } from "@/lib/sms-phone";
 
-type MemberFilter = "all" | "pending" | "unpaid" | "intake" | "meeting";
+type MemberFilter = "all" | "pending" | "unpaid" | "intake" | "meeting" | "staff_grants";
 
 type MemberRow = {
   userId: string;
@@ -23,6 +23,9 @@ type MemberRow = {
   paymentStatus: string;
   paymentMethod: string | null;
   paymentNote: string | null;
+  staffGrantExpiresAt: string | null;
+  staffGrantedAt: string | null;
+  staffGrantedBy: string | null;
   onboardingComplete: boolean;
   paidAt: string | null;
   approvedAt: string | null;
@@ -35,6 +38,20 @@ type MemberRow = {
   rampStartedAt: string | null;
   coachingMode: MemberCoachingMode;
 };
+
+function isStaffGrantRow(m: MemberRow): boolean {
+  return (
+    m.paymentMethod === "manual" &&
+    Boolean(m.staffGrantedAt || m.staffGrantExpiresAt || (m.paymentNote || "").toLowerCase().includes("staff grant"))
+  );
+}
+
+function staffGrantNeedsReapprove(m: MemberRow): boolean {
+  if (!isStaffGrantRow(m)) return false;
+  if (m.paymentStatus !== "paid") return true;
+  if (!m.staffGrantExpiresAt) return false;
+  return new Date(m.staffGrantExpiresAt).getTime() <= Date.now();
+}
 
 function formatWhen(iso: string | null): string {
   if (!iso) return "—";
@@ -230,6 +247,8 @@ export default function AdminMembersPage() {
         return member.onboardingComplete && !member.coachIntakeCompleteAt;
       case "meeting":
         return Boolean(member.coachMeetingRequestedAt);
+      case "staff_grants":
+        return isStaffGrantRow(member);
       default:
         return true;
     }
@@ -288,12 +307,15 @@ export default function AdminMembersPage() {
     (m) => isPaidPlan(m.plan) && m.paymentStatus !== "paid",
   ).length;
   const meetingCount = members.filter((m) => m.coachMeetingRequestedAt).length;
+  const staffGrantCount = members.filter(isStaffGrantRow).length;
+  const staffReapproveCount = members.filter(staffGrantNeedsReapprove).length;
   const visibleMembers = members.filter(matchesFilter);
 
   const filterButtons: { id: MemberFilter; label: string; count?: number }[] = [
     { id: "all", label: "All" },
     { id: "pending", label: "Pending", count: pendingCount },
     { id: "unpaid", label: "Unpaid", count: unpaidCount },
+    { id: "staff_grants", label: "Staff grants", count: staffGrantCount },
     { id: "intake", label: "Intake", count: intakePendingCount },
     { id: "meeting", label: "Meetings", count: meetingCount },
   ];
@@ -306,7 +328,14 @@ export default function AdminMembersPage() {
           <p className="text-sm text-[var(--muted)]">
             Self-registered ticket signups — approve, mark paid, or{" "}
             <strong className="font-semibold text-[var(--text)]">Staff grant</strong> a tier
-            (Coach / Business / 1st Class) without Stripe.
+            (Coach / Business / 1st Class) without Stripe. Staff grants need reapproval each{" "}
+            <strong className="font-semibold text-[var(--text)]">1st of the month</strong> (you +
+            Jeremy get email).
+            {staffReapproveCount > 0 ? (
+              <span className="ml-1 font-semibold text-amber-300">
+                {staffReapproveCount} need reapproval.
+              </span>
+            ) : null}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -409,13 +438,24 @@ export default function AdminMembersPage() {
                       {member.paymentStatus === "paid" && member.paymentMethod && (
                         <span className="text-[10px] text-[var(--muted)]">
                           via{" "}
-                          {member.paymentMethod === "manual" &&
-                          (member.paymentNote || "").toLowerCase().includes("staff grant")
+                          {isStaffGrantRow(member)
                             ? "Staff grant"
                             : paymentMethodLabel(member.paymentMethod)}
                           {member.paidAt ? ` · ${formatWhen(member.paidAt)}` : ""}
                         </span>
                       )}
+                      {isStaffGrantRow(member) && member.staffGrantExpiresAt ? (
+                        <span
+                          className={`text-[10px] font-semibold ${
+                            staffGrantNeedsReapprove(member)
+                              ? "text-amber-300"
+                              : "text-violet-300"
+                          }`}
+                        >
+                          {staffGrantNeedsReapprove(member) ? "Reapprove by " : "Until "}
+                          {formatWhen(member.staffGrantExpiresAt)}
+                        </span>
+                      ) : null}
                       {member.paymentNote && (
                         <span className="max-w-[12rem] text-[10px] text-[var(--muted)] italic line-clamp-2">
                           {member.paymentNote}
@@ -487,9 +527,17 @@ export default function AdminMembersPage() {
                           setStaffGrantNote("");
                         }}
                         disabled={staffGranting === member.userId}
-                        className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-violet-500/40 text-violet-300"
+                        className={`btn-ghost text-xs px-3 py-1.5 ring-1 ${
+                          staffGrantNeedsReapprove(member)
+                            ? "ring-amber-500/50 text-amber-300"
+                            : "ring-violet-500/40 text-violet-300"
+                        }`}
                       >
-                        Staff grant
+                        {staffGrantNeedsReapprove(member)
+                          ? "Reapprove grant"
+                          : isStaffGrantRow(member)
+                            ? "Extend grant"
+                            : "Staff grant"}
                       </button>
                       {isPaidPlan(member.plan) && member.paymentStatus !== "paid" && (
                         <button
@@ -640,8 +688,9 @@ export default function AdminMembersPage() {
                 {staffGrantTarget.name} · {staffGrantTarget.email}
               </p>
               <p className="mt-2 text-xs text-[var(--muted)]">
-                Sets tier + paid (manual) without Stripe. Coach Class gets grey Maintain teaser;
-                Business+ unlocks full Quick maintain. Audited as staff grant.
+                Sets tier + paid (manual) without Stripe through the <strong>1st of next month</strong>.
+                John + Jeremy get email on grant / reapprove / expire. Coach Class = grey Maintain;
+                Business+ = full Quick maintain.
               </p>
             </div>
             <div>
