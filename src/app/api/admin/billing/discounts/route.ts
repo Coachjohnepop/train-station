@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requirePlatformStaff } from "@/lib/api-auth";
+import { requireStaff } from "@/lib/api-auth";
 import { actorFromSession, auditFromRequest } from "@/lib/audit-request";
 import {
   createBillingDiscount,
@@ -34,7 +34,8 @@ const patchSchema = z.object({
 });
 
 export async function GET() {
-  const auth = await requirePlatformStaff();
+  // Coaches create promo codes from Coach → Discounts; platform still uses Billing tab.
+  const auth = await requireStaff();
   if (!auth.ok) return auth.response;
 
   try {
@@ -54,7 +55,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const auth = await requirePlatformStaff();
+  const auth = await requireStaff();
   if (!auth.ok) return auth.response;
 
   const parsed = createSchema.safeParse(await request.json().catch(() => ({})));
@@ -99,7 +100,7 @@ export async function POST(request: Request) {
         stripeCouponId: created.couponId,
         notes:
           parsed.data.notes ||
-          `Created from Admin → Billing · applies ${parsed.data.appliesTo}`,
+          `Created from Admin → Discounts · applies ${parsed.data.appliesTo}`,
       });
       referralSaved = true;
     } catch (e: unknown) {
@@ -140,7 +141,7 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const auth = await requirePlatformStaff();
+  const auth = await requireStaff();
   if (!auth.ok) return auth.response;
 
   const parsed = patchSchema.safeParse(await request.json().catch(() => ({})));

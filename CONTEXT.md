@@ -11,7 +11,7 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 
 | Who | Role | Notes |
 |-----|------|--------|
-| **John** (you) | Builder / product | Repo owner; deploys; soaks; coaches Jeremy through product |
+| **John** (you) | Builder / product | Repo owner; deploys; soaks; coaches Jeremy through product. **Vercel login email: `john@bcxvoice.com`** (CLI username `john-9066`, team `johnepop's projects`). |
 | **Jeremy** | Customer coach | Primary admin user; stress-tests clone/templates/calendar; email `jeremy@thetrainstation.co` |
 | **John & Steph** | Demo member journey | Program subs, floating video, schedule greens in demos |
 | **Grok** (xAI) | Coding agent in this TUI | Not Claude — may share this file |
@@ -25,7 +25,7 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 | **Zoom** (live class) | Coach Connect as **`jeremy@thetrainstation.co`** · Marketplace app credentials on Vercel (John) | Host / recordings = Jeremy’s Zoom when he Connects. |
 | **Stripe** | **Master / merchant = Jeremy’s Train Station business Stripe** · API keys on Vercel (John wires) | Full money-flow below. **Card Live cutover still open** (prod often still Test mode). |
 | **Venmo** | **Jeremy’s business Venmo** (`@JeremyByrdCSCS`) · QR on Landing store | **LIVE on prod (Jul 19)** as real-money backup. **Same Train Station business bank story as Stripe** — not a second company. Coach **Mark paid** unlocks access. |
-| **Vercel / GitHub / Postgres** | John | Deploys, env, DB. |
+| **Vercel / GitHub / Postgres** | **John · `john@bcxvoice.com`** (Vercel user `john-9066` · team johnepop's projects) | Deploys, env, DB. Project `train-station` → thetrainstation.co. |
 
 **Jeremy-facing tech map:** → **`JEREMY_ADMIN_MANUAL.md`**  
 **Payments training:** → **`JEREMY_VENMO_SCRIPT.md`** (2‑min see Venmo) · **`JEREMY_S5_PAYMENTS_TEST.md`** · **`STRIPE_COMMISSION_SETUP.md`** · **`STRIPE_DEMO_SCRIPT.md`** · **`PAYMENT_ADMIN_DEMO_SCRIPT.md`** · **`STRIPE_PRODUCT_CATALOG.md`**

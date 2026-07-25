@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import AdminAppSearch from "@/components/AdminAppSearch";
 import AdminSectionNav from "@/components/AdminSectionNav";
 import {
   COACH_NAV_GROUPS,
@@ -40,6 +41,14 @@ export default function AdminAreaNav({
 
   return (
     <div className="space-y-4">
+      <div className={collapsed ? "flex justify-center" : ""}>
+        <AdminAppSearch
+          canCoach={canCoach}
+          canPlatform={canPlatform}
+          onNavigate={onNavClick}
+          collapsed={collapsed}
+        />
+      </div>
       {dualWorkspace ? (
         <div className={`space-y-2 ${collapsed ? "px-1" : "px-2"}`}>
           {collapsed ? (

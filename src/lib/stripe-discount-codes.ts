@@ -37,7 +37,8 @@ export async function stripeProductIdsForDiscountScope(
 
   for (const planId of planIds) {
     const priceId = await resolveStripePriceId(planId);
-    if (!priceId) continue;
+    // Only real Stripe Price IDs (env typos sometimes paste sk_/pk_ into STRIPE_PRICE_*).
+    if (!priceId || !priceId.startsWith("price_")) continue;
     try {
       const price = await stripe.prices.retrieve(priceId);
       const product =
@@ -86,13 +87,21 @@ export async function resolveStripePromotionCode(
 
   const normalized = code.toUpperCase().replace(/\s+/g, "");
   try {
-    const listed = await stripe.promotionCodes.list({
+    // Prefer active codes; if Stripe returns nothing (timing / API quirks), try without active filter.
+    let listed = await stripe.promotionCodes.list({
       code: normalized,
       active: true,
-      limit: 1,
+      limit: 5,
     });
-    const hit = listed.data[0];
-    if (!hit) return null;
+    let hit = listed.data[0];
+    if (!hit) {
+      listed = await stripe.promotionCodes.list({
+        code: normalized,
+        limit: 5,
+      });
+      hit = listed.data.find((p) => p.active) || listed.data[0];
+    }
+    if (!hit || !hit.active) return null;
     return { promotionCode: hit.id };
   } catch {
     return null;

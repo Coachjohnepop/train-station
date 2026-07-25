@@ -465,6 +465,12 @@ export async function createBillingDiscount(input: {
 
   const code = input.code.trim().toUpperCase().replace(/\s+/g, "");
   if (code.length < 2) return { ok: false, error: "Discount code must be at least 2 characters." };
+  if (/^(SK|PK|PRICE|PROD|WHSEC)_/i.test(code)) {
+    return {
+      ok: false,
+      error: "That looks like a Stripe API/price id, not a promo code. Use something like FEEDBACK50.",
+    };
+  }
 
   const percent = input.percentOff != null ? Number(input.percentOff) : null;
   const amountOff = input.amountOffCents != null ? Math.round(Number(input.amountOffCents)) : null;

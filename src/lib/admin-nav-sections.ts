@@ -61,6 +61,17 @@ export const COACH_NAV_GROUPS: AdminNavGroup[] = [
     items: peopleItems,
   },
   {
+    /** First-class coach money tool — promo codes for Checkout (not buried under Site). */
+    label: "Discount codes",
+    items: [
+      {
+        href: "/admin/discounts",
+        label: "Create & manage",
+        match: (p) => p.startsWith("/admin/discounts"),
+      },
+    ],
+  },
+  {
     label: "Talk",
     items: [
       {

@@ -213,16 +213,20 @@ function applyReferralDiscounts(
   discount?: CheckoutDiscount | null,
 ) {
   // Stripe: cannot combine pre-applied discounts[] with allow_promotion_codes.
-  if (referralDiscountsEnabled() && discount?.promotionCode) {
+  // Always honor an already-resolved promo/coupon (Checkout field or referral map).
+  // referralDiscountsEnabled() only gates the optional allow_promotion_codes fallback.
+  if (discount?.promotionCode) {
     sessionParams.discounts = [{ promotion_code: discount.promotionCode }];
     return;
   }
-  if (referralDiscountsEnabled() && discount?.coupon) {
+  if (discount?.coupon) {
     sessionParams.discounts = [{ coupon: discount.coupon }];
     return;
   }
-  // Members can enter promo codes created in Admin → Billing.
-  sessionParams.allow_promotion_codes = true;
+  // Members can still type a code in Stripe Checkout when we did not pre-apply one.
+  if (referralDiscountsEnabled()) {
+    sessionParams.allow_promotion_codes = true;
+  }
 }
 
 /** Optional coach tips at membership Checkout (fixed presets and/or $1 adjustable). */
