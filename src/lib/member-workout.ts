@@ -9,6 +9,7 @@ import {
   buildDemoWorkoutExerciseItems,
   findDemoWorkoutRecord,
 } from "@/lib/demo-workout-items";
+import { resolveExerciseVideoUrl } from "@/lib/exercise-video-hints";
 import { prisma } from "@/lib/prisma";
 
 function mapItemToBlock(item: {
@@ -40,15 +41,21 @@ function mapItemToBlock(item: {
   const restRaw = item.restBetweenSetsSec ?? item.restSec ?? null;
   const restSec =
     typeof restRaw === "number" && restRaw > 0 ? Math.min(600, Math.floor(restRaw)) : null;
+  const name = ex.name || "Exercise";
+  // Library URL first; else name-based YouTube example demos (same as SMS / catalog).
+  const videoUrl = resolveExerciseVideoUrl({
+    name,
+    videoUrl: ex.videoUrl ?? null,
+  });
 
   return {
     id: item.id,
     exerciseId: item.exerciseId || ex.id || item.id,
-    name: ex.name || "Exercise",
+    name,
     description: coachNotes ?? libraryDescription,
     coachNotes,
     libraryDescription,
-    videoUrl: ex.videoUrl ?? null,
+    videoUrl,
     setScheme: rx.approach,
     repPattern: rx.repPattern,
     reps: rx.reps,
