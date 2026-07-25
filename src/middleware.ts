@@ -28,6 +28,7 @@ const PUBLIC_API_PREFIXES = [
   "/api/payments/public",
   "/api/pricing/public",
   "/api/stripe/webhook",
+  "/api/calendly/webhook",
   "/api/sms/inbound",
   "/api/sms/status", // Twilio delivery receipts (signed)
   "/api/analytics",

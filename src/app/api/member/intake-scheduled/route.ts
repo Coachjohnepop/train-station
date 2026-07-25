@@ -16,6 +16,7 @@ const bodySchema = z.object({
   bookingSource: z.enum(["calendly", "app_slots", "manual"]).optional(),
   phone: z.string().max(40).optional().nullable(),
   calendlyEventUri: z.string().url().optional().nullable(),
+  calendlyInviteeUri: z.string().url().optional().nullable(),
 });
 
 export async function POST(request: Request) {
@@ -47,9 +48,31 @@ export async function POST(request: Request) {
   });
 
   // Persist a Booking row when we know the meeting time (shows on Admin → Bookings).
-  if (meetingIso) {
+  // If Calendly webhook already recorded this invitee, skip create + skip duplicate coach notify.
+  let skipCoachNotify = false;
+  if (body.calendlyInviteeUri) {
+    try {
+      const { findBookingByCalendlyInviteeUri } = await import("@/lib/booking");
+      const existing = await findBookingByCalendlyInviteeUri(body.calendlyInviteeUri);
+      if (existing) skipCoachNotify = true;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (meetingIso && !skipCoachNotify) {
     try {
       const contact = await getAdminContact();
+      const { calendlyInviteeNoteMarker } = await import("@/lib/booking");
+      const notes = [
+        body.bookingSource === "calendly" ? "Calendly embed" : null,
+        body.calendlyInviteeUri
+          ? calendlyInviteeNoteMarker(body.calendlyInviteeUri)
+          : null,
+        body.calendlyEventUri ? `event:${body.calendlyEventUri}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
       await createBooking({
         memberEmail: session.email,
         memberPhone: body.phone || undefined,
@@ -57,6 +80,7 @@ export async function POST(request: Request) {
         adminEmail: contact.email,
         adminPhone: contact.phone || undefined,
         userId: session.id,
+        notes: notes || null,
       });
     } catch (e) {
       console.error("[intake-scheduled] createBooking failed", e);
@@ -64,16 +88,18 @@ export async function POST(request: Request) {
   }
 
   const account = await getAccountByUserId(session.id);
-  await notifyCoachIntakeReady({
-    userId: session.id,
-    name: account?.account.name || session.name || "Member",
-    email: session.email,
-    plan: signupPlanLabel(profile.plan),
-    paymentStatus: profile.paymentStatus,
-    scheduledAt: meetingIso,
-    bookingSource: body.bookingSource || (meetingIso ? "manual" : "calendly"),
-    phone: body.phone || account?.account.phone || profile.phone || null,
-  });
+  if (!skipCoachNotify) {
+    await notifyCoachIntakeReady({
+      userId: session.id,
+      name: account?.account.name || session.name || "Member",
+      email: session.email,
+      plan: signupPlanLabel(profile.plan),
+      paymentStatus: profile.paymentStatus,
+      scheduledAt: meetingIso,
+      bookingSource: body.bookingSource || (meetingIso ? "manual" : "calendly"),
+      phone: body.phone || account?.account.phone || profile.phone || null,
+    });
+  }
 
   const result = await awardGamificationPoints({
     userId: session.id,

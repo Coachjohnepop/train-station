@@ -195,6 +195,8 @@ export async function createBooking(data: {
   adminPhone?: string;
   zoomUrl?: string;
   userId?: string;
+  notes?: string | null;
+  status?: string;
 }) {
   if (isDemoMode()) {
     // find or create demo user
@@ -220,7 +222,8 @@ export async function createBooking(data: {
       scheduledAt: data.scheduledAt.toISOString(),
       durationMin: data.durationMin || 15,
       zoomUrl: data.zoomUrl || null,
-      status: "pending",
+      status: data.status || "pending",
+      notes: data.notes || null,
       createdAt: new Date().toISOString(),
       userId: du.id,
     };
@@ -251,10 +254,34 @@ export async function createBooking(data: {
       adminEmail: data.adminEmail,
       adminPhone: data.adminPhone || null,
       zoomUrl: data.zoomUrl || null,
-      status: "pending",
+      status: data.status || "pending",
+      notes: data.notes?.trim() || null,
       userId: userId || null,
     },
   });
+}
+
+/** Find a booking tagged with a Calendly invitee URI (idempotent webhooks). */
+export async function findBookingByCalendlyInviteeUri(
+  inviteeUri: string,
+): Promise<{ id: string; status: string; scheduledAt: Date | string; memberEmail: string } | null> {
+  const marker = calendlyInviteeNoteMarker(inviteeUri);
+  if (isDemoMode()) {
+    const hit = demoBookings.find((b: { notes?: string | null }) =>
+      (b.notes || "").includes(marker),
+    );
+    return hit || null;
+  }
+  const rows = await prisma.booking.findMany({
+    where: { notes: { contains: marker } },
+    orderBy: { createdAt: "desc" },
+    take: 1,
+  });
+  return rows[0] || null;
+}
+
+export function calendlyInviteeNoteMarker(inviteeUri: string): string {
+  return `calendly-invitee:${inviteeUri.trim()}`;
 }
 
 export async function getBookings() {

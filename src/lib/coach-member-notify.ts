@@ -20,17 +20,25 @@ export async function notifyCoachForMemberEvent(params: {
   subject: string;
   message: string;
   deepLink?: string;
+  /** Skip Messages thread (e.g. Calendly guest with no member account). */
+  skipInApp?: boolean;
 }): Promise<{ inApp: boolean; email: boolean; sms: boolean }> {
   const [settings, memberPrefs] = await Promise.all([
     getCoachSettings(),
-    getMemberCoachPrefs(params.memberUserId),
+    params.skipInApp
+      ? Promise.resolve(null)
+      : getMemberCoachPrefs(params.memberUserId),
   ]);
 
-  const channels = resolveAlertChannels(settings.alertPrefs, memberPrefs.alertOverrides, params.event);
+  const channels = resolveAlertChannels(
+    settings.alertPrefs,
+    memberPrefs?.alertOverrides,
+    params.event,
+  );
   const link = params.deepLink || `${appBaseUrl()}/admin/members`;
   const result = { inApp: false, email: false, sms: false };
 
-  if (channels.inApp) {
+  if (channels.inApp && !params.skipInApp && params.memberUserId) {
     try {
       await postCoachSystemMessage({
         memberId: params.memberUserId,
@@ -171,6 +179,7 @@ export async function notifyCoachIntakeReady(params: {
   /** calendly | app_slots | manual */
   bookingSource?: string | null;
   phone?: string | null;
+  skipInApp?: boolean;
 }): Promise<{ inApp: boolean; email: boolean; sms: boolean }> {
   const paymentPending =
     isPaidPlan(params.plan) && params.paymentStatus !== "paid" && params.paymentStatus !== "none";
@@ -201,6 +210,7 @@ export async function notifyCoachIntakeReady(params: {
       `Plan: ${params.plan}${phoneLine}${paymentNote}\n\n` +
       `Open Queue / Bookings to confirm and send Zoom if needed.`,
     deepLink: `${appBaseUrl()}/admin/bookings`,
+    skipInApp: params.skipInApp,
   });
 }
 

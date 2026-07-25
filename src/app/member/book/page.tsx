@@ -282,6 +282,7 @@ export default function MemberBookPage() {
                 scheduledAt: details.scheduledAt || null,
                 bookingSource: "calendly",
                 calendlyEventUri: details.eventUri || null,
+                calendlyInviteeUri: details.inviteeUri || null,
                 phone: memberPhone || null,
               }),
             });

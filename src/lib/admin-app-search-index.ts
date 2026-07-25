@@ -67,7 +67,7 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
     href: "/admin/bookings",
     workspace: "coach",
     group: "People",
-    keywords: ["calendly", "intake", "calls", "appointments", "schedule calls"],
+    keywords: ["calendly", "intake", "calls", "appointments", "schedule calls", "webhook"],
   },
   {
     id: "coach-messages",

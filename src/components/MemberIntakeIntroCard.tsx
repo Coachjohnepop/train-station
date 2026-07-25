@@ -70,6 +70,7 @@ export default function MemberIntakeIntroCard({
   async function handleScheduled(details?: {
     scheduledAt?: string | null;
     eventUri?: string | null;
+    inviteeUri?: string | null;
   }) {
     setBooking(true);
     try {
@@ -80,6 +81,7 @@ export default function MemberIntakeIntroCard({
           scheduledAt: details?.scheduledAt || null,
           bookingSource: "calendly",
           calendlyEventUri: details?.eventUri || null,
+          calendlyInviteeUri: details?.inviteeUri || null,
         }),
       });
       const data = await res.json();
@@ -217,6 +219,7 @@ export default function MemberIntakeIntroCard({
           void handleScheduled({
             scheduledAt: details.scheduledAt,
             eventUri: details.eventUri,
+            inviteeUri: details.inviteeUri,
           });
         }}
       />
