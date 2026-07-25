@@ -87,6 +87,10 @@ export default function AdminMembersPage() {
     "venmo",
   );
   const [markPaidNote, setMarkPaidNote] = useState("");
+  const [staffGrantTarget, setStaffGrantTarget] = useState<MemberRow | null>(null);
+  const [staffGrantPlan, setStaffGrantPlan] = useState<"member" | "business" | "pro">("member");
+  const [staffGrantNote, setStaffGrantNote] = useState("");
+  const [staffGranting, setStaffGranting] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<MemberFilter>("all");
   const [removing, setRemoving] = useState<string | null>(null);
@@ -189,6 +193,33 @@ export default function AdminMembersPage() {
     setMarkingPaid(null);
   }
 
+  async function submitStaffGrant() {
+    if (!staffGrantTarget) return;
+    setStaffGranting(staffGrantTarget.userId);
+    setError("");
+    const res = await fetch(
+      `/api/admin/members/${encodeURIComponent(staffGrantTarget.userId)}/staff-grant`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan: staffGrantPlan,
+          note: staffGrantNote.trim() || undefined,
+          completeOnboarding: true,
+        }),
+      },
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error || "Staff grant failed.");
+    } else {
+      setStaffGrantTarget(null);
+      setStaffGrantNote("");
+      await loadMembers();
+    }
+    setStaffGranting(null);
+  }
+
   function matchesFilter(member: MemberRow): boolean {
     switch (filter) {
       case "pending":
@@ -273,8 +304,9 @@ export default function AdminMembersPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Members</h1>
           <p className="text-sm text-[var(--muted)]">
-            Self-registered ticket signups — approve after onboarding, mark Venmo/manual payments
-            here.
+            Self-registered ticket signups — approve, mark paid, or{" "}
+            <strong className="font-semibold text-[var(--text)]">Staff grant</strong> a tier
+            (Coach / Business / 1st Class) without Stripe.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -376,12 +408,16 @@ export default function AdminMembersPage() {
                       {statusChip(member.paymentStatus, "payment")}
                       {member.paymentStatus === "paid" && member.paymentMethod && (
                         <span className="text-[10px] text-[var(--muted)]">
-                          via {paymentMethodLabel(member.paymentMethod)}
+                          via{" "}
+                          {member.paymentMethod === "manual" &&
+                          (member.paymentNote || "").toLowerCase().includes("staff grant")
+                            ? "Staff grant"
+                            : paymentMethodLabel(member.paymentMethod)}
                           {member.paidAt ? ` · ${formatWhen(member.paidAt)}` : ""}
                         </span>
                       )}
                       {member.paymentNote && (
-                        <span className="text-[10px] text-[var(--muted)] italic">
+                        <span className="max-w-[12rem] text-[10px] text-[var(--muted)] italic line-clamp-2">
                           {member.paymentNote}
                         </span>
                       )}
@@ -438,6 +474,22 @@ export default function AdminMembersPage() {
                         className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-sky-500/30 text-sky-300"
                       >
                         Equipment
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStaffGrantTarget(member);
+                          setStaffGrantPlan(
+                            isPaidPlan(member.plan)
+                              ? (member.plan as "member" | "business" | "pro")
+                              : "member",
+                          );
+                          setStaffGrantNote("");
+                        }}
+                        disabled={staffGranting === member.userId}
+                        className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-violet-500/40 text-violet-300"
+                      >
+                        Staff grant
                       </button>
                       {isPaidPlan(member.plan) && member.paymentStatus !== "paid" && (
                         <button
@@ -570,6 +622,72 @@ export default function AdminMembersPage() {
                 onClick={() => void submitMarkPaid()}
               >
                 {markingPaid === markPaidTarget.userId ? "Saving…" : "Confirm paid"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {staffGrantTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="card w-full max-w-md space-y-4 p-6">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-300">
+                Manual staff grant
+              </p>
+              <h2 className="mt-1 text-lg font-semibold">Grant membership</h2>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                {staffGrantTarget.name} · {staffGrantTarget.email}
+              </p>
+              <p className="mt-2 text-xs text-[var(--muted)]">
+                Sets tier + paid (manual) without Stripe. Coach Class gets grey Maintain teaser;
+                Business+ unlocks full Quick maintain. Audited as staff grant.
+              </p>
+            </div>
+            <div>
+              <label htmlFor="staff-plan" className="text-xs font-medium text-[var(--muted)]">
+                Plan
+              </label>
+              <select
+                id="staff-plan"
+                className="input mt-1 w-full"
+                value={staffGrantPlan}
+                onChange={(e) =>
+                  setStaffGrantPlan(e.target.value as "member" | "business" | "pro")
+                }
+              >
+                <option value="member">Coach Class</option>
+                <option value="business">Business Class</option>
+                <option value="pro">1st Class</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="staff-note" className="text-xs font-medium text-[var(--muted)]">
+                Note (optional)
+              </label>
+              <input
+                id="staff-note"
+                className="input mt-1 w-full"
+                placeholder="e.g. Beta · family · pending Stripe discount test"
+                value={staffGrantNote}
+                onChange={(e) => setStaffGrantNote(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                className="btn-ghost text-sm"
+                onClick={() => setStaffGrantTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary text-sm"
+                disabled={staffGranting === staffGrantTarget.userId}
+                onClick={() => void submitStaffGrant()}
+              >
+                {staffGranting === staffGrantTarget.userId ? "Saving…" : "Grant access"}
               </button>
             </div>
           </div>
