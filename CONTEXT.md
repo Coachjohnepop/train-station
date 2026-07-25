@@ -335,24 +335,47 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ## WHERE WE LEFT OFF
 
 **Date:** 2026-07-25 (John sleeping)  
-**Status:** **Venmo LIVE** · Stripe **half-cutover** (secret often live in Vercel; public site still **`pk_test_…`** last probe) · Discount codes **on prod** · coach signup/booking alerts **on prod** · Calendly webhook **shipped** (needs env + Calendly subscribe) · SMS **PARKED**.  
+**Status:** **Venmo LIVE** · Stripe Live cutover **blocked on invalid secret key** · Discount codes **on prod** · coach alerts **on prod** · Calendly webhook **shipped** (needs env) · SMS **PARKED**.  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.
+
+### Stripe Live — morning action (blocked)
+
+Bootstrap `POST /api/admin/ops/stripe-bootstrap` with OPS_BOOTSTRAP_SECRET returned:
+
+```
+Invalid API Key provided: sk_live_…P7TI
+```
+
+Earlier error showed **`sk_Live_…`** (capital L) — code now normalizes `sk_Live_` → `sk_live_` (`f67b77d`). **Still invalid after normalize** → key body is wrong/revoked/truncated, or not from Train Station Live (`acct_1TmKSW…`).
+
+**Do this morning:**
+1. Stripe Dashboard **The Train Station** → toggle **Live** → Developers → API keys  
+2. **Reveal / roll** secret → copy **`sk_live_…`** (all lowercase `live`)  
+3. Copy **`pk_live_…`**  
+4. Vercel Production: update `STRIPE_SECRET_KEY` + `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (exact paste, no spaces)  
+5. Redeploy  
+6. Re-run bootstrap (Bearer OPS_BOOTSTRAP_SECRET) → write returned `membershipEnv` + `tipEnv` `price_…` into Vercel  
+7. Live webhook `whsec_…` for `https://www.thetrainstation.co/api/stripe/webhook`  
+8. Confirm `/api/payments/public` shows **`pk_live_…`**
+
+**Do not** paste `sk_` into `STRIPE_PRICE_*` (must be `price_…` only).
 
 ### Jul 25 ship (done this stretch)
 
-1. **Coach left nav search** (`AdminAppSearch` + `admin-app-search-index`) + **⌘K**.
-2. **Discount codes** — first-class coach nav group **Discount codes** → `/admin/discounts` (also Billing tab). Staff API. Checkout applies resolved promos. **On prod.** Create codes after Live/Test prices match the active Stripe key.
-3. **Stripe Live ops (in progress, human):** John putting `sk_live` / `pk_live` on Vercel. **Do not put `sk_` into `STRIPE_PRICE_*`** — those must be `price_…`. Need Live `price_…` for MEMBER/BUSINESS/PRO + `whsec` + **redeploy**. Public `/api/payments/public` still showed `pk_test` when last checked.
-4. **Site loop sweep** — `scripts/site-loop-sweep.mjs` · 0 dead pages · fixed **cron middleware** (`/api/cron` allowlisted).
-5. **Coach notify** — new **signup** email+Messages; **intro booked** email+Messages with **When** time. Calendly embed + in-app slots.
-6. **Calendly webhook** — `POST /api/calendly/webhook` · set `CALENDLY_WEBHOOK_SIGNING_KEY` · subscribe `invitee.created` / `invitee.canceled` · exact start time → Bookings + coach alert. Idempotent by invitee URI.
+1. Coach app search + **Discount codes** nav `/admin/discounts` (prod).
+2. Site sweep + cron middleware fix.
+3. Coach notify: signup + intro booked (with time when known).
+4. Calendly webhook code (`/api/calendly/webhook`).
+5. Ops bootstrap creates membership + tip prices + FEEDBACK50 once key works.
+6. Normalize `sk_Live_`/`pk_Live_` prefix casing.
 
 ### Next wake-up (suggested)
 
-1. Finish Stripe Live: Live `price_…` on Vercel, matching `pk_live`, webhook `whsec`, redeploy; confirm `pk_live` on payments public.
-2. Wire Calendly webhook env + subscription; smoke one real book.
-3. Create Live (or Test-matching) discount codes from coach **Discount codes**.
-4. Optional: Connect Express for platform admin $275.
+1. **Fix Live secret** (above) — unblocks everything money-related.  
+2. Bootstrap → set price env → redeploy → $25 smoke.  
+3. Calendly webhook signing key + subscribe.  
+4. Create Live discount codes.  
+5. Optional: Connect Express for $275.
 
 ### Jul 23 ship (done)
 
