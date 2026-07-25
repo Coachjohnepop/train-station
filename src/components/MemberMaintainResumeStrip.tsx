@@ -100,33 +100,52 @@ export default function MemberMaintainResumeStrip({
     <div
       role="banner"
       aria-label="Resume in-progress Quick maintain workout"
-      className={`border-b border-amber-400/50 bg-gradient-to-r from-amber-600/95 via-amber-500/90 to-violet-600/90 shadow-[0_4px_24px_rgba(245,158,11,0.35)] ${
+      className={`maintain-resume-banner border-b border-amber-700/40 shadow-[0_4px_24px_rgba(180,83,9,0.28)] ${
         embedded ? "" : "sticky top-0 z-[60]"
       }`}
+      style={{
+        background:
+          "linear-gradient(90deg, #b45309 0%, #d97706 42%, #6d28d9 100%)",
+      }}
     >
       <div className="mx-auto flex w-full max-w-lg items-center gap-3 px-3 py-2.5 md:max-w-3xl lg:max-w-6xl xl:max-w-7xl md:px-6 lg:px-8 sm:px-4">
         <Link
           href={href}
-          className="flex min-w-0 flex-1 items-center gap-3 rounded-lg outline-none ring-offset-2 ring-offset-transparent focus-visible:ring-2 focus-visible:ring-white/80"
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-white"
+          style={{ color: "#fff", textDecoration: "none" }}
         >
           <span
-            className="hidden h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.9)] sm:block"
+            className="hidden h-2.5 w-2.5 shrink-0 animate-pulse rounded-full sm:block"
+            style={{
+              background: "#fff",
+              boxShadow: "0 0 10px rgba(255,255,255,0.95)",
+            }}
             aria-hidden
           />
           <span className="min-w-0 text-left">
-            <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-white/90">
+            <span
+              className="block text-[10px] font-bold uppercase tracking-[0.16em]"
+              style={{ color: "rgba(255,255,255,0.95)" }}
+            >
               Workout in progress
             </span>
-            <span className="mt-0.5 block truncate text-sm font-semibold text-white sm:text-base">
+            <span
+              className="mt-0.5 block truncate text-sm font-semibold sm:text-base"
+              style={{ color: "#ffffff" }}
+            >
               {resume.workoutName}
-              <span className="font-normal text-white/85"> — pick up where you left off</span>
+              <span style={{ fontWeight: 500, color: "rgba(255,255,255,0.92)" }}>
+                {" "}
+                — pick up where you left off
+              </span>
             </span>
           </span>
         </Link>
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <button
             type="button"
-            className="rounded-lg px-2 py-2 text-[10px] font-semibold text-white/80 hover:bg-black/15 hover:text-white sm:px-2.5"
+            className="rounded-lg px-2 py-2 text-[10px] font-semibold sm:px-2.5"
+            style={{ color: "#ffffff", background: "rgba(0,0,0,0.18)" }}
             title="Hide this banner until you open the workout again"
             onClick={() => {
               dismissMaintainResumeStrip(resume.workoutId);
@@ -137,7 +156,12 @@ export default function MemberMaintainResumeStrip({
           </button>
           <Link
             href={href}
-            className="rounded-full bg-white px-3 py-2 text-xs font-bold text-amber-900 shadow-md transition hover:bg-amber-50 sm:px-4 sm:text-sm"
+            className="rounded-full px-3 py-2 text-xs font-bold shadow-md transition sm:px-4 sm:text-sm"
+            style={{
+              background: "#ffffff",
+              color: "#78350f",
+              textDecoration: "none",
+            }}
           >
             Back to workout →
           </Link>
