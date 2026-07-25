@@ -53,6 +53,7 @@ export default async function MemberLayout({
       tierLabel={tierLabel}
       memberName={name}
       memberEmail={email}
+      memberUserId={profileUserId}
       membershipTier={membershipTier}
       intakePending={intakePending}
       paymentGateActive={paymentGateActive}

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import IntakeBookingCelebrate from "@/components/IntakeBookingCelebrate";
 import LiveZoomJoinPrompt from "@/components/LiveZoomJoinPrompt";
 import MemberLiveZoomStrip from "@/components/MemberLiveZoomStrip";
+import MemberMaintainResumeStrip from "@/components/MemberMaintainResumeStrip";
 import ResumePathTracker from "@/components/ResumePathTracker";
 import UnreadAppBadge from "@/components/UnreadAppBadge";
 import PwaInstallHint from "@/components/PwaInstallHint";
@@ -25,6 +26,7 @@ export default function MemberShell({
   tierLabel: tierLabelProp,
   memberName,
   memberEmail,
+  memberUserId = null,
   membershipTier,
   intakePending = false,
   paymentGateActive = false,
@@ -34,6 +36,8 @@ export default function MemberShell({
   tierLabel?: string;
   memberName: string;
   memberEmail?: string;
+  /** Logged-in member id — powers maintain resume strip. */
+  memberUserId?: string | null;
   membershipTier: MembershipThemeTier;
   intakePending?: boolean;
   paymentGateActive?: boolean;
@@ -94,6 +98,12 @@ export default function MemberShell({
         {!paymentGateActive ? (
           <Suspense fallback={null}>
             <MemberLiveZoomStrip embedded />
+          </Suspense>
+        ) : null}
+
+        {!paymentGateActive && memberUserId ? (
+          <Suspense fallback={null}>
+            <MemberMaintainResumeStrip memberUserId={memberUserId} embedded />
           </Suspense>
         ) : null}
       </div>

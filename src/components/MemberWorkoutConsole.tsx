@@ -28,6 +28,10 @@ import {
 } from "@/lib/rest-timer-sound";
 import { confettiOriginFromElement, fireWorkoutConfetti } from "@/lib/workout-confetti";
 import type { LiveRestActive } from "@/lib/live-workout-session";
+import {
+  clearMaintainResume,
+  writeMaintainResume,
+} from "@/lib/member-maintain-resume";
 
 export type MemberExerciseBlock = {
   id: string;
@@ -207,11 +211,47 @@ export default function MemberWorkoutConsole({
   onEngage?: () => void;
 }) {
   const engageOnceRef = useRef(false);
+  const isMaintainSession = programSlug === "maintain";
+  const markMaintainResume = useCallback(() => {
+    if (!isMaintainSession || reviewMode) return;
+    const uid = liveSyncUserId || targetUserId;
+    if (!uid) return;
+    const sessionDate =
+      liveSessionDate ||
+      (() => {
+        try {
+          return new Date().toLocaleDateString("en-CA");
+        } catch {
+          return new Date().toISOString().slice(0, 10);
+        }
+      })();
+    writeMaintainResume({
+      userId: uid,
+      workoutId: workout.workoutId,
+      workoutName: workout.workoutName || "Quick maintain",
+      sessionDate,
+      updatedAt: new Date().toISOString(),
+    });
+  }, [
+    isMaintainSession,
+    reviewMode,
+    liveSyncUserId,
+    targetUserId,
+    liveSessionDate,
+    workout.workoutId,
+    workout.workoutName,
+  ]);
   const fireEngage = useCallback(() => {
+    markMaintainResume();
     if (engageOnceRef.current) return;
     engageOnceRef.current = true;
     onEngage?.();
-  }, [onEngage]);
+  }, [onEngage, markMaintainResume]);
+
+  // Remember open maintain session immediately so "Back to workout" appears if they leave.
+  useEffect(() => {
+    if (isMaintainSession && !reviewMode) markMaintainResume();
+  }, [isMaintainSession, reviewMode, markMaintainResume]);
   const [weights, setWeights] = useState<Record<string, string>>(() =>
     buildSeededWeights(workout.exercises),
   );
@@ -1477,6 +1517,9 @@ export default function MemberWorkoutConsole({
 
       const data = await res.json();
       await clearLiveSession();
+      if (isMaintainSession) {
+        clearMaintainResume(liveSyncUserId || targetUserId, workout.workoutId);
+      }
       setLogResult({
         performedAt: data.performedAt,
         count: data.performances || idsToLog.length,
@@ -1517,6 +1560,8 @@ export default function MemberWorkoutConsole({
     programSlug,
     targetUserId,
     liveSessionDate,
+    isMaintainSession,
+    liveSyncUserId,
     clearLiveSession,
     logResult,
     isLogging,
