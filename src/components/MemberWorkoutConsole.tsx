@@ -1015,7 +1015,7 @@ export default function MemberWorkoutConsole({
         !restTickAnnouncedRef.current.has(left)
       ) {
         restTickAnnouncedRef.current.add(left);
-        playRestTick(left <= 3);
+        playRestTick(left <= 5);
       }
     };
 

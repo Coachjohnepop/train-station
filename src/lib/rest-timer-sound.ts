@@ -12,8 +12,11 @@ export const REST_TIMER_SOUND_IDS = [
 
 export type RestTimerSoundId = (typeof REST_TIMER_SOUND_IDS)[number];
 
-/** Default: loud train whistle when rest ends. */
-export const DEFAULT_REST_TIMER_SOUND: RestTimerSoundId = "whistle";
+/** Default: Cybertruck honk when rest ends. */
+export const DEFAULT_REST_TIMER_SOUND: RestTimerSoundId = "cybertruck";
+
+/** End-of-rest samples play at half the prior gym-floor level. */
+export const REST_COMPLETE_VOLUME_SCALE = 0.5;
 
 export type RestTimerSoundOption = {
   id: RestTimerSoundId;
@@ -21,7 +24,7 @@ export type RestTimerSoundOption = {
   /** Short coach-facing hint */
   hint: string;
   src: string;
-  /** Playback volume 0–1 (default 1). */
+  /** Playback volume 0–1 before REST_COMPLETE_VOLUME_SCALE (default 1). */
   volume?: number;
 };
 
@@ -30,13 +33,21 @@ export type RestTimerSoundOption = {
  * Filenames are rest-*-v SFX so clients don't keep an old talking clip cached.
  */
 /** Bump when replacing files so browsers drop stale (quiet/broken) cache entries. */
-const AUDIO_CACHE_BUST = "20260722";
+const AUDIO_CACHE_BUST = "20260725b";
 
 export const REST_TIMER_SOUND_OPTIONS: RestTimerSoundOption[] = [
   {
+    id: "cybertruck",
+    label: "Cybertruck honk",
+    hint: "Real Cybertruck horn (default)",
+    src: `/audio/rest-cybertruck-horn-v2.mp3?v=${AUDIO_CACHE_BUST}`,
+    /** Sample is hotter than synth SFX; still scaled by REST_COMPLETE_VOLUME_SCALE. */
+    volume: 0.85,
+  },
+  {
     id: "whistle",
     label: "Train whistle",
-    hint: "Dual-tone station blast (default)",
+    hint: "Dual-tone station blast",
     src: `/audio/rest-train-whistle.mp3?v=${AUDIO_CACHE_BUST}`,
   },
   {
@@ -50,14 +61,6 @@ export const REST_TIMER_SOUND_OPTIONS: RestTimerSoundOption[] = [
     label: "Buzzer",
     hint: "Harsh game-show buzz",
     src: `/audio/rest-buzzer.mp3?v=${AUDIO_CACHE_BUST}`,
-  },
-  {
-    id: "cybertruck",
-    label: "Cybertruck honk",
-    hint: "Real Cybertruck horn sample",
-    src: `/audio/rest-cybertruck-horn-v2.mp3?v=${AUDIO_CACHE_BUST}`,
-    /** ~15% quieter — real sample is hotter than the synth SFX. */
-    volume: 0.85,
   },
 ];
 
@@ -84,14 +87,14 @@ export function restTimerSoundSrc(id: RestTimerSoundId | string | null | undefin
 
 export function restTimerSoundLabel(id: RestTimerSoundId | string | null | undefined): string {
   const sound = normalizeRestTimerSound(id);
-  return REST_TIMER_SOUND_OPTIONS.find((o) => o.id === sound)?.label ?? "Train whistle";
+  return REST_TIMER_SOUND_OPTIONS.find((o) => o.id === sound)?.label ?? "Cybertruck honk";
 }
 
 export function restTimerSoundVolume(id: RestTimerSoundId | string | null | undefined): number {
   const sound = normalizeRestTimerSound(id);
   const v = REST_TIMER_SOUND_OPTIONS.find((o) => o.id === sound)?.volume;
-  if (typeof v === "number" && Number.isFinite(v)) {
-    return Math.min(1, Math.max(0, v));
-  }
-  return 1;
+  const base =
+    typeof v === "number" && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1;
+  // Halve end-of-rest blasts (buzzer / whistle / bell / honk).
+  return Math.min(1, Math.max(0, base * REST_COMPLETE_VOLUME_SCALE));
 }

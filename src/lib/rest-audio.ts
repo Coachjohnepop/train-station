@@ -36,7 +36,7 @@ function getCtx(): AudioContext | null {
 
 /**
  * Quiet rest click — soft short pulse so it can play every second without being harsh.
- * `urgent` slightly raises pitch/volume in the last few seconds.
+ * `urgent` = last 5 seconds: pitch up + 1.5× volume so the floor notices.
  */
 export function playRestTick(urgent = false): void {
   const ctx = getCtx();
@@ -46,8 +46,9 @@ export function playRestTick(urgent = false): void {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = "sine";
-    osc.frequency.value = urgent ? 720 : 520;
-    const peak = urgent ? 0.055 : 0.028;
+    osc.frequency.value = urgent ? 760 : 520;
+    // Base click; last 5 ticks 1.5× prior urgent level so the floor notices.
+    const peak = urgent ? 0.055 * 1.5 : 0.028;
     gain.gain.setValueAtTime(0.0001, now);
     gain.gain.exponentialRampToValueAtTime(peak, now + 0.008);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.055);
@@ -83,16 +84,17 @@ export function playRestStart(): void {
   }
 }
 
-/** Loud fallback buzz if the chosen sample fails to load/play. */
+/** Fallback buzz if the chosen sample fails — 50% quieter than prior gym level. */
 function playRestCompleteFallback(): void {
   const ctx = getCtx();
   if (!ctx) return;
   try {
     const now = ctx.currentTime;
+    const peak = 0.11; // was 0.22
     const master = ctx.createGain();
     master.gain.setValueAtTime(0.0001, now);
-    master.gain.exponentialRampToValueAtTime(0.22, now + 0.05);
-    master.gain.setValueAtTime(0.22, now + 0.4);
+    master.gain.exponentialRampToValueAtTime(peak, now + 0.05);
+    master.gain.setValueAtTime(peak, now + 0.4);
     master.gain.exponentialRampToValueAtTime(0.0001, now + 0.85);
     master.connect(ctx.destination);
 
@@ -135,8 +137,8 @@ function getOrCreateSample(src: string): HTMLAudioElement {
 }
 
 /**
- * End-of-rest alert — coach-selected sample at near-max volume.
- * Default is train whistle so the gym floor hears it.
+ * End-of-rest alert — coach-selected sample (default Cybertruck honk).
+ * Volumes are scaled via restTimerSoundVolume (~50% of prior levels).
  */
 export function playRestComplete(
   sound: RestTimerSoundId | string | null | undefined = DEFAULT_REST_TIMER_SOUND,
