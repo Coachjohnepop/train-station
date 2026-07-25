@@ -35,6 +35,7 @@ const EVENT_LABELS: Record<CoachAlertEvent, string> = {
   newMember: "New member finished onboarding",
   warmupStarted: "Member started warm-ups",
   intakeScheduled: "Member booked intro / call time",
+  workoutLogged: "Member finished / logged a workout",
 };
 
 export default function CoachSettingsPanel() {

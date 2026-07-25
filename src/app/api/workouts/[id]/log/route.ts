@@ -146,7 +146,101 @@ export async function POST(request: Request, { params }: Params) {
         }
       : null;
 
-    return NextResponse.json({ ...result, gamification: gamificationPayload, gamificationWarning });
+    // Notify coach (Messages + email) so they see what the member finished.
+    // Non-fatal — logging already succeeded.
+    let coachNotify: { inApp: boolean; email: boolean; sms: boolean } | null = null;
+    try {
+      const { prisma } = await import("@/lib/prisma");
+      const { isDemoMode } = await import("@/lib/demo-enrollments");
+      const sessionDate = parsed.data.sessionDate || localTodayIso();
+      const progress = parsed.data.progress ?? result.progress ?? 100;
+
+      let workoutName = "Workout";
+      let maintain = false;
+      const exerciseNames = new Map<string, string>();
+
+      if (!isDemoMode()) {
+        const workout = await prisma.workout.findUnique({
+          where: { id: workoutId },
+          select: {
+            name: true,
+            source: true,
+            exercises: {
+              select: { exerciseId: true, exercise: { select: { name: true } } },
+            },
+          },
+        });
+        if (workout) {
+          workoutName = workout.name;
+          maintain = workout.source === "maintain";
+          for (const we of workout.exercises) {
+            exerciseNames.set(we.exerciseId, we.exercise.name);
+          }
+        }
+        // Fill any missing names from exercise ids on the log payload
+        const missing = parsed.data.exercises
+          .map((e) => e.exerciseId)
+          .filter((id) => id && !exerciseNames.has(id));
+        if (missing.length) {
+          const rows = await prisma.exercise.findMany({
+            where: { id: { in: [...new Set(missing)] } },
+            select: { id: true, name: true },
+          });
+          for (const r of rows) exerciseNames.set(r.id, r.name);
+        }
+      } else {
+        maintain = parsed.data.programSlug === "maintain";
+      }
+
+      const { getMemberProfile } = await import("@/lib/member-profiles-store");
+      const profile = await getMemberProfile(uid);
+      let memberName = profile?.email?.split("@")[0] || "Member";
+      let memberEmail = profile?.email || "";
+      // Prefer the member being logged (not staff coach session when impersonating).
+      if (uid === auth.session.id) {
+        memberName = auth.session.name?.trim() || memberName;
+        memberEmail = auth.session.email || memberEmail;
+      } else if (!isDemoMode()) {
+        const memberUser = await prisma.user.findUnique({
+          where: { id: uid },
+          select: { name: true, email: true },
+        });
+        if (memberUser) {
+          memberName = memberUser.name?.trim() || memberName;
+          memberEmail = memberUser.email || memberEmail;
+        }
+      }
+      if (!memberEmail) memberEmail = auth.session.email || profile?.email || "";
+
+      const { notifyCoachWorkoutLogged } = await import("@/lib/coach-member-notify");
+      coachNotify = await notifyCoachWorkoutLogged({
+        userId: uid,
+        name: memberName,
+        email: memberEmail,
+        workoutName,
+        workoutId,
+        sessionDate,
+        progress,
+        programSlug: parsed.data.programSlug ?? null,
+        late: lateScore?.late ?? false,
+        maintain,
+        exercises: parsed.data.exercises.map((e) => ({
+          name: exerciseNames.get(e.exerciseId) || e.exerciseId,
+          setsCompleted: e.setsCompleted,
+          repsCompleted: e.repsCompleted,
+          startingWeightLbs: e.startingWeightLbs,
+        })),
+      });
+    } catch (notifyErr) {
+      console.warn("Workout logged but coach notify failed", notifyErr);
+    }
+
+    return NextResponse.json({
+      ...result,
+      gamification: gamificationPayload,
+      gamificationWarning,
+      coachNotify,
+    });
   } catch (e: any) {
     // Preserve previous error behavior for "user not found" / "workout not found" etc.
     if (e?.message?.includes("User not found")) {

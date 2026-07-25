@@ -4,7 +4,11 @@ export type AlertChannels = {
   email: boolean;
 };
 
-export type CoachAlertEvent = "newMember" | "warmupStarted" | "intakeScheduled";
+export type CoachAlertEvent =
+  | "newMember"
+  | "warmupStarted"
+  | "intakeScheduled"
+  | "workoutLogged";
 
 export type CoachAlertPrefs = Record<CoachAlertEvent, AlertChannels>;
 
@@ -19,6 +23,8 @@ export function defaultCoachAlertPrefs(): CoachAlertPrefs {
     newMember: { ...DEFAULT_ALERT_CHANNELS },
     warmupStarted: { inApp: true, sms: true, email: false },
     intakeScheduled: { inApp: true, sms: false, email: true },
+    /** Default: Messages + email so coach sees what the member did. */
+    workoutLogged: { inApp: true, sms: false, email: true },
   };
 }
 
@@ -40,6 +46,7 @@ export function normalizeCoachAlertPrefs(raw: unknown): CoachAlertPrefs {
     newMember: normalizeAlertChannels(data.newMember ?? defaults.newMember),
     warmupStarted: normalizeAlertChannels(data.warmupStarted ?? defaults.warmupStarted),
     intakeScheduled: normalizeAlertChannels(data.intakeScheduled ?? defaults.intakeScheduled),
+    workoutLogged: normalizeAlertChannels(data.workoutLogged ?? defaults.workoutLogged),
   };
 }
 

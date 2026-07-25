@@ -230,3 +230,77 @@ export async function notifyCoachWarmupStarted(params: {
     deepLink: `${appBaseUrl()}/member/today?forUser=${encodeURIComponent(params.userId)}&asInstructor=true&date=${params.sessionDate}`,
   });
 }
+
+export type WorkoutLogExerciseSummary = {
+  name: string;
+  setsCompleted?: number | null;
+  repsCompleted?: number | null;
+  startingWeightLbs?: number | null;
+};
+
+/**
+ * Member finished / logged a workout — Messages thread + coach email with what they did.
+ */
+export async function notifyCoachWorkoutLogged(params: {
+  userId: string;
+  name: string;
+  email: string;
+  workoutName: string;
+  workoutId: string;
+  sessionDate: string;
+  progress: number;
+  programSlug?: string | null;
+  exercises?: WorkoutLogExerciseSummary[];
+  late?: boolean;
+  maintain?: boolean;
+}): Promise<{ inApp: boolean; email: boolean; sms: boolean }> {
+  const progressLabel =
+    params.progress >= 100
+      ? "Completed 100%"
+      : `Logged ${Math.max(0, Math.min(100, params.progress))}%`;
+  const kind = params.maintain ? "Quick maintain" : "Workout";
+  const programLine = params.programSlug
+    ? `\nProgram: ${params.programSlug}`
+    : "";
+  const lateLine = params.late ? "\nLate catch-up (score reduced)." : "";
+
+  const lines: string[] = [];
+  const exercises = params.exercises?.filter((e) => e.name?.trim()) ?? [];
+  if (exercises.length > 0) {
+    lines.push("", "What they logged:");
+    for (const ex of exercises.slice(0, 24)) {
+      const bits: string[] = [];
+      if (ex.setsCompleted != null) bits.push(`${ex.setsCompleted} set${ex.setsCompleted === 1 ? "" : "s"}`);
+      if (ex.repsCompleted != null) bits.push(`${ex.repsCompleted} reps`);
+      if (ex.startingWeightLbs != null && ex.startingWeightLbs > 0) {
+        bits.push(`${ex.startingWeightLbs} lb`);
+      }
+      lines.push(`• ${ex.name}${bits.length ? ` — ${bits.join(" · ")}` : ""}`);
+    }
+    if (exercises.length > 24) {
+      lines.push(`• … +${exercises.length - 24} more`);
+    }
+  }
+
+  const deepLink =
+    `${appBaseUrl()}/member/today?forUser=${encodeURIComponent(params.userId)}` +
+    `&asInstructor=1&date=${encodeURIComponent(params.sessionDate)}` +
+    (params.maintain
+      ? `&maintain=${encodeURIComponent(params.workoutId)}`
+      : "");
+
+  return notifyCoachForMemberEvent({
+    event: "workoutLogged",
+    memberUserId: params.userId,
+    memberName: params.name,
+    memberEmail: params.email,
+    subject: `${params.name} finished: ${params.workoutName}`,
+    message:
+      `${kind}: ${params.workoutName}\n` +
+      `Date: ${params.sessionDate}\n` +
+      `${progressLabel}${programLine}${lateLine}` +
+      lines.join("\n") +
+      `\n\nOpen their Today to review sets and silhouettes.`,
+    deepLink,
+  });
+}
