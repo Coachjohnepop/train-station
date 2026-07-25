@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Sticky “Back to workout” bar for in-progress Quick maintain — same idea as Zoom join.
- * Visible on any member page until they rejoin or finish/log the session.
+ * Smart top banner: in-progress Quick maintain — always above the fold until rejoin or finish.
+ * Same sticky chrome as Live Class / Zoom; higher visual priority when a session is open.
  */
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -37,7 +37,9 @@ export default function MemberMaintainResumeStrip({
       return;
     }
     const local = readMaintainResume(memberUserId);
-    if (local) setResume(local);
+    if (local && !isMaintainResumeDismissed(local.workoutId)) {
+      setResume(local);
+    }
 
     try {
       const res = await fetch(
@@ -48,7 +50,9 @@ export default function MemberMaintainResumeStrip({
       const data = (await res.json()) as { resume?: MaintainResumePointer | null };
       if (data.resume?.workoutId) {
         writeMaintainResume(data.resume);
-        setResume(data.resume);
+        if (!isMaintainResumeDismissed(data.resume.workoutId)) {
+          setResume(data.resume);
+        }
       } else if (!local) {
         setResume(null);
       }
@@ -61,7 +65,12 @@ export default function MemberMaintainResumeStrip({
     void refresh();
     const onChange = () => {
       if (!memberUserId) return;
-      setResume(readMaintainResume(memberUserId));
+      const next = readMaintainResume(memberUserId);
+      if (next && isMaintainResumeDismissed(next.workoutId)) {
+        setResume(null);
+        return;
+      }
+      setResume(next);
     };
     const onVis = () => {
       if (document.visibilityState === "visible") void refresh();
@@ -69,14 +78,15 @@ export default function MemberMaintainResumeStrip({
     window.addEventListener("maintain-resume-changed", onChange);
     window.addEventListener("storage", onChange);
     document.addEventListener("visibilitychange", onVis);
-    const id = window.setInterval(() => void refresh(), 30_000);
+    // Re-check on SPA navigations (pathname/search change)
+    const id = window.setInterval(() => void refresh(), 15_000);
     return () => {
       window.removeEventListener("maintain-resume-changed", onChange);
       window.removeEventListener("storage", onChange);
       document.removeEventListener("visibilitychange", onVis);
       window.clearInterval(id);
     };
-  }, [memberUserId, refresh]);
+  }, [memberUserId, refresh, pathname, search]);
 
   if (!resume || !memberUserId) return null;
 
@@ -88,22 +98,36 @@ export default function MemberMaintainResumeStrip({
 
   return (
     <div
-      className={`border-b border-violet-500/35 bg-violet-950/95 backdrop-blur-sm ${
-        embedded ? "" : "sticky top-0 z-40"
+      role="banner"
+      aria-label="Resume in-progress Quick maintain workout"
+      className={`border-b border-amber-400/50 bg-gradient-to-r from-amber-600/95 via-amber-500/90 to-violet-600/90 shadow-[0_4px_24px_rgba(245,158,11,0.35)] ${
+        embedded ? "" : "sticky top-0 z-[60]"
       }`}
     >
-      <div className="mx-auto flex w-full max-w-lg items-center justify-between gap-2 px-4 py-2 md:max-w-3xl lg:max-w-6xl xl:max-w-7xl md:px-6 lg:px-8">
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-300/90">
-            Quick maintain · in progress
-          </p>
-          <p className="truncate text-xs text-violet-100/85">{resume.workoutName}</p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
+      <div className="mx-auto flex w-full max-w-lg items-center gap-3 px-3 py-2.5 md:max-w-3xl lg:max-w-6xl xl:max-w-7xl md:px-6 lg:px-8 sm:px-4">
+        <Link
+          href={href}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-lg outline-none ring-offset-2 ring-offset-transparent focus-visible:ring-2 focus-visible:ring-white/80"
+        >
+          <span
+            className="hidden h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.9)] sm:block"
+            aria-hidden
+          />
+          <span className="min-w-0 text-left">
+            <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-white/90">
+              Workout in progress
+            </span>
+            <span className="mt-0.5 block truncate text-sm font-semibold text-white sm:text-base">
+              {resume.workoutName}
+              <span className="font-normal text-white/85"> — pick up where you left off</span>
+            </span>
+          </span>
+        </Link>
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <button
             type="button"
-            className="btn-ghost border border-violet-400/30 px-2 py-2 text-[10px] font-semibold text-violet-200/80"
-            title="Hide this bar until you open the workout again"
+            className="rounded-lg px-2 py-2 text-[10px] font-semibold text-white/80 hover:bg-black/15 hover:text-white sm:px-2.5"
+            title="Hide this banner until you open the workout again"
             onClick={() => {
               dismissMaintainResumeStrip(resume.workoutId);
               setResume(null);
@@ -113,9 +137,9 @@ export default function MemberMaintainResumeStrip({
           </button>
           <Link
             href={href}
-            className="btn-primary shrink-0 px-3 py-2 text-xs font-bold sm:px-4 sm:text-sm"
+            className="rounded-full bg-white px-3 py-2 text-xs font-bold text-amber-900 shadow-md transition hover:bg-amber-50 sm:px-4 sm:text-sm"
           >
-            Back to workout
+            Back to workout →
           </Link>
         </div>
       </div>

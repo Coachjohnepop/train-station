@@ -95,15 +95,16 @@ export default function MemberShell({
           </p>
         ) : null}
 
-        {!paymentGateActive ? (
-          <Suspense fallback={null}>
-            <MemberLiveZoomStrip embedded />
-          </Suspense>
-        ) : null}
-
+        {/* In-progress maintain: top action banner (above Live Class) so it never gets lost */}
         {!paymentGateActive && memberUserId ? (
           <Suspense fallback={null}>
             <MemberMaintainResumeStrip memberUserId={memberUserId} embedded />
+          </Suspense>
+        ) : null}
+
+        {!paymentGateActive ? (
+          <Suspense fallback={null}>
+            <MemberLiveZoomStrip embedded />
           </Suspense>
         ) : null}
       </div>
