@@ -2,12 +2,17 @@
 
 ## Principle (non-negotiable)
 
-**Always use PostgreSQL (Prisma) for durable app data** — programs, workouts, members, enrollments, SMS, payments, chat, coach settings, analytics, audit logs.
+**Always use PostgreSQL (Prisma) for durable app data** — programs, workouts, members, enrollments, SMS, payments, chat, coach settings, analytics, audit logs, **and notifications**.
 
 - **Prod / real multi-user:** database only. Blob/JSON facades exist only while migrating legacy stores.
 - **Do not add new JSON- or Blob-only stores.** New tables + migrations instead.
 - **Object storage (Blob)** is fine for **binary media** (images, short videos); **rows that point at them live in the DB**.
 - **Seed / `*.dev.json`:** snapshots for shipping content with git — not the runtime source of truth when DB is configured.
+- **Notifications (email / push / SMS):** must leave a row in Postgres when we try to send.
+  - SMS → `SmsLog` (+ `SmsDeliveryEvent`)
+  - Email + web push → `OutboundNotification`
+  - In-app Messages → `CoachChatMessage` / `CoachChatThread`
+  - Do **not** treat Resend dashboard or server logs as the system of record.
 
 If a coach or member would lose work after a redeploy, it must be in Postgres.
 

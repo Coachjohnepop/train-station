@@ -124,16 +124,47 @@ ${cta}
 }
 
 export async function sendResendEmail(input: ResendEmailInput): Promise<boolean> {
+  const { categoryFromEmailTags, recordOutboundNotification } = await import(
+    "@/lib/outbound-notifications"
+  );
+  const category = categoryFromEmailTags(input.tags, input.subject);
+  const toList = Array.isArray(input.to) ? input.to : [input.to];
+  const toAddress = toList.filter(Boolean).join(", ");
+
+  const logEmail = async (
+    status: "sent" | "failed" | "skipped_paused" | "skipped_no_key" | "skipped_misconfigured",
+    extra?: { providerId?: string | null; errorMessage?: string | null; metadata?: Record<string, unknown> },
+  ) => {
+    await recordOutboundNotification({
+      channel: "email",
+      category,
+      status,
+      toAddress,
+      subject: input.subject,
+      bodyPreview: input.text,
+      provider: "resend",
+      providerId: extra?.providerId ?? null,
+      errorMessage: extra?.errorMessage ?? null,
+      metadata: {
+        tags: input.tags ?? null,
+        ctaUrl: input.ctaUrl ?? null,
+        ...extra?.metadata,
+      },
+    });
+  };
+
   if (!(await isOutboundMessagingEnabled())) {
     console.log(
       `[RESEND — paused] To: ${input.to}\nSubject: ${input.subject}\n(Admin → Coach settings or MESSAGING_ENABLED=false)\n`,
     );
+    await logEmail("skipped_paused");
     return false;
   }
 
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) {
     console.log(`[RESEND — not configured] To: ${input.to}\nSubject: ${input.subject}\n${input.text}\n`);
+    await logEmail("skipped_no_key");
     return false;
   }
 
@@ -144,7 +175,7 @@ export async function sendResendEmail(input: ResendEmailInput): Promise<boolean>
     );
   }
 
-  const to = Array.isArray(input.to) ? input.to : [input.to];
+  const to = toList;
   const headers: Record<string, string> = {
     "X-Entity-Ref-ID": `ts-${Date.now()}`,
     ...input.headers,
@@ -199,18 +230,48 @@ export async function sendResendEmail(input: ResendEmailInput): Promise<boolean>
           }),
         });
         if (retry.ok) {
+          let providerId: string | null = null;
+          try {
+            const j = (await retry.json()) as { id?: string };
+            providerId = j.id ?? null;
+          } catch {
+            /* ignore */
+          }
           console.warn("[RESEND] sent via verified fallback from:", fallback);
+          await logEmail("sent", {
+            providerId,
+            metadata: { from: fallback, fallback: true },
+          });
           return true;
         }
         const retryBody = await retry.text();
         console.error("[RESEND] fallback send failed:", retry.status, retryBody);
+        await logEmail("failed", {
+          errorMessage: `primary ${res.status}: ${body.slice(0, 300)}; fallback ${retry.status}: ${retryBody.slice(0, 300)}`,
+        });
+        return false;
       }
 
+      await logEmail("failed", {
+        errorMessage: `${res.status}: ${body.slice(0, 500)}`,
+      });
       return false;
     }
+
+    let providerId: string | null = null;
+    try {
+      const j = (await res.json()) as { id?: string };
+      providerId = j.id ?? null;
+    } catch {
+      /* ignore */
+    }
+    await logEmail("sent", { providerId });
     return true;
   } catch (err) {
     console.error("[RESEND] send failed", err);
+    await logEmail("failed", {
+      errorMessage: err instanceof Error ? err.message : String(err),
+    });
     return false;
   }
 }

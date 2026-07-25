@@ -4,7 +4,7 @@ import { resolveDatabaseUrl } from "@/lib/database-config";
 import { createPgPool } from "@/lib/pg-connection";
 
 /** Bump when prisma/schema.prisma changes so dev hot-reload gets a fresh client. */
-const PRISMA_SCHEMA_VERSION = 9;
+const PRISMA_SCHEMA_VERSION = 10;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;

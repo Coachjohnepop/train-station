@@ -71,6 +71,7 @@ model User {
   performances       ExercisePerformance[]
   workoutLogs        WorkoutLog[]
   smsLogs            SmsLog[]
+  outboundNotifications OutboundNotification[]
   bookings           Booking[]
   homeEquipment      UserEquipment[]
   weatherLogs        UserWeatherLog[]
@@ -549,6 +550,44 @@ model SmsDeliveryEvent {
   smsLog     SmsLog   @relation(fields: [smsLogId], references: [id], onDelete: Cascade)
 
   @@index([smsLogId, createdAt])
+  @@index([createdAt])
+}
+
+/**
+ * Durable ledger for email + web-push (and optional in-app notify metadata).
+ * SMS stays on SmsLog — this is the non-SMS outbound channel of record in Postgres.
+ * Never put notification history only in Resend UI or server logs.
+ */
+model OutboundNotification {
+  id           String   @id @default(cuid())
+  /** email | push | in_app */
+  channel      String
+  /**
+   * workout-complete | coach-alert | welcome | password-reset | chat-push |
+   * hub | staff-grant | lead | tip | unknown
+   */
+  category     String   @default("unknown")
+  /**
+   * sent | failed | skipped_paused | skipped_no_key | skipped_misconfigured | skipped_no_recipient
+   */
+  status       String   @default("sent")
+  /** Email address, or truncated push endpoint / user id label */
+  toAddress    String?
+  userId       String?
+  subject      String?
+  bodyPreview  String?  @db.Text
+  provider     String? // resend | web-push | none
+  providerId   String?
+  errorMessage String?  @db.Text
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([channel, createdAt])
+  @@index([category, createdAt])
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([toAddress, createdAt])
   @@index([createdAt])
 }
 

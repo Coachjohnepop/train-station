@@ -77,7 +77,24 @@ export async function sendPushToUserIds(
   userIds: string[],
   payload: PushPayload,
 ): Promise<{ sent: number; failed: number }> {
-  if (!userIds.length || isDemoMode() || !configureWebPush()) {
+  if (!userIds.length || isDemoMode()) {
+    return { sent: 0, failed: 0 };
+  }
+  if (!configureWebPush()) {
+    try {
+      const { recordOutboundNotification } = await import("@/lib/outbound-notifications");
+      await recordOutboundNotification({
+        channel: "push",
+        category: payload.tag?.startsWith("chat-") ? "chat-push" : "push",
+        status: "skipped_no_key",
+        subject: payload.title,
+        bodyPreview: payload.body,
+        provider: "web-push",
+        metadata: { userIds, reason: "vapid_not_configured" },
+      });
+    } catch {
+      /* ignore */
+    }
     return { sent: 0, failed: 0 };
   }
 
@@ -85,7 +102,23 @@ export async function sendPushToUserIds(
   const subs = await prisma.webPushSubscription.findMany({
     where: { userId: { in: unique } },
   });
-  if (!subs.length) return { sent: 0, failed: 0 };
+  if (!subs.length) {
+    try {
+      const { recordOutboundNotification } = await import("@/lib/outbound-notifications");
+      await recordOutboundNotification({
+        channel: "push",
+        category: payload.tag?.startsWith("chat-") ? "chat-push" : "push",
+        status: "skipped_no_recipient",
+        subject: payload.title,
+        bodyPreview: payload.body,
+        provider: "web-push",
+        metadata: { userIds: unique, reason: "no_subscriptions" },
+      });
+    } catch {
+      /* ignore */
+    }
+    return { sent: 0, failed: 0 };
+  }
 
   const body = JSON.stringify(payload);
   let sent = 0;
@@ -119,6 +152,32 @@ export async function sendPushToUserIds(
     await prisma.webPushSubscription.deleteMany({
       where: { endpoint: { in: staleEndpoints } },
     });
+  }
+
+  // One durable row per fan-out (detail in metadata) — avoids N rows for multi-device users.
+  try {
+    const { recordOutboundNotification } = await import("@/lib/outbound-notifications");
+    await recordOutboundNotification({
+      channel: "push",
+      category: payload.tag?.startsWith("chat-") ? "chat-push" : "push",
+      status: sent > 0 ? "sent" : "failed",
+      toAddress: unique.slice(0, 5).join(","),
+      subject: payload.title,
+      bodyPreview: payload.body,
+      provider: "web-push",
+      errorMessage: failed > 0 && sent === 0 ? `${failed} device(s) failed` : null,
+      metadata: {
+        userIds: unique,
+        devices: subs.length,
+        sent,
+        failed,
+        staleRemoved: staleEndpoints.length,
+        url: payload.url ?? null,
+        tag: payload.tag ?? null,
+      },
+    });
+  } catch {
+    /* ignore */
   }
 
   return { sent, failed };
