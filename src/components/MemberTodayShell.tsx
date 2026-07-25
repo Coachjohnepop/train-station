@@ -19,6 +19,12 @@ import type { ResolvedDayPart } from "@/lib/program-day-sessions";
 import FreeContentLockCard from "@/components/FreeContentLockCard";
 import type { ContentAccessResult } from "@/lib/gamification-content-access";
 import { LATE_WORKOUT_SCORE_HIT_PERCENT } from "@/lib/member-workout-late";
+import DayCompleteStamp from "@/components/DayCompleteStamp";
+import MemberMaintainWorkouts from "@/components/MemberMaintainWorkouts";
+import type {
+  MaintainAccess,
+  MaintainWorkoutCard,
+} from "@/lib/member-maintain-workouts";
 
 type Props = {
   todayIso: string;
@@ -51,7 +57,74 @@ type Props = {
   contentAccess?: ContentAccessResult | null;
   /** Viewing yesterday’s plan from Today — 20% score hit when logging. */
   isLateCatchUp?: boolean;
+  /** Quick maintain library (not program days). */
+  maintainWorkouts?: MaintainWorkoutCard[];
+  activeMaintainId?: string | null;
+  /** Resolved maintain gate (full / earned / locked). */
+  maintainAccess?: MaintainAccess | null;
+  /** Open console even when selected day is not today (e.g. maintain session). */
+  forceShowWorkout?: boolean;
 };
+
+/** Compact entry next to the day summary card (under day chips). */
+function MaintainDaySideCard({ access }: { access: MaintainAccess }) {
+  const dayComplete = access.dayComplete;
+  const locked = !access.allowed;
+  const href = "#quick-maintain";
+
+  return (
+    <Link
+      href={href}
+      className={`card relative flex min-h-[7.5rem] flex-col justify-between overflow-hidden p-4 transition sm:min-w-[10.5rem] ${
+        dayComplete
+          ? "border-[color-mix(in_srgb,var(--success)_35%,var(--border))]"
+          : locked
+            ? "border-[var(--border)] opacity-70 grayscale-[0.45] hover:opacity-90"
+            : "border-accent/35 bg-accent/5 hover:border-accent/60"
+      }`}
+    >
+      {dayComplete ? <DayCompleteStamp /> : null}
+      <div className={dayComplete ? "opacity-40" : undefined}>
+        <p
+          className={`text-[10px] font-bold uppercase tracking-[0.18em] ${
+            locked && !dayComplete ? "text-[var(--muted)]" : "text-accent"
+          }`}
+        >
+          {access.mode === "full"
+            ? "Business+"
+            : access.mode === "earned"
+              ? "Earned"
+              : "Locked"}
+        </p>
+        <p className="mt-1 text-sm font-semibold leading-snug text-[var(--text)]">
+          Quick maintain
+        </p>
+        <p className="mt-1 text-[11px] leading-snug text-[var(--muted)]">
+          {dayComplete
+            ? "Come back tomorrow"
+            : locked
+              ? `${access.showUps}/${access.showUpsNeeded} workouts · on-demand ${
+                  access.onDemandDone ? "✓" : "…"
+                }`
+              : access.mode === "earned" && access.usesRemaining != null
+                ? `${access.usesRemaining} uses left this month`
+                : "~45 min muscle groups"}
+        </p>
+      </div>
+      <span
+        className={`mt-3 text-xs font-semibold ${
+          dayComplete
+            ? "text-[var(--success)]"
+            : locked
+              ? "text-[var(--muted)]"
+              : "text-accent"
+        }`}
+      >
+        {dayComplete ? "Trained today" : locked ? "How to unlock →" : "Open list →"}
+      </span>
+    </Link>
+  );
+}
 
 function DaySummaryCard({
   summary,
@@ -203,7 +276,12 @@ export default function MemberTodayShell({
   contentAccess = null,
   programBlock = null,
   isLateCatchUp = false,
+  maintainWorkouts = [],
+  activeMaintainId = null,
+  maintainAccess = null,
+  forceShowWorkout = false,
 }: Props) {
+  const canUseMaintain = Boolean(maintainAccess?.allowed);
   const router = useRouter();
   const searchParams = useSearchParams();
   const isToday = selectedDate === todayIso;
@@ -212,7 +290,24 @@ export default function MemberTodayShell({
     (!isToday && !isLateCatchUp && selectedDate > todayIso);
   /** Today or yesterday catch-up may open the full console. */
   const showFullWorkout =
-    (isToday || isLateCatchUp) && !!workout && (intakeComplete || hasCoachSession);
+    forceShowWorkout ||
+    ((isToday || isLateCatchUp) && !!workout && (intakeComplete || hasCoachSession));
+
+  const maintainHref = useCallback(
+    (workoutId: string) => {
+      const q = new URLSearchParams(searchParams.toString());
+      q.set("maintain", workoutId);
+      // Keep date so late/today context remains when closing maintain.
+      return `/member/today?${q.toString()}`;
+    },
+    [searchParams],
+  );
+  const clearMaintainHref = useCallback(() => {
+    const q = new URLSearchParams(searchParams.toString());
+    q.delete("maintain");
+    const suffix = q.toString() ? `?${q.toString()}` : "";
+    return `/member/today${suffix}`;
+  }, [searchParams]);
   const multiPart = Boolean(dayParts && dayParts.length > 1);
   const showWarmupFlow =
     !intakeComplete && !!warmupWorkout && days.length > 0 && !hasCoachSession;
@@ -392,13 +487,48 @@ export default function MemberTodayShell({
         />
       )}
 
-      {!showWarmupFlow && !showFullWorkout && selectedSummary && (
-        <DaySummaryCard
-          summary={selectedSummary}
-          isToday={isToday}
-          previewOnly={isTomorrow}
+      {!showWarmupFlow && !showFullWorkout && selectedSummary ? (
+        <div
+          className={`grid items-stretch gap-3 ${
+            maintainAccess
+              ? "sm:grid-cols-[minmax(0,1fr)_minmax(10.5rem,13rem)]"
+              : ""
+          }`}
+        >
+          <DaySummaryCard
+            summary={selectedSummary}
+            isToday={isToday}
+            previewOnly={isTomorrow}
+          />
+          {maintainAccess ? <MaintainDaySideCard access={maintainAccess} /> : null}
+        </div>
+      ) : null}
+
+      {/* Slim maintain shortcut under chips when program console is open */}
+      {showFullWorkout && !activeMaintainId && maintainAccess ? (
+        <div className="flex justify-end">
+          <Link
+            href="#quick-maintain"
+            className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+              canUseMaintain
+                ? "border-accent/40 bg-accent/10 text-accent hover:border-accent/70"
+                : "border-[var(--border)] text-[var(--muted)] opacity-80 grayscale-[0.3]"
+            }`}
+          >
+            {canUseMaintain ? "Quick maintain →" : "Maintain (locked) →"}
+          </Link>
+        </div>
+      ) : null}
+
+      {maintainAccess && (maintainWorkouts.length > 0 || maintainAccess.mode === "locked") ? (
+        <MemberMaintainWorkouts
+          workouts={maintainWorkouts}
+          hrefFor={maintainHref}
+          clearHref={activeMaintainId && canUseMaintain ? clearMaintainHref() : null}
+          activeWorkoutId={activeMaintainId}
+          access={maintainAccess}
         />
-      )}
+      ) : null}
 
       {showFollowUpCard && (
         <MemberIntakeIntroCard initialStatus={intakeStatus} followUpOnly />

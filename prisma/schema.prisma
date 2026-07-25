@@ -130,7 +130,7 @@ model Workout {
   certifiedAt       DateTime?
   exportText        String?           @db.Text
   certifiedBy       String?
-  /// catalog | template | sms | …
+  /// catalog | template | sms | maintain | …
   source            String            @default("catalog")
   restTimerEnabled  Boolean           @default(false)
   restTimerSeconds  Int?

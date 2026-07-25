@@ -57,14 +57,39 @@ export async function POST(request: Request, { params }: Params) {
   if (scopeErr) return scopeErr;
 
   // Free-pool / content-tier: block explorer bypass of the Today UI lock.
+  // Maintain library: Business+ unlimited, or Coach Class earned uses (see resolveMaintainAccess).
   if (!isStaffRole(auth.session.role)) {
-    const { assertMemberCanLogWorkout } = await import("@/lib/gamification-content-access");
-    const canLog = await assertMemberCanLogWorkout({
-      userId: uid,
-      programSlug: parsed.data.programSlug,
-    });
-    if (!canLog.ok) {
-      return NextResponse.json({ detail: canLog.reason, locked: true }, { status: 403 });
+    const { isMaintainWorkoutId, resolveMaintainAccess } = await import(
+      "@/lib/member-maintain-workouts"
+    );
+    const maintain = await isMaintainWorkoutId(workoutId);
+    if (maintain) {
+      const { getMemberProfile } = await import("@/lib/member-profiles-store");
+      const profile = await getMemberProfile(uid);
+      const access = await resolveMaintainAccess(uid, profile?.plan);
+      if (!access.allowed) {
+        return NextResponse.json(
+          {
+            detail: access.detail,
+            locked: true,
+            maintainAccess: {
+              mode: access.mode,
+              usesRemaining: access.usesRemaining,
+              upgradeHref: access.upgradeHref,
+            },
+          },
+          { status: 403 },
+        );
+      }
+    } else {
+      const { assertMemberCanLogWorkout } = await import("@/lib/gamification-content-access");
+      const canLog = await assertMemberCanLogWorkout({
+        userId: uid,
+        programSlug: parsed.data.programSlug,
+      });
+      if (!canLog.ok) {
+        return NextResponse.json({ detail: canLog.reason, locked: true }, { status: 403 });
+      }
     }
   }
 

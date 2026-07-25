@@ -39,6 +39,14 @@ import { getUserEnrollments } from "@/lib/data/user-data";
 import { normalizeTrainingLocation } from "@/lib/program-macro-cycle";
 import { formatProgramStartOption } from "@/lib/member-program-block";
 import { resolveContentAccess } from "@/lib/gamification-content-access";
+import {
+  canSeeMaintainTeaser,
+  isMaintainWorkoutId,
+  listMaintainWorkouts,
+  resolveMaintainAccess,
+} from "@/lib/member-maintain-workouts";
+import { getMemberWorkoutById } from "@/lib/member-workout";
+import { normalizeSignupPlan } from "@/lib/signup-plans";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +57,8 @@ type Props = {
     date?: string;
     /** 1-based multi-part day index (AM/mid/PM) */
     part?: string;
+    /** Business+ quick maintain workout id */
+    maintain?: string;
   }>;
 };
 
@@ -245,6 +255,35 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     curatedMode,
     contentTierMin,
   });
+
+  const memberPlan = normalizeSignupPlan(profile?.plan);
+  /** Business+ unlimited · Coach Class earn 5/mo · greyscale teaser otherwise. */
+  const maintainAccess = !asInstructor
+    ? await resolveMaintainAccess(uid, memberPlan)
+    : null;
+  // Coach Class+ (and anyone allowed) see the library list — locked rows stay greyed.
+  const maintainList =
+    maintainAccess &&
+    (maintainAccess.allowed || canSeeMaintainTeaser(memberPlan))
+      ? await listMaintainWorkouts()
+      : [];
+  const canOpenMaintain = Boolean(maintainAccess?.allowed);
+  const maintainId = sp.maintain?.trim() || null;
+  let maintainWorkout = null as Awaited<ReturnType<typeof getMemberWorkoutById>>;
+  if (
+    maintainId &&
+    canOpenMaintain &&
+    (await isMaintainWorkoutId(maintainId))
+  ) {
+    maintainWorkout = await getMemberWorkoutById(maintainId, {
+      userId: uid,
+      memberName,
+    });
+  }
+  // Prefer maintain console when opened from the list.
+  const consoleWorkout = maintainWorkout || memberWorkout;
+  const consoleIsMaintain = Boolean(maintainWorkout);
+
   return (
     <div className="space-y-4">
       <TodayPageLiveRefresh
@@ -268,18 +307,24 @@ export default async function MemberTodayPage({ searchParams }: Props) {
               selectedSummary={selectedSummary}
               nextStretchPreview={stretchPreview}
               tomorrowDay={tomorrowDay}
-              workout={memberWorkout}
-              programSlug={programSlug}
+              workout={consoleWorkout}
+              programSlug={consoleIsMaintain ? "maintain" : programSlug}
               trainingLocation={trainingLocation}
               targetUserId={uid}
-              scheduleLabel={scheduleLabel}
+              scheduleLabel={
+                consoleIsMaintain ? "Quick maintain · not program day" : scheduleLabel
+              }
               calendarDateLabel={formatDateLabel(clampedViewDate)}
               subtitle={
-                isLateCatchUp
-                  ? "Catch-up day — finish yesterday’s workout (−20% score)."
-                  : subtitle
+                consoleIsMaintain
+                  ? "Business+ maintain session — log it when you finish."
+                  : isLateCatchUp
+                    ? "Catch-up day — finish yesterday’s workout (−20% score)."
+                    : subtitle
               }
-              dayParts={parts && parts.length > 1 ? parts : undefined}
+              dayParts={
+                consoleIsMaintain ? undefined : parts && parts.length > 1 ? parts : undefined
+              }
               activePartIndex={activePartIndex}
               hasCoachSession={!!session}
               intakeComplete={intakeComplete}
@@ -290,8 +335,14 @@ export default async function MemberTodayPage({ searchParams }: Props) {
               autoPromptIntroBooking={coachSettings.autoPromptIntroBooking}
               autoPromptFollowUpBooking={coachSettings.autoPromptFollowUpBooking}
               programBlock={programBlock}
-              contentAccess={asInstructor ? null : contentAccess}
-              isLateCatchUp={isLateCatchUp}
+              contentAccess={
+                consoleIsMaintain ? null : asInstructor ? null : contentAccess
+              }
+              isLateCatchUp={consoleIsMaintain ? false : isLateCatchUp}
+              maintainWorkouts={maintainList}
+              activeMaintainId={maintainId}
+              maintainAccess={maintainAccess}
+              forceShowWorkout={consoleIsMaintain}
             />
           </Suspense>
 
@@ -320,7 +371,10 @@ export default async function MemberTodayPage({ searchParams }: Props) {
             </details>
           )}
 
-          <MemberTodayHub dashboard={dashboard} />
+          <MemberTodayHub
+            dashboard={dashboard}
+            maintainAccess={maintainAccess}
+          />
         </>
       ) : (
         <>
