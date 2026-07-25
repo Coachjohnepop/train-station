@@ -171,6 +171,12 @@ body {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
+/* Maintain immersive: hide app chrome under the fixed workout shell */
+body.maintain-immersive-open .member-sticky-chrome {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .app-shell-subbar {
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg) 88%, var(--surface-2));

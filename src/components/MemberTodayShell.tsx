@@ -20,6 +20,9 @@ import FreeContentLockCard from "@/components/FreeContentLockCard";
 import type { ContentAccessResult } from "@/lib/gamification-content-access";
 import { LATE_WORKOUT_SCORE_HIT_PERCENT } from "@/lib/member-workout-late";
 import DayCompleteStamp from "@/components/DayCompleteStamp";
+import MemberMaintainConsoleStage, {
+  notifyMaintainWorkoutEngage,
+} from "@/components/MemberMaintainConsoleStage";
 import MemberMaintainWorkouts from "@/components/MemberMaintainWorkouts";
 import type {
   MaintainAccess,
@@ -616,6 +619,30 @@ export default function MemberTodayShell({
 
           {contentAccess?.locked ? (
             <FreeContentLockCard access={contentAccess} />
+          ) : activeMaintainId ? (
+            <MemberMaintainConsoleStage
+              exitHref={clearMaintainHref()}
+              workoutName={workout.workoutName || "Quick maintain"}
+            >
+              <MemberWorkoutConsole
+                workout={workout}
+                backHref={clearMaintainHref()}
+                backLabel="← Today"
+                programSlug={programSlug}
+                targetUserId={targetUserId}
+                liveSyncUserId={targetUserId}
+                liveSessionDate={selectedDate}
+                scheduleLabel={
+                  multiPart && dayParts
+                    ? `${dayParts.find((p) => p.partIndex === activePartIndex)?.label || "Session"}${
+                        scheduleLabel ? ` · ${scheduleLabel}` : ""
+                      }`
+                    : scheduleLabel
+                }
+                calendarDateLabel={calendarDateLabel}
+                onEngage={notifyMaintainWorkoutEngage}
+              />
+            </MemberMaintainConsoleStage>
           ) : (
             <MemberWorkoutConsole
               workout={workout}

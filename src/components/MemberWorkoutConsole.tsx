@@ -176,6 +176,8 @@ export default function MemberWorkoutConsole({
   embedded = false,
   coachFloorMode = false,
   onCoachFloorFinished,
+  /** Maintain: notify parent/stage when member starts (weight / set / finish). */
+  onEngage,
 }: {
   workout: MemberWorkoutView;
   backHref?: string;
@@ -201,7 +203,15 @@ export default function MemberWorkoutConsole({
   coachFloorMode?: boolean;
   /** Called after coach taps Finished on live floor (collapse tile, etc.). */
   onCoachFloorFinished?: () => void;
+  /** First real training action this session (maintain fullscreen auto-enter). */
+  onEngage?: () => void;
 }) {
+  const engageOnceRef = useRef(false);
+  const fireEngage = useCallback(() => {
+    if (engageOnceRef.current) return;
+    engageOnceRef.current = true;
+    onEngage?.();
+  }, [onEngage]);
   const [weights, setWeights] = useState<Record<string, string>>(() =>
     buildSeededWeights(workout.exercises),
   );
@@ -1105,6 +1115,7 @@ export default function MemberWorkoutConsole({
 
   const updateWeight = useCallback(
     (blockId: string, value: string) => {
+      fireEngage();
       setWeights((w) => {
         const updated = { ...w, [blockId]: value };
         stateRef.current = { ...stateRef.current, weights: updated };
@@ -1112,7 +1123,7 @@ export default function MemberWorkoutConsole({
       });
       queueLiveSave();
     },
-    [queueLiveSave],
+    [queueLiveSave, fireEngage],
   );
 
   const toggleSet = useCallback(
@@ -1136,6 +1147,7 @@ export default function MemberWorkoutConsole({
       });
 
       if (!wasDone) {
+        fireEngage();
         // Starts rest + pushes set checkoff + restActive in one live save.
         maybeStartRestTimer(blockId, setNum);
         if (coachFloorMode && originEl) {
@@ -1166,6 +1178,7 @@ export default function MemberWorkoutConsole({
       maybeStartRestTimer,
       coachFloorMode,
       workout.exercises,
+      fireEngage,
     ],
   );
 
@@ -1314,6 +1327,7 @@ export default function MemberWorkoutConsole({
 
   const markExerciseFinished = useCallback(
     (blockId: string) => {
+      fireEngage();
       setVideoModalBlockId((openId) => (openId === blockId ? null : openId));
       const next = new Set(finishedExercises);
       next.add(blockId);
@@ -1322,7 +1336,7 @@ export default function MemberWorkoutConsole({
       advanceToNextExercise(blockId, next);
       queueLiveSave(true);
     },
-    [finishedExercises, advanceToNextExercise, queueLiveSave],
+    [finishedExercises, advanceToNextExercise, queueLiveSave, fireEngage],
   );
 
   const closeExerciseEdit = useCallback(() => {
