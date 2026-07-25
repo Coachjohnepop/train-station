@@ -384,6 +384,34 @@ export default function MemberTodayShell({
     coachMeetingRequestNote,
   };
 
+  // Quick maintain focus: only the workout pane (rest timer works). ← Today restores full home.
+  if (activeMaintainId && workout && canUseMaintain) {
+    return (
+      <div
+        id="member-today-top"
+        className="scroll-mt-4 min-w-0 space-y-3 overflow-x-clip"
+      >
+        <MemberMaintainConsoleStage
+          exitHref={clearMaintainHref()}
+          workoutName={workout.workoutName || "Quick maintain"}
+        >
+          <MemberWorkoutConsole
+            workout={workout}
+            backHref={clearMaintainHref()}
+            backLabel="← Today"
+            programSlug={programSlug}
+            targetUserId={targetUserId}
+            liveSyncUserId={targetUserId}
+            liveSessionDate={selectedDate}
+            scheduleLabel={scheduleLabel}
+            calendarDateLabel={calendarDateLabel}
+            onEngage={notifyMaintainWorkoutEngage}
+          />
+        </MemberMaintainConsoleStage>
+      </div>
+    );
+  }
+
   return (
     <div
       id="member-today-top"
@@ -619,30 +647,6 @@ export default function MemberTodayShell({
 
           {contentAccess?.locked ? (
             <FreeContentLockCard access={contentAccess} />
-          ) : activeMaintainId ? (
-            <MemberMaintainConsoleStage
-              exitHref={clearMaintainHref()}
-              workoutName={workout.workoutName || "Quick maintain"}
-            >
-              <MemberWorkoutConsole
-                workout={workout}
-                backHref={clearMaintainHref()}
-                backLabel="← Today"
-                programSlug={programSlug}
-                targetUserId={targetUserId}
-                liveSyncUserId={targetUserId}
-                liveSessionDate={selectedDate}
-                scheduleLabel={
-                  multiPart && dayParts
-                    ? `${dayParts.find((p) => p.partIndex === activePartIndex)?.label || "Session"}${
-                        scheduleLabel ? ` · ${scheduleLabel}` : ""
-                      }`
-                    : scheduleLabel
-                }
-                calendarDateLabel={calendarDateLabel}
-                onEngage={notifyMaintainWorkoutEngage}
-              />
-            </MemberMaintainConsoleStage>
           ) : (
             <MemberWorkoutConsole
               workout={workout}
