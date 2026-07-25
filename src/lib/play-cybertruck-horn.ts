@@ -18,8 +18,8 @@ export function playCybertruckHorn(): void {
         hornRelease = null;
       });
     }
-    // Match rest-complete Cybertruck level (~50% quieter end blast).
-    hornAudio.volume = 0.85 * 0.5;
+    // Match rest-complete Cybertruck level (hotter than whistle/bell/buzzer).
+    hornAudio.volume = 0.85;
     hornRelease?.();
     hornRelease = holdBackgroundMusicForMedia();
     hornAudio.currentTime = 0;

@@ -4,6 +4,7 @@ import { holdBackgroundMusicForMedia } from "@/lib/background-music-control";
 import {
   DEFAULT_REST_TIMER_SOUND,
   normalizeRestTimerSound,
+  restTimerSoundFallbackSrc,
   restTimerSoundSrc,
   restTimerSoundVolume,
   type RestTimerSoundId,
@@ -138,72 +139,72 @@ function getOrCreateSample(src: string): HTMLAudioElement {
 
 /**
  * End-of-rest alert — coach-selected sample (default Cybertruck honk).
- * Volumes are scaled via restTimerSoundVolume (~50% of prior levels).
+ * Fresh Audio element each play avoids stuck/paused cache entries after long rests.
  */
 export function playRestComplete(
   sound: RestTimerSoundId | string | null | undefined = DEFAULT_REST_TIMER_SOUND,
 ): void {
   if (typeof window === "undefined") return;
   const id = normalizeRestTimerSound(sound);
-  const src = restTimerSoundSrc(id);
+  const primarySrc = restTimerSoundSrc(id);
+  const fallbackSrc = restTimerSoundFallbackSrc(id);
   const volume = restTimerSoundVolume(id);
 
   try {
-    // Resume audio context early (iOS) — helps after mute/unlock.
     getCtx();
-
-    const audio = getOrCreateSample(src);
-    audio.volume = volume;
 
     sampleRelease?.();
     const token = ++sampleReleaseToken;
     sampleRelease = holdBackgroundMusicForMedia();
 
-    const fail = () => {
-      releaseSampleHold(token);
-      sampleCache.delete(src);
-      playRestCompleteFallback();
-    };
+    const playSrc = (src: string, allowAlt: boolean) => {
+      // New element every time — reusing a single node often fails after rest timers.
+      const audio = new Audio(src);
+      audio.preload = "auto";
+      audio.volume = volume;
 
-    audio.onended = () => releaseSampleHold(token);
-    audio.onpause = () => {
-      // Only release if fully finished (not a seek pause).
-      if (audio.ended) releaseSampleHold(token);
-    };
-
-    const start = () => {
-      try {
-        audio.currentTime = 0;
-      } catch {
-        /* ignore seek-before-load */
-      }
-      void audio.play().then(() => {
-        // Some browsers report play success with 0 duration if decode failed.
-        if (!Number.isFinite(audio.duration) || audio.duration === 0) {
-          // Give metadata a beat; if still dead, fall back.
-          window.setTimeout(() => {
-            if (!Number.isFinite(audio.duration) || audio.duration === 0) fail();
-          }, 120);
+      const fail = () => {
+        if (allowAlt && fallbackSrc && fallbackSrc !== src) {
+          playSrc(fallbackSrc, false);
+          return;
         }
-      }).catch(fail);
+        releaseSampleHold(token);
+        playRestCompleteFallback();
+      };
+
+      audio.onended = () => releaseSampleHold(token);
+      audio.onerror = () => fail();
+
+      const start = () => {
+        try {
+          audio.currentTime = 0;
+        } catch {
+          /* ignore */
+        }
+        void audio.play().then(() => {
+          // Warm the shared cache for next preload.
+          sampleCache.set(src, audio);
+        }).catch(fail);
+      };
+
+      if (audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        start();
+      } else {
+        const onReady = () => {
+          audio.removeEventListener("canplaythrough", onReady);
+          audio.removeEventListener("canplay", onReady);
+          start();
+        };
+        audio.addEventListener("canplaythrough", onReady);
+        audio.addEventListener("canplay", onReady);
+        audio.load();
+        window.setTimeout(() => {
+          if (audio.paused && !audio.ended) start();
+        }, 400);
+      }
     };
 
-    if (audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-      start();
-    } else {
-      const onReady = () => {
-        audio.removeEventListener("canplay", onReady);
-        audio.removeEventListener("loadeddata", onReady);
-        start();
-      };
-      audio.addEventListener("canplay", onReady);
-      audio.addEventListener("loadeddata", onReady);
-      audio.load();
-      // Safety: if events never fire, try play anyway then fallback.
-      window.setTimeout(() => {
-        if (audio.paused && !audio.ended) start();
-      }, 500);
-    }
+    playSrc(primarySrc, true);
   } catch {
     playRestCompleteFallback();
   }

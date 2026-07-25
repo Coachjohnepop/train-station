@@ -1032,12 +1032,13 @@ export default function MemberWorkoutConsole({
       if (!restMutedRef.current) {
         playRestComplete(restSoundRef.current);
       }
+      // Cybertruck / end samples ~1.1s+ — keep popup open long enough to finish.
       closeTimer = window.setTimeout(() => {
         if (cancelled) return;
         setRestTimer(null);
         setRestSecondsLeft(0);
         setRestCompleting(false);
-      }, 900);
+      }, 1600);
     };
 
     const tick = () => {

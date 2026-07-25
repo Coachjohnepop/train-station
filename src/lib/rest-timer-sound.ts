@@ -15,8 +15,12 @@ export type RestTimerSoundId = (typeof REST_TIMER_SOUND_IDS)[number];
 /** Default: Cybertruck honk when rest ends. */
 export const DEFAULT_REST_TIMER_SOUND: RestTimerSoundId = "cybertruck";
 
-/** End-of-rest samples play at half the prior gym-floor level. */
+/**
+ * Whistle / bell / buzzer play at half prior gym-floor level.
+ * Cybertruck (default) stays hotter so the honk still cuts through.
+ */
 export const REST_COMPLETE_VOLUME_SCALE = 0.5;
+export const REST_CYBERTRUCK_VOLUME_SCALE = 0.85;
 
 export type RestTimerSoundOption = {
   id: RestTimerSoundId;
@@ -24,7 +28,7 @@ export type RestTimerSoundOption = {
   /** Short coach-facing hint */
   hint: string;
   src: string;
-  /** Playback volume 0–1 before REST_COMPLETE_VOLUME_SCALE (default 1). */
+  /** Playback volume 0–1 before scale (default 1). */
   volume?: number;
 };
 
@@ -33,16 +37,16 @@ export type RestTimerSoundOption = {
  * Filenames are rest-*-v SFX so clients don't keep an old talking clip cached.
  */
 /** Bump when replacing files so browsers drop stale (quiet/broken) cache entries. */
-const AUDIO_CACHE_BUST = "20260725b";
+const AUDIO_CACHE_BUST = "20260725c";
 
 export const REST_TIMER_SOUND_OPTIONS: RestTimerSoundOption[] = [
   {
     id: "cybertruck",
     label: "Cybertruck honk",
     hint: "Real Cybertruck horn (default)",
+    // Prefer v2 path; playRestComplete will fall back if load fails.
     src: `/audio/rest-cybertruck-horn-v2.mp3?v=${AUDIO_CACHE_BUST}`,
-    /** Sample is hotter than synth SFX; still scaled by REST_COMPLETE_VOLUME_SCALE. */
-    volume: 0.85,
+    volume: 1,
   },
   {
     id: "whistle",
@@ -95,6 +99,15 @@ export function restTimerSoundVolume(id: RestTimerSoundId | string | null | unde
   const v = REST_TIMER_SOUND_OPTIONS.find((o) => o.id === sound)?.volume;
   const base =
     typeof v === "number" && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1;
-  // Halve end-of-rest blasts (buzzer / whistle / bell / honk).
-  return Math.min(1, Math.max(0, base * REST_COMPLETE_VOLUME_SCALE));
+  const scale =
+    sound === "cybertruck" ? REST_CYBERTRUCK_VOLUME_SCALE : REST_COMPLETE_VOLUME_SCALE;
+  return Math.min(1, Math.max(0, base * scale));
+}
+
+/** Alternate paths if primary cybertruck sample fails to decode. */
+export function restTimerSoundFallbackSrc(
+  id: RestTimerSoundId | string | null | undefined,
+): string | null {
+  if (normalizeRestTimerSound(id) !== "cybertruck") return null;
+  return `/audio/rest-cybertruck-horn.mp3?v=${AUDIO_CACHE_BUST}`;
 }
