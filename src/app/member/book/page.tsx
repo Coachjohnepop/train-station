@@ -272,10 +272,19 @@ export default function MemberBookPage() {
         prefill={memberEmail ? { email: memberEmail } : undefined}
         title="Book with Coach Jeremy"
         onClose={() => setCalendlyModalOpen(false)}
-        onScheduled={() => {
+        onScheduled={(details) => {
           setCalendlyBooked(true);
           void (async () => {
-            const res = await fetch("/api/member/intake-scheduled", { method: "POST" });
+            const res = await fetch("/api/member/intake-scheduled", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                scheduledAt: details.scheduledAt || null,
+                bookingSource: "calendly",
+                calendlyEventUri: details.eventUri || null,
+                phone: memberPhone || null,
+              }),
+            });
             if (!res.ok) return;
             const data = await res.json();
             dispatchMemberScoreCelebrate({

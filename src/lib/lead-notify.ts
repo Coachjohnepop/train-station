@@ -31,13 +31,13 @@ export async function notifyNewLead(lead: Lead): Promise<void> {
     const ok = await sendResendEmail({
       to: RECIPIENTS,
       replyTo: process.env.LEAD_NOTIFY_REPLY_TO?.trim() || process.env.COACH_NOTIFY_EMAIL?.trim(),
-      subject: `New lead: ${lead.name || "Guest"} (${lead.email})`,
+      subject: `New ${lead.source?.includes("signup") ? "signup" : "lead"}: ${lead.name || "Guest"} (${lead.email})`,
       text:
-        `New pre-sign-up from the landing page\n\n` +
+        `New ${lead.source?.includes("signup") ? "member signup" : "lead"}\n\n` +
         `Name:    ${lead.name || "Guest"}\n` +
         `Email:   ${lead.email}\n` +
         `Phone:   ${lead.phone || "—"}\n` +
-        `Interest: ${lead.plan || "—"}\n` +
+        `Plan:    ${lead.plan || "—"}\n` +
         `Source:  ${lead.source || "—"}\n` +
         `When:    ${lead.createdAt || new Date().toISOString()}\n`,
       tags: [{ name: "category", value: "lead" }],

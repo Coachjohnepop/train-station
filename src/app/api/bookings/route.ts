@@ -80,6 +80,36 @@ export async function POST(request: Request) {
     // zoomUrl left for admin to fill
   });
 
+  // Coach alert: new call request with the chosen calendar time.
+  try {
+    const { notifyCoachIntakeReady } = await import("@/lib/coach-member-notify");
+    const { ensureMemberProfile, updateMemberProfile } = await import(
+      "@/lib/member-profiles-store"
+    );
+    const { signupPlanLabel, normalizeSignupPlan } = await import("@/lib/signup-plans");
+    const userId = data.userId || auth.session.id;
+    const profile = await ensureMemberProfile({
+      userId,
+      email: data.memberEmail,
+      plan: normalizeSignupPlan(null),
+    });
+    if (!profile.introBookedAt) {
+      await updateMemberProfile(userId, { introBookedAt: new Date().toISOString() });
+    }
+    await notifyCoachIntakeReady({
+      userId,
+      name: auth.session.name || data.memberEmail,
+      email: data.memberEmail,
+      plan: signupPlanLabel(profile.plan),
+      paymentStatus: profile.paymentStatus,
+      scheduledAt: data.scheduledAt,
+      bookingSource: "app_slots",
+      phone: data.memberPhone || profile.phone || null,
+    });
+  } catch (e) {
+    console.error("[bookings] coach notify failed", e);
+  }
+
   return NextResponse.json(booking, { status: 201 });
 }
 

@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef } from "react";
 import {
   buildCalendlyEmbedUrl,
   isCalendlyScheduledMessage,
+  parseCalendlyScheduledDetails,
   type CalendlyPrefill,
+  type CalendlyScheduledDetails,
 } from "@/lib/calendly-embed";
 
 type Props = {
@@ -13,7 +15,7 @@ type Props = {
   prefill?: CalendlyPrefill;
   title?: string;
   onClose: () => void;
-  onScheduled: () => void;
+  onScheduled: (details: CalendlyScheduledDetails) => void;
 };
 
 export default function EmbeddedCalendlyModal({
@@ -43,7 +45,7 @@ export default function EmbeddedCalendlyModal({
     function handleMessage(event: MessageEvent) {
       if (!event.origin.endsWith("calendly.com")) return;
       if (!isCalendlyScheduledMessage(event.data)) return;
-      onScheduledRef.current();
+      onScheduledRef.current(parseCalendlyScheduledDetails(event.data));
       onCloseRef.current();
     }
 

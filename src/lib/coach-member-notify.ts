@@ -75,6 +75,45 @@ export async function notifyCoachForMemberEvent(params: {
   return result;
 }
 
+const COACH_TZ =
+  process.env.APP_TIMEZONE?.trim() ||
+  process.env.TZ?.trim() ||
+  "America/Los_Angeles";
+
+/** Human-readable meeting time for coach emails / Messages. */
+export function formatCoachMeetingWhen(
+  iso: string | null | undefined,
+  timeZone: string = COACH_TZ,
+): string {
+  if (!iso?.trim()) {
+    return "Time chosen in Calendly — check your Calendly calendar or confirmation email for the exact slot";
+  }
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) {
+    return "Time chosen in Calendly — check your Calendly calendar for the exact slot";
+  }
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+    }).format(d);
+  } catch {
+    return d.toLocaleString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+}
+
 export async function notifyCoachNewMember(params: {
   userId: string;
   name: string;
@@ -92,6 +131,31 @@ export async function notifyCoachNewMember(params: {
   });
 }
 
+/** Fired at account create (signup) — email + in-app Messages. */
+export async function notifyCoachNewSignup(params: {
+  userId: string;
+  name: string;
+  email: string;
+  plan: string;
+  phone?: string | null;
+  source?: string | null;
+}): Promise<{ inApp: boolean; email: boolean; sms: boolean }> {
+  const phoneLine = params.phone?.trim() ? `\nPhone: ${params.phone.trim()}` : "";
+  const sourceLine = params.source ? `\nSource: ${params.source}` : "";
+  return notifyCoachForMemberEvent({
+    event: "newMember",
+    memberUserId: params.userId,
+    memberName: params.name,
+    memberEmail: params.email,
+    subject: "New signup",
+    message:
+      `${params.name} just created an account.\n` +
+      `Plan: ${params.plan}${phoneLine}${sourceLine}\n\n` +
+      `They still need to finish setup / payment and book their intro call.`,
+    deepLink: `${appBaseUrl()}/admin/queue`,
+  });
+}
+
 function isPaidPlan(plan: string): boolean {
   return plan === "member" || plan === "pro" || plan === "business";
 }
@@ -102,6 +166,11 @@ export async function notifyCoachIntakeReady(params: {
   email: string;
   plan: string;
   paymentStatus?: string;
+  /** ISO start of the intro/follow-up call when known */
+  scheduledAt?: string | null;
+  /** calendly | app_slots | manual */
+  bookingSource?: string | null;
+  phone?: string | null;
 }): Promise<{ inApp: boolean; email: boolean; sms: boolean }> {
   const paymentPending =
     isPaidPlan(params.plan) && params.paymentStatus !== "paid" && params.paymentStatus !== "none";
@@ -110,14 +179,28 @@ export async function notifyCoachIntakeReady(params: {
     ? "\n\nPayment is still pending — use Queue to mark paid (Venmo/cash) when you accept them."
     : "";
 
+  const when = formatCoachMeetingWhen(params.scheduledAt);
+  const source =
+    params.bookingSource === "app_slots"
+      ? "In-app slot request"
+      : params.bookingSource === "calendly"
+        ? "Calendly"
+        : params.bookingSource || "Booking";
+  const phoneLine = params.phone?.trim() ? `\nPhone: ${params.phone.trim()}` : "";
+
   return notifyCoachForMemberEvent({
     event: "intakeScheduled",
     memberUserId: params.userId,
     memberName: params.name,
     memberEmail: params.email,
-    subject: "Intake sign-off needed",
-    message: `${params.name} is ready for coach intake sign-off.${paymentNote}\n\nPlan: ${params.plan}`,
-    deepLink: `${appBaseUrl()}/admin/queue`,
+    subject: "Intro call booked",
+    message:
+      `${params.name} booked a coach call.\n\n` +
+      `When: ${when}\n` +
+      `Via: ${source}\n` +
+      `Plan: ${params.plan}${phoneLine}${paymentNote}\n\n` +
+      `Open Queue / Bookings to confirm and send Zoom if needed.`,
+    deepLink: `${appBaseUrl()}/admin/bookings`,
   });
 }
 

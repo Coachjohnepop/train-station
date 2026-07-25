@@ -67,10 +67,21 @@ export default function MemberIntakeIntroCard({
     })();
   }, [initialStatus]);
 
-  async function handleScheduled() {
+  async function handleScheduled(details?: {
+    scheduledAt?: string | null;
+    eventUri?: string | null;
+  }) {
     setBooking(true);
     try {
-      const res = await fetch("/api/member/intake-scheduled", { method: "POST" });
+      const res = await fetch("/api/member/intake-scheduled", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scheduledAt: details?.scheduledAt || null,
+          bookingSource: "calendly",
+          calendlyEventUri: details?.eventUri || null,
+        }),
+      });
       const data = await res.json();
       const totalPoints =
         typeof data.totalPoints === "number"
@@ -201,9 +212,12 @@ export default function MemberIntakeIntroCard({
         }
         title={modalTitle}
         onClose={() => setModalOpen(false)}
-        onScheduled={() => {
+        onScheduled={(details) => {
           setModalOpen(false);
-          void handleScheduled();
+          void handleScheduled({
+            scheduledAt: details.scheduledAt,
+            eventUri: details.eventUri,
+          });
         }}
       />
     </>

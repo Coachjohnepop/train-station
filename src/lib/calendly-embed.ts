@@ -85,6 +85,80 @@ export function isCalendlyPostMessage(data: unknown): data is { event: string } 
 
 export function isCalendlyScheduledMessage(
   data: unknown,
-): data is { event: "calendly.event_scheduled" } {
+): data is { event: "calendly.event_scheduled"; payload?: unknown } {
   return isCalendlyPostMessage(data) && data.event === "calendly.event_scheduled";
+}
+
+/** Details we can pull from Calendly’s browser postMessage (start time is optional). */
+export type CalendlyScheduledDetails = {
+  /** ISO start when present in the embed payload */
+  scheduledAt: string | null;
+  inviteeEmail: string | null;
+  inviteeName: string | null;
+  eventUri: string | null;
+  inviteeUri: string | null;
+};
+
+function asRecord(v: unknown): Record<string, unknown> | null {
+  return v && typeof v === "object" ? (v as Record<string, unknown>) : null;
+}
+
+function pickIso(...candidates: unknown[]): string | null {
+  for (const c of candidates) {
+    if (typeof c !== "string" || !c.trim()) continue;
+    const d = new Date(c);
+    if (!Number.isNaN(d.getTime())) return d.toISOString();
+  }
+  return null;
+}
+
+/**
+ * Best-effort parse of calendly.event_scheduled postMessage.
+ * Calendly often only sends resource URIs (not start time) unless the event object is expanded.
+ */
+export function parseCalendlyScheduledDetails(data: unknown): CalendlyScheduledDetails {
+  const empty: CalendlyScheduledDetails = {
+    scheduledAt: null,
+    inviteeEmail: null,
+    inviteeName: null,
+    eventUri: null,
+    inviteeUri: null,
+  };
+  if (!isCalendlyScheduledMessage(data)) return empty;
+
+  const payload = asRecord((data as { payload?: unknown }).payload) || asRecord(data) || {};
+  const event = asRecord(payload.event) || asRecord(payload.scheduled_event) || {};
+  const invitee = asRecord(payload.invitee) || {};
+
+  const scheduledAt = pickIso(
+    event.start_time,
+    event.startTime,
+    invitee.start_time,
+    invitee.startTime,
+    payload.start_time,
+    payload.event_start_time,
+  );
+
+  const eventUri =
+    (typeof event.uri === "string" && event.uri) ||
+    (typeof payload.event === "string" && payload.event) ||
+    null;
+  const inviteeUri =
+    (typeof invitee.uri === "string" && invitee.uri) ||
+    (typeof payload.invitee === "string" && payload.invitee) ||
+    null;
+
+  return {
+    scheduledAt,
+    inviteeEmail:
+      (typeof invitee.email === "string" && invitee.email) ||
+      (typeof payload.email === "string" && payload.email) ||
+      null,
+    inviteeName:
+      (typeof invitee.name === "string" && invitee.name) ||
+      (typeof payload.name === "string" && payload.name) ||
+      null,
+    eventUri,
+    inviteeUri,
+  };
 }

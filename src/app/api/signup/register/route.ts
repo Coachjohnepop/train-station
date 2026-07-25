@@ -16,6 +16,7 @@ import { stripeConfiguredForPlan } from "@/lib/stripe";
 import { registerMember } from "@/lib/member-accounts-store";
 import { ensureMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
 import { notifyNewLead } from "@/lib/lead-notify";
+import { notifyCoachNewSignup } from "@/lib/coach-member-notify";
 import { sendMemberWelcomeEmail } from "@/lib/member-welcome";
 import { isQuoteOffer } from "@/lib/product-offers";
 import { resolveReferralDiscount } from "@/lib/referral-discounts";
@@ -97,6 +98,16 @@ export async function POST(request: Request) {
       plan,
       source: quoteRequest ? `quote:${plan}` : "signup-register",
       createdAt: account.createdAt,
+    });
+
+    // Coach email + in-app Messages (Queue) — separate from lead lead-notify list.
+    await notifyCoachNewSignup({
+      userId: account.userId,
+      name: account.name,
+      email: normalizedEmail,
+      plan: signupPlanLabel(plan),
+      phone: phone || account.phone || null,
+      source: quoteRequest ? `quote:${plan}` : "signup",
     });
 
     if (quoteRequest) {
