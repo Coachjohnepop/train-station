@@ -97,7 +97,33 @@ export default function PoweredByPage() {
             today?”, live classes that shouldn’t lie about “Join”, and money that can clear on
             card <em>or</em> Venmo without a second set of books.
           </p>
-          <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
+
+          {/* Aggressive build-cost band — git: 43 active days · peak full-intensity soaks · $250/hr */}
+          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {[
+              { v: "400+", k: "documented build-hours" },
+              { v: "43", k: "active build days" },
+              { v: "$100K+", k: "to rebuild at $250/hr" },
+            ].map((stat) => (
+              <div
+                key={stat.k}
+                className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-4 text-center"
+              >
+                <p className="text-3xl font-extrabold tracking-tight text-[var(--accent)] sm:text-4xl">
+                  {stat.v}
+                </p>
+                <p className="mt-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--muted)]">
+                  {stat.k}
+                </p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-center text-[11px] leading-relaxed text-[var(--muted)]">
+            From first commit (Jun 2026) through live coaching soaks — full-intensity days, not
+            calendar fluff. License it and skip the rebuild.
+          </p>
+
+          <p className="mt-5 text-sm leading-relaxed text-[var(--muted)]">
             We shipped and soaked features in production — Quick maintain for Business+, Day
             Complete when the day is done, green hold timers into rest, cybertruck rest audio,
             coach floor weight next to sets, YouTube demos, coach notify on workout log, durable
