@@ -334,8 +334,25 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-07-23  
-**Status:** **Venmo LIVE** · Stripe still **test mode** on prod · tips + coach weight + mobile-only alerts + platform-admin fee UI **shipped to main** · SMS **PARKED**.
+**Date:** 2026-07-25 (John sleeping)  
+**Status:** **Venmo LIVE** · Stripe **half-cutover** (secret often live in Vercel; public site still **`pk_test_…`** last probe) · Discount codes **on prod** · coach signup/booking alerts **on prod** · Calendly webhook **shipped** (needs env + Calendly subscribe) · SMS **PARKED**.  
+**Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.
+
+### Jul 25 ship (done this stretch)
+
+1. **Coach left nav search** (`AdminAppSearch` + `admin-app-search-index`) + **⌘K**.
+2. **Discount codes** — first-class coach nav group **Discount codes** → `/admin/discounts` (also Billing tab). Staff API. Checkout applies resolved promos. **On prod.** Create codes after Live/Test prices match the active Stripe key.
+3. **Stripe Live ops (in progress, human):** John putting `sk_live` / `pk_live` on Vercel. **Do not put `sk_` into `STRIPE_PRICE_*`** — those must be `price_…`. Need Live `price_…` for MEMBER/BUSINESS/PRO + `whsec` + **redeploy**. Public `/api/payments/public` still showed `pk_test` when last checked.
+4. **Site loop sweep** — `scripts/site-loop-sweep.mjs` · 0 dead pages · fixed **cron middleware** (`/api/cron` allowlisted).
+5. **Coach notify** — new **signup** email+Messages; **intro booked** email+Messages with **When** time. Calendly embed + in-app slots.
+6. **Calendly webhook** — `POST /api/calendly/webhook` · set `CALENDLY_WEBHOOK_SIGNING_KEY` · subscribe `invitee.created` / `invitee.canceled` · exact start time → Bookings + coach alert. Idempotent by invitee URI.
+
+### Next wake-up (suggested)
+
+1. Finish Stripe Live: Live `price_…` on Vercel, matching `pk_live`, webhook `whsec`, redeploy; confirm `pk_live` on payments public.
+2. Wire Calendly webhook env + subscription; smoke one real book.
+3. Create Live (or Test-matching) discount codes from coach **Discount codes**.
+4. Optional: Connect Express for platform admin $275.
 
 ### Jul 23 ship (done)
 
