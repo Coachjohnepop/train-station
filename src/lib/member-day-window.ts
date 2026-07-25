@@ -108,6 +108,41 @@ export async function resolvePrimaryScheduleProgram(userId: string) {
   return null;
 }
 
+/**
+ * Always-available yesterday · today · tomorrow calendar chips.
+ * Used when no program schedule is linked so swipe still works with empty workout days.
+ */
+export function buildCalendarSwipeDays(todayIso: string): MemberDaySummary[] {
+  const labels = ["Yesterday", "Today", "Tomorrow"] as const;
+  const days: MemberDaySummary[] = [];
+  for (let offset = -1; offset <= 1; offset++) {
+    const iso = addDaysIso(todayIso, offset);
+    const phase = offset < 0 ? "past" : offset === 0 ? "today" : "future";
+    days.push({
+      iso,
+      phase,
+      weekday: formatWeekday(iso),
+      shortDate: formatShortDate(iso),
+      dayLabel: labels[offset + 1],
+      weekNumber: 1,
+      dayNumber: offset + 2,
+      workoutName: null,
+      workoutId: null,
+      programSlug: "calendar",
+      completed: false,
+      exerciseCount: 0,
+      exerciseNames: [],
+      stretchNames: [],
+      smsOverride: false,
+      hasWorkout: false,
+      daysFromToday: offset,
+      visibilityTier: dayVisibilityTier(iso, todayIso),
+      themeLabel: null,
+    });
+  }
+  return days;
+}
+
 /** Placeholder schedule for intake ramp when member has no program enrolled yet. */
 export function buildIntakeRampPlaceholderDays(
   todayIso: string,

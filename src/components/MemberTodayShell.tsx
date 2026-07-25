@@ -72,6 +72,7 @@ function DaySummaryCard({
     dayLabel,
     visibilityTier,
     themeLabel,
+    hasWorkout,
   } = summary;
 
   return (
@@ -82,16 +83,22 @@ function DaySummaryCard({
             {previewOnly
               ? "Preview"
               : phase === "past"
-                ? "What you did"
+                ? "Yesterday"
                 : phase === "future"
-                  ? "Coming up"
+                  ? "Tomorrow"
                   : "Today"}
             <span className="mx-1">·</span>
             {dayLabel}
           </p>
           {previewOnly ? (
             <p className="mt-1 text-xs text-[var(--muted)]">
-              Starts tomorrow — swipe back to Today to train.
+              Starts tomorrow — swipe or tap the day chips to go back to Today.
+            </p>
+          ) : null}
+          {!previewOnly && !hasWorkout && !workoutName ? (
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              No workout on this day yet — your coach can assign one. You can still swipe to
+              yesterday / today / tomorrow.
             </p>
           ) : null}
           <h2 className="mt-1 text-lg font-semibold leading-tight">
@@ -337,7 +344,7 @@ export default function MemberTodayShell({
         )}
         {days.length >= 2 ? (
           <p className="mt-1 text-[10px] text-[var(--muted)] sm:text-xs">
-            Swipe the workout left / right for yesterday · today · tomorrow
+            Use the day chips (or swipe) for yesterday · today · tomorrow
           </p>
         ) : null}
       </div>

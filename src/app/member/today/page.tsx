@@ -20,6 +20,7 @@ import {
 import { loadMemberUpcomingSessions, memberTodayHref } from "@/lib/member-today";
 import { resolveTodayPageWorkout } from "@/lib/member-today-workout";
 import {
+  buildCalendarSwipeDays,
   buildIntakeRampPlaceholderDays,
   buildMemberDayWindow,
   nextDayStretchPreview,
@@ -118,8 +119,16 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     !intakeComplete && warmupWorkout && !(dayWindow?.days.length)
       ? buildIntakeRampPlaceholderDays(calendarToday, 3, 1)
       : null;
-  const memberDays = dayWindow?.days.length ? dayWindow.days : intakeRampDays ?? [];
-  const memberRollup = dayWindow?.rollup ?? (intakeRampDays ? rollupForMemberDays(intakeRampDays) : null);
+  // Always expose real yesterday · today · tomorrow chips — even with no workout assigned.
+  const calendarSwipeDays = buildCalendarSwipeDays(programTodayKey);
+  const memberDays = dayWindow?.days.length
+    ? dayWindow.days
+    : intakeRampDays?.length
+      ? intakeRampDays
+      : calendarSwipeDays;
+  const memberRollup =
+    dayWindow?.rollup ??
+    (memberDays.length ? rollupForMemberDays(memberDays) : null);
   // Clamp deep-links outside the 3-day window back to program today.
   const allowedIsos = new Set(memberDays.map((d) => d.iso));
   const viewDate = allowedIsos.has(rawViewDate) ? rawViewDate : programTodayKey;
