@@ -334,10 +334,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-07-25 (evening)  
-**Status:** **Member Today / Quick maintain stack shipped + looped** · **Venmo LIVE** · Stripe Live cutover **still open** · SMS **PARKED**.  
+**Date:** 2026-07-25 (evening · nits closed)  
+**Status:** **Member Today / Quick maintain stack complete** · **Venmo LIVE** · Stripe Live cutover **still open** · SMS **PARKED**.  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
-**main tip:** `a039217` (maintain loop expand) · prior `e9ac9d0` (exercise timer + uncheck) · `e953238` maintain suite.
+**main tip:** see latest `git log` (plank 3×45s + member complete email + coach floor weight).
 
 ### Shipped this session — Business+ Quick maintain + Today polish
 
@@ -349,24 +349,25 @@ Member-facing (prod-soaked, 3-loop green 134/0):
 | **Day Complete stamp** | Locks maintain/on-demand after a logged workout — John signed off “perfect” |
 | **Focus pane** | Workout pane focus (not browser fullscreen); ← Today |
 | **Resume** | Sticky “Back to workout” banner + live-session + local pointer |
-| **Prescriptions** | Real sets/reps on maintain (repair setScheme) |
+| **Prescriptions** | Real sets/reps on maintain; holds = **standard 3×45s** (not timed-minutes) |
 | **Rest audio** | Cybertruck default; louder last 5 ticks; quieter other ends; live no longer overrides to whistle |
-| **Timed holds** | Green **Time of Exercise** → cybertruck → rest timer (e.g. 3-min plank) |
+| **Hold timer** | Green **Time of Exercise** from reps like `45s` (or timed min) → cybertruck → rest |
 | **Set uncheck** | Live merge fixed so undo sticks; no auto re-check/timer |
 | **YouTube demos** | Short form preloaded on maintain library + hint map |
-| **Coach notify** | Messages + email (`jeremy@…`) on workout log — **member email not built** |
+| **Coach notify** | Messages + email (`jeremy@…`) on workout log |
+| **Member complete email** | Confirmation to member on log (`notifyMemberWorkoutLogged`) |
+| **Coach floor weight** | Denser row, wider readable weight cell |
 | **Staff grant** | Admin Members + monthly reapproval email cron |
 
 Loop: `scripts/member-maintain-coach-loop.mjs` · artifact `.member-maintain-coach-loop-latest.json`.
 
 ### Suggested next (ranked)
 
-1. **Jeremy smoke (15–20 min)** — Business+ maintain, Day Complete, green hold→rest, uncheck, Watch demo, coach Messages after log.  
-2. **Member complete email (optional)** — confirmation to member when they log (coach already notified).  
-3. **Stripe Live cutover (F1)** — still the money desk blocker (keys + live prices).  
-4. **Phone-pass / push** — Jeremy Enable alerts once; 5-min phone pass of Book Call / badge / Join Live.  
-5. **Landing content** — real welcome + free-ticket YouTube (Jeremy).  
-6. **Parked** — Twilio SMS; Zoom Marketplace publish for coach 2.
+1. **Jeremy smoke (15–20 min)** — maintain, Day Complete, 45s hold→rest ×3, uncheck, demos, coach Messages + member email.  
+2. **Stripe Live cutover (F1)** — still the money desk blocker (keys + live prices).  
+3. **Phone-pass / push** — Jeremy Enable alerts once; 5-min phone pass of Book Call / badge / Join Live.  
+4. **Landing content** — real welcome + free-ticket YouTube (Jeremy).  
+5. **Parked** — Twilio SMS; Zoom Marketplace publish for coach 2.
 
 ### Stripe Live — morning action (blocked)
 

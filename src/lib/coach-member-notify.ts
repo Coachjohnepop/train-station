@@ -5,7 +5,7 @@ import { resolveAlertChannels, type CoachAlertEvent } from "@/lib/alert-channels
 import { getCoachSettings } from "@/lib/coach-settings-store";
 import { getMemberCoachPrefs } from "@/lib/member-coach-prefs-store";
 import { postCoachSystemMessage } from "@/lib/coach-chat";
-import { sendResendEmail } from "@/lib/resend-mail";
+import { sendResendEmail, transactionalSubject } from "@/lib/resend-mail";
 import { deliverSms } from "@/lib/sms";
 
 function appBaseUrl() {
@@ -302,5 +302,52 @@ export async function notifyCoachWorkoutLogged(params: {
       lines.join("\n") +
       `\n\nOpen their Today to review sets and silhouettes.`,
     deepLink,
+  });
+}
+
+/**
+ * Short confirmation to the member after they log a workout.
+ * Non-fatal caller responsibility; does not post to Messages.
+ */
+export async function notifyMemberWorkoutLogged(params: {
+  name: string;
+  email: string;
+  workoutName: string;
+  sessionDate: string;
+  progress: number;
+  maintain?: boolean;
+  late?: boolean;
+}): Promise<boolean> {
+  const email = params.email?.trim();
+  if (!email || !email.includes("@")) return false;
+
+  const hi = (params.name || email.split("@")[0] || "there").trim().split(/\s+/)[0] || "there";
+  const kind = params.maintain ? "Quick maintain" : "workout";
+  const progressLabel =
+    params.progress >= 100
+      ? "100% complete"
+      : `${Math.max(0, Math.min(100, params.progress))}% logged`;
+  const lateLine = params.late
+    ? "\n(Catch-up day — score is reduced a bit for logging late.)\n"
+    : "\n";
+  const todayUrl = `${appBaseUrl()}/member/today`;
+
+  const text =
+    `Hi ${hi},\n\n` +
+    `Nice work — your ${kind} is saved.\n\n` +
+    `${params.workoutName}\n` +
+    `Date: ${params.sessionDate} · ${progressLabel}` +
+    lateLine +
+    `Your coach can see this in Messages. Day Complete is on for today — come back tomorrow for the next session.\n\n` +
+    `— ${BRAND_NAME}\n` +
+    todayUrl;
+
+  return sendResendEmail({
+    to: email,
+    subject: transactionalSubject("workout-complete"),
+    text,
+    ctaUrl: todayUrl,
+    ctaLabel: "Open Today",
+    tags: [{ name: "category", value: "workout-complete" }],
   });
 }

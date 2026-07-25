@@ -85,12 +85,40 @@ type ActiveRestTimer = {
   phase: "exercise" | "rest";
 };
 
-/** Timed approach: setCount is duration in minutes (1–4). */
-function timedExerciseDurationSec(block: MemberExerciseBlock): number | null {
+/** Parse hold duration from prescription text: "45s", "90 sec", "2 min", "1:30". */
+function parseDurationSecondsFromReps(reps: string | null | undefined): number | null {
+  if (!reps?.trim()) return null;
+  const raw = reps.trim().toLowerCase();
+  const mmss = raw.match(/^(\d{1,2}):(\d{2})$/);
+  if (mmss) {
+    const total = Number(mmss[1]) * 60 + Number(mmss[2]);
+    if (Number.isFinite(total) && total >= 5 && total <= 1800) return total;
+  }
+  const min = raw.match(/^(\d+(?:\.\d+)?)\s*(m|min|mins|minute|minutes)\b/);
+  if (min) {
+    const n = Number(min[1]);
+    if (Number.isFinite(n) && n > 0 && n <= 30) return Math.round(n * 60);
+  }
+  // Explicit seconds only — bare "10" stays as rep count, not a hold.
+  const sec = raw.match(/^(\d+(?:\.\d+)?)\s*(s|sec|secs|second|seconds)\b/);
+  if (sec) {
+    const n = Number(sec[1]);
+    if (Number.isFinite(n) && n >= 5 && n <= 1800) return Math.round(n);
+  }
+  return null;
+}
+
+/**
+ * Green "Time of Exercise" duration:
+ * 1) reps like "45s" / "2 min" (maintain holds, timed cues)
+ * 2) timed approach setCount as minutes (1–4)
+ */
+function exerciseHoldDurationSec(block: MemberExerciseBlock): number | null {
+  const fromReps = parseDurationSecondsFromReps(block.reps);
+  if (fromReps != null) return fromReps;
   if (!isTimedApproach(block.setScheme)) return null;
   const mins = Number(block.setCount);
   if (!Number.isFinite(mins) || mins < 1) return null;
-  // Cap at 30 min for safety (live schema max 1800s).
   return Math.min(30, Math.max(1, Math.round(mins))) * 60;
 }
 
@@ -969,7 +997,7 @@ export default function MemberWorkoutConsole({
           ? opts.secondsOverride
           : null;
       if (seconds == null && phase === "exercise") {
-        seconds = timedExerciseDurationSec(block);
+        seconds = exerciseHoldDurationSec(block);
       }
       if (seconds == null) {
         seconds = resolveSecondsForBlock(block);
@@ -1206,11 +1234,11 @@ export default function MemberWorkoutConsole({
     if (Date.now() < suppressAutoRestUntilRef.current) return;
     const latest = newlyCompleted[0];
     const block = workout.exercises.find((e) => e.id === latest.blockId);
-    const isTimed = block ? isTimedApproach(block.setScheme) : false;
+    const holdSec = block ? exerciseHoldDurationSec(block) : null;
     maybeStartRestTimer(latest.blockId, latest.setNum, {
       fromRemote: true,
-      phase: isTimed ? "exercise" : "rest",
-      secondsOverride: isTimed && block ? timedExerciseDurationSec(block) ?? undefined : undefined,
+      phase: holdSec ? "exercise" : "rest",
+      secondsOverride: holdSec ?? undefined,
     });
   }, [completedSets, maybeStartRestTimer, workout.exercises]);
 
@@ -1298,13 +1326,12 @@ export default function MemberWorkoutConsole({
       if (!wasDone) {
         fireEngage();
         const block = workout.exercises.find((e) => e.id === blockId);
-        const isTimed = block ? isTimedApproach(block.setScheme) : false;
-        // Timed sets: green "Time of Exercise" first, then rest. Reps sets: rest only.
-        if (isTimed && block) {
-          const holdSec = timedExerciseDurationSec(block);
+        // Hold / timed cue: green "Time of Exercise" first, then rest. Else rest only.
+        const holdSec = block ? exerciseHoldDurationSec(block) : null;
+        if (holdSec) {
           maybeStartRestTimer(blockId, setNum, {
             phase: "exercise",
-            secondsOverride: holdSec ?? undefined,
+            secondsOverride: holdSec,
           });
         } else {
           maybeStartRestTimer(blockId, setNum, { phase: "rest" });
@@ -2232,7 +2259,7 @@ export default function MemberWorkoutConsole({
                           </button>
                         </div>
                         {(() => {
-                          const holdSec = timedExerciseDurationSec(block);
+                          const holdSec = exerciseHoldDurationSec(block);
                           if (!holdSec) return null;
                           const restS = resolveSecondsForBlock(block);
                           return (
@@ -2300,7 +2327,16 @@ export default function MemberWorkoutConsole({
                           })}
                         </div>
                         {(() => {
+                          const holdSec = exerciseHoldDurationSec(block);
                           const restS = resolveSecondsForBlock(block);
+                          if (holdSec) {
+                            return (
+                              <p className="mt-1 text-[10px] text-[var(--muted)]">
+                                Green hold {holdSec >= 60 ? `${Math.round(holdSec / 60)} min` : `${holdSec}s`}
+                                {restS ? ` → rest ${restS}s` : ""} · uncheck stays off until you re-mark
+                              </p>
+                            );
+                          }
                           if (!restS) return null;
                           return (
                             <p className="mt-1 text-[10px] text-[var(--muted)]">

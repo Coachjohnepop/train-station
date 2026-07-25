@@ -146,9 +146,10 @@ export async function POST(request: Request, { params }: Params) {
         }
       : null;
 
-    // Notify coach (Messages + email) so they see what the member finished.
+    // Notify coach (Messages + email) + member confirmation email.
     // Non-fatal — logging already succeeded.
     let coachNotify: { inApp: boolean; email: boolean; sms: boolean } | null = null;
+    let memberNotify: boolean | null = null;
     try {
       const { prisma } = await import("@/lib/prisma");
       const { isDemoMode } = await import("@/lib/demo-enrollments");
@@ -212,7 +213,10 @@ export async function POST(request: Request, { params }: Params) {
       }
       if (!memberEmail) memberEmail = auth.session.email || profile?.email || "";
 
-      const { notifyCoachWorkoutLogged } = await import("@/lib/coach-member-notify");
+      const {
+        notifyCoachWorkoutLogged,
+        notifyMemberWorkoutLogged,
+      } = await import("@/lib/coach-member-notify");
       coachNotify = await notifyCoachWorkoutLogged({
         userId: uid,
         name: memberName,
@@ -231,6 +235,21 @@ export async function POST(request: Request, { params }: Params) {
           startingWeightLbs: e.startingWeightLbs,
         })),
       });
+
+      try {
+        memberNotify = await notifyMemberWorkoutLogged({
+          name: memberName,
+          email: memberEmail,
+          workoutName,
+          sessionDate,
+          progress,
+          maintain,
+          late: lateScore?.late ?? false,
+        });
+      } catch (memberMailErr) {
+        console.warn("Workout logged but member email failed", memberMailErr);
+        memberNotify = false;
+      }
     } catch (notifyErr) {
       console.warn("Workout logged but coach notify failed", notifyErr);
     }
@@ -240,6 +259,7 @@ export async function POST(request: Request, { params }: Params) {
       gamification: gamificationPayload,
       gamificationWarning,
       coachNotify,
+      memberNotify,
     });
   } catch (e: any) {
     // Preserve previous error behavior for "user not found" / "workout not found" etc.

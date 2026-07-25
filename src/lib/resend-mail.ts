@@ -223,6 +223,8 @@ export function transactionalSubject(kind: string): string {
       return `${BRAND_NAME} message from your coach`;
     case "welcome":
       return `Welcome to ${BRAND_NAME}`;
+    case "workout-complete":
+      return `Workout logged — nice work`;
     default:
       return BRAND_NAME;
   }

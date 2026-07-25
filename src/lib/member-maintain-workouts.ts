@@ -543,10 +543,15 @@ async function pickExercisesByHints(hints: string[], limit = 7): Promise<string[
   return picked;
 }
 
-/** Maintain default: 3×10 medium, except holds/planks → 3×45s timed. */
+/**
+ * Maintain default: 3×10 medium.
+ * Holds/planks: 3 rounds × 45s (standard sets — not "timed minutes", which made
+ * setCount=3 look like a 3-minute single hold and fought reps "45s").
+ */
 const MAINTAIN_SETS = 3;
 const MAINTAIN_REPS = "10";
 const MAINTAIN_REST_SEC = 90;
+const MAINTAIN_HOLD_SEC = 45;
 
 function isHoldStyleExercise(name: string): boolean {
   const n = name.toLowerCase();
@@ -571,15 +576,16 @@ function maintainExerciseRx(exerciseName: string): {
 } {
   if (isHoldStyleExercise(exerciseName)) {
     return {
-      setScheme: "timed",
+      // Standard so members get 3 set checkoffs; green hold timer parses "45s" each round.
+      setScheme: "standard",
       repPattern: null,
-      reps: "45s",
+      reps: `${MAINTAIN_HOLD_SEC}s`,
       sets: MAINTAIN_SETS,
       setCount: MAINTAIN_SETS,
       weightTier: "light",
       restBetweenSetsSec: 60,
-      notes: "Hold solid form ~45s — 3 rounds. Maintain pace.",
-      phase: { phaseType: "TIMED", reps: null, durationSec: 45 },
+      notes: `Hold solid form ~${MAINTAIN_HOLD_SEC}s — ${MAINTAIN_SETS} rounds. Maintain pace.`,
+      phase: { phaseType: "TIMED", reps: null, durationSec: MAINTAIN_HOLD_SEC },
     };
   }
   // Isolation-ish: a bit higher rep
