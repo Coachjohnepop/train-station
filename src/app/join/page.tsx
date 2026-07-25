@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ComingSoonPrograms from "@/components/ComingSoonPrograms";
+import LandingSiteFooter from "@/components/LandingSiteFooter";
 import PricingWithInlineSignup from "@/components/PricingWithInlineSignup";
 
 export default async function JoinPage({
@@ -79,6 +80,7 @@ export default async function JoinPage({
           </a>
         </div>
       </div>
+      <LandingSiteFooter />
     </div>
   );
 }

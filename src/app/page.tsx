@@ -7,6 +7,7 @@ import ComingSoonPrograms from "@/components/ComingSoonPrograms";
 import LandingConversion from "@/components/LandingConversion";
 import LandingNav from "@/components/LandingNav";
 import LandingServicesSection from "@/components/LandingServicesSection";
+import LandingSiteFooter from "@/components/LandingSiteFooter";
 import LandingTicketPicker from "@/components/LandingTicketPicker";
 import LandingWelcomeBanner from "@/components/LandingWelcomeBanner";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
@@ -76,6 +77,7 @@ export default async function HomePage() {
         )}
         <LandingServicesSection purchaseAuth={{ signedIn: true, role: session.role }} />
         <ComingSoonPrograms />
+        <LandingSiteFooter />
       </div>
     );
   }
