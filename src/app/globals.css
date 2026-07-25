@@ -2183,6 +2183,50 @@ input:-webkit-autofill {
     0 0 0 3px color-mix(in srgb, var(--success, #34c759) 35%, transparent);
 }
 
+/* Timed hold / plank — green "Time of Exercise" */
+.workout-rest-player--exercise {
+  border-color: color-mix(in srgb, #34c759 70%, var(--border));
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--surface) 88%, #34c759 12%),
+    color-mix(in srgb, var(--bg) 90%, #0a3d1a 10%)
+  );
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55),
+    0 0 0 1px color-mix(in srgb, #34c759 28%, transparent);
+}
+
+.workout-rest-player--exercise .workout-rest-player__eyebrow {
+  color: color-mix(in srgb, #34c759 85%, var(--muted));
+}
+
+.workout-rest-player--exercise .workout-rest-player__time {
+  color: #34c759;
+}
+
+.workout-rest-player--exercise .workout-rest-player__track-fill {
+  background: linear-gradient(90deg, #1f9d4a, #34c759, #a8e6bf);
+}
+
+.workout-rest-player--exercise.workout-rest-player--urgent {
+  border-color: color-mix(in srgb, #34c759 80%, #ffcc00 20%);
+  animation: rest-player-pulse-green 0.85s ease-in-out infinite;
+}
+
+.workout-rest-player--exercise.workout-rest-player--urgent .workout-rest-player__time {
+  color: #6ee7a0;
+}
+
+@keyframes rest-player-pulse-green {
+  0%,
+  100% {
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+  }
+  50% {
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55),
+      0 0 0 4px color-mix(in srgb, #34c759 45%, transparent);
+  }
+}
+
 @keyframes rest-player-pulse {
   0%,
   100% {

@@ -81,7 +81,18 @@ type ActiveRestTimer = {
   completedSetNum: number;
   endsAt: number;
   totalSeconds: number;
+  /** exercise = green hold; rest = between-sets rest */
+  phase: "exercise" | "rest";
 };
+
+/** Timed approach: setCount is duration in minutes (1–4). */
+function timedExerciseDurationSec(block: MemberExerciseBlock): number | null {
+  if (!isTimedApproach(block.setScheme)) return null;
+  const mins = Number(block.setCount);
+  if (!Number.isFinite(mins) || mins < 1) return null;
+  // Cap at 30 min for safety (live schema max 1800s).
+  return Math.min(30, Math.max(1, Math.round(mins))) * 60;
+}
 
 function sortedSet(nums: number[]): number[] {
   return nums.slice().sort((a, b) => a - b);
@@ -387,6 +398,8 @@ export default function MemberWorkoutConsole({
   /** Only push restActive when we start/clear it — never wipe partner rest with accidental null. */
   const restActiveDirtyRef = useRef(false);
   const lastAppliedRestEndsAt = useRef(0);
+  /** After intentional uncheck, block remote re-check / auto-timer for a short window. */
+  const suppressAutoRestUntilRef = useRef(0);
   const lastAppliedRevision = useRef(0);
   const lastAppliedRemoteAt = useRef<string | null>(null);
   const applyingRemote = useRef(false);
@@ -428,9 +441,12 @@ export default function MemberWorkoutConsole({
     // Ignore expired or already-applied rest windows.
     if (rest.endsAt <= Date.now() + 250) return;
     if (rest.endsAt <= lastAppliedRestEndsAt.current) return;
+    // Don't resurrect a timer right after the member intentionally unchecked.
+    if (Date.now() < suppressAutoRestUntilRef.current) return;
     lastAppliedRestEndsAt.current = rest.endsAt;
     restActiveRef.current = rest;
     const left = Math.max(0, Math.ceil((rest.endsAt - Date.now()) / 1000));
+    const phase = rest.phase === "exercise" ? "exercise" : "rest";
     setRestCompleting(false);
     setRestSecondsLeft(left);
     setRestTimer({
@@ -438,6 +454,7 @@ export default function MemberWorkoutConsole({
       completedSetNum: rest.completedSetNum,
       endsAt: rest.endsAt,
       totalSeconds: rest.totalSeconds,
+      phase,
     });
     restTickAnnouncedRef.current = new Set();
     restHornPlayedRef.current = false;
@@ -910,12 +927,33 @@ export default function MemberWorkoutConsole({
   );
 
   const maybeStartRestTimer = useCallback(
-    (blockId: string, setNum: number, opts?: { fromRemote?: boolean; silentStart?: boolean }) => {
+    (
+      blockId: string,
+      setNum: number,
+      opts?: {
+        fromRemote?: boolean;
+        silentStart?: boolean;
+        /** When set, force this phase (timed hold vs rest). */
+        phase?: "exercise" | "rest";
+        /** Prefer these seconds (e.g. timed hold minutes). */
+        secondsOverride?: number;
+      },
+    ) => {
+      if (Date.now() < suppressAutoRestUntilRef.current) return;
+
       const block = workout.exercises.find((e) => e.id === blockId);
       if (!block) return;
 
-      // Ensure rest is on for live set checkoffs unless coach turned it off.
-      if (restSettingsRef.current.enabled !== false) {
+      // Ensure rest is on for live set checkoffs unless coach explicitly turned it off.
+      // Timed "Time of Exercise" still runs even if between-set rest is disabled.
+      const phase: "exercise" | "rest" =
+        opts?.phase ??
+        (opts?.fromRemote && restActiveRef.current?.phase === "exercise"
+          ? "exercise"
+          : "rest");
+
+      if (phase === "rest") {
+        if (restSettingsRef.current.enabled === false) return;
         restSettingsRef.current = {
           ...restSettingsRef.current,
           enabled: true,
@@ -926,7 +964,16 @@ export default function MemberWorkoutConsole({
         setSessionRestEnabled(true);
       }
 
-      const seconds = resolveSecondsForBlock(block);
+      let seconds: number | null =
+        typeof opts?.secondsOverride === "number" && opts.secondsOverride > 0
+          ? opts.secondsOverride
+          : null;
+      if (seconds == null && phase === "exercise") {
+        seconds = timedExerciseDurationSec(block);
+      }
+      if (seconds == null) {
+        seconds = resolveSecondsForBlock(block);
+      }
       if (!seconds || seconds <= 0) return;
 
       // Rest after every set including the last set of the exercise.
@@ -948,6 +995,7 @@ export default function MemberWorkoutConsole({
         completedSetNum: setNum,
         endsAt,
         totalSeconds,
+        phase,
       });
       restTickAnnouncedRef.current = new Set();
       restHornPlayedRef.current = false;
@@ -960,6 +1008,7 @@ export default function MemberWorkoutConsole({
           endsAt,
           totalSeconds,
           startedBy: instructorName || coachFloorMode ? "coach" : "member",
+          phase,
         };
         restActiveDirtyRef.current = true;
         // Push set + restActive together so partner timer spins immediately.
@@ -978,6 +1027,14 @@ export default function MemberWorkoutConsole({
       coachFloorMode,
       queueLiveSave,
     ],
+  );
+
+  /** After timed hold ends (or is skipped), open the between-set rest timer. */
+  const flipExerciseTimerToRest = useCallback(
+    (blockId: string, setNum: number) => {
+      maybeStartRestTimer(blockId, setNum, { phase: "rest", silentStart: false });
+    },
+    [maybeStartRestTimer],
   );
 
   const saveCoachRestSettings = useCallback(
@@ -1040,14 +1097,17 @@ export default function MemberWorkoutConsole({
     [canCoachRestSettings, workout.workoutId, queueLiveSave],
   );
 
-  // Countdown while popup is open; on 0 → buzz → auto-close.
-  // Depend only on endsAt so mute toggles don't cancel the auto-close timer.
+  // Countdown while popup is open; on 0 → buzz → rest closes, exercise flips to rest.
+  // Depend only on endsAt + phase so mute toggles don't cancel the auto-close timer.
   useEffect(() => {
     if (!restTimer) return;
 
     let cancelled = false;
     let closeTimer: number | null = null;
     const endsAt = restTimer.endsAt;
+    const phase = restTimer.phase;
+    const blockId = restTimer.blockId;
+    const setNum = restTimer.completedSetNum;
     restHornPlayedRef.current = false;
     restTickAnnouncedRef.current = new Set();
     setRestCompleting(false);
@@ -1063,9 +1123,18 @@ export default function MemberWorkoutConsole({
       // Cybertruck / end samples ~1.1s+ — keep popup open long enough to finish.
       closeTimer = window.setTimeout(() => {
         if (cancelled) return;
+        if (phase === "exercise") {
+          // Hold done → same horn, then rest timer.
+          flipExerciseTimerToRest(blockId, setNum);
+          return;
+        }
         setRestTimer(null);
         setRestSecondsLeft(0);
         setRestCompleting(false);
+        restActiveRef.current = null;
+        restActiveDirtyRef.current = true;
+        lastAppliedRestEndsAt.current = 0;
+        if (livePushEnabled) queueLiveSave(true);
       }, 1600);
     };
 
@@ -1095,7 +1164,7 @@ export default function MemberWorkoutConsole({
       window.clearInterval(id);
       if (closeTimer != null) window.clearTimeout(closeTimer);
     };
-  }, [restTimer?.endsAt]);
+  }, [restTimer?.endsAt, restTimer?.phase, flipExerciseTimerToRest, livePushEnabled, queueLiveSave]);
 
   // When coach or member marks a set on the other side, start rest locally so both see/hear it.
   useEffect(() => {
@@ -1134,9 +1203,16 @@ export default function MemberWorkoutConsole({
     liveRestBaselineReadyRef.current = true;
     // Only start for a single new checkoff (one set at a time).
     if (newlyCompleted.length !== 1) return;
+    if (Date.now() < suppressAutoRestUntilRef.current) return;
     const latest = newlyCompleted[0];
-    maybeStartRestTimer(latest.blockId, latest.setNum, { fromRemote: true });
-  }, [completedSets, maybeStartRestTimer]);
+    const block = workout.exercises.find((e) => e.id === latest.blockId);
+    const isTimed = block ? isTimedApproach(block.setScheme) : false;
+    maybeStartRestTimer(latest.blockId, latest.setNum, {
+      fromRemote: true,
+      phase: isTimed ? "exercise" : "rest",
+      secondsOverride: isTimed && block ? timedExerciseDurationSec(block) ?? undefined : undefined,
+    });
+  }, [completedSets, maybeStartRestTimer, workout.exercises]);
 
   // Re-seed when the workout / past logs change. Keep any in-session edits.
   const weightSeedKey = workout.exercises
@@ -1199,11 +1275,15 @@ export default function MemberWorkoutConsole({
     (blockId: string, setNum: number, originEl?: HTMLElement) => {
       const wasDone = completedSets[blockId]?.has(setNum) ?? false;
 
-      if (wasDone && restTimer?.blockId === blockId) {
+      if (wasDone) {
+        // Undo set: stay unchecked, kill any timer, do NOT auto re-check or re-launch.
+        suppressAutoRestUntilRef.current = Date.now() + 4000;
         restActiveRef.current = null;
+        restActiveDirtyRef.current = true;
         lastAppliedRestEndsAt.current = 0;
         setRestTimer(null);
         setRestSecondsLeft(0);
+        setRestCompleting(false);
       }
 
       setCompletedSets((prev) => {
@@ -1217,10 +1297,19 @@ export default function MemberWorkoutConsole({
 
       if (!wasDone) {
         fireEngage();
-        // Starts rest + pushes set checkoff + restActive in one live save.
-        maybeStartRestTimer(blockId, setNum);
+        const block = workout.exercises.find((e) => e.id === blockId);
+        const isTimed = block ? isTimedApproach(block.setScheme) : false;
+        // Timed sets: green "Time of Exercise" first, then rest. Reps sets: rest only.
+        if (isTimed && block) {
+          const holdSec = timedExerciseDurationSec(block);
+          maybeStartRestTimer(blockId, setNum, {
+            phase: "exercise",
+            secondsOverride: holdSec ?? undefined,
+          });
+        } else {
+          maybeStartRestTimer(blockId, setNum, { phase: "rest" });
+        }
         if (coachFloorMode && originEl) {
-          const block = workout.exercises.find((e) => e.id === blockId);
           if (block) {
             const prescription = normalizePrescription({
               setScheme: block.setScheme,
@@ -1228,8 +1317,8 @@ export default function MemberWorkoutConsole({
               reps: block.reps,
               sets: block.setCount,
             });
-            const isTimed = isTimedApproach(prescription.approach);
-            const isLastSet = isTimed ? setNum === 1 : setNum === block.setCount;
+            const timed = isTimedApproach(prescription.approach);
+            const isLastSet = timed ? setNum === 1 : setNum === block.setCount;
             if (isLastSet) {
               fireWorkoutConfetti(confettiOriginFromElement(originEl));
               setCoachExpandedBlockId((open) => (open === blockId ? null : open));
@@ -1237,19 +1326,29 @@ export default function MemberWorkoutConsole({
           }
         }
       } else {
+        // Push unchecked state + cleared rest so server/partner don't re-apply the set.
         queueLiveSave(true);
       }
     },
     [
       queueLiveSave,
       completedSets,
-      restTimer?.blockId,
       maybeStartRestTimer,
       coachFloorMode,
       workout.exercises,
       fireEngage,
     ],
   );
+
+  /** Skip: exercise hold → rest; rest → close. */
+  const skipActiveTimer = useCallback(() => {
+    if (!restTimer) return;
+    if (restTimer.phase === "exercise") {
+      flipExerciseTimerToRest(restTimer.blockId, restTimer.completedSetNum);
+      return;
+    }
+    clearRestTimer();
+  }, [restTimer, flipExerciseTimerToRest, clearRestTimer]);
 
   const restBlockName =
     restTimer != null
@@ -1266,7 +1365,7 @@ export default function MemberWorkoutConsole({
       <WorkoutRestTimer
         secondsLeft={displayRestSeconds > 0 ? displayRestSeconds : restSecondsLeft}
         totalSeconds={restTimer.totalSeconds}
-        onSkip={clearRestTimer}
+        onSkip={skipActiveTimer}
         compact={coachFloorMode}
         sticky
         exerciseName={restBlockName}
@@ -1274,6 +1373,7 @@ export default function MemberWorkoutConsole({
         muted={restMuted}
         onToggleMute={toggleRestMute}
         completing={restCompleting || displayRestSeconds <= 0}
+        phase={restTimer.phase}
       />
     ) : null;
 
@@ -2131,6 +2231,17 @@ export default function MemberWorkoutConsole({
                             </span>
                           </button>
                         </div>
+                        {(() => {
+                          const holdSec = timedExerciseDurationSec(block);
+                          if (!holdSec) return null;
+                          const restS = resolveSecondsForBlock(block);
+                          return (
+                            <p className="mt-1 text-[10px] text-[var(--muted)]">
+                              Green hold {holdSec >= 60 ? `${Math.round(holdSec / 60)} min` : `${holdSec}s`}
+                              {restS ? ` → rest ${restS}s` : ""} · uncheck stays off until you re-mark
+                            </p>
+                          );
+                        })()}
                       </>
                     ) : (
                       <>

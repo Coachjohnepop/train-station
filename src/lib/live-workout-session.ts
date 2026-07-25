@@ -9,7 +9,7 @@ import {
 import { getHotLiveSession, setHotLiveSession } from "@/lib/live-session-hot";
 import { localTodayIso } from "@/lib/program-calendar";
 
-/** Shared rest popup so coach checkoff spins the same timer on the member. */
+/** Shared rest/exercise popup so coach checkoff spins the same timer on the member. */
 export type LiveRestActive = {
   blockId: string;
   completedSetNum: number;
@@ -17,6 +17,11 @@ export type LiveRestActive = {
   endsAt: number;
   totalSeconds: number;
   startedBy: "coach" | "member";
+  /**
+   * exercise = hold / timed set ("Time of Exercise", green)
+   * rest = between-sets rest (amber default)
+   */
+  phase?: "exercise" | "rest";
 };
 
 export type LiveWorkoutSession = {
@@ -69,21 +74,27 @@ export function liveSessionKey(
   return `${userId}:${workoutId}:${date}`;
 }
 
+/**
+ * Client sends a full snapshot of its completed-set map.
+ * Blocks present in `incoming` replace existing (including empty arrays = uncheck all).
+ * Blocks only on the server (not mentioned) are kept — concurrent partner progress.
+ */
 function mergeCompletedSets(
   existing: Record<string, number[]>,
   incoming: Record<string, number[]>,
 ): Record<string, number[]> {
   const out = { ...existing };
   for (const [blockId, nums] of Object.entries(incoming)) {
-    const merged = new Set([...(out[blockId] ?? []), ...nums]);
-    out[blockId] = Array.from(merged).sort((a, b) => a - b);
+    // Replace — do not union. Unchecks must stick.
+    out[blockId] = Array.from(new Set(nums)).sort((a, b) => a - b);
   }
   return out;
 }
 
 function mergeFinishedExercises(existing: string[], incoming: string[]): string[] {
-  if (incoming.length < existing.length) return incoming;
-  return Array.from(new Set([...existing, ...incoming]));
+  // Full replace from client snapshot so undoing "exercise done" can clear.
+  if (Array.isArray(incoming)) return Array.from(new Set(incoming));
+  return existing;
 }
 
 async function loadStore(preferFresh = false): Promise<LiveSessionStore> {

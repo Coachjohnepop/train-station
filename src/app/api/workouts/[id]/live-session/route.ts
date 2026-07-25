@@ -14,8 +14,10 @@ const restActiveSchema = z
     blockId: z.string().min(1),
     completedSetNum: z.number().int().positive(),
     endsAt: z.number().int().positive(),
-    totalSeconds: z.number().int().min(1).max(600),
+    // Timed holds can be several minutes (setCount minutes × 60).
+    totalSeconds: z.number().int().min(1).max(1800),
     startedBy: z.enum(["coach", "member"]),
+    phase: z.enum(["exercise", "rest"]).optional(),
   })
   .nullable();
 
