@@ -22,6 +22,10 @@ type Props = {
   canPlatform: boolean;
   onNavigate?: () => void;
   collapsed?: boolean;
+  /** Sticky top bar layout (wider input, stronger chrome). */
+  variant?: "sidebar" | "topbar";
+  /** Only one instance should own ⌘K (default true). */
+  enableHotkey?: boolean;
 };
 
 export default function AdminAppSearch({
@@ -29,6 +33,8 @@ export default function AdminAppSearch({
   canPlatform,
   onNavigate,
   collapsed = false,
+  variant = "sidebar",
+  enableHotkey = true,
 }: Props) {
   const router = useRouter();
   const listId = useId();
@@ -64,8 +70,9 @@ export default function AdminAppSearch({
     [onNavigate, router],
   );
 
-  // Global ⌘K / Ctrl+K
+  // Global ⌘K / Ctrl+K (only one mounted instance should enable this)
   useEffect(() => {
+    if (!enableHotkey) return;
     function onKey(e: KeyboardEvent) {
       const isMod = e.metaKey || e.ctrlKey;
       if (isMod && (e.key === "k" || e.key === "K")) {
@@ -77,7 +84,7 @@ export default function AdminAppSearch({
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [enableHotkey]);
 
   // Click outside closes dropdown (sidebar mode)
   useEffect(() => {
@@ -208,14 +215,18 @@ export default function AdminAppSearch({
     );
   }
 
+  const isTopbar = variant === "topbar";
+
   return (
-    <div ref={rootRef} className="relative px-1">
+    <div ref={rootRef} className={`relative ${isTopbar ? "w-full min-w-0" : "px-1"}`}>
       <label className="sr-only" htmlFor={`${listId}-input`}>
         Search apps and pages
       </label>
       <div className="relative">
         <span
-          className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[var(--muted)]"
+          className={`pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)] ${
+            isTopbar ? "text-sm" : "text-xs"
+          }`}
           aria-hidden
         >
           ⌕
@@ -226,13 +237,19 @@ export default function AdminAppSearch({
           type="search"
           autoComplete="off"
           spellCheck={false}
-          placeholder="Search apps…"
+          placeholder={
+            isTopbar
+              ? "Search apps & pages — Discount codes, Programs, Members…"
+              : "Search apps…"
+          }
           value={query}
           aria-controls={listId}
           aria-expanded={showResults}
           aria-autocomplete="list"
           role="combobox"
-          className="input w-full py-2 pl-8 pr-12 text-xs"
+          className={`input w-full pl-8 pr-12 ${
+            isTopbar ? "py-2.5 text-sm shadow-sm" : "py-2 text-xs"
+          }`}
           onChange={(e) => {
             setQuery(e.target.value);
             setOpen(true);
@@ -240,12 +257,22 @@ export default function AdminAppSearch({
           onFocus={() => setOpen(true)}
           onKeyDown={onInputKeyDown}
         />
-        <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-[var(--border)] bg-[var(--surface-2)] px-1.5 py-0.5 text-[9px] font-medium text-[var(--muted)] sm:inline">
+        <kbd
+          className={`pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-[var(--border)] bg-[var(--surface-2)] px-1.5 py-0.5 font-medium text-[var(--muted)] ${
+            isTopbar
+              ? "hidden text-[10px] sm:inline"
+              : "hidden text-[9px] sm:inline"
+          }`}
+        >
           ⌘K
         </kbd>
       </div>
       {showResults && !paletteOpen ? (
-        <div className="absolute left-0 right-0 z-50 mt-1 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg)] shadow-xl">
+        <div
+          className={`absolute left-0 right-0 z-50 mt-1 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg)] shadow-xl ${
+            isTopbar ? "max-w-2xl" : ""
+          }`}
+        >
           {resultsList}
         </div>
       ) : null}

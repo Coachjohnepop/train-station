@@ -11,6 +11,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import AdminAreaNav from "@/components/AdminAreaNav";
+import AdminAppSearch from "@/components/AdminAppSearch";
 import AdminPersistenceBanner from "@/components/AdminPersistenceBanner";
 import ResumePathTracker from "@/components/ResumePathTracker";
 
@@ -169,6 +170,12 @@ export default function AdminShell({
               Go to Today
             </p>
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              <AdminAppSearch
+                canCoach={canCoach}
+                canPlatform={canPlatform}
+                collapsed
+                enableHotkey
+              />
               <Link
                 href="/admin/chat"
                 className="relative inline-flex min-h-[40px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs font-semibold text-[var(--text)] transition hover:border-accent hover:text-accent sm:min-h-[44px] sm:px-3 sm:text-sm"
@@ -287,29 +294,36 @@ export default function AdminShell({
         </div>
       )}
 
-      {/* Mobile / tablet header */}
-      <header className="app-shell-header header-theme-clearance sticky top-0 z-30 flex items-center justify-between gap-2 px-3 py-2.5 xl:hidden">
-        <button
-          type="button"
-          onClick={openDrawer}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-2)]"
-          aria-label="Open menu"
-          aria-expanded={drawerOpen}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path
-              d="M4 7h16M4 12h16M4 17h16"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
+      {/* Mobile / tablet sticky top: menu + search always visible */}
+      <header className="app-shell-header header-theme-clearance sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--bg)]/95 px-3 py-2 backdrop-blur-md xl:hidden">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={openDrawer}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-2)]"
+            aria-label="Open menu"
+            aria-expanded={drawerOpen}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M4 7h16M4 12h16M4 17h16"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+          <div className="min-w-0 flex-1">
+            <AdminAppSearch
+              canCoach={canCoach}
+              canPlatform={canPlatform}
+              variant="topbar"
+              enableHotkey
             />
-          </svg>
-        </button>
-        <Link href="/admin/queue" className="min-w-0 flex-1 text-center transition hover:opacity-90">
-          <TrainStationBrand variant="header" className="!h-6 mx-auto" />
-        </Link>
-        <div className="flex w-11 shrink-0 items-center justify-end">
-          <LogoutButton />
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            <LogoutButton compact />
+          </div>
         </div>
       </header>
 
@@ -478,6 +492,26 @@ export default function AdminShell({
       ) : null}
 
       <div className="flex min-w-0 flex-1 flex-col">
+        {/* Desktop sticky search — stays at top of the browser viewport while content scrolls */}
+        <div className="app-shell-header sticky top-0 z-40 hidden border-b border-[var(--border)] bg-[var(--bg)]/95 px-4 py-2.5 backdrop-blur-md xl:block">
+          <div className="mx-auto flex w-full max-w-6xl items-center gap-3 md:max-w-7xl xl:max-w-[min(100%,96rem)]">
+            <div className="min-w-0 flex-1">
+              <AdminAppSearch
+                canCoach={canCoach}
+                canPlatform={canPlatform}
+                variant="topbar"
+                enableHotkey
+              />
+            </div>
+            <Link
+              href="/admin/discounts"
+              className="btn-ghost shrink-0 px-3 py-2 text-xs font-semibold"
+              title="Discount codes"
+            >
+              Discount codes
+            </Link>
+          </div>
+        </div>
         <main className="admin-main mx-auto w-full max-w-6xl flex-1 px-3 py-4 pb-[max(6rem,env(safe-area-inset-bottom))] md:max-w-7xl md:px-6 md:py-6 xl:max-w-[min(100%,96rem)] xl:px-8 xl:pb-8">
           <AdminPersistenceBanner />
           <div className="mb-3 space-y-2">

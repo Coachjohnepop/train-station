@@ -66,7 +66,7 @@ export const COACH_NAV_GROUPS: AdminNavGroup[] = [
     items: [
       {
         href: "/admin/discounts",
-        label: "Create & manage",
+        label: "Discount codes",
         match: (p) => p.startsWith("/admin/discounts"),
       },
     ],
@@ -172,6 +172,11 @@ export const PLATFORM_NAV_GROUPS: AdminNavGroup[] = [
   {
     label: "Commerce",
     items: [
+      {
+        href: "/admin/discounts",
+        label: "Discount codes",
+        match: (p) => p.startsWith("/admin/discounts"),
+      },
       {
         href: "/admin/billing",
         label: "Billing",
