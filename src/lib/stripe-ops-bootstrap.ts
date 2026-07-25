@@ -1,7 +1,12 @@
 import "server-only";
 
 import { getStripe } from "@/lib/stripe";
-import { resolveStripePriceId } from "@/lib/pricing-catalog";
+import {
+  resolveStripePriceId,
+  syncStripePriceForPlan,
+} from "@/lib/pricing-catalog";
+import { isStripeLiveMode, isStripeTestMode } from "@/lib/stripe-price-ids";
+import type { MembershipPlan } from "@/lib/signup-plans";
 
 const TIP_PRODUCT_NAME = "Tip your coach";
 const FEEDBACK_CODE = "FEEDBACK50";
@@ -19,11 +24,23 @@ const TIP_CUSTOM = {
   env: "STRIPE_PRICE_TIP_CUSTOM",
 } as const;
 
+const MEMBERSHIP_DEFAULTS: Array<{
+  planId: MembershipPlan;
+  priceCents: number;
+  env: string;
+}> = [
+  { planId: "member", priceCents: 2500, env: "STRIPE_PRICE_MEMBER" },
+  { planId: "business", priceCents: 5000, env: "STRIPE_PRICE_BUSINESS" },
+  { planId: "pro", priceCents: 85000, env: "STRIPE_PRICE_PRO" },
+];
+
 export type OpsBootstrapResult = {
   mode: "test" | "live" | "unknown";
   accountId: string | null;
+  publishableKeyPrefix: string | null;
   tipProductId: string;
   tipEnv: Record<string, string>;
+  membershipEnv: Record<string, string>;
   feedback: {
     code: string;
     couponId: string;
@@ -168,7 +185,52 @@ async function ensureFeedback50(
 }
 
 /**
- * Idempotent: tip product/prices + FEEDBACK50 on the Stripe account behind STRIPE_SECRET_KEY.
+ * Ensure membership prices exist on the current Stripe account + pricing catalog.
+ * Reuses a valid env/catalog price_ when it still retrieves on this account.
+ */
+async function ensureMembershipPrices(
+  stripe: NonNullable<ReturnType<typeof getStripe>>,
+  notes: string[],
+): Promise<Record<string, string>> {
+  const membershipEnv: Record<string, string> = {};
+
+  for (const row of MEMBERSHIP_DEFAULTS) {
+    let priceId = await resolveStripePriceId(row.planId);
+    let usable = false;
+    if (priceId?.startsWith("price_")) {
+      try {
+        const p = await stripe.prices.retrieve(priceId);
+        if (p.active && p.unit_amount != null) usable = true;
+      } catch {
+        usable = false;
+        notes.push(
+          `${row.env}=${priceId} not usable on this Stripe account — creating a new price.`,
+        );
+      }
+    }
+
+    if (!usable) {
+      const synced = await syncStripePriceForPlan({
+        planId: row.planId,
+        priceCents: row.priceCents,
+      });
+      if ("error" in synced) {
+        notes.push(`Failed ${row.planId}: ${synced.error}`);
+        continue;
+      }
+      priceId = synced.stripePriceId;
+      notes.push(`Created ${row.env}=${priceId} ($${(row.priceCents / 100).toFixed(0)})`);
+    }
+
+    if (priceId) membershipEnv[row.env] = priceId;
+  }
+
+  return membershipEnv;
+}
+
+/**
+ * Idempotent: membership prices + tip product/prices + FEEDBACK50
+ * on the Stripe account behind STRIPE_SECRET_KEY.
  */
 export async function runStripeOpsBootstrap(): Promise<
   OpsBootstrapResult | { error: string }
@@ -176,10 +238,9 @@ export async function runStripeOpsBootstrap(): Promise<
   const stripe = getStripe();
   if (!stripe) return { error: "Stripe is not configured (STRIPE_SECRET_KEY)." };
 
-  const key = process.env.STRIPE_SECRET_KEY?.trim() || "";
-  const mode = key.startsWith("sk_live")
+  const mode = isStripeLiveMode()
     ? "live"
-    : key.startsWith("sk_test")
+    : isStripeTestMode()
       ? "test"
       : "unknown";
 
@@ -192,7 +253,32 @@ export async function runStripeOpsBootstrap(): Promise<
     /* claimable keys may block accounts.retrieve */
   }
 
+  const pub =
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() ||
+    process.env.STRIPE_PUBLISHABLE_KEY?.trim() ||
+    "";
+  const publishableKeyPrefix = pub
+    ? pub.startsWith("pk_live_")
+      ? "pk_live"
+      : pub.startsWith("pk_test_")
+        ? "pk_test"
+        : "other"
+    : null;
+
   const notes: string[] = [];
+  if (mode === "live" && publishableKeyPrefix === "pk_test") {
+    notes.push(
+      "MISMATCH: secret is LIVE but NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is still pk_test. Set matching pk_live and redeploy.",
+    );
+  }
+  if (mode === "test" && publishableKeyPrefix === "pk_live") {
+    notes.push(
+      "MISMATCH: secret is TEST but publishable is pk_live. Align both to Live or both to Test.",
+    );
+  }
+
+  const membershipEnv = await ensureMembershipPrices(stripe, notes);
+
   const tipProductId = await findOrCreateTipProduct(stripe);
   const tipEnv: Record<string, string> = {};
 
@@ -214,23 +300,30 @@ export async function runStripeOpsBootstrap(): Promise<
   const productIds = await recurringMembershipProductIds(stripe);
   if (productIds.length === 0) {
     notes.push(
-      "No membership product IDs resolved — FEEDBACK50 created without applies_to restriction. Set STRIPE_PRICE_MEMBER/BUSINESS and re-run to restrict.",
+      "No membership product IDs resolved — FEEDBACK50 created without applies_to restriction.",
     );
   }
 
   const feedback = await ensureFeedback50(stripe, productIds);
   notes.push(
-    "Paste tipEnv into Vercel Production and redeploy so tips.enabled becomes true.",
+    "Set membershipEnv + tipEnv on Vercel Production (price_… only), then redeploy.",
   );
   notes.push(
-    "Members enter FEEDBACK50 at checkout (no env var). Connect Express still required for platform admin payouts.",
+    "Members enter FEEDBACK50 at checkout. Connect Express still required for platform admin payouts.",
   );
+  if (mode === "live") {
+    notes.push(
+      "Confirm Stripe Live webhook whsec on /api/stripe/webhook for checkout.session.completed + invoice events.",
+    );
+  }
 
   return {
     mode,
     accountId,
+    publishableKeyPrefix,
     tipProductId,
     tipEnv,
+    membershipEnv,
     feedback,
     notes,
   };

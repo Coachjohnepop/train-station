@@ -17,7 +17,21 @@ export const STRIPE_TEST_PUBLISHABLE_KEY =
 
 export function isStripeTestMode(): boolean {
   const key = process.env.STRIPE_SECRET_KEY?.trim() || "";
-  return key.startsWith("sk_test_");
+  // Standard + restricted keys (rk_ / rkcs_)
+  return (
+    key.startsWith("sk_test_") ||
+    key.startsWith("rk_test_") ||
+    key.startsWith("rkcs_test")
+  );
+}
+
+export function isStripeLiveMode(): boolean {
+  const key = process.env.STRIPE_SECRET_KEY?.trim() || "";
+  return (
+    key.startsWith("sk_live_") ||
+    key.startsWith("rk_live_") ||
+    key.startsWith("rkcs_live")
+  );
 }
 
 /** Test-mode demo prices only — never override env when sk_live is set. */

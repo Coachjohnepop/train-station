@@ -31,8 +31,12 @@ function envStripePriceId(planId: string): string | null {
   const offer = getOfferDefinition(planId);
   if (!offer?.stripePriceEnv) return null;
   const primary = process.env[offer.stripePriceEnv]?.trim();
-  if (primary) return primary;
-  if (planId === "pro") return process.env.STRIPE_PRICE_FIRST_CLASS_1ON1?.trim() || null;
+  // Guard against accidental paste of sk_/pk_ into STRIPE_PRICE_* (broke Live cutover).
+  if (primary?.startsWith("price_")) return primary;
+  if (planId === "pro") {
+    const legacy = process.env.STRIPE_PRICE_FIRST_CLASS_1ON1?.trim();
+    if (legacy?.startsWith("price_")) return legacy;
+  }
   return null;
 }
 
