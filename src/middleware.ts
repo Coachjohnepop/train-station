@@ -38,6 +38,8 @@ const PUBLIC_API_PREFIXES = [
   "/api/brand/public",
   // Web Push VAPID public key is meant to be public (private key stays server-side)
   "/api/push/vapid-public-key",
+  // Vercel Cron + manual Bearer CRON_SECRET — each route still authorizes
+  "/api/cron",
 ];
 
 function isPublicPage(pathname: string): boolean {
