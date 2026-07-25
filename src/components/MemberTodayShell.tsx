@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef, type TouchEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { MEMBER_TODAY_RESET_EVENT } from "@/lib/member-today-home";
@@ -18,6 +18,7 @@ import {
 import type { ResolvedDayPart } from "@/lib/program-day-sessions";
 import FreeContentLockCard from "@/components/FreeContentLockCard";
 import type { ContentAccessResult } from "@/lib/gamification-content-access";
+import { LATE_WORKOUT_SCORE_HIT_PERCENT } from "@/lib/member-workout-late";
 
 type Props = {
   todayIso: string;
@@ -48,14 +49,18 @@ type Props = {
   programBlock?: ResolvedProgramBlock | null;
   /** Free-ticket content gate — keep day wheel; lock only the player. */
   contentAccess?: ContentAccessResult | null;
+  /** Viewing yesterday’s plan from Today — 20% score hit when logging. */
+  isLateCatchUp?: boolean;
 };
 
 function DaySummaryCard({
   summary,
   isToday,
+  previewOnly = false,
 }: {
   summary: MemberDaySummary;
   isToday: boolean;
+  previewOnly?: boolean;
 }) {
   const {
     phase,
@@ -74,10 +79,21 @@ function DaySummaryCard({
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-            {phase === "past" ? "What you did" : phase === "future" ? "Coming up" : "Today"}
+            {previewOnly
+              ? "Preview"
+              : phase === "past"
+                ? "What you did"
+                : phase === "future"
+                  ? "Coming up"
+                  : "Today"}
             <span className="mx-1">·</span>
             {dayLabel}
           </p>
+          {previewOnly ? (
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              Starts tomorrow — swipe back to Today to train.
+            </p>
+          ) : null}
           <h2 className="mt-1 text-lg font-semibold leading-tight">
             {scheduleDayHeadline(workoutName, dayLabel, { phase, visibilityTier })}
           </h2>
@@ -179,11 +195,17 @@ export default function MemberTodayShell({
   autoPromptFollowUpBooking = false,
   contentAccess = null,
   programBlock = null,
+  isLateCatchUp = false,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isToday = selectedDate === todayIso;
-  const showFullWorkout = isToday && !!workout && (intakeComplete || hasCoachSession);
+  const isTomorrow =
+    days.find((d) => d.iso === selectedDate)?.phase === "future" ||
+    (!isToday && !isLateCatchUp && selectedDate > todayIso);
+  /** Today or yesterday catch-up may open the full console. */
+  const showFullWorkout =
+    (isToday || isLateCatchUp) && !!workout && (intakeComplete || hasCoachSession);
   const multiPart = Boolean(dayParts && dayParts.length > 1);
   const showWarmupFlow =
     !intakeComplete && !!warmupWorkout && days.length > 0 && !hasCoachSession;
@@ -198,6 +220,31 @@ export default function MemberTodayShell({
       router.replace(`/member/today${suffix}`, { scroll: false });
     },
     [router, searchParams, todayIso],
+  );
+
+  const swipeOrigin = useRef<{ x: number; y: number } | null>(null);
+  const onSwipeTouchStart = useCallback((e: TouchEvent) => {
+    const t = e.changedTouches[0] || e.touches[0];
+    if (!t) return;
+    swipeOrigin.current = { x: t.clientX, y: t.clientY };
+  }, []);
+  const onSwipeTouchEnd = useCallback(
+    (e: TouchEvent) => {
+      const origin = swipeOrigin.current;
+      swipeOrigin.current = null;
+      if (!origin || days.length < 2) return;
+      const t = e.changedTouches[0];
+      if (!t) return;
+      const dx = t.clientX - origin.x;
+      const dy = t.clientY - origin.y;
+      if (Math.abs(dx) < 56 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+      const idx = days.findIndex((d) => d.iso === selectedDate);
+      if (idx < 0) return;
+      // Swipe left → tomorrow / next; swipe right → yesterday / prev
+      if (dx < 0 && idx < days.length - 1) selectDate(days[idx + 1].iso);
+      else if (dx > 0 && idx > 0) selectDate(days[idx - 1].iso);
+    },
+    [days, selectedDate, selectDate],
   );
 
   const selectPart = useCallback(
@@ -236,6 +283,8 @@ export default function MemberTodayShell({
     <div
       id="member-today-top"
       className={`scroll-mt-4 min-w-0 space-y-4 overflow-x-clip ${todayGold ? "member-today-gold-shell" : ""}`}
+      onTouchStart={onSwipeTouchStart}
+      onTouchEnd={onSwipeTouchEnd}
     >
       {programBlock?.status === "pending" && (
         <div className="rounded-xl border border-[#7c3aed]/40 bg-[#7c3aed]/10 px-4 py-3 text-sm">
@@ -273,7 +322,11 @@ export default function MemberTodayShell({
             ? programBlock?.status === "pending"
               ? "Before Day 1"
               : "Today"
-            : "Your schedule"}
+            : isLateCatchUp
+              ? "Yesterday (catch-up)"
+              : isTomorrow
+                ? "Tomorrow (preview)"
+                : "Your schedule"}
         </h1>
         {isToday && rampHighlight && autoPromptIntroBooking ? (
           <p className="mt-1 text-xs font-medium text-[var(--ramp-gold-light)] sm:text-sm">
@@ -282,7 +335,22 @@ export default function MemberTodayShell({
         ) : (
           <p className="mt-1 text-xs text-[var(--muted)] sm:text-sm">{subtitle}</p>
         )}
+        {days.length >= 2 ? (
+          <p className="mt-1 text-[10px] text-[var(--muted)] sm:text-xs">
+            Swipe the workout left / right for yesterday · today · tomorrow
+          </p>
+        ) : null}
       </div>
+
+      {isLateCatchUp && showFullWorkout ? (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-100">
+          <p className="font-semibold">Late catch-up</p>
+          <p className="mt-0.5 text-xs text-amber-100/90">
+            You can finish yesterday’s workout now. Score for this log is reduced by{" "}
+            {LATE_WORKOUT_SCORE_HIT_PERCENT}% (late).
+          </p>
+        </div>
+      ) : null}
 
       {rollup && days.length > 0 && (
         <div
@@ -317,8 +385,12 @@ export default function MemberTodayShell({
         />
       )}
 
-      {!showWarmupFlow && !isToday && selectedSummary && (
-        <DaySummaryCard summary={selectedSummary} isToday={false} />
+      {!showWarmupFlow && !showFullWorkout && selectedSummary && (
+        <DaySummaryCard
+          summary={selectedSummary}
+          isToday={isToday}
+          previewOnly={isTomorrow}
+        />
       )}
 
       {showFollowUpCard && (
@@ -344,15 +416,13 @@ export default function MemberTodayShell({
         </>
       )}
 
-      {!showWarmupFlow && isToday && !showFullWorkout && selectedSummary && (
-        <DaySummaryCard summary={selectedSummary} isToday />
-      )}
-
       {showFullWorkout && workout && (
-        <div className="min-w-0 sm:mx-0">
+        <div className="min-w-0 touch-pan-y sm:mx-0">
           {programSlug === "adult" && (
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
-              <span className="text-xs text-[var(--muted)]">Today&apos;s track</span>
+              <span className="text-xs text-[var(--muted)]">
+                {isLateCatchUp ? "Yesterday's track" : "Today's track"}
+              </span>
               <MemberTrainingLocationToggle
                 programSlug={programSlug}
                 initialLocation={trainingLocation}

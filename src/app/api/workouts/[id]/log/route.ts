@@ -4,6 +4,12 @@ import { requireSession, assertUserScope } from "@/lib/api-auth";
 import { isStaffRole } from "@/lib/staff-access";
 import { createWorkoutLogAndPerformances, type LogExerciseInput } from "@/lib/data/user-data";
 import { awardGamificationPoints } from "@/lib/member-gamification-store";
+import { getGamificationPointsConfig } from "@/lib/gamification-config";
+import {
+  canLogSessionDate,
+  lateAdjustedPoints,
+  lateScoreLabel,
+} from "@/lib/member-workout-late";
 import { localTodayIso } from "@/lib/program-calendar";
 
 const logExerciseSchema = z.object({
@@ -73,12 +79,29 @@ export async function POST(request: Request, { params }: Params) {
 
     let gamification: Awaited<ReturnType<typeof awardGamificationPoints>> | null = null;
     let gamificationWarning: string | null = null;
+    let lateScore: { late: boolean; hitPercent: number } | null = null;
     try {
       const sessionDate = parsed.data.sessionDate || localTodayIso();
+      const todayIso = localTodayIso();
+      if (!isStaffRole(auth.session.role)) {
+        const allowed = canLogSessionDate(sessionDate, todayIso);
+        if (!allowed.ok) {
+          return NextResponse.json({ detail: allowed.reason, locked: true }, { status: 403 });
+        }
+      }
+      const pointsConfig = await getGamificationPointsConfig();
+      const adjusted = lateAdjustedPoints(
+        pointsConfig.workout_logged,
+        sessionDate,
+        todayIso,
+      );
+      lateScore = { late: adjusted.late, hitPercent: adjusted.hitPercent };
       gamification = await awardGamificationPoints({
         userId: uid,
         eventId: `workout:${workoutId}:${sessionDate}`,
         type: "workout_logged",
+        points: adjusted.points,
+        label: adjusted.late ? lateScoreLabel(adjusted.hitPercent) : undefined,
         programSlug: parsed.data.programSlug ?? null,
       });
     } catch (gamErr: unknown) {
@@ -93,6 +116,8 @@ export async function POST(request: Request, { params }: Params) {
       ? {
           ...gamification,
           pointsEarned: gamification.pointsEarned,
+          late: lateScore?.late ?? false,
+          lateHitPercent: lateScore?.hitPercent ?? 0,
         }
       : null;
 

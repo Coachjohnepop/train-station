@@ -98,16 +98,32 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     enrollments[primaryProgram?.slug ?? "adult"]?.trainingLocation,
   );
 
+  // Today ± 1 day only (swipe window: yesterday | today | tomorrow).
   const dayWindow = primaryProgram
     ? await buildMemberDayWindow(uid, primaryProgram.slug, loggedSet, {
-        rollingDays: 5,
-        daysBefore: 2,
+        rollingDays: 3,
+        daysBefore: 1,
       })
     : null;
 
   const programBlock = dayWindow?.block ?? null;
   const programTodayKey = dayWindow?.programTodayKey ?? calendarToday;
-  const viewDate = sp.date || programTodayKey;
+  const rawViewDate = sp.date || programTodayKey;
+  const intakeComplete =
+    !uid.startsWith("member-") || isCoachIntakeComplete(profile);
+  const warmupWorkout = !intakeComplete
+    ? buildWarmupWorkoutView(memberName, coachSettings.warmupBlocks)
+    : null;
+  const intakeRampDays =
+    !intakeComplete && warmupWorkout && !(dayWindow?.days.length)
+      ? buildIntakeRampPlaceholderDays(calendarToday, 3, 1)
+      : null;
+  const memberDays = dayWindow?.days.length ? dayWindow.days : intakeRampDays ?? [];
+  const memberRollup = dayWindow?.rollup ?? (intakeRampDays ? rollupForMemberDays(intakeRampDays) : null);
+  // Clamp deep-links outside the 3-day window back to program today.
+  const allowedIsos = new Set(memberDays.map((d) => d.iso));
+  const viewDate = allowedIsos.has(rawViewDate) ? rawViewDate : programTodayKey;
+
   const partIndexRaw = sp.part ? Number(sp.part) : undefined;
   const partIndex =
     partIndexRaw && Number.isFinite(partIndexRaw) && partIndexRaw >= 1
@@ -163,23 +179,23 @@ export default async function MemberTodayPage({ searchParams }: Props) {
         ? "Your 28-day block has ended — renew to continue"
         : source === "program"
           ? `Program schedule — ${scheduleLabel}`
-          : "Spin the day wheel to see what you've done and what's ahead.";
+          : "Swipe yesterday · today · tomorrow — only 3 days.";
 
-  const intakeComplete =
-    !uid.startsWith("member-") || isCoachIntakeComplete(profile);
-  const warmupWorkout = !intakeComplete
-    ? buildWarmupWorkoutView(memberName, coachSettings.warmupBlocks)
-    : null;
-  const intakeRampDays =
-    !intakeComplete && warmupWorkout && !(dayWindow?.days.length)
-      ? buildIntakeRampPlaceholderDays(calendarToday)
-      : null;
-  const memberDays = dayWindow?.days.length ? dayWindow.days : intakeRampDays ?? [];
-  const memberRollup = dayWindow?.rollup ?? (intakeRampDays ? rollupForMemberDays(intakeRampDays) : null);
   const selectedSummary = memberDays.find((d) => d.iso === viewDate) ?? null;
   const stretchPreview = memberDays.length ? nextDayStretchPreview(memberDays, programTodayKey) : [];
   const tomorrowDay = memberDays.length ? nextMemberDay(memberDays, programTodayKey) : null;
-  const memberWorkout = viewDate === programTodayKey ? workout : null;
+  // Today and yesterday may run the full workout; tomorrow is preview only.
+  const yesterdayIso = toIsoDate(
+    (() => {
+      const d = new Date(`${programTodayKey}T12:00:00`);
+      d.setDate(d.getDate() - 1);
+      return d;
+    })(),
+  );
+  const canStartThisDate = viewDate === programTodayKey || viewDate === yesterdayIso;
+  const memberWorkout = canStartThisDate ? workout : null;
+  const isLateCatchUp = viewDate === yesterdayIso;
+  const clampedViewDate = viewDate;
 
   const enrollSlug = primaryProgram?.slug ?? "adult";
   const enrollPos = enrollments[enrollSlug];
@@ -237,7 +253,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
           <Suspense fallback={<div className="card h-40 animate-pulse p-4" />}>
             <MemberTodayShell
               todayIso={programTodayKey}
-              selectedDate={viewDate}
+              selectedDate={clampedViewDate}
               days={memberDays}
               rollup={memberRollup}
               selectedSummary={selectedSummary}
@@ -248,8 +264,12 @@ export default async function MemberTodayPage({ searchParams }: Props) {
               trainingLocation={trainingLocation}
               targetUserId={uid}
               scheduleLabel={scheduleLabel}
-              calendarDateLabel={formatDateLabel(viewDate)}
-              subtitle={subtitle}
+              calendarDateLabel={formatDateLabel(clampedViewDate)}
+              subtitle={
+                isLateCatchUp
+                  ? "Catch-up day — finish yesterday’s workout (−20% score)."
+                  : subtitle
+              }
               dayParts={parts && parts.length > 1 ? parts : undefined}
               activePartIndex={activePartIndex}
               hasCoachSession={!!session}
@@ -262,6 +282,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
               autoPromptFollowUpBooking={coachSettings.autoPromptFollowUpBooking}
               programBlock={programBlock}
               contentAccess={asInstructor ? null : contentAccess}
+              isLateCatchUp={isLateCatchUp}
             />
           </Suspense>
 

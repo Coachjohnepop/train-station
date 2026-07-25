@@ -7,7 +7,8 @@ const MAX_CHIP_W = 76;
 const MIN_CHIP_W = 48;
 const GAP_DESKTOP = 8;
 const GAP_MOBILE = 4;
-const VISIBLE_DAYS = 5;
+/** Member Today shows a 3-day window (yesterday · today · tomorrow). */
+const VISIBLE_DAYS = 3;
 
 type WheelMetrics = {
   chipW: number;
