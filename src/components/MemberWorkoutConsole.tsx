@@ -321,7 +321,12 @@ export default function MemberWorkoutConsole({
     // Live floor defaults rest ON so set checkoffs always spin a timer unless coach turns it off.
     const enabled = workout.restTimerEnabled !== false;
     setSessionRestEnabled(enabled);
-    const sound = normalizeRestTimerSound(workout.restTimerSound);
+    // Maintain always defaults to Cybertruck; null workout sound → cybertruck.
+    const sound = normalizeRestTimerSound(
+      programSlug === "maintain"
+        ? workout.restTimerSound || DEFAULT_REST_TIMER_SOUND
+        : workout.restTimerSound,
+    );
     setSessionRestSound(sound);
     restSoundRef.current = sound;
     restSettingsRef.current = {
@@ -336,6 +341,7 @@ export default function MemberWorkoutConsole({
     workout.restTimerSeconds,
     workout.restTimerSound,
     workout.exercises,
+    programSlug,
   ]);
 
   useEffect(() => {
@@ -488,8 +494,22 @@ export default function MemberWorkoutConsole({
         setSessionRestSeconds(secs);
         restSettingsRef.current = { ...restSettingsRef.current, seconds: secs };
       }
-      if (typeof session.restTimerSound === "string" && session.restTimerSound) {
+      // Coach floor may push a chosen sound; members keep workout/default (Cybertruck).
+      // Old live rows often still say "whistle" from the previous default — don't clobber.
+      if (
+        canCoachRestSettings &&
+        typeof session.restTimerSound === "string" &&
+        session.restTimerSound
+      ) {
         const sound = normalizeRestTimerSound(session.restTimerSound);
+        setSessionRestSound(sound);
+        restSoundRef.current = sound;
+        restSettingsRef.current = { ...restSettingsRef.current, sound };
+        preloadRestCompleteSound(sound);
+      } else if (programSlug === "maintain" || !session.restTimerSound) {
+        const sound = normalizeRestTimerSound(
+          workout.restTimerSound ?? DEFAULT_REST_TIMER_SOUND,
+        );
         setSessionRestSound(sound);
         restSoundRef.current = sound;
         restSettingsRef.current = { ...restSettingsRef.current, sound };
@@ -569,7 +589,15 @@ export default function MemberWorkoutConsole({
       }
       applyingRemote.current = false;
     },
-    [instructorName, coachFloorMode, workout.exercises, applyRemoteRestActive],
+    [
+      instructorName,
+      coachFloorMode,
+      canCoachRestSettings,
+      programSlug,
+      workout.exercises,
+      workout.restTimerSound,
+      applyRemoteRestActive,
+    ],
   );
 
   const flushWarmupSave = useCallback(() => {
