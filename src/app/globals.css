@@ -771,34 +771,40 @@ table.data th {
   color: var(--ramp-gold-light);
 }
 
-/* Coach live floor — compact square set buttons, 6 per row then wrap */
+/*
+ * Coach live floor checkoff row:
+ * - Weight first column: a bit wider (3-digit lbs readable) — not a tiny equal square
+ * - Set chips fill remaining width, dense wrap, no dead padding band
+ * Goal: type weight easily without bloating the student card.
+ */
 .coach-live-checkoff .coach-floor-set-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
+  display: grid;
+  grid-template-columns: minmax(3.4rem, 3.85rem) repeat(auto-fit, minmax(2.35rem, 1fr));
+  gap: 0.28rem;
+  align-items: stretch;
+  width: 100%;
 }
 
-/* Weight cell — same footprint as a set checkoff, far left of the row */
+/* Weight — first column; readable digits, same row height as set chips */
 .coach-live-checkoff .coach-floor-weight-box {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.05rem;
-  flex: 0 0 calc((100% - 1.25rem) / 6);
-  max-width: calc((100% - 1.25rem) / 6);
-  aspect-ratio: 1;
-  min-height: 0;
-  padding: 0.1rem;
-  border-radius: 6px;
-  border: 1.5px solid color-mix(in srgb, var(--accent) 40%, var(--border));
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface-2));
+  gap: 0.1rem;
+  min-height: 2.5rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.2rem 0.15rem;
+  border-radius: 8px;
+  border: 1.5px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-2));
   cursor: text;
 }
 
 .coach-live-checkoff .coach-floor-weight-box:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
 .coach-live-checkoff .coach-floor-weight-box__input {
@@ -807,8 +813,9 @@ table.data th {
   border: 0;
   background: transparent;
   text-align: center;
-  font-size: 0.625rem;
-  font-weight: 700;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
   line-height: 1.1;
   color: var(--text);
   padding: 0;
@@ -832,28 +839,28 @@ table.data th {
 }
 
 .coach-live-checkoff .coach-floor-weight-box__label {
-  font-size: 0.4rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  opacity: 0.85;
+  opacity: 0.9;
   line-height: 1;
   color: var(--muted);
   pointer-events: none;
 }
 
+/* Set chips — equal fill of leftover columns; square-ish, not oversized */
 .coach-live-checkoff .coach-floor-set-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0;
-  flex: 0 0 calc((100% - 1.25rem) / 6);
-  max-width: calc((100% - 1.25rem) / 6);
-  aspect-ratio: 1;
-  min-height: 0;
-  padding: 0.1rem;
-  border-radius: 6px;
+  gap: 0.05rem;
+  min-height: 2.5rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.15rem 0.1rem;
+  border-radius: 8px;
   border: 1.5px solid var(--border);
   background: var(--surface-2);
   font-weight: 700;
@@ -881,21 +888,38 @@ table.data th {
 }
 
 .coach-live-checkoff .coach-floor-set-btn--done .coach-floor-set-btn__num {
-  font-size: 0.7rem;
+  font-size: 0.85rem;
 }
 
 .coach-live-checkoff .coach-floor-set-btn__num {
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   line-height: 1;
 }
 
 .coach-live-checkoff .coach-floor-set-btn__label {
-  font-size: 0.4rem;
+  font-size: 0.45rem;
   font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   opacity: 0.85;
   line-height: 1;
+}
+
+/* Narrow student tiles: keep weight usable, sets still tappable */
+@media (max-width: 380px) {
+  .coach-live-checkoff .coach-floor-set-grid {
+    grid-template-columns: minmax(3.15rem, 3.5rem) repeat(auto-fit, minmax(2.15rem, 1fr));
+    gap: 0.22rem;
+  }
+
+  .coach-live-checkoff .coach-floor-weight-box,
+  .coach-live-checkoff .coach-floor-set-btn {
+    min-height: 2.35rem;
+  }
+
+  .coach-live-checkoff .coach-floor-weight-box__input {
+    font-size: 0.75rem;
+  }
 }
 
 .live-floor-grid {

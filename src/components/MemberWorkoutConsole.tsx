@@ -1837,8 +1837,8 @@ export default function MemberWorkoutConsole({
                       const restS = resolveSecondsForBlock(block);
                       if (!restS) return null;
                       return (
-                        <p className="mt-1 text-[10px] font-medium text-[var(--muted)]">
-                          Rest {restS}s — popup opens on set check, closes when it buzzes
+                        <p className="mt-0.5 text-[9px] font-medium leading-tight text-[var(--muted)]">
+                          Rest {restS}s on check
                         </p>
                       );
                     })()}
