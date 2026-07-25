@@ -60,8 +60,11 @@ const LEGACY_SCHEME_MAP: Record<
 > = {
   sets_1_5: { approach: "standard" },
   sets_10: { approach: "standard" },
+  /** Maintain seed historically used this; treat as standard sets. */
+  straight: { approach: "standard" },
   drop_sets: { approach: "drop_sets" },
   timed_sets: { approach: "timed" },
+  drop: { approach: "drop_sets" },
   rep_6_8_10: { approach: "drop_sets", repPattern: "rep_6_8_10" },
   rep_8_10_12: { approach: "drop_sets", repPattern: "rep_8_10_12" },
   rep_12_10_8: { approach: "drop_sets", repPattern: "rep_12_10_8" },

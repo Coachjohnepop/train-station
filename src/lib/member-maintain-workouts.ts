@@ -543,9 +543,80 @@ async function pickExercisesByHints(hints: string[], limit = 7): Promise<string[
   return picked;
 }
 
+/** Maintain default: 3×10 medium, except holds/planks → 3×45s timed. */
+const MAINTAIN_SETS = 3;
+const MAINTAIN_REPS = "10";
+const MAINTAIN_REST_SEC = 90;
+
+function isHoldStyleExercise(name: string): boolean {
+  const n = name.toLowerCase();
+  return (
+    n.includes("plank") ||
+    n.includes("hold") ||
+    n.includes("dead hang") ||
+    n.includes("wall sit")
+  );
+}
+
+function maintainExerciseRx(exerciseName: string): {
+  setScheme: string;
+  repPattern: string | null;
+  reps: string;
+  sets: number;
+  setCount: number;
+  weightTier: string;
+  restBetweenSetsSec: number;
+  notes: string;
+  phase: { phaseType: "REPS" | "TIMED"; reps: number | null; durationSec: number | null };
+} {
+  if (isHoldStyleExercise(exerciseName)) {
+    return {
+      setScheme: "timed",
+      repPattern: null,
+      reps: "45s",
+      sets: MAINTAIN_SETS,
+      setCount: MAINTAIN_SETS,
+      weightTier: "light",
+      restBetweenSetsSec: 60,
+      notes: "Hold solid form ~45s — 3 rounds. Maintain pace.",
+      phase: { phaseType: "TIMED", reps: null, durationSec: 45 },
+    };
+  }
+  // Isolation-ish: a bit higher rep
+  const lowerName = exerciseName.toLowerCase();
+  const isolation =
+    lowerName.includes("curl") ||
+    lowerName.includes("extension") ||
+    lowerName.includes("raise") ||
+    lowerName.includes("fly") ||
+    lowerName.includes("kick");
+  const reps = isolation ? "12" : MAINTAIN_REPS;
+  return {
+    setScheme: "standard",
+    repPattern: null,
+    reps,
+    sets: MAINTAIN_SETS,
+    setCount: MAINTAIN_SETS,
+    weightTier: "medium",
+    restBetweenSetsSec: MAINTAIN_REST_SEC,
+    notes: "Maintain pace — solid form, finish in ~45 minutes.",
+    phase: {
+      phaseType: "REPS",
+      reps: Number(reps) || 10,
+      durationSec: null,
+    },
+  };
+}
+
 async function createMaintainWorkout(spec: (typeof DEFAULT_SPECS)[number]): Promise<string | null> {
   const exerciseIds = await pickExercisesByHints(spec.exerciseHints, 7);
   if (exerciseIds.length < 4) return null;
+
+  const library = await prisma.exercise.findMany({
+    where: { id: { in: exerciseIds } },
+    select: { id: true, name: true },
+  });
+  const nameById = new Map(library.map((e) => [e.id, e.name]));
 
   const workout = await prisma.workout.create({
     data: {
@@ -553,26 +624,115 @@ async function createMaintainWorkout(spec: (typeof DEFAULT_SPECS)[number]): Prom
       description: encodeMaintainMeta(spec.key, spec.muscleGroup, spec.blurb),
       source: MAINTAIN_WORKOUT_SOURCE,
       restTimerEnabled: true,
-      restTimerSeconds: 90,
+      restTimerSeconds: MAINTAIN_REST_SEC,
+      restTimerSound: "cybertruck",
       exercises: {
-        create: exerciseIds.map((exerciseId, sortOrder) => ({
-          exerciseId,
-          sortOrder,
-          setScheme: "straight",
-          repPattern: "standard",
-          reps: "10",
-          sets: 3,
-          weightTier: "moderate",
-          restBetweenSetsSec: 90,
-          notes: "Maintain pace — solid form, finish in ~45 minutes.",
-        })),
+        create: exerciseIds.map((exerciseId, sortOrder) => {
+          const rx = maintainExerciseRx(nameById.get(exerciseId) || "");
+          return {
+            exercise: { connect: { id: exerciseId } },
+            sortOrder,
+            setScheme: rx.setScheme,
+            repPattern: rx.repPattern,
+            reps: rx.reps,
+            sets: rx.sets,
+            setCount: rx.setCount,
+            weightTier: rx.weightTier,
+            restBetweenSetsSec: rx.restBetweenSetsSec,
+            notes: rx.notes,
+            phases: {
+              create: [
+                {
+                  phaseIndex: 0,
+                  phaseType: rx.phase.phaseType,
+                  reps: rx.phase.reps,
+                  durationSec: rx.phase.durationSec,
+                  repKind: "FIXED" as const,
+                },
+              ],
+            },
+          };
+        }),
       },
     },
   });
   return workout.id;
 }
 
-/** Ensure default maintain library exists (idempotent). */
+/** Fix existing maintain rows: standard 3×10 (or timed holds), setCount, phases. */
+export async function repairMaintainWorkoutPrescriptions(): Promise<number> {
+  if (isDemoMode()) return 0;
+
+  const rows = await prisma.workoutExercise.findMany({
+    where: { workout: { source: MAINTAIN_WORKOUT_SOURCE } },
+    select: {
+      id: true,
+      setScheme: true,
+      reps: true,
+      sets: true,
+      setCount: true,
+      weightTier: true,
+      exercise: { select: { name: true } },
+      phases: { select: { id: true } },
+    },
+  });
+
+  let fixed = 0;
+  for (const row of rows) {
+    const rx = maintainExerciseRx(row.exercise.name);
+    const needsFix =
+      row.setScheme !== rx.setScheme ||
+      row.reps !== rx.reps ||
+      row.sets !== rx.sets ||
+      row.setCount !== rx.setCount ||
+      row.weightTier !== rx.weightTier ||
+      row.phases.length === 0;
+
+    if (!needsFix) continue;
+
+    await prisma.workoutExercise.update({
+      where: { id: row.id },
+      data: {
+        setScheme: rx.setScheme,
+        repPattern: rx.repPattern,
+        reps: rx.reps,
+        sets: rx.sets,
+        setCount: rx.setCount,
+        weightTier: rx.weightTier,
+        restBetweenSetsSec: rx.restBetweenSetsSec,
+        notes: rx.notes,
+      },
+    });
+
+    if (row.phases.length === 0) {
+      await prisma.workoutSetPhase.create({
+        data: {
+          workoutExerciseId: row.id,
+          phaseIndex: 0,
+          phaseType: rx.phase.phaseType,
+          reps: rx.phase.reps,
+          durationSec: rx.phase.durationSec,
+          repKind: "FIXED",
+        },
+      });
+    } else {
+      // Refresh first phase to match rx
+      await prisma.workoutSetPhase.updateMany({
+        where: { workoutExerciseId: row.id, phaseIndex: 0 },
+        data: {
+          phaseType: rx.phase.phaseType,
+          reps: rx.phase.reps,
+          durationSec: rx.phase.durationSec,
+          repKind: "FIXED",
+        },
+      });
+    }
+    fixed += 1;
+  }
+  return fixed;
+}
+
+/** Ensure default maintain library exists (idempotent) and prescriptions are complete. */
 export async function ensureDefaultMaintainWorkouts(): Promise<void> {
   if (isDemoMode()) return;
 
@@ -591,6 +751,13 @@ export async function ensureDefaultMaintainWorkouts(): Promise<void> {
     } catch (e) {
       console.warn("[maintain] seed failed", spec.key, e);
     }
+  }
+
+  try {
+    const fixed = await repairMaintainWorkoutPrescriptions();
+    if (fixed > 0) console.info(`[maintain] repaired ${fixed} exercise prescriptions`);
+  } catch (e) {
+    console.warn("[maintain] repair failed", e);
   }
 }
 

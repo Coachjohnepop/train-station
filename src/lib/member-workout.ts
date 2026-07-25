@@ -109,7 +109,8 @@ async function getMemberWorkoutFromPrisma(
         setScheme: item.setScheme,
         repPattern: item.repPattern,
         reps: item.reps,
-        sets: item.sets,
+        // Prefer structured setCount; fall back to legacy sets column.
+        sets: item.setCount ?? item.sets,
         weightTier: item.weightTier,
         notes: item.notes,
         restSec: item.restSec,
