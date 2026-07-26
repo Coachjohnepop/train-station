@@ -10,6 +10,38 @@ type Props = {
   maintainAccess?: MaintainAccess | null;
 };
 
+function maintainTileSubtitle(access: MaintainAccess | null, dayComplete: boolean): string {
+  if (!access) return "Business+";
+  if (dayComplete) return "Day complete";
+  if (access.mode === "full") return "Unlimited";
+  if (access.mode === "earned" && access.usesRemaining != null) {
+    return `${access.usesRemaining} left this month`;
+  }
+  if (access.mode === "locked") {
+    if (!access.showUpsMet) {
+      return `Earn · ${access.showUps}/${access.showUpsNeeded} show-ups`;
+    }
+    if (!access.onDemandDone) return "Earn · finish on-demand";
+    return "Locked · earn or upgrade";
+  }
+  return "Locked · earn or upgrade";
+}
+
+/** Short hover / long-press friendly copy for locked Coach Class. */
+function maintainTileTitle(access: MaintainAccess | null, dayComplete: boolean): string {
+  if (dayComplete) {
+    return "You already trained today — Quick maintain opens again tomorrow.";
+  }
+  if (!access) return "Quick maintain — Business Class perk.";
+  if (access.allowed) {
+    return access.detail || access.headline;
+  }
+  return (
+    access.detail ||
+    `Coach Class: log ${access.showUpsNeeded} workouts this month (${access.showUps}/${access.showUpsNeeded}) and finish on-demand content for ${access.usesLimit ?? 5} Quick maintain uses — or upgrade to Business for unlimited.`
+  );
+}
+
 export default function MemberTodayHub({
   dashboard,
   maintainAccess = null,
@@ -20,6 +52,7 @@ export default function MemberTodayHub({
   const maintainHref = maintainAccess
     ? "/member/today#quick-maintain"
     : "/member/account";
+  const maintainTitle = maintainTileTitle(maintainAccess, dayComplete);
 
   return (
     <div className="space-y-3">
@@ -33,6 +66,7 @@ export default function MemberTodayHub({
           </Link>
         </div>
       ) : null}
+      {/* Primary tools first; Quick maintain last — not front-and-center for Coach Class. */}
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         <Link
           href="/member/chat"
@@ -43,41 +77,6 @@ export default function MemberTodayHub({
             <p className="text-[10px] text-[var(--muted)]">Text your coach</p>
           </div>
           <span className="text-xs font-medium text-accent">→</span>
-        </Link>
-
-        <Link
-          href={maintainHref}
-          className={`card relative flex items-center justify-between gap-2 overflow-hidden p-3 transition ${
-            dayComplete
-              ? "border-[color-mix(in_srgb,var(--success)_30%,var(--border))]"
-              : maintainLocked
-                ? "opacity-60 grayscale-[0.4] hover:opacity-80"
-                : "hover-accent-border"
-          }`}
-        >
-          {dayComplete ? <DayCompleteStamp className="rounded-[inherit]" /> : null}
-          <div className={dayComplete ? "relative z-[1] opacity-40" : undefined}>
-            <p className="text-sm font-semibold">Maintain</p>
-            <p className="text-[10px] text-[var(--muted)]">
-              {dayComplete
-                ? "Day complete"
-                : maintainAccess?.mode === "full"
-                  ? "Unlimited"
-                  : maintainAccess?.mode === "earned" &&
-                      maintainAccess.usesRemaining != null
-                    ? `${maintainAccess.usesRemaining} left`
-                    : maintainAccess
-                      ? "Locked · earn or upgrade"
-                      : "Business+"}
-            </p>
-          </div>
-          <span
-            className={`relative z-[1] text-xs font-medium ${
-              dayComplete ? "text-[var(--success)]" : "text-accent"
-            }`}
-          >
-            →
-          </span>
         </Link>
 
         <Link
@@ -108,6 +107,42 @@ export default function MemberTodayHub({
             </p>
           </div>
           <span className="text-xs font-medium text-accent">→</span>
+        </Link>
+
+        <Link
+          href={maintainHref}
+          title={maintainTitle}
+          aria-label={
+            maintainLocked && !dayComplete
+              ? `Quick maintain locked. ${maintainTitle}`
+              : "Quick maintain"
+          }
+          className={`card relative flex items-center justify-between gap-2 overflow-hidden p-3 transition ${
+            dayComplete
+              ? "border-[color-mix(in_srgb,var(--success)_30%,var(--border))]"
+              : maintainLocked
+                ? "opacity-55 grayscale-[0.45] hover:opacity-75"
+                : "hover-accent-border"
+          }`}
+        >
+          {dayComplete ? <DayCompleteStamp className="rounded-[inherit]" /> : null}
+          <div className={dayComplete ? "relative z-[1] opacity-40" : undefined}>
+            <p className="text-sm font-semibold">Quick maintain</p>
+            <p className="text-[10px] text-[var(--muted)]">
+              {maintainTileSubtitle(maintainAccess, dayComplete)}
+            </p>
+          </div>
+          <span
+            className={`relative z-[1] text-xs font-medium ${
+              dayComplete
+                ? "text-[var(--success)]"
+                : maintainLocked
+                  ? "text-[var(--muted)]"
+                  : "text-accent"
+            }`}
+          >
+            {maintainLocked && !dayComplete ? "?" : "→"}
+          </span>
         </Link>
       </div>
 

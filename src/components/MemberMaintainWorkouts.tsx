@@ -32,13 +32,34 @@ export default function MemberMaintainWorkouts({
   const mode = access?.mode ?? "full";
   const blockInteraction = locked || dayComplete;
 
-  // Expanded by default; auto-collapse when a session is open (mobile scroll).
-  const [expanded, setExpanded] = useState(() => !activeWorkoutId);
+  // Collapsed by default when locked (not front-and-center). Expand when
+  // deep-linked (#quick-maintain) or a session is already open.
+  const [expanded, setExpanded] = useState(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#quick-maintain") {
+      return true;
+    }
+    return Boolean(activeWorkoutId) && !locked;
+  });
+
   useEffect(() => {
-    if (activeWorkoutId) setExpanded(false);
-  }, [activeWorkoutId]);
+    if (activeWorkoutId && !locked) setExpanded(true);
+  }, [activeWorkoutId, locked]);
+
+  useEffect(() => {
+    const openFromHash = () => {
+      if (window.location.hash === "#quick-maintain") {
+        setExpanded(true);
+      }
+    };
+    openFromHash();
+    window.addEventListener("hashchange", openFromHash);
+    return () => window.removeEventListener("hashchange", openFromHash);
+  }, []);
 
   const title = access?.headline || "Quick maintain (~45 min)";
+  const unlockTitle =
+    access?.detail ||
+    "Coach Class: complete this month’s show-ups and on-demand content to unlock, or upgrade to Business for unlimited.";
 
   return (
     <section
@@ -47,7 +68,7 @@ export default function MemberMaintainWorkouts({
         dayComplete
           ? "border-[color-mix(in_srgb,var(--success)_30%,var(--border))]"
           : locked
-            ? "opacity-75 grayscale-[0.35]"
+            ? "opacity-80 grayscale-[0.25]"
             : ""
       }`}
     >
@@ -60,6 +81,7 @@ export default function MemberMaintainWorkouts({
             className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--muted)] transition hover:border-accent/40 hover:text-accent"
             aria-expanded={expanded}
             aria-controls="quick-maintain-body"
+            title={locked && !dayComplete ? unlockTitle : undefined}
             onClick={() => setExpanded((v) => !v)}
           >
             <span
@@ -75,6 +97,7 @@ export default function MemberMaintainWorkouts({
             type="button"
             className="min-w-0 flex-1 text-left"
             aria-expanded={expanded}
+            title={locked && !dayComplete ? unlockTitle : undefined}
             onClick={() => setExpanded((v) => !v)}
           >
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent">
@@ -84,7 +107,7 @@ export default function MemberMaintainWorkouts({
                   ? "Business+ perk"
                   : mode === "earned"
                     ? "Earned this month"
-                    : "Coach Class · locked"}
+                    : "Coach Class · not day-1"}
             </p>
             <h2 className="mt-1 text-base font-semibold text-[var(--text)] sm:text-lg">
               {title}
@@ -93,7 +116,9 @@ export default function MemberMaintainWorkouts({
               <p className="mt-0.5 text-[11px] text-[var(--muted)]">
                 {activeWorkoutId
                   ? "Session open — tap to change workout"
-                  : "Tap to expand library"}
+                  : locked && !dayComplete
+                    ? "Tap for how to unlock · greyed until you qualify"
+                    : "Tap to expand library"}
               </p>
             ) : (
               <p className="mt-1 text-xs text-[var(--muted)]">
@@ -119,7 +144,11 @@ export default function MemberMaintainWorkouts({
             {access && access.mode !== "full" && !dayComplete ? (
               <div className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/80 p-3 text-xs">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
-                  Unlock paths
+                  {locked ? "How to unlock Quick maintain" : "Your earn path"}
+                </p>
+                <p className="text-[11px] leading-snug text-[var(--muted)]">
+                  Not available on day one for Coach Class. Complete the steps below for{" "}
+                  {access.usesLimit ?? 5} uses this month, or go Business for unlimited.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Link
@@ -159,57 +188,73 @@ export default function MemberMaintainWorkouts({
             ) : null}
 
             {workouts.length > 0 ? (
-              <ul
-                className={`space-y-2 ${
-                  blockInteraction ? "pointer-events-none select-none" : ""
-                }`}
-              >
-                {workouts.map((w) => {
-                  const active = activeWorkoutId === w.id;
-                  const inner = (
-                    <>
-                      <span className="min-w-0">
-                        <span className="block font-semibold text-[var(--text)]">{w.name}</span>
-                        <span className="mt-0.5 block text-[11px] text-[var(--muted)]">
-                          {w.muscleGroup} · {w.durationMin} min · {w.exerciseCount} exercises
+              <div className="space-y-2">
+                {locked && !dayComplete ? (
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+                    Sessions (greyed until you qualify)
+                  </p>
+                ) : null}
+                <ul
+                  className={`space-y-2 ${
+                    blockInteraction ? "pointer-events-none select-none" : ""
+                  }`}
+                >
+                  {workouts.map((w) => {
+                    const active = activeWorkoutId === w.id;
+                    const inner = (
+                      <>
+                        <span className="min-w-0">
+                          <span className="block font-semibold text-[var(--text)]">{w.name}</span>
+                          <span className="mt-0.5 block text-[11px] text-[var(--muted)]">
+                            {w.muscleGroup} · {w.durationMin} min · {w.exerciseCount} exercises
+                          </span>
+                          <span className="mt-0.5 block text-[11px] text-[var(--muted)]">
+                            {w.blurb}
+                          </span>
                         </span>
-                        <span className="mt-0.5 block text-[11px] text-[var(--muted)]">
-                          {w.blurb}
+                        <span className="shrink-0 text-xs font-semibold text-accent">
+                          {dayComplete
+                            ? "—"
+                            : locked
+                              ? "Locked"
+                              : active
+                                ? "Open"
+                                : "Start →"}
                         </span>
-                      </span>
-                      <span className="shrink-0 text-xs font-semibold text-accent">
-                        {dayComplete
-                          ? "—"
-                          : locked
-                            ? "Locked"
-                            : active
-                              ? "Open"
-                              : "Start →"}
-                      </span>
-                    </>
-                  );
-                  return (
-                    <li key={w.id}>
-                      {blockInteraction ? (
-                        <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3 opacity-60">
-                          {inner}
-                        </div>
-                      ) : (
-                        <Link
-                          href={hrefFor(w.id)}
-                          className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-3 transition ${
-                            active
-                              ? "border-accent bg-accent/10"
-                              : "border-[var(--border)] bg-[var(--surface-2)] hover:border-accent/50"
-                          }`}
-                        >
-                          {inner}
-                        </Link>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
+                      </>
+                    );
+                    return (
+                      <li key={w.id}>
+                        {blockInteraction ? (
+                          <div
+                            className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3 opacity-50 grayscale-[0.4]"
+                            title={
+                              locked && !dayComplete
+                                ? unlockTitle
+                                : dayComplete
+                                  ? "Day complete — try again tomorrow"
+                                  : undefined
+                            }
+                          >
+                            {inner}
+                          </div>
+                        ) : (
+                          <Link
+                            href={hrefFor(w.id)}
+                            className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-3 transition ${
+                              active
+                                ? "border-accent bg-accent/10"
+                                : "border-[var(--border)] bg-[var(--surface-2)] hover:border-accent/50"
+                            }`}
+                          >
+                            {inner}
+                          </Link>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             ) : null}
           </div>
         ) : null}
