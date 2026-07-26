@@ -71,27 +71,33 @@ export type EcoDelightSponsorStats = {
 };
 
 export async function fetchEcoDelightSponsorStats(): Promise<EcoDelightSponsorStats> {
-  const base =
-    process.env.ECO_DELIGHT_API_URL?.replace(/\/$/, "") || ECO_DELIGHT_STORE_URL;
   const secret = process.env.ECO_DELIGHT_AFFILIATE_STATS_SECRET?.trim() || "";
-  const url = new URL(`${base}/api/affiliate/sponsor-stats`);
-  url.searchParams.set("ref", ECO_DELIGHT_REFERRAL_CODE);
-  if (secret) url.searchParams.set("secret", secret);
+  // Prefer explicit API host; fall back to store URL then known Eco Vercel prod.
+  const bases = [
+    process.env.ECO_DELIGHT_API_URL?.replace(/\/$/, ""),
+    ECO_DELIGHT_STORE_URL,
+    "https://eco-coffee-eight.vercel.app",
+  ].filter(Boolean) as string[];
 
-  try {
-    const res = await fetch(url.toString(), {
-      cache: "no-store",
-      headers: secret ? { Authorization: `Bearer ${secret}` } : {},
-    });
-    const body = (await res.json().catch(() => ({}))) as EcoDelightSponsorStats;
-    if (!res.ok) {
-      return { ok: false, error: body.error || `status ${res.status}` };
+  let lastError = "fetch failed";
+  for (const base of bases) {
+    const url = new URL(`${base}/api/affiliate/sponsor-stats`);
+    url.searchParams.set("ref", ECO_DELIGHT_REFERRAL_CODE);
+    if (secret) url.searchParams.set("secret", secret);
+    try {
+      const res = await fetch(url.toString(), {
+        cache: "no-store",
+        headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+      });
+      const body = (await res.json().catch(() => ({}))) as EcoDelightSponsorStats;
+      if (!res.ok) {
+        lastError = body.error || `status ${res.status} @ ${base}`;
+        continue;
+      }
+      return { ...body, ok: true };
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : "fetch failed";
     }
-    return { ...body, ok: true };
-  } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : "fetch failed",
-    };
   }
+  return { ok: false, error: lastError };
 }
