@@ -75,8 +75,8 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 |------|--------|
 | **Live site** | https://www.thetrainstation.co |
 | **Repo** | `train-station` · GitHub `Coachjohnepop/train-station` |
-| **Production branch** | `main` only (unless John says otherwise) |
-| **Preview branch** | `preview` → Vercel Preview URL → merge to `main` when stable |
+| **Production branch** | `main` only — **default: ship straight to main** (Jeremy tests only on live thetrainstation.co; few users, OK) |
+| **Preview branch** | `preview` → Vercel Preview URL — optional when John wants a gated pass first |
 | **Prod fallback tag** | `prod-fallback-2026-06-14` (`64807c9`) — old safety pin |
 | **Data ship rule** | Commit **code + data** (`prisma/seed-data.json`, `prisma/*.dev.json`) — see Publish section below |
 | **Full deploy doc** | `DEPLOY.md` |
