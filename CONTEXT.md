@@ -362,13 +362,23 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 | **Multi-part paste-day→next week** | Copies all parts, not just part 1 |
 | **patchDay merge** | Prefer full server response (sessions/options) so multi-part never half-overwrites |
 | **Logo white plate** | UI + static assets (backups under `public/images/logo-backups/*-pre-white-2026-07-26.png`) |
+| **Prod deploy** | `4d4de44` on main · Ready |
+
+### Prod soak (Jul 26 post-deploy · 4 passes each)
+
+| Loop | Result |
+|------|--------|
+| **MILITARY-PASTE-LOGO** | **153/153 pass · 4 rounds** — GET program, 2-part day, template paste→part2, GET sticky clones, logo white plate · `scripts/military-paste-logo-soak.mjs` |
+| **TRIPLEDAYS** | **141/141 pass · 4 rounds** — 3-part Military day structure · `scripts/tripledays-soak.mjs` |
+| **site-loop-sweep** | **0 errors** · pages/APIs/nav healthy · Stripe still TEST (warn only) |
+| **FULL-SITE-4-LOOP** | **462 pass · 0 fail · 48 warn** — known: Stripe TEST, Zoom disconnected, billing Stripe flaky 500s, optional /pricing|/privacy|/terms 404 |
 
 ### Suggested next (ranked)
 
-1. **Deploy** this military/logo batch to prod · tell Jeremy to retry Military paste + 2-part day.  
-2. **Jeremy smoke** — Military W1 day 1 AM/PM + template paste + logo on landing.  
-3. **Stripe Live cutover (F1)** — still the money desk blocker.  
-4. Landing YouTube / phone pass (Jeremy).
+1. **Tell Jeremy** Military paste + logo live — retry content entry.  
+2. **Stripe Live cutover (F1)** — still the money desk blocker.  
+3. Landing YouTube / phone pass (Jeremy).  
+4. Optional: Zoom reconnect; billing overview 500 when Stripe flaky.
 
 ### Stripe Live — morning action (blocked)
 
