@@ -32,18 +32,8 @@ export default function MemberMaintainWorkouts({
   const mode = access?.mode ?? "full";
   const blockInteraction = locked || dayComplete;
 
-  // Collapsed by default when locked (not front-and-center). Expand when
-  // deep-linked (#quick-maintain) or a session is already open.
-  const [expanded, setExpanded] = useState(() => {
-    if (typeof window !== "undefined" && window.location.hash === "#quick-maintain") {
-      return true;
-    }
-    return Boolean(activeWorkoutId) && !locked;
-  });
-
-  useEffect(() => {
-    if (activeWorkoutId && !locked) setExpanded(true);
-  }, [activeWorkoutId, locked]);
+  // Always default closed — open only when the member taps, or deep-links #quick-maintain.
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     const openFromHash = () => {
@@ -59,7 +49,7 @@ export default function MemberMaintainWorkouts({
   const title = access?.headline || "Quick maintain (~45 min)";
   const unlockTitle =
     access?.detail ||
-    "Coach Class: complete this month’s show-ups and on-demand content to unlock, or upgrade to Business for unlimited.";
+    "Coach Class: complete this month’s show-ups and on-demand content to unlock 5 uses, or upgrade to Business Class for 5 uses/month included.";
 
   return (
     <section
@@ -104,9 +94,9 @@ export default function MemberMaintainWorkouts({
               {dayComplete
                 ? "Closed for today"
                 : mode === "full"
-                  ? "Business+ perk"
+                  ? "Business Class · 5 uses / month"
                   : mode === "earned"
-                    ? "Earned this month"
+                    ? "Earned · 5 uses / month"
                     : "Coach Class · not day-1"}
             </p>
             <h2 className="mt-1 text-base font-semibold text-[var(--text)] sm:text-lg">
@@ -114,11 +104,11 @@ export default function MemberMaintainWorkouts({
             </h2>
             {!expanded ? (
               <p className="mt-0.5 text-[11px] text-[var(--muted)]">
-                {activeWorkoutId
-                  ? "Session open — tap to change workout"
-                  : locked && !dayComplete
-                    ? "Tap for how to unlock · greyed until you qualify"
-                    : "Tap to expand library"}
+                {locked && !dayComplete
+                  ? "Tap for how to unlock · greyed until you qualify"
+                  : mode === "full" || mode === "earned"
+                    ? `${access?.usesRemaining ?? 5} of ${access?.usesLimit ?? 5} left · tap to open`
+                    : "Tap to expand"}
               </p>
             ) : (
               <p className="mt-1 text-xs text-[var(--muted)]">
@@ -141,6 +131,19 @@ export default function MemberMaintainWorkouts({
 
         {expanded ? (
           <div id="quick-maintain-body" className="space-y-3 px-4 pb-4">
+            {access && access.mode === "full" && !dayComplete ? (
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/80 p-3 text-xs text-[var(--muted)]">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-accent">
+                  Business Class · five uses per month
+                </p>
+                <p className="mt-1 text-[11px] leading-snug">
+                  {access.usesRemaining != null && access.usesLimit != null
+                    ? `${access.usesRemaining} of ${access.usesLimit} Quick maintain sessions left this month.`
+                    : "Five Quick maintain sessions included each month."}
+                </p>
+              </div>
+            ) : null}
+
             {access && access.mode !== "full" && !dayComplete ? (
               <div className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/80 p-3 text-xs">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
@@ -148,14 +151,15 @@ export default function MemberMaintainWorkouts({
                 </p>
                 <p className="text-[11px] leading-snug text-[var(--muted)]">
                   Not available on day one for Coach Class. Complete the steps below for{" "}
-                  {access.usesLimit ?? 5} uses this month, or go Business for unlimited.
+                  {access.usesLimit ?? 5} uses this month, or go Business Class for five uses
+                  included (no earn path).
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Link
                     href={access.upgradeHref}
                     className="rounded-lg bg-accent px-3 py-1.5 text-[11px] font-semibold text-[var(--bg)]"
                   >
-                    Upgrade to Business · unlimited
+                    Upgrade to Business · 5 uses / month
                   </Link>
                 </div>
                 <ul className="mt-2 space-y-1 text-[var(--muted)]">

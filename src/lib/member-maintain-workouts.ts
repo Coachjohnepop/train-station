@@ -10,7 +10,7 @@ import {
   type SignupPlan,
 } from "@/lib/signup-plans";
 
-/** Business Class and higher (Business, 1st Class / pro) — unlimited maintain. */
+/** Business Class and higher get included maintain quota (no earn path). */
 export const MAINTAIN_MIN_PLAN: MembershipPlan = "business";
 
 /** Coach Class can *see* the teaser (greyed) and earn limited uses. */
@@ -21,8 +21,13 @@ export const MAINTAIN_DURATION_MIN = 45;
 
 /** Coach Class earn path: log this many non-maintain workouts in the calendar month. */
 export const MAINTAIN_EARN_SHOW_UPS = 2;
-/** After earn criteria, Coach Class gets this many maintain starts per calendar month. */
+/**
+ * Monthly Quick maintain uses for Business Class (included) and for Coach Class
+ * after they complete the earn path. Same cap either way.
+ */
 export const MAINTAIN_EARNED_USES_PER_MONTH = 5;
+/** Alias for copy / Business Class included allotment. */
+export const MAINTAIN_BUSINESS_USES_PER_MONTH = MAINTAIN_EARNED_USES_PER_MONTH;
 
 export type MaintainWorkoutCard = {
   id: string;
@@ -35,9 +40,9 @@ export type MaintainWorkoutCard = {
 
 /**
  * Access to start/log maintain sessions.
- * - full: Business+ unlimited
+ * - full: Business Class (and higher) included — 5 uses / month
  * - earned: Coach Class met show-ups + on-demand, has uses left this month
- * - locked: greyscale teaser (upgrade or keep earning)
+ * - locked: greyscale teaser (upgrade or keep earning / used up)
  * Day complete (already logged a workout today) always blocks, with stamp UI.
  */
 export type MaintainAccessMode = "full" | "earned" | "locked";
@@ -47,7 +52,7 @@ export type MaintainAccess = {
   mode: MaintainAccessMode;
   /** Already completed a workout today — maintain / on-demand closed. */
   dayComplete: boolean;
-  /** null = unlimited (Business+) */
+  /** Remaining starts this month (Business included or Coach earned). */
   usesRemaining: number | null;
   usesLimit: number | null;
   usesUsed: number;
@@ -165,7 +170,7 @@ const DEFAULT_SPECS: Array<{
   },
 ];
 
-/** True when plan is Business Class or higher (unlimited). */
+/** True when plan is Business Class or higher (included monthly uses, no earn path). */
 export function canAccessMaintainWorkouts(plan: SignupPlan | string | null | undefined): boolean {
   if (!plan) return false;
   const normalized = normalizeSignupPlan(String(plan));
@@ -337,7 +342,7 @@ export async function resolveMaintainAccess(
     mode: "locked",
     dayComplete: false,
     usesRemaining: 0,
-    usesLimit: MAINTAIN_EARNED_USES_PER_MONTH,
+    usesLimit: MAINTAIN_BUSINESS_USES_PER_MONTH,
     usesUsed: 0,
     showUps: 0,
     showUpsNeeded,
@@ -356,16 +361,43 @@ export async function resolveMaintainAccess(
   }
 
   const dayComplete = await hasCompletedWorkoutToday(storageUserId);
+  const usesLimit = MAINTAIN_BUSINESS_USES_PER_MONTH;
 
   if (canAccessMaintainWorkouts(plan)) {
+    const usesUsed = await countMaintainUses(storageUserId, start, end);
+    const usesRemaining = Math.max(0, usesLimit - usesUsed);
+    const allowed = usesRemaining > 0;
+    if (!allowed) {
+      return withDayCompleteGate(
+        {
+          allowed: false,
+          mode: "locked",
+          dayComplete: false,
+          usesRemaining: 0,
+          usesLimit,
+          usesUsed,
+          showUps: showUpsNeeded,
+          showUpsNeeded,
+          showUpsMet: true,
+          onDemandDone: true,
+          onDemandParts: [],
+          earnReady: true,
+          upgradeHref,
+          monthKey,
+          headline: "Quick maintain · 5 uses used",
+          detail: `Business Class includes ${usesLimit} Quick maintain sessions per month. You’re out for this month — resets next month.`,
+        },
+        dayComplete,
+      );
+    }
     return withDayCompleteGate(
       {
         allowed: true,
         mode: "full",
         dayComplete: false,
-        usesRemaining: null,
-        usesLimit: null,
-        usesUsed: 0,
+        usesRemaining,
+        usesLimit,
+        usesUsed,
         showUps: showUpsNeeded,
         showUpsNeeded,
         showUpsMet: true,
@@ -374,8 +406,8 @@ export async function resolveMaintainAccess(
         earnReady: true,
         upgradeHref,
         monthKey,
-        headline: "Quick maintain · unlimited",
-        detail: "Business Class perk — ~45 min muscle-group sessions anytime.",
+        headline: `Quick maintain · ${usesRemaining} of ${usesLimit} left`,
+        detail: `Business Class — ${usesLimit} Quick maintain sessions per month (~45 min muscle-group).`,
       },
       dayComplete,
     );
@@ -387,7 +419,7 @@ export async function resolveMaintainAccess(
       {
         ...emptyLocked(
           "Quick maintain · locked",
-          "Upgrade to Coach Class or higher, then earn or go Business for full access.",
+          "Upgrade to Coach Class or higher, then earn 5 uses/month — or go Business Class for 5 uses included.",
         ),
         upgradeHref: purchaseHref("member", { signedIn: true, role: "MEMBER" }),
       },
@@ -404,7 +436,6 @@ export async function resolveMaintainAccess(
   const showUpsMet = showUps >= showUpsNeeded;
   const onDemandDone = onDemandParts.length === 0 || onDemandParts.every((p) => p.done);
   const earnReady = showUpsMet && onDemandDone;
-  const usesLimit = MAINTAIN_EARNED_USES_PER_MONTH;
   const usesRemaining = Math.max(0, usesLimit - usesUsed);
   const allowed = earnReady && usesRemaining > 0;
 
@@ -426,8 +457,7 @@ export async function resolveMaintainAccess(
         upgradeHref,
         monthKey,
         headline: `Quick maintain · ${usesRemaining} of ${usesLimit} left`,
-        detail:
-          "Earned this month by showing up and finishing on-demand. Upgrade to Business for unlimited.",
+        detail: `Earned this month by showing up and finishing on-demand. Business Class includes ${usesLimit} uses/month with no earn path.`,
       },
       dayComplete,
     );
@@ -451,7 +481,7 @@ export async function resolveMaintainAccess(
         upgradeHref,
         monthKey,
         headline: "Quick maintain · used up",
-        detail: `You used all ${usesLimit} earned sessions this month. Upgrade to Business for unlimited, or wait until next month.`,
+        detail: `You used all ${usesLimit} earned sessions this month. Resets next month — or upgrade to Business Class for ${usesLimit} included uses each month.`,
       },
       dayComplete,
     );
@@ -482,7 +512,7 @@ export async function resolveMaintainAccess(
       upgradeHref,
       monthKey,
       headline: "Quick maintain · locked",
-      detail: `Coach Class: ${missing.join(" and ")} for ${usesLimit} uses this month — or upgrade to Business for unlimited.`,
+      detail: `Coach Class: ${missing.join(" and ")} for ${usesLimit} uses this month — or upgrade to Business Class for ${usesLimit} uses/month included (no earn path).`,
     },
     dayComplete,
   );

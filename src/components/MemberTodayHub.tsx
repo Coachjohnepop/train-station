@@ -11,13 +11,21 @@ type Props = {
 };
 
 function maintainTileSubtitle(access: MaintainAccess | null, dayComplete: boolean): string {
-  if (!access) return "Business+";
+  if (!access) return "5 uses / month";
   if (dayComplete) return "Day complete";
-  if (access.mode === "full") return "Unlimited";
+  if (access.mode === "full") {
+    if (access.usesRemaining != null && access.usesLimit != null) {
+      return `${access.usesRemaining} of ${access.usesLimit} left`;
+    }
+    return "5 uses / month";
+  }
   if (access.mode === "earned" && access.usesRemaining != null) {
     return `${access.usesRemaining} left this month`;
   }
   if (access.mode === "locked") {
+    if (access.earnReady && access.usesRemaining === 0) {
+      return "0 of 5 left";
+    }
     if (!access.showUpsMet) {
       return `Earn · ${access.showUps}/${access.showUpsNeeded} show-ups`;
     }
@@ -32,13 +40,13 @@ function maintainTileTitle(access: MaintainAccess | null, dayComplete: boolean):
   if (dayComplete) {
     return "You already trained today — Quick maintain opens again tomorrow.";
   }
-  if (!access) return "Quick maintain — Business Class perk.";
+  if (!access) return "Quick maintain — Business Class: five uses per month.";
   if (access.allowed) {
     return access.detail || access.headline;
   }
   return (
     access.detail ||
-    `Coach Class: log ${access.showUpsNeeded} workouts this month (${access.showUps}/${access.showUpsNeeded}) and finish on-demand content for ${access.usesLimit ?? 5} Quick maintain uses — or upgrade to Business for unlimited.`
+    `Coach Class: log ${access.showUpsNeeded} workouts this month (${access.showUps}/${access.showUpsNeeded}) and finish on-demand content for ${access.usesLimit ?? 5} Quick maintain uses — or upgrade to Business Class for five uses per month included.`
   );
 }
 

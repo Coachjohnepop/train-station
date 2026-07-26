@@ -257,7 +257,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   });
 
   const memberPlan = normalizeSignupPlan(profile?.plan);
-  /** Business+ unlimited · Coach Class earn 5/mo · greyscale teaser otherwise. */
+  /** Business Class: 5 uses/mo included · Coach Class earn 5/mo · greyscale teaser otherwise. */
   const maintainAccess = !asInstructor
     ? await resolveMaintainAccess(uid, memberPlan)
     : null;
@@ -317,7 +317,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
               calendarDateLabel={formatDateLabel(clampedViewDate)}
               subtitle={
                 consoleIsMaintain
-                  ? "Business+ maintain session — log it when you finish."
+                  ? "Quick maintain (5 uses / month) — log it when you finish."
                   : isLateCatchUp
                     ? "Catch-up day — finish yesterday’s workout (−20% score)."
                     : subtitle
