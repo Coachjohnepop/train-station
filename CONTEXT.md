@@ -373,12 +373,28 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 | **site-loop-sweep** | **0 errors** · pages/APIs/nav healthy · Stripe still TEST (warn only) |
 | **FULL-SITE-4-LOOP** | **462 pass · 0 fail · 48 warn** — known: Stripe TEST, Zoom disconnected, billing Stripe flaky 500s, optional /pricing|/privacy|/terms 404 |
 
+### Eco Delight sponsorship (Jul 26)
+
+| Item | Value |
+|------|--------|
+| **Member** | `/member/sponsorship` (nav: **Partners**) |
+| **Coach** | `/admin/sponsorship` · commission board |
+| **Affiliate email** | `jeremy@thetrainstation.co` |
+| **Ref** | `TRAINSTATION` |
+| **Code** | `JEREMYDISC` · 10% · 100 uses · expires ~2027-07-26 |
+| **Buy link** | `https://buyecodelight.com/store/subscriptions?ref=TRAINSTATION&discount=JEREMYDISC` |
+| **Eco seed** | `eco-coffee` · `scripts/seed-jeremy-trainstation-affiliate.mjs` (DB seeded) |
+| **Stats API** | `GET /api/affiliate/sponsor-stats?ref=TRAINSTATION` (Eco) |
+| **Commercial** | Subscriptions page 5s Jeremy spot; set `NEXT_PUBLIC_JEREMY_YT_SHORT_ID` when Short is filmed |
+| **Payouts** | Jeremy Stripe Connect in Eco affiliate portal (still `stripeOnboarded: false`) |
+
 ### Suggested next (ranked)
 
 1. **Tell Jeremy** Military paste + logo live — retry content entry.  
-2. **Stripe Live cutover (F1)** — still the money desk blocker.  
-3. Landing YouTube / phone pass (Jeremy).  
-4. Optional: Zoom reconnect; billing overview 500 when Stripe flaky.
+2. Jeremy: Eco affiliate portal + Stripe Connect for coffee commissions.  
+3. Film YouTube Short → set `NEXT_PUBLIC_JEREMY_YT_SHORT_ID` on Eco.  
+4. **Stripe Live cutover (F1)** — still the money desk blocker.  
+5. Landing YouTube / phone pass (Jeremy).
 
 ### Stripe Live — morning action (blocked)
 
