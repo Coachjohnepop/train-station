@@ -57,7 +57,13 @@ type Props = {
   focusWorkoutId: string | null;
   focusWorkoutLabel?: string;
   disabled?: boolean;
-  onPasted: () => void | Promise<void>;
+  /** Called after a successful day paste so the builder can reload + open the new clones. */
+  onPasted: (result?: {
+    gymWorkoutId?: string;
+    homeWorkoutId?: string;
+    partIndex?: number;
+    dayId?: string;
+  }) => void | Promise<void>;
   onMessage?: (msg: string) => void;
 };
 
@@ -314,13 +320,21 @@ export default function ProgramTemplatePastePanel({
       }
 
       if (!res.ok) {
-        setError(formatApiErrorDetail(data.detail) || data.message || "Paste failed");
+        setError(
+          formatApiErrorDetail(data.detail) ||
+            data.message ||
+            (data.detail === "RENAME_REQUIRED"
+              ? "Give this copy a new name (different from the template) before pasting."
+              : "Paste failed"),
+        );
         return;
       }
       const tracksLabel = [trackGym && "Gym", trackHome && "Home"]
         .filter(Boolean)
         .join(" + ");
-      const partNote = partIndex > 1 ? ` · part ${partIndex}` : "";
+      const pastedPart =
+        typeof data.partIndex === "number" ? data.partIndex : partIndex;
+      const partNote = pastedPart > 1 ? ` · part ${pastedPart}` : "";
       const nameNote =
         sourceMode === "template" && pasteContentName.trim()
           ? ` as “${pasteContentName.trim()}”`
@@ -328,7 +342,12 @@ export default function ProgramTemplatePastePanel({
       msg(
         `Pasted ${tracksLabel}${partNote}${nameNote} (fresh copies). Source template unchanged.`,
       );
-      await onPasted();
+      await onPasted({
+        gymWorkoutId: typeof data.gymWorkoutId === "string" ? data.gymWorkoutId : undefined,
+        homeWorkoutId: typeof data.homeWorkoutId === "string" ? data.homeWorkoutId : undefined,
+        partIndex: pastedPart,
+        dayId,
+      });
     } finally {
       setBusy(false);
     }

@@ -57,27 +57,16 @@ export default function TrainStationBrand({
     );
   }
 
-  const image = (
-    <Image
-      src={src}
-      alt={brand.brandName}
-      width={display.width}
-      height={display.height}
-      sizes={display.sizes}
-      className={`${display.className} object-contain`}
-      priority={variant === "hero"}
-    />
-  );
-
   if (variant === "hero") {
     // Stacked circle + wordmark, left-aligned (hero places this in the left column).
+    // Solid white plate so the dark logo mark stays readable on dark landing chrome.
     return (
       <div className={`flex flex-col items-start ${className}`}>
         <div
-          className="flex items-center justify-center rounded-full bg-white/10 p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)] ring-2 ring-white/30 backdrop-blur-sm sm:p-3"
+          className="flex items-center justify-center rounded-full bg-white p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)] ring-2 ring-white/80 sm:p-3"
           aria-hidden
         >
-          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full sm:h-20 sm:w-20 md:h-24 md:w-24">
+          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-white sm:h-20 sm:w-20 md:h-24 md:w-24">
             <Image
               src={brand.logoIconUrl || src}
               alt=""
@@ -99,9 +88,29 @@ export default function TrainStationBrand({
     );
   }
 
+  // Header / compact / icon: white circular plate (Jeremy: logo needs a white background).
+  const plateSize =
+    variant === "icon"
+      ? "h-9 w-9 p-0.5"
+      : variant === "header"
+        ? "h-9 w-9 p-0.5 sm:h-10 sm:w-10"
+        : "h-14 w-14 p-1 sm:h-16 sm:w-16";
+
   return (
-    <div className={className}>
-      {image}
+    <div className={`inline-flex items-center justify-center ${className}`}>
+      <div
+        className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-white shadow-sm ring-1 ring-black/10 ${plateSize}`}
+      >
+        <Image
+          src={src}
+          alt={brand.brandName}
+          width={display.width}
+          height={display.height}
+          sizes={display.sizes}
+          className="h-full w-full object-contain"
+          priority={variant === "compact"}
+        />
+      </div>
     </div>
   );
 }

@@ -334,40 +334,41 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-07-25 (evening · nits closed)  
-**Status:** **Member Today / Quick maintain stack complete** · **Venmo LIVE** · Stripe Live cutover **still open** · SMS **PARKED**.  
+**Date:** 2026-07-26 (Jeremy feedback list + military builder + logo)  
+**Status:** **Military paste/save kick-out fixed (code)** · **logo white plate** · Venmo LIVE · Stripe Live still open · SMS PARKED.  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
-**main tip:** see latest `git log` (plank 3×45s + member complete email + coach floor weight).
+**main tip:** see latest `git log` after deploy.
 
-### Shipped this session — Business+ Quick maintain + Today polish
+### Jeremy voice-note (Jul 26) — knock-out list
 
-Member-facing (prod-soaked, 3-loop green 134/0):
+| # | Item | Owner | Status |
+|---|------|--------|--------|
+| 1 | Military builder kicks to Programs / paste “not saving” | Us | **Fixed in code** — root cause: after template paste, builder `GET /api/programs/[slug]` (no GET existed) so UI never reloaded new clones; editor stayed on old empty workout |
+| 2 | Template paste multi-part + rename friction | Us | **Fixed** — paste grows partCount if needed; onPasted reloads + reopens Gym/Home clones; clearer rename errors |
+| 3 | Logo needs white background | Us | **Fixed** — solid white plate in `TrainStationBrand` + baked into `logo.png` / icon / hero / favicon |
+| 4 | Military content entry | Jeremy | Next for him after deploy |
+| 5 | Adult first weeks OK · Athletes ~6 weeks | Jeremy | Leave stable |
+| 6 | Mom & Dads after Military | Jeremy | Catalog slug `mom-dads-little-time` already live |
+| 7 | 3 exercise video uploads | Jeremy | In progress on his side |
+| 8 | Landing YouTube / phone 5-min | Jeremy | Still open |
+| 9 | Stripe Live cutover | Us + keys | Still blocked on Live secret |
+
+### Shipped this session (Jul 26)
 
 | Piece | Notes |
 |-------|--------|
-| **Quick maintain** | 5 muscle-group ~45m sessions on Today; Business+ unlimited; Coach Class greyscale + earn (2 show-ups + on-demand → 5/mo) |
-| **Day Complete stamp** | Locks maintain/on-demand after a logged workout — John signed off “perfect” |
-| **Focus pane** | Workout pane focus (not browser fullscreen); ← Today |
-| **Resume** | Sticky “Back to workout” banner + live-session + local pointer |
-| **Prescriptions** | Real sets/reps on maintain; holds = **standard 3×45s** (not timed-minutes) |
-| **Rest audio** | Cybertruck default; louder last 5 ticks; quieter other ends; live no longer overrides to whistle |
-| **Hold timer** | Green **Time of Exercise** from reps like `45s` (or timed min) → cybertruck → rest |
-| **Set uncheck** | Live merge fixed so undo sticks; no auto re-check/timer |
-| **YouTube demos** | Short form preloaded on maintain library + hint map |
-| **Coach notify** | Messages + email (`jeremy@…`) on workout log |
-| **Member complete email** | Confirmation to member on log (`notifyMemberWorkoutLogged`) |
-| **Coach floor weight** | Denser row, wider readable weight cell |
-| **Staff grant** | Admin Members + monthly reapproval email cron |
-
-Loop: `scripts/member-maintain-coach-loop.mjs` · artifact `.member-maintain-coach-loop-latest.json`.
+| **GET `/api/programs/[slug]`** | Coach program tree for paste/refresh (was PATCH-only → silent fail) |
+| **Paste reopen** | After paste: reload tree + open the new Gym/Home clones on the correct part |
+| **Multi-part paste-day→next week** | Copies all parts, not just part 1 |
+| **patchDay merge** | Prefer full server response (sessions/options) so multi-part never half-overwrites |
+| **Logo white plate** | UI + static assets (backups under `public/images/logo-backups/*-pre-white-2026-07-26.png`) |
 
 ### Suggested next (ranked)
 
-1. **Jeremy smoke (15–20 min)** — maintain, Day Complete, 45s hold→rest ×3, uncheck, demos, coach Messages + member email.  
-2. **Stripe Live cutover (F1)** — still the money desk blocker (keys + live prices).  
-3. **Phone-pass / push** — Jeremy Enable alerts once; 5-min phone pass of Book Call / badge / Join Live.  
-4. **Landing content** — real welcome + free-ticket YouTube (Jeremy).  
-5. **Parked** — Twilio SMS; Zoom Marketplace publish for coach 2.
+1. **Deploy** this military/logo batch to prod · tell Jeremy to retry Military paste + 2-part day.  
+2. **Jeremy smoke** — Military W1 day 1 AM/PM + template paste + logo on landing.  
+3. **Stripe Live cutover (F1)** — still the money desk blocker.  
+4. Landing YouTube / phone pass (Jeremy).
 
 ### Stripe Live — morning action (blocked)
 

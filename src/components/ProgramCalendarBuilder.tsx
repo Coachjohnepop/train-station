@@ -446,7 +446,14 @@ export default function ProgramCalendarBuilder({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     });
-    if (!res.ok) throw new Error("Day save failed");
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const detail =
+        (typeof body.detail === "string" && body.detail) ||
+        (typeof body.message === "string" && body.message) ||
+        "Day save failed";
+      throw new Error(detail);
+    }
     const updated = await res.json();
     setProgram((prev) => ({
       ...prev,
@@ -456,17 +463,49 @@ export default function ProgramCalendarBuilder({
           d.id === dayId
             ? {
                 ...d,
-                ...patch,
+                // Prefer server response over request patch so multi-part
+                // options/sessions never get partially overwritten.
+                ...updated,
                 options: updated.options ?? d.options,
                 sessions: updated.sessions ?? d.sessions,
                 partCount: updated.partCount ?? d.partCount,
-                workoutId: updated.workoutId ?? d.workoutId,
+                workoutId:
+                  updated.workoutId !== undefined ? updated.workoutId : d.workoutId,
               }
             : d,
         ),
       })),
     }));
     return updated;
+  }
+
+  /** Reload program tree from server (used after paste / multi-part edits). */
+  async function reloadProgramTree(): Promise<Program | null> {
+    try {
+      const res = await fetch(`/api/programs/${program.slug}`, { cache: "no-store" });
+      if (res.ok) {
+        const fresh = await res.json();
+        if (fresh?.weeks) {
+          setProgram((prev) => ({ ...prev, ...fresh, weeks: fresh.weeks }));
+          return fresh as Program;
+        }
+      }
+    } catch {
+      /* fall through to sync */
+    }
+    try {
+      const res = await fetch(`/api/programs/${program.slug}/sync`, { method: "POST" });
+      if (res.ok) {
+        const fresh = await res.json();
+        if (fresh?.weeks) {
+          setProgram((prev) => ({ ...prev, ...fresh, weeks: fresh.weeks }));
+          return fresh as Program;
+        }
+      }
+    } catch {
+      /* non-fatal */
+    }
+    return null;
   }
 
   async function setDayOptions(
@@ -487,8 +526,12 @@ export default function ProgramCalendarBuilder({
         setMessage("Saved.");
         setTimeout(() => setMessage(null), 1500);
       }
-    } catch {
-      if (!silent) setMessage("Could not save — try again.");
+    } catch (e) {
+      if (!silent) {
+        const msg = e instanceof Error && e.message ? e.message : "Could not save — try again.";
+        setMessage(msg);
+        setTimeout(() => setMessage(null), 4000);
+      }
     } finally {
       if (!silent) setSaving(false);
     }
@@ -497,20 +540,49 @@ export default function ProgramCalendarBuilder({
   async function setDayPartCount(dayId: string, partCount: number) {
     setSaving(true);
     try {
-      await patchDay(dayId, { partCount });
+      const updated = await patchDay(dayId, { partCount });
+      const nextPart = Math.min(
+        Math.max(1, focus?.dayId === dayId ? focus.partIndex ?? 1 : 1),
+        partCount,
+      );
       setFocus((f) =>
-        f && f.dayId === dayId
-          ? { ...f, partIndex: Math.min(f.partIndex ?? 1, partCount) }
-          : f,
+        f && f.dayId === dayId ? { ...f, partIndex: nextPart } : f,
       );
       setMessage(
         partCount <= 1
           ? "Single-part day."
-          : `${partCount}-part day — switch parts below to assign each session.`,
+          : `${partCount}-part day — switch parts below to assign each session (Gym/Home per part).`,
       );
       setTimeout(() => setMessage(null), 3500);
-    } catch {
-      setMessage("Could not update day parts — try again.");
+      // Re-open using the server day (sessions for new parts) so Part 2/3 is writable immediately.
+      if (focus?.dayId === dayId) {
+        const week = program.weeks.find((w) => w.days.some((d) => d.id === dayId));
+        const day = week?.days.find((d) => d.id === dayId);
+        if (week && day) {
+          const updatedDay: ProgramDay = {
+            ...day,
+            partCount: updated.partCount ?? partCount,
+            sessions: updated.sessions ?? day.sessions,
+            options: updated.options ?? day.options,
+            workoutId:
+              updated.workoutId !== undefined ? updated.workoutId : day.workoutId,
+          };
+          await openDayOption(
+            updatedDay,
+            week,
+            focus.optIdx,
+            focus.label || "Gym",
+            nextPart,
+          );
+        }
+      }
+    } catch (e) {
+      const msg =
+        e instanceof Error && e.message
+          ? e.message
+          : "Could not update day parts — try again.";
+      setMessage(msg);
+      setTimeout(() => setMessage(null), 4000);
     } finally {
       setSaving(false);
     }
@@ -1125,7 +1197,19 @@ export default function ProgramCalendarBuilder({
       return;
     }
 
-    const sourceOpts = getDayOptions(focusDay).filter((o) => o.workoutId);
+    // Include every part (AM/PM military days) — not only the open part.
+    const partCount = Math.max(
+      1,
+      focusDay.partCount ?? daySessions(focusDay).length,
+      ...daySessions(focusDay).map((s) => s.partIndex),
+    );
+    const sourceOpts: DayOption[] = [];
+    for (let p = 1; p <= partCount; p++) {
+      for (const o of getDayOptions(focusDay, p)) {
+        if (!o.workoutId) continue;
+        sourceOpts.push({ ...o, partIndex: p });
+      }
+    }
     if (sourceOpts.length === 0 && !isDayOffLabel(focus.label) && !isFastedCardioLabel(focus.label)) {
       setMessage("Nothing to paste — add Gym/Home workouts first.");
       return;
@@ -1133,15 +1217,16 @@ export default function ProgramCalendarBuilder({
 
     setSaving(true);
     try {
-      if (isDayOffLabel(focus.label)) {
+      if (isDayOffLabel(focus.label) && sourceOpts.length === 0) {
         await patchDay(targetDay.id, {
-          options: [{ workoutId: "", label: DAY_OFF_LABEL }],
+          options: [{ workoutId: "", label: DAY_OFF_LABEL, partIndex: 1 }],
           replaceAllOptions: true,
+          partCount: 1,
           // Respect auto-clear — don't force “Rest day” text onto every week.
           notes: notesForCopy(focusDay.notes ?? "Rest day"),
           publishedAt: null,
         });
-      } else if (isFastedCardioLabel(focus.label)) {
+      } else if (isFastedCardioLabel(focus.label) && sourceOpts.length <= 1) {
         // Clone underlying workout if present
         const src = sourceOpts[0];
         if (src?.workoutId) {
@@ -1169,9 +1254,11 @@ export default function ProgramCalendarBuilder({
                 label: FASTED_CARDIO_LABEL,
                 trainingLocation: null,
                 notes: notesForCopy(src.notes),
+                partIndex: 1,
               },
             ],
             replaceAllOptions: true,
+            partCount: 1,
             notes: notesForCopy(focusDay.notes),
             publishedAt: null,
           });
@@ -1196,6 +1283,7 @@ export default function ProgramCalendarBuilder({
             label: opt.label,
             trainingLocation: opt.trainingLocation ?? trainingLocationFromLabel(opt.label),
             notes: notesForCopy(opt.notes),
+            partIndex: opt.partIndex ?? 1,
           });
           setAllWorkouts((prev) =>
             prev.some((w) => w.id === cloned.id)
@@ -1207,6 +1295,7 @@ export default function ProgramCalendarBuilder({
         await patchDay(targetDay.id, {
           options: clonedOpts,
           replaceAllOptions: true,
+          partCount,
           notes: notesForCopy(focusDay.notes),
           publishedAt: null,
         });
@@ -1214,8 +1303,8 @@ export default function ProgramCalendarBuilder({
 
       setMessage(
         autoClearNotesOnCopy
-          ? `Pasted → next week (clones, day notes cleared, draft).`
-          : `Pasted week ${activeWeekData.weekNumber} day ${focusDay.dayNumber} → week ${nextWeek.weekNumber} (clones only).`,
+          ? `Pasted → next week (clones${partCount > 1 ? `, ${partCount} parts` : ""}, day notes cleared, draft).`
+          : `Pasted week ${activeWeekData.weekNumber} day ${focusDay.dayNumber} → week ${nextWeek.weekNumber}${partCount > 1 ? ` (${partCount} parts)` : ""} (clones only).`,
       );
       setTimeout(() => setMessage(null), 4000);
       setActiveWeek(nextWeek.weekNumber);
@@ -3395,18 +3484,42 @@ export default function ProgramCalendarBuilder({
               setMessage(m);
               setTimeout(() => setMessage(null), 4000);
             }}
-            onPasted={async () => {
-              // Reload program from server so pasted options appear
-              try {
-                const res = await fetch(`/api/programs/${program.slug}`, { cache: "no-store" });
-                if (res.ok) {
-                  const fresh = await res.json();
-                  if (fresh?.weeks) setProgram((prev) => ({ ...prev, ...fresh, weeks: fresh.weeks }));
+            onPasted={async (result) => {
+              // Reload full tree (GET now works; sync is fallback), then open the new clones.
+              // Without this, paste wrote to DB but the editor kept the old empty workout —
+              // Jeremy saw “kicked back / not saving” on Military multi-part days.
+              const fresh = await reloadProgramTree();
+              const dayId = result?.dayId || focus?.dayId;
+              const partIndex = result?.partIndex ?? focus?.partIndex ?? 1;
+              if (!dayId) return;
+
+              const tree = fresh || program;
+              let week: ProgramWeek | undefined;
+              let day: ProgramDay | undefined;
+              for (const w of tree.weeks || []) {
+                const d = w.days.find((x) => x.id === dayId);
+                if (d) {
+                  week = w;
+                  day = d;
+                  break;
                 }
-              } catch {
-                /* non-fatal */
               }
-              if (focus?.workoutId) void loadSlots(focus.workoutId, prescription);
+              if (!week || !day) {
+                if (focus?.workoutId) void loadSlots(focus.workoutId, prescription);
+                return;
+              }
+
+              const opts = getDayOptions(day, partIndex);
+              const preferHome =
+                (focus && isHomeLabel(focus.label) && result?.homeWorkoutId) ||
+                (!result?.gymWorkoutId && Boolean(result?.homeWorkoutId));
+              let optIdx = preferHome
+                ? opts.findIndex((o) => isHomeLabel(o.label))
+                : opts.findIndex((o) => isGymLabel(o.label));
+              if (optIdx < 0) optIdx = opts.findIndex((o) => Boolean(o.workoutId));
+              if (optIdx < 0) optIdx = 0;
+              const label = opts[optIdx]?.label || (preferHome ? "Home" : "Gym");
+              await openDayOption(day, week, optIdx, label, partIndex);
             }}
           />
 

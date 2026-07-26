@@ -26,6 +26,24 @@ const patchSchema = z.object({
 
 type Params = { params: Promise<{ slug: string }> };
 
+/** Full program tree for coach builder refresh (paste, multi-part, etc.). */
+export async function GET(_request: Request, { params }: Params) {
+  const auth = await requireCoachStaff();
+  if (!auth.ok) return auth.response;
+
+  const { slug } = await params;
+  try {
+    const full = await getProgramBySlug(slug);
+    if (!full) {
+      return NextResponse.json({ detail: "Program not found" }, { status: 404 });
+    }
+    return NextResponse.json(full);
+  } catch (e) {
+    console.error("GET program failed", e);
+    return NextResponse.json({ detail: "Could not load program" }, { status: 500 });
+  }
+}
+
 export async function PATCH(request: Request, { params }: Params) {
   const auth = await requireCoachStaff();
   if (!auth.ok) return auth.response;

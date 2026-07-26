@@ -414,9 +414,16 @@ export async function pasteWorkoutOntoProgramDay(input: {
     });
     if (!day) throw new Error("DAY_NOT_FOUND");
 
-    const maxParts = Math.max(day.partCount || 1, day.sessions?.length || 1, 1);
+    // Grow the day if coach pastes onto part 2/3 before partCount has fully settled.
     const rawPart = typeof input.partIndex === "number" ? input.partIndex : 1;
-    const partIndex = Math.min(Math.max(1, Math.round(rawPart)), maxParts);
+    const requestedPart = Math.min(5, Math.max(1, Math.round(rawPart)));
+    const maxParts = Math.max(
+      day.partCount || 1,
+      day.sessions?.length || 1,
+      requestedPart,
+      1,
+    );
+    const partIndex = Math.min(requestedPart, maxParts);
     const sessionId = await resolveSessionIdForPart(day.id, partIndex, maxParts);
 
     type Opt = {
