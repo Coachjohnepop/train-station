@@ -171,6 +171,23 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
     keywords: ["youtube", "welcome", "free ticket", "brand", "media", "venmo qr"],
   },
   {
+    id: "coach-sponsorship",
+    title: "Sponsorships",
+    description: "Eco Delight affiliate · JEREMYDISC · commission",
+    href: "/admin/sponsorship",
+    workspace: "coach",
+    group: "Site",
+    keywords: [
+      "sponsor",
+      "eco delight",
+      "affiliate",
+      "coffee",
+      "jeremydisc",
+      "commission",
+      "trainstation",
+    ],
+  },
+  {
     id: "coach-discounts",
     title: "Discount codes",
     description: "Create promo / coupon codes for Checkout",
