@@ -5,6 +5,7 @@ import { useState } from "react";
 import FreeTicketModal from "@/components/FreeTicketModal";
 import MembershipTicketGrid from "@/components/MembershipTicketGrid";
 import { usePurchaseAuth } from "@/hooks/usePurchaseAuth";
+import type { FreeTicketGagConfig } from "@/lib/landing-media";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 import type { TicketTierId } from "@/lib/landing-tickets";
 import { TICKET_TIERS } from "@/lib/landing-tickets";
@@ -12,10 +13,12 @@ import { TICKET_TIERS } from "@/lib/landing-tickets";
 export default function LandingTicketPicker({
   freeChastiseVideoUrl = null,
   welcomeVideoUrl = null,
+  gagConfig = null,
   purchaseAuth: purchaseAuthProp,
 }: {
   freeChastiseVideoUrl?: string | null;
   welcomeVideoUrl?: string | null;
+  gagConfig?: Partial<FreeTicketGagConfig> | null;
   purchaseAuth?: PurchaseAuth;
 }) {
   const [freeModalOpen, setFreeModalOpen] = useState(false);
@@ -77,6 +80,7 @@ export default function LandingTicketPicker({
         open={freeModalOpen}
         freeChastiseVideoUrl={freeChastiseVideoUrl}
         welcomeVideoUrl={welcomeVideoUrl}
+        gagConfig={gagConfig}
         purchaseAuth={purchaseAuth}
         onClose={() => setFreeModalOpen(false)}
         onUpgrade={() => {

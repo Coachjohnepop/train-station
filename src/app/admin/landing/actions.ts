@@ -19,6 +19,11 @@ export async function saveLandingMediaAction(input: {
   welcomeVideoUrl: string | null;
   welcomeVideosByPlan?: WelcomeVideosByPlan;
   freeChastiseVideoUrl: string | null;
+  gagVideoUrl?: string | null;
+  gagStartSec?: number;
+  gagDurationSec?: number;
+  gagEnabled?: boolean;
+  purchaseThankYouVideoUrl?: string | null;
   venmoQrUrl?: string | null;
   venmoHandle?: string | null;
   venmoInstructions?: string | null;
@@ -33,6 +38,11 @@ export async function saveLandingMediaAction(input: {
       welcomeVideoUrl: input.welcomeVideoUrl,
       welcomeVideosByPlan: input.welcomeVideosByPlan,
       freeChastiseVideoUrl: input.freeChastiseVideoUrl,
+      gagVideoUrl: input.gagVideoUrl,
+      gagStartSec: input.gagStartSec,
+      gagDurationSec: input.gagDurationSec,
+      gagEnabled: input.gagEnabled,
+      purchaseThankYouVideoUrl: input.purchaseThankYouVideoUrl,
       venmoQrUrl: input.venmoQrUrl,
       venmoHandle: input.venmoHandle,
       venmoInstructions: input.venmoInstructions,
@@ -42,6 +52,11 @@ export async function saveLandingMediaAction(input: {
       storedWelcomeVideoUrl: config.welcomeVideoUrl,
       storedWelcomeVideosByPlan: config.welcomeVideosByPlan,
       storedFreeChastiseVideoUrl: config.freeChastiseVideoUrl,
+      storedGagVideoUrl: config.gagVideoUrl,
+      storedGagStartSec: config.gagStartSec,
+      storedGagDurationSec: config.gagDurationSec,
+      storedGagEnabled: config.gagEnabled,
+      storedPurchaseThankYouVideoUrl: config.purchaseThankYouVideoUrl,
       storedVenmoQrUrl: config.venmoQrUrl,
       storedVenmoHandle: config.venmoHandle,
       storedVenmoInstructions: config.venmoInstructions,
@@ -116,6 +131,7 @@ export async function saveMemberContentAction(input: {
   weeklyVideoTitle: string;
   dinnerVideoUrl: string | null;
   dinnerVideoTitle: string;
+  dailyInspirationClips?: import("@/lib/member-content-store").DailyInspirationClip[];
   nutritionIntro: string;
   nutritionTiers: NutritionCalorieTier[];
 }) {
@@ -132,6 +148,7 @@ export async function saveMemberContentAction(input: {
       storedWeeklyVideoTitle: config.weeklyVideoTitle,
       storedDinnerVideoUrl: config.dinnerVideoUrl,
       storedDinnerVideoTitle: config.dinnerVideoTitle,
+      storedDailyInspirationClips: config.dailyInspirationClips,
       storedNutritionIntro: config.nutritionIntro,
       storedNutritionTiers: config.nutritionTiers,
       updatedAt: config.updatedAt,

@@ -4,20 +4,19 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { setBackgroundMusicOverlay } from "@/lib/background-music-control";
 import {
-  FREE_TICKET_RICKROLL_CHORUS_START_SEC,
-  FREE_TICKET_RICKROLL_DURATION_MS,
   FREE_TICKET_RICKROLL_FADE_MS,
-  FREE_TICKET_RICKROLL_URL,
   isRickrollVideoUrl,
   landingVideoEmbedSrc,
+  resolveFreeTicketGag,
+  type FreeTicketGagConfig,
 } from "@/lib/landing-media";
 import { postYoutubeEmbedCommand } from "@/lib/youtube-embed-control";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 
 /**
  * Free / Explorer ticket open:
- * 1) Always play Rickroll from the chorus for ~10s (hard-coded gag).
- * 2) Crossfade to Jeremy’s free-tier intro (admin free-chastise URL, else welcome).
+ * 1) Play gag (default Rickroll ~10s from chorus; admin-configurable).
+ * 2) Crossfade to Jeremy’s free-tier intro (admin free-ticket video, else welcome).
  */
 export default function FreeTicketModal({
   open,
@@ -25,6 +24,7 @@ export default function FreeTicketModal({
   onUpgrade,
   freeChastiseVideoUrl = null,
   welcomeVideoUrl = null,
+  gagConfig = null,
   purchaseAuth = { signedIn: false },
 }: {
   open: boolean;
@@ -33,6 +33,10 @@ export default function FreeTicketModal({
   /** Jeremy free-tier intro (after gag). Not the rickroll. */
   freeChastiseVideoUrl?: string | null;
   welcomeVideoUrl?: string | null;
+  /** From Admin → Videos (optional). Accepts FreeTicketGagConfig or API shape with durationSec. */
+  gagConfig?:
+    | (Partial<FreeTicketGagConfig> & { durationSec?: number })
+    | null;
   purchaseAuth?: PurchaseAuth;
 }) {
   const [showJeremy, setShowJeremy] = useState(false);
@@ -44,6 +48,18 @@ export default function FreeTicketModal({
   const jeremyRef = useRef<HTMLIFrameElement>(null);
 
   const embedOrigin = typeof window !== "undefined" ? window.location.origin : undefined;
+  const durationSecFromConfig =
+    gagConfig && "durationSec" in gagConfig && gagConfig.durationSec != null
+      ? gagConfig.durationSec
+      : gagConfig?.durationMs != null
+        ? Math.round(gagConfig.durationMs / 1000)
+        : undefined;
+  const gag = resolveFreeTicketGag({
+    gagEnabled: gagConfig?.enabled,
+    gagVideoUrl: gagConfig?.videoUrl,
+    gagStartSec: gagConfig?.startSec,
+    gagDurationSec: durationSecFromConfig,
+  });
 
   // Prefer free-ticket intro; fall back to general welcome (never use rickroll as Jeremy).
   const jeremyVideoUrl = (() => {
@@ -55,11 +71,13 @@ export default function FreeTicketModal({
   })();
   const hasJeremy = Boolean(jeremyVideoUrl);
 
-  const rickrollSrc = landingVideoEmbedSrc(FREE_TICKET_RICKROLL_URL, true, {
-    mute: false,
-    origin: embedOrigin,
-    startSeconds: FREE_TICKET_RICKROLL_CHORUS_START_SEC,
-  });
+  const rickrollSrc = gag.enabled
+    ? landingVideoEmbedSrc(gag.videoUrl, true, {
+        mute: false,
+        origin: embedOrigin,
+        startSeconds: gag.startSec,
+      })
+    : null;
 
   const jeremySrc =
     loadJeremy && hasJeremy
@@ -67,7 +85,8 @@ export default function FreeTicketModal({
       : null;
 
   // Preload Jeremy iframe a few seconds before the crossfade.
-  const preloadMs = Math.max(0, FREE_TICKET_RICKROLL_DURATION_MS - 3_000);
+  const gagDurationMs = gag.enabled ? gag.durationMs : 0;
+  const preloadMs = Math.max(0, gagDurationMs - 3_000);
 
   useEffect(() => {
     timersRef.current.forEach((id) => window.clearTimeout(id));
@@ -92,19 +111,32 @@ export default function FreeTicketModal({
       timersRef.current.push(window.setTimeout(fn, ms));
     };
 
+    if (!gag.enabled) {
+      // Skip gag — load Jeremy immediately.
+      setLoadJeremy(true);
+      setShowJeremy(true);
+      setFadeJeremyIn(true);
+      setHideRickroll(true);
+      return () => {
+        timersRef.current.forEach((id) => window.clearTimeout(id));
+        timersRef.current = [];
+        setBackgroundMusicOverlay(false);
+      };
+    }
+
     if (hasJeremy) {
       schedule(() => setLoadJeremy(true), preloadMs);
     }
 
-    // 10s gag → crossfade to Jeremy (or empty state copy).
+    // Gag duration → crossfade to Jeremy (or empty state copy).
     schedule(() => {
       setShowJeremy(true);
       requestAnimationFrame(() => setFadeJeremyIn(true));
-    }, FREE_TICKET_RICKROLL_DURATION_MS);
+    }, gagDurationMs);
 
     schedule(
       () => setHideRickroll(true),
-      FREE_TICKET_RICKROLL_DURATION_MS + FREE_TICKET_RICKROLL_FADE_MS,
+      gagDurationMs + FREE_TICKET_RICKROLL_FADE_MS,
     );
 
     return () => {
@@ -112,7 +144,7 @@ export default function FreeTicketModal({
       timersRef.current = [];
       setBackgroundMusicOverlay(false);
     };
-  }, [open, hasJeremy, preloadMs]);
+  }, [open, hasJeremy, preloadMs, gag.enabled, gagDurationMs]);
 
   useEffect(() => {
     if (!open || !rickrollSrc) return;
@@ -120,12 +152,7 @@ export default function FreeTicketModal({
       postYoutubeEmbedCommand(rickrollRef.current, "playVideo");
       postYoutubeEmbedCommand(rickrollRef.current, "unMute");
       // Seek to chorus in case embed ignored start= on some devices.
-      postYoutubeEmbedCommand(
-        rickrollRef.current,
-        "seekTo",
-        FREE_TICKET_RICKROLL_CHORUS_START_SEC,
-        true,
-      );
+      postYoutubeEmbedCommand(rickrollRef.current, "seekTo", gag.startSec, true);
     };
     const t1 = window.setTimeout(kick, 200);
     const t2 = window.setTimeout(kick, 1000);
@@ -133,7 +160,7 @@ export default function FreeTicketModal({
       window.clearTimeout(t1);
       window.clearTimeout(t2);
     };
-  }, [open, rickrollSrc]);
+  }, [open, rickrollSrc, gag.startSec]);
 
   useEffect(() => {
     if (!fadeJeremyIn || !hasJeremy) return;
@@ -181,7 +208,7 @@ export default function FreeTicketModal({
           {showJeremy
             ? hasJeremy
               ? "Explorer is real access to starter programs — no homework, no follow-up calls required."
-              : "Paste Jeremy’s free-tier intro under Admin → Landing (free-ticket video)."
+              : "Paste Jeremy’s free-tier intro under Admin → Videos (free-ticket intro)."
             : "You tapped Free. Enjoy the chorus… then hear from your coach."}
         </p>
 

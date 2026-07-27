@@ -7,14 +7,17 @@ import ComingSoonPrograms from "@/components/ComingSoonPrograms";
 import LandingNav from "@/components/LandingNav";
 import LandingSiteFooter from "@/components/LandingSiteFooter";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
+import type { FreeTicketGagConfig } from "@/lib/landing-media";
 
 /** Public landing: hero + mobile ticket picker + coming-soon programs. */
 export default function LandingConversion({
   freeChastiseVideoUrl = null,
   welcomeVideoUrl = null,
+  gagConfig = null,
 }: {
   freeChastiseVideoUrl?: string | null;
   welcomeVideoUrl?: string | null;
+  gagConfig?: Partial<FreeTicketGagConfig> | null;
 }) {
   return (
     <div className="relative min-h-screen app-shell-bg">
@@ -24,6 +27,7 @@ export default function LandingConversion({
       <LandingTicketPicker
         freeChastiseVideoUrl={freeChastiseVideoUrl}
         welcomeVideoUrl={welcomeVideoUrl}
+        gagConfig={gagConfig}
       />
       <LandingServicesSection />
       <ComingSoonPrograms />

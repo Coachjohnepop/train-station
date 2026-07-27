@@ -72,6 +72,7 @@ export default async function HomePage() {
           <LandingTicketPicker
             freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
             welcomeVideoUrl={landingVideos.welcomeVideoUrl}
+            gagConfig={landingVideos.gag}
             purchaseAuth={{ signedIn: true, role: session.role }}
           />
         )}
@@ -87,6 +88,7 @@ export default async function HomePage() {
       <LandingConversion
         freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
         welcomeVideoUrl={landingVideos.welcomeVideoUrl}
+        gagConfig={landingVideos.gag}
       />
 
       {/* Desktop only — hero already has View memberships on phones */}

@@ -3,6 +3,7 @@ import "server-only";
 import { getLandingMedia } from "@/lib/landing-media-store";
 import {
   freeChastiseVideoUrlFromConfig,
+  resolveFreeTicketGag,
   welcomeVideoUrlFromConfig,
 } from "@/lib/landing-media";
 
@@ -14,10 +15,18 @@ export async function getResolvedLandingVideos() {
       url ? welcomeVideoUrlFromConfig(url) : null,
     ]),
   ) as Record<string, string | null>;
+  const gag = resolveFreeTicketGag(config);
   return {
     welcomeVideoUrl: welcomeVideoUrlFromConfig(config.welcomeVideoUrl),
     welcomeVideosByPlan,
     freeChastiseVideoUrl: freeChastiseVideoUrlFromConfig(config.freeChastiseVideoUrl),
+    purchaseThankYouVideoUrl: config.purchaseThankYouVideoUrl?.trim() || null,
+    gag: {
+      enabled: gag.enabled,
+      videoUrl: gag.videoUrl,
+      startSec: gag.startSec,
+      durationSec: Math.round(gag.durationMs / 1000),
+    },
     updatedAt: config.updatedAt,
   };
 }

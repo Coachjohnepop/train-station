@@ -10,6 +10,19 @@ export type LandingMediaConfig = {
   welcomeVideoUrl: string | null;
   welcomeVideosByPlan: WelcomeVideosByPlan;
   freeChastiseVideoUrl: string | null;
+  /**
+   * Free-ticket gag (default Rick Astley). Empty = built-in default URL.
+   * Played ~gagDurationSec from gagStartSec, then crossfades to free-ticket intro.
+   */
+  gagVideoUrl: string | null;
+  /** Seconds into gag video to start (chorus). Default 43. */
+  gagStartSec: number;
+  /** How long gag plays before Jeremy intro. Default 10. */
+  gagDurationSec: number;
+  /** When false, skip gag and go straight to free-ticket intro. */
+  gagEnabled: boolean;
+  /** After paid checkout success — “thank you for the purchase”. */
+  purchaseThankYouVideoUrl: string | null;
   venmoQrUrl: string | null;
   venmoHandle: string | null;
   venmoInstructions: string | null;
@@ -37,6 +50,11 @@ function emptyConfig(): LandingMediaConfig {
     welcomeVideoUrl: null,
     welcomeVideosByPlan: {},
     freeChastiseVideoUrl: null,
+    gagVideoUrl: null,
+    gagStartSec: 43,
+    gagDurationSec: 10,
+    gagEnabled: true,
+    purchaseThankYouVideoUrl: null,
     venmoQrUrl: null,
     venmoHandle: null,
     venmoInstructions: null,
@@ -50,13 +68,25 @@ function normalizeUrl(raw: unknown): string | null {
   return trimmed || null;
 }
 
+function clampInt(raw: unknown, fallback: number, min: number, max: number): number {
+  const n = typeof raw === "number" ? raw : Number(raw);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(n)));
+}
+
 function normalize(raw: unknown): LandingMediaConfig {
   if (!raw || typeof raw !== "object") return emptyConfig();
-  const data = raw as Partial<LandingMediaConfig>;
+  const data = raw as Partial<LandingMediaConfig> & { gagEnabled?: unknown };
+  const defaults = emptyConfig();
   return {
     welcomeVideoUrl: normalizeUrl(data.welcomeVideoUrl),
     welcomeVideosByPlan: normalizeWelcomeVideosByPlan(data.welcomeVideosByPlan),
     freeChastiseVideoUrl: normalizeUrl(data.freeChastiseVideoUrl),
+    gagVideoUrl: normalizeUrl(data.gagVideoUrl),
+    gagStartSec: clampInt(data.gagStartSec, defaults.gagStartSec, 0, 3600),
+    gagDurationSec: clampInt(data.gagDurationSec, defaults.gagDurationSec, 3, 60),
+    gagEnabled: data.gagEnabled === false ? false : true,
+    purchaseThankYouVideoUrl: normalizeUrl(data.purchaseThankYouVideoUrl),
     venmoQrUrl: normalizeUrl(data.venmoQrUrl),
     venmoHandle: normalizeUrl(data.venmoHandle),
     venmoInstructions: normalizeUrl(data.venmoInstructions),
@@ -96,6 +126,11 @@ export async function saveLandingMedia(
       | "welcomeVideoUrl"
       | "welcomeVideosByPlan"
       | "freeChastiseVideoUrl"
+      | "gagVideoUrl"
+      | "gagStartSec"
+      | "gagDurationSec"
+      | "gagEnabled"
+      | "purchaseThankYouVideoUrl"
       | "venmoQrUrl"
       | "venmoHandle"
       | "venmoInstructions"
@@ -133,6 +168,34 @@ export async function saveLandingMedia(
       throw new Error("Free-ticket video must be a valid YouTube URL.");
     }
     next.freeChastiseVideoUrl = url;
+  }
+
+  if (patch.gagVideoUrl !== undefined) {
+    const url = patch.gagVideoUrl?.trim() || null;
+    if (url && !isYoutubeUrl(url)) {
+      throw new Error("Gag video must be a valid YouTube URL.");
+    }
+    next.gagVideoUrl = url;
+  }
+
+  if (patch.gagStartSec !== undefined) {
+    next.gagStartSec = clampInt(patch.gagStartSec, 43, 0, 3600);
+  }
+
+  if (patch.gagDurationSec !== undefined) {
+    next.gagDurationSec = clampInt(patch.gagDurationSec, 10, 3, 60);
+  }
+
+  if (patch.gagEnabled !== undefined) {
+    next.gagEnabled = Boolean(patch.gagEnabled);
+  }
+
+  if (patch.purchaseThankYouVideoUrl !== undefined) {
+    const url = patch.purchaseThankYouVideoUrl?.trim() || null;
+    if (url && !isYoutubeUrl(url)) {
+      throw new Error("Purchase thank-you video must be a valid YouTube URL.");
+    }
+    next.purchaseThankYouVideoUrl = url;
   }
 
   if (patch.venmoQrUrl !== undefined) {

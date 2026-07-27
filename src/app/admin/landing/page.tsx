@@ -24,14 +24,18 @@ export default async function AdminLandingPage() {
         home page.
       </p>
       <div className="mt-4 rounded-xl border border-violet-500/30 bg-violet-500/5 px-4 py-3 text-xs text-[var(--muted)]">
-        <p className="font-semibold text-violet-100">Video checklist (Jeremy)</p>
+        <p className="font-semibold text-violet-100">Videos moved</p>
+        <p className="mt-2">
+          Manage <strong className="text-violet-50">all site videos</strong> (gag, intros, purchase
+          thank-you, weekly / dinner / daily inspiration) under{" "}
+          <a href="/admin/videos" className="text-accent hover:underline">
+            Admin → Videos
+          </a>
+          . This page keeps brand logo + Venmo.
+        </p>
         <ol className="mt-2 list-decimal space-y-1 pl-5">
-          <li>Welcome (default + per ticket if you want different intros)</li>
-          <li>
-            Free-ticket intro (Jeremy) — after the built-in 10s chorus gag when someone taps Free
-          </li>
-          <li>Weekly coach video + dinner video (member Today strip below)</li>
-          <li>Venmo QR if you take money outside Stripe</li>
+          <li>Venmo QR if you take money outside Stripe (below)</li>
+          <li>Logo / brand (below)</li>
         </ol>
         <p className="mt-2">
           Personal macros go in{" "}

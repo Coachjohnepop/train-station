@@ -6,6 +6,8 @@ import { useSearchParams } from "next/navigation";
 import PaymentReceiptCard, {
   type PaymentReceiptView,
 } from "@/components/PaymentReceiptCard";
+import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
+import { isYoutubeUrl } from "@/lib/youtube";
 
 type Phase = "confirming" | "ready" | "error";
 
@@ -17,6 +19,25 @@ function CheckoutSuccessInner() {
   const [receipt, setReceipt] = useState<PaymentReceiptView | null>(null);
   const [continueHref, setContinueHref] = useState("/member/onboard");
   const [step, setStep] = useState<1 | 2>(1);
+  const [thankYouVideo, setThankYouVideo] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/landing-media", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled) return;
+        const url =
+          typeof data?.purchaseThankYouVideoUrl === "string"
+            ? data.purchaseThankYouVideoUrl.trim()
+            : "";
+        if (url && isYoutubeUrl(url)) setThankYouVideo(url);
+      })
+      .catch(() => null);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!sessionId) {
@@ -130,6 +151,18 @@ function CheckoutSuccessInner() {
           <p className="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-accent">
             Step 2 of 2 · Confirmation
           </p>
+          {thankYouVideo ? (
+            <div className="overflow-hidden rounded-xl border border-[var(--border)]">
+              <p className="bg-[var(--surface-2)] px-3 py-2 text-center text-xs font-semibold text-[var(--text)]">
+                Thank you for the purchase
+              </p>
+              <YoutubeAutoplayFrame
+                className="aspect-video w-full"
+                videoUrl={thankYouVideo}
+                title="Thank you for your purchase"
+              />
+            </div>
+          ) : null}
           <PaymentReceiptCard receipt={receipt} />
           <button
             type="button"

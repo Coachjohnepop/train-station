@@ -84,8 +84,9 @@ export const WELCOME_VIDEO_PLAN_OPTIONS = MEMBERSHIP_PLANS.map((plan) => ({
 }));
 
 /**
- * Free / Explorer ticket gag: always Rick Astley from the chorus, ~10s, then fade to
- * Jeremy’s free-tier intro (Admin → Landing free-ticket video — not this URL).
+ * Free / Explorer ticket gag: default Rick Astley from the chorus, ~10s, then fade to
+ * Jeremy’s free-tier intro (Admin → Videos free-ticket video — not this URL).
+ * Admins can override URL / start / duration under Admin → Videos.
  */
 export const FREE_TICKET_RICKROLL_URL =
   "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=43s";
@@ -98,6 +99,39 @@ export const FREE_TICKET_RICKROLL_DURATION_MS = 10_000;
 
 /** Crossfade length (must match FreeTicketModal CSS transition). */
 export const FREE_TICKET_RICKROLL_FADE_MS = 1_500;
+
+export type FreeTicketGagConfig = {
+  enabled: boolean;
+  videoUrl: string;
+  startSec: number;
+  durationMs: number;
+};
+
+/** Resolve gag settings from admin store (with hard-coded defaults). */
+export function resolveFreeTicketGag(input?: {
+  gagEnabled?: boolean | null;
+  gagVideoUrl?: string | null;
+  gagStartSec?: number | null;
+  gagDurationSec?: number | null;
+} | null): FreeTicketGagConfig {
+  const enabled = input?.gagEnabled !== false;
+  const videoUrl =
+    input?.gagVideoUrl?.trim() || FREE_TICKET_RICKROLL_URL;
+  const startSec =
+    typeof input?.gagStartSec === "number" && Number.isFinite(input.gagStartSec)
+      ? Math.max(0, Math.min(3600, Math.round(input.gagStartSec)))
+      : FREE_TICKET_RICKROLL_CHORUS_START_SEC;
+  const durationSec =
+    typeof input?.gagDurationSec === "number" && Number.isFinite(input.gagDurationSec)
+      ? Math.max(3, Math.min(60, Math.round(input.gagDurationSec)))
+      : FREE_TICKET_RICKROLL_DURATION_MS / 1000;
+  return {
+    enabled,
+    videoUrl,
+    startSec,
+    durationMs: durationSec * 1000,
+  };
+}
 
 export function isRickrollVideoUrl(url: string | null | undefined): boolean {
   if (!url?.trim()) return false;

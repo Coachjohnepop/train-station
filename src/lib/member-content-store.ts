@@ -9,11 +9,21 @@ export type NutritionCalorieTier = {
   sampleDay: string;
 };
 
+/** Daily / library inspirational clips for member Today (and Video admin). */
+export type DailyInspirationClip = {
+  id: string;
+  title: string;
+  videoUrl: string;
+  /** 0 = Sunday … 6 = Saturday; null = any day / general library */
+  weekday: number | null;
+};
+
 export type MemberContentConfig = {
   weeklyVideoUrl: string | null;
   weeklyVideoTitle: string;
   dinnerVideoUrl: string | null;
   dinnerVideoTitle: string;
+  dailyInspirationClips: DailyInspirationClip[];
   nutritionIntro: string;
   nutritionTiers: NutritionCalorieTier[];
   updatedAt: string;
@@ -80,11 +90,41 @@ function emptyConfig(): MemberContentConfig {
     weeklyVideoTitle: "This week from Coach Jeremy",
     dinnerVideoUrl: null,
     dinnerVideoTitle: "What's for dinner?",
+    dailyInspirationClips: [],
     nutritionIntro:
       "Sample day templates by calorie level — swap foods to match what you like. Your coach can personalize these on your intro call.",
     nutritionTiers: DEFAULT_NUTRITION_TIERS,
     updatedAt: new Date().toISOString(),
   };
+}
+
+function normalizeClips(raw: unknown): DailyInspirationClip[] {
+  if (!Array.isArray(raw)) return [];
+  const out: DailyInspirationClip[] = [];
+  for (const row of raw) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Partial<DailyInspirationClip>;
+    const videoUrl = typeof r.videoUrl === "string" ? r.videoUrl.trim() : "";
+    if (!videoUrl) continue;
+    if (!isYoutubeUrl(videoUrl)) continue;
+    const title =
+      typeof r.title === "string" && r.title.trim() ? r.title.trim() : "Daily inspiration";
+    let weekday: number | null = null;
+    if (r.weekday !== null && r.weekday !== undefined) {
+      const w = typeof r.weekday === "number" ? r.weekday : Number(r.weekday);
+      if (Number.isFinite(w) && w >= 0 && w <= 6) weekday = Math.round(w);
+    }
+    out.push({
+      id:
+        typeof r.id === "string" && r.id.trim()
+          ? r.id.trim()
+          : `insp-${out.length + 1}-${Date.now().toString(36)}`,
+      title,
+      videoUrl,
+      weekday,
+    });
+  }
+  return out;
 }
 
 function normalize(raw: unknown): MemberContentConfig {
@@ -101,6 +141,7 @@ function normalize(raw: unknown): MemberContentConfig {
       typeof data.dinnerVideoTitle === "string" && data.dinnerVideoTitle.trim()
         ? data.dinnerVideoTitle.trim()
         : emptyConfig().dinnerVideoTitle,
+    dailyInspirationClips: normalizeClips(data.dailyInspirationClips),
     nutritionIntro:
       typeof data.nutritionIntro === "string" ? data.nutritionIntro.trim() : emptyConfig().nutritionIntro,
     nutritionTiers: normalizeTiers(data.nutritionTiers),
@@ -132,6 +173,7 @@ export async function saveMemberContent(
       | "weeklyVideoTitle"
       | "dinnerVideoUrl"
       | "dinnerVideoTitle"
+      | "dailyInspirationClips"
       | "nutritionIntro"
       | "nutritionTiers"
     >
@@ -167,6 +209,10 @@ export async function saveMemberContent(
     next.dinnerVideoTitle = patch.dinnerVideoTitle.trim() || emptyConfig().dinnerVideoTitle;
   }
 
+  if (patch.dailyInspirationClips !== undefined) {
+    next.dailyInspirationClips = normalizeClips(patch.dailyInspirationClips);
+  }
+
   if (patch.nutritionIntro !== undefined) {
     next.nutritionIntro = patch.nutritionIntro.trim();
   }
@@ -185,4 +231,16 @@ export async function saveMemberContent(
   });
 
   return next;
+}
+
+/** Prefer clip matching weekday (0–6); else first general (null weekday); else first clip. */
+export function pickDailyInspirationClip(
+  clips: DailyInspirationClip[],
+  weekday: number = new Date().getDay(),
+): DailyInspirationClip | null {
+  if (!clips.length) return null;
+  const day = clips.find((c) => c.weekday === weekday);
+  if (day) return day;
+  const any = clips.find((c) => c.weekday === null);
+  return any || clips[0] || null;
 }
