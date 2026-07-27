@@ -12,6 +12,7 @@ type Promo = {
   timesRedeemed: number;
   maxRedemptions: number | null;
   expiresAt: string | null;
+  appliesToLabel?: string;
 };
 
 type Coupon = {
@@ -22,6 +23,7 @@ type Coupon = {
   duration: string;
   timesRedeemed: number;
   valid: boolean;
+  appliesToLabel?: string;
 };
 
 function statusPill(status: string, tone?: "ok" | "warn" | "bad" | "muted") {
@@ -246,7 +248,24 @@ export default function AdminDiscountsPanel({
                   })
                 }
               >
-                Preset: 20% one-time (ready, unused)
+                Preset: 20% one-time (1st Class)
+              </button>
+              <button
+                type="button"
+                className="btn-ghost text-[10px] ring-1 ring-emerald-500/40"
+                onClick={() =>
+                  setDiscountForm({
+                    ...discountForm,
+                    kind: "percent",
+                    percentOff: "98",
+                    duration: "once",
+                    appliesTo: "all",
+                    name: "Smoke test · 98% all tickets",
+                    code: discountForm.code || "TEST98",
+                  })
+                }
+              >
+                Preset: 98% all plans (smoke)
               </button>
             </div>
 
@@ -270,30 +289,48 @@ export default function AdminDiscountsPanel({
             </label>
 
             <div>
-              <p className="mb-1.5 text-xs text-[var(--muted)]">Applies to</p>
-              <div className="flex flex-wrap gap-2">
+              <p className="mb-1.5 text-xs font-medium text-[var(--text)]">
+                Where this code works{" "}
+                <span className="font-normal text-[var(--muted)]">(required)</span>
+              </p>
+              <div className="flex flex-col gap-2">
                 {(
                   [
-                    ["subscription", "Recurring only"],
-                    ["one_time", "One-time only"],
-                    ["all", "All products"],
+                    [
+                      "subscription",
+                      "Coach + Business only",
+                      "$25/mo and $50/mo subscriptions — not 1st Class",
+                    ],
+                    [
+                      "one_time",
+                      "1st Class only",
+                      "$850 one-time package — not monthly tickets",
+                    ],
+                    [
+                      "all",
+                      "All membership tickets",
+                      "Coach, Business, and 1st Class (use for smoke tests)",
+                    ],
                   ] as const
-                ).map(([id, label]) => (
+                ).map(([id, label, hint]) => (
                   <button
                     key={id}
                     type="button"
-                    className={`btn-ghost text-xs ${
-                      discountForm.appliesTo === id ? "ring-1 ring-accent" : ""
+                    className={`rounded-lg border px-3 py-2 text-left transition ${
+                      discountForm.appliesTo === id
+                        ? "border-accent bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]"
+                        : "border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--accent)]/50"
                     }`}
                     onClick={() => setDiscountForm({ ...discountForm, appliesTo: id })}
                   >
-                    {label}
+                    <span className="block text-sm font-semibold">{label}</span>
+                    <span className="mt-0.5 block text-[10px] text-[var(--muted)]">{hint}</span>
                   </button>
                 ))}
               </div>
-              <p className="mt-1 text-[10px] text-[var(--muted)]">
-                Recurring = Coach + Business. One-time = 1st Class package (built, not required
-                yet).
+              <p className="mt-2 text-[10px] text-amber-200/90">
+                Wrong scope = checkout error “coupon does not apply to anything in this order.”
+                Example: 1st Class–only code on Coach Class $25.
               </p>
             </div>
 
@@ -427,6 +464,7 @@ export default function AdminDiscountsPanel({
                   <tr className="border-b border-[var(--border)] text-left text-[10px] uppercase tracking-[2px] text-[var(--muted)]">
                     <th className="px-3 py-2">Code</th>
                     <th className="px-3 py-2">Offer</th>
+                    <th className="px-3 py-2">Works on</th>
                     <th className="px-3 py-2">Uses</th>
                     <th className="px-3 py-2" />
                   </tr>
@@ -437,6 +475,9 @@ export default function AdminDiscountsPanel({
                       <td className="px-3 py-2 font-mono font-semibold">{p.code}</td>
                       <td className="px-3 py-2 text-xs text-[var(--muted)]">
                         {p.couponSummary}
+                      </td>
+                      <td className="px-3 py-2 text-[11px] text-[var(--muted)]">
+                        {p.appliesToLabel || "—"}
                       </td>
                       <td className="px-3 py-2 text-xs">
                         {p.timesRedeemed}
@@ -458,7 +499,7 @@ export default function AdminDiscountsPanel({
                   {promos.length === 0 && (
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={5}
                         className="px-3 py-6 text-center text-xs text-[var(--muted)]"
                       >
                         No promotion codes yet.
@@ -477,6 +518,7 @@ export default function AdminDiscountsPanel({
                   <tr className="border-b border-[var(--border)] text-left text-[10px] uppercase tracking-[2px] text-[var(--muted)]">
                     <th className="px-3 py-2">Name</th>
                     <th className="px-3 py-2">Value</th>
+                    <th className="px-3 py-2">Works on</th>
                     <th className="px-3 py-2">Duration</th>
                     <th className="px-3 py-2">Redeemed</th>
                   </tr>
@@ -491,6 +533,9 @@ export default function AdminDiscountsPanel({
                       <td className="px-3 py-2 text-xs">
                         {c.percentOff != null ? `${c.percentOff}%` : c.amountOffLabel || "—"}
                       </td>
+                      <td className="px-3 py-2 text-[11px] text-[var(--muted)]">
+                        {c.appliesToLabel || "—"}
+                      </td>
                       <td className="px-3 py-2 text-xs text-[var(--muted)]">{c.duration}</td>
                       <td className="px-3 py-2 text-xs">{c.timesRedeemed}</td>
                     </tr>
@@ -498,7 +543,7 @@ export default function AdminDiscountsPanel({
                   {coupons.length === 0 && (
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={5}
                         className="px-3 py-6 text-center text-xs text-[var(--muted)]"
                       >
                         No coupons yet.

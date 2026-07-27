@@ -59,6 +59,10 @@ export type BillingCoupon = {
   valid: boolean;
   createdAt: string;
   redeemBy: string | null;
+  /** Stripe product ids on coupon.applies_to (empty = any product). */
+  productIds: string[];
+  /** Human scope for admin UI. */
+  appliesToLabel: string;
 };
 
 export type BillingPromotionCode = {
@@ -71,7 +75,28 @@ export type BillingPromotionCode = {
   timesRedeemed: number;
   expiresAt: string | null;
   createdAt: string;
+  productIds: string[];
+  appliesToLabel: string;
 };
+
+function labelDiscountProducts(
+  productIds: string[],
+  nameById: Map<string, string>,
+): string {
+  if (productIds.length === 0) return "All products";
+  const names = productIds.map((id) => {
+    const n = nameById.get(id) || "";
+    if (/coach class|ts_plan.?member|member/i.test(n) || n.includes("Coach Class")) {
+      return "Coach Class $25";
+    }
+    if (/business/i.test(n)) return "Business $50";
+    if (/1st class|first class|pro/i.test(n)) return "1st Class $850";
+    if (/tip/i.test(n)) return "Tips";
+    return n || id.slice(0, 12);
+  });
+  // De-dupe preserve order
+  return [...new Set(names)].join(" · ");
+}
 
 export type BillingSubscription = {
   id: string;
@@ -382,12 +407,41 @@ export async function listBillingCouponsAndPromos(): Promise<{
     return { coupons: [], promotionCodes: [], error: "Stripe is not configured." };
   }
 
-  const [couponsList, promosList] = await Promise.all([
+  const [couponsList, promosList, productsList] = await Promise.all([
     stripe.coupons.list({ limit: 100 }),
     stripe.promotionCodes.list({ limit: 100, expand: ["data.promotion.coupon"] }),
+    stripe.products.list({ active: true, limit: 100 }),
   ]);
 
-  const coupons: BillingCoupon[] = couponsList.data.map((c) => ({
+  const nameById = new Map(productsList.data.map((p) => [p.id, p.name || p.id]));
+
+  // Coupon.applies_to is not always on list expand — retrieve when missing product list.
+  const couponDetails = await Promise.all(
+    couponsList.data.map(async (c) => {
+      let productIds = c.applies_to?.products ?? [];
+      if (!c.applies_to) {
+        try {
+          const full = await stripe.coupons.retrieve(c.id);
+          productIds = full.applies_to?.products ?? [];
+        } catch {
+          productIds = [];
+        }
+      }
+      return { c, productIds };
+    }),
+  );
+
+  const couponById = new Map(
+    couponDetails.map(({ c, productIds }) => [
+      c.id,
+      {
+        productIds,
+        appliesToLabel: labelDiscountProducts(productIds, nameById),
+      },
+    ]),
+  );
+
+  const coupons: BillingCoupon[] = couponDetails.map(({ c, productIds }) => ({
     id: c.id,
     name: c.name,
     percentOff: c.percent_off,
@@ -401,11 +455,15 @@ export async function listBillingCouponsAndPromos(): Promise<{
     valid: c.valid,
     createdAt: new Date(c.created * 1000).toISOString(),
     redeemBy: c.redeem_by ? new Date(c.redeem_by * 1000).toISOString() : null,
+    productIds,
+    appliesToLabel: labelDiscountProducts(productIds, nameById),
   }));
 
   const promotionCodes: BillingPromotionCode[] = promosList.data.map((p) => {
     const promoCoupon = p.promotion?.coupon;
     const coupon = typeof promoCoupon === "string" ? null : promoCoupon;
+    const couponId =
+      typeof promoCoupon === "string" ? promoCoupon : promoCoupon?.id || "";
     let couponSummary =
       typeof promoCoupon === "string" ? promoCoupon : promoCoupon?.id || "";
     if (coupon) {
@@ -414,16 +472,28 @@ export async function listBillingCouponsAndPromos(): Promise<{
         couponSummary = money(coupon.amount_off, coupon.currency || "usd");
       }
     }
+    // Prefer expanded coupon applies_to; fall back to coupon list detail.
+    let productIds =
+      coupon && "applies_to" in coupon && coupon.applies_to?.products
+        ? coupon.applies_to.products
+        : couponById.get(couponId)?.productIds ?? [];
+    if (!productIds.length && couponId) {
+      productIds = couponById.get(couponId)?.productIds ?? [];
+    }
     return {
       id: p.id,
       code: p.code,
       active: p.active,
-      couponId: typeof promoCoupon === "string" ? promoCoupon : promoCoupon?.id || "",
+      couponId,
       couponSummary,
       maxRedemptions: p.max_redemptions,
       timesRedeemed: p.times_redeemed || 0,
       expiresAt: p.expires_at ? new Date(p.expires_at * 1000).toISOString() : null,
       createdAt: new Date(p.created * 1000).toISOString(),
+      productIds,
+      appliesToLabel:
+        couponById.get(couponId)?.appliesToLabel ||
+        labelDiscountProducts(productIds, nameById),
     };
   });
 
