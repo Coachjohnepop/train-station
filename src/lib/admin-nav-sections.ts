@@ -189,8 +189,9 @@ export const PLATFORM_NAV_GROUPS: AdminNavGroup[] = [
       },
       {
         href: "/admin/commission",
-        label: "Dev & partnership",
-        match: (p) => p.startsWith("/admin/commission"),
+        label: "Money desk",
+        match: (p) =>
+          p.startsWith("/admin/commission") || p.startsWith("/admin/payouts"),
       },
       {
         href: "/admin/pricing",
@@ -254,6 +255,7 @@ const PLATFORM_PATH_PREFIXES = [
   "/admin/platform",
   "/admin/billing",
   "/admin/commission",
+  "/admin/payouts",
   "/admin/pricing",
   "/admin/offers",
   "/admin/users",

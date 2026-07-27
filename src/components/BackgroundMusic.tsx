@@ -30,10 +30,9 @@ const ACTIVATION_EVENTS: (keyof WindowEventMap)[] = [
   "click",
 ];
 
-const ADMIN_MUSIC_LANDING = new Set(["/admin", "/admin/day"]);
-
-function isAdminSubPage(pathname: string): boolean {
-  return pathname.startsWith("/admin") && !ADMIN_MUSIC_LANDING.has(pathname);
+/** No theme song on any coach/platform admin surface (including /admin/day). */
+function isAdminRoute(pathname: string): boolean {
+  return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
 function isUserMuted(): boolean {
@@ -50,11 +49,17 @@ function sleep(ms: number) {
 
 export default function BackgroundMusic() {
   const pathname = usePathname() ?? "";
-  const adminSubPage = isAdminSubPage(pathname);
+  const onAdmin = isAdminRoute(pathname);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const overlayPauseRef = useRef(false);
+  /** Keep handlers (gestures / visibility) from restarting music on admin. */
+  const adminRouteRef = useRef(onAdmin);
   const hintTimerRef = useRef<number | null>(null);
   const unlockedRef = useRef(false);
+
+  useEffect(() => {
+    adminRouteRef.current = onAdmin;
+  }, [onAdmin]);
 
   /** User hit mute on the speaker. */
   const [off, setOff] = useState(false);
@@ -103,10 +108,18 @@ export default function BackgroundMusic() {
     return advancing;
   }, []);
 
+  const stopAdminMusic = useCallback((audio: HTMLAudioElement) => {
+    audio.pause();
+    audio.muted = true;
+    setSoundLive(false);
+    dismissHint();
+  }, [dismissHint]);
+
   const forceAudible = useCallback(
     async (audio: HTMLAudioElement) => {
-      if (isUserMuted() || overlayPauseRef.current) {
-        setSoundLive(false);
+      if (adminRouteRef.current || isUserMuted() || overlayPauseRef.current) {
+        if (adminRouteRef.current) stopAdminMusic(audio);
+        else setSoundLive(false);
         return false;
       }
       audio.volume = VOLUME;
@@ -121,7 +134,7 @@ export default function BackgroundMusic() {
       if (ok) setOff(false);
       return ok;
     },
-    [confirmSoundLive],
+    [confirmSoundLive, stopAdminMusic],
   );
 
   const whenCanPlay = (audio: HTMLAudioElement, ms = 8000) =>
@@ -153,6 +166,11 @@ export default function BackgroundMusic() {
   /** Finger + best-effort music. Speaker stays “muted” until sound is confirmed. */
   const startMusicWithFinger = useCallback(
     async (audio: HTMLAudioElement) => {
+      if (adminRouteRef.current) {
+        stopAdminMusic(audio);
+        return;
+      }
+
       showFingerForAtLeastTwentySeconds();
 
       if (isUserMuted()) {
@@ -177,9 +195,17 @@ export default function BackgroundMusic() {
       audio.volume = VOLUME;
 
       await whenCanPlay(audio);
+      if (adminRouteRef.current) {
+        stopAdminMusic(audio);
+        return;
+      }
 
       // Try audible autoplay a few times
       for (let i = 0; i < 5; i++) {
+        if (adminRouteRef.current) {
+          stopAdminMusic(audio);
+          return;
+        }
         audio.muted = false;
         audio.volume = VOLUME;
         try {
@@ -200,7 +226,7 @@ export default function BackgroundMusic() {
       }
       setSoundLive(false);
     },
-    [showFingerForAtLeastTwentySeconds, confirmSoundLive],
+    [showFingerForAtLeastTwentySeconds, confirmSoundLive, stopAdminMusic],
   );
 
   useEffect(() => registerBackgroundMusicMediaDucking(), []);
@@ -210,14 +236,26 @@ export default function BackgroundMusic() {
     if (!audio) return;
     markBackgroundMusicElement(audio);
 
-    void startMusicWithFinger(audio);
+    if (adminRouteRef.current) {
+      stopAdminMusic(audio);
+    } else {
+      void startMusicWithFinger(audio);
+    }
 
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
+      if (adminRouteRef.current) {
+        stopAdminMusic(audio);
+        return;
+      }
       if (isUserMuted() || overlayPauseRef.current) return;
       void forceAudible(audio);
     };
     const onPageShow = () => {
+      if (adminRouteRef.current) {
+        stopAdminMusic(audio);
+        return;
+      }
       if (isUserMuted()) return;
       void startMusicWithFinger(audio);
     };
@@ -229,14 +267,17 @@ export default function BackgroundMusic() {
       window.removeEventListener("pageshow", onPageShow);
       clearHintTimer();
     };
-  }, [startMusicWithFinger, forceAudible, clearHintTimer]);
+  }, [startMusicWithFinger, forceAudible, clearHintTimer, stopAdminMusic]);
 
   // First real gesture → unlock sound (does not hide the finger)
   useEffect(() => {
     const opts: AddEventListenerOptions = { capture: true, passive: true };
     const onActivation = () => {
       const audio = audioRef.current;
-      if (!audio || isUserMuted() || overlayPauseRef.current) return;
+      if (!audio || adminRouteRef.current || isUserMuted() || overlayPauseRef.current) {
+        if (audio && adminRouteRef.current) stopAdminMusic(audio);
+        return;
+      }
       void forceAudible(audio);
     };
     ACTIVATION_EVENTS.forEach((e) => window.addEventListener(e, onActivation, opts));
@@ -245,7 +286,7 @@ export default function BackgroundMusic() {
         window.removeEventListener(e, onActivation, opts),
       );
     };
-  }, [forceAudible]);
+  }, [forceAudible, stopAdminMusic]);
 
   useEffect(() => {
     const onOverlay = (e: Event) => {
@@ -253,7 +294,7 @@ export default function BackgroundMusic() {
       if (!audio) return;
       const active = Boolean((e as CustomEvent<{ active?: boolean }>).detail?.active);
       overlayPauseRef.current = active;
-      if (active) {
+      if (active || adminRouteRef.current) {
         audio.pause();
         setSoundLive(false);
         return;
@@ -264,12 +305,12 @@ export default function BackgroundMusic() {
     return () => window.removeEventListener(BG_MUSIC_OVERLAY_EVENT, onOverlay);
   }, [forceAudible]);
 
+  // Route change: hard-stop on any /admin path; resume only on member/public.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (adminSubPage || overlayPauseRef.current) {
-      audio.pause();
-      setSoundLive(false);
+    if (onAdmin || overlayPauseRef.current) {
+      stopAdminMusic(audio);
       return;
     }
     if (isUserMuted()) {
@@ -278,11 +319,11 @@ export default function BackgroundMusic() {
       return;
     }
     void startMusicWithFinger(audio);
-  }, [adminSubPage, startMusicWithFinger]);
+  }, [onAdmin, startMusicWithFinger, stopAdminMusic]);
 
   const toggle = () => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || adminRouteRef.current) return;
 
     // If we're only waiting for a gesture, speaker click = unlock (user gesture)
     if (!off && !soundLive) {
@@ -315,9 +356,8 @@ export default function BackgroundMusic() {
     }
   };
 
-  const onAdminLanding = ADMIN_MUSIC_LANDING.has(pathname);
   const onPublicHome = pathname === "/";
-  const fingerVisible = showHint && !adminSubPage;
+  const fingerVisible = showHint && !onAdmin;
 
   // Honest icon: only “on” when sound is confirmed live
   const showAsPlaying = !off && soundLive;
@@ -340,26 +380,23 @@ export default function BackgroundMusic() {
         ref={audioRef}
         src={SRC}
         loop
-        autoPlay
-        preload="auto"
+        // Never autoplay on admin — route effect + muted start; public may unlock later
+        autoPlay={!onAdmin}
+        preload={onAdmin ? "none" : "auto"}
+        muted={onAdmin}
         playsInline
         data-ts-bg-music="true"
       />
-      {!adminSubPage ? (
+      {!onAdmin ? (
         <div
           className={`bg-music-control-cluster fixed z-50 flex items-end overflow-visible ${
-            onAdminLanding
-              ? "bottom-20 xl:bottom-6"
-              : onPublicHome
-                ? "bottom-5 sm:bottom-8"
-                : "bottom-6"
+            onPublicHome ? "bottom-5 sm:bottom-8" : "bottom-6"
           }`}
           style={{
             right: "max(1rem, env(safe-area-inset-right, 0px))",
-            bottom:
-              onAdminLanding || onPublicHome
-                ? undefined
-                : "max(1.25rem, env(safe-area-inset-bottom, 0px))",
+            bottom: onPublicHome
+              ? undefined
+              : "max(1.25rem, env(safe-area-inset-bottom, 0px))",
           }}
         >
           {fingerVisible ? (

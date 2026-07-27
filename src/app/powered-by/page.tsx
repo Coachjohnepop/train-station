@@ -98,12 +98,13 @@ export default function PoweredByPage() {
             card <em>or</em> Venmo without a second set of books.
           </p>
 
-          {/* Aggressive build-cost band — git: 43 active days · peak full-intensity soaks · $250/hr */}
+          {/* Effort band — no hourly rate. Hours/days include Jake’s prior cycle (abandoned code, kept lessons)
+              plus this repo’s full-intensity rebuild (43 git commit-days · 780+ commits · multi-agent soaks). */}
           <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
             {[
-              { v: "400+", k: "documented build-hours" },
-              { v: "43", k: "active build days" },
-              { v: "$100K+", k: "to rebuild at $250/hr" },
+              { v: "1,000+", k: "build-hours across both cycles" },
+              { v: "80+", k: "active build days" },
+              { v: "780+", k: "production commits" },
             ].map((stat) => (
               <div
                 key={stat.k}
@@ -119,8 +120,10 @@ export default function PoweredByPage() {
             ))}
           </div>
           <p className="mt-3 text-center text-[11px] leading-relaxed text-[var(--muted)]">
-            From first commit (Jun 2026) through live coaching soaks — full-intensity days, not
-            calendar fluff. License it and skip the rebuild.
+            Counts the first build cycle with Jake (code fully rebuilt — lessons kept) plus this
+            stack’s live shipping run (Jun–Jul 2026): 43 hard commit-days, 780+ commits, peak
+            days with 50+ ship slices, full-intensity soaks — not calendar fluff. License it and
+            skip the double rebuild.
           </p>
 
           <p className="mt-5 text-sm leading-relaxed text-[var(--muted)]">

@@ -6,6 +6,8 @@ import {
 } from "@/lib/commission-partner-splits";
 import { listCommissionPartners, validatePartnerShares } from "@/lib/commission-partners-store";
 import { listCommissionPayouts } from "@/lib/commission-ledger-store";
+import { buildMoneyDeskQueue } from "@/lib/money-desk-queue";
+import { previewPlatformAdminFee } from "@/lib/platform-admin-fee";
 import {
   commissionConfigFromEnv,
   commissionFromMrr,
@@ -20,6 +22,8 @@ import {
 } from "@/lib/stripe-commission";
 import { getConnectPlatformHint, listConnectPartnerStatuses } from "@/lib/stripe-connect";
 import { COMMISSION_PAYOUT_WEEKDAYS, getCoachSettings } from "@/lib/coach-settings-store";
+import { getStripe, getStripePublishableKey } from "@/lib/stripe";
+import { isStripeTestMode } from "@/lib/stripe-price-ids";
 
 export const dynamic = "force-dynamic";
 
@@ -29,19 +33,81 @@ async function requireStaff() {
   return session;
 }
 
+async function fetchStripeBalanceSnapshot(): Promise<{
+  configured: boolean;
+  testMode: boolean;
+  availableCents: number | null;
+  availableLabel: string | null;
+  pendingCents: number | null;
+  pendingLabel: string | null;
+  error: string | null;
+}> {
+  const stripe = getStripe();
+  if (!stripe) {
+    return {
+      configured: false,
+      testMode: isStripeTestMode(),
+      availableCents: null,
+      availableLabel: null,
+      pendingCents: null,
+      pendingLabel: null,
+      error: "Stripe is not configured (missing STRIPE_SECRET_KEY).",
+    };
+  }
+  try {
+    const balance = await stripe.balance.retrieve();
+    const available =
+      balance.available?.reduce((sum, b) => sum + (b.currency === "usd" ? b.amount : 0), 0) ?? 0;
+    const pending =
+      balance.pending?.reduce((sum, b) => sum + (b.currency === "usd" ? b.amount : 0), 0) ?? 0;
+    return {
+      configured: true,
+      testMode: isStripeTestMode(),
+      availableCents: available,
+      availableLabel: formatUsdFromCents(available),
+      pendingCents: pending,
+      pendingLabel: formatUsdFromCents(pending),
+      error: null,
+    };
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Could not load Stripe balance.";
+    return {
+      configured: true,
+      testMode: isStripeTestMode(),
+      availableCents: null,
+      availableLabel: null,
+      pendingCents: null,
+      pendingLabel: null,
+      error: message,
+    };
+  }
+}
+
 export async function GET() {
   const session = await requireStaff();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [mrr, payouts, partners, connectStatuses, coachSettings, connectPlatform] =
-    await Promise.all([
-      fetchActiveMrrCents(),
-      listCommissionPayouts(),
-      listCommissionPartners(),
-      listConnectPartnerStatuses(),
-      getCoachSettings(),
-      getConnectPlatformHint(),
-    ]);
+  const [
+    mrr,
+    payouts,
+    partners,
+    connectStatuses,
+    coachSettings,
+    connectPlatform,
+    stripeBalance,
+    platformAdmin,
+  ] = await Promise.all([
+    fetchActiveMrrCents(),
+    listCommissionPayouts(),
+    listCommissionPartners(),
+    listConnectPartnerStatuses(),
+    getCoachSettings(),
+    getConnectPlatformHint(),
+    fetchStripeBalanceSnapshot(),
+    previewPlatformAdminFee().catch((e: unknown) => ({
+      error: e instanceof Error ? e.message : "Platform admin fee preview failed.",
+    })),
+  ]);
 
   const mode = commissionSplitMode();
   const shareCheck = validatePartnerShares(partners, mode);
@@ -61,23 +127,85 @@ export async function GET() {
   }));
 
   const connectById = new Map(connectStatuses.map((s) => [s.partnerId, s]));
+  const partnersWithConnect = partners.map((p) => ({
+    ...p,
+    connect: connectById.get(p.id) ?? null,
+  }));
   const poolTotalCents =
     mode === "flat"
       ? (flatSplit?.totalPartnerPayoutCents ?? 0)
       : (poolBreakdown?.totalCommissionCents ?? 0);
   const payoutMinCents = commissionPayoutMinCentsFromEnv();
+  const payoutMinimum = {
+    cents: payoutMinCents,
+    label: formatUsdFromCents(payoutMinCents),
+    met: poolTotalCents >= payoutMinCents,
+    shortfallCents: Math.max(0, payoutMinCents - poolTotalCents),
+    shortfallLabel: formatUsdFromCents(Math.max(0, payoutMinCents - poolTotalCents)),
+  };
+
+  const companyFeed =
+    mode === "flat" && flatSplit
+      ? {
+          sharePercent: flatSplit.companyRetainedPercent,
+          amountCents: flatSplit.companyRetainedCents,
+          amountLabel: formatUsdFromCents(flatSplit.companyRetainedCents),
+          label:
+            process.env.STRIPE_COMPANY_FEED_LABEL?.trim() ||
+            "The Train Station (Jeremy · master Stripe)",
+        }
+      : poolBreakdown
+        ? {
+            sharePercent:
+              poolBreakdown.mrrCents > 0
+                ? Math.round(
+                    ((poolBreakdown.mrrCents - poolBreakdown.totalCommissionCents) /
+                      poolBreakdown.mrrCents) *
+                      100,
+                  )
+                : 0,
+            amountCents: Math.max(
+              0,
+              poolBreakdown.mrrCents - poolBreakdown.totalCommissionCents,
+            ),
+            amountLabel: formatUsdFromCents(
+              Math.max(0, poolBreakdown.mrrCents - poolBreakdown.totalCommissionCents),
+            ),
+            label:
+              process.env.STRIPE_COMPANY_FEED_LABEL?.trim() ||
+              "The Train Station (Jeremy · master Stripe)",
+          }
+        : null;
+
+  const periodSuggested = previousCommissionPeriod();
+  const periodRecord = payouts.find((p) => p.period === periodSuggested);
+  const periodAlreadyPaid = periodRecord?.status === "paid";
+  const periodPartial = periodRecord?.status === "partial";
+
+  const paymentQueue = buildMoneyDeskQueue({
+    projectedSplits,
+    partners: partnersWithConnect,
+    companyFeed,
+    payoutMinimum,
+    period: periodSuggested,
+    periodAlreadyPaid,
+    periodPartial,
+    mode,
+    shareValid: shareCheck.shareValid,
+    shareMessage: shareCheck.message,
+    platformAdmin,
+  });
 
   return NextResponse.json({
     enabled: isCommissionEnabled(),
     mode,
-    periodSuggested: previousCommissionPeriod(),
-    payoutMinimum: {
-      cents: payoutMinCents,
-      label: formatUsdFromCents(payoutMinCents),
-      met: poolTotalCents >= payoutMinCents,
-      shortfallCents: Math.max(0, payoutMinCents - poolTotalCents),
-      shortfallLabel: formatUsdFromCents(Math.max(0, payoutMinCents - poolTotalCents)),
+    periodSuggested,
+    payoutMinimum,
+    stripeBalance: {
+      ...stripeBalance,
+      publishableKeyPresent: Boolean(getStripePublishableKey()),
     },
+    paymentQueue,
     mrr: {
       cents: mrr.mrrCents,
       label: formatUsdFromCents(mrr.mrrCents),
@@ -103,38 +231,8 @@ export async function GET() {
             )
           : undefined,
     },
-    companyFeed:
-      mode === "flat" && flatSplit
-        ? {
-            sharePercent: flatSplit.companyRetainedPercent,
-            amountCents: flatSplit.companyRetainedCents,
-            amountLabel: formatUsdFromCents(flatSplit.companyRetainedCents),
-            label: process.env.STRIPE_COMPANY_FEED_LABEL?.trim() || "Company (platform account)",
-          }
-        : poolBreakdown
-          ? {
-              sharePercent:
-                poolBreakdown.mrrCents > 0
-                  ? Math.round(
-                      ((poolBreakdown.mrrCents - poolBreakdown.totalCommissionCents) /
-                        poolBreakdown.mrrCents) *
-                        100,
-                    )
-                  : 0,
-              amountCents: Math.max(
-                0,
-                poolBreakdown.mrrCents - poolBreakdown.totalCommissionCents,
-              ),
-              amountLabel: formatUsdFromCents(
-                Math.max(0, poolBreakdown.mrrCents - poolBreakdown.totalCommissionCents),
-              ),
-              label: process.env.STRIPE_COMPANY_FEED_LABEL?.trim() || "Company (platform account)",
-            }
-          : null,
-    partners: partners.map((p) => ({
-      ...p,
-      connect: connectById.get(p.id) ?? null,
-    })),
+    companyFeed,
+    partners: partnersWithConnect,
     shareTotal: shareCheck.shareTotal,
     shareValid: shareCheck.shareValid,
     shareMessage: shareCheck.message,

@@ -334,10 +334,23 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-07-26 (Jeremy feedback list + military builder + logo)  
-**Status:** **Military paste/save kick-out fixed (code)** · **logo white plate** · Venmo LIVE · Stripe Live still open · SMS PARKED.  
+**Date:** 2026-07-27 (Stripe Live partial · Money desk · Eco partner path for John)  
+**Status:** Money desk UI on `/admin/commission` · Eco Delight Stripe = **John’s partner payout rail** (not TS merchant) · Venmo LIVE · **TS card Live still incomplete** (pk_test + test prices) · SMS PARKED.  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
-**main tip:** see latest `git log` after deploy.
+
+### John · Eco business partner (2026-07-27)
+
+| Item | Value |
+|------|--------|
+| **Eco partner login** | `john@thetrainstation.co` · ref **JOHNPARTNER** · ACTIVE |
+| **Stripe Connect Express** | Linked (same Express as legacy `john@bcxvoice.com` / FRESHCOFFEE) · onboarded · bank on Express |
+| **Platform** | Eco Delight Coffee Live Stripe — partner draws / Eco commissions → Express → bank |
+| **Not this** | Eco is **not** merchant of record for Train Station memberships (still Jeremy’s TS Stripe) |
+| **TS Money desk** | Partner pool + $275 still need **Connect on Jeremy’s TS Stripe** when TS goes Live |
+| **Seed script** | `eco-coffee/scripts/seed-john-business-partner.mjs` |
+| **Legacy** | `john@bcxvoice.com` still holds pending Eco affiliate balance (~$47) until paid; use trainstation email going forward |
+
+**Prior session:** Military paste/save kick-out fixed · logo white plate · soak green.
 
 ### Jeremy voice-note (Jul 26) — knock-out list
 

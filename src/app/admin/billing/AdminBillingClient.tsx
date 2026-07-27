@@ -264,9 +264,9 @@ export default function AdminBillingClient() {
           <h1 className="text-2xl font-semibold tracking-tight">Billing</h1>
           <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
             Stripe transactions, full &amp; partial refunds, discount codes, and subscription
-            health. Development &amp; partnership fee payouts stay under{" "}
+            health. Stripe balance, holding min, and partner payouts live on the{" "}
             <Link href="/admin/commission" className="text-accent hover:underline">
-              Dev &amp; partnership
+              Money desk
             </Link>
             .
           </p>
@@ -357,7 +357,7 @@ export default function AdminBillingClient() {
               </li>
               <li>
                 <Link href="/admin/commission" className="text-accent hover:underline">
-                  Development &amp; partnership fees (Connect)
+                  Money desk — balance, queue, Connect payouts
                 </Link>
               </li>
               <li>

@@ -23,6 +23,22 @@ type Partner = {
   connect: ConnectStatus | null;
 };
 
+type PaymentQueueItem = {
+  id: string;
+  payee: string;
+  email: string | null;
+  kind: "partner_pool" | "company_retain" | "platform_admin";
+  kindLabel: string;
+  amountCents: number;
+  amountLabel: string;
+  detail: string;
+  status: "ready" | "blocked" | "info" | "paid" | "partial";
+  statusLabel: string;
+  action: "connect_pool" | "platform_admin" | "none";
+  processable: boolean;
+  blockedReason: string | null;
+};
+
 type CommissionResponse = {
   enabled: boolean;
   mode: "flat" | "tiered" | "milestone";
@@ -89,6 +105,17 @@ type CommissionResponse = {
     shortfallCents: number;
     shortfallLabel: string;
   };
+  stripeBalance?: {
+    configured: boolean;
+    testMode: boolean;
+    availableCents: number | null;
+    availableLabel: string | null;
+    pendingCents: number | null;
+    pendingLabel: string | null;
+    error: string | null;
+    publishableKeyPresent?: boolean;
+  };
+  paymentQueue?: PaymentQueueItem[];
   connectPlatform?: {
     ready: boolean;
     message: string | null;
@@ -279,6 +306,7 @@ export default function AdminCommissionClient() {
   async function runPayout(dryRun: boolean) {
     setBusy(dryRun ? "dry" : "payout");
     setError("");
+    setAdminFeeMsg(null);
     const res = await fetch("/api/stripe/commission/payout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -288,6 +316,21 @@ export default function AdminCommissionClient() {
     if (!res.ok) {
       setError(body.error || "Payout failed.");
     } else {
+      const lines = body.record?.partnerLines as
+        | Array<{ partnerName: string; amountCents: number; status: string }>
+        | undefined;
+      const lineSummary = (lines || [])
+        .map((l) => `${l.partnerName}: ${centsToUsd(l.amountCents)} (${l.status})`)
+        .join(" · ");
+      if (dryRun) {
+        setAdminFeeMsg(
+          `Preview pool ${body.record?.period || data?.periodSuggested}: ${lineSummary || body.message || "OK"}`,
+        );
+      } else {
+        setAdminFeeMsg(
+          `Processed partner pool ${body.record?.period || ""}: ${lineSummary || "done"}`,
+        );
+      }
       await load();
     }
     setBusy(null);
@@ -316,8 +359,10 @@ export default function AdminCommissionClient() {
       setAdminFeeMsg(
         `Paid ${body.preview?.amountLabel ?? "platform admin"} to ${body.preview?.partnerName ?? "partner"} · ${body.transferId}`,
       );
+      await load();
     } else {
       setAdminFeeMsg("Platform admin fee updated.");
+      await load();
     }
     setBusy(null);
   }
@@ -334,34 +379,40 @@ export default function AdminCommissionClient() {
   const highlightedPartner =
     connectPartnerId && data?.partners.find((p) => p.id === connectPartnerId);
 
+  const queue = data?.paymentQueue ?? [];
+  const balance = data?.stripeBalance;
+  const poolProcessable = queue.some((q) => q.action === "connect_pool" && q.processable);
+  const adminProcessable = queue.some((q) => q.action === "platform_admin" && q.processable);
+
+  function statusTone(status: PaymentQueueItem["status"]): string {
+    if (status === "ready") return "bg-emerald-500/15 text-emerald-300";
+    if (status === "paid") return "bg-sky-500/15 text-sky-200";
+    if (status === "partial") return "bg-violet-500/15 text-violet-200";
+    if (status === "info") return "bg-[var(--surface-2)] text-[var(--muted)]";
+    return "bg-amber-500/15 text-amber-200";
+  }
+
   return (
     <div className="max-w-4xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Development &amp; partnership fees
-        </h1>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          {data?.mode === "milestone" ? (
-            <>
-              Development and partnership fee pool: {data?.commission.tier1RatePercent ?? 5}% of
-              gross MRR until {data?.commission.tier1CapLabel ?? "$5,000"} MRR, then{" "}
-              {data?.commission.tier2RatePercent ?? 30}% of all MRR. Partners split that pool by
-              share % (Connect payouts) — add future partners when ownership expands.
-            </>
-          ) : data?.mode === "tiered" ? (
-            <>
-              Tiered fee pool: {data?.commission.tier1RatePercent ?? 5}% on first{" "}
-              {data?.commission.tier1CapLabel ?? "$5,000"} MRR, then{" "}
-              {data?.commission.tier2RatePercent ?? 30}% above — partners split that pool via
-              Connect.
-            </>
-          ) : (
-            <>
-              Flat development &amp; partnership fees: each partner&apos;s share is a % of gross
-              MRR. The remainder stays on the platform Stripe account (company feed).
-            </>
-          )}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Money desk</h1>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Stripe balance, holding minimum, and a payout queue for John (business partner) and
+            Jeremy (company feed on master Stripe). Membership card money stays on this platform;
+            John’s Eco Delight coffee partnership pays via Eco Stripe Connect (
+            <code className="text-[10px]">john@thetrainstation.co</code> · JOHNPARTNER). Process
+            partner pool and platform admin fee here when TS Connect is Ready.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="btn-secondary text-xs"
+          disabled={loading || busy !== null}
+          onClick={() => void load()}
+        >
+          {loading ? "Refreshing…" : "Refresh balance"}
+        </button>
       </div>
 
       {connectNotice && (
@@ -385,6 +436,185 @@ export default function AdminCommissionClient() {
         <p className="text-sm text-[var(--muted)]">Loading…</p>
       ) : data ? (
         <>
+          {/* KPI strip: balance + holding min + pool */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="card p-4">
+              <div className="text-[10px] font-semibold uppercase tracking-[2px] text-[var(--muted)]">
+                Stripe available
+              </div>
+              <div className="mt-1 text-2xl font-semibold">
+                {balance?.availableLabel ?? "—"}
+              </div>
+              <div className="mt-1 text-xs text-[var(--muted)]">
+                {balance?.error
+                  ? balance.error
+                  : balance?.testMode
+                    ? "Test mode balance"
+                    : "Live master account (Jeremy)"}
+              </div>
+            </div>
+            <div className="card p-4">
+              <div className="text-[10px] font-semibold uppercase tracking-[2px] text-[var(--muted)]">
+                Stripe pending
+              </div>
+              <div className="mt-1 text-2xl font-semibold">
+                {balance?.pendingLabel ?? "—"}
+              </div>
+              <div className="mt-1 text-xs text-[var(--muted)]">
+                Settling · not yet available
+              </div>
+            </div>
+            <div className="card p-4">
+              <div className="text-[10px] font-semibold uppercase tracking-[2px] text-[var(--muted)]">
+                Holding minimum
+              </div>
+              <div className="mt-1 text-2xl font-semibold">
+                {data.payoutMinimum?.label ?? "$400"}
+              </div>
+              <div
+                className={`mt-1 text-xs ${
+                  data.payoutMinimum?.met ? "text-emerald-300" : "text-amber-300"
+                }`}
+              >
+                {data.payoutMinimum?.met
+                  ? "Pool meets floor — Connect payouts unlocked"
+                  : `Short ${data.payoutMinimum?.shortfallLabel ?? "—"} for Connect transfers`}
+              </div>
+            </div>
+            <div className="card p-4">
+              <div className="text-[10px] font-semibold uppercase tracking-[2px] text-[var(--muted)]">
+                Partner pool · {data.periodSuggested}
+              </div>
+              <div className="mt-1 text-2xl font-semibold text-emerald-300">
+                {data.commission.totalLabel}
+              </div>
+              <div className="mt-1 text-xs text-[var(--muted)]">
+                MRR {data.mrr.label} · {data.mrr.activeSubscriptions} active sub
+                {data.mrr.activeSubscriptions === 1 ? "" : "s"}
+              </div>
+            </div>
+          </div>
+
+          {/* Payment queue */}
+          <div className="card space-y-4 p-5">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-[2px] text-accent">
+                  Payment queue
+                </h2>
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  Queued amounts for John (Connect) and Jeremy (company feed). Preview first, then
+                  process when Connect is Ready and the holding minimum is met.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="btn-ghost text-sm"
+                  disabled={busy !== null}
+                  onClick={() => void runPayout(true)}
+                >
+                  {busy === "dry" ? "…" : "Preview pool"}
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary text-sm"
+                  disabled={busy !== null || !poolProcessable}
+                  title={
+                    !poolProcessable
+                      ? "Fix Connect / shares / holding minimum before processing"
+                      : undefined
+                  }
+                  onClick={() => {
+                    if (
+                      !confirm(
+                        `Transfer partner pool for ${data.periodSuggested} via Connect? Uses master Stripe balance.`,
+                      )
+                    ) {
+                      return;
+                    }
+                    void runPayout(false);
+                  }}
+                >
+                  {busy === "payout" ? "Transferring…" : "Process partner pool"}
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary text-sm"
+                  disabled={busy !== null || !adminProcessable}
+                  onClick={() => {
+                    if (
+                      !confirm(
+                        "Transfer platform admin fee ($275 default) to John via Connect?",
+                      )
+                    ) {
+                      return;
+                    }
+                    void runPlatformAdminFee(false);
+                  }}
+                >
+                  {busy === "admin-pay" ? "Paying…" : "Process platform admin"}
+                </button>
+              </div>
+            </div>
+
+            {queue.length === 0 ? (
+              <p className="text-sm text-[var(--muted)]">
+                No queued lines yet — add partners and ensure MRR/pool math has amounts.
+              </p>
+            ) : (
+              <div className="overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--surface-2)]">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[var(--border)] text-left text-[10px] uppercase tracking-[2px] text-[var(--muted)]">
+                      <th className="px-3 py-2">Payee</th>
+                      <th className="px-3 py-2">Type</th>
+                      <th className="px-3 py-2">Amount</th>
+                      <th className="px-3 py-2">Status</th>
+                      <th className="px-3 py-2">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {queue.map((row) => (
+                      <tr
+                        key={row.id}
+                        className="border-b border-[var(--border)] last:border-0 align-top"
+                      >
+                        <td className="px-3 py-3">
+                          <div className="font-medium">{row.payee}</div>
+                          {row.email ? (
+                            <div className="text-xs text-[var(--muted)]">{row.email}</div>
+                          ) : null}
+                        </td>
+                        <td className="px-3 py-3 text-xs text-[var(--muted)]">{row.kindLabel}</td>
+                        <td className="px-3 py-3 font-semibold">{row.amountLabel}</td>
+                        <td className="px-3 py-3">
+                          <span
+                            className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${statusTone(row.status)}`}
+                          >
+                            {row.statusLabel}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-xs text-[var(--muted)]">
+                          <div>{row.detail}</div>
+                          {row.blockedReason ? (
+                            <div className="mt-1 text-amber-300">{row.blockedReason}</div>
+                          ) : null}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {adminFeeMsg && (
+              <p className="text-sm text-violet-100/90 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-2">
+                {adminFeeMsg}
+              </p>
+            )}
+          </div>
+
           <div className="card space-y-4 p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-sm font-semibold uppercase tracking-[2px] text-accent">

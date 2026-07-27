@@ -116,12 +116,13 @@ function defaultMilestonePartnerSeed(): CommissionPartner[] {
   return [
     {
       id: randomUUID(),
-      name: "John Popham",
+      name: "John Popham · Business Partner",
       email: "john@thetrainstation.co",
       stripeAccountId: null,
       sharePercent: 100,
       enabled: true,
-      notes: "Auto-seeded milestone partner",
+      notes:
+        "Dev & partnership fee pool (TS master Stripe Connect). Eco Delight coffee partner draws use Eco Stripe Express (john@thetrainstation.co / JOHNPARTNER) — separate platform.",
       createdAt: now,
       updatedAt: now,
     },

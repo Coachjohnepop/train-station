@@ -19,10 +19,10 @@ const cards = [
   },
   {
     href: "/admin/commission",
-    title: "Development & partnership fees",
+    title: "Money desk",
     description:
-      "Dev and partner fee pool, Connect onboarding, platform admin $275, referral map, payout floor.",
-    cta: "Open fees →",
+      "Stripe balance, holding minimum, payout queue for John & Jeremy, Connect transfers, platform admin $275.",
+    cta: "Open money desk →",
   },
   {
     href: "/admin/gamification",
