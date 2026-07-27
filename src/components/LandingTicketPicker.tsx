@@ -1,18 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import FreeTicketModal from "@/components/FreeTicketModal";
-import MembershipSeatArt from "@/components/MembershipSeatArt";
-import TrainStationBrand from "@/components/TrainStationBrand";
-import {
-  TICKET_TIERS,
-  mergeTicketPrices,
-  type TicketTier,
-  type TicketTierId,
-} from "@/lib/landing-tickets";
+import MembershipTicketGrid from "@/components/MembershipTicketGrid";
 import { usePurchaseAuth } from "@/hooks/usePurchaseAuth";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
+import type { TicketTierId } from "@/lib/landing-tickets";
+import { TICKET_TIERS } from "@/lib/landing-tickets";
 
 export default function LandingTicketPicker({
   freeChastiseVideoUrl = null,
@@ -25,33 +20,14 @@ export default function LandingTicketPicker({
 }) {
   const [freeModalOpen, setFreeModalOpen] = useState(false);
   const [highlightPaid, setHighlightPaid] = useState(false);
-  const [tiers, setTiers] = useState<TicketTier[]>(TICKET_TIERS);
   const purchaseAuth = usePurchaseAuth(purchaseAuthProp);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch("/api/pricing/public");
-        if (!res.ok) return;
-        const body = await res.json();
-        if (cancelled || !Array.isArray(body.tickets)) return;
-        setTiers(mergeTicketPrices(body.tickets));
-      } catch {
-        // Keep static fallback tiers.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   function handleTicketClick(tierId: TicketTierId) {
     if (tierId === "free") {
       setFreeModalOpen(true);
       return;
     }
-    const tier = tiers.find((t) => t.id === tierId);
+    const tier = TICKET_TIERS.find((t) => t.id === tierId);
     if (!tier) return;
     window.location.href = purchaseHref(tier.signupPlan, purchaseAuth);
   }
@@ -67,62 +43,19 @@ export default function LandingTicketPicker({
     >
       {/* Alias for /#plans (join + shared CTAs); #tickets remains primary. */}
       <div id="plans" className="h-0 scroll-mt-20" aria-hidden tabIndex={-1} />
-      <div className="mx-auto max-w-4xl text-center">
-        <TrainStationBrand variant="compact" className="mb-6" />
-        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--accent)]">Pick your ticket</p>
-        <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text)] sm:text-3xl">
-          Membership tickets
-        </h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-[var(--muted)]">
-          Tap a ticket on your phone — side by side, no guessing. We&apos;ll guide you through setup after you choose.
-        </p>
-      </div>
 
       <div
-        className={`mx-auto mt-8 grid max-w-4xl grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 transition-all ${
+        className={`transition-all ${
           highlightPaid ? "ring-2 ring-[var(--tier-trim-strong)]/40 rounded-2xl p-2" : ""
         }`}
       >
-        {tiers.map((tier) => (
-          <button
-            key={tier.id}
-            id={`ticket-${tier.id}`}
-            type="button"
-            onClick={() => handleTicketClick(tier.id)}
-            className={`group relative isolate flex min-h-[200px] flex-col overflow-hidden rounded-xl border text-left shadow-lg transition-all active:scale-[0.97] sm:min-h-[280px] sm:rounded-2xl ${tier.themeClass} ${
-              tier.id !== "free" && highlightPaid ? "scale-[1.02] shadow-[var(--tier-trim-glow)]" : "hover:scale-[1.02]"
-            }`}
-          >
-            {tier.seatArtSrc ? (
-              <MembershipSeatArt ticketId={tier.id} className="ticket-card__art" />
-            ) : (
-              <div className="ticket-card__art bg-gradient-to-br from-zinc-700/40 to-zinc-900/60" />
-            )}
-            <div className="ticket-card__body relative z-10">
-              <div className="pointer-events-none absolute right-0 top-0 h-3 w-3 rounded-full border border-dashed border-white/20 sm:h-4 sm:w-4" />
-              <div className="text-[9px] font-bold uppercase tracking-widest text-white/50 sm:text-[10px]">
-                {tier.subtitle}
-              </div>
-              <div className="mt-1 text-sm font-bold leading-tight text-white sm:text-lg">{tier.title}</div>
-              <div className="mt-2 flex items-baseline gap-0.5">
-                <span className="text-xl font-semibold text-white sm:text-3xl">{tier.price}</span>
-                {tier.priceNote && (
-                  <span className="text-[10px] text-white/60 sm:text-xs">{tier.priceNote}</span>
-                )}
-              </div>
-              <ul className="mt-2 flex-1 space-y-0.5">
-                {tier.perks.slice(0, 3).map((p) => (
-                  <li key={p} className="text-[9px] leading-snug text-white/75 sm:text-xs">
-                    · {p}
-                  </li>
-                ))}
-              </ul>
-              <span className="mt-2 inline-block text-[10px] font-semibold text-[#c4b5fd] group-hover:text-white sm:text-xs">
-                {tier.id === "free" ? "Tap if you dare →" : "Select →"}
-              </span>
-            </div>
-          </button>
-        ))}
+        <MembershipTicketGrid
+          mode="landing"
+          showBrand
+          onFreeSelect={() => setFreeModalOpen(true)}
+          onPaidSelect={(tierId) => handleTicketClick(tierId)}
+          highlightPaid={highlightPaid}
+        />
       </div>
 
       <div className="mx-auto mt-6 flex max-w-md flex-col items-center gap-2 sm:flex-row sm:justify-center">

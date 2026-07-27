@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import EmbeddedStripeCheckoutModal from "@/components/EmbeddedStripeCheckoutModal";
 import CheckoutUpgradeOptions from "@/components/CheckoutUpgradeOptions";
 import MembershipPaymentCard from "@/components/MembershipPaymentCard";
+import MembershipTicketGrid from "@/components/MembershipTicketGrid";
 import {
   isMembershipPlan,
   normalizeSignupPlan,
@@ -210,7 +211,13 @@ function MemberCheckoutInner() {
 
   return (
     <>
-      <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-10">
+      <div
+        className={
+          showMembershipCard
+            ? "mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-10"
+            : "mx-auto min-h-[70vh] max-w-4xl px-3 py-8 sm:px-6 sm:py-12"
+        }
+      >
         {showMembershipCard ? (
           <MembershipPaymentCard plan={plan as SignupPlan} priceLabel={priceLabel || undefined}>
             {isDowngradeIntent && (
@@ -366,59 +373,35 @@ function MemberCheckoutInner() {
             </div>
           </MembershipPaymentCard>
         ) : (
-          <div className="card space-y-5 p-6">
-            <div className="text-center">
+          <div className="space-y-6">
+            <div className="mx-auto max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-4 text-center sm:px-6">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent">
-                Free Explorer
+                You&apos;re signed in · Free Explorer
               </p>
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight">Pick your ticket</h1>
               <p className="mt-2 text-sm text-[var(--muted)]">
-                You&apos;re signed in on Free Explorer. Choose a paid seat to unlock Today&apos;s
-                workouts and scores — card or Venmo on the next step.
+                Same seats as the landing page. Tap a paid ticket for card or Venmo checkout —
+                or stay free for now.
               </p>
+              {error ? <p className="mt-2 text-sm text-amber-400">{error}</p> : null}
             </div>
-            {error && <p className="text-sm text-amber-400">{error}</p>}
             {paymentsLoading ? (
               <p className="text-center text-sm text-[var(--muted)]">Loading tickets…</p>
             ) : (
-              <div className="flex flex-col gap-2">
-                {(payments?.memberships || [])
-                  .filter((m) => m.plan === "member" || m.plan === "business" || m.plan === "pro")
-                  .map((m) => (
-                    <Link
-                      key={m.plan}
-                      href={`/member/checkout?plan=${encodeURIComponent(m.plan)}${
-                        promoCode.trim()
-                          ? `&promo=${encodeURIComponent(promoCode.trim())}`
-                          : ""
-                      }`}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-left transition hover:border-accent"
-                    >
-                      <span>
-                        <span className="block font-semibold">{m.label}</span>
-                        <span className="mt-0.5 block text-[11px] text-[var(--muted)]">
-                          {m.feeCategoryLabel ||
-                            (m.checkoutMode === "subscription"
-                              ? "Monthly subscription"
-                              : "One-time fee")}
-                        </span>
-                      </span>
-                      <span className="shrink-0 text-sm font-semibold text-accent">
-                        {m.priceLabel}
-                        <span className="ml-1 text-[10px] font-normal text-[var(--muted)]">→</span>
-                      </span>
-                    </Link>
-                  ))}
-              </div>
+              <MembershipTicketGrid
+                mode="checkout"
+                promoCode={promoCode}
+                showBrand
+                heading="Membership tickets"
+                subheading="Tap a ticket — same train seats as home. We'll take you to pay (or Today if you stay free)."
+              />
             )}
             <p className="text-center text-[11px] text-[var(--muted)]">
-              Stay on Free Explorer for now?{" "}
               <Link href="/member/today" className="font-semibold text-accent hover:underline">
-                Go to Today
+                Open free dashboard
               </Link>
               {" · "}
               <Link href="/#tickets" className="hover:text-accent">
-                Compare seats
+                Back to home tickets
               </Link>
             </p>
           </div>
