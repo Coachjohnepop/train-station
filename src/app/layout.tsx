@@ -11,12 +11,12 @@ import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
 
-/** Link-preview / social share image — First Class seat (not free-ticket rundown chair). */
+/** Link-preview / social share image — dual tickets fanned like cards. */
 const SITE_OG_IMAGE = {
-  url: "/images/tickets/first-class.jpg",
-  width: 1024,
-  height: 683,
-  alt: "The Train Station — First Class",
+  url: "/images/tickets/dual-tickets-fan.jpg",
+  width: 1152,
+  height: 864,
+  alt: "The Train Station — dual membership tickets",
 } as const;
 
 function siteOrigin(): string {

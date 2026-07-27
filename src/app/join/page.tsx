@@ -31,6 +31,16 @@ export default async function JoinPage({
       <div className="mx-auto max-w-3xl px-6 pt-16 pb-10 text-center">
         <div className="uppercase tracking-[3px] text-xs font-semibold text-[#7c3aed] mb-3">MEMBERSHIPS</div>
         <h1 className="text-5xl font-semibold tracking-[-1.8px] mb-4">Join The Train Station</h1>
+        <div className="mx-auto mb-6 max-w-[300px] sm:max-w-[380px]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/tickets/dual-tickets-fan.jpg"
+            alt="Coach Class and First Class tickets fanned like playing cards"
+            className="mx-auto w-full drop-shadow-[0_16px_48px_rgba(124,58,237,0.5)]"
+            width={1152}
+            height={864}
+          />
+        </div>
         <p className="text-xl text-[#9d8ab8] max-w-xl mx-auto">
           Professional programs, real accountability, and the tools coaches actually use — available for members now.
         </p>

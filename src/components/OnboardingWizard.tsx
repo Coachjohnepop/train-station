@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import GearTabShopHint from "@/components/GearTabShopHint";
 import MemberHomeEquipment from "@/components/MemberHomeEquipment";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
 import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
@@ -24,6 +25,7 @@ import type { ProgramStartSettings } from "@/lib/program-start-settings";
 import { weekdayLabel } from "@/lib/program-start-settings";
 import { TICKET_TIERS } from "@/lib/landing-tickets";
 import {
+  DUAL_TICKETS_FAN_SRC,
   membershipThemeTierFromPlan,
   seatArtForPlan,
 } from "@/lib/membership-theme";
@@ -177,15 +179,27 @@ export default function OnboardingWizard({
       <div className="card p-5 sm:p-6 space-y-4">
         {currentStep === 1 && (
           <>
-            {/* Train ticket hero — same seat art as landing / checkout */}
-            <div className="payment-seat-card overflow-hidden rounded-xl border border-[var(--border)]">
-              <MembershipSeatArt
-                plan={plan as SignupPlan}
-                membershipTier={tier}
-                className="w-full"
-                priority
-              />
-              <div className="flex gap-1.5 overflow-x-auto bg-[var(--surface-2)] p-2">
+            {/* Dual tickets fan + your seat art */}
+            <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-2)]">
+              <div className="px-4 pt-4 pb-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={DUAL_TICKETS_FAN_SRC}
+                  alt="Membership tickets fanned like playing cards"
+                  className="mx-auto w-full max-w-[260px] drop-shadow-[0_8px_28px_rgba(124,58,237,0.4)]"
+                  width={1152}
+                  height={864}
+                />
+              </div>
+              <div className="payment-seat-card">
+                <MembershipSeatArt
+                  plan={plan as SignupPlan}
+                  membershipTier={tier}
+                  className="w-full"
+                  priority
+                />
+              </div>
+              <div className="flex gap-1.5 overflow-x-auto p-2">
                 {TICKET_TIERS.map((t) => {
                   const active = t.signupPlan === plan;
                   return (
@@ -265,9 +279,15 @@ export default function OnboardingWizard({
 
         {currentStep === 3 && (
           <>
+            <GearTabShopHint />
             <h2 className="text-lg font-semibold">Home equipment</h2>
             <p className="text-sm text-[var(--muted)]">
               Check what you have at home so we can show realistic workout options.
+            </p>
+            <p className="rounded-lg border border-[#7c3aed]/35 bg-[#7c3aed]/10 px-3 py-2 text-xs text-[var(--text)]">
+              Missing something? Look up — tap{" "}
+              <strong className="text-[#c4b5fd]">Gear</strong> in the nav to shop on this site
+              anytime.
             </p>
             <MemberHomeEquipment defaultOpen />
             <div className="flex gap-3 pt-2">

@@ -9,6 +9,7 @@ import {
   type TicketTier,
   type TicketTierId,
 } from "@/lib/landing-tickets";
+import { DUAL_TICKETS_FAN_SRC } from "@/lib/membership-theme";
 import { useEffect, useState } from "react";
 
 /**
@@ -80,6 +81,17 @@ export default function MembershipTicketGrid({
     <div className={className}>
       <div className="mx-auto max-w-4xl text-center">
         {showBrand ? <TrainStationBrand variant="compact" className="mb-6" /> : null}
+        {/* Dual tickets fanned like cards — signature membership graphic */}
+        <div className="mx-auto mb-5 max-w-[280px] sm:max-w-[340px]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={DUAL_TICKETS_FAN_SRC}
+            alt="Coach Class and First Class tickets fanned like playing cards"
+            className="mx-auto w-full drop-shadow-[0_12px_40px_rgba(124,58,237,0.45)]"
+            width={1152}
+            height={864}
+          />
+        </div>
         <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--accent)]">
           Pick your ticket
         </p>

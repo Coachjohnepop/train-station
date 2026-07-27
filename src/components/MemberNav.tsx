@@ -182,13 +182,26 @@ export default function MemberNav({
         }
 
         const isAccountTab = item.href === "/member/account";
+        const isGearTab = item.href === "/member/equipment";
 
         return (
           <Link
             key={item.href}
-            id={isScoresTab ? "member-nav-scores" : undefined}
+            id={
+              isScoresTab
+                ? "member-nav-scores"
+                : isGearTab
+                  ? "member-nav-gear"
+                  : undefined
+            }
             href={href}
-            title={locked ? "Complete your ticket to unlock" : undefined}
+            title={
+              locked
+                ? "Complete your ticket to unlock"
+                : isGearTab
+                  ? "Gear shop — browse & buy equipment"
+                  : undefined
+            }
             className={`member-nav-item relative flex flex-1 flex-col items-center justify-center rounded-lg px-1 py-2 text-center text-[10px] font-medium transition sm:text-xs lg:flex-none lg:min-w-[4.75rem] lg:px-5 ${tabClass} ${
               isScoresTab && scorePulse ? "member-nav-score-pulse" : ""
             } ${locked ? "opacity-75" : ""}`}

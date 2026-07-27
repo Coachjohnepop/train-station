@@ -55,6 +55,10 @@ export const TICKET_SEAT_ART: Partial<Record<TicketTierId, string>> = {
   "first-class": "/images/tickets/first-class.jpg",
 };
 
+/** Signature brand graphic — dual boarding tickets fanned like playing cards. */
+export const DUAL_TICKETS_FAN_SRC = "/images/tickets/dual-tickets-fan.jpg";
+export const DUAL_TICKETS_FAN_VELVET_SRC = "/images/tickets/dual-tickets-fan-velvet.jpg";
+
 const PLAN_TO_TICKET: Partial<Record<SignupPlan, TicketTierId>> = {
   explorer: "free",
   member: "coach-class",
