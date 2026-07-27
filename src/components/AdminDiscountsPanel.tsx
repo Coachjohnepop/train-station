@@ -62,6 +62,8 @@ export default function AdminDiscountsPanel({
   const [discountMsg, setDiscountMsg] = useState("");
   /** Last promo code successfully copied (shows check briefly). */
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  /** Stripe key mode on this deployment (from public payments probe). */
+  const [stripeMode, setStripeMode] = useState<"live" | "test" | "unknown">("unknown");
   const [discountForm, setDiscountForm] = useState({
     code: "",
     name: "",
@@ -79,11 +81,24 @@ export default function AdminDiscountsPanel({
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/admin/billing/discounts", { cache: "no-store" });
+      const [res, payRes] = await Promise.all([
+        fetch("/api/admin/billing/discounts", { cache: "no-store" }),
+        fetch("/api/payments/public", { cache: "no-store" }),
+      ]);
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || "Discounts failed");
       setPromos(body.promotionCodes || []);
       setCoupons(body.coupons || []);
+
+      const pay = await payRes.json().catch(() => ({}));
+      const pk = typeof pay.stripePublishableKey === "string" ? pay.stripePublishableKey : "";
+      if (pay.stripeTestMode === true || pk.startsWith("pk_test_")) {
+        setStripeMode("test");
+      } else if (pk.startsWith("pk_live_") || (pay.stripeEnabled && pay.stripeTestMode !== true)) {
+        setStripeMode("live");
+      } else {
+        setStripeMode("unknown");
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Load failed");
     } finally {
@@ -214,19 +229,43 @@ export default function AdminDiscountsPanel({
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="card space-y-3 p-4">
-            <h2 className="font-semibold">Create discount code</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="font-semibold">Create discount code</h2>
+              {stripeMode === "live" ? (
+                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+                  Live Stripe
+                </span>
+              ) : stripeMode === "test" ? (
+                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200">
+                  Test Stripe
+                </span>
+              ) : null}
+            </div>
             <p className="text-xs text-[var(--muted)]">
-              Creates a Stripe coupon + promotion code on the{" "}
-              <strong className="text-[var(--text)]">same account as STRIPE_SECRET_KEY</strong>{" "}
-              (Live keys → Live codes; Test keys → Test codes). Members enter it on{" "}
-              <strong className="text-[var(--text)]">Checkout</strong> (or{" "}
-              <code className="text-[10px]">?promo=CODE</code>). Primary use:{" "}
-              <strong className="text-[var(--text)]">% off for N months</strong> on recurring
+              {stripeMode === "live" ? (
+                <>
+                  Codes you create here are{" "}
+                  <strong className="text-emerald-300">real Live Stripe promos</strong> — they work
+                  on production Checkout with real cards. Members enter the code at{" "}
+                  <strong className="text-[var(--text)]">Checkout</strong> (or{" "}
+                  <code className="text-[10px]">?promo=CODE</code>).
+                </>
+              ) : stripeMode === "test" ? (
+                <>
+                  This deployment is on{" "}
+                  <strong className="text-amber-200">Stripe Test mode</strong>. Codes here only work
+                  with test cards — not real charges. Switch Production env to Live keys when you
+                  are ready for real money.
+                </>
+              ) : (
+                <>
+                  Creates a Stripe coupon + promotion code on the connected Stripe account. Members
+                  enter it on <strong className="text-[var(--text)]">Checkout</strong> (or{" "}
+                  <code className="text-[10px]">?promo=CODE</code>).
+                </>
+              )}{" "}
+              Common use: <strong className="text-[var(--text)]">% off for N months</strong> on
               memberships (e.g. feedback guests — 50% × 3 months).
-            </p>
-            <p className="text-[11px] text-amber-200/90">
-              Codes created in Test mode do not work after you flip to Live — create them again
-              here once Live keys are on Production.
             </p>
 
             <div className="flex flex-wrap gap-1.5">
