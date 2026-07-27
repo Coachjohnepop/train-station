@@ -60,6 +60,8 @@ export default function AdminDiscountsPanel({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [discountMsg, setDiscountMsg] = useState("");
+  /** Last promo code successfully copied (shows check briefly). */
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [discountForm, setDiscountForm] = useState({
     code: "",
     name: "",
@@ -92,6 +94,37 @@ export default function AdminDiscountsPanel({
   useEffect(() => {
     void loadDiscounts();
   }, [loadDiscounts]);
+
+  async function copyPromoCode(code: string) {
+    const text = code.trim().toUpperCase();
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedCode(text);
+      window.setTimeout(() => {
+        setCopiedCode((cur) => (cur === text ? null : cur));
+      }, 1600);
+    } catch {
+      // Fallback for older browsers / blocked clipboard
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        setCopiedCode(text);
+        window.setTimeout(() => {
+          setCopiedCode((cur) => (cur === text ? null : cur));
+        }, 1600);
+      } catch {
+        setError("Could not copy — select the code and copy manually.");
+      }
+    }
+  }
 
   async function createDiscount() {
     setBusy(true);
@@ -472,7 +505,32 @@ export default function AdminDiscountsPanel({
                 <tbody>
                   {promos.map((p) => (
                     <tr key={p.id} className="border-b border-[var(--border)] last:border-0">
-                      <td className="px-3 py-2 font-mono font-semibold">{p.code}</td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-semibold tracking-wide">{p.code}</span>
+                          <button
+                            type="button"
+                            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[var(--border)] text-[var(--muted)] transition hover:border-accent hover:text-[var(--text)]"
+                            title={
+                              copiedCode === p.code.toUpperCase()
+                                ? "Copied"
+                                : `Copy ${p.code}`
+                            }
+                            aria-label={
+                              copiedCode === p.code.toUpperCase()
+                                ? `${p.code} copied`
+                                : `Copy code ${p.code}`
+                            }
+                            onClick={() => void copyPromoCode(p.code)}
+                          >
+                            {copiedCode === p.code.toUpperCase() ? (
+                              <CopyCheckIcon />
+                            ) : (
+                              <CopyIcon />
+                            )}
+                          </button>
+                        </div>
+                      </td>
                       <td className="px-3 py-2 text-xs text-[var(--muted)]">
                         {p.couponSummary}
                       </td>
@@ -564,5 +622,43 @@ export default function AdminDiscountsPanel({
         </div>
       )}
     </div>
+  );
+}
+
+function CopyIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="9" y="9" width="13" height="13" rx="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+function CopyCheckIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className="text-emerald-400"
+    >
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
   );
 }
