@@ -264,21 +264,21 @@ export async function notifyCoachOfMemberReply(params: {
   memberEmail: string;
   message: string;
 }): Promise<void> {
-  const coachEmail =
-    process.env.COACH_NOTIFY_EMAIL?.trim() ||
-    process.env.LEAD_NOTIFY_EMAIL?.split(",")[0]?.trim() ||
-    "jeremy@thetrainstation.co";
+  const { resolveCoachNotifyEmails } = await import("@/lib/coach-member-notify");
+  const coachEmails = resolveCoachNotifyEmails(null);
 
   const link = `${appBaseUrl()}/admin/chat`;
   const preview = params.message.length > 200 ? `${params.message.slice(0, 197)}…` : params.message;
 
-  await sendHubEmail({
-    to: coachEmail,
-    subject: `${params.memberName} replied — ${BRAND_NAME}`,
-    text:
-      `${params.memberName} (${params.memberEmail}) sent a message:\n\n` +
-      `${preview}\n\n` +
-      `Reply in the hub — your phone stays private.`,
-    ctaUrl: link,
-  });
+  for (const to of coachEmails) {
+    await sendHubEmail({
+      to,
+      subject: `${params.memberName} replied — ${BRAND_NAME}`,
+      text:
+        `${params.memberName} (${params.memberEmail}) sent a message:\n\n` +
+        `${preview}\n\n` +
+        `Reply in the hub — your phone stays private.`,
+      ctaUrl: link,
+    });
+  }
 }

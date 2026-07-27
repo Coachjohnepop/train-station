@@ -13,15 +13,59 @@ function appBaseUrl() {
   return process.env.NEXT_PUBLIC_APP_URL || "https://www.thetrainstation.co";
 }
 
-const DEFAULT_COACH_EMAIL = "jeremy@thetrainstation.co";
+const DEFAULT_COACH_EMAILS = [
+  "jeremy@thetrainstation.co",
+  "john@thetrainstation.co",
+] as const;
 
-/** Onboarding funnel — never skip email when a coach address is known. */
+/** Funnel + member progress — always email coaches (and Messages for progress). */
 const FORCE_EMAIL_EVENTS: ReadonlySet<CoachAlertEvent> = new Set([
   "newMember",
   "equipmentSelected",
   "programStartChosen",
   "messagesOpened",
+  "warmupStarted",
+  "workoutLogged",
+  "intakeScheduled",
 ]);
+
+/** Always post system note into the member’s Messages thread for coaches. */
+const FORCE_IN_APP_EVENTS: ReadonlySet<CoachAlertEvent> = new Set([
+  "newMember",
+  "equipmentSelected",
+  "programStartChosen",
+  "messagesOpened",
+  "warmupStarted",
+  "workoutLogged",
+  "intakeScheduled",
+]);
+
+function parseEmailList(raw: string | null | undefined): string[] {
+  if (!raw?.trim()) return [];
+  return raw
+    .split(/[,;\s]+/)
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => e.includes("@"));
+}
+
+/**
+ * Every coach who should get progress / funnel emails.
+ * settings.coachEmail (comma-ok) + COACH_NOTIFY_EMAIL + LEAD_NOTIFY + defaults (Jeremy + John).
+ */
+export function resolveCoachNotifyEmails(
+  coachEmailSetting?: string | null,
+): string[] {
+  const fromSettings = parseEmailList(coachEmailSetting);
+  const fromEnv = parseEmailList(process.env.COACH_NOTIFY_EMAIL);
+  const fromLead = parseEmailList(process.env.LEAD_NOTIFY_EMAIL);
+  const merged = [
+    ...fromSettings,
+    ...fromEnv,
+    ...fromLead,
+    ...DEFAULT_COACH_EMAILS,
+  ];
+  return [...new Set(merged.filter(Boolean))];
+}
 
 /**
  * One-shot claim so equipment toggles / repeated message opens don't spam.
@@ -95,6 +139,7 @@ export async function notifyCoachForMemberEvent(params: {
       ? params.forceEmail
       : FORCE_EMAIL_EVENTS.has(params.event);
   if (forceEmail) channels.email = true;
+  if (FORCE_IN_APP_EVENTS.has(params.event)) channels.inApp = true;
 
   const link = params.deepLink || `${appBaseUrl()}/admin/members`;
   const result = { inApp: false, email: false, sms: false, push: false };
@@ -112,21 +157,23 @@ export async function notifyCoachForMemberEvent(params: {
     }
   }
 
-  const coachEmail =
-    settings.coachEmail?.trim() ||
-    process.env.COACH_NOTIFY_EMAIL?.trim() ||
-    process.env.LEAD_NOTIFY_EMAIL?.split(",")[0]?.trim() ||
-    DEFAULT_COACH_EMAIL;
+  const coachEmails = resolveCoachNotifyEmails(settings.coachEmail);
 
-  if (channels.email && coachEmail) {
-    result.email = await sendResendEmail({
-      to: coachEmail,
-      subject: `${params.subject} — ${BRAND_NAME}`,
-      text: `${params.message}\n\nMember: ${params.memberName} <${params.memberEmail}>\n\nOpen: ${link}`,
-      ctaUrl: link,
-      ctaLabel: "Open coach dashboard",
-      tags: [{ name: "category", value: `coach-${params.event}` }],
-    });
+  if (channels.email && coachEmails.length) {
+    // Send to every coach (Jeremy + John + any extra notify list).
+    let anyOk = false;
+    for (const to of coachEmails) {
+      const ok = await sendResendEmail({
+        to,
+        subject: `${params.subject} — ${BRAND_NAME}`,
+        text: `${params.message}\n\nMember: ${params.memberName} <${params.memberEmail}>\n\nOpen: ${link}`,
+        ctaUrl: link,
+        ctaLabel: "Open coach dashboard",
+        tags: [{ name: "category", value: `coach-${params.event}` }],
+      });
+      if (ok) anyOk = true;
+    }
+    result.email = anyOk;
   }
 
   const coachPhone = settings.coachPhone?.trim();
