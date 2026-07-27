@@ -1,7 +1,9 @@
-/** Legacy / alternate emails that map to the canonical invited account. */
-const ACCOUNT_EMAIL_ALIASES: Record<string, string> = {
-  "johnsteph@thetrainstation.co": "john@lemonvoice.com",
-};
+/**
+ * Legacy / alternate emails → canonical account email.
+ * john@lemonvoice.com is not mapped (free for real signup); demo John & Steph is
+ * johnsteph@thetrainstation.co only.
+ */
+const ACCOUNT_EMAIL_ALIASES: Record<string, string> = {};
 
 export function normalizeAccountEmail(email: string): string {
   const normalized = email.trim().toLowerCase();

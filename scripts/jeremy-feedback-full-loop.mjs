@@ -12,7 +12,7 @@ import { dirname, join } from "node:path";
 
 const BASE = process.env.BASE_URL || "https://www.thetrainstation.co";
 const COACH_EMAIL = process.env.COACH_EMAIL || "jeremy@thetrainstation.co";
-const MEMBER_EMAIL = process.env.MEMBER_EMAIL || "john@lemonvoice.com";
+const MEMBER_EMAIL = process.env.MEMBER_EMAIL || "johnsteph@thetrainstation.co";
 const MARKER = `JEREMY-LOOP-${Date.now()}`;
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 

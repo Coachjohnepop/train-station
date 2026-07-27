@@ -49,7 +49,7 @@ const ALWAYS_KEEP_EMAILS = new Set([
   "jaymoody170@gmail.com",
   "jeremy_blackburn@icloud.com",
   "john@bcxvoice.com",
-  "john@lemonvoice.com",
+  "johnsteph@thetrainstation.co",
   "sprealty9@gmail.com",
 ]);
 
