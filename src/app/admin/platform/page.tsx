@@ -4,6 +4,20 @@ export const dynamic = "force-dynamic";
 
 const cards = [
   {
+    href: "/admin/accounting",
+    title: "Accounting",
+    description:
+      "Stripe balance, payout minimums, projected partner payouts, paying members, MRR & 30d volume.",
+    cta: "Open accounting →",
+  },
+  {
+    href: "/admin/analytics",
+    title: "Site Analytics",
+    description:
+      "Page views, sessions, signups, traffic by area, top pages & clicks from the live tracker.",
+    cta: "Open analytics →",
+  },
+  {
     href: "/admin/billing",
     title: "Billing desk",
     description:
@@ -56,16 +70,16 @@ const cards = [
     cta: "View reports →",
   },
   {
-    href: "/admin/insights",
-    title: "Insights",
-    description: "Page views, clicks, and sessions from the live click tracker.",
-    cta: "View insights →",
-  },
-  {
     href: "/admin/landing",
     title: "Landing & Venmo",
     description: "Public checkout backup — videos, Venmo QR, and ticket media.",
     cta: "Edit landing →",
+  },
+  {
+    href: "/admin/videos",
+    title: "Videos",
+    description: "Site YouTube desk — free gag, intros, purchase thank-you, daily inspiration.",
+    cta: "Open videos →",
   },
 ];
 

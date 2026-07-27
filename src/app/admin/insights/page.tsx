@@ -1,12 +1,8 @@
-import { Suspense } from "react";
-import AdminInsightsClient from "@/components/AdminInsightsClient";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminInsightsPage() {
-  return (
-    <Suspense fallback={<p className="text-sm text-[var(--muted)]">Loading insights…</p>}>
-      <AdminInsightsClient />
-    </Suspense>
-  );
+/** Insights renamed → Site Analytics */
+export default function AdminInsightsRedirectPage() {
+  redirect("/admin/analytics");
 }

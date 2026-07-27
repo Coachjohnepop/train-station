@@ -227,7 +227,7 @@ export async function ingestAnalyticsEvents(
   return { ...result, storage: "demo" };
 }
 
-export async function getAnalyticsOverview(days = 7): Promise<{
+export type AnalyticsOverview = {
   storage: "database" | "demo";
   pageViews: number;
   pageClicks: number;
@@ -235,35 +235,78 @@ export async function getAnalyticsOverview(days = 7): Promise<{
   topPages: Array<{ path: string; views: number }>;
   topClicks: Array<{ label: string; path: string; clicks: number }>;
   payments: { count: number; revenueCents: number };
-}> {
+  /** Breakdown of page views by site area */
+  sections: {
+    landing: number;
+    member: number;
+    admin: number;
+    auth: number;
+    other: number;
+  };
+  /** New MEMBER users created in the window */
+  newSignups: number;
+  /** Distinct users with any analytics event (when known) */
+  activeUsers: number;
+};
+
+function emptySections(): AnalyticsOverview["sections"] {
+  return { landing: 0, member: 0, admin: 0, auth: 0, other: 0 };
+}
+
+function bumpSection(
+  sections: AnalyticsOverview["sections"],
+  path: string | null | undefined,
+) {
+  const s = inferPageSection(path || undefined) || "other";
+  if (s === "landing" || s === "member" || s === "admin" || s === "auth") {
+    sections[s] += 1;
+  } else {
+    sections.other += 1;
+  }
+}
+
+export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview> {
   const since = new Date();
   since.setDate(since.getDate() - days);
 
   if (isDatabaseConfigured() && !isDemoMode()) {
     const { prisma } = await import("@/lib/prisma");
-    const [pageViews, pageClicks, sessions, payments] = await Promise.all([
-      prisma.analyticsEvent.count({
-        where: { eventType: "page_view", occurredAt: { gte: since } },
-      }),
-      prisma.analyticsEvent.count({
-        where: { eventType: "page_click", occurredAt: { gte: since } },
-      }),
-      prisma.analyticsSession.count({
-        where: { lastActivityAt: { gte: since } },
-      }),
-      prisma.factSubscriptionPayment.aggregate({
-        where: { paidAt: { gte: since }, status: "paid" },
-        _count: true,
-        _sum: { amountCents: true },
-      }),
-    ]);
+    const [pageViews, pageClicks, sessions, payments, newSignups, activeUsers] =
+      await Promise.all([
+        prisma.analyticsEvent.count({
+          where: { eventType: "page_view", occurredAt: { gte: since } },
+        }),
+        prisma.analyticsEvent.count({
+          where: { eventType: "page_click", occurredAt: { gte: since } },
+        }),
+        prisma.analyticsSession.count({
+          where: { lastActivityAt: { gte: since } },
+        }),
+        prisma.factSubscriptionPayment.aggregate({
+          where: { paidAt: { gte: since }, status: "paid" },
+          _count: true,
+          _sum: { amountCents: true },
+        }),
+        prisma.user.count({
+          where: { role: "MEMBER", createdAt: { gte: since } },
+        }),
+        prisma.analyticsEvent
+          .findMany({
+            where: { occurredAt: { gte: since }, userId: { not: null } },
+            select: { userId: true },
+            distinct: ["userId"],
+            take: 5000,
+          })
+          .then((rows) => rows.length)
+          .catch(() => 0),
+      ]);
 
     const pageGroups = await prisma.analyticsEvent.groupBy({
       by: ["pagePath"],
       where: { eventType: "page_view", occurredAt: { gte: since }, pagePath: { not: null } },
       _count: true,
       orderBy: { _count: { pagePath: "desc" } },
-      take: 10,
+      take: 15,
     });
 
     const clickGroups = await prisma.analyticsEvent.groupBy({
@@ -271,8 +314,27 @@ export async function getAnalyticsOverview(days = 7): Promise<{
       where: { eventType: "page_click", occurredAt: { gte: since } },
       _count: true,
       orderBy: { _count: { elementText: "desc" } },
-      take: 10,
+      take: 15,
     });
+
+    const sectionGroups = await prisma.analyticsEvent.groupBy({
+      by: ["pageSection"],
+      where: { eventType: "page_view", occurredAt: { gte: since } },
+      _count: true,
+    });
+
+    const sections = emptySections();
+    for (const g of sectionGroups) {
+      const key = (g.pageSection || "other") as keyof typeof sections;
+      if (key in sections) sections[key] += g._count;
+      else sections.other += g._count;
+    }
+    // Fallback: if pageSection empty, approximate from top paths
+    if (Object.values(sections).every((n) => n === 0)) {
+      for (const g of pageGroups) {
+        for (let i = 0; i < g._count; i++) bumpSection(sections, g.pagePath);
+      }
+    }
 
     return {
       storage: "database",
@@ -292,6 +354,9 @@ export async function getAnalyticsOverview(days = 7): Promise<{
         count: payments._count,
         revenueCents: payments._sum.amountCents ?? 0,
       },
+      sections,
+      newSignups,
+      activeUsers,
     };
   }
 
@@ -300,13 +365,18 @@ export async function getAnalyticsOverview(days = 7): Promise<{
   const pageViews = recent.filter((e) => e.eventType === "page_view").length;
   const pageClicks = recent.filter((e) => e.eventType === "page_click").length;
   const sessionKeys = new Set(recent.map((e) => e.sessionKey));
+  const userKeys = new Set(
+    recent.map((e) => e.userId).filter((id): id is string => Boolean(id)),
+  );
 
   const pageCounts = new Map<string, number>();
   const clickCounts = new Map<string, { label: string; path: string; clicks: number }>();
+  const sections = emptySections();
 
   for (const e of recent) {
     if (e.eventType === "page_view" && e.pagePath) {
       pageCounts.set(e.pagePath, (pageCounts.get(e.pagePath) ?? 0) + 1);
+      bumpSection(sections, e.pagePath);
     }
     if (e.eventType === "page_click") {
       const key = `${e.pagePath ?? ""}|${e.elementText ?? e.clickAction ?? ""}`;
@@ -327,9 +397,12 @@ export async function getAnalyticsOverview(days = 7): Promise<{
     uniqueSessions: sessionKeys.size,
     topPages: [...pageCounts.entries()]
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
+      .slice(0, 15)
       .map(([path, views]) => ({ path, views })),
-    topClicks: [...clickCounts.values()].sort((a, b) => b.clicks - a.clicks).slice(0, 10),
+    topClicks: [...clickCounts.values()].sort((a, b) => b.clicks - a.clicks).slice(0, 15),
     payments: { count: 0, revenueCents: 0 },
+    sections,
+    newSignups: 0,
+    activeUsers: userKeys.size,
   };
 }

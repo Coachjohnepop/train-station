@@ -183,6 +183,11 @@ export const PLATFORM_NAV_GROUPS: AdminNavGroup[] = [
     label: "Commerce",
     items: [
       {
+        href: "/admin/accounting",
+        label: "Accounting",
+        match: (p) => p.startsWith("/admin/accounting"),
+      },
+      {
         href: "/admin/discounts",
         label: "Discount codes",
         match: (p) => p.startsWith("/admin/discounts"),
@@ -224,14 +229,15 @@ export const PLATFORM_NAV_GROUPS: AdminNavGroup[] = [
         match: (p) => p.startsWith("/admin/audit"),
       },
       {
+        href: "/admin/analytics",
+        label: "Site Analytics",
+        match: (p) =>
+          p.startsWith("/admin/analytics") || p.startsWith("/admin/insights"),
+      },
+      {
         href: "/admin/reports",
         label: "Reports",
         match: (p) => p.startsWith("/admin/reports"),
-      },
-      {
-        href: "/admin/insights",
-        label: "Insights",
-        match: (p) => p.startsWith("/admin/insights"),
       },
       {
         href: "/admin/coach-suggestions",
@@ -258,6 +264,7 @@ export const PLATFORM_NAV_ITEMS: AdminNavItem[] = PLATFORM_NAV_GROUPS.flatMap((g
 
 const PLATFORM_PATH_PREFIXES = [
   "/admin/platform",
+  "/admin/accounting",
   "/admin/billing",
   "/admin/commission",
   "/admin/payouts",
@@ -265,6 +272,7 @@ const PLATFORM_PATH_PREFIXES = [
   "/admin/offers",
   "/admin/users",
   "/admin/audit",
+  "/admin/analytics",
   "/admin/reports",
   "/admin/insights",
   "/admin/coach-suggestions",
