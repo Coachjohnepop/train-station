@@ -155,26 +155,30 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname === "/member") {
+    // Incomplete onboarding → wizard first (not Today)
+    if (
+      session.role === "MEMBER" &&
+      request.cookies.get(NEEDS_ONBOARD_COOKIE)?.value === "1" &&
+      request.cookies.get(NEEDS_PAYMENT_COOKIE)?.value !== "1"
+    ) {
+      const plan =
+        request.nextUrl.searchParams.get("plan") ||
+        request.cookies.get(SIGNUP_PLAN_COOKIE)?.value;
+      const onboard = new URL("/member/onboard", request.url);
+      if (plan) onboard.searchParams.set("plan", plan);
+      return NextResponse.redirect(onboard);
+    }
     return NextResponse.redirect(new URL("/member/today", request.url));
   }
 
-  if (session.role === "MEMBER" && pathname.startsWith("/member")) {
+  if (session.role === "MEMBER") {
     const plan =
       request.nextUrl.searchParams.get("plan") ||
       request.cookies.get(SIGNUP_PLAN_COOKIE)?.value;
 
+    // Landing home while still onboarding → back to wizard
     if (
-      memberPathRequiresPayment(pathname) &&
-      request.cookies.get(NEEDS_PAYMENT_COOKIE)?.value === "1"
-    ) {
-      const checkout = new URL("/member/checkout", request.url);
-      if (plan) checkout.searchParams.set("plan", plan);
-      return NextResponse.redirect(checkout);
-    }
-
-    if (
-      !pathname.startsWith("/member/onboard") &&
-      !pathname.startsWith("/member/checkout") &&
+      (pathname === "/" || pathname === "") &&
       request.cookies.get(NEEDS_ONBOARD_COOKIE)?.value === "1" &&
       request.cookies.get(NEEDS_PAYMENT_COOKIE)?.value !== "1"
     ) {
@@ -183,11 +187,39 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(onboard);
     }
 
-    if (
-      !pathname.startsWith("/member/pending") &&
-      request.cookies.get(PENDING_APPROVAL_COOKIE)?.value === "1"
-    ) {
-      return NextResponse.redirect(new URL("/member/pending", request.url));
+    if (pathname.startsWith("/member")) {
+      if (
+        memberPathRequiresPayment(pathname) &&
+        request.cookies.get(NEEDS_PAYMENT_COOKIE)?.value === "1"
+      ) {
+        const checkout = new URL("/member/checkout", request.url);
+        if (plan) checkout.searchParams.set("plan", plan);
+        return NextResponse.redirect(checkout);
+      }
+
+      // While onboarding: keep them in the wizard for Today / training routes,
+      // but allow Account (settings, payment confirmation) and checkout paths.
+      if (
+        request.cookies.get(NEEDS_ONBOARD_COOKIE)?.value === "1" &&
+        request.cookies.get(NEEDS_PAYMENT_COOKIE)?.value !== "1"
+      ) {
+        const onboardAllowed =
+          pathname.startsWith("/member/onboard") ||
+          pathname.startsWith("/member/checkout") ||
+          pathname.startsWith("/member/account");
+        if (!onboardAllowed) {
+          const onboard = new URL("/member/onboard", request.url);
+          if (plan) onboard.searchParams.set("plan", plan);
+          return NextResponse.redirect(onboard);
+        }
+      }
+
+      if (
+        !pathname.startsWith("/member/pending") &&
+        request.cookies.get(PENDING_APPROVAL_COOKIE)?.value === "1"
+      ) {
+        return NextResponse.redirect(new URL("/member/pending", request.url));
+      }
     }
   }
 

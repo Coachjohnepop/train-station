@@ -1,11 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import MemberHomeEquipment from "@/components/MemberHomeEquipment";
+import MembershipSeatArt from "@/components/MembershipSeatArt";
 import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
 import { welcomeVideoUrlForPlan } from "@/lib/landing-media";
-import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
+import {
+  normalizeSignupPlan,
+  signupPlanLabel,
+  type SignupPlan,
+} from "@/lib/signup-plans";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
 import PhoneInput from "@/components/PhoneInput";
 import QuickAuthSetupPrompt from "@/components/QuickAuthSetupPrompt";
@@ -16,6 +22,11 @@ import { isPaidOffer } from "@/lib/product-offers";
 import { recommendedProgramStartDate } from "@/lib/member-program-block";
 import type { ProgramStartSettings } from "@/lib/program-start-settings";
 import { weekdayLabel } from "@/lib/program-start-settings";
+import { TICKET_TIERS } from "@/lib/landing-tickets";
+import {
+  membershipThemeTierFromPlan,
+  seatArtForPlan,
+} from "@/lib/membership-theme";
 
 async function saveProgress(body: Record<string, unknown>) {
   await fetch("/api/member/onboard-progress", {
@@ -142,6 +153,9 @@ export default function OnboardingWizard({
     }
   }
 
+  const tier = membershipThemeTierFromPlan(plan);
+  const seatSrc = seatArtForPlan(plan as SignupPlan);
+
   return (
     <div className="max-w-md mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -163,10 +177,57 @@ export default function OnboardingWizard({
       <div className="card p-5 sm:p-6 space-y-4">
         {currentStep === 1 && (
           <>
+            {/* Train ticket hero — same seat art as landing / checkout */}
+            <div className="payment-seat-card overflow-hidden rounded-xl border border-[var(--border)]">
+              <MembershipSeatArt
+                plan={plan as SignupPlan}
+                membershipTier={tier}
+                className="w-full"
+                priority
+              />
+              <div className="flex gap-1.5 overflow-x-auto bg-[var(--surface-2)] p-2">
+                {TICKET_TIERS.map((t) => {
+                  const active = t.signupPlan === plan;
+                  return (
+                    <div
+                      key={t.id}
+                      className={`relative h-12 w-16 shrink-0 overflow-hidden rounded-lg border ${
+                        active
+                          ? "border-accent ring-1 ring-accent"
+                          : "border-[var(--border)] opacity-60"
+                      }`}
+                      title={t.title}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={t.seatArtSrc || seatSrc || "/images/tickets/coach-class.jpg"}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                      {active ? (
+                        <span className="absolute inset-x-0 bottom-0 bg-black/70 px-0.5 py-0.5 text-center text-[7px] font-bold uppercase tracking-wide text-white">
+                          Yours
+                        </span>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             <h1 className="text-xl font-bold">Welcome aboard</h1>
             <p className="text-sm text-[var(--muted)] leading-relaxed">
+              You&apos;re on <strong className="text-[var(--text)]">{signupPlanLabel(plan)}</strong>.
               A quick setup for texts and your profile — then your dashboard walks you through booking
               your coach intro and warming up.
+            </p>
+            <p className="text-xs text-[var(--muted)]">
+              Need something first?{" "}
+              <Link href="/member/account" className="font-semibold text-accent hover:underline">
+                Open Account
+              </Link>{" "}
+              (payment confirmation, settings). Today and Home will bring you back here until setup
+              is done.
             </p>
             {planWelcomeUrl ? (
               <div className="aspect-video overflow-hidden rounded-xl bg-black ring-1 ring-[#3d2660]">
@@ -179,7 +240,9 @@ export default function OnboardingWizard({
                 />
               </div>
             ) : (
-              <p className="text-xs text-[var(--muted)] italic">Your coach welcome clip will appear here soon.</p>
+              <p className="text-xs text-[var(--muted)] italic">
+                Your coach welcome clip will appear here soon — your train seat is ready either way.
+              </p>
             )}
             <button type="button" onClick={() => void nextStep()} className="btn-primary w-full">
               Start setup
