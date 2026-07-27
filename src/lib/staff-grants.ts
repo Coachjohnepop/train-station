@@ -10,7 +10,7 @@ import type { MemberProfile } from "@/lib/member-profiles-types";
 export function staffGrantNotifyEmails(): string[] {
   const raw =
     process.env.STAFF_GRANT_NOTIFY_EMAILS?.trim() ||
-    "john@thetrainstation.co,jeremy@thetrainstation.co,john@bcxvoice.com";
+    "john@thetrainstation.co,jeremy@thetrainstation.co";
   return [
     ...new Set(
       raw

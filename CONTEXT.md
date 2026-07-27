@@ -11,7 +11,7 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 
 | Who | Role | Notes |
 |-----|------|--------|
-| **John** (you) | Builder / product | Repo owner; deploys; soaks; coaches Jeremy through product. **Admin / Vercel: `john@bcxvoice.com`** (CLI `john-9066`). **`john@lemonvoice.com` is not a system account** — free for member signup smoke tests (demo John & Steph uses `johnsteph@thetrainstation.co`). |
+| **John** (you) | Builder / product | Repo owner; deploys; soaks; coaches Jeremy. **App admin: `john@thetrainstation.co`**. **Member smoke account: `john@bcxvoice.com`** (not staff). **Vercel/GitHub deploy login: `john@bcxvoice.com`** (CLI `john-9066`) — platform only, not member role. **`john@lemonvoice.com` free** for fresh paid-signup tests (demo John & Steph = `johnsteph@thetrainstation.co`). |
 | **Jeremy** | Customer coach | Primary admin user; stress-tests clone/templates/calendar; email `jeremy@thetrainstation.co` |
 | **John & Steph** | Demo member journey | Program subs, floating video, schedule greens in demos |
 | **Grok** (xAI) | Coding agent in this TUI | Not Claude — may share this file |
