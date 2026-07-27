@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import CoachClassDayBand from "@/components/CoachClassDayBand";
 import CoachLessonPlanBuilder from "@/components/CoachLessonPlanBuilder";
+import CoachNeedsDonePanel from "@/components/CoachNeedsDonePanel";
 import type { CoachMemberOption } from "@/components/CoachMemberPicker";
 import type { CoachDayStudentCard, CoachDaySummary } from "@/lib/coach-day";
 import type { TodaySession } from "@/lib/today-sessions";
@@ -218,7 +219,7 @@ export default function CoachDashboard({
               Go to Today →
             </Link>
             <p className="text-center text-xs text-[var(--muted)]">
-              Full-screen workout floor — count sets, no sidebar, today only.
+              Live floor for counting sets — left nav stays available (hide with ✕ if you need space).
             </p>
           </>
         ) : (
@@ -226,6 +227,8 @@ export default function CoachDashboard({
             Planning for a future day — use <strong>Go to Today</strong> on class day to run the floor.
           </p>
         )}
+
+        <CoachNeedsDonePanel compact />
 
         <div className="space-y-1.5">
           <p className="text-[11px] text-[var(--muted)]">

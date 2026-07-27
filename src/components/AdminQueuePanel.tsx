@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import CoachNeedsDonePanel from "@/components/CoachNeedsDonePanel";
 import { formatPhoneDisplay } from "@/lib/sms-phone";
 
 type QueueAction = "approve" | "mark_paid" | "intake" | "meeting" | "message";
@@ -218,6 +219,8 @@ export default function AdminQueuePanel() {
           Members who need your attention — approve, payment, intake, or follow-up.
         </p>
       </div>
+
+      <CoachNeedsDonePanel />
 
       {error && <p className="text-sm text-amber-400">{error}</p>}
 

@@ -32,6 +32,10 @@ import {
   writeAdminNavCollapsed,
 } from "@/lib/admin-nav-collapsed";
 import {
+  readAdminNavHidden,
+  writeAdminNavHidden,
+} from "@/lib/admin-nav-hidden";
+import {
   ADMIN_NAV_WIDTH_COLLAPSED,
   ADMIN_NAV_WIDTH_DEFAULT,
   clampAdminNavWidth,
@@ -59,7 +63,8 @@ export default function AdminShell({
   showDevSwitcher,
 }: Props) {
   const pathname = usePathname();
-  const coachFloorFocus = pathname.startsWith("/admin/today");
+  /** Go to Today stays in the full admin shell so left nav is always available. */
+  const onGoToToday = pathname.startsWith("/admin/today");
   /** Slim chrome on phone/tablet Messages so jelly beans stay sticky and tappable. Desktop keeps full nav. */
   const [coachMessagesFocus, setCoachMessagesFocus] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -73,6 +78,7 @@ export default function AdminShell({
     return () => mq.removeEventListener("change", sync);
   }, [pathname]);
   const [navCollapsed, setNavCollapsed] = useState(false);
+  const [navHidden, setNavHidden] = useState(false);
   const [navWidth, setNavWidth] = useState(ADMIN_NAV_WIDTH_DEFAULT);
   const [navResizing, setNavResizing] = useState(false);
   const resizeStartX = useRef(0);
@@ -83,6 +89,7 @@ export default function AdminShell({
 
   useEffect(() => {
     setNavCollapsed(readAdminNavCollapsed());
+    setNavHidden(readAdminNavHidden());
     setNavWidth(readAdminNavWidth());
   }, []);
 
@@ -90,20 +97,36 @@ export default function AdminShell({
     setNavCollapsed((current) => {
       const next = !current;
       writeAdminNavCollapsed(next);
+      if (!next) {
+        setNavHidden(false);
+        writeAdminNavHidden(false);
+      }
       return next;
     });
   }, []);
 
+  const hideNav = useCallback(() => {
+    setNavHidden(true);
+    writeAdminNavHidden(true);
+  }, []);
+
+  const showNav = useCallback(() => {
+    setNavHidden(false);
+    writeAdminNavHidden(false);
+    setNavCollapsed(false);
+    writeAdminNavCollapsed(false);
+  }, []);
+
   const onNavResizePointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (navCollapsed) return;
+      if (navCollapsed || navHidden) return;
       e.preventDefault();
       resizeStartX.current = e.clientX;
       resizeStartW.current = navWidth;
       setNavResizing(true);
       e.currentTarget.setPointerCapture(e.pointerId);
     },
-    [navCollapsed, navWidth],
+    [navCollapsed, navHidden, navWidth],
   );
 
   const onNavResizePointerMove = useCallback(
@@ -139,7 +162,11 @@ export default function AdminShell({
       setNavCollapsed(false);
       writeAdminNavCollapsed(false);
     }
-  }, [navCollapsed]);
+    if (navHidden) {
+      setNavHidden(false);
+      writeAdminNavHidden(false);
+    }
+  }, [navCollapsed, navHidden]);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -153,52 +180,6 @@ export default function AdminShell({
       window.removeEventListener("keydown", onKey);
     };
   }, [drawerOpen, closeDrawer]);
-
-  if (coachFloorFocus) {
-    return (
-      <div className="coach-floor-shell flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-[var(--bg)]">
-        {/* Frozen top bar: Messages stay reachable while the live floor / sets scroll */}
-        <header className="coach-floor-sticky-chrome sticky top-0 z-40 shrink-0 border-b border-sky-500/30 bg-[var(--bg)]/95 backdrop-blur-sm">
-          <div className="flex min-h-[52px] items-center justify-between gap-2 px-2 py-2 sm:px-3">
-            <Link
-              href="/admin/day"
-              className="btn-ghost min-h-[40px] shrink-0 px-2 text-xs font-semibold sm:min-h-[44px] sm:px-3 sm:text-sm"
-            >
-              ← Dashboard
-            </Link>
-            <p className="min-w-0 truncate text-center text-xs font-bold tracking-tight sm:text-sm">
-              Go to Today
-            </p>
-            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-              <AdminAppSearch
-                canCoach={canCoach}
-                canPlatform={canPlatform}
-                collapsed
-                enableHotkey
-              />
-              <Link
-                href="/admin/chat"
-                className="relative inline-flex min-h-[40px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs font-semibold text-[var(--text)] transition hover:border-accent hover:text-accent sm:min-h-[44px] sm:px-3 sm:text-sm"
-                title="Messages — chat with members while coaching"
-                aria-label="Messages"
-              >
-                <span className="sm:hidden">Msgs</span>
-                <span className="hidden sm:inline">Messages</span>
-                <ChatNavBadge role="coach" placement="corner" />
-              </Link>
-              <CoachJoinLiveNavStrip />
-              <LogoutButton compact className="shrink-0" />
-            </div>
-          </div>
-        </header>
-        <main className="min-h-0 flex-1 overflow-y-auto px-2 py-2 sm:px-3">
-          {children}
-        </main>
-        <UnreadAppBadge role="coach" />
-        <CoachHelpAssistant />
-      </div>
-    );
-  }
 
   // Messages: slim top chrome so member jelly-bean chips freeze and stay tappable.
   if (coachMessagesFocus) {
@@ -373,11 +354,24 @@ export default function AdminShell({
         </div>
       ) : null}
 
+      {/* Desktop unhide when rail fully hidden — always available */}
+      {navHidden ? (
+        <button
+          type="button"
+          onClick={showNav}
+          className="app-shell-header fixed left-0 top-1/2 z-50 hidden -translate-y-1/2 rounded-r-lg border border-l-0 border-[var(--border)] bg-[var(--surface)] px-1.5 py-4 text-sm font-bold text-accent shadow-lg hover:bg-[var(--surface-2)] xl:block"
+          aria-label="Show navigation"
+          title="Show navigation"
+        >
+          »
+        </button>
+      ) : null}
+
       {/* Desktop sidebar — wide screens only; drag right edge to resize */}
       <aside
-        className={`app-shell-header admin-sidebar relative hidden xl:sticky xl:top-0 xl:flex xl:h-screen xl:shrink-0 xl:flex-col xl:border-r xl:border-[var(--border)] ${
-          navResizing ? "" : "xl:transition-[width] xl:duration-200"
-        }`}
+        className={`app-shell-header admin-sidebar relative hidden xl:sticky xl:top-0 xl:h-screen xl:shrink-0 xl:flex-col xl:border-r xl:border-[var(--border)] ${
+          navHidden ? "xl:hidden" : "xl:flex"
+        } ${navResizing ? "" : "xl:transition-[width] xl:duration-200"}`}
         style={{
           width: navCollapsed ? ADMIN_NAV_WIDTH_COLLAPSED : navWidth,
         }}
@@ -444,18 +438,32 @@ export default function AdminShell({
               collapsed={navCollapsed}
             />
           </div>
-          <button
-            type="button"
-            onClick={toggleNavCollapsed}
-            className={`flex min-h-[44px] items-center rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-xs font-semibold text-[var(--muted)] transition hover:text-[var(--text)] ${
-              navCollapsed ? "w-full justify-center px-0" : "w-full justify-center gap-2 px-3"
-            }`}
-            aria-label={navCollapsed ? "Expand navigation" : "Collapse navigation"}
-            title={navCollapsed ? "Expand navigation" : "Collapse navigation"}
-          >
-            <span aria-hidden>{navCollapsed ? "»" : "«"}</span>
-            {!navCollapsed ? <span>Collapse</span> : null}
-          </button>
+          <div className={`flex gap-1 ${navCollapsed ? "flex-col" : "flex-col"}`}>
+            <button
+              type="button"
+              onClick={toggleNavCollapsed}
+              className={`flex min-h-[40px] items-center rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-xs font-semibold text-[var(--muted)] transition hover:text-[var(--text)] ${
+                navCollapsed ? "w-full justify-center px-0" : "w-full justify-center gap-2 px-3"
+              }`}
+              aria-label={navCollapsed ? "Expand navigation" : "Collapse navigation"}
+              title={navCollapsed ? "Expand navigation" : "Collapse navigation"}
+            >
+              <span aria-hidden>{navCollapsed ? "»" : "«"}</span>
+              {!navCollapsed ? <span>Collapse</span> : null}
+            </button>
+            <button
+              type="button"
+              onClick={hideNav}
+              className={`flex min-h-[40px] items-center rounded-lg border border-[var(--border)] text-xs font-semibold text-[var(--muted)] transition hover:text-[var(--text)] ${
+                navCollapsed ? "w-full justify-center px-0" : "w-full justify-center gap-2 px-3"
+              }`}
+              aria-label="Hide navigation"
+              title="Hide navigation (show again with the » edge control)"
+            >
+              <span aria-hidden>✕</span>
+              {!navCollapsed ? <span>Hide</span> : null}
+            </button>
+          </div>
         </div>
 
         {/* Resize handle — desktop only; double-click resets width */}
@@ -495,6 +503,17 @@ export default function AdminShell({
         {/* Desktop sticky search — stays at top of the browser viewport while content scrolls */}
         <div className="app-shell-header sticky top-0 z-40 hidden border-b border-[var(--border)] bg-[var(--bg)]/95 px-4 py-2.5 backdrop-blur-md xl:block">
           <div className="mx-auto flex w-full max-w-6xl items-center gap-3 md:max-w-7xl xl:max-w-[min(100%,96rem)]">
+            {navHidden ? (
+              <button
+                type="button"
+                onClick={showNav}
+                className="btn-ghost shrink-0 px-2 py-2 text-xs font-bold text-accent"
+                aria-label="Show navigation"
+                title="Show left navigation"
+              >
+                » Nav
+              </button>
+            ) : null}
             <div className="min-w-0 flex-1">
               <AdminAppSearch
                 canCoach={canCoach}
@@ -503,6 +522,24 @@ export default function AdminShell({
                 enableHotkey
               />
             </div>
+            {onGoToToday ? (
+              <>
+                <Link
+                  href="/admin/day"
+                  className="btn-ghost shrink-0 px-3 py-2 text-xs font-semibold"
+                >
+                  ← Dashboard
+                </Link>
+                <Link
+                  href="/admin/chat"
+                  className="relative inline-flex shrink-0 items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold"
+                >
+                  Messages
+                  <ChatNavBadge role="coach" placement="inline" />
+                </Link>
+                <CoachJoinLiveNavStrip />
+              </>
+            ) : null}
             <Link
               href="/admin/discounts"
               className="btn-ghost shrink-0 px-3 py-2 text-xs font-semibold"

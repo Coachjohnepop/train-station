@@ -40,6 +40,18 @@ const FORCE_IN_APP_EVENTS: ReadonlySet<CoachAlertEvent> = new Set([
   "intakeScheduled",
 ]);
 
+/**
+ * Phone interrupt when coachPhone is set (gym-friendly).
+ * Signup + paid funnel steps — not every workout log (those stay email + Messages).
+ */
+const FORCE_SMS_EVENTS: ReadonlySet<CoachAlertEvent> = new Set([
+  "newMember",
+  "equipmentSelected",
+  "programStartChosen",
+  "messagesOpened",
+  "intakeScheduled",
+]);
+
 function parseEmailList(raw: string | null | undefined): string[] {
   if (!raw?.trim()) return [];
   return raw
@@ -140,6 +152,7 @@ export async function notifyCoachForMemberEvent(params: {
       : FORCE_EMAIL_EVENTS.has(params.event);
   if (forceEmail) channels.email = true;
   if (FORCE_IN_APP_EVENTS.has(params.event)) channels.inApp = true;
+  if (FORCE_SMS_EVENTS.has(params.event)) channels.sms = true;
 
   const link = params.deepLink || `${appBaseUrl()}/admin/members`;
   const result = { inApp: false, email: false, sms: false, push: false };
