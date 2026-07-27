@@ -10,6 +10,9 @@ import type { SignupPlan } from "@/lib/signup-plans";
 import { signupPlanLabel } from "@/lib/signup-plans";
 import QuickAuthSettings from "@/components/QuickAuthSettings";
 import PushAlertSettings from "@/components/PushAlertSettings";
+import PaymentReceiptCard, {
+  type PaymentReceiptView,
+} from "@/components/PaymentReceiptCard";
 
 type MembershipData = {
   plan: string;
@@ -46,12 +49,55 @@ export default function MemberAccountClient({
   const justTipped = searchParams.get("tipped") === "1";
   const [billingBusy, setBillingBusy] = useState(false);
   const [billingError, setBillingError] = useState("");
+  const [receipt, setReceipt] = useState<PaymentReceiptView | null>(null);
+  const [receiptLoading, setReceiptLoading] = useState(false);
+  const [receiptError, setReceiptError] = useState("");
+  const [receiptOpen, setReceiptOpen] = useState(false);
   const [resetBusy, setResetBusy] = useState(false);
   const [resetMsg, setResetMsg] = useState<string | null>(null);
   const [downgradeTarget, setDowngradeTarget] = useState<SignupPlan | null>(null);
 
   const upgradePlans = membership.upgradePlans ?? membership.switchablePlans ?? [];
   const downgradePlans = membership.downgradePlans ?? [];
+
+  useEffect(() => {
+    if (membership.paymentStatus !== "paid" && membership.paymentMethod !== "stripe") {
+      return;
+    }
+    let cancelled = false;
+    setReceiptLoading(true);
+    void (async () => {
+      try {
+        const res = await fetch("/api/stripe/receipt", { cache: "no-store" });
+        const body = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (res.ok && body.receipt) {
+          setReceipt(body.receipt);
+          setReceiptError("");
+        } else {
+          setReceipt(null);
+          setReceiptError(
+            typeof body.error === "string" ? body.error : "No card receipt on file yet.",
+          );
+        }
+      } catch {
+        if (!cancelled) setReceiptError("Could not load payment confirmation.");
+      } finally {
+        if (!cancelled) setReceiptLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [membership.paymentStatus, membership.paymentMethod]);
+
+  // Deep-link: /member/account#payment-confirmation opens the receipt.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash === "#payment-confirmation") {
+      setReceiptOpen(true);
+    }
+  }, []);
 
   async function openBillingPortal() {
     setBillingBusy(true);
@@ -309,6 +355,44 @@ export default function MemberAccountClient({
             Complete checkout
           </Link>
         )}
+
+        {/* Payment confirmation — reopen anytime after card checkout */}
+        <div
+          id="payment-confirmation"
+          className="space-y-2 scroll-mt-24 border-t border-[var(--border)] pt-3"
+        >
+          <p className="text-sm font-medium">Payment confirmation</p>
+          {receiptLoading ? (
+            <p className="text-xs text-[var(--muted)]">Loading receipt…</p>
+          ) : receipt ? (
+            <>
+              <p className="text-xs text-[var(--muted)]">
+                {receipt.amountTotalLabel || "Paid"}
+                {receipt.planLabel ? ` · ${receipt.planLabel}` : ""}
+                {receipt.paidAt
+                  ? ` · ${new Date(receipt.paidAt).toLocaleDateString()}`
+                  : ""}
+              </p>
+              <button
+                type="button"
+                className="btn-secondary text-sm"
+                onClick={() => setReceiptOpen((o) => !o)}
+              >
+                {receiptOpen ? "Hide confirmation" : "View payment confirmation"}
+              </button>
+              {receiptOpen ? (
+                <div className="pt-2">
+                  <PaymentReceiptCard receipt={receipt} />
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <p className="text-xs text-[var(--muted)]">
+              {receiptError ||
+                "Card payment confirmations show here after Stripe checkout. Venmo members are marked paid by coach."}
+            </p>
+          )}
+        </div>
 
         {membership.canManageBilling && (
           <div className="space-y-2">

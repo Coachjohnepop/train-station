@@ -126,27 +126,11 @@ function MemberCheckoutInner() {
   const priceLabel = planPriceLabel(plan, payments);
   const feeLabel = planFeeLabel(plan, payments);
 
-  const handleCheckoutComplete = useCallback(async (completedSessionId: string) => {
-    setConfirming(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/stripe/confirm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: completedSessionId }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.redirectTo) {
-        setCheckoutOpen(false);
-        window.location.href = data.redirectTo;
-        return;
-      }
-      setError(data.error || "Payment confirmation failed. Contact support if you were charged.");
-    } catch {
-      setError("Could not confirm payment. Try again or contact support.");
-    } finally {
-      setConfirming(false);
-    }
+  /** After Stripe finishes, land on the confirmation page (user advances manually). */
+  const handleCheckoutComplete = useCallback((completedSessionId: string) => {
+    setCheckoutOpen(false);
+    setConfirming(false);
+    window.location.href = `/member/checkout/success?session_id=${encodeURIComponent(completedSessionId)}`;
   }, []);
 
   const closeCheckout = useCallback(() => {
