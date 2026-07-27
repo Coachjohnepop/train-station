@@ -334,9 +334,70 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-07-27 (Stripe Live partial · Money desk · Eco partner path for John)  
-**Status:** Money desk UI on `/admin/commission` · Eco Delight Stripe = **John’s partner payout rail** (not TS merchant) · Venmo LIVE · **TS card Live still incomplete** (pk_test + test prices) · SMS PARKED.  
+**Date:** 2026-07-27 (Jeremy: no usable coach notify · accountability product gap · Money desk / Eco path)  
+**Status:** Funnel coach-email code shipped (`4976417`) but Jeremy **still not reached in real life** — Resend **sent** to `jeremy@thetrainstation.co`, he reports **did not get notification**. Push **0 subs** for Jeremy. Signup SMS **off**. SMS carrier still PARKED. Venmo LIVE · Stripe Live incomplete.  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
+
+### Jeremy voice-note (Jul 27) — coach notify + accountability (P0)
+
+**His words (paraphrase kept close):**  
+Did **not** get notification. Difference vs every other website: we must **hold members accountable**. He needs to be notified when **new members sign up**, and he needs to **notify them** — **email is not accountability** (most people don’t check email). If he just goes about his day he would have **no idea** someone signed up. Also need a **shared list of things that need done** so they stay on top of it and don’t circle back from forgetting. Personal: training ~3h then home (Corvette overheating hope).
+
+| # | Ask | Why it matters | Status / fact |
+|---|-----|----------------|---------------|
+| 1 | **Phone-level alert when someone signs up** | Can’t coach what he doesn’t know about | Emails **did** send (see audit) but he didn’t experience them; **no web push** on his account; **newMember SMS = false** in coach prefs |
+| 2 | **Notify members in a way that works** (not email-only) | Accountability product — email ≠ behavior change | In-app Messages + badge exist; **PWA Enable alerts** underused; **Twilio SMS PARKED**; need design: push + in-app + optional SMS when unparked |
+| 3 | **Shared “needs done” list** | Ops memory — Queue alone not enough as a working checklist | Partial: Queue / Bookings / Members; **missing** durable coach action list (signup → equipment → start date → intro call → first workout) |
+| 4 | Hold **them** accountable day-to-day | Core product differentiator vs generic fitness sites | Gamification / Today / Messages exist; **coach-initiated nudges** and **missed-day loops** still thin |
+
+#### Prod audit (Jul 27) — “Did not get notification”
+
+Recent real signup trail (**Lemon John** `john@lemonvoice.com`, ~Jul 26 evening PT):
+
+| When (PT) | Outbound | To | Status |
+|-----------|----------|-----|--------|
+| ~7:28–9:00 PM | `lead` + `coach-newMember` **New signup** | `jeremy@thetrainstation.co` (+ john on lead) | **sent** (Resend) |
+| ~9:40 PM | `coach-newMember` **finished onboarding** + lead | `jeremy@thetrainstation.co` | **sent** |
+| Same windows | `push` chat-push / coach | — | **`skipped_no_recipient`** (no device) |
+
+**CoachSettings (prod):**  
+- `coachEmail` = `jeremy@thetrainstation.co`  
+- `coachPhone` = `6159438400`  
+- `newMember`: email **on**, sms **off**, inApp **on**  
+- Stored alertPrefs missing newer keys until re-save (`equipmentSelected` / `programStartChosen` / `messagesOpened` — defaults apply in code)  
+
+**Staff web push:**  
+- `jeremy@thetrainstation.co` → **0** subscriptions  
+- `john@thetrainstation.co` → **0** subscriptions  
+
+**Root cause (ops, not “code never fired”):**  
+1. **Email is invisible** during training / day — matches Jeremy’s own complaint about members.  
+2. **No push device** registered for Jeremy → nothing hits the phone lock screen.  
+3. **SMS off** for `newMember` even though phone is on file (and Twilio still PARKED for product SMS).  
+4. In-app system notes only help if he **opens admin/Messages** — no ambient interrupt.
+
+#### Product work implied (design + ship — ranked)
+
+1. **Coach interrupt channel that works while he’s training**  
+   - Jeremy: install PWA / home screen → **Enable alerts once** as `jeremy@thetrainstation.co`  
+   - Prefer **SMS on for newMember** (even before full Twilio product path if a single coach alert number is allowed)  
+   - Optional: iMessage/email secondary is fine but **not primary**  
+
+2. **Member accountability channel (not email)**  
+   - Push + in-app Messages + badge as primary nudge  
+   - Coach one-tap “nudge member” from Queue/Members  
+   - SMS when unparked for no-show / missed workout  
+
+3. **Coach “Needs done” board** (shared list)  
+   - Durable checklist per member: signed up · equipment · start date · intro booked · paid · first workout · coach follow-up  
+   - Surfaces on Dashboard / Queue so neither John nor Jeremy forgets  
+   - Tie to the funnel events we already emit  
+
+4. **Prove notify end-to-end with Jeremy watching**  
+   - Test signup → phone buzzes within seconds  
+   - Log in OutboundNotification + show last notify in Admin  
+
+**Code already shipped (still insufficient alone):** `4976417` funnel events (signup, equipment, start date, messages open) force email + staff push attempt; one-shot claims for spam control.
 
 ### John · Eco business partner (2026-07-27)
 
@@ -403,11 +464,13 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ### Suggested next (ranked)
 
-1. **Tell Jeremy** Military paste + logo live — retry content entry.  
-2. Jeremy: Eco affiliate portal + Stripe Connect for coffee commissions.  
-3. Film YouTube Short → set `NEXT_PUBLIC_JEREMY_YT_SHORT_ID` on Eco.  
-4. **Stripe Live cutover (F1)** — still the money desk blocker.  
-5. Landing YouTube / phone pass (Jeremy).
+1. **P0 — Coach phone interrupt** so Jeremy feels signup in real time (Enable alerts + SMS-on for newMember + prove E2E). See Jul 27 voice-note.  
+2. **P0 — “Needs done” shared checklist** (signup → gear → start → intro → first session).  
+3. **P0 — Member accountability nudges** (push/in-app primary; not email-only).  
+4. **Tell Jeremy** Military paste + logo live — retry content entry.  
+5. Jeremy: Eco affiliate portal + Stripe Connect for coffee commissions.  
+6. **Stripe Live cutover (F1)** — still the money desk blocker.  
+7. Landing YouTube / phone pass (Jeremy).
 
 ### Stripe Live — morning action (blocked)
 
