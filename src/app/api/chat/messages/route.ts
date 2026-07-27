@@ -8,6 +8,7 @@ import {
 } from "@/lib/coach-chat";
 import { assertChatThreadAccess } from "@/lib/chat-thread-access";
 import { isStaffRole } from "@/lib/auth-session";
+import { notifyCoachMessagesOpened } from "@/lib/coach-member-notify";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -39,6 +40,19 @@ export async function GET(request: Request) {
       : markReadParam === "1";
   if (shouldMarkRead) {
     await markThreadRead(threadId, readerId);
+  }
+
+  // First time a real member opens Messages → always notify Jeremy (one-shot).
+  if (
+    role === "member" &&
+    access.session.role === "MEMBER" &&
+    access.memberId
+  ) {
+    void notifyCoachMessagesOpened({
+      userId: access.memberId,
+      name: access.session.name || "Member",
+      email: access.session.email,
+    }).catch((e) => console.warn("[chat] messages-opened notify failed", e));
   }
 
   const messages = getMessagesForThread(threadId);

@@ -148,11 +148,29 @@ Coach intro booking: on dashboard after setup
     createdAt: completedAt,
   });
 
+  // Summarize home gear for coach email (best-effort).
+  let equipmentSummary: string | null = null;
+  try {
+    const { getMemberEquipmentWithStatus } = await import("@/lib/equipment-store");
+    const gear = await getMemberEquipmentWithStatus(session.id);
+    const have = gear.filter((g) => g.hasAtHome).map((g) => g.name);
+    equipmentSummary =
+      have.length > 0
+        ? `${have.slice(0, 20).join(", ")}${have.length > 20 ? ` (+${have.length - 20} more)` : ""}`
+        : "none checked";
+  } catch {
+    /* ignore */
+  }
+
   await notifyCoachNewMember({
     userId: session.id,
     name: session.name || "Member",
     email: session.email,
     plan: profile.plan,
+    programStartDate: startIso,
+    programSlug: enrolledSlug,
+    equipmentSummary,
+    phone: phone || profile.phone || null,
   });
 
   await awardGamificationPoints({

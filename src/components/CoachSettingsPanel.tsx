@@ -32,7 +32,10 @@ type CoachSettings = {
 };
 
 const EVENT_LABELS: Record<CoachAlertEvent, string> = {
-  newMember: "New member finished onboarding",
+  newMember: "New signup / finished onboarding",
+  equipmentSelected: "Member selected home equipment",
+  programStartChosen: "Member chose program start date",
+  messagesOpened: "Member opened Messages (first time)",
   warmupStarted: "Member started warm-ups",
   intakeScheduled: "Member booked intro / call time",
   workoutLogged: "Member finished / logged a workout",

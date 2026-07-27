@@ -7,9 +7,59 @@ import { getMemberCoachPrefs } from "@/lib/member-coach-prefs-store";
 import { postCoachSystemMessage } from "@/lib/coach-chat";
 import { sendResendEmail, transactionalSubject } from "@/lib/resend-mail";
 import { deliverSms } from "@/lib/sms";
+import { isDemoMode } from "@/lib/demo-enrollments";
 
 function appBaseUrl() {
   return process.env.NEXT_PUBLIC_APP_URL || "https://www.thetrainstation.co";
+}
+
+const DEFAULT_COACH_EMAIL = "jeremy@thetrainstation.co";
+
+/** Onboarding funnel — never skip email when a coach address is known. */
+const FORCE_EMAIL_EVENTS: ReadonlySet<CoachAlertEvent> = new Set([
+  "newMember",
+  "equipmentSelected",
+  "programStartChosen",
+  "messagesOpened",
+]);
+
+/**
+ * One-shot claim so equipment toggles / repeated message opens don't spam.
+ * Uses OutboundNotification as durable claim ledger (no schema migration).
+ */
+export async function claimCoachNotifyOnce(params: {
+  memberUserId: string;
+  claimKey: string;
+}): Promise<boolean> {
+  if (isDemoMode()) return true;
+  const userId = params.memberUserId?.trim();
+  const category = `coach-once:${params.claimKey}`.slice(0, 80);
+  if (!userId) return false;
+
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    const existing = await prisma.outboundNotification.findFirst({
+      where: { userId, category, status: "sent" },
+      select: { id: true },
+    });
+    if (existing) return false;
+
+    await prisma.outboundNotification.create({
+      data: {
+        channel: "in_app",
+        category,
+        status: "sent",
+        userId,
+        subject: `claim:${params.claimKey}`,
+        bodyPreview: "coach notify once claim",
+        provider: "coach-notify-once",
+      },
+    });
+    return true;
+  } catch (e) {
+    console.warn("[coach-notify] claim once failed — allowing notify", e);
+    return true;
+  }
 }
 
 export async function notifyCoachForMemberEvent(params: {
@@ -22,7 +72,12 @@ export async function notifyCoachForMemberEvent(params: {
   deepLink?: string;
   /** Skip Messages thread (e.g. Calendly guest with no member account). */
   skipInApp?: boolean;
-}): Promise<{ inApp: boolean; email: boolean; sms: boolean }> {
+  /**
+   * Force email for funnel events even if coach prefs turned email off.
+   * Default: true for signup / equipment / start / messages-open.
+   */
+  forceEmail?: boolean;
+}): Promise<{ inApp: boolean; email: boolean; sms: boolean; push: boolean }> {
   const [settings, memberPrefs] = await Promise.all([
     getCoachSettings(),
     params.skipInApp
@@ -35,8 +90,14 @@ export async function notifyCoachForMemberEvent(params: {
     memberPrefs?.alertOverrides,
     params.event,
   );
+  const forceEmail =
+    params.forceEmail !== undefined
+      ? params.forceEmail
+      : FORCE_EMAIL_EVENTS.has(params.event);
+  if (forceEmail) channels.email = true;
+
   const link = params.deepLink || `${appBaseUrl()}/admin/members`;
-  const result = { inApp: false, email: false, sms: false };
+  const result = { inApp: false, email: false, sms: false, push: false };
 
   if (channels.inApp && !params.skipInApp && params.memberUserId) {
     try {
@@ -55,7 +116,7 @@ export async function notifyCoachForMemberEvent(params: {
     settings.coachEmail?.trim() ||
     process.env.COACH_NOTIFY_EMAIL?.trim() ||
     process.env.LEAD_NOTIFY_EMAIL?.split(",")[0]?.trim() ||
-    "";
+    DEFAULT_COACH_EMAIL;
 
   if (channels.email && coachEmail) {
     result.email = await sendResendEmail({
@@ -74,7 +135,34 @@ export async function notifyCoachForMemberEvent(params: {
     result.sms = await deliverSms(coachPhone, smsBody);
   }
 
-  if (!result.inApp && !result.email && !result.sms) {
+  // Web push to staff devices that enabled alerts (Jeremy / John).
+  try {
+    const { sendPushToUserIds } = await import("@/lib/web-push");
+    const { prisma } = await import("@/lib/prisma");
+    if (!isDemoMode()) {
+      const staff = await prisma.user.findMany({
+        where: { role: { in: ["ADMIN", "INSTRUCTOR", "PLATFORM_ADMIN"] } },
+        select: { id: true },
+      });
+      const ids = staff.map((s) => s.id);
+      if (ids.length) {
+        const push = await sendPushToUserIds(ids, {
+          title: params.subject,
+          body: `${params.memberName}: ${params.message.split("\n")[0] || params.subject}`.slice(
+            0,
+            160,
+          ),
+          url: link.replace(appBaseUrl(), "") || "/admin/members",
+          tag: `coach-${params.event}-${params.memberUserId || "x"}`,
+        });
+        result.push = push.sent > 0;
+      }
+    }
+  } catch (e) {
+    console.warn("[coach-notify] push failed", e);
+  }
+
+  if (!result.inApp && !result.email && !result.sms && !result.push) {
     console.log(
       `[coach-notify:${params.event}] ${params.memberName} — channels off or unconfigured`,
     );
@@ -127,15 +215,135 @@ export async function notifyCoachNewMember(params: {
   name: string;
   email: string;
   plan: string;
+  /** Program Day 1 ISO date when known */
+  programStartDate?: string | null;
+  programSlug?: string | null;
+  equipmentSummary?: string | null;
+  phone?: string | null;
 }): Promise<void> {
+  const startLine = params.programStartDate?.trim()
+    ? `\nProgram start (Day 1): ${params.programStartDate.trim()}`
+    : "";
+  const programLine = params.programSlug?.trim()
+    ? `\nProgram: ${params.programSlug.trim()}`
+    : "";
+  const equipLine = params.equipmentSummary?.trim()
+    ? `\nHome equipment: ${params.equipmentSummary.trim()}`
+    : "";
+  const phoneLine = params.phone?.trim() ? `\nPhone: ${params.phone.trim()}` : "";
+
   await notifyCoachForMemberEvent({
     event: "newMember",
     memberUserId: params.userId,
     memberName: params.name,
     memberEmail: params.email,
     subject: "New member finished onboarding",
-    message: `${params.name} completed setup and is ready for a 15-minute intake.\nPlan: ${params.plan}`,
+    message:
+      `${params.name} completed setup and is ready for a 15-minute intake.\n` +
+      `Plan: ${params.plan}${programLine}${startLine}${equipLine}${phoneLine}`,
     deepLink: `${appBaseUrl()}/admin/members`,
+  });
+
+  // Explicit start-date event so funnel dashboards / prefs can treat it separately.
+  if (params.programStartDate?.trim()) {
+    await notifyCoachProgramStartChosen({
+      userId: params.userId,
+      name: params.name,
+      email: params.email,
+      plan: params.plan,
+      programStartDate: params.programStartDate.trim(),
+      programSlug: params.programSlug || null,
+    });
+  }
+}
+
+/** Member saved home equipment (first meaningful selection). */
+export async function notifyCoachEquipmentSelected(params: {
+  userId: string;
+  name: string;
+  email: string;
+  plan?: string | null;
+  equipmentNames: string[];
+}): Promise<{ inApp: boolean; email: boolean; sms: boolean; push: boolean } | null> {
+  const claimed = await claimCoachNotifyOnce({
+    memberUserId: params.userId,
+    claimKey: "equipment-selected",
+  });
+  if (!claimed) return null;
+
+  const names = params.equipmentNames.filter((n) => n?.trim()).slice(0, 40);
+  const list =
+    names.length > 0
+      ? names.map((n) => `• ${n}`).join("\n")
+      : "• (saved equipment list — no items checked yet)";
+  const more =
+    params.equipmentNames.length > 40
+      ? `\n• … +${params.equipmentNames.length - 40} more`
+      : "";
+
+  return notifyCoachForMemberEvent({
+    event: "equipmentSelected",
+    memberUserId: params.userId,
+    memberName: params.name,
+    memberEmail: params.email,
+    subject: "Member selected home equipment",
+    message:
+      `${params.name} updated what they have at home.\n` +
+      (params.plan ? `Plan: ${params.plan}\n` : "") +
+      `\n${list}${more}`,
+    deepLink: `${appBaseUrl()}/admin/members`,
+  });
+}
+
+/** Member chose program Day 1 (usually at onboarding complete). */
+export async function notifyCoachProgramStartChosen(params: {
+  userId: string;
+  name: string;
+  email: string;
+  plan: string;
+  programStartDate: string;
+  programSlug?: string | null;
+}): Promise<{ inApp: boolean; email: boolean; sms: boolean; push: boolean } | null> {
+  const claimed = await claimCoachNotifyOnce({
+    memberUserId: params.userId,
+    claimKey: `program-start:${params.programStartDate}`,
+  });
+  if (!claimed) return null;
+
+  return notifyCoachForMemberEvent({
+    event: "programStartChosen",
+    memberUserId: params.userId,
+    memberName: params.name,
+    memberEmail: params.email,
+    subject: "Member chose program start date",
+    message:
+      `${params.name} set Day 1 to ${params.programStartDate}.\n` +
+      `Plan: ${params.plan}` +
+      (params.programSlug ? `\nProgram: ${params.programSlug}` : ""),
+    deepLink: `${appBaseUrl()}/admin/members`,
+  });
+}
+
+/** Member opened Messages (first time only). */
+export async function notifyCoachMessagesOpened(params: {
+  userId: string;
+  name: string;
+  email: string;
+}): Promise<{ inApp: boolean; email: boolean; sms: boolean; push: boolean } | null> {
+  const claimed = await claimCoachNotifyOnce({
+    memberUserId: params.userId,
+    claimKey: "messages-opened",
+  });
+  if (!claimed) return null;
+
+  return notifyCoachForMemberEvent({
+    event: "messagesOpened",
+    memberUserId: params.userId,
+    memberName: params.name,
+    memberEmail: params.email,
+    subject: "Member opened Messages",
+    message: `${params.name} opened the Messages hub for the first time.`,
+    deepLink: `${appBaseUrl()}/admin/chat?member=${encodeURIComponent(params.userId)}`,
   });
 }
 

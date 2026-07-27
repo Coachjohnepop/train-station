@@ -6,6 +6,9 @@ export type AlertChannels = {
 
 export type CoachAlertEvent =
   | "newMember"
+  | "equipmentSelected"
+  | "programStartChosen"
+  | "messagesOpened"
   | "warmupStarted"
   | "intakeScheduled"
   | "workoutLogged";
@@ -18,9 +21,19 @@ export const DEFAULT_ALERT_CHANNELS: AlertChannels = {
   email: true,
 };
 
+/** Onboarding funnel events — always email + in-app by default (coach must see every step). */
+export const FUNNEL_ALERT_CHANNELS: AlertChannels = {
+  inApp: true,
+  sms: false,
+  email: true,
+};
+
 export function defaultCoachAlertPrefs(): CoachAlertPrefs {
   return {
-    newMember: { ...DEFAULT_ALERT_CHANNELS },
+    newMember: { ...FUNNEL_ALERT_CHANNELS },
+    equipmentSelected: { ...FUNNEL_ALERT_CHANNELS },
+    programStartChosen: { ...FUNNEL_ALERT_CHANNELS },
+    messagesOpened: { ...FUNNEL_ALERT_CHANNELS },
     warmupStarted: { inApp: true, sms: true, email: false },
     intakeScheduled: { inApp: true, sms: false, email: true },
     /** Default: Messages + email so coach sees what the member did. */
@@ -44,6 +57,15 @@ export function normalizeCoachAlertPrefs(raw: unknown): CoachAlertPrefs {
   const data = raw as Partial<Record<CoachAlertEvent, unknown>>;
   return {
     newMember: normalizeAlertChannels(data.newMember ?? defaults.newMember),
+    equipmentSelected: normalizeAlertChannels(
+      data.equipmentSelected ?? defaults.equipmentSelected,
+    ),
+    programStartChosen: normalizeAlertChannels(
+      data.programStartChosen ?? defaults.programStartChosen,
+    ),
+    messagesOpened: normalizeAlertChannels(
+      data.messagesOpened ?? defaults.messagesOpened,
+    ),
     warmupStarted: normalizeAlertChannels(data.warmupStarted ?? defaults.warmupStarted),
     intakeScheduled: normalizeAlertChannels(data.intakeScheduled ?? defaults.intakeScheduled),
     workoutLogged: normalizeAlertChannels(data.workoutLogged ?? defaults.workoutLogged),
