@@ -334,9 +334,33 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-07-28 (video model: store intros · YouTube for the rest)  
-**Status:** Stripe **Live**. Athletes / Military / Mom-Dads → **22 weeks**. **Admin → Videos**: coach intro + per-ticket-class clips **upload to Vercel Blob** (MP4/WebM/MOV, max 200 MB); gag / thank-you / weekly / dinner / daily / exercises stay **YouTube links**.  
+**Date:** 2026-07-28 (sign-off — video library **shipped to prod**)  
+**Status:** Stripe **Live**. Commit **`6dd56a1`** on `main` → Vercel Production **Ready**. Coach intros: **upload library → assign slots** on **Admin → Videos**. Full site loop green (pages/links/payment/users/videos); only optional 404s: `/pricing` `/privacy` `/terms` `/partners`. Landing welcome/free still **empty** — Jeremy needs to upload real clips.  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
+
+### Shipped this session (prod)
+
+| Item | Detail |
+|------|--------|
+| Video model | **Stored:** overall + free-ticket + per ticket class (Explorer / Coach / Business / 1st). **YouTube:** gag, purchase thank-you, weekly, dinner, daily, exercises. |
+| Admin → Videos | Multi-upload library (MP4/WebM/MOV, max 200 MB, Blob client upload) → rename → assign to slots → **Save all videos**. Gag on/off + start/duration still in section 3. |
+| Playback | `PlayableVideoFrame` (YouTube or HTML5). Free-ticket modal: Rickroll ~10s then Jeremy intro (file or YT). |
+| APIs | `POST /api/admin/landing-media/upload` · `GET/POST/DELETE /api/admin/site-videos/library` · store `demo/site-video-library.json` |
+| Loop script | `scripts/pages-admin-videos-loop.mjs` — post-deploy verified library + upload routes **200** |
+| Weeks / builder | Athletes / Military / Mom-Dads **22 weeks**; cross-program **Import week** (earlier same day) |
+
+### Jeremy next (content, not code)
+
+1. **Admin → Videos** — upload intros, assign Overall / Free-ticket / Coach Class / Business / etc., Save.  
+2. Confirm free path: gag ~10s → free-ticket intro.  
+3. Fill empty program week shells when ready.  
+4. Session times ops: 11–12, 1–2, 2:45–3:45.
+
+### Open / not done
+
+- Optional marketing routes missing (404): `/pricing`, `/privacy`, `/terms`, `/partners` — not in product nav.  
+- Coach notify P0 still open (push/SMS experience; Jul 27 voice note below).  
+- Local-only untracked soak scripts / reports not committed (on purpose).
 
 ### Video storage model (product decision)
 
@@ -349,7 +373,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Library UX:** Admin → Videos — multi-upload into **Jeremy’s video library**, rename clips, then **assign** to Overall / Free-ticket / Free Explorer / Coach Class / Business Class / 1st Class. Save publishes slot URLs into landing-media.
 
-API: `POST /api/admin/landing-media/upload` · library ` /api/admin/site-videos/library`. Player: `PlayableVideoFrame` (YouTube or HTML5).
+API: `POST /api/admin/landing-media/upload` · library `/api/admin/site-videos/library`. Player: `PlayableVideoFrame` (YouTube or HTML5).
 
 ### Jeremy voice (Jul 28) — reply checklist
 
@@ -357,7 +381,7 @@ API: `POST /api/admin/landing-media/upload` · library ` /api/admin/site-videos/
 |---|-----|--------|
 | 1 | Signup bottom “Eco Delight” / “under the rules” | Brand = **The Train Station**; footer = **Powered by Lemonvoice**. Eco only on **Partners**. Not on signup path in code. |
 | 2 | Stripe payments | **Live** on prod. |
-| 3 | 2-min intro + free video to promote | **Admin → Videos** — **Upload** default welcome + free intro + per-ticket (not only YouTube). Placeholders cleared. |
+| 3 | 2-min intro + free video to promote | **Prod:** Admin → Videos library + assign. Placeholders cleared; **content not uploaded yet**. |
 | 4 | Copy week Adult/Athletes → Military | **Import week from another program** in program builder. |
 | 5 | Athletes / Mom & Dads only 4 weeks | **Expanded to 22 weeks** (empty shells to fill). |
 | 6 | Sessions 11–12, 1–2, 2:45–3:45 | Ops note. |
