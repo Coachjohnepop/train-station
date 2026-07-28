@@ -168,6 +168,49 @@ export async function getLiveWorkoutSession(input: {
   return session;
 }
 
+/**
+ * Weights: non-empty values win. When both sides send non-empty for the same key,
+ * prefer the writer's value (input). Empty strings never wipe a known weight.
+ */
+function mergeWeights(
+  existing: Record<string, string>,
+  incoming: Record<string, string>,
+): Record<string, string> {
+  const out = { ...existing };
+  for (const [k, v] of Object.entries(incoming)) {
+    if (typeof v !== "string") continue;
+    const trimmed = v.trim();
+    if (trimmed === "") continue;
+    out[k] = trimmed;
+  }
+  return out;
+}
+
+/**
+ * Completed sets: replace per block when the writer includes that block.
+ * If a stale member write races a newer coach write, union the set numbers so
+ * coach checkoffs are not wiped (member can still uncheck by pushing empty array).
+ */
+function mergeCompletedSetsForWriter(
+  existing: Record<string, number[]>,
+  incoming: Record<string, number[]>,
+  opts: { staleMemberVsCoach: boolean },
+): Record<string, number[]> {
+  if (!opts.staleMemberVsCoach) {
+    return mergeCompletedSets(existing, incoming);
+  }
+  const out = { ...existing };
+  for (const [blockId, nums] of Object.entries(incoming)) {
+    const prev = new Set(out[blockId] ?? []);
+    const next = new Set(nums);
+    // If member cleared all sets intentionally, honor empty only when not racing coach.
+    // Stale race: union so coach progress sticks.
+    for (const n of next) prev.add(n);
+    out[blockId] = Array.from(prev).sort((a, b) => a - b);
+  }
+  return out;
+}
+
 export async function upsertLiveWorkoutSession(input: {
   userId: string;
   workoutId: string;
@@ -184,6 +227,8 @@ export async function upsertLiveWorkoutSession(input: {
   restActive?: LiveRestActive | null;
   restActiveProvided?: boolean;
   updatedBy: "coach" | "member";
+  /** Client's last known revision — used to detect stale overwrites. */
+  baseRevision?: number;
 }): Promise<{ session: LiveWorkoutSession; blobSaved: boolean }> {
   const sessionDate = normalizeLiveSessionDate(input.sessionDate);
   const key = liveSessionKey(input.userId, input.workoutId, sessionDate);
@@ -194,41 +239,86 @@ export async function upsertLiveWorkoutSession(input: {
     sessionDate,
   });
 
-  // Coach may push rest settings; members omit them so we keep the last coach values.
-  const restTimerEnabled =
-    typeof input.restTimerEnabled === "boolean"
-      ? input.restTimerEnabled
-      : existing?.restTimerEnabled;
-  const restTimerSeconds =
-    typeof input.restTimerSeconds === "number"
-      ? input.restTimerSeconds
-      : existing?.restTimerSeconds;
-  const restTimerSound =
-    typeof input.restTimerSound === "string" && input.restTimerSound.trim()
-      ? input.restTimerSound.trim()
-      : existing?.restTimerSound;
+  const existingRev = existing?.revision ?? 0;
+  const baseRevision =
+    typeof input.baseRevision === "number" && Number.isFinite(input.baseRevision)
+      ? input.baseRevision
+      : null;
+  const staleMemberVsCoach =
+    input.updatedBy === "member" &&
+    existing?.updatedBy === "coach" &&
+    baseRevision != null &&
+    existingRev > baseRevision;
+
+  // Rest duration/enabled: coach owns. Members must not clobber with defaults.
+  let restTimerEnabled = existing?.restTimerEnabled;
+  let restTimerSeconds = existing?.restTimerSeconds;
+  let restTimerSound = existing?.restTimerSound;
+  if (input.updatedBy === "coach") {
+    if (typeof input.restTimerEnabled === "boolean") {
+      restTimerEnabled = input.restTimerEnabled;
+    }
+    if (typeof input.restTimerSeconds === "number") {
+      restTimerSeconds = input.restTimerSeconds;
+    }
+    if (typeof input.restTimerSound === "string" && input.restTimerSound.trim()) {
+      restTimerSound = input.restTimerSound.trim();
+    }
+  } else if (restTimerEnabled === undefined && typeof input.restTimerEnabled === "boolean") {
+    // First write, no coach yet — allow member to seed.
+    restTimerEnabled = input.restTimerEnabled;
+    if (typeof input.restTimerSeconds === "number") restTimerSeconds = input.restTimerSeconds;
+    if (typeof input.restTimerSound === "string" && input.restTimerSound.trim()) {
+      restTimerSound = input.restTimerSound.trim();
+    }
+  }
+
   const restActive = input.restActiveProvided
     ? input.restActive ?? null
     : (existing?.restActive ?? null);
+
+  // Stale member write racing coach: keep coach weights for keys coach set; still accept member keys.
+  let weights: Record<string, string>;
+  if (staleMemberVsCoach && existing) {
+    weights = mergeWeights(input.weights, existing.weights);
+  } else {
+    weights = mergeWeights(existing?.weights ?? {}, input.weights);
+  }
+
+  const completedSets = mergeCompletedSetsForWriter(
+    existing?.completedSets ?? {},
+    input.completedSets,
+    { staleMemberVsCoach },
+  );
+
+  const finishedExercises = staleMemberVsCoach
+    ? Array.from(
+        new Set([
+          ...(existing?.finishedExercises ?? []),
+          ...mergeFinishedExercises([], input.finishedExercises),
+        ]),
+      )
+    : mergeFinishedExercises(
+        existing?.finishedExercises ?? [],
+        input.finishedExercises,
+      );
 
   const session: LiveWorkoutSession = {
     userId: input.userId,
     workoutId: input.workoutId,
     sessionDate,
-    completedSets: mergeCompletedSets(existing?.completedSets ?? {}, input.completedSets),
-    finishedExercises: mergeFinishedExercises(
-      existing?.finishedExercises ?? [],
-      input.finishedExercises,
-    ),
-    weights: { ...(existing?.weights ?? {}), ...input.weights },
+    completedSets,
+    finishedExercises,
+    weights,
     activeId: input.activeId ?? existing?.activeId,
     restTimerEnabled,
     restTimerSeconds,
     restTimerSound,
     restActive,
     updatedAt: new Date().toISOString(),
-    updatedBy: input.updatedBy,
-    revision: (existing?.revision ?? 0) + 1,
+    // Keep coach as author when member stale-write merges onto coach state.
+    updatedBy: staleMemberVsCoach ? "coach" : input.updatedBy,
+    revision: existingRev + 1,
   };
 
   // Hot cache first so SSE subscribers on this instance get the checkoff immediately.

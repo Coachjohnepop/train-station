@@ -33,6 +33,8 @@ const putSchema = z.object({
   restTimerSound: z.string().min(1).max(40).optional(),
   restActive: restActiveSchema.optional(),
   updatedBy: z.enum(["coach", "member"]),
+  /** Last revision the client applied — detects stale overwrites across instances. */
+  baseRevision: z.number().int().nonnegative().optional(),
   clear: z.boolean().optional(),
 });
 
@@ -103,7 +105,7 @@ export async function PUT(request: Request, { params }: Params) {
     finishedExercises: data.finishedExercises,
     weights: data.weights,
     activeId: data.activeId,
-    // Either side may push rest controls (coach floor or member after coach enabled).
+    // Rest duration/enabled: coach-owned (members may not clobber). Still accepted in body.
     restTimerEnabled: data.restTimerEnabled,
     restTimerSeconds: data.restTimerSeconds,
     restTimerSound: data.restTimerSound,
@@ -111,6 +113,7 @@ export async function PUT(request: Request, { params }: Params) {
     restActiveProvided,
     restActive: restActiveProvided ? data.restActive ?? null : undefined,
     updatedBy: data.updatedBy,
+    baseRevision: data.baseRevision,
   });
 
   return NextResponse.json({

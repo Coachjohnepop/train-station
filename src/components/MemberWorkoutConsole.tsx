@@ -431,6 +431,8 @@ export default function MemberWorkoutConsole({
   const lastAppliedRevision = useRef(0);
   const lastAppliedRemoteAt = useRef<string | null>(null);
   const applyingRemote = useRef(false);
+  /** After applying a remote snapshot, skip the auto-push effect so we don't echo stale local. */
+  const skipAutoPushAfterRemote = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveChain = useRef(Promise.resolve());
   const lastPushedRevision = useRef(0);
@@ -506,10 +508,37 @@ export default function MemberWorkoutConsole({
       updatedAt?: string;
     }) => {
       if (typeof session.revision === "number") {
-        if (session.revision <= lastAppliedRevision.current) {
-          // Still allow a newer shared rest popup on the same revision edge cases.
+        if (session.revision < lastAppliedRevision.current) {
+          // Older than what we already applied — ignore.
+          return;
+        }
+        if (session.revision === lastAppliedRevision.current) {
+          // Same revision: still allow rest popup / rest-timer field refresh from coach.
           if (session.restActive && session.restActive.endsAt > lastAppliedRestEndsAt.current) {
             applyRemoteRestActive(session.restActive);
+          }
+          if (session.updatedBy === "coach") {
+            if (typeof session.restTimerEnabled === "boolean") {
+              setSessionRestEnabled(session.restTimerEnabled);
+              restSettingsRef.current = {
+                ...restSettingsRef.current,
+                enabled: session.restTimerEnabled,
+              };
+            }
+            if (typeof session.restTimerSeconds === "number" && session.restTimerSeconds > 0) {
+              const secs = normalizeRestTimerSeconds(session.restTimerSeconds);
+              setSessionRestSeconds(secs);
+              restSettingsRef.current = { ...restSettingsRef.current, seconds: secs };
+            }
+            if (session.weights) {
+              const merged = mergeWeightsWithSeeds(
+                workout.exercises,
+                session.weights,
+                session.weights,
+              );
+              setWeights(merged);
+              stateRef.current = { ...stateRef.current, weights: merged };
+            }
           }
           return;
         }
@@ -608,11 +637,15 @@ export default function MemberWorkoutConsole({
       }
       if (session.weights && !weightsSame) {
         // Partner non-empty weights win; keep last-session seeds for blanks.
-        const merged = mergeWeightsWithSeeds(
-          workout.exercises,
-          localSnap.weights,
-          session.weights,
-        );
+        // Coach updates always apply fully so member floor mirrors coach weight box.
+        const merged =
+          session.updatedBy === "coach"
+            ? mergeWeightsWithSeeds(workout.exercises, session.weights, session.weights)
+            : mergeWeightsWithSeeds(
+                workout.exercises,
+                localSnap.weights,
+                session.weights,
+              );
         setWeights(merged);
         stateRef.current = { ...stateRef.current, weights: merged };
       }
@@ -632,6 +665,8 @@ export default function MemberWorkoutConsole({
       } else {
         setCoachLive(fromCoach);
       }
+      // Don't immediately re-push the state we just applied (avoids overwriting coach on race).
+      skipAutoPushAfterRemote.current = true;
       applyingRemote.current = false;
     },
     [
@@ -697,14 +732,17 @@ export default function MemberWorkoutConsole({
         payload.restActive = restActiveRef.current;
       }
       if (!coachFloorMode) payload.activeId = snap.activeId;
-      // Coach floor pushes rest controls so member countdown matches mid-session.
-      // Members also echo rest controls once known so both stay aligned.
-      {
+      // Coach owns rest duration/enabled — members must not push defaults over coach.
+      if (canCoachRestSettings) {
         const rest = restSettingsRef.current;
         payload.restTimerEnabled = rest.enabled;
         payload.restTimerSeconds = normalizeRestTimerSeconds(rest.seconds);
         payload.restTimerSound = rest.sound;
       }
+      // Helps server detect stale member overwrites of newer coach revisions.
+      const baseRev = Math.max(lastAppliedRevision.current, lastPushedRevision.current);
+      if (baseRev > 0) payload.baseRevision = baseRev;
+
       const res = await fetch(`/api/workouts/${workout.workoutId}/live-session`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -724,6 +762,7 @@ export default function MemberWorkoutConsole({
       const rev = data.session?.revision;
       if (typeof rev === "number") {
         lastPushedRevision.current = rev;
+        lastAppliedRevision.current = Math.max(lastAppliedRevision.current, rev);
       }
     });
 
@@ -737,6 +776,7 @@ export default function MemberWorkoutConsole({
     serializeCompletedSets,
     applyRemoteSession,
     coachFloorMode,
+    canCoachRestSettings,
   ]);
 
   const queueLiveSave = useCallback(
@@ -827,6 +867,11 @@ export default function MemberWorkoutConsole({
   // Push local checkoffs to shared store (coach ↔ member).
   useEffect(() => {
     if (!livePushEnabled) return;
+    if (skipAutoPushAfterRemote.current) {
+      skipAutoPushAfterRemote.current = false;
+      return;
+    }
+    if (applyingRemote.current) return;
     queueLiveSave();
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
