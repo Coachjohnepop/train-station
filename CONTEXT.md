@@ -334,9 +334,33 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-07-27 (Jeremy: no usable coach notify · accountability product gap · Money desk / Eco path)  
-**Status:** Funnel coach-email code shipped (`4976417`) but Jeremy **still not reached in real life** — Resend **sent** to `jeremy@thetrainstation.co`, he reports **did not get notification**. Push **0 subs** for Jeremy. Signup SMS **off**. SMS carrier still PARKED. Venmo LIVE · Stripe Live incomplete.  
+**Date:** 2026-07-28 (video model: store intros · YouTube for the rest)  
+**Status:** Stripe **Live**. Athletes / Military / Mom-Dads → **22 weeks**. **Admin → Videos**: coach intro + per-ticket-class clips **upload to Vercel Blob** (MP4/WebM/MOV, max 200 MB); gag / thank-you / weekly / dinner / daily / exercises stay **YouTube links**.  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
+
+### Video storage model (product decision)
+
+| Stored (upload) | YouTube links |
+|-----------------|---------------|
+| Default welcome / coach intro | Free-ticket gag (Rickroll etc.) |
+| Per ticket class welcome (`welcomeVideosByPlan`) | Purchase thank-you |
+| Free-ticket intro (Jeremy after gag) | Weekly / dinner / daily inspiration |
+| | Exercise library demos |
+
+**Library UX:** Admin → Videos — multi-upload into **Jeremy’s video library**, rename clips, then **assign** to Overall / Free-ticket / Free Explorer / Coach Class / Business Class / 1st Class. Save publishes slot URLs into landing-media.
+
+API: `POST /api/admin/landing-media/upload` · library ` /api/admin/site-videos/library`. Player: `PlayableVideoFrame` (YouTube or HTML5).
+
+### Jeremy voice (Jul 28) — reply checklist
+
+| # | Ask | Status |
+|---|-----|--------|
+| 1 | Signup bottom “Eco Delight” / “under the rules” | Brand = **The Train Station**; footer = **Powered by Lemonvoice**. Eco only on **Partners**. Not on signup path in code. |
+| 2 | Stripe payments | **Live** on prod. |
+| 3 | 2-min intro + free video to promote | **Admin → Videos** — **Upload** default welcome + free intro + per-ticket (not only YouTube). Placeholders cleared. |
+| 4 | Copy week Adult/Athletes → Military | **Import week from another program** in program builder. |
+| 5 | Athletes / Mom & Dads only 4 weeks | **Expanded to 22 weeks** (empty shells to fill). |
+| 6 | Sessions 11–12, 1–2, 2:45–3:45 | Ops note. |
 
 ### Jeremy voice-note (Jul 27) — coach notify + accountability (P0)
 

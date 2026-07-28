@@ -10,6 +10,8 @@ import {
   resolveFreeTicketGag,
   type FreeTicketGagConfig,
 } from "@/lib/landing-media";
+import { isDirectVideoUrl } from "@/lib/site-video";
+import { isYoutubeUrl } from "@/lib/youtube";
 import { postYoutubeEmbedCommand } from "@/lib/youtube-embed-control";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 
@@ -45,7 +47,8 @@ export default function FreeTicketModal({
   const [loadJeremy, setLoadJeremy] = useState(false);
   const timersRef = useRef<number[]>([]);
   const rickrollRef = useRef<HTMLIFrameElement>(null);
-  const jeremyRef = useRef<HTMLIFrameElement>(null);
+  const jeremyIframeRef = useRef<HTMLIFrameElement>(null);
+  const jeremyVideoRef = useRef<HTMLVideoElement>(null);
 
   const embedOrigin = typeof window !== "undefined" ? window.location.origin : undefined;
   const durationSecFromConfig =
@@ -70,6 +73,10 @@ export default function FreeTicketModal({
     return null;
   })();
   const hasJeremy = Boolean(jeremyVideoUrl);
+  const jeremyIsYoutube = Boolean(jeremyVideoUrl && isYoutubeUrl(jeremyVideoUrl));
+  const jeremyIsDirect = Boolean(
+    jeremyVideoUrl && !jeremyIsYoutube && isDirectVideoUrl(jeremyVideoUrl),
+  );
 
   const rickrollSrc = gag.enabled
     ? landingVideoEmbedSrc(gag.videoUrl, true, {
@@ -79,10 +86,11 @@ export default function FreeTicketModal({
       })
     : null;
 
-  const jeremySrc =
-    loadJeremy && hasJeremy
+  const jeremyYtSrc =
+    loadJeremy && hasJeremy && jeremyIsYoutube
       ? landingVideoEmbedSrc(jeremyVideoUrl, true, { mute: false, origin: embedOrigin })
       : null;
+  const showJeremyFile = loadJeremy && hasJeremy && jeremyIsDirect && Boolean(jeremyVideoUrl);
 
   // Preload Jeremy iframe a few seconds before the crossfade.
   const gagDurationMs = gag.enabled ? gag.durationMs : 0;
@@ -165,8 +173,14 @@ export default function FreeTicketModal({
   useEffect(() => {
     if (!fadeJeremyIn || !hasJeremy) return;
     const kick = () => {
-      postYoutubeEmbedCommand(jeremyRef.current, "playVideo");
-      postYoutubeEmbedCommand(jeremyRef.current, "unMute");
+      if (jeremyIsYoutube) {
+        postYoutubeEmbedCommand(jeremyIframeRef.current, "playVideo");
+        postYoutubeEmbedCommand(jeremyIframeRef.current, "unMute");
+      } else if (jeremyVideoRef.current) {
+        void jeremyVideoRef.current.play().catch(() => {
+          /* gesture may be required */
+        });
+      }
     };
     const t1 = window.setTimeout(kick, 400);
     const t2 = window.setTimeout(kick, 1200);
@@ -174,7 +188,7 @@ export default function FreeTicketModal({
       window.clearTimeout(t1);
       window.clearTimeout(t2);
     };
-  }, [fadeJeremyIn, hasJeremy]);
+  }, [fadeJeremyIn, hasJeremy, jeremyIsYoutube]);
 
   if (!open) return null;
 
@@ -228,18 +242,34 @@ export default function FreeTicketModal({
             />
           )}
 
-          {jeremySrc && (
+          {jeremyYtSrc && (
             <iframe
-              ref={jeremyRef}
-              key="jeremy"
+              ref={jeremyIframeRef}
+              key="jeremy-yt"
               className={`absolute inset-0 h-full w-full transition-opacity ease-in-out ${
                 fadeJeremyIn ? "opacity-100" : "pointer-events-none opacity-0"
               }`}
               style={{ transitionDuration: `${FREE_TICKET_RICKROLL_FADE_MS}ms` }}
-              src={jeremySrc}
+              src={jeremyYtSrc}
               title="Coach Jeremy"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
+            />
+          )}
+
+          {showJeremyFile && jeremyVideoUrl && (
+            <video
+              ref={jeremyVideoRef}
+              key="jeremy-file"
+              className={`absolute inset-0 h-full w-full object-contain bg-black transition-opacity ease-in-out ${
+                fadeJeremyIn ? "opacity-100" : "pointer-events-none opacity-0"
+              }`}
+              style={{ transitionDuration: `${FREE_TICKET_RICKROLL_FADE_MS}ms` }}
+              src={jeremyVideoUrl}
+              title="Coach Jeremy"
+              playsInline
+              controls
+              preload="auto"
             />
           )}
 
@@ -247,10 +277,11 @@ export default function FreeTicketModal({
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 p-4 text-center text-xs text-[#9d8ab8]">
               <p className="font-medium text-white">Coach intro not set yet</p>
               <p className="mt-2">
-                <Link href="/admin/landing" className="text-[#7c3aed] underline">
-                  Admin → Landing
+                <Link href="/admin/videos" className="text-[#7c3aed] underline">
+                  Admin → Videos
                 </Link>{" "}
-                → free-ticket video (Jeremy&apos;s free-tier intro). The 10s chorus gag is built-in.
+                → free-ticket intro (upload Jeremy&apos;s free-tier clip). The 10s chorus gag is
+                built-in.
               </p>
             </div>
           )}

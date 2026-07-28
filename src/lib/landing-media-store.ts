@@ -2,6 +2,7 @@ import path from "path";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
 import type { MembershipPlan } from "@/lib/signup-plans";
 import { MEMBERSHIP_PLANS } from "@/lib/signup-plans";
+import { isAllowedCoachIntroVideoUrl } from "@/lib/site-video";
 import { isYoutubeUrl } from "@/lib/youtube";
 
 export type WelcomeVideosByPlan = Partial<Record<MembershipPlan, string | null>>;
@@ -145,8 +146,10 @@ export async function saveLandingMedia(
 
   if (patch.welcomeVideoUrl !== undefined) {
     const url = patch.welcomeVideoUrl?.trim() || null;
-    if (url && !isYoutubeUrl(url)) {
-      throw new Error("Welcome video must be a valid YouTube URL.");
+    if (url && !isAllowedCoachIntroVideoUrl(url)) {
+      throw new Error(
+        "Welcome video must be an uploaded coach intro (MP4/WebM/MOV) or a YouTube URL.",
+      );
     }
     next.welcomeVideoUrl = url;
   }
@@ -155,8 +158,10 @@ export async function saveLandingMedia(
     const normalized = normalizeWelcomeVideosByPlan(patch.welcomeVideosByPlan);
     for (const plan of MEMBERSHIP_PLANS) {
       const url = normalized[plan];
-      if (url && !isYoutubeUrl(url)) {
-        throw new Error(`${plan} welcome video must be a valid YouTube URL.`);
+      if (url && !isAllowedCoachIntroVideoUrl(url)) {
+        throw new Error(
+          `${plan} welcome video must be an uploaded file or a YouTube URL.`,
+        );
       }
     }
     next.welcomeVideosByPlan = normalized;
@@ -164,8 +169,10 @@ export async function saveLandingMedia(
 
   if (patch.freeChastiseVideoUrl !== undefined) {
     const url = patch.freeChastiseVideoUrl?.trim() || null;
-    if (url && !isYoutubeUrl(url)) {
-      throw new Error("Free-ticket video must be a valid YouTube URL.");
+    if (url && !isAllowedCoachIntroVideoUrl(url)) {
+      throw new Error(
+        "Free-ticket intro must be an uploaded file or a YouTube URL.",
+      );
     }
     next.freeChastiseVideoUrl = url;
   }

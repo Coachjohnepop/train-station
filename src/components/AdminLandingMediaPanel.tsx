@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { saveLandingMediaAction } from "@/app/admin/landing/actions";
-import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
+import PlayableVideoFrame from "@/components/PlayableVideoFrame";
 import { WELCOME_VIDEO_PLAN_OPTIONS } from "@/lib/landing-media";
 import type { WelcomeVideosByPlan } from "@/lib/landing-media-store";
-import { isYoutubeUrl } from "@/lib/youtube";
+import { isAllowedCoachIntroVideoUrl } from "@/lib/site-video";
 
 export default function AdminLandingMediaPanel({
   initialWelcomeUrl = "",
@@ -41,24 +41,24 @@ export default function AdminLandingMediaPanel({
     const free = freeUrl.trim();
     const qr = venmoQrUrl.trim();
 
-    if (welcome && !isYoutubeUrl(welcome)) {
+    if (welcome && !isAllowedCoachIntroVideoUrl(welcome)) {
       setError(true);
-      setMessage("Default welcome video must be a YouTube link (youtube.com or youtu.be).");
+      setMessage("Default welcome video must be an uploaded file or YouTube link.");
       setSaving(false);
       return;
     }
     for (const { plan, label } of WELCOME_VIDEO_PLAN_OPTIONS) {
       const url = welcomeByPlan[plan]?.trim();
-      if (url && !isYoutubeUrl(url)) {
+      if (url && !isAllowedCoachIntroVideoUrl(url)) {
         setError(true);
-        setMessage(`${label} welcome video must be a YouTube link.`);
+        setMessage(`${label} welcome video must be an uploaded file or YouTube link.`);
         setSaving(false);
         return;
       }
     }
-    if (free && !isYoutubeUrl(free)) {
+    if (free && !isAllowedCoachIntroVideoUrl(free)) {
       setError(true);
-      setMessage("Free-ticket video must be a YouTube link (youtube.com or youtu.be).");
+      setMessage("Free-ticket video must be an uploaded file or YouTube link.");
       setSaving(false);
       return;
     }
@@ -129,7 +129,11 @@ export default function AdminLandingMediaPanel({
           </li>
         </ul>
         <p className="mt-3 text-xs text-[#9d8ab8]">
-          Upload clips to YouTube (public or unlisted). Venmo QR can be the site asset{" "}
+          Prefer uploading coach intros under{" "}
+          <a href="/admin/videos" className="text-[#c4b5fd] underline">
+            Admin → Videos
+          </a>{" "}
+          (stored on site). You can still paste a YouTube URL here. Venmo QR can be{" "}
           <code className="text-[10px] text-[#c4b5fd]">
             https://www.thetrainstation.co/images/venmo-jeremy-qr.png
           </code>{" "}
@@ -141,8 +145,8 @@ export default function AdminLandingMediaPanel({
         <div>
           <p className="text-sm font-semibold text-white">Welcome videos (onboarding)</p>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            Paste a YouTube link for each ticket tier. Members see their plan&apos;s clip on setup step
-            1 — swap Rick Roll for your real intro anytime.
+            Upload (recommended) under Admin → Videos, or paste a YouTube / stored URL here. Members
+            see their plan&apos;s clip on setup step 1.
           </p>
         </div>
         {WELCOME_VIDEO_PLAN_OPTIONS.map(({ plan, label }) => {
@@ -181,7 +185,7 @@ export default function AdminLandingMediaPanel({
       <VideoField
         id="free"
         label="Free-ticket intro (Jeremy)"
-        hint="Coach free-tier intro YouTube URL. App always plays a 10s chorus gag first, then fades into this clip (falls back to Welcome if empty). Don’t paste Rickroll here — that’s built-in."
+        hint="Coach free-tier intro (uploaded file or YouTube). App always plays a 10s chorus gag first, then fades into this clip (falls back to Welcome if empty). Don’t paste Rickroll here — that’s built-in."
         value={freeUrl}
         onChange={setFreeUrl}
         previewUrl={freeUrl}
@@ -301,7 +305,8 @@ function VideoField({
   where: string;
   compact?: boolean;
 }) {
-  const previewVideo = previewUrl?.trim() && isYoutubeUrl(previewUrl) ? previewUrl.trim() : null;
+  const previewVideo =
+    previewUrl?.trim() && isAllowedCoachIntroVideoUrl(previewUrl) ? previewUrl.trim() : null;
   return (
     <div className={`space-y-3 ${compact ? "rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-3" : "card"}`}>
       <div>
@@ -314,20 +319,22 @@ function VideoField({
       <input
         id={id}
         className="input w-full"
-        placeholder="https://www.youtube.com/watch?v=… or https://youtu.be/…"
+        placeholder="Uploaded URL or https://www.youtube.com/watch?v=…"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
       {previewVideo ? (
         <div className="aspect-video overflow-hidden rounded-xl bg-black ring-1 ring-[#3d2660]">
-          <YoutubeAutoplayFrame
+          <PlayableVideoFrame
             className="h-full w-full"
             videoUrl={previewVideo}
             title={`${label} preview`}
           />
         </div>
       ) : (
-        <p className="text-xs text-[var(--muted)] italic">Paste a YouTube URL to preview.</p>
+        <p className="text-xs text-[var(--muted)] italic">
+          Upload under Admin → Videos, or paste a URL to preview.
+        </p>
       )}
     </div>
   );

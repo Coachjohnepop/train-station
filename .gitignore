@@ -49,6 +49,7 @@ prisma/dev.db
 prisma/dev.db-journal
 prisma/exercises.dev.json
 /public/uploads/chat/
+/public/uploads/site-videos/
 *.bak.*
 
 # ephemeral test manifests / reports

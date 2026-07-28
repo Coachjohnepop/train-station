@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useId, useState } from "react";
-import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
+import PlayableVideoFrame from "@/components/PlayableVideoFrame";
 
 const DEFAULT_TRIGGER =
   "inline-flex h-14 items-center justify-center rounded-full bg-[#7c3aed] px-10 text-sm font-bold text-white shadow-lg shadow-[#7c3aed]/30 transition-all hover:bg-[#6d2dd6] hover:scale-[1.05] active:scale-[0.98]";
@@ -31,7 +31,7 @@ export default function WelcomeVideoPopover({
 
   const videoBody = welcomeVideoUrl?.trim() ? (
     <div className="aspect-video overflow-hidden rounded-xl bg-black">
-      <YoutubeAutoplayFrame
+      <PlayableVideoFrame
         className="h-full w-full"
         videoUrl={welcomeVideoUrl}
         title="Welcome video"
@@ -44,9 +44,9 @@ export default function WelcomeVideoPopover({
     <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center text-xs text-white/70">
       <p>Welcome video not set yet.</p>
       <p className="mt-2">
-        Coach: add your YouTube link in{" "}
-        <Link href="/admin/landing" className="text-[#c4b5fd] underline">
-          Admin → Landing videos
+        Coach: upload your intro under{" "}
+        <Link href="/admin/videos" className="text-[#c4b5fd] underline">
+          Admin → Videos
         </Link>
         .
       </p>

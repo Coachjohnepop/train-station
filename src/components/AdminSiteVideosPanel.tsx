@@ -1,20 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { upload } from "@vercel/blob/client";
 import {
   saveLandingMediaAction,
   saveMemberContentAction,
 } from "@/app/admin/landing/actions";
+import PlayableVideoFrame from "@/components/PlayableVideoFrame";
 import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
 import {
-  FREE_TICKET_RICKROLL_URL,
-  WELCOME_VIDEO_PLAN_OPTIONS,
-} from "@/lib/landing-media";
+  assignmentsFromLanding,
+  COACH_INTRO_SLOTS,
+  setSlotUrl,
+  urlForSlot,
+  type CoachIntroAssignments,
+  type CoachIntroSlotId,
+} from "@/lib/coach-intro-slots";
+import { FREE_TICKET_RICKROLL_URL } from "@/lib/landing-media";
 import type { WelcomeVideosByPlan } from "@/lib/landing-media-store";
 import type {
   DailyInspirationClip,
   NutritionCalorieTier,
 } from "@/lib/member-content-store";
+import type { SiteVideoLibraryItem } from "@/lib/site-video-library-store";
+import {
+  isAllowedCoachIntroVideoUrl,
+  SITE_VIDEO_MAX_BYTES,
+  siteVideoExtFromMime,
+  siteVideoMimeFromName,
+} from "@/lib/site-video";
 import { isYoutubeUrl } from "@/lib/youtube";
 
 const WEEKDAYS = [
@@ -28,7 +42,16 @@ const WEEKDAYS = [
   { value: "6", label: "Saturday" },
 ];
 
-function VideoField({
+const MAX_MB = Math.round(SITE_VIDEO_MAX_BYTES / (1024 * 1024));
+
+function titleFromFileName(name: string): string {
+  const base = name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
+  if (!base) return "Untitled video";
+  return base.charAt(0).toUpperCase() + base.slice(1);
+}
+
+/** YouTube-only field (gag, weekly, dinner, daily). */
+function YoutubeVideoField({
   label,
   hint,
   value,
@@ -66,6 +89,14 @@ function VideoField({
   );
 }
 
+function libraryLabel(items: SiteVideoLibraryItem[], url: string): string {
+  const hit = items.find((i) => i.url === url);
+  if (hit) return hit.title;
+  if (!url) return "— none —";
+  if (isYoutubeUrl(url)) return "YouTube clip";
+  return "Uploaded video";
+}
+
 export default function AdminSiteVideosPanel({
   initialWelcomeUrl = "",
   initialWelcomeVideosByPlan = {},
@@ -82,6 +113,7 @@ export default function AdminSiteVideosPanel({
   initialDailyClips = [],
   initialNutritionIntro = "",
   initialNutritionTiers = [],
+  initialLibrary = [],
 }: {
   initialWelcomeUrl?: string;
   initialWelcomeVideosByPlan?: WelcomeVideosByPlan;
@@ -98,12 +130,16 @@ export default function AdminSiteVideosPanel({
   initialDailyClips?: DailyInspirationClip[];
   initialNutritionIntro?: string;
   initialNutritionTiers?: NutritionCalorieTier[];
+  initialLibrary?: SiteVideoLibraryItem[];
 }) {
-  const [welcomeUrl, setWelcomeUrl] = useState(initialWelcomeUrl);
-  const [welcomeByPlan, setWelcomeByPlan] = useState<WelcomeVideosByPlan>(
-    initialWelcomeVideosByPlan,
+  const [library, setLibrary] = useState<SiteVideoLibraryItem[]>(initialLibrary);
+  const [assignments, setAssignments] = useState<CoachIntroAssignments>(() =>
+    assignmentsFromLanding({
+      welcomeVideoUrl: initialWelcomeUrl,
+      freeChastiseVideoUrl: initialFreeUrl,
+      welcomeVideosByPlan: initialWelcomeVideosByPlan,
+    }),
   );
-  const [freeUrl, setFreeUrl] = useState(initialFreeUrl);
   const [gagUrl, setGagUrl] = useState(initialGagUrl);
   const [gagStartSec, setGagStartSec] = useState(String(initialGagStartSec));
   const [gagDurationSec, setGagDurationSec] = useState(String(initialGagDurationSec));
@@ -119,6 +155,171 @@ export default function AdminSiteVideosPanel({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState(false);
+
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [previewId, setPreviewId] = useState<string | null>(null);
+
+  const usedUrls = useMemo(() => {
+    const set = new Set<string>();
+    const overall = assignments.overall.trim();
+    const free = assignments.free.trim();
+    if (overall) set.add(overall);
+    if (free) set.add(free);
+    for (const url of Object.values(assignments.byPlan)) {
+      if (url?.trim()) set.add(url.trim());
+    }
+    return set;
+  }, [assignments]);
+
+  function assignSlot(slotId: CoachIntroSlotId, url: string) {
+    setAssignments((prev) => setSlotUrl(prev, slotId, url));
+  }
+
+  function slotsUsingUrl(url: string): string[] {
+    if (!url) return [];
+    return COACH_INTRO_SLOTS.filter((s) => urlForSlot(s.id, assignments) === url).map(
+      (s) => s.label,
+    );
+  }
+
+  async function registerInLibrary(params: {
+    url: string;
+    title: string;
+    fileName?: string;
+  }): Promise<SiteVideoLibraryItem | null> {
+    const res = await fetch("/api/admin/site-videos/library", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "add",
+        url: params.url,
+        title: params.title,
+        fileName: params.fileName,
+      }),
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      item?: SiteVideoLibraryItem;
+      error?: string;
+    };
+    if (!res.ok || !data.item) {
+      throw new Error(data.error || "Could not add video to library.");
+    }
+    setLibrary((prev) => {
+      const without = prev.filter((i) => i.id !== data.item!.id && i.url !== data.item!.url);
+      return [data.item!, ...without];
+    });
+    return data.item;
+  }
+
+  async function uploadOneFile(file: File, index: number, total: number) {
+    if (file.size > SITE_VIDEO_MAX_BYTES) {
+      throw new Error(`${file.name}: too large (max ${MAX_MB} MB).`);
+    }
+    setUploadProgress(`Uploading ${index + 1} of ${total}: ${file.name}`);
+    const mime = file.type || siteVideoMimeFromName(file.name);
+    const ext = siteVideoExtFromMime(mime);
+    const pathname = `site-videos/${crypto.randomUUID()}.${ext}`;
+    let url: string | null = null;
+
+    try {
+      const blob = await upload(pathname, file, {
+        access: "public",
+        handleUploadUrl: "/api/admin/landing-media/upload",
+        contentType: mime,
+        multipart: file.size > 4 * 1024 * 1024,
+        onUploadProgress: (p) => {
+          setUploadProgress(
+            `Uploading ${index + 1} of ${total}: ${file.name} (${Math.round(p.percentage)}%)`,
+          );
+        },
+      });
+      url = blob.url;
+    } catch (clientErr) {
+      if (file.size > 4.5 * 1024 * 1024) {
+        throw clientErr instanceof Error
+          ? clientErr
+          : new Error(`${file.name}: client upload failed.`);
+      }
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/admin/landing-media/upload", {
+        method: "POST",
+        body: form,
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        url?: string;
+        error?: string;
+      };
+      if (!res.ok || !data.url) {
+        throw new Error(data.error || `${file.name}: upload failed`);
+      }
+      url = data.url;
+    }
+
+    if (!url) throw new Error(`${file.name}: no URL returned`);
+
+    await registerInLibrary({
+      url,
+      title: titleFromFileName(file.name),
+      fileName: file.name,
+    });
+  }
+
+  async function handleMultiUpload(files: FileList | null) {
+    if (!files?.length) return;
+    setUploading(true);
+    setUploadError(null);
+    setUploadProgress(null);
+    const list = Array.from(files);
+    try {
+      for (let i = 0; i < list.length; i++) {
+        await uploadOneFile(list[i], i, list.length);
+      }
+      setUploadProgress(`Added ${list.length} video${list.length === 1 ? "" : "s"} to library.`);
+    } catch (e: unknown) {
+      setUploadError(e instanceof Error ? e.message : "Upload failed");
+      setUploadProgress(null);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function renameLibraryItem(id: string, title: string) {
+    setLibrary((prev) => prev.map((i) => (i.id === id ? { ...i, title } : i)));
+    try {
+      await fetch("/api/admin/site-videos/library", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "rename", id, title }),
+      });
+    } catch {
+      /* local title already updated; save rename best-effort */
+    }
+  }
+
+  async function removeLibraryItem(id: string) {
+    const item = library.find((i) => i.id === id);
+    if (!item) return;
+    const used = slotsUsingUrl(item.url);
+    if (used.length) {
+      const ok = window.confirm(
+        `“${item.title}” is assigned to: ${used.join(", ")}.\n\nRemove from library anyway? Those slots will keep the URL until you change them.`,
+      );
+      if (!ok) return;
+    } else if (!window.confirm(`Remove “${item.title}” from the library?`)) {
+      return;
+    }
+
+    setLibrary((prev) => prev.filter((i) => i.id !== id));
+    if (previewId === id) setPreviewId(null);
+    await fetch(`/api/admin/site-videos/library?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }).catch(() => null);
+  }
 
   function addClip() {
     setClips((prev) => [
@@ -155,22 +356,33 @@ export default function AdminSiteVideosPanel({
       return true;
     };
 
-    if (!yt(welcomeUrl, "Default welcome video")) {
+    const introOk = (url: string, label: string) => {
+      const t = url.trim();
+      if (t && !isAllowedCoachIntroVideoUrl(t)) {
+        setError(true);
+        setMessage(`${label} must be a library video or YouTube link.`);
+        return false;
+      }
+      return true;
+    };
+
+    if (!introOk(assignments.overall, "Overall intro")) {
       setSaving(false);
       return;
     }
-    for (const { plan, label } of WELCOME_VIDEO_PLAN_OPTIONS) {
-      const url = welcomeByPlan[plan]?.trim() || "";
-      if (url && !isYoutubeUrl(url)) {
+    if (!introOk(assignments.free, "Free-ticket intro")) {
+      setSaving(false);
+      return;
+    }
+    for (const slot of COACH_INTRO_SLOTS) {
+      if (slot.id === "overall" || slot.id === "free") continue;
+      const url = urlForSlot(slot.id, assignments);
+      if (url && !isAllowedCoachIntroVideoUrl(url)) {
         setError(true);
-        setMessage(`${label} welcome video must be a YouTube link.`);
+        setMessage(`${slot.label} must be a library video or YouTube link.`);
         setSaving(false);
         return;
       }
-    }
-    if (!yt(freeUrl, "Free-ticket intro")) {
-      setSaving(false);
-      return;
     }
     if (!yt(gagUrl, "Gag / rickroll video")) {
       setSaving(false);
@@ -202,9 +414,9 @@ export default function AdminSiteVideosPanel({
     const dur = Number(gagDurationSec);
 
     const landingResult = await saveLandingMediaAction({
-      welcomeVideoUrl: welcomeUrl.trim() || null,
-      welcomeVideosByPlan: welcomeByPlan,
-      freeChastiseVideoUrl: freeUrl.trim() || null,
+      welcomeVideoUrl: assignments.overall.trim() || null,
+      welcomeVideosByPlan: assignments.byPlan,
+      freeChastiseVideoUrl: assignments.free.trim() || null,
       gagVideoUrl: gagUrl.trim() || null,
       gagStartSec: Number.isFinite(start) ? start : 43,
       gagDurationSec: Number.isFinite(dur) ? dur : 10,
@@ -237,11 +449,13 @@ export default function AdminSiteVideosPanel({
     }
 
     if ("ok" in landingResult && landingResult.ok) {
-      setWelcomeUrl(landingResult.storedWelcomeVideoUrl || "");
-      if (landingResult.storedWelcomeVideosByPlan) {
-        setWelcomeByPlan(landingResult.storedWelcomeVideosByPlan);
-      }
-      setFreeUrl(landingResult.storedFreeChastiseVideoUrl || "");
+      setAssignments(
+        assignmentsFromLanding({
+          welcomeVideoUrl: landingResult.storedWelcomeVideoUrl,
+          freeChastiseVideoUrl: landingResult.storedFreeChastiseVideoUrl,
+          welcomeVideosByPlan: landingResult.storedWelcomeVideosByPlan,
+        }),
+      );
       setGagUrl(landingResult.storedGagVideoUrl || "");
       setGagStartSec(String(landingResult.storedGagStartSec ?? 43));
       setGagDurationSec(String(landingResult.storedGagDurationSec ?? 10));
@@ -258,7 +472,7 @@ export default function AdminSiteVideosPanel({
       }
     }
 
-    setMessage("Saved — all videos live on the site now.");
+    setMessage("Saved — library assignments are live on the site.");
     setError(false);
     setSaving(false);
   }
@@ -268,27 +482,202 @@ export default function AdminSiteVideosPanel({
       <div className="rounded-2xl border border-violet-500/30 bg-violet-500/5 p-4 text-sm text-[var(--muted)]">
         <p className="font-semibold text-violet-100">Site video desk</p>
         <p className="mt-1">
-          One place for every coach-facing YouTube: free-ticket gag, intros, purchase thank-you,
-          weekly / dinner / daily inspiration. Paste full YouTube links (Share → Copy link).
-        </p>
-        <p className="mt-2 text-xs">
-          Exercise library demos stay under{" "}
-          <a href="/admin/exercises" className="text-accent hover:underline">
-            Exercises
-          </a>
-          . Venmo QR stays under{" "}
-          <a href="/admin/landing" className="text-accent hover:underline">
-            Landing
-          </a>
-          .
+          <strong className="text-[var(--text)]">1)</strong> Upload Jeremy&apos;s clips into the
+          library. <strong className="text-[var(--text)]">2)</strong> Assign each one — overall
+          intro, Coach Class, Business Class, free-ticket, etc. Everything else (gag, weekly,
+          dinner, daily) stays YouTube.
         </p>
       </div>
 
+      {/* —— Library + assignments —— */}
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-semibold">1 · Jeremy&apos;s video library</h2>
+            <p className="text-xs text-[var(--muted)]">
+              Upload several MP4 / WebM / MOV files (max {MAX_MB} MB each). Name them, then pick
+              where each goes below.
+            </p>
+          </div>
+          <div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v"
+              multiple
+              className="hidden"
+              onChange={(e) => void handleMultiUpload(e.target.files)}
+            />
+            <button
+              type="button"
+              className="btn-primary px-4 py-2 text-sm font-semibold"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+            >
+              {uploading ? "Uploading…" : "Upload videos"}
+            </button>
+          </div>
+        </div>
+
+        {uploadProgress ? (
+          <p className="text-xs text-emerald-300">{uploadProgress}</p>
+        ) : null}
+        {uploadError ? <p className="text-xs text-red-300">{uploadError}</p> : null}
+
+        {library.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-[var(--border)] px-4 py-6 text-sm text-[var(--muted)]">
+            No library videos yet. Upload Jeremy&apos;s overall intro, Coach Class intro, Business
+            intro, free-ticket clip, etc. — then assign them in section 2.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {library.map((item) => {
+              const used = slotsUsingUrl(item.url);
+              const open = previewId === item.id;
+              return (
+                <li
+                  key={item.id}
+                  className="rounded-xl border border-emerald-500/20 bg-[var(--surface)] p-4"
+                >
+                  <div className="flex flex-wrap items-start gap-3">
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <input
+                        value={item.title}
+                        onChange={(e) =>
+                          setLibrary((prev) =>
+                            prev.map((i) =>
+                              i.id === item.id ? { ...i, title: e.target.value } : i,
+                            ),
+                          )
+                        }
+                        onBlur={(e) => void renameLibraryItem(item.id, e.target.value)}
+                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm font-semibold"
+                        placeholder="Video name"
+                      />
+                      <p className="truncate text-[11px] text-[var(--muted)]" title={item.url}>
+                        {item.fileName ? `${item.fileName} · ` : ""}
+                        {item.url}
+                      </p>
+                      {used.length ? (
+                        <p className="text-[11px] text-emerald-300/90">
+                          Assigned to: {used.join(" · ")}
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-amber-200/80">
+                          Not assigned yet — pick a slot below.
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="btn-ghost text-xs"
+                        onClick={() => setPreviewId(open ? null : item.id)}
+                      >
+                        {open ? "Hide" : "Preview"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-ghost text-xs text-red-300"
+                        onClick={() => void removeLibraryItem(item.id)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                  {open ? (
+                    <div className="mt-3 overflow-hidden rounded-lg border border-[var(--border)] bg-black">
+                      <PlayableVideoFrame
+                        className="aspect-video w-full"
+                        videoUrl={item.url}
+                        title={item.title}
+                      />
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">1 · Free ticket gag (~10s)</h2>
+        <h2 className="text-lg font-semibold">2 · Where each one goes</h2>
         <p className="text-xs text-[var(--muted)]">
-          Default is Rick Astley from the chorus. Plays when someone taps Free, then crossfades to
-          Jeremy&apos;s free-ticket intro.
+          Choose a library video for overall intro, each ticket class, and the free-ticket intro.
+          One video can be used in multiple slots.
+        </p>
+        <div className="space-y-3">
+          {COACH_INTRO_SLOTS.map((slot) => {
+            const currentUrl = urlForSlot(slot.id, assignments);
+            const selectValue =
+              library.find((i) => i.url === currentUrl)?.id ||
+              (currentUrl ? "__custom__" : "");
+            return (
+              <div
+                key={slot.id}
+                className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--text)]">{slot.label}</p>
+                    <p className="text-xs text-[var(--muted)]">{slot.hint}</p>
+                  </div>
+                  {currentUrl ? (
+                    <span className="max-w-[14rem] truncate text-[11px] text-emerald-300/90">
+                      {libraryLabel(library, currentUrl)}
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-[var(--muted)]">Unassigned</span>
+                  )}
+                </div>
+                <select
+                  value={selectValue}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "") {
+                      assignSlot(slot.id, "");
+                      return;
+                    }
+                    if (v === "__custom__") return;
+                    const item = library.find((i) => i.id === v);
+                    if (item) assignSlot(slot.id, item.url);
+                  }}
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm"
+                >
+                  <option value="">— none —</option>
+                  {library.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.title}
+                      {usedUrls.has(item.url) && item.url !== currentUrl ? " (also elsewhere)" : ""}
+                    </option>
+                  ))}
+                  {currentUrl && !library.some((i) => i.url === currentUrl) ? (
+                    <option value="__custom__">
+                      Current URL (not in library) — re-upload or clear
+                    </option>
+                  ) : null}
+                </select>
+                {currentUrl && isAllowedCoachIntroVideoUrl(currentUrl) ? (
+                  <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-black">
+                    <PlayableVideoFrame
+                      className="aspect-video w-full max-h-48"
+                      videoUrl={currentUrl}
+                      title={slot.label}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">3 · Free ticket gag (~10s) · YouTube</h2>
+        <p className="text-xs text-[var(--muted)]">
+          Default Rick Astley. Plays when someone taps Free, then crossfades to the free-ticket
+          intro from the library above.
         </p>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -298,7 +687,7 @@ export default function AdminSiteVideosPanel({
           />
           Play gag before free-ticket intro
         </label>
-        <VideoField
+        <YoutubeVideoField
           label="Gag video URL"
           hint={`Leave blank for default: ${FREE_TICKET_RICKROLL_URL}`}
           value={gagUrl}
@@ -331,46 +720,17 @@ export default function AdminSiteVideosPanel({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">2 · Intro / welcome videos</h2>
-        <VideoField
-          label="Default welcome / intro"
-          hint="Onboarding step 1 + landing when no plan-specific clip."
-          value={welcomeUrl}
-          onChange={setWelcomeUrl}
-        />
-        <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Per ticket (optional)
-          </p>
-          {WELCOME_VIDEO_PLAN_OPTIONS.map(({ plan, label }) => (
-            <VideoField
-              key={plan}
-              label={label}
-              value={welcomeByPlan[plan] || ""}
-              onChange={(v) => setWelcomeByPlan((prev) => ({ ...prev, [plan]: v || null }))}
-            />
-          ))}
-        </div>
-        <VideoField
-          label="Free-ticket intro (Jeremy)"
-          hint="After the gag when someone taps Free / Explorer."
-          value={freeUrl}
-          onChange={setFreeUrl}
-        />
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">3 · Thank you for the purchase</h2>
-        <VideoField
+        <h2 className="text-lg font-semibold">4 · Thank you for the purchase · YouTube</h2>
+        <YoutubeVideoField
           label="Post-checkout thank-you"
-          hint="Shown on the payment success screen after Stripe (and can be reused later)."
+          hint="YouTube link — payment success screen after Stripe."
           value={purchaseUrl}
           onChange={setPurchaseUrl}
         />
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">4 · Member Today strip</h2>
+        <h2 className="text-lg font-semibold">5 · Member Today strip · YouTube</h2>
         <label className="block text-sm">
           <span className="font-medium">Weekly video title</span>
           <input
@@ -379,7 +739,7 @@ export default function AdminSiteVideosPanel({
             className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm"
           />
         </label>
-        <VideoField label="Weekly coach video" value={weeklyUrl} onChange={setWeeklyUrl} />
+        <YoutubeVideoField label="Weekly coach video" value={weeklyUrl} onChange={setWeeklyUrl} />
         <label className="block text-sm">
           <span className="font-medium">Dinner video title</span>
           <input
@@ -388,23 +748,22 @@ export default function AdminSiteVideosPanel({
             className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm"
           />
         </label>
-        <VideoField label="Dinner video" value={dinnerUrl} onChange={setDinnerUrl} />
+        <YoutubeVideoField label="Dinner video" value={dinnerUrl} onChange={setDinnerUrl} />
       </section>
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">5 · Daily inspirational videos</h2>
+          <h2 className="text-lg font-semibold">6 · Daily inspirational · YouTube</h2>
           <button type="button" className="btn-ghost text-xs" onClick={addClip}>
             + Add clip
           </button>
         </div>
         <p className="text-xs text-[var(--muted)]">
-          Optional day-of-week targeting (Sunday–Saturday). Leave “Any day” for a general library
-          clip. Member Today shows today&apos;s match first.
+          YouTube only. Optional day-of-week targeting. Member Today shows today&apos;s match first.
         </p>
         {clips.length === 0 ? (
           <p className="rounded-lg border border-dashed border-[var(--border)] px-3 py-4 text-sm text-[var(--muted)]">
-            No daily clips yet — add one when Jeremy has an inspiration video ready.
+            No daily clips yet.
           </p>
         ) : (
           <ul className="space-y-4">
@@ -446,7 +805,7 @@ export default function AdminSiteVideosPanel({
                     </option>
                   ))}
                 </select>
-                <VideoField
+                <YoutubeVideoField
                   label="YouTube URL"
                   value={clip.videoUrl}
                   onChange={(v) => updateClip(index, { videoUrl: v })}
@@ -461,7 +820,7 @@ export default function AdminSiteVideosPanel({
         <button
           type="button"
           onClick={() => void handleSave()}
-          disabled={saving}
+          disabled={saving || uploading}
           className="btn-primary px-5 py-2.5 text-sm font-semibold"
         >
           {saving ? "Saving…" : "Save all videos"}
@@ -469,7 +828,9 @@ export default function AdminSiteVideosPanel({
         {message ? (
           <p className={`text-sm ${error ? "text-red-300" : "text-emerald-300"}`}>{message}</p>
         ) : (
-          <p className="text-xs text-[var(--muted)]">Saves public + member video config immediately.</p>
+          <p className="text-xs text-[var(--muted)]">
+            Uploads join the library immediately. Save publishes slot assignments to the live site.
+          </p>
         )}
       </div>
     </div>

@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import GearTabShopHint from "@/components/GearTabShopHint";
 import MemberHomeEquipment from "@/components/MemberHomeEquipment";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
-import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
+import PlayableVideoFrame from "@/components/PlayableVideoFrame";
 import { welcomeVideoUrlForPlan } from "@/lib/landing-media";
 import {
   normalizeSignupPlan,
@@ -245,7 +245,7 @@ export default function OnboardingWizard({
             </p>
             {planWelcomeUrl ? (
               <div className="aspect-video overflow-hidden rounded-xl bg-black ring-1 ring-[#3d2660]">
-                <YoutubeAutoplayFrame
+                <PlayableVideoFrame
                   className="h-full w-full"
                   videoUrl={planWelcomeUrl}
                   title="Welcome video"
