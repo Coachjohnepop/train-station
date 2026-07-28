@@ -307,6 +307,11 @@ export default function ProgramCalendarBuilder({
   const [autoClearNotesOnCopy, setAutoClearNotesOnCopy] = useState(true);
   /** Ref so long week-copy loops always see the checkbox value (no stale closure). */
   const autoClearNotesOnCopyRef = useRef(true);
+  /** Import a week from another program (e.g. Adult/Athletes → Military). */
+  const [importSourceSlug, setImportSourceSlug] = useState("adult");
+  const [importSourceWeek, setImportSourceWeek] = useState(1);
+  const [importSourceMaxWeek, setImportSourceMaxWeek] = useState(22);
+  const [importBusy, setImportBusy] = useState(false);
 
   useEffect(() => {
     try {
@@ -2147,10 +2152,11 @@ export default function ProgramCalendarBuilder({
   async function copyWeek(
     fromWeekNumber: number,
     toWeekNumber: number,
-    opts?: { manageSaving?: boolean },
+    opts?: { manageSaving?: boolean; fromProgramWeeks?: ProgramWeek[] },
   ) {
     const manageSaving = opts?.manageSaving !== false;
-    const fromWeek = program.weeks.find((w) => w.weekNumber === fromWeekNumber);
+    const sourceWeeks = opts?.fromProgramWeeks ?? program.weeks;
+    const fromWeek = sourceWeeks.find((w) => w.weekNumber === fromWeekNumber);
     const toWeek = program.weeks.find((w) => w.weekNumber === toWeekNumber);
     if (!fromWeek || !toWeek) return false;
 
@@ -2273,6 +2279,68 @@ export default function ProgramCalendarBuilder({
       setTimeout(() => setMessage(null), 4500);
     }
   }
+
+  /** Load another program's week and clone it into the week you're viewing (Adult → Military, etc.). */
+  async function importWeekFromOtherProgram() {
+    if (!importSourceSlug || importSourceSlug === program.slug) {
+      setMessage("Pick a different program to import from.");
+      setTimeout(() => setMessage(null), 3000);
+      return;
+    }
+    setImportBusy(true);
+    setSaving(true);
+    setMessage(
+      `Importing ${importSourceSlug} week ${importSourceWeek} → this program week ${activeWeek}…`,
+    );
+    try {
+      const res = await fetch(`/api/programs/${encodeURIComponent(importSourceSlug)}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        setMessage("Could not load source program — try again.");
+        return;
+      }
+      const source = (await res.json()) as Program;
+      const maxW = source.durationWeeks || source.weeks?.length || 1;
+      setImportSourceMaxWeek(maxW);
+      const fromWeekNum = Math.min(importSourceWeek, maxW);
+      const ok = await copyWeek(fromWeekNum, activeWeek, {
+        manageSaving: false,
+        fromProgramWeeks: source.weeks as ProgramWeek[],
+      });
+      if (ok) {
+        await sync();
+        await jumpToWeek(activeWeek);
+        setMessage(
+          `Imported ${source.name || importSourceSlug} week ${fromWeekNum} → week ${activeWeek} (clones only). Edit, then Publish.`,
+        );
+        setTimeout(() => setMessage(null), 5000);
+      }
+    } catch {
+      setMessage("Import failed — try again.");
+      setTimeout(() => setMessage(null), 3500);
+    } finally {
+      setImportBusy(false);
+      setSaving(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!importSourceSlug || importSourceSlug === program.slug) return;
+    let cancelled = false;
+    void fetch(`/api/programs/${encodeURIComponent(importSourceSlug)}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: Program | null) => {
+        if (cancelled || !data) return;
+        const maxW = data.durationWeeks || data.weeks?.length || 1;
+        setImportSourceMaxWeek(maxW);
+        setImportSourceWeek((w) => Math.min(w, maxW));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [importSourceSlug, program.slug]);
 
   /** Copy the week you're viewing into the next week (clone workouts). */
   async function copyCurrentWeekToNext() {
@@ -2989,11 +3057,66 @@ export default function ProgramCalendarBuilder({
                 </button>
               )}
             </div>
+            <div className="mt-2 flex flex-wrap items-end gap-2 rounded-lg border border-sky-500/30 bg-sky-500/5 px-3 py-2">
+              <p className="w-full text-[10px] font-semibold uppercase tracking-wide text-sky-200">
+                Import week from another program
+              </p>
+              <label className="text-[10px] text-[var(--muted)]">
+                From program
+                <select
+                  className="input mt-0.5 block h-8 min-w-[10rem] text-xs"
+                  value={importSourceSlug}
+                  disabled={saving || importBusy}
+                  onChange={(e) => setImportSourceSlug(e.target.value)}
+                >
+                  {[
+                    { slug: "adult", name: "Adult" },
+                    { slug: "strength-training", name: "Athletes" },
+                    { slug: "boot-camp-preparation", name: "Military" },
+                    { slug: "mom-dads-little-time", name: "Mom & Dads" },
+                  ]
+                    .filter((p) => p.slug !== program.slug)
+                    .map((p) => (
+                      <option key={p.slug} value={p.slug}>
+                        {p.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <label className="text-[10px] text-[var(--muted)]">
+                Source week
+                <select
+                  className="input mt-0.5 block h-8 w-20 text-xs"
+                  value={importSourceWeek}
+                  disabled={saving || importBusy}
+                  onChange={(e) => setImportSourceWeek(Number(e.target.value))}
+                >
+                  {Array.from({ length: importSourceMaxWeek }, (_, i) => i + 1).map((n) => (
+                    <option key={n} value={n}>
+                      W{n}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                className="btn-primary h-8 px-3 text-xs font-semibold"
+                disabled={saving || importBusy}
+                onClick={() => void importWeekFromOtherProgram()}
+                title={`Clone ${importSourceSlug} week ${importSourceWeek} into this program week ${activeWeek}`}
+              >
+                {importBusy
+                  ? "Importing…"
+                  : `Import → this week (W${activeWeek})`}
+              </button>
+            </div>
           </div>
 
           <p className="mb-2 text-[11px] text-[var(--muted)]">
             Click a day (Mon–Sun) to write or edit its Gym/Home workout.{" "}
             <strong className="text-[var(--text)]">Copy current week</strong> seeds the next week;{" "}
+            <strong className="text-[var(--text)]">Import from another program</strong> pulls Adult /
+            Athletes / etc. into Military;{" "}
             <strong className="text-[var(--text)]">Post to Template Library</strong> saves a reusable
             week pack.
           </p>
