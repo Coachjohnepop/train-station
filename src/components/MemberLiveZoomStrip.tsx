@@ -2,12 +2,21 @@
 
 /**
  * Sticky top strip for members:
- * - Coach actively hosting → "Join Live Zoom Now"
- * - Otherwise always show a Zoom affordance → "Ping Coach to Start Zoom"
+ * - Coach actively hosting, not yet joined → full "Join Live Zoom Now" strip (persistent)
+ * - After Join → compact fixed chip (Rejoin / Hide) so workout UI has room on mobile
+ * - Chip hidden → tiny edge pill to restore
+ * - Coach not live → waiting / ping affordance
  *
  * Uses SSE + 500ms poll so Join flips nearly instantly when coach starts Zoom.
  */
 import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import {
+  markZoomJoined,
+  readZoomChipHidden,
+  readZoomJoined,
+  writeZoomChipHidden,
+} from "@/lib/member-zoom-join-ui";
 import { useMemberLiveZoomStatus } from "@/lib/use-member-live-zoom-status";
 
 type Props = {
@@ -17,10 +26,113 @@ type Props = {
 
 export default function MemberLiveZoomStrip({ embedded = false }: Props) {
   const status = useMemberLiveZoomStatus();
+  const sessionDate = status?.sessionDate ?? "";
+  const [joined, setJoined] = useState(false);
+  const [chipHidden, setChipHidden] = useState(false);
 
   // Join only while coach is actively hosting (not merely because a room object exists).
   const showJoin = Boolean(status?.canJoin && status?.joinUrl && status?.hostStarted);
 
+  useEffect(() => {
+    if (!sessionDate) {
+      setJoined(false);
+      setChipHidden(false);
+      return;
+    }
+    setJoined(readZoomJoined(sessionDate));
+    setChipHidden(readZoomChipHidden(sessionDate));
+  }, [sessionDate]);
+
+  // Coach ended live → clear "joined" UI for a clean next class (date-scoped keys anyway).
+  useEffect(() => {
+    if (!sessionDate || !status) return;
+    if (!status.hostStarted && joined) {
+      // Keep joined flag for the day in case coach briefly reconnects; just don't show chip.
+    }
+  }, [status, sessionDate, joined]);
+
+  const onJoinClick = useCallback(() => {
+    if (!sessionDate) return;
+    markZoomJoined(sessionDate);
+    setJoined(true);
+    setChipHidden(false);
+  }, [sessionDate]);
+
+  const hideChip = useCallback(() => {
+    if (!sessionDate) return;
+    writeZoomChipHidden(sessionDate, true);
+    setChipHidden(true);
+  }, [sessionDate]);
+
+  const showChip = useCallback(() => {
+    if (!sessionDate) return;
+    writeZoomChipHidden(sessionDate, false);
+    setChipHidden(false);
+  }, [sessionDate]);
+
+  // ── Post-join compact chrome (chip / edge pill) ─────────────────
+  if (showJoin && status?.joinUrl && joined) {
+    if (chipHidden) {
+      return (
+        <button
+          type="button"
+          onClick={showChip}
+          className="fixed bottom-[max(5.5rem,env(safe-area-inset-bottom))] right-3 z-[55] flex h-11 w-11 items-center justify-center rounded-full border border-sky-400/50 bg-sky-950/95 text-lg shadow-lg backdrop-blur-sm md:bottom-6"
+          aria-label="Show Zoom live controls"
+          title="Zoom live"
+        >
+          <span aria-hidden className="relative flex h-2.5 w-2.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+          </span>
+        </button>
+      );
+    }
+
+    return (
+      <div
+        className="fixed bottom-[max(5.5rem,env(safe-area-inset-bottom))] right-3 z-[55] flex max-w-[min(100vw-1.5rem,20rem)] items-center gap-1.5 rounded-2xl border border-sky-400/45 bg-sky-950/95 px-2.5 py-2 shadow-xl backdrop-blur-md md:bottom-6"
+        role="status"
+        aria-label="In Zoom live class"
+      >
+        <span
+          className="relative ml-0.5 flex h-2 w-2 shrink-0"
+          aria-hidden
+        >
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+        </span>
+        <span className="hidden text-[11px] font-semibold text-sky-100 sm:inline">
+          In Zoom
+        </span>
+        <a
+          href={status.joinUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-primary shrink-0 px-3 py-1.5 text-[11px] font-bold"
+        >
+          Rejoin
+        </a>
+        <Link
+          href="/member/live"
+          className="btn-ghost shrink-0 border border-sky-400/30 px-2 py-1.5 text-[11px] font-semibold text-sky-100"
+        >
+          Live
+        </Link>
+        <button
+          type="button"
+          onClick={hideChip}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sky-200/80 hover:bg-sky-500/20 hover:text-sky-50"
+          aria-label="Hide Zoom chip"
+          title="Hide — use the green dot to show again"
+        >
+          ✕
+        </button>
+      </div>
+    );
+  }
+
+  // ── Loading ─────────────────────────────────────────────────────
   if (!status) {
     return (
       <div
@@ -46,6 +158,7 @@ export default function MemberLiveZoomStrip({ embedded = false }: Props) {
     );
   }
 
+  // ── Pre-join full strip (persistent until Join) ─────────────────
   return (
     <div
       className={`border-b border-sky-500/30 bg-sky-950/95 backdrop-blur-sm ${
@@ -70,6 +183,7 @@ export default function MemberLiveZoomStrip({ embedded = false }: Props) {
             href={status.joinUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={onJoinClick}
             className="btn-primary shrink-0 px-3 py-2 text-xs font-bold sm:px-4 sm:text-sm"
           >
             Join Live Zoom Now

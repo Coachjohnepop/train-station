@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { markZoomJoined, readZoomJoined } from "@/lib/member-zoom-join-ui";
 import { useMemberLiveZoomStatus } from "@/lib/use-member-live-zoom-status";
 
 function dismissKey(sessionDate: string) {
@@ -17,6 +18,11 @@ export default function LiveZoomJoinPrompt() {
       setVisible(false);
       return;
     }
+    // Don't nag after they've joined Zoom for this class day.
+    if (readZoomJoined(status.sessionDate)) {
+      setVisible(false);
+      return;
+    }
     const dismissed = sessionStorage.getItem(dismissKey(status.sessionDate)) === "1";
     const shouldShow =
       Boolean(status.hostStarted && status.canJoin && status.joinUrl) && !dismissed;
@@ -25,6 +31,11 @@ export default function LiveZoomJoinPrompt() {
 
   function dismiss() {
     if (status) sessionStorage.setItem(dismissKey(status.sessionDate), "1");
+    setVisible(false);
+  }
+
+  function onJoin() {
+    if (status?.sessionDate) markZoomJoined(status.sessionDate);
     setVisible(false);
   }
 
@@ -50,6 +61,7 @@ export default function LiveZoomJoinPrompt() {
             href={status.joinUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={onJoin}
             className="btn-primary px-4 py-2 text-sm font-bold"
           >
             Join Live Zoom Now
