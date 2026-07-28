@@ -334,9 +334,21 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-07-28 (sign-off — video library **shipped to prod**)  
-**Status:** Stripe **Live**. Commit **`6dd56a1`** on `main` → Vercel Production **Ready**. Coach intros: **upload library → assign slots** on **Admin → Videos**. Full site loop green (pages/links/payment/users/videos); only optional 404s: `/pricing` `/privacy` `/terms` `/partners`. Landing welcome/free still **empty** — Jeremy needs to upload real clips.  
-**Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
+**Date:** 2026-07-28 (Free ticket product rules + gag fix)  
+**Status:** Stripe **Live**. Free path product decisions locked (see below). **Still need:** Jeremy free-ticket intro upload; ship FreeTicketModal + `productFreeTicketGag` when ready.  
+**Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.
+
+### Free ticket product rules (John · Jul 28)
+
+| Rule | Decision |
+|------|----------|
+| Guest Free | Always **10s classic Rickroll** (chorus @ 43s) → Jeremy free-ticket intro |
+| Signed-in | **No gag** — straight to Jeremy intro |
+| Free product | Real Explorer path (~20% of Coach Class capabilities), not joke-only |
+| Autoplay | Yes — mute-first then unMute ASAP after Free tap |
+| Admin gag URL | **Not used** for Free modal (custom Shorts @ 60s broke kids); store reset to defaults |
+
+**Kids “Free video not working”:** free-ticket + welcome slots were **empty**; gag was a **YouTube Short 60s** in admin. Code now hard-codes product gag; content still needs Admin → Videos free intro.  
 
 ### Shipped this session (prod)
 

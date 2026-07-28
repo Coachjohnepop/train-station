@@ -140,9 +140,6 @@ export default function AdminSiteVideosPanel({
       welcomeVideosByPlan: initialWelcomeVideosByPlan,
     }),
   );
-  const [gagUrl, setGagUrl] = useState(initialGagUrl);
-  const [gagStartSec, setGagStartSec] = useState(String(initialGagStartSec));
-  const [gagDurationSec, setGagDurationSec] = useState(String(initialGagDurationSec));
   const [gagEnabled, setGagEnabled] = useState(initialGagEnabled);
   const [purchaseUrl, setPurchaseUrl] = useState(initialPurchaseThankYouUrl);
   const [weeklyUrl, setWeeklyUrl] = useState(initialWeeklyUrl);
@@ -384,10 +381,6 @@ export default function AdminSiteVideosPanel({
         return;
       }
     }
-    if (!yt(gagUrl, "Gag / rickroll video")) {
-      setSaving(false);
-      return;
-    }
     if (!yt(purchaseUrl, "Purchase thank-you video")) {
       setSaving(false);
       return;
@@ -410,16 +403,14 @@ export default function AdminSiteVideosPanel({
       }
     }
 
-    const start = Number(gagStartSec);
-    const dur = Number(gagDurationSec);
-
     const landingResult = await saveLandingMediaAction({
       welcomeVideoUrl: assignments.overall.trim() || null,
       welcomeVideosByPlan: assignments.byPlan,
       freeChastiseVideoUrl: assignments.free.trim() || null,
-      gagVideoUrl: gagUrl.trim() || null,
-      gagStartSec: Number.isFinite(start) ? start : 43,
-      gagDurationSec: Number.isFinite(dur) ? dur : 10,
+      // Product Free path: fixed 10s Rickroll (never persist custom Shorts / long gag).
+      gagVideoUrl: null,
+      gagStartSec: 43,
+      gagDurationSec: 10,
       gagEnabled,
       purchaseThankYouVideoUrl: purchaseUrl.trim() || null,
     });
@@ -456,9 +447,6 @@ export default function AdminSiteVideosPanel({
           welcomeVideosByPlan: landingResult.storedWelcomeVideosByPlan,
         }),
       );
-      setGagUrl(landingResult.storedGagVideoUrl || "");
-      setGagStartSec(String(landingResult.storedGagStartSec ?? 43));
-      setGagDurationSec(String(landingResult.storedGagDurationSec ?? 10));
       setGagEnabled(landingResult.storedGagEnabled !== false);
       setPurchaseUrl(landingResult.storedPurchaseThankYouVideoUrl || "");
     }
@@ -674,10 +662,17 @@ export default function AdminSiteVideosPanel({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">3 · Free ticket gag (~10s) · YouTube</h2>
-        <p className="text-xs text-[var(--muted)]">
-          Default Rick Astley. Plays when someone taps Free, then crossfades to the free-ticket
-          intro from the library above.
+        <h2 className="text-lg font-semibold">3 · Free ticket gag (product-fixed)</h2>
+        <p className="text-xs text-[var(--muted)] leading-relaxed">
+          <strong className="text-[var(--text)]">Guests</strong> who tap Free always get the classic{" "}
+          ~10s Rick Astley chorus, then your free-ticket intro from the library above.{" "}
+          <strong className="text-[var(--text)]">Signed-in members</strong> skip the gag and go
+          straight to that intro. Custom gag URLs (Shorts, long clips) are no longer used — they broke
+          Free for kids.
+        </p>
+        <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--muted)]">
+          Default gag: <code className="text-[var(--text)]">{FREE_TICKET_RICKROLL_URL}</code> · start{" "}
+          43s · play 10s
         </p>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -685,38 +680,8 @@ export default function AdminSiteVideosPanel({
             checked={gagEnabled}
             onChange={(e) => setGagEnabled(e.target.checked)}
           />
-          Play gag before free-ticket intro
+          Allow gag for guests (kill switch — leave on)
         </label>
-        <YoutubeVideoField
-          label="Gag video URL"
-          hint={`Leave blank for default: ${FREE_TICKET_RICKROLL_URL}`}
-          value={gagUrl}
-          onChange={setGagUrl}
-        />
-        <div className="grid grid-cols-2 gap-3">
-          <label className="text-sm">
-            <span className="font-medium">Start at (seconds)</span>
-            <input
-              type="number"
-              min={0}
-              max={3600}
-              value={gagStartSec}
-              onChange={(e) => setGagStartSec(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="text-sm">
-            <span className="font-medium">Play for (seconds)</span>
-            <input
-              type="number"
-              min={3}
-              max={60}
-              value={gagDurationSec}
-              onChange={(e) => setGagDurationSec(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm"
-            />
-          </label>
-        </div>
       </section>
 
       <section className="space-y-3">

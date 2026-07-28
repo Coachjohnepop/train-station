@@ -84,9 +84,15 @@ export const WELCOME_VIDEO_PLAN_OPTIONS = MEMBERSHIP_PLANS.map((plan) => ({
 }));
 
 /**
- * Free / Explorer ticket gag: default Rick Astley from the chorus, ~10s, then fade to
- * Jeremy’s free-tier intro (Admin → Videos free-ticket video — not this URL).
- * Admins can override URL / start / duration under Admin → Videos.
+ * Free / Explorer ticket gag — **product defaults are fixed** (not admin-overridable):
+ * classic Rick Astley from the chorus, exactly ~10s, then Jeremy free-tier intro.
+ *
+ * Who gets the gag:
+ * - Anonymous / not signed in on landing Free → always on
+ * - Signed-in members (Explorer re-open Free, etc.) → skip gag, straight to Jeremy
+ *
+ * Admin → Videos still stores free-ticket intro; gag URL/start/duration fields are
+ * legacy and no longer drive the Free ticket modal (custom Shorts broke kids’ Free).
  */
 export const FREE_TICKET_RICKROLL_URL =
   "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=43s";
@@ -107,29 +113,36 @@ export type FreeTicketGagConfig = {
   durationMs: number;
 };
 
-/** Resolve gag settings from admin store (with hard-coded defaults). */
+/** Product gag for Free ticket UI (ignores admin custom gag URL / duration). */
+export function productFreeTicketGag(opts: {
+  /** Signed-in members never get the rickroll — only landing guests. */
+  signedIn: boolean;
+}): FreeTicketGagConfig {
+  return {
+    enabled: !opts.signedIn,
+    videoUrl: FREE_TICKET_RICKROLL_URL,
+    startSec: FREE_TICKET_RICKROLL_CHORUS_START_SEC,
+    durationMs: FREE_TICKET_RICKROLL_DURATION_MS,
+  };
+}
+
+/**
+ * Resolve gag for APIs / legacy callers.
+ * Product path always uses fixed 10s Rickroll (admin URL/start/duration ignored).
+ * `gagEnabled: false` is still a kill switch if ever needed in store.
+ */
 export function resolveFreeTicketGag(input?: {
   gagEnabled?: boolean | null;
   gagVideoUrl?: string | null;
   gagStartSec?: number | null;
   gagDurationSec?: number | null;
 } | null): FreeTicketGagConfig {
-  const enabled = input?.gagEnabled !== false;
-  const videoUrl =
-    input?.gagVideoUrl?.trim() || FREE_TICKET_RICKROLL_URL;
-  const startSec =
-    typeof input?.gagStartSec === "number" && Number.isFinite(input.gagStartSec)
-      ? Math.max(0, Math.min(3600, Math.round(input.gagStartSec)))
-      : FREE_TICKET_RICKROLL_CHORUS_START_SEC;
-  const durationSec =
-    typeof input?.gagDurationSec === "number" && Number.isFinite(input.gagDurationSec)
-      ? Math.max(3, Math.min(60, Math.round(input.gagDurationSec)))
-      : FREE_TICKET_RICKROLL_DURATION_MS / 1000;
+  const killSwitch = input?.gagEnabled === false;
   return {
-    enabled,
-    videoUrl,
-    startSec,
-    durationMs: durationSec * 1000,
+    enabled: !killSwitch,
+    videoUrl: FREE_TICKET_RICKROLL_URL,
+    startSec: FREE_TICKET_RICKROLL_CHORUS_START_SEC,
+    durationMs: FREE_TICKET_RICKROLL_DURATION_MS,
   };
 }
 

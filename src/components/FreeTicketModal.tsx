@@ -7,8 +7,7 @@ import {
   FREE_TICKET_RICKROLL_FADE_MS,
   isRickrollVideoUrl,
   landingVideoEmbedSrc,
-  resolveFreeTicketGag,
-  type FreeTicketGagConfig,
+  productFreeTicketGag,
 } from "@/lib/landing-media";
 import { isDirectVideoUrl } from "@/lib/site-video";
 import { isYoutubeUrl } from "@/lib/youtube";
@@ -17,8 +16,14 @@ import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 
 /**
  * Free / Explorer ticket open:
- * 1) Play gag (default Rickroll ~10s from chorus; admin-configurable).
- * 2) Crossfade to Jeremy’s free-tier intro (admin free-ticket video, else welcome).
+ *
+ * Guests (not signed in):
+ *   1) Hard-coded ~10s Rickroll from chorus (product fixed — not admin Shorts)
+ *   2) Crossfade to Jeremy’s free-tier intro (Admin free-ticket slot, else welcome)
+ *
+ * Signed-in members: skip gag → Jeremy intro only (or empty CTA if not uploaded).
+ *
+ * Free is a real product path (Explorer), not a joke-only dead end.
  */
 export default function FreeTicketModal({
   open,
@@ -26,7 +31,8 @@ export default function FreeTicketModal({
   onUpgrade,
   freeChastiseVideoUrl = null,
   welcomeVideoUrl = null,
-  gagConfig = null,
+  /** @deprecated Product gag is fixed; prop ignored for URL/duration. */
+  gagConfig: _gagConfig = null,
   purchaseAuth = { signedIn: false },
 }: {
   open: boolean;
@@ -35,12 +41,10 @@ export default function FreeTicketModal({
   /** Jeremy free-tier intro (after gag). Not the rickroll. */
   freeChastiseVideoUrl?: string | null;
   welcomeVideoUrl?: string | null;
-  /** From Admin → Videos (optional). Accepts FreeTicketGagConfig or API shape with durationSec. */
-  gagConfig?:
-    | (Partial<FreeTicketGagConfig> & { durationSec?: number })
-    | null;
+  gagConfig?: unknown;
   purchaseAuth?: PurchaseAuth;
 }) {
+  void _gagConfig;
   const [showJeremy, setShowJeremy] = useState(false);
   const [fadeJeremyIn, setFadeJeremyIn] = useState(false);
   const [hideRickroll, setHideRickroll] = useState(false);
@@ -50,19 +54,9 @@ export default function FreeTicketModal({
   const jeremyIframeRef = useRef<HTMLIFrameElement>(null);
   const jeremyVideoRef = useRef<HTMLVideoElement>(null);
 
+  const signedIn = Boolean(purchaseAuth.signedIn);
   const embedOrigin = typeof window !== "undefined" ? window.location.origin : undefined;
-  const durationSecFromConfig =
-    gagConfig && "durationSec" in gagConfig && gagConfig.durationSec != null
-      ? gagConfig.durationSec
-      : gagConfig?.durationMs != null
-        ? Math.round(gagConfig.durationMs / 1000)
-        : undefined;
-  const gag = resolveFreeTicketGag({
-    gagEnabled: gagConfig?.enabled,
-    gagVideoUrl: gagConfig?.videoUrl,
-    gagStartSec: gagConfig?.startSec,
-    gagDurationSec: durationSecFromConfig,
-  });
+  const gag = productFreeTicketGag({ signedIn });
 
   // Prefer free-ticket intro; fall back to general welcome (never use rickroll as Jeremy).
   const jeremyVideoUrl = (() => {
@@ -78,9 +72,13 @@ export default function FreeTicketModal({
     jeremyVideoUrl && !jeremyIsYoutube && isDirectVideoUrl(jeremyVideoUrl),
   );
 
+  /**
+   * Start muted for guaranteed autoplay after the Free tap, then unMute ASAP.
+   * Unmuted-from-frame-one often fails silently on iOS → “video not working”.
+   */
   const rickrollSrc = gag.enabled
     ? landingVideoEmbedSrc(gag.videoUrl, true, {
-        mute: false,
+        mute: true,
         origin: embedOrigin,
         startSeconds: gag.startSec,
       })
@@ -88,17 +86,37 @@ export default function FreeTicketModal({
 
   const jeremyYtSrc =
     loadJeremy && hasJeremy && jeremyIsYoutube
-      ? landingVideoEmbedSrc(jeremyVideoUrl, true, { mute: false, origin: embedOrigin })
+      ? landingVideoEmbedSrc(jeremyVideoUrl, true, {
+          mute: true,
+          origin: embedOrigin,
+        })
       : null;
   const showJeremyFile = loadJeremy && hasJeremy && jeremyIsDirect && Boolean(jeremyVideoUrl);
 
-  // Preload Jeremy iframe a few seconds before the crossfade.
   const gagDurationMs = gag.enabled ? gag.durationMs : 0;
   const preloadMs = Math.max(0, gagDurationMs - 3_000);
 
-  useEffect(() => {
+  function clearTimers() {
     timersRef.current.forEach((id) => window.clearTimeout(id));
     timersRef.current = [];
+  }
+
+  function schedule(fn: () => void, ms: number) {
+    timersRef.current.push(window.setTimeout(fn, ms));
+  }
+
+  /** Hammer play + unMute so sound lands as soon as the player is ready. */
+  function kickYoutube(iframe: HTMLIFrameElement | null, seekSec?: number) {
+    if (!iframe) return;
+    postYoutubeEmbedCommand(iframe, "playVideo");
+    postYoutubeEmbedCommand(iframe, "unMute");
+    if (typeof seekSec === "number") {
+      postYoutubeEmbedCommand(iframe, "seekTo", seekSec, true);
+    }
+  }
+
+  useEffect(() => {
+    clearTimers();
 
     if (!open) {
       setShowJeremy(false);
@@ -115,19 +133,14 @@ export default function FreeTicketModal({
     setHideRickroll(false);
     setLoadJeremy(false);
 
-    const schedule = (fn: () => void, ms: number) => {
-      timersRef.current.push(window.setTimeout(fn, ms));
-    };
-
     if (!gag.enabled) {
-      // Skip gag — load Jeremy immediately.
+      // Signed-in path (or kill switch): Jeremy immediately.
       setLoadJeremy(true);
       setShowJeremy(true);
       setFadeJeremyIn(true);
       setHideRickroll(true);
       return () => {
-        timersRef.current.forEach((id) => window.clearTimeout(id));
-        timersRef.current = [];
+        clearTimers();
         setBackgroundMusicOverlay(false);
       };
     }
@@ -136,58 +149,47 @@ export default function FreeTicketModal({
       schedule(() => setLoadJeremy(true), preloadMs);
     }
 
-    // Gag duration → crossfade to Jeremy (or empty state copy).
     schedule(() => {
       setShowJeremy(true);
       requestAnimationFrame(() => setFadeJeremyIn(true));
     }, gagDurationMs);
 
-    schedule(
-      () => setHideRickroll(true),
-      gagDurationMs + FREE_TICKET_RICKROLL_FADE_MS,
-    );
+    schedule(() => setHideRickroll(true), gagDurationMs + FREE_TICKET_RICKROLL_FADE_MS);
 
     return () => {
-      timersRef.current.forEach((id) => window.clearTimeout(id));
-      timersRef.current = [];
+      clearTimers();
       setBackgroundMusicOverlay(false);
     };
   }, [open, hasJeremy, preloadMs, gag.enabled, gagDurationMs]);
 
+  // Gag: aggressive audible autoplay right after Free tap (user gesture window).
   useEffect(() => {
     if (!open || !rickrollSrc) return;
-    const kick = () => {
-      postYoutubeEmbedCommand(rickrollRef.current, "playVideo");
-      postYoutubeEmbedCommand(rickrollRef.current, "unMute");
-      // Seek to chorus in case embed ignored start= on some devices.
-      postYoutubeEmbedCommand(rickrollRef.current, "seekTo", gag.startSec, true);
-    };
-    const t1 = window.setTimeout(kick, 200);
-    const t2 = window.setTimeout(kick, 1000);
-    return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
-    };
+    const delays = [0, 50, 120, 250, 500, 900, 1600];
+    const ids = delays.map((ms) =>
+      window.setTimeout(() => kickYoutube(rickrollRef.current, gag.startSec), ms),
+    );
+    return () => ids.forEach((id) => window.clearTimeout(id));
   }, [open, rickrollSrc, gag.startSec]);
 
+  // Jeremy: play + unMute as soon as he fades in (preloaded ~3s early for guests).
   useEffect(() => {
     if (!fadeJeremyIn || !hasJeremy) return;
-    const kick = () => {
-      if (jeremyIsYoutube) {
-        postYoutubeEmbedCommand(jeremyIframeRef.current, "playVideo");
-        postYoutubeEmbedCommand(jeremyIframeRef.current, "unMute");
-      } else if (jeremyVideoRef.current) {
-        void jeremyVideoRef.current.play().catch(() => {
-          /* gesture may be required */
-        });
-      }
-    };
-    const t1 = window.setTimeout(kick, 400);
-    const t2 = window.setTimeout(kick, 1200);
-    return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
-    };
+    const delays = [0, 80, 200, 450, 900, 1500];
+    const ids = delays.map((ms) =>
+      window.setTimeout(() => {
+        if (jeremyIsYoutube) {
+          kickYoutube(jeremyIframeRef.current);
+        } else if (jeremyVideoRef.current) {
+          const el = jeremyVideoRef.current;
+          el.muted = false;
+          void el.play().catch(() => {
+            /* may need another tap on locked-down browsers */
+          });
+        }
+      }, ms),
+    );
+    return () => ids.forEach((id) => window.clearTimeout(id));
   }, [fadeJeremyIn, hasJeremy, jeremyIsYoutube]);
 
   if (!open) return null;
@@ -221,8 +223,8 @@ export default function FreeTicketModal({
         <p className="mt-1 text-xs text-[#9d8ab8] leading-relaxed sm:text-sm">
           {showJeremy
             ? hasJeremy
-              ? "Explorer is real access to starter programs — no homework, no follow-up calls required."
-              : "Paste Jeremy’s free-tier intro under Admin → Videos (free-ticket intro)."
+              ? "Explorer is real access — starter programs, about 20% of Coach Class power. No homework required."
+              : "Coach intro not uploaded yet — Free still works. Continue below, or coach can set the free-ticket video under Admin → Videos."
             : "You tapped Free. Enjoy the chorus… then hear from your coach."}
         </p>
 
@@ -269,19 +271,21 @@ export default function FreeTicketModal({
               title="Coach Jeremy"
               playsInline
               controls
+              autoPlay
               preload="auto"
             />
           )}
 
           {showJeremy && !hasJeremy && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 p-4 text-center text-xs text-[#9d8ab8]">
-              <p className="font-medium text-white">Coach intro not set yet</p>
-              <p className="mt-2">
+              <p className="font-medium text-white">Coach intro coming soon</p>
+              <p className="mt-2 max-w-xs leading-relaxed">
+                Free / Explorer still opens real access. Grab your ticket below — Jeremy will add his
+                free-tier intro under{" "}
                 <Link href="/admin/videos" className="text-[#7c3aed] underline">
                   Admin → Videos
-                </Link>{" "}
-                → free-ticket intro (upload Jeremy&apos;s free-tier clip). The 10s chorus gag is
-                built-in.
+                </Link>
+                .
               </p>
             </div>
           )}
@@ -303,7 +307,7 @@ export default function FreeTicketModal({
             className="inline-flex h-11 items-center justify-center rounded-full border border-[#3d2660] text-sm font-semibold text-[#9d8ab8] hover:text-white hover:border-[#7c3aed]/40 transition"
             onClick={onClose}
           >
-            OK fine — I really want free
+            Continue with Free / Explorer
           </Link>
           <button type="button" onClick={onClose} className="text-xs text-[#9d8ab8] hover:text-white py-1">
             Never mind
