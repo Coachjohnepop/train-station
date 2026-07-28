@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import ZoomMeetingEmbedLazy from "@/components/ZoomMeetingEmbedLazy";
 import type { ZoomEmbedCredentials } from "@/components/ZoomMeetingEmbed";
+import { markZoomJoined } from "@/lib/member-zoom-join-ui";
 import { useDesktopEmbed } from "@/lib/use-desktop-embed";
 
 export default function MemberLiveZoomEmbed({
@@ -63,6 +64,7 @@ export default function MemberLiveZoomEmbed({
         speakerView: true,
       });
       setEmbedVisible(true);
+      markZoomJoined(sessionDate);
     } catch {
       setMessage("Could not join embedded Zoom.");
     } finally {
@@ -103,6 +105,7 @@ export default function MemberLiveZoomEmbed({
             target="_blank"
             rel="noopener noreferrer"
             className="btn-primary px-4 py-2 text-sm"
+            onClick={() => markZoomJoined(sessionDate)}
           >
             {desktop ? "Join in Zoom app" : "Join Zoom"}
           </a>
