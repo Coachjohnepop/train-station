@@ -100,7 +100,7 @@ export function fireWorkoutConfetti(origin?: ConfettiOrigin, durationMs = 1600) 
   const canvas = document.createElement("canvas");
   canvas.setAttribute("aria-hidden", "true");
   canvas.style.cssText =
-    "position:fixed;inset:0;pointer-events:none;z-index:300;width:100%;height:100%;";
+    "position:fixed;inset:0;pointer-events:none;z-index:13000;width:100%;height:100%;";
   document.body.appendChild(canvas);
 
   const stop = runConfetti(canvas, durationMs, origin);

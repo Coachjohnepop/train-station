@@ -12,8 +12,8 @@ export const REST_TIMER_SOUND_IDS = [
 
 export type RestTimerSoundId = (typeof REST_TIMER_SOUND_IDS)[number];
 
-/** Default: Cybertruck honk when rest ends. */
-export const DEFAULT_REST_TIMER_SOUND: RestTimerSoundId = "cybertruck";
+/** Default: station train whistle (the real sample in /audio/train-whistle.mp3). */
+export const DEFAULT_REST_TIMER_SOUND: RestTimerSoundId = "whistle";
 
 /**
  * Whistle / bell / buzzer play at half prior gym-floor level.
@@ -37,13 +37,13 @@ export type RestTimerSoundOption = {
  * Filenames are rest-*-v SFX so clients don't keep an old talking clip cached.
  */
 /** Bump when replacing files so browsers drop stale (quiet/broken) cache entries. */
-const AUDIO_CACHE_BUST = "20260725c";
+const AUDIO_CACHE_BUST = "20260729a";
 
 export const REST_TIMER_SOUND_OPTIONS: RestTimerSoundOption[] = [
   {
     id: "cybertruck",
     label: "Cybertruck honk",
-    hint: "Real Cybertruck horn (default)",
+    hint: "Real Cybertruck horn",
     // Prefer v2 path; playRestComplete will fall back if load fails.
     src: `/audio/rest-cybertruck-horn-v2.mp3?v=${AUDIO_CACHE_BUST}`,
     volume: 1,
@@ -51,8 +51,10 @@ export const REST_TIMER_SOUND_OPTIONS: RestTimerSoundOption[] = [
   {
     id: "whistle",
     label: "Train whistle",
-    hint: "Dual-tone station blast",
-    src: `/audio/rest-train-whistle.mp3?v=${AUDIO_CACHE_BUST}`,
+    hint: "Station train whistle (the one we added)",
+    // Use the real train-whistle.mp3 (not the alternate rest-train-whistle sample).
+    src: `/audio/train-whistle.mp3?v=${AUDIO_CACHE_BUST}`,
+    volume: 1,
   },
   {
     id: "bell",
@@ -91,7 +93,7 @@ export function restTimerSoundSrc(id: RestTimerSoundId | string | null | undefin
 
 export function restTimerSoundLabel(id: RestTimerSoundId | string | null | undefined): string {
   const sound = normalizeRestTimerSound(id);
-  return REST_TIMER_SOUND_OPTIONS.find((o) => o.id === sound)?.label ?? "Cybertruck honk";
+  return REST_TIMER_SOUND_OPTIONS.find((o) => o.id === sound)?.label ?? "Train whistle";
 }
 
 export function restTimerSoundVolume(id: RestTimerSoundId | string | null | undefined): number {
@@ -100,14 +102,23 @@ export function restTimerSoundVolume(id: RestTimerSoundId | string | null | unde
   const base =
     typeof v === "number" && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1;
   const scale =
-    sound === "cybertruck" ? REST_CYBERTRUCK_VOLUME_SCALE : REST_COMPLETE_VOLUME_SCALE;
+    sound === "cybertruck" || sound === "whistle"
+      ? REST_CYBERTRUCK_VOLUME_SCALE
+      : REST_COMPLETE_VOLUME_SCALE;
   return Math.min(1, Math.max(0, base * scale));
 }
 
-/** Alternate paths if primary cybertruck sample fails to decode. */
+/** Alternate paths if primary sample fails to decode. */
 export function restTimerSoundFallbackSrc(
   id: RestTimerSoundId | string | null | undefined,
 ): string | null {
-  if (normalizeRestTimerSound(id) !== "cybertruck") return null;
-  return `/audio/rest-cybertruck-horn.mp3?v=${AUDIO_CACHE_BUST}`;
+  const sound = normalizeRestTimerSound(id);
+  if (sound === "cybertruck") {
+    return `/audio/rest-cybertruck-horn.mp3?v=${AUDIO_CACHE_BUST}`;
+  }
+  if (sound === "whistle") {
+    // Older rest-train-whistle path if the primary train-whistle.mp3 fails.
+    return `/audio/rest-train-whistle.mp3?v=${AUDIO_CACHE_BUST}`;
+  }
+  return null;
 }

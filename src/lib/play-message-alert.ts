@@ -5,7 +5,8 @@
 
 import { holdBackgroundMusicForMedia } from "@/lib/background-music-control";
 
-const ALERT_SRC = "/audio/rest-train-whistle.mp3";
+/** Same station train whistle used for rest-end (the file we added). */
+const ALERT_SRC = "/audio/train-whistle.mp3";
 const SOUND_OFF_KEY = "ts-message-alert-muted";
 
 let alertAudio: HTMLAudioElement | null = null;

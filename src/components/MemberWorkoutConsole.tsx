@@ -14,7 +14,7 @@ import MemberExerciseVideoModal from "@/components/MemberExerciseVideoModal";
 import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
 import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
 import WorkoutRestTimer from "@/components/WorkoutRestTimer";
-import { playRestComplete, playRestStart, playRestTick, preloadRestCompleteSound } from "@/lib/rest-audio";
+import { playRestComplete, playRestStart, playRestTick, playSetCheckPop, preloadRestCompleteSound } from "@/lib/rest-audio";
 import {
   DEFAULT_REST_TIMER_SECONDS,
   REST_TIMER_PRESETS,
@@ -1494,6 +1494,10 @@ export default function MemberWorkoutConsole({
 
       if (!wasDone) {
         fireEngage();
+        // Soft set-check pop (member + coach). Rest start chirp still separate.
+        if (!restMutedRef.current) {
+          playSetCheckPop();
+        }
         const block = workout.exercises.find((e) => e.id === blockId);
         // Hold / timed cue: green "Time of Exercise" first, then rest. Else rest only.
         const holdSec = block ? exerciseHoldDurationSec(block) : null;
@@ -1505,18 +1509,19 @@ export default function MemberWorkoutConsole({
         } else {
           maybeStartRestTimer(blockId, setNum, { phase: "rest" });
         }
-        if (coachFloorMode && originEl) {
-          if (block) {
-            const prescription = normalizePrescription({
-              setScheme: block.setScheme,
-              repPattern: block.repPattern,
-              reps: block.reps,
-              sets: block.setCount,
-            });
-            const timed = isTimedApproach(prescription.approach);
-            const isLastSet = timed ? setNum === 1 : setNum === block.setCount;
-            if (isLastSet) {
-              fireWorkoutConfetti(confettiOriginFromElement(originEl));
+        // Last-set confetti: coach floor AND member (pass origin from the set button).
+        if (block && originEl) {
+          const prescription = normalizePrescription({
+            setScheme: block.setScheme,
+            repPattern: block.repPattern,
+            reps: block.reps,
+            sets: block.setCount,
+          });
+          const timed = isTimedApproach(prescription.approach);
+          const isLastSet = timed ? setNum === 1 : setNum === block.setCount;
+          if (isLastSet) {
+            fireWorkoutConfetti(confettiOriginFromElement(originEl));
+            if (coachFloorMode) {
               setCoachExpandedBlockId((open) => (open === blockId ? null : open));
             }
           }
@@ -2425,7 +2430,7 @@ export default function MemberWorkoutConsole({
                             className={`member-set-btn text-xs py-0.5 ${allSetsDone ? "member-set-btn--done" : ""}`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              toggleSet(block.id, 1);
+                              toggleSet(block.id, 1, e.currentTarget);
                             }}
                             disabled={reviewMode && !instructorName}
                           >
@@ -2493,7 +2498,7 @@ export default function MemberWorkoutConsole({
                                 className={`member-set-btn text-xs py-0.5 ${done ? "member-set-btn--done" : ""}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  toggleSet(block.id, setNum);
+                                  toggleSet(block.id, setNum, e.currentTarget);
                                 }}
                                 disabled={reviewMode && !instructorName}
                               >

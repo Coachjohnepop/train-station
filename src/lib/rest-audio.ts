@@ -20,11 +20,13 @@ let sampleReleaseToken = 0;
 let lastStartAt = 0;
 let lastTickAt = 0;
 let lastTickSec = -1;
+let lastPopAt = 0;
 let lastCompleteAt = 0;
 let completeInFlight = false;
 
 const START_GAP_MS = 900;
 const TICK_GAP_MS = 180;
+const POP_GAP_MS = 70;
 const COMPLETE_GAP_MS = 1800;
 
 function getCtx(): AudioContext | null {
@@ -43,6 +45,35 @@ function getCtx(): AudioContext | null {
     return audioCtx;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Soft set-check "pop" when a set is marked done (member or coach).
+ * Distinct from rest ticks / end horn — short and quiet.
+ */
+export function playSetCheckPop(): void {
+  const nowMs = Date.now();
+  if (nowMs - lastPopAt < POP_GAP_MS) return;
+  lastPopAt = nowMs;
+  const ctx = getCtx();
+  if (!ctx) return;
+  try {
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(620, now);
+    osc.frequency.exponentialRampToValueAtTime(280, now + 0.06);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.05, now + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  } catch {
+    /* ignore */
   }
 }
 
