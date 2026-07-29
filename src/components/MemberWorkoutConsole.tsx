@@ -337,12 +337,20 @@ export default function MemberWorkoutConsole({
   const canCoachRestSettings = Boolean(instructorName || coachFloorMode);
 
   useEffect(() => {
+    // Coach floor stays muted unless they tap Unmute (same-room double-horn fix).
+    if (coachFloorMode) {
+      setRestMuted(true);
+      restMutedRef.current = true;
+      return;
+    }
     try {
-      setRestMuted(localStorage.getItem(REST_MUTE_KEY) === "1");
+      const muted = localStorage.getItem(REST_MUTE_KEY) === "1";
+      setRestMuted(muted);
+      restMutedRef.current = muted;
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [coachFloorMode]);
 
   // Seed rest settings from workout prescription (coach can change mid-session).
   useEffect(() => {
@@ -427,6 +435,8 @@ export default function MemberWorkoutConsole({
   const restActiveRef = useRef<LiveRestActive | null>(null);
   /** Only push restActive when we start/clear it — never wipe partner rest with accidental null. */
   const restActiveDirtyRef = useRef(false);
+  /** After skip, force restActive:null on next push even if something re-seeded the ref. */
+  const pendingForceClearRestRef = useRef(false);
   const lastAppliedRestEndsAt = useRef(0);
   /** After intentional uncheck, block remote re-check / auto-timer for a short window. */
   const suppressAutoRestUntilRef = useRef(0);
@@ -747,7 +757,13 @@ export default function MemberWorkoutConsole({
       };
       // Only send restActive when we intentionally started/cleared it.
       // Omitting keeps the partner's countdown from being wiped by a null save.
-      if (restActiveDirtyRef.current) {
+      // After Skip, force null even if a race re-seeded the ref.
+      if (pendingForceClearRestRef.current) {
+        payload.restActive = null;
+        restActiveRef.current = null;
+        restActiveDirtyRef.current = false;
+        pendingForceClearRestRef.current = false;
+      } else if (restActiveDirtyRef.current) {
         payload.restActive = restActiveRef.current;
         restActiveDirtyRef.current = false;
       } else if (restActiveRef.current) {
@@ -1004,9 +1020,11 @@ export default function MemberWorkoutConsole({
     setRestCompleting(false);
     restActiveRef.current = null;
     restActiveDirtyRef.current = true;
+    pendingForceClearRestRef.current = true;
     lastAppliedRestEndsAt.current = 0;
+    restTimerIdentityRef.current = "";
     // Block partner echo from re-opening the timer we just skipped.
-    suppressAutoRestUntilRef.current = Date.now() + 2500;
+    suppressAutoRestUntilRef.current = Date.now() + 4000;
     // Push clear so partner closes the shared rest popup.
     if (livePushEnabled) queueLiveSave(true);
   }, [livePushEnabled, queueLiveSave]);
@@ -1295,6 +1313,7 @@ export default function MemberWorkoutConsole({
       restHornPlayedRef.current = true;
       setRestCompleting(true);
       setRestSecondsLeft(0);
+      // One horn per device max; coach floor muted by default. Only play if not muted.
       if (!restMutedRef.current) {
         playRestComplete(restSoundRef.current);
       }
@@ -1517,11 +1536,20 @@ export default function MemberWorkoutConsole({
     ],
   );
 
-  /** Skip: exercise hold → rest; rest → close. */
+  /** Skip: exercise hold → rest; rest → close. Uses refs so coach skip works even if React state lags. */
   const skipActiveTimer = useCallback(() => {
-    if (!restTimer) return;
-    if (restTimer.phase === "exercise") {
-      flipExerciseTimerToRest(restTimer.blockId, restTimer.completedSetNum);
+    const open = restActiveRef.current;
+    const local = restTimer;
+    const blockId = open?.blockId ?? local?.blockId;
+    const setNum = open?.completedSetNum ?? local?.completedSetNum;
+    const phase = open?.phase ?? local?.phase ?? "rest";
+    if (!blockId || setNum == null) {
+      // Hard clear any stuck popup
+      clearRestTimer();
+      return;
+    }
+    if (phase === "exercise") {
+      flipExerciseTimerToRest(blockId, setNum);
       return;
     }
     clearRestTimer();

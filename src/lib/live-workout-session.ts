@@ -274,7 +274,8 @@ export async function upsertLiveWorkoutSession(input: {
   }
 
   // Rest popup: coach duration retargets and either side's skip must stick.
-  // Don't let a stale member snapshot overwrite a coach-retargeted endsAt.
+  // Critical: after coach/member clears (null), a late member poll-echo must NOT
+  // revive the old endsAt — that made Skip look broken on the coach floor.
   let restActive: LiveRestActive | null;
   if (!input.restActiveProvided) {
     restActive = existing?.restActive ?? null;
@@ -286,14 +287,25 @@ export async function upsertLiveWorkoutSession(input: {
   } else {
     const prev = existing?.restActive ?? null;
     const next = input.restActive;
-    if (
-      prev &&
+    if (!prev) {
+      // Nothing active server-side. Member may start their own rest, but must not
+      // resurrect a coach-started timer after a skip cleared it.
+      if (next.startedBy === "coach") {
+        restActive = null;
+      } else {
+        restActive = next;
+      }
+    } else if (
       prev.startedBy === "coach" &&
+      next.startedBy === "coach" &&
       prev.blockId === next.blockId &&
       prev.completedSetNum === next.completedSetNum &&
       prev.endsAt !== next.endsAt
     ) {
-      // Member echo of older endsAt — keep coach retarget / skip state
+      // Member echo of older endsAt — keep coach retarget
+      restActive = prev;
+    } else if (prev.startedBy === "coach" && next.startedBy === "member") {
+      // Member cannot clobber an active coach timer (except via null clear above)
       restActive = prev;
     } else {
       restActive = next;
