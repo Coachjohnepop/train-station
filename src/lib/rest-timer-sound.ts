@@ -12,15 +12,17 @@ export const REST_TIMER_SOUND_IDS = [
 
 export type RestTimerSoundId = (typeof REST_TIMER_SOUND_IDS)[number];
 
-/** Default: station train whistle (the real sample in /audio/train-whistle.mp3). */
-export const DEFAULT_REST_TIMER_SOUND: RestTimerSoundId = "whistle";
+/** Default: Cybertruck honk when rest ends. */
+export const DEFAULT_REST_TIMER_SOUND: RestTimerSoundId = "cybertruck";
 
 /**
- * Whistle / bell / buzzer play at half prior gym-floor level.
- * Cybertruck (default) stays hotter so the honk still cuts through.
+ * Bell / buzzer stay a bit quieter.
+ * Cybertruck + train whistle stay hot so they cut through the gym floor.
  */
 export const REST_COMPLETE_VOLUME_SCALE = 0.5;
 export const REST_CYBERTRUCK_VOLUME_SCALE = 0.85;
+/** Full level for the robust station whistle sample. */
+export const REST_WHISTLE_VOLUME_SCALE = 1;
 
 export type RestTimerSoundOption = {
   id: RestTimerSoundId;
@@ -37,13 +39,13 @@ export type RestTimerSoundOption = {
  * Filenames are rest-*-v SFX so clients don't keep an old talking clip cached.
  */
 /** Bump when replacing files so browsers drop stale (quiet/broken) cache entries. */
-const AUDIO_CACHE_BUST = "20260729a";
+const AUDIO_CACHE_BUST = "20260729b";
 
 export const REST_TIMER_SOUND_OPTIONS: RestTimerSoundOption[] = [
   {
     id: "cybertruck",
     label: "Cybertruck honk",
-    hint: "Real Cybertruck horn",
+    hint: "Real Cybertruck horn (default)",
     // Prefer v2 path; playRestComplete will fall back if load fails.
     src: `/audio/rest-cybertruck-horn-v2.mp3?v=${AUDIO_CACHE_BUST}`,
     volume: 1,
@@ -51,9 +53,9 @@ export const REST_TIMER_SOUND_OPTIONS: RestTimerSoundOption[] = [
   {
     id: "whistle",
     label: "Train whistle",
-    hint: "Station train whistle (the one we added)",
-    // Use the real train-whistle.mp3 (not the alternate rest-train-whistle sample).
-    src: `/audio/train-whistle.mp3?v=${AUDIO_CACHE_BUST}`,
+    hint: "Loud station dual-tone blast",
+    // Robust rest sample (rest-train-whistle) — train-whistle.mp3 alone was too thin.
+    src: `/audio/rest-train-whistle.mp3?v=${AUDIO_CACHE_BUST}`,
     volume: 1,
   },
   {
@@ -93,7 +95,7 @@ export function restTimerSoundSrc(id: RestTimerSoundId | string | null | undefin
 
 export function restTimerSoundLabel(id: RestTimerSoundId | string | null | undefined): string {
   const sound = normalizeRestTimerSound(id);
-  return REST_TIMER_SOUND_OPTIONS.find((o) => o.id === sound)?.label ?? "Train whistle";
+  return REST_TIMER_SOUND_OPTIONS.find((o) => o.id === sound)?.label ?? "Cybertruck honk";
 }
 
 export function restTimerSoundVolume(id: RestTimerSoundId | string | null | undefined): number {
@@ -101,10 +103,9 @@ export function restTimerSoundVolume(id: RestTimerSoundId | string | null | unde
   const v = REST_TIMER_SOUND_OPTIONS.find((o) => o.id === sound)?.volume;
   const base =
     typeof v === "number" && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1;
-  const scale =
-    sound === "cybertruck" || sound === "whistle"
-      ? REST_CYBERTRUCK_VOLUME_SCALE
-      : REST_COMPLETE_VOLUME_SCALE;
+  let scale = REST_COMPLETE_VOLUME_SCALE;
+  if (sound === "cybertruck") scale = REST_CYBERTRUCK_VOLUME_SCALE;
+  if (sound === "whistle") scale = REST_WHISTLE_VOLUME_SCALE;
   return Math.min(1, Math.max(0, base * scale));
 }
 
@@ -117,8 +118,8 @@ export function restTimerSoundFallbackSrc(
     return `/audio/rest-cybertruck-horn.mp3?v=${AUDIO_CACHE_BUST}`;
   }
   if (sound === "whistle") {
-    // Older rest-train-whistle path if the primary train-whistle.mp3 fails.
-    return `/audio/rest-train-whistle.mp3?v=${AUDIO_CACHE_BUST}`;
+    // Secondary sample if the robust rest-train-whistle fails.
+    return `/audio/train-whistle.mp3?v=${AUDIO_CACHE_BUST}`;
   }
   return null;
 }
