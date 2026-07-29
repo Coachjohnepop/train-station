@@ -49,14 +49,20 @@ export default function FreeTicketModal({
   const [fadeJeremyIn, setFadeJeremyIn] = useState(false);
   const [hideRickroll, setHideRickroll] = useState(false);
   const [loadJeremy, setLoadJeremy] = useState(false);
+  /** Stable after mount so iframe src does not change (remount = restart hitch). */
+  const [embedOrigin, setEmbedOrigin] = useState<string | undefined>(undefined);
   const timersRef = useRef<number[]>([]);
   const rickrollRef = useRef<HTMLIFrameElement>(null);
   const jeremyIframeRef = useRef<HTMLIFrameElement>(null);
   const jeremyVideoRef = useRef<HTMLVideoElement>(null);
+  const rickrollKickGen = useRef(0);
 
   const signedIn = Boolean(purchaseAuth.signedIn);
-  const embedOrigin = typeof window !== "undefined" ? window.location.origin : undefined;
   const gag = productFreeTicketGag({ signedIn });
+
+  useEffect(() => {
+    setEmbedOrigin(window.location.origin);
+  }, []);
 
   // Prefer free-ticket intro; fall back to general welcome (never use rickroll as Jeremy).
   const jeremyVideoUrl = (() => {
@@ -73,19 +79,20 @@ export default function FreeTicketModal({
   );
 
   /**
-   * Start muted for guaranteed autoplay after the Free tap, then unMute ASAP.
-   * Unmuted-from-frame-one often fails silently on iOS → “video not working”.
+   * Mute + start= in the embed URL (chorus once). Do NOT re-seek via postMessage —
+   * repeated seekTo was the hitch/restart. Only play + unMute after load.
    */
-  const rickrollSrc = gag.enabled
-    ? landingVideoEmbedSrc(gag.videoUrl, true, {
-        mute: true,
-        origin: embedOrigin,
-        startSeconds: gag.startSec,
-      })
-    : null;
+  const rickrollSrc =
+    gag.enabled && embedOrigin
+      ? landingVideoEmbedSrc(gag.videoUrl, true, {
+          mute: true,
+          origin: embedOrigin,
+          startSeconds: gag.startSec,
+        })
+      : null;
 
   const jeremyYtSrc =
-    loadJeremy && hasJeremy && jeremyIsYoutube
+    loadJeremy && hasJeremy && jeremyIsYoutube && embedOrigin
       ? landingVideoEmbedSrc(jeremyVideoUrl, true, {
           mute: true,
           origin: embedOrigin,
@@ -105,14 +112,11 @@ export default function FreeTicketModal({
     timersRef.current.push(window.setTimeout(fn, ms));
   }
 
-  /** Hammer play + unMute so sound lands as soon as the player is ready. */
-  function kickYoutube(iframe: HTMLIFrameElement | null, seekSec?: number) {
+  /** Play + unMute only — never seek (start= is already on the embed). */
+  function kickYoutubePlay(iframe: HTMLIFrameElement | null) {
     if (!iframe) return;
     postYoutubeEmbedCommand(iframe, "playVideo");
     postYoutubeEmbedCommand(iframe, "unMute");
-    if (typeof seekSec === "number") {
-      postYoutubeEmbedCommand(iframe, "seekTo", seekSec, true);
-    }
   }
 
   useEffect(() => {
@@ -162,34 +166,43 @@ export default function FreeTicketModal({
     };
   }, [open, hasJeremy, preloadMs, gag.enabled, gagDurationMs]);
 
-  // Gag: aggressive audible autoplay right after Free tap (user gesture window).
+  // Gag: one smooth start — play/unmute only (no seek). Light retry if player was slow.
   useEffect(() => {
     if (!open || !rickrollSrc) return;
-    const delays = [0, 50, 120, 250, 500, 900, 1600];
-    const ids = delays.map((ms) =>
-      window.setTimeout(() => kickYoutube(rickrollRef.current, gag.startSec), ms),
-    );
-    return () => ids.forEach((id) => window.clearTimeout(id));
-  }, [open, rickrollSrc, gag.startSec]);
+    const gen = ++rickrollKickGen.current;
+    const kick = () => {
+      if (gen !== rickrollKickGen.current) return;
+      kickYoutubePlay(rickrollRef.current);
+    };
+    // Wait for iframe paint; second try if still muted/not playing (no seek).
+    const t1 = window.setTimeout(kick, 350);
+    const t2 = window.setTimeout(kick, 900);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [open, rickrollSrc]);
 
-  // Jeremy: play + unMute as soon as he fades in (preloaded ~3s early for guests).
+  // Jeremy: play + unMute once he fades in (no seek).
   useEffect(() => {
     if (!fadeJeremyIn || !hasJeremy) return;
-    const delays = [0, 80, 200, 450, 900, 1500];
-    const ids = delays.map((ms) =>
-      window.setTimeout(() => {
-        if (jeremyIsYoutube) {
-          kickYoutube(jeremyIframeRef.current);
-        } else if (jeremyVideoRef.current) {
-          const el = jeremyVideoRef.current;
-          el.muted = false;
-          void el.play().catch(() => {
-            /* may need another tap on locked-down browsers */
-          });
-        }
-      }, ms),
-    );
-    return () => ids.forEach((id) => window.clearTimeout(id));
+    const kick = () => {
+      if (jeremyIsYoutube) {
+        kickYoutubePlay(jeremyIframeRef.current);
+      } else if (jeremyVideoRef.current) {
+        const el = jeremyVideoRef.current;
+        el.muted = false;
+        void el.play().catch(() => {
+          /* may need another tap on locked-down browsers */
+        });
+      }
+    };
+    const t1 = window.setTimeout(kick, 400);
+    const t2 = window.setTimeout(kick, 1000);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
   }, [fadeJeremyIn, hasJeremy, jeremyIsYoutube]);
 
   if (!open) return null;
@@ -232,7 +245,8 @@ export default function FreeTicketModal({
           {rickrollSrc && !hideRickroll && (
             <iframe
               ref={rickrollRef}
-              key="rickroll"
+              // Stable key for this open cycle — do not remount on parent re-renders.
+              key={`rickroll-${open ? "on" : "off"}`}
               className={`absolute inset-0 h-full w-full transition-opacity ease-in-out ${
                 fadeJeremyIn ? "pointer-events-none opacity-0" : "opacity-100"
               }`}
