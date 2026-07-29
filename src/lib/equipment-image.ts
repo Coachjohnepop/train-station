@@ -19,6 +19,10 @@ const ALLOWED_IMAGE_HOST_SUFFIXES = [
   "amazon-adsystem.com",
   "public.blob.vercel-storage.com",
   "blob.vercel-storage.com",
+  // Self-hosted Gear photos + free stock CDNs used for catalog tiles
+  "thetrainstation.co",
+  "images.unsplash.com",
+  "images.pexels.com",
 ];
 
 export function isAllowedEquipmentImageHost(hostname: string): boolean {
