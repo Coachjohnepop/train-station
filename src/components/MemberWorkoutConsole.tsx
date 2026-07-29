@@ -325,6 +325,8 @@ export default function MemberWorkoutConsole({
   const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
   const restHornPlayedRef = useRef(false);
   const restTickAnnouncedRef = useRef<Set<number>>(new Set());
+  /** Tracks open timer identity so duration retargets don't re-fire start/tick/complete storms. */
+  const restTimerIdentityRef = useRef<string>("");
   const restMutedRef = useRef(restMuted);
   restMutedRef.current = restMuted;
   const prevCompletedSetsRef = useRef<Record<string, Set<number>> | null>(null);
@@ -502,11 +504,14 @@ export default function MemberWorkoutConsole({
       totalSeconds: rest.totalSeconds,
       phase,
     });
-    restTickAnnouncedRef.current = new Set();
-    restHornPlayedRef.current = false;
-    // Don't re-chirp start sound on mid-timer retargets (duration chips).
-    if (!restMutedRef.current && !isRetarget) {
-      playRestStart();
+    // New timer only: reset sound guards. Retarget keeps them so we don't blast.
+    if (!isRetarget) {
+      restTimerIdentityRef.current = `${rest.blockId}:${rest.completedSetNum}:${phase}`;
+      restTickAnnouncedRef.current = new Set();
+      restHornPlayedRef.current = false;
+      if (!restMutedRef.current) {
+        playRestStart();
+      }
     }
   }, []);
 
@@ -1172,12 +1177,13 @@ export default function MemberWorkoutConsole({
           });
           setRestSecondsLeft(nextSeconds);
           setRestCompleting(false);
-          restHornPlayedRef.current = false;
+          // Keep restHornPlayedRef — retarget must not re-arm complete/ticks blast.
         }
       } else {
         restActiveRef.current = null;
         restActiveDirtyRef.current = true;
         lastAppliedRestEndsAt.current = 0;
+        restTimerIdentityRef.current = "";
         setRestTimer(null);
         setRestSecondsLeft(0);
         setRestCompleting(false);
@@ -1256,7 +1262,7 @@ export default function MemberWorkoutConsole({
       });
       setRestSecondsLeft(nextSeconds);
       setRestCompleting(false);
-      restHornPlayedRef.current = false;
+      // Do not reset restHornPlayedRef / tick set on ±15s.
       if (livePushEnabled) flushLiveSave();
     },
     [restTimer, instructorName, coachFloorMode, livePushEnabled, flushLiveSave],
@@ -1273,8 +1279,15 @@ export default function MemberWorkoutConsole({
     const phase = restTimer.phase;
     const blockId = restTimer.blockId;
     const setNum = restTimer.completedSetNum;
-    restHornPlayedRef.current = false;
-    restTickAnnouncedRef.current = new Set();
+    // New timer identity (block/set/phase) → reset sound guards.
+    // Pure retarget (±15s / duration chip) keeps guards so we don't re-horn/re-tick a blast.
+    const identity = `${blockId}:${setNum}:${phase ?? "rest"}`;
+    const prevIdentity = restTimerIdentityRef.current;
+    if (prevIdentity !== identity) {
+      restTimerIdentityRef.current = identity;
+      restHornPlayedRef.current = false;
+      restTickAnnouncedRef.current = new Set();
+    }
     setRestCompleting(false);
 
     const finishAndClose = () => {
@@ -1318,7 +1331,7 @@ export default function MemberWorkoutConsole({
         !restTickAnnouncedRef.current.has(left)
       ) {
         restTickAnnouncedRef.current.add(left);
-        playRestTick(left <= 5);
+        playRestTick(left <= 5, left);
       }
     };
 
@@ -1605,8 +1618,8 @@ export default function MemberWorkoutConsole({
                       }`}
                       onClick={() => {
                         void saveCoachRestSettings(true, sessionRestSeconds, opt.id);
-                        // Preview so coach hears the pick immediately.
-                        playRestComplete(opt.id);
+                        // Single forced preview (guards still prevent stacked samples).
+                        playRestComplete(opt.id, { force: true });
                       }}
                     >
                       {opt.label}

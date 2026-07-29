@@ -16,6 +16,17 @@ const sampleCache = new Map<string, HTMLAudioElement>();
 let sampleRelease: (() => void) | null = null;
 let sampleReleaseToken = 0;
 
+/** Global de-dupe so live coach+member retargets don't stack chirps/horns. */
+let lastStartAt = 0;
+let lastTickAt = 0;
+let lastTickSec = -1;
+let lastCompleteAt = 0;
+let completeInFlight = false;
+
+const START_GAP_MS = 900;
+const TICK_GAP_MS = 180;
+const COMPLETE_GAP_MS = 1800;
+
 function getCtx(): AudioContext | null {
   if (typeof window === "undefined") return null;
   try {
@@ -39,7 +50,16 @@ function getCtx(): AudioContext | null {
  * Quiet rest click — soft short pulse so it can play every second without being harsh.
  * `urgent` = last 5 seconds: pitch up + 1.5× volume so the floor notices.
  */
-export function playRestTick(urgent = false): void {
+export function playRestTick(urgent = false, secondLeft?: number): void {
+  const nowMs = Date.now();
+  // One tick per countdown second (and never stack within TICK_GAP_MS).
+  if (typeof secondLeft === "number" && secondLeft === lastTickSec && nowMs - lastTickAt < 1200) {
+    return;
+  }
+  if (nowMs - lastTickAt < TICK_GAP_MS) return;
+  lastTickAt = nowMs;
+  if (typeof secondLeft === "number") lastTickSec = secondLeft;
+
   const ctx = getCtx();
   if (!ctx) return;
   try {
@@ -48,7 +68,6 @@ export function playRestTick(urgent = false): void {
     const gain = ctx.createGain();
     osc.type = "sine";
     osc.frequency.value = urgent ? 760 : 520;
-    // Base click; last 5 ticks 1.5× prior urgent level so the floor notices.
     const peak = urgent ? 0.055 * 1.5 : 0.028;
     gain.gain.setValueAtTime(0.0001, now);
     gain.gain.exponentialRampToValueAtTime(peak, now + 0.008);
@@ -64,6 +83,10 @@ export function playRestTick(urgent = false): void {
 
 /** Soft start chirp when rest begins (after a set is checked). */
 export function playRestStart(): void {
+  const nowMs = Date.now();
+  if (nowMs - lastStartAt < START_GAP_MS) return;
+  lastStartAt = nowMs;
+
   const ctx = getCtx();
   if (!ctx) return;
   try {
@@ -91,7 +114,7 @@ function playRestCompleteFallback(): void {
   if (!ctx) return;
   try {
     const now = ctx.currentTime;
-    const peak = 0.11; // was 0.22
+    const peak = 0.11;
     const master = ctx.createGain();
     master.gain.setValueAtTime(0.0001, now);
     master.gain.exponentialRampToValueAtTime(peak, now + 0.05);
@@ -130,7 +153,6 @@ function getOrCreateSample(src: string): HTMLAudioElement {
   audio = new Audio(src);
   audio.preload = "auto";
   audio.addEventListener("error", () => {
-    // Drop broken cache entry so the next try fetches a fresh element.
     if (sampleCache.get(src) === audio) sampleCache.delete(src);
   });
   sampleCache.set(src, audio);
@@ -139,12 +161,25 @@ function getOrCreateSample(src: string): HTMLAudioElement {
 
 /**
  * End-of-rest alert — coach-selected sample (default Cybertruck honk).
- * Fresh Audio element each play avoids stuck/paused cache entries after long rests.
+ * Guarded so live retargets / dual clients don't stack multiple horns.
  */
 export function playRestComplete(
   sound: RestTimerSoundId | string | null | undefined = DEFAULT_REST_TIMER_SOUND,
+  opts?: { force?: boolean },
 ): void {
   if (typeof window === "undefined") return;
+  const nowMs = Date.now();
+  if (!opts?.force) {
+    if (completeInFlight) return;
+    if (nowMs - lastCompleteAt < COMPLETE_GAP_MS) return;
+  }
+  lastCompleteAt = nowMs;
+  completeInFlight = true;
+  // Reset after gap so a later legitimate end can sound.
+  window.setTimeout(() => {
+    completeInFlight = false;
+  }, COMPLETE_GAP_MS);
+
   const id = normalizeRestTimerSound(sound);
   const primarySrc = restTimerSoundSrc(id);
   const fallbackSrc = restTimerSoundFallbackSrc(id);
@@ -157,8 +192,8 @@ export function playRestComplete(
     const token = ++sampleReleaseToken;
     sampleRelease = holdBackgroundMusicForMedia();
 
+    let started = false;
     const playSrc = (src: string, allowAlt: boolean) => {
-      // New element every time — reusing a single node often fails after rest timers.
       const audio = new Audio(src);
       audio.preload = "auto";
       audio.volume = volume;
@@ -169,28 +204,36 @@ export function playRestComplete(
           return;
         }
         releaseSampleHold(token);
-        playRestCompleteFallback();
+        // Only synthetic fallback if the sample path never started.
+        if (!started) playRestCompleteFallback();
       };
 
       audio.onended = () => releaseSampleHold(token);
       audio.onerror = () => fail();
 
       const start = () => {
+        if (started) return;
+        started = true;
         try {
           audio.currentTime = 0;
         } catch {
           /* ignore */
         }
-        void audio.play().then(() => {
-          // Warm the shared cache for next preload.
-          sampleCache.set(src, audio);
-        }).catch(fail);
+        void audio
+          .play()
+          .then(() => {
+            sampleCache.set(src, audio);
+          })
+          .catch(fail);
       };
 
       if (audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
         start();
       } else {
+        let armed = false;
         const onReady = () => {
+          if (armed) return;
+          armed = true;
           audio.removeEventListener("canplaythrough", onReady);
           audio.removeEventListener("canplay", onReady);
           start();
@@ -199,13 +242,14 @@ export function playRestComplete(
         audio.addEventListener("canplay", onReady);
         audio.load();
         window.setTimeout(() => {
-          if (audio.paused && !audio.ended) start();
+          if (!started && audio.paused && !audio.ended) start();
         }, 400);
       }
     };
 
     playSrc(primarySrc, true);
   } catch {
+    completeInFlight = false;
     playRestCompleteFallback();
   }
 }
