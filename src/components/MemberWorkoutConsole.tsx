@@ -468,11 +468,27 @@ export default function MemberWorkoutConsole({
       setRestCompleting(false);
       return;
     }
-    // Ignore expired or already-applied rest windows.
+    // Ignore fully expired rest windows.
     if (rest.endsAt <= Date.now() + 250) return;
-    if (rest.endsAt <= lastAppliedRestEndsAt.current) return;
-    // Don't resurrect a timer right after the member intentionally unchecked.
+    // Don't resurrect a timer right after intentional uncheck/skip.
     if (Date.now() < suppressAutoRestUntilRef.current) return;
+
+    const prev = restActiveRef.current;
+    const same =
+      prev &&
+      prev.blockId === rest.blockId &&
+      prev.completedSetNum === rest.completedSetNum &&
+      prev.endsAt === rest.endsAt &&
+      prev.totalSeconds === rest.totalSeconds &&
+      (prev.phase ?? "rest") === (rest.phase ?? "rest");
+    if (same) return;
+
+    // Allow coach to shorten OR lengthen mid-countdown (old code rejected shorter endsAt).
+    const isRetarget =
+      Boolean(prev) &&
+      prev!.blockId === rest.blockId &&
+      prev!.completedSetNum === rest.completedSetNum;
+
     lastAppliedRestEndsAt.current = rest.endsAt;
     restActiveRef.current = rest;
     const left = Math.max(0, Math.ceil((rest.endsAt - Date.now()) / 1000));
@@ -488,7 +504,8 @@ export default function MemberWorkoutConsole({
     });
     restTickAnnouncedRef.current = new Set();
     restHornPlayedRef.current = false;
-    if (!restMutedRef.current) {
+    // Don't re-chirp start sound on mid-timer retargets (duration chips).
+    if (!restMutedRef.current && !isRetarget) {
       playRestStart();
     }
   }, []);
@@ -514,7 +531,7 @@ export default function MemberWorkoutConsole({
         }
         if (session.revision === lastAppliedRevision.current) {
           // Same revision: still allow rest popup / rest-timer field refresh from coach.
-          if (session.restActive && session.restActive.endsAt > lastAppliedRestEndsAt.current) {
+          if ("restActive" in session) {
             applyRemoteRestActive(session.restActive);
           }
           if (session.updatedBy === "coach") {
@@ -983,6 +1000,8 @@ export default function MemberWorkoutConsole({
     restActiveRef.current = null;
     restActiveDirtyRef.current = true;
     lastAppliedRestEndsAt.current = 0;
+    // Block partner echo from re-opening the timer we just skipped.
+    suppressAutoRestUntilRef.current = Date.now() + 2500;
     // Push clear so partner closes the shared rest popup.
     if (livePushEnabled) queueLiveSave(true);
   }, [livePushEnabled, queueLiveSave]);
@@ -1128,26 +1147,46 @@ export default function MemberWorkoutConsole({
         sound: nextSound,
       };
 
-      // Live: retarget the open countdown so coach doesn't wait for the next set.
+      // Live: retarget open countdown AND push restActive so member matches.
+      // (Previously only local React state updated — partner kept the old endsAt.)
       if (enabled) {
-        setRestTimer((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
+        const open = restActiveRef.current;
+        if (open) {
+          const nextEndsAt = Date.now() + nextSeconds * 1000;
+          const phase = open.phase === "exercise" ? "exercise" : "rest";
+          restActiveRef.current = {
+            ...open,
             totalSeconds: nextSeconds,
-            endsAt: Date.now() + nextSeconds * 1000,
+            endsAt: nextEndsAt,
+            startedBy: instructorName || coachFloorMode ? "coach" : open.startedBy,
+            phase,
           };
-        });
-        setRestSecondsLeft(nextSeconds);
-        setRestCompleting(false);
-        restHornPlayedRef.current = false;
+          restActiveDirtyRef.current = true;
+          lastAppliedRestEndsAt.current = nextEndsAt;
+          setRestTimer({
+            blockId: open.blockId,
+            completedSetNum: open.completedSetNum,
+            endsAt: nextEndsAt,
+            totalSeconds: nextSeconds,
+            phase,
+          });
+          setRestSecondsLeft(nextSeconds);
+          setRestCompleting(false);
+          restHornPlayedRef.current = false;
+        }
       } else {
+        restActiveRef.current = null;
+        restActiveDirtyRef.current = true;
+        lastAppliedRestEndsAt.current = 0;
         setRestTimer(null);
         setRestSecondsLeft(0);
         setRestCompleting(false);
       }
 
-      if (!canCoachRestSettings || !workout.workoutId) return;
+      if (!canCoachRestSettings || !workout.workoutId) {
+        if (livePushEnabled) flushLiveSave();
+        return;
+      }
       setRestSettingsSaving(true);
       try {
         await fetch(`/api/workouts/${workout.workoutId}/rest-timer`, {
@@ -1159,15 +1198,68 @@ export default function MemberWorkoutConsole({
             sound: nextSound,
           }),
         });
-        // Push to live session so the member picks up the new duration immediately.
-        queueLiveSave(true);
+        // Push duration + open restActive retarget to partner immediately.
+        flushLiveSave();
       } catch {
-        /* local override still works */
+        if (livePushEnabled) flushLiveSave();
       } finally {
         setRestSettingsSaving(false);
       }
     },
-    [canCoachRestSettings, workout.workoutId, queueLiveSave],
+    [
+      canCoachRestSettings,
+      workout.workoutId,
+      flushLiveSave,
+      instructorName,
+      coachFloorMode,
+      livePushEnabled,
+    ],
+  );
+
+  /** Both sides: nudge open countdown ±seconds and push shared restActive. */
+  const adjustActiveTimerBy = useCallback(
+    (deltaSec: number) => {
+      const open = restActiveRef.current;
+      const local = restTimer;
+      if (!open && !local) return;
+      const base = open ?? {
+        blockId: local!.blockId,
+        completedSetNum: local!.completedSetNum,
+        endsAt: local!.endsAt,
+        totalSeconds: local!.totalSeconds,
+        startedBy: (instructorName || coachFloorMode ? "coach" : "member") as
+          | "coach"
+          | "member",
+        phase: local!.phase,
+      };
+      const left = Math.max(1, Math.ceil((base.endsAt - Date.now()) / 1000) + deltaSec);
+      const nextSeconds = Math.min(1800, Math.max(5, left));
+      const nextEndsAt = Date.now() + nextSeconds * 1000;
+      const phase = base.phase === "exercise" ? "exercise" : "rest";
+      const totalSeconds = Math.max(base.totalSeconds, nextSeconds);
+      restActiveRef.current = {
+        blockId: base.blockId,
+        completedSetNum: base.completedSetNum,
+        endsAt: nextEndsAt,
+        totalSeconds,
+        startedBy: instructorName || coachFloorMode ? "coach" : base.startedBy,
+        phase,
+      };
+      restActiveDirtyRef.current = true;
+      lastAppliedRestEndsAt.current = nextEndsAt;
+      setRestTimer({
+        blockId: base.blockId,
+        completedSetNum: base.completedSetNum,
+        endsAt: nextEndsAt,
+        totalSeconds,
+        phase,
+      });
+      setRestSecondsLeft(nextSeconds);
+      setRestCompleting(false);
+      restHornPlayedRef.current = false;
+      if (livePushEnabled) flushLiveSave();
+    },
+    [restTimer, instructorName, coachFloorMode, livePushEnabled, flushLiveSave],
   );
 
   // Countdown while popup is open; on 0 → buzz → rest closes, exercise flips to rest.
@@ -1438,6 +1530,7 @@ export default function MemberWorkoutConsole({
         secondsLeft={displayRestSeconds > 0 ? displayRestSeconds : restSecondsLeft}
         totalSeconds={restTimer.totalSeconds}
         onSkip={skipActiveTimer}
+        onAdjust={adjustActiveTimerBy}
         compact={coachFloorMode}
         sticky
         exerciseName={restBlockName}

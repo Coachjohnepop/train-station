@@ -10,6 +10,8 @@ type Props = {
   secondsLeft: number;
   totalSeconds: number;
   onSkip: () => void;
+  /** Both coach and member can nudge the shared countdown (±15s). */
+  onAdjust?: (deltaSec: number) => void;
   compact?: boolean;
   /** Centered modal (default). When false, inline card only. */
   sticky?: boolean;
@@ -30,6 +32,7 @@ export default function WorkoutRestTimer({
   secondsLeft,
   totalSeconds,
   onSkip,
+  onAdjust,
   compact = false,
   sticky = true,
   exerciseName,
@@ -143,6 +146,28 @@ export default function WorkoutRestTimer({
       </div>
 
       <div className="workout-rest-player__actions">
+        {onAdjust && !done ? (
+          <>
+            <button
+              type="button"
+              className="workout-rest-player__btn"
+              onClick={() => onAdjust(-15)}
+              aria-label="Subtract 15 seconds"
+              title="−15s (both sides)"
+            >
+              −15s
+            </button>
+            <button
+              type="button"
+              className="workout-rest-player__btn"
+              onClick={() => onAdjust(15)}
+              aria-label="Add 15 seconds"
+              title="+15s (both sides)"
+            >
+              +15s
+            </button>
+          </>
+        ) : null}
         {onToggleMute ? (
           <button
             type="button"

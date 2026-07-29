@@ -273,9 +273,32 @@ export async function upsertLiveWorkoutSession(input: {
     }
   }
 
-  const restActive = input.restActiveProvided
-    ? input.restActive ?? null
-    : (existing?.restActive ?? null);
+  // Rest popup: coach duration retargets and either side's skip must stick.
+  // Don't let a stale member snapshot overwrite a coach-retargeted endsAt.
+  let restActive: LiveRestActive | null;
+  if (!input.restActiveProvided) {
+    restActive = existing?.restActive ?? null;
+  } else if (input.restActive == null) {
+    // Explicit clear (skip / close) — both sides
+    restActive = null;
+  } else if (input.updatedBy === "coach") {
+    restActive = input.restActive;
+  } else {
+    const prev = existing?.restActive ?? null;
+    const next = input.restActive;
+    if (
+      prev &&
+      prev.startedBy === "coach" &&
+      prev.blockId === next.blockId &&
+      prev.completedSetNum === next.completedSetNum &&
+      prev.endsAt !== next.endsAt
+    ) {
+      // Member echo of older endsAt — keep coach retarget / skip state
+      restActive = prev;
+    } else {
+      restActive = next;
+    }
+  }
 
   // Stale member write racing coach: keep coach weights for keys coach set; still accept member keys.
   let weights: Record<string, string>;
