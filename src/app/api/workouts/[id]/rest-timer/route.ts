@@ -11,14 +11,14 @@ import { normalizeRestTimerSeconds } from "@/lib/rest-timer";
 import {
   DEFAULT_REST_TIMER_SOUND,
   normalizeRestTimerSound,
-  REST_TIMER_SOUND_IDS,
 } from "@/lib/rest-timer-sound";
 import { updateWorkoutRestTimer } from "@/lib/sms-generated-workouts";
 
 const bodySchema = z.object({
   enabled: z.boolean(),
   seconds: z.number().int().min(15).max(600).optional(),
-  sound: z.enum(REST_TIMER_SOUND_IDS).optional(),
+  /** Built-in id or full custom audio URL */
+  sound: z.string().min(1).max(2000).optional(),
 });
 
 type Params = { params: Promise<{ id: string }> };

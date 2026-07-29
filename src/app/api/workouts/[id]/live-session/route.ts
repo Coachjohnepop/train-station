@@ -30,7 +30,8 @@ const putSchema = z.object({
   activeId: z.string().optional(),
   restTimerEnabled: z.boolean().optional(),
   restTimerSeconds: z.number().int().min(15).max(600).optional(),
-  restTimerSound: z.string().min(1).max(40).optional(),
+  /** Built-in id or full custom audio URL (coach uploads can be long blob URLs). */
+  restTimerSound: z.string().min(1).max(2000).optional(),
   restActive: restActiveSchema.optional(),
   updatedBy: z.enum(["coach", "member"]),
   /** Last revision the client applied — detects stale overwrites across instances. */

@@ -19,10 +19,9 @@ import {
 } from "@/lib/rest-timer";
 import {
   DEFAULT_REST_TIMER_SOUND,
-  REST_TIMER_SOUND_OPTIONS,
-  type RestTimerSoundId,
+  type RestTimerSoundKey,
 } from "@/lib/rest-timer-sound";
-import { playRestComplete } from "@/lib/rest-audio";
+import CoachRestSoundLibrary from "@/components/CoachRestSoundLibrary";
 
 
 type ParsedExercise = {
@@ -82,7 +81,7 @@ export default function CoachLessonPlanBuilder({
 
   const [restTimerEnabled, setRestTimerEnabled] = useState(true);
   const [restTimerSeconds, setRestTimerSeconds] = useState(DEFAULT_REST_TIMER_SECONDS);
-  const [restTimerSound, setRestTimerSound] = useState<RestTimerSoundId>(DEFAULT_REST_TIMER_SOUND);
+  const [restTimerSound, setRestTimerSound] = useState<RestTimerSoundKey>(DEFAULT_REST_TIMER_SOUND);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -735,29 +734,17 @@ export default function CoachLessonPlanBuilder({
                     ))}
                   </select>
                 </label>
-                <label className="block text-xs">
-                  <span className="text-[var(--muted)]">Sound when rest ends</span>
-                  <select
-                    className="input mt-1 w-full text-sm"
+                <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)]/40 p-3">
+                  <CoachRestSoundLibrary
                     value={restTimerSound}
-                    onChange={(e) => {
-                      const next = e.target.value as RestTimerSoundId;
-                      setRestTimerSound(next);
-                      playRestComplete(next);
-                    }}
-                  >
-                    {REST_TIMER_SOUND_OPTIONS.map((opt) => (
-                      <option key={opt.id} value={opt.id}>
-                        {opt.label} — {opt.hint}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    onChange={setRestTimerSound}
+                  />
+                </div>
               </>
             ) : null}
             <p className="text-[10px] text-[var(--muted)]">
               When on, coach and member see an automatic countdown on Go to Today after each set
-              is checked off. Default end sound is a loud train whistle.
+              is checked off. Default end sound is Cybertruck; upload longer/louder clips below if you want.
             </p>
           </div>
 

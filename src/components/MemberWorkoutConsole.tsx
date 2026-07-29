@@ -22,10 +22,10 @@ import {
 } from "@/lib/rest-timer";
 import {
   DEFAULT_REST_TIMER_SOUND,
-  REST_TIMER_SOUND_OPTIONS,
   normalizeRestTimerSound,
-  type RestTimerSoundId,
+  type RestTimerSoundKey,
 } from "@/lib/rest-timer-sound";
+import CoachRestSoundLibrary from "@/components/CoachRestSoundLibrary";
 import { confettiOriginFromElement, fireWorkoutConfetti } from "@/lib/workout-confetti";
 import type { LiveRestActive } from "@/lib/live-workout-session";
 import {
@@ -318,8 +318,8 @@ export default function MemberWorkoutConsole({
   /** Session override so coach can set rest on the floor without rebuilding the workout. */
   const [sessionRestEnabled, setSessionRestEnabled] = useState(true);
   const [sessionRestSeconds, setSessionRestSeconds] = useState(DEFAULT_REST_TIMER_SECONDS);
-  const [sessionRestSound, setSessionRestSound] = useState<RestTimerSoundId>(DEFAULT_REST_TIMER_SOUND);
-  const restSoundRef = useRef<RestTimerSoundId>(DEFAULT_REST_TIMER_SOUND);
+  const [sessionRestSound, setSessionRestSound] = useState<RestTimerSoundKey>(DEFAULT_REST_TIMER_SOUND);
+  const restSoundRef = useRef<RestTimerSoundKey>(DEFAULT_REST_TIMER_SOUND);
   const [restSettingsSaving, setRestSettingsSaving] = useState(false);
   const [coachExpandedBlockId, setCoachExpandedBlockId] = useState<string | null>(null);
   const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
@@ -429,7 +429,7 @@ export default function MemberWorkoutConsole({
   const restSettingsRef = useRef({
     enabled: true,
     seconds: DEFAULT_REST_TIMER_SECONDS,
-    sound: DEFAULT_REST_TIMER_SOUND as RestTimerSoundId,
+    sound: DEFAULT_REST_TIMER_SOUND as RestTimerSoundKey,
   });
   /** Shared rest popup (epoch endsAt) — pushed so partner spins up the same timer. */
   const restActiveRef = useRef<LiveRestActive | null>(null);
@@ -1156,7 +1156,7 @@ export default function MemberWorkoutConsole({
     async (
       enabled: boolean,
       seconds: number,
-      sound: RestTimerSoundId = restSoundRef.current,
+      sound: RestTimerSoundKey = restSoundRef.current,
     ) => {
       const nextSeconds = normalizeRestTimerSeconds(seconds);
       const nextSound = normalizeRestTimerSound(sound);
@@ -1633,33 +1633,13 @@ export default function MemberWorkoutConsole({
               })}
             </div>
             <div className="mt-2.5 border-t border-accent/20 pt-2">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
-                Rest end sound
-              </p>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {REST_TIMER_SOUND_OPTIONS.map((opt) => {
-                  const active = sessionRestSound === opt.id;
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      title={opt.hint}
-                      className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
-                        active
-                          ? "border-sky-400/60 bg-sky-500/25 text-sky-100"
-                          : "border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:border-sky-400/40 hover:text-[var(--text)]"
-                      }`}
-                      onClick={() => {
-                        void saveCoachRestSettings(true, sessionRestSeconds, opt.id);
-                        // Single forced preview (guards still prevent stacked samples).
-                        playRestComplete(opt.id, { force: true });
-                      }}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
-              </div>
+              <CoachRestSoundLibrary
+                compact
+                value={sessionRestSound}
+                onChange={(key) => {
+                  void saveCoachRestSettings(true, sessionRestSeconds, key);
+                }}
+              />
             </div>
           </>
         ) : null}
