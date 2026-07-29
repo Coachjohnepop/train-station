@@ -229,7 +229,7 @@ function gateCookieOptions() {
   };
 }
 
-/** Keep payment + approval gate cookies aligned with the member profile. */
+/** Keep payment + approval + onboarding gate cookies aligned with the member profile. */
 export async function syncMemberGateCookies(
   res: CookieWriter,
   input: { userId: string; profile: MemberProfile | null },
@@ -248,5 +248,21 @@ export async function syncMemberGateCookies(
     res.cookies.set(PENDING_APPROVAL_COOKIE, "1", opts);
   } else {
     res.cookies.set(PENDING_APPROVAL_COOKIE, "", clear);
+  }
+
+  // Onboarding must follow the profile, not a one-shot cookie from signup.
+  // Missing cookie was letting incomplete free Explorer land on Today.
+  const needsOnboard =
+    (input.profile && !input.profile.onboardingComplete) ||
+    (!input.profile && input.userId.startsWith("member-"));
+  if (needsOnboard) {
+    res.cookies.set(NEEDS_ONBOARD_COOKIE, "1", opts);
+    const plan = input.profile?.plan;
+    if (plan) {
+      res.cookies.set(SIGNUP_PLAN_COOKIE, plan, opts);
+    }
+  } else {
+    res.cookies.set(NEEDS_ONBOARD_COOKIE, "", clear);
+    res.cookies.set(SIGNUP_PLAN_COOKIE, "", clear);
   }
 }

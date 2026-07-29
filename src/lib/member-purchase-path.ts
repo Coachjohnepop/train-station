@@ -49,7 +49,8 @@ export function purchaseHref(
   }
 
   if (normalized === "explorer") {
-    return "/member";
+    // Incomplete onboarding is enforced server-side; this lands free path on wizard entry.
+    return "/member/onboard?plan=explorer";
   }
 
   return memberCheckoutPath(plan, options);

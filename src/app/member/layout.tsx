@@ -1,3 +1,5 @@
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import MemberShell from "@/components/MemberShell";
 import { getMemberDashboard } from "@/lib/member-context";
 import { getSessionUser } from "@/lib/auth";
@@ -8,6 +10,7 @@ import { getMemberProfile } from "@/lib/member-profiles-store";
 import { isCoachIntakeComplete } from "@/lib/member-intake";
 import { membershipThemeTierFromPlan } from "@/lib/membership-theme";
 import { memberNeedsPaymentAsync } from "@/lib/member-gates";
+import { isMemberPathExemptFromPaymentGate } from "@/lib/member-route-gates";
 import type { SignupPlan } from "@/lib/signup-plans";
 
 export default async function MemberLayout({
@@ -15,10 +18,11 @@ export default async function MemberLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [dashboard, session, cookieUid] = await Promise.all([
+  const [dashboard, session, cookieUid, headerStore] = await Promise.all([
     getMemberDashboard(),
     getSessionUser(),
     getCurrentUserId(),
+    headers(),
   ]);
   const tierLabel = dashboard?.access.tierLabel ?? "Coach Class";
   const viewedMember = cookieUid ? resolveDemoUser(cookieUid) : undefined;
@@ -47,6 +51,34 @@ export default async function MemberLayout({
     ? await memberNeedsPaymentAsync(profile, profileUserId)
     : false;
   const checkoutPlan = (profile?.plan ?? "member") as SignupPlan;
+
+  // Server-side onboard gate (DB), not cookie-only. Incomplete free Explorer
+  // must finish the wizard before Today / training.
+  if (
+    session?.role === "MEMBER" &&
+    profileUserId?.startsWith("member-") &&
+    (!profile || !profile.onboardingComplete)
+  ) {
+    const pathname =
+      headerStore.get("x-pathname") ||
+      headerStore.get("x-invoke-path") ||
+      headerStore.get("next-url") ||
+      "";
+    const pathOnly = pathname.startsWith("http")
+      ? new URL(pathname).pathname
+      : pathname;
+    const onExempt =
+      !pathOnly ||
+      pathOnly === "/member" ||
+      pathOnly.startsWith("/member/onboard") ||
+      isMemberPathExemptFromPaymentGate(pathOnly);
+    // Exempt includes checkout/account/chat/book/pending/onboard — allow those.
+    // Block Today, programs, workout, equipment, live, etc.
+    if (!onExempt && pathOnly.startsWith("/member")) {
+      const plan = profile?.plan || "explorer";
+      redirect(`/member/onboard?plan=${encodeURIComponent(plan)}`);
+    }
+  }
 
   return (
     <MemberShell

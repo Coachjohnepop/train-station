@@ -57,6 +57,15 @@ async function sessionFromRequest(request: NextRequest) {
   return token ? await verifySessionTokenEdge(token) : null;
 }
 
+/** Pass pathname into server layouts (onboarding gate reads x-pathname). */
+function nextWithPath(request: NextRequest, pathname: string) {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", pathname);
+  return NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (
@@ -71,7 +80,7 @@ export async function middleware(request: NextRequest) {
   // Lock down API routes: anonymous callers get 401 unless explicitly public.
   if (pathname.startsWith("/api/")) {
     if (isPublicApi(pathname)) {
-      return NextResponse.next();
+      return nextWithPath(request, pathname);
     }
 
     // Ops bootstrap: Bearer OPS_BOOTSTRAP_SECRET / CRON_SECRET (no session cookie).
@@ -155,7 +164,8 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname === "/member") {
-    // Incomplete onboarding → wizard first (not Today)
+    // Cookie shortcut when present; otherwise /member/page.tsx resolves from DB profile
+    // (cookie-only was skipping free Explorer past the onboarding wizard).
     if (
       session.role === "MEMBER" &&
       request.cookies.get(NEEDS_ONBOARD_COOKIE)?.value === "1" &&
@@ -168,7 +178,7 @@ export async function middleware(request: NextRequest) {
       if (plan) onboard.searchParams.set("plan", plan);
       return NextResponse.redirect(onboard);
     }
-    return NextResponse.redirect(new URL("/member/today", request.url));
+    return nextWithPath(request, pathname);
   }
 
   if (session.role === "MEMBER") {
@@ -223,7 +233,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  return nextWithPath(request, pathname);
 }
 
 export const config = {
