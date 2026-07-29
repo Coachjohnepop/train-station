@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import GearItemEditForm from "@/components/GearItemEditForm";
 import { formatApiError } from "@/lib/api-errors";
 import { equipmentImageProxyPath } from "@/lib/equipment-image-url";
 
@@ -296,11 +297,10 @@ export default function AdminEquipmentCatalog() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [storage, setStorage] = useState<"postgres" | "demo" | null>(null);
-  const [savingId, setSavingId] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [previewing, setPreviewing] = useState(false);
-  const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set());
+  /** Which catalog card is open for editing (one at a time keeps the grid clean). */
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [pasteUrl, setPasteUrl] = useState("");
   const [newName, setNewName] = useState("");
@@ -329,7 +329,7 @@ export default function AdminEquipmentCatalog() {
       if (data.storage === "postgres" || data.storage === "demo") {
         setStorage(data.storage);
       }
-      setDirtyIds(new Set());
+      setEditingId(null);
     }
     setLoading(false);
   }, []);
@@ -428,127 +428,6 @@ export default function AdminEquipmentCatalog() {
         ? `Saved “${data.name}” to the database. Edit or delete anytime below.`
         : `Saved “${data.name}” (demo storage).`,
     );
-  }
-
-  async function saveItem(item: EquipmentItem) {
-    setSavingId(item.id);
-    setError("");
-    setSuccess("");
-    const res = await fetch(`/api/admin/equipment/${encodeURIComponent(item.id)}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: item.name,
-        category: item.category,
-        description: item.description,
-        productUrl: item.productUrl,
-        imageUrl: item.imageUrl,
-      }),
-    });
-    const data = await res.json().catch(() => ({}));
-    setSavingId(null);
-    if (!res.ok) {
-      setError(data.error || formatApiError(data.detail) || "Could not save equipment.");
-      await load();
-      return;
-    }
-    if (data.storage === "postgres" || data.storage === "demo") {
-      setStorage(data.storage);
-    }
-    const saved = toCatalogItem(data);
-    setItems((prev) =>
-      prev
-        .map((row) => (row.id === item.id ? saved : row))
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    );
-    setDirtyIds((prev) => {
-      const next = new Set(prev);
-      next.delete(item.id);
-      return next;
-    });
-    flashSuccess(
-      data.storage === "postgres"
-        ? `Updated “${saved.name}” in the database.`
-        : `Updated “${saved.name}”.`,
-    );
-  }
-
-  async function refreshImageFromLink(item: EquipmentItem) {
-    const url = item.productUrl?.trim();
-    if (!url) {
-      setError("Add a product link first, then refresh the photo — or paste a custom Image URL.");
-      return;
-    }
-    setSavingId(item.id);
-    setError("");
-    try {
-      const res = await fetch("/api/admin/equipment/preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(
-          data.error ||
-            "Could not pull photo from link. Paste a custom Image URL and Save instead.",
-        );
-        setSavingId(null);
-        return;
-      }
-      if (!data.imageUrl) {
-        setError("No photo found on that page. Paste a custom Image URL and Save.");
-        setSavingId(null);
-        return;
-      }
-      const next: EquipmentItem = {
-        ...item,
-        imageUrl: data.imageUrl,
-        name: item.name.trim() || data.title || item.name,
-      };
-      await saveItem(next);
-    } catch {
-      setError("Could not refresh photo. Paste a custom Image URL and Save.");
-      setSavingId(null);
-    }
-  }
-
-  async function removeItem(id: string, name: string) {
-    if (
-      !window.confirm(
-        `Delete “${name}” from the catalog permanently? Members will lose this gear link.`,
-      )
-    ) {
-      return;
-    }
-    setDeletingId(id);
-    setError("");
-    setSuccess("");
-    const res = await fetch(`/api/admin/equipment/${encodeURIComponent(id)}`, {
-      method: "DELETE",
-    });
-    const data = await res.json().catch(() => ({}));
-    setDeletingId(null);
-    if (!res.ok) {
-      setError(data.error || "Could not delete equipment.");
-      return;
-    }
-    setItems((prev) => prev.filter((row) => row.id !== id));
-    setDirtyIds((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-    flashSuccess(
-      data.storage === "postgres"
-        ? `Deleted “${name}” from the database.`
-        : `Deleted “${name}”.`,
-    );
-  }
-
-  function updateDraft(id: string, patch: Partial<EquipmentItem>) {
-    setItems((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
-    setDirtyIds((prev) => new Set(prev).add(id));
   }
 
   if (loading) {
@@ -709,11 +588,7 @@ export default function AdminEquipmentCatalog() {
           <p className="text-xs text-[var(--muted)]">
             {items.length} item{items.length === 1 ? "" : "s"}
             {shopCount > 0 ? ` · ${shopCount} on Gear shop` : ""}
-            {dirtyIds.size > 0 ? (
-              <span className="ml-1 font-semibold text-amber-300">
-                · {dirtyIds.size} unsaved
-              </span>
-            ) : null}
+            <span className="ml-1 text-[var(--muted)]">· tap Edit on any card</span>
             <button
               type="button"
               className="ml-2 text-accent hover:underline"
@@ -736,141 +611,84 @@ export default function AdminEquipmentCatalog() {
               gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr))",
             }}
           >
-            {items.map((item) => (
-              <li
-                key={item.id}
-                className="card flex h-full min-w-0 flex-col overflow-hidden p-0"
-              >
-                <ProductThumb
-                  name={item.name}
-                  imageUrl={item.imageUrl}
-                  productUrl={item.productUrl}
-                  equipmentId={item.id}
-                  variant="card"
-                />
-                <div className="flex min-w-0 flex-1 flex-col gap-2 p-3">
-                  {(() => {
-                    const status = equipmentPublishStatus(item);
-                    return (
-                      <span
-                        className={`inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${status.className}`}
-                        title={status.title}
-                      >
-                        {status.label}
-                      </span>
-                    );
-                  })()}
-                  <input
-                    className="input w-full text-sm font-medium"
-                    value={item.name}
-                    onChange={(e) => updateDraft(item.id, { name: e.target.value })}
-                    aria-label="Name"
+            {items.map((item) => {
+              const status = equipmentPublishStatus(item);
+              const editing = editingId === item.id;
+              return (
+                <li
+                  key={item.id}
+                  className="card flex h-full min-w-0 flex-col overflow-hidden p-0"
+                >
+                  <ProductThumb
+                    name={item.name}
+                    imageUrl={item.imageUrl}
+                    productUrl={editing ? null : item.productUrl}
+                    equipmentId={item.id}
+                    variant="card"
                   />
-                  <EquipmentCategorySelect
-                    value={item.category || ""}
-                    options={categoryOptions}
-                    className="input w-full text-sm"
-                    onChange={(category) =>
-                      updateDraft(item.id, { category: category || null })
-                    }
-                    onCategoryCreated={rememberCategory}
-                    disabled={savingId === item.id}
-                  />
-                  <input
-                    className="input w-full text-xs"
-                    value={item.productUrl || ""}
-                    onChange={(e) =>
-                      updateDraft(item.id, { productUrl: e.target.value || null })
-                    }
-                    placeholder="Product link (Amazon…)"
-                    aria-label="Product link"
-                  />
-                  <div>
-                    <label className="text-[10px] font-medium text-[var(--muted)]">
-                      Image URL {item.productUrl ? "(required for Gear)" : "(optional)"}
-                    </label>
-                    <div className="mt-0.5 flex gap-1">
-                      <input
-                        className="input min-w-0 flex-1 text-xs"
-                        value={item.imageUrl || ""}
-                        onChange={(e) =>
-                          updateDraft(item.id, { imageUrl: e.target.value || null })
-                        }
-                        placeholder="https://… custom photo if auto fails"
-                        aria-label="Override image URL"
-                      />
-                      {item.imageUrl ? (
+                  <div className="flex min-w-0 flex-1 flex-col gap-2 p-3">
+                    <span
+                      className={`inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${status.className}`}
+                      title={status.title}
+                    >
+                      {status.label}
+                    </span>
+                    <p className="text-sm font-semibold leading-snug text-[var(--text)]">
+                      {item.name}
+                    </p>
+                    {item.category ? (
+                      <p className="text-[10px] uppercase tracking-wide text-[var(--muted)]">
+                        {item.category}
+                      </p>
+                    ) : null}
+                    {item.description ? (
+                      <p className="line-clamp-2 text-xs text-[var(--muted)]">{item.description}</p>
+                    ) : null}
+                    {!editing ? (
+                      <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
                         <button
                           type="button"
-                          className="btn-ghost shrink-0 px-2 text-[10px]"
-                          title="Clear image URL"
-                          onClick={() => updateDraft(item.id, { imageUrl: null })}
+                          className="btn-primary min-h-[40px] flex-1 px-3 text-xs"
+                          onClick={() => setEditingId(item.id)}
                         >
-                          Clear
+                          Edit
                         </button>
-                      ) : null}
-                    </div>
-                  </div>
-                  <textarea
-                    className="input w-full min-h-[52px] flex-1 text-xs"
-                    value={item.description || ""}
-                    onChange={(e) =>
-                      updateDraft(item.id, { description: e.target.value || null })
-                    }
-                    placeholder="Notes for members"
-                    aria-label="Description"
-                  />
-                  <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
-                    <button
-                      type="button"
-                      className={`min-h-[40px] flex-1 px-2 text-xs sm:flex-none sm:px-3 ${
-                        dirtyIds.has(item.id) ? "btn-primary" : "btn-ghost ring-1 ring-[var(--border)]"
-                      }`}
-                      disabled={savingId === item.id}
-                      onClick={() => void saveItem(item)}
-                    >
-                      {savingId === item.id
-                        ? "Saving…"
-                        : dirtyIds.has(item.id)
-                          ? "Save to DB"
-                          : "Save"}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-ghost min-h-[40px] px-2 text-xs sm:px-3"
-                      disabled={savingId === item.id || !item.productUrl}
-                      onClick={() => void refreshImageFromLink(item)}
-                      title="Pull photo from product link, then save"
-                    >
-                      Refresh photo
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-ghost min-h-[40px] px-2 text-xs text-red-300 sm:px-3"
-                      disabled={deletingId === item.id}
-                      onClick={() => void removeItem(item.id, item.name)}
-                    >
-                      {deletingId === item.id ? "…" : "Delete"}
-                    </button>
-                    {item.productUrl ? (
-                      <a
-                        href={item.productUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn-ghost min-h-[40px] px-2 text-xs sm:px-3"
-                      >
-                        Store ↗
-                      </a>
+                        {item.productUrl ? (
+                          <a
+                            href={item.productUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn-ghost min-h-[40px] px-3 text-xs"
+                          >
+                            Store ↗
+                          </a>
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
-                  {dirtyIds.has(item.id) ? (
-                    <p className="text-[10px] font-medium text-amber-300">
-                      Unsaved changes — click Save to DB
-                    </p>
+                  {editing ? (
+                    <GearItemEditForm
+                      item={item}
+                      onCancel={() => setEditingId(null)}
+                      onSaved={(saved) => {
+                        setItems((prev) =>
+                          prev
+                            .map((row) => (row.id === saved.id ? { ...row, ...saved } : row))
+                            .sort((a, b) => a.name.localeCompare(b.name)),
+                        );
+                        setEditingId(null);
+                        flashSuccess(`Updated “${saved.name}” in the database.`);
+                      }}
+                      onDeleted={(id) => {
+                        setItems((prev) => prev.filter((row) => row.id !== id));
+                        setEditingId(null);
+                        flashSuccess("Deleted from the catalog.");
+                      }}
+                    />
                   ) : null}
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

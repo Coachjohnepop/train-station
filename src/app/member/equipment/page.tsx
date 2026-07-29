@@ -7,7 +7,8 @@ export default function MemberEquipmentPage() {
         <h1 className="text-2xl font-bold">Gear</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
           Coach-recommended equipment. Tap a photo to open the store in a{" "}
-          <strong>new tab</strong> — this app stays open here.
+          <strong>new tab</strong> — this app stays open here. Coaches can{" "}
+          <strong>Edit</strong> any item to change the link, photo, or notes.
         </p>
       </div>
       <MemberEquipmentShop />

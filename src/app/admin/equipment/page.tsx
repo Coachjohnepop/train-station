@@ -7,8 +7,9 @@ export default function AdminEquipmentPage() {
       <div>
         <h1 className="text-2xl font-bold">Equipment</h1>
         <p className="mt-2 max-w-3xl text-sm text-[var(--muted)]">
-          Paste a product link to add gear for members on <strong>Gear</strong>. The catalog
-          below uses multiple columns on wider screens.
+          Paste a product link to add gear for members on <strong>Gear</strong>. Tap{" "}
+          <strong>Edit</strong> on any card to change name, product link, photo, or notes — then
+          Save.
         </p>
       </div>
       <AdminEquipmentCatalog />
