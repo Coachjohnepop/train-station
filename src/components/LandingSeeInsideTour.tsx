@@ -12,24 +12,30 @@ import { TOP_LEVEL_PROGRAMS } from "@/lib/programs";
 import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 
 /**
- * See inside tour (preview):
- * demo → ticket (pay anytime) → fork onboard | program → book Jeremy
- * Rules: money anytime after ticket; program start date only after full onboard.
+ * See inside — fully auto until the final fork (no slide-clicking).
+ *
+ * Demo: 5 actions × 2s (weight → set1 → set2 → set3 → confetti)
+ * Then auto ticket highlight / pause 2s → land on Onboard | Program fork.
+ * Ticket still selectable if user taps early; Free rickroll works.
+ * Pay anytime; start date needs full onboard.
  */
-const SCREEN_MS = 2000;
+const STEP_MS = 2000;
 
 type Stage = "demo" | "tickets" | "fork" | "onboard" | "program" | "book";
 
-const STAGE_ORDER: Stage[] = ["demo", "tickets", "fork", "onboard", "program", "book"];
+/** Auto-play sequence (fork is interactive end) */
+const AUTO_STAGES: Stage[] = ["demo", "tickets", "fork"];
 
 const COACH: Record<Stage, string> = {
-  demo: "Live session on your phone — log weight, check sets, finish strong.",
-  tickets: "Choose your ticket — you can pay now. Free works the same path.",
-  fork: "Pay anytime. Onboard fully to unlock your program start date.",
-  onboard: "Finish full onboard to pick your start date. Pay is separate — already open.",
-  program: "Pick a track anytime. Start date waits until onboarding is complete.",
+  demo: "Live session — weight, sets, finish. Watch it build.",
+  tickets: "Choose your ticket — pay anytime after you pick.",
+  fork: "Onboard (left) or pick a program (right). Start date needs full onboard.",
+  onboard: "Full onboard unlocks your program start date. Pay is separate.",
+  program: "Pick a track anytime. Start date waits until onboard is complete.",
   book: "Book Coach Jeremy — or skip and book later in the app.",
 };
+
+type DemoStep = "weight" | "set1" | "set2" | "set3" | "confetti";
 
 export default function LandingSeeInsideTour({
   open,
@@ -44,9 +50,9 @@ export default function LandingSeeInsideTour({
 }) {
   const router = useRouter();
   const [stage, setStage] = useState<Stage>("demo");
+  const [demoStep, setDemoStep] = useState<DemoStep>("weight");
   const [weight, setWeight] = useState(95);
   const [doneSets, setDoneSets] = useState<number[]>([]);
-  const [demoPhase, setDemoPhase] = useState<"idle" | "weight" | "sets" | "done">("idle");
   const [freeModalOpen, setFreeModalOpen] = useState(false);
   const [plan, setPlan] = useState("explorer");
   const [programSlug, setProgramSlug] = useState<string | null>(null);
@@ -56,6 +62,8 @@ export default function LandingSeeInsideTour({
   const confettiFired = useRef(false);
   const reducedMotion = useRef(false);
   const timers = useRef<number[]>([]);
+  /** When true, stop auto-advance (user is on interactive fork/onboard/program/book) */
+  const autoPaused = useRef(false);
 
   const clearTimers = useCallback(() => {
     for (const t of timers.current) window.clearTimeout(t);
@@ -75,36 +83,41 @@ export default function LandingSeeInsideTour({
   }, [onClose, plan, programSlug, router]);
 
   const enterFork = useCallback((signupPlan: string) => {
+    clearTimers();
+    autoPaused.current = true;
     setPlan(signupPlan);
     setFreeModalOpen(false);
     setDidOnboard(false);
     setDidProgram(false);
     setProgramSlug(null);
     setStage("fork");
-  }, []);
+  }, [clearTimers]);
 
   const pickTicket = useCallback(
     (tierId: TicketTierId, signupPlan: string) => {
       if (tierId === "free") {
         setPlan("explorer");
         setFreeModalOpen(true);
+        autoPaused.current = true;
+        clearTimers();
         return;
       }
       enterFork(signupPlan);
     },
-    [enterFork],
+    [enterFork, clearTimers],
   );
 
-  // Reset
+  // Reset when opened
   useEffect(() => {
     if (!open) return;
     reducedMotion.current =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    autoPaused.current = false;
     setStage("demo");
+    setDemoStep("weight");
     setWeight(95);
     setDoneSets([]);
-    setDemoPhase("idle");
     confettiFired.current = false;
     setFreeModalOpen(false);
     setPlan("explorer");
@@ -114,35 +127,67 @@ export default function LandingSeeInsideTour({
     clearTimers();
   }, [open, clearTimers]);
 
-  // Auto-advance demo → tickets only
+  // Full auto sequence: demo 5×2s → tickets 2s → fork (stop)
   useEffect(() => {
-    if (!open || stage !== "demo") return;
+    if (!open) return;
+    if (autoPaused.current) return;
+    if (stage !== "demo" && stage !== "tickets") return;
+
     clearTimers();
-    setWeight(95);
-    setDoneSets([]);
-    setDemoPhase("idle");
-    confettiFired.current = false;
-    const fast = reducedMotion.current;
-    later(fast ? 200 : 300, () => {
-      setDemoPhase("weight");
-      setWeight(115);
-    });
-    later(fast ? 350 : 550, () => setWeight(135));
-    later(fast ? 500 : 800, () => {
-      setDemoPhase("sets");
-      setDoneSets([1]);
-    });
-    later(fast ? 700 : 1100, () => setDoneSets([1, 2]));
-    later(fast ? 900 : 1450, () => {
-      setDoneSets([1, 2, 3]);
-      setDemoPhase("done");
-      if (!confettiFired.current && !fast) {
-        confettiFired.current = true;
-        const el = lastSetRef.current;
-        if (el) fireWorkoutConfetti(confettiOriginFromElement(el));
-      }
-    });
-    later(fast ? 1200 : SCREEN_MS, () => setStage("tickets"));
+    const step = reducedMotion.current ? 900 : STEP_MS;
+
+    if (stage === "demo") {
+      setDemoStep("weight");
+      setWeight(95);
+      setDoneSets([]);
+      confettiFired.current = false;
+
+      // 1) Weight
+      later(0, () => {
+        setDemoStep("weight");
+        setWeight(135);
+      });
+      // 2) Set 1
+      later(step, () => {
+        setDemoStep("set1");
+        setDoneSets([1]);
+      });
+      // 3) Set 2
+      later(step * 2, () => {
+        setDemoStep("set2");
+        setDoneSets([1, 2]);
+      });
+      // 4) Set 3
+      later(step * 3, () => {
+        setDemoStep("set3");
+        setDoneSets([1, 2, 3]);
+      });
+      // 5) Confetti / finish
+      later(step * 4, () => {
+        setDemoStep("confetti");
+        setDoneSets([1, 2, 3]);
+        if (!confettiFired.current && !reducedMotion.current) {
+          confettiFired.current = true;
+          const el = lastSetRef.current;
+          if (el) fireWorkoutConfetti(confettiOriginFromElement(el));
+        }
+      });
+      // Next slide: tickets
+      later(step * 5, () => {
+        if (!autoPaused.current) setStage("tickets");
+      });
+    }
+
+    if (stage === "tickets") {
+      // Auto show tickets 2s, then land on fork (user can still tap a ticket during the beat)
+      later(step, () => {
+        if (!autoPaused.current) {
+          autoPaused.current = true;
+          setStage("fork");
+        }
+      });
+    }
+
     return clearTimers;
   }, [open, stage, later, clearTimers]);
 
@@ -166,13 +211,24 @@ export default function LandingSeeInsideTour({
 
   if (!open) return null;
 
-  const progress =
-    ((STAGE_ORDER.indexOf(stage) + 1) / STAGE_ORDER.length) * 100;
-  const weightHot = demoPhase !== "idle";
+  const autoIndex =
+    stage === "demo" ? 0 : stage === "tickets" ? 1 : stage === "fork" ? 2 : 2;
+  const progress = ((autoIndex + 1) / AUTO_STAGES.length) * 100;
   const programs = TOP_LEVEL_PROGRAMS.filter((p) => p.catalogStatus !== "hidden");
   const planNorm = normalizeSignupPlan(plan);
   const planLabel = signupPlanLabel(planNorm);
   const isPaidPlan = planNorm !== "explorer";
+  const weightHot = demoStep !== "weight" || weight >= 135;
+  const statusLine =
+    demoStep === "weight"
+      ? "Logging weight · coach sees it live"
+      : demoStep === "set1"
+        ? "Set 1 done"
+        : demoStep === "set2"
+          ? "Set 2 done"
+          : demoStep === "set3"
+            ? "Set 3 done"
+            : "Exercise complete — nice work";
 
   return (
     <div
@@ -190,28 +246,14 @@ export default function LandingSeeInsideTour({
             Station tour
           </h2>
         </div>
-        <div className="flex items-center gap-2">
-          {stage === "demo" ? (
-            <button
-              type="button"
-              onClick={() => {
-                clearTimers();
-                setStage("tickets");
-              }}
-              className="rounded-full border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/85 transition hover:bg-white/10"
-            >
-              Skip to tickets
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white"
-            aria-label="Close tour"
-          >
-            ✕
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-9 w-9 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white"
+          aria-label="Close tour"
+        >
+          ✕
+        </button>
       </div>
 
       <div className="mx-4 h-1 shrink-0 overflow-hidden rounded-full bg-white/10 sm:mx-6">
@@ -226,7 +268,7 @@ export default function LandingSeeInsideTour({
           key={stage}
           className="landing-see-inside__panel flex w-full max-w-md flex-col items-center gap-4"
         >
-          {/* ── Demo ── */}
+          {/* ── Demo (auto 5 × 2s) ── */}
           {stage === "demo" && (
             <div className="landing-see-inside__phone relative w-full max-w-[300px] overflow-hidden rounded-[1.75rem] border border-white/15 bg-[#12081f] shadow-[0_24px_80px_rgba(0,0,0,0.65)] sm:max-w-[320px]">
               <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
@@ -280,7 +322,7 @@ export default function LandingSeeInsideTour({
                           ref={n === 3 ? lastSetRef : undefined}
                           type="button"
                           tabIndex={-1}
-                          className={`flex h-12 flex-1 flex-col items-center justify-center rounded-lg border text-xs font-bold transition-colors duration-300 ${
+                          className={`flex h-12 flex-1 flex-col items-center justify-center rounded-lg border text-xs font-bold transition-colors duration-500 ${
                             done
                               ? "border-[#d4af37]/55 bg-[#d4af37]/20 text-[#fde68a]"
                               : "border-white/15 bg-white/5 text-white/80"
@@ -293,17 +335,14 @@ export default function LandingSeeInsideTour({
                     })}
                   </div>
                   <p className="mt-2 min-h-[1rem] text-[10px] font-medium text-[#c4b5fd]/90">
-                    {demoPhase === "idle" && "Coach Jeremy is on the floor with you."}
-                    {demoPhase === "weight" && "Weight updated · coach sees it live"}
-                    {demoPhase === "sets" && `${doneSets.length}/3 sets logged`}
-                    {demoPhase === "done" && "Exercise complete — nice work"}
+                    {statusLine}
                   </p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ── Tickets ── */}
+          {/* ── Tickets (auto 2s, or tap to pick early) ── */}
           {stage === "tickets" && (
             <div className="w-full max-w-md">
               <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-[#c4b5fd]">
@@ -313,8 +352,7 @@ export default function LandingSeeInsideTour({
                 Choose your ticket
               </h3>
               <p className="mt-1.5 text-center text-[12px] text-white/55">
-                Pay anytime after you pick — we&apos;ll take the money.{" "}
-                <span className="text-white/75">Start date unlocks only after full onboard.</span>
+                Tap a ticket, or wait — we&apos;ll continue automatically.
               </p>
               <div className="mt-4 grid grid-cols-2 gap-2">
                 {TICKET_TIERS.map((tier) => {
@@ -359,19 +397,19 @@ export default function LandingSeeInsideTour({
             </div>
           )}
 
-          {/* ── Fork: onboard left | program right ── */}
+          {/* ── Fork: end of auto tour ── */}
           {stage === "fork" && (
             <div className="w-full max-w-md">
               <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-[#c4b5fd]">
-                {planLabel} · next step
+                {planLabel} · your next step
               </p>
               <h3 className="mt-1 text-center text-2xl font-semibold text-white">
                 How do you want to start?
               </h3>
               <p className="mt-1 text-center text-[12px] text-white/55">
                 {isPaidPlan
-                  ? "Pay now or later in this path — either works. Start date needs full onboard."
-                  : "Free Explorer continues the same way. Start date needs full onboard."}
+                  ? "Pay anytime. Start date needs full onboard."
+                  : "Free continues here. Start date needs full onboard."}
               </p>
               {isPaidPlan ? (
                 <button
@@ -433,7 +471,7 @@ export default function LandingSeeInsideTour({
             </div>
           )}
 
-          {/* ── Onboard path ── */}
+          {/* ── Onboard (from fork only) ── */}
           {stage === "onboard" && (
             <div className="w-full max-w-sm rounded-3xl border border-[#7c3aed]/40 bg-[#140a22] p-5">
               <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#a78bfa]">
@@ -452,22 +490,17 @@ export default function LandingSeeInsideTour({
                   <span>
                     <strong className="text-white">Program start date</strong>
                     <span className="mt-0.5 block text-[11px] text-white/50">
-                      Only after steps 1–2 are complete — not before.
+                      Only after full onboard is complete.
                     </span>
                   </span>
                 </li>
               </ol>
-              <p className="mt-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[11px] leading-snug text-amber-100/90">
-                {isPaidPlan
-                  ? "Payment is open now — you can pay without finishing onboard. Start date waits."
-                  : "Free still needs full onboard before a start date."}
-              </p>
               <div className="mt-4 flex flex-col gap-2">
                 {isPaidPlan ? (
                   <button
                     type="button"
                     onClick={goSignup}
-                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#a78bfa]/50 bg-[#7c3aed]/25 text-sm font-semibold text-white transition hover:bg-[#7c3aed]/40"
+                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#a78bfa]/50 bg-[#7c3aed]/25 text-sm font-semibold text-white"
                   >
                     Pay now · {planLabel} →
                   </button>
@@ -479,7 +512,7 @@ export default function LandingSeeInsideTour({
                       setDidProgram(true);
                       setStage("program");
                     }}
-                    className="inline-flex h-11 items-center justify-center rounded-full border border-white/20 text-sm font-semibold text-white transition hover:bg-white/10"
+                    className="inline-flex h-11 items-center justify-center rounded-full border border-white/20 text-sm font-semibold text-white"
                   >
                     Or pick a program →
                   </button>
@@ -495,7 +528,7 @@ export default function LandingSeeInsideTour({
             </div>
           )}
 
-          {/* ── Program path ── */}
+          {/* ── Program (from fork only) ── */}
           {stage === "program" && (
             <div className="w-full max-w-md">
               <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-[#c4b5fd]">
@@ -505,8 +538,7 @@ export default function LandingSeeInsideTour({
                 Pick your training track
               </h3>
               <p className="mt-1 text-center text-[11px] text-white/50">
-                Track is open now.{" "}
-                <span className="text-amber-200/90">Start date locked until full onboard.</span>
+                Start date locked until full onboard.
               </p>
               <div className="mt-3 max-h-[36vh] space-y-2 overflow-y-auto pr-1">
                 {programs.map((p) => {
@@ -535,7 +567,7 @@ export default function LandingSeeInsideTour({
                   <button
                     type="button"
                     onClick={goSignup}
-                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#a78bfa]/50 bg-[#7c3aed]/25 text-sm font-semibold text-white transition hover:bg-[#7c3aed]/40"
+                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#a78bfa]/50 bg-[#7c3aed]/25 text-sm font-semibold text-white"
                   >
                     Pay now · {planLabel} →
                   </button>
@@ -547,7 +579,7 @@ export default function LandingSeeInsideTour({
                       setDidOnboard(true);
                       setStage("onboard");
                     }}
-                    className="inline-flex h-11 items-center justify-center rounded-full border border-white/20 text-sm font-semibold text-white transition hover:bg-white/10"
+                    className="inline-flex h-11 items-center justify-center rounded-full border border-white/20 text-sm font-semibold text-white"
                   >
                     Or finish onboard (unlock start date) →
                   </button>
@@ -564,7 +596,7 @@ export default function LandingSeeInsideTour({
             </div>
           )}
 
-          {/* ── Book (converge) ── */}
+          {/* ── Book ── */}
           {stage === "book" && (
             <div className="w-full max-w-sm rounded-3xl border border-emerald-500/30 bg-[#0c1a14] p-5">
               <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-300/90">
@@ -573,9 +605,6 @@ export default function LandingSeeInsideTour({
               <h3 className="mt-2 text-center text-xl font-semibold text-white">
                 Book with Coach Jeremy
               </h3>
-              <p className="mt-1 text-center text-[12px] text-white/55">
-                First appointment — intro, start date, your plan
-              </p>
               <div className="mt-4 overflow-hidden rounded-2xl border border-white/12 bg-[#0a0612]/90">
                 <div className="flex items-center gap-3 border-b border-white/10 px-3 py-2.5">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#7c3aed]/30 text-sm font-bold text-[#e9d5ff]">
@@ -586,32 +615,12 @@ export default function LandingSeeInsideTour({
                     <p className="text-[11px] text-emerald-300/90">15-min intro · Calendly</p>
                   </div>
                 </div>
-                <div className="space-y-1.5 px-3 py-2.5">
-                  {["Tue · 11:00 AM", "Tue · 1:00 PM", "Wed · 2:45 PM"].map((slot, i) => (
-                    <div
-                      key={slot}
-                      className={`flex items-center justify-between rounded-xl px-3 py-2 text-[12px] ${
-                        i === 0
-                          ? "border border-emerald-400/40 bg-emerald-500/15 text-white"
-                          : "border border-white/8 bg-white/[0.04] text-white/70"
-                      }`}
-                    >
-                      <span className="font-medium">{slot}</span>
-                      <span className="text-[10px] font-bold uppercase text-emerald-300/80">
-                        {i === 0 ? "Pick →" : "Open"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
                 <div className="border-t border-white/10 px-3 py-2.5">
                   <div className="flex h-10 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-[#042f1a]">
                     Book Call · Coach Jeremy
                   </div>
                 </div>
               </div>
-              <p className="mt-3 text-center text-[11px] text-white/50">
-                In the app anytime: bottom nav → <strong className="text-emerald-300">Book Call</strong>
-              </p>
               <div className="mt-4 flex flex-col gap-2">
                 <button
                   type="button"
@@ -627,11 +636,8 @@ export default function LandingSeeInsideTour({
                   onClick={goSignup}
                   className="text-xs font-semibold text-white/50 underline decoration-white/25 underline-offset-4 hover:text-white"
                 >
-                  Skip book for now — you can Book Call later in the app
+                  Skip book for now — Book Call later in the app
                 </button>
-                <p className="text-center text-[10px] leading-snug text-white/40">
-                  Start date still requires full onboard after you&apos;re in.
-                </p>
               </div>
             </div>
           )}
@@ -642,23 +648,24 @@ export default function LandingSeeInsideTour({
         </div>
       </div>
 
-      {/* Stage dots */}
       <div
         className="flex shrink-0 justify-center gap-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1"
         aria-hidden
       >
-        {STAGE_ORDER.map((s) => {
-          const i = STAGE_ORDER.indexOf(s);
-          const cur = STAGE_ORDER.indexOf(stage);
-          return (
-            <span
-              key={s}
-              className={`h-1.5 rounded-full transition-all duration-500 ${
-                s === stage ? "w-6 bg-white" : i < cur ? "w-3 bg-[#a78bfa]" : "w-2 bg-white/25"
-              }`}
-            />
-          );
-        })}
+        {AUTO_STAGES.map((s, i) => (
+          <span
+            key={s}
+            className={`h-1.5 rounded-full transition-all duration-500 ${
+              s === stage || (stage !== "demo" && stage !== "tickets" && s === "fork")
+                ? i === autoIndex || (stage !== "demo" && stage !== "tickets" && s === "fork")
+                  ? "w-6 bg-white"
+                  : "w-3 bg-[#a78bfa]"
+                : i < autoIndex
+                  ? "w-3 bg-[#a78bfa]"
+                  : "w-2 bg-white/25"
+            }`}
+          />
+        ))}
       </div>
 
       <FreeTicketModal
@@ -667,10 +674,7 @@ export default function LandingSeeInsideTour({
         welcomeVideoUrl={welcomeVideoUrl}
         purchaseAuth={{ signedIn: false }}
         onClose={() => setFreeModalOpen(false)}
-        onUpgrade={() => {
-          setFreeModalOpen(false);
-          // Stay on tickets to pick paid
-        }}
+        onUpgrade={() => setFreeModalOpen(false)}
         onContinueFree={() => enterFork("explorer")}
       />
     </div>
