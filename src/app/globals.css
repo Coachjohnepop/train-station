@@ -1315,7 +1315,7 @@ table.data th {
   }
 }
 
-/* See-inside tour coach line — quick fade-up between beats */
+/* See-inside tour — hero-style horizontal auto-scroll */
 .landing-see-inside__coach {
   animation: landing-see-inside-coach-in 0.45s ease-out both;
 }
@@ -1344,6 +1344,19 @@ table.data th {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+.landing-see-inside__scroller {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.landing-see-inside__scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.landing-see-inside__screen {
+  min-height: 0;
 }
 
 /* Transparent nav over cinematic hero on public home (mobile POP) */

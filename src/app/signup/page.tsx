@@ -11,6 +11,7 @@ import { formatPhoneInputValue } from "@/lib/sms-phone";
 import { offerSavePassword, offerSavePasswordFromForm } from "@/lib/browser-credentials";
 import { useFormAutofillSync } from "@/hooks/useFormAutofillSync";
 import OAuthButtons from "@/components/OAuthButtons";
+import MembershipSeatArt from "@/components/MembershipSeatArt";
 
 function SignupForm() {
   const router = useRouter();
@@ -171,7 +172,7 @@ function SignupForm() {
 
       <div className="flex-1 flex items-center justify-center px-6 py-16">
         <div className="w-full max-w-md">
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <div className="uppercase tracking-[3px] text-xs font-semibold text-[#7c3aed] mb-3">
               {isWaitlistOnly ? "Coming soon" : "Get started"}
             </div>
@@ -184,6 +185,23 @@ function SignupForm() {
                 : "Next you'll set up texts, book your coach, and open your training dashboard."}
             </p>
           </div>
+
+          {/* Ticket image for the plan they picked — lives here, not on join hero */}
+          {!isWaitlistOnly && (
+            <div className="mb-6 flex flex-col items-center">
+              <div className="w-full max-w-[220px] overflow-hidden rounded-2xl border border-[#3d2660] shadow-[0_12px_40px_rgba(124,58,237,0.35)]">
+                <MembershipSeatArt
+                  plan={ticketPlan}
+                  priority
+                  className="w-full"
+                  alt={`${signupPlanLabel(ticketPlan)} membership`}
+                />
+              </div>
+              <p className="mt-2 text-sm font-semibold text-[#c4b5fd]">
+                {signupPlanLabel(ticketPlan)}
+              </p>
+            </div>
+          )}
 
           {!isWaitlistOnly && (
             <>

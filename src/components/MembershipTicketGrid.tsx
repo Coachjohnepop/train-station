@@ -24,6 +24,7 @@ export default function MembershipTicketGrid({
   highlightPaid = false,
   className = "",
   showBrand = true,
+  showFanArt = false,
   heading = "Membership options",
   subheading = "Choose a plan when you're ready — we'll walk you through setup after you pick.",
 }: {
@@ -35,6 +36,8 @@ export default function MembershipTicketGrid({
   highlightPaid?: boolean;
   className?: string;
   showBrand?: boolean;
+  /** Dual Coach/First fan art — off by default; ticket art lives on signup. */
+  showFanArt?: boolean;
   heading?: string;
   subheading?: string;
 }) {
@@ -84,16 +87,18 @@ export default function MembershipTicketGrid({
         {showBrand ? (
           <TrainStationBrand variant="compact" className="mb-6 hidden sm:inline-flex" />
         ) : null}
-        <div className="mx-auto mb-5 hidden max-w-[280px] sm:block sm:max-w-[340px]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={DUAL_TICKETS_FAN_SRC}
-            alt="Coach Class and First Class tickets fanned like playing cards"
-            className="mx-auto w-full drop-shadow-[0_12px_40px_rgba(124,58,237,0.45)]"
-            width={1152}
-            height={864}
-          />
-        </div>
+        {showFanArt ? (
+          <div className="mx-auto mb-5 hidden max-w-[280px] sm:block sm:max-w-[340px]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={DUAL_TICKETS_FAN_SRC}
+              alt="Coach Class and First Class tickets fanned like playing cards"
+              className="mx-auto w-full drop-shadow-[0_12px_40px_rgba(124,58,237,0.45)]"
+              width={1152}
+              height={864}
+            />
+          </div>
+        ) : null}
         <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--accent)]">
           When you&apos;re ready
         </p>
