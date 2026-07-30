@@ -306,7 +306,7 @@ export default function LandingSeeInsideTour({
             : current === "w_set3"
               ? "Set 3 complete."
               : current === "w_confetti"
-                ? "Exercise finished."
+                ? "Exercise Finished."
             : current === "access_business"
               ? "How to access — Business Class (demo)."
               : current === "pick_adult"
