@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import CoachClassDayBand from "@/components/CoachClassDayBand";
 import CoachLessonPlanBuilder from "@/components/CoachLessonPlanBuilder";
 import CoachNeedsDonePanel from "@/components/CoachNeedsDonePanel";
+import CoachStartHereCard from "@/components/CoachStartHereCard";
 import type { CoachMemberOption } from "@/components/CoachMemberPicker";
 import type { CoachDayStudentCard, CoachDaySummary } from "@/lib/coach-day";
 import type { TodaySession } from "@/lib/today-sessions";
@@ -209,6 +210,9 @@ export default function CoachDashboard({
             planOpen={showPlanWorkout}
           />
         </header>
+
+        {/* Coach app 101 — job map (dismissible). Preview review before prod. */}
+        <CoachStartHereCard />
 
         {isCalendarToday ? (
           <>
