@@ -53,6 +53,7 @@ export default async function AdminVideosPage() {
         initialNutritionIntro={member.nutritionIntro}
         initialNutritionTiers={member.nutritionTiers}
         initialLibrary={library.items}
+        initialUploadedContentVolumeDb={landing.uploadedContentVolumeDb}
       />
     </div>
   );

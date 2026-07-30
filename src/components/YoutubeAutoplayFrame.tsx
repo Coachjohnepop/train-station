@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { holdBackgroundMusicForMedia } from "@/lib/background-music-control";
+import {
+  DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
+  volumeDbToYoutubePercent,
+} from "@/lib/media-volume";
 import { postYoutubeEmbedCommand } from "@/lib/youtube-embed-control";
 import { youtubeEmbedUrl, type YoutubeEmbedOptions } from "@/lib/youtube";
 
@@ -16,6 +20,8 @@ type Props = {
   kickPlayback?: boolean;
   /** Pause site background music while this embed is open/playing (user-click flows). */
   duckBackgroundMusic?: boolean;
+  /** Relative dB from native; YouTube can only attenuate (boost capped at 100). */
+  volumeDb?: number;
 };
 
 export default function YoutubeAutoplayFrame({
@@ -26,6 +32,7 @@ export default function YoutubeAutoplayFrame({
   autoplay = false,
   kickPlayback = false,
   duckBackgroundMusic = false,
+  volumeDb = DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
 }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [embedSrc, setEmbedSrc] = useState<string | null>(null);
@@ -35,8 +42,8 @@ export default function YoutubeAutoplayFrame({
       youtubeEmbedUrl(videoUrl, {
         autoplay,
         mute: autoplay ? false : true,
-        enableJsApi: autoplay,
-        origin: autoplay ? window.location.origin : undefined,
+        enableJsApi: true,
+        origin: typeof window !== "undefined" ? window.location.origin : undefined,
         ...embedOptions,
       }),
     );
@@ -50,10 +57,19 @@ export default function YoutubeAutoplayFrame({
   }, [duckBackgroundMusic]);
 
   useEffect(() => {
-    if (!autoplay || !kickPlayback || !embedSrc) return;
+    if (!embedSrc) return;
+    const pct = volumeDbToYoutubePercent(volumeDb);
     const kick = () => {
-      postYoutubeEmbedCommand(iframeRef.current, "playVideo");
-      postYoutubeEmbedCommand(iframeRef.current, "unMute");
+      const iframe = iframeRef.current;
+      if (!iframe?.contentWindow) return;
+      if (autoplay || kickPlayback) {
+        postYoutubeEmbedCommand(iframe, "playVideo");
+        postYoutubeEmbedCommand(iframe, "unMute");
+      }
+      iframe.contentWindow.postMessage(
+        JSON.stringify({ event: "command", func: "setVolume", args: [pct] }),
+        "*",
+      );
     };
     const t1 = window.setTimeout(kick, 250);
     const t2 = window.setTimeout(kick, 1200);
@@ -61,7 +77,7 @@ export default function YoutubeAutoplayFrame({
       window.clearTimeout(t1);
       window.clearTimeout(t2);
     };
-  }, [embedSrc, kickPlayback, autoplay]);
+  }, [embedSrc, kickPlayback, autoplay, volumeDb]);
 
   if (!embedSrc) return null;
 

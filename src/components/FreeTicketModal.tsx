@@ -9,10 +9,12 @@ import {
   landingVideoEmbedSrc,
   productFreeTicketGag,
 } from "@/lib/landing-media";
+import { applyMediaVolumeDb, volumeDbToYoutubePercent } from "@/lib/media-volume";
 import { isDirectVideoUrl } from "@/lib/site-video";
 import { isYoutubeUrl } from "@/lib/youtube";
 import { postYoutubeEmbedCommand } from "@/lib/youtube-embed-control";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
+import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
 
 /**
  * Free / Explorer ticket open:
@@ -62,6 +64,7 @@ export default function FreeTicketModal({
 
   const signedIn = Boolean(purchaseAuth.signedIn);
   const gag = productFreeTicketGag({ signedIn });
+  const volumeDb = useUploadedContentVolumeDb();
 
   useEffect(() => {
     setEmbedOrigin(window.location.origin);
@@ -186,15 +189,24 @@ export default function FreeTicketModal({
     };
   }, [open, rickrollSrc]);
 
-  // Jeremy: play + unMute once he fades in (no seek).
+  // Jeremy: play + unMute once he fades in (no seek); apply admin volume offset.
   useEffect(() => {
     if (!fadeJeremyIn || !hasJeremy) return;
     const kick = () => {
       if (jeremyIsYoutube) {
         kickYoutubePlay(jeremyIframeRef.current);
+        const iframe = jeremyIframeRef.current;
+        if (iframe?.contentWindow) {
+          const pct = volumeDbToYoutubePercent(volumeDb);
+          iframe.contentWindow.postMessage(
+            JSON.stringify({ event: "command", func: "setVolume", args: [pct] }),
+            "*",
+          );
+        }
       } else if (jeremyVideoRef.current) {
         const el = jeremyVideoRef.current;
         el.muted = false;
+        applyMediaVolumeDb(el, volumeDb);
         void el.play().catch(() => {
           /* may need another tap on locked-down browsers */
         });
@@ -206,7 +218,7 @@ export default function FreeTicketModal({
       window.clearTimeout(t1);
       window.clearTimeout(t2);
     };
-  }, [fadeJeremyIn, hasJeremy, jeremyIsYoutube]);
+  }, [fadeJeremyIn, hasJeremy, jeremyIsYoutube, volumeDb]);
 
   if (!open) return null;
 
@@ -290,6 +302,8 @@ export default function FreeTicketModal({
               controls
               autoPlay
               preload="auto"
+              onLoadedMetadata={(e) => applyMediaVolumeDb(e.currentTarget, volumeDb)}
+              onPlay={(e) => applyMediaVolumeDb(e.currentTarget, volumeDb)}
             />
           )}
 

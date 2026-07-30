@@ -30,6 +30,14 @@ import {
   siteVideoMimeFromName,
 } from "@/lib/site-video";
 import { isYoutubeUrl } from "@/lib/youtube";
+import {
+  clampVolumeDb,
+  DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
+  formatVolumeDbLabel,
+  VOLUME_DB_MAX,
+  VOLUME_DB_MIN,
+  VOLUME_DB_STEP,
+} from "@/lib/media-volume";
 
 const WEEKDAYS = [
   { value: "", label: "Any day" },
@@ -115,6 +123,7 @@ export default function AdminSiteVideosPanel({
   initialNutritionIntro = "",
   initialNutritionTiers = [],
   initialLibrary = [],
+  initialUploadedContentVolumeDb = DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
 }: {
   initialWelcomeUrl?: string;
   initialWelcomeVideosByPlan?: WelcomeVideosByPlan;
@@ -133,8 +142,12 @@ export default function AdminSiteVideosPanel({
   initialNutritionIntro?: string;
   initialNutritionTiers?: NutritionCalorieTier[];
   initialLibrary?: SiteVideoLibraryItem[];
+  initialUploadedContentVolumeDb?: number;
 }) {
   const [library, setLibrary] = useState<SiteVideoLibraryItem[]>(initialLibrary);
+  const [volumeDb, setVolumeDb] = useState(() =>
+    clampVolumeDb(initialUploadedContentVolumeDb, DEFAULT_UPLOADED_CONTENT_VOLUME_DB),
+  );
   const [assignments, setAssignments] = useState<CoachIntroAssignments>(() =>
     assignmentsFromLanding({
       welcomeVideoUrl: initialWelcomeUrl,
@@ -423,6 +436,7 @@ export default function AdminSiteVideosPanel({
       gagEnabled,
       purchaseThankYouVideoUrl: purchaseUrl.trim() || null,
       equipmentIntroVideoUrl: assignments.equipment.trim() || null,
+      uploadedContentVolumeDb: volumeDb,
     });
 
     if ("error" in landingResult && landingResult.error) {
@@ -460,6 +474,14 @@ export default function AdminSiteVideosPanel({
       );
       setGagEnabled(landingResult.storedGagEnabled !== false);
       setPurchaseUrl(landingResult.storedPurchaseThankYouVideoUrl || "");
+      if (landingResult.storedUploadedContentVolumeDb != null) {
+        setVolumeDb(
+          clampVolumeDb(
+            landingResult.storedUploadedContentVolumeDb,
+            DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
+          ),
+        );
+      }
     }
     if ("ok" in memberResult && memberResult.ok) {
       setWeeklyUrl(memberResult.storedWeeklyVideoUrl || "");
@@ -487,6 +509,59 @@ export default function AdminSiteVideosPanel({
           dinner, daily) stays YouTube.
         </p>
       </div>
+
+      {/* —— Uploaded content volume —— */}
+      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+        <h2 className="text-lg font-semibold">Playback volume · uploaded intros</h2>
+        <p className="mt-1 text-xs text-[var(--muted)]">
+          Relative to native file volume, in <strong className="text-[var(--text)]">3 dB</strong>{" "}
+          steps. Applies to overall / free / plan / gear intros (uploaded files; YouTube can only
+          get quieter or stay full). Default is +6 dB so intros cut through.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className="btn-ghost rounded-full px-4 py-2 text-sm font-bold"
+            disabled={volumeDb <= VOLUME_DB_MIN}
+            onClick={() =>
+              setVolumeDb((v) =>
+                clampVolumeDb(v - VOLUME_DB_STEP, DEFAULT_UPLOADED_CONTENT_VOLUME_DB),
+              )
+            }
+            aria-label="Quieter by 3 dB"
+          >
+            − 3 dB
+          </button>
+          <div className="min-w-[8rem] text-center">
+            <p className="text-lg font-bold tabular-nums text-[var(--text)]">
+              {formatVolumeDbLabel(volumeDb)}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">
+              {VOLUME_DB_MIN} … +{VOLUME_DB_MAX} dB
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn-ghost rounded-full px-4 py-2 text-sm font-bold"
+            disabled={volumeDb >= VOLUME_DB_MAX}
+            onClick={() =>
+              setVolumeDb((v) =>
+                clampVolumeDb(v + VOLUME_DB_STEP, DEFAULT_UPLOADED_CONTENT_VOLUME_DB),
+              )
+            }
+            aria-label="Louder by 3 dB"
+          >
+            + 3 dB
+          </button>
+          <button
+            type="button"
+            className="text-xs font-semibold text-[var(--accent)] underline"
+            onClick={() => setVolumeDb(0)}
+          >
+            Reset to native
+          </button>
+        </div>
+      </section>
 
       {/* —— Library + assignments —— */}
       <section className="space-y-4">
@@ -590,6 +665,7 @@ export default function AdminSiteVideosPanel({
                         className="aspect-video w-full"
                         videoUrl={item.url}
                         title={item.title}
+                        volumeDb={volumeDb}
                       />
                     </div>
                   ) : null}
@@ -664,6 +740,7 @@ export default function AdminSiteVideosPanel({
                       className="aspect-video w-full max-h-48"
                       videoUrl={currentUrl}
                       title={slot.label}
+                      volumeDb={volumeDb}
                     />
                   </div>
                 ) : null}

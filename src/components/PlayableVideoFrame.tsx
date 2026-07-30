@@ -3,6 +3,10 @@
 import { useEffect, useRef } from "react";
 import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
 import { holdBackgroundMusicForMedia } from "@/lib/background-music-control";
+import {
+  applyMediaVolumeDb,
+  DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
+} from "@/lib/media-volume";
 import { isDirectVideoUrl } from "@/lib/site-video";
 import { isYoutubeUrl, type YoutubeEmbedOptions } from "@/lib/youtube";
 
@@ -17,6 +21,11 @@ type Props = {
   kickPlayback?: boolean;
   /** Pause site background music while this player is open/playing. */
   duckBackgroundMusic?: boolean;
+  /**
+   * Relative volume for uploaded / coach intro content (dB from native, steps of 3).
+   * Default +6 dB so intros play louder.
+   */
+  volumeDb?: number;
 };
 
 /**
@@ -30,6 +39,7 @@ export default function PlayableVideoFrame({
   autoplay = false,
   kickPlayback = false,
   duckBackgroundMusic = false,
+  volumeDb = DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -40,10 +50,17 @@ export default function PlayableVideoFrame({
   }, [duckBackgroundMusic, videoUrl]);
 
   useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    applyMediaVolumeDb(el, volumeDb);
+  }, [videoUrl, volumeDb]);
+
+  useEffect(() => {
     if (!autoplay || !kickPlayback) return;
     const el = videoRef.current;
     if (!el) return;
     const play = () => {
+      applyMediaVolumeDb(el, volumeDb);
       void el.play().catch(() => {
         /* autoplay may need user gesture */
       });
@@ -54,7 +71,7 @@ export default function PlayableVideoFrame({
       window.clearTimeout(t1);
       window.clearTimeout(t2);
     };
-  }, [videoUrl, autoplay, kickPlayback]);
+  }, [videoUrl, autoplay, kickPlayback, volumeDb]);
 
   if (isYoutubeUrl(videoUrl)) {
     return (
@@ -66,6 +83,7 @@ export default function PlayableVideoFrame({
         autoplay={autoplay}
         kickPlayback={kickPlayback}
         duckBackgroundMusic={duckBackgroundMusic}
+        volumeDb={volumeDb}
       />
     );
   }
@@ -81,6 +99,8 @@ export default function PlayableVideoFrame({
         playsInline
         autoPlay={autoplay}
         preload="metadata"
+        onLoadedMetadata={(e) => applyMediaVolumeDb(e.currentTarget, volumeDb)}
+        onPlay={(e) => applyMediaVolumeDb(e.currentTarget, volumeDb)}
       />
     );
   }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useId, useState } from "react";
 import PlayableVideoFrame from "@/components/PlayableVideoFrame";
+import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
 
 const DEFAULT_TRIGGER =
   "inline-flex h-14 items-center justify-center rounded-full bg-[#7c3aed] px-10 text-sm font-bold text-white shadow-lg shadow-[#7c3aed]/30 transition-all hover:bg-[#6d2dd6] hover:scale-[1.05] active:scale-[0.98]";
@@ -22,6 +23,7 @@ export default function WelcomeVideoPopover({
   const [open, setOpen] = useState(false);
   const [isTouch, setIsTouch] = useState(false);
   const titleId = useId();
+  const volumeDb = useUploadedContentVolumeDb();
   useEffect(() => {
     setIsTouch(window.matchMedia("(hover: none)").matches);
   }, []);
@@ -38,6 +40,7 @@ export default function WelcomeVideoPopover({
         autoplay
         kickPlayback={open}
         duckBackgroundMusic={open}
+        volumeDb={volumeDb}
       />
     </div>
   ) : (

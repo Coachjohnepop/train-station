@@ -29,6 +29,7 @@ import {
   membershipThemeTierFromPlan,
   seatArtForPlan,
 } from "@/lib/membership-theme";
+import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
 
 async function saveProgress(body: Record<string, unknown>) {
   await fetch("/api/member/onboard-progress", {
@@ -91,6 +92,7 @@ export default function OnboardingWizard({
   const [error, setError] = useState<string | null>(null);
 
   const planWelcomeUrl = welcomeVideoUrlForPlan(plan, welcomeVideoUrl, welcomeVideosByPlan);
+  const introVolumeDb = useUploadedContentVolumeDb();
 
   async function nextStep() {
     setError(null);
@@ -251,6 +253,7 @@ export default function OnboardingWizard({
                   title="Welcome video"
                   autoplay
                   kickPlayback={currentStep === 1}
+                  volumeDb={introVolumeDb}
                 />
               </div>
             ) : (

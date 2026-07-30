@@ -17,6 +17,7 @@ export async function GET() {
     freeChastiseVideoUrl: freeChastiseVideoUrlFromConfig(config.freeChastiseVideoUrl),
     purchaseThankYouVideoUrl: config.purchaseThankYouVideoUrl?.trim() || null,
     equipmentIntroVideoUrl: equipmentIntroVideoUrlFromConfig(config.equipmentIntroVideoUrl),
+    uploadedContentVolumeDb: config.uploadedContentVolumeDb,
     gag: {
       enabled: gag.enabled,
       videoUrl: gag.videoUrl,

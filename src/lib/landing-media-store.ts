@@ -2,6 +2,10 @@ import path from "path";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
 import type { MembershipPlan } from "@/lib/signup-plans";
 import { MEMBERSHIP_PLANS } from "@/lib/signup-plans";
+import {
+  clampVolumeDb,
+  DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
+} from "@/lib/media-volume";
 import { isAllowedCoachIntroVideoUrl } from "@/lib/site-video";
 import { isYoutubeUrl } from "@/lib/youtube";
 
@@ -29,6 +33,11 @@ export type LandingMediaConfig = {
    * Upload under Admin → Videos or paste YouTube / library URL.
    */
   equipmentIntroVideoUrl: string | null;
+  /**
+   * Relative volume for uploaded coach intros / free intro / gear intro (HTML5 + YT).
+   * Multiples of 3 dB from native (0). Default +6 dB (louder intros).
+   */
+  uploadedContentVolumeDb: number;
   venmoQrUrl: string | null;
   venmoHandle: string | null;
   venmoInstructions: string | null;
@@ -62,6 +71,7 @@ function emptyConfig(): LandingMediaConfig {
     gagEnabled: true,
     purchaseThankYouVideoUrl: null,
     equipmentIntroVideoUrl: null,
+    uploadedContentVolumeDb: DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
     venmoQrUrl: null,
     venmoHandle: null,
     venmoInstructions: null,
@@ -95,6 +105,10 @@ function normalize(raw: unknown): LandingMediaConfig {
     gagEnabled: data.gagEnabled === false ? false : true,
     purchaseThankYouVideoUrl: normalizeUrl(data.purchaseThankYouVideoUrl),
     equipmentIntroVideoUrl: normalizeUrl(data.equipmentIntroVideoUrl),
+    uploadedContentVolumeDb: clampVolumeDb(
+      (data as { uploadedContentVolumeDb?: unknown }).uploadedContentVolumeDb,
+      DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
+    ),
     venmoQrUrl: normalizeUrl(data.venmoQrUrl),
     venmoHandle: normalizeUrl(data.venmoHandle),
     venmoInstructions: normalizeUrl(data.venmoInstructions),
@@ -140,6 +154,7 @@ export async function saveLandingMedia(
       | "gagEnabled"
       | "purchaseThankYouVideoUrl"
       | "equipmentIntroVideoUrl"
+      | "uploadedContentVolumeDb"
       | "venmoQrUrl"
       | "venmoHandle"
       | "venmoInstructions"
@@ -221,6 +236,13 @@ export async function saveLandingMedia(
       );
     }
     next.equipmentIntroVideoUrl = url;
+  }
+
+  if (patch.uploadedContentVolumeDb !== undefined) {
+    next.uploadedContentVolumeDb = clampVolumeDb(
+      patch.uploadedContentVolumeDb,
+      DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
+    );
   }
 
   if (patch.venmoQrUrl !== undefined) {
