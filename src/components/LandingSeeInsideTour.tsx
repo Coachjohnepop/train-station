@@ -2,21 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import FreeTicketModal from "@/components/FreeTicketModal";
 import {
   confettiOriginFromElement,
   fireWorkoutConfetti,
 } from "@/lib/workout-confetti";
-import { TICKET_TIERS, type TicketTierId } from "@/lib/landing-tickets";
-import { TOP_LEVEL_PROGRAMS } from "@/lib/programs";
 import { PROGRAM_IMAGES } from "@/lib/program-constants";
-import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 
 /**
- * See inside — full auto-play, left/right arrows, then two real choices.
+ * See inside — full auto-play tour for cold traffic only.
  *
  * Auto: workout ×5 → Business → Adult → equip blank/all → book open/day/confirm
- * Confetti + post-confetti steps hold longer (felt rushed).
+ * Ends at “Where next?” → exits into normal site nav (/join#tickets | /join#programs).
+ * Wizard never continues after that. Members never see this (home is welcome shell).
  */
 const STEP_MS = 2000;
 /** Last set + confetti: hold so burst can play before next slide */
@@ -52,8 +49,6 @@ const AUTO_BEATS: AutoBeat[] = [
   "book_confirm",
 ];
 
-type EndMode = "choice" | "tickets" | "programs" | "pay";
-
 const DEMO_EQUIPMENT = [
   { id: "dumbbells", name: "Dumbbells", img: "/images/equipment/dumbbells.jpg" },
   { id: "kettlebell", name: "Kettlebell", img: "/images/equipment/kettlebell.jpg" },
@@ -67,21 +62,13 @@ const BOOK_SLOTS = ["Tue · 11:00 AM", "Tue · 1:00 PM", "Wed · 2:45 PM"];
 export default function LandingSeeInsideTour({
   open,
   onClose,
-  freeChastiseVideoUrl = null,
-  welcomeVideoUrl = null,
 }: {
   open: boolean;
   onClose: () => void;
-  freeChastiseVideoUrl?: string | null;
-  welcomeVideoUrl?: string | null;
 }) {
   const router = useRouter();
   const [beat, setBeat] = useState(0);
   const [phase, setPhase] = useState<"auto" | "end">("auto");
-  const [endMode, setEndMode] = useState<EndMode>("choice");
-  const [plan, setPlan] = useState("business");
-  const [programSlug, setProgramSlug] = useState<string | null>("adult");
-  const [freeModalOpen, setFreeModalOpen] = useState(false);
   const lastSetRef = useRef<HTMLDivElement | null>(null);
   const confettiFired = useRef(false);
   const reducedMotion = useRef(false);
@@ -93,12 +80,14 @@ export default function LandingSeeInsideTour({
     timers.current = [];
   }, []);
 
-  const goPay = useCallback(() => {
-    const q = new URLSearchParams({ plan });
-    if (programSlug) q.set("interest", programSlug);
-    onClose();
-    router.push(`/signup?${q.toString()}`);
-  }, [onClose, plan, programSlug, router]);
+  /** Close wizard and land in normal join nav (tickets or programs). */
+  const exitToSite = useCallback(
+    (href: string) => {
+      onClose();
+      router.push(href);
+    },
+    [onClose, router]
+  );
 
   // Reset
   useEffect(() => {
@@ -109,10 +98,6 @@ export default function LandingSeeInsideTour({
     paused.current = false;
     setPhase("auto");
     setBeat(0);
-    setEndMode("choice");
-    setPlan("business");
-    setProgramSlug("adult");
-    setFreeModalOpen(false);
     confettiFired.current = false;
     clearTimers();
   }, [open, clearTimers]);
@@ -132,36 +117,28 @@ export default function LandingSeeInsideTour({
     paused.current = true;
     clearTimers();
     if (phase === "end") {
-      if (endMode === "tickets" || endMode === "programs" || endMode === "pay") {
-        setEndMode("choice");
-        return;
-      }
-      // From final choices back into auto sequence at last beat
+      // From “Where next?” back into auto sequence at last beat
       setPhase("auto");
       setBeat(AUTO_BEATS.length - 1);
       return;
     }
     if (beat <= 0) return;
     setBeat((b) => b - 1);
-  }, [phase, endMode, beat, clearTimers]);
+  }, [phase, beat, clearTimers]);
 
   const goNext = useCallback(() => {
     paused.current = true;
     clearTimers();
     if (phase === "end") {
-      if (endMode === "choice") {
-        // Stay on choices — no forced advance
-        return;
-      }
+      // Stay on choices — only explicit card taps exit the wizard
       return;
     }
     if (beat >= AUTO_BEATS.length - 1) {
       setPhase("end");
-      setEndMode("choice");
       return;
     }
     setBeat((b) => b + 1);
-  }, [phase, endMode, beat, clearTimers]);
+  }, [phase, beat, clearTimers]);
 
   // Auto-advance (paused after manual arrow)
   useEffect(() => {
@@ -172,7 +149,6 @@ export default function LandingSeeInsideTour({
       if (paused.current) return;
       if (beat >= AUTO_BEATS.length - 1) {
         setPhase("end");
-        setEndMode("choice");
         return;
       }
       setBeat((b) => b + 1);
@@ -269,37 +245,9 @@ export default function LandingSeeInsideTour({
     current === "book_day" || current === "book_confirm" ? 0 : -1;
   const bookDone = current === "book_confirm";
 
-  const planLabel = signupPlanLabel(normalizeSignupPlan(plan));
-  const isPaid = normalizeSignupPlan(plan) !== "explorer";
-
-  const programs = TOP_LEVEL_PROGRAMS.filter((p) => p.catalogStatus !== "hidden");
-  // Prefer six tiles: catalog + fill from PROGRAM_IMAGES keys if needed
-  const programTiles = [
-    ...programs.map((p) => ({
-      slug: p.slug,
-      name: p.name,
-      img: PROGRAM_IMAGES[p.slug] || "/images/programs/adult.jpg",
-    })),
-  ];
-  while (programTiles.length < 6) {
-    const extras = [
-      { slug: "chest", name: "Upper strength", img: "/images/programs/chest-press.jpg" },
-      { slug: "squat", name: "Lower power", img: "/images/programs/squat.jpg" },
-    ];
-    const e = extras[programTiles.length - programs.length];
-    if (!e) break;
-    programTiles.push(e);
-  }
-
   const coachLine =
     phase === "end"
-      ? endMode === "choice"
-        ? "Choose ticket level (left) or a program (right). Pay anytime — program is optional."
-        : endMode === "tickets"
-          ? "Pick your level. Seat art shows the class you board."
-          : endMode === "programs"
-            ? "Pick a track — or skip and go straight to payment."
-            : "Checkout whenever you’re ready. Change anything later in Member → Settings."
+      ? "Ticket, program, or Create Account & Pay — all open the real site. Wizard ends here."
       : current === "w_weight"
         ? "Log the weight you used."
         : current === "w_set1"
@@ -321,16 +269,6 @@ export default function LandingSeeInsideTour({
                       : current === "book_day"
                         ? "Pick an open day and time."
                         : "Booked — intro call locked in.";
-
-  function pickTicket(tierId: TicketTierId, signupPlan: string) {
-    if (tierId === "free") {
-      setPlan("explorer");
-      setFreeModalOpen(true);
-      return;
-    }
-    setPlan(signupPlan);
-    setEndMode("pay");
-  }
 
   return (
     <div
@@ -356,7 +294,6 @@ export default function LandingSeeInsideTour({
                 paused.current = true;
                 clearTimers();
                 setPhase("end");
-                setEndMode("choice");
               }}
               className="rounded-full border border-white/20 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-white/85"
             >
@@ -381,13 +318,21 @@ export default function LandingSeeInsideTour({
         />
       </div>
 
-      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5">
+      <div
+        className={`relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] ${
+          phase === "end"
+            ? "justify-start pt-3 sm:pt-5"
+            : "justify-center pt-1.5"
+        }`}
+      >
         {/* Left / right nav */}
         <button
           type="button"
           onClick={goPrev}
           disabled={phase === "auto" && beat === 0}
-          className="absolute left-1.5 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/50 text-lg font-bold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/15 disabled:pointer-events-none disabled:opacity-25 sm:left-3"
+          className={`absolute left-1.5 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/50 text-lg font-bold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/15 disabled:pointer-events-none disabled:opacity-25 sm:left-3 ${
+            phase === "end" ? "top-8" : "top-1/2 -translate-y-1/2"
+          }`}
           aria-label="Previous step"
         >
           ‹
@@ -395,17 +340,23 @@ export default function LandingSeeInsideTour({
         <button
           type="button"
           onClick={goNext}
-          className="absolute right-1.5 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/50 text-lg font-bold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/15 sm:right-3"
+          className={`absolute right-1.5 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/50 text-lg font-bold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/15 sm:right-3 ${
+            phase === "end" ? "top-8" : "top-1/2 -translate-y-1/2"
+          }`}
           aria-label="Next step"
         >
           ›
         </button>
 
-        <div className="flex w-full max-w-md flex-col items-center gap-1.5 px-8 sm:gap-2 sm:px-10">
-          {/* Stacked slides crossfade — no unmount flash between confetti and Business */}
+        <div
+          className={`flex w-full flex-col items-center gap-1.5 px-8 sm:gap-2 sm:px-10 ${
+            phase === "end" ? "max-w-lg" : "max-w-md"
+          }`}
+        >
+          {/* Stacked slides — only during auto (stage min-height would leave a blank band on end) */}
+          {phase === "auto" ? (
           <div className="landing-see-inside__stage">
           {/* ── Workout phone ── */}
-          {phase === "auto" && (
             <div
               className={`landing-see-inside__slide w-full ${
                 onWorkout
@@ -475,10 +426,8 @@ export default function LandingSeeInsideTour({
               </div>
             </div>
             </div>
-          )}
 
           {/* ── How to Access · Business Class ── */}
-          {phase === "auto" && (
             <div
               className={`landing-see-inside__slide w-full ${
                 current === "access_business"
@@ -508,10 +457,8 @@ export default function LandingSeeInsideTour({
               <p className="text-center text-[10px] text-emerald-300/90">Selected ✓</p>
             </div>
             </div>
-          )}
 
           {/* ── Program Adult ── */}
-          {phase === "auto" && (
             <div
               className={`landing-see-inside__slide w-full ${
                 current === "pick_adult"
@@ -543,10 +490,8 @@ export default function LandingSeeInsideTour({
               </div>
             </div>
             </div>
-          )}
 
           {/* ── Equipment ── */}
-          {phase === "auto" && (
             <div
               className={`landing-see-inside__slide w-full ${
                 current === "equip_blank" || current === "equip_all"
@@ -589,10 +534,8 @@ export default function LandingSeeInsideTour({
               </p>
             </div>
             </div>
-          )}
 
           {/* ── Book ── */}
-          {phase === "auto" && (
             <div
               className={`landing-see-inside__slide w-full ${
                 current === "book_open" ||
@@ -665,12 +608,12 @@ export default function LandingSeeInsideTour({
                 </div>
               </div>
             </div>
-          )}
           </div>
+          ) : null}
           {/* end stage stack */}
 
-          {/* ── END: two real choices ── */}
-          {phase === "end" && endMode === "choice" && (
+          {/* ── END: exit wizard into normal site nav ── */}
+          {phase === "end" && (
             <div className="w-full max-w-lg">
               <p className="text-center text-[9px] font-bold uppercase tracking-[0.24em] text-[#c4b5fd]">
                 Your move
@@ -679,13 +622,13 @@ export default function LandingSeeInsideTour({
                 Where next?
               </h3>
               <p className="mt-0.5 text-center text-[11px] text-white/55">
-                Ticket or program first — both reach payment. Program is optional.
+                Tour ends here — open real tickets or programs on the site.
               </p>
               <div className="mt-2.5 grid grid-cols-2 gap-2 sm:mt-3 sm:gap-2.5">
-                {/* Left — ticket art */}
+                {/* Left — ticket art → /join#tickets */}
                 <button
                   type="button"
-                  onClick={() => setEndMode("tickets")}
+                  onClick={() => exitToSite("/join?from=tour#tickets")}
                   className="group flex flex-col overflow-hidden rounded-xl border border-[#7c3aed]/50 bg-[#1a0b2e] text-left shadow-[0_8px_28px_rgba(124,58,237,0.25)] transition hover:border-[#a78bfa]"
                 >
                   <div className="relative aspect-[4/3] w-full overflow-hidden bg-black/40">
@@ -713,10 +656,10 @@ export default function LandingSeeInsideTour({
                   </div>
                 </button>
 
-                {/* Right — program placeholder art (swap file when ready) */}
+                {/* Right — program art → /join#programs */}
                 <button
                   type="button"
-                  onClick={() => setEndMode("programs")}
+                  onClick={() => exitToSite("/join?from=tour#programs")}
                   className="group flex flex-col overflow-hidden rounded-xl border border-white/15 bg-[#12081f] text-left transition hover:border-[#7c3aed]/50"
                 >
                   <div className="relative aspect-[4/3] w-full overflow-hidden bg-black/40">
@@ -746,144 +689,14 @@ export default function LandingSeeInsideTour({
               </div>
               <button
                 type="button"
-                onClick={() => setEndMode("pay")}
-                className="mt-2 w-full text-center text-[11px] font-semibold text-white/50 underline decoration-white/25 underline-offset-4"
+                onClick={() => exitToSite("/join?from=tour#tickets")}
+                className="landing-hero-early-signup mt-3 inline-flex h-12 w-full items-center justify-center rounded-full text-[15px] font-extrabold"
               >
-                Skip program — go to payment →
+                Create Account &amp; Pay
               </button>
-            </div>
-          )}
-
-          {phase === "end" && endMode === "tickets" && (
-            <div className="w-full max-w-md">
-              <button
-                type="button"
-                onClick={() => setEndMode("choice")}
-                className="mb-2 text-[11px] font-semibold text-white/50"
-              >
-                ← Back
-              </button>
-              <h3 className="text-center text-xl font-semibold text-white">Choose ticket level</h3>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                {TICKET_TIERS.map((tier) => (
-                  <button
-                    key={tier.id}
-                    type="button"
-                    onClick={() => pickTicket(tier.id, tier.signupPlan)}
-                    className={`relative flex min-h-[140px] flex-col overflow-hidden rounded-xl border text-left ${tier.themeClass}`}
-                  >
-                    {tier.seatArtSrc ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={tier.seatArtSrc}
-                        alt=""
-                        className="absolute inset-0 h-full w-full object-cover opacity-90"
-                      />
-                    ) : null}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/65 to-transparent" />
-                    <div className="relative z-10 mt-auto p-2.5">
-                      <p className="text-sm font-bold text-white">{tier.title}</p>
-                      <p className="text-lg font-semibold text-white">
-                        {tier.price}
-                        {tier.priceNote ? (
-                          <span className="text-[10px] text-white/60">{tier.priceNote}</span>
-                        ) : null}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {phase === "end" && endMode === "programs" && (
-            <div className="w-full max-w-md">
-              <button
-                type="button"
-                onClick={() => setEndMode("choice")}
-                className="mb-2 text-[11px] font-semibold text-white/50"
-              >
-                ← Back
-              </button>
-              <h3 className="text-center text-xl font-semibold text-white">Choose program</h3>
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                {programTiles.slice(0, 6).map((p) => {
-                  const active = programSlug === p.slug;
-                  return (
-                    <button
-                      key={p.slug}
-                      type="button"
-                      onClick={() => setProgramSlug(p.slug)}
-                      className={`overflow-hidden rounded-xl border text-left transition ${
-                        active
-                          ? "border-[#7c3aed] ring-2 ring-[#7c3aed]/50"
-                          : "border-white/12"
-                      }`}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={p.img} alt="" className="aspect-[4/3] w-full object-cover" />
-                      <p className="bg-[#12081f] px-1.5 py-1 text-[10px] font-semibold leading-tight text-white">
-                        {p.name}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="mt-4 flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEndMode("pay")}
-                  disabled={!programSlug}
-                  className="landing-hero-early-signup inline-flex h-12 items-center justify-center rounded-full text-[15px] font-extrabold disabled:opacity-40"
-                >
-                  Continue to payment →
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setProgramSlug(null);
-                    setEndMode("pay");
-                  }}
-                  className="text-xs font-semibold text-white/50 underline"
-                >
-                  Skip program — pay only →
-                </button>
-              </div>
-            </div>
-          )}
-
-          {phase === "end" && endMode === "pay" && (
-            <div className="w-full max-w-sm rounded-3xl border border-[#7c3aed]/40 bg-[#140a22] p-5 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#a78bfa]">
-                Payment
+              <p className="mt-2 text-center text-[11px] text-white/45">
+                Opens real memberships — wizard ends. Start date still needs full onboard.
               </p>
-              <h3 className="mt-2 text-2xl font-semibold text-white">{planLabel}</h3>
-              {programSlug ? (
-                <p className="mt-1 text-sm text-white/60">
-                  Program:{" "}
-                  {programTiles.find((p) => p.slug === programSlug)?.name || programSlug}
-                </p>
-              ) : (
-                <p className="mt-1 text-sm text-white/50">No program yet — pick later in Settings</p>
-              )}
-              <p className="mt-3 text-[11px] text-white/45">
-                Pay now. Start date still needs full onboard. Everything editable in{" "}
-                <strong className="text-white/70">Member → Settings</strong>.
-              </p>
-              <button
-                type="button"
-                onClick={goPay}
-                className="landing-hero-early-signup mt-4 inline-flex h-12 w-full items-center justify-center rounded-full text-[15px] font-extrabold"
-              >
-                {isPaid ? `Pay & create account · ${planLabel} →` : `Create Free account →`}
-              </button>
-              <button
-                type="button"
-                onClick={() => setEndMode("choice")}
-                className="mt-2 text-xs text-white/45"
-              >
-                ← Change ticket or program
-              </button>
             </div>
           )}
 
@@ -893,31 +706,27 @@ export default function LandingSeeInsideTour({
         </div>
       </div>
 
-      {phase === "auto" ? (
-        <div className="flex shrink-0 justify-center gap-1 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-0.5">
-          {AUTO_BEATS.map((_, i) => (
+      {/* Bottom step dots — full tour including final “Where next?” */}
+      <div className="flex shrink-0 justify-center gap-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1">
+        {AUTO_BEATS.map((_, i) => {
+          const active = phase === "auto" && i === beat;
+          const done = phase === "end" || (phase === "auto" && i < beat);
+          return (
             <span
               key={i}
               className={`h-1 rounded-full transition-all ${
-                i === beat ? "w-4 bg-white" : i < beat ? "w-2 bg-[#a78bfa]" : "w-1.5 bg-white/25"
+                active ? "w-4 bg-white" : done ? "w-2 bg-[#a78bfa]" : "w-1.5 bg-white/25"
               }`}
             />
-          ))}
-        </div>
-      ) : null}
-
-      <FreeTicketModal
-        open={freeModalOpen}
-        freeChastiseVideoUrl={freeChastiseVideoUrl}
-        welcomeVideoUrl={welcomeVideoUrl}
-        purchaseAuth={{ signedIn: false }}
-        onClose={() => setFreeModalOpen(false)}
-        onUpgrade={() => setFreeModalOpen(false)}
-        onContinueFree={() => {
-          setPlan("explorer");
-          setEndMode("pay");
-        }}
-      />
+          );
+        })}
+        <span
+          className={`h-1 rounded-full transition-all ${
+            phase === "end" ? "w-4 bg-white" : "w-1.5 bg-white/25"
+          }`}
+          aria-hidden
+        />
+      </div>
     </div>
   );
 }

@@ -21,11 +21,13 @@ export default function JoinProgramThenTickets({
   const [program, setProgram] = useState<string | null>(null);
 
   useEffect(() => {
-    // Deep-link /join#tickets (Memberships nav) should land on ticket grid
+    // Deep-link /join#tickets or /join#programs (nav + end of See inside tour)
     if (typeof window === "undefined") return;
-    if (window.location.hash === "#tickets") {
+    const hash = window.location.hash;
+    if (hash === "#tickets" || hash === "#programs") {
+      const id = hash.slice(1);
       requestAnimationFrame(() => {
-        document.getElementById("tickets")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
       });
     }
   }, []);

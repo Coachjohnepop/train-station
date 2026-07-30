@@ -49,13 +49,14 @@ const ROTATING = [
 
 /**
  * Cold-traffic “send POP” screen — one promise, one ask.
- * Ask = See inside (guided tour) → choose your ticket. Not free-first.
+ * Ask = See inside (guided tour) → exits into /join tickets or programs.
+ * Members never hit this shell (home is welcome + status after join).
  */
 export default function LandingHero({
   welcomeVideoUrl = null,
-  freeChastiseVideoUrl = null,
 }: {
   welcomeVideoUrl?: string | null;
+  /** @deprecated Tour no longer hosts free ticket; kept optional for callers. */
   freeChastiseVideoUrl?: string | null;
 }) {
   const [imageTick, setImageTick] = useState(0);
@@ -139,7 +140,7 @@ export default function LandingHero({
                 See inside
               </button>
               <p className="mt-2.5 text-center text-[12px] font-medium text-white/55">
-                Quick tour · then pick program &amp; ticket
+                Quick tour · then tickets or programs on the site
               </p>
 
               <p className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[13px] font-semibold text-white/70">
@@ -196,8 +197,6 @@ export default function LandingHero({
       <LandingSeeInsideTour
         open={tourOpen}
         onClose={() => setTourOpen(false)}
-        welcomeVideoUrl={welcomeVideoUrl}
-        freeChastiseVideoUrl={freeChastiseVideoUrl}
       />
     </section>
   );

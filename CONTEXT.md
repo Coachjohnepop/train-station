@@ -334,12 +334,12 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-07-30 (See inside landing tour — **preview only**)  
-**Status:** Stripe **Live** on prod. **Landing POP overhaul lives on `preview` only** — not merged to `main` / thetrainstation.co yet. John was about to final-pass the tour then take a break.  
+**Date:** 2026-07-30 (See inside landing tour → **prod**)  
+**Status:** Stripe **Live**. See inside tour shipped `preview` → `main` (thetrainstation.co).  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
-**Preview branch:** `preview` @ latest (see `git log main..preview`). Stable alias: `https://train-station-git-preview-johnepop-s-projects.vercel.app`
+**Branches:** `preview` / `main` · prod: https://www.thetrainstation.co · preview alias: `https://train-station-git-preview-johnepop-s-projects.vercel.app`
 
-### Landing · See inside (preview · Jul 30) — product decisions
+### Landing · See inside (Jul 30) — product decisions
 
 | Rule | Decision |
 |------|----------|
@@ -347,10 +347,12 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 | Tour | Full **auto-play** (~2s/step; set-3 hold longer for confetti); left/right arrows pause auto |
 | Workout demo | Weight → set1 → set2 → **set3 + confetti** (live-console last-set) · caption **Exercise Finished.** |
 | Then auto | Business Class demo → Adult program → equip blank → 5 gear → book open/day/confirm |
-| End choices | **Left** ticket level (dual-fan art) · **Right** program (placeholder SVG until John supplies art) |
-| Pay | **Anytime** after ticket — we take the money |
+| End choices | **Where next?** Left → `/join?from=tour#tickets` · Right → `/join?from=tour#programs` · **Create Account & Pay** → join tickets — **wizard ends**, normal site nav |
+| End layout | Top-aligned (no huge blank top); **bottom step dots** through final choice |
+| After join | Members get welcome shell — **never see See inside again** |
+| Pay | **Anytime** after ticket on real join/signup — we take the money |
 | Start date | **Only after full onboard** |
-| Free | Rickroll product gag → Jeremy free intro; continues same funnel |
+| Free | Rickroll product gag → Jeremy free intro on join tickets |
 | Theme song | Unlocks on **first click/tap anywhere** (browser policy); Free modal ducks BG music |
 | Memberships nav | `/join#tickets` — ticket grid always on join |
 | Programs nav | `#programs` — **live** Adult/Athletes/Military/Mom-Dads first, then waitlist |
@@ -361,10 +363,9 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ### Still open after this pass (landing)
 
-1. **John final eyeball** of See inside on preview (spacing/timing) — then decide merge `preview` → `main`.  
-2. **Program choice card art** — placeholder at `public/images/programs/choose-program-placeholder.svg`; replace when John has the real image.  
-3. **Jeremy content:** free-ticket intro upload, welcome slots (Admin → Videos).  
-4. Volume only fully boosts **HTML5 uploads**; YouTube capped at 100.
+1. **Program choice card art** — placeholder at `public/images/programs/choose-program-placeholder.svg`; replace when John has the real image.  
+2. **Jeremy content:** free-ticket intro upload, welcome slots (Admin → Videos).  
+3. Volume only fully boosts **HTML5 uploads**; YouTube capped at 100.
 
 ### Still open (not landing — durable backlog)
 
