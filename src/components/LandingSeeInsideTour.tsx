@@ -20,7 +20,7 @@ const SCREEN_MS = 2000;
 const PANELS = [
   { id: "demo", coach: "Live session on your phone — log weight, check sets, finish strong." },
   { id: "signup", coach: "Fast board: Business Class in under a minute." },
-  { id: "book", coach: "Book your first appointment — coach call, then you train." },
+  { id: "book", coach: "Book your first appointment with Coach Jeremy." },
   { id: "board", coach: "Ready? Pick a program, choose your ticket, ride." },
 ] as const;
 
@@ -321,50 +321,63 @@ export default function LandingSeeInsideTour({
           {active.id === "book" && (
             <div className="w-full max-w-sm rounded-3xl border border-emerald-500/30 bg-[#0c1a14] p-5 shadow-[0_20px_60px_rgba(16,185,129,0.15)]">
               <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-300/90">
-                Get started
+                After you board
               </p>
               <h3 className="mt-2 text-center text-xl font-semibold text-white">
-                Book your first appointment
+                Book with Coach Jeremy
               </h3>
-              <ol className="mt-4 space-y-3 text-left text-sm text-white/85">
-                <li className="flex gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-bold text-emerald-300">
-                    1
+              <p className="mt-1 text-center text-[12px] text-white/55">
+                First appointment — intro call, start date, your plan
+              </p>
+
+              {/* Mock Book Call card — matches member app path */}
+              <div className="mt-4 overflow-hidden rounded-2xl border border-white/12 bg-[#0a0612]/90">
+                <div className="flex items-center gap-3 border-b border-white/10 px-3 py-2.5">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#7c3aed]/30 text-sm font-bold text-[#e9d5ff]">
+                    JB
                   </span>
-                  <span>
-                    <strong className="text-white">Create account</strong>
-                    <span className="mt-0.5 block text-[12px] text-white/55">
-                      Pick your ticket — Business Class is ready when you are.
-                    </span>
-                  </span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-bold text-emerald-300">
-                    2
-                  </span>
-                  <span>
-                    <strong className="text-white">Book a coach call</strong>
-                    <span className="mt-0.5 block text-[12px] text-white/55">
-                      Calendly on Book Call — Jeremy sets your start date &amp; plan.
-                    </span>
-                  </span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-bold text-emerald-300">
-                    3
-                  </span>
-                  <span>
-                    <strong className="text-white">Train on Today</strong>
-                    <span className="mt-0.5 block text-[12px] text-white/55">
-                      Same live console — weight, sets, finish.
-                    </span>
-                  </span>
-                </li>
-              </ol>
-              <div className="mt-4 rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-center text-[12px] text-white/65">
-                After signup → <span className="font-semibold text-emerald-300">Book Call</span> in
-                the app
+                  <div className="min-w-0 text-left">
+                    <p className="truncate text-sm font-semibold text-white">Coach Jeremy Byrd</p>
+                    <p className="text-[11px] text-emerald-300/90">15-min intro · Calendly</p>
+                  </div>
+                </div>
+                <div className="space-y-1.5 px-3 py-2.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-white/40">
+                    Next open slots
+                  </p>
+                  {["Tue · 11:00 AM", "Tue · 1:00 PM", "Wed · 2:45 PM"].map((slot, i) => (
+                    <div
+                      key={slot}
+                      className={`flex items-center justify-between rounded-xl px-3 py-2 text-left text-[12px] ${
+                        i === 0
+                          ? "border border-emerald-400/40 bg-emerald-500/15 text-white"
+                          : "border border-white/8 bg-white/[0.04] text-white/70"
+                      }`}
+                    >
+                      <span className="font-medium">{slot}</span>
+                      <span
+                        className={
+                          i === 0
+                            ? "text-[10px] font-bold uppercase text-emerald-300"
+                            : "text-[10px] text-white/35"
+                        }
+                      >
+                        {i === 0 ? "Pick →" : "Open"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t border-white/10 px-3 py-2.5">
+                  <div className="flex h-10 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-[#042f1a]">
+                    Book Call · Coach Jeremy
+                  </div>
+                </div>
               </div>
+
+              <p className="mt-3 text-center text-[11px] leading-snug text-white/55">
+                In the app: <span className="font-semibold text-emerald-300">Book Call</span> in the
+                bottom nav — opens Jeremy&apos;s calendar.
+              </p>
             </div>
           )}
 
