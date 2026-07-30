@@ -53,8 +53,10 @@ const ROTATING = [
  */
 export default function LandingHero({
   welcomeVideoUrl = null,
+  freeChastiseVideoUrl = null,
 }: {
   welcomeVideoUrl?: string | null;
+  freeChastiseVideoUrl?: string | null;
 }) {
   const [imageTick, setImageTick] = useState(0);
   const [phraseTick, setPhraseTick] = useState(0);
@@ -191,7 +193,12 @@ export default function LandingHero({
         ))}
       </div>
 
-      <LandingSeeInsideTour open={tourOpen} onClose={() => setTourOpen(false)} />
+      <LandingSeeInsideTour
+        open={tourOpen}
+        onClose={() => setTourOpen(false)}
+        welcomeVideoUrl={welcomeVideoUrl}
+        freeChastiseVideoUrl={freeChastiseVideoUrl}
+      />
     </section>
   );
 }

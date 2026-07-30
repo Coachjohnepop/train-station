@@ -13,8 +13,8 @@ import ThemeAttributesSync from "@/components/ThemeAttributesSync";
  */
 export default function LandingConversion({
   welcomeVideoUrl = null,
+  freeChastiseVideoUrl = null,
 }: {
-  /** Kept for callers; free-ticket gag no longer lives on the home page. */
   freeChastiseVideoUrl?: string | null;
   welcomeVideoUrl?: string | null;
   gagConfig?: unknown;
@@ -24,7 +24,10 @@ export default function LandingConversion({
       <ThemeAttributesSync membershipTier="explorer" />
       {/* Transparent nav over hero so SMS open is full-bleed athletes, not a grey header */}
       <LandingNav overHero />
-      <LandingHero welcomeVideoUrl={welcomeVideoUrl} />
+      <LandingHero
+        welcomeVideoUrl={welcomeVideoUrl}
+        freeChastiseVideoUrl={freeChastiseVideoUrl}
+      />
       <div className="app-shell-bg">
         <ComingSoonPrograms />
         <LandingServicesSection />

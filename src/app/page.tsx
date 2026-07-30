@@ -83,7 +83,10 @@ export default async function HomePage() {
             </Link>
           </div>
         </div>
-        <LandingConversion welcomeVideoUrl={landingVideos.welcomeVideoUrl} />
+        <LandingConversion
+          welcomeVideoUrl={landingVideos.welcomeVideoUrl}
+          freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
+        />
       </>
     );
   }
@@ -149,5 +152,10 @@ export default async function HomePage() {
   }
 
   // Cold traffic / SMS — full send POP only (no floating memberships FAB).
-  return <LandingConversion welcomeVideoUrl={landingVideos.welcomeVideoUrl} />;
+  return (
+    <LandingConversion
+      welcomeVideoUrl={landingVideos.welcomeVideoUrl}
+      freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
+    />
+  );
 }

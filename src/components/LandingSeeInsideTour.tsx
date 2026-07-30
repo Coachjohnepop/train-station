@@ -2,42 +2,46 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import FreeTicketModal from "@/components/FreeTicketModal";
 import {
   confettiOriginFromElement,
   fireWorkoutConfetti,
 } from "@/lib/workout-confetti";
+import { TICKET_TIERS, type TicketTierId } from "@/lib/landing-tickets";
 
 /**
  * Cold-traffic “See inside” — few distinct screens only (no near-duplicate slides).
- * Auto-advances every SCREEN_MS. Demo animates in place within that beat.
+ * Auto-advances every SCREEN_MS until Choose your ticket (last) — user picks Free/Coach/Business/1st.
+ * Free opens rickroll modal (product gag).
  */
-const TICKETS_HREF = "/join?from=tour#programs";
 const BUSINESS_SIGNUP = "/signup?plan=business";
-/** ~2 seconds per screen */
+/** ~2 seconds per auto screen (last panel waits for tap) */
 const SCREEN_MS = 2000;
 
-/** Only advance when content is meaningfully different */
 const PANELS = [
   { id: "demo", coach: "Live session on your phone — log weight, check sets, finish strong." },
   { id: "signup", coach: "Fast board: Business Class in under a minute." },
   { id: "book", coach: "Book your first appointment with Coach Jeremy." },
-  { id: "board", coach: "Ready? Pick a program, choose your ticket, ride." },
+  { id: "tickets", coach: "Choose your ticket — Free, Coach, Business, or 1st Class." },
 ] as const;
-
-type PanelId = (typeof PANELS)[number]["id"];
 
 export default function LandingSeeInsideTour({
   open,
   onClose,
+  freeChastiseVideoUrl = null,
+  welcomeVideoUrl = null,
 }: {
   open: boolean;
   onClose: () => void;
+  freeChastiseVideoUrl?: string | null;
+  welcomeVideoUrl?: string | null;
 }) {
   const router = useRouter();
   const [panel, setPanel] = useState(0);
   const [weight, setWeight] = useState(95);
   const [doneSets, setDoneSets] = useState<number[]>([]);
   const [demoPhase, setDemoPhase] = useState<"idle" | "weight" | "sets" | "done">("idle");
+  const [freeModalOpen, setFreeModalOpen] = useState(false);
   const lastSetRef = useRef<HTMLButtonElement | null>(null);
   const confettiFired = useRef(false);
   const reducedMotion = useRef(false);
@@ -57,15 +61,22 @@ export default function LandingSeeInsideTour({
     [],
   );
 
-  const goTickets = useCallback(() => {
-    onClose();
-    router.push(TICKETS_HREF);
-  }, [onClose, router]);
-
   const goBusinessSignup = useCallback(() => {
     onClose();
     router.push(BUSINESS_SIGNUP);
   }, [onClose, router]);
+
+  const pickTicket = useCallback(
+    (tierId: TicketTierId, signupPlan: string) => {
+      if (tierId === "free") {
+        setFreeModalOpen(true);
+        return;
+      }
+      onClose();
+      router.push(`/signup?plan=${encodeURIComponent(signupPlan)}`);
+    },
+    [onClose, router],
+  );
 
   // Reset when opened
   useEffect(() => {
@@ -78,10 +89,11 @@ export default function LandingSeeInsideTour({
     setDoneSets([]);
     setDemoPhase("idle");
     confettiFired.current = false;
+    setFreeModalOpen(false);
     clearTimers();
   }, [open, clearTimers]);
 
-  // Every screen: hold SCREEN_MS, then advance (or leave on last)
+  // Auto-advance 2s/screen until last (tickets) — stay until user picks
   useEffect(() => {
     if (!open) return;
     clearTimers();
@@ -114,14 +126,15 @@ export default function LandingSeeInsideTour({
       });
     }
 
-    const hold = reducedMotion.current ? 1200 : SCREEN_MS;
+    // Last panel: choose ticket — do not auto-leave
     if (panel >= PANELS.length - 1) {
-      later(hold, () => goTickets());
-    } else {
-      later(hold, () => setPanel((p) => p + 1));
+      return clearTimers;
     }
+
+    const hold = reducedMotion.current ? 1200 : SCREEN_MS;
+    later(hold, () => setPanel((p) => p + 1));
     return clearTimers;
-  }, [open, panel, later, clearTimers, goTickets]);
+  }, [open, panel, later, clearTimers]);
 
   useEffect(() => {
     if (!open) return;
@@ -169,10 +182,13 @@ export default function LandingSeeInsideTour({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={goTickets}
+            onClick={() => {
+              clearTimers();
+              setPanel(PANELS.length - 1);
+            }}
             className="rounded-full border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/85 transition hover:bg-white/10"
           >
-            Skip
+            Skip to tickets
           </button>
           <button
             type="button"
@@ -381,28 +397,59 @@ export default function LandingSeeInsideTour({
             </div>
           )}
 
-          {active.id === "board" && (
-            <div className="flex w-full max-w-sm flex-col items-center gap-4 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-[#c4b5fd]">
-                The Train Station
+          {active.id === "tickets" && (
+            <div className="w-full max-w-md">
+              <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-[#c4b5fd]">
+                Your level
               </p>
-              <h3 className="text-3xl font-semibold leading-tight tracking-tight text-white sm:text-4xl">
-                Ready to board?
+              <h3 className="mt-1 text-center text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                Choose your ticket
               </h3>
-              <button
-                type="button"
-                onClick={goTickets}
-                className="landing-hero-early-signup landing-hero-cta-pulse inline-flex h-14 w-full items-center justify-center rounded-full text-[17px] font-extrabold"
-              >
-                Choose program &amp; ticket
-              </button>
-              <button
-                type="button"
-                onClick={goBusinessSignup}
-                className="inline-flex h-12 w-full items-center justify-center rounded-full border border-white/25 bg-white/5 text-sm font-semibold text-white transition hover:bg-white/10"
-              >
-                Fast path: Business Class signup
-              </button>
+              <p className="mt-1 text-center text-[12px] text-white/55">
+                Free · Coach · Business · 1st Class
+              </p>
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-2.5">
+                {TICKET_TIERS.map((tier) => {
+                  const isFree = tier.id === "free";
+                  return (
+                    <button
+                      key={tier.id}
+                      type="button"
+                      onClick={() => pickTicket(tier.id, tier.signupPlan)}
+                      className={`group relative flex min-h-[148px] flex-col overflow-hidden rounded-xl border text-left shadow-lg transition active:scale-[0.98] sm:min-h-[160px] ${tier.themeClass}`}
+                    >
+                      {tier.seatArtSrc ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={tier.seatArtSrc}
+                          alt=""
+                          className="absolute inset-0 h-full w-full object-cover opacity-90"
+                        />
+                      ) : null}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/20" />
+                      <div className="relative z-10 mt-auto flex flex-col p-2.5 sm:p-3">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-white/60">
+                          {tier.subtitle}
+                        </span>
+                        <span className="text-sm font-bold text-white sm:text-base">
+                          {tier.title}
+                        </span>
+                        <span className="mt-0.5 text-lg font-semibold text-white">
+                          {tier.price}
+                          {tier.priceNote ? (
+                            <span className="ml-0.5 text-[10px] font-medium text-white/60">
+                              {tier.priceNote}
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="mt-1 text-[10px] font-semibold text-[#c4b5fd] group-hover:text-white">
+                          {isFree ? "Tap if you dare →" : "Select →"}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -423,11 +470,26 @@ export default function LandingSeeInsideTour({
             className={`h-1.5 rounded-full transition-all duration-500 ${
               i === panel ? "w-6 bg-white" : i < panel ? "w-3 bg-[#a78bfa]" : "w-2 bg-white/25"
             }`}
-            onClick={() => setPanel(i)}
+            onClick={() => {
+              clearTimers();
+              setPanel(i);
+            }}
             aria-label={`Go to ${p.id}`}
           />
         ))}
       </div>
+
+      <FreeTicketModal
+        open={freeModalOpen}
+        freeChastiseVideoUrl={freeChastiseVideoUrl}
+        welcomeVideoUrl={welcomeVideoUrl}
+        purchaseAuth={{ signedIn: false }}
+        onClose={() => setFreeModalOpen(false)}
+        onUpgrade={() => {
+          setFreeModalOpen(false);
+          // Stay on tickets so they can pick Coach / Business / 1st
+        }}
+      />
     </div>
   );
 }
