@@ -175,7 +175,7 @@ export default function LandingNav({
           {/* Desktop / tablet only — mobile uses ☰ so we don’t stack weird jelly beans */}
           {variant === "public" ? (
             <>
-              {/* Cold hero: no second “Board free” — one ask lives in the hero. */}
+              {/* Cold hero: one ask lives in the hero (Board Now). */}
               <Link
                 href="/login"
                 className={`landing-nav__link ${overHero ? "hidden sm:inline-flex text-white/90" : "hidden md:inline-flex"}`}

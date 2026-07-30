@@ -131,10 +131,10 @@ export default function LandingHero({
                 href="/signup?plan=explorer"
                 className="landing-hero-early-signup landing-hero-cta-pulse inline-flex h-[3.5rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg"
               >
-                Board free — start today
+                Board Now
               </Link>
               <p className="mt-2.5 text-center text-[12px] font-medium text-white/55">
-                No card required
+                Free · no card required
               </p>
 
               {/* Secondary: text only — never a second competing pill */}
