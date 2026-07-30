@@ -9,13 +9,12 @@ import {
 
 /**
  * Cold-traffic “See inside” — few distinct screens only (no near-duplicate slides).
- * 1) One live-session panel: weight → sets → confetti animate in place
- * 2) Business Class fast signup
- * 3) Book first appointment
- * 4) Board CTA
+ * Auto-advances every SCREEN_MS. Demo animates in place within that beat.
  */
 const TICKETS_HREF = "/join?from=tour#programs";
 const BUSINESS_SIGNUP = "/signup?plan=business";
+/** ~2 seconds per screen */
+const SCREEN_MS = 2000;
 
 /** Only advance when content is meaningfully different */
 const PANELS = [
@@ -82,47 +81,40 @@ export default function LandingSeeInsideTour({
     clearTimers();
   }, [open, clearTimers]);
 
-  // Panel 0 only: run demo animation once in place (no screen changes)
+  // Every screen: hold SCREEN_MS, then advance (or leave on last)
   useEffect(() => {
-    if (!open || panel !== 0) return;
+    if (!open) return;
     clearTimers();
-    setWeight(95);
-    setDoneSets([]);
-    setDemoPhase("idle");
-    confettiFired.current = false;
 
-    const fast = reducedMotion.current;
-    // idle hold → weight change → sets → last set + confetti → next panel
-    later(fast ? 400 : 1200, () => {
-      setDemoPhase("weight");
-      setWeight(115);
-    });
-    later(fast ? 700 : 2000, () => setWeight(135));
-    later(fast ? 1100 : 3200, () => {
-      setDemoPhase("sets");
-      setDoneSets([1]);
-    });
-    later(fast ? 1500 : 4200, () => setDoneSets([1, 2]));
-    later(fast ? 1900 : 5400, () => {
-      setDoneSets([1, 2, 3]);
-      setDemoPhase("done");
-      if (!confettiFired.current && !fast) {
-        confettiFired.current = true;
-        const el = lastSetRef.current;
-        if (el) fireWorkoutConfetti(confettiOriginFromElement(el));
-      }
-    });
-    // Advance only after demo finishes — next panel is different content
-    later(fast ? 2600 : 7200, () => setPanel(1));
+    // Demo panel: animate weight/sets/confetti inside the same 2s beat
+    if (panel === 0) {
+      setWeight(95);
+      setDoneSets([]);
+      setDemoPhase("idle");
+      confettiFired.current = false;
+      const fast = reducedMotion.current;
+      later(fast ? 200 : 300, () => {
+        setDemoPhase("weight");
+        setWeight(115);
+      });
+      later(fast ? 350 : 550, () => setWeight(135));
+      later(fast ? 500 : 800, () => {
+        setDemoPhase("sets");
+        setDoneSets([1]);
+      });
+      later(fast ? 700 : 1100, () => setDoneSets([1, 2]));
+      later(fast ? 900 : 1450, () => {
+        setDoneSets([1, 2, 3]);
+        setDemoPhase("done");
+        if (!confettiFired.current && !fast) {
+          confettiFired.current = true;
+          const el = lastSetRef.current;
+          if (el) fireWorkoutConfetti(confettiOriginFromElement(el));
+        }
+      });
+    }
 
-    return clearTimers;
-  }, [open, panel, later, clearTimers]);
-
-  // Panels 1–3: hold ~2.5s each (distinct content), then advance or exit
-  useEffect(() => {
-    if (!open || panel === 0) return;
-    clearTimers();
-    const hold = reducedMotion.current ? 1600 : 2800;
+    const hold = reducedMotion.current ? 1200 : SCREEN_MS;
     if (panel >= PANELS.length - 1) {
       later(hold, () => goTickets());
     } else {
