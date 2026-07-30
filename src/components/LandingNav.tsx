@@ -273,7 +273,7 @@ export default function LandingNav({
                 </Link>
               ))}
               <Link
-                href="/join"
+                href="/join#tickets"
                 onClick={closeMenus}
                 className="block rounded-lg px-2 py-2 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
               >

@@ -339,7 +339,7 @@ async function runRound(round) {
   // Gamification (admin + member APIs)
   const gamiAdmin = await coach.req("/admin/gamification");
   pass(`${tag} admin gamification page`, String(gamiAdmin.res.status));
-  const gamiApi = await coach.req("/api/admin/gamification");
+  const gamiApi = await coach.req("/api/admin/gamification/config");
   if (gamiApi.res.ok) pass(`${tag} admin gamification API`, "200");
   else if ([401, 403, 404, 405].includes(gamiApi.res.status)) {
     warn(`${tag} admin gamification API`, String(gamiApi.res.status));
@@ -505,11 +505,11 @@ async function runRound(round) {
     pass(`${tag} maintain-resume`, String(resume.res.status));
   } else fail(`${tag} maintain-resume`, String(resume.res.status));
 
-  // Live zoom member strip (keep zoom working — status only)
-  const mLiveZoom = await memberReq("/api/member/live-zoom");
+  // Live zoom member strip (nested routes — status only; no bare /live-zoom index)
+  const mLiveZoom = await memberReq("/api/member/live-zoom/status");
   if (mLiveZoom.res.ok || [401, 403, 404].includes(mLiveZoom.res.status)) {
-    pass(`${tag} member live-zoom`, String(mLiveZoom.res.status));
-  } else fail(`${tag} member live-zoom`, String(mLiveZoom.res.status));
+    pass(`${tag} member live-zoom/status`, String(mLiveZoom.res.status));
+  } else fail(`${tag} member live-zoom/status`, String(mLiveZoom.res.status));
 
   pass(`${tag} round complete`);
 }

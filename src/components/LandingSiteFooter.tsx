@@ -24,6 +24,14 @@ export default function LandingSiteFooter() {
           Platform
         </Link>
         <span aria-hidden>·</span>
+        <Link href="/privacy" className="hover:text-[var(--accent)]">
+          Privacy
+        </Link>
+        <span aria-hidden>·</span>
+        <Link href="/terms" className="hover:text-[var(--accent)]">
+          Terms
+        </Link>
+        <span aria-hidden>·</span>
         <a
           href="https://www.lemonvoice.com"
           target="_blank"

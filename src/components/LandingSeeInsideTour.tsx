@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   confettiOriginFromElement,
@@ -67,6 +68,7 @@ export default function LandingSeeInsideTour({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [beat, setBeat] = useState(0);
   const [phase, setPhase] = useState<"auto" | "end">("auto");
   const lastSetRef = useRef<HTMLDivElement | null>(null);
@@ -74,6 +76,12 @@ export default function LandingSeeInsideTour({
   const reducedMotion = useRef(false);
   const timers = useRef<number[]>([]);
   const paused = useRef(false);
+
+  // Portal to body so sticky landing nav (z-40) can’t sit above the tour
+  // (hero is z-0 and traps fixed children otherwise).
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const clearTimers = useCallback(() => {
     for (const t of timers.current) window.clearTimeout(t);
@@ -212,7 +220,7 @@ export default function LandingSeeInsideTour({
     };
   }, [open]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
   const current = phase === "auto" ? AUTO_BEATS[beat] : null;
   const progress =
@@ -257,9 +265,9 @@ export default function LandingSeeInsideTour({
             : current === "w_set3"
               ? "Exercise Finished."
             : current === "access_business"
-              ? "How to access — Business Class (demo)."
+              ? "How to access — pick a ticket class (Business Class demo)."
               : current === "pick_adult"
-                ? "Pick your program — Adult Strength."
+                ? "Pick a program — Adult shown."
                 : current === "equip_blank"
                   ? "Your gear list starts empty."
                   : current === "equip_all"
@@ -270,9 +278,9 @@ export default function LandingSeeInsideTour({
                         ? "Pick an open day and time."
                         : "Booked — intro call locked in.";
 
-  return (
+  return createPortal(
     <div
-      className="landing-see-inside fixed inset-0 z-[80] flex flex-col bg-[#07040f]"
+      className="landing-see-inside fixed inset-0 z-[100] flex flex-col bg-[#07040f]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="see-inside-title"
@@ -441,7 +449,7 @@ export default function LandingSeeInsideTour({
                 How to access
               </p>
               <h3 className="mt-0.5 text-center text-lg font-semibold leading-tight text-white">
-                Pick Business Class
+                Pick a Ticket Class
               </h3>
               <div className="mx-auto mt-2 max-w-[160px] overflow-hidden rounded-lg border-2 border-[#a78bfa] shadow-[0_0_20px_rgba(124,58,237,0.4)] ring-2 ring-[#7c3aed]/50 sm:max-w-[180px]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -472,7 +480,7 @@ export default function LandingSeeInsideTour({
                 Program
               </p>
               <h3 className="mt-0.5 text-center text-lg font-semibold leading-tight text-white">
-                Pick Adult
+                Pick a Program
               </h3>
               <div className="mt-2 overflow-hidden rounded-xl border-2 border-[#7c3aed] ring-2 ring-[#7c3aed]/40">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -727,6 +735,7 @@ export default function LandingSeeInsideTour({
           aria-hidden
         />
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
