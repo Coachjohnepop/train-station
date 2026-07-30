@@ -138,16 +138,23 @@ export default function LandingSeeInsideTour({
     return clearTimers;
   }, [open, phase, beat, clearTimers]);
 
-  // Confetti on confetti beat
+  // Confetti ONLY on its own beat — after set 3 has already been held for a full step
   useEffect(() => {
     if (!open || phase !== "auto") return;
-    if (AUTO_BEATS[beat] !== "w_confetti") return;
+    const step = AUTO_BEATS[beat];
+    // Never fire on set-check beats (especially w_set3)
+    if (step !== "w_confetti") return;
     if (confettiFired.current || reducedMotion.current) return;
     confettiFired.current = true;
+    // Slight delay so set-3 checkmark is already settled from previous step
     const t = window.setTimeout(() => {
       const el = lastSetRef.current;
-      if (el) fireWorkoutConfetti(confettiOriginFromElement(el));
-    }, 200);
+      if (el) {
+        fireWorkoutConfetti(confettiOriginFromElement(el), 1800);
+      } else {
+        fireWorkoutConfetti(undefined, 1800);
+      }
+    }, 350);
     return () => window.clearTimeout(t);
   }, [open, phase, beat]);
 
@@ -186,6 +193,7 @@ export default function LandingSeeInsideTour({
       ? 135
       : 95;
 
+  // Set 3 checks alone on w_set3; confetti beat keeps them checked (no re-toggle)
   const doneSets =
     current === "w_set1"
       ? [1]
@@ -194,6 +202,8 @@ export default function LandingSeeInsideTour({
         : current === "w_set3" || current === "w_confetti"
           ? [1, 2, 3]
           : [];
+  const set3JustDone = current === "w_set3";
+  const celebrating = current === "w_confetti";
 
   const equipSelected = current === "equip_all";
   const bookDayIndex =
@@ -233,10 +243,14 @@ export default function LandingSeeInsideTour({
             : "Checkout whenever you’re ready. Change anything later in Member → Settings."
       : current === "w_weight"
         ? "Log the weight you used."
-        : current === "w_set1" || current === "w_set2" || current === "w_set3"
-          ? "Tap each set as you finish."
-          : current === "w_confetti"
-            ? "Last set — celebrate and keep the train moving."
+        : current === "w_set1"
+          ? "Set 1 complete."
+          : current === "w_set2"
+            ? "Set 2 complete."
+            : current === "w_set3"
+              ? "Set 3 complete."
+              : current === "w_confetti"
+                ? "Finish — confetti."
             : current === "access_business"
               ? "How to access — Business Class (demo)."
               : current === "pick_adult"
@@ -348,13 +362,18 @@ export default function LandingSeeInsideTour({
                     </label>
                     {[1, 2, 3].map((n) => {
                       const done = doneSets.includes(n);
+                      const isThird = n === 3;
                       return (
                         <div
                           key={n}
-                          ref={n === 3 ? lastSetRef : undefined}
+                          ref={isThird ? lastSetRef : undefined}
                           className={`flex h-12 flex-1 flex-col items-center justify-center rounded-lg border text-xs font-bold transition-colors duration-500 ${
                             done
-                              ? "border-[#d4af37]/55 bg-[#d4af37]/20 text-[#fde68a]"
+                              ? isThird && set3JustDone
+                                ? "border-[#c4b5fd]/70 bg-[#7c3aed]/25 text-[#e9d5ff]"
+                                : celebrating && isThird
+                                  ? "border-[#d4af37]/70 bg-[#d4af37]/30 text-[#fde68a] scale-105"
+                                  : "border-[#d4af37]/55 bg-[#d4af37]/20 text-[#fde68a]"
                               : "border-white/15 bg-white/5 text-white/80"
                           }`}
                         >
