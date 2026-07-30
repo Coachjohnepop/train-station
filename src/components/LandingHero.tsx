@@ -4,6 +4,7 @@ import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import TrainStationBrand from "@/components/TrainStationBrand";
 import WelcomeVideoPopover from "@/components/WelcomeVideoPopover";
+import LandingSeeInsideTour from "@/components/LandingSeeInsideTour";
 
 const images = [
   { src: "/images/splash/black-guy.jpg", alt: "Athlete powering through a heavy lift" },
@@ -48,7 +49,7 @@ const ROTATING = [
 
 /**
  * Cold-traffic “send POP” screen — one promise, one ask.
- * Ticket theater never lives here.
+ * Ask = See inside (guided tour) → choose your ticket. Not free-first.
  */
 export default function LandingHero({
   welcomeVideoUrl = null,
@@ -58,6 +59,7 @@ export default function LandingHero({
   const [imageTick, setImageTick] = useState(0);
   const [phraseTick, setPhraseTick] = useState(0);
   const [canRotateCopy, setCanRotateCopy] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
 
   // Images can crossfade immediately
   useEffect(() => {
@@ -125,34 +127,34 @@ export default function LandingHero({
               </span>
             </p>
 
-            {/* Single primary ask */}
+            {/* Single primary ask: guided tour, not free signup */}
             <div className="mt-7 w-full max-w-sm sm:mt-9">
-              <Link
-                href="/signup?plan=explorer"
+              <button
+                type="button"
+                onClick={() => setTourOpen(true)}
                 className="landing-hero-early-signup landing-hero-cta-pulse inline-flex h-[3.5rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg"
               >
-                Board Now
-              </Link>
+                See inside
+              </button>
               <p className="mt-2.5 text-center text-[12px] font-medium text-white/55">
-                Free · no card required
+                15-second tour · then pick your ticket
               </p>
 
-              {/* Secondary: text only — never a second competing pill */}
               <p className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[13px] font-semibold text-white/70">
                 <Link
-                  href="/login"
+                  href="/join?from=tour#tickets"
                   className="underline decoration-white/35 underline-offset-[5px] transition hover:text-white hover:decoration-white"
                 >
-                  Member sign in
+                  Choose your ticket
                 </Link>
                 <span className="text-white/30" aria-hidden>
                   ·
                 </span>
                 <Link
-                  href="/join"
+                  href="/login"
                   className="underline decoration-white/35 underline-offset-[5px] transition hover:text-white hover:decoration-white"
                 >
-                  See plans
+                  Member sign in
                 </Link>
                 {welcomeVideoUrl?.trim() ? (
                   <>
@@ -188,6 +190,8 @@ export default function LandingHero({
           />
         ))}
       </div>
+
+      <LandingSeeInsideTour open={tourOpen} onClose={() => setTourOpen(false)} />
     </section>
   );
 }

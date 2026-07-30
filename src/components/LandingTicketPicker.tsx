@@ -55,6 +55,8 @@ export default function LandingTicketPicker({
         <MembershipTicketGrid
           mode="landing"
           showBrand
+          heading="Choose your ticket"
+          subheading="Free Explorer, Coach Class, Business Class, First Class — pick your seat and we’ll get you rolling."
           onFreeSelect={() => setFreeModalOpen(true)}
           onPaidSelect={(tierId) => handleTicketClick(tierId)}
           highlightPaid={highlightPaid}

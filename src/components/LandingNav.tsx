@@ -175,7 +175,7 @@ export default function LandingNav({
           {/* Desktop / tablet only — mobile uses ☰ so we don’t stack weird jelly beans */}
           {variant === "public" ? (
             <>
-              {/* Cold hero: one ask lives in the hero (Board Now). */}
+              {/* Cold hero: primary ask is See inside (in hero). */}
               <Link
                 href="/login"
                 className={`landing-nav__link ${overHero ? "hidden sm:inline-flex text-white/90" : "hidden md:inline-flex"}`}
@@ -184,10 +184,10 @@ export default function LandingNav({
               </Link>
               {!overHero ? (
                 <Link
-                  href="/signup?plan=explorer"
+                  href="/join#tickets"
                   className="btn-primary hidden px-4 py-2 text-xs font-bold md:inline-flex"
                 >
-                  Early sign up
+                  Choose ticket
                 </Link>
               ) : null}
             </>
@@ -240,10 +240,10 @@ export default function LandingNav({
               </Link>
             ))}
             <Link
-              href="/signup?plan=explorer"
+              href="/join#tickets"
               className="block rounded-lg px-2 py-2 text-sm font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
             >
-              Early sign up
+              Choose your ticket
             </Link>
             <Link href="/login" className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]">
               Member sign in
