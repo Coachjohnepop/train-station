@@ -9,7 +9,7 @@ import {
 } from "@/lib/workout-confetti";
 import { TICKET_TIERS, type TicketTierId } from "@/lib/landing-tickets";
 import { TOP_LEVEL_PROGRAMS } from "@/lib/programs";
-import { signupPlanLabel } from "@/lib/signup-plans";
+import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 
 /**
  * See inside tour (preview):
@@ -171,7 +171,7 @@ export default function LandingSeeInsideTour({
     ((STAGE_ORDER.indexOf(stage) + 1) / STAGE_ORDER.length) * 100;
   const weightHot = demoPhase !== "idle";
   const programs = TOP_LEVEL_PROGRAMS.filter((p) => p.catalogStatus !== "hidden");
-  const planLabel = signupPlanLabel(plan);
+  const planLabel = signupPlanLabel(normalizeSignupPlan(plan));
 
   return (
     <div
