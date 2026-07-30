@@ -175,19 +175,21 @@ export default function LandingNav({
           {/* Desktop / tablet only — mobile uses ☰ so we don’t stack weird jelly beans */}
           {variant === "public" ? (
             <>
-              <Link href="/login" className="landing-nav__link hidden md:inline-flex">
-                Member sign in
-              </Link>
+              {/* Cold hero: no second “Board free” — one ask lives in the hero. */}
               <Link
-                href="/signup?plan=explorer"
-                className={`btn-primary px-3 py-1.5 text-[11px] font-bold md:px-4 md:py-2 md:text-xs ${
-                  overHero
-                    ? "bg-white text-[#1a0b2e] shadow-lg shadow-purple-500/40 hover:bg-[#f5f3ff]"
-                    : "hidden md:inline-flex"
-                }`}
+                href="/login"
+                className={`landing-nav__link ${overHero ? "hidden sm:inline-flex text-white/90" : "hidden md:inline-flex"}`}
               >
-                {overHero ? "Board free" : "Early sign up"}
+                Sign in
               </Link>
+              {!overHero ? (
+                <Link
+                  href="/signup?plan=explorer"
+                  className="btn-primary hidden px-4 py-2 text-xs font-bold md:inline-flex"
+                >
+                  Early sign up
+                </Link>
+              ) : null}
             </>
           ) : (
             <>

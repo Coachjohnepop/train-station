@@ -357,12 +357,13 @@ export default function BackgroundMusic() {
   };
 
   const onPublicHome = pathname === "/";
-  const fingerVisible = showHint && !onAdmin;
+  // Cold home: never cover the primary CTA with Theme Song + finger.
+  // Quiet speaker only; music still unlocks on any gesture.
+  const fingerVisible = showHint && !onAdmin && !onPublicHome;
 
   // Honest icon: only “on” when sound is confirmed live
   const showAsPlaying = !off && soundLive;
 
-  // Emperor’s New Groove energy — short, clear, mobile-friendly
   const bubbleMobile = off
     ? "Theme Song — tap to play"
     : soundLive
@@ -390,10 +391,10 @@ export default function BackgroundMusic() {
       {!onAdmin ? (
         <div
           className={`bg-music-control-cluster fixed z-50 flex items-end overflow-visible ${
-            onPublicHome ? "bottom-5 sm:bottom-8" : "bottom-6"
+            onPublicHome ? "bottom-4 sm:bottom-7" : "bottom-6"
           }`}
           style={{
-            right: "max(1rem, env(safe-area-inset-right, 0px))",
+            right: "max(0.75rem, env(safe-area-inset-right, 0px))",
             bottom: onPublicHome
               ? undefined
               : "max(1.25rem, env(safe-area-inset-bottom, 0px))",
@@ -405,7 +406,6 @@ export default function BackgroundMusic() {
                 <span className="sm:hidden">{bubbleMobile}</span>
                 <span className="hidden sm:inline">{bubbleDesktop}</span>
               </p>
-              {/* 👉🏽 medium tan — one shade lighter than medium-dark */}
               <span className="bg-music-guide-pointer" aria-hidden>
                 {"\u{1F449}\u{1F3FD}"}
               </span>
@@ -416,10 +416,12 @@ export default function BackgroundMusic() {
             onClick={toggle}
             aria-label={showAsPlaying ? "Mute background music" : "Play background music"}
             title={showAsPlaying ? "Mute music" : "Play music"}
-            className={`bg-music-toggle relative z-10 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.985] ${
+            className={`bg-music-toggle relative z-10 inline-flex shrink-0 items-center justify-center rounded-2xl border shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.985] ${
+              onPublicHome ? "h-10 w-10 opacity-80" : "h-11 w-11"
+            } ${
               showAsPlaying
                 ? "border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_18%,var(--bg))] text-[var(--text)]"
-                : "border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_90%,transparent)] text-[var(--muted)]"
+                : "border-white/25 bg-black/45 text-white/80"
             }`}
           >
             {showAsPlaying ? <SpeakerOnIcon /> : <SpeakerOffIcon />}

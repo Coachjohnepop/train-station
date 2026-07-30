@@ -148,18 +148,6 @@ export default async function HomePage() {
     );
   }
 
-  return (
-    <>
-      <LandingConversion welcomeVideoUrl={landingVideos.welcomeVideoUrl} />
-      <div className="home-memberships-fab fixed z-30 hidden flex-col items-end gap-2 md:flex">
-        <Link
-          href="/join"
-          className="group inline-flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_90%,transparent)] px-5 py-2.5 text-sm font-semibold text-[var(--text)] shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:shadow-2xl active:scale-[0.985]"
-        >
-          View memberships
-          <span className="text-[var(--accent)] transition group-hover:translate-x-0.5">→</span>
-        </Link>
-      </div>
-    </>
-  );
+  // Cold traffic / SMS — full send POP only (no floating memberships FAB).
+  return <LandingConversion welcomeVideoUrl={landingVideos.welcomeVideoUrl} />;
 }
