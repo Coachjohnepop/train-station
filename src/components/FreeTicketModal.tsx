@@ -29,6 +29,7 @@ export default function FreeTicketModal({
   open,
   onClose,
   onUpgrade,
+  onContinueFree,
   freeChastiseVideoUrl = null,
   welcomeVideoUrl = null,
   /** @deprecated Product gag is fixed; prop ignored for URL/duration. */
@@ -38,6 +39,8 @@ export default function FreeTicketModal({
   open: boolean;
   onClose: () => void;
   onUpgrade: () => void;
+  /** If set, Free continue stays in parent flow (e.g. tour) instead of navigating. */
+  onContinueFree?: () => void;
   /** Jeremy free-tier intro (after gag). Not the rickroll. */
   freeChastiseVideoUrl?: string | null;
   welcomeVideoUrl?: string | null;
@@ -316,13 +319,26 @@ export default function FreeTicketModal({
           >
             Show me Coach Class &amp; 1st Class →
           </button>
-          <Link
-            href={purchaseHref("explorer", purchaseAuth)}
-            className="inline-flex h-11 items-center justify-center rounded-full border border-[#3d2660] text-sm font-semibold text-[#9d8ab8] hover:text-white hover:border-[#7c3aed]/40 transition"
-            onClick={onClose}
-          >
-            Continue with Free / Explorer
-          </Link>
+          {onContinueFree ? (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onContinueFree();
+              }}
+              className="inline-flex h-11 items-center justify-center rounded-full border border-[#3d2660] text-sm font-semibold text-[#9d8ab8] hover:text-white hover:border-[#7c3aed]/40 transition"
+            >
+              Continue with Free / Explorer
+            </button>
+          ) : (
+            <Link
+              href={purchaseHref("explorer", purchaseAuth)}
+              className="inline-flex h-11 items-center justify-center rounded-full border border-[#3d2660] text-sm font-semibold text-[#9d8ab8] hover:text-white hover:border-[#7c3aed]/40 transition"
+              onClick={onClose}
+            >
+              Continue with Free / Explorer
+            </Link>
+          )}
           <button type="button" onClick={onClose} className="text-xs text-[#9d8ab8] hover:text-white py-1">
             Never mind
           </button>
