@@ -22,6 +22,12 @@ export function volumeDbToLinear(db: number): number {
   return Math.pow(10, db / 20);
 }
 
+/** dB offset for a linear gain multiplier (e.g. 3× → ~+9.5 dB). */
+export function linearMultiplierToDb(mult: number): number {
+  if (!(mult > 0) || !Number.isFinite(mult)) return 0;
+  return 20 * Math.log10(mult);
+}
+
 /**
  * YouTube iframe API setVolume is 0–100 (native ≈ 100).
  * Boost above 0 dB cannot exceed 100 on YouTube embeds.

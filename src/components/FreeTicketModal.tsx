@@ -9,12 +9,23 @@ import {
   landingVideoEmbedSrc,
   productFreeTicketGag,
 } from "@/lib/landing-media";
-import { applyMediaVolumeDb, volumeDbToYoutubePercent } from "@/lib/media-volume";
+import {
+  applyMediaVolumeDb,
+  clampVolumeDb,
+  linearMultiplierToDb,
+  volumeDbToYoutubePercent,
+} from "@/lib/media-volume";
 import { isDirectVideoUrl } from "@/lib/site-video";
 import { isYoutubeUrl } from "@/lib/youtube";
-import { postYoutubeEmbedCommand } from "@/lib/youtube-embed-control";
+import {
+  fadeOutYoutubeEmbed,
+  postYoutubeEmbedCommand,
+} from "@/lib/youtube-embed-control";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
+
+/** Free-ticket Jeremy intro: 3× louder than admin content volume offset. */
+const JEREMY_WORD_VOLUME_MULT = 3;
 
 /**
  * Free / Explorer ticket open:
@@ -61,6 +72,7 @@ export default function FreeTicketModal({
   const jeremyIframeRef = useRef<HTMLIFrameElement>(null);
   const jeremyVideoRef = useRef<HTMLVideoElement>(null);
   const rickrollKickGen = useRef(0);
+  const cancelRickrollFade = useRef<(() => void) | null>(null);
 
   const signedIn = Boolean(purchaseAuth.signedIn);
   const gag = productFreeTicketGag({ signedIn });
@@ -112,11 +124,18 @@ export default function FreeTicketModal({
   function clearTimers() {
     timersRef.current.forEach((id) => window.clearTimeout(id));
     timersRef.current = [];
+    cancelRickrollFade.current?.();
+    cancelRickrollFade.current = null;
   }
 
   function schedule(fn: () => void, ms: number) {
     timersRef.current.push(window.setTimeout(fn, ms));
   }
+
+  /** Admin content dB × 3 for “A word from Jeremy” (HTML5 can exceed 1.0 via GainNode). */
+  const jeremyVolumeDb = clampVolumeDb(
+    volumeDb + linearMultiplierToDb(JEREMY_WORD_VOLUME_MULT),
+  );
 
   /** Play + unMute only — never seek (start= is already on the embed). */
   function kickYoutubePlay(iframe: HTMLIFrameElement | null) {
@@ -159,9 +178,16 @@ export default function FreeTicketModal({
       schedule(() => setLoadJeremy(true), preloadMs);
     }
 
+    // Start visual + audio crossfade together
     schedule(() => {
       setShowJeremy(true);
       requestAnimationFrame(() => setFadeJeremyIn(true));
+      // Audio fade-out on rickroll (CSS already fades opacity)
+      cancelRickrollFade.current?.();
+      cancelRickrollFade.current = fadeOutYoutubeEmbed(
+        rickrollRef.current,
+        FREE_TICKET_RICKROLL_FADE_MS,
+      );
     }, gagDurationMs);
 
     schedule(() => setHideRickroll(true), gagDurationMs + FREE_TICKET_RICKROLL_FADE_MS);
@@ -172,13 +198,15 @@ export default function FreeTicketModal({
     };
   }, [open, hasJeremy, preloadMs, gag.enabled, gagDurationMs]);
 
-  // Gag: one smooth start — play/unmute only (no seek). Light retry if player was slow.
+  // Gag: one smooth start — play/unmute only (no seek). Full volume, then fade later.
   useEffect(() => {
     if (!open || !rickrollSrc) return;
     const gen = ++rickrollKickGen.current;
     const kick = () => {
       if (gen !== rickrollKickGen.current) return;
-      kickYoutubePlay(rickrollRef.current);
+      const iframe = rickrollRef.current;
+      kickYoutubePlay(iframe);
+      postYoutubeEmbedCommand(iframe, "setVolume", 100);
     };
     // Wait for iframe paint; second try if still muted/not playing (no seek).
     const t1 = window.setTimeout(kick, 350);
@@ -189,24 +217,20 @@ export default function FreeTicketModal({
     };
   }, [open, rickrollSrc]);
 
-  // Jeremy: play + unMute once he fades in (no seek); apply admin volume offset.
+  // Jeremy: play + unMute once he fades in; 3× louder than admin content volume.
   useEffect(() => {
     if (!fadeJeremyIn || !hasJeremy) return;
     const kick = () => {
       if (jeremyIsYoutube) {
-        kickYoutubePlay(jeremyIframeRef.current);
         const iframe = jeremyIframeRef.current;
-        if (iframe?.contentWindow) {
-          const pct = volumeDbToYoutubePercent(volumeDb);
-          iframe.contentWindow.postMessage(
-            JSON.stringify({ event: "command", func: "setVolume", args: [pct] }),
-            "*",
-          );
-        }
+        kickYoutubePlay(iframe);
+        // YouTube caps at 100% — use max when boosted; real 3× needs HTML5 upload.
+        const pct = volumeDbToYoutubePercent(jeremyVolumeDb);
+        postYoutubeEmbedCommand(iframe, "setVolume", pct);
       } else if (jeremyVideoRef.current) {
         const el = jeremyVideoRef.current;
         el.muted = false;
-        applyMediaVolumeDb(el, volumeDb);
+        applyMediaVolumeDb(el, jeremyVolumeDb);
         void el.play().catch(() => {
           /* may need another tap on locked-down browsers */
         });
@@ -218,7 +242,7 @@ export default function FreeTicketModal({
       window.clearTimeout(t1);
       window.clearTimeout(t2);
     };
-  }, [fadeJeremyIn, hasJeremy, jeremyIsYoutube, volumeDb]);
+  }, [fadeJeremyIn, hasJeremy, jeremyIsYoutube, jeremyVolumeDb]);
 
   if (!open) return null;
 
@@ -302,8 +326,8 @@ export default function FreeTicketModal({
               controls
               autoPlay
               preload="auto"
-              onLoadedMetadata={(e) => applyMediaVolumeDb(e.currentTarget, volumeDb)}
-              onPlay={(e) => applyMediaVolumeDb(e.currentTarget, volumeDb)}
+              onLoadedMetadata={(e) => applyMediaVolumeDb(e.currentTarget, jeremyVolumeDb)}
+              onPlay={(e) => applyMediaVolumeDb(e.currentTarget, jeremyVolumeDb)}
             />
           )}
 
