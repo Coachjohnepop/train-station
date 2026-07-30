@@ -21,30 +21,51 @@ export function postYoutubeEmbedCommand(
 }
 
 /**
- * Ramp YouTube embed volume 100 → 0 over `durationMs`, then mute + pause.
- * Visual opacity fades separately in FreeTicketModal.
+ * Linear volume fade 100 → 0 over exactly `durationMs` (default 2s), then mute + pause.
+ * Uses rAF for smooth steps; posts setVolume often so YouTube actually ramps.
  */
 export function fadeOutYoutubeEmbed(
   iframe: HTMLIFrameElement | null,
-  durationMs: number,
+  durationMs = 2_000,
 ): () => void {
   if (!iframe?.contentWindow || durationMs <= 0) {
+    postYoutubeEmbedCommand(iframe, "setVolume", 0);
     postYoutubeEmbedCommand(iframe, "mute");
     postYoutubeEmbedCommand(iframe, "pauseVideo");
     return () => {};
   }
-  const steps = Math.max(8, Math.round(durationMs / 80));
-  const stepMs = durationMs / steps;
-  let i = 0;
-  const id = window.setInterval(() => {
-    i += 1;
-    const pct = Math.max(0, Math.round(100 * (1 - i / steps)));
+
+  let cancelled = false;
+  let rafId = 0;
+  const start = performance.now();
+
+  // Start from full volume (in case player was quieter)
+  postYoutubeEmbedCommand(iframe, "unMute");
+  postYoutubeEmbedCommand(iframe, "setVolume", 100);
+
+  const finish = () => {
+    postYoutubeEmbedCommand(iframe, "setVolume", 0);
+    postYoutubeEmbedCommand(iframe, "mute");
+    postYoutubeEmbedCommand(iframe, "pauseVideo");
+  };
+
+  const tick = (now: number) => {
+    if (cancelled) return;
+    const t = Math.min(1, (now - start) / durationMs);
+    // Linear to silent
+    const pct = Math.max(0, Math.min(100, Math.round(100 * (1 - t))));
     postYoutubeEmbedCommand(iframe, "setVolume", pct);
-    if (i >= steps) {
-      window.clearInterval(id);
-      postYoutubeEmbedCommand(iframe, "mute");
-      postYoutubeEmbedCommand(iframe, "pauseVideo");
+    if (t < 1) {
+      rafId = window.requestAnimationFrame(tick);
+    } else {
+      finish();
     }
-  }, stepMs);
-  return () => window.clearInterval(id);
+  };
+
+  rafId = window.requestAnimationFrame(tick);
+
+  return () => {
+    cancelled = true;
+    window.cancelAnimationFrame(rafId);
+  };
 }

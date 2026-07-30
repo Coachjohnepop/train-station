@@ -108,8 +108,12 @@ export const FREE_TICKET_RICKROLL_CHORUS_START_SEC = 43;
 /** How long the gag plays before crossfading to Jeremy. */
 export const FREE_TICKET_RICKROLL_DURATION_MS = 10_000;
 
-/** Crossfade length (visual opacity + YouTube volume ramp in FreeTicketModal). */
-export const FREE_TICKET_RICKROLL_FADE_MS = 1_800;
+/**
+ * Rickroll → Jeremy crossfade.
+ * Audio ramps volume 100 → 0 over this window (must be 2s for product).
+ * Visual opacity uses the same duration.
+ */
+export const FREE_TICKET_RICKROLL_FADE_MS = 2_000;
 
 export type FreeTicketGagConfig = {
   enabled: boolean;
