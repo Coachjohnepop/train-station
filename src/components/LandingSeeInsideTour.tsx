@@ -13,9 +13,8 @@ import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 
 /**
  * See inside tour (preview):
- * 1 demo → 2 choose ticket → 3 fork (onboard left | program right)
- * → each path can reach the other → 4 book Jeremy (skippable) → create account
- * Free: rickroll modal, then same fork.
+ * demo → ticket (pay anytime) → fork onboard | program → book Jeremy
+ * Rules: money anytime after ticket; program start date only after full onboard.
  */
 const SCREEN_MS = 2000;
 
@@ -25,11 +24,11 @@ const STAGE_ORDER: Stage[] = ["demo", "tickets", "fork", "onboard", "program", "
 
 const COACH: Record<Stage, string> = {
   demo: "Live session on your phone — log weight, check sets, finish strong.",
-  tickets: "Choose your ticket — Free, Coach, Business, or 1st Class.",
-  fork: "Next: set up your account path, or pick the program you’ll train.",
-  onboard: "Onboarding — texts, profile, start date. You can finish later in the app.",
-  program: "Pick your training track. Switch anytime from your member dashboard.",
-  book: "Book your first appointment with Coach Jeremy — or skip and do it later.",
+  tickets: "Choose your ticket — you can pay now. Free works the same path.",
+  fork: "Pay anytime. Onboard fully to unlock your program start date.",
+  onboard: "Finish full onboard to pick your start date. Pay is separate — already open.",
+  program: "Pick a track anytime. Start date waits until onboarding is complete.",
+  book: "Book Coach Jeremy — or skip and book later in the app.",
 };
 
 export default function LandingSeeInsideTour({
@@ -171,7 +170,9 @@ export default function LandingSeeInsideTour({
     ((STAGE_ORDER.indexOf(stage) + 1) / STAGE_ORDER.length) * 100;
   const weightHot = demoPhase !== "idle";
   const programs = TOP_LEVEL_PROGRAMS.filter((p) => p.catalogStatus !== "hidden");
-  const planLabel = signupPlanLabel(normalizeSignupPlan(plan));
+  const planNorm = normalizeSignupPlan(plan);
+  const planLabel = signupPlanLabel(planNorm);
+  const isPaidPlan = planNorm !== "explorer";
 
   return (
     <div
@@ -311,6 +312,10 @@ export default function LandingSeeInsideTour({
               <h3 className="mt-1 text-center text-2xl font-semibold tracking-tight text-white sm:text-3xl">
                 Choose your ticket
               </h3>
+              <p className="mt-1.5 text-center text-[12px] text-white/55">
+                Pay anytime after you pick — we&apos;ll take the money.{" "}
+                <span className="text-white/75">Start date unlocks only after full onboard.</span>
+              </p>
               <div className="mt-4 grid grid-cols-2 gap-2">
                 {TICKET_TIERS.map((tier) => {
                   const isFree = tier.id === "free";
@@ -344,7 +349,7 @@ export default function LandingSeeInsideTour({
                           ) : null}
                         </span>
                         <span className="mt-1 text-[10px] font-semibold text-[#c4b5fd]">
-                          {isFree ? "Tap if you dare →" : "Select →"}
+                          {isFree ? "Tap if you dare →" : "Select & pay anytime →"}
                         </span>
                       </div>
                     </button>
@@ -364,9 +369,28 @@ export default function LandingSeeInsideTour({
                 How do you want to start?
               </h3>
               <p className="mt-1 text-center text-[12px] text-white/55">
-                Equal paths — you can do both. They meet at booking Jeremy.
+                {isPaidPlan
+                  ? "Pay now or later in this path — either works. Start date needs full onboard."
+                  : "Free Explorer continues the same way. Start date needs full onboard."}
               </p>
-              <div className="mt-5 grid grid-cols-2 gap-3">
+              {isPaidPlan ? (
+                <button
+                  type="button"
+                  onClick={goSignup}
+                  className="landing-hero-early-signup mt-4 inline-flex h-12 w-full items-center justify-center rounded-full text-[15px] font-extrabold"
+                >
+                  Pay &amp; create account · {planLabel} →
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={goSignup}
+                  className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-full border border-white/20 text-sm font-semibold text-white transition hover:bg-white/10"
+                >
+                  Create Free account now →
+                </button>
+              )}
+              <div className="mt-4 grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -381,7 +405,7 @@ export default function LandingSeeInsideTour({
                   <div>
                     <p className="text-lg font-semibold text-white">Onboard</p>
                     <p className="mt-1 text-[12px] leading-snug text-white/60">
-                      Profile, texts, start date — get set for the station.
+                      Full setup unlocks your <strong className="text-white/85">start date</strong>.
                     </p>
                   </div>
                   <span className="text-xs font-semibold text-[#c4b5fd]">Start setup →</span>
@@ -400,7 +424,7 @@ export default function LandingSeeInsideTour({
                   <div>
                     <p className="text-lg font-semibold text-white">Pick a program</p>
                     <p className="mt-1 text-[12px] leading-snug text-white/60">
-                      Adult, Athletes, Military, busy parents…
+                      Choose a track anytime. Start date still needs onboard.
                     </p>
                   </div>
                   <span className="text-xs font-semibold text-[#c4b5fd]">Choose track →</span>
@@ -415,7 +439,7 @@ export default function LandingSeeInsideTour({
               <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#a78bfa]">
                 Onboarding
               </p>
-              <h3 className="mt-1 text-xl font-semibold text-white">Set up your seat</h3>
+              <h3 className="mt-1 text-xl font-semibold text-white">Full setup unlocks start date</h3>
               <ol className="mt-4 space-y-2.5 text-sm text-white/85">
                 <li className="flex gap-2">
                   <span className="font-bold text-[#c4b5fd]">1.</span> Name, phone for workout texts
@@ -424,13 +448,30 @@ export default function LandingSeeInsideTour({
                   <span className="font-bold text-[#c4b5fd]">2.</span> Gear / home equipment (optional)
                 </li>
                 <li className="flex gap-2">
-                  <span className="font-bold text-[#c4b5fd]">3.</span> Program start date
+                  <span className="font-bold text-emerald-300/90">3.</span>
+                  <span>
+                    <strong className="text-white">Program start date</strong>
+                    <span className="mt-0.5 block text-[11px] text-white/50">
+                      Only after steps 1–2 are complete — not before.
+                    </span>
+                  </span>
                 </li>
               </ol>
-              <p className="mt-3 text-[11px] text-white/50">
-                You can skip pieces and finish later in Account / Today.
+              <p className="mt-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[11px] leading-snug text-amber-100/90">
+                {isPaidPlan
+                  ? "Payment is open now — you can pay without finishing onboard. Start date waits."
+                  : "Free still needs full onboard before a start date."}
               </p>
               <div className="mt-4 flex flex-col gap-2">
+                {isPaidPlan ? (
+                  <button
+                    type="button"
+                    onClick={goSignup}
+                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#a78bfa]/50 bg-[#7c3aed]/25 text-sm font-semibold text-white transition hover:bg-[#7c3aed]/40"
+                  >
+                    Pay now · {planLabel} →
+                  </button>
+                ) : null}
                 {!didProgram ? (
                   <button
                     type="button"
@@ -463,7 +504,11 @@ export default function LandingSeeInsideTour({
               <h3 className="mt-1 text-center text-xl font-semibold text-white">
                 Pick your training track
               </h3>
-              <div className="mt-3 max-h-[40vh] space-y-2 overflow-y-auto pr-1">
+              <p className="mt-1 text-center text-[11px] text-white/50">
+                Track is open now.{" "}
+                <span className="text-amber-200/90">Start date locked until full onboard.</span>
+              </p>
+              <div className="mt-3 max-h-[36vh] space-y-2 overflow-y-auto pr-1">
                 {programs.map((p) => {
                   const active = programSlug === p.slug;
                   return (
@@ -486,6 +531,15 @@ export default function LandingSeeInsideTour({
                 })}
               </div>
               <div className="mt-4 flex flex-col gap-2">
+                {isPaidPlan ? (
+                  <button
+                    type="button"
+                    onClick={goSignup}
+                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#a78bfa]/50 bg-[#7c3aed]/25 text-sm font-semibold text-white transition hover:bg-[#7c3aed]/40"
+                  >
+                    Pay now · {planLabel} →
+                  </button>
+                ) : null}
                 {!didOnboard ? (
                   <button
                     type="button"
@@ -495,7 +549,7 @@ export default function LandingSeeInsideTour({
                     }}
                     className="inline-flex h-11 items-center justify-center rounded-full border border-white/20 text-sm font-semibold text-white transition hover:bg-white/10"
                   >
-                    Or go through onboarding →
+                    Or finish onboard (unlock start date) →
                   </button>
                 ) : null}
                 <button
@@ -564,15 +618,20 @@ export default function LandingSeeInsideTour({
                   onClick={goSignup}
                   className="landing-hero-early-signup inline-flex h-12 items-center justify-center rounded-full text-[15px] font-extrabold"
                 >
-                  Create account · {planLabel} →
+                  {isPaidPlan
+                    ? `Pay & create account · ${planLabel} →`
+                    : `Create Free account · ${planLabel} →`}
                 </button>
                 <button
                   type="button"
                   onClick={goSignup}
                   className="text-xs font-semibold text-white/50 underline decoration-white/25 underline-offset-4 hover:text-white"
                 >
-                  Skip for now — book later in the app
+                  Skip book for now — you can Book Call later in the app
                 </button>
+                <p className="text-center text-[10px] leading-snug text-white/40">
+                  Start date still requires full onboard after you&apos;re in.
+                </p>
               </div>
             </div>
           )}
