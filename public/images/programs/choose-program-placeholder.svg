@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" fill="none">
+  <rect width="800" height="600" fill="#12081f"/>
+  <rect x="40" y="40" width="720" height="520" rx="28" stroke="#7c3aed" stroke-opacity="0.45" stroke-width="3" fill="#1a0b2e"/>
+  <!-- six tile placeholders -->
+  <rect x="80" y="120" width="200" height="150" rx="16" fill="#0a0612" stroke="#3d2660" stroke-width="2"/>
+  <rect x="300" y="120" width="200" height="150" rx="16" fill="#0a0612" stroke="#3d2660" stroke-width="2"/>
+  <rect x="520" y="120" width="200" height="150" rx="16" fill="#0a0612" stroke="#3d2660" stroke-width="2"/>
+  <rect x="80" y="300" width="200" height="150" rx="16" fill="#0a0612" stroke="#3d2660" stroke-width="2"/>
+  <rect x="300" y="300" width="200" height="150" rx="16" fill="#0a0612" stroke="#3d2660" stroke-width="2"/>
+  <rect x="520" y="300" width="200" height="150" rx="16" fill="#0a0612" stroke="#3d2660" stroke-width="2"/>
+  <text x="400" y="90" text-anchor="middle" fill="#a78bfa" font-family="system-ui,sans-serif" font-size="22" font-weight="700" letter-spacing="4">PROGRAMS</text>
+  <text x="400" y="520" text-anchor="middle" fill="#9d8ab8" font-family="system-ui,sans-serif" font-size="16">Art placeholder — swap file anytime</text>
+</svg>

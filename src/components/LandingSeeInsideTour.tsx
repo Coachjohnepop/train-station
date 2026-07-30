@@ -597,7 +597,7 @@ export default function LandingSeeInsideTour({
 
           {/* ── END: two real choices ── */}
           {phase === "end" && endMode === "choice" && (
-            <div className="w-full max-w-md">
+            <div className="w-full max-w-lg">
               <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-[#c4b5fd]">
                 Your move
               </p>
@@ -608,37 +608,64 @@ export default function LandingSeeInsideTour({
                 Ticket or program first — both reach payment. Program is optional.
               </p>
               <div className="mt-5 grid grid-cols-2 gap-3">
+                {/* Left — ticket art */}
                 <button
                   type="button"
                   onClick={() => setEndMode("tickets")}
-                  className="flex min-h-[150px] flex-col items-start justify-between rounded-2xl border border-[#7c3aed]/50 bg-[#1a0b2e] p-4 text-left"
+                  className="group flex flex-col overflow-hidden rounded-2xl border border-[#7c3aed]/50 bg-[#1a0b2e] text-left shadow-[0_12px_40px_rgba(124,58,237,0.25)] transition hover:border-[#a78bfa]"
                 >
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#a78bfa]">
-                    Left
-                  </span>
-                  <div>
-                    <p className="text-lg font-semibold text-white">Choose ticket level</p>
-                    <p className="mt-1 text-[12px] text-white/60">
-                      Free · Coach · Business · 1st — seat art for each class.
-                    </p>
+                  <div className="relative aspect-[5/4] w-full overflow-hidden bg-black/40">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/images/tickets/dual-tickets-fan.jpg"
+                      alt="Coach Class and First Class tickets"
+                      className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.03]"
+                    />
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#1a0b2e] via-transparent to-transparent" />
+                    <span className="absolute left-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#c4b5fd] backdrop-blur-sm">
+                      Left
+                    </span>
                   </div>
-                  <span className="text-xs font-semibold text-[#c4b5fd]">Open levels →</span>
+                  <div className="flex flex-1 flex-col p-3">
+                    <p className="text-base font-semibold text-white sm:text-lg">
+                      Choose ticket level
+                    </p>
+                    <p className="mt-1 text-[11px] leading-snug text-white/60">
+                      Free · Coach · Business · 1st
+                    </p>
+                    <span className="mt-2 text-xs font-semibold text-[#c4b5fd]">
+                      Open levels →
+                    </span>
+                  </div>
                 </button>
+
+                {/* Right — program placeholder art (swap file when ready) */}
                 <button
                   type="button"
                   onClick={() => setEndMode("programs")}
-                  className="flex min-h-[150px] flex-col items-start justify-between rounded-2xl border border-white/15 bg-[#12081f] p-4 text-left"
+                  className="group flex flex-col overflow-hidden rounded-2xl border border-white/15 bg-[#12081f] text-left transition hover:border-[#7c3aed]/50"
                 >
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-white/45">
-                    Right
-                  </span>
-                  <div>
-                    <p className="text-lg font-semibold text-white">Choose program</p>
-                    <p className="mt-1 text-[12px] text-white/60">
-                      Adult, Athletes, Military… with program art.
-                    </p>
+                  <div className="relative aspect-[5/4] w-full overflow-hidden bg-black/40">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/images/programs/choose-program-placeholder.svg"
+                      alt="Programs — art coming soon"
+                      className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.03]"
+                    />
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#12081f] via-transparent to-transparent" />
+                    <span className="absolute left-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/60 backdrop-blur-sm">
+                      Right
+                    </span>
                   </div>
-                  <span className="text-xs font-semibold text-[#c4b5fd]">Open programs →</span>
+                  <div className="flex flex-1 flex-col p-3">
+                    <p className="text-base font-semibold text-white sm:text-lg">Choose program</p>
+                    <p className="mt-1 text-[11px] leading-snug text-white/60">
+                      Adult, Athletes, Military…
+                    </p>
+                    <span className="mt-2 text-xs font-semibold text-[#c4b5fd]">
+                      Open programs →
+                    </span>
+                  </div>
                 </button>
               </div>
               <button
