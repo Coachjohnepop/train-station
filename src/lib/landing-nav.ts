@@ -6,9 +6,10 @@ export type LandingNavSection = {
   href: string;
 };
 
-/** In-page story anchors on home. Memberships live at /join (no ticket art on home). */
+/** In-page story anchors on home. Memberships live at /join (ticket grid). */
 export const LANDING_NAV_SECTIONS: LandingNavSection[] = [
-  { id: "coming-soon-programs", label: "Programs", href: "#coming-soon-programs" },
+  /** Live catalog (Adult, Athletes, …) + waitlist — see ComingSoonPrograms section id=programs */
+  { id: "programs", label: "Programs", href: "#programs" },
   { id: "services", label: "Services", href: "#services" },
 ];
 
