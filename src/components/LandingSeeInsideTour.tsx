@@ -192,14 +192,25 @@ export default function LandingSeeInsideTour({
     // Slight delay so set-3 checkmark is already settled from previous step
     const t = window.setTimeout(() => {
       const el = lastSetRef.current;
+      // Match confetti lifetime to hold so canvas doesn't vanish mid-step (flash)
+      const burstMs = Math.max(2200, CONFETTI_HOLD_MS - 400);
       if (el) {
-        fireWorkoutConfetti(confettiOriginFromElement(el), 1800);
+        fireWorkoutConfetti(confettiOriginFromElement(el), burstMs);
       } else {
-        fireWorkoutConfetti(undefined, 1800);
+        fireWorkoutConfetti(undefined, burstMs);
       }
     }, 350);
     return () => window.clearTimeout(t);
   }, [open, phase, beat]);
+
+  // Preload Business Class art so confetti → access doesn't flash a blank load
+  useEffect(() => {
+    if (!open) return;
+    const img = new window.Image();
+    img.src = "/images/tickets/business-class.jpg";
+    const adult = new window.Image();
+    adult.src = PROGRAM_IMAGES.adult || "/images/programs/adult.jpg";
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -389,9 +400,19 @@ export default function LandingSeeInsideTour({
           ›
         </button>
 
-        <div className="landing-see-inside__panel flex w-full max-w-md flex-col items-center gap-3 px-10 sm:px-12">
+        <div className="flex w-full max-w-md flex-col items-center gap-3 px-10 sm:px-12">
+          {/* Stacked slides crossfade — no unmount flash between confetti and Business */}
+          <div className="landing-see-inside__stage">
           {/* ── Workout phone ── */}
-          {phase === "auto" && current?.startsWith("w_") && (
+          {phase === "auto" && (
+            <div
+              className={`landing-see-inside__slide w-full ${
+                current?.startsWith("w_")
+                  ? "landing-see-inside__slide--active flex flex-col items-center"
+                  : "landing-see-inside__slide--idle"
+              }`}
+              aria-hidden={!current?.startsWith("w_")}
+            >
             <div className="w-full max-w-[300px] overflow-hidden rounded-[1.75rem] border border-white/15 bg-[#12081f] shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
               <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
                 <div>
@@ -450,10 +471,19 @@ export default function LandingSeeInsideTour({
                 </div>
               </div>
             </div>
+            </div>
           )}
 
           {/* ── How to Access · Business Class ── */}
-          {phase === "auto" && current === "access_business" && (
+          {phase === "auto" && (
+            <div
+              className={`landing-see-inside__slide w-full ${
+                current === "access_business"
+                  ? "landing-see-inside__slide--active flex flex-col items-center"
+                  : "landing-see-inside__slide--idle"
+              }`}
+              aria-hidden={current !== "access_business"}
+            >
             <div className="w-full max-w-sm rounded-3xl border border-[#7c3aed]/40 bg-[#140a22] p-5">
               <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-[#a78bfa]">
                 How to access
@@ -474,10 +504,19 @@ export default function LandingSeeInsideTour({
               </p>
               <p className="mt-1 text-center text-[11px] text-emerald-300/90">Selected ✓</p>
             </div>
+            </div>
           )}
 
           {/* ── Program Adult ── */}
-          {phase === "auto" && current === "pick_adult" && (
+          {phase === "auto" && (
+            <div
+              className={`landing-see-inside__slide w-full ${
+                current === "pick_adult"
+                  ? "landing-see-inside__slide--active flex flex-col items-center"
+                  : "landing-see-inside__slide--idle"
+              }`}
+              aria-hidden={current !== "pick_adult"}
+            >
             <div className="w-full max-w-sm rounded-3xl border border-white/15 bg-[#12081f] p-4">
               <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-[#c4b5fd]">
                 Program
@@ -496,10 +535,19 @@ export default function LandingSeeInsideTour({
                 </div>
               </div>
             </div>
+            </div>
           )}
 
           {/* ── Equipment ── */}
-          {phase === "auto" && (current === "equip_blank" || current === "equip_all") && (
+          {phase === "auto" && (
+            <div
+              className={`landing-see-inside__slide w-full ${
+                current === "equip_blank" || current === "equip_all"
+                  ? "landing-see-inside__slide--active flex flex-col items-center"
+                  : "landing-see-inside__slide--idle"
+              }`}
+              aria-hidden={current !== "equip_blank" && current !== "equip_all"}
+            >
             <div className="w-full max-w-sm rounded-3xl border border-white/15 bg-[#12081f] p-4">
               <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-[#c4b5fd]">
                 Gear at home
@@ -533,11 +581,25 @@ export default function LandingSeeInsideTour({
                 Change anytime in Member → Settings
               </p>
             </div>
+            </div>
           )}
 
           {/* ── Book ── */}
-          {phase === "auto" &&
-            (current === "book_open" || current === "book_day" || current === "book_confirm") && (
+          {phase === "auto" && (
+            <div
+              className={`landing-see-inside__slide w-full ${
+                current === "book_open" ||
+                current === "book_day" ||
+                current === "book_confirm"
+                  ? "landing-see-inside__slide--active flex flex-col items-center"
+                  : "landing-see-inside__slide--idle"
+              }`}
+              aria-hidden={
+                current !== "book_open" &&
+                current !== "book_day" &&
+                current !== "book_confirm"
+              }
+            >
               <div className="w-full max-w-sm rounded-3xl border border-emerald-500/30 bg-[#0c1a14] p-4">
                 <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-300/90">
                   Book Call
@@ -593,7 +655,10 @@ export default function LandingSeeInsideTour({
                   </div>
                 </div>
               </div>
-            )}
+            </div>
+          )}
+          </div>
+          {/* end stage stack */}
 
           {/* ── END: two real choices ── */}
           {phase === "end" && endMode === "choice" && (
