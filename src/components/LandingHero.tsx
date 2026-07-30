@@ -137,7 +137,7 @@ export default function LandingHero({
                 See inside
               </button>
               <p className="mt-2.5 text-center text-[12px] font-medium text-white/55">
-                ~20s auto tour · then pick program &amp; ticket
+                Quick tour · then pick program &amp; ticket
               </p>
 
               <p className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[13px] font-semibold text-white/70">

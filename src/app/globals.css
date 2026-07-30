@@ -1315,48 +1315,28 @@ table.data th {
   }
 }
 
-/* See-inside tour — hero-style horizontal auto-scroll */
+/* See-inside tour — one panel at a time; soft fade only (no multi-slide flicker) */
+.landing-see-inside__panel {
+  animation: landing-see-inside-panel-in 0.4s ease-out both;
+}
+
+@keyframes landing-see-inside-panel-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .landing-see-inside__coach {
-  animation: landing-see-inside-coach-in 0.45s ease-out both;
+  /* no re-animate every tick — only with panel change via parent key */
 }
 
-@keyframes landing-see-inside-coach-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
+@media (prefers-reduced-motion: reduce) {
+  .landing-see-inside__panel {
+    animation: none !important;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.landing-see-inside__phone {
-  animation: landing-see-inside-phone-in 0.55s ease-out both;
-}
-
-@keyframes landing-see-inside-phone-in {
-  from {
-    opacity: 0;
-    transform: translateY(16px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.landing-see-inside__scroller {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.landing-see-inside__scroller::-webkit-scrollbar {
-  display: none;
-}
-
-.landing-see-inside__screen {
-  min-height: 0;
 }
 
 /* Transparent nav over cinematic hero on public home (mobile POP) */
