@@ -19,19 +19,17 @@ import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
  * Confetti + post-confetti steps hold longer (felt rushed).
  */
 const STEP_MS = 2000;
-/** Confetti beat: let the burst play before advancing */
-const CONFETTI_HOLD_MS = 3600;
-/** After confetti (access, program, gear, book) — slower so it doesn’t blur past */
-const AFTER_CONFETTI_MS = 3200;
+/** Last set + confetti: hold so burst can play before next slide */
+const SET3_CONFETTI_HOLD_MS = 3600;
+/** After workout (access, program, gear, book) — slower so it doesn’t blur past */
+const AFTER_WORKOUT_MS = 3200;
 
 type AutoBeat =
   | "w_weight"
   | "w_set1"
   | "w_set2"
+  /** Last set — checks set 3 and fires confetti (same as live member console) */
   | "w_set3"
-  /** All sets checked — no confetti yet (prevents set-3 + confetti feeling combined) */
-  | "w_all_done"
-  | "w_confetti"
   | "access_business"
   | "pick_adult"
   | "equip_blank"
@@ -45,8 +43,6 @@ const AUTO_BEATS: AutoBeat[] = [
   "w_set1",
   "w_set2",
   "w_set3",
-  "w_all_done",
-  "w_confetti",
   "access_business",
   "pick_adult",
   "equip_blank",
@@ -124,14 +120,11 @@ export default function LandingSeeInsideTour({
   function holdMsForBeat(index: number): number {
     if (reducedMotion.current) return 1000;
     const id = AUTO_BEATS[index];
-    // Set 3 alone — full 2s with NO confetti
-    if (id === "w_set3") return STEP_MS;
-    // Pause on all-sets-done before confetti so they never feel like one step
-    if (id === "w_all_done") return STEP_MS;
-    if (id === "w_confetti") return CONFETTI_HOLD_MS;
-    // Everything after confetti — give it more air
-    const confettiIdx = AUTO_BEATS.indexOf("w_confetti");
-    if (index > confettiIdx) return AFTER_CONFETTI_MS;
+    // Last set + confetti — hold long enough for the burst
+    if (id === "w_set3") return SET3_CONFETTI_HOLD_MS;
+    // Everything after workout
+    const set3Idx = AUTO_BEATS.indexOf("w_set3");
+    if (index > set3Idx) return AFTER_WORKOUT_MS;
     return STEP_MS;
   }
 
@@ -188,36 +181,26 @@ export default function LandingSeeInsideTour({
     return clearTimers;
   }, [open, phase, beat, clearTimers]);
 
-  // Confetti ONLY on w_confetti — never on w_set3 or w_all_done
+  // Last set (set 3) fires confetti — same as live member console
   useEffect(() => {
     if (!open || phase !== "auto") return;
     const step = AUTO_BEATS[beat];
-
-    // Hard block on any set-check / hold beat
-    if (step === "w_set3" || step === "w_all_done" || step === "w_set1" || step === "w_set2") {
-      return;
-    }
-    if (step !== "w_confetti") return;
+    if (step !== "w_set3") return;
     if (reducedMotion.current) return;
 
     let cancelled = false;
-    // Fire well after entering confetti beat (set 3 already visible for 2 full prior beats)
+    // Fire as set 3 checks (small delay so checkmark paints first)
     const t = window.setTimeout(() => {
       if (cancelled || confettiFired.current) return;
       confettiFired.current = true;
       const el = lastSetRef.current;
-      const burstMs = Math.max(2400, CONFETTI_HOLD_MS - 200);
-      // Origin: center of phone card, not the set-3 button (avoids “set 3 launches confetti”)
+      const burstMs = Math.max(2400, SET3_CONFETTI_HOLD_MS - 400);
       if (el) {
-        const origin = confettiOriginFromElement(el);
-        fireWorkoutConfetti(
-          { x: origin.x, y: origin.y - 40 },
-          burstMs,
-        );
+        fireWorkoutConfetti(confettiOriginFromElement(el), burstMs);
       } else {
         fireWorkoutConfetti(undefined, burstMs);
       }
-    }, 700);
+    }, 120);
     return () => {
       cancelled = true;
       window.clearTimeout(t);
@@ -265,23 +248,21 @@ export default function LandingSeeInsideTour({
     current === "w_weight" ||
     current === "w_set1" ||
     current === "w_set2" ||
-    current === "w_set3" ||
-    current === "w_all_done" ||
-    current === "w_confetti";
+    current === "w_set3";
 
   const displayWeight = onWorkout ? 135 : 95;
 
-  // Progressive checks — set 3 only on w_set3; stay checked through all_done + confetti
+  // Progressive checks — set 3 + confetti on last set (live console behavior)
   const doneSets =
     current === "w_set1"
       ? [1]
       : current === "w_set2"
         ? [1, 2]
-        : current === "w_set3" || current === "w_all_done" || current === "w_confetti"
+        : current === "w_set3"
           ? [1, 2, 3]
           : [];
   const set3JustDone = current === "w_set3";
-  const celebrating = current === "w_confetti";
+  const celebrating = current === "w_set3";
 
   const equipSelected = current === "equip_all";
   const bookDayIndex =
@@ -326,11 +307,7 @@ export default function LandingSeeInsideTour({
           : current === "w_set2"
             ? "Set 2 complete."
             : current === "w_set3"
-              ? "Set 3 complete."
-              : current === "w_all_done"
-                ? "All sets done."
-                : current === "w_confetti"
-                  ? "Exercise Finished."
+              ? "Exercise Finished."
             : current === "access_business"
               ? "How to access — Business Class (demo)."
               : current === "pick_adult"
