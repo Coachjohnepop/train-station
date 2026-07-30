@@ -2,36 +2,34 @@
 
 import LandingHero from "@/components/LandingHero";
 import LandingServicesSection from "@/components/LandingServicesSection";
-import LandingTicketPicker from "@/components/LandingTicketPicker";
 import ComingSoonPrograms from "@/components/ComingSoonPrograms";
 import LandingNav from "@/components/LandingNav";
 import LandingSiteFooter from "@/components/LandingSiteFooter";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
-import type { FreeTicketGagConfig } from "@/lib/landing-media";
 
-/** Public landing: hero + mobile ticket picker + coming-soon programs. */
+/**
+ * Public landing for guests / SMS traffic.
+ * Ticket theater stays in onboarding only — never lead the marketing site with seat cards.
+ */
 export default function LandingConversion({
-  freeChastiseVideoUrl = null,
   welcomeVideoUrl = null,
-  gagConfig = null,
 }: {
+  /** Kept for callers; free-ticket gag no longer lives on the home page. */
   freeChastiseVideoUrl?: string | null;
   welcomeVideoUrl?: string | null;
-  gagConfig?: Partial<FreeTicketGagConfig> | null;
+  gagConfig?: unknown;
 }) {
   return (
-    <div className="relative min-h-screen app-shell-bg">
+    <div className="relative min-h-screen bg-black">
       <ThemeAttributesSync membershipTier="explorer" />
-      <LandingNav />
+      {/* Transparent nav over hero so SMS open is full-bleed athletes, not a grey header */}
+      <LandingNav overHero />
       <LandingHero welcomeVideoUrl={welcomeVideoUrl} />
-      <LandingTicketPicker
-        freeChastiseVideoUrl={freeChastiseVideoUrl}
-        welcomeVideoUrl={welcomeVideoUrl}
-        gagConfig={gagConfig}
-      />
-      <LandingServicesSection />
-      <ComingSoonPrograms />
-      <LandingSiteFooter />
+      <div className="app-shell-bg">
+        <ComingSoonPrograms />
+        <LandingServicesSection />
+        <LandingSiteFooter />
+      </div>
     </div>
   );
 }

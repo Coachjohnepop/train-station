@@ -19,9 +19,12 @@ import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 export default function LandingNav({
   variant = "public",
   purchaseAuth: purchaseAuthProp,
+  overHero = false,
 }: {
   variant?: "public" | "welcome";
   purchaseAuth?: PurchaseAuth;
+  /** Transparent cinematic bar over the cold-traffic hero (SMS first screen). */
+  overHero?: boolean;
 }) {
   const pathname = usePathname();
   const onHomePage = pathname === "/";
@@ -64,20 +67,20 @@ export default function LandingNav({
   }
 
   function membershipAction(tier: LandingMembershipNavItem) {
+    closeMenus();
     if (purchaseAuth.signedIn) {
-      closeMenus();
       window.location.href = purchaseHref(tier.signupPlan, purchaseAuth);
       return;
     }
-    if (onHomePage && tier.href.startsWith("#")) {
-      scrollToHash(tier.href);
-      return;
-    }
-    closeMenus();
+    window.location.href = tier.signupHref || tier.href || "/join";
   }
 
   return (
-    <header className="landing-nav header-theme-clearance sticky top-0 z-40 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] backdrop-blur-md">
+    <header
+      className={`landing-nav header-theme-clearance sticky top-0 z-40 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] backdrop-blur-md ${
+        overHero ? "landing-nav--over-hero" : ""
+      }`}
+    >
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
         <Link
           href="/"
@@ -97,63 +100,7 @@ export default function LandingNav({
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
-          <div
-            className="relative"
-            onMouseEnter={() => setMembershipsOpen(true)}
-            onMouseLeave={() => setMembershipsOpen(false)}
-          >
-            <Link
-              href={landingNavHref("#tickets", onHomePage)}
-              onClick={(e) => {
-                if (onHomePage) {
-                  e.preventDefault();
-                  scrollToHash("#tickets");
-                }
-              }}
-              className="landing-nav__link"
-            >
-              Memberships
-            </Link>
-            {membershipsOpen && (
-              <div className="absolute left-0 top-full z-50 mt-1 min-w-[15rem] rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-xl">
-                {memberships.map((tier) => (
-                  <Link
-                    key={tier.id}
-                    href={
-                      purchaseAuth.signedIn
-                        ? purchaseHref(tier.signupPlan, purchaseAuth)
-                        : landingNavHref(tier.href, onHomePage)
-                    }
-                    onClick={(e) => {
-                      if (purchaseAuth.signedIn || (onHomePage && tier.href.startsWith("#"))) {
-                        e.preventDefault();
-                        membershipAction(tier);
-                      }
-                    }}
-                    className="flex items-center justify-between gap-3 px-3 py-2 text-sm transition hover:bg-[var(--surface-2)]"
-                  >
-                    <span className="font-medium text-[var(--text)]">{tier.shortLabel}</span>
-                    <span className="text-xs text-[var(--muted)]">{tier.priceDisplay}</span>
-                  </Link>
-                ))}
-                <div className="my-1 border-t border-[var(--border)]" />
-                <Link
-                  href={landingNavHref("#tickets", onHomePage)}
-                  onClick={(e) => {
-                    if (onHomePage) {
-                      e.preventDefault();
-                      scrollToHash("#tickets");
-                    }
-                  }}
-                  className="block px-3 py-2 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
-                >
-                  Compare all tickets →
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {LANDING_NAV_SECTIONS.filter((s) => s.id !== "tickets").map((section) => (
+          {LANDING_NAV_SECTIONS.map((section) => (
             <Link
               key={section.id}
               href={landingNavHref(section.href, onHomePage)}
@@ -168,6 +115,46 @@ export default function LandingNav({
               {section.label}
             </Link>
           ))}
+
+          <div
+            className="relative"
+            onMouseEnter={() => setMembershipsOpen(true)}
+            onMouseLeave={() => setMembershipsOpen(false)}
+          >
+            <Link href="/join" className="landing-nav__link" onClick={closeMenus}>
+              Memberships
+            </Link>
+            {membershipsOpen && (
+              <div className="absolute left-0 top-full z-50 mt-1 min-w-[15rem] rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-xl">
+                {memberships.map((tier) => (
+                  <Link
+                    key={tier.id}
+                    href={
+                      purchaseAuth.signedIn
+                        ? purchaseHref(tier.signupPlan, purchaseAuth)
+                        : tier.signupHref
+                    }
+                    onClick={(e) => {
+                      e.preventDefault();
+                      membershipAction(tier);
+                    }}
+                    className="flex items-center justify-between gap-3 px-3 py-2 text-sm transition hover:bg-[var(--surface-2)]"
+                  >
+                    <span className="font-medium text-[var(--text)]">{tier.shortLabel}</span>
+                    <span className="text-xs text-[var(--muted)]">{tier.priceDisplay}</span>
+                  </Link>
+                ))}
+                <div className="my-1 border-t border-[var(--border)]" />
+                <Link
+                  href="/join"
+                  onClick={closeMenus}
+                  className="block px-3 py-2 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
+                >
+                  Compare plans →
+                </Link>
+              </div>
+            )}
+          </div>
         </nav>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -193,14 +180,18 @@ export default function LandingNav({
               </Link>
               <Link
                 href="/signup?plan=explorer"
-                className="btn-primary hidden px-4 py-2 text-xs md:inline-flex"
+                className={`btn-primary px-3 py-1.5 text-[11px] font-bold md:px-4 md:py-2 md:text-xs ${
+                  overHero
+                    ? "bg-white text-[#1a0b2e] shadow-lg shadow-purple-500/40 hover:bg-[#f5f3ff]"
+                    : "hidden md:inline-flex"
+                }`}
               >
-                Early sign up
+                {overHero ? "Board free" : "Early sign up"}
               </Link>
             </>
           ) : (
             <>
-              <Link href="/#tickets" className="landing-nav__link hidden md:inline-flex">
+              <Link href="/join" className="landing-nav__link hidden md:inline-flex">
                 Memberships
               </Link>
               <button
@@ -228,35 +219,9 @@ export default function LandingNav({
 
       {mobileOpen && (
         <div className="border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 md:hidden">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent)]">
-            Memberships
-          </p>
+          {/* Story first — memberships last (same order as page body). */}
           <div className="space-y-1">
-            {memberships.map((tier) => (
-              <Link
-                key={tier.id}
-                href={
-                  purchaseAuth.signedIn
-                    ? purchaseHref(tier.signupPlan, purchaseAuth)
-                    : landingNavHref(tier.href, onHomePage)
-                }
-                onClick={(e) => {
-                  if (purchaseAuth.signedIn || (onHomePage && tier.href.startsWith("#"))) {
-                    e.preventDefault();
-                    membershipAction(tier);
-                  } else {
-                    closeMenus();
-                  }
-                }}
-                className="flex items-center justify-between rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]"
-              >
-                <span>{tier.shortLabel}</span>
-                <span className="text-xs text-[var(--muted)]">{tier.priceDisplay}</span>
-              </Link>
-            ))}
-          </div>
-          <div className="mt-3 space-y-1 border-t border-[var(--border)] pt-3">
-            {LANDING_NAV_SECTIONS.filter((s) => s.id !== "tickets").map((section) => (
+            {LANDING_NAV_SECTIONS.map((section) => (
               <Link
                 key={section.id}
                 href={landingNavHref(section.href, onHomePage)}
@@ -281,6 +246,38 @@ export default function LandingNav({
             <Link href="/login" className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]">
               Member sign in
             </Link>
+          </div>
+          <div className="mt-3 border-t border-[var(--border)] pt-3">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--muted)]">
+              Memberships
+            </p>
+            <div className="space-y-1">
+              {memberships.map((tier) => (
+                <Link
+                  key={tier.id}
+                  href={
+                    purchaseAuth.signedIn
+                      ? purchaseHref(tier.signupPlan, purchaseAuth)
+                      : tier.signupHref
+                  }
+                  onClick={(e) => {
+                    e.preventDefault();
+                    membershipAction(tier);
+                  }}
+                  className="flex items-center justify-between rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]"
+                >
+                  <span>{tier.shortLabel}</span>
+                  <span className="text-xs text-[var(--muted)]">{tier.priceDisplay}</span>
+                </Link>
+              ))}
+              <Link
+                href="/join"
+                onClick={closeMenus}
+                className="block rounded-lg px-2 py-2 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
+              >
+                Compare plans →
+              </Link>
+            </div>
           </div>
         </div>
       )}

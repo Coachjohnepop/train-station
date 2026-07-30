@@ -14,7 +14,14 @@ import MemberExerciseVideoModal from "@/components/MemberExerciseVideoModal";
 import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
 import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
 import WorkoutRestTimer from "@/components/WorkoutRestTimer";
-import { playRestComplete, playRestStart, playRestTick, playSetCheckPop, preloadRestCompleteSound } from "@/lib/rest-audio";
+import {
+  playRestComplete,
+  playRestStart,
+  playRestTick,
+  playSetCheckPop,
+  preloadRestCompleteSound,
+  unlockRestAudio,
+} from "@/lib/rest-audio";
 import {
   DEFAULT_REST_TIMER_SECONDS,
   REST_TIMER_PRESETS,
@@ -352,6 +359,21 @@ export default function MemberWorkoutConsole({
     }
   }, [coachFloorMode]);
 
+  // iOS/Safari: rest-end is timer-driven (no gesture). Unlock WebAudio + HTMLAudio
+  // on first member touch so Stephanie's phone can play when rest hits 0.
+  useEffect(() => {
+    if (coachFloorMode || typeof window === "undefined") return;
+    const unlock = () => unlockRestAudio(restSoundRef.current);
+    window.addEventListener("pointerdown", unlock, { passive: true });
+    window.addEventListener("touchstart", unlock, { passive: true });
+    window.addEventListener("keydown", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("touchstart", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, [coachFloorMode]);
+
   // Seed rest settings from workout prescription (coach can change mid-session).
   useEffect(() => {
     const fromWorkout =
@@ -414,6 +436,8 @@ export default function MemberWorkoutConsole({
       } catch {
         /* ignore */
       }
+      // Unmute is a gesture — prime audio so the next rest-end isn't blocked.
+      if (!next) unlockRestAudio(restSoundRef.current);
       return next;
     });
   }, []);
@@ -473,6 +497,18 @@ export default function MemberWorkoutConsole({
   const applyRemoteRestActive = useCallback((rest: LiveRestActive | null | undefined) => {
     if (rest === undefined) return;
     if (rest === null) {
+      // Partner closed shared rest. If countdown was already done / nearly done and we
+      // never got our local finishAndClose (clock skew / coach clear after end), horn once.
+      const prev = restActiveRef.current;
+      if (
+        prev &&
+        !restHornPlayedRef.current &&
+        !restMutedRef.current &&
+        prev.endsAt <= Date.now() + 2500
+      ) {
+        restHornPlayedRef.current = true;
+        playRestComplete(restSoundRef.current, { force: true });
+      }
       lastAppliedRestEndsAt.current = 0;
       restActiveRef.current = null;
       setRestTimer(null);
@@ -1313,11 +1349,13 @@ export default function MemberWorkoutConsole({
       restHornPlayedRef.current = true;
       setRestCompleting(true);
       setRestSecondsLeft(0);
-      // One horn per device max; coach floor muted by default. Only play if not muted.
+      // Real rest-end: force so global de-dupe never swallows the horn.
+      // Coach floor stays silent via restMuted default; members always try to play.
       if (!restMutedRef.current) {
-        playRestComplete(restSoundRef.current);
+        playRestComplete(restSoundRef.current, { force: true });
       }
       // Cybertruck / end samples ~1.1s+ — keep popup open long enough to finish.
+      // Do not depend on effect cleanup for sound (remote null can cancel this timer).
       closeTimer = window.setTimeout(() => {
         if (cancelled) return;
         if (phase === "exercise") {
@@ -1494,6 +1532,8 @@ export default function MemberWorkoutConsole({
 
       if (!wasDone) {
         fireEngage();
+        // User gesture: unlock iOS audio so rest-end can play when countdown hits 0.
+        unlockRestAudio(restSoundRef.current);
         // Soft set-check pop (member + coach). Rest start chirp still separate.
         if (!restMutedRef.current) {
           playSetCheckPop();

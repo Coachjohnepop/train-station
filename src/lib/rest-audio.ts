@@ -15,6 +15,8 @@ let audioCtx: AudioContext | null = null;
 const sampleCache = new Map<string, HTMLAudioElement>();
 let sampleRelease: (() => void) | null = null;
 let sampleReleaseToken = 0;
+/** True after a user-gesture unlock succeeded (iOS / Safari autoplay). */
+let audioUnlocked = false;
 
 /** Global de-dupe so live coach+member retargets don't stack chirps/horns. */
 let lastStartAt = 0;
@@ -191,8 +193,65 @@ function getOrCreateSample(src: string): HTMLAudioElement {
 }
 
 /**
+ * Call from a user gesture (set check, mute toggle, any touch on workout).
+ * iOS/Safari block rest-end samples until AudioContext + HTMLAudio are unlocked.
+ */
+export function unlockRestAudio(
+  sound: RestTimerSoundId | string | null | undefined = DEFAULT_REST_TIMER_SOUND,
+): void {
+  if (typeof window === "undefined") return;
+  try {
+    const ctx = getCtx();
+    if (ctx?.state === "suspended") {
+      void ctx.resume().then(() => {
+        audioUnlocked = true;
+      }).catch(() => {});
+    } else if (ctx) {
+      audioUnlocked = true;
+    }
+
+    const src = restTimerSoundSrc(sound);
+    const audio = getOrCreateSample(src);
+    // Silent prime play during the gesture — required on iOS so a later
+    // timer-driven rest-end (no gesture) can call play() successfully.
+    if (audio.paused || audio.ended) {
+      const prevMuted = audio.muted;
+      const prevVol = audio.volume;
+      audio.muted = true;
+      audio.volume = 0;
+      void audio
+        .play()
+        .then(() => {
+          audio.pause();
+          try {
+            audio.currentTime = 0;
+          } catch {
+            /* ignore */
+          }
+          audio.muted = prevMuted;
+          audio.volume = prevVol > 0 ? prevVol : restTimerSoundVolume(sound);
+          audioUnlocked = true;
+        })
+        .catch(() => {
+          audio.muted = prevMuted;
+          audio.volume = prevVol;
+        });
+    } else {
+      audioUnlocked = true;
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+export function isRestAudioUnlocked(): boolean {
+  return audioUnlocked;
+}
+
+/**
  * End-of-rest alert — coach-selected sample (default Cybertruck honk).
  * Guarded so live retargets / dual clients don't stack multiple horns.
+ * Pass `{ force: true }` for the real countdown-zero path so de-dupe never swallows it.
  */
 export function playRestComplete(
   sound: RestTimerSoundId | string | null | undefined = DEFAULT_REST_TIMER_SOUND,
@@ -217,6 +276,7 @@ export function playRestComplete(
   const volume = restTimerSoundVolume(id);
 
   try {
+    // Best-effort unlock if something already primed the context.
     getCtx();
 
     sampleRelease?.();
@@ -225,9 +285,11 @@ export function playRestComplete(
 
     let started = false;
     const playSrc = (src: string, allowAlt: boolean) => {
-      const audio = new Audio(src);
+      // Reuse preloaded element so iOS unlock from set-check carries over.
+      const audio = getOrCreateSample(src);
       audio.preload = "auto";
       audio.volume = volume;
+      audio.muted = false;
 
       const fail = () => {
         if (allowAlt && fallbackSrc && fallbackSrc !== src) {
@@ -240,7 +302,10 @@ export function playRestComplete(
       };
 
       audio.onended = () => releaseSampleHold(token);
-      audio.onerror = () => fail();
+      audio.onerror = () => {
+        if (sampleCache.get(src) === audio) sampleCache.delete(src);
+        fail();
+      };
 
       const start = () => {
         if (started) return;
@@ -253,6 +318,7 @@ export function playRestComplete(
         void audio
           .play()
           .then(() => {
+            audioUnlocked = true;
             sampleCache.set(src, audio);
           })
           .catch(fail);
@@ -271,7 +337,11 @@ export function playRestComplete(
         };
         audio.addEventListener("canplaythrough", onReady);
         audio.addEventListener("canplay", onReady);
-        audio.load();
+        try {
+          audio.load();
+        } catch {
+          /* ignore */
+        }
         window.setTimeout(() => {
           if (!started && audio.paused && !audio.ended) start();
         }, 400);

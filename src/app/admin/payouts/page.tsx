@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Friendly alias → Money desk (commission + balance + payment queue). */
+/** Friendly alias → Stripe money Share tab (partner pool + bank history). */
 export default function AdminPayoutsRedirectPage() {
-  redirect("/admin/commission");
+  redirect("/admin/billing?tab=share");
 }

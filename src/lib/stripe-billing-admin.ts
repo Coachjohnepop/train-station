@@ -4,6 +4,10 @@ import { getStripe, getStripePublishableKey } from "@/lib/stripe";
 import { isStripeTestMode } from "@/lib/stripe-price-ids";
 import { fetchActiveMrrCents, formatUsdFromCents } from "@/lib/stripe-commission";
 import { listMemberProfiles } from "@/lib/member-profiles-store";
+import {
+  getLastBankPayout,
+  getStripeBalanceSnapshot,
+} from "@/lib/stripe-account-money";
 
 export type BillingTransaction = {
   id: string;
@@ -154,8 +158,9 @@ export async function getBillingAdminOverview() {
     };
   }
 
-  const [balance, mrr, charges, refunds, openPi] = await Promise.all([
-    stripe.balance.retrieve().catch(() => null),
+  const [balanceSnap, lastPayout, mrr, charges, refunds, openPi] = await Promise.all([
+    getStripeBalanceSnapshot("platform"),
+    getLastBankPayout("platform"),
     fetchActiveMrrCents(),
     stripe.charges.list({ limit: 100 }),
     stripe.refunds.list({ limit: 50 }),
@@ -186,11 +191,6 @@ export async function getBillingAdminOverview() {
     }
   }
 
-  const available =
-    balance?.available?.reduce((sum, b) => sum + (b.currency === "usd" ? b.amount : 0), 0) ?? null;
-  const pending =
-    balance?.pending?.reduce((sum, b) => sum + (b.currency === "usd" ? b.amount : 0), 0) ?? null;
-
   const requiresAction = openPi.data.filter(
     (pi) => pi.status === "requires_action" || pi.status === "requires_payment_method",
   ).length;
@@ -201,11 +201,21 @@ export async function getBillingAdminOverview() {
     publishableKeyPresent: Boolean(getStripePublishableKey()),
     message: null as string | null,
     balance: {
-      availableCents: available,
-      availableLabel: available == null ? null : formatUsdFromCents(available),
-      pendingCents: pending,
-      pendingLabel: pending == null ? null : formatUsdFromCents(pending),
+      availableCents: balanceSnap.availableCents,
+      availableLabel: balanceSnap.availableLabel,
+      pendingCents: balanceSnap.pendingCents,
+      pendingLabel: balanceSnap.pendingLabel,
+      error: balanceSnap.error,
     },
+    lastBankPayout: lastPayout
+      ? {
+          id: lastPayout.id,
+          amountLabel: lastPayout.amountLabel,
+          status: lastPayout.status,
+          arrivalDate: lastPayout.arrivalDate,
+          createdAt: lastPayout.createdAt,
+        }
+      : null,
     mrr: {
       cents: mrr.mrrCents,
       label: formatUsdFromCents(mrr.mrrCents),

@@ -11,12 +11,12 @@ import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
 
-/** Link-preview / social share image — dual tickets fanned like cards. */
+/** Link-preview / SMS share image — training energy, not a ticket grid. */
 const SITE_OG_IMAGE = {
-  url: "/images/tickets/dual-tickets-fan.jpg",
-  width: 1152,
-  height: 864,
-  alt: "The Train Station — dual membership tickets",
+  url: "/images/splash/black-guy.jpg",
+  width: 1200,
+  height: 1600,
+  alt: "Athlete training hard — The Train Station",
 } as const;
 
 function siteOrigin(): string {
@@ -29,13 +29,22 @@ function siteOrigin(): string {
 export async function generateMetadata(): Promise<Metadata> {
   const brand = await getResolvedSiteBrand();
   const title = brand.brandName || BRAND_NAME;
-  const description = brand.brandTagline || BRAND_TAGLINE;
+  const description =
+    brand.brandTagline ||
+    BRAND_TAGLINE ||
+    "Live coaching, real programs, results that stick. Board The Train Station.";
   const origin = siteOrigin();
+  const shareTitle = `${title} — Train with purpose`;
+  const shareDescription =
+    "Live coaching with Coach Jeremy · real programs · a community that shows up. Board free or pick your ticket.";
 
   return {
     metadataBase: new URL(origin),
-    title,
-    description,
+    title: {
+      default: shareTitle,
+      template: `%s · ${title}`,
+    },
+    description: shareDescription,
     applicationName: title,
     manifest: "/manifest.webmanifest",
     appleWebApp: {
@@ -53,14 +62,14 @@ export async function generateMetadata(): Promise<Metadata> {
       locale: "en_US",
       url: origin,
       siteName: title,
-      title,
-      description,
+      title: shareTitle,
+      description: shareDescription,
       images: [SITE_OG_IMAGE],
     },
     twitter: {
       card: "summary_large_image",
-      title,
-      description,
+      title: shareTitle,
+      description: shareDescription,
       images: [SITE_OG_IMAGE.url],
     },
   };

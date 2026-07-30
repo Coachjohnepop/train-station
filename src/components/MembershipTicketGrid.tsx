@@ -13,8 +13,8 @@ import { DUAL_TICKETS_FAN_SRC } from "@/lib/membership-theme";
 import { useEffect, useState } from "react";
 
 /**
- * Landing-style train seat ticket grid (same art + card chrome as /#tickets).
- * Used on home and post-signup Explorer checkout so tickets feel like one product.
+ * Train-seat ticket grid for onboarding / checkout only.
+ * Do not put this on the public home page — marketing leads with training story, not ticket art.
  */
 export default function MembershipTicketGrid({
   mode = "landing",
@@ -24,8 +24,8 @@ export default function MembershipTicketGrid({
   highlightPaid = false,
   className = "",
   showBrand = true,
-  heading = "Membership tickets",
-  subheading = "Tap a ticket on your phone — side by side, no guessing. We'll guide you through setup after you choose.",
+  heading = "Membership options",
+  subheading = "Choose a plan when you're ready — we'll walk you through setup after you pick.",
 }: {
   /** landing = free/paid via callbacks; checkout = free → today, paid → plan checkout */
   mode?: "landing" | "checkout";
@@ -80,9 +80,11 @@ export default function MembershipTicketGrid({
   return (
     <div className={className}>
       <div className="mx-auto max-w-4xl text-center">
-        {showBrand ? <TrainStationBrand variant="compact" className="mb-6" /> : null}
-        {/* Dual tickets fanned like cards — signature membership graphic */}
-        <div className="mx-auto mb-5 max-w-[280px] sm:max-w-[340px]">
+        {/* Desktop: brand + dual-ticket art. Mobile: keep tickets calmer (hero already led). */}
+        {showBrand ? (
+          <TrainStationBrand variant="compact" className="mb-6 hidden sm:inline-flex" />
+        ) : null}
+        <div className="mx-auto mb-5 hidden max-w-[280px] sm:block sm:max-w-[340px]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={DUAL_TICKETS_FAN_SRC}
@@ -93,7 +95,7 @@ export default function MembershipTicketGrid({
           />
         </div>
         <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--accent)]">
-          Pick your ticket
+          When you&apos;re ready
         </p>
         <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text)] sm:text-3xl">
           {heading}

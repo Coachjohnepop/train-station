@@ -6,6 +6,7 @@ import type { MembershipPlan } from "@/lib/signup-plans";
 export type CoachIntroSlotId =
   | "overall"
   | "free"
+  | "equipment"
   | MembershipPlan;
 
 export type CoachIntroSlotDef = {
@@ -24,6 +25,11 @@ export const COACH_INTRO_SLOTS: CoachIntroSlotDef[] = [
     id: "free",
     label: "Free-ticket intro",
     hint: "After the gag when someone taps Free / Explorer on the landing page.",
+  },
+  {
+    id: "equipment",
+    label: "Gear / equipment intro",
+    hint: "First time a member opens Gear — purpose of the tab and how to think about home-gym buys.",
   },
   // Ticket classes in a friendly coach order (not raw plan enum order).
   {
@@ -51,17 +57,20 @@ export const COACH_INTRO_SLOTS: CoachIntroSlotDef[] = [
 export type CoachIntroAssignments = {
   overall: string;
   free: string;
+  equipment: string;
   byPlan: WelcomeVideosByPlan;
 };
 
 export function assignmentsFromLanding(input: {
   welcomeVideoUrl?: string | null;
   freeChastiseVideoUrl?: string | null;
+  equipmentIntroVideoUrl?: string | null;
   welcomeVideosByPlan?: WelcomeVideosByPlan;
 }): CoachIntroAssignments {
   return {
     overall: input.welcomeVideoUrl?.trim() || "",
     free: input.freeChastiseVideoUrl?.trim() || "",
+    equipment: input.equipmentIntroVideoUrl?.trim() || "",
     byPlan: { ...(input.welcomeVideosByPlan || {}) },
   };
 }
@@ -72,6 +81,7 @@ export function urlForSlot(
 ): string {
   if (slotId === "overall") return assignments.overall;
   if (slotId === "free") return assignments.free;
+  if (slotId === "equipment") return assignments.equipment;
   return assignments.byPlan[slotId]?.trim() || "";
 }
 
@@ -83,6 +93,7 @@ export function setSlotUrl(
   const nextUrl = url.trim();
   if (slotId === "overall") return { ...assignments, overall: nextUrl };
   if (slotId === "free") return { ...assignments, free: nextUrl };
+  if (slotId === "equipment") return { ...assignments, equipment: nextUrl };
   return {
     ...assignments,
     byPlan: {

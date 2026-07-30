@@ -34,7 +34,7 @@ export default function LandingWelcomeBanner({
     if (isFreeTier) {
       return "You're on Explorer (free) — sample the station, then upgrade when you're ready for daily coach workouts and live sessions.";
     }
-    return "Your programs, progress, and workouts are ready — or pick a membership ticket below.";
+    return "Your programs, progress, and workouts are ready — open the dashboard or compare memberships anytime.";
   }
 
   return (
@@ -94,7 +94,11 @@ export default function LandingWelcomeBanner({
               </Link>
             </div>
             <p className="mt-3 text-[11px] text-[var(--muted)]">
-              Same account — no need to sign up again. Compare all tickets below.
+              Same account — no need to sign up again.{" "}
+              <Link href="/join" className="text-accent hover:underline">
+                Compare memberships
+              </Link>
+              .
             </p>
           </div>
         )}

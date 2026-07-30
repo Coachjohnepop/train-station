@@ -2,6 +2,7 @@ import "server-only";
 
 import { getLandingMedia } from "@/lib/landing-media-store";
 import {
+  equipmentIntroVideoUrlFromConfig,
   freeChastiseVideoUrlFromConfig,
   resolveFreeTicketGag,
   welcomeVideoUrlFromConfig,
@@ -21,6 +22,7 @@ export async function getResolvedLandingVideos() {
     welcomeVideosByPlan,
     freeChastiseVideoUrl: freeChastiseVideoUrlFromConfig(config.freeChastiseVideoUrl),
     purchaseThankYouVideoUrl: config.purchaseThankYouVideoUrl?.trim() || null,
+    equipmentIntroVideoUrl: equipmentIntroVideoUrlFromConfig(config.equipmentIntroVideoUrl),
     gag: {
       enabled: gag.enabled,
       videoUrl: gag.videoUrl,

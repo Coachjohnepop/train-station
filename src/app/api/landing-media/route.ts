@@ -3,6 +3,7 @@ import { getLandingMedia } from "@/lib/landing-media-store";
 
 export const dynamic = "force-dynamic";
 import {
+  equipmentIntroVideoUrlFromConfig,
   freeChastiseVideoUrlFromConfig,
   resolveFreeTicketGag,
   welcomeVideoUrlFromConfig,
@@ -15,6 +16,7 @@ export async function GET() {
     welcomeVideoUrl: welcomeVideoUrlFromConfig(config.welcomeVideoUrl),
     freeChastiseVideoUrl: freeChastiseVideoUrlFromConfig(config.freeChastiseVideoUrl),
     purchaseThankYouVideoUrl: config.purchaseThankYouVideoUrl?.trim() || null,
+    equipmentIntroVideoUrl: equipmentIntroVideoUrlFromConfig(config.equipmentIntroVideoUrl),
     gag: {
       enabled: gag.enabled,
       videoUrl: gag.videoUrl,
@@ -25,5 +27,8 @@ export async function GET() {
     hasWelcome: Boolean(welcomeVideoUrlFromConfig(config.welcomeVideoUrl)),
     hasFreeChastise: Boolean(freeChastiseVideoUrlFromConfig(config.freeChastiseVideoUrl)),
     hasPurchaseThankYou: Boolean(config.purchaseThankYouVideoUrl?.trim()),
+    hasEquipmentIntro: Boolean(
+      equipmentIntroVideoUrlFromConfig(config.equipmentIntroVideoUrl),
+    ),
   });
 }

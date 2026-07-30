@@ -106,6 +106,7 @@ export default function AdminSiteVideosPanel({
   initialGagDurationSec = 10,
   initialGagEnabled = true,
   initialPurchaseThankYouUrl = "",
+  initialEquipmentIntroUrl = "",
   initialWeeklyUrl = "",
   initialWeeklyTitle = "",
   initialDinnerUrl = "",
@@ -123,6 +124,7 @@ export default function AdminSiteVideosPanel({
   initialGagDurationSec?: number;
   initialGagEnabled?: boolean;
   initialPurchaseThankYouUrl?: string;
+  initialEquipmentIntroUrl?: string;
   initialWeeklyUrl?: string;
   initialWeeklyTitle?: string;
   initialDinnerUrl?: string;
@@ -137,6 +139,7 @@ export default function AdminSiteVideosPanel({
     assignmentsFromLanding({
       welcomeVideoUrl: initialWelcomeUrl,
       freeChastiseVideoUrl: initialFreeUrl,
+      equipmentIntroVideoUrl: initialEquipmentIntroUrl,
       welcomeVideosByPlan: initialWelcomeVideosByPlan,
     }),
   );
@@ -163,8 +166,10 @@ export default function AdminSiteVideosPanel({
     const set = new Set<string>();
     const overall = assignments.overall.trim();
     const free = assignments.free.trim();
+    const equipment = assignments.equipment.trim();
     if (overall) set.add(overall);
     if (free) set.add(free);
+    if (equipment) set.add(equipment);
     for (const url of Object.values(assignments.byPlan)) {
       if (url?.trim()) set.add(url.trim());
     }
@@ -371,8 +376,12 @@ export default function AdminSiteVideosPanel({
       setSaving(false);
       return;
     }
+    if (!introOk(assignments.equipment, "Gear / equipment intro")) {
+      setSaving(false);
+      return;
+    }
     for (const slot of COACH_INTRO_SLOTS) {
-      if (slot.id === "overall" || slot.id === "free") continue;
+      if (slot.id === "overall" || slot.id === "free" || slot.id === "equipment") continue;
       const url = urlForSlot(slot.id, assignments);
       if (url && !isAllowedCoachIntroVideoUrl(url)) {
         setError(true);
@@ -413,6 +422,7 @@ export default function AdminSiteVideosPanel({
       gagDurationSec: 10,
       gagEnabled,
       purchaseThankYouVideoUrl: purchaseUrl.trim() || null,
+      equipmentIntroVideoUrl: assignments.equipment.trim() || null,
     });
 
     if ("error" in landingResult && landingResult.error) {
@@ -444,6 +454,7 @@ export default function AdminSiteVideosPanel({
         assignmentsFromLanding({
           welcomeVideoUrl: landingResult.storedWelcomeVideoUrl,
           freeChastiseVideoUrl: landingResult.storedFreeChastiseVideoUrl,
+          equipmentIntroVideoUrl: landingResult.storedEquipmentIntroVideoUrl,
           welcomeVideosByPlan: landingResult.storedWelcomeVideosByPlan,
         }),
       );
@@ -592,7 +603,8 @@ export default function AdminSiteVideosPanel({
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">2 · Where each one goes</h2>
         <p className="text-xs text-[var(--muted)]">
-          Choose a library video for overall intro, each ticket class, and the free-ticket intro.
+          Choose a library video for overall intro, Gear (equipment first visit), each ticket class,
+          and the free-ticket intro.
           One video can be used in multiple slots.
         </p>
         <div className="space-y-3">

@@ -168,14 +168,15 @@ export default function AdminAccountingClient() {
         <div>
           <h1 className="text-2xl font-bold">Accounting</h1>
           <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-            Stripe balance, holding minimums, projected partner payouts, and membership revenue
-            snapshot. Process transfers on{" "}
-            <Link href={data.links.moneyDesk} className="text-accent hover:underline">
-              Money desk
-            </Link>
-            ; refunds & invoices on{" "}
+            Executive rollup: balance, holding minimums, projected partner shares, membership
+            revenue. Day-to-day money ops (platform + partner accounts, share, bank history,
+            charges) live on{" "}
             <Link href={data.links.billing} className="text-accent hover:underline">
-              Billing
+              Stripe money
+            </Link>
+            . Run partner share on{" "}
+            <Link href={data.links.moneyDesk} className="text-accent hover:underline">
+              Share tab
             </Link>
             .
           </p>
@@ -202,18 +203,20 @@ export default function AdminAccountingClient() {
           Balance & minimums
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Kpi
-            title="Stripe available"
-            value={bal.availableLabel || "—"}
-            hint={
-              bal.error
-                ? bal.error
-                : bal.pendingLabel
-                  ? `Pending ${bal.pendingLabel}`
-                  : "Ready to bank / transfer"
-            }
-            tone={bal.error ? "warn" : "ok"}
-          />
+          <Link href="/admin/billing?tab=balance" className="block transition hover:opacity-90">
+            <Kpi
+              title="Stripe available"
+              value={bal.availableLabel || "—"}
+              hint={
+                bal.error
+                  ? bal.error
+                  : bal.pendingLabel
+                    ? `Pending ${bal.pendingLabel} · open Stripe money`
+                    : "Open Stripe money → Balance"
+              }
+              tone={bal.error ? "warn" : "ok"}
+            />
+          </Link>
           <Kpi
             title="Stripe pending"
             value={bal.pendingLabel || "—"}

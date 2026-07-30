@@ -24,6 +24,7 @@ export async function saveLandingMediaAction(input: {
   gagDurationSec?: number;
   gagEnabled?: boolean;
   purchaseThankYouVideoUrl?: string | null;
+  equipmentIntroVideoUrl?: string | null;
   venmoQrUrl?: string | null;
   venmoHandle?: string | null;
   venmoInstructions?: string | null;
@@ -43,6 +44,7 @@ export async function saveLandingMediaAction(input: {
       gagDurationSec: input.gagDurationSec,
       gagEnabled: input.gagEnabled,
       purchaseThankYouVideoUrl: input.purchaseThankYouVideoUrl,
+      equipmentIntroVideoUrl: input.equipmentIntroVideoUrl,
       venmoQrUrl: input.venmoQrUrl,
       venmoHandle: input.venmoHandle,
       venmoInstructions: input.venmoInstructions,
@@ -57,6 +59,7 @@ export async function saveLandingMediaAction(input: {
       storedGagDurationSec: config.gagDurationSec,
       storedGagEnabled: config.gagEnabled,
       storedPurchaseThankYouVideoUrl: config.purchaseThankYouVideoUrl,
+      storedEquipmentIntroVideoUrl: config.equipmentIntroVideoUrl,
       storedVenmoQrUrl: config.venmoQrUrl,
       storedVenmoHandle: config.venmoHandle,
       storedVenmoInstructions: config.venmoInstructions,

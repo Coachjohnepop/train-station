@@ -21,6 +21,7 @@ export default async function AdminVideosPage() {
   const library = await ensureLibraryHasUrls([
     { url: landing.welcomeVideoUrl, title: "Overall intro" },
     { url: landing.freeChastiseVideoUrl, title: "Free-ticket intro" },
+    { url: landing.equipmentIntroVideoUrl, title: "Gear / equipment intro" },
     ...planTitles,
   ]);
 
@@ -29,8 +30,9 @@ export default async function AdminVideosPage() {
       <div>
         <h1 className="text-2xl font-bold">Videos</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Upload Jeremy&apos;s intros once, assign overall / Coach Class / Business / free-ticket,
-          and manage YouTube slots for gag, thank-you, weekly, dinner, and daily inspiration.
+          Upload Jeremy&apos;s intros once, assign overall / Coach Class / Business / free-ticket /
+          Gear intro, and manage YouTube slots for gag, thank-you, weekly, dinner, and daily
+          inspiration.
         </p>
       </div>
       <AdminSiteVideosPanel
@@ -42,6 +44,7 @@ export default async function AdminVideosPage() {
         initialGagDurationSec={landing.gagDurationSec}
         initialGagEnabled={landing.gagEnabled}
         initialPurchaseThankYouUrl={landing.purchaseThankYouVideoUrl ?? ""}
+        initialEquipmentIntroUrl={landing.equipmentIntroVideoUrl ?? ""}
         initialWeeklyUrl={member.weeklyVideoUrl ?? ""}
         initialWeeklyTitle={member.weeklyVideoTitle}
         initialDinnerUrl={member.dinnerVideoUrl ?? ""}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { MEMBER_NAME_COOKIE } from "@/lib/current-user";
@@ -8,7 +9,6 @@ import LandingConversion from "@/components/LandingConversion";
 import LandingNav from "@/components/LandingNav";
 import LandingServicesSection from "@/components/LandingServicesSection";
 import LandingSiteFooter from "@/components/LandingSiteFooter";
-import LandingTicketPicker from "@/components/LandingTicketPicker";
 import LandingWelcomeBanner from "@/components/LandingWelcomeBanner";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
 import { getResolvedLandingVideos } from "@/lib/landing-media-server";
@@ -21,10 +21,72 @@ import { getMemberProfile } from "@/lib/member-profiles-store";
 import { membershipThemeTierFromPlan } from "@/lib/membership-theme";
 import { signupPlanLabel } from "@/lib/signup-plans";
 
+/** SMS / iMessage / social preview when someone texts www.thetrainstation.co */
+export const metadata: Metadata = {
+  title: "The Train Station — Train with purpose",
+  description:
+    "Live coaching with Coach Jeremy. Real programs, real accountability, results that stick. Board free today.",
+  openGraph: {
+    title: "The Train Station — Train with purpose",
+    description:
+      "Live coaching · real programs · a community that shows up. Board The Train Station.",
+    url: "https://www.thetrainstation.co",
+    siteName: "The Train Station",
+    type: "website",
+    images: [
+      {
+        url: "/images/splash/black-guy.jpg",
+        width: 1200,
+        height: 1600,
+        alt: "Athlete training hard — The Train Station",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "The Train Station — Train with purpose",
+    description:
+      "Live coaching · real programs · results that stick. Board free today.",
+    images: ["/images/splash/black-guy.jpg"],
+  },
+};
+
 export default async function HomePage() {
   const cookieStore = await cookies();
   const session = await getSessionUser();
   const landingVideos = await getResolvedLandingVideos();
+
+  // Staff: same public POP landing cold traffic sees — never ticket theater.
+  if (session && isStaffRole(session.role)) {
+    const demoUser = resolveDemoUser(session.id);
+    const displayName =
+      session.name ||
+      demoUser?.name ||
+      cookieStore.get(MEMBER_NAME_COOKIE)?.value ||
+      "Coach";
+    return (
+      <>
+        <div className="sticky top-0 z-50 border-b border-[#7c3aed]/40 bg-[#1a0b2e]/95 px-3 py-2 text-center backdrop-blur-md sm:px-4">
+          <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-2 text-xs sm:justify-between sm:text-sm">
+            <p className="text-white/80">
+              Signed in as <span className="font-semibold text-white">{displayName}</span>
+              <span className="hidden text-white/50 sm:inline">
+                {" "}
+                · this is the public landing members see
+              </span>
+            </p>
+            <Link
+              href="/admin"
+              className="inline-flex items-center rounded-full bg-[#7c3aed] px-4 py-1.5 text-xs font-bold text-white shadow-lg shadow-[#7c3aed]/35 transition hover:bg-[#6d28d9]"
+            >
+              Coach admin →
+            </Link>
+          </div>
+        </div>
+        <LandingConversion welcomeVideoUrl={landingVideos.welcomeVideoUrl} />
+      </>
+    );
+  }
 
   if (session) {
     const demoUser = resolveDemoUser(session.id);
@@ -34,10 +96,9 @@ export default async function HomePage() {
       cookieStore.get(MEMBER_NAME_COOKIE)?.value ||
       "Member";
     const email = session.email || demoUser?.email;
-    const isCoach = isStaffRole(session.role);
     const profile =
       session.role === "MEMBER" ? await getMemberProfile(session.id) : null;
-    const membershipPlan = profile?.plan ?? (isCoach ? null : "explorer");
+    const membershipPlan = profile?.plan ?? "explorer";
     const themeTier = membershipThemeTierFromPlan(profile?.plan);
     const established = isEstablishedMember(profile);
     const membershipSnapshot =
@@ -50,7 +111,7 @@ export default async function HomePage() {
           variant="welcome"
           purchaseAuth={{ signedIn: true, role: session.role }}
         />
-        {established && membershipSnapshot && !isCoach ? (
+        {established && membershipSnapshot ? (
           <LandingMemberStatus
             membership={membershipSnapshot}
             displayName={displayName}
@@ -61,23 +122,27 @@ export default async function HomePage() {
           <LandingWelcomeBanner
             displayName={displayName}
             email={email}
-            isCoach={isCoach}
+            isCoach={false}
             membershipPlan={membershipPlan}
             membershipPlanLabel={profile ? signupPlanLabel(profile.plan) : null}
             isEstablishedMember={established}
             welcomeVideoUrl={landingVideos.welcomeVideoUrl}
           />
         )}
-        {established && membershipSnapshot ? null : (
-          <LandingTicketPicker
-            freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
-            welcomeVideoUrl={landingVideos.welcomeVideoUrl}
-            gagConfig={landingVideos.gag}
-            purchaseAuth={{ signedIn: true, role: session.role }}
-          />
-        )}
-        <LandingServicesSection purchaseAuth={{ signedIn: true, role: session.role }} />
         <ComingSoonPrograms />
+        <LandingServicesSection purchaseAuth={{ signedIn: true, role: session.role }} />
+        {/* No landing ticket grid — plans at /join; ticket art only in onboarding. */}
+        {!established && (
+          <div className="border-t border-[var(--border)] px-4 py-10 text-center">
+            <p className="text-sm text-[var(--muted)]">Ready for a full membership?</p>
+            <Link
+              href="/join"
+              className="mt-3 inline-flex h-11 items-center justify-center rounded-full bg-[#7c3aed] px-6 text-sm font-semibold text-white hover:bg-[#6d28d9]"
+            >
+              View memberships →
+            </Link>
+          </div>
+        )}
         <LandingSiteFooter />
       </div>
     );
@@ -85,16 +150,10 @@ export default async function HomePage() {
 
   return (
     <>
-      <LandingConversion
-        freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
-        welcomeVideoUrl={landingVideos.welcomeVideoUrl}
-        gagConfig={landingVideos.gag}
-      />
-
-      {/* Desktop only — hero already has View memberships on phones */}
+      <LandingConversion welcomeVideoUrl={landingVideos.welcomeVideoUrl} />
       <div className="home-memberships-fab fixed z-30 hidden flex-col items-end gap-2 md:flex">
         <Link
-          href="#tickets"
+          href="/join"
           className="group inline-flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_90%,transparent)] px-5 py-2.5 text-sm font-semibold text-[var(--text)] shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:shadow-2xl active:scale-[0.985]"
         >
           View memberships

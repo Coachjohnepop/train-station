@@ -27,33 +27,31 @@ export default async function JoinPage({
         </div>
       </div>
 
-      {/* Hero */}
+      {/* Hero — plain plans, no ticket theater (that’s onboarding only). */}
       <div className="mx-auto max-w-3xl px-6 pt-16 pb-10 text-center">
-        <div className="uppercase tracking-[3px] text-xs font-semibold text-[#7c3aed] mb-3">MEMBERSHIPS</div>
-        <h1 className="text-5xl font-semibold tracking-[-1.8px] mb-4">Join The Train Station</h1>
-        <div className="mx-auto mb-6 max-w-[300px] sm:max-w-[380px]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/images/tickets/dual-tickets-fan.jpg"
-            alt="Coach Class and First Class tickets fanned like playing cards"
-            className="mx-auto w-full drop-shadow-[0_16px_48px_rgba(124,58,237,0.5)]"
-            width={1152}
-            height={864}
-          />
+        <div className="mb-3 text-xs font-semibold uppercase tracking-[3px] text-[#7c3aed]">
+          Memberships
         </div>
-        <p className="text-xl text-[#9d8ab8] max-w-xl mx-auto">
-          Professional programs, real accountability, and the tools coaches actually use — available for members now.
+        <h1 className="mb-4 text-4xl font-semibold tracking-[-1.5px] sm:text-5xl sm:tracking-[-1.8px]">
+          Join The Train Station
+        </h1>
+        <p className="mx-auto max-w-xl text-lg text-[#9d8ab8] sm:text-xl">
+          Professional programs, real accountability, and coach tools that actually work — train on
+          your phone or in the gym.
         </p>
-        <div className="mt-6 text-sm text-[#9d8ab8]">
-          Pick a ticket below, create your account, and you&apos;re in — train on your phone or in the gym with coach support.
-        </div>
-        <div className="mt-4">
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <Link
-            href="/signup"
-            className="inline-flex h-10 items-center justify-center rounded-full bg-[#7c3aed] px-6 text-sm font-semibold text-white hover:bg-[#6d2dd6] transition"
+            href="/signup?plan=explorer"
+            className="inline-flex h-11 items-center justify-center rounded-full bg-[#7c3aed] px-6 text-sm font-semibold text-white transition hover:bg-[#6d2dd6]"
           >
-            Create your account →
+            Start free →
           </Link>
+          <a
+            href="#plans"
+            className="inline-flex h-11 items-center justify-center rounded-full border border-[#3d2660] px-6 text-sm font-semibold text-white transition hover:bg-white/5"
+          >
+            Compare plans
+          </a>
         </div>
       </div>
 
@@ -72,10 +70,8 @@ export default async function JoinPage({
         </div>
       </div>
 
-      {/* Pricing overview with inline signup after choosing a plan.
-          Dual anchors: #plans (join copy) and #tickets (shared landing nav / /join#tickets). */}
+      {/* Clean plan cards — ticket art lives in onboarding only. */}
       <div id="plans" className="mx-auto max-w-6xl scroll-mt-20 px-6 pb-16">
-        <div id="tickets" className="h-0 scroll-mt-20" aria-hidden tabIndex={-1} />
         <PricingWithInlineSignup recParam={recParam} />
       </div>
 

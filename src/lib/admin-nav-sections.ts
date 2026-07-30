@@ -194,14 +194,13 @@ export const PLATFORM_NAV_GROUPS: AdminNavGroup[] = [
       },
       {
         href: "/admin/billing",
-        label: "Billing",
-        match: (p) => p.startsWith("/admin/billing"),
+        label: "Stripe money",
+        match: (p) => p.startsWith("/admin/billing") || p.startsWith("/admin/payouts"),
       },
       {
         href: "/admin/commission",
-        label: "Money desk",
-        match: (p) =>
-          p.startsWith("/admin/commission") || p.startsWith("/admin/payouts"),
+        label: "Partner desk",
+        match: (p) => p.startsWith("/admin/commission"),
       },
       {
         href: "/admin/pricing",

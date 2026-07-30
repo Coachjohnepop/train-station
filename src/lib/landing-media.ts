@@ -65,6 +65,11 @@ export function welcomeVideoUrlFromConfig(stored: string | null | undefined) {
   ]);
 }
 
+/** First-visit Gear tab intro (Jeremy home-gym buying guide). */
+export function equipmentIntroVideoUrlFromConfig(stored: string | null | undefined) {
+  return resolveLandingVideoUrl(stored, ["NEXT_PUBLIC_EQUIPMENT_INTRO_VIDEO_URL"]);
+}
+
 export function welcomeVideoUrlForPlan(
   plan: SignupPlan | string | null | undefined,
   storedDefault: string | null | undefined,

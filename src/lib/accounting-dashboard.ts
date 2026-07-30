@@ -313,7 +313,7 @@ export async function getAccountingDashboard() {
           ?.label ?? "Friday",
     },
     links: {
-      moneyDesk: "/admin/commission",
+      moneyDesk: "/admin/billing?tab=share",
       billing: "/admin/billing",
       discounts: "/admin/discounts",
       members: "/admin/members",

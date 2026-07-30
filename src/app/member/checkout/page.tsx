@@ -345,7 +345,7 @@ function MemberCheckoutInner() {
               ) : (
                 <>
                   {!isSignupCheckout && (
-                    <Link href="/#tickets" className="hover:text-accent">
+                    <Link href="/join" className="hover:text-accent">
                       Compare train seats
                     </Link>
                   )}
@@ -384,7 +384,7 @@ function MemberCheckoutInner() {
                 Open free dashboard
               </Link>
               {" · "}
-              <Link href="/#tickets" className="hover:text-accent">
+              <Link href="/join" className="hover:text-accent">
                 Back to home tickets
               </Link>
             </p>

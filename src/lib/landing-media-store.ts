@@ -24,6 +24,11 @@ export type LandingMediaConfig = {
   gagEnabled: boolean;
   /** After paid checkout success — “thank you for the purchase”. */
   purchaseThankYouVideoUrl: string | null;
+  /**
+   * First visit to member Gear / equipment — Jeremy explains home gym buying.
+   * Upload under Admin → Videos or paste YouTube / library URL.
+   */
+  equipmentIntroVideoUrl: string | null;
   venmoQrUrl: string | null;
   venmoHandle: string | null;
   venmoInstructions: string | null;
@@ -56,6 +61,7 @@ function emptyConfig(): LandingMediaConfig {
     gagDurationSec: 10,
     gagEnabled: true,
     purchaseThankYouVideoUrl: null,
+    equipmentIntroVideoUrl: null,
     venmoQrUrl: null,
     venmoHandle: null,
     venmoInstructions: null,
@@ -88,6 +94,7 @@ function normalize(raw: unknown): LandingMediaConfig {
     gagDurationSec: clampInt(data.gagDurationSec, defaults.gagDurationSec, 3, 60),
     gagEnabled: data.gagEnabled === false ? false : true,
     purchaseThankYouVideoUrl: normalizeUrl(data.purchaseThankYouVideoUrl),
+    equipmentIntroVideoUrl: normalizeUrl(data.equipmentIntroVideoUrl),
     venmoQrUrl: normalizeUrl(data.venmoQrUrl),
     venmoHandle: normalizeUrl(data.venmoHandle),
     venmoInstructions: normalizeUrl(data.venmoInstructions),
@@ -132,6 +139,7 @@ export async function saveLandingMedia(
       | "gagDurationSec"
       | "gagEnabled"
       | "purchaseThankYouVideoUrl"
+      | "equipmentIntroVideoUrl"
       | "venmoQrUrl"
       | "venmoHandle"
       | "venmoInstructions"
@@ -203,6 +211,16 @@ export async function saveLandingMedia(
       throw new Error("Purchase thank-you video must be a valid YouTube URL.");
     }
     next.purchaseThankYouVideoUrl = url;
+  }
+
+  if (patch.equipmentIntroVideoUrl !== undefined) {
+    const url = patch.equipmentIntroVideoUrl?.trim() || null;
+    if (url && !isAllowedCoachIntroVideoUrl(url)) {
+      throw new Error(
+        "Equipment intro must be an uploaded coach intro (MP4/WebM/MOV) or a YouTube URL.",
+      );
+    }
+    next.equipmentIntroVideoUrl = url;
   }
 
   if (patch.venmoQrUrl !== undefined) {
