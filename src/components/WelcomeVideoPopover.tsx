@@ -2,12 +2,17 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useId, useState } from "react";
+import { createPortal } from "react-dom";
 import PlayableVideoFrame from "@/components/PlayableVideoFrame";
 import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
 
 const DEFAULT_TRIGGER =
   "inline-flex h-14 items-center justify-center rounded-full bg-[#7c3aed] px-10 text-sm font-bold text-white shadow-lg shadow-[#7c3aed]/30 transition-all hover:bg-[#6d2dd6] hover:scale-[1.05] active:scale-[0.98]";
 
+/**
+ * “Watch intro” — always opens a large, near-fullscreen player (desktop + mobile).
+ * No tiny hover card; click/tap only.
+ */
 export default function WelcomeVideoPopover({
   children,
   className = "",
@@ -21,18 +26,33 @@ export default function WelcomeVideoPopover({
   welcomeVideoUrl?: string | null;
 }) {
   const [open, setOpen] = useState(false);
-  const [isTouch, setIsTouch] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const titleId = useId();
   const volumeDb = useUploadedContentVolumeDb();
+
   useEffect(() => {
-    setIsTouch(window.matchMedia("(hover: none)").matches);
+    setMounted(true);
   }, []);
 
   const show = useCallback(() => setOpen(true), []);
   const hide = useCallback(() => setOpen(false), []);
 
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") hide();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open, hide]);
+
   const videoBody = welcomeVideoUrl?.trim() ? (
-    <div className="aspect-video overflow-hidden rounded-xl bg-black">
+    <div className="aspect-video w-full overflow-hidden rounded-xl bg-black sm:rounded-2xl">
       <PlayableVideoFrame
         className="h-full w-full"
         videoUrl={welcomeVideoUrl}
@@ -44,9 +64,9 @@ export default function WelcomeVideoPopover({
       />
     </div>
   ) : (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center text-xs text-white/70">
+    <div className="rounded-xl border border-white/10 bg-white/5 p-6 text-center text-sm text-white/70">
       <p>Welcome video not set yet.</p>
-      <p className="mt-2">
+      <p className="mt-2 text-xs">
         Coach: upload your intro under{" "}
         <Link href="/admin/videos" className="text-[#c4b5fd] underline">
           Admin → Videos
@@ -56,66 +76,56 @@ export default function WelcomeVideoPopover({
     </div>
   );
 
+  const modal =
+    open && mounted
+      ? createPortal(
+          <div
+            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/88 p-3 backdrop-blur-md sm:p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            onClick={hide}
+          >
+            <div
+              className="flex w-full max-w-[min(96vw,56rem)] flex-col rounded-2xl border border-white/15 bg-[#0a0612] p-3 shadow-2xl sm:p-5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-2 flex items-center justify-between gap-3 sm:mb-3">
+                <p id={titleId} className="text-sm font-semibold text-white sm:text-base">
+                  Welcome — a word from Coach Jeremy
+                </p>
+                <button
+                  type="button"
+                  onClick={hide}
+                  className="shrink-0 rounded-full border border-white/15 px-3 py-1 text-xs font-semibold text-white/70 hover:bg-white/10 hover:text-white"
+                >
+                  Close
+                </button>
+              </div>
+              {videoBody}
+              <p className="mt-2 text-center text-[11px] text-white/45 sm:mt-3">
+                Esc or tap outside to close
+              </p>
+            </div>
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
     <>
-      <span
-        className={`relative inline-block ${className}`}
-        onMouseEnter={() => !isTouch && show()}
-        onMouseLeave={() => !isTouch && hide()}
-      >
+      <span className={`relative inline-block ${className}`}>
         <button
           type="button"
           className={buttonClassName || DEFAULT_TRIGGER}
-          onClick={() => setOpen((v) => !v)}
+          onClick={show}
           aria-expanded={open}
           aria-haspopup="dialog"
         >
           {children}
         </button>
-
-        {open && !isTouch && (
-          <div
-            role="dialog"
-            aria-labelledby={titleId}
-            className="absolute left-1/2 top-full z-50 mt-3 w-[min(92vw,320px)] -translate-x-1/2 rounded-2xl border border-white/20 bg-black/95 p-3 shadow-2xl backdrop-blur-md"
-          >
-            <p id={titleId} className="mb-2 text-center text-xs font-semibold tracking-wide text-white/90">
-              Welcome to The Train Station
-            </p>
-            {videoBody}
-            <p className="mt-2 text-center text-[10px] text-white/50">Hover away to close · tap Enter on mobile</p>
-          </div>
-        )}
       </span>
-
-      {open && isTouch && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={titleId}
-          onClick={hide}
-        >
-          <div
-            className="w-full max-w-md rounded-2xl border border-white/15 bg-[#0a0612] p-4 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <p id={titleId} className="text-sm font-semibold text-white">
-                Welcome — quick intro
-              </p>
-              <button
-                type="button"
-                onClick={hide}
-                className="rounded-full px-2 py-1 text-xs text-white/60 hover:text-white"
-              >
-                Close
-              </button>
-            </div>
-            {videoBody}
-          </div>
-        </div>
-      )}
+      {modal}
     </>
   );
 }

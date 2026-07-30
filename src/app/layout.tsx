@@ -36,7 +36,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const origin = siteOrigin();
   const shareTitle = `${title} — Train with purpose`;
   const shareDescription =
-    "Live coaching with Coach Jeremy · real programs · on your phone. See inside — then choose your ticket.";
+    "Live coaching with Coach Jeremy · real programs · on your phone. Free quick tour — then choose your ticket.";
 
   return {
     metadataBase: new URL(origin),

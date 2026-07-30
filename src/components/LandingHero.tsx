@@ -49,7 +49,7 @@ const ROTATING = [
 
 /**
  * Cold-traffic “send POP” screen — one promise, one ask.
- * Ask = See inside (guided tour) → exits into /join tickets or programs.
+ * Ask = Free Quick Tour → exits into /join tickets or programs.
  * Members never hit this shell (home is welcome + status after join).
  */
 export default function LandingHero({
@@ -137,10 +137,10 @@ export default function LandingHero({
                 onClick={() => setTourOpen(true)}
                 className="landing-hero-early-signup landing-hero-cta-pulse inline-flex h-[3.5rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg"
               >
-                See inside
+                Free Quick Tour
               </button>
               <p className="mt-2.5 text-center text-[12px] font-medium text-white/55">
-                Quick tour · then tickets or programs on the site
+                ~15 sec · then tickets or programs on the site
               </p>
 
               <p className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[13px] font-semibold text-white/70">

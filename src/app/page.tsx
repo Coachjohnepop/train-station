@@ -25,11 +25,11 @@ import { signupPlanLabel } from "@/lib/signup-plans";
 export const metadata: Metadata = {
   title: "The Train Station — Train with purpose",
   description:
-    "Live coaching with Coach Jeremy. Real programs, real accountability. See inside in 15 seconds — then choose your ticket.",
+    "Live coaching with Coach Jeremy. Real programs, real accountability. Free quick tour — then choose your ticket.",
   openGraph: {
     title: "The Train Station — Train with purpose",
     description:
-      "Live coaching · real programs · on your phone. See inside — then choose your ticket.",
+      "Live coaching · real programs · on your phone. Free quick tour — then choose your ticket.",
     url: "https://www.thetrainstation.co",
     siteName: "The Train Station",
     type: "website",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "The Train Station — Train with purpose",
     description:
-      "Live coaching · real programs · on your phone. See inside — then choose your ticket.",
+      "Live coaching · real programs · on your phone. Free quick tour — then choose your ticket.",
     images: ["/images/splash/black-guy.jpg"],
   },
 };

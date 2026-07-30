@@ -288,7 +288,7 @@ export default function LandingSeeInsideTour({
       <div className="flex shrink-0 items-center justify-between gap-2 px-3 pb-1 pt-[max(0.4rem,env(safe-area-inset-top))] sm:px-5">
         <div>
           <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-[#c4b5fd]">
-            See inside
+            Free Quick Tour
           </p>
           <h2 id="see-inside-title" className="text-xs font-semibold text-white sm:text-sm">
             Station tour
