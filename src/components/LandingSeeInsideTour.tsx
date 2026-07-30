@@ -29,6 +29,8 @@ type AutoBeat =
   | "w_set1"
   | "w_set2"
   | "w_set3"
+  /** All sets checked — no confetti yet (prevents set-3 + confetti feeling combined) */
+  | "w_all_done"
   | "w_confetti"
   | "access_business"
   | "pick_adult"
@@ -43,6 +45,7 @@ const AUTO_BEATS: AutoBeat[] = [
   "w_set1",
   "w_set2",
   "w_set3",
+  "w_all_done",
   "w_confetti",
   "access_business",
   "pick_adult",
@@ -121,8 +124,12 @@ export default function LandingSeeInsideTour({
   function holdMsForBeat(index: number): number {
     if (reducedMotion.current) return 1000;
     const id = AUTO_BEATS[index];
+    // Set 3 alone — full 2s with NO confetti
+    if (id === "w_set3") return STEP_MS;
+    // Pause on all-sets-done before confetti so they never feel like one step
+    if (id === "w_all_done") return STEP_MS;
     if (id === "w_confetti") return CONFETTI_HOLD_MS;
-    // Everything after confetti was flying by — give it more air
+    // Everything after confetti — give it more air
     const confettiIdx = AUTO_BEATS.indexOf("w_confetti");
     if (index > confettiIdx) return AFTER_CONFETTI_MS;
     return STEP_MS;
@@ -181,26 +188,40 @@ export default function LandingSeeInsideTour({
     return clearTimers;
   }, [open, phase, beat, clearTimers]);
 
-  // Confetti ONLY on its own beat — after set 3 has already been held for a full step
+  // Confetti ONLY on w_confetti — never on w_set3 or w_all_done
   useEffect(() => {
     if (!open || phase !== "auto") return;
     const step = AUTO_BEATS[beat];
-    // Never fire on set-check beats (especially w_set3)
+
+    // Hard block on any set-check / hold beat
+    if (step === "w_set3" || step === "w_all_done" || step === "w_set1" || step === "w_set2") {
+      return;
+    }
     if (step !== "w_confetti") return;
-    if (confettiFired.current || reducedMotion.current) return;
-    confettiFired.current = true;
-    // Slight delay so set-3 checkmark is already settled from previous step
+    if (reducedMotion.current) return;
+
+    let cancelled = false;
+    // Fire well after entering confetti beat (set 3 already visible for 2 full prior beats)
     const t = window.setTimeout(() => {
+      if (cancelled || confettiFired.current) return;
+      confettiFired.current = true;
       const el = lastSetRef.current;
-      // Match confetti lifetime to hold so canvas doesn't vanish mid-step (flash)
-      const burstMs = Math.max(2200, CONFETTI_HOLD_MS - 400);
+      const burstMs = Math.max(2400, CONFETTI_HOLD_MS - 200);
+      // Origin: center of phone card, not the set-3 button (avoids “set 3 launches confetti”)
       if (el) {
-        fireWorkoutConfetti(confettiOriginFromElement(el), burstMs);
+        const origin = confettiOriginFromElement(el);
+        fireWorkoutConfetti(
+          { x: origin.x, y: origin.y - 40 },
+          burstMs,
+        );
       } else {
         fireWorkoutConfetti(undefined, burstMs);
       }
-    }, 350);
-    return () => window.clearTimeout(t);
+    }, 700);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
   }, [open, phase, beat]);
 
   // Preload Business Class art so confetti → access doesn't flash a blank load
@@ -240,22 +261,23 @@ export default function LandingSeeInsideTour({
       ? ((beat + 1) / (AUTO_BEATS.length + 1)) * 100
       : 100;
 
-  const displayWeight =
+  const onWorkout =
     current === "w_weight" ||
     current === "w_set1" ||
     current === "w_set2" ||
     current === "w_set3" ||
-    current === "w_confetti"
-      ? 135
-      : 95;
+    current === "w_all_done" ||
+    current === "w_confetti";
 
-  // Set 3 checks alone on w_set3; confetti beat keeps them checked (no re-toggle)
+  const displayWeight = onWorkout ? 135 : 95;
+
+  // Progressive checks — set 3 only on w_set3; stay checked through all_done + confetti
   const doneSets =
     current === "w_set1"
       ? [1]
       : current === "w_set2"
         ? [1, 2]
-        : current === "w_set3" || current === "w_confetti"
+        : current === "w_set3" || current === "w_all_done" || current === "w_confetti"
           ? [1, 2, 3]
           : [];
   const set3JustDone = current === "w_set3";
@@ -305,8 +327,10 @@ export default function LandingSeeInsideTour({
             ? "Set 2 complete."
             : current === "w_set3"
               ? "Set 3 complete."
-              : current === "w_confetti"
-                ? "Exercise Finished."
+              : current === "w_all_done"
+                ? "All sets done."
+                : current === "w_confetti"
+                  ? "Exercise Finished."
             : current === "access_business"
               ? "How to access — Business Class (demo)."
               : current === "pick_adult"
@@ -407,11 +431,11 @@ export default function LandingSeeInsideTour({
           {phase === "auto" && (
             <div
               className={`landing-see-inside__slide w-full ${
-                current?.startsWith("w_")
+                onWorkout
                   ? "landing-see-inside__slide--active flex flex-col items-center"
                   : "landing-see-inside__slide--idle"
               }`}
-              aria-hidden={!current?.startsWith("w_")}
+              aria-hidden={!onWorkout}
             >
             <div className="w-full max-w-[300px] overflow-hidden rounded-[1.75rem] border border-white/15 bg-[#12081f] shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
               <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
