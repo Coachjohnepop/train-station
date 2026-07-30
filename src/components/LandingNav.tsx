@@ -121,7 +121,7 @@ export default function LandingNav({
             onMouseEnter={() => setMembershipsOpen(true)}
             onMouseLeave={() => setMembershipsOpen(false)}
           >
-            <Link href="/join" className="landing-nav__link" onClick={closeMenus}>
+            <Link href="/join#tickets" className="landing-nav__link" onClick={closeMenus}>
               Memberships
             </Link>
             {membershipsOpen && (
@@ -146,11 +146,11 @@ export default function LandingNav({
                 ))}
                 <div className="my-1 border-t border-[var(--border)]" />
                 <Link
-                  href="/join"
+                  href="/join#tickets"
                   onClick={closeMenus}
                   className="block px-3 py-2 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
                 >
-                  Compare plans →
+                  All ticket levels →
                 </Link>
               </div>
             )}

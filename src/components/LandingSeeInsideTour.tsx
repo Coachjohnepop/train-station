@@ -9,33 +9,63 @@ import {
 } from "@/lib/workout-confetti";
 import { TICKET_TIERS, type TicketTierId } from "@/lib/landing-tickets";
 import { TOP_LEVEL_PROGRAMS } from "@/lib/programs";
+import { PROGRAM_IMAGES } from "@/lib/program-constants";
 import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 
 /**
- * See inside — fully auto until the final fork (no slide-clicking).
+ * See inside — full auto-play (~2s/step), then two real choices.
  *
- * Demo: 5 actions × 2s (weight → set1 → set2 → set3 → confetti)
- * Then auto ticket highlight / pause 2s → land on Onboard | Program fork.
- * Ticket still selectable if user taps early; Free rickroll works.
- * Pay anytime; start date needs full onboard.
+ * Auto (~12 × 2s):
+ *  workout ×5 → Business Class demo → Adult program → equipment blank →
+ *  equipment 5 selected → book click → pick day → book it
+ *
+ * Interactive end:
+ *  left = Choose ticket level (grid + seat art)
+ *  right = Choose program (logos)
+ *  converge = payment (program skippable)
  */
 const STEP_MS = 2000;
 
-type Stage = "demo" | "tickets" | "fork" | "onboard" | "program" | "book";
+type AutoBeat =
+  | "w_weight"
+  | "w_set1"
+  | "w_set2"
+  | "w_set3"
+  | "w_confetti"
+  | "access_business"
+  | "pick_adult"
+  | "equip_blank"
+  | "equip_all"
+  | "book_open"
+  | "book_day"
+  | "book_confirm";
 
-/** Auto-play sequence (fork is interactive end) */
-const AUTO_STAGES: Stage[] = ["demo", "tickets", "fork"];
+const AUTO_BEATS: AutoBeat[] = [
+  "w_weight",
+  "w_set1",
+  "w_set2",
+  "w_set3",
+  "w_confetti",
+  "access_business",
+  "pick_adult",
+  "equip_blank",
+  "equip_all",
+  "book_open",
+  "book_day",
+  "book_confirm",
+];
 
-const COACH: Record<Stage, string> = {
-  demo: "Live session — weight, sets, finish. Watch it build.",
-  tickets: "Choose your ticket — pay anytime after you pick.",
-  fork: "Onboard (left) or pick a program (right). Start date needs full onboard.",
-  onboard: "Full onboard unlocks your program start date. Pay is separate.",
-  program: "Pick a track anytime. Start date waits until onboard is complete.",
-  book: "Book Coach Jeremy — or skip and book later in the app.",
-};
+type EndMode = "choice" | "tickets" | "programs" | "pay";
 
-type DemoStep = "weight" | "set1" | "set2" | "set3" | "confetti";
+const DEMO_EQUIPMENT = [
+  { id: "dumbbells", name: "Dumbbells", img: "/images/equipment/dumbbells.jpg" },
+  { id: "kettlebell", name: "Kettlebell", img: "/images/equipment/kettlebell.jpg" },
+  { id: "bands", name: "Resistance bands", img: "/images/equipment/resistance-bands.jpg" },
+  { id: "bench", name: "Bench", img: "/images/equipment/bench.jpg" },
+  { id: "mat", name: "Yoga mat", img: "/images/equipment/yoga-mat.jpg" },
+];
+
+const BOOK_SLOTS = ["Tue · 11:00 AM", "Tue · 1:00 PM", "Wed · 2:45 PM"];
 
 export default function LandingSeeInsideTour({
   open,
@@ -49,147 +79,77 @@ export default function LandingSeeInsideTour({
   welcomeVideoUrl?: string | null;
 }) {
   const router = useRouter();
-  const [stage, setStage] = useState<Stage>("demo");
-  const [demoStep, setDemoStep] = useState<DemoStep>("weight");
-  const [weight, setWeight] = useState(95);
-  const [doneSets, setDoneSets] = useState<number[]>([]);
+  const [beat, setBeat] = useState(0);
+  const [phase, setPhase] = useState<"auto" | "end">("auto");
+  const [endMode, setEndMode] = useState<EndMode>("choice");
+  const [plan, setPlan] = useState("business");
+  const [programSlug, setProgramSlug] = useState<string | null>("adult");
   const [freeModalOpen, setFreeModalOpen] = useState(false);
-  const [plan, setPlan] = useState("explorer");
-  const [programSlug, setProgramSlug] = useState<string | null>(null);
-  const [didOnboard, setDidOnboard] = useState(false);
-  const [didProgram, setDidProgram] = useState(false);
-  const lastSetRef = useRef<HTMLButtonElement | null>(null);
+  const lastSetRef = useRef<HTMLDivElement | null>(null);
   const confettiFired = useRef(false);
   const reducedMotion = useRef(false);
   const timers = useRef<number[]>([]);
-  /** When true, stop auto-advance (user is on interactive fork/onboard/program/book) */
-  const autoPaused = useRef(false);
+  const paused = useRef(false);
 
   const clearTimers = useCallback(() => {
     for (const t of timers.current) window.clearTimeout(t);
     timers.current = [];
   }, []);
 
-  const later = useCallback((ms: number, fn: () => void) => {
-    const id = window.setTimeout(fn, ms);
-    timers.current.push(id);
-  }, []);
-
-  const goSignup = useCallback(() => {
+  const goPay = useCallback(() => {
     const q = new URLSearchParams({ plan });
     if (programSlug) q.set("interest", programSlug);
     onClose();
     router.push(`/signup?${q.toString()}`);
   }, [onClose, plan, programSlug, router]);
 
-  const enterFork = useCallback((signupPlan: string) => {
-    clearTimers();
-    autoPaused.current = true;
-    setPlan(signupPlan);
-    setFreeModalOpen(false);
-    setDidOnboard(false);
-    setDidProgram(false);
-    setProgramSlug(null);
-    setStage("fork");
-  }, [clearTimers]);
-
-  const pickTicket = useCallback(
-    (tierId: TicketTierId, signupPlan: string) => {
-      if (tierId === "free") {
-        setPlan("explorer");
-        setFreeModalOpen(true);
-        autoPaused.current = true;
-        clearTimers();
-        return;
-      }
-      enterFork(signupPlan);
-    },
-    [enterFork, clearTimers],
-  );
-
-  // Reset when opened
+  // Reset
   useEffect(() => {
     if (!open) return;
     reducedMotion.current =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    autoPaused.current = false;
-    setStage("demo");
-    setDemoStep("weight");
-    setWeight(95);
-    setDoneSets([]);
-    confettiFired.current = false;
+    paused.current = false;
+    setPhase("auto");
+    setBeat(0);
+    setEndMode("choice");
+    setPlan("business");
+    setProgramSlug("adult");
     setFreeModalOpen(false);
-    setPlan("explorer");
-    setProgramSlug(null);
-    setDidOnboard(false);
-    setDidProgram(false);
+    confettiFired.current = false;
     clearTimers();
   }, [open, clearTimers]);
 
-  // Full auto sequence: demo 5×2s → tickets 2s → fork (stop)
+  // Auto-advance
   useEffect(() => {
-    if (!open) return;
-    if (autoPaused.current) return;
-    if (stage !== "demo" && stage !== "tickets") return;
-
+    if (!open || phase !== "auto" || paused.current) return;
     clearTimers();
-    const step = reducedMotion.current ? 900 : STEP_MS;
-
-    if (stage === "demo") {
-      setDemoStep("weight");
-      setWeight(95);
-      setDoneSets([]);
-      confettiFired.current = false;
-
-      // 1) Weight
-      later(0, () => {
-        setDemoStep("weight");
-        setWeight(135);
-      });
-      // 2) Set 1
-      later(step, () => {
-        setDemoStep("set1");
-        setDoneSets([1]);
-      });
-      // 3) Set 2
-      later(step * 2, () => {
-        setDemoStep("set2");
-        setDoneSets([1, 2]);
-      });
-      // 4) Set 3
-      later(step * 3, () => {
-        setDemoStep("set3");
-        setDoneSets([1, 2, 3]);
-      });
-      // 5) Confetti / finish
-      later(step * 4, () => {
-        setDemoStep("confetti");
-        setDoneSets([1, 2, 3]);
-        if (!confettiFired.current && !reducedMotion.current) {
-          confettiFired.current = true;
-          const el = lastSetRef.current;
-          if (el) fireWorkoutConfetti(confettiOriginFromElement(el));
-        }
-      });
-      // Next slide: tickets
-      later(step * 5, () => {
-        if (!autoPaused.current) setStage("tickets");
-      });
-    }
-
-    if (stage === "tickets") {
-      // Auto show tickets 2s, then land on fork (user can still tap a ticket during the beat)
-      later(step, () => {
-        if (!autoPaused.current) {
-          autoPaused.current = true;
-          setStage("fork");
-        }
-      });
-    }
-
+    const ms = reducedMotion.current ? 900 : STEP_MS;
+    const id = window.setTimeout(() => {
+      if (paused.current) return;
+      if (beat >= AUTO_BEATS.length - 1) {
+        setPhase("end");
+        setEndMode("choice");
+        return;
+      }
+      setBeat((b) => b + 1);
+    }, ms);
+    timers.current.push(id);
     return clearTimers;
-  }, [open, stage, later, clearTimers]);
+  }, [open, phase, beat, clearTimers]);
+
+  // Confetti on confetti beat
+  useEffect(() => {
+    if (!open || phase !== "auto") return;
+    if (AUTO_BEATS[beat] !== "w_confetti") return;
+    if (confettiFired.current || reducedMotion.current) return;
+    confettiFired.current = true;
+    const t = window.setTimeout(() => {
+      const el = lastSetRef.current;
+      if (el) fireWorkoutConfetti(confettiOriginFromElement(el));
+    }, 200);
+    return () => window.clearTimeout(t);
+  }, [open, phase, beat]);
 
   useEffect(() => {
     if (!open) return;
@@ -211,24 +171,95 @@ export default function LandingSeeInsideTour({
 
   if (!open) return null;
 
-  const autoIndex =
-    stage === "demo" ? 0 : stage === "tickets" ? 1 : stage === "fork" ? 2 : 2;
-  const progress = ((autoIndex + 1) / AUTO_STAGES.length) * 100;
+  const current = phase === "auto" ? AUTO_BEATS[beat] : null;
+  const progress =
+    phase === "auto"
+      ? ((beat + 1) / (AUTO_BEATS.length + 1)) * 100
+      : 100;
+
+  const displayWeight =
+    current === "w_weight" ||
+    current === "w_set1" ||
+    current === "w_set2" ||
+    current === "w_set3" ||
+    current === "w_confetti"
+      ? 135
+      : 95;
+
+  const doneSets =
+    current === "w_set1"
+      ? [1]
+      : current === "w_set2"
+        ? [1, 2]
+        : current === "w_set3" || current === "w_confetti"
+          ? [1, 2, 3]
+          : [];
+
+  const equipSelected = current === "equip_all";
+  const bookDayIndex =
+    current === "book_day" || current === "book_confirm" ? 0 : -1;
+  const bookDone = current === "book_confirm";
+
+  const planLabel = signupPlanLabel(normalizeSignupPlan(plan));
+  const isPaid = normalizeSignupPlan(plan) !== "explorer";
+
   const programs = TOP_LEVEL_PROGRAMS.filter((p) => p.catalogStatus !== "hidden");
-  const planNorm = normalizeSignupPlan(plan);
-  const planLabel = signupPlanLabel(planNorm);
-  const isPaidPlan = planNorm !== "explorer";
-  const weightHot = demoStep !== "weight" || weight >= 135;
-  const statusLine =
-    demoStep === "weight"
-      ? "Logging weight · coach sees it live"
-      : demoStep === "set1"
-        ? "Set 1 done"
-        : demoStep === "set2"
-          ? "Set 2 done"
-          : demoStep === "set3"
-            ? "Set 3 done"
-            : "Exercise complete — nice work";
+  // Prefer six tiles: catalog + fill from PROGRAM_IMAGES keys if needed
+  const programTiles = [
+    ...programs.map((p) => ({
+      slug: p.slug,
+      name: p.name,
+      img: PROGRAM_IMAGES[p.slug] || "/images/programs/adult.jpg",
+    })),
+  ];
+  while (programTiles.length < 6) {
+    const extras = [
+      { slug: "chest", name: "Upper strength", img: "/images/programs/chest-press.jpg" },
+      { slug: "squat", name: "Lower power", img: "/images/programs/squat.jpg" },
+    ];
+    const e = extras[programTiles.length - programs.length];
+    if (!e) break;
+    programTiles.push(e);
+  }
+
+  const coachLine =
+    phase === "end"
+      ? endMode === "choice"
+        ? "Choose ticket level (left) or a program (right). Pay anytime — program is optional."
+        : endMode === "tickets"
+          ? "Pick your level. Seat art shows the class you board."
+          : endMode === "programs"
+            ? "Pick a track — or skip and go straight to payment."
+            : "Checkout whenever you’re ready. Change anything later in Member → Settings."
+      : current === "w_weight"
+        ? "Log the weight you used."
+        : current === "w_set1" || current === "w_set2" || current === "w_set3"
+          ? "Tap each set as you finish."
+          : current === "w_confetti"
+            ? "Last set — celebrate and keep the train moving."
+            : current === "access_business"
+              ? "How to access — Business Class (demo)."
+              : current === "pick_adult"
+                ? "Pick your program — Adult Strength."
+                : current === "equip_blank"
+                  ? "Your gear list starts empty."
+                  : current === "equip_all"
+                    ? "Tap what you have at home — five items selected."
+                    : current === "book_open"
+                      ? "Book Call with Coach Jeremy."
+                      : current === "book_day"
+                        ? "Pick an open day and time."
+                        : "Booked — intro call locked in.";
+
+  function pickTicket(tierId: TicketTierId, signupPlan: string) {
+    if (tierId === "free") {
+      setPlan("explorer");
+      setFreeModalOpen(true);
+      return;
+    }
+    setPlan(signupPlan);
+    setEndMode("pay");
+  }
 
   return (
     <div
@@ -243,17 +274,33 @@ export default function LandingSeeInsideTour({
             See inside
           </p>
           <h2 id="see-inside-title" className="text-sm font-semibold text-white sm:text-base">
-            Station tour
+            Station tour · auto
           </h2>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white"
-          aria-label="Close tour"
-        >
-          ✕
-        </button>
+        <div className="flex items-center gap-2">
+          {phase === "auto" ? (
+            <button
+              type="button"
+              onClick={() => {
+                paused.current = true;
+                clearTimers();
+                setPhase("end");
+                setEndMode("choice");
+              }}
+              className="rounded-full border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/85"
+            >
+              Skip to choices
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+            aria-label="Close tour"
+          >
+            ✕
+          </button>
+        </div>
       </div>
 
       <div className="mx-4 h-1 shrink-0 overflow-hidden rounded-full bg-white/10 sm:mx-6">
@@ -263,14 +310,11 @@ export default function LandingSeeInsideTour({
         />
       </div>
 
-      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
-        <div
-          key={stage}
-          className="landing-see-inside__panel flex w-full max-w-md flex-col items-center gap-4"
-        >
-          {/* ── Demo (auto 5 × 2s) ── */}
-          {stage === "demo" && (
-            <div className="landing-see-inside__phone relative w-full max-w-[300px] overflow-hidden rounded-[1.75rem] border border-white/15 bg-[#12081f] shadow-[0_24px_80px_rgba(0,0,0,0.65)] sm:max-w-[320px]">
+      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+        <div className="landing-see-inside__panel flex w-full max-w-md flex-col items-center gap-3">
+          {/* ── Workout phone ── */}
+          {phase === "auto" && current?.startsWith("w_") && (
+            <div className="w-full max-w-[300px] overflow-hidden rounded-[1.75rem] border border-white/15 bg-[#12081f] shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
               <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#a78bfa]">
@@ -282,46 +326,32 @@ export default function LandingSeeInsideTour({
                   LIVE
                 </span>
               </div>
-              <div className="space-y-3 p-3.5">
+              <div className="p-3.5">
                 <div className="rounded-xl border border-[#7c3aed]/35 bg-[#1a0b2e]/90 p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-[#c4b5fd]/80">
-                        Now
-                      </p>
+                      <p className="text-[10px] font-semibold uppercase text-[#c4b5fd]/80">Now</p>
                       <h3 className="text-base font-semibold text-white">Goblet squat</h3>
                       <p className="mt-0.5 text-[11px] text-white/55">3 × 8 · Medium</p>
                     </div>
-                    <span
-                      className={`text-xs font-bold tabular-nums transition-colors duration-500 ${
-                        weightHot ? "text-[#fde68a]" : "text-white/70"
-                      }`}
-                    >
-                      {weight}
-                      <span className="ml-0.5 text-[10px] font-semibold text-white/45">lbs</span>
+                    <span className="text-xs font-bold tabular-nums text-[#fde68a]">
+                      {displayWeight}
+                      <span className="ml-0.5 text-[10px] text-white/45">lbs</span>
                     </span>
                   </div>
                   <div className="mt-3 flex items-end gap-2">
                     <label className="flex min-w-[4.25rem] flex-col rounded-lg border border-white/15 bg-black/30 px-2 py-1.5">
-                      <span className="text-[8px] font-bold uppercase tracking-wider text-white/40">
-                        Weight
-                      </span>
-                      <span
-                        className={`text-lg font-bold tabular-nums leading-none transition-colors duration-500 ${
-                          weightHot ? "text-[#fde68a]" : "text-white"
-                        }`}
-                      >
-                        {weight}
+                      <span className="text-[8px] font-bold uppercase text-white/40">Weight</span>
+                      <span className="text-lg font-bold tabular-nums text-[#fde68a]">
+                        {displayWeight}
                       </span>
                     </label>
                     {[1, 2, 3].map((n) => {
                       const done = doneSets.includes(n);
                       return (
-                        <button
+                        <div
                           key={n}
                           ref={n === 3 ? lastSetRef : undefined}
-                          type="button"
-                          tabIndex={-1}
                           className={`flex h-12 flex-1 flex-col items-center justify-center rounded-lg border text-xs font-bold transition-colors duration-500 ${
                             done
                               ? "border-[#d4af37]/55 bg-[#d4af37]/20 text-[#fde68a]"
@@ -329,344 +359,366 @@ export default function LandingSeeInsideTour({
                           }`}
                         >
                           <span className="text-base leading-none">{done ? "✓" : n}</span>
-                          <span className="text-[8px] font-semibold uppercase opacity-70">Set</span>
-                        </button>
+                          <span className="text-[8px] uppercase opacity-70">Set</span>
+                        </div>
                       );
                     })}
                   </div>
-                  <p className="mt-2 min-h-[1rem] text-[10px] font-medium text-[#c4b5fd]/90">
-                    {statusLine}
-                  </p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ── Tickets (auto 2s, or tap to pick early) ── */}
-          {stage === "tickets" && (
-            <div className="w-full max-w-md">
-              <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-[#c4b5fd]">
-                Your level
+          {/* ── How to Access · Business Class ── */}
+          {phase === "auto" && current === "access_business" && (
+            <div className="w-full max-w-sm rounded-3xl border border-[#7c3aed]/40 bg-[#140a22] p-5">
+              <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-[#a78bfa]">
+                How to access
               </p>
-              <h3 className="mt-1 text-center text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-                Choose your ticket
+              <h3 className="mt-1 text-center text-xl font-semibold text-white">
+                Pick Business Class
               </h3>
-              <p className="mt-1.5 text-center text-[12px] text-white/55">
-                Tap a ticket, or wait — we&apos;ll continue automatically.
+              <div className="mx-auto mt-3 max-w-[200px] overflow-hidden rounded-xl border-2 border-[#a78bfa] shadow-[0_0_24px_rgba(124,58,237,0.45)] ring-2 ring-[#7c3aed]/50">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/tickets/business-class.jpg"
+                  alt="Business Class"
+                  className="h-auto w-full object-cover"
+                />
+              </div>
+              <p className="mt-3 text-center text-lg font-bold text-white">
+                Business Class · $50/mo
               </p>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                {TICKET_TIERS.map((tier) => {
-                  const isFree = tier.id === "free";
-                  return (
-                    <button
-                      key={tier.id}
-                      type="button"
-                      onClick={() => pickTicket(tier.id, tier.signupPlan)}
-                      className={`group relative flex min-h-[148px] flex-col overflow-hidden rounded-xl border text-left shadow-lg transition active:scale-[0.98] ${tier.themeClass}`}
-                    >
-                      {tier.seatArtSrc ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={tier.seatArtSrc}
-                          alt=""
-                          className="absolute inset-0 h-full w-full object-cover opacity-90"
-                        />
-                      ) : null}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/20" />
-                      <div className="relative z-10 mt-auto flex flex-col p-2.5">
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-white/60">
-                          {tier.subtitle}
-                        </span>
-                        <span className="text-sm font-bold text-white">{tier.title}</span>
-                        <span className="mt-0.5 text-lg font-semibold text-white">
-                          {tier.price}
-                          {tier.priceNote ? (
-                            <span className="ml-0.5 text-[10px] font-medium text-white/60">
-                              {tier.priceNote}
-                            </span>
-                          ) : null}
-                        </span>
-                        <span className="mt-1 text-[10px] font-semibold text-[#c4b5fd]">
-                          {isFree ? "Tap if you dare →" : "Select & pay anytime →"}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
+              <p className="mt-1 text-center text-[11px] text-emerald-300/90">Selected ✓</p>
+            </div>
+          )}
+
+          {/* ── Program Adult ── */}
+          {phase === "auto" && current === "pick_adult" && (
+            <div className="w-full max-w-sm rounded-3xl border border-white/15 bg-[#12081f] p-4">
+              <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-[#c4b5fd]">
+                Program
+              </p>
+              <h3 className="mt-1 text-center text-xl font-semibold text-white">Pick Adult</h3>
+              <div className="mt-3 overflow-hidden rounded-2xl border-2 border-[#7c3aed] ring-2 ring-[#7c3aed]/40">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={PROGRAM_IMAGES.adult}
+                  alt="Adult Strength"
+                  className="h-36 w-full object-cover"
+                />
+                <div className="bg-[#1a0b2e] px-3 py-2">
+                  <p className="text-sm font-semibold text-white">Adult Strength Conditioning</p>
+                  <p className="text-[11px] text-emerald-300">Selected ✓</p>
+                </div>
               </div>
             </div>
           )}
 
-          {/* ── Fork: end of auto tour ── */}
-          {stage === "fork" && (
+          {/* ── Equipment ── */}
+          {phase === "auto" && (current === "equip_blank" || current === "equip_all") && (
+            <div className="w-full max-w-sm rounded-3xl border border-white/15 bg-[#12081f] p-4">
+              <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-[#c4b5fd]">
+                Gear at home
+              </p>
+              <h3 className="mt-1 text-center text-lg font-semibold text-white">
+                {equipSelected ? "Five items selected" : "Your equipment list"}
+              </h3>
+              <div className="mt-3 grid grid-cols-5 gap-1.5">
+                {DEMO_EQUIPMENT.map((eq) => (
+                  <div
+                    key={eq.id}
+                    className={`overflow-hidden rounded-lg border transition ${
+                      equipSelected
+                        ? "border-emerald-400/60 ring-1 ring-emerald-400/40"
+                        : "border-white/10 opacity-50"
+                    }`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={eq.img} alt={eq.name} className="aspect-square w-full object-cover" />
+                    {equipSelected ? (
+                      <p className="bg-emerald-500/20 text-center text-[8px] font-bold text-emerald-300">
+                        ✓
+                      </p>
+                    ) : (
+                      <p className="bg-black/40 py-0.5 text-center text-[8px] text-white/40">—</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-center text-[10px] text-white/45">
+                Change anytime in Member → Settings
+              </p>
+            </div>
+          )}
+
+          {/* ── Book ── */}
+          {phase === "auto" &&
+            (current === "book_open" || current === "book_day" || current === "book_confirm") && (
+              <div className="w-full max-w-sm rounded-3xl border border-emerald-500/30 bg-[#0c1a14] p-4">
+                <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-300/90">
+                  Book Call
+                </p>
+                <h3 className="mt-1 text-center text-lg font-semibold text-white">
+                  Coach Jeremy
+                </h3>
+                <div className="mt-3 overflow-hidden rounded-2xl border border-white/12 bg-[#0a0612]/90">
+                  <div className="flex items-center gap-3 border-b border-white/10 px-3 py-2.5">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#7c3aed]/30 text-sm font-bold text-[#e9d5ff]">
+                      JB
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold text-white">Coach Jeremy Byrd</p>
+                      <p className="text-[11px] text-emerald-300/90">15-min intro · Calendly</p>
+                    </div>
+                  </div>
+                  {(current === "book_day" || current === "book_confirm") && (
+                    <div className="space-y-1.5 px-3 py-2.5">
+                      {BOOK_SLOTS.map((slot, i) => (
+                        <div
+                          key={slot}
+                          className={`flex items-center justify-between rounded-xl px-3 py-2 text-[12px] ${
+                            i === bookDayIndex
+                              ? "border border-emerald-400/50 bg-emerald-500/20 text-white"
+                              : "border border-white/8 bg-white/[0.04] text-white/60"
+                          }`}
+                        >
+                          <span className="font-medium">{slot}</span>
+                          <span className="text-[10px] font-bold uppercase text-emerald-300">
+                            {i === bookDayIndex ? (bookDone ? "Booked ✓" : "Pick →") : "Open"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="border-t border-white/10 px-3 py-2.5">
+                    <div
+                      className={`flex h-10 items-center justify-center rounded-full text-sm font-bold ${
+                        bookDone
+                          ? "bg-emerald-400 text-[#042f1a]"
+                          : current === "book_open"
+                            ? "bg-emerald-500 text-[#042f1a] ring-2 ring-emerald-300/50"
+                            : "bg-emerald-500/80 text-[#042f1a]"
+                      }`}
+                    >
+                      {bookDone
+                        ? "Appointment booked ✓"
+                        : current === "book_open"
+                          ? "Book Call · Coach Jeremy"
+                          : "Confirm booking"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          {/* ── END: two real choices ── */}
+          {phase === "end" && endMode === "choice" && (
             <div className="w-full max-w-md">
               <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-[#c4b5fd]">
-                {planLabel} · your next step
+                Your move
               </p>
               <h3 className="mt-1 text-center text-2xl font-semibold text-white">
-                How do you want to start?
+                Where next?
               </h3>
               <p className="mt-1 text-center text-[12px] text-white/55">
-                {isPaidPlan
-                  ? "Pay anytime. Start date needs full onboard."
-                  : "Free continues here. Start date needs full onboard."}
+                Ticket or program first — both reach payment. Program is optional.
               </p>
-              {isPaidPlan ? (
+              <div className="mt-5 grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={goSignup}
-                  className="landing-hero-early-signup mt-4 inline-flex h-12 w-full items-center justify-center rounded-full text-[15px] font-extrabold"
-                >
-                  Pay &amp; create account · {planLabel} →
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={goSignup}
-                  className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-full border border-white/20 text-sm font-semibold text-white transition hover:bg-white/10"
-                >
-                  Create Free account now →
-                </button>
-              )}
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDidOnboard(true);
-                    setStage("onboard");
-                  }}
-                  className="flex min-h-[160px] flex-col items-start justify-between rounded-2xl border border-[#7c3aed]/45 bg-[#1a0b2e] p-4 text-left transition hover:border-[#a78bfa] hover:bg-[#241040]"
+                  onClick={() => setEndMode("tickets")}
+                  className="flex min-h-[150px] flex-col items-start justify-between rounded-2xl border border-[#7c3aed]/50 bg-[#1a0b2e] p-4 text-left"
                 >
                   <span className="text-[10px] font-bold uppercase tracking-wider text-[#a78bfa]">
                     Left
                   </span>
                   <div>
-                    <p className="text-lg font-semibold text-white">Onboard</p>
-                    <p className="mt-1 text-[12px] leading-snug text-white/60">
-                      Full setup unlocks your <strong className="text-white/85">start date</strong>.
+                    <p className="text-lg font-semibold text-white">Choose ticket level</p>
+                    <p className="mt-1 text-[12px] text-white/60">
+                      Free · Coach · Business · 1st — seat art for each class.
                     </p>
                   </div>
-                  <span className="text-xs font-semibold text-[#c4b5fd]">Start setup →</span>
+                  <span className="text-xs font-semibold text-[#c4b5fd]">Open levels →</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setDidProgram(true);
-                    setStage("program");
-                  }}
-                  className="flex min-h-[160px] flex-col items-start justify-between rounded-2xl border border-white/15 bg-[#12081f] p-4 text-left transition hover:border-[#7c3aed]/50 hover:bg-[#1a1428]"
+                  onClick={() => setEndMode("programs")}
+                  className="flex min-h-[150px] flex-col items-start justify-between rounded-2xl border border-white/15 bg-[#12081f] p-4 text-left"
                 >
                   <span className="text-[10px] font-bold uppercase tracking-wider text-white/45">
                     Right
                   </span>
                   <div>
-                    <p className="text-lg font-semibold text-white">Pick a program</p>
-                    <p className="mt-1 text-[12px] leading-snug text-white/60">
-                      Choose a track anytime. Start date still needs onboard.
+                    <p className="text-lg font-semibold text-white">Choose program</p>
+                    <p className="mt-1 text-[12px] text-white/60">
+                      Adult, Athletes, Military… with program art.
                     </p>
                   </div>
-                  <span className="text-xs font-semibold text-[#c4b5fd]">Choose track →</span>
+                  <span className="text-xs font-semibold text-[#c4b5fd]">Open programs →</span>
                 </button>
               </div>
+              <button
+                type="button"
+                onClick={() => setEndMode("pay")}
+                className="mt-3 w-full text-center text-xs font-semibold text-white/50 underline decoration-white/25 underline-offset-4"
+              >
+                Skip program — go to payment →
+              </button>
             </div>
           )}
 
-          {/* ── Onboard (from fork only) ── */}
-          {stage === "onboard" && (
-            <div className="w-full max-w-sm rounded-3xl border border-[#7c3aed]/40 bg-[#140a22] p-5">
-              <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#a78bfa]">
-                Onboarding
-              </p>
-              <h3 className="mt-1 text-xl font-semibold text-white">Full setup unlocks start date</h3>
-              <ol className="mt-4 space-y-2.5 text-sm text-white/85">
-                <li className="flex gap-2">
-                  <span className="font-bold text-[#c4b5fd]">1.</span> Name, phone for workout texts
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-bold text-[#c4b5fd]">2.</span> Gear / home equipment (optional)
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-bold text-emerald-300/90">3.</span>
-                  <span>
-                    <strong className="text-white">Program start date</strong>
-                    <span className="mt-0.5 block text-[11px] text-white/50">
-                      Only after full onboard is complete.
-                    </span>
-                  </span>
-                </li>
-              </ol>
-              <div className="mt-4 flex flex-col gap-2">
-                {isPaidPlan ? (
-                  <button
-                    type="button"
-                    onClick={goSignup}
-                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#a78bfa]/50 bg-[#7c3aed]/25 text-sm font-semibold text-white"
-                  >
-                    Pay now · {planLabel} →
-                  </button>
-                ) : null}
-                {!didProgram ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDidProgram(true);
-                      setStage("program");
-                    }}
-                    className="inline-flex h-11 items-center justify-center rounded-full border border-white/20 text-sm font-semibold text-white"
-                  >
-                    Or pick a program →
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => setStage("book")}
-                  className="landing-hero-early-signup inline-flex h-12 items-center justify-center rounded-full text-[15px] font-extrabold"
-                >
-                  Continue to book Coach Jeremy →
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── Program (from fork only) ── */}
-          {stage === "program" && (
+          {phase === "end" && endMode === "tickets" && (
             <div className="w-full max-w-md">
-              <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-[#c4b5fd]">
-                Program
-              </p>
-              <h3 className="mt-1 text-center text-xl font-semibold text-white">
-                Pick your training track
-              </h3>
-              <p className="mt-1 text-center text-[11px] text-white/50">
-                Start date locked until full onboard.
-              </p>
-              <div className="mt-3 max-h-[36vh] space-y-2 overflow-y-auto pr-1">
-                {programs.map((p) => {
+              <button
+                type="button"
+                onClick={() => setEndMode("choice")}
+                className="mb-2 text-[11px] font-semibold text-white/50"
+              >
+                ← Back
+              </button>
+              <h3 className="text-center text-xl font-semibold text-white">Choose ticket level</h3>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {TICKET_TIERS.map((tier) => (
+                  <button
+                    key={tier.id}
+                    type="button"
+                    onClick={() => pickTicket(tier.id, tier.signupPlan)}
+                    className={`relative flex min-h-[140px] flex-col overflow-hidden rounded-xl border text-left ${tier.themeClass}`}
+                  >
+                    {tier.seatArtSrc ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={tier.seatArtSrc}
+                        alt=""
+                        className="absolute inset-0 h-full w-full object-cover opacity-90"
+                      />
+                    ) : null}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/65 to-transparent" />
+                    <div className="relative z-10 mt-auto p-2.5">
+                      <p className="text-sm font-bold text-white">{tier.title}</p>
+                      <p className="text-lg font-semibold text-white">
+                        {tier.price}
+                        {tier.priceNote ? (
+                          <span className="text-[10px] text-white/60">{tier.priceNote}</span>
+                        ) : null}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {phase === "end" && endMode === "programs" && (
+            <div className="w-full max-w-md">
+              <button
+                type="button"
+                onClick={() => setEndMode("choice")}
+                className="mb-2 text-[11px] font-semibold text-white/50"
+              >
+                ← Back
+              </button>
+              <h3 className="text-center text-xl font-semibold text-white">Choose program</h3>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {programTiles.slice(0, 6).map((p) => {
                   const active = programSlug === p.slug;
                   return (
                     <button
                       key={p.slug}
                       type="button"
                       onClick={() => setProgramSlug(p.slug)}
-                      className={`w-full rounded-xl border p-3 text-left transition ${
+                      className={`overflow-hidden rounded-xl border text-left transition ${
                         active
-                          ? "border-[#7c3aed] bg-[#7c3aed]/20"
-                          : "border-white/12 bg-white/[0.04] hover:border-[#7c3aed]/40"
+                          ? "border-[#7c3aed] ring-2 ring-[#7c3aed]/50"
+                          : "border-white/12"
                       }`}
                     >
-                      <p className="text-sm font-semibold text-white">{p.name}</p>
-                      <p className="mt-0.5 line-clamp-2 text-[11px] text-white/50">
-                        {p.description}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={p.img} alt="" className="aspect-[4/3] w-full object-cover" />
+                      <p className="bg-[#12081f] px-1.5 py-1 text-[10px] font-semibold leading-tight text-white">
+                        {p.name}
                       </p>
                     </button>
                   );
                 })}
               </div>
               <div className="mt-4 flex flex-col gap-2">
-                {isPaidPlan ? (
-                  <button
-                    type="button"
-                    onClick={goSignup}
-                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#a78bfa]/50 bg-[#7c3aed]/25 text-sm font-semibold text-white"
-                  >
-                    Pay now · {planLabel} →
-                  </button>
-                ) : null}
-                {!didOnboard ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDidOnboard(true);
-                      setStage("onboard");
-                    }}
-                    className="inline-flex h-11 items-center justify-center rounded-full border border-white/20 text-sm font-semibold text-white"
-                  >
-                    Or finish onboard (unlock start date) →
-                  </button>
-                ) : null}
                 <button
                   type="button"
+                  onClick={() => setEndMode("pay")}
                   disabled={!programSlug}
-                  onClick={() => setStage("book")}
                   className="landing-hero-early-signup inline-flex h-12 items-center justify-center rounded-full text-[15px] font-extrabold disabled:opacity-40"
                 >
-                  Continue to book Coach Jeremy →
+                  Continue to payment →
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProgramSlug(null);
+                    setEndMode("pay");
+                  }}
+                  className="text-xs font-semibold text-white/50 underline"
+                >
+                  Skip program — pay only →
                 </button>
               </div>
             </div>
           )}
 
-          {/* ── Book ── */}
-          {stage === "book" && (
-            <div className="w-full max-w-sm rounded-3xl border border-emerald-500/30 bg-[#0c1a14] p-5">
-              <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-300/90">
-                You meet here
+          {phase === "end" && endMode === "pay" && (
+            <div className="w-full max-w-sm rounded-3xl border border-[#7c3aed]/40 bg-[#140a22] p-5 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#a78bfa]">
+                Payment
               </p>
-              <h3 className="mt-2 text-center text-xl font-semibold text-white">
-                Book with Coach Jeremy
-              </h3>
-              <div className="mt-4 overflow-hidden rounded-2xl border border-white/12 bg-[#0a0612]/90">
-                <div className="flex items-center gap-3 border-b border-white/10 px-3 py-2.5">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#7c3aed]/30 text-sm font-bold text-[#e9d5ff]">
-                    JB
-                  </span>
-                  <div className="min-w-0 text-left">
-                    <p className="truncate text-sm font-semibold text-white">Coach Jeremy Byrd</p>
-                    <p className="text-[11px] text-emerald-300/90">15-min intro · Calendly</p>
-                  </div>
-                </div>
-                <div className="border-t border-white/10 px-3 py-2.5">
-                  <div className="flex h-10 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-[#042f1a]">
-                    Book Call · Coach Jeremy
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4 flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={goSignup}
-                  className="landing-hero-early-signup inline-flex h-12 items-center justify-center rounded-full text-[15px] font-extrabold"
-                >
-                  {isPaidPlan
-                    ? `Pay & create account · ${planLabel} →`
-                    : `Create Free account · ${planLabel} →`}
-                </button>
-                <button
-                  type="button"
-                  onClick={goSignup}
-                  className="text-xs font-semibold text-white/50 underline decoration-white/25 underline-offset-4 hover:text-white"
-                >
-                  Skip book for now — Book Call later in the app
-                </button>
-              </div>
+              <h3 className="mt-2 text-2xl font-semibold text-white">{planLabel}</h3>
+              {programSlug ? (
+                <p className="mt-1 text-sm text-white/60">
+                  Program:{" "}
+                  {programTiles.find((p) => p.slug === programSlug)?.name || programSlug}
+                </p>
+              ) : (
+                <p className="mt-1 text-sm text-white/50">No program yet — pick later in Settings</p>
+              )}
+              <p className="mt-3 text-[11px] text-white/45">
+                Pay now. Start date still needs full onboard. Everything editable in{" "}
+                <strong className="text-white/70">Member → Settings</strong>.
+              </p>
+              <button
+                type="button"
+                onClick={goPay}
+                className="landing-hero-early-signup mt-4 inline-flex h-12 w-full items-center justify-center rounded-full text-[15px] font-extrabold"
+              >
+                {isPaid ? `Pay & create account · ${planLabel} →` : `Create Free account →`}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEndMode("choice")}
+                className="mt-2 text-xs text-white/45"
+              >
+                ← Change ticket or program
+              </button>
             </div>
           )}
 
-          <p className="landing-see-inside__coach max-w-sm text-center text-[15px] font-semibold leading-snug text-white sm:text-base">
-            {COACH[stage]}
+          <p className="max-w-sm text-center text-[14px] font-semibold leading-snug text-white sm:text-[15px]">
+            {coachLine}
           </p>
         </div>
       </div>
 
-      <div
-        className="flex shrink-0 justify-center gap-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1"
-        aria-hidden
-      >
-        {AUTO_STAGES.map((s, i) => (
-          <span
-            key={s}
-            className={`h-1.5 rounded-full transition-all duration-500 ${
-              s === stage || (stage !== "demo" && stage !== "tickets" && s === "fork")
-                ? i === autoIndex || (stage !== "demo" && stage !== "tickets" && s === "fork")
-                  ? "w-6 bg-white"
-                  : "w-3 bg-[#a78bfa]"
-                : i < autoIndex
-                  ? "w-3 bg-[#a78bfa]"
-                  : "w-2 bg-white/25"
-            }`}
-          />
-        ))}
-      </div>
+      {phase === "auto" ? (
+        <div className="flex shrink-0 justify-center gap-1 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-1">
+          {AUTO_BEATS.map((_, i) => (
+            <span
+              key={i}
+              className={`h-1 rounded-full transition-all ${
+                i === beat ? "w-4 bg-white" : i < beat ? "w-2 bg-[#a78bfa]" : "w-1.5 bg-white/25"
+              }`}
+            />
+          ))}
+        </div>
+      ) : null}
 
       <FreeTicketModal
         open={freeModalOpen}
@@ -675,7 +727,10 @@ export default function LandingSeeInsideTour({
         purchaseAuth={{ signedIn: false }}
         onClose={() => setFreeModalOpen(false)}
         onUpgrade={() => setFreeModalOpen(false)}
-        onContinueFree={() => enterFork("explorer")}
+        onContinueFree={() => {
+          setPlan("explorer");
+          setEndMode("pay");
+        }}
       />
     </div>
   );

@@ -21,6 +21,16 @@ export default function JoinProgramThenTickets({
   const [program, setProgram] = useState<string | null>(null);
 
   useEffect(() => {
+    // Deep-link /join#tickets (Memberships nav) should land on ticket grid
+    if (typeof window === "undefined") return;
+    if (window.location.hash === "#tickets") {
+      requestAnimationFrame(() => {
+        document.getElementById("tickets")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }, []);
+
+  useEffect(() => {
     if (!program) return;
     document.getElementById("tickets")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [program]);
@@ -29,10 +39,35 @@ export default function JoinProgramThenTickets({
 
   return (
     <div>
+      {/* Tickets always present for Memberships nav → /join#tickets */}
+      <div id="tickets" className="scroll-mt-20">
+        <div className="mx-auto max-w-3xl px-6 pb-2 pt-2 text-center">
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#7c3aed]">
+            Memberships
+          </p>
+          <h2 className="mt-1 text-2xl font-semibold text-white sm:text-3xl">
+            Choose your ticket
+          </h2>
+          {selected ? (
+            <p className="mt-1 text-sm text-[#c4b5fd]">
+              For program: <span className="font-semibold text-white">{selected.name}</span>
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-[#9d8ab8]">
+              Free · Coach · Business · 1st Class — pay anytime
+            </p>
+          )}
+        </div>
+        <LandingTicketPicker
+          freeChastiseVideoUrl={freeChastiseVideoUrl}
+          welcomeVideoUrl={welcomeVideoUrl}
+        />
+      </div>
+
       <section id="programs" className="scroll-mt-20 px-4 pb-6 sm:px-6">
         <div className="mx-auto max-w-5xl text-center">
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#7c3aed]">
-            Step 1
+            Programs
           </p>
           <h2 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">
             Pick your program
@@ -40,7 +75,7 @@ export default function JoinProgramThenTickets({
           <p className="mx-auto mt-2 max-w-lg text-sm text-[#9d8ab8]">
             {fromTour
               ? "Same station you just toured — choose the track you want to train on."
-              : "Start with the training track that fits you. Tickets open after you pick."}
+              : "Optional track — ticket payment works with or without a program pick."}
           </p>
         </div>
 
@@ -75,30 +110,16 @@ export default function JoinProgramThenTickets({
                     active ? "text-[#c4b5fd]" : "text-[#7c3aed]"
                   }`}
                 >
-                  {active ? "Selected · choose ticket below ↓" : "Select →"}
+                  {active ? "Selected ✓" : "Select →"}
                 </span>
               </button>
             );
           })}
         </div>
-      </section>
-
-      {program ? (
-        <div className="border-t border-[#3d2660]/60 pt-2">
-          <p className="px-4 text-center text-xs font-medium text-[#c4b5fd] sm:px-6">
-            Step 2 · Ticket for{" "}
-            <span className="font-semibold text-white">{selected?.name || program}</span>
-          </p>
-          <LandingTicketPicker
-            freeChastiseVideoUrl={freeChastiseVideoUrl}
-            welcomeVideoUrl={welcomeVideoUrl}
-          />
-        </div>
-      ) : (
-        <p className="px-6 pb-10 text-center text-sm text-[#9d8ab8]">
-          Select a program above to unlock Free, Coach Class, Business Class, and 1st Class.
+        <p className="mx-auto mt-4 max-w-lg px-2 pb-6 text-center text-sm text-[#9d8ab8]">
+          Tickets are above — pay anytime. Program is optional and editable later in Settings.
         </p>
-      )}
+      </section>
 
       <ComingSoonPrograms compact />
     </div>
