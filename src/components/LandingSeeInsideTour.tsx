@@ -339,16 +339,16 @@ export default function LandingSeeInsideTour({
       aria-modal="true"
       aria-labelledby="see-inside-title"
     >
-      <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6">
+      <div className="flex shrink-0 items-center justify-between gap-2 px-3 pb-1 pt-[max(0.4rem,env(safe-area-inset-top))] sm:px-5">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#c4b5fd]">
+          <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-[#c4b5fd]">
             See inside
           </p>
-          <h2 id="see-inside-title" className="text-sm font-semibold text-white sm:text-base">
+          <h2 id="see-inside-title" className="text-xs font-semibold text-white sm:text-sm">
             Station tour
           </h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {phase === "auto" ? (
             <button
               type="button"
@@ -358,7 +358,7 @@ export default function LandingSeeInsideTour({
                 setPhase("end");
                 setEndMode("choice");
               }}
-              className="rounded-full border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/85"
+              className="rounded-full border border-white/20 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-white/85"
             >
               Skip to choices
             </button>
@@ -366,7 +366,7 @@ export default function LandingSeeInsideTour({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
             aria-label="Close tour"
           >
             ✕
@@ -374,20 +374,20 @@ export default function LandingSeeInsideTour({
         </div>
       </div>
 
-      <div className="mx-4 h-1 shrink-0 overflow-hidden rounded-full bg-white/10 sm:mx-6">
+      <div className="mx-3 h-0.5 shrink-0 overflow-hidden rounded-full bg-white/10 sm:mx-5">
         <div
           className="h-full rounded-full bg-gradient-to-r from-[#a78bfa] to-[#f0c75e] transition-[width] duration-700 ease-out"
           style={{ width: `${Math.round(progress)}%` }}
         />
       </div>
 
-      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5">
         {/* Left / right nav */}
         <button
           type="button"
           onClick={goPrev}
           disabled={phase === "auto" && beat === 0}
-          className="absolute left-2 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/50 text-xl font-bold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/15 disabled:pointer-events-none disabled:opacity-25 sm:left-4"
+          className="absolute left-1.5 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/50 text-lg font-bold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/15 disabled:pointer-events-none disabled:opacity-25 sm:left-3"
           aria-label="Previous step"
         >
           ‹
@@ -395,13 +395,13 @@ export default function LandingSeeInsideTour({
         <button
           type="button"
           onClick={goNext}
-          className="absolute right-2 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/50 text-xl font-bold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/15 sm:right-4"
+          className="absolute right-1.5 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/50 text-lg font-bold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/15 sm:right-3"
           aria-label="Next step"
         >
           ›
         </button>
 
-        <div className="flex w-full max-w-md flex-col items-center gap-3 px-10 sm:px-12">
+        <div className="flex w-full max-w-md flex-col items-center gap-1.5 px-8 sm:gap-2 sm:px-10">
           {/* Stacked slides crossfade — no unmount flash between confetti and Business */}
           <div className="landing-see-inside__stage">
           {/* ── Workout phone ── */}
@@ -414,35 +414,37 @@ export default function LandingSeeInsideTour({
               }`}
               aria-hidden={!onWorkout}
             >
-            <div className="w-full max-w-[300px] overflow-hidden rounded-[1.75rem] border border-white/15 bg-[#12081f] shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
-              <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
+            <div className="w-full max-w-[270px] overflow-hidden rounded-2xl border border-white/15 bg-[#12081f] shadow-[0_16px_48px_rgba(0,0,0,0.65)] sm:max-w-[290px]">
+              <div className="flex items-center justify-between border-b border-white/10 px-3 py-1.5">
                 <div>
-                  <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#a78bfa]">
+                  <p className="text-[8px] font-bold uppercase tracking-[0.18em] text-[#a78bfa]">
                     Live session
                   </p>
-                  <p className="text-sm font-semibold text-white">Today · Lower day</p>
+                  <p className="text-sm font-semibold leading-tight text-white">Today · Lower day</p>
                 </div>
-                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[9px] font-bold text-emerald-300">
                   LIVE
                 </span>
               </div>
-              <div className="p-3.5">
-                <div className="rounded-xl border border-[#7c3aed]/35 bg-[#1a0b2e]/90 p-3">
+              <div className="p-2.5">
+                <div className="rounded-lg border border-[#7c3aed]/35 bg-[#1a0b2e]/90 p-2.5">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="text-[10px] font-semibold uppercase text-[#c4b5fd]/80">Now</p>
-                      <h3 className="text-base font-semibold text-white">Goblet squat</h3>
-                      <p className="mt-0.5 text-[11px] text-white/55">3 × 8 · Medium</p>
+                      <p className="text-[9px] font-semibold uppercase text-[#c4b5fd]/80">Now</p>
+                      <h3 className="text-[15px] font-semibold leading-tight text-white">
+                        Goblet squat
+                      </h3>
+                      <p className="text-[10px] text-white/55">3 × 8 · Medium</p>
                     </div>
                     <span className="text-xs font-bold tabular-nums text-[#fde68a]">
                       {displayWeight}
-                      <span className="ml-0.5 text-[10px] text-white/45">lbs</span>
+                      <span className="ml-0.5 text-[9px] text-white/45">lbs</span>
                     </span>
                   </div>
-                  <div className="mt-3 flex items-end gap-2">
-                    <label className="flex min-w-[4.25rem] flex-col rounded-lg border border-white/15 bg-black/30 px-2 py-1.5">
-                      <span className="text-[8px] font-bold uppercase text-white/40">Weight</span>
-                      <span className="text-lg font-bold tabular-nums text-[#fde68a]">
+                  <div className="mt-2 flex items-end gap-1.5">
+                    <label className="flex min-w-[3.75rem] flex-col rounded-md border border-white/15 bg-black/30 px-1.5 py-1">
+                      <span className="text-[7px] font-bold uppercase text-white/40">Weight</span>
+                      <span className="text-base font-bold tabular-nums leading-none text-[#fde68a]">
                         {displayWeight}
                       </span>
                     </label>
@@ -453,7 +455,7 @@ export default function LandingSeeInsideTour({
                         <div
                           key={n}
                           ref={isThird ? lastSetRef : undefined}
-                          className={`flex h-12 flex-1 flex-col items-center justify-center rounded-lg border text-xs font-bold transition-colors duration-500 ${
+                          className={`flex h-10 flex-1 flex-col items-center justify-center rounded-md border text-[11px] font-bold transition-colors duration-500 ${
                             done
                               ? isThird && set3JustDone
                                 ? "border-[#c4b5fd]/70 bg-[#7c3aed]/25 text-[#e9d5ff]"
@@ -463,8 +465,8 @@ export default function LandingSeeInsideTour({
                               : "border-white/15 bg-white/5 text-white/80"
                           }`}
                         >
-                          <span className="text-base leading-none">{done ? "✓" : n}</span>
-                          <span className="text-[8px] uppercase opacity-70">Set</span>
+                          <span className="text-sm leading-none">{done ? "✓" : n}</span>
+                          <span className="text-[7px] uppercase opacity-70">Set</span>
                         </div>
                       );
                     })}
@@ -485,14 +487,14 @@ export default function LandingSeeInsideTour({
               }`}
               aria-hidden={current !== "access_business"}
             >
-            <div className="w-full max-w-sm rounded-3xl border border-[#7c3aed]/40 bg-[#140a22] p-5">
-              <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-[#a78bfa]">
+            <div className="w-full max-w-[17.5rem] rounded-2xl border border-[#7c3aed]/40 bg-[#140a22] p-3 sm:max-w-sm sm:p-3.5">
+              <p className="text-center text-[9px] font-bold uppercase tracking-[0.24em] text-[#a78bfa]">
                 How to access
               </p>
-              <h3 className="mt-1 text-center text-xl font-semibold text-white">
+              <h3 className="mt-0.5 text-center text-lg font-semibold leading-tight text-white">
                 Pick Business Class
               </h3>
-              <div className="mx-auto mt-3 max-w-[200px] overflow-hidden rounded-xl border-2 border-[#a78bfa] shadow-[0_0_24px_rgba(124,58,237,0.45)] ring-2 ring-[#7c3aed]/50">
+              <div className="mx-auto mt-2 max-w-[160px] overflow-hidden rounded-lg border-2 border-[#a78bfa] shadow-[0_0_20px_rgba(124,58,237,0.4)] ring-2 ring-[#7c3aed]/50 sm:max-w-[180px]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/images/tickets/business-class.jpg"
@@ -500,10 +502,10 @@ export default function LandingSeeInsideTour({
                   className="h-auto w-full object-cover"
                 />
               </div>
-              <p className="mt-3 text-center text-lg font-bold text-white">
+              <p className="mt-2 text-center text-base font-bold text-white">
                 Business Class · $50/mo
               </p>
-              <p className="mt-1 text-center text-[11px] text-emerald-300/90">Selected ✓</p>
+              <p className="text-center text-[10px] text-emerald-300/90">Selected ✓</p>
             </div>
             </div>
           )}
@@ -518,21 +520,25 @@ export default function LandingSeeInsideTour({
               }`}
               aria-hidden={current !== "pick_adult"}
             >
-            <div className="w-full max-w-sm rounded-3xl border border-white/15 bg-[#12081f] p-4">
-              <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-[#c4b5fd]">
+            <div className="w-full max-w-[17.5rem] rounded-2xl border border-white/15 bg-[#12081f] p-3 sm:max-w-sm">
+              <p className="text-center text-[9px] font-bold uppercase tracking-[0.24em] text-[#c4b5fd]">
                 Program
               </p>
-              <h3 className="mt-1 text-center text-xl font-semibold text-white">Pick Adult</h3>
-              <div className="mt-3 overflow-hidden rounded-2xl border-2 border-[#7c3aed] ring-2 ring-[#7c3aed]/40">
+              <h3 className="mt-0.5 text-center text-lg font-semibold leading-tight text-white">
+                Pick Adult
+              </h3>
+              <div className="mt-2 overflow-hidden rounded-xl border-2 border-[#7c3aed] ring-2 ring-[#7c3aed]/40">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={PROGRAM_IMAGES.adult}
                   alt="Adult Strength"
-                  className="h-36 w-full object-cover"
+                  className="h-28 w-full object-cover sm:h-32"
                 />
-                <div className="bg-[#1a0b2e] px-3 py-2">
-                  <p className="text-sm font-semibold text-white">Adult Strength Conditioning</p>
-                  <p className="text-[11px] text-emerald-300">Selected ✓</p>
+                <div className="bg-[#1a0b2e] px-2.5 py-1.5">
+                  <p className="text-xs font-semibold text-white sm:text-sm">
+                    Adult Strength Conditioning
+                  </p>
+                  <p className="text-[10px] text-emerald-300">Selected ✓</p>
                 </div>
               </div>
             </div>
@@ -549,14 +555,14 @@ export default function LandingSeeInsideTour({
               }`}
               aria-hidden={current !== "equip_blank" && current !== "equip_all"}
             >
-            <div className="w-full max-w-sm rounded-3xl border border-white/15 bg-[#12081f] p-4">
-              <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-[#c4b5fd]">
+            <div className="w-full max-w-[17.5rem] rounded-2xl border border-white/15 bg-[#12081f] p-3 sm:max-w-sm">
+              <p className="text-center text-[9px] font-bold uppercase tracking-[0.24em] text-[#c4b5fd]">
                 Gear at home
               </p>
-              <h3 className="mt-1 text-center text-lg font-semibold text-white">
+              <h3 className="mt-0.5 text-center text-base font-semibold leading-tight text-white">
                 {equipSelected ? "Five items selected" : "Your equipment list"}
               </h3>
-              <div className="mt-3 grid grid-cols-5 gap-1.5">
+              <div className="mt-2 grid grid-cols-5 gap-1">
                 {DEMO_EQUIPMENT.map((eq) => (
                   <div
                     key={eq.id}
@@ -578,7 +584,7 @@ export default function LandingSeeInsideTour({
                   </div>
                 ))}
               </div>
-              <p className="mt-2 text-center text-[10px] text-white/45">
+              <p className="mt-1.5 text-center text-[9px] text-white/45">
                 Change anytime in Member → Settings
               </p>
             </div>
@@ -601,45 +607,47 @@ export default function LandingSeeInsideTour({
                 current !== "book_confirm"
               }
             >
-              <div className="w-full max-w-sm rounded-3xl border border-emerald-500/30 bg-[#0c1a14] p-4">
-                <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-300/90">
+              <div className="w-full max-w-[17.5rem] rounded-2xl border border-emerald-500/30 bg-[#0c1a14] p-3 sm:max-w-sm">
+                <p className="text-center text-[9px] font-bold uppercase tracking-[0.24em] text-emerald-300/90">
                   Book Call
                 </p>
-                <h3 className="mt-1 text-center text-lg font-semibold text-white">
+                <h3 className="mt-0.5 text-center text-base font-semibold leading-tight text-white">
                   Coach Jeremy
                 </h3>
-                <div className="mt-3 overflow-hidden rounded-2xl border border-white/12 bg-[#0a0612]/90">
-                  <div className="flex items-center gap-3 border-b border-white/10 px-3 py-2.5">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#7c3aed]/30 text-sm font-bold text-[#e9d5ff]">
+                <div className="mt-2 overflow-hidden rounded-xl border border-white/12 bg-[#0a0612]/90">
+                  <div className="flex items-center gap-2 border-b border-white/10 px-2.5 py-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#7c3aed]/30 text-xs font-bold text-[#e9d5ff]">
                       JB
                     </span>
                     <div>
-                      <p className="text-sm font-semibold text-white">Coach Jeremy Byrd</p>
-                      <p className="text-[11px] text-emerald-300/90">15-min intro · Calendly</p>
+                      <p className="text-xs font-semibold text-white sm:text-sm">
+                        Coach Jeremy Byrd
+                      </p>
+                      <p className="text-[10px] text-emerald-300/90">15-min intro · Calendly</p>
                     </div>
                   </div>
                   {(current === "book_day" || current === "book_confirm") && (
-                    <div className="space-y-1.5 px-3 py-2.5">
+                    <div className="space-y-1 px-2.5 py-2">
                       {BOOK_SLOTS.map((slot, i) => (
                         <div
                           key={slot}
-                          className={`flex items-center justify-between rounded-xl px-3 py-2 text-[12px] ${
+                          className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-[11px] ${
                             i === bookDayIndex
                               ? "border border-emerald-400/50 bg-emerald-500/20 text-white"
                               : "border border-white/8 bg-white/[0.04] text-white/60"
                           }`}
                         >
                           <span className="font-medium">{slot}</span>
-                          <span className="text-[10px] font-bold uppercase text-emerald-300">
+                          <span className="text-[9px] font-bold uppercase text-emerald-300">
                             {i === bookDayIndex ? (bookDone ? "Booked ✓" : "Pick →") : "Open"}
                           </span>
                         </div>
                       ))}
                     </div>
                   )}
-                  <div className="border-t border-white/10 px-3 py-2.5">
+                  <div className="border-t border-white/10 px-2.5 py-2">
                     <div
-                      className={`flex h-10 items-center justify-center rounded-full text-sm font-bold ${
+                      className={`flex h-9 items-center justify-center rounded-full text-xs font-bold ${
                         bookDone
                           ? "bg-emerald-400 text-[#042f1a]"
                           : current === "book_open"
@@ -664,23 +672,23 @@ export default function LandingSeeInsideTour({
           {/* ── END: two real choices ── */}
           {phase === "end" && endMode === "choice" && (
             <div className="w-full max-w-lg">
-              <p className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-[#c4b5fd]">
+              <p className="text-center text-[9px] font-bold uppercase tracking-[0.24em] text-[#c4b5fd]">
                 Your move
               </p>
-              <h3 className="mt-1 text-center text-2xl font-semibold text-white">
+              <h3 className="mt-0.5 text-center text-xl font-semibold leading-tight text-white sm:text-2xl">
                 Where next?
               </h3>
-              <p className="mt-1 text-center text-[12px] text-white/55">
+              <p className="mt-0.5 text-center text-[11px] text-white/55">
                 Ticket or program first — both reach payment. Program is optional.
               </p>
-              <div className="mt-5 grid grid-cols-2 gap-3">
+              <div className="mt-2.5 grid grid-cols-2 gap-2 sm:mt-3 sm:gap-2.5">
                 {/* Left — ticket art */}
                 <button
                   type="button"
                   onClick={() => setEndMode("tickets")}
-                  className="group flex flex-col overflow-hidden rounded-2xl border border-[#7c3aed]/50 bg-[#1a0b2e] text-left shadow-[0_12px_40px_rgba(124,58,237,0.25)] transition hover:border-[#a78bfa]"
+                  className="group flex flex-col overflow-hidden rounded-xl border border-[#7c3aed]/50 bg-[#1a0b2e] text-left shadow-[0_8px_28px_rgba(124,58,237,0.25)] transition hover:border-[#a78bfa]"
                 >
-                  <div className="relative aspect-[5/4] w-full overflow-hidden bg-black/40">
+                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-black/40">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src="/images/tickets/dual-tickets-fan.jpg"
@@ -692,14 +700,14 @@ export default function LandingSeeInsideTour({
                       Left
                     </span>
                   </div>
-                  <div className="flex flex-1 flex-col p-3">
-                    <p className="text-base font-semibold text-white sm:text-lg">
+                  <div className="flex flex-1 flex-col p-2 sm:p-2.5">
+                    <p className="text-sm font-semibold leading-tight text-white sm:text-base">
                       Choose ticket level
                     </p>
-                    <p className="mt-1 text-[11px] leading-snug text-white/60">
+                    <p className="mt-0.5 text-[10px] leading-snug text-white/60">
                       Free · Coach · Business · 1st
                     </p>
-                    <span className="mt-2 text-xs font-semibold text-[#c4b5fd]">
+                    <span className="mt-1 text-[11px] font-semibold text-[#c4b5fd]">
                       Open levels →
                     </span>
                   </div>
@@ -709,9 +717,9 @@ export default function LandingSeeInsideTour({
                 <button
                   type="button"
                   onClick={() => setEndMode("programs")}
-                  className="group flex flex-col overflow-hidden rounded-2xl border border-white/15 bg-[#12081f] text-left transition hover:border-[#7c3aed]/50"
+                  className="group flex flex-col overflow-hidden rounded-xl border border-white/15 bg-[#12081f] text-left transition hover:border-[#7c3aed]/50"
                 >
-                  <div className="relative aspect-[5/4] w-full overflow-hidden bg-black/40">
+                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-black/40">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src="/images/programs/choose-program-placeholder.svg"
@@ -723,12 +731,14 @@ export default function LandingSeeInsideTour({
                       Right
                     </span>
                   </div>
-                  <div className="flex flex-1 flex-col p-3">
-                    <p className="text-base font-semibold text-white sm:text-lg">Choose program</p>
-                    <p className="mt-1 text-[11px] leading-snug text-white/60">
+                  <div className="flex flex-1 flex-col p-2 sm:p-2.5">
+                    <p className="text-sm font-semibold leading-tight text-white sm:text-base">
+                      Choose program
+                    </p>
+                    <p className="mt-0.5 text-[10px] leading-snug text-white/60">
                       Adult, Athletes, Military…
                     </p>
-                    <span className="mt-2 text-xs font-semibold text-[#c4b5fd]">
+                    <span className="mt-1 text-[11px] font-semibold text-[#c4b5fd]">
                       Open programs →
                     </span>
                   </div>
@@ -737,7 +747,7 @@ export default function LandingSeeInsideTour({
               <button
                 type="button"
                 onClick={() => setEndMode("pay")}
-                className="mt-3 w-full text-center text-xs font-semibold text-white/50 underline decoration-white/25 underline-offset-4"
+                className="mt-2 w-full text-center text-[11px] font-semibold text-white/50 underline decoration-white/25 underline-offset-4"
               >
                 Skip program — go to payment →
               </button>
@@ -877,14 +887,14 @@ export default function LandingSeeInsideTour({
             </div>
           )}
 
-          <p className="max-w-sm text-center text-[14px] font-semibold leading-snug text-white sm:text-[15px]">
+          <p className="max-w-sm text-center text-[12px] font-semibold leading-snug text-white sm:text-[13px]">
             {coachLine}
           </p>
         </div>
       </div>
 
       {phase === "auto" ? (
-        <div className="flex shrink-0 justify-center gap-1 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-1">
+        <div className="flex shrink-0 justify-center gap-1 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-0.5">
           {AUTO_BEATS.map((_, i) => (
             <span
               key={i}

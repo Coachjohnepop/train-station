@@ -1315,11 +1315,17 @@ table.data th {
   }
 }
 
-/* See-inside tour — no fade-in remount (that caused flicker between steps) */
+/* See-inside tour — compact stage height for mobile + desktop */
 .landing-see-inside__stage {
   position: relative;
   width: 100%;
-  min-height: min(28rem, 62vh);
+  min-height: min(18.5rem, 48vh);
+}
+
+@media (min-width: 640px) {
+  .landing-see-inside__stage {
+    min-height: min(20rem, 46vh);
+  }
 }
 
 .landing-see-inside__slide {
