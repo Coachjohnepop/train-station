@@ -13,18 +13,16 @@ import { PROGRAM_IMAGES } from "@/lib/program-constants";
 import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 
 /**
- * See inside — full auto-play (~2s/step), then two real choices.
+ * See inside — full auto-play, left/right arrows, then two real choices.
  *
- * Auto (~12 × 2s):
- *  workout ×5 → Business Class demo → Adult program → equipment blank →
- *  equipment 5 selected → book click → pick day → book it
- *
- * Interactive end:
- *  left = Choose ticket level (grid + seat art)
- *  right = Choose program (logos)
- *  converge = payment (program skippable)
+ * Auto: workout ×5 → Business → Adult → equip blank/all → book open/day/confirm
+ * Confetti + post-confetti steps hold longer (felt rushed).
  */
 const STEP_MS = 2000;
+/** Confetti beat: let the burst play before advancing */
+const CONFETTI_HOLD_MS = 3600;
+/** After confetti (access, program, gear, book) — slower so it doesn’t blur past */
+const AFTER_CONFETTI_MS = 3200;
 
 type AutoBeat =
   | "w_weight"
@@ -120,11 +118,56 @@ export default function LandingSeeInsideTour({
     clearTimers();
   }, [open, clearTimers]);
 
-  // Auto-advance
+  function holdMsForBeat(index: number): number {
+    if (reducedMotion.current) return 1000;
+    const id = AUTO_BEATS[index];
+    if (id === "w_confetti") return CONFETTI_HOLD_MS;
+    // Everything after confetti was flying by — give it more air
+    const confettiIdx = AUTO_BEATS.indexOf("w_confetti");
+    if (index > confettiIdx) return AFTER_CONFETTI_MS;
+    return STEP_MS;
+  }
+
+  const goPrev = useCallback(() => {
+    paused.current = true;
+    clearTimers();
+    if (phase === "end") {
+      if (endMode === "tickets" || endMode === "programs" || endMode === "pay") {
+        setEndMode("choice");
+        return;
+      }
+      // From final choices back into auto sequence at last beat
+      setPhase("auto");
+      setBeat(AUTO_BEATS.length - 1);
+      return;
+    }
+    if (beat <= 0) return;
+    setBeat((b) => b - 1);
+  }, [phase, endMode, beat, clearTimers]);
+
+  const goNext = useCallback(() => {
+    paused.current = true;
+    clearTimers();
+    if (phase === "end") {
+      if (endMode === "choice") {
+        // Stay on choices — no forced advance
+        return;
+      }
+      return;
+    }
+    if (beat >= AUTO_BEATS.length - 1) {
+      setPhase("end");
+      setEndMode("choice");
+      return;
+    }
+    setBeat((b) => b + 1);
+  }, [phase, endMode, beat, clearTimers]);
+
+  // Auto-advance (paused after manual arrow)
   useEffect(() => {
     if (!open || phase !== "auto" || paused.current) return;
     clearTimers();
-    const ms = reducedMotion.current ? 900 : STEP_MS;
+    const ms = holdMsForBeat(beat);
     const id = window.setTimeout(() => {
       if (paused.current) return;
       if (beat >= AUTO_BEATS.length - 1) {
@@ -162,10 +205,12 @@ export default function LandingSeeInsideTour({
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") goPrev();
+      if (e.key === "ArrowRight") goNext();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, goPrev, goNext]);
 
   useEffect(() => {
     if (!open) return;
@@ -288,7 +333,7 @@ export default function LandingSeeInsideTour({
             See inside
           </p>
           <h2 id="see-inside-title" className="text-sm font-semibold text-white sm:text-base">
-            Station tour · auto
+            Station tour
           </h2>
         </div>
         <div className="flex items-center gap-2">
@@ -325,7 +370,26 @@ export default function LandingSeeInsideTour({
       </div>
 
       <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
-        <div className="landing-see-inside__panel flex w-full max-w-md flex-col items-center gap-3">
+        {/* Left / right nav */}
+        <button
+          type="button"
+          onClick={goPrev}
+          disabled={phase === "auto" && beat === 0}
+          className="absolute left-2 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/50 text-xl font-bold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/15 disabled:pointer-events-none disabled:opacity-25 sm:left-4"
+          aria-label="Previous step"
+        >
+          ‹
+        </button>
+        <button
+          type="button"
+          onClick={goNext}
+          className="absolute right-2 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/50 text-xl font-bold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/15 sm:right-4"
+          aria-label="Next step"
+        >
+          ›
+        </button>
+
+        <div className="landing-see-inside__panel flex w-full max-w-md flex-col items-center gap-3 px-10 sm:px-12">
           {/* ── Workout phone ── */}
           {phase === "auto" && current?.startsWith("w_") && (
             <div className="w-full max-w-[300px] overflow-hidden rounded-[1.75rem] border border-white/15 bg-[#12081f] shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
