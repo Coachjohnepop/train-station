@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import PlayableVideoFrame from "@/components/PlayableVideoFrame";
 import {
   fromLocalInputValue,
@@ -93,6 +93,12 @@ export default function MemberMeasurementsClient({
   const [notes, setNotes] = useState("");
   const [measuredAtLocal, setMeasuredAtLocal] = useState(() => toLocalInputValue());
   const [watchAgain, setWatchAgain] = useState(false);
+  const [beforePhotoUrl, setBeforePhotoUrl] = useState<string | null>(null);
+  /** Pending “now” photo for this check-in (saved with form). */
+  const [nowPhotoUrl, setNowPhotoUrl] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState<"before" | "now" | null>(null);
+  const beforeFileRef = useRef<HTMLInputElement>(null);
+  const nowFileRef = useRef<HTMLInputElement>(null);
   const volumeDb = useUploadedContentVolumeDb();
 
   const videoUrl = introVideoUrl?.trim() || "";
@@ -111,6 +117,11 @@ export default function MemberMeasurementsClient({
         return;
       }
       setRows(data.measurements || []);
+      setBeforePhotoUrl(
+        typeof data.beforePhotoUrl === "string" && data.beforePhotoUrl.trim()
+          ? data.beforePhotoUrl.trim()
+          : null,
+      );
     } catch {
       setError("Could not load measurements.");
     } finally {
@@ -126,6 +137,39 @@ export default function MemberMeasurementsClient({
     setForm((prev) => ({ ...prev, [id]: value }));
   }
 
+  async function uploadPortrait(kind: "before" | "now", files: FileList | null) {
+    const file = files?.[0];
+    if (!file) return;
+    setPhotoBusy(kind);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("kind", kind);
+      const res = await fetch("/api/member/measurements/photo", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Photo upload failed.");
+      }
+      if (kind === "before") {
+        setBeforePhotoUrl(data.url || data.beforePhotoUrl || null);
+        setMessage("Before portrait saved on your sheet.");
+      } else {
+        setNowPhotoUrl(data.url || data.photoUrl || null);
+        setMessage("Now photo attached — inscribe check-in to lock it in the log.");
+      }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Photo upload failed.");
+    } finally {
+      setPhotoBusy(null);
+      if (kind === "before" && beforeFileRef.current) beforeFileRef.current.value = "";
+      if (kind === "now" && nowFileRef.current) nowFileRef.current.value = "";
+    }
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -135,6 +179,7 @@ export default function MemberMeasurementsClient({
       const body: Record<string, unknown> = {
         notes,
         measuredAt: fromLocalInputValue(measuredAtLocal),
+        photoUrl: nowPhotoUrl,
       };
       for (const f of MEASUREMENT_FIELDS) {
         body[f.id] = form[f.id] === "" ? null : form[f.id];
@@ -152,6 +197,7 @@ export default function MemberMeasurementsClient({
       setMessage("Check-in inscribed. Your coach can see this sheet too.");
       setForm(emptyMeasurementForm());
       setNotes("");
+      setNowPhotoUrl(null);
       setMeasuredAtLocal(toLocalInputValue());
       await load();
     } catch {
@@ -318,6 +364,19 @@ export default function MemberMeasurementsClient({
           border: 1px solid var(--ms-rule-soft);
           background: rgba(255, 248, 230, 0.55);
         }
+        .ms-portrait {
+          border: 2px solid var(--ms-rule);
+          background: rgba(255, 248, 230, 0.65);
+          box-shadow: inset 0 0 0 1px rgba(139, 105, 20, 0.25);
+        }
+        .ms-portrait__label {
+          font-family: ui-serif, Georgia, serif;
+          font-size: 0.58rem;
+          font-weight: 700;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: var(--ms-accent);
+        }
       `,
         }}
       />
@@ -359,6 +418,121 @@ export default function MemberMeasurementsClient({
             </p>
           </div>
         </header>
+
+        {/* Portraits — Before (baseline) + Now (this check-in) */}
+        <div className="relative z-[1] mt-5">
+          <h2 className="ms-section-label">Portrait · Before &amp; now</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="ms-portrait overflow-hidden rounded-sm">
+              <div className="flex items-center justify-between border-b border-[var(--ms-rule-soft)] px-2.5 py-1.5">
+                <span className="ms-portrait__label">Before</span>
+                <span className="font-serif text-[10px] italic text-[var(--ms-ink-soft)]">
+                  starting look
+                </span>
+              </div>
+              <div className="relative aspect-[3/4] max-h-56 w-full bg-[#1a1208]/10">
+                {beforePhotoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={beforePhotoUrl}
+                    alt="Before progress photo"
+                    className="h-full w-full object-cover object-top"
+                  />
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-1 px-3 text-center">
+                    <p className="font-serif text-sm text-[var(--ms-ink-soft)]">No before photo yet</p>
+                    <p className="text-[10px] text-[var(--ms-ink-soft)]">
+                      Upload a full-body or mid-shot from day one
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className="border-t border-[var(--ms-rule-soft)] px-2.5 py-2">
+                <input
+                  ref={beforeFileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => void uploadPortrait("before", e.target.files)}
+                />
+                <button
+                  type="button"
+                  className="w-full rounded border border-[var(--ms-rule)] bg-[var(--ms-box)] px-2 py-1.5 font-serif text-xs font-semibold text-[var(--ms-ink)] hover:bg-white/50 disabled:opacity-60"
+                  disabled={Boolean(photoBusy) || saving}
+                  onClick={() => beforeFileRef.current?.click()}
+                >
+                  {photoBusy === "before"
+                    ? "Uploading…"
+                    : beforePhotoUrl
+                      ? "Replace before photo"
+                      : "Upload before photo"}
+                </button>
+              </div>
+            </div>
+
+            <div className="ms-portrait overflow-hidden rounded-sm">
+              <div className="flex items-center justify-between border-b border-[var(--ms-rule-soft)] px-2.5 py-1.5">
+                <span className="ms-portrait__label">Now</span>
+                <span className="font-serif text-[10px] italic text-[var(--ms-ink-soft)]">
+                  this check-in
+                </span>
+              </div>
+              <div className="relative aspect-[3/4] max-h-56 w-full bg-[#1a1208]/10">
+                {nowPhotoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={nowPhotoUrl}
+                    alt="Current progress photo"
+                    className="h-full w-full object-cover object-top"
+                  />
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-1 px-3 text-center">
+                    <p className="font-serif text-sm text-[var(--ms-ink-soft)]">Add today&apos;s photo</p>
+                    <p className="text-[10px] text-[var(--ms-ink-soft)]">
+                      Same pose as before when you can
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2 border-t border-[var(--ms-rule-soft)] px-2.5 py-2">
+                <input
+                  ref={nowFileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => void uploadPortrait("now", e.target.files)}
+                />
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 rounded border border-[var(--ms-rule)] bg-[var(--ms-box)] px-2 py-1.5 font-serif text-xs font-semibold text-[var(--ms-ink)] hover:bg-white/50 disabled:opacity-60"
+                  disabled={Boolean(photoBusy) || saving}
+                  onClick={() => nowFileRef.current?.click()}
+                >
+                  {photoBusy === "now"
+                    ? "Uploading…"
+                    : nowPhotoUrl
+                      ? "Replace now photo"
+                      : "Upload now photo"}
+                </button>
+                {nowPhotoUrl ? (
+                  <button
+                    type="button"
+                    className="rounded border border-rose-800/30 px-2 py-1.5 font-serif text-xs text-rose-900"
+                    onClick={() => setNowPhotoUrl(null)}
+                  >
+                    Clear
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+          <p className="mt-2 font-serif text-[11px] italic text-[var(--ms-ink-soft)]">
+            Before stays on your sheet until you replace it. Now is saved with this check-in when you
+            inscribe.
+          </p>
+        </div>
 
         {/* Main sheet: stats wrap around video (upper-right) */}
         <div className="relative z-[1] mt-5 grid gap-4 lg:grid-cols-[1fr_minmax(15rem,18.5rem)] lg:items-start">
@@ -586,21 +760,33 @@ export default function MemberMeasurementsClient({
                     Erase
                   </button>
                 </div>
-                <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 font-serif text-xs tabular-nums text-[var(--ms-ink-soft)]">
-                  {MEASUREMENT_FIELDS.filter((f) => row[f.id] != null).map((f) => (
-                    <span key={f.id}>
-                      {f.label}:{" "}
-                      <span className="font-semibold text-[var(--ms-ink)]">
-                        {formatMeasurementValue(row[f.id], f.unit)}
-                      </span>
-                    </span>
-                  ))}
+                <div className="mt-1.5 flex flex-wrap items-start gap-3">
+                  {row.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={row.photoUrl}
+                      alt="Check-in photo"
+                      className="h-16 w-12 shrink-0 rounded object-cover object-top ring-1 ring-[var(--ms-rule-soft)]"
+                    />
+                  ) : null}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 font-serif text-xs tabular-nums text-[var(--ms-ink-soft)]">
+                      {MEASUREMENT_FIELDS.filter((f) => row[f.id] != null).map((f) => (
+                        <span key={f.id}>
+                          {f.label}:{" "}
+                          <span className="font-semibold text-[var(--ms-ink)]">
+                            {formatMeasurementValue(row[f.id], f.unit)}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                    {row.notes ? (
+                      <p className="mt-1 font-serif text-sm italic text-[var(--ms-ink-soft)]">
+                        {row.notes}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
-                {row.notes ? (
-                  <p className="mt-1 font-serif text-sm italic text-[var(--ms-ink-soft)]">
-                    {row.notes}
-                  </p>
-                ) : null}
               </li>
             ))}
           </ul>

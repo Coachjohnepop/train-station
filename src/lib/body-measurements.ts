@@ -149,6 +149,8 @@ export type MeasurementRecord = MeasurementValues & {
   id: string;
   userId: string;
   notes: string | null;
+  /** Progress photo for this check-in (“now”). */
+  photoUrl: string | null;
   measuredAt: string;
   source: MeasurementSource;
   recordedByUserId: string | null;
@@ -188,6 +190,7 @@ export function parseOptionalNumber(
 export function parseMeasurementPayload(body: Record<string, unknown>): {
   values: MeasurementValues;
   notes: string | null;
+  photoUrl: string | null;
   measuredAt: Date;
 } {
   const values: MeasurementValues = {};
@@ -205,8 +208,14 @@ export function parseMeasurementPayload(body: Record<string, unknown>): {
   const notes = notesRaw ? notesRaw.slice(0, 2000) : null;
   if (notes) any = true;
 
+  let photoUrl: string | null = null;
+  if (typeof body.photoUrl === "string" && body.photoUrl.trim()) {
+    photoUrl = body.photoUrl.trim().slice(0, 800);
+    any = true;
+  }
+
   if (!any) {
-    throw new Error("Enter at least one measurement or a note.");
+    throw new Error("Enter at least one measurement, a photo, or a note.");
   }
 
   let measuredAt = new Date();
@@ -215,7 +224,7 @@ export function parseMeasurementPayload(body: Record<string, unknown>): {
     if (!Number.isNaN(d.getTime())) measuredAt = d;
   }
 
-  return { values, notes, measuredAt };
+  return { values, notes, photoUrl, measuredAt };
 }
 
 export function formatMeasurementValue(
@@ -256,6 +265,7 @@ export function serializeMeasurementRow(row: {
   leftCalfIn?: number | null;
   rightCalfIn?: number | null;
   bodyFatPct?: number | null;
+  photoUrl?: string | null;
   notes: string | null;
   measuredAt: Date | string;
   source?: string | null;
@@ -282,6 +292,7 @@ export function serializeMeasurementRow(row: {
     leftCalfIn: row.leftCalfIn ?? null,
     rightCalfIn: row.rightCalfIn ?? null,
     bodyFatPct: row.bodyFatPct ?? null,
+    photoUrl: row.photoUrl ?? null,
     notes: row.notes ?? null,
     measuredAt,
     source,

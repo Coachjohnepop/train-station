@@ -25,6 +25,7 @@ export default function AdminMemberMeasurementsModal({
   onClose,
 }: Props) {
   const [rows, setRows] = useState<MeasurementRecord[]>([]);
+  const [beforePhotoUrl, setBeforePhotoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -44,8 +45,14 @@ export default function AdminMemberMeasurementsModal({
     if (!res.ok) {
       setError(data.error || "Could not load measurements.");
       setRows([]);
+      setBeforePhotoUrl(null);
     } else {
       setRows(data.measurements || []);
+      setBeforePhotoUrl(
+        typeof data.beforePhotoUrl === "string" && data.beforePhotoUrl.trim()
+          ? data.beforePhotoUrl.trim()
+          : null,
+      );
     }
     setLoading(false);
   }, [userId]);
@@ -131,6 +138,25 @@ export default function AdminMemberMeasurementsModal({
           </button>
         </div>
 
+        {beforePhotoUrl ? (
+          <div className="mt-4 flex items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={beforePhotoUrl}
+              alt="Before photo"
+              className="h-24 w-18 shrink-0 rounded object-cover object-top"
+            />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                Before portrait
+              </p>
+              <p className="mt-1 text-xs text-[var(--muted)]">Member baseline photo</p>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-3 text-xs text-[var(--muted)]">No before photo uploaded yet.</p>
+        )}
+
         <form className="mt-4 space-y-3 border-b border-[var(--border)] pb-4" onSubmit={(e) => void handleSave(e)}>
           <h3 className="text-sm font-semibold">Log check-in as coach</h3>
           <MeasurementFormFields
@@ -183,19 +209,31 @@ export default function AdminMemberMeasurementsModal({
                       Delete
                     </button>
                   </div>
-                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums text-[var(--muted)]">
-                    {MEASUREMENT_FIELDS.filter((f) => row[f.id] != null).map((f) => (
-                      <span key={f.id}>
-                        {f.label}:{" "}
-                        <span className="text-[var(--text)]">
-                          {formatMeasurementValue(row[f.id], f.unit)}
-                        </span>
-                      </span>
-                    ))}
+                  <div className="mt-1 flex flex-wrap items-start gap-2">
+                    {row.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={row.photoUrl}
+                        alt="Check-in"
+                        className="h-14 w-11 shrink-0 rounded object-cover object-top"
+                      />
+                    ) : null}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums text-[var(--muted)]">
+                        {MEASUREMENT_FIELDS.filter((f) => row[f.id] != null).map((f) => (
+                          <span key={f.id}>
+                            {f.label}:{" "}
+                            <span className="text-[var(--text)]">
+                              {formatMeasurementValue(row[f.id], f.unit)}
+                            </span>
+                          </span>
+                        ))}
+                      </div>
+                      {row.notes ? (
+                        <p className="mt-1 text-xs text-[var(--muted)]">{row.notes}</p>
+                      ) : null}
+                    </div>
                   </div>
-                  {row.notes ? (
-                    <p className="mt-1 text-xs text-[var(--muted)]">{row.notes}</p>
-                  ) : null}
                 </li>
               ))}
             </ul>

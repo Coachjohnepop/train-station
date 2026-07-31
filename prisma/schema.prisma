@@ -675,6 +675,8 @@ model MemberProfile {
   email                       String
   plan                        String
   weightLbs                   String?
+  /// Baseline progress photo (“before”) for measurements sheet.
+  beforePhotoUrl              String?
   notes                       String?   @db.Text
   onboardingComplete          Boolean   @default(false)
   completedAt                 DateTime?
@@ -1109,6 +1111,8 @@ model UserMeasurement {
   leftCalfIn       Float?
   rightCalfIn      Float?
   bodyFatPct       Float?
+  /// Optional “now” / progress photo for this check-in.
+  photoUrl         String?
   notes            String?  @db.Text
   measuredAt       DateTime @default(now())
   /** member | coach */

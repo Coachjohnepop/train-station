@@ -26,11 +26,61 @@ function prismaSelect() {
     leftCalfIn: true,
     rightCalfIn: true,
     bodyFatPct: true,
+    photoUrl: true,
     notes: true,
     measuredAt: true,
     source: true,
     recordedByUserId: true,
   } as const;
+}
+
+export async function getMemberBeforePhotoUrl(userId: string): Promise<string | null> {
+  if (!isDatabaseConfigured()) return null;
+  const { prisma } = await import("@/lib/prisma");
+  const row = await prisma.memberProfile.findUnique({
+    where: { userId },
+    select: { beforePhotoUrl: true },
+  });
+  return row?.beforePhotoUrl?.trim() || null;
+}
+
+export async function setMemberBeforePhotoUrl(
+  userId: string,
+  url: string | null,
+): Promise<string | null> {
+  if (!isDatabaseConfigured()) {
+    throw new Error("Database is required to save photos.");
+  }
+  const { prisma } = await import("@/lib/prisma");
+  const next = url?.trim() || null;
+  const existing = await prisma.memberProfile.findUnique({
+    where: { userId },
+    select: { userId: true, email: true, plan: true },
+  });
+  if (existing) {
+    await prisma.memberProfile.update({
+      where: { userId },
+      data: { beforePhotoUrl: next },
+    });
+  } else {
+    // Minimal profile so early free explorers can still pin a before photo.
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+    if (!user?.email) {
+      throw new Error("Create your member profile first, then add a before photo.");
+    }
+    await prisma.memberProfile.create({
+      data: {
+        userId,
+        email: user.email,
+        plan: "explorer",
+        beforePhotoUrl: next,
+      },
+    });
+  }
+  return next;
 }
 
 export async function listUserMeasurements(
@@ -57,7 +107,7 @@ export async function createUserMeasurement(input: {
   if (!isDatabaseConfigured()) {
     throw new Error("Database is required to save measurements.");
   }
-  const { values, notes, measuredAt } = parseMeasurementPayload(input.body);
+  const { values, notes, photoUrl, measuredAt } = parseMeasurementPayload(input.body);
   const { prisma } = await import("@/lib/prisma");
   const row = await prisma.userMeasurement.create({
     data: {
@@ -75,6 +125,7 @@ export async function createUserMeasurement(input: {
       leftCalfIn: values.leftCalfIn ?? null,
       rightCalfIn: values.rightCalfIn ?? null,
       bodyFatPct: values.bodyFatPct ?? null,
+      photoUrl,
       notes,
       measuredAt,
       source: input.source,

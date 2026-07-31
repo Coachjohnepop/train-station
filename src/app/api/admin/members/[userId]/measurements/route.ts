@@ -4,6 +4,7 @@ import { isDatabaseConfigured } from "@/lib/database-config";
 import {
   createUserMeasurement,
   deleteUserMeasurement,
+  getMemberBeforePhotoUrl,
   listUserMeasurements,
 } from "@/lib/measurements-store";
 
@@ -27,10 +28,15 @@ export async function GET(
   );
 
   try {
-    const measurements = await listUserMeasurements(userId.trim(), limit);
+    const uid = userId.trim();
+    const [measurements, beforePhotoUrl] = await Promise.all([
+      listUserMeasurements(uid, limit),
+      getMemberBeforePhotoUrl(uid),
+    ]);
     return NextResponse.json({
       ok: true,
       measurements,
+      beforePhotoUrl,
       databaseConfigured: isDatabaseConfigured(),
     });
   } catch (e: unknown) {

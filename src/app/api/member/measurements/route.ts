@@ -3,6 +3,7 @@ import { requireMemberAccess } from "@/lib/api-auth";
 import { isDatabaseConfigured } from "@/lib/database-config";
 import {
   createUserMeasurement,
+  getMemberBeforePhotoUrl,
   listUserMeasurements,
 } from "@/lib/measurements-store";
 
@@ -18,10 +19,14 @@ export async function GET(request: Request) {
   );
 
   try {
-    const measurements = await listUserMeasurements(auth.session.id, limit);
+    const [measurements, beforePhotoUrl] = await Promise.all([
+      listUserMeasurements(auth.session.id, limit),
+      getMemberBeforePhotoUrl(auth.session.id),
+    ]);
     return NextResponse.json({
       ok: true,
       measurements,
+      beforePhotoUrl,
       databaseConfigured: isDatabaseConfigured(),
     });
   } catch (e: unknown) {
