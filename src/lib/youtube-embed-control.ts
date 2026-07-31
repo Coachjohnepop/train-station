@@ -1,6 +1,7 @@
 export type YoutubeEmbedCommand =
   | "playVideo"
   | "pauseVideo"
+  | "stopVideo"
   | "mute"
   | "unMute"
   | "seekTo"
@@ -70,9 +71,7 @@ export function fadeOutYoutubeEmbed(
   durationMs = 2_000,
 ): () => void {
   if (!iframe?.contentWindow || durationMs <= 0) {
-    postYoutubeEmbedCommand(iframe, "setVolume", 0);
-    postYoutubeEmbedCommand(iframe, "mute");
-    postYoutubeEmbedCommand(iframe, "pauseVideo");
+    killYoutubeEmbed(iframe);
     return () => {};
   }
 
@@ -82,9 +81,7 @@ export function fadeOutYoutubeEmbed(
   primeYoutubeEmbed(iframe);
 
   const finish = () => {
-    postYoutubeEmbedCommand(iframe, "setVolume", 0);
-    postYoutubeEmbedCommand(iframe, "mute");
-    postYoutubeEmbedCommand(iframe, "pauseVideo");
+    killYoutubeEmbed(iframe);
   };
 
   const tick = (now: number) => {
@@ -105,4 +102,14 @@ export function fadeOutYoutubeEmbed(
     cancelled = true;
     window.cancelAnimationFrame(rafId);
   };
+}
+
+/** Hard stop — mute, volume 0, pause. No playVideo. */
+export function killYoutubeEmbed(iframe: HTMLIFrameElement | null): void {
+  if (!iframe) return;
+  primeYoutubeEmbed(iframe);
+  postYoutubeEmbedCommand(iframe, "setVolume", 0);
+  postYoutubeEmbedCommand(iframe, "mute");
+  postYoutubeEmbedCommand(iframe, "pauseVideo");
+  postYoutubeEmbedCommand(iframe, "stopVideo" as YoutubeEmbedCommand);
 }

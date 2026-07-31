@@ -97,6 +97,8 @@ export function youtubeEmbedUrl(
   if (options.origin?.trim()) {
     params.set("origin", options.origin.trim());
   }
+  // Never loop a free-ticket gag / intro embed
+  params.set("loop", "0");
   const start =
     options.startSeconds != null && Number.isFinite(options.startSeconds)
       ? Math.max(0, Math.floor(options.startSeconds))

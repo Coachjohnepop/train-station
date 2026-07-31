@@ -19,8 +19,8 @@ import { isDirectVideoUrl } from "@/lib/site-video";
 import { isYoutubeUrl } from "@/lib/youtube";
 import {
   ensureYoutubeAudible,
-  fadeOutYoutubeEmbed,
   kickYoutubeAudible,
+  killYoutubeEmbed,
   postYoutubeEmbedCommand,
 } from "@/lib/youtube-embed-control";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
@@ -75,7 +75,8 @@ export default function FreeTicketModal({
   const jeremyIframeRef = useRef<HTMLIFrameElement>(null);
   const jeremyVideoRef = useRef<HTMLVideoElement>(null);
   const rickrollKickGen = useRef(0);
-  const cancelRickrollFade = useRef<(() => void) | null>(null);
+  /** After handoff, never send another command to the gag iframe. */
+  const gagLiveRef = useRef(false);
 
   const signedIn = Boolean(purchaseAuth.signedIn);
   const gag = productFreeTicketGag({ signedIn });
@@ -102,7 +103,8 @@ export default function FreeTicketModal({
 
   /**
    * Embed autoplays once (user just tapped Free). We never postMessage playVideo
-   * after that — only unMute/volume. A second playVideo restarts from start= → double gag.
+   * on the gag — only unMute/volume. At handoff we kill + unmount the iframe so
+   * YouTube cannot restart the chorus (~:49) for a few bars.
    */
   const rickrollSrc =
     gag.enabled && embedOrigin
@@ -128,12 +130,16 @@ export default function FreeTicketModal({
   function clearTimers() {
     timersRef.current.forEach((id) => window.clearTimeout(id));
     timersRef.current = [];
-    cancelRickrollFade.current?.();
-    cancelRickrollFade.current = null;
   }
 
   function schedule(fn: () => void, ms: number) {
     timersRef.current.push(window.setTimeout(fn, ms));
+  }
+
+  function killGagNow() {
+    gagLiveRef.current = false;
+    killYoutubeEmbed(rickrollRef.current);
+    setHideRickroll(true);
   }
 
   /** Admin content dB × 3 for “A word from Jeremy” (HTML5 can exceed 1.0 via GainNode). */
@@ -141,77 +147,77 @@ export default function FreeTicketModal({
     volumeDb + linearMultiplierToDb(JEREMY_WORD_VOLUME_MULT),
   );
 
+  // Open / close lifecycle — only re-run when `open` or gag on/off flips (not volume/hasJeremy)
   useEffect(() => {
     clearTimers();
 
     if (!open) {
+      gagLiveRef.current = false;
       setShowJeremy(false);
       setFadeJeremyIn(false);
       setHideRickroll(false);
       setLoadJeremy(false);
       setBackgroundMusicOverlay(false);
-      // Resume theme song after free modal
       requestBackgroundMusicPlay();
       return;
     }
 
-    // Duck theme song under Free gag / Jeremy
     setBackgroundMusicOverlay(true);
     setShowJeremy(false);
     setFadeJeremyIn(false);
     setHideRickroll(false);
     setLoadJeremy(false);
+    gagLiveRef.current = gag.enabled;
 
     if (!gag.enabled) {
-      // Signed-in path (or kill switch): Jeremy immediately.
       setLoadJeremy(true);
       setShowJeremy(true);
       setFadeJeremyIn(true);
       setHideRickroll(true);
+      gagLiveRef.current = false;
       return () => {
         clearTimers();
         setBackgroundMusicOverlay(false);
       };
     }
 
+    // Preload Jeremy under gag (no audio commands to gag iframe)
     if (hasJeremy) {
       schedule(() => setLoadJeremy(true), preloadMs);
     }
 
-    // Start visual + audio crossfade together (rickroll volume → silent over 2s)
+    // Handoff: hard-kill gag iframe immediately, then fade Jeremy in.
+    // Volume fade while iframe still live was letting YT re-cue a few bars (~:49).
     schedule(() => {
+      killGagNow();
       setShowJeremy(true);
       requestAnimationFrame(() => setFadeJeremyIn(true));
-      cancelRickrollFade.current?.();
-      cancelRickrollFade.current = fadeOutYoutubeEmbed(
-        rickrollRef.current,
-        FREE_TICKET_RICKROLL_FADE_MS,
-      );
     }, gagDurationMs);
-
-    schedule(() => setHideRickroll(true), gagDurationMs + FREE_TICKET_RICKROLL_FADE_MS);
 
     return () => {
       clearTimers();
+      gagLiveRef.current = false;
+      killYoutubeEmbed(rickrollRef.current);
       setBackgroundMusicOverlay(false);
     };
-  }, [open, hasJeremy, preloadMs, gag.enabled, gagDurationMs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only restart gag schedule when modal opens
+  }, [open, gag.enabled, gagDurationMs, hasJeremy, preloadMs]);
 
-  // Gag: embed already autoplays. Only unMute + volume — never playVideo (restarts gag).
+  // Gag: autoplay already running. UnMute/volume only while gag is live — never after handoff.
   useEffect(() => {
-    if (!open || !rickrollSrc) return;
+    if (!open || !rickrollSrc || !gag.enabled) return;
     const gen = ++rickrollKickGen.current;
+    gagLiveRef.current = true;
 
     const audibleOnly = () => {
-      if (gen !== rickrollKickGen.current) return;
+      if (gen !== rickrollKickGen.current || !gagLiveRef.current) return;
       ensureYoutubeAudible(rickrollRef.current);
     };
 
-    // A few volume/unmute nudges after load (no playVideo)
-    const ids = [100, 400, 900].map((ms) => window.setTimeout(audibleOnly, ms));
+    const ids = [150, 500].map((ms) => window.setTimeout(audibleOnly, ms));
 
     const onMsg = (e: MessageEvent) => {
-      if (gen !== rickrollKickGen.current) return;
+      if (gen !== rickrollKickGen.current || !gagLiveRef.current) return;
       let data: unknown = e.data;
       if (typeof data === "string") {
         try {
@@ -221,7 +227,6 @@ export default function FreeTicketModal({
         }
       }
       if (!data || typeof data !== "object") return;
-      // onReady only — never infoDelivery (constant restarts)
       if ((data as { event?: string }).event === "onReady") {
         audibleOnly();
       }
@@ -232,7 +237,7 @@ export default function FreeTicketModal({
       ids.forEach((id) => window.clearTimeout(id));
       window.removeEventListener("message", onMsg);
     };
-  }, [open, rickrollSrc]);
+  }, [open, rickrollSrc, gag.enabled]);
 
   // Jeremy: play + unMute once he fades in; 3× louder than admin content volume.
   useEffect(() => {
@@ -313,7 +318,8 @@ export default function FreeTicketModal({
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
               onLoad={() => {
-                // Autoplay already running — never playVideo here
+                if (!gagLiveRef.current) return;
+                // Autoplay already running — unmute only, never playVideo
                 ensureYoutubeAudible(rickrollRef.current);
               }}
             />
