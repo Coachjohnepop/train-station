@@ -6,7 +6,10 @@ import {
   DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
   volumeDbToYoutubePercent,
 } from "@/lib/media-volume";
-import { postYoutubeEmbedCommand } from "@/lib/youtube-embed-control";
+import {
+  kickYoutubeAudible,
+  postYoutubeEmbedCommand,
+} from "@/lib/youtube-embed-control";
 import { youtubeEmbedUrl, type YoutubeEmbedOptions } from "@/lib/youtube";
 
 type Props = {
@@ -63,20 +66,13 @@ export default function YoutubeAutoplayFrame({
       const iframe = iframeRef.current;
       if (!iframe?.contentWindow) return;
       if (autoplay || kickPlayback) {
-        postYoutubeEmbedCommand(iframe, "playVideo");
-        postYoutubeEmbedCommand(iframe, "unMute");
+        kickYoutubeAudible(iframe);
       }
-      iframe.contentWindow.postMessage(
-        JSON.stringify({ event: "command", func: "setVolume", args: [pct] }),
-        "*",
-      );
+      postYoutubeEmbedCommand(iframe, "setVolume", pct);
     };
-    const t1 = window.setTimeout(kick, 250);
-    const t2 = window.setTimeout(kick, 1200);
-    return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
-    };
+    const delays = [100, 300, 700, 1400];
+    const ids = delays.map((ms) => window.setTimeout(kick, ms));
+    return () => ids.forEach((id) => window.clearTimeout(id));
   }, [embedSrc, kickPlayback, autoplay, volumeDb]);
 
   if (!embedSrc) return null;
