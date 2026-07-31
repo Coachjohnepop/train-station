@@ -589,12 +589,12 @@ export default function MemberMeasurementsClient({
         className="ms-sheet p-4 sm:p-6 md:p-7 pb-24"
       >
         <header className="relative z-[1] border-b border-[var(--ms-rule-soft)] pb-3">
-          <p className="ms-ornament text-center">✦ · royal measure · ✦</p>
+          <p className="ms-ornament text-center">✦ · train station check-in · ✦</p>
           <h1 className="ms-sheet-title mt-1 text-center text-xl font-bold sm:text-2xl">
             Body Measurements
           </h1>
           <p className="mt-1 text-center font-serif text-xs italic text-[var(--ms-ink-soft)]">
-            Purple of the crown · same marks each session · Train Station
+            Quarterly check-in · same marks each session · Train Station
           </p>
           <div className="mt-3 flex flex-wrap items-end justify-between gap-3 font-serif text-sm">
             <label className="flex min-w-[11rem] flex-1 flex-col gap-0.5">
