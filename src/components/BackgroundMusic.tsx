@@ -57,6 +57,11 @@ export default function BackgroundMusic() {
   const adminRouteRef = useRef(onAdmin);
   const hintTimerRef = useRef<number | null>(null);
   const unlockedRef = useRef(false);
+  /**
+   * Hard mute preference (localStorage). Checked after every await so a late
+   * forceAudible from capture-phase click cannot undo the speaker mute tap.
+   */
+  const userMutedRef = useRef(false);
 
   useEffect(() => {
     adminRouteRef.current = onAdmin;
@@ -65,11 +70,18 @@ export default function BackgroundMusic() {
   /** User hit mute on the speaker. */
   const [off, setOff] = useState(false);
   /**
-   * True until we confirm real audible playback (currentTime advancing, unmuted).
-   * Starts true so the icon is muted in private windows until sound works.
+   * True only when we confirm real audible playback (currentTime advancing, unmuted).
+   * Starts false so the icon is muted until sound actually works.
    */
   const [soundLive, setSoundLive] = useState(false);
   const [showHint, setShowHint] = useState(true);
+
+  // Hydrate mute preference once on mount
+  useEffect(() => {
+    const muted = isUserMuted();
+    userMutedRef.current = muted;
+    setOff(muted);
+  }, []);
 
   const clearHintTimer = useCallback(() => {
     if (hintTimerRef.current != null) {
@@ -118,9 +130,13 @@ export default function BackgroundMusic() {
 
   const forceAudible = useCallback(
     async (audio: HTMLAudioElement) => {
-      if (adminRouteRef.current || isUserMuted() || overlayPauseRef.current) {
-        if (adminRouteRef.current) stopAdminMusic(audio);
-        else setSoundLive(false);
+      if (adminRouteRef.current) {
+        stopAdminMusic(audio);
+        return false;
+      }
+      // Respect speaker mute (ref, not only localStorage — set sync on toggle)
+      if (userMutedRef.current || isUserMuted() || overlayPauseRef.current) {
+        setSoundLive(false);
         return false;
       }
       audio.volume = VOLUME;
@@ -131,8 +147,26 @@ export default function BackgroundMusic() {
         setSoundLive(false);
         return false;
       }
+      // Mute may have been pressed while play() was in flight
+      if (userMutedRef.current || isUserMuted()) {
+        audio.muted = true;
+        audio.pause();
+        setSoundLive(false);
+        setOff(true);
+        return false;
+      }
       const ok = await confirmSoundLive(audio);
-      if (ok) setOff(false);
+      if (userMutedRef.current || isUserMuted()) {
+        audio.muted = true;
+        audio.pause();
+        setSoundLive(false);
+        setOff(true);
+        return false;
+      }
+      if (ok) {
+        setOff(false);
+        userMutedRef.current = false;
+      }
       return ok;
     },
     [confirmSoundLive, stopAdminMusic],
@@ -270,15 +304,24 @@ export default function BackgroundMusic() {
     };
   }, [startMusicWithFinger, forceAudible, clearHintTimer, stopAdminMusic]);
 
-  // First real gesture → unlock sound (does not hide the finger)
+  // First real gesture → unlock sound (does not hide the finger).
+  // Skip the speaker control so mute/unmute is owned only by toggle().
   useEffect(() => {
     const opts: AddEventListenerOptions = { capture: true, passive: true };
-    const onActivation = () => {
+    const onActivation = (e: Event) => {
+      const t = e.target;
+      if (
+        t instanceof Element &&
+        t.closest(".bg-music-control-cluster, .bg-music-toggle")
+      ) {
+        return;
+      }
       const audio = audioRef.current;
-      if (!audio || adminRouteRef.current || isUserMuted() || overlayPauseRef.current) {
+      if (!audio || adminRouteRef.current) {
         if (audio && adminRouteRef.current) stopAdminMusic(audio);
         return;
       }
+      if (userMutedRef.current || isUserMuted() || overlayPauseRef.current) return;
       void forceAudible(audio);
     };
     ACTIVATION_EVENTS.forEach((e) => window.addEventListener(e, onActivation, opts));
@@ -306,11 +349,12 @@ export default function BackgroundMusic() {
     return () => window.removeEventListener(BG_MUSIC_OVERLAY_EVENT, onOverlay);
   }, [forceAudible]);
 
-  // Free Quick Tour / Watch intro open: same user gesture → unlock theme song.
+  // Free Quick Tour / Watch intro open: unlock theme song unless user muted.
   useEffect(() => {
     const onRequestPlay = () => {
       const audio = audioRef.current;
-      if (!audio || adminRouteRef.current || isUserMuted()) return;
+      if (!audio || adminRouteRef.current) return;
+      if (userMutedRef.current || isUserMuted()) return;
       overlayPauseRef.current = false;
       void forceAudible(audio);
     };
@@ -326,47 +370,67 @@ export default function BackgroundMusic() {
       stopAdminMusic(audio);
       return;
     }
-    if (isUserMuted()) {
+    if (userMutedRef.current || isUserMuted()) {
+      userMutedRef.current = true;
       setOff(true);
       setSoundLive(false);
+      audio.muted = true;
+      audio.pause();
       return;
     }
     void startMusicWithFinger(audio);
   }, [onAdmin, startMusicWithFinger, stopAdminMusic]);
 
-  const toggle = () => {
+  /** Speaker only: mute ↔ unmute. Capture-phase unlock never steals this click. */
+  const toggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     const audio = audioRef.current;
     if (!audio || adminRouteRef.current) return;
 
-    // If we're only waiting for a gesture, speaker click = unlock (user gesture)
-    if (!off && !soundLive) {
-      void forceAudible(audio).then((ok) => {
-        if (!ok) {
-          // Still blocked — fall through to treat as explicit play attempt
-          audio.muted = false;
-          void audio.play().then(() => confirmSoundLive(audio));
-        }
-      });
+    // Currently playing (or thinks it is) → mute hard
+    if (!off && (soundLive || !audio.paused)) {
+      userMutedRef.current = true;
+      setOff(true);
+      setSoundLive(false);
+      unlockedRef.current = false;
+      dismissHint();
+      try {
+        window.localStorage.setItem(OFF_KEY, "1");
+      } catch {
+        /* ignore */
+      }
+      audio.muted = true;
+      audio.pause();
       return;
     }
 
-    const next = !off;
-    setOff(next);
+    // Muted / waiting → unmute + play (this click is the gesture)
+    userMutedRef.current = false;
+    setOff(false);
     try {
-      window.localStorage.setItem(OFF_KEY, next ? "1" : "0");
+      window.localStorage.setItem(OFF_KEY, "0");
     } catch {
       /* ignore */
     }
-    if (next) {
-      dismissHint();
-      setSoundLive(false);
-      unlockedRef.current = false;
-      audio.muted = true;
-      audio.pause();
-    } else {
-      // Explicit unmute is a user gesture — should allow sound
-      void startMusicWithFinger(audio).then(() => forceAudible(audio));
-    }
+    overlayPauseRef.current = false;
+    audio.muted = false;
+    audio.volume = VOLUME;
+    audio.loop = true;
+    void audio
+      .play()
+      .then(() => confirmSoundLive(audio))
+      .then((ok) => {
+        if (userMutedRef.current) {
+          audio.muted = true;
+          audio.pause();
+          setSoundLive(false);
+          setOff(true);
+          return;
+        }
+        if (ok) setSoundLive(true);
+      })
+      .catch(() => setSoundLive(false));
   };
 
   const onPublicHome = pathname === "/";
@@ -427,6 +491,7 @@ export default function BackgroundMusic() {
           <button
             type="button"
             onClick={toggle}
+            onPointerDown={(e) => e.stopPropagation()}
             aria-label={showAsPlaying ? "Mute background music" : "Play background music"}
             title={showAsPlaying ? "Mute music" : "Play music"}
             className={`bg-music-toggle relative z-10 inline-flex shrink-0 items-center justify-center rounded-2xl border shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.985] ${
