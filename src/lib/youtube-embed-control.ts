@@ -36,18 +36,27 @@ export function primeYoutubeEmbed(iframe: HTMLIFrameElement | null): void {
   }
 }
 
-/** Play + full volume + unmute (after prime). */
-export function kickYoutubeAudible(iframe: HTMLIFrameElement | null): void {
+/**
+ * Play + full volume + unmute (after prime).
+ * Prefer `startOnce: true` for Free gag — repeated playVideo restarts the video.
+ */
+export function kickYoutubeAudible(
+  iframe: HTMLIFrameElement | null,
+  opts?: { startOnce?: boolean; alreadyStarted?: boolean },
+): void {
   if (!iframe) return;
   primeYoutubeEmbed(iframe);
-  postYoutubeEmbedCommand(iframe, "playVideo");
+  // Only call playVideo once; later kicks only unMute/volume (no restart).
+  if (!opts?.startOnce || !opts.alreadyStarted) {
+    postYoutubeEmbedCommand(iframe, "playVideo");
+  }
   postYoutubeEmbedCommand(iframe, "unMute");
   postYoutubeEmbedCommand(iframe, "setVolume", 100);
 }
 
 /**
  * Linear volume fade 100 → 0 over `durationMs`, then mute + pause.
- * Does NOT unMute at start (caller must already be audible).
+ * Never calls playVideo (would restart the clip).
  */
 export function fadeOutYoutubeEmbed(
   iframe: HTMLIFrameElement | null,

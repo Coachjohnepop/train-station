@@ -74,11 +74,20 @@ export function welcomeVideoUrlForPlan(
   plan: SignupPlan | string | null | undefined,
   storedDefault: string | null | undefined,
   byPlan: WelcomeVideosByPlan = {},
+  /** Unified Free Explorer clip (same as free-ticket intro after gag). */
+  freeExplorerUrl: string | null | undefined = null,
 ): string | null {
   const normalized = normalizeSignupPlan(plan);
+  if (normalized === "explorer") {
+    const free =
+      freeExplorerUrl?.trim() ||
+      byPlan.explorer?.trim() ||
+      null;
+    if (free && !isRickrollVideoUrl(free)) return free;
+  }
   if ((MEMBERSHIP_PLANS as readonly string[]).includes(normalized)) {
     const planUrl = byPlan[normalized as keyof WelcomeVideosByPlan];
-    if (planUrl?.trim()) return planUrl.trim();
+    if (planUrl?.trim() && !isRickrollVideoUrl(planUrl)) return planUrl.trim();
   }
   return welcomeVideoUrlFromConfig(storedDefault);
 }
@@ -96,8 +105,8 @@ export const WELCOME_VIDEO_PLAN_OPTIONS = MEMBERSHIP_PLANS.map((plan) => ({
  * - Anonymous / not signed in on landing Free → always on
  * - Signed-in members (Explorer re-open Free, etc.) → skip gag, straight to Jeremy
  *
- * Admin → Videos still stores free-ticket intro; gag URL/start/duration fields are
- * legacy and no longer drive the Free ticket modal (custom Shorts broke kids’ Free).
+ * Admin → Videos: one Free Explorer intro (after gag + Free onboard). Gag is
+ * product-fixed; no admin gag upload.
  */
 export const FREE_TICKET_RICKROLL_URL =
   "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=43s";

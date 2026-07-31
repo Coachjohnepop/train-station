@@ -2,7 +2,10 @@ import { WELCOME_VIDEO_PLAN_OPTIONS } from "@/lib/landing-media";
 import type { WelcomeVideosByPlan } from "@/lib/landing-media-store";
 import type { MembershipPlan } from "@/lib/signup-plans";
 
-/** Slots where Jeremy’s uploaded intros can be assigned. */
+/**
+ * Slots where Jeremy’s uploaded intros can be assigned.
+ * Free path = one slot only (Free Explorer) for Free button after gag + onboard.
+ */
 export type CoachIntroSlotId =
   | "overall"
   | "free"
@@ -23,20 +26,15 @@ export const COACH_INTRO_SLOTS: CoachIntroSlotDef[] = [
   },
   {
     id: "free",
-    label: "Free-ticket intro",
-    hint: "After the gag when someone taps Free / Explorer on the landing page.",
+    label: "Free Explorer intro",
+    hint: "One clip for Free: after the rickroll on Free ticket, and on Free Explorer onboard. No second free upload.",
   },
   {
     id: "equipment",
     label: "Gear / equipment intro",
     hint: "First time a member opens Gear — purpose of the tab and how to think about home-gym buys.",
   },
-  // Ticket classes in a friendly coach order (not raw plan enum order).
-  {
-    id: "explorer",
-    label: "Free Explorer intro",
-    hint: "Onboarding welcome for Free Explorer ticket holders.",
-  },
+  // Paid classes only (explorer merged into free slot above)
   {
     id: "member",
     label: "Coach Class intro",
@@ -56,10 +54,21 @@ export const COACH_INTRO_SLOTS: CoachIntroSlotDef[] = [
 
 export type CoachIntroAssignments = {
   overall: string;
+  /** Unified Free Explorer video (free-ticket modal + explorer plan onboard). */
   free: string;
   equipment: string;
   byPlan: WelcomeVideosByPlan;
 };
+
+/** Merge freeChastise + byPlan.explorer into one free URL for admin + product. */
+export function resolveFreeExplorerVideoUrl(input: {
+  freeChastiseVideoUrl?: string | null;
+  welcomeVideosByPlan?: WelcomeVideosByPlan;
+}): string {
+  const free = input.freeChastiseVideoUrl?.trim() || "";
+  const explorer = input.welcomeVideosByPlan?.explorer?.trim() || "";
+  return free || explorer || "";
+}
 
 export function assignmentsFromLanding(input: {
   welcomeVideoUrl?: string | null;
@@ -67,11 +76,20 @@ export function assignmentsFromLanding(input: {
   equipmentIntroVideoUrl?: string | null;
   welcomeVideosByPlan?: WelcomeVideosByPlan;
 }): CoachIntroAssignments {
+  const byPlan = { ...(input.welcomeVideosByPlan || {}) };
+  const freeUrl = resolveFreeExplorerVideoUrl({
+    freeChastiseVideoUrl: input.freeChastiseVideoUrl,
+    welcomeVideosByPlan: byPlan,
+  });
+  // Keep explorer in byPlan in sync for onboard welcomeVideoUrlForPlan
+  if (freeUrl) {
+    byPlan.explorer = freeUrl;
+  }
   return {
     overall: input.welcomeVideoUrl?.trim() || "",
-    free: input.freeChastiseVideoUrl?.trim() || "",
+    free: freeUrl,
     equipment: input.equipmentIntroVideoUrl?.trim() || "",
-    byPlan: { ...(input.welcomeVideosByPlan || {}) },
+    byPlan,
   };
 }
 
@@ -80,7 +98,7 @@ export function urlForSlot(
   assignments: CoachIntroAssignments,
 ): string {
   if (slotId === "overall") return assignments.overall;
-  if (slotId === "free") return assignments.free;
+  if (slotId === "free" || slotId === "explorer") return assignments.free;
   if (slotId === "equipment") return assignments.equipment;
   return assignments.byPlan[slotId]?.trim() || "";
 }
@@ -92,8 +110,18 @@ export function setSlotUrl(
 ): CoachIntroAssignments {
   const nextUrl = url.trim();
   if (slotId === "overall") return { ...assignments, overall: nextUrl };
-  if (slotId === "free") return { ...assignments, free: nextUrl };
   if (slotId === "equipment") return { ...assignments, equipment: nextUrl };
+  // free + explorer always write the same Free Explorer clip
+  if (slotId === "free" || slotId === "explorer") {
+    return {
+      ...assignments,
+      free: nextUrl,
+      byPlan: {
+        ...assignments.byPlan,
+        explorer: nextUrl || null,
+      },
+    };
+  }
   return {
     ...assignments,
     byPlan: {

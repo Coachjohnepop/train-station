@@ -10,17 +10,28 @@ import {
 
 export async function getResolvedLandingVideos() {
   const config = await getLandingMedia();
+  // One Free Explorer URL: free-ticket field wins, else legacy byPlan.explorer
+  const freeExplorer =
+    freeChastiseVideoUrlFromConfig(config.freeChastiseVideoUrl) ||
+    freeChastiseVideoUrlFromConfig(config.welcomeVideosByPlan?.explorer) ||
+    null;
+
   const welcomeVideosByPlan = Object.fromEntries(
     Object.entries(config.welcomeVideosByPlan).map(([plan, url]) => [
       plan,
       url ? welcomeVideoUrlFromConfig(url) : null,
     ]),
   ) as Record<string, string | null>;
+  // Always expose unified Free Explorer on explorer plan for onboard
+  if (freeExplorer) {
+    welcomeVideosByPlan.explorer = freeExplorer;
+  }
+
   const gag = resolveFreeTicketGag(config);
   return {
     welcomeVideoUrl: welcomeVideoUrlFromConfig(config.welcomeVideoUrl),
     welcomeVideosByPlan,
-    freeChastiseVideoUrl: freeChastiseVideoUrlFromConfig(config.freeChastiseVideoUrl),
+    freeChastiseVideoUrl: freeExplorer,
     purchaseThankYouVideoUrl: config.purchaseThankYouVideoUrl?.trim() || null,
     equipmentIntroVideoUrl: equipmentIntroVideoUrlFromConfig(config.equipmentIntroVideoUrl),
     uploadedContentVolumeDb: config.uploadedContentVolumeDb,

@@ -385,7 +385,7 @@ export default function AdminSiteVideosPanel({
       setSaving(false);
       return;
     }
-    if (!introOk(assignments.free, "Free-ticket intro")) {
+    if (!introOk(assignments.free, "Free Explorer intro")) {
       setSaving(false);
       return;
     }
@@ -425,10 +425,17 @@ export default function AdminSiteVideosPanel({
       }
     }
 
+    // One Free Explorer clip → free-ticket modal after gag + Free Explorer onboard
+    const freeExplorerUrl = assignments.free.trim() || null;
+    const byPlan = {
+      ...assignments.byPlan,
+      explorer: freeExplorerUrl,
+    };
+
     const landingResult = await saveLandingMediaAction({
       welcomeVideoUrl: assignments.overall.trim() || null,
-      welcomeVideosByPlan: assignments.byPlan,
-      freeChastiseVideoUrl: assignments.free.trim() || null,
+      welcomeVideosByPlan: byPlan,
+      freeChastiseVideoUrl: freeExplorerUrl,
       // Product Free path: fixed 10s Rickroll (never persist custom Shorts / long gag).
       gagVideoUrl: null,
       gagStartSec: 43,
@@ -505,7 +512,7 @@ export default function AdminSiteVideosPanel({
         <p className="mt-1">
           <strong className="text-[var(--text)]">1)</strong> Upload Jeremy&apos;s clips into the
           library. <strong className="text-[var(--text)]">2)</strong> Assign each one — overall
-          intro, Coach Class, Business Class, free-ticket, etc. Everything else (gag, weekly,
+          intro, Free Explorer, Coach Class, etc. Everything else (gag, weekly,
           dinner, daily) stays YouTube.
         </p>
       </div>
@@ -601,7 +608,7 @@ export default function AdminSiteVideosPanel({
         {library.length === 0 ? (
           <p className="rounded-xl border border-dashed border-[var(--border)] px-4 py-6 text-sm text-[var(--muted)]">
             No library videos yet. Upload Jeremy&apos;s overall intro, Coach Class intro, Business
-            intro, free-ticket clip, etc. — then assign them in section 2.
+            intro, Free Explorer clip, etc. — then assign them in section 2.
           </p>
         ) : (
           <ul className="space-y-3">
@@ -679,9 +686,8 @@ export default function AdminSiteVideosPanel({
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">2 · Where each one goes</h2>
         <p className="text-xs text-[var(--muted)]">
-          Choose a library video for overall intro, Gear (equipment first visit), each ticket class,
-          and the free-ticket intro.
-          One video can be used in multiple slots.
+          Choose a library video for overall intro, Free Explorer (one clip for Free button + onboard),
+          Gear, and paid ticket classes. One video can be reused in multiple slots.
         </p>
         <div className="space-y-3">
           {COACH_INTRO_SLOTS.map((slot) => {
@@ -754,10 +760,10 @@ export default function AdminSiteVideosPanel({
         <h2 className="text-lg font-semibold">3 · Free ticket gag (product-fixed)</h2>
         <p className="text-xs text-[var(--muted)] leading-relaxed">
           <strong className="text-[var(--text)]">Guests</strong> who tap Free always get the classic{" "}
-          ~10s Rick Astley chorus, then your free-ticket intro from the library above.{" "}
+          ~10s Rick Astley chorus, then your <strong className="text-[var(--text)]">Free Explorer intro</strong>{" "}
+          (one upload above — also used on Free onboard).{" "}
           <strong className="text-[var(--text)]">Signed-in members</strong> skip the gag and go
-          straight to that intro. Custom gag URLs (Shorts, long clips) are no longer used — they broke
-          Free for kids.
+          straight to that intro. No gag upload — product-fixed only.
         </p>
         <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--muted)]">
           Default gag: <code className="text-[var(--text)]">{FREE_TICKET_RICKROLL_URL}</code> · start{" "}

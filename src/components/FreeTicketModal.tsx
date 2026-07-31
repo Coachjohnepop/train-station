@@ -74,6 +74,8 @@ export default function FreeTicketModal({
   const jeremyIframeRef = useRef<HTMLIFrameElement>(null);
   const jeremyVideoRef = useRef<HTMLVideoElement>(null);
   const rickrollKickGen = useRef(0);
+  /** After first playVideo, only unMute/volume — never restart gag. */
+  const rickrollStartedRef = useRef(false);
   const cancelRickrollFade = useRef<(() => void) | null>(null);
 
   const signedIn = Boolean(purchaseAuth.signedIn);
@@ -84,7 +86,8 @@ export default function FreeTicketModal({
     setEmbedOrigin(window.location.origin);
   }, []);
 
-  // Prefer free-ticket intro; fall back to general welcome (never use rickroll as Jeremy).
+  // One Free Explorer clip: free-ticket slot (synced with plan explorer) → overall welcome.
+  // Never use rickroll as Jeremy.
   const jeremyVideoUrl = (() => {
     const free = freeChastiseVideoUrl?.trim();
     if (free && !isRickrollVideoUrl(free)) return free;
@@ -196,21 +199,29 @@ export default function FreeTicketModal({
     };
   }, [open, hasJeremy, preloadMs, gag.enabled, gagDurationMs]);
 
-  // Gag: hammer play + unMute until the player actually goes loud.
-  // Free open is a user gesture — keep kicking for a few seconds after load.
+  // Gag: start once, then only unMute/volume (infoDelivery must not call playVideo again).
   useEffect(() => {
     if (!open || !rickrollSrc) return;
     const gen = ++rickrollKickGen.current;
-    const kick = () => {
-      if (gen !== rickrollKickGen.current) return;
-      kickYoutubeAudible(rickrollRef.current);
-    };
-    // Immediate + staggered (player ready is async)
-    kick();
-    const delays = [50, 150, 300, 500, 800, 1200, 1800, 2500];
-    const ids = delays.map((ms) => window.setTimeout(kick, ms));
+    rickrollStartedRef.current = false;
 
-    // When YT posts onReady / infoDelivery, kick again
+    const kick = (opts?: { forcePlay?: boolean }) => {
+      if (gen !== rickrollKickGen.current) return;
+      const already = rickrollStartedRef.current;
+      kickYoutubeAudible(rickrollRef.current, {
+        startOnce: true,
+        alreadyStarted: already && !opts?.forcePlay,
+      });
+      if (!already || opts?.forcePlay) rickrollStartedRef.current = true;
+    };
+
+    // Sparse boots only — enough for player ready, not a restart storm
+    kick({ forcePlay: true });
+    const ids = [200, 600, 1200].map((ms) =>
+      window.setTimeout(() => kick(), ms),
+    );
+
+    // Only onReady (not infoDelivery — that fires continuously and restarted the gag)
     const onMsg = (e: MessageEvent) => {
       if (gen !== rickrollKickGen.current) return;
       let data: unknown = e.data;
@@ -222,8 +233,7 @@ export default function FreeTicketModal({
         }
       }
       if (!data || typeof data !== "object") return;
-      const ev = (data as { event?: string }).event;
-      if (ev === "onReady" || ev === "infoDelivery" || ev === "initialDelivery") {
+      if ((data as { event?: string }).event === "onReady") {
         kick();
       }
     };
@@ -295,7 +305,7 @@ export default function FreeTicketModal({
           {showJeremy
             ? hasJeremy
               ? "Explorer is real access — starter programs, about 20% of Coach Class power. No homework required."
-              : "Coach intro not uploaded yet — Free still works. Continue below, or coach can set the free-ticket video under Admin → Videos."
+              : "Coach intro not uploaded yet — Free still works. Continue below, or coach can set Free Explorer under Admin → Videos."
             : "You tapped Free. Enjoy the chorus… then hear from your coach."}
         </p>
 
@@ -313,7 +323,14 @@ export default function FreeTicketModal({
               title="You picked free"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
-              onLoad={() => kickYoutubeAudible(rickrollRef.current)}
+              onLoad={() => {
+                // First load may start play; if already started, only unMute/volume
+                kickYoutubeAudible(rickrollRef.current, {
+                  startOnce: true,
+                  alreadyStarted: rickrollStartedRef.current,
+                });
+                rickrollStartedRef.current = true;
+              }}
             />
           )}
 
