@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireMemberAccess } from "@/lib/api-auth";
 import {
   isAllowedMeasurementPhotoUrl,
+  MEASUREMENT_PHOTO_MAX_BYTES,
   storeMeasurementPhoto,
   validateMeasurementPhoto,
 } from "@/lib/measurement-photo-storage";
@@ -9,11 +10,15 @@ import { setMemberBeforePhotoUrl } from "@/lib/measurements-store";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
+/** App Router: allow larger multipart bodies for mobile photos (still compress client-side). */
+export const runtime = "nodejs";
 
 /**
  * Upload a measurements portrait.
- * - kind=before → saves baseline “before” on member profile
- * - kind=now → returns URL only (attach to check-in via photoUrl on POST /measurements)
+ * - kind=before → saves baseline “before” on member profile (DB URL + Blob file)
+ * - kind=now → returns URL only (attach via photoUrl on POST /measurements)
+ *
+ * Mobile: client compresses first. Server accepts JPEG/PNG/WebP/HEIC.
  */
 export async function POST(request: Request) {
   const auth = await requireMemberAccess();
@@ -25,17 +30,45 @@ export async function POST(request: Request) {
     const kindRaw = String(form.get("kind") || "now").toLowerCase();
     const kind = kindRaw === "before" ? "before" : "now";
 
-    if (!(file instanceof File)) {
-      return NextResponse.json({ error: "file is required" }, { status: 400 });
+    if (!file || typeof file !== "object" || !("arrayBuffer" in file)) {
+      return NextResponse.json(
+        { error: "No photo received. Take a photo or choose one from your library." },
+        { status: 400 },
+      );
     }
 
-    const mime = file.type || "image/jpeg";
-    validateMeasurementPhoto({ size: file.size, mimeType: mime, name: file.name });
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const stored = await storeMeasurementPhoto(buffer, mime, auth.session.id, kind);
+    const blob = file as Blob & { name?: string; type?: string; size: number };
+    const name = typeof blob.name === "string" && blob.name ? blob.name : "photo.jpg";
+    const mime = (blob.type || "").trim() || "image/jpeg";
+    const size = typeof blob.size === "number" ? blob.size : 0;
+
+    validateMeasurementPhoto({ size, mimeType: mime, name });
+
+    if (size > MEASUREMENT_PHOTO_MAX_BYTES) {
+      return NextResponse.json(
+        {
+          error: `Photo too large (${Math.round(size / 1024 / 1024)} MB). Max ${Math.round(MEASUREMENT_PHOTO_MAX_BYTES / 1024 / 1024)} MB after compress.`,
+        },
+        { status: 413 },
+      );
+    }
+
+    const buffer = Buffer.from(await blob.arrayBuffer());
+    if (buffer.length === 0) {
+      return NextResponse.json({ error: "Empty photo file." }, { status: 400 });
+    }
+
+    const stored = await storeMeasurementPhoto(
+      buffer,
+      mime,
+      auth.session.id,
+      kind,
+      name,
+    );
 
     if (!isAllowedMeasurementPhotoUrl(stored.url)) {
-      return NextResponse.json({ error: "Invalid photo URL returned." }, { status: 500 });
+      console.error("[measurements/photo] rejected URL shape", stored.url);
+      return NextResponse.json({ error: "Invalid photo URL returned from storage." }, { status: 500 });
     }
 
     if (kind === "before") {
@@ -44,7 +77,8 @@ export async function POST(request: Request) {
         ok: true,
         kind: "before",
         url: stored.url,
-        beforePhotoUrl,
+        beforePhotoUrl: beforePhotoUrl || stored.url,
+        persisted: true,
       });
     }
 
@@ -53,9 +87,12 @@ export async function POST(request: Request) {
       kind: "now",
       url: stored.url,
       photoUrl: stored.url,
+      persisted: false,
+      hint: "Call Save check-in to store this photo on your measurement log.",
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Upload failed";
+    console.error("[measurements/photo]", message);
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

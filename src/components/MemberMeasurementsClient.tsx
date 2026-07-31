@@ -19,6 +19,7 @@ import {
   type MeasurementFieldId,
   type MeasurementRecord,
 } from "@/lib/body-measurements";
+import { compressImageForUpload } from "@/lib/client-image-compress";
 import {
   DEFAULT_PHOTO_CROP,
   normalizePhotoCrop,
@@ -122,8 +123,12 @@ export default function MemberMeasurementsClient({
   const [displayName, setDisplayName] = useState("");
   const [ageYears, setAgeYears] = useState("");
   const [gender, setGender] = useState("");
-  const beforeFileRef = useRef<HTMLInputElement>(null);
-  const nowFileRef = useRef<HTMLInputElement>(null);
+  /** Library pickers (no capture attribute). */
+  const beforeLibraryRef = useRef<HTMLInputElement>(null);
+  const nowLibraryRef = useRef<HTMLInputElement>(null);
+  /** Camera capture. */
+  const beforeCameraRef = useRef<HTMLInputElement>(null);
+  const nowCameraRef = useRef<HTMLInputElement>(null);
   const volumeDb = useUploadedContentVolumeDb();
 
   const videoUrl = introVideoUrl?.trim() || "";
@@ -176,37 +181,90 @@ export default function MemberMeasurementsClient({
   }
 
   async function uploadPortrait(kind: "before" | "now", files: FileList | null) {
-    const file = files?.[0];
-    if (!file) return;
+    const raw = files?.[0];
+    if (!raw) return;
     setPhotoBusy(kind);
     setError(null);
+    setMessage(kind === "before" ? "Uploading before photo…" : "Uploading now photo…");
     try {
+      let file: File;
+      try {
+        file = await compressImageForUpload(raw);
+      } catch (compressErr) {
+        // Fall back to raw if compress fails (and size is small enough)
+        if (raw.size <= 3.5 * 1024 * 1024) {
+          file = raw;
+        } else {
+          throw compressErr;
+        }
+      }
+
       const formData = new FormData();
       formData.append("file", file);
       formData.append("kind", kind);
       const res = await fetch("/api/member/measurements/photo", {
         method: "POST",
         body: formData,
+        credentials: "same-origin",
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Photo upload failed.");
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        url?: string;
+        beforePhotoUrl?: string;
+        photoUrl?: string;
+      };
+      if (!res.ok) {
+        throw new Error(
+          data.error ||
+            (res.status === 401
+              ? "Sign in again to upload photos."
+              : res.status === 403
+                ? "Your account can’t upload yet (payment/approval)."
+                : res.status === 413
+                  ? "Photo too large for the server. Try a smaller image."
+                  : `Photo upload failed (${res.status}).`),
+        );
+      }
+      const url = data.url || data.beforePhotoUrl || data.photoUrl;
+      if (!url) throw new Error("Upload succeeded but no photo URL came back.");
+
       if (kind === "before") {
-        setBeforePhotoUrl(data.url || data.beforePhotoUrl || null);
+        setBeforePhotoUrl(url);
         setBeforeCrop({ ...DEFAULT_PHOTO_CROP });
         setBeforeCropOpen(true);
-        setMessage("Before portrait saved — adjust crop if you want, then Save crop.");
+        // Confirm persistence from DB
+        try {
+          const check = await fetch("/api/member/measurements", {
+            cache: "no-store",
+            credentials: "same-origin",
+          });
+          const body = await check.json().catch(() => ({}));
+          if (body.beforePhotoUrl) setBeforePhotoUrl(body.beforePhotoUrl);
+        } catch {
+          /* keep local url */
+        }
+        setMessage("Before photo saved to your account. Crop if you want, then Save crop.");
       } else {
-        setNowPhotoUrl(data.url || data.photoUrl || null);
+        setNowPhotoUrl(url);
         setNowCrop({ ...DEFAULT_PHOTO_CROP });
         setNowCropOpen(true);
-        setMessage("Now photo attached — crop if you want, then Save check-in.");
+        setMessage(
+          "Now photo uploaded. Crop if you want, then tap Save / Save check-in to lock it on this visit.",
+        );
       }
     } catch (e: unknown) {
+      setMessage(null);
       setError(e instanceof Error ? e.message : "Photo upload failed.");
     } finally {
       setPhotoBusy(null);
-      if (kind === "before" && beforeFileRef.current) beforeFileRef.current.value = "";
-      if (kind === "now" && nowFileRef.current) nowFileRef.current.value = "";
+      for (const ref of [
+        beforeLibraryRef,
+        beforeCameraRef,
+        nowLibraryRef,
+        nowCameraRef,
+      ]) {
+        if (ref.current) ref.current.value = "";
+      }
     }
   }
 
@@ -791,12 +849,19 @@ export default function MemberMeasurementsClient({
                 </div>
               )
             ) : null}
-            <div className="w-full border-t border-[var(--ms-rule-soft)] px-2 py-1.5">
+            <div className="flex w-full flex-col gap-1 border-t border-[var(--ms-rule-soft)] px-2 py-1.5">
               <input
-                ref={beforeFileRef}
+                ref={beforeCameraRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/*"
-                capture="user"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => void uploadPortrait("before", e.target.files)}
+              />
+              <input
+                ref={beforeLibraryRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*"
                 className="hidden"
                 onChange={(e) => void uploadPortrait("before", e.target.files)}
               />
@@ -804,13 +869,17 @@ export default function MemberMeasurementsClient({
                 type="button"
                 className="w-full rounded border border-[var(--ms-rule)] bg-[var(--ms-box)] px-2 py-1 font-serif text-[11px] font-semibold text-[var(--ms-ink)] hover:bg-[rgba(124,58,237,0.35)] disabled:opacity-60"
                 disabled={Boolean(photoBusy) || saving}
-                onClick={() => beforeFileRef.current?.click()}
+                onClick={() => beforeCameraRef.current?.click()}
               >
-                {photoBusy === "before"
-                  ? "…"
-                  : beforePhotoUrl
-                    ? "Replace before"
-                    : "Upload before"}
+                {photoBusy === "before" ? "Uploading…" : "📷 Take photo"}
+              </button>
+              <button
+                type="button"
+                className="w-full rounded border border-[var(--ms-rule)] bg-[var(--ms-box)] px-2 py-1 font-serif text-[11px] font-semibold text-[var(--ms-ink)] hover:bg-[rgba(124,58,237,0.35)] disabled:opacity-60"
+                disabled={Boolean(photoBusy) || saving}
+                onClick={() => beforeLibraryRef.current?.click()}
+              >
+                {photoBusy === "before" ? "…" : "🖼 Library"}
               </button>
             </div>
           </div>
@@ -903,36 +972,53 @@ export default function MemberMeasurementsClient({
                 </div>
               )
             ) : null}
-            <div className="flex w-full gap-1 border-t border-[var(--ms-rule-soft)] px-2 py-1.5">
+            <div className="flex w-full flex-col gap-1 border-t border-[var(--ms-rule-soft)] px-2 py-1.5">
               <input
-                ref={nowFileRef}
+                ref={nowCameraRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/*"
-                capture="user"
+                accept="image/*"
+                capture="environment"
                 className="hidden"
                 onChange={(e) => void uploadPortrait("now", e.target.files)}
               />
-              <button
-                type="button"
-                className="min-w-0 flex-1 rounded border border-[var(--ms-rule)] bg-[var(--ms-box)] px-2 py-1 font-serif text-[11px] font-semibold text-[var(--ms-ink)] hover:bg-[rgba(124,58,237,0.35)] disabled:opacity-60"
-                disabled={Boolean(photoBusy) || saving}
-                onClick={() => nowFileRef.current?.click()}
-              >
-                {photoBusy === "now" ? "…" : nowPhotoUrl ? "Replace now" : "Upload now"}
-              </button>
-              {nowPhotoUrl ? (
+              <input
+                ref={nowLibraryRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*"
+                className="hidden"
+                onChange={(e) => void uploadPortrait("now", e.target.files)}
+              />
+              <div className="flex gap-1">
                 <button
                   type="button"
-                  className="rounded border border-fuchsia-400/30 px-2 py-1 font-serif text-[11px] text-fuchsia-200"
-                  onClick={() => {
-                    setNowPhotoUrl(null);
-                    setNowCrop({ ...DEFAULT_PHOTO_CROP });
-                    setNowCropOpen(false);
-                  }}
+                  className="min-w-0 flex-1 rounded border border-[var(--ms-rule)] bg-[var(--ms-box)] px-2 py-1 font-serif text-[11px] font-semibold text-[var(--ms-ink)] hover:bg-[rgba(124,58,237,0.35)] disabled:opacity-60"
+                  disabled={Boolean(photoBusy) || saving}
+                  onClick={() => nowCameraRef.current?.click()}
                 >
-                  ✕
+                  {photoBusy === "now" ? "…" : "📷 Camera"}
                 </button>
-              ) : null}
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 rounded border border-[var(--ms-rule)] bg-[var(--ms-box)] px-2 py-1 font-serif text-[11px] font-semibold text-[var(--ms-ink)] hover:bg-[rgba(124,58,237,0.35)] disabled:opacity-60"
+                  disabled={Boolean(photoBusy) || saving}
+                  onClick={() => nowLibraryRef.current?.click()}
+                >
+                  {photoBusy === "now" ? "…" : "🖼 Library"}
+                </button>
+                {nowPhotoUrl ? (
+                  <button
+                    type="button"
+                    className="rounded border border-fuchsia-400/30 px-2 py-1 font-serif text-[11px] text-fuchsia-200"
+                    onClick={() => {
+                      setNowPhotoUrl(null);
+                      setNowCrop({ ...DEFAULT_PHOTO_CROP });
+                      setNowCropOpen(false);
+                    }}
+                  >
+                    ✕
+                  </button>
+                ) : null}
+              </div>
             </div>
           </div>
 
