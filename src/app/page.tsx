@@ -62,6 +62,7 @@ export default async function HomePage() {
         <LandingConversion
           welcomeVideoUrl={landingVideos.welcomeVideoUrl}
           freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
+          heroSlides={landingVideos.heroSlides}
         />
       </>
     );
@@ -132,6 +133,7 @@ export default async function HomePage() {
     <LandingConversion
       welcomeVideoUrl={landingVideos.welcomeVideoUrl}
       freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
+      heroSlides={landingVideos.heroSlides}
     />
   );
 }

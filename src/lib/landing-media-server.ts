@@ -8,6 +8,7 @@ import {
   resolveFreeTicketGag,
   welcomeVideoUrlFromConfig,
 } from "@/lib/landing-media";
+import { activeHeroSlides } from "@/lib/hero-slides";
 
 export async function getResolvedLandingVideos() {
   const config = await getLandingMedia();
@@ -38,6 +39,7 @@ export async function getResolvedLandingVideos() {
     measurementsIntroVideoUrl: measurementsIntroVideoUrlFromConfig(
       config.measurementsIntroVideoUrl,
     ),
+    heroSlides: activeHeroSlides(config.heroSlides),
     uploadedContentVolumeDb: config.uploadedContentVolumeDb,
     gag: {
       enabled: gag.enabled,

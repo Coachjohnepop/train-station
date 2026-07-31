@@ -4,6 +4,7 @@ import { getSessionUser, isStaffRole } from "@/lib/auth";
 import {
   getLandingMedia,
   saveLandingMedia,
+  type HeroSlide,
   type WelcomeVideosByPlan,
 } from "@/lib/landing-media-store";
 import {
@@ -16,9 +17,10 @@ import type { LogoTransform } from "@/lib/logo-transform";
 import { getSiteBrand, saveSiteBrand } from "@/lib/site-brand-store";
 
 export async function saveLandingMediaAction(input: {
-  welcomeVideoUrl: string | null;
+  welcomeVideoUrl?: string | null;
   welcomeVideosByPlan?: WelcomeVideosByPlan;
-  freeChastiseVideoUrl: string | null;
+  freeChastiseVideoUrl?: string | null;
+  heroSlides?: HeroSlide[];
   gagVideoUrl?: string | null;
   gagStartSec?: number;
   gagDurationSec?: number;
@@ -42,6 +44,7 @@ export async function saveLandingMediaAction(input: {
       welcomeVideoUrl: input.welcomeVideoUrl,
       welcomeVideosByPlan: input.welcomeVideosByPlan,
       freeChastiseVideoUrl: input.freeChastiseVideoUrl,
+      heroSlides: input.heroSlides,
       gagVideoUrl: input.gagVideoUrl,
       gagStartSec: input.gagStartSec,
       gagDurationSec: input.gagDurationSec,
@@ -59,6 +62,7 @@ export async function saveLandingMediaAction(input: {
       storedWelcomeVideoUrl: config.welcomeVideoUrl,
       storedWelcomeVideosByPlan: config.welcomeVideosByPlan,
       storedFreeChastiseVideoUrl: config.freeChastiseVideoUrl,
+      storedHeroSlides: config.heroSlides,
       storedGagVideoUrl: config.gagVideoUrl,
       storedGagStartSec: config.gagStartSec,
       storedGagDurationSec: config.gagDurationSec,
@@ -70,6 +74,24 @@ export async function saveLandingMediaAction(input: {
       storedVenmoQrUrl: config.venmoQrUrl,
       storedVenmoHandle: config.venmoHandle,
       storedVenmoInstructions: config.venmoInstructions,
+      updatedAt: config.updatedAt,
+    };
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : "Save failed" };
+  }
+}
+
+/** Save only hero carousel slides (Admin → Landing hero editor). */
+export async function saveHeroSlidesAction(slides: HeroSlide[]) {
+  const session = await getSessionUser();
+  if (!session || !isStaffRole(session.role)) {
+    return { error: "Coach sign-in required. Sign out and sign in again at /login." };
+  }
+  try {
+    const config = await saveLandingMedia({ heroSlides: slides });
+    return {
+      ok: true as const,
+      storedHeroSlides: config.heroSlides,
       updatedAt: config.updatedAt,
     };
   } catch (e: unknown) {

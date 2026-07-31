@@ -6,6 +6,7 @@ import ComingSoonPrograms from "@/components/ComingSoonPrograms";
 import LandingNav from "@/components/LandingNav";
 import LandingSiteFooter from "@/components/LandingSiteFooter";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
+import type { HeroSlide } from "@/lib/hero-slides";
 
 /**
  * Public landing for guests / SMS traffic.
@@ -14,9 +15,11 @@ import ThemeAttributesSync from "@/components/ThemeAttributesSync";
 export default function LandingConversion({
   welcomeVideoUrl = null,
   freeChastiseVideoUrl = null,
+  heroSlides = null,
 }: {
   freeChastiseVideoUrl?: string | null;
   welcomeVideoUrl?: string | null;
+  heroSlides?: HeroSlide[] | null;
   gagConfig?: unknown;
 }) {
   return (
@@ -27,6 +30,7 @@ export default function LandingConversion({
       <LandingHero
         welcomeVideoUrl={welcomeVideoUrl}
         freeChastiseVideoUrl={freeChastiseVideoUrl}
+        heroSlides={heroSlides}
       />
       <div className="app-shell-bg">
         <ComingSoonPrograms />

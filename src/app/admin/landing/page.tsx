@@ -1,3 +1,4 @@
+import AdminHeroImagesPanel from "@/components/AdminHeroImagesPanel";
 import AdminLandingMediaPanel from "@/components/AdminLandingMediaPanel";
 import AdminMemberContentPanel from "@/components/AdminMemberContentPanel";
 import AdminSiteBrandPanel from "@/components/AdminSiteBrandPanel";
@@ -20,32 +21,26 @@ export default async function AdminLandingPage() {
     <div className="max-w-3xl">
       <h1 className="text-2xl font-bold">Site brand & landing media</h1>
       <p className="mt-2 text-[var(--muted)]">
-        Logo, name, and tagline for white-label resale — plus YouTube links and Venmo QR for the
-        home page.
+        Hero carousel photos, logo, name, tagline, and Venmo — plus legacy media panels.
       </p>
       <div className="mt-4 rounded-xl border border-violet-500/30 bg-violet-500/5 px-4 py-3 text-xs text-[var(--muted)]">
-        <p className="font-semibold text-violet-100">Videos moved</p>
-        <p className="mt-2">
-          Manage <strong className="text-violet-50">all site videos</strong> (gag, intros, purchase
-          thank-you, weekly / dinner / daily inspiration) under{" "}
-          <a href="/admin/videos" className="text-accent hover:underline">
-            Admin → Videos
-          </a>
-          . This page keeps brand logo + Venmo.
-        </p>
+        <p className="font-semibold text-violet-100">Where things live</p>
         <ol className="mt-2 list-decimal space-y-1 pl-5">
-          <li>Venmo QR if you take money outside Stripe (below)</li>
-          <li>Logo / brand (below)</li>
+          <li>
+            <strong className="text-violet-50">Hero images</strong> — full-screen landing carousel
+            (below)
+          </li>
+          <li>Logo / brand + Venmo QR (below)</li>
+          <li>
+            All site <strong className="text-violet-50">videos</strong> →{" "}
+            <a href="/admin/videos" className="text-accent hover:underline">
+              Admin → Videos
+            </a>
+          </li>
         </ol>
-        <p className="mt-2">
-          Personal macros go in{" "}
-          <a href="/admin/chat" className="text-accent hover:underline">
-            Messages
-          </a>{" "}
-          (Macros quick-reply) — not the public Nutrition sample page.
-        </p>
       </div>
       <div className="mt-8 space-y-12">
+        <AdminHeroImagesPanel initialSlides={config.heroSlides} />
         <AdminSiteBrandPanel
           initialBrandName={brandConfig.brandName}
           initialBrandTagline={brandConfig.brandTagline}

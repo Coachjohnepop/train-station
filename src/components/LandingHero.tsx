@@ -1,23 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import TrainStationBrand from "@/components/TrainStationBrand";
 import WelcomeVideoPopover from "@/components/WelcomeVideoPopover";
 import LandingSeeInsideTour from "@/components/LandingSeeInsideTour";
-
-const images = [
-  { src: "/images/splash/black-guy.jpg", alt: "Athlete powering through a heavy lift" },
-  {
-    src: "/images/splash/blonde-girl.jpg",
-    alt: "Athlete on cable lat pulldowns in Train Station gear",
-  },
-  {
-    src: "/images/splash/hispanic-split-squat.jpg",
-    alt: "Athlete hitting Bulgarian split squats",
-  },
-  { src: "/images/splash/asian-woman.jpg", alt: "Athlete in an intense training session" },
-];
+import {
+  activeHeroSlides,
+  DEFAULT_HERO_SLIDES,
+  type HeroSlide,
+} from "@/lib/hero-slides";
 
 /** Locked first headline so SMS open doesn’t fight a rotating word. */
 const FIRST_HEADLINE = (
@@ -54,21 +46,30 @@ const ROTATING = [
  */
 export default function LandingHero({
   welcomeVideoUrl = null,
+  heroSlides = null,
 }: {
   welcomeVideoUrl?: string | null;
   /** @deprecated Tour no longer hosts free ticket; kept optional for callers. */
   freeChastiseVideoUrl?: string | null;
+  /** From Admin → Landing hero editor. Falls back to built-in defaults. */
+  heroSlides?: HeroSlide[] | null;
 }) {
   const [imageTick, setImageTick] = useState(0);
   const [phraseTick, setPhraseTick] = useState(0);
   const [canRotateCopy, setCanRotateCopy] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
 
+  const images = useMemo(() => {
+    const active = activeHeroSlides(heroSlides);
+    return active.length ? active : DEFAULT_HERO_SLIDES;
+  }, [heroSlides]);
+
   // Images can crossfade immediately
   useEffect(() => {
+    if (images.length <= 1) return;
     const id = window.setInterval(() => setImageTick((t) => t + 1), 3200);
     return () => window.clearInterval(id);
-  }, []);
+  }, [images.length]);
 
   // Hold “Purpose.” for first ~3.2s so the ask is stable on open
   useEffect(() => {
@@ -82,7 +83,7 @@ export default function LandingHero({
     return () => window.clearInterval(id);
   }, [canRotateCopy]);
 
-  const imageIndex = imageTick % images.length;
+  const imageIndex = images.length ? imageTick % images.length : 0;
   const headline = canRotateCopy ? ROTATING[phraseTick % ROTATING.length] : FIRST_HEADLINE;
 
   return (
@@ -93,11 +94,17 @@ export default function LandingHero({
       {images.map((image, index) => (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          key={image.src}
+          key={`${image.id}-${image.src}`}
           src={image.src}
           alt={image.alt}
           fetchPriority={index === 0 ? "high" : "low"}
-          className={`landing-hero-slide absolute inset-0 h-full w-full object-cover object-[center_22%] sm:object-center ${
+          style={{
+            objectPosition:
+              index === imageIndex
+                ? image.objectPosition || "center 22%"
+                : image.objectPosition || "center 22%",
+          }}
+          className={`landing-hero-slide absolute inset-0 h-full w-full object-cover sm:object-center ${
             index === imageIndex ? "landing-hero-slide--active" : "landing-hero-slide--idle"
           }`}
         />

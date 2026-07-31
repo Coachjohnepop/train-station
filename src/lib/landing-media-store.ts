@@ -6,15 +6,28 @@ import {
   clampVolumeDb,
   DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
 } from "@/lib/media-volume";
+import {
+  DEFAULT_HERO_SLIDES,
+  HERO_SLIDE_MAX,
+  HERO_SLIDE_MIN,
+  normalizeHeroSlides,
+  type HeroSlide,
+} from "@/lib/hero-slides";
 import { isAllowedCoachIntroVideoUrl } from "@/lib/site-video";
 import { isYoutubeUrl } from "@/lib/youtube";
 
 export type WelcomeVideosByPlan = Partial<Record<MembershipPlan, string | null>>;
+export type { HeroSlide };
 
 export type LandingMediaConfig = {
   welcomeVideoUrl: string | null;
   welcomeVideosByPlan: WelcomeVideosByPlan;
   freeChastiseVideoUrl: string | null;
+  /**
+   * Cold landing hero carousel (Admin → Landing → Hero images).
+   * Order = play order. More than 4 allowed.
+   */
+  heroSlides: HeroSlide[];
   /**
    * Free-ticket gag (default Rick Astley). Empty = built-in default URL.
    * Played ~gagDurationSec from gagStartSec, then crossfades to free-ticket intro.
@@ -70,6 +83,7 @@ function emptyConfig(): LandingMediaConfig {
     welcomeVideoUrl: null,
     welcomeVideosByPlan: {},
     freeChastiseVideoUrl: null,
+    heroSlides: DEFAULT_HERO_SLIDES.map((s) => ({ ...s })),
     gagVideoUrl: null,
     gagStartSec: 43,
     gagDurationSec: 5,
@@ -105,6 +119,9 @@ function normalize(raw: unknown): LandingMediaConfig {
     welcomeVideoUrl: normalizeUrl(data.welcomeVideoUrl),
     welcomeVideosByPlan: normalizeWelcomeVideosByPlan(data.welcomeVideosByPlan),
     freeChastiseVideoUrl: normalizeUrl(data.freeChastiseVideoUrl),
+    heroSlides: normalizeHeroSlides(
+      (data as { heroSlides?: unknown }).heroSlides ?? DEFAULT_HERO_SLIDES,
+    ),
     gagVideoUrl: normalizeUrl(data.gagVideoUrl),
     gagStartSec: clampInt(data.gagStartSec, defaults.gagStartSec, 0, 3600),
     gagDurationSec: clampInt(data.gagDurationSec, defaults.gagDurationSec, 3, 60),
@@ -155,6 +172,7 @@ export async function saveLandingMedia(
       | "welcomeVideoUrl"
       | "welcomeVideosByPlan"
       | "freeChastiseVideoUrl"
+      | "heroSlides"
       | "gagVideoUrl"
       | "gagStartSec"
       | "gagDurationSec"
@@ -206,6 +224,21 @@ export async function saveLandingMedia(
       );
     }
     next.freeChastiseVideoUrl = url;
+  }
+
+  if (patch.heroSlides !== undefined) {
+    const slides = normalizeHeroSlides(patch.heroSlides);
+    if (slides.length < HERO_SLIDE_MIN) {
+      throw new Error(`Keep at least ${HERO_SLIDE_MIN} hero image.`);
+    }
+    if (slides.length > HERO_SLIDE_MAX) {
+      throw new Error(`At most ${HERO_SLIDE_MAX} hero images.`);
+    }
+    const enabled = slides.filter((s) => s.enabled && s.src);
+    if (enabled.length < 1) {
+      throw new Error("Enable at least one hero image with a valid file or URL.");
+    }
+    next.heroSlides = slides;
   }
 
   if (patch.gagVideoUrl !== undefined) {
