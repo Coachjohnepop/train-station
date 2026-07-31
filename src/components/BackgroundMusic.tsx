@@ -23,6 +23,8 @@ const SRC = "/background-music.mp3";
 const VOLUME = 0.55;
 /** Finger stays up at least this long (mute also dismisses). */
 const HINT_MS = 22_000;
+/** “Tap anywhere” unlocks Theme Song at most this many times; then only the speaker. */
+const MAX_GESTURE_UNLOCKS = 2;
 
 const ACTIVATION_EVENTS: (keyof WindowEventMap)[] = [
   "pointerdown",
@@ -51,11 +53,13 @@ export default function BackgroundMusic() {
   const unlockedRef = useRef(false);
   /**
    * Session-only mute from the corner speaker (not persisted).
-   * Any other tap on the page clears this and starts Theme Song.
+   * First two non-speaker taps can still clear this and start Theme Song.
    */
   const speakerMutedRef = useRef(false);
   /** Ignore activation that is the same click as the speaker mute (capture fires first). */
   const ignoreNextActivationRef = useRef(false);
+  /** How many times “tap anywhere” has started/unmuted the song this session. */
+  const gestureUnlockCountRef = useRef(0);
 
   useEffect(() => {
     adminRouteRef.current = onAdmin;
@@ -70,10 +74,11 @@ export default function BackgroundMusic() {
   const [soundLive, setSoundLive] = useState(false);
   const [showHint, setShowHint] = useState(true);
 
-  // Never inherit mute from a previous visit / private session key
+  // Never inherit mute from a previous visit; reset gesture budget each load
   useEffect(() => {
     clearPersistedBackgroundMusicMute();
     speakerMutedRef.current = false;
+    gestureUnlockCountRef.current = 0;
     setOff(false);
   }, []);
 
@@ -313,8 +318,8 @@ export default function BackgroundMusic() {
     };
   }, [startMusicWithFinger, forceAudible, clearHintTimer, stopAdminMusic]);
 
-  // Any real gesture (landing tap, Free Quick Tour, etc.) starts Theme Song.
-  // Only the corner speaker can mute; next non-speaker tap unmutes again.
+  // First two real gestures (landing tap, Free Quick Tour, etc.) start Theme Song.
+  // After that, only the corner speaker can play/mute — third+ page click is quiet.
   useEffect(() => {
     const opts: AddEventListenerOptions = { capture: true, passive: true };
     const onActivation = (e: Event) => {
@@ -334,7 +339,14 @@ export default function BackgroundMusic() {
         if (audio && adminRouteRef.current) stopAdminMusic(audio);
         return;
       }
-      // Always start on any landing / site tap — ignore prior mute state
+      // Already playing unmuted — don't burn an unlock or re-fire
+      if (!audio.paused && !audio.muted && !speakerMutedRef.current) {
+        return;
+      }
+      if (gestureUnlockCountRef.current >= MAX_GESTURE_UNLOCKS) {
+        return;
+      }
+      gestureUnlockCountRef.current += 1;
       void forceAudible(audio);
     };
     ACTIVATION_EVENTS.forEach((e) => window.addEventListener(e, onActivation, opts));
@@ -424,16 +436,25 @@ export default function BackgroundMusic() {
   // Honest icon: only “on” when sound is confirmed live
   const showAsPlaying = !off && soundLive;
 
+  const gestureBudgetLeft = gestureUnlockCountRef.current < MAX_GESTURE_UNLOCKS;
   const bubbleMobile = off
-    ? "Theme Song — tap to play"
+    ? gestureBudgetLeft
+      ? "Theme Song — tap to play"
+      : "Theme Song — tap speaker to play"
     : soundLive
       ? "Theme Song — tap to mute"
-      : "Theme Song — tap anywhere to play";
+      : gestureBudgetLeft
+        ? "Theme Song — tap anywhere to play"
+        : "Theme Song — tap speaker to play";
   const bubbleDesktop = off
-    ? "Theme Song — click the speaker to play"
+    ? gestureBudgetLeft
+      ? "Theme Song — click the speaker to play"
+      : "Theme Song — click speaker to play"
     : soundLive
       ? "Theme Song — click to mute anytime"
-      : "Theme Song — click anywhere to play";
+      : gestureBudgetLeft
+        ? "Theme Song — click anywhere to play"
+        : "Theme Song — click speaker to play";
 
   return (
     <>
