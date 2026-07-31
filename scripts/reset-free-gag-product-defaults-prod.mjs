@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Reset Free-ticket gag store to product defaults (classic 10s Rickroll).
+ * Reset Free-ticket gag store to product defaults (classic 5s Rickroll).
  * Clears a bad custom gag (e.g. YouTube Short @ 60s) that broke Free for kids.
  *
  *   npx tsx scripts/reset-free-gag-product-defaults-prod.mjs
@@ -30,7 +30,7 @@ async function main() {
     ...prev,
     gagVideoUrl: null,
     gagStartSec: 43,
-    gagDurationSec: 10,
+    gagDurationSec: 5,
     gagEnabled: true,
     updatedAt: new Date().toISOString(),
   };
@@ -48,7 +48,7 @@ async function main() {
   await saveLandingMedia({
     gagVideoUrl: null,
     gagStartSec: 43,
-    gagDurationSec: 10,
+    gagDurationSec: 5,
     gagEnabled: true,
   });
   console.log("\nVerify: curl -s https://www.thetrainstation.co/api/landing-media | jq .gag");

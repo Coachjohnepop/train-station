@@ -16,7 +16,7 @@ export default function AdminCoachSettingsPage() {
       <div className="rounded-xl border border-violet-500/35 bg-violet-500/10 px-4 py-3 text-sm">
         <p className="font-semibold text-violet-100">Site videos</p>
         <p className="mt-1 text-xs text-[var(--muted)]">
-          Free gag (~10s), intros, thank-you after purchase, weekly / dinner / daily inspiration —
+          Free gag (~5s), intros, thank-you after purchase, weekly / dinner / daily inspiration —
           all managed in one desk.
         </p>
         <Link

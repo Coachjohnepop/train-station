@@ -67,7 +67,7 @@ function emptyConfig(): LandingMediaConfig {
     freeChastiseVideoUrl: null,
     gagVideoUrl: null,
     gagStartSec: 43,
-    gagDurationSec: 10,
+    gagDurationSec: 5,
     gagEnabled: true,
     purchaseThankYouVideoUrl: null,
     equipmentIntroVideoUrl: null,
@@ -213,7 +213,7 @@ export async function saveLandingMedia(
   }
 
   if (patch.gagDurationSec !== undefined) {
-    next.gagDurationSec = clampInt(patch.gagDurationSec, 10, 3, 60);
+    next.gagDurationSec = clampInt(patch.gagDurationSec, 5, 3, 60);
   }
 
   if (patch.gagEnabled !== undefined) {

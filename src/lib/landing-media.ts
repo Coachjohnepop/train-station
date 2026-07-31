@@ -99,7 +99,7 @@ export const WELCOME_VIDEO_PLAN_OPTIONS = MEMBERSHIP_PLANS.map((plan) => ({
 
 /**
  * Free / Explorer ticket gag — **product defaults are fixed** (not admin-overridable):
- * classic Rick Astley from the chorus, exactly ~10s, then Jeremy free-tier intro.
+ * classic Rick Astley from the chorus, exactly ~5s, then Jeremy free-tier intro.
  *
  * Who gets the gag:
  * - Anonymous / not signed in on landing Free → always on
@@ -115,8 +115,8 @@ export const FREE_TICKET_RICKROLL_URL =
 /** Chorus start second for Never Gonna Give You Up. */
 export const FREE_TICKET_RICKROLL_CHORUS_START_SEC = 43;
 
-/** How long the gag plays before crossfading to Jeremy. */
-export const FREE_TICKET_RICKROLL_DURATION_MS = 10_000;
+/** How long the gag plays before cutting over to Jeremy. */
+export const FREE_TICKET_RICKROLL_DURATION_MS = 5_000;
 
 /**
  * Rickroll → Jeremy crossfade.
@@ -147,7 +147,7 @@ export function productFreeTicketGag(opts: {
 
 /**
  * Resolve gag for APIs / legacy callers.
- * Product path always uses fixed 10s Rickroll (admin URL/start/duration ignored).
+ * Product path always uses fixed 5s Rickroll (admin URL/start/duration ignored).
  * `gagEnabled: false` is still a kill switch if ever needed in store.
  */
 export function resolveFreeTicketGag(input?: {

@@ -116,7 +116,7 @@ export default function AdminLandingMediaPanel({
           </li>
           <li>
             <strong className="text-white">Free-ticket video</strong> — Jeremy&apos;s free-tier intro
-            after the built-in 10s chorus gag when someone taps{" "}
+            after the built-in 5s chorus gag when someone taps{" "}
             <span className="text-[#c4b5fd]">Free</span>. Site music
             mutes automatically.
           </li>
@@ -185,7 +185,7 @@ export default function AdminLandingMediaPanel({
       <VideoField
         id="free"
         label="Free-ticket intro (Jeremy)"
-        hint="Coach free-tier intro (uploaded file or YouTube). App always plays a 10s chorus gag first, then fades into this clip (falls back to Welcome if empty). Don’t paste Rickroll here — that’s built-in."
+        hint="Coach free-tier intro (uploaded file or YouTube). App always plays a 5s chorus gag first, then cuts over to this clip (falls back to Welcome if empty). Don’t paste Rickroll here — that’s built-in."
         value={freeUrl}
         onChange={setFreeUrl}
         previewUrl={freeUrl}

@@ -111,7 +111,7 @@ export default function AdminSiteVideosPanel({
   initialFreeUrl = "",
   initialGagUrl = "",
   initialGagStartSec = 43,
-  initialGagDurationSec = 10,
+  initialGagDurationSec = 5,
   initialGagEnabled = true,
   initialPurchaseThankYouUrl = "",
   initialEquipmentIntroUrl = "",
@@ -436,10 +436,10 @@ export default function AdminSiteVideosPanel({
       welcomeVideoUrl: assignments.overall.trim() || null,
       welcomeVideosByPlan: byPlan,
       freeChastiseVideoUrl: freeExplorerUrl,
-      // Product Free path: fixed 10s Rickroll (never persist custom Shorts / long gag).
+      // Product Free path: fixed 5s Rickroll (never persist custom Shorts / long gag).
       gagVideoUrl: null,
       gagStartSec: 43,
-      gagDurationSec: 10,
+      gagDurationSec: 5,
       gagEnabled,
       purchaseThankYouVideoUrl: purchaseUrl.trim() || null,
       equipmentIntroVideoUrl: assignments.equipment.trim() || null,
@@ -760,14 +760,14 @@ export default function AdminSiteVideosPanel({
         <h2 className="text-lg font-semibold">3 · Free ticket gag (product-fixed)</h2>
         <p className="text-xs text-[var(--muted)] leading-relaxed">
           <strong className="text-[var(--text)]">Guests</strong> who tap Free always get the classic{" "}
-          ~10s Rick Astley chorus, then your <strong className="text-[var(--text)]">Free Explorer intro</strong>{" "}
+          ~5s Rick Astley chorus, then your <strong className="text-[var(--text)]">Free Explorer intro</strong>{" "}
           (one upload above — also used on Free onboard).{" "}
           <strong className="text-[var(--text)]">Signed-in members</strong> skip the gag and go
           straight to that intro. No gag upload — product-fixed only.
         </p>
         <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--muted)]">
           Default gag: <code className="text-[var(--text)]">{FREE_TICKET_RICKROLL_URL}</code> · start{" "}
-          43s · play 10s
+          43s · play 5s
         </p>
         <label className="flex items-center gap-2 text-sm">
           <input

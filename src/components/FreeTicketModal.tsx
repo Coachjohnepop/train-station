@@ -35,7 +35,7 @@ const JEREMY_WORD_VOLUME_MULT = 3;
  * Free / Explorer ticket open:
  *
  * Guests (not signed in):
- *   1) Hard-coded ~10s Rickroll from chorus (product fixed — not admin Shorts)
+ *   1) Hard-coded ~5s Rickroll from chorus (product fixed — not admin Shorts)
  *   2) Crossfade to Jeremy’s free-tier intro (Admin free-ticket slot, else welcome)
  *
  * Signed-in members: skip gag → Jeremy intro only (or empty CTA if not uploaded).
