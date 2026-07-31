@@ -1,6 +1,8 @@
 /** Pause/resume site background music while other audio or video plays. */
 
 export const BG_MUSIC_OVERLAY_EVENT = "ts-bg-music-overlay";
+/** Ask BackgroundMusic to unlock/play (call from a user gesture when possible). */
+export const BG_MUSIC_REQUEST_PLAY_EVENT = "ts-bg-music-request-play";
 const BG_MUSIC_ATTR = "data-ts-bg-music";
 
 let overlayHold = false;
@@ -9,6 +11,10 @@ const playingMedia = new Set<HTMLMediaElement>();
 let listenersRegistered = false;
 
 function shouldPauseBackgroundMusic(): boolean {
+  // Prune detached media that never fired pause/ended
+  for (const el of [...playingMedia]) {
+    if (!el.isConnected || el.paused || el.ended) playingMedia.delete(el);
+  }
   return overlayHold || externalHoldCount > 0 || playingMedia.size > 0;
 }
 
@@ -25,6 +31,28 @@ export function setBackgroundMusicOverlay(active: boolean): void {
   if (typeof window === "undefined") return;
   overlayHold = active;
   emitPauseState();
+}
+
+/**
+ * Drop all ducking holds (overlays, leaked video holds) so theme song can play.
+ * Does not override the user’s explicit mute preference (handled in BackgroundMusic).
+ */
+export function clearBackgroundMusicHolds(): void {
+  if (typeof window === "undefined") return;
+  overlayHold = false;
+  externalHoldCount = 0;
+  playingMedia.clear();
+  emitPauseState();
+}
+
+/**
+ * Clear holds + ask the player to start. Safe to call from Free Quick Tour open
+ * (same click that unlocks autoplay).
+ */
+export function requestBackgroundMusicPlay(): void {
+  if (typeof window === "undefined") return;
+  clearBackgroundMusicHolds();
+  window.dispatchEvent(new CustomEvent(BG_MUSIC_REQUEST_PLAY_EVENT));
 }
 
 /** Hold BG music paused until the returned release function runs (YouTube overlays, etc.). */

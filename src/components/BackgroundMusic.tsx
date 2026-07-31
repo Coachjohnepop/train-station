@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   BG_MUSIC_OVERLAY_EVENT,
+  BG_MUSIC_REQUEST_PLAY_EVENT,
   markBackgroundMusicElement,
   registerBackgroundMusicMediaDucking,
 } from "@/lib/background-music-control";
@@ -305,6 +306,18 @@ export default function BackgroundMusic() {
     return () => window.removeEventListener(BG_MUSIC_OVERLAY_EVENT, onOverlay);
   }, [forceAudible]);
 
+  // Free Quick Tour / Watch intro open: same user gesture → unlock theme song.
+  useEffect(() => {
+    const onRequestPlay = () => {
+      const audio = audioRef.current;
+      if (!audio || adminRouteRef.current || isUserMuted()) return;
+      overlayPauseRef.current = false;
+      void forceAudible(audio);
+    };
+    window.addEventListener(BG_MUSIC_REQUEST_PLAY_EVENT, onRequestPlay);
+    return () => window.removeEventListener(BG_MUSIC_REQUEST_PLAY_EVENT, onRequestPlay);
+  }, [forceAudible]);
+
   // Route change: hard-stop on any /admin path; resume only on member/public.
   useEffect(() => {
     const audio = audioRef.current;
@@ -390,7 +403,7 @@ export default function BackgroundMusic() {
       />
       {!onAdmin ? (
         <div
-          className={`bg-music-control-cluster fixed z-50 flex items-end overflow-visible ${
+          className={`bg-music-control-cluster fixed z-[120] flex items-end overflow-visible ${
             onPublicHome ? "bottom-4 sm:bottom-7" : "bottom-6"
           }`}
           style={{

@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import TrainStationBrand from "@/components/TrainStationBrand";
 import WelcomeVideoPopover from "@/components/WelcomeVideoPopover";
 import LandingSeeInsideTour from "@/components/LandingSeeInsideTour";
+import { requestBackgroundMusicPlay } from "@/lib/background-music-control";
 
 const images = [
   { src: "/images/splash/black-guy.jpg", alt: "Athlete powering through a heavy lift" },
@@ -134,7 +135,11 @@ export default function LandingHero({
             <div className="mt-7 w-full max-w-sm sm:mt-9">
               <button
                 type="button"
-                onClick={() => setTourOpen(true)}
+                onClick={() => {
+                  // Same tap unlocks Theme Song (browsers block autoplay until gesture).
+                  requestBackgroundMusicPlay();
+                  setTourOpen(true);
+                }}
                 className="landing-hero-early-signup landing-hero-cta-pulse inline-flex h-[3.5rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg"
               >
                 Free Quick Tour

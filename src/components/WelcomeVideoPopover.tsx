@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import PlayableVideoFrame from "@/components/PlayableVideoFrame";
 import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
+import { requestBackgroundMusicPlay } from "@/lib/background-music-control";
 
 const DEFAULT_TRIGGER =
   "inline-flex h-14 items-center justify-center rounded-full bg-[#7c3aed] px-10 text-sm font-bold text-white shadow-lg shadow-[#7c3aed]/30 transition-all hover:bg-[#6d2dd6] hover:scale-[1.05] active:scale-[0.98]";
@@ -34,8 +35,14 @@ export default function WelcomeVideoPopover({
     setMounted(true);
   }, []);
 
-  const show = useCallback(() => setOpen(true), []);
-  const hide = useCallback(() => setOpen(false), []);
+  const show = useCallback(() => {
+    setOpen(true);
+  }, []);
+  const hide = useCallback(() => {
+    setOpen(false);
+    // Resume theme song after intro closes
+    requestBackgroundMusicPlay();
+  }, []);
 
   useEffect(() => {
     if (!open) return;
