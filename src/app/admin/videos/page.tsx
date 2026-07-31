@@ -33,9 +33,8 @@ export default async function AdminVideosPage() {
       <div>
         <h1 className="text-2xl font-bold">Videos</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Upload Jeremy&apos;s intros once, assign overall / Free Explorer (one free clip) / Coach
-          Class / Business / Gear. Gag is product-fixed. YouTube for thank-you, weekly, dinner,
-          daily inspiration.
+          Upload or replace Jeremy&apos;s intros on each slot, watch them here, then Save. Free
+          Explorer is the clip after the fixed gag. YouTube for thank-you, weekly, dinner, daily.
         </p>
       </div>
       <AdminSiteVideosPanel

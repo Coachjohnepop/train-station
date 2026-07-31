@@ -142,16 +142,35 @@ export async function addSiteVideoLibraryItem(input: {
 
 export async function updateSiteVideoLibraryItem(
   id: string,
-  patch: { title?: string },
+  patch: { title?: string; url?: string; fileName?: string | null },
 ): Promise<SiteVideoLibraryItem> {
   const current = await getSiteVideoLibrary();
   const idx = current.items.findIndex((i) => i.id === id);
   if (idx < 0) throw new Error("Video not found in library.");
 
   const prev = current.items[idx];
+  let nextUrl = prev.url;
+  if (patch.url !== undefined) {
+    const url = patch.url.trim();
+    if (!url || !isAllowedCoachIntroVideoUrl(url)) {
+      throw new Error("Video URL must be an uploaded site file or YouTube link.");
+    }
+    // Another library row already owns this URL — don't create a dupe key.
+    const clash = current.items.find((i) => i.id !== id && i.url === url);
+    if (clash) {
+      throw new Error("That video file is already in the library under another name.");
+    }
+    nextUrl = url;
+  }
+
   const nextItem: SiteVideoLibraryItem = {
     ...prev,
     title: patch.title !== undefined ? patch.title.trim() || "Untitled video" : prev.title,
+    url: nextUrl,
+    fileName:
+      patch.fileName !== undefined
+        ? patch.fileName?.trim() || null
+        : prev.fileName,
   };
 
   const items = [...current.items];

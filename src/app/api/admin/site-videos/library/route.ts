@@ -21,11 +21,11 @@ export async function GET() {
 }
 
 const postSchema = z.object({
-  action: z.enum(["add", "rename"]).default("add"),
+  action: z.enum(["add", "rename", "replace"]).default("add"),
   id: z.string().max(80).optional(),
   url: z.string().max(2000).optional(),
   title: z.string().max(200).optional(),
-  fileName: z.string().max(300).optional(),
+  fileName: z.string().max(300).optional().nullable(),
 });
 
 export async function POST(request: Request) {
@@ -45,6 +45,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, item });
     }
 
+    if (body.action === "replace") {
+      if (!body.id) {
+        return NextResponse.json({ error: "id is required to replace." }, { status: 400 });
+      }
+      if (!body.url?.trim()) {
+        return NextResponse.json({ error: "url is required to replace." }, { status: 400 });
+      }
+      const before = await getSiteVideoLibrary();
+      const prev = before.items.find((i) => i.id === body.id);
+      const previousUrl = prev?.url ?? null;
+      const item = await updateSiteVideoLibraryItem(body.id, {
+        url: body.url,
+        fileName: body.fileName ?? null,
+        ...(body.title !== undefined ? { title: body.title } : {}),
+      });
+      return NextResponse.json({ ok: true, item, previousUrl });
+    }
+
     if (!body.url?.trim()) {
       return NextResponse.json({ error: "url is required." }, { status: 400 });
     }
@@ -52,7 +70,7 @@ export async function POST(request: Request) {
     const item = await addSiteVideoLibraryItem({
       url: body.url,
       title: body.title,
-      fileName: body.fileName,
+      fileName: body.fileName ?? undefined,
       id: body.id,
     });
     return NextResponse.json({ ok: true, item });
