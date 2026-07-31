@@ -8,6 +8,7 @@ import {
   fireWorkoutConfetti,
 } from "@/lib/workout-confetti";
 import { PROGRAM_IMAGES } from "@/lib/program-constants";
+import { requestBackgroundMusicPlay } from "@/lib/background-music-control";
 
 /**
  * See inside — full auto-play tour for cold traffic only.
