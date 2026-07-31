@@ -5,7 +5,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 <!-- END:nextjs-agent-rules -->
 
 ## Storage (non-negotiable)
-**Always use PostgreSQL (Prisma) for durable app data.** Do not add new JSON / Vercel Blob stores for coach or member state. Blob is OK for binary media only; metadata stays in the DB. Seed/`*.dev.json` are snapshots, not prod runtime. Details: `CONTEXT.md` · `PERSISTENCE.md`.
+**Always use PostgreSQL (Prisma) for durable app data.**  
+**Any new module, feature, or data element** (measurements, photos metadata, admin desks, etc.) must land in **tables + migrations** — not JSON/Blob-only stores or localStorage as system of record. Blob is OK for binary media only; metadata stays in the DB. Seed/`*.dev.json` are snapshots, not prod runtime. Details: `CONTEXT.md` · `PERSISTENCE.md`.
 
 ## Coach content model (templates / paste / categories)
 See **CLAUDE.md** section "Coach template / paste model". Summary for agents:

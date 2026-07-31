@@ -85,22 +85,42 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 
 ## Durable product rules (don’t forget)
 
-### Always use the database (Postgres) for app data
+### Always use the database (Postgres) for app data — **non-negotiable**
+**Every new module, feature, or data element that a member or coach relies on must persist in PostgreSQL (Prisma).**  
+No exceptions for “quick” features, admin desks, measurements, SEO copy, hero slides, check-ins, photos metadata, or future modules.
+
 **Production and any multi-user / coach content path stores durable state in PostgreSQL (Prisma).**  
-Do not add new features that write only to JSON files, Vercel Blob, or in-memory maps.
+Do not add new features that write only to JSON files, Vercel Blob JSON, localStorage, or in-memory maps as the system of record.
 
 | Rule | Meaning |
 |------|---------|
-| **Default storage** | Prisma models + migrations — programs, workouts, members, SMS, payments, chat, settings, logs |
-| **New features** | Design the schema first; ship API that reads/writes DB when `DATABASE_URL` / `POSTGRES_PRISMA_URL` is real |
-| **No new blob/JSON stores** | Legacy `*-store.ts` / `prisma/*.dev.json` / Blob paths are **migration debt only** — do not grow them |
+| **Default storage** | Prisma models + migrations — programs, workouts, members, measurements, SMS, payments, chat, settings, logs, ops |
+| **New modules / data elements** | **Schema first** (model + migration) → API that **reads/writes DB** when `DATABASE_URL` / `POSTGRES_PRISMA_URL` is real → UI. Do not ship UI that only saves to Blob/JSON/localStorage |
+| **No new blob/JSON stores** | Legacy `*-store.ts` / `prisma/*.dev.json` / Blob JSON paths are **migration debt only** — do not grow them for product state |
 | **Local without DB** | Demo/JSON is a **dev fallback** when DB is unset/dummy — never the product-of-record for prod |
 | **Seed files** | `prisma/seed-data.json` / `*.dev.json` are **export/import snapshots** for shipping content with code — not the runtime store on prod |
-| **Secrets / media** | Env vars for keys; Blob/object storage OK for **files** (images, short chat video) — metadata still in DB |
+| **Secrets / media** | Env vars for keys; Blob/object storage OK for **binary files only** (images, short video) — **URLs + all fields still live in Postgres** |
+| **Agent checklist** | Before coding a new surface: (1) table/columns? (2) migration? (3) write path to Prisma? (4) no sole reliance on Blob JSON? |
 
-When in doubt: **if a coach or member would lose work when a deploy restarts, it belongs in Postgres.**
+When in doubt: **if a coach or member would lose work when a deploy restarts, it belongs in Postgres.**  
+Same bar for **new** work: if it is product data, it is a **database** concern first.
 
 See `PERSISTENCE.md` for demo-vs-DB matrix and blob→Postgres cutover.
+
+### Measurements (member sheet · coach visibility) — **Postgres**
+All measurement product state is durable in the DB (not localStorage, not Blob JSON as source of truth).
+
+| Data | Storage |
+|------|---------|
+| Each **check-in** (tape fields, weight, body fat, notes, measuredAt, source) | `UserMeasurement` |
+| **Original** (all-time first) vs **Check-in** (latest entry) | Derived from `UserMeasurement` history (oldest non-null per field = original) |
+| **Now** progress photo URL per check-in | `UserMeasurement.photoUrl` (file bytes on Blob; URL in DB) |
+| **Before** portrait URL | `MemberProfile.beforePhotoUrl` |
+| Sheet identity: gender, ageYears | `MemberProfile.gender`, `MemberProfile.ageYears` |
+| Name (optional edit on sheet) | `User.name` |
+
+APIs: `/api/member/measurements`, `/api/member/measurements/photo`, `/api/admin/members/[userId]/measurements`.  
+Requires real `DATABASE_URL` — create/list **fail closed** if DB is not configured.
 
 ### Always clone
 Jeremy builds by **cloning**, never shared mutable refs:
@@ -334,10 +354,16 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-07-30 (See inside landing tour → **prod**)  
-**Status:** Stripe **Live**. See inside tour shipped `preview` → `main` (thetrainstation.co).  
+**Date:** 2026-07-31  
+**Status:** Prod `main` includes measurements sheet (royal purple, Original|Check-in dual fields, before/now photos), hero image admin, SEO desk, free gag 5s.  
+**Rule reaffirmed:** **any new module / data element → Postgres first** (see Durable product rules).  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
 **Branches:** `preview` / `main` · prod: https://www.thetrainstation.co · preview alias: `https://train-station-git-preview-johnepop-s-projects.vercel.app`
+
+### Measurements (current product)
+- Member **Measure** (`/member/measurements`): D&D-style sheet; key column (name/age/weight/gender/body fat); Before|Now photos; tape list (neck, chest, shoulders, biceps flexed R/L, waist, glutes/hips, upper quad pocket R/L, calf R/L); each field **Original** (left, first-ever) + **Check-in** (right, enter now); **Inscribe check-in** → `UserMeasurement` in DB.
+- Coach: Admin → Members → **Measurements** (same dual layout + history).
+- How-to video slot: Admin → Videos → **Measurements how-to**.
 
 ### Landing · See inside (Jul 30) — product decisions
 
