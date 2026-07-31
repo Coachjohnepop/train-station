@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { setBackgroundMusicOverlay } from "@/lib/background-music-control";
 import {
+  FREE_TICKET_RICKROLL_DURATION_MS,
   FREE_TICKET_RICKROLL_FADE_MS,
   isRickrollVideoUrl,
   landingVideoEmbedSrc,
@@ -147,7 +148,8 @@ export default function FreeTicketModal({
     volumeDb + linearMultiplierToDb(JEREMY_WORD_VOLUME_MULT),
   );
 
-  // Open / close lifecycle — only re-run when `open` or gag on/off flips (not volume/hasJeremy)
+  // Open / close — only restart when the modal opens/closes (not when hasJeremy/volume changes).
+  // Re-running mid-open remounted the gag and caused a second chorus.
   useEffect(() => {
     clearTimers();
 
@@ -181,18 +183,23 @@ export default function FreeTicketModal({
       };
     }
 
-    // Preload Jeremy under gag (no audio commands to gag iframe)
-    if (hasJeremy) {
-      schedule(() => setLoadJeremy(true), preloadMs);
-    }
+    const duration = FREE_TICKET_RICKROLL_DURATION_MS;
+    const preload = Math.max(0, duration - 3_000);
 
-    // Handoff: hard-kill gag iframe immediately, then fade Jeremy in.
-    // Volume fade while iframe still live was letting YT re-cue a few bars (~:49).
+    // Preload Jeremy under gag (audio still gag-only until handoff)
+    schedule(() => {
+      if (!gagLiveRef.current) return;
+      setLoadJeremy(true);
+    }, preload);
+
+    // Handoff: kill gag iframe first, THEN show Jeremy (never both at once).
     schedule(() => {
       killGagNow();
+      // Load Jeremy if preload hasn't run yet
+      setLoadJeremy(true);
       setShowJeremy(true);
       requestAnimationFrame(() => setFadeJeremyIn(true));
-    }, gagDurationMs);
+    }, duration);
 
     return () => {
       clearTimers();
@@ -200,8 +207,9 @@ export default function FreeTicketModal({
       killYoutubeEmbed(rickrollRef.current);
       setBackgroundMusicOverlay(false);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only restart gag schedule when modal opens
-  }, [open, gag.enabled, gagDurationMs, hasJeremy, preloadMs]);
+    // Intentionally only `open` — do not re-arm gag when props re-render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Gag: autoplay already running. UnMute/volume only while gag is live — never after handoff.
   useEffect(() => {
@@ -237,7 +245,8 @@ export default function FreeTicketModal({
       ids.forEach((id) => window.clearTimeout(id));
       window.removeEventListener("message", onMsg);
     };
-  }, [open, rickrollSrc, gag.enabled]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, rickrollSrc]);
 
   // Jeremy: play + unMute once he fades in; 3× louder than admin content volume.
   useEffect(() => {
@@ -304,15 +313,13 @@ export default function FreeTicketModal({
         </p>
 
         <div className="relative mt-3 min-h-0 flex-1 overflow-hidden rounded-xl bg-black ring-1 ring-amber-500/20">
-          {rickrollSrc && !hideRickroll && (
+          {/* Never show gag once Jeremy title is up (avoids “A word from Jeremy” + chorus). */}
+          {rickrollSrc && !hideRickroll && !showJeremy && (
             <iframe
               ref={rickrollRef}
               // One stable iframe for this open — remount = second play
               key="free-gag-rickroll"
-              className={`absolute inset-0 h-full w-full transition-opacity ease-in-out ${
-                fadeJeremyIn ? "pointer-events-none opacity-0" : "opacity-100"
-              }`}
-              style={{ transitionDuration: `${FREE_TICKET_RICKROLL_FADE_MS}ms` }}
+              className="absolute inset-0 h-full w-full"
               src={rickrollSrc}
               title="You picked free"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
