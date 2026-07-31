@@ -365,6 +365,38 @@ export default function AdminSiteVideosPanel({
     }
   }
 
+  /** Persist intro slot URLs to landing media immediately (so members see them without a full Save). */
+  async function publishIntroSlots(next: CoachIntroAssignments) {
+    const freeExplorerUrl = next.free.trim() || null;
+    const byPlan = {
+      ...next.byPlan,
+      explorer: freeExplorerUrl,
+    };
+    const landingResult = await saveLandingMediaAction({
+      welcomeVideoUrl: next.overall.trim() || null,
+      welcomeVideosByPlan: byPlan,
+      freeChastiseVideoUrl: freeExplorerUrl,
+      equipmentIntroVideoUrl: next.equipment.trim() || null,
+      measurementsIntroVideoUrl: next.measurements.trim() || null,
+      gagEnabled,
+      uploadedContentVolumeDb: volumeDb,
+    });
+    if ("error" in landingResult && landingResult.error) {
+      throw new Error(landingResult.error);
+    }
+    if ("ok" in landingResult && landingResult.ok) {
+      setAssignments(
+        assignmentsFromLanding({
+          welcomeVideoUrl: landingResult.storedWelcomeVideoUrl,
+          freeChastiseVideoUrl: landingResult.storedFreeChastiseVideoUrl,
+          equipmentIntroVideoUrl: landingResult.storedEquipmentIntroVideoUrl,
+          measurementsIntroVideoUrl: landingResult.storedMeasurementsIntroVideoUrl,
+          welcomeVideosByPlan: landingResult.storedWelcomeVideosByPlan,
+        }),
+      );
+    }
+  }
+
   /** Upload a file and assign it to one intro slot (or replace that slot’s file). */
   async function handleSlotUpload(slotId: CoachIntroSlotId, files: FileList | null) {
     const file = files?.[0];
@@ -377,6 +409,7 @@ export default function AdminSiteVideosPanel({
     try {
       const currentUrl = urlForSlot(slotId, assignments);
       const existing = library.find((i) => i.url === currentUrl);
+      let assignedUrl = "";
       if (existing) {
         // Replace the library row in place so title/slot mapping stay put.
         const url = await putFileToBlob(file, `Replacing ${label}: ${file.name}`);
@@ -403,15 +436,22 @@ export default function AdminSiteVideosPanel({
         );
         reassignUrlEverywhere(data.previousUrl || existing.url, data.item.url);
         assignSlot(slotId, data.item.url);
+        assignedUrl = data.item.url;
         setPreviewId(data.item.id);
       } else {
         const item = await uploadOneFile(file, 0, 1, label);
         assignSlot(slotId, item.url);
+        assignedUrl = item.url;
         setPreviewId(item.id);
       }
+      const nextAssignments = setSlotUrl(assignments, slotId, assignedUrl);
+      setAssignments(nextAssignments);
       setWatchingSlots((prev) => ({ ...prev, [slotId]: true }));
-      setUploadProgress(`${label}: ready. Click Save all videos to publish live.`);
-      setMessage(null);
+      setUploadProgress(`${label}: publishing to live site…`);
+      await publishIntroSlots(nextAssignments);
+      setUploadProgress(`${label}: live on the site.`);
+      setMessage(`${label} published — members will see it on the next page load.`);
+      setError(false);
     } catch (e: unknown) {
       setUploadError(e instanceof Error ? e.message : "Upload failed");
       setUploadProgress(null);
@@ -997,8 +1037,23 @@ export default function AdminSiteVideosPanel({
                       if (v === "__custom__") return;
                       const item = library.find((i) => i.id === v);
                       if (item) {
-                        assignSlot(slot.id, item.url);
-                        setWatchingSlots((prev) => ({ ...prev, [slot.id]: true }));
+                      const next = setSlotUrl(assignments, slot.id, item.url);
+                      setAssignments(next);
+                      setWatchingSlots((prev) => ({ ...prev, [slot.id]: true }));
+                      void publishIntroSlots(next)
+                        .then(() => {
+                          setMessage(
+                            `${slot.label} set to “${item.title}” and published live.`,
+                          );
+                          setError(false);
+                        })
+                        .catch((err: unknown) => {
+                          setUploadError(
+                            err instanceof Error
+                              ? err.message
+                              : "Assigned in UI but publish failed — click Save all videos.",
+                          );
+                        });
                       }
                     }}
                     className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text)]"
