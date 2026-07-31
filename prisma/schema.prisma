@@ -677,6 +677,10 @@ model MemberProfile {
   weightLbs                   String?
   /// Baseline progress photo (“before”) for measurements sheet.
   beforePhotoUrl              String?
+  /// Sheet identity (optional) — gender label for measurements portrait row.
+  gender                      String?
+  /// Sheet identity age in years (optional shortcut vs birthdate).
+  ageYears                    Int?
   notes                       String?   @db.Text
   onboardingComplete          Boolean   @default(false)
   completedAt                 DateTime?

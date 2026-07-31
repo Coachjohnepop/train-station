@@ -34,14 +34,119 @@ function prismaSelect() {
   } as const;
 }
 
-export async function getMemberBeforePhotoUrl(userId: string): Promise<string | null> {
-  if (!isDatabaseConfigured()) return null;
+export type MeasurementSheetIdentity = {
+  name: string | null;
+  ageYears: number | null;
+  gender: string | null;
+  beforePhotoUrl: string | null;
+};
+
+function ageYearsFromBirthdate(birthdate: Date | null | undefined): number | null {
+  if (!birthdate) return null;
+  const now = new Date();
+  let age = now.getFullYear() - birthdate.getFullYear();
+  const m = now.getMonth() - birthdate.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birthdate.getDate())) age -= 1;
+  if (age < 0 || age > 120) return null;
+  return age;
+}
+
+export async function getMeasurementSheetIdentity(
+  userId: string,
+): Promise<MeasurementSheetIdentity> {
+  if (!isDatabaseConfigured()) {
+    return { name: null, ageYears: null, gender: null, beforePhotoUrl: null };
+  }
   const { prisma } = await import("@/lib/prisma");
-  const row = await prisma.memberProfile.findUnique({
-    where: { userId },
-    select: { beforePhotoUrl: true },
-  });
-  return row?.beforePhotoUrl?.trim() || null;
+  const [user, profile] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, birthdate: true },
+    }),
+    prisma.memberProfile.findUnique({
+      where: { userId },
+      select: { beforePhotoUrl: true, gender: true, ageYears: true },
+    }),
+  ]);
+  const fromBirth = ageYearsFromBirthdate(user?.birthdate ?? null);
+  return {
+    name: user?.name?.trim() || null,
+    ageYears:
+      profile?.ageYears != null && Number.isFinite(profile.ageYears)
+        ? profile.ageYears
+        : fromBirth,
+    gender: profile?.gender?.trim() || null,
+    beforePhotoUrl: profile?.beforePhotoUrl?.trim() || null,
+  };
+}
+
+export async function getMemberBeforePhotoUrl(userId: string): Promise<string | null> {
+  const id = await getMeasurementSheetIdentity(userId);
+  return id.beforePhotoUrl;
+}
+
+export async function saveMeasurementSheetIdentity(
+  userId: string,
+  input: { name?: string | null; ageYears?: number | null; gender?: string | null },
+): Promise<MeasurementSheetIdentity> {
+  if (!isDatabaseConfigured()) {
+    throw new Error("Database is required to save sheet identity.");
+  }
+  const { prisma } = await import("@/lib/prisma");
+
+  if (input.name !== undefined) {
+    const name = input.name?.trim() || null;
+    await prisma.user.update({
+      where: { id: userId },
+      data: { name },
+    });
+  }
+
+  const profilePatch: { gender?: string | null; ageYears?: number | null } = {};
+  if (input.gender !== undefined) {
+    profilePatch.gender = input.gender?.trim().slice(0, 40) || null;
+  }
+  if (input.ageYears !== undefined) {
+    const n = input.ageYears;
+    if (n == null || n === ("" as unknown)) {
+      profilePatch.ageYears = null;
+    } else {
+      const age = Math.round(Number(n));
+      if (!Number.isFinite(age) || age < 1 || age > 120) {
+        throw new Error("Age must be between 1 and 120.");
+      }
+      profilePatch.ageYears = age;
+    }
+  }
+
+  if (Object.keys(profilePatch).length) {
+    const existing = await prisma.memberProfile.findUnique({
+      where: { userId },
+      select: { userId: true },
+    });
+    if (existing) {
+      await prisma.memberProfile.update({
+        where: { userId },
+        data: profilePatch,
+      });
+    } else {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true },
+      });
+      if (!user?.email) throw new Error("Member profile missing.");
+      await prisma.memberProfile.create({
+        data: {
+          userId,
+          email: user.email,
+          plan: "explorer",
+          ...profilePatch,
+        },
+      });
+    }
+  }
+
+  return getMeasurementSheetIdentity(userId);
 }
 
 export async function setMemberBeforePhotoUrl(
