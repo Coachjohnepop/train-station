@@ -845,6 +845,17 @@ export default function MemberMeasurementsClient({
           <p className="mt-1 text-center font-serif text-xs italic text-[var(--ms-ink-soft)]">
             Quarterly check-in · same marks each session · Train Station
           </p>
+          {hasVideo ? (
+            <div className="mt-2 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setWatchAgain(true)}
+                className="rounded border border-[var(--ms-rule)] bg-[var(--ms-box)] px-3 py-1 font-serif text-[11px] font-semibold text-[var(--ms-accent)] hover:bg-[rgba(124,58,237,0.35)]"
+              >
+                ▶ Watch how-to (optional)
+              </button>
+            </div>
+          ) : null}
           <div className="mt-3 flex flex-wrap items-end justify-between gap-3 font-serif text-sm">
             <label className="flex min-w-[11rem] flex-1 flex-col gap-0.5">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--ms-gold)]">
@@ -1246,7 +1257,7 @@ export default function MemberMeasurementsClient({
                   className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ms-accent)] underline-offset-2 hover:underline"
                   onClick={() => setWatchAgain(true)}
                 >
-                  Expand
+                  Watch again
                 </button>
               ) : null}
             </div>
@@ -1281,7 +1292,7 @@ export default function MemberMeasurementsClient({
                   onClick={() => setWatchAgain(true)}
                   className="w-full text-left text-[10px] text-[var(--ms-ink-soft)] underline-offset-2 hover:text-[var(--ms-accent)] hover:underline"
                 >
-                  {isYt ? "Full YouTube player →" : "Full-screen how-to →"}
+                  {isYt ? "Watch again · full player →" : "Watch again · full-screen →"}
                 </button>
               </div>
             ) : null}

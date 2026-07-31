@@ -4,7 +4,10 @@ import { useCallback, useEffect, useId, useState } from "react";
 import PlayableVideoFrame from "@/components/PlayableVideoFrame";
 import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
 
-/** localStorage — first visit to Measurements auto-opens Jeremy’s how-to once. */
+/**
+ * Full-screen how-to — only when the member asks (Watch again / Expand).
+ * No auto-open, no autoplay (tap play in the player).
+ */
 export const MEASUREMENTS_INTRO_SEEN_KEY = "ts-measurements-intro-seen";
 
 type Props = {
@@ -19,39 +22,21 @@ export default function MeasurementsIntroModal({
   onForceOpenHandled,
 }: Props) {
   const [open, setOpen] = useState(false);
-  const [ready, setReady] = useState(false);
   const titleId = useId();
   const url = videoUrl?.trim() || "";
   const volumeDb = useUploadedContentVolumeDb();
 
-  const markSeen = useCallback(() => {
+  const close = useCallback(() => {
     try {
       localStorage.setItem(MEASUREMENTS_INTRO_SEEN_KEY, "1");
     } catch {
       /* ignore */
     }
-  }, []);
-
-  const close = useCallback(() => {
-    markSeen();
     setOpen(false);
     onForceOpenHandled?.();
-  }, [markSeen, onForceOpenHandled]);
+  }, [onForceOpenHandled]);
 
-  useEffect(() => {
-    if (!url) {
-      setReady(true);
-      return;
-    }
-    try {
-      const seen = localStorage.getItem(MEASUREMENTS_INTRO_SEEN_KEY) === "1";
-      if (!seen) setOpen(true);
-    } catch {
-      setOpen(true);
-    }
-    setReady(true);
-  }, [url]);
-
+  // Open only on explicit "Watch again" / Expand — never auto-popup on page load
   useEffect(() => {
     if (forceOpen && url) setOpen(true);
   }, [forceOpen, url]);
@@ -70,8 +55,7 @@ export default function MeasurementsIntroModal({
     };
   }, [open, close]);
 
-  if (!url || !ready) return null;
-  if (!open) return null;
+  if (!url || !open) return null;
 
   return (
     <div
@@ -91,7 +75,7 @@ export default function MeasurementsIntroModal({
               How to take your measurements
             </h2>
             <p className="mt-0.5 text-xs text-[var(--muted)]">
-              Watch Jeremy&apos;s short how-to, then log your check-in below.
+              Tap play when you&apos;re ready — then log your check-in below.
             </p>
           </div>
           <button type="button" className="btn-ghost text-xs" onClick={close}>
@@ -104,8 +88,7 @@ export default function MeasurementsIntroModal({
             videoUrl={url}
             title="How to take measurements"
             volumeDb={volumeDb}
-            autoplay
-            kickPlayback
+            autoplay={false}
             duckBackgroundMusic
           />
         </div>
