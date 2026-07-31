@@ -12,6 +12,7 @@ import MemberNav from "@/components/MemberNav";
 import MemberHeaderHomeLink from "@/components/MemberHeaderHomeLink";
 import LogoutButton from "@/components/LogoutButton";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
+import ThemeModeToggle from "@/components/ThemeModeToggle";
 import UserBicepAvatar from "@/components/UserBicepAvatar";
 import Link from "next/link";
 
@@ -52,9 +53,10 @@ export default function MemberShell({
       </Suspense>
       <ThemeAttributesSync membershipTier={membershipTier} />
 
-      {/* Frozen top chrome: greeting + Today/Messages nav (and live strip) stay visible while session scrolls */}
-      <div className="member-sticky-chrome sticky top-0 z-50">
-        <header className="app-shell-header header-theme-clearance">
+      {/* Frozen top chrome: greeting + Today/Messages nav (and live strip) stay visible while session scrolls.
+          data-member-chrome hides the root fixed theme toggle so it doesn’t sit on Business Class / Sign out. */}
+      <div className="member-sticky-chrome sticky top-0 z-50" data-member-chrome="">
+        <header className="app-shell-header">
           <div className="mx-auto flex w-full max-w-lg md:max-w-3xl lg:max-w-6xl xl:max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
               <MemberHeaderHomeLink />
@@ -72,11 +74,13 @@ export default function MemberShell({
                 </div>
               </Link>
             </div>
-            <div className="flex flex-col items-end gap-1">
-              <div className="flex items-center gap-2">
-                <span className="badge-accent inline-block rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-tight tracking-wide">
-                  {tierLabel}
-                </span>
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
+              <span className="badge-accent inline-block max-w-[7.5rem] truncate rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-tight tracking-wide sm:max-w-none">
+                {tierLabel}
+              </span>
+              {/* Reuse .global-theme-toggle so label stays icon-only on narrow screens */}
+              <div className="global-theme-toggle">
+                <ThemeModeToggle />
               </div>
               <LogoutButton />
             </div>

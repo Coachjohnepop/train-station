@@ -1162,6 +1162,11 @@ table.data th {
   }
 }
 
+/* Member shell owns theme toggle in-header — hide the fixed global one to avoid overlap */
+body:has([data-member-chrome]) [data-global-theme-toggle] {
+  display: none !important;
+}
+
 .admin-sidebar-nav--collapsed ul {
   display: flex;
   flex-direction: column;

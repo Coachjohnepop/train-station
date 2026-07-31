@@ -707,6 +707,44 @@ export default function MemberMeasurementsClient({
           outline: none;
         }
         .ms-input-line:focus { border-bottom-color: var(--ms-gold); }
+        /* Keep native calendar chip inside the field (avoids orphan box next to Save) */
+        .ms-datetime {
+          display: block;
+          width: 100%;
+          min-width: 0;
+          max-width: 100%;
+          box-sizing: border-box;
+          padding-right: 0.25rem;
+          color-scheme: dark;
+        }
+        .ms-datetime::-webkit-calendar-picker-indicator {
+          cursor: pointer;
+          opacity: 0.75;
+          margin-left: 0.25rem;
+          filter: invert(0.85) sepia(1) saturate(3) hue-rotate(220deg);
+        }
+        .ms-header-actions {
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+          gap: 0.75rem;
+        }
+        @media (min-width: 480px) {
+          .ms-header-actions {
+            flex-direction: row;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 1rem;
+          }
+          .ms-header-actions .ms-datetime-wrap {
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: 18rem;
+          }
+          .ms-header-actions .ms-header-save {
+            flex: 0 0 auto;
+          }
+        }
         .ms-log-row {
           border: 1px solid var(--ms-rule-soft);
           background: rgba(46, 16, 80, 0.45);
@@ -856,8 +894,8 @@ export default function MemberMeasurementsClient({
               </button>
             </div>
           ) : null}
-          <div className="mt-3 flex flex-wrap items-end justify-between gap-3 font-serif text-sm">
-            <label className="flex min-w-[11rem] flex-1 flex-col gap-0.5">
+          <div className="ms-header-actions mt-3 font-serif text-sm">
+            <label className="ms-datetime-wrap flex flex-col gap-0.5">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--ms-gold)]">
                 Date measured
               </span>
@@ -866,13 +904,13 @@ export default function MemberMeasurementsClient({
                 value={measuredAtLocal}
                 onChange={(e) => setMeasuredAtLocal(e.target.value)}
                 disabled={saving}
-                className="ms-input-line w-full py-1 text-sm"
+                className="ms-input-line ms-datetime py-1 text-sm"
               />
             </label>
             <button
               type="submit"
               disabled={saving || Boolean(photoBusy)}
-              className={saveButtonClass}
+              className={`${saveButtonClass} ms-header-save`}
             >
               {saving ? "Saving…" : photoBusy ? "Wait…" : "Save"}
             </button>
