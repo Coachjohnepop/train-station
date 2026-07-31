@@ -1,7 +1,10 @@
 /**
  * Uploaded content volume relative to native (0 dB).
  * Steps of 3 dB; linear gain = 10^(dB/20).
- * HTMLMediaElement.volume is capped at 1.0 — boosts above 0 dB use Web Audio GainNode.
+ *
+ * HTMLMediaElement.volume is capped at 1.0. Boosts above 0 dB only use Web Audio
+ * GainNode for **same-origin** media. Cross-origin Blob/CDN videos MUST NOT use
+ * createMediaElementSource — without CORS that path is silent.
  */
 
 export const VOLUME_DB_STEP = 3;
@@ -51,35 +54,56 @@ type Wired = {
 
 const wired = new WeakMap<HTMLMediaElement, Wired>();
 
+function isSameOriginMedia(el: HTMLMediaElement): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const src = el.currentSrc || el.src || el.getAttribute("src") || "";
+    if (!src) return true; // not loaded yet — allow later retry
+    if (src.startsWith("blob:") || src.startsWith("data:")) return true;
+    const u = new URL(src, window.location.href);
+    return u.origin === window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
+function tearDownGraph(el: HTMLMediaElement): void {
+  const prev = wired.get(el);
+  if (!prev) return;
+  try {
+    prev.source.disconnect();
+    prev.gain.disconnect();
+  } catch {
+    /* ignore */
+  }
+  try {
+    void prev.ctx.close();
+  } catch {
+    /* ignore */
+  }
+  wired.delete(el);
+}
+
 /**
  * Apply relative volume to an HTML video/audio element.
- * For gain > 1, uses Web Audio GainNode (browser volume property max is 1).
+ * Always unmutes. Cross-origin (e.g. Vercel Blob) stays on element.volume ≤ 1
+ * so we never silence the stream via a CORS-blocked Web Audio graph.
  */
 export function applyMediaVolumeDb(el: HTMLMediaElement, db: number): void {
   const offset = clampVolumeDb(db, 0);
   const linear = volumeDbToLinear(offset);
 
-  // Prefer simple path when not boosting past 1.0
-  if (linear <= 1) {
-    // Disconnect prior graph if any — leave element on media element volume
-    const prev = wired.get(el);
-    if (prev) {
-      try {
-        prev.source.disconnect();
-        prev.gain.disconnect();
-      } catch {
-        /* ignore */
-      }
-      wired.delete(el);
-    }
-    el.volume = Math.max(0, Math.min(1, linear));
-    el.muted = false;
+  el.muted = false;
+
+  // Attenuate or native: simple element volume (and drop any old graph)
+  if (linear <= 1 || !isSameOriginMedia(el)) {
+    tearDownGraph(el);
+    el.volume = Math.max(0, Math.min(1, linear > 1 ? 1 : linear));
     return;
   }
 
-  // Boost above native: Web Audio
+  // Same-origin boost above 1.0 via Web Audio
   el.volume = 1;
-  el.muted = false;
   let graph = wired.get(el);
   if (!graph) {
     const AC =
@@ -98,8 +122,9 @@ export function applyMediaVolumeDb(el: HTMLMediaElement, db: number): void {
       graph = { ctx, gain, source };
       wired.set(el, graph);
     } catch {
-      // Already wired elsewhere or createMediaElementSource once-only violation
+      // createMediaElementSource is once-per-element; never leave muted
       el.volume = 1;
+      el.muted = false;
       return;
     }
   }

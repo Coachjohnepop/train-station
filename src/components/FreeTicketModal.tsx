@@ -324,10 +324,17 @@ export default function FreeTicketModal({
               title="Coach Jeremy"
               playsInline
               controls
+              muted={false}
               autoPlay
               preload="auto"
-              onLoadedMetadata={(e) => applyMediaVolumeDb(e.currentTarget, jeremyVolumeDb)}
-              onPlay={(e) => applyMediaVolumeDb(e.currentTarget, jeremyVolumeDb)}
+              onLoadedMetadata={(e) => {
+                e.currentTarget.muted = false;
+                applyMediaVolumeDb(e.currentTarget, jeremyVolumeDb);
+              }}
+              onPlay={(e) => {
+                e.currentTarget.muted = false;
+                applyMediaVolumeDb(e.currentTarget, jeremyVolumeDb);
+              }}
             />
           )}
 
