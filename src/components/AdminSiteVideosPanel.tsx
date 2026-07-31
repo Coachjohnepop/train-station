@@ -133,6 +133,7 @@ export default function AdminSiteVideosPanel({
   initialGagEnabled = true,
   initialPurchaseThankYouUrl = "",
   initialEquipmentIntroUrl = "",
+  initialMeasurementsIntroUrl = "",
   initialWeeklyUrl = "",
   initialWeeklyTitle = "",
   initialDinnerUrl = "",
@@ -152,6 +153,7 @@ export default function AdminSiteVideosPanel({
   initialGagEnabled?: boolean;
   initialPurchaseThankYouUrl?: string;
   initialEquipmentIntroUrl?: string;
+  initialMeasurementsIntroUrl?: string;
   initialWeeklyUrl?: string;
   initialWeeklyTitle?: string;
   initialDinnerUrl?: string;
@@ -171,6 +173,7 @@ export default function AdminSiteVideosPanel({
       welcomeVideoUrl: initialWelcomeUrl,
       freeChastiseVideoUrl: initialFreeUrl,
       equipmentIntroVideoUrl: initialEquipmentIntroUrl,
+      measurementsIntroVideoUrl: initialMeasurementsIntroUrl,
       welcomeVideosByPlan: initialWelcomeVideosByPlan,
     }),
   );
@@ -207,9 +210,11 @@ export default function AdminSiteVideosPanel({
     const overall = assignments.overall.trim();
     const free = assignments.free.trim();
     const equipment = assignments.equipment.trim();
+    const measurements = assignments.measurements.trim();
     if (overall) set.add(overall);
     if (free) set.add(free);
     if (equipment) set.add(equipment);
+    if (measurements) set.add(measurements);
     for (const url of Object.values(assignments.byPlan)) {
       if (url?.trim()) set.add(url.trim());
     }
@@ -551,8 +556,19 @@ export default function AdminSiteVideosPanel({
       setSaving(false);
       return;
     }
+    if (!introOk(assignments.measurements, "Measurements how-to")) {
+      setSaving(false);
+      return;
+    }
     for (const slot of COACH_INTRO_SLOTS) {
-      if (slot.id === "overall" || slot.id === "free" || slot.id === "equipment") continue;
+      if (
+        slot.id === "overall" ||
+        slot.id === "free" ||
+        slot.id === "equipment" ||
+        slot.id === "measurements"
+      ) {
+        continue;
+      }
       const url = urlForSlot(slot.id, assignments);
       if (url && !isAllowedCoachIntroVideoUrl(url)) {
         setError(true);
@@ -601,6 +617,7 @@ export default function AdminSiteVideosPanel({
       gagEnabled,
       purchaseThankYouVideoUrl: purchaseUrl.trim() || null,
       equipmentIntroVideoUrl: assignments.equipment.trim() || null,
+      measurementsIntroVideoUrl: assignments.measurements.trim() || null,
       uploadedContentVolumeDb: volumeDb,
     });
 
@@ -634,6 +651,7 @@ export default function AdminSiteVideosPanel({
           welcomeVideoUrl: landingResult.storedWelcomeVideoUrl,
           freeChastiseVideoUrl: landingResult.storedFreeChastiseVideoUrl,
           equipmentIntroVideoUrl: landingResult.storedEquipmentIntroVideoUrl,
+          measurementsIntroVideoUrl: landingResult.storedMeasurementsIntroVideoUrl,
           welcomeVideosByPlan: landingResult.storedWelcomeVideosByPlan,
         }),
       );

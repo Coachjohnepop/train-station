@@ -10,6 +10,7 @@ export type CoachIntroSlotId =
   | "overall"
   | "free"
   | "equipment"
+  | "measurements"
   | MembershipPlan;
 
 export type CoachIntroSlotDef = {
@@ -34,6 +35,11 @@ export const COACH_INTRO_SLOTS: CoachIntroSlotDef[] = [
     label: "Gear / equipment intro",
     hint: "First time a member opens Gear — purpose of the tab and how to think about home-gym buys.",
   },
+  {
+    id: "measurements",
+    label: "Measurements how-to",
+    hint: "First time a member opens Measure — how to take weight and tape measurements correctly.",
+  },
   // Paid classes only (explorer merged into free slot above)
   {
     id: "member",
@@ -57,6 +63,7 @@ export type CoachIntroAssignments = {
   /** Unified Free Explorer video (free-ticket modal + explorer plan onboard). */
   free: string;
   equipment: string;
+  measurements: string;
   byPlan: WelcomeVideosByPlan;
 };
 
@@ -74,6 +81,7 @@ export function assignmentsFromLanding(input: {
   welcomeVideoUrl?: string | null;
   freeChastiseVideoUrl?: string | null;
   equipmentIntroVideoUrl?: string | null;
+  measurementsIntroVideoUrl?: string | null;
   welcomeVideosByPlan?: WelcomeVideosByPlan;
 }): CoachIntroAssignments {
   const byPlan = { ...(input.welcomeVideosByPlan || {}) };
@@ -89,6 +97,7 @@ export function assignmentsFromLanding(input: {
     overall: input.welcomeVideoUrl?.trim() || "",
     free: freeUrl,
     equipment: input.equipmentIntroVideoUrl?.trim() || "",
+    measurements: input.measurementsIntroVideoUrl?.trim() || "",
     byPlan,
   };
 }
@@ -100,6 +109,7 @@ export function urlForSlot(
   if (slotId === "overall") return assignments.overall;
   if (slotId === "free" || slotId === "explorer") return assignments.free;
   if (slotId === "equipment") return assignments.equipment;
+  if (slotId === "measurements") return assignments.measurements;
   return assignments.byPlan[slotId]?.trim() || "";
 }
 
@@ -111,6 +121,7 @@ export function setSlotUrl(
   const nextUrl = url.trim();
   if (slotId === "overall") return { ...assignments, overall: nextUrl };
   if (slotId === "equipment") return { ...assignments, equipment: nextUrl };
+  if (slotId === "measurements") return { ...assignments, measurements: nextUrl };
   // free + explorer always write the same Free Explorer clip
   if (slotId === "free" || slotId === "explorer") {
     return {

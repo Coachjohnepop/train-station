@@ -20,36 +20,12 @@ import {
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import { membershipThemeTierFromPlan } from "@/lib/membership-theme";
 import { signupPlanLabel } from "@/lib/signup-plans";
+import { buildRootMetadata } from "@/lib/site-seo-server";
 
-/** SMS / iMessage / social preview when someone texts www.thetrainstation.co */
-export const metadata: Metadata = {
-  title: "The Train Station — Train with purpose",
-  description:
-    "Live coaching with Coach Jeremy. Real programs, real accountability. Free quick tour — then choose your ticket.",
-  openGraph: {
-    title: "The Train Station — Train with purpose",
-    description:
-      "Live coaching · real programs · on your phone. Free quick tour — then choose your ticket.",
-    url: "https://www.thetrainstation.co",
-    siteName: "The Train Station",
-    type: "website",
-    images: [
-      {
-        url: "/images/splash/black-guy.jpg",
-        width: 1200,
-        height: 1600,
-        alt: "Athlete training hard — The Train Station",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "The Train Station — Train with purpose",
-    description:
-      "Live coaching · real programs · on your phone. Free quick tour — then choose your ticket.",
-    images: ["/images/splash/black-guy.jpg"],
-  },
-};
+/** Home share preview — driven by Admin → SEO desk. */
+export async function generateMetadata(): Promise<Metadata> {
+  return buildRootMetadata();
+}
 
 export default async function HomePage() {
   const cookieStore = await cookies();

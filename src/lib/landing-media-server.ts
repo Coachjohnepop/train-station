@@ -4,6 +4,7 @@ import { getLandingMedia } from "@/lib/landing-media-store";
 import {
   equipmentIntroVideoUrlFromConfig,
   freeChastiseVideoUrlFromConfig,
+  measurementsIntroVideoUrlFromConfig,
   resolveFreeTicketGag,
   welcomeVideoUrlFromConfig,
 } from "@/lib/landing-media";
@@ -34,6 +35,9 @@ export async function getResolvedLandingVideos() {
     freeChastiseVideoUrl: freeExplorer,
     purchaseThankYouVideoUrl: config.purchaseThankYouVideoUrl?.trim() || null,
     equipmentIntroVideoUrl: equipmentIntroVideoUrlFromConfig(config.equipmentIntroVideoUrl),
+    measurementsIntroVideoUrl: measurementsIntroVideoUrlFromConfig(
+      config.measurementsIntroVideoUrl,
+    ),
     uploadedContentVolumeDb: config.uploadedContentVolumeDb,
     gag: {
       enabled: gag.enabled,

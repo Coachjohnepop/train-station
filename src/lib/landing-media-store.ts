@@ -34,6 +34,11 @@ export type LandingMediaConfig = {
    */
   equipmentIntroVideoUrl: string | null;
   /**
+   * First visit to member Measurements — how to take tape / scale measurements.
+   * Upload under Admin → Videos.
+   */
+  measurementsIntroVideoUrl: string | null;
+  /**
    * Relative volume for uploaded coach intros / free intro / gear intro (HTML5 + YT).
    * Multiples of 3 dB from native (0). Default +6 dB (louder intros).
    */
@@ -71,6 +76,7 @@ function emptyConfig(): LandingMediaConfig {
     gagEnabled: true,
     purchaseThankYouVideoUrl: null,
     equipmentIntroVideoUrl: null,
+    measurementsIntroVideoUrl: null,
     uploadedContentVolumeDb: DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
     venmoQrUrl: null,
     venmoHandle: null,
@@ -105,6 +111,7 @@ function normalize(raw: unknown): LandingMediaConfig {
     gagEnabled: data.gagEnabled === false ? false : true,
     purchaseThankYouVideoUrl: normalizeUrl(data.purchaseThankYouVideoUrl),
     equipmentIntroVideoUrl: normalizeUrl(data.equipmentIntroVideoUrl),
+    measurementsIntroVideoUrl: normalizeUrl(data.measurementsIntroVideoUrl),
     uploadedContentVolumeDb: clampVolumeDb(
       (data as { uploadedContentVolumeDb?: unknown }).uploadedContentVolumeDb,
       DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
@@ -154,6 +161,7 @@ export async function saveLandingMedia(
       | "gagEnabled"
       | "purchaseThankYouVideoUrl"
       | "equipmentIntroVideoUrl"
+      | "measurementsIntroVideoUrl"
       | "uploadedContentVolumeDb"
       | "venmoQrUrl"
       | "venmoHandle"
@@ -236,6 +244,16 @@ export async function saveLandingMedia(
       );
     }
     next.equipmentIntroVideoUrl = url;
+  }
+
+  if (patch.measurementsIntroVideoUrl !== undefined) {
+    const url = patch.measurementsIntroVideoUrl?.trim() || null;
+    if (url && !isAllowedCoachIntroVideoUrl(url)) {
+      throw new Error(
+        "Measurements how-to must be an uploaded coach intro (MP4/WebM/MOV) or a YouTube URL.",
+      );
+    }
+    next.measurementsIntroVideoUrl = url;
   }
 
   if (patch.uploadedContentVolumeDb !== undefined) {

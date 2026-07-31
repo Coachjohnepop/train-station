@@ -264,6 +264,15 @@ export default function AdminSiteAnalyticsClient() {
           </div>
 
           <div className="flex flex-wrap gap-2 text-xs">
+            <Link href="/admin/platform" className="btn-ghost px-3 py-2">
+              Backoffice home
+            </Link>
+            <Link href="/admin/seo" className="btn-ghost px-3 py-2">
+              SEO
+            </Link>
+            <Link href="/admin/billing?tab=balance" className="btn-ghost px-3 py-2">
+              Stripe balances
+            </Link>
             <Link href="/admin/accounting" className="btn-ghost px-3 py-2">
               Accounting
             </Link>

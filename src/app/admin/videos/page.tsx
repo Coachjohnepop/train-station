@@ -25,6 +25,7 @@ export default async function AdminVideosPage() {
     { url: landing.welcomeVideoUrl, title: "Overall intro" },
     { url: landing.freeChastiseVideoUrl, title: "Free Explorer intro" },
     { url: landing.equipmentIntroVideoUrl, title: "Gear / equipment intro" },
+    { url: landing.measurementsIntroVideoUrl, title: "Measurements how-to" },
     ...planTitles,
   ]);
 
@@ -47,6 +48,7 @@ export default async function AdminVideosPage() {
         initialGagEnabled={landing.gagEnabled}
         initialPurchaseThankYouUrl={landing.purchaseThankYouVideoUrl ?? ""}
         initialEquipmentIntroUrl={landing.equipmentIntroVideoUrl ?? ""}
+        initialMeasurementsIntroUrl={landing.measurementsIntroVideoUrl ?? ""}
         initialWeeklyUrl={member.weeklyVideoUrl ?? ""}
         initialWeeklyTitle={member.weeklyVideoTitle}
         initialDinnerUrl={member.dinnerVideoUrl ?? ""}

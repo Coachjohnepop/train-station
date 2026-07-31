@@ -234,6 +234,11 @@ export const PLATFORM_NAV_GROUPS: AdminNavGroup[] = [
           p.startsWith("/admin/analytics") || p.startsWith("/admin/insights"),
       },
       {
+        href: "/admin/seo",
+        label: "SEO",
+        match: (p) => p.startsWith("/admin/seo"),
+      },
+      {
         href: "/admin/reports",
         label: "Reports",
         match: (p) => p.startsWith("/admin/reports"),
@@ -272,6 +277,7 @@ const PLATFORM_PATH_PREFIXES = [
   "/admin/users",
   "/admin/audit",
   "/admin/analytics",
+  "/admin/seo",
   "/admin/reports",
   "/admin/insights",
   "/admin/coach-suggestions",

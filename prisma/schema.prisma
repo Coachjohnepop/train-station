@@ -1092,13 +1092,29 @@ model PromptResponse {
   enrollment    ProgramEnrollment? @relation(fields: [enrollmentId], references: [id])
 }
 
+/// Body-composition check-in (member self-log or coach entry). Units: lbs + inches + %.
 model UserMeasurement {
-  id          String   @id @default(cuid())
-  userId      String
-  weightLbs   Float?
-  notes       String?
-  measuredAt  DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String   @id @default(cuid())
+  userId           String
+  weightLbs        Float?
+  neckIn           Float?
+  shouldersIn      Float?
+  chestIn          Float?
+  waistIn          Float?
+  hipsIn           Float?
+  leftBicepIn      Float?
+  rightBicepIn     Float?
+  leftThighIn      Float?
+  rightThighIn     Float?
+  leftCalfIn       Float?
+  rightCalfIn      Float?
+  bodyFatPct       Float?
+  notes            String?  @db.Text
+  measuredAt       DateTime @default(now())
+  /** member | coach */
+  source           String   @default("member")
+  recordedByUserId String?
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, measuredAt])
 }

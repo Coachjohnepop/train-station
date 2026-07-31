@@ -25,6 +25,7 @@ export async function saveLandingMediaAction(input: {
   gagEnabled?: boolean;
   purchaseThankYouVideoUrl?: string | null;
   equipmentIntroVideoUrl?: string | null;
+  measurementsIntroVideoUrl?: string | null;
   /** Relative volume for uploaded intros, steps of 3 dB from native. */
   uploadedContentVolumeDb?: number;
   venmoQrUrl?: string | null;
@@ -47,6 +48,7 @@ export async function saveLandingMediaAction(input: {
       gagEnabled: input.gagEnabled,
       purchaseThankYouVideoUrl: input.purchaseThankYouVideoUrl,
       equipmentIntroVideoUrl: input.equipmentIntroVideoUrl,
+      measurementsIntroVideoUrl: input.measurementsIntroVideoUrl,
       uploadedContentVolumeDb: input.uploadedContentVolumeDb,
       venmoQrUrl: input.venmoQrUrl,
       venmoHandle: input.venmoHandle,
@@ -63,6 +65,7 @@ export async function saveLandingMediaAction(input: {
       storedGagEnabled: config.gagEnabled,
       storedPurchaseThankYouVideoUrl: config.purchaseThankYouVideoUrl,
       storedEquipmentIntroVideoUrl: config.equipmentIntroVideoUrl,
+      storedMeasurementsIntroVideoUrl: config.measurementsIntroVideoUrl,
       storedUploadedContentVolumeDb: config.uploadedContentVolumeDb,
       storedVenmoQrUrl: config.venmoQrUrl,
       storedVenmoHandle: config.venmoHandle,

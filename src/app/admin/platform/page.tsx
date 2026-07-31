@@ -1,112 +1,12 @@
-import Link from "next/link";
+import { Suspense } from "react";
+import AdminPlatformDashboardClient from "@/components/AdminPlatformDashboardClient";
 
 export const dynamic = "force-dynamic";
 
-const cards = [
-  {
-    href: "/admin/accounting",
-    title: "Accounting",
-    description:
-      "Stripe balance, payout minimums, projected partner payouts, paying members, MRR & 30d volume.",
-    cta: "Open accounting →",
-  },
-  {
-    href: "/admin/analytics",
-    title: "Site Analytics",
-    description:
-      "Page views, sessions, signups, traffic by area, top pages & clicks from the live tracker.",
-    cta: "Open analytics →",
-  },
-  {
-    href: "/admin/billing",
-    title: "Billing desk",
-    description:
-      "Transactions, full & partial refunds, discount codes, subscriptions, and volume KPIs.",
-    cta: "Open billing →",
-  },
-  {
-    href: "/admin/audit",
-    title: "Audit log",
-    description:
-      "M&A diligence trail — mark-paid, refunds, discounts, tips, role changes, platform admin fee.",
-    cta: "Open audit →",
-  },
-  {
-    href: "/admin/commission",
-    title: "Money desk",
-    description:
-      "Stripe balance, holding minimum, payout queue for John & Jeremy, Connect transfers, platform admin $275.",
-    cta: "Open money desk →",
-  },
-  {
-    href: "/admin/gamification",
-    title: "Gamification",
-    description:
-      "Points levers, free-pool curation, promo free weeks, prize hall of fame, recompute, audit log.",
-    cta: "Open gamification →",
-  },
-  {
-    href: "/admin/offers",
-    title: "Offers & merchandise",
-    description: "Custom training packages, merch SKUs, and coach-set pricing.",
-    cta: "Manage offers →",
-  },
-  {
-    href: "/admin/pricing",
-    title: "Membership pricing",
-    description: "Coach / Business / 1st Class prices — update the site and sync new Stripe prices.",
-    cta: "Edit pricing →",
-  },
-  {
-    href: "/admin/users",
-    title: "Users & roles",
-    description: "Staff accounts, instructors, demo members, and role assignments.",
-    cta: "Manage users →",
-  },
-  {
-    href: "/admin/reports",
-    title: "Reports",
-    description: "Engagement and activity summaries across the site.",
-    cta: "View reports →",
-  },
-  {
-    href: "/admin/landing",
-    title: "Landing & Venmo",
-    description: "Public checkout backup — videos, Venmo QR, and ticket media.",
-    cta: "Edit landing →",
-  },
-  {
-    href: "/admin/videos",
-    title: "Videos",
-    description: "Site YouTube desk — free gag, intros, purchase thank-you, daily inspiration.",
-    cta: "Open videos →",
-  },
-];
-
 export default function PlatformAdminPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold">Platform admin</h1>
-      <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">
-        Site operations, payments, and access control — separate from Jeremy&apos;s day-to-day
-        coaching tools.
-      </p>
-
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
-        {cards.map((card) => (
-          <Link
-            key={card.href}
-            href={card.href}
-            className="card flex flex-col justify-between transition hover:border-[#7c3aed]/50"
-          >
-            <div>
-              <h2 className="font-semibold">{card.title}</h2>
-              <p className="mt-2 text-sm text-[var(--muted)]">{card.description}</p>
-            </div>
-            <span className="mt-4 text-sm font-medium text-[#7c3aed]">{card.cta}</span>
-          </Link>
-        ))}
-      </div>
-    </div>
+    <Suspense fallback={<p className="text-sm text-[var(--muted)]">Loading backoffice…</p>}>
+      <AdminPlatformDashboardClient />
+    </Suspense>
   );
 }

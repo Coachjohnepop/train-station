@@ -70,6 +70,11 @@ export function equipmentIntroVideoUrlFromConfig(stored: string | null | undefin
   return resolveLandingVideoUrl(stored, ["NEXT_PUBLIC_EQUIPMENT_INTRO_VIDEO_URL"]);
 }
 
+/** First-visit Measurements tab — how to take body measurements. */
+export function measurementsIntroVideoUrlFromConfig(stored: string | null | undefined) {
+  return resolveLandingVideoUrl(stored, ["NEXT_PUBLIC_MEASUREMENTS_INTRO_VIDEO_URL"]);
+}
+
 export function welcomeVideoUrlForPlan(
   plan: SignupPlan | string | null | undefined,
   storedDefault: string | null | undefined,

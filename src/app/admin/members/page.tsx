@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import AdminMemberEquipmentModal from "@/components/AdminMemberEquipmentModal";
+import AdminMemberMeasurementsModal from "@/components/AdminMemberMeasurementsModal";
 import {
   COACHING_MODE_LABELS,
   type MemberCoachingMode,
@@ -113,6 +114,7 @@ export default function AdminMembersPage() {
   const [removing, setRemoving] = useState<string | null>(null);
   const [savingMode, setSavingMode] = useState<string | null>(null);
   const [equipmentTarget, setEquipmentTarget] = useState<MemberRow | null>(null);
+  const [measurementsTarget, setMeasurementsTarget] = useState<MemberRow | null>(null);
 
   async function loadMembers() {
     setLoading(true);
@@ -517,6 +519,13 @@ export default function AdminMembersPage() {
                       </button>
                       <button
                         type="button"
+                        onClick={() => setMeasurementsTarget(member)}
+                        className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-fuchsia-500/30 text-fuchsia-300"
+                      >
+                        Measurements
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => {
                           setStaffGrantTarget(member);
                           setStaffGrantPlan(
@@ -615,6 +624,14 @@ export default function AdminMembersPage() {
           userId={equipmentTarget.userId}
           memberName={equipmentTarget.name}
           onClose={() => setEquipmentTarget(null)}
+        />
+      )}
+
+      {measurementsTarget && (
+        <AdminMemberMeasurementsModal
+          userId={measurementsTarget.userId}
+          memberName={measurementsTarget.name}
+          onClose={() => setMeasurementsTarget(null)}
         />
       )}
 
