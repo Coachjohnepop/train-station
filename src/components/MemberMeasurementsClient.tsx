@@ -10,6 +10,7 @@ import MeasurementsIntroModal from "@/components/MeasurementsIntroModal";
 import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
 import {
   MEASUREMENT_FIELDS,
+  TAPE_MEASUREMENT_FIELDS,
   deltaLabel,
   emptyMeasurementForm,
   formatMeasurementValue,
@@ -18,26 +19,6 @@ import {
   type MeasurementRecord,
 } from "@/lib/body-measurements";
 import { isYoutubeUrl } from "@/lib/youtube";
-
-const TORSO_IDS: MeasurementFieldId[] = [
-  "neckIn",
-  "shouldersIn",
-  "chestIn",
-  "waistIn",
-  "hipsIn",
-];
-const LIMB_IDS: MeasurementFieldId[] = [
-  "leftBicepIn",
-  "rightBicepIn",
-  "leftThighIn",
-  "rightThighIn",
-  "leftCalfIn",
-  "rightCalfIn",
-];
-
-function fieldById(id: MeasurementFieldId): MeasurementFieldDef {
-  return MEASUREMENT_FIELDS.find((f) => f.id === id)!;
-}
 
 function SheetStatInput({
   field,
@@ -67,6 +48,11 @@ function SheetStatInput({
         aria-label={`${field.label} (${field.unit})`}
       />
       <span className="ms-stat__unit">{field.unit}</span>
+      {field.hint ? (
+        <span className="mt-0.5 px-1 text-[9px] leading-tight text-[var(--ms-ink-soft)]">
+          {field.hint}
+        </span>
+      ) : null}
     </label>
   );
 }
@@ -639,32 +625,22 @@ export default function MemberMeasurementsClient({
           </div>
         </div>
 
-        {/* Below: girths + limbs + demo video */}
+        {/* Below: coach tape list + demo video */}
         <div className="relative z-[1] mt-5 grid gap-4 lg:grid-cols-[1fr_minmax(13rem,16rem)] lg:items-start">
           <div className="min-w-0 space-y-4">
             <div>
-              <h2 className="ms-section-label">Torso · Girth</h2>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {TORSO_IDS.map((id) => (
+              <h2 className="ms-section-label">Measurements · Tape (inches)</h2>
+              <p className="mb-2 font-serif text-[11px] italic text-[var(--ms-ink-soft)]">
+                Neck · Chest · Shoulders · Bicep flexed R/L · Waist · Glutes/hips · Upper quad
+                (pocket line) R/L · Calf R/L
+              </p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                {TAPE_MEASUREMENT_FIELDS.map((field) => (
                   <SheetStatInput
-                    key={id}
-                    field={fieldById(id)}
-                    value={form[id]}
-                    onChange={(v) => setField(id, v)}
-                    disabled={saving}
-                  />
-                ))}
-              </div>
-            </div>
-            <div>
-              <h2 className="ms-section-label">Limbs · Left &amp; right</h2>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
-                {LIMB_IDS.map((id) => (
-                  <SheetStatInput
-                    key={id}
-                    field={fieldById(id)}
-                    value={form[id]}
-                    onChange={(v) => setField(id, v)}
+                    key={field.id}
+                    field={field}
+                    value={form[field.id]}
+                    onChange={(v) => setField(field.id, v)}
                     disabled={saving}
                   />
                 ))}

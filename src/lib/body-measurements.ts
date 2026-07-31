@@ -1,6 +1,7 @@
 /**
  * Body measurement check-ins — shared field catalog for member + coach UIs.
- * Units: weight lbs, girths inches, body fat %.
+ * Coach list: Neck, Chest, Shoulders, Bicep flexed R/L, Waist, Glutes/hips,
+ * Upper Quad (pocket line) R/L, Calf R/L. Plus weight + body fat on the key column.
  */
 
 export type MeasurementSource = "member" | "coach";
@@ -8,16 +9,16 @@ export type MeasurementSource = "member" | "coach";
 export type MeasurementFieldId =
   | "weightLbs"
   | "neckIn"
-  | "shouldersIn"
   | "chestIn"
+  | "shouldersIn"
+  | "rightBicepIn"
+  | "leftBicepIn"
   | "waistIn"
   | "hipsIn"
-  | "leftBicepIn"
-  | "rightBicepIn"
-  | "leftThighIn"
   | "rightThighIn"
-  | "leftCalfIn"
+  | "leftThighIn"
   | "rightCalfIn"
+  | "leftCalfIn"
   | "bodyFatPct";
 
 export type MeasurementFieldDef = {
@@ -29,7 +30,24 @@ export type MeasurementFieldDef = {
   min: number;
   max: number;
   step: number;
+  /** Hide from the lower tape grid (still on key identity column). */
+  keyColumnOnly?: boolean;
 };
+
+/** Coach measurement order (tape / inches). */
+export const TAPE_MEASUREMENT_ORDER: MeasurementFieldId[] = [
+  "neckIn",
+  "chestIn",
+  "shouldersIn",
+  "rightBicepIn",
+  "leftBicepIn",
+  "waistIn",
+  "hipsIn",
+  "rightThighIn",
+  "leftThighIn",
+  "rightCalfIn",
+  "leftCalfIn",
+];
 
 export const MEASUREMENT_FIELDS: MeasurementFieldDef[] = [
   {
@@ -40,6 +58,7 @@ export const MEASUREMENT_FIELDS: MeasurementFieldDef[] = [
     min: 50,
     max: 500,
     step: 0.1,
+    keyColumnOnly: true,
   },
   {
     id: "neckIn",
@@ -47,6 +66,15 @@ export const MEASUREMENT_FIELDS: MeasurementFieldDef[] = [
     unit: "in",
     min: 8,
     max: 30,
+    step: 0.1,
+  },
+  {
+    id: "chestIn",
+    label: "Chest",
+    unit: "in",
+    hint: "Around fullest part",
+    min: 20,
+    max: 80,
     step: 0.1,
   },
   {
@@ -58,26 +86,35 @@ export const MEASUREMENT_FIELDS: MeasurementFieldDef[] = [
     step: 0.1,
   },
   {
-    id: "chestIn",
-    label: "Chest",
+    id: "rightBicepIn",
+    label: "Bicep flexed · R",
     unit: "in",
-    hint: "Around fullest part, relaxed",
-    min: 20,
-    max: 80,
+    hint: "Flexed peak",
+    min: 5,
+    max: 30,
+    step: 0.1,
+  },
+  {
+    id: "leftBicepIn",
+    label: "Bicep flexed · L",
+    unit: "in",
+    hint: "Flexed peak",
+    min: 5,
+    max: 30,
     step: 0.1,
   },
   {
     id: "waistIn",
     label: "Waist",
     unit: "in",
-    hint: "Narrowest point, usually navel",
+    hint: "Narrowest / navel line",
     min: 15,
     max: 80,
     step: 0.1,
   },
   {
     id: "hipsIn",
-    label: "Hips",
+    label: "Glutes / hips",
     unit: "in",
     hint: "Widest part of glutes",
     min: 20,
@@ -85,48 +122,34 @@ export const MEASUREMENT_FIELDS: MeasurementFieldDef[] = [
     step: 0.1,
   },
   {
-    id: "leftBicepIn",
-    label: "Left bicep",
+    id: "rightThighIn",
+    label: "Upper quad · R",
     unit: "in",
-    min: 5,
-    max: 30,
-    step: 0.1,
-  },
-  {
-    id: "rightBicepIn",
-    label: "Right bicep",
-    unit: "in",
-    min: 5,
-    max: 30,
+    hint: "At pocket line",
+    min: 10,
+    max: 50,
     step: 0.1,
   },
   {
     id: "leftThighIn",
-    label: "Left thigh",
+    label: "Upper quad · L",
     unit: "in",
+    hint: "At pocket line",
     min: 10,
     max: 50,
     step: 0.1,
   },
   {
-    id: "rightThighIn",
-    label: "Right thigh",
-    unit: "in",
-    min: 10,
-    max: 50,
-    step: 0.1,
-  },
-  {
-    id: "leftCalfIn",
-    label: "Left calf",
+    id: "rightCalfIn",
+    label: "Calf · R",
     unit: "in",
     min: 8,
     max: 30,
     step: 0.1,
   },
   {
-    id: "rightCalfIn",
-    label: "Right calf",
+    id: "leftCalfIn",
+    label: "Calf · L",
     unit: "in",
     min: 8,
     max: 30,
@@ -136,12 +159,18 @@ export const MEASUREMENT_FIELDS: MeasurementFieldDef[] = [
     id: "bodyFatPct",
     label: "Body fat",
     unit: "%",
-    hint: "Optional — calipers, DEXA, or estimate",
+    hint: "Overall body fat",
     min: 2,
     max: 70,
     step: 0.1,
+    keyColumnOnly: true,
   },
 ];
+
+/** Tape fields only (excludes weight / body fat key-column fields). */
+export const TAPE_MEASUREMENT_FIELDS: MeasurementFieldDef[] = TAPE_MEASUREMENT_ORDER.map(
+  (id) => MEASUREMENT_FIELDS.find((f) => f.id === id)!,
+);
 
 export type MeasurementValues = Partial<Record<MeasurementFieldId, number | null>>;
 
