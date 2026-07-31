@@ -26,12 +26,9 @@ const HINT_MS = 22_000;
 /** “Tap anywhere” unlocks Theme Song at most this many times; then only the speaker. */
 const MAX_GESTURE_UNLOCKS = 2;
 
-const ACTIVATION_EVENTS: (keyof WindowEventMap)[] = [
-  "pointerdown",
-  "keydown",
-  "touchstart",
-  "click",
-];
+// pointerdown covers mouse + touch once (do not also listen to click/touchstart —
+// that would burn both gesture unlocks on a single tap).
+const ACTIVATION_EVENTS: (keyof WindowEventMap)[] = ["pointerdown", "keydown"];
 
 /** No theme song on any coach/platform admin surface (including /admin/day). */
 function isAdminRoute(pathname: string): boolean {
