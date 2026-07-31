@@ -66,41 +66,6 @@ export function isBackgroundMusicUserMuted(): boolean {
   }
 }
 
-/**
- * Mute / unmute Theme Song from any UI (tour chrome, speaker).
- * Uses the same audio element + localStorage key as BackgroundMusic.
- */
-export function setBackgroundMusicMuted(muted: boolean): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(BG_MUSIC_MUTED_KEY, muted ? "1" : "0");
-  } catch {
-    /* ignore */
-  }
-  const el = document.querySelector(
-    `audio[${BG_MUSIC_ATTR}="true"]`,
-  ) as HTMLAudioElement | null;
-  if (!el) {
-    if (!muted) requestBackgroundMusicPlay();
-    return;
-  }
-  if (muted) {
-    el.muted = true;
-    el.pause();
-  } else {
-    clearBackgroundMusicHolds();
-    el.muted = false;
-    el.volume = Math.max(el.volume || 0, 0.55);
-    el.loop = true;
-    void el.play().catch(() => {});
-    requestBackgroundMusicPlay();
-  }
-  // Let BackgroundMusic refresh icon state
-  window.dispatchEvent(
-    new CustomEvent("ts-bg-music-mute-changed", { detail: { muted } }),
-  );
-}
-
 /** Hold BG music paused until the returned release function runs (YouTube overlays, etc.). */
 export function holdBackgroundMusicForMedia(): () => void {
   if (typeof window === "undefined") return () => {};

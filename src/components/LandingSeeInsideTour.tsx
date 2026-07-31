@@ -8,7 +8,6 @@ import {
   fireWorkoutConfetti,
 } from "@/lib/workout-confetti";
 import { PROGRAM_IMAGES } from "@/lib/program-constants";
-import { requestBackgroundMusicPlay } from "@/lib/background-music-control";
 
 /**
  * See inside — full auto-play tour for cold traffic only.
@@ -108,10 +107,10 @@ export default function LandingSeeInsideTour({
     [onClose, router]
   );
 
-  // Reset + keep Theme Song under the tour (don’t leave it ducked)
+  // Reset tour. Theme Song unlock is the global “tap anywhere” handler only
+  // (one mute = corner speaker — no second control, no remute races).
   useEffect(() => {
     if (!open) return;
-    requestBackgroundMusicPlay();
     reducedMotion.current =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
