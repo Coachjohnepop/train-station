@@ -189,8 +189,7 @@ export default function MemberMeasurementsClient({
     }
   }
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
+  async function saveCheckIn() {
     setSaving(true);
     setError(null);
     setMessage(null);
@@ -216,7 +215,7 @@ export default function MemberMeasurementsClient({
         setError(data.error || "Save failed.");
         return;
       }
-      setMessage("Check-in inscribed. Your coach can see this sheet too.");
+      setMessage("Saved to your sheet and the adventure log. Your coach can see this too.");
       setForm(emptyMeasurementForm());
       setNotes("");
       setNowPhotoUrl(null);
@@ -234,6 +233,14 @@ export default function MemberMeasurementsClient({
       setSaving(false);
     }
   }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    await saveCheckIn();
+  }
+
+  const saveButtonClass =
+    "inline-flex items-center justify-center rounded border-2 border-[var(--ms-rule)] bg-[var(--ms-royal)] px-5 py-2.5 font-serif text-sm font-bold uppercase tracking-wider text-white shadow-[0_0_20px_rgba(124,58,237,0.45)] transition hover:bg-[#6d28d9] disabled:opacity-60";
 
   async function handleDelete(id: string) {
     if (!window.confirm("Erase this check-in from the log?")) return;
@@ -497,7 +504,11 @@ export default function MemberMeasurementsClient({
         onForceOpenHandled={() => setWatchAgain(false)}
       />
 
-      <form onSubmit={(e) => void handleSave(e)} className="ms-sheet p-4 sm:p-6 md:p-7">
+      <form
+        id="ms-checkin-form"
+        onSubmit={(e) => void handleSave(e)}
+        className="ms-sheet p-4 sm:p-6 md:p-7 pb-24"
+      >
         <header className="relative z-[1] border-b border-[var(--ms-rule-soft)] pb-3">
           <p className="ms-ornament text-center">✦ · royal measure · ✦</p>
           <h1 className="ms-sheet-title mt-1 text-center text-xl font-bold sm:text-2xl">
@@ -519,6 +530,9 @@ export default function MemberMeasurementsClient({
                 className="ms-input-line w-full py-1 text-sm"
               />
             </label>
+            <button type="submit" disabled={saving} className={saveButtonClass}>
+              {saving ? "Saving…" : "Save"}
+            </button>
           </div>
         </header>
 
@@ -786,21 +800,39 @@ export default function MemberMeasurementsClient({
             <p className="font-serif text-sm text-emerald-200">{message}</p>
           ) : null}
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded border-2 border-[var(--ms-rule)] bg-[var(--ms-royal)] px-5 py-2.5 font-serif text-sm font-bold uppercase tracking-wider text-white shadow-[0_0_20px_rgba(124,58,237,0.45)] transition hover:bg-[#6d28d9] disabled:opacity-60"
-            >
-              {saving ? "Inscribing…" : "Inscribe check-in"}
+            <button type="submit" disabled={saving} className={saveButtonClass}>
+              {saving ? "Saving…" : "Save check-in"}
             </button>
             <p className="font-serif text-[11px] italic text-[var(--ms-ink-soft)]">
-              Key fields + photos up top · tape measures below
+              Writes this visit to Postgres (adventure log). Originals stay locked as first-ever
+              values.
             </p>
           </div>
         </div>
 
         <p className="ms-ornament relative z-[1] mt-6 text-center">✦ · end of sheet · ✦</p>
       </form>
+
+      {/* Sticky save — always visible while scrolling the sheet */}
+      <div className="sticky bottom-3 z-20 mx-auto max-w-4xl px-1">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-[var(--ms-rule)] bg-[rgba(30,16,60,0.95)] px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.45)] backdrop-blur">
+          <p className="font-serif text-xs text-[var(--ms-ink-soft)] sm:text-sm">
+            {saving
+              ? "Saving your check-in…"
+              : message
+                ? message
+                : "Enter check-in numbers (right column), then save."}
+          </p>
+          <button
+            type="button"
+            disabled={saving}
+            className={saveButtonClass}
+            onClick={() => void saveCheckIn()}
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </div>
 
       {latest ? (
         <section className="ms-sheet p-4 sm:p-5">
