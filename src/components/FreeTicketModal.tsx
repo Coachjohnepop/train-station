@@ -18,6 +18,7 @@ import {
 import { isDirectVideoUrl } from "@/lib/site-video";
 import { isYoutubeUrl } from "@/lib/youtube";
 import {
+  ensureYoutubeAudible,
   fadeOutYoutubeEmbed,
   kickYoutubeAudible,
   postYoutubeEmbedCommand,
@@ -74,8 +75,6 @@ export default function FreeTicketModal({
   const jeremyIframeRef = useRef<HTMLIFrameElement>(null);
   const jeremyVideoRef = useRef<HTMLVideoElement>(null);
   const rickrollKickGen = useRef(0);
-  /** After first playVideo, only unMute/volume — never restart gag. */
-  const rickrollStartedRef = useRef(false);
   const cancelRickrollFade = useRef<(() => void) | null>(null);
 
   const signedIn = Boolean(purchaseAuth.signedIn);
@@ -102,9 +101,8 @@ export default function FreeTicketModal({
   );
 
   /**
-   * Free is always opened by a tap → try unmuted autoplay first (sound on).
-   * If the browser blocks it, onLoad kicks still unMute after enablejsapi handshake.
-   * start= chorus; do not re-seek via postMessage (that was the hitch/restart).
+   * Embed autoplays once (user just tapped Free). We never postMessage playVideo
+   * after that — only unMute/volume. A second playVideo restarts from start= → double gag.
    */
   const rickrollSrc =
     gag.enabled && embedOrigin
@@ -199,29 +197,19 @@ export default function FreeTicketModal({
     };
   }, [open, hasJeremy, preloadMs, gag.enabled, gagDurationMs]);
 
-  // Gag: start once, then only unMute/volume (infoDelivery must not call playVideo again).
+  // Gag: embed already autoplays. Only unMute + volume — never playVideo (restarts gag).
   useEffect(() => {
     if (!open || !rickrollSrc) return;
     const gen = ++rickrollKickGen.current;
-    rickrollStartedRef.current = false;
 
-    const kick = (opts?: { forcePlay?: boolean }) => {
+    const audibleOnly = () => {
       if (gen !== rickrollKickGen.current) return;
-      const already = rickrollStartedRef.current;
-      kickYoutubeAudible(rickrollRef.current, {
-        startOnce: true,
-        alreadyStarted: already && !opts?.forcePlay,
-      });
-      if (!already || opts?.forcePlay) rickrollStartedRef.current = true;
+      ensureYoutubeAudible(rickrollRef.current);
     };
 
-    // Sparse boots only — enough for player ready, not a restart storm
-    kick({ forcePlay: true });
-    const ids = [200, 600, 1200].map((ms) =>
-      window.setTimeout(() => kick(), ms),
-    );
+    // A few volume/unmute nudges after load (no playVideo)
+    const ids = [100, 400, 900].map((ms) => window.setTimeout(audibleOnly, ms));
 
-    // Only onReady (not infoDelivery — that fires continuously and restarted the gag)
     const onMsg = (e: MessageEvent) => {
       if (gen !== rickrollKickGen.current) return;
       let data: unknown = e.data;
@@ -233,8 +221,9 @@ export default function FreeTicketModal({
         }
       }
       if (!data || typeof data !== "object") return;
+      // onReady only — never infoDelivery (constant restarts)
       if ((data as { event?: string }).event === "onReady") {
-        kick();
+        audibleOnly();
       }
     };
     window.addEventListener("message", onMsg);
@@ -313,8 +302,8 @@ export default function FreeTicketModal({
           {rickrollSrc && !hideRickroll && (
             <iframe
               ref={rickrollRef}
-              // Stable key for this open cycle — do not remount on parent re-renders.
-              key={`rickroll-${open ? "on" : "off"}`}
+              // One stable iframe for this open — remount = second play
+              key="free-gag-rickroll"
               className={`absolute inset-0 h-full w-full transition-opacity ease-in-out ${
                 fadeJeremyIn ? "pointer-events-none opacity-0" : "opacity-100"
               }`}
@@ -324,12 +313,8 @@ export default function FreeTicketModal({
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
               onLoad={() => {
-                // First load may start play; if already started, only unMute/volume
-                kickYoutubeAudible(rickrollRef.current, {
-                  startOnce: true,
-                  alreadyStarted: rickrollStartedRef.current,
-                });
-                rickrollStartedRef.current = true;
+                // Autoplay already running — never playVideo here
+                ensureYoutubeAudible(rickrollRef.current);
               }}
             />
           )}

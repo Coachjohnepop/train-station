@@ -108,8 +108,9 @@ export const WELCOME_VIDEO_PLAN_OPTIONS = MEMBERSHIP_PLANS.map((plan) => ({
  * Admin → Videos: one Free Explorer intro (after gag + Free onboard). Gag is
  * product-fixed; no admin gag upload.
  */
+/** Watch URL without t= — start second is set only via embed start= (avoid double-start). */
 export const FREE_TICKET_RICKROLL_URL =
-  "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=43s";
+  "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 
 /** Chorus start second for Never Gonna Give You Up. */
 export const FREE_TICKET_RICKROLL_CHORUS_START_SEC = 43;
