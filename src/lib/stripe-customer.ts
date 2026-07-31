@@ -98,7 +98,40 @@ export async function repairMemberStripeBillingState(userId: string): Promise<vo
     patch.paymentStatus = "paid";
   }
 
-  if (!profile.stripeSubscriptionId) {
+  // Drop stale subscription ids (deleted in Dashboard / test→live mix) so home never 500s
+  if (profile.stripeSubscriptionId) {
+    try {
+      await stripe.subscriptions.retrieve(profile.stripeSubscriptionId);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/No such subscription/i.test(msg) || /resource_missing/i.test(msg)) {
+        console.warn(
+          "[stripe] clearing missing subscription from profile",
+          profile.stripeSubscriptionId,
+          userId,
+        );
+        patch.stripeSubscriptionId = null;
+      }
+    }
+  }
+
+  if (!profile.stripeSubscriptionId && !("stripeSubscriptionId" in patch)) {
+    try {
+      const subs = await stripe.subscriptions.list({
+        customer: profile.stripeCustomerId,
+        status: "all",
+        limit: 5,
+      });
+      const active = subs.data.find((sub) => sub.status === "active" || sub.status === "trialing");
+      if (active) {
+        patch.stripeSubscriptionId = active.id;
+        patch.paymentStatus = "paid";
+      }
+    } catch {
+      /* ignore */
+    }
+  } else if (patch.stripeSubscriptionId === null) {
+    // After clearing a dead id, try to attach a live one
     try {
       const subs = await stripe.subscriptions.list({
         customer: profile.stripeCustomerId,

@@ -15,24 +15,33 @@ async function paymentMethodIdFromSubscription(
   stripe: Stripe,
   subscriptionId: string,
 ): Promise<string | null> {
-  const sub = await stripe.subscriptions.retrieve(subscriptionId, {
-    expand: ["default_payment_method", "latest_invoice.payment_intent.payment_method"],
-  });
+  try {
+    const sub = await stripe.subscriptions.retrieve(subscriptionId, {
+      expand: ["default_payment_method", "latest_invoice.payment_intent.payment_method"],
+    });
 
-  const dpm = sub.default_payment_method;
-  if (typeof dpm === "string") return dpm;
-  if (dpm && typeof dpm === "object") return dpm.id;
+    const dpm = sub.default_payment_method;
+    if (typeof dpm === "string") return dpm;
+    if (dpm && typeof dpm === "object") return dpm.id;
 
-  const latestInvoice = sub.latest_invoice;
-  if (latestInvoice && typeof latestInvoice === "object") {
-    const pi = (latestInvoice as Stripe.Invoice & {
-      payment_intent?: string | Stripe.PaymentIntent | null;
-    }).payment_intent;
-    if (pi && typeof pi === "object") {
-      const pm = pi.payment_method;
-      if (typeof pm === "string") return pm;
-      if (pm && typeof pm === "object") return pm.id;
+    const latestInvoice = sub.latest_invoice;
+    if (latestInvoice && typeof latestInvoice === "object") {
+      const pi = (latestInvoice as Stripe.Invoice & {
+        payment_intent?: string | Stripe.PaymentIntent | null;
+      }).payment_intent;
+      if (pi && typeof pi === "object") {
+        const pm = pi.payment_method;
+        if (typeof pm === "string") return pm;
+        if (pm && typeof pm === "object") return pm.id;
+      }
     }
+  } catch (e: unknown) {
+    // Deleted / wrong-mode sub ids must never 500 the landing page or account
+    console.warn(
+      "[stripe] subscription retrieve failed (ignored):",
+      subscriptionId,
+      e instanceof Error ? e.message : e,
+    );
   }
 
   return null;
@@ -145,11 +154,21 @@ export async function promoteCustomerPaymentMethodsForCheckout(
     preferredId = await paymentMethodIdFromSubscription(stripe, subscriptionId);
   }
 
-  const methods = await stripe.paymentMethods.list({
-    customer: customerId,
-    type: "card",
-    limit: 20,
-  });
+  let methods: Stripe.ApiList<Stripe.PaymentMethod>;
+  try {
+    methods = await stripe.paymentMethods.list({
+      customer: customerId,
+      type: "card",
+      limit: 20,
+    });
+  } catch (e: unknown) {
+    console.warn(
+      "[stripe] paymentMethods.list failed (ignored):",
+      customerId,
+      e instanceof Error ? e.message : e,
+    );
+    return;
+  }
 
   if (!preferredId && methods.data.length > 0) {
     preferredId = methods.data[0].id;

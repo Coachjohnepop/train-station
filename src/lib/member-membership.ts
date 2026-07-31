@@ -63,7 +63,16 @@ function paymentStatusLabel(status: MemberProfile["paymentStatus"]): string {
 export async function getMemberMembershipSnapshot(
   userId: string,
 ): Promise<MemberMembershipSnapshot | null> {
-  await repairMemberStripeBillingState(userId);
+  try {
+    await repairMemberStripeBillingState(userId);
+  } catch (e: unknown) {
+    console.warn(
+      "[membership] repairMemberStripeBillingState failed:",
+      userId,
+      e instanceof Error ? e.message : e,
+    );
+  }
+
   let profile = await getMemberProfile(userId);
   // Older accounts may exist as User rows without a MemberProfile — ensure one so
   // Account settings does not 404.
@@ -91,26 +100,43 @@ export async function getMemberMembershipSnapshot(
 
   const plan = profile.plan;
   const offer = getOfferDefinition(plan);
-  const effective =
-    MEMBERSHIP_PLANS.has(plan as MembershipPlan) && plan !== "explorer"
-      ? await getEffectiveMembershipOffer(plan as MembershipPlan)
-      : null;
+  let effective: Awaited<ReturnType<typeof getEffectiveMembershipOffer>> | null = null;
+  try {
+    effective =
+      MEMBERSHIP_PLANS.has(plan as MembershipPlan) && plan !== "explorer"
+        ? await getEffectiveMembershipOffer(plan as MembershipPlan)
+        : null;
+  } catch {
+    effective = null;
+  }
 
   const isSubscription = offer?.checkoutMode === "subscription";
   const stripeReady = isStripePaymentsEnabled();
   if (profile.stripeCustomerId) {
-    await promoteCustomerPaymentMethodsForCheckout(
-      profile.stripeCustomerId,
-      profile.stripeSubscriptionId,
-    );
-  }
-
-  const hasSavedPaymentMethod = profile.stripeCustomerId
-    ? await customerHasSavedPaymentMethod(
+    try {
+      await promoteCustomerPaymentMethodsForCheckout(
         profile.stripeCustomerId,
         profile.stripeSubscriptionId,
-      )
-    : false;
+      );
+    } catch (e: unknown) {
+      console.warn(
+        "[membership] promoteCustomerPaymentMethodsForCheckout failed:",
+        e instanceof Error ? e.message : e,
+      );
+    }
+  }
+
+  let hasSavedPaymentMethod = false;
+  if (profile.stripeCustomerId) {
+    try {
+      hasSavedPaymentMethod = await customerHasSavedPaymentMethod(
+        profile.stripeCustomerId,
+        profile.stripeSubscriptionId,
+      );
+    } catch {
+      hasSavedPaymentMethod = false;
+    }
+  }
 
   const paidActive = profile.paymentStatus === "paid";
   // Upgrades: paid subscribers, or explorer/pending who can checkout higher tiers.

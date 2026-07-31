@@ -81,8 +81,17 @@ export default async function HomePage() {
     const membershipPlan = profile?.plan ?? "explorer";
     const themeTier = membershipThemeTierFromPlan(profile?.plan);
     const established = isEstablishedMember(profile);
-    const membershipSnapshot =
-      established && profile ? await getMemberMembershipSnapshot(session.id) : null;
+    let membershipSnapshot: Awaited<ReturnType<typeof getMemberMembershipSnapshot>> = null;
+    if (established && profile) {
+      try {
+        membershipSnapshot = await getMemberMembershipSnapshot(session.id);
+      } catch (e: unknown) {
+        console.error(
+          "[home] membership snapshot failed (showing welcome fallback):",
+          e instanceof Error ? e.message : e,
+        );
+      }
+    }
 
     return (
       <div className="min-h-screen app-shell-bg">
