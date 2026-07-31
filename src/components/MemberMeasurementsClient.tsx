@@ -114,6 +114,9 @@ export default function MemberMeasurementsClient({
   const [nowPhotoUrl, setNowPhotoUrl] = useState<string | null>(null);
   const [beforeCrop, setBeforeCrop] = useState<PhotoCrop>({ ...DEFAULT_PHOTO_CROP });
   const [nowCrop, setNowCrop] = useState<PhotoCrop>({ ...DEFAULT_PHOTO_CROP });
+  /** Crop sliders open only while editing; collapse after Save crop / when not needed. */
+  const [beforeCropOpen, setBeforeCropOpen] = useState(false);
+  const [nowCropOpen, setNowCropOpen] = useState(false);
   const [cropSaving, setCropSaving] = useState(false);
   const [photoBusy, setPhotoBusy] = useState<"before" | "now" | null>(null);
   const [displayName, setDisplayName] = useState("");
@@ -146,6 +149,8 @@ export default function MemberMeasurementsClient({
       );
       setBeforeCrop(normalizePhotoCrop(data.beforePhotoCrop || null));
       setNowCrop({ ...DEFAULT_PHOTO_CROP });
+      setBeforeCropOpen(false);
+      setNowCropOpen(false);
       const id = data.identity || {};
       if (typeof id.name === "string") setDisplayName(id.name);
       if (id.ageYears != null && Number.isFinite(Number(id.ageYears))) {
@@ -188,11 +193,13 @@ export default function MemberMeasurementsClient({
       if (kind === "before") {
         setBeforePhotoUrl(data.url || data.beforePhotoUrl || null);
         setBeforeCrop({ ...DEFAULT_PHOTO_CROP });
-        setMessage("Before portrait saved — adjust crop if needed, then Save crop.");
+        setBeforeCropOpen(true);
+        setMessage("Before portrait saved — adjust crop if you want, then Save crop.");
       } else {
         setNowPhotoUrl(data.url || data.photoUrl || null);
         setNowCrop({ ...DEFAULT_PHOTO_CROP });
-        setMessage("Now photo attached — crop if needed, then Save check-in.");
+        setNowCropOpen(true);
+        setMessage("Now photo attached — crop if you want, then Save check-in.");
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Photo upload failed.");
@@ -237,6 +244,7 @@ export default function MemberMeasurementsClient({
       setNotes("");
       setNowPhotoUrl(null);
       setNowCrop({ ...DEFAULT_PHOTO_CROP });
+      setNowCropOpen(false);
       setMeasuredAtLocal(toLocalInputValue());
       if (data.identity) {
         if (typeof data.identity.name === "string") setDisplayName(data.identity.name);
@@ -276,6 +284,7 @@ export default function MemberMeasurementsClient({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Could not save crop.");
       if (data.beforePhotoCrop) setBeforeCrop(normalizePhotoCrop(data.beforePhotoCrop));
+      setBeforeCropOpen(false);
       setMessage("Before photo crop saved.");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Could not save crop.");
@@ -705,55 +714,77 @@ export default function MemberMeasurementsClient({
               )}
             </div>
             {beforePhotoUrl ? (
-              <div className="ms-crop-sliders">
-                <label>
-                  L–R
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={beforeCrop.focusX}
-                    onChange={(e) =>
-                      setBeforeCrop((c) => ({ ...c, focusX: Number(e.target.value) }))
-                    }
-                  />
-                </label>
-                <label>
-                  Up–Dn
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={beforeCrop.focusY}
-                    onChange={(e) =>
-                      setBeforeCrop((c) => ({ ...c, focusY: Number(e.target.value) }))
-                    }
-                  />
-                </label>
-                <label>
-                  Zoom
-                  <input
-                    type="range"
-                    min={100}
-                    max={250}
-                    value={Math.round(beforeCrop.zoom * 100)}
-                    onChange={(e) =>
-                      setBeforeCrop((c) => ({
-                        ...c,
-                        zoom: Number(e.target.value) / 100,
-                      }))
-                    }
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="mt-1 w-full rounded border border-[var(--ms-rule)] bg-[var(--ms-box)] px-2 py-1 font-serif text-[10px] font-semibold text-[var(--ms-ink)] disabled:opacity-60"
-                  disabled={cropSaving || saving}
-                  onClick={() => void saveBeforeCrop()}
-                >
-                  {cropSaving ? "Saving crop…" : "Save crop"}
-                </button>
-              </div>
+              beforeCropOpen ? (
+                <div className="ms-crop-sliders">
+                  <label>
+                    L–R
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={beforeCrop.focusX}
+                      onChange={(e) =>
+                        setBeforeCrop((c) => ({ ...c, focusX: Number(e.target.value) }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    Up–Dn
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={beforeCrop.focusY}
+                      onChange={(e) =>
+                        setBeforeCrop((c) => ({ ...c, focusY: Number(e.target.value) }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    Zoom
+                    <input
+                      type="range"
+                      min={100}
+                      max={250}
+                      value={Math.round(beforeCrop.zoom * 100)}
+                      onChange={(e) =>
+                        setBeforeCrop((c) => ({
+                          ...c,
+                          zoom: Number(e.target.value) / 100,
+                        }))
+                      }
+                    />
+                  </label>
+                  <div className="mt-1 flex gap-1">
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 rounded border border-[var(--ms-rule)] bg-[var(--ms-royal)]/50 px-2 py-1 font-serif text-[10px] font-semibold text-[var(--ms-ink)] disabled:opacity-60"
+                      disabled={cropSaving || saving}
+                      onClick={() => void saveBeforeCrop()}
+                    >
+                      {cropSaving ? "Saving…" : "Save crop"}
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded border border-[var(--ms-rule-soft)] px-2 py-1 font-serif text-[10px] text-[var(--ms-ink-soft)]"
+                      disabled={cropSaving}
+                      onClick={() => setBeforeCropOpen(false)}
+                    >
+                      Done
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full border-t border-[var(--ms-rule-soft)] px-2 py-1.5">
+                  <button
+                    type="button"
+                    className="w-full rounded border border-[var(--ms-rule)] bg-[var(--ms-box)] px-2 py-1 font-serif text-[11px] font-semibold text-[var(--ms-ink)] hover:bg-[rgba(124,58,237,0.35)]"
+                    onClick={() => setBeforeCropOpen(true)}
+                  >
+                    Crop
+                  </button>
+                </div>
+              )
             ) : null}
             <div className="w-full border-t border-[var(--ms-rule-soft)] px-2 py-1.5">
               <input
@@ -803,50 +834,69 @@ export default function MemberMeasurementsClient({
               )}
             </div>
             {nowPhotoUrl ? (
-              <div className="ms-crop-sliders">
-                <label>
-                  L–R
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={nowCrop.focusX}
-                    onChange={(e) =>
-                      setNowCrop((c) => ({ ...c, focusX: Number(e.target.value) }))
-                    }
-                  />
-                </label>
-                <label>
-                  Up–Dn
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={nowCrop.focusY}
-                    onChange={(e) =>
-                      setNowCrop((c) => ({ ...c, focusY: Number(e.target.value) }))
-                    }
-                  />
-                </label>
-                <label>
-                  Zoom
-                  <input
-                    type="range"
-                    min={100}
-                    max={250}
-                    value={Math.round(nowCrop.zoom * 100)}
-                    onChange={(e) =>
-                      setNowCrop((c) => ({
-                        ...c,
-                        zoom: Number(e.target.value) / 100,
-                      }))
-                    }
-                  />
-                </label>
-                <p className="mt-0.5 text-center text-[9px] text-[var(--ms-ink-soft)]">
-                  Crop saves with Save check-in
-                </p>
-              </div>
+              nowCropOpen ? (
+                <div className="ms-crop-sliders">
+                  <label>
+                    L–R
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={nowCrop.focusX}
+                      onChange={(e) =>
+                        setNowCrop((c) => ({ ...c, focusX: Number(e.target.value) }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    Up–Dn
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={nowCrop.focusY}
+                      onChange={(e) =>
+                        setNowCrop((c) => ({ ...c, focusY: Number(e.target.value) }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    Zoom
+                    <input
+                      type="range"
+                      min={100}
+                      max={250}
+                      value={Math.round(nowCrop.zoom * 100)}
+                      onChange={(e) =>
+                        setNowCrop((c) => ({
+                          ...c,
+                          zoom: Number(e.target.value) / 100,
+                        }))
+                      }
+                    />
+                  </label>
+                  <p className="mt-0.5 text-center text-[9px] text-[var(--ms-ink-soft)]">
+                    Crop applies on Save check-in
+                  </p>
+                  <button
+                    type="button"
+                    className="mt-1 w-full rounded border border-[var(--ms-rule)] bg-[var(--ms-box)] px-2 py-1 font-serif text-[10px] font-semibold text-[var(--ms-ink)]"
+                    onClick={() => setNowCropOpen(false)}
+                  >
+                    Done
+                  </button>
+                </div>
+              ) : (
+                <div className="w-full border-t border-[var(--ms-rule-soft)] px-2 py-1.5">
+                  <button
+                    type="button"
+                    className="w-full rounded border border-[var(--ms-rule)] bg-[var(--ms-box)] px-2 py-1 font-serif text-[11px] font-semibold text-[var(--ms-ink)] hover:bg-[rgba(124,58,237,0.35)]"
+                    onClick={() => setNowCropOpen(true)}
+                  >
+                    Crop
+                  </button>
+                </div>
+              )
             ) : null}
             <div className="flex w-full gap-1 border-t border-[var(--ms-rule-soft)] px-2 py-1.5">
               <input
