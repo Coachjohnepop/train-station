@@ -8,11 +8,6 @@ import {
   fireWorkoutConfetti,
 } from "@/lib/workout-confetti";
 import { PROGRAM_IMAGES } from "@/lib/program-constants";
-import {
-  isBackgroundMusicUserMuted,
-  requestBackgroundMusicPlay,
-  setBackgroundMusicMuted,
-} from "@/lib/background-music-control";
 
 /**
  * See inside — full auto-play tour for cold traffic only.
@@ -76,8 +71,6 @@ export default function LandingSeeInsideTour({
   const [mounted, setMounted] = useState(false);
   const [beat, setBeat] = useState(0);
   const [phase, setPhase] = useState<"auto" | "end">("auto");
-  /** Theme Song mute — shown in tour chrome so it’s never under the overlay */
-  const [musicMuted, setMusicMuted] = useState(false);
   const lastSetRef = useRef<HTMLDivElement | null>(null);
   const confettiFired = useRef(false);
   const reducedMotion = useRef(false);
@@ -98,16 +91,6 @@ export default function LandingSeeInsideTour({
     return () => {
       delete document.documentElement.dataset.landingTour;
     };
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    setMusicMuted(isBackgroundMusicUserMuted());
-    const onMute = (e: Event) => {
-      setMusicMuted(Boolean((e as CustomEvent<{ muted?: boolean }>).detail?.muted));
-    };
-    window.addEventListener("ts-bg-music-mute-changed", onMute);
-    return () => window.removeEventListener("ts-bg-music-mute-changed", onMute);
   }, [open]);
 
   const clearTimers = useCallback(() => {
@@ -313,8 +296,8 @@ export default function LandingSeeInsideTour({
       aria-modal="true"
       aria-labelledby="see-inside-title"
     >
-      <div className="flex shrink-0 items-start justify-between gap-2 px-3 pb-1 pt-[max(0.4rem,env(safe-area-inset-top))] sm:items-center sm:px-5">
-        <div className="min-w-0 flex-1 pr-1">
+      <div className="flex shrink-0 items-center justify-between gap-2 px-3 pb-1 pt-[max(0.4rem,env(safe-area-inset-top))] sm:px-5">
+        <div className="min-w-0">
           <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-[#c4b5fd]">
             Free Quick Tour
           </p>
@@ -322,29 +305,7 @@ export default function LandingSeeInsideTour({
             Station tour
           </h2>
         </div>
-        <div className="flex max-w-[min(100%,16rem)] shrink-0 flex-wrap items-center justify-end gap-1 sm:max-w-none sm:gap-1.5">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              const next = !musicMuted;
-              setMusicMuted(next);
-              setBackgroundMusicMuted(next);
-              if (!next) requestBackgroundMusicPlay();
-            }}
-            className={`inline-flex h-8 items-center gap-1 rounded-full border px-2 text-[11px] font-semibold transition sm:gap-1.5 sm:px-2.5 ${
-              musicMuted
-                ? "border-white/20 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
-                : "border-[#7c3aed]/50 bg-[#7c3aed]/20 text-[#e9d5ff] hover:bg-[#7c3aed]/30"
-            }`}
-            aria-label={musicMuted ? "Play Theme Song" : "Mute Theme Song"}
-            title={musicMuted ? "Play Theme Song" : "Mute Theme Song"}
-          >
-            <span aria-hidden>{musicMuted ? "🔇" : "🔊"}</span>
-            <span className="hidden xs:inline sm:inline">
-              {musicMuted ? "Song off" : "Song on"}
-            </span>
-          </button>
+        <div className="flex shrink-0 items-center gap-1.5">
           {phase === "auto" ? (
             <button
               type="button"
@@ -353,10 +314,9 @@ export default function LandingSeeInsideTour({
                 clearTimers();
                 setPhase("end");
               }}
-              className="h-8 rounded-full border border-white/20 bg-white/5 px-2 text-[11px] font-semibold text-white/85 sm:px-2.5"
+              className="h-8 rounded-full border border-white/20 bg-white/5 px-2.5 text-[11px] font-semibold text-white/85"
             >
-              Skip
-              <span className="hidden sm:inline"> to choices</span>
+              Skip to choices
             </button>
           ) : null}
           <button
