@@ -3,8 +3,10 @@
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  BG_MUSIC_MUTED_KEY,
   BG_MUSIC_OVERLAY_EVENT,
   BG_MUSIC_REQUEST_PLAY_EVENT,
+  isBackgroundMusicUserMuted,
   markBackgroundMusicElement,
   registerBackgroundMusicMediaDucking,
 } from "@/lib/background-music-control";
@@ -20,7 +22,7 @@ import {
 
 const SRC = "/background-music.mp3";
 const VOLUME = 0.55;
-const OFF_KEY = "ts-bg-music-muted";
+const OFF_KEY = BG_MUSIC_MUTED_KEY;
 /** Finger stays up at least this long (mute also dismisses). */
 const HINT_MS = 22_000;
 
@@ -37,11 +39,7 @@ function isAdminRoute(pathname: string): boolean {
 }
 
 function isUserMuted(): boolean {
-  try {
-    return window.localStorage.getItem(OFF_KEY) === "1";
-  } catch {
-    return false;
-  }
+  return isBackgroundMusicUserMuted();
 }
 
 function sleep(ms: number) {
@@ -361,6 +359,25 @@ export default function BackgroundMusic() {
     window.addEventListener(BG_MUSIC_REQUEST_PLAY_EVENT, onRequestPlay);
     return () => window.removeEventListener(BG_MUSIC_REQUEST_PLAY_EVENT, onRequestPlay);
   }, [forceAudible]);
+
+  // Tour chrome (or other UI) toggled mute via setBackgroundMusicMuted
+  useEffect(() => {
+    const onMuteChanged = (e: Event) => {
+      const muted = Boolean((e as CustomEvent<{ muted?: boolean }>).detail?.muted);
+      userMutedRef.current = muted;
+      setOff(muted);
+      if (muted) {
+        setSoundLive(false);
+        unlockedRef.current = false;
+        dismissHint();
+      } else {
+        const audio = audioRef.current;
+        if (audio && !adminRouteRef.current) void forceAudible(audio);
+      }
+    };
+    window.addEventListener("ts-bg-music-mute-changed", onMuteChanged);
+    return () => window.removeEventListener("ts-bg-music-mute-changed", onMuteChanged);
+  }, [forceAudible, dismissHint]);
 
   // Route change: hard-stop on any /admin path; resume only on member/public.
   useEffect(() => {

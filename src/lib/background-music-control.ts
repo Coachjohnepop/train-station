@@ -3,6 +3,8 @@
 export const BG_MUSIC_OVERLAY_EVENT = "ts-bg-music-overlay";
 /** Ask BackgroundMusic to unlock/play (call from a user gesture when possible). */
 export const BG_MUSIC_REQUEST_PLAY_EVENT = "ts-bg-music-request-play";
+/** Theme Song mute preference (shared with BackgroundMusic + tour mute control). */
+export const BG_MUSIC_MUTED_KEY = "ts-bg-music-muted";
 const BG_MUSIC_ATTR = "data-ts-bg-music";
 
 let overlayHold = false;
@@ -53,6 +55,50 @@ export function requestBackgroundMusicPlay(): void {
   if (typeof window === "undefined") return;
   clearBackgroundMusicHolds();
   window.dispatchEvent(new CustomEvent(BG_MUSIC_REQUEST_PLAY_EVENT));
+}
+
+export function isBackgroundMusicUserMuted(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(BG_MUSIC_MUTED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Mute / unmute Theme Song from any UI (tour chrome, speaker).
+ * Uses the same audio element + localStorage key as BackgroundMusic.
+ */
+export function setBackgroundMusicMuted(muted: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(BG_MUSIC_MUTED_KEY, muted ? "1" : "0");
+  } catch {
+    /* ignore */
+  }
+  const el = document.querySelector(
+    `audio[${BG_MUSIC_ATTR}="true"]`,
+  ) as HTMLAudioElement | null;
+  if (!el) {
+    if (!muted) requestBackgroundMusicPlay();
+    return;
+  }
+  if (muted) {
+    el.muted = true;
+    el.pause();
+  } else {
+    clearBackgroundMusicHolds();
+    el.muted = false;
+    el.volume = Math.max(el.volume || 0, 0.55);
+    el.loop = true;
+    void el.play().catch(() => {});
+    requestBackgroundMusicPlay();
+  }
+  // Let BackgroundMusic refresh icon state
+  window.dispatchEvent(
+    new CustomEvent("ts-bg-music-mute-changed", { detail: { muted } }),
+  );
 }
 
 /** Hold BG music paused until the returned release function runs (YouTube overlays, etc.). */

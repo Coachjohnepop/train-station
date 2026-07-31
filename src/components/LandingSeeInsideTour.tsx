@@ -8,7 +8,11 @@ import {
   fireWorkoutConfetti,
 } from "@/lib/workout-confetti";
 import { PROGRAM_IMAGES } from "@/lib/program-constants";
-import { requestBackgroundMusicPlay } from "@/lib/background-music-control";
+import {
+  isBackgroundMusicUserMuted,
+  requestBackgroundMusicPlay,
+  setBackgroundMusicMuted,
+} from "@/lib/background-music-control";
 
 /**
  * See inside — full auto-play tour for cold traffic only.
@@ -72,6 +76,8 @@ export default function LandingSeeInsideTour({
   const [mounted, setMounted] = useState(false);
   const [beat, setBeat] = useState(0);
   const [phase, setPhase] = useState<"auto" | "end">("auto");
+  /** Theme Song mute — shown in tour chrome so it’s never under the overlay */
+  const [musicMuted, setMusicMuted] = useState(false);
   const lastSetRef = useRef<HTMLDivElement | null>(null);
   const confettiFired = useRef(false);
   const reducedMotion = useRef(false);
@@ -83,6 +89,16 @@ export default function LandingSeeInsideTour({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    setMusicMuted(isBackgroundMusicUserMuted());
+    const onMute = (e: Event) => {
+      setMusicMuted(Boolean((e as CustomEvent<{ muted?: boolean }>).detail?.muted));
+    };
+    window.addEventListener("ts-bg-music-mute-changed", onMute);
+    return () => window.removeEventListener("ts-bg-music-mute-changed", onMute);
+  }, [open]);
 
   const clearTimers = useCallback(() => {
     for (const t of timers.current) window.clearTimeout(t);
@@ -297,6 +313,26 @@ export default function LandingSeeInsideTour({
           </h2>
         </div>
         <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const next = !musicMuted;
+              setMusicMuted(next);
+              setBackgroundMusicMuted(next);
+              if (!next) requestBackgroundMusicPlay();
+            }}
+            className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold transition ${
+              musicMuted
+                ? "border-white/20 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+                : "border-[#7c3aed]/50 bg-[#7c3aed]/20 text-[#e9d5ff] hover:bg-[#7c3aed]/30"
+            }`}
+            aria-label={musicMuted ? "Play Theme Song" : "Mute Theme Song"}
+            title={musicMuted ? "Play Theme Song" : "Mute Theme Song"}
+          >
+            <span aria-hidden>{musicMuted ? "🔇" : "🔊"}</span>
+            <span className="hidden sm:inline">{musicMuted ? "Song off" : "Song on"}</span>
+          </button>
           {phase === "auto" ? (
             <button
               type="button"
