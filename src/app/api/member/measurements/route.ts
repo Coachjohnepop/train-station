@@ -28,6 +28,11 @@ export async function GET(request: Request) {
       ok: true,
       measurements,
       beforePhotoUrl: identity.beforePhotoUrl,
+      beforePhotoCrop: {
+        focusX: identity.beforePhotoFocusX ?? 50,
+        focusY: identity.beforePhotoFocusY ?? 25,
+        zoom: identity.beforePhotoZoom ?? 1,
+      },
       identity: {
         name: identity.name,
         ageYears: identity.ageYears,
@@ -38,6 +43,39 @@ export async function GET(request: Request) {
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Could not load measurements.";
     return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+/** Persist before-photo crop only (does not create a check-in). */
+export async function PATCH(request: Request) {
+  const auth = await requireMemberAccess();
+  if (!auth.ok) return auth.response;
+
+  try {
+    const body = (await request.json()) as {
+      beforePhotoCrop?: { focusX?: number; focusY?: number; zoom?: number };
+    };
+    if (!body.beforePhotoCrop) {
+      return NextResponse.json({ error: "beforePhotoCrop is required." }, { status: 400 });
+    }
+    const { setMemberBeforePhotoCrop } = await import("@/lib/measurements-store");
+    await setMemberBeforePhotoCrop(auth.session.id, {
+      focusX: Number(body.beforePhotoCrop.focusX ?? 50),
+      focusY: Number(body.beforePhotoCrop.focusY ?? 25),
+      zoom: Number(body.beforePhotoCrop.zoom ?? 1),
+    });
+    const identity = await getMeasurementSheetIdentity(auth.session.id);
+    return NextResponse.json({
+      ok: true,
+      beforePhotoCrop: {
+        focusX: identity.beforePhotoFocusX ?? 50,
+        focusY: identity.beforePhotoFocusY ?? 25,
+        zoom: identity.beforePhotoZoom ?? 1,
+      },
+    });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Could not save crop.";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
 
@@ -82,6 +120,11 @@ export async function POST(request: Request) {
         gender: identity.gender,
       },
       beforePhotoUrl: identity.beforePhotoUrl,
+      beforePhotoCrop: {
+        focusX: identity.beforePhotoFocusX ?? 50,
+        focusY: identity.beforePhotoFocusY ?? 25,
+        zoom: identity.beforePhotoZoom ?? 1,
+      },
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Could not save measurement.";

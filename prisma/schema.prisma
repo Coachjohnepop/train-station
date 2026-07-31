@@ -677,6 +677,10 @@ model MemberProfile {
   weightLbs                   String?
   /// Baseline progress photo (“before”) for measurements sheet.
   beforePhotoUrl              String?
+  /// Display crop for before photo (object-position style + zoom).
+  beforePhotoFocusX           Float?    @default(50)
+  beforePhotoFocusY           Float?    @default(25)
+  beforePhotoZoom             Float?    @default(1)
   /// Sheet identity (optional) — gender label for measurements portrait row.
   gender                      String?
   /// Sheet identity age in years (optional shortcut vs birthdate).
@@ -1117,6 +1121,10 @@ model UserMeasurement {
   bodyFatPct       Float?
   /// Optional “now” / progress photo for this check-in.
   photoUrl         String?
+  /// Display crop for this check-in photo (portrait frame).
+  photoFocusX      Float?   @default(50)
+  photoFocusY      Float?   @default(25)
+  photoZoom        Float?   @default(1)
   notes            String?  @db.Text
   measuredAt       DateTime @default(now())
   /** member | coach */

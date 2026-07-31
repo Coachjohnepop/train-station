@@ -201,6 +201,9 @@ export type MeasurementRecord = MeasurementValues & {
   notes: string | null;
   /** Progress photo for this check-in (“now”). */
   photoUrl: string | null;
+  photoFocusX: number | null;
+  photoFocusY: number | null;
+  photoZoom: number | null;
   measuredAt: string;
   source: MeasurementSource;
   recordedByUserId: string | null;
@@ -237,10 +240,20 @@ export function parseOptionalNumber(
   return Math.round(n * 10) / 10;
 }
 
+function parseCropPart(raw: unknown, fallback: number, min: number, max: number): number {
+  if (raw === null || raw === undefined || raw === "") return fallback;
+  const n = typeof raw === "number" ? raw : Number(raw);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
 export function parseMeasurementPayload(body: Record<string, unknown>): {
   values: MeasurementValues;
   notes: string | null;
   photoUrl: string | null;
+  photoFocusX: number;
+  photoFocusY: number;
+  photoZoom: number;
   measuredAt: Date;
 } {
   const values: MeasurementValues = {};
@@ -264,6 +277,10 @@ export function parseMeasurementPayload(body: Record<string, unknown>): {
     any = true;
   }
 
+  const photoFocusX = parseCropPart(body.photoFocusX, 50, 0, 100);
+  const photoFocusY = parseCropPart(body.photoFocusY, 25, 0, 100);
+  const photoZoom = parseCropPart(body.photoZoom, 1, 1, 2.5);
+
   if (!any) {
     throw new Error("Enter at least one measurement, a photo, or a note.");
   }
@@ -274,7 +291,7 @@ export function parseMeasurementPayload(body: Record<string, unknown>): {
     if (!Number.isNaN(d.getTime())) measuredAt = d;
   }
 
-  return { values, notes, photoUrl, measuredAt };
+  return { values, notes, photoUrl, photoFocusX, photoFocusY, photoZoom, measuredAt };
 }
 
 export function formatMeasurementValue(
@@ -316,6 +333,9 @@ export function serializeMeasurementRow(row: {
   rightCalfIn?: number | null;
   bodyFatPct?: number | null;
   photoUrl?: string | null;
+  photoFocusX?: number | null;
+  photoFocusY?: number | null;
+  photoZoom?: number | null;
   notes: string | null;
   measuredAt: Date | string;
   source?: string | null;
@@ -343,6 +363,9 @@ export function serializeMeasurementRow(row: {
     rightCalfIn: row.rightCalfIn ?? null,
     bodyFatPct: row.bodyFatPct ?? null,
     photoUrl: row.photoUrl ?? null,
+    photoFocusX: row.photoFocusX ?? null,
+    photoFocusY: row.photoFocusY ?? null,
+    photoZoom: row.photoZoom ?? null,
     notes: row.notes ?? null,
     measuredAt,
     source,

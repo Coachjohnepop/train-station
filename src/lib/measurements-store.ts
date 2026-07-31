@@ -27,6 +27,9 @@ function prismaSelect() {
     rightCalfIn: true,
     bodyFatPct: true,
     photoUrl: true,
+    photoFocusX: true,
+    photoFocusY: true,
+    photoZoom: true,
     notes: true,
     measuredAt: true,
     source: true,
@@ -39,6 +42,9 @@ export type MeasurementSheetIdentity = {
   ageYears: number | null;
   gender: string | null;
   beforePhotoUrl: string | null;
+  beforePhotoFocusX: number | null;
+  beforePhotoFocusY: number | null;
+  beforePhotoZoom: number | null;
 };
 
 function ageYearsFromBirthdate(birthdate: Date | null | undefined): number | null {
@@ -55,7 +61,15 @@ export async function getMeasurementSheetIdentity(
   userId: string,
 ): Promise<MeasurementSheetIdentity> {
   if (!isDatabaseConfigured()) {
-    return { name: null, ageYears: null, gender: null, beforePhotoUrl: null };
+    return {
+      name: null,
+      ageYears: null,
+      gender: null,
+      beforePhotoUrl: null,
+      beforePhotoFocusX: 50,
+      beforePhotoFocusY: 25,
+      beforePhotoZoom: 1,
+    };
   }
   const { prisma } = await import("@/lib/prisma");
   const [user, profile] = await Promise.all([
@@ -65,7 +79,14 @@ export async function getMeasurementSheetIdentity(
     }),
     prisma.memberProfile.findUnique({
       where: { userId },
-      select: { beforePhotoUrl: true, gender: true, ageYears: true },
+      select: {
+        beforePhotoUrl: true,
+        beforePhotoFocusX: true,
+        beforePhotoFocusY: true,
+        beforePhotoZoom: true,
+        gender: true,
+        ageYears: true,
+      },
     }),
   ]);
   const fromBirth = ageYearsFromBirthdate(user?.birthdate ?? null);
@@ -77,6 +98,9 @@ export async function getMeasurementSheetIdentity(
         : fromBirth,
     gender: profile?.gender?.trim() || null,
     beforePhotoUrl: profile?.beforePhotoUrl?.trim() || null,
+    beforePhotoFocusX: profile?.beforePhotoFocusX ?? 50,
+    beforePhotoFocusY: profile?.beforePhotoFocusY ?? 25,
+    beforePhotoZoom: profile?.beforePhotoZoom ?? 1,
   };
 }
 
@@ -188,6 +212,33 @@ export async function setMemberBeforePhotoUrl(
   return next;
 }
 
+export async function setMemberBeforePhotoCrop(
+  userId: string,
+  crop: { focusX: number; focusY: number; zoom: number },
+): Promise<void> {
+  if (!isDatabaseConfigured()) {
+    throw new Error("Database is required to save photo crop.");
+  }
+  const { prisma } = await import("@/lib/prisma");
+  const { normalizePhotoCrop } = await import("@/lib/photo-crop");
+  const c = normalizePhotoCrop(crop);
+  const existing = await prisma.memberProfile.findUnique({
+    where: { userId },
+    select: { userId: true },
+  });
+  if (!existing) {
+    throw new Error("Upload a before photo first, then crop.");
+  }
+  await prisma.memberProfile.update({
+    where: { userId },
+    data: {
+      beforePhotoFocusX: c.focusX,
+      beforePhotoFocusY: c.focusY,
+      beforePhotoZoom: c.zoom,
+    },
+  });
+}
+
 export async function listUserMeasurements(
   userId: string,
   limit = 50,
@@ -212,7 +263,8 @@ export async function createUserMeasurement(input: {
   if (!isDatabaseConfigured()) {
     throw new Error("Database is required to save measurements.");
   }
-  const { values, notes, photoUrl, measuredAt } = parseMeasurementPayload(input.body);
+  const { values, notes, photoUrl, photoFocusX, photoFocusY, photoZoom, measuredAt } =
+    parseMeasurementPayload(input.body);
   const { prisma } = await import("@/lib/prisma");
   const row = await prisma.userMeasurement.create({
     data: {
@@ -231,6 +283,9 @@ export async function createUserMeasurement(input: {
       rightCalfIn: values.rightCalfIn ?? null,
       bodyFatPct: values.bodyFatPct ?? null,
       photoUrl,
+      photoFocusX,
+      photoFocusY,
+      photoZoom,
       notes,
       measuredAt,
       source: input.source,

@@ -19,6 +19,12 @@ import {
   type MeasurementFieldId,
   type MeasurementRecord,
 } from "@/lib/body-measurements";
+import {
+  DEFAULT_PHOTO_CROP,
+  normalizePhotoCrop,
+  photoCropStyle,
+  type PhotoCrop,
+} from "@/lib/photo-crop";
 import { isYoutubeUrl } from "@/lib/youtube";
 
 /** Label + original (left, locked) + check-in (right, editable). */
@@ -106,6 +112,9 @@ export default function MemberMeasurementsClient({
   const [watchAgain, setWatchAgain] = useState(false);
   const [beforePhotoUrl, setBeforePhotoUrl] = useState<string | null>(null);
   const [nowPhotoUrl, setNowPhotoUrl] = useState<string | null>(null);
+  const [beforeCrop, setBeforeCrop] = useState<PhotoCrop>({ ...DEFAULT_PHOTO_CROP });
+  const [nowCrop, setNowCrop] = useState<PhotoCrop>({ ...DEFAULT_PHOTO_CROP });
+  const [cropSaving, setCropSaving] = useState(false);
   const [photoBusy, setPhotoBusy] = useState<"before" | "now" | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [ageYears, setAgeYears] = useState("");
@@ -135,6 +144,8 @@ export default function MemberMeasurementsClient({
           ? data.beforePhotoUrl.trim()
           : null,
       );
+      setBeforeCrop(normalizePhotoCrop(data.beforePhotoCrop || null));
+      setNowCrop({ ...DEFAULT_PHOTO_CROP });
       const id = data.identity || {};
       if (typeof id.name === "string") setDisplayName(id.name);
       if (id.ageYears != null && Number.isFinite(Number(id.ageYears))) {
@@ -143,6 +154,7 @@ export default function MemberMeasurementsClient({
       if (typeof id.gender === "string") setGender(id.gender);
       // Fresh form for a new check-in (originals show from history separately)
       setForm(emptyMeasurementForm());
+      setNowPhotoUrl(null);
     } catch {
       setError("Could not load measurements.");
     } finally {
@@ -175,10 +187,12 @@ export default function MemberMeasurementsClient({
       if (!res.ok) throw new Error(data.error || "Photo upload failed.");
       if (kind === "before") {
         setBeforePhotoUrl(data.url || data.beforePhotoUrl || null);
-        setMessage("Before portrait saved.");
+        setBeforeCrop({ ...DEFAULT_PHOTO_CROP });
+        setMessage("Before portrait saved — adjust crop if needed, then Save crop.");
       } else {
         setNowPhotoUrl(data.url || data.photoUrl || null);
-        setMessage("Now photo attached — inscribe to save with this check-in.");
+        setNowCrop({ ...DEFAULT_PHOTO_CROP });
+        setMessage("Now photo attached — crop if needed, then Save check-in.");
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Photo upload failed.");
@@ -198,6 +212,9 @@ export default function MemberMeasurementsClient({
         notes,
         measuredAt: fromLocalInputValue(measuredAtLocal),
         photoUrl: nowPhotoUrl,
+        photoFocusX: nowCrop.focusX,
+        photoFocusY: nowCrop.focusY,
+        photoZoom: nowCrop.zoom,
         name: displayName.trim() || null,
         ageYears: ageYears.trim() === "" ? null : Number(ageYears),
         gender: gender.trim() || null,
@@ -219,6 +236,7 @@ export default function MemberMeasurementsClient({
       setForm(emptyMeasurementForm());
       setNotes("");
       setNowPhotoUrl(null);
+      setNowCrop({ ...DEFAULT_PHOTO_CROP });
       setMeasuredAtLocal(toLocalInputValue());
       if (data.identity) {
         if (typeof data.identity.name === "string") setDisplayName(data.identity.name);
@@ -237,6 +255,33 @@ export default function MemberMeasurementsClient({
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     await saveCheckIn();
+  }
+
+  async function saveBeforeCrop() {
+    if (!beforePhotoUrl) return;
+    setCropSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/member/measurements", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          beforePhotoCrop: {
+            focusX: beforeCrop.focusX,
+            focusY: beforeCrop.focusY,
+            zoom: beforeCrop.zoom,
+          },
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not save crop.");
+      if (data.beforePhotoCrop) setBeforeCrop(normalizePhotoCrop(data.beforePhotoCrop));
+      setMessage("Before photo crop saved.");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Could not save crop.");
+    } finally {
+      setCropSaving(false);
+    }
   }
 
   const saveButtonClass =
@@ -421,6 +466,9 @@ export default function MemberMeasurementsClient({
           border: 2px solid var(--ms-rule);
           background: rgba(30, 10, 55, 0.7);
           box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.2);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
         }
         .ms-portrait__label {
           font-family: ui-serif, Georgia, serif;
@@ -430,9 +478,40 @@ export default function MemberMeasurementsClient({
           text-transform: uppercase;
           color: var(--ms-gold);
         }
+        /* Vertical portrait frame (taller than wide) */
         .ms-portrait__frame {
-          max-height: 7rem;
-          aspect-ratio: 3 / 4;
+          width: min(100%, 8.5rem);
+          aspect-ratio: 2 / 3;
+          height: auto;
+          max-height: 12rem;
+          margin: 0 auto;
+          overflow: hidden;
+          background: #0a0614;
+          position: relative;
+        }
+        .ms-portrait__frame img {
+          position: absolute;
+          inset: 0;
+        }
+        .ms-crop-sliders {
+          width: 100%;
+          padding: 0.35rem 0.45rem 0.45rem;
+          border-top: 1px solid var(--ms-rule-soft);
+        }
+        .ms-crop-sliders label {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          font-size: 0.55rem;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          color: var(--ms-ink-soft);
+          margin-bottom: 0.2rem;
+        }
+        .ms-crop-sliders input[type="range"] {
+          flex: 1;
+          min-width: 0;
+          accent-color: #a78bfa;
         }
         .ms-dual {
           background: var(--ms-box);
@@ -602,34 +681,86 @@ export default function MemberMeasurementsClient({
             </div>
           </div>
 
-          {/* Col 2 — Before (half size) */}
-          <div className="ms-portrait overflow-hidden rounded-sm">
-            <div className="flex items-center justify-between border-b border-[var(--ms-rule-soft)] px-2 py-1">
+          {/* Col 2 — Before (vertical portrait + crop) */}
+          <div className="ms-portrait w-full overflow-hidden rounded-sm">
+            <div className="flex w-full items-center justify-between border-b border-[var(--ms-rule-soft)] px-2 py-1">
               <span className="ms-portrait__label">Before</span>
               <span className="font-serif text-[9px] italic text-[var(--ms-ink-soft)]">
-                baseline
+                vertical
               </span>
             </div>
-            <div className="ms-portrait__frame relative w-full bg-black/30">
+            <div className="ms-portrait__frame">
               {beforePhotoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={beforePhotoUrl}
                   alt="Before progress photo"
-                  className="h-full w-full object-cover object-top"
+                  style={photoCropStyle(beforeCrop)}
                 />
               ) : (
-                <div className="flex h-full min-h-[7rem] flex-col items-center justify-center gap-0.5 px-2 text-center">
+                <div className="flex h-full flex-col items-center justify-center gap-0.5 px-2 text-center">
                   <p className="font-serif text-xs text-[var(--ms-ink-soft)]">No before yet</p>
+                  <p className="text-[9px] text-[var(--ms-ink-soft)]">Portrait / full body</p>
                 </div>
               )}
             </div>
-            <div className="border-t border-[var(--ms-rule-soft)] px-2 py-1.5">
+            {beforePhotoUrl ? (
+              <div className="ms-crop-sliders">
+                <label>
+                  L–R
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={beforeCrop.focusX}
+                    onChange={(e) =>
+                      setBeforeCrop((c) => ({ ...c, focusX: Number(e.target.value) }))
+                    }
+                  />
+                </label>
+                <label>
+                  Up–Dn
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={beforeCrop.focusY}
+                    onChange={(e) =>
+                      setBeforeCrop((c) => ({ ...c, focusY: Number(e.target.value) }))
+                    }
+                  />
+                </label>
+                <label>
+                  Zoom
+                  <input
+                    type="range"
+                    min={100}
+                    max={250}
+                    value={Math.round(beforeCrop.zoom * 100)}
+                    onChange={(e) =>
+                      setBeforeCrop((c) => ({
+                        ...c,
+                        zoom: Number(e.target.value) / 100,
+                      }))
+                    }
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="mt-1 w-full rounded border border-[var(--ms-rule)] bg-[var(--ms-box)] px-2 py-1 font-serif text-[10px] font-semibold text-[var(--ms-ink)] disabled:opacity-60"
+                  disabled={cropSaving || saving}
+                  onClick={() => void saveBeforeCrop()}
+                >
+                  {cropSaving ? "Saving crop…" : "Save crop"}
+                </button>
+              </div>
+            ) : null}
+            <div className="w-full border-t border-[var(--ms-rule-soft)] px-2 py-1.5">
               <input
                 ref={beforeFileRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/*"
-                capture="environment"
+                capture="user"
                 className="hidden"
                 onChange={(e) => void uploadPortrait("before", e.target.files)}
               />
@@ -648,34 +779,81 @@ export default function MemberMeasurementsClient({
             </div>
           </div>
 
-          {/* Col 3 — Now (half size) */}
-          <div className="ms-portrait overflow-hidden rounded-sm">
-            <div className="flex items-center justify-between border-b border-[var(--ms-rule-soft)] px-2 py-1">
+          {/* Col 3 — Now (vertical portrait + crop) */}
+          <div className="ms-portrait w-full overflow-hidden rounded-sm">
+            <div className="flex w-full items-center justify-between border-b border-[var(--ms-rule-soft)] px-2 py-1">
               <span className="ms-portrait__label">Now</span>
               <span className="font-serif text-[9px] italic text-[var(--ms-ink-soft)]">
                 this check-in
               </span>
             </div>
-            <div className="ms-portrait__frame relative w-full bg-black/30">
+            <div className="ms-portrait__frame">
               {nowPhotoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={nowPhotoUrl}
                   alt="Current progress photo"
-                  className="h-full w-full object-cover object-top"
+                  style={photoCropStyle(nowCrop)}
                 />
               ) : (
-                <div className="flex h-full min-h-[7rem] flex-col items-center justify-center gap-0.5 px-2 text-center">
+                <div className="flex h-full flex-col items-center justify-center gap-0.5 px-2 text-center">
                   <p className="font-serif text-xs text-[var(--ms-ink-soft)]">Today&apos;s photo</p>
+                  <p className="text-[9px] text-[var(--ms-ink-soft)]">Portrait / full body</p>
                 </div>
               )}
             </div>
-            <div className="flex gap-1 border-t border-[var(--ms-rule-soft)] px-2 py-1.5">
+            {nowPhotoUrl ? (
+              <div className="ms-crop-sliders">
+                <label>
+                  L–R
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={nowCrop.focusX}
+                    onChange={(e) =>
+                      setNowCrop((c) => ({ ...c, focusX: Number(e.target.value) }))
+                    }
+                  />
+                </label>
+                <label>
+                  Up–Dn
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={nowCrop.focusY}
+                    onChange={(e) =>
+                      setNowCrop((c) => ({ ...c, focusY: Number(e.target.value) }))
+                    }
+                  />
+                </label>
+                <label>
+                  Zoom
+                  <input
+                    type="range"
+                    min={100}
+                    max={250}
+                    value={Math.round(nowCrop.zoom * 100)}
+                    onChange={(e) =>
+                      setNowCrop((c) => ({
+                        ...c,
+                        zoom: Number(e.target.value) / 100,
+                      }))
+                    }
+                  />
+                </label>
+                <p className="mt-0.5 text-center text-[9px] text-[var(--ms-ink-soft)]">
+                  Crop saves with Save check-in
+                </p>
+              </div>
+            ) : null}
+            <div className="flex w-full gap-1 border-t border-[var(--ms-rule-soft)] px-2 py-1.5">
               <input
                 ref={nowFileRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/*"
-                capture="environment"
+                capture="user"
                 className="hidden"
                 onChange={(e) => void uploadPortrait("now", e.target.files)}
               />
@@ -691,7 +869,10 @@ export default function MemberMeasurementsClient({
                 <button
                   type="button"
                   className="rounded border border-fuchsia-400/30 px-2 py-1 font-serif text-[11px] text-fuchsia-200"
-                  onClick={() => setNowPhotoUrl(null)}
+                  onClick={() => {
+                    setNowPhotoUrl(null);
+                    setNowCrop({ ...DEFAULT_PHOTO_CROP });
+                  }}
                 >
                   ✕
                 </button>
@@ -888,12 +1069,20 @@ export default function MemberMeasurementsClient({
                 </div>
                 <div className="mt-1.5 flex flex-wrap items-start gap-3">
                   {row.photoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={row.photoUrl}
-                      alt="Check-in photo"
-                      className="h-12 w-9 shrink-0 rounded object-cover object-top ring-1 ring-[var(--ms-rule-soft)]"
-                    />
+                    <div className="h-14 w-10 shrink-0 overflow-hidden rounded ring-1 ring-[var(--ms-rule-soft)]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={row.photoUrl}
+                        alt="Check-in photo"
+                        style={photoCropStyle(
+                          normalizePhotoCrop({
+                            focusX: row.photoFocusX,
+                            focusY: row.photoFocusY,
+                            zoom: row.photoZoom,
+                          }),
+                        )}
+                      />
+                    </div>
                   ) : null}
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap gap-x-3 gap-y-1 font-serif text-xs tabular-nums text-[var(--ms-ink-soft)]">
