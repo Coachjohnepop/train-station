@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import MeasurementFormFields, {
   fromLocalInputValue,
   toLocalInputValue,
@@ -9,6 +9,7 @@ import {
   MEASUREMENT_FIELDS,
   emptyMeasurementForm,
   formatMeasurementValue,
+  originalValuesFromHistory,
   type MeasurementFieldId,
   type MeasurementRecord,
 } from "@/lib/body-measurements";
@@ -60,6 +61,8 @@ export default function AdminMemberMeasurementsModal({
   useEffect(() => {
     void load();
   }, [load]);
+
+  const originals = useMemo(() => originalValuesFromHistory(rows), [rows]);
 
   function setField(id: MeasurementFieldId, value: string) {
     setForm((prev) => ({ ...prev, [id]: value }));
@@ -167,6 +170,7 @@ export default function AdminMemberMeasurementsModal({
             measuredAt={measuredAtLocal}
             onMeasuredAtChange={setMeasuredAtLocal}
             disabled={saving}
+            originals={originals}
           />
           {error ? <p className="text-sm text-rose-300">{error}</p> : null}
           {message ? <p className="text-sm text-emerald-300">{message}</p> : null}

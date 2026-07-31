@@ -174,6 +174,27 @@ export const TAPE_MEASUREMENT_FIELDS: MeasurementFieldDef[] = TAPE_MEASUREMENT_O
 
 export type MeasurementValues = Partial<Record<MeasurementFieldId, number | null>>;
 
+/**
+ * All-time original for each field: first non-null value ever recorded
+ * (oldest check-in wins). Rows are expected newest-first (API order).
+ */
+export function originalValuesFromHistory(
+  rows: Array<Partial<MeasurementValues>>,
+): MeasurementValues {
+  const oldestFirst = [...rows].reverse();
+  const out: MeasurementValues = {};
+  for (const f of MEASUREMENT_FIELDS) {
+    for (const row of oldestFirst) {
+      const v = row[f.id];
+      if (v != null && Number.isFinite(Number(v))) {
+        out[f.id] = Number(v);
+        break;
+      }
+    }
+  }
+  return out;
+}
+
 export type MeasurementRecord = MeasurementValues & {
   id: string;
   userId: string;

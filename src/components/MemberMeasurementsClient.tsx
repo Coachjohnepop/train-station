@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PlayableVideoFrame from "@/components/PlayableVideoFrame";
 import {
   fromLocalInputValue,
@@ -14,46 +14,64 @@ import {
   deltaLabel,
   emptyMeasurementForm,
   formatMeasurementValue,
+  originalValuesFromHistory,
   type MeasurementFieldDef,
   type MeasurementFieldId,
   type MeasurementRecord,
 } from "@/lib/body-measurements";
 import { isYoutubeUrl } from "@/lib/youtube";
 
-function SheetStatInput({
+/** Label + original (left, locked) + check-in (right, editable). */
+function DualMeasureField({
   field,
+  original,
   value,
   onChange,
   disabled,
+  compact,
 }: {
   field: MeasurementFieldDef;
+  original: number | null | undefined;
   value: string;
   onChange: (v: string) => void;
   disabled?: boolean;
+  compact?: boolean;
 }) {
+  const origLabel = formatMeasurementValue(original, field.unit);
   return (
-    <label className="ms-stat flex flex-col items-center justify-center text-center">
-      <span className="ms-stat__label">{field.label}</span>
-      <input
-        type="number"
-        inputMode="decimal"
-        step={field.step}
-        min={field.min}
-        max={field.max}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        placeholder="—"
-        className="ms-stat__input"
-        aria-label={`${field.label} (${field.unit})`}
-      />
+    <div className={`ms-dual ${compact ? "ms-dual--compact" : ""}`}>
+      <div className="ms-dual__title">
+        <span className="ms-stat__label">{field.label}</span>
+        {field.hint ? (
+          <span className="ms-dual__hint">{field.hint}</span>
+        ) : null}
+      </div>
+      <div className="ms-dual__cols">
+        <div className="ms-dual__cell ms-dual__cell--orig">
+          <span className="ms-dual__col-label">Original</span>
+          <span className="ms-dual__orig-value" title="First value you ever logged">
+            {origLabel}
+          </span>
+        </div>
+        <div className="ms-dual__cell ms-dual__cell--now">
+          <span className="ms-dual__col-label">Check-in</span>
+          <input
+            type="number"
+            inputMode="decimal"
+            step={field.step}
+            min={field.min}
+            max={field.max}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={disabled}
+            placeholder="—"
+            className="ms-stat__input ms-dual__input"
+            aria-label={`${field.label} check-in (${field.unit})`}
+          />
+        </div>
+      </div>
       <span className="ms-stat__unit">{field.unit}</span>
-      {field.hint ? (
-        <span className="mt-0.5 px-1 text-[9px] leading-tight text-[var(--ms-ink-soft)]">
-          {field.hint}
-        </span>
-      ) : null}
-    </label>
+    </div>
   );
 }
 
@@ -123,18 +141,8 @@ export default function MemberMeasurementsClient({
         setAgeYears(String(id.ageYears));
       }
       if (typeof id.gender === "string") setGender(id.gender);
-      // Prefill weight from latest check-in if form empty
-      const latest = (data.measurements || [])[0] as MeasurementRecord | undefined;
-      if (latest?.weightLbs != null) {
-        setForm((prev) =>
-          prev.weightLbs ? prev : { ...prev, weightLbs: String(latest.weightLbs) },
-        );
-      }
-      if (latest?.bodyFatPct != null) {
-        setForm((prev) =>
-          prev.bodyFatPct ? prev : { ...prev, bodyFatPct: String(latest.bodyFatPct) },
-        );
-      }
+      // Fresh form for a new check-in (originals show from history separately)
+      setForm(emptyMeasurementForm());
     } catch {
       setError("Could not load measurements.");
     } finally {
@@ -242,6 +250,7 @@ export default function MemberMeasurementsClient({
 
   const latest = rows[0] || null;
   const previous = rows[1] || null;
+  const originals = useMemo(() => originalValuesFromHistory(rows), [rows]);
 
   return (
     <div className="ms-page mx-auto max-w-4xl space-y-6 pb-10">
@@ -415,9 +424,68 @@ export default function MemberMeasurementsClient({
           color: var(--ms-gold);
         }
         .ms-portrait__frame {
-          /* ~half of previous max-h-56 (14rem) → ~7rem */
           max-height: 7rem;
           aspect-ratio: 3 / 4;
+        }
+        .ms-dual {
+          background: var(--ms-box);
+          border: 2px solid var(--ms-rule);
+          border-radius: 8px;
+          padding: 0.4rem 0.45rem 0.35rem;
+          text-align: center;
+        }
+        .ms-dual__title {
+          margin-bottom: 0.3rem;
+        }
+        .ms-dual__hint {
+          display: block;
+          font-size: 0.55rem;
+          color: var(--ms-ink-soft);
+          margin-top: 0.1rem;
+        }
+        .ms-dual__cols {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0.35rem;
+          align-items: end;
+        }
+        .ms-dual__cell {
+          min-width: 0;
+        }
+        .ms-dual__col-label {
+          display: block;
+          font-family: ui-serif, Georgia, serif;
+          font-size: 0.5rem;
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: var(--ms-gold);
+          margin-bottom: 0.15rem;
+        }
+        .ms-dual__orig-value {
+          display: block;
+          font-family: ui-serif, Georgia, serif;
+          font-size: 1rem;
+          font-weight: 700;
+          color: var(--ms-ink-soft);
+          border-bottom: 1px solid var(--ms-rule-soft);
+          padding: 0.15rem 0.2rem;
+          min-height: 1.6rem;
+        }
+        .ms-dual__cell--now .ms-stat__input {
+          max-width: none;
+          width: 100%;
+        }
+        .ms-dual__input {
+          font-size: 1.05rem !important;
+        }
+        .ms-dual .ms-stat__unit {
+          margin-top: 0.25rem;
+        }
+        .ms-key-pair {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0.35rem;
         }
       `,
         }}
@@ -482,20 +550,6 @@ export default function MemberMeasurementsClient({
                 placeholder="—"
               />
             </KeyField>
-            <KeyField label="Weight (lbs)">
-              <input
-                type="number"
-                inputMode="decimal"
-                step={0.1}
-                min={50}
-                max={500}
-                value={form.weightLbs}
-                onChange={(e) => setField("weightLbs", e.target.value)}
-                disabled={saving}
-                className="ms-key__input"
-                placeholder="—"
-              />
-            </KeyField>
             <KeyField label="Gender">
               <select
                 value={gender}
@@ -511,20 +565,27 @@ export default function MemberMeasurementsClient({
                 <option value="Other">Other</option>
               </select>
             </KeyField>
-            <KeyField label="Body fat %">
-              <input
-                type="number"
-                inputMode="decimal"
-                step={0.1}
-                min={2}
-                max={70}
+            <p className="mb-1 mt-2 text-[9px] font-bold uppercase tracking-wider text-[var(--ms-gold)]">
+              Original · left · · Check-in · right
+            </p>
+            <DualMeasureField
+              field={MEASUREMENT_FIELDS.find((f) => f.id === "weightLbs")!}
+              original={originals.weightLbs}
+              value={form.weightLbs}
+              onChange={(v) => setField("weightLbs", v)}
+              disabled={saving}
+              compact
+            />
+            <div className="mt-2">
+              <DualMeasureField
+                field={MEASUREMENT_FIELDS.find((f) => f.id === "bodyFatPct")!}
+                original={originals.bodyFatPct}
                 value={form.bodyFatPct}
-                onChange={(e) => setField("bodyFatPct", e.target.value)}
+                onChange={(v) => setField("bodyFatPct", v)}
                 disabled={saving}
-                className="ms-key__input"
-                placeholder="—"
+                compact
               />
-            </KeyField>
+            </div>
           </div>
 
           {/* Col 2 — Before (half size) */}
@@ -631,14 +692,16 @@ export default function MemberMeasurementsClient({
             <div>
               <h2 className="ms-section-label">Measurements · Tape (inches)</h2>
               <p className="mb-2 font-serif text-[11px] italic text-[var(--ms-ink-soft)]">
-                Neck · Chest · Shoulders · Bicep flexed R/L · Waist · Glutes/hips · Upper quad
-                (pocket line) R/L · Calf R/L
+                Each row: <strong className="text-[var(--ms-gold)]">Original</strong> (first ever,
+                left) · <strong className="text-[var(--ms-gold)]">Check-in</strong> (enter now,
+                right). First time you log a number, it becomes the all-time original.
               </p>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {TAPE_MEASUREMENT_FIELDS.map((field) => (
-                  <SheetStatInput
+                  <DualMeasureField
                     key={field.id}
                     field={field}
+                    original={originals[field.id]}
                     value={form[field.id]}
                     onChange={(v) => setField(field.id, v)}
                     disabled={saving}

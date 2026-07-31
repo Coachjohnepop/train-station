@@ -2,7 +2,9 @@
 
 import {
   MEASUREMENT_FIELDS,
+  formatMeasurementValue,
   type MeasurementFieldId,
+  type MeasurementValues,
 } from "@/lib/body-measurements";
 
 type Props = {
@@ -13,6 +15,8 @@ type Props = {
   measuredAt: string;
   onMeasuredAtChange: (isoLocal: string) => void;
   disabled?: boolean;
+  /** All-time first value per field (left column, read-only). */
+  originals?: MeasurementValues | null;
 };
 
 /** datetime-local value from ISO or now. */
@@ -37,6 +41,7 @@ export default function MeasurementFormFields({
   measuredAt,
   onMeasuredAtChange,
   disabled,
+  originals = null,
 }: Props) {
   return (
     <div className="space-y-4">
@@ -51,30 +56,56 @@ export default function MeasurementFormFields({
         />
       </label>
 
+      <p className="text-[11px] text-[var(--muted)]">
+        Each field: <strong className="text-[var(--text)]">Original</strong> (first ever, left) ·{" "}
+        <strong className="text-[var(--text)]">Check-in</strong> (enter now, right).
+      </p>
+
       <div className="grid gap-3 sm:grid-cols-2">
-        {MEASUREMENT_FIELDS.map((field) => (
-          <label key={field.id} className="block text-sm">
-            <span className="font-medium">
-              {field.label}{" "}
-              <span className="text-[var(--muted)] font-normal">({field.unit})</span>
-            </span>
-            <input
-              type="number"
-              inputMode="decimal"
-              step={field.step}
-              min={field.min}
-              max={field.max}
-              value={values[field.id]}
-              onChange={(e) => onChange(field.id, e.target.value)}
-              disabled={disabled}
-              placeholder="—"
-              className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm tabular-nums"
-            />
-            {field.hint ? (
-              <span className="mt-0.5 block text-[11px] text-[var(--muted)]">{field.hint}</span>
-            ) : null}
-          </label>
-        ))}
+        {MEASUREMENT_FIELDS.map((field) => {
+          const orig = originals?.[field.id];
+          return (
+            <div
+              key={field.id}
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3"
+            >
+              <p className="text-sm font-medium">
+                {field.label}{" "}
+                <span className="font-normal text-[var(--muted)]">({field.unit})</span>
+              </p>
+              {field.hint ? (
+                <p className="text-[11px] text-[var(--muted)]">{field.hint}</p>
+              ) : null}
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+                    Original
+                  </p>
+                  <p className="mt-0.5 rounded border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1.5 text-sm tabular-nums text-[var(--muted)]">
+                    {formatMeasurementValue(orig, field.unit)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+                    Check-in
+                  </p>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step={field.step}
+                    min={field.min}
+                    max={field.max}
+                    value={values[field.id]}
+                    onChange={(e) => onChange(field.id, e.target.value)}
+                    disabled={disabled}
+                    placeholder="—"
+                    className="mt-0.5 w-full rounded border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1.5 text-sm tabular-nums"
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <label className="block text-sm">
