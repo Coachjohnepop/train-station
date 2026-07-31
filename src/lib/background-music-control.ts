@@ -3,7 +3,10 @@
 export const BG_MUSIC_OVERLAY_EVENT = "ts-bg-music-overlay";
 /** Ask BackgroundMusic to unlock/play (call from a user gesture when possible). */
 export const BG_MUSIC_REQUEST_PLAY_EVENT = "ts-bg-music-request-play";
-/** Theme Song mute preference (shared with BackgroundMusic + tour mute control). */
+/**
+ * Legacy key — was used to persist mute across visits. We no longer persist mute
+ * (landing should always start Theme Song on first tap). Cleared on load.
+ */
 export const BG_MUSIC_MUTED_KEY = "ts-bg-music-muted";
 const BG_MUSIC_ATTR = "data-ts-bg-music";
 
@@ -57,12 +60,19 @@ export function requestBackgroundMusicPlay(): void {
   window.dispatchEvent(new CustomEvent(BG_MUSIC_REQUEST_PLAY_EVENT));
 }
 
+/** @deprecated Mute is session-only now; always returns false after clear. */
 export function isBackgroundMusicUserMuted(): boolean {
-  if (typeof window === "undefined") return false;
+  return false;
+}
+
+/** Drop legacy persisted mute so private/new visits never inherit “muted”. */
+export function clearPersistedBackgroundMusicMute(): void {
+  if (typeof window === "undefined") return;
   try {
-    return window.localStorage.getItem(BG_MUSIC_MUTED_KEY) === "1";
+    window.localStorage.removeItem(BG_MUSIC_MUTED_KEY);
+    window.sessionStorage.removeItem(BG_MUSIC_MUTED_KEY);
   } catch {
-    return false;
+    /* ignore */
   }
 }
 

@@ -3,11 +3,10 @@
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  BG_MUSIC_MUTED_KEY,
   BG_MUSIC_OVERLAY_EVENT,
   BG_MUSIC_REQUEST_PLAY_EVENT,
   clearBackgroundMusicHolds,
-  isBackgroundMusicUserMuted,
+  clearPersistedBackgroundMusicMute,
   markBackgroundMusicElement,
   registerBackgroundMusicMediaDucking,
 } from "@/lib/background-music-control";
@@ -15,15 +14,13 @@ import {
 /**
  * Site-wide background music + pointing-finger guide.
  *
- * Speaker icon is honest: it only shows “playing” after we confirm the track
- * is unmuted AND currentTime is advancing. Until then it shows muted and the
- * finger says “tap for sound” — even in a brand-new private window (browsers
- * almost always block silent-tab autoplay with volume).
+ * Any tap on the landing (and other public pages) starts Theme Song.
+ * Mute is session-only via the corner speaker — never localStorage.
+ * (Persisted mute blocked private windows / return visits.)
  */
 
 const SRC = "/background-music.mp3";
 const VOLUME = 0.55;
-const OFF_KEY = BG_MUSIC_MUTED_KEY;
 /** Finger stays up at least this long (mute also dismisses). */
 const HINT_MS = 22_000;
 
@@ -37,10 +34,6 @@ const ACTIVATION_EVENTS: (keyof WindowEventMap)[] = [
 /** No theme song on any coach/platform admin surface (including /admin/day). */
 function isAdminRoute(pathname: string): boolean {
   return pathname === "/admin" || pathname.startsWith("/admin/");
-}
-
-function isUserMuted(): boolean {
-  return isBackgroundMusicUserMuted();
 }
 
 function sleep(ms: number) {
@@ -57,16 +50,18 @@ export default function BackgroundMusic() {
   const hintTimerRef = useRef<number | null>(null);
   const unlockedRef = useRef(false);
   /**
-   * Hard mute preference (localStorage). Checked after every await so a late
-   * forceAudible from capture-phase click cannot undo the speaker mute tap.
+   * Session-only mute from the corner speaker (not persisted).
+   * Any other tap on the page clears this and starts Theme Song.
    */
-  const userMutedRef = useRef(false);
+  const speakerMutedRef = useRef(false);
+  /** Ignore activation that is the same click as the speaker mute (capture fires first). */
+  const ignoreNextActivationRef = useRef(false);
 
   useEffect(() => {
     adminRouteRef.current = onAdmin;
   }, [onAdmin]);
 
-  /** User hit mute on the speaker. */
+  /** Speaker shows muted (session only). */
   const [off, setOff] = useState(false);
   /**
    * True only when we confirm real audible playback (currentTime advancing, unmuted).
@@ -75,11 +70,11 @@ export default function BackgroundMusic() {
   const [soundLive, setSoundLive] = useState(false);
   const [showHint, setShowHint] = useState(true);
 
-  // Hydrate mute preference once on mount
+  // Never inherit mute from a previous visit / private session key
   useEffect(() => {
-    const muted = isUserMuted();
-    userMutedRef.current = muted;
-    setOff(muted);
+    clearPersistedBackgroundMusicMute();
+    speakerMutedRef.current = false;
+    setOff(false);
   }, []);
 
   const clearHintTimer = useCallback(() => {
@@ -128,19 +123,24 @@ export default function BackgroundMusic() {
   }, [dismissHint]);
 
   const forceAudible = useCallback(
-    async (audio: HTMLAudioElement) => {
+    async (audio: HTMLAudioElement, opts?: { fromSpeakerMute?: boolean }) => {
       if (adminRouteRef.current) {
         stopAdminMusic(audio);
         return false;
       }
-      // Only the corner speaker sets user mute — respect it
-      if (userMutedRef.current || isUserMuted()) {
+      // Tap anywhere always starts song — clear session speaker mute
+      // (unless this call is the mute side of the speaker toggle)
+      if (!opts?.fromSpeakerMute) {
+        speakerMutedRef.current = false;
+        setOff(false);
+      } else if (speakerMutedRef.current) {
         setSoundLive(false);
         return false;
       }
-      // Gesture unlock clears video-duck holds so "tap anywhere" always works on landing
+
       overlayPauseRef.current = false;
       clearBackgroundMusicHolds();
+      clearPersistedBackgroundMusicMute();
 
       audio.volume = VOLUME;
       audio.muted = false;
@@ -150,19 +150,18 @@ export default function BackgroundMusic() {
         setSoundLive(false);
         return false;
       }
-      // Speaker mute while play() was in flight
-      if (userMutedRef.current || isUserMuted()) {
+      // Speaker was muted mid-flight
+      if (speakerMutedRef.current) {
         audio.muted = true;
         audio.pause();
         setSoundLive(false);
         setOff(true);
         return false;
       }
-      // Mark unlocked so startMusicWithFinger cannot remute after a successful gesture
       unlockedRef.current = true;
       setOff(false);
       const ok = await confirmSoundLive(audio);
-      if (userMutedRef.current || isUserMuted()) {
+      if (speakerMutedRef.current) {
         audio.muted = true;
         audio.pause();
         setSoundLive(false);
@@ -171,7 +170,6 @@ export default function BackgroundMusic() {
         return false;
       }
       if (!ok) {
-        // Still playing unmuted — keep icon honest but don't remute
         setSoundLive(!audio.paused && !audio.muted);
       }
       return !audio.paused && !audio.muted;
@@ -215,13 +213,6 @@ export default function BackgroundMusic() {
 
       showFingerForAtLeastTwentySeconds();
 
-      if (userMutedRef.current || isUserMuted()) {
-        userMutedRef.current = true;
-        setOff(true);
-        setSoundLive(false);
-        return;
-      }
-
       // Don't restart bootstrap if a tap already unlocked
       if (unlockedRef.current && !audio.paused && !audio.muted) {
         setSoundLive(true);
@@ -249,11 +240,11 @@ export default function BackgroundMusic() {
         return;
       }
       // Gesture may have unlocked during load wait — never remute after that
-      if (unlockedRef.current || userMutedRef.current) return;
+      if (unlockedRef.current || speakerMutedRef.current) return;
 
       // Try audible autoplay a few times
       for (let i = 0; i < 5; i++) {
-        if (adminRouteRef.current || unlockedRef.current || userMutedRef.current) {
+        if (adminRouteRef.current || unlockedRef.current || speakerMutedRef.current) {
           if (adminRouteRef.current) stopAdminMusic(audio);
           return;
         }
@@ -265,11 +256,11 @@ export default function BackgroundMusic() {
         } catch {
           /* blocked */
         }
-        if (unlockedRef.current || userMutedRef.current) return;
+        if (unlockedRef.current || speakerMutedRef.current) return;
         await sleep(180 * (i + 1));
       }
 
-      if (unlockedRef.current || userMutedRef.current) return;
+      if (unlockedRef.current || speakerMutedRef.current) return;
 
       // Buffer muted — icon stays muted; any gesture will unlock
       audio.muted = true;
@@ -302,7 +293,7 @@ export default function BackgroundMusic() {
         stopAdminMusic(audio);
         return;
       }
-      if (isUserMuted() || overlayPauseRef.current) return;
+      if (overlayPauseRef.current) return;
       void forceAudible(audio);
     };
     const onPageShow = () => {
@@ -310,7 +301,6 @@ export default function BackgroundMusic() {
         stopAdminMusic(audio);
         return;
       }
-      if (isUserMuted()) return;
       void startMusicWithFinger(audio);
     };
 
@@ -323,11 +313,15 @@ export default function BackgroundMusic() {
     };
   }, [startMusicWithFinger, forceAudible, clearHintTimer, stopAdminMusic]);
 
-  // First real gesture → unlock sound (does not hide the finger).
-  // Skip the speaker control so mute/unmute is owned only by toggle().
+  // Any real gesture (landing tap, Free Quick Tour, etc.) starts Theme Song.
+  // Only the corner speaker can mute; next non-speaker tap unmutes again.
   useEffect(() => {
     const opts: AddEventListenerOptions = { capture: true, passive: true };
     const onActivation = (e: Event) => {
+      if (ignoreNextActivationRef.current) {
+        ignoreNextActivationRef.current = false;
+        return;
+      }
       const t = e.target;
       if (
         t instanceof Element &&
@@ -340,7 +334,7 @@ export default function BackgroundMusic() {
         if (audio && adminRouteRef.current) stopAdminMusic(audio);
         return;
       }
-      if (userMutedRef.current || isUserMuted() || overlayPauseRef.current) return;
+      // Always start on any landing / site tap — ignore prior mute state
       void forceAudible(audio);
     };
     ACTIVATION_EVENTS.forEach((e) => window.addEventListener(e, onActivation, opts));
@@ -362,19 +356,18 @@ export default function BackgroundMusic() {
         setSoundLive(false);
         return;
       }
-      if (!isUserMuted()) void forceAudible(audio);
+      // Don't auto-resume after video duck if user just muted via speaker
+      if (speakerMutedRef.current) return;
+      void forceAudible(audio);
     };
     window.addEventListener(BG_MUSIC_OVERLAY_EVENT, onOverlay);
     return () => window.removeEventListener(BG_MUSIC_OVERLAY_EVENT, onOverlay);
   }, [forceAudible]);
 
-  // Free Quick Tour / Watch intro open: unlock theme song unless user muted.
   useEffect(() => {
     const onRequestPlay = () => {
       const audio = audioRef.current;
       if (!audio || adminRouteRef.current) return;
-      if (userMutedRef.current || isUserMuted()) return;
-      overlayPauseRef.current = false;
       void forceAudible(audio);
     };
     window.addEventListener(BG_MUSIC_REQUEST_PLAY_EVENT, onRequestPlay);
@@ -389,67 +382,38 @@ export default function BackgroundMusic() {
       stopAdminMusic(audio);
       return;
     }
-    if (userMutedRef.current || isUserMuted()) {
-      userMutedRef.current = true;
-      setOff(true);
-      setSoundLive(false);
-      audio.muted = true;
-      audio.pause();
-      return;
-    }
+    // Fresh page: never carry mute
+    speakerMutedRef.current = false;
+    setOff(false);
     void startMusicWithFinger(audio);
   }, [onAdmin, startMusicWithFinger, stopAdminMusic]);
 
-  /** Speaker only: mute ↔ unmute. Capture-phase unlock never steals this click. */
+  /** Single mute control: corner speaker only. Session-only (not remembered). */
   const toggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    ignoreNextActivationRef.current = true;
     const audio = audioRef.current;
     if (!audio || adminRouteRef.current) return;
 
-    // Currently playing (or thinks it is) → mute hard
+    // Currently playing → mute for this session only
     if (!off && (soundLive || !audio.paused)) {
-      userMutedRef.current = true;
+      speakerMutedRef.current = true;
       setOff(true);
       setSoundLive(false);
       unlockedRef.current = false;
       dismissHint();
-      try {
-        window.localStorage.setItem(OFF_KEY, "1");
-      } catch {
-        /* ignore */
-      }
+      clearPersistedBackgroundMusicMute();
       audio.muted = true;
       audio.pause();
       return;
     }
 
-    // Muted / waiting → unmute + play (this click is the gesture)
-    userMutedRef.current = false;
+    // Muted / waiting → play (this click is the gesture)
+    speakerMutedRef.current = false;
     setOff(false);
-    try {
-      window.localStorage.setItem(OFF_KEY, "0");
-    } catch {
-      /* ignore */
-    }
-    overlayPauseRef.current = false;
-    audio.muted = false;
-    audio.volume = VOLUME;
-    audio.loop = true;
-    void audio
-      .play()
-      .then(() => confirmSoundLive(audio))
-      .then((ok) => {
-        if (userMutedRef.current) {
-          audio.muted = true;
-          audio.pause();
-          setSoundLive(false);
-          setOff(true);
-          return;
-        }
-        if (ok) setSoundLive(true);
-      })
-      .catch(() => setSoundLive(false));
+    clearPersistedBackgroundMusicMute();
+    void forceAudible(audio);
   };
 
   const onPublicHome = pathname === "/";
