@@ -105,8 +105,15 @@ export default function MemberMeasurementsClient({
   const [rows, setRows] = useState<MeasurementRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  /**
+   * Sticky floating Save bar while filling the sheet.
+   * After the first Save press in this page visit, dock it to the form footer
+   * so it no longer hovers over content.
+   */
+  const [floatSave, setFloatSave] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const formSaveRef = useRef<HTMLDivElement>(null);
   const [form, setForm] = useState(emptyMeasurementForm);
   const [notes, setNotes] = useState("");
   const [measuredAtLocal, setMeasuredAtLocal] = useState(() => toLocalInputValue());
@@ -367,6 +374,14 @@ export default function MemberMeasurementsClient({
     }
   }
 
+  function dockSaveBar() {
+    setFloatSave(false);
+    // Bring the in-form Save into view after the floating bar goes away
+    requestAnimationFrame(() => {
+      formSaveRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    });
+  }
+
   async function saveCheckIn() {
     if (photoBusyRef.current) {
       setError("Wait for the photo upload to finish, then save.");
@@ -375,6 +390,8 @@ export default function MemberMeasurementsClient({
     if (savingRef.current) return;
     savingRef.current = true;
     setSaving(true);
+    // First press in this visit: stop hovering — Save lives at the bottom of the sheet
+    dockSaveBar();
     setError(null);
     setMessage(null);
     try {
@@ -1314,7 +1331,10 @@ export default function MemberMeasurementsClient({
           {message ? (
             <p className="font-serif text-sm text-emerald-200">{message}</p>
           ) : null}
-          <div className="flex flex-wrap items-center gap-3">
+          <div
+            ref={formSaveRef}
+            className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-[var(--ms-rule)] bg-[rgba(30,16,60,0.55)] px-3 py-3 sm:px-4"
+          >
             <button
               type="submit"
               disabled={saving || Boolean(photoBusy)}
@@ -1322,9 +1342,12 @@ export default function MemberMeasurementsClient({
             >
               {saving ? "Saving…" : photoBusy ? "Wait for photo…" : "Save check-in"}
             </button>
-            <p className="font-serif text-[11px] italic text-[var(--ms-ink-soft)]">
-              Writes this visit to Postgres (adventure log). Originals stay locked as first-ever
-              values.
+            <p className="min-w-0 flex-1 font-serif text-[11px] italic text-[var(--ms-ink-soft)] sm:text-xs">
+              {saving
+                ? "Saving your check-in…"
+                : message
+                  ? message
+                  : "Writes this visit to Postgres (adventure log). Originals stay locked as first-ever values."}
             </p>
           </div>
         </div>
@@ -1332,28 +1355,30 @@ export default function MemberMeasurementsClient({
         <p className="ms-ornament relative z-[1] mt-6 text-center">✦ · end of sheet · ✦</p>
       </form>
 
-      {/* Sticky save — always visible while scrolling the sheet */}
-      <div className="sticky bottom-3 z-20 mx-auto max-w-4xl px-1">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-[var(--ms-rule)] bg-[rgba(30,16,60,0.95)] px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.45)] backdrop-blur">
-          <p className="font-serif text-xs text-[var(--ms-ink-soft)] sm:text-sm">
-            {saving
-              ? "Saving your check-in…"
-              : photoBusy
-                ? "Uploading photo…"
-                : message
-                  ? message
-                  : "Enter check-in numbers (right column), then save."}
-          </p>
-          <button
-            type="button"
-            disabled={saving || Boolean(photoBusy)}
-            className={saveButtonClass}
-            onClick={() => void saveCheckIn()}
-          >
-            {saving ? "Saving…" : photoBusy ? "Wait…" : "Save"}
-          </button>
+      {/* Floating Save — only until first Save press this visit, then docks to form footer */}
+      {floatSave ? (
+        <div className="sticky bottom-3 z-20 mx-auto max-w-4xl px-1 pb-[env(safe-area-inset-bottom)]">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-[var(--ms-rule)] bg-[rgba(30,16,60,0.95)] px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.45)] backdrop-blur">
+            <p className="font-serif text-xs text-[var(--ms-ink-soft)] sm:text-sm">
+              {saving
+                ? "Saving your check-in…"
+                : photoBusy
+                  ? "Uploading photo…"
+                  : message
+                    ? message
+                    : "Enter check-in numbers (right column), then save."}
+            </p>
+            <button
+              type="button"
+              disabled={saving || Boolean(photoBusy)}
+              className={saveButtonClass}
+              onClick={() => void saveCheckIn()}
+            >
+              {saving ? "Saving…" : photoBusy ? "Wait…" : "Save"}
+            </button>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {latest ? (
         <section className="ms-sheet p-4 sm:p-5">
