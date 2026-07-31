@@ -84,9 +84,17 @@ export async function buildRootMetadata(): Promise<Metadata> {
       title: brandName,
     },
     icons: {
-      icon: brand.faviconUrl,
+      icon: [
+        { url: brand.faviconUrl, type: "image/png" },
+        { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+        { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      ],
       shortcut: brand.faviconUrl,
-      apple: brand.logoIconUrl,
+      // iOS Share → Add to Home Screen probes /apple-touch-icon.png by default
+      apple: [
+        { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+        { url: brand.logoIconUrl, type: "image/png" },
+      ],
     },
     robots,
     verification: Object.keys(verification).length ? verification : undefined,

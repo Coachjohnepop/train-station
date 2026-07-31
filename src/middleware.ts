@@ -72,7 +72,15 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/images") ||
     pathname.startsWith("/favicon") ||
-    pathname.match(/\.(png|jpg|jpeg|svg|ico|webp)$/)
+    // PWA / iOS home-screen probes (must never hit auth or HTML 404)
+    pathname === "/apple-touch-icon.png" ||
+    pathname === "/apple-touch-icon-precomposed.png" ||
+    pathname === "/icon-192.png" ||
+    pathname === "/icon-512.png" ||
+    pathname === "/manifest.webmanifest" ||
+    pathname === "/manifest.json" ||
+    pathname === "/sw.js" ||
+    pathname.match(/\.(png|jpg|jpeg|svg|ico|webp|webmanifest)$/)
   ) {
     return NextResponse.next();
   }

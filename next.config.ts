@@ -30,6 +30,13 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Legacy PWA probes some browsers still hit
+  async rewrites() {
+    return [
+      { source: "/manifest.json", destination: "/manifest.webmanifest" },
+      { source: "/site.webmanifest", destination: "/manifest.webmanifest" },
+    ];
+  },
 };
 
 export default nextConfig;
