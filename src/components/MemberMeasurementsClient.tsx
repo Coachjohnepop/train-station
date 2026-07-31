@@ -624,10 +624,15 @@ export default function MemberMeasurementsClient({
           </div>
         </header>
 
-        {/* Row 1: 3 columns — key data | before | now */}
+        {/*
+          3-column sheet:
+          [ Identity (row-span-2) | Before | Now ]
+          [ Identity              | Demo video (col-span-2) ]
+          [ Tape measurements across all 3 columns ]
+        */}
         <div className="relative z-[1] mt-5 grid gap-3 sm:grid-cols-3 sm:items-start">
-          {/* Col 1 — identity / key stats */}
-          <div className="rounded-sm border border-[var(--ms-rule-soft)] bg-[rgba(20,8,40,0.35)] p-3">
+          {/* Col 1 — identity / key (sits beside photos + video) */}
+          <div className="rounded-sm border border-[var(--ms-rule-soft)] bg-[rgba(20,8,40,0.35)] p-3 sm:row-span-2">
             <h2 className="ms-section-label !mb-3">Identity · Key</h2>
             <KeyField label="Name">
               <input
@@ -690,7 +695,7 @@ export default function MemberMeasurementsClient({
             </div>
           </div>
 
-          {/* Col 2 — Before (vertical portrait + crop) */}
+          {/* Col 2 — Before */}
           <div className="ms-portrait w-full overflow-hidden rounded-sm">
             <div className="flex w-full items-center justify-between border-b border-[var(--ms-rule-soft)] px-2 py-1">
               <span className="ms-portrait__label">Before</span>
@@ -810,7 +815,7 @@ export default function MemberMeasurementsClient({
             </div>
           </div>
 
-          {/* Col 3 — Now (vertical portrait + crop) */}
+          {/* Col 3 — Now */}
           <div className="ms-portrait w-full overflow-hidden rounded-sm">
             <div className="flex w-full items-center justify-between border-b border-[var(--ms-rule-soft)] px-2 py-1">
               <span className="ms-portrait__label">Now</span>
@@ -922,6 +927,7 @@ export default function MemberMeasurementsClient({
                   onClick={() => {
                     setNowPhotoUrl(null);
                     setNowCrop({ ...DEFAULT_PHOTO_CROP });
+                    setNowCropOpen(false);
                   }}
                 >
                   ✕
@@ -929,84 +935,79 @@ export default function MemberMeasurementsClient({
               ) : null}
             </div>
           </div>
-        </div>
 
-        {/* Below: coach tape list + demo video */}
-        <div className="relative z-[1] mt-5 grid gap-4 lg:grid-cols-[1fr_minmax(13rem,16rem)] lg:items-start">
-          <div className="min-w-0 space-y-4">
-            <div>
-              <h2 className="ms-section-label">Measurements · Tape (inches)</h2>
-              <p className="mb-2 font-serif text-[11px] italic text-[var(--ms-ink-soft)]">
-                Each row: <strong className="text-[var(--ms-gold)]">Original</strong> (first ever,
-                left) · <strong className="text-[var(--ms-gold)]">Check-in</strong> (enter now,
-                right). First time you log a number, it becomes the all-time original.
-              </p>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {TAPE_MEASUREMENT_FIELDS.map((field) => (
-                  <DualMeasureField
-                    key={field.id}
-                    field={field}
-                    original={originals[field.id]}
-                    value={form[field.id]}
-                    onChange={(v) => setField(field.id, v)}
-                    disabled={saving}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <aside className="lg:sticky lg:top-4">
-            <div className="ms-video-frame overflow-hidden rounded-sm">
-              <div className="flex items-center justify-between gap-2 border-b border-[var(--ms-rule-soft)] bg-[#12081f] px-2 py-1">
-                <span className="ms-video-label">How to measure</span>
-                {hasVideo ? (
-                  <button
-                    type="button"
-                    className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ms-accent)] underline-offset-2 hover:underline"
-                    onClick={() => setWatchAgain(true)}
-                  >
-                    Expand
-                  </button>
-                ) : null}
-              </div>
+          {/* Demo video — columns 2–3, flush under Before / Now */}
+          <div className="ms-video-frame overflow-hidden rounded-sm sm:col-span-2">
+            <div className="flex items-center justify-between gap-2 border-b border-[var(--ms-rule-soft)] bg-[#12081f] px-2 py-1">
+              <span className="ms-video-label">Demonstration · How to measure</span>
               {hasVideo ? (
-                <div className="aspect-video w-full bg-black">
-                  <PlayableVideoFrame
-                    className="aspect-video h-full w-full"
-                    videoUrl={videoUrl}
-                    title="How to take your measurements"
-                    volumeDb={volumeDb}
-                    autoplay={false}
-                    duckBackgroundMusic
-                  />
-                </div>
-              ) : (
-                <div className="flex aspect-video flex-col items-center justify-center gap-2 bg-gradient-to-b from-[#1a0b30] to-[#0c0618] px-3 text-center">
-                  <p className="font-serif text-sm text-[var(--ms-accent)]">Demonstration</p>
-                  <a
-                    href="https://www.youtube.com/results?search_query=how+to+take+body+measurements+tape+correctly"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 rounded border border-[var(--ms-rule)] bg-[var(--ms-royal)]/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--ms-ink)]"
-                  >
-                    ▶ Placeholder · YouTube
-                  </a>
-                </div>
-              )}
-              {hasVideo ? (
-                <div className="border-t border-[var(--ms-rule-soft)] bg-[#12081f] px-2 py-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setWatchAgain(true)}
-                    className="w-full text-left text-[10px] text-[var(--ms-ink-soft)] underline-offset-2 hover:text-[var(--ms-accent)] hover:underline"
-                  >
-                    {isYt ? "Full YouTube player →" : "Full-screen how-to →"}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ms-accent)] underline-offset-2 hover:underline"
+                  onClick={() => setWatchAgain(true)}
+                >
+                  Expand
+                </button>
               ) : null}
             </div>
-          </aside>
+            {hasVideo ? (
+              <div className="aspect-video w-full bg-black">
+                <PlayableVideoFrame
+                  className="aspect-video h-full w-full"
+                  videoUrl={videoUrl}
+                  title="How to take your measurements"
+                  volumeDb={volumeDb}
+                  autoplay={false}
+                  duckBackgroundMusic
+                />
+              </div>
+            ) : (
+              <div className="flex aspect-video flex-col items-center justify-center gap-2 bg-gradient-to-b from-[#1a0b30] to-[#0c0618] px-3 text-center">
+                <p className="font-serif text-sm text-[var(--ms-accent)]">Demonstration</p>
+                <a
+                  href="https://www.youtube.com/results?search_query=how+to+take+body+measurements+tape+correctly"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 rounded border border-[var(--ms-rule)] bg-[var(--ms-royal)]/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--ms-ink)]"
+                >
+                  ▶ Placeholder · YouTube
+                </a>
+              </div>
+            )}
+            {hasVideo ? (
+              <div className="border-t border-[var(--ms-rule-soft)] bg-[#12081f] px-2 py-1.5">
+                <button
+                  type="button"
+                  onClick={() => setWatchAgain(true)}
+                  className="w-full text-left text-[10px] text-[var(--ms-ink-soft)] underline-offset-2 hover:text-[var(--ms-accent)] hover:underline"
+                >
+                  {isYt ? "Full YouTube player →" : "Full-screen how-to →"}
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Tape measurements — full width, all 3 columns */}
+          <div className="min-w-0 sm:col-span-3">
+            <h2 className="ms-section-label">Measurements · Tape (inches)</h2>
+            <p className="mb-2 font-serif text-[11px] italic text-[var(--ms-ink-soft)]">
+              Each field: <strong className="text-[var(--ms-gold)]">Original</strong> (first ever,
+              left) · <strong className="text-[var(--ms-gold)]">Check-in</strong> (enter now,
+              right). First time you log a number, it becomes the all-time original.
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {TAPE_MEASUREMENT_FIELDS.map((field) => (
+                <DualMeasureField
+                  key={field.id}
+                  field={field}
+                  original={originals[field.id]}
+                  value={form[field.id]}
+                  onChange={(v) => setField(field.id, v)}
+                  disabled={saving}
+                />
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="relative z-[1] mt-5 space-y-3 border-t border-[var(--ms-rule-soft)] pt-4">
