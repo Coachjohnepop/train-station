@@ -90,6 +90,16 @@ export default function LandingSeeInsideTour({
     setMounted(true);
   }, []);
 
+  // Hide fixed Light/Dark control while tour is open (it sat on Song/Skip/Close).
+  // Tour is always dark cinematic — theme toggle would look “broken” anyway.
+  useEffect(() => {
+    if (!open) return;
+    document.documentElement.dataset.landingTour = "open";
+    return () => {
+      delete document.documentElement.dataset.landingTour;
+    };
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     setMusicMuted(isBackgroundMusicUserMuted());
@@ -303,8 +313,8 @@ export default function LandingSeeInsideTour({
       aria-modal="true"
       aria-labelledby="see-inside-title"
     >
-      <div className="flex shrink-0 items-center justify-between gap-2 px-3 pb-1 pt-[max(0.4rem,env(safe-area-inset-top))] sm:px-5">
-        <div>
+      <div className="flex shrink-0 items-start justify-between gap-2 px-3 pb-1 pt-[max(0.4rem,env(safe-area-inset-top))] sm:items-center sm:px-5">
+        <div className="min-w-0 flex-1 pr-1">
           <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-[#c4b5fd]">
             Free Quick Tour
           </p>
@@ -312,7 +322,7 @@ export default function LandingSeeInsideTour({
             Station tour
           </h2>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex max-w-[min(100%,16rem)] shrink-0 flex-wrap items-center justify-end gap-1 sm:max-w-none sm:gap-1.5">
           <button
             type="button"
             onClick={(e) => {
@@ -322,7 +332,7 @@ export default function LandingSeeInsideTour({
               setBackgroundMusicMuted(next);
               if (!next) requestBackgroundMusicPlay();
             }}
-            className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold transition ${
+            className={`inline-flex h-8 items-center gap-1 rounded-full border px-2 text-[11px] font-semibold transition sm:gap-1.5 sm:px-2.5 ${
               musicMuted
                 ? "border-white/20 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
                 : "border-[#7c3aed]/50 bg-[#7c3aed]/20 text-[#e9d5ff] hover:bg-[#7c3aed]/30"
@@ -331,7 +341,9 @@ export default function LandingSeeInsideTour({
             title={musicMuted ? "Play Theme Song" : "Mute Theme Song"}
           >
             <span aria-hidden>{musicMuted ? "🔇" : "🔊"}</span>
-            <span className="hidden sm:inline">{musicMuted ? "Song off" : "Song on"}</span>
+            <span className="hidden xs:inline sm:inline">
+              {musicMuted ? "Song off" : "Song on"}
+            </span>
           </button>
           {phase === "auto" ? (
             <button
@@ -341,15 +353,16 @@ export default function LandingSeeInsideTour({
                 clearTimers();
                 setPhase("end");
               }}
-              className="rounded-full border border-white/20 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-white/85"
+              className="h-8 rounded-full border border-white/20 bg-white/5 px-2 text-[11px] font-semibold text-white/85 sm:px-2.5"
             >
-              Skip to choices
+              Skip
+              <span className="hidden sm:inline"> to choices</span>
             </button>
           ) : null}
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/15 text-white/70 hover:bg-white/10 hover:text-white"
             aria-label="Close tour"
           >
             ✕
