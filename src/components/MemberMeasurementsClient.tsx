@@ -123,54 +123,91 @@ export default function MemberMeasurementsClient({
   const [displayName, setDisplayName] = useState("");
   const [ageYears, setAgeYears] = useState("");
   const [gender, setGender] = useState("");
+  /** Local preview while upload in flight (object URL). */
+  const [beforePreviewLocal, setBeforePreviewLocal] = useState<string | null>(null);
+  const [nowPreviewLocal, setNowPreviewLocal] = useState<string | null>(null);
   /** Library pickers (no capture attribute). */
   const beforeLibraryRef = useRef<HTMLInputElement>(null);
   const nowLibraryRef = useRef<HTMLInputElement>(null);
   /** Camera capture. */
   const beforeCameraRef = useRef<HTMLInputElement>(null);
   const nowCameraRef = useRef<HTMLInputElement>(null);
+  const savingRef = useRef(false);
+  const photoBusyRef = useRef<"before" | "now" | null>(null);
   const volumeDb = useUploadedContentVolumeDb();
 
   const videoUrl = introVideoUrl?.trim() || "";
   const hasVideo = Boolean(videoUrl);
   const isYt = hasVideo && isYoutubeUrl(videoUrl);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/member/measurements", { cache: "no-store" });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data.error || "Could not load measurements.");
-        setRows([]);
-        return;
+  const beforeDisplayUrl = beforePreviewLocal || beforePhotoUrl;
+  const nowDisplayUrl = nowPreviewLocal || nowPhotoUrl;
+
+  const load = useCallback(
+    async (opts?: { preserveNow?: boolean; preserveForm?: boolean }) => {
+      // Soft refresh after photo upload should not flip the whole sheet into loading
+      if (!opts?.preserveForm) setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/member/measurements", {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError(data.error || "Could not load measurements.");
+          if (!opts?.preserveForm) setRows([]);
+          return;
+        }
+        const list = (data.measurements || []) as MeasurementRecord[];
+        setRows(list);
+        setBeforePhotoUrl(
+          typeof data.beforePhotoUrl === "string" && data.beforePhotoUrl.trim()
+            ? data.beforePhotoUrl.trim()
+            : null,
+        );
+        if (!opts?.preserveForm) {
+          setBeforeCrop(normalizePhotoCrop(data.beforePhotoCrop || null));
+          setBeforeCropOpen(false);
+        } else {
+          // Soft refresh: still adopt crop if we had none
+          setBeforeCrop((prev) =>
+            prev ? prev : normalizePhotoCrop(data.beforePhotoCrop || null),
+          );
+        }
+        const id = data.identity || {};
+        if (!opts?.preserveForm) {
+          if (typeof id.name === "string") setDisplayName(id.name);
+          if (id.ageYears != null && Number.isFinite(Number(id.ageYears))) {
+            setAgeYears(String(id.ageYears));
+          }
+          if (typeof id.gender === "string") setGender(id.gender);
+          // Fresh form for a new check-in (originals show from history separately)
+          setForm(emptyMeasurementForm());
+        }
+        if (!opts?.preserveNow) {
+          setNowPhotoUrl(null);
+          setNowCrop({ ...DEFAULT_PHOTO_CROP });
+          setNowCropOpen(false);
+          setNowPreviewLocal((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return null;
+          });
+        }
+        if (!opts?.preserveForm) {
+          setBeforePreviewLocal((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return null;
+          });
+        }
+      } catch {
+        if (!opts?.preserveForm) setError("Could not load measurements.");
+      } finally {
+        if (!opts?.preserveForm) setLoading(false);
       }
-      setRows(data.measurements || []);
-      setBeforePhotoUrl(
-        typeof data.beforePhotoUrl === "string" && data.beforePhotoUrl.trim()
-          ? data.beforePhotoUrl.trim()
-          : null,
-      );
-      setBeforeCrop(normalizePhotoCrop(data.beforePhotoCrop || null));
-      setNowCrop({ ...DEFAULT_PHOTO_CROP });
-      setBeforeCropOpen(false);
-      setNowCropOpen(false);
-      const id = data.identity || {};
-      if (typeof id.name === "string") setDisplayName(id.name);
-      if (id.ageYears != null && Number.isFinite(Number(id.ageYears))) {
-        setAgeYears(String(id.ageYears));
-      }
-      if (typeof id.gender === "string") setGender(id.gender);
-      // Fresh form for a new check-in (originals show from history separately)
-      setForm(emptyMeasurementForm());
-      setNowPhotoUrl(null);
-    } catch {
-      setError("Could not load measurements.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   useEffect(() => {
     void load();
@@ -183,24 +220,58 @@ export default function MemberMeasurementsClient({
   async function uploadPortrait(kind: "before" | "now", files: FileList | null) {
     const raw = files?.[0];
     if (!raw) return;
+    if (photoBusyRef.current || savingRef.current) {
+      setMessage("Already busy — wait a moment, then try again.");
+      return;
+    }
+    photoBusyRef.current = kind;
     setPhotoBusy(kind);
     setError(null);
-    setMessage(kind === "before" ? "Uploading before photo…" : "Uploading now photo…");
+    setMessage("Processing photo…");
+
+    // Instant local preview (must render via *DisplayUrl in the frames)
+    const localUrl = URL.createObjectURL(raw);
+    if (kind === "before") {
+      setBeforePreviewLocal((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return localUrl;
+      });
+    } else {
+      setNowPreviewLocal((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return localUrl;
+      });
+    }
+
     try {
       let file: File;
       try {
+        setMessage("Compressing photo…");
         file = await compressImageForUpload(raw);
       } catch (compressErr) {
-        // Fall back to raw if compress fails (and size is small enough)
-        if (raw.size <= 3.5 * 1024 * 1024) {
+        if (raw.size > 0 && raw.size <= 3.2 * 1024 * 1024) {
           file = raw;
         } else {
           throw compressErr;
         }
       }
 
+      // Prefer a JPEG name so server MIME sniffing works on mobile
+      const uploadName =
+        file.name && /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name)
+          ? file.name
+          : "photo.jpg";
+      const uploadFile =
+        file.type && file.type !== "application/octet-stream"
+          ? file
+          : new File([file], uploadName, {
+              type: file.type || "image/jpeg",
+              lastModified: Date.now(),
+            });
+
+      setMessage("Uploading photo…");
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", uploadFile, uploadName);
       formData.append("kind", kind);
       const res = await fetch("/api/member/measurements/photo", {
         method: "POST",
@@ -221,41 +292,69 @@ export default function MemberMeasurementsClient({
               : res.status === 403
                 ? "Your account can’t upload yet (payment/approval)."
                 : res.status === 413
-                  ? "Photo too large for the server. Try a smaller image."
+                  ? "Photo too large for the server. Try Library and a smaller image."
                   : `Photo upload failed (${res.status}).`),
         );
       }
-      const url = data.url || data.beforePhotoUrl || data.photoUrl;
+      const url = (data.url || data.beforePhotoUrl || data.photoUrl || "").trim();
       if (!url) throw new Error("Upload succeeded but no photo URL came back.");
 
       if (kind === "before") {
         setBeforePhotoUrl(url);
         setBeforeCrop({ ...DEFAULT_PHOTO_CROP });
-        setBeforeCropOpen(true);
-        // Confirm persistence from DB
-        try {
-          const check = await fetch("/api/member/measurements", {
-            cache: "no-store",
-            credentials: "same-origin",
-          });
-          const body = await check.json().catch(() => ({}));
-          if (body.beforePhotoUrl) setBeforePhotoUrl(body.beforePhotoUrl);
-        } catch {
-          /* keep local url */
-        }
-        setMessage("Before photo saved to your account. Crop if you want, then Save crop.");
+        setBeforeCropOpen(false);
+        // Switch frame from blob preview → durable URL (local kept if remote fails to paint)
+        setBeforePreviewLocal((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return null;
+        });
+        setMessage("Before photo saved. Tap Crop to adjust framing if you want.");
       } else {
+        // Keep Now photo in the frame (do not null it after persist)
         setNowPhotoUrl(url);
         setNowCrop({ ...DEFAULT_PHOTO_CROP });
-        setNowCropOpen(true);
-        setMessage(
-          "Now photo uploaded. Crop if you want, then tap Save / Save check-in to lock it on this visit.",
-        );
+        setNowCropOpen(false);
+        setNowPreviewLocal((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return null;
+        });
+        // Persist immediately so it survives refresh; leave URL in state for the frame
+        setMessage("Saving now photo to your log…");
+        const persist = await fetch("/api/member/measurements", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            photoUrl: url,
+            photoFocusX: 50,
+            photoFocusY: 25,
+            photoZoom: 1,
+            measuredAt: new Date().toISOString(),
+            notes: "Photo check-in",
+          }),
+        });
+        const persistData = await persist.json().catch(() => ({}));
+        if (!persist.ok) {
+          setMessage(
+            "Photo is in the frame — tap Save check-in to lock it on this visit.",
+          );
+          setError(
+            typeof persistData.error === "string"
+              ? persistData.error
+              : "Could not auto-save photo check-in.",
+          );
+        } else {
+          setMessage("Now photo saved and showing above. Add numbers, then Save if you want.");
+          // Refresh history without wiping the Now frame or typed check-in numbers
+          void load({ preserveNow: true, preserveForm: true }).catch(() => undefined);
+        }
       }
     } catch (e: unknown) {
       setMessage(null);
       setError(e instanceof Error ? e.message : "Photo upload failed.");
+      // Keep local preview so they still see what they picked
     } finally {
+      photoBusyRef.current = null;
       setPhotoBusy(null);
       for (const ref of [
         beforeLibraryRef,
@@ -269,10 +368,22 @@ export default function MemberMeasurementsClient({
   }
 
   async function saveCheckIn() {
+    if (photoBusyRef.current) {
+      setError("Wait for the photo upload to finish, then save.");
+      return;
+    }
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setError(null);
     setMessage(null);
     try {
+      const ageRaw = ageYears.trim();
+      const ageNum = ageRaw === "" ? null : Number(ageRaw);
+      if (ageRaw !== "" && (!Number.isFinite(ageNum) || (ageNum as number) < 1 || (ageNum as number) > 120)) {
+        throw new Error("Age must be a number between 1 and 120 (or leave blank).");
+      }
+
       const body: Record<string, unknown> = {
         notes,
         measuredAt: fromLocalInputValue(measuredAtLocal),
@@ -281,26 +392,68 @@ export default function MemberMeasurementsClient({
         photoFocusY: nowCrop.focusY,
         photoZoom: nowCrop.zoom,
         name: displayName.trim() || null,
-        ageYears: ageYears.trim() === "" ? null : Number(ageYears),
+        ageYears: ageNum,
         gender: gender.trim() || null,
       };
       for (const f of MEASUREMENT_FIELDS) {
         body[f.id] = form[f.id] === "" ? null : form[f.id];
       }
+
+      const hasMeasure = MEASUREMENT_FIELDS.some((f) => form[f.id]?.trim());
+      const hasNote = Boolean(notes.trim());
+      const hasNow = Boolean(nowPhotoUrl);
+      if (!hasMeasure && !hasNote && !hasNow) {
+        // Identity-only: update profile without inventing a fake measurement row
+        // only when they actually typed identity fields.
+        const hasIdentity =
+          Boolean(displayName.trim()) || ageRaw !== "" || Boolean(gender.trim());
+        if (!hasIdentity) {
+          throw new Error(
+            "Nothing to save — enter a check-in number, take a Now photo, or add a note.",
+          );
+        }
+        const idRes = await fetch("/api/member/measurements", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            name: body.name,
+            ageYears: body.ageYears,
+            gender: body.gender,
+            notes: "Identity update",
+            measuredAt: body.measuredAt,
+          }),
+        });
+        const idData = await idRes.json().catch(() => ({}));
+        if (!idRes.ok) {
+          throw new Error(idData.error || "Could not save identity.");
+        }
+        setMessage("Identity saved.");
+        // Release spinner before refresh so Save never looks stuck
+        savingRef.current = false;
+        setSaving(false);
+        void load({ preserveNow: true }).catch(() => undefined);
+        return;
+      }
+
       const res = await fetch("/api/member/measurements", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || "Save failed.");
-        return;
+        throw new Error(data.error || "Save failed.");
       }
       setMessage("Saved to your sheet and the adventure log. Your coach can see this too.");
       setForm(emptyMeasurementForm());
       setNotes("");
       setNowPhotoUrl(null);
+      setNowPreviewLocal((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
       setNowCrop({ ...DEFAULT_PHOTO_CROP });
       setNowCropOpen(false);
       setMeasuredAtLocal(toLocalInputValue());
@@ -310,16 +463,28 @@ export default function MemberMeasurementsClient({
         else setAgeYears("");
         if (typeof data.identity.gender === "string") setGender(data.identity.gender);
       }
-      await load();
-    } catch {
-      setError("Save failed.");
-    } finally {
+      if (typeof data.beforePhotoUrl === "string" && data.beforePhotoUrl.trim()) {
+        setBeforePhotoUrl(data.beforePhotoUrl.trim());
+      }
+      savingRef.current = false;
       setSaving(false);
+      void load({ preserveNow: false }).catch(() => undefined);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Save failed.");
+      savingRef.current = false;
+      setSaving(false);
+    } finally {
+      // Safety if an early path forgot to clear
+      if (savingRef.current) {
+        savingRef.current = false;
+        setSaving(false);
+      }
     }
   }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    e.stopPropagation();
     await saveCheckIn();
   }
 
@@ -676,8 +841,12 @@ export default function MemberMeasurementsClient({
                 className="ms-input-line w-full py-1 text-sm"
               />
             </label>
-            <button type="submit" disabled={saving} className={saveButtonClass}>
-              {saving ? "Saving…" : "Save"}
+            <button
+              type="submit"
+              disabled={saving || Boolean(photoBusy)}
+              className={saveButtonClass}
+            >
+              {saving ? "Saving…" : photoBusy ? "Wait…" : "Save"}
             </button>
           </div>
         </header>
@@ -762,12 +931,19 @@ export default function MemberMeasurementsClient({
               </span>
             </div>
             <div className="ms-portrait__frame">
-              {beforePhotoUrl ? (
+              {beforeDisplayUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={beforePhotoUrl}
+                  src={beforeDisplayUrl}
                   alt="Before progress photo"
                   style={photoCropStyle(beforeCrop)}
+                  onError={() => {
+                    if (!beforePreviewLocal && beforePhotoUrl) {
+                      setError(
+                        "Before photo could not be displayed. Try Camera or Library again.",
+                      );
+                    }
+                  }}
                 />
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-0.5 px-2 text-center">
@@ -775,8 +951,13 @@ export default function MemberMeasurementsClient({
                   <p className="text-[9px] text-[var(--ms-ink-soft)]">Portrait / full body</p>
                 </div>
               )}
+              {photoBusy === "before" ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/55 px-2 text-center">
+                  <p className="font-serif text-[11px] font-semibold text-white">Uploading…</p>
+                </div>
+              ) : null}
             </div>
-            {beforePhotoUrl ? (
+            {beforeDisplayUrl ? (
               beforeCropOpen ? (
                 <div className="ms-crop-sliders">
                   <label>
@@ -893,12 +1074,19 @@ export default function MemberMeasurementsClient({
               </span>
             </div>
             <div className="ms-portrait__frame">
-              {nowPhotoUrl ? (
+              {nowDisplayUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={nowPhotoUrl}
+                  src={nowDisplayUrl}
                   alt="Current progress photo"
                   style={photoCropStyle(nowCrop)}
+                  onError={() => {
+                    if (!nowPreviewLocal && nowPhotoUrl) {
+                      setError(
+                        "Now photo could not be displayed. Try Camera or Library again.",
+                      );
+                    }
+                  }}
                 />
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-0.5 px-2 text-center">
@@ -906,8 +1094,13 @@ export default function MemberMeasurementsClient({
                   <p className="text-[9px] text-[var(--ms-ink-soft)]">Portrait / full body</p>
                 </div>
               )}
+              {photoBusy === "now" ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/55 px-2 text-center">
+                  <p className="font-serif text-[11px] font-semibold text-white">Uploading…</p>
+                </div>
+              ) : null}
             </div>
-            {nowPhotoUrl ? (
+            {nowDisplayUrl ? (
               nowCropOpen ? (
                 <div className="ms-crop-sliders">
                   <label>
@@ -1005,12 +1198,16 @@ export default function MemberMeasurementsClient({
                 >
                   {photoBusy === "now" ? "…" : "🖼 Library"}
                 </button>
-                {nowPhotoUrl ? (
+                {nowDisplayUrl ? (
                   <button
                     type="button"
                     className="rounded border border-fuchsia-400/30 px-2 py-1 font-serif text-[11px] text-fuchsia-200"
                     onClick={() => {
                       setNowPhotoUrl(null);
+                      setNowPreviewLocal((prev) => {
+                        if (prev) URL.revokeObjectURL(prev);
+                        return null;
+                      });
                       setNowCrop({ ...DEFAULT_PHOTO_CROP });
                       setNowCropOpen(false);
                     }}
@@ -1118,8 +1315,12 @@ export default function MemberMeasurementsClient({
             <p className="font-serif text-sm text-emerald-200">{message}</p>
           ) : null}
           <div className="flex flex-wrap items-center gap-3">
-            <button type="submit" disabled={saving} className={saveButtonClass}>
-              {saving ? "Saving…" : "Save check-in"}
+            <button
+              type="submit"
+              disabled={saving || Boolean(photoBusy)}
+              className={saveButtonClass}
+            >
+              {saving ? "Saving…" : photoBusy ? "Wait for photo…" : "Save check-in"}
             </button>
             <p className="font-serif text-[11px] italic text-[var(--ms-ink-soft)]">
               Writes this visit to Postgres (adventure log). Originals stay locked as first-ever
@@ -1137,17 +1338,19 @@ export default function MemberMeasurementsClient({
           <p className="font-serif text-xs text-[var(--ms-ink-soft)] sm:text-sm">
             {saving
               ? "Saving your check-in…"
-              : message
-                ? message
-                : "Enter check-in numbers (right column), then save."}
+              : photoBusy
+                ? "Uploading photo…"
+                : message
+                  ? message
+                  : "Enter check-in numbers (right column), then save."}
           </p>
           <button
             type="button"
-            disabled={saving}
+            disabled={saving || Boolean(photoBusy)}
             className={saveButtonClass}
             onClick={() => void saveCheckIn()}
           >
-            {saving ? "Saving…" : "Save"}
+            {saving ? "Saving…" : photoBusy ? "Wait…" : "Save"}
           </button>
         </div>
       </div>

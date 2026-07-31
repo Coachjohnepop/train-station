@@ -38,8 +38,18 @@ export async function POST(request: Request) {
     }
 
     const blob = file as Blob & { name?: string; type?: string; size: number };
-    const name = typeof blob.name === "string" && blob.name ? blob.name : "photo.jpg";
-    const mime = (blob.type || "").trim() || "image/jpeg";
+    const name =
+      typeof blob.name === "string" && blob.name.trim()
+        ? blob.name.trim()
+        : "photo.jpg";
+    // Mobile Safari often sends empty type — sniff from name, default JPEG after client compress
+    let mime = (blob.type || "").trim().toLowerCase();
+    if (!mime || mime === "application/octet-stream") {
+      if (/\.png$/i.test(name)) mime = "image/png";
+      else if (/\.webp$/i.test(name)) mime = "image/webp";
+      else if (/\.heic$/i.test(name) || /\.heif$/i.test(name)) mime = "image/heic";
+      else mime = "image/jpeg";
+    }
     const size = typeof blob.size === "number" ? blob.size : 0;
 
     validateMeasurementPhoto({ size, mimeType: mime, name });
@@ -56,6 +66,14 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await blob.arrayBuffer());
     if (buffer.length === 0) {
       return NextResponse.json({ error: "Empty photo file." }, { status: 400 });
+    }
+    // Magic-byte sniff if client still lied about type
+    if (
+      buffer[0] === 0xff &&
+      buffer[1] === 0xd8 &&
+      (mime === "image/heic" || mime === "application/octet-stream")
+    ) {
+      mime = "image/jpeg";
     }
 
     const stored = await storeMeasurementPhoto(

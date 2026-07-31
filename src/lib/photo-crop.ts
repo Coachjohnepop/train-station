@@ -54,6 +54,9 @@ export function photoCropStyle(crop: PhotoCrop): {
   transformOrigin: string;
   width: string;
   height: string;
+  maxWidth: string;
+  maxHeight: string;
+  display: string;
 } {
   return {
     objectFit: "cover",
@@ -62,5 +65,8 @@ export function photoCropStyle(crop: PhotoCrop): {
     transformOrigin: `${crop.focusX}% ${crop.focusY}%`,
     width: "100%",
     height: "100%",
+    maxWidth: "none",
+    maxHeight: "none",
+    display: "block",
   };
 }
