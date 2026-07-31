@@ -19,10 +19,12 @@ import { isDirectVideoUrl } from "@/lib/site-video";
 import { isYoutubeUrl } from "@/lib/youtube";
 import {
   fadeOutYoutubeEmbed,
+  kickYoutubeAudible,
   postYoutubeEmbedCommand,
 } from "@/lib/youtube-embed-control";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
+import { requestBackgroundMusicPlay } from "@/lib/background-music-control";
 
 /** Free-ticket Jeremy intro: 3× louder than admin content volume offset. */
 const JEREMY_WORD_VOLUME_MULT = 3;
@@ -97,13 +99,14 @@ export default function FreeTicketModal({
   );
 
   /**
-   * Mute + start= in the embed URL (chorus once). Do NOT re-seek via postMessage —
-   * repeated seekTo was the hitch/restart. Only play + unMute after load.
+   * Free is always opened by a tap → try unmuted autoplay first (sound on).
+   * If the browser blocks it, onLoad kicks still unMute after enablejsapi handshake.
+   * start= chorus; do not re-seek via postMessage (that was the hitch/restart).
    */
   const rickrollSrc =
     gag.enabled && embedOrigin
       ? landingVideoEmbedSrc(gag.videoUrl, true, {
-          mute: true,
+          mute: false,
           origin: embedOrigin,
           startSeconds: gag.startSec,
         })
@@ -137,13 +140,6 @@ export default function FreeTicketModal({
     volumeDb + linearMultiplierToDb(JEREMY_WORD_VOLUME_MULT),
   );
 
-  /** Play + unMute only — never seek (start= is already on the embed). */
-  function kickYoutubePlay(iframe: HTMLIFrameElement | null) {
-    if (!iframe) return;
-    postYoutubeEmbedCommand(iframe, "playVideo");
-    postYoutubeEmbedCommand(iframe, "unMute");
-  }
-
   useEffect(() => {
     clearTimers();
 
@@ -153,9 +149,12 @@ export default function FreeTicketModal({
       setHideRickroll(false);
       setLoadJeremy(false);
       setBackgroundMusicOverlay(false);
+      // Resume theme song after free modal
+      requestBackgroundMusicPlay();
       return;
     }
 
+    // Duck theme song under Free gag / Jeremy
     setBackgroundMusicOverlay(true);
     setShowJeremy(false);
     setFadeJeremyIn(false);
@@ -178,11 +177,10 @@ export default function FreeTicketModal({
       schedule(() => setLoadJeremy(true), preloadMs);
     }
 
-    // Start visual + audio crossfade together
+    // Start visual + audio crossfade together (rickroll volume → silent over 2s)
     schedule(() => {
       setShowJeremy(true);
       requestAnimationFrame(() => setFadeJeremyIn(true));
-      // Audio fade-out on rickroll (CSS already fades opacity)
       cancelRickrollFade.current?.();
       cancelRickrollFade.current = fadeOutYoutubeEmbed(
         rickrollRef.current,
@@ -198,22 +196,42 @@ export default function FreeTicketModal({
     };
   }, [open, hasJeremy, preloadMs, gag.enabled, gagDurationMs]);
 
-  // Gag: one smooth start — play/unmute only (no seek). Full volume, then fade later.
+  // Gag: hammer play + unMute until the player actually goes loud.
+  // Free open is a user gesture — keep kicking for a few seconds after load.
   useEffect(() => {
     if (!open || !rickrollSrc) return;
     const gen = ++rickrollKickGen.current;
     const kick = () => {
       if (gen !== rickrollKickGen.current) return;
-      const iframe = rickrollRef.current;
-      kickYoutubePlay(iframe);
-      postYoutubeEmbedCommand(iframe, "setVolume", 100);
+      kickYoutubeAudible(rickrollRef.current);
     };
-    // Wait for iframe paint; second try if still muted/not playing (no seek).
-    const t1 = window.setTimeout(kick, 350);
-    const t2 = window.setTimeout(kick, 900);
+    // Immediate + staggered (player ready is async)
+    kick();
+    const delays = [50, 150, 300, 500, 800, 1200, 1800, 2500];
+    const ids = delays.map((ms) => window.setTimeout(kick, ms));
+
+    // When YT posts onReady / infoDelivery, kick again
+    const onMsg = (e: MessageEvent) => {
+      if (gen !== rickrollKickGen.current) return;
+      let data: unknown = e.data;
+      if (typeof data === "string") {
+        try {
+          data = JSON.parse(data);
+        } catch {
+          return;
+        }
+      }
+      if (!data || typeof data !== "object") return;
+      const ev = (data as { event?: string }).event;
+      if (ev === "onReady" || ev === "infoDelivery" || ev === "initialDelivery") {
+        kick();
+      }
+    };
+    window.addEventListener("message", onMsg);
+
     return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
+      ids.forEach((id) => window.clearTimeout(id));
+      window.removeEventListener("message", onMsg);
     };
   }, [open, rickrollSrc]);
 
@@ -223,8 +241,7 @@ export default function FreeTicketModal({
     const kick = () => {
       if (jeremyIsYoutube) {
         const iframe = jeremyIframeRef.current;
-        kickYoutubePlay(iframe);
-        // YouTube caps at 100% — use max when boosted; real 3× needs HTML5 upload.
+        kickYoutubeAudible(iframe);
         const pct = volumeDbToYoutubePercent(jeremyVolumeDb);
         postYoutubeEmbedCommand(iframe, "setVolume", pct);
       } else if (jeremyVideoRef.current) {
@@ -236,11 +253,13 @@ export default function FreeTicketModal({
         });
       }
     };
-    const t1 = window.setTimeout(kick, 400);
-    const t2 = window.setTimeout(kick, 1000);
+    const t1 = window.setTimeout(kick, 200);
+    const t2 = window.setTimeout(kick, 600);
+    const t3 = window.setTimeout(kick, 1200);
     return () => {
       window.clearTimeout(t1);
       window.clearTimeout(t2);
+      window.clearTimeout(t3);
     };
   }, [fadeJeremyIn, hasJeremy, jeremyIsYoutube, jeremyVolumeDb]);
 
@@ -294,6 +313,7 @@ export default function FreeTicketModal({
               title="You picked free"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
+              onLoad={() => kickYoutubeAudible(rickrollRef.current)}
             />
           )}
 

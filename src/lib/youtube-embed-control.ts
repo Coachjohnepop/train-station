@@ -21,8 +21,33 @@ export function postYoutubeEmbedCommand(
 }
 
 /**
- * Linear volume fade 100 → 0 over exactly `durationMs` (default 2s), then mute + pause.
- * Uses rAF for smooth steps; posts setVolume often so YouTube actually ramps.
+ * Handshake so the embed accepts postMessage commands (enablejsapi=1 required on src).
+ * Without this, unMute/setVolume are often ignored.
+ */
+export function primeYoutubeEmbed(iframe: HTMLIFrameElement | null): void {
+  if (!iframe?.contentWindow) return;
+  try {
+    iframe.contentWindow.postMessage(
+      JSON.stringify({ event: "listening", id: 1, channel: "widget" }),
+      "*",
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Play + full volume + unmute (after prime). */
+export function kickYoutubeAudible(iframe: HTMLIFrameElement | null): void {
+  if (!iframe) return;
+  primeYoutubeEmbed(iframe);
+  postYoutubeEmbedCommand(iframe, "playVideo");
+  postYoutubeEmbedCommand(iframe, "unMute");
+  postYoutubeEmbedCommand(iframe, "setVolume", 100);
+}
+
+/**
+ * Linear volume fade 100 → 0 over `durationMs`, then mute + pause.
+ * Does NOT unMute at start (caller must already be audible).
  */
 export function fadeOutYoutubeEmbed(
   iframe: HTMLIFrameElement | null,
@@ -38,10 +63,7 @@ export function fadeOutYoutubeEmbed(
   let cancelled = false;
   let rafId = 0;
   const start = performance.now();
-
-  // Start from full volume (in case player was quieter)
-  postYoutubeEmbedCommand(iframe, "unMute");
-  postYoutubeEmbedCommand(iframe, "setVolume", 100);
+  primeYoutubeEmbed(iframe);
 
   const finish = () => {
     postYoutubeEmbedCommand(iframe, "setVolume", 0);
@@ -52,7 +74,6 @@ export function fadeOutYoutubeEmbed(
   const tick = (now: number) => {
     if (cancelled) return;
     const t = Math.min(1, (now - start) / durationMs);
-    // Linear to silent
     const pct = Math.max(0, Math.min(100, Math.round(100 * (1 - t))));
     postYoutubeEmbedCommand(iframe, "setVolume", pct);
     if (t < 1) {

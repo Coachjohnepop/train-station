@@ -104,7 +104,8 @@ export function youtubeEmbedUrl(
   if (start != null && start > 0) {
     params.set("start", String(start));
   }
-  return `https://www.youtube-nocookie.com/embed/${id}?${params.toString()}`;
+  // Use www.youtube.com (not nocookie) so enablejsapi postMessage unMute/setVolume is reliable.
+  return `https://www.youtube.com/embed/${id}?${params.toString()}`;
 }
 
 export function isYoutubeUrl(url: string): boolean {
