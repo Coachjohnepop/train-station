@@ -12,8 +12,7 @@ import {
   type LandingMembershipNavItem,
 } from "@/lib/landing-nav";
 import { logoutUrl } from "@/lib/logout-url";
-import MemberDashboardLink from "@/components/MemberDashboardLink";
-import { isStaffRole } from "@/lib/auth-session";
+import ThemeModeToggle from "@/components/ThemeModeToggle";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 
 export default function LandingNav({
@@ -75,107 +74,124 @@ export default function LandingNav({
     window.location.href = tier.signupHref || tier.href || "/join";
   }
 
+  const isWelcome = variant === "welcome";
+
   return (
     <header
-      className={`landing-nav header-theme-clearance sticky top-0 z-40 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] backdrop-blur-md ${
+      data-landing-nav=""
+      className={`landing-nav sticky top-0 z-40 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] backdrop-blur-md ${
         overHero ? "landing-nav--over-hero" : ""
       }`}
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
-        <Link
-          href="/"
-          className="flex min-w-0 shrink items-center gap-2 transition hover:opacity-90"
-          onClick={closeMenus}
-        >
-          <span className="md:hidden">
-            <TrainStationBrand variant="icon" />
-          </span>
-          <span className="hidden md:block">
-            <TrainStationBrand variant="header" />
-          </span>
-          {/* Wordmark only from sm — frees mobile header space */}
-          <span className="hidden max-w-[10.5rem] text-[11px] font-semibold uppercase leading-tight tracking-[0.14em] text-[var(--text)] sm:inline md:hidden">
-            The Train Station
-          </span>
-        </Link>
-
-        <nav className="hidden items-center gap-1 md:flex">
-          {LANDING_NAV_SECTIONS.map((section) => (
-            <Link
-              key={section.id}
-              href={landingNavHref(section.href, onHomePage)}
-              onClick={(e) => {
-                if (onHomePage && section.href.startsWith("#")) {
-                  e.preventDefault();
-                  scrollToHash(section.href);
-                }
-              }}
-              className="landing-nav__link"
-            >
-              {section.label}
-            </Link>
-          ))}
-
-          <div
-            className="relative"
-            onMouseEnter={() => setMembershipsOpen(true)}
-            onMouseLeave={() => setMembershipsOpen(false)}
+      {/*
+        Mobile welcome: [logo] [Memberships · Sign out] …… [theme] [☰]
+        No Dashboard pill (primary actions live on the page body).
+      */}
+      <div className="mx-auto flex max-w-6xl items-center gap-1.5 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
+        <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
+          <Link
+            href="/"
+            className="flex min-w-0 shrink-0 items-center gap-2 transition hover:opacity-90"
+            onClick={closeMenus}
           >
-            <Link href="/join#tickets" className="landing-nav__link" onClick={closeMenus}>
-              Memberships
-            </Link>
-            {membershipsOpen && (
-              <div className="absolute left-0 top-full z-50 mt-1 min-w-[15rem] rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-xl">
-                {memberships.map((tier) => (
-                  <Link
-                    key={tier.id}
-                    href={
-                      purchaseAuth.signedIn
-                        ? purchaseHref(tier.signupPlan, purchaseAuth)
-                        : tier.signupHref
-                    }
-                    onClick={(e) => {
-                      e.preventDefault();
-                      membershipAction(tier);
-                    }}
-                    className="flex items-center justify-between gap-3 px-3 py-2 text-sm transition hover:bg-[var(--surface-2)]"
-                  >
-                    <span className="font-medium text-[var(--text)]">{tier.shortLabel}</span>
-                    <span className="text-xs text-[var(--muted)]">{tier.priceDisplay}</span>
-                  </Link>
-                ))}
-                <div className="my-1 border-t border-[var(--border)]" />
-                <Link
-                  href="/join#tickets"
-                  onClick={closeMenus}
-                  className="block px-3 py-2 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
-                >
-                  All ticket levels →
-                </Link>
-              </div>
-            )}
-          </div>
-        </nav>
+            <span className="md:hidden">
+              <TrainStationBrand variant="icon" />
+            </span>
+            <span className="hidden md:block">
+              <TrainStationBrand variant="header" />
+            </span>
+            <span className="hidden max-w-[10.5rem] text-[11px] font-semibold uppercase leading-tight tracking-[0.14em] text-[var(--text)] sm:inline md:hidden">
+              The Train Station
+            </span>
+          </Link>
 
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-          {variant === "welcome" && purchaseAuth.signedIn ? (
-            purchaseAuth.role && isStaffRole(purchaseAuth.role) ? (
+          {isWelcome ? (
+            <div className="flex min-w-0 items-center gap-0.5 sm:gap-1">
               <Link
-                href="/admin"
-                className="btn-primary px-3 py-1.5 text-[11px] font-semibold md:hidden"
+                href="/join"
+                className="landing-nav__link landing-nav__link--compact"
+                onClick={closeMenus}
               >
-                Dashboard
+                Memberships
               </Link>
-            ) : (
-              <MemberDashboardLink className="btn-primary px-3 py-1.5 text-[11px] font-semibold md:hidden">
-                Dashboard
-              </MemberDashboardLink>
-            )
+              {purchaseAuth.signedIn ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.location.href = logoutUrl();
+                  }}
+                  className="landing-nav__link landing-nav__link--compact"
+                >
+                  Sign out
+                </button>
+              ) : null}
+            </div>
           ) : null}
-          {/* Desktop / tablet only — mobile uses ☰ so we don’t stack weird jelly beans */}
+
+          <nav className="ml-1 hidden items-center gap-1 md:flex">
+            {LANDING_NAV_SECTIONS.map((section) => (
+              <Link
+                key={section.id}
+                href={landingNavHref(section.href, onHomePage)}
+                onClick={(e) => {
+                  if (onHomePage && section.href.startsWith("#")) {
+                    e.preventDefault();
+                    scrollToHash(section.href);
+                  }
+                }}
+                className="landing-nav__link"
+              >
+                {section.label}
+              </Link>
+            ))}
+
+            {!isWelcome ? (
+              <div
+                className="relative"
+                onMouseEnter={() => setMembershipsOpen(true)}
+                onMouseLeave={() => setMembershipsOpen(false)}
+              >
+                <Link href="/join#tickets" className="landing-nav__link" onClick={closeMenus}>
+                  Memberships
+                </Link>
+                {membershipsOpen && (
+                  <div className="absolute left-0 top-full z-50 mt-1 min-w-[15rem] rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-xl">
+                    {memberships.map((tier) => (
+                      <Link
+                        key={tier.id}
+                        href={
+                          purchaseAuth.signedIn
+                            ? purchaseHref(tier.signupPlan, purchaseAuth)
+                            : tier.signupHref
+                        }
+                        onClick={(e) => {
+                          e.preventDefault();
+                          membershipAction(tier);
+                        }}
+                        className="flex items-center justify-between gap-3 px-3 py-2 text-sm transition hover:bg-[var(--surface-2)]"
+                      >
+                        <span className="font-medium text-[var(--text)]">{tier.shortLabel}</span>
+                        <span className="text-xs text-[var(--muted)]">{tier.priceDisplay}</span>
+                      </Link>
+                    ))}
+                    <div className="my-1 border-t border-[var(--border)]" />
+                    <Link
+                      href="/join#tickets"
+                      onClick={closeMenus}
+                      className="block px-3 py-2 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
+                    >
+                      All ticket levels →
+                    </Link>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </nav>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
           {variant === "public" ? (
             <>
-              {/* Cold hero: primary ask is Free Quick Tour (in hero). */}
               <Link
                 href="/login"
                 className={`landing-nav__link ${overHero ? "hidden sm:inline-flex text-white/90" : "hidden md:inline-flex"}`}
@@ -191,22 +207,11 @@ export default function LandingNav({
                 </Link>
               ) : null}
             </>
-          ) : (
-            <>
-              <Link href="/join" className="landing-nav__link hidden md:inline-flex">
-                Memberships
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  window.location.href = logoutUrl();
-                }}
-                className="landing-nav__link hidden md:inline-flex"
-              >
-                Sign out
-              </button>
-            </>
-          )}
+          ) : null}
+          {/* Theme lives in-nav so it never sits on the hamburger */}
+          <div className="global-theme-toggle">
+            <ThemeModeToggle />
+          </div>
           <button
             type="button"
             className="landing-nav__menu-btn md:hidden"
@@ -221,7 +226,6 @@ export default function LandingNav({
 
       {mobileOpen && (
         <div className="border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 md:hidden">
-          {/* Story first — memberships last (same order as page body). */}
           <div className="space-y-1">
             {LANDING_NAV_SECTIONS.map((section) => (
               <Link
@@ -239,15 +243,57 @@ export default function LandingNav({
                 {section.label}
               </Link>
             ))}
-            <Link
-              href="/join#tickets"
-              className="block rounded-lg px-2 py-2 text-sm font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
-            >
-              Choose your ticket
-            </Link>
-            <Link href="/login" className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]">
-              Member sign in
-            </Link>
+            {isWelcome && purchaseAuth.signedIn ? (
+              <>
+                <a
+                  href="/member/today"
+                  className="block rounded-lg px-2 py-2 text-sm font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
+                  onClick={closeMenus}
+                >
+                  Today
+                </a>
+                <a
+                  href="/member/today"
+                  className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]"
+                  onClick={closeMenus}
+                >
+                  Open dashboard
+                </a>
+                <Link
+                  href="/member/account"
+                  className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]"
+                  onClick={closeMenus}
+                >
+                  Account &amp; billing
+                </Link>
+                <button
+                  type="button"
+                  className="block w-full rounded-lg px-2 py-2 text-left text-sm hover:bg-[var(--surface-2)]"
+                  onClick={() => {
+                    window.location.href = logoutUrl();
+                  }}
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/join#tickets"
+                  className="block rounded-lg px-2 py-2 text-sm font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
+                  onClick={closeMenus}
+                >
+                  Choose your ticket
+                </Link>
+                <Link
+                  href="/login"
+                  className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]"
+                  onClick={closeMenus}
+                >
+                  Member sign in
+                </Link>
+              </>
+            )}
           </div>
           <div className="mt-3 border-t border-[var(--border)] pt-3">
             <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--muted)]">

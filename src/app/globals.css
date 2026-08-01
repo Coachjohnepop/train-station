@@ -1162,8 +1162,9 @@ table.data th {
   }
 }
 
-/* Member shell owns theme toggle in-header — hide the fixed global one to avoid overlap */
-body:has([data-member-chrome]) [data-global-theme-toggle] {
+/* Member shell / landing nav own theme toggle in-header — hide the fixed global one */
+body:has([data-member-chrome]) [data-global-theme-toggle],
+body:has([data-landing-nav]) [data-global-theme-toggle] {
   display: none !important;
 }
 
@@ -1182,6 +1183,19 @@ body:has([data-member-chrome]) [data-global-theme-toggle] {
   font-weight: 600;
   color: var(--muted);
   transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+
+.landing-nav__link--compact {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.7rem;
+}
+
+@media (min-width: 400px) {
+  .landing-nav__link--compact {
+    padding: 0.35rem 0.65rem;
+    font-size: 0.75rem;
+  }
 }
 
 .landing-nav__link:hover {
@@ -1200,6 +1214,13 @@ body:has([data-member-chrome]) [data-global-theme-toggle] {
   background: var(--surface-2);
   color: var(--text);
   font-size: 1rem;
+  flex-shrink: 0;
+}
+
+/* Theme control in landing/member chrome — keep icon-only on narrow phones */
+.landing-nav .global-theme-toggle .theme-mode-toggle {
+  padding: 0.35rem 0.5rem;
+  min-height: 2.25rem;
 }
 
 /* ——— Cold-traffic hero (SMS / mobile first screen) ——— */

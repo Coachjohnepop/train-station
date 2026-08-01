@@ -58,11 +58,19 @@ export default function LandingMemberStatus({
             ? "Sample the station, then upgrade when you are ready for daily coach workouts and live sessions."
             : `Your ${planLabel} ticket is active. Open your dashboard for today’s workout, messages, and scores.`}
         </p>
-        {welcomeVideoUrl?.trim() ? (
-          <div className="mx-auto mt-5 flex max-w-md flex-col items-center gap-2">
-            <WelcomeVideoPopover welcomeVideoUrl={welcomeVideoUrl}>
-              Watch intro
-            </WelcomeVideoPopover>
+        <div className="mx-auto mt-5 flex max-w-md flex-col items-center gap-2">
+          <div className="flex w-full flex-col items-stretch justify-center gap-2 sm:w-auto sm:flex-row sm:items-center">
+            {welcomeVideoUrl?.trim() ? (
+              <WelcomeVideoPopover welcomeVideoUrl={welcomeVideoUrl}>
+                Watch intro
+              </WelcomeVideoPopover>
+            ) : null}
+            {/* Straight to today’s workout — full page load for mobile Safari reliability */}
+            <a href="/member/today" className="btn-primary w-full px-8 sm:w-auto">
+              Today
+            </a>
+          </div>
+          {welcomeVideoUrl?.trim() ? (
             <a
               href={welcomeVideoUrl}
               target="_blank"
@@ -71,10 +79,10 @@ export default function LandingMemberStatus({
             >
               YouTube link →
             </a>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
         <div className="mx-auto mt-6 flex max-w-md flex-col items-stretch gap-3 sm:flex-row sm:justify-center">
-          <MemberDashboardLink className="btn-primary w-full px-8 sm:w-auto">
+          <MemberDashboardLink className="btn-secondary w-full px-8 sm:w-auto">
             Open Dashboard
           </MemberDashboardLink>
           <Link href="/member/account" className="btn-secondary w-full px-8 sm:w-auto">

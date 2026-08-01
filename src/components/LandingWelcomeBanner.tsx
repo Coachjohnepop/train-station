@@ -45,19 +45,30 @@ export default function LandingWelcomeBanner({
         </h1>
         <p className="mt-3 text-base text-[var(--muted)] sm:text-lg">{subtitle()}</p>
 
-        {welcomeVideoUrl?.trim() ? (
+        {welcomeVideoUrl?.trim() || !isCoach ? (
           <div className="mt-6 flex flex-col items-center gap-2">
-            <WelcomeVideoPopover welcomeVideoUrl={welcomeVideoUrl}>
-              Watch intro
-            </WelcomeVideoPopover>
-            <a
-              href={welcomeVideoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-accent hover:underline"
-            >
-              YouTube link →
-            </a>
+            <div className="flex w-full max-w-xs flex-col items-stretch justify-center gap-2 sm:max-w-none sm:flex-row sm:items-center">
+              {welcomeVideoUrl?.trim() ? (
+                <WelcomeVideoPopover welcomeVideoUrl={welcomeVideoUrl}>
+                  Watch intro
+                </WelcomeVideoPopover>
+              ) : null}
+              {!isCoach ? (
+                <a href="/member/today" className="btn-primary w-full px-8 sm:w-auto">
+                  Today
+                </a>
+              ) : null}
+            </div>
+            {welcomeVideoUrl?.trim() ? (
+              <a
+                href={welcomeVideoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-accent hover:underline"
+              >
+                YouTube link →
+              </a>
+            ) : null}
           </div>
         ) : null}
 
@@ -67,7 +78,7 @@ export default function LandingWelcomeBanner({
               Coach admin
             </Link>
           ) : (
-            <MemberDashboardLink className="btn-primary w-full max-w-xs px-8 sm:w-auto">
+            <MemberDashboardLink className="btn-secondary w-full max-w-xs px-8 sm:w-auto">
               {isFreeTier ? "Open free dashboard" : "Open Dashboard"}
             </MemberDashboardLink>
           )}
