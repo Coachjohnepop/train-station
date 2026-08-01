@@ -11,7 +11,9 @@ import {
 import { formatMembershipPaymentStatus, type MemberMembershipSnapshot } from "@/lib/member-membership";
 import { signupPlanLabel } from "@/lib/signup-plans";
 
+/** Every ticket class has dedicated seat photography. */
 const TICKET_ID_BY_PLAN = {
+  explorer: "free",
   member: "coach-class",
   business: "business-class",
   pro: "first-class",
@@ -40,8 +42,9 @@ export default function LandingMemberStatus({
   const planLabel = signupPlanLabel(membership.plan);
   const statusLabel = formatMembershipPaymentStatus(membership);
   const isFree = membership.plan === "explorer";
-  const ticketId = TICKET_ID_BY_PLAN[membership.plan as keyof typeof TICKET_ID_BY_PLAN];
-  const seatArt = seatArtForPlan(membership.plan);
+  const ticketId =
+    TICKET_ID_BY_PLAN[membership.plan as keyof typeof TICKET_ID_BY_PLAN] ?? "free";
+  const seatArt = seatArtForPlan(membership.plan) || seatArtForPlan("explorer");
   const tierLabel = MEMBERSHIP_THEME_LABELS[themeTier];
 
   return (
