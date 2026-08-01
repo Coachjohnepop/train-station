@@ -14,9 +14,10 @@ import {
 /**
  * Site-wide background music + pointing-finger guide.
  *
- * Any tap on the landing (and other public pages) starts Theme Song.
- * Mute is session-only via the corner speaker — never localStorage.
- * (Persisted mute blocked private windows / return visits.)
+ * Autoplay / “tap anywhere” Theme Song only on public marketing + join funnel
+ * (landing, onboarding, membership shopping). After a registered member logs in,
+ * no autoplay — corner speaker can still start music on demand.
+ * Mute is session-only via the speaker — never localStorage.
  */
 
 const SRC = "/background-music.mp3";
@@ -35,6 +36,40 @@ function isAdminRoute(pathname: string): boolean {
   return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
+/**
+ * Routes where Theme Song may autoplay / unlock on any tap.
+ * Authenticated member home and /member/* app (except onboard/checkout) are excluded
+ * via the signedIn gate in allowThemeSongAutoPlay.
+ */
+function isThemeSongFunnelRoute(pathname: string): boolean {
+  if (pathname === "/" || pathname === "/landing" || pathname.startsWith("/landing/")) {
+    return true;
+  }
+  if (pathname.startsWith("/join")) return true;
+  if (pathname.startsWith("/signup")) return true;
+  if (pathname.startsWith("/login")) return true;
+  if (pathname.startsWith("/pricing")) return true;
+  if (pathname.startsWith("/coming-soon")) return true;
+  // Shopping / setup after account exists
+  if (pathname.startsWith("/member/onboard")) return true;
+  if (pathname.startsWith("/member/checkout")) return true;
+  if (pathname.startsWith("/member/pending")) return true;
+  return false;
+}
+
+/**
+ * True → gesture unlock + bootstrap play allowed.
+ * False → quiet unless user taps the speaker (registered member app, admin, etc.).
+ */
+function allowThemeSongAutoPlay(pathname: string, signedIn: boolean): boolean {
+  if (isAdminRoute(pathname)) return false;
+  if (!isThemeSongFunnelRoute(pathname)) return false;
+  // Logged-in member on home welcome (/) — no autoplay after auth
+  if (signedIn && (pathname === "/" || pathname === "/landing")) return false;
+  // Logged-in on join/checkout/onboard still OK (shopping / finishing setup)
+  return true;
+}
+
 function sleep(ms: number) {
   return new Promise<void>((r) => window.setTimeout(r, ms));
 }
@@ -46,6 +81,9 @@ export default function BackgroundMusic() {
   const overlayPauseRef = useRef(false);
   /** Keep handlers (gestures / visibility) from restarting music on admin. */
   const adminRouteRef = useRef(onAdmin);
+  /** When false: no tap-anywhere autoplay; speaker still works. */
+  const autoPlayAllowedRef = useRef(false);
+  const signedInRef = useRef(false);
   const hintTimerRef = useRef<number | null>(null);
   const unlockedRef = useRef(false);
   /**
@@ -57,10 +95,51 @@ export default function BackgroundMusic() {
   const ignoreNextActivationRef = useRef(false);
   /** How many times “tap anywhere” has started/unmuted the song this session. */
   const gestureUnlockCountRef = useRef(0);
+  const [signedIn, setSignedIn] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+
+  const autoPlayAllowed = allowThemeSongAutoPlay(pathname, signedIn);
 
   useEffect(() => {
     adminRouteRef.current = onAdmin;
   }, [onAdmin]);
+
+  useEffect(() => {
+    autoPlayAllowedRef.current = autoPlayAllowed;
+  }, [autoPlayAllowed]);
+
+  useEffect(() => {
+    signedInRef.current = signedIn;
+  }, [signedIn]);
+
+  // Resolve session so logged-in landing home can silence autoplay
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/auth/session", { cache: "no-store", credentials: "same-origin" });
+        if (!res.ok) {
+          if (!cancelled) {
+            setSignedIn(false);
+            setAuthReady(true);
+          }
+          return;
+        }
+        const data = await res.json();
+        if (cancelled) return;
+        setSignedIn(Boolean(data.signedIn && data.user));
+        setAuthReady(true);
+      } catch {
+        if (!cancelled) {
+          setSignedIn(false);
+          setAuthReady(true);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
 
   /** Speaker shows muted (session only). */
   const [off, setOff] = useState(false);
@@ -117,20 +196,35 @@ export default function BackgroundMusic() {
     return advancing;
   }, []);
 
-  const stopAdminMusic = useCallback((audio: HTMLAudioElement) => {
+  const stopMusicQuiet = useCallback((audio: HTMLAudioElement) => {
     audio.pause();
     audio.muted = true;
     setSoundLive(false);
+    unlockedRef.current = false;
     dismissHint();
   }, [dismissHint]);
 
+  const stopAdminMusic = useCallback(
+    (audio: HTMLAudioElement) => {
+      stopMusicQuiet(audio);
+    },
+    [stopMusicQuiet],
+  );
+
   const forceAudible = useCallback(
-    async (audio: HTMLAudioElement, opts?: { fromSpeakerMute?: boolean }) => {
+    async (
+      audio: HTMLAudioElement,
+      opts?: { fromSpeakerMute?: boolean; fromSpeakerButton?: boolean },
+    ) => {
       if (adminRouteRef.current) {
         stopAdminMusic(audio);
         return false;
       }
-      // Tap anywhere always starts song — clear session speaker mute
+      // Registered member app: only the corner speaker may start music
+      if (!autoPlayAllowedRef.current && !opts?.fromSpeakerButton) {
+        return false;
+      }
+      // Tap anywhere / speaker play — clear session speaker mute
       // (unless this call is the mute side of the speaker toggle)
       if (!opts?.fromSpeakerMute) {
         speakerMutedRef.current = false;
@@ -208,8 +302,8 @@ export default function BackgroundMusic() {
   /** Finger + best-effort music. Speaker stays “muted” until sound is confirmed. */
   const startMusicWithFinger = useCallback(
     async (audio: HTMLAudioElement) => {
-      if (adminRouteRef.current) {
-        stopAdminMusic(audio);
+      if (adminRouteRef.current || !autoPlayAllowedRef.current) {
+        stopMusicQuiet(audio);
         return;
       }
 
@@ -237,8 +331,8 @@ export default function BackgroundMusic() {
       audio.volume = VOLUME;
 
       await whenCanPlay(audio);
-      if (adminRouteRef.current) {
-        stopAdminMusic(audio);
+      if (adminRouteRef.current || !autoPlayAllowedRef.current) {
+        stopMusicQuiet(audio);
         return;
       }
       // Gesture may have unlocked during load wait — never remute after that
@@ -246,8 +340,11 @@ export default function BackgroundMusic() {
 
       // Try audible autoplay a few times
       for (let i = 0; i < 5; i++) {
-        if (adminRouteRef.current || unlockedRef.current || speakerMutedRef.current) {
-          if (adminRouteRef.current) stopAdminMusic(audio);
+        if (adminRouteRef.current || !autoPlayAllowedRef.current) {
+          stopMusicQuiet(audio);
+          return;
+        }
+        if (unlockedRef.current || speakerMutedRef.current) {
           return;
         }
         audio.muted = false;
@@ -263,8 +360,12 @@ export default function BackgroundMusic() {
       }
 
       if (unlockedRef.current || speakerMutedRef.current) return;
+      if (!autoPlayAllowedRef.current) {
+        stopMusicQuiet(audio);
+        return;
+      }
 
-      // Buffer muted — icon stays muted; any gesture will unlock
+      // Buffer muted — icon stays muted; any gesture will unlock (funnel only)
       audio.muted = true;
       try {
         await audio.play();
@@ -273,7 +374,7 @@ export default function BackgroundMusic() {
       }
       setSoundLive(false);
     },
-    [showFingerForAtLeastTwentySeconds, confirmSoundLive, stopAdminMusic],
+    [showFingerForAtLeastTwentySeconds, confirmSoundLive, stopMusicQuiet],
   );
 
   useEffect(() => registerBackgroundMusicMediaDucking(), []);
@@ -283,24 +384,29 @@ export default function BackgroundMusic() {
     if (!audio) return;
     markBackgroundMusicElement(audio);
 
-    if (adminRouteRef.current) {
-      stopAdminMusic(audio);
+    // Wait for auth on "/" so we don't start song then kill it for signed-in members
+    if (!authReady && (pathname === "/" || pathname === "/landing")) {
+      return;
+    }
+
+    if (adminRouteRef.current || !autoPlayAllowedRef.current) {
+      stopMusicQuiet(audio);
     } else {
       void startMusicWithFinger(audio);
     }
 
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
-      if (adminRouteRef.current) {
-        stopAdminMusic(audio);
+      if (adminRouteRef.current || !autoPlayAllowedRef.current) {
+        stopMusicQuiet(audio);
         return;
       }
       if (overlayPauseRef.current) return;
       void forceAudible(audio);
     };
     const onPageShow = () => {
-      if (adminRouteRef.current) {
-        stopAdminMusic(audio);
+      if (adminRouteRef.current || !autoPlayAllowedRef.current) {
+        stopMusicQuiet(audio);
         return;
       }
       void startMusicWithFinger(audio);
@@ -313,10 +419,18 @@ export default function BackgroundMusic() {
       window.removeEventListener("pageshow", onPageShow);
       clearHintTimer();
     };
-  }, [startMusicWithFinger, forceAudible, clearHintTimer, stopAdminMusic]);
+  }, [
+    startMusicWithFinger,
+    forceAudible,
+    clearHintTimer,
+    stopMusicQuiet,
+    authReady,
+    pathname,
+    autoPlayAllowed,
+  ]);
 
-  // First two real gestures (landing tap, Free Quick Tour, etc.) start Theme Song.
-  // After that, only the corner speaker can play/mute — third+ page click is quiet.
+  // First two real gestures on funnel pages start Theme Song.
+  // After login / member app: no tap-anywhere unlock — speaker only.
   useEffect(() => {
     const opts: AddEventListenerOptions = { capture: true, passive: true };
     const onActivation = (e: Event) => {
@@ -334,6 +448,9 @@ export default function BackgroundMusic() {
       const audio = audioRef.current;
       if (!audio || adminRouteRef.current) {
         if (audio && adminRouteRef.current) stopAdminMusic(audio);
+        return;
+      }
+      if (!autoPlayAllowedRef.current) {
         return;
       }
       // Already playing unmuted — don't burn an unlock or re-fire
@@ -367,6 +484,8 @@ export default function BackgroundMusic() {
       }
       // Don't auto-resume after video duck if user just muted via speaker
       if (speakerMutedRef.current) return;
+      // Don't resume into logged-in member app unless they used speaker
+      if (!autoPlayAllowedRef.current) return;
       void forceAudible(audio);
     };
     window.addEventListener(BG_MUSIC_OVERLAY_EVENT, onOverlay);
@@ -377,25 +496,30 @@ export default function BackgroundMusic() {
     const onRequestPlay = () => {
       const audio = audioRef.current;
       if (!audio || adminRouteRef.current) return;
+      // FreeTicketModal / intro close may request play — only on funnel routes
+      if (!autoPlayAllowedRef.current) return;
       void forceAudible(audio);
     };
     window.addEventListener(BG_MUSIC_REQUEST_PLAY_EVENT, onRequestPlay);
     return () => window.removeEventListener(BG_MUSIC_REQUEST_PLAY_EVENT, onRequestPlay);
   }, [forceAudible]);
 
-  // Route change: hard-stop on any /admin path; resume only on member/public.
+  // Route / auth change: stop on admin + registered member app; funnel may start.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (onAdmin || overlayPauseRef.current) {
-      stopAdminMusic(audio);
+    if (!authReady && (pathname === "/" || pathname === "/landing")) {
       return;
     }
-    // Fresh page: never carry mute
+    if (onAdmin || !autoPlayAllowed || overlayPauseRef.current) {
+      stopMusicQuiet(audio);
+      return;
+    }
+    // Fresh funnel page: never carry mute into autoplay attempt
     speakerMutedRef.current = false;
     setOff(false);
     void startMusicWithFinger(audio);
-  }, [onAdmin, startMusicWithFinger, stopAdminMusic]);
+  }, [onAdmin, autoPlayAllowed, authReady, pathname, startMusicWithFinger, stopMusicQuiet]);
 
   /** Single mute control: corner speaker only. Session-only (not remembered). */
   const toggle = (e: React.MouseEvent) => {
@@ -418,40 +542,49 @@ export default function BackgroundMusic() {
       return;
     }
 
-    // Muted / waiting → play (this click is the gesture)
+    // Muted / waiting → play (this click is the gesture; allowed even when autoplay is off)
     speakerMutedRef.current = false;
     setOff(false);
     clearPersistedBackgroundMusicMute();
-    void forceAudible(audio);
+    void forceAudible(audio, { fromSpeakerButton: true });
   };
 
-  const onPublicHome = pathname === "/";
-  // Cold home: never cover the primary CTA with Theme Song + finger.
-  // Quiet speaker only; music still unlocks on any gesture.
-  const fingerVisible = showHint && !onAdmin && !onPublicHome;
+  const onPublicHome = pathname === "/" && !signedIn;
+  const onLoggedInHome = pathname === "/" && signedIn;
+  // Finger / “tap anywhere” only on funnel autoplay routes (not logged-in member home)
+  const fingerVisible =
+    showHint && !onAdmin && autoPlayAllowed && !onPublicHome && !onLoggedInHome;
 
   // Honest icon: only “on” when sound is confirmed live
   const showAsPlaying = !off && soundLive;
 
-  const gestureBudgetLeft = gestureUnlockCountRef.current < MAX_GESTURE_UNLOCKS;
+  const gestureBudgetLeft =
+    autoPlayAllowed && gestureUnlockCountRef.current < MAX_GESTURE_UNLOCKS;
   const bubbleMobile = off
-    ? gestureBudgetLeft
-      ? "Theme Song — tap to play"
+    ? autoPlayAllowed
+      ? gestureBudgetLeft
+        ? "Theme Song — tap to play"
+        : "Theme Song — tap speaker to play"
       : "Theme Song — tap speaker to play"
     : soundLive
       ? "Theme Song — tap to mute"
-      : gestureBudgetLeft
-        ? "Theme Song — tap anywhere to play"
+      : autoPlayAllowed
+        ? gestureBudgetLeft
+          ? "Theme Song — tap anywhere to play"
+          : "Theme Song — tap speaker to play"
         : "Theme Song — tap speaker to play";
   const bubbleDesktop = off
-    ? gestureBudgetLeft
-      ? "Theme Song — click the speaker to play"
-      : "Theme Song — click speaker to play"
+    ? "Theme Song — click the speaker to play"
     : soundLive
       ? "Theme Song — click to mute anytime"
-      : gestureBudgetLeft
-        ? "Theme Song — click anywhere to play"
+      : autoPlayAllowed
+        ? gestureBudgetLeft
+          ? "Theme Song — click anywhere to play"
+          : "Theme Song — click speaker to play"
         : "Theme Song — click speaker to play";
+
+  // Show speaker on funnel + logged-in member surfaces (not admin)
+  const showSpeaker = !onAdmin;
 
   return (
     <>
@@ -459,23 +592,24 @@ export default function BackgroundMusic() {
         ref={audioRef}
         src={SRC}
         loop
-        // Never autoplay on admin — route effect + muted start; public may unlock later
-        autoPlay={!onAdmin}
-        preload={onAdmin ? "none" : "auto"}
-        muted={onAdmin}
+        // Never HTML autoplay on admin or logged-in member app
+        autoPlay={false}
+        preload={onAdmin || !autoPlayAllowed ? "none" : "auto"}
+        muted={onAdmin || !autoPlayAllowed}
         playsInline
         data-ts-bg-music="true"
       />
-      {!onAdmin ? (
+      {showSpeaker ? (
         <div
           className={`bg-music-control-cluster fixed z-[120] flex items-end overflow-visible ${
-            onPublicHome ? "bottom-4 sm:bottom-7" : "bottom-6"
+            onPublicHome || onLoggedInHome ? "bottom-4 sm:bottom-7" : "bottom-6"
           }`}
           style={{
             right: "max(0.75rem, env(safe-area-inset-right, 0px))",
-            bottom: onPublicHome
-              ? undefined
-              : "max(1.25rem, env(safe-area-inset-bottom, 0px))",
+            bottom:
+              onPublicHome || onLoggedInHome
+                ? undefined
+                : "max(1.25rem, env(safe-area-inset-bottom, 0px))",
           }}
         >
           {fingerVisible ? (
@@ -496,7 +630,7 @@ export default function BackgroundMusic() {
             aria-label={showAsPlaying ? "Mute background music" : "Play background music"}
             title={showAsPlaying ? "Mute music" : "Play music"}
             className={`bg-music-toggle relative z-10 inline-flex shrink-0 items-center justify-center rounded-2xl border shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.985] ${
-              onPublicHome ? "h-10 w-10 opacity-80" : "h-11 w-11"
+              onPublicHome || onLoggedInHome ? "h-10 w-10 opacity-80" : "h-11 w-11"
             } ${
               showAsPlaying
                 ? "border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_18%,var(--bg))] text-[var(--text)]"
