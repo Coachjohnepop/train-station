@@ -113,21 +113,10 @@ export default function LandingMemberStatus({
             <p className="mt-2 text-sm font-semibold text-white/85">Starter access</p>
           )}
 
-          <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-white/75">
-            {isFree
-              ? "Sample the station, then upgrade when you are ready for daily coach workouts and live sessions."
-              : `Your ${planLabel} ticket is active. Tap Today for this session’s workout, or watch the intro anytime.`}
+          {/* Real membership payment/approval status only — no price or instructional blurb */}
+          <p className="mt-3 text-sm font-medium text-white/70">
+            Status: <span className="font-semibold text-white">{statusLabel}</span>
           </p>
-
-          {membership.priceDisplay || !isFree ? (
-            <p className="mt-3 text-xs font-medium text-white/60">
-              {membership.priceDisplay ? (
-                <span className="text-white/80">{membership.priceDisplay}</span>
-              ) : null}
-              {membership.priceDisplay ? " · " : null}
-              Status: <span className="font-semibold text-white/90">{statusLabel}</span>
-            </p>
-          ) : null}
         </div>
       </div>
 
@@ -194,11 +183,6 @@ export default function LandingMemberStatus({
               <div className="mt-1 text-2xl font-bold leading-tight text-white sm:text-3xl">
                 {planLabel}
               </div>
-              {membership.priceDisplay ? (
-                <div className="mt-2 text-xl font-semibold text-white sm:text-2xl">
-                  {membership.priceDisplay}
-                </div>
-              ) : null}
               <p className="mt-2 text-sm text-white/80">
                 Status: <span className="font-semibold text-white">{statusLabel}</span>
               </p>

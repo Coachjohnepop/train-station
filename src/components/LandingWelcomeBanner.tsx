@@ -117,11 +117,11 @@ export default function LandingWelcomeBanner({
                   ? "You're already on board"
                   : MEMBERSHIP_THEME_LABELS[themeTier]}
             </p>
-          ) : null}
-
-          <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-white/75">
-            {heroSubcopy()}
-          </p>
+          ) : (
+            <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-white/75">
+              {heroSubcopy()}
+            </p>
+          )}
         </div>
       </div>
 
