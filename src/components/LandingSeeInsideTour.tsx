@@ -502,7 +502,7 @@ export default function LandingSeeInsideTour({
                 />
                 <div className="bg-[#1a0b2e] px-2.5 py-1.5">
                   <p className="text-xs font-semibold text-white sm:text-sm">
-                    Adult Strength Conditioning
+                    Adult Strength & Conditioning
                   </p>
                   <p className="text-[10px] text-emerald-300">Selected ✓</p>
                 </div>

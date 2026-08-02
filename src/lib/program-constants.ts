@@ -8,7 +8,7 @@ export const PROGRAM_IMAGES: Record<string, string> = {
   adult: "/images/programs/adult.jpg",
   "strength-training": "/images/programs/strength.jpg",
   "boot-camp-preparation": "/images/programs/bootcamp.jpg",
-  "mom-dads-little-time": "/images/programs/youth.jpg",
+  "mom-dads-little-time": "/images/programs/mom-dads.jpg",
   "youth-sports": "/images/programs/youth.jpg",
 };
 
