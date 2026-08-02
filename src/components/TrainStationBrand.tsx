@@ -60,19 +60,20 @@ export default function TrainStationBrand({
   if (variant === "hero") {
     // Stacked circle + wordmark, left-aligned (hero places this in the left column).
     // Solid white plate so the dark logo mark stays readable on dark landing chrome.
+    // Circle size is fluid (clamp) so it scales with viewport width.
     return (
       <div className={`flex flex-col items-start ${className}`}>
         <div
-          className="flex items-center justify-center rounded-full bg-white p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)] ring-2 ring-white/80 sm:p-3"
+          className="landing-hero-logo-plate flex items-center justify-center rounded-full bg-white shadow-[0_20px_50px_rgba(0,0,0,0.45)] ring-2 ring-white/80"
           aria-hidden
         >
-          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-white sm:h-20 sm:w-20 md:h-24 md:w-24">
+          <div className="landing-hero-logo-mark flex items-center justify-center overflow-hidden rounded-full bg-white">
             <Image
               src={brand.logoIconUrl || src}
               alt=""
-              width={224}
-              height={224}
-              sizes="(max-width: 640px) 80px, 112px"
+              width={280}
+              height={280}
+              sizes="(max-width: 640px) 20vw, (max-width: 1024px) 12vw, 140px"
               className="h-full w-full object-contain"
               priority
             />
