@@ -13,7 +13,7 @@ export type CatalogProgramDef = {
 export const TOP_LEVEL_PROGRAMS: CatalogProgramDef[] = [
   {
     slug: "adult",
-    name: "Adult Strength & Conditioning",
+    name: "Strength & Conditioning",
     description:
       "General fitness and strength for adults — Gym and Home tracks every day.",
     sortOrder: 1,
@@ -141,7 +141,7 @@ export function isJunkWorkoutName(name: string): boolean {
   if (/\btestingsilly\b/i.test(n)) return true;
   if (/^totally fake/i.test(n)) return true;
   if (/^qa workout/i.test(n)) return true;
-  // Do NOT treat "Adult Strength & Conditioning · … Fasted cardio" as junk —
+  // Do NOT treat "Strength & Conditioning · … Fasted cardio" as junk —
   // those are real program-day titles Jeremy uses.
 
   return false;

@@ -13,7 +13,7 @@ const BASE = process.env.BASE_URL || "https://www.thetrainstation.co";
 const { req, loginCoach } = createCoachClient(BASE);
 
 const LIVE_NAMES = [
-  "Adult Strength & Conditioning",
+  "Strength & Conditioning",
   "Athletes — Speed, Strength & Conditioning",
   "Military Preparation",
   "Mom & Dads with Little Time",

@@ -68,7 +68,7 @@ async function main() {
   }
   const names = programs.map((p) => p.name);
   const live = [
-    "Adult Strength & Conditioning",
+    "Strength & Conditioning",
     "Athletes — Speed, Strength & Conditioning",
     "Military Preparation",
     "Mom & Dads with Little Time",
