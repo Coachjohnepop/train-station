@@ -14,6 +14,10 @@ export const PROGRAM_IMAGES: Record<string, string> = {
   /** Jeremy seminar / keynote photo */
   speaking: "/images/programs/speaking.jpg",
   speaking_fee: "/images/programs/speaking.jpg",
+  /** Services & extras cards (#services) */
+  team_consultation: "/images/services/team-consultation.jpg",
+  custom_training: "/images/services/custom-training.jpg",
+  merchandise: "/images/services/merchandise-gear-collage.jpg",
 };
 
 /** Resolve card art: coach-uploaded coverUrl wins over static defaults. */

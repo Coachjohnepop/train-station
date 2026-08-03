@@ -35,6 +35,12 @@ export default function LandingServicesSection({
         {SERVICE_OFFERS.map((offer) => {
           const img = resolveProgramImage(offer.id);
           const isSpeaking = offer.id === "speaking_fee";
+          const altById: Record<string, string> = {
+            speaking_fee: "Coach Jeremy speaking at a seminar",
+            team_consultation: "Coach training a football team on the field",
+            custom_training: "Coach consulting with an athletic director while a volleyball team practices",
+            merchandise: "Affordable home gear — bands, dumbbells, bench, and simple kit",
+          };
           return (
             <button
               key={offer.id}
@@ -46,7 +52,7 @@ export default function LandingServicesSection({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={img}
-                  alt={isSpeaking ? "Coach Jeremy speaking at a seminar" : ""}
+                  alt={altById[offer.id] || offer.label}
                   className="aspect-[16/9] w-full object-cover object-center"
                 />
               ) : null}
