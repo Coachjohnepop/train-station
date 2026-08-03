@@ -36,7 +36,7 @@ export function resendSendingDomain(): string {
   return `send.${siteHostname()}`;
 }
 
-/** Derive accounts@… from the verified LEAD_NOTIFY_FROM address (e.g. leads@send.buyecodelight.com). */
+/** Derive accounts@… from the verified LEAD_NOTIFY_FROM address (e.g. john@thetrainstation.co). */
 function accountsFromLeadNotifyFrom(): string | null {
   const leadFrom = process.env.LEAD_NOTIFY_FROM?.trim();
   if (!leadFrom) return null;

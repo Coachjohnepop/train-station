@@ -224,8 +224,17 @@ export async function middleware(request: NextRequest) {
         const onboardAllowed =
           pathname.startsWith("/member/onboard") ||
           pathname.startsWith("/member/checkout") ||
-          pathname.startsWith("/member/account");
-        if (!onboardAllowed) {
+          pathname.startsWith("/member/account") ||
+          pathname.startsWith("/member/speaking") ||
+          pathname.startsWith("/member/book") ||
+          pathname.startsWith("/member/quote-received");
+        // Speaking quotes skip the membership onboard wizard entirely.
+        if (plan === "speaking_fee" && pathname.startsWith("/member/speaking")) {
+          // allow
+        } else if (!onboardAllowed) {
+          if (plan === "speaking_fee") {
+            return NextResponse.redirect(new URL("/member/speaking", request.url));
+          }
           const onboard = new URL("/member/onboard", request.url);
           if (plan) onboard.searchParams.set("plan", plan);
           return NextResponse.redirect(onboard);

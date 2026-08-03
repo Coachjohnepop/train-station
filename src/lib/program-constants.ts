@@ -10,6 +10,9 @@ export const PROGRAM_IMAGES: Record<string, string> = {
   "boot-camp-preparation": "/images/programs/bootcamp.jpg",
   "mom-dads-little-time": "/images/programs/mom-dads.jpg",
   "youth-sports": "/images/programs/youth-training.jpg",
+  /** Jeremy seminar / keynote photo */
+  speaking: "/images/programs/speaking.jpg",
+  speaking_fee: "/images/programs/speaking.jpg",
 };
 
 export const CATEGORY_LABELS: Record<string, string> = {

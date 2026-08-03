@@ -29,6 +29,9 @@ export type MoneyAccount = {
   stripeAccountId: string | null;
   email: string | null;
   enabled: boolean;
+  /** True when platform key is not Jeremy / Train Station business */
+  merchantMismatch?: boolean;
+  merchantMismatchReason?: string | null;
 };
 
 export type StripeBalanceSnapshot = {
@@ -38,6 +41,12 @@ export type StripeBalanceSnapshot = {
   accountId: string;
   accountKind: MoneyAccountKind;
   accountLabel: string;
+  /** Real Stripe acct_… for platform key (or Connect destination) */
+  stripeMerchantAccountId: string | null;
+  stripeMerchantEmail: string | null;
+  stripeMerchantBusinessName: string | null;
+  merchantMismatch: boolean;
+  merchantMismatchReason: string | null;
   availableCents: number | null;
   availableLabel: string | null;
   pendingCents: number | null;
@@ -51,6 +60,102 @@ export type StripeBalanceSnapshot = {
   }>;
   error: string | null;
 };
+
+/** Emails / name fragments that indicate Jeremy’s Train Station master (not John personal). */
+const JEREMY_MASTER_EMAIL_HINTS = [
+  "coachbyrd",
+  "jeremybyrd",
+  "jeremy@thetrainstation",
+  "byrd@thetrainstation",
+];
+const JOHN_PERSONAL_EMAIL_HINTS = [
+  "john@bcxvoice",
+  "john@lemonvoice",
+  "johnepop",
+  "john.popham",
+  "johnpopham",
+];
+
+export type PlatformMerchantIdentity = {
+  accountId: string | null;
+  email: string | null;
+  businessName: string | null;
+  displayName: string | null;
+  looksLikeJeremyMaster: boolean;
+  looksLikeJohnPersonal: boolean;
+  mismatch: boolean;
+  mismatchReason: string | null;
+};
+
+export async function getPlatformMerchantIdentity(): Promise<PlatformMerchantIdentity> {
+  const empty: PlatformMerchantIdentity = {
+    accountId: null,
+    email: null,
+    businessName: null,
+    displayName: null,
+    looksLikeJeremyMaster: false,
+    looksLikeJohnPersonal: false,
+    mismatch: false,
+    mismatchReason: null,
+  };
+  const stripe = getStripe();
+  if (!stripe) return empty;
+  try {
+    // Platform identity = GET /v1/account (typed retrieve requires a connected acct id).
+    const acct = (await (stripe as unknown as {
+      accounts: {
+        retrieve: (id?: string) => Promise<{
+          id?: string;
+          email?: string | null;
+          business_profile?: { name?: string | null } | null;
+          company?: { name?: string | null } | null;
+          settings?: { dashboard?: { display_name?: string | null } | null } | null;
+        }>;
+      };
+    }).accounts.retrieve(undefined as unknown as string)) as {
+      id?: string;
+      email?: string | null;
+      business_profile?: { name?: string | null } | null;
+      company?: { name?: string | null } | null;
+      settings?: { dashboard?: { display_name?: string | null } | null } | null;
+    };
+    const email = (acct.email || "").trim().toLowerCase() || null;
+    const businessName =
+      (acct.business_profile?.name || acct.company?.name || "").trim() || null;
+    const displayName =
+      (acct.settings?.dashboard?.display_name || "").trim() || null;
+    const blob = `${email || ""} ${businessName || ""} ${displayName || ""}`.toLowerCase();
+    const looksLikeJeremyMaster =
+      JEREMY_MASTER_EMAIL_HINTS.some((h) => blob.includes(h)) ||
+      /\btrain\s*station\b/i.test(businessName || "") ||
+      /\btrain\s*station\b/i.test(displayName || "");
+    const looksLikeJohnPersonal =
+      JOHN_PERSONAL_EMAIL_HINTS.some((h) => blob.includes(h)) ||
+      /\bpopham\b/i.test(blob);
+    let mismatch = false;
+    let mismatchReason: string | null = null;
+    if (looksLikeJohnPersonal && !looksLikeJeremyMaster) {
+      mismatch = true;
+      mismatchReason =
+        "STRIPE_SECRET_KEY is a John/personal Stripe account. Member balances and charges will settle there. Replace Production keys with Jeremy’s Train Station Live sk_live / pk_live.";
+    } else if (!looksLikeJeremyMaster && email) {
+      mismatch = true;
+      mismatchReason = `Platform key is logged in as ${email} (${acct.id}). Expected Jeremy’s Train Station business account. Confirm Dashboard ownership before taking real member payments.`;
+    }
+    return {
+      accountId: acct.id || null,
+      email,
+      businessName,
+      displayName,
+      looksLikeJeremyMaster,
+      looksLikeJohnPersonal,
+      mismatch,
+      mismatchReason,
+    };
+  } catch {
+    return empty;
+  }
+}
 
 export type BalanceActivityRow = {
   id: string;
@@ -145,17 +250,39 @@ export async function listMoneyAccounts(): Promise<{
   accounts: MoneyAccount[];
   configured: boolean;
   testMode: boolean;
+  platformMerchant: PlatformMerchantIdentity;
 }> {
   const stripe = getStripe();
+  const platformMerchant = await getPlatformMerchantIdentity();
+
+  const who =
+    platformMerchant.businessName ||
+    platformMerchant.displayName ||
+    platformMerchant.email ||
+    platformMerchant.accountId ||
+    "unknown";
+  const platformLabel = platformMerchant.looksLikeJeremyMaster
+    ? "Train Station (Jeremy)"
+    : platformMerchant.mismatch
+      ? `Wrong master · ${who}`
+      : `Platform · ${who}`;
+  const platformSubtitle = platformMerchant.mismatch
+    ? "⚠️ STRIPE_SECRET_KEY is not Jeremy’s business account"
+    : platformMerchant.email
+      ? `Master · ${platformMerchant.email}${platformMerchant.accountId ? ` · ${platformMerchant.accountId}` : ""}`
+      : "Platform · member charges land here";
+
   const platform: MoneyAccount = {
     id: "platform",
     kind: "platform",
-    label: "Train Station (Jeremy)",
-    subtitle: "Platform · member charges land here",
+    label: platformLabel,
+    subtitle: platformSubtitle,
     partnerId: null,
-    stripeAccountId: null,
-    email: null,
+    stripeAccountId: platformMerchant.accountId,
+    email: platformMerchant.email,
     enabled: true,
+    merchantMismatch: platformMerchant.mismatch,
+    merchantMismatchReason: platformMerchant.mismatchReason,
   };
 
   const partners = await listCommissionPartners().catch(() => []);
@@ -189,6 +316,7 @@ export async function listMoneyAccounts(): Promise<{
     accounts: [platform, ...connectAccounts, ...pendingPartners],
     configured: Boolean(stripe),
     testMode: isStripeTestMode(),
+    platformMerchant,
   };
 }
 
@@ -216,15 +344,37 @@ export async function getStripeBalanceSnapshot(
 ): Promise<StripeBalanceSnapshot> {
   const ctx = resolveAccountContext(accountParam);
   const stripe = getStripe();
+  const platformMerchant =
+    ctx.kind === "platform" ? await getPlatformMerchantIdentity() : null;
+
+  const identityLabel =
+    ctx.kind === "platform"
+      ? platformMerchant?.looksLikeJeremyMaster
+        ? "Train Station (Jeremy)"
+        : platformMerchant?.businessName ||
+          platformMerchant?.email ||
+          platformMerchant?.accountId ||
+          "Platform (STRIPE_SECRET_KEY)"
+      : ctx.accountId;
+
   const base = {
     configured: Boolean(stripe),
     testMode: isStripeTestMode(),
     publishableKeyPresent: Boolean(getStripePublishableKey()),
     accountId: ctx.accountId,
     accountKind: ctx.kind,
-    accountLabel:
-      accountLabel ||
-      (ctx.kind === "platform" ? "Train Station (Jeremy)" : ctx.accountId),
+    accountLabel: accountLabel || identityLabel,
+    stripeMerchantAccountId:
+      ctx.kind === "platform"
+        ? platformMerchant?.accountId || null
+        : ctx.stripeAccountId,
+    stripeMerchantEmail:
+      ctx.kind === "platform" ? platformMerchant?.email || null : null,
+    stripeMerchantBusinessName:
+      ctx.kind === "platform" ? platformMerchant?.businessName || null : null,
+    merchantMismatch: ctx.kind === "platform" ? Boolean(platformMerchant?.mismatch) : false,
+    merchantMismatchReason:
+      ctx.kind === "platform" ? platformMerchant?.mismatchReason || null : null,
   };
 
   if (!stripe) {

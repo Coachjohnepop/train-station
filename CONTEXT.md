@@ -23,7 +23,7 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 |--------|---------------|--------|
 | **Twilio** (carrier SMS) | **`john@thetrainstation.co`** · account phone = **John’s personal cell** | **PARKED (Jul 19)** — Jeremy weighing cost vs **Messages + email hub** already built. Account started under John; address wait is optional until un-parked. Do **not** put tokens here. Cost sheet: **`VENDOR_COSTS.md`**. |
 | **Zoom** (live class) | Coach Connect as **`jeremy@thetrainstation.co`** · Marketplace app credentials on Vercel (John) | Host / recordings = Jeremy’s Zoom when he Connects. |
-| **Stripe** | **Master / merchant = Jeremy’s Train Station business Stripe** · API keys on Vercel (John wires) | Full money-flow below. **Card Live cutover still open** (prod often still Test mode). |
+| **Stripe** | **Master / merchant = Jeremy’s Train Station business Stripe** · Live keys on Vercel Production (John wires) | Full money-flow below. **Card Live is ON prod** (`pk_live_51SuLDr…`). John = Connect partner for fee pool later — not the card merchant. |
 | **Venmo** | **Jeremy’s business Venmo** (`@JeremyByrdCSCS`) · QR on Landing store | **LIVE on prod (Jul 19)** as real-money backup. **Same Train Station business bank story as Stripe** — not a second company. Coach **Mark paid** unlocks access. |
 | **Vercel / GitHub / Postgres** | **John · `john@bcxvoice.com`** (Vercel user `john-9066` · team johnepop's projects) | Deploys, env, DB. Project `train-station` → thetrainstation.co. |
 
@@ -354,11 +354,28 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-07-31  
-**Status:** Prod `main` includes measurements sheet (royal purple, Original|Check-in dual fields, before/now photos), hero image admin, SEO desk, free gag 5s.  
+**Date:** 2026-08-03  
+**Status:** Prod `main` includes measurements sheet, hero/SEO, free gag. **Stripe master = Jeremy Live on Vercel** (verified public surface).  
 **Rule reaffirmed:** **any new module / data element → Postgres first** (see Durable product rules).  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
 **Branches:** `preview` / `main` · prod: https://www.thetrainstation.co · preview alias: `https://train-station-git-preview-johnepop-s-projects.vercel.app`
+
+### Stripe master — **WRONG ACCOUNT on Production (2026-08-03)**
+
+John reported Admin Billing shows **his** Stripe balances. That means Production `STRIPE_SECRET_KEY` is **John’s Live account** (`pk_live_51SuLDr…`), not Jeremy’s Train Station business.
+
+| Item | Status |
+|------|--------|
+| **Symptom** | Money desk balances wrong; **Checkout** footer: *“authorize Eco Delight Coffee to charge you”* = Stripe **business name** on Production Live keys (not app copy) |
+| **Public** | LIVE + prices ready — charges settle on **whoever owns that Live key** (currently Eco Delight Coffee account) |
+| **Fix** | Point Production `STRIPE_SECRET_KEY` + `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (+ prices/webhook) at **Jeremy’s Train Station Live** only → redeploy |
+| **Verify** | Checkout no longer says Eco Delight; Billing master is Jeremy’s TS business |
+| **John / Eco Stripe** | Not TS membership merchant. John Connect for TS fees later; Eco coffee commissions stay on Eco platform |
+| **Venmo** | Still `@JeremyByrdCSCS` (separate rail) |
+| **Email (2026-08-03)** | Off Eco for mail: `RESEND_FROM` / `LEAD_NOTIFY_FROM` → **john@thetrainstation.co**; `RESEND_REPLY_TO` → **jeremy@**; notify both. **Eco sponsorship UI kept** (Partners / admin Sponsorships only) |
+
+**Helper:** `scripts/wire-jeremy-master-stripe.mjs` once `.env.jeremy.live` has his `sk_live` / `pk_live`.  
+**Do not** leave Eco Delight / John `sk_live` on TS `STRIPE_SECRET_KEY`.
 
 ### Measurements (current product)
 - Member **Measure** (`/member/measurements`): D&D-style sheet; key column (name/age/weight/gender/body fat); Before|Now photos; tape list (neck, chest, shoulders, biceps flexed R/L, waist, glutes/hips, upper quad pocket R/L, calf R/L); each field **Original** (left, first-ever) + **Check-in** (right, enter now); **Inscribe check-in** → `UserMeasurement` in DB.
@@ -672,7 +689,7 @@ Earlier error showed **`sk_Live_…`** (capital L) — code now normalizes `sk_L
 
 | # | Item | Notes |
 |---|------|--------|
-| F1 | **Stripe Live cutover** | Create Live tip + membership `price_…`; Vercel Live keys; webhook 200; real $25 smoke (refund OK). Account `acct_1TmKSWQWWnajU9uyk`. Script: `create-stripe-tip-products.mjs`. |
+| F1 | **Stripe Live cutover** | **Mostly done (2026-08-03):** Jeremy Live keys + prices on Vercel Production; public LIVE + three plans ready (`pk_live_51SuLDr…`). Remaining: optional $25 smoke + webhook 200 proof; then John’s **Connect** for commission (not merchant). |
 | F2 | **Workout floor polish** | Weight seeds last/guess shipped; optional later: per-set weight. |
 | F3 | **Gamification free-pool / access gaps** | **Mostly closed** — free-week async gates + log API free-pool enforce. Coach still curates Adult freePool pins if wanted. |
 | F4 | **Multi-part day UI** | **Shipped** on calendar (1/2/3 parts). Polish only if Jeremy asks. |

@@ -180,7 +180,7 @@ Quick path:
 
 ## Part E — Go live checklist (card money)
 
-**Status as of Jul 20:** prod still **`stripeTestMode: true`**. **Venmo is already live** for real money (`@JeremyByrdCSCS` + Mark paid). Cards need this cutover.
+**Status as of Aug 3, 2026:** prod is **LIVE** (`pk_live_51SuLDr…`, three memberships `stripeReady`). Jeremy Live keys + prices on Vercel Production. **Venmo** still live (`@JeremyByrdCSCS` + Mark paid). Remaining: optional $25 smoke + webhook 200; then John’s Connect for commission.
 
 Do **with Jeremy** on a shared call when his business Stripe is ready.
 

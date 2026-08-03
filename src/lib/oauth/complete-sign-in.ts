@@ -166,11 +166,14 @@ async function provisionNewOAuthMember(
   }
 
   const sessionUser = sessionFromAccount(normalizedEmail, account, profile.name);
-  const redirectTo = quoteRequest
-    ? `/member/quote-received?plan=${encodeURIComponent(plan)}`
-    : needsCheckout
-      ? memberCheckoutPath(plan)
-      : `/member/onboard?plan=${encodeURIComponent(plan)}`;
+  const redirectTo =
+    plan === "speaking_fee"
+      ? "/member/speaking"
+      : quoteRequest
+        ? `/member/quote-received?plan=${encodeURIComponent(plan)}`
+        : needsCheckout
+          ? memberCheckoutPath(plan)
+          : `/member/onboard?plan=${encodeURIComponent(plan)}`;
 
   const res = NextResponse.redirect(new URL(redirectTo, appBaseUrl()));
   applySessionCookies(res, sessionUser);

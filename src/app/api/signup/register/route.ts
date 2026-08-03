@@ -138,11 +138,15 @@ export async function POST(request: Request) {
         });
       }
     }
-    const redirectTo = quoteRequest
-      ? `/member/quote-received?plan=${encodeURIComponent(plan)}`
-      : needsCheckout
-        ? memberCheckoutPath(plan)
-        : `/member/onboard?plan=${encodeURIComponent(plan)}`;
+    // Speaking: intake wizard first, then same 15-min book flow as new members.
+    const redirectTo =
+      plan === "speaking_fee"
+        ? "/member/speaking"
+        : quoteRequest
+          ? `/member/quote-received?plan=${encodeURIComponent(plan)}`
+          : needsCheckout
+            ? memberCheckoutPath(plan)
+            : `/member/onboard?plan=${encodeURIComponent(plan)}`;
     const res = NextResponse.json({
       ok: true,
       redirectTo,

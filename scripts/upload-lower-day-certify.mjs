@@ -146,7 +146,7 @@ async function sendExportEmail({ workoutName, workoutId, exportText }) {
   const apiKey = loadEnvKey("RESEND_API_KEY");
   const from =
     loadEnvKey("LEAD_NOTIFY_FROM") ||
-    "Train Station Leads <leads@send.buyecodelight.com>";
+    "Train Station Leads <john@thetrainstation.co>";
 
   if (!apiKey) {
     fail("Email export", "RESEND_API_KEY missing");

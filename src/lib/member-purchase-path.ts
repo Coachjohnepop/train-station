@@ -36,6 +36,17 @@ export function purchaseHref(
 ): string {
   const normalized = normalizeSignupPlan(plan);
 
+  // Speaking: intake wizard → 15-min book (not card checkout).
+  if (normalized === "speaking_fee" || plan === "speaking") {
+    if (!auth.signedIn) {
+      return signupPath("speaking_fee", { quote: true });
+    }
+    if (auth.role && isStaffRole(auth.role)) {
+      return "/admin";
+    }
+    return "/member/speaking";
+  }
+
   if (!auth.signedIn) {
     if (normalized === "custom_training") {
       const dest = encodeURIComponent(memberCheckoutPath("custom_training"));

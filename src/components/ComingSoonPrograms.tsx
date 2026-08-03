@@ -41,21 +41,29 @@ export default function ComingSoonPrograms({ compact = false }: { compact?: bool
           {live.map((prog) => {
             const img = PROGRAM_IMAGES[prog.slug];
             const isSoon = prog.catalogStatus === "coming_soon";
+            const isSpeaking = prog.slug === "speaking";
+            const href = isSoon
+              ? `/signup?interest=${encodeURIComponent(prog.slug)}`
+              : isSpeaking
+                ? `/signup?plan=speaking_fee&quote=1` // after account → /member/speaking intake
+                : `/join#programs`;
+            const cta = isSoon
+              ? "Notify me →"
+              : isSpeaking
+                ? "Book speaking →"
+                : "Board this track →";
+            const badge = isSoon ? "Soon" : isSpeaking ? "Available" : "Live";
             return (
               <Link
                 key={prog.slug}
-                href={
-                  isSoon
-                    ? `/signup?interest=${encodeURIComponent(prog.slug)}`
-                    : `/join#programs`
-                }
+                href={href}
                 className="group relative overflow-hidden rounded-2xl border border-[#3d2660] bg-[#0a0612]/80 transition hover:border-[#7c3aed]/50 hover:bg-[#1a1428]"
               >
                 {img ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={img}
-                    alt=""
+                    alt={isSpeaking ? "Coach Jeremy speaking at a seminar" : ""}
                     className="aspect-[5/3] w-full object-cover opacity-90 transition group-hover:opacity-100"
                   />
                 ) : (
@@ -63,11 +71,11 @@ export default function ComingSoonPrograms({ compact = false }: { compact?: bool
                 )}
                 {isSoon ? (
                   <span className="absolute right-3 top-3 rounded-full bg-[#7c3aed]/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#a78bfa]">
-                    Soon
+                    {badge}
                   </span>
                 ) : (
                   <span className="absolute right-3 top-3 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-300">
-                    Live
+                    {badge}
                   </span>
                 )}
                 <div className="p-3 sm:p-4">
@@ -78,7 +86,7 @@ export default function ComingSoonPrograms({ compact = false }: { compact?: bool
                     {prog.description}
                   </p>
                   <span className="mt-3 inline-block text-[10px] font-medium text-[#7c3aed] group-hover:underline">
-                    {isSoon ? "Notify me →" : "Board this track →"}
+                    {cta}
                   </span>
                 </div>
               </Link>

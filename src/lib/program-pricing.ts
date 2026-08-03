@@ -20,6 +20,10 @@ export function getProgramListPrice(program: CatalogProgram): {
 } {
   const cat = program.category || "workout";
 
+  // Speaking is a quote/service track, not a membership workout list price.
+  if (program.slug === "speaking" || program.slug === "speaking_fee") {
+    return { cents: 0, label: "Custom · per event", futureLabel: "Quote on request" };
+  }
   if (program.catalogStatus === "coming_soon" || cat === "eating") {
     return { cents: 0, label: "Coming soon", futureLabel: "$19/mo add-on" };
   }

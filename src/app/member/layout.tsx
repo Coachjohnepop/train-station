@@ -71,11 +71,15 @@ export default async function MemberLayout({
       !pathOnly ||
       pathOnly === "/member" ||
       pathOnly.startsWith("/member/onboard") ||
+      pathOnly.startsWith("/member/speaking") ||
       isMemberPathExemptFromPaymentGate(pathOnly);
-    // Exempt includes checkout/account/chat/book/pending/onboard — allow those.
+    // Exempt includes checkout/account/chat/book/pending/onboard/speaking — allow those.
     // Block Today, programs, workout, equipment, live, etc.
     if (!onExempt && pathOnly.startsWith("/member")) {
       const plan = profile?.plan || "explorer";
+      if (plan === "speaking_fee") {
+        redirect("/member/speaking");
+      }
       redirect(`/member/onboard?plan=${encodeURIComponent(plan)}`);
     }
   }

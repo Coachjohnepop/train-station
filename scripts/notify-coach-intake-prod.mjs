@@ -55,7 +55,7 @@ async function sendEmail({ subject, text, ctaUrl }) {
   const from =
     process.env.RESEND_FROM?.trim() ||
     process.env.LEAD_NOTIFY_FROM?.trim() ||
-    "Train Station <accounts@send.buyecodelight.com>";
+    "The Train Station <john@thetrainstation.co>";
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",

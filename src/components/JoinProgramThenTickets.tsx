@@ -82,7 +82,9 @@ export default function JoinProgramThenTickets({
         </div>
 
         <div className="mx-auto mt-6 grid max-w-5xl grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {TOP_LEVEL_PROGRAMS.filter((p) => p.catalogStatus !== "hidden").map((p) => {
+          {TOP_LEVEL_PROGRAMS.filter(
+            (p) => p.catalogStatus !== "hidden" && p.category === "workout",
+          ).map((p) => {
             const active = program === p.slug;
             const soon = p.catalogStatus === "coming_soon";
             return (

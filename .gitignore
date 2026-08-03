@@ -67,3 +67,7 @@ scripts/.jerdog-loop.log
 # Diligence / DSAR dumps
 exports/
 
+
+# Jeremy Live Stripe keys (never commit)
+.env.jeremy.live
+.env.jeremy.*

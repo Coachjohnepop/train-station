@@ -156,7 +156,7 @@ export const SERVICE_OFFERS: ProductOfferDefinition[] = [
     checkoutMode: "quote",
     priceLabel: "Custom",
     priceNote: "per event",
-    description: "Keynotes and speaking engagements — custom fee per event.",
+    description: "Keynotes and seminars with Coach Jeremy — custom fee per event.",
   },
   {
     id: "custom_training",

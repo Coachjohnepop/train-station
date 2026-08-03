@@ -45,6 +45,8 @@ type MoneyAccount = {
   stripeAccountId: string | null;
   email: string | null;
   enabled: boolean;
+  merchantMismatch?: boolean;
+  merchantMismatchReason?: string | null;
 };
 
 type Overview = {
@@ -127,6 +129,11 @@ type BalanceSnap = {
   pendingLabel: string | null;
   accountLabel: string;
   accountKind: string;
+  stripeMerchantAccountId?: string | null;
+  stripeMerchantEmail?: string | null;
+  stripeMerchantBusinessName?: string | null;
+  merchantMismatch?: boolean;
+  merchantMismatchReason?: string | null;
   currencies: Array<{
     currency: string;
     availableLabel: string;
@@ -731,12 +738,63 @@ export default function AdminBillingClient() {
         {selectedAccount &&
           statusPill(
             selectedAccount.kind === "platform" ? "Platform account" : "Connect account",
-            selectedAccount.kind === "platform" ? "ok" : "muted",
+            selectedAccount.kind === "platform" && !selectedAccount.merchantMismatch ? "ok" : "muted",
           )}
         {selectedAccount?.kind === "connect" &&
           !selectedAccount.stripeAccountId &&
           statusPill("Connect not linked", "warn")}
+        {(selectedAccount?.merchantMismatch || balance?.merchantMismatch) &&
+          statusPill("Wrong master account", "warn")}
       </div>
+
+      {(selectedAccount?.merchantMismatch || balance?.merchantMismatch) && (
+        <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-50">
+          <p className="font-semibold text-rose-100">
+            Master Stripe is not Jeremy&apos;s Train Station account
+          </p>
+          <p className="mt-1 text-rose-100/90">
+            {selectedAccount?.merchantMismatchReason ||
+              balance?.merchantMismatchReason ||
+              "STRIPE_SECRET_KEY on Vercel Production is pointing at the wrong Stripe account. Balances and member card charges settle on that account."}
+          </p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-rose-100/85">
+            <li>
+              Live key identity:{" "}
+              <span className="font-mono text-xs">
+                {balance?.stripeMerchantEmail || selectedAccount?.email || "—"}
+              </span>
+              {balance?.stripeMerchantAccountId || selectedAccount?.stripeAccountId
+                ? ` · ${balance?.stripeMerchantAccountId || selectedAccount?.stripeAccountId}`
+                : ""}
+            </li>
+            <li>
+              Fix: Vercel → Production → set <code className="text-xs">STRIPE_SECRET_KEY</code> +{" "}
+              <code className="text-xs">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> from{" "}
+              <strong>Jeremy&apos;s</strong> Live Dashboard, then redeploy.
+            </li>
+            <li>
+              John&apos;s Stripe stays for <strong>Connect commission</strong> only — not master merchant.
+            </li>
+          </ul>
+        </div>
+      )}
+
+      {isPlatform && balance && !balance.merchantMismatch && balance.stripeMerchantEmail && (
+        <p className="text-xs text-[var(--muted)]">
+          Master merchant:{" "}
+          <span className="text-[var(--text)]">
+            {balance.stripeMerchantBusinessName || balance.accountLabel}
+          </span>
+          {" · "}
+          <span className="font-mono">{balance.stripeMerchantEmail}</span>
+          {balance.stripeMerchantAccountId ? (
+            <>
+              {" · "}
+              <span className="font-mono">{balance.stripeMerchantAccountId}</span>
+            </>
+          ) : null}
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-1 border-b border-[var(--border)] pb-1">
         {tabs.map((t) => (

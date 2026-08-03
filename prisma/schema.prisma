@@ -994,6 +994,38 @@ model CustomTrainingOffer {
   @@index([status])
 }
 
+/** Speaking engagement intake (scope wizard) before 15-min coach call. */
+model SpeakingInquiry {
+  id              String   @id
+  userId          String?
+  email           String
+  name            String?
+  phone           String?
+  /** keynote | seminar | workshop | panel | corporate | school | other */
+  eventType       String
+  /** virtual | in_person | hybrid | undecided */
+  format          String
+  audienceSize    String?
+  audienceDesc    String?  @db.Text
+  organization    String?
+  eventDate       String?
+  locationCity    String?
+  locationState   String?
+  /** open | under_1k | 1k_3k | 3k_5k | 5k_plus | prefer_not */
+  budgetRange     String?
+  topicsGoals     String?  @db.Text
+  extraNotes      String?  @db.Text
+  /** draft | submitted | call_booked | closed */
+  status          String   @default("submitted")
+  createdAt       DateTime
+  updatedAt       DateTime
+
+  @@index([userId])
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+}
+
 /** Reference prescription patterns (seeded from workout-prescription-examples.csv). */
 model PrescriptionExample {
   id                 Int      @id

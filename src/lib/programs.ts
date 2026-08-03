@@ -56,6 +56,15 @@ export const TOP_LEVEL_PROGRAMS: CatalogProgramDef[] = [
     category: "workout",
     catalogStatus: "coming_soon",
   },
+  {
+    slug: "speaking",
+    name: "Speaking Engagements",
+    description:
+      "Keynotes and seminars with Coach Jeremy — custom fee per event.",
+    sortOrder: 6,
+    category: "journey",
+    catalogStatus: "live",
+  },
 ];
 
 /** Legacy / deprioritized slugs — hidden from member and admin program lists. */
