@@ -684,13 +684,16 @@ export default function LandingSeeInsideTour({
                   <div className="relative aspect-[4/3] w-full overflow-hidden bg-black/40">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src="/images/programs/choose-program-placeholder.svg"
-                      alt="Programs — art coming soon"
+                      src="/images/programs/choose-program-collage.jpg"
+                      alt="Train Station programs — Adult, Athletes, Military, Mom & Dads, Adolescent, Speaking"
                       className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.03]"
                     />
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#12081f] via-transparent to-transparent" />
                     <span className="absolute left-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/60 backdrop-blur-sm">
                       Right
+                    </span>
+                    <span className="absolute right-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#c4b5fd] backdrop-blur-sm">
+                      Programs
                     </span>
                   </div>
                   <div className="flex flex-1 flex-col p-2 sm:p-2.5">

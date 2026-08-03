@@ -406,7 +406,7 @@ John reported Admin Billing shows **his** Stripe balances. That means Production
 
 ### Still open after this pass (landing)
 
-1. **Program choice card art** — placeholder at `public/images/programs/choose-program-placeholder.svg`; replace when John has the real image.  
+1. **Program choice card art** — **Done:** tour “Where next?” uses `public/images/programs/choose-program-collage.jpg` (2×3: Adult, Athletes, Military, Mom&Dads, Adolescent, Speaking; real photos prioritized in crop).  
 2. **Jeremy content:** free-ticket intro upload, welcome slots (Admin → Videos).  
 3. Volume only fully boosts **HTML5 uploads**; YouTube capped at 100.
 
