@@ -230,19 +230,11 @@ export function formatCustomTrainingSummary(params: CustomTrainingParameters): s
   return `${params.daysPerWeek}d/wk · ${params.sessionsPerDay} session(s)/day · ${params.minutesPerSession} min · drop-in: ${days}`;
 }
 
+/**
+ * Waitlist-only tracks (not already in TOP_LEVEL_PROGRAMS live/soon cards).
+ * Do not re-list Military / Adolescent here — those already appear above as catalog cards.
+ */
 export const COMING_SOON_PROGRAMS = [
-  {
-    slug: "adolescent",
-    name: "Adolescent Training",
-    emoji: "🏃",
-    blurb: "Age-appropriate strength and conditioning for teen athletes.",
-  },
-  {
-    slug: "military-prep",
-    name: "Military Preparation",
-    emoji: "🎖️",
-    blurb: "Conditioning and resilience work to prepare for military service.",
-  },
   {
     slug: "stretching",
     name: "Stretching",

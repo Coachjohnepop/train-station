@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { COMING_SOON_PROGRAMS } from "@/lib/landing-tickets";
-import { PROGRAM_IMAGES } from "@/lib/program-constants";
+import { resolveProgramImage } from "@/lib/program-constants";
 import { TOP_LEVEL_PROGRAMS } from "@/lib/programs";
 
 /**
@@ -39,7 +39,7 @@ export default function ComingSoonPrograms({ compact = false }: { compact?: bool
         {/* Live / catalog programs — Adult first */}
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
           {live.map((prog) => {
-            const img = PROGRAM_IMAGES[prog.slug];
+            const img = resolveProgramImage(prog.slug);
             const isSoon = prog.catalogStatus === "coming_soon";
             const isSpeaking = prog.slug === "speaking";
             const href = isSoon

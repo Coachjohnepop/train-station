@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { PROGRAM_IMAGES, CATEGORY_LABELS } from "@/lib/program-constants";
+import { resolveProgramImage, CATEGORY_LABELS } from "@/lib/program-constants";
 import {
   CART_STORAGE_KEY,
   categoryLabel,
@@ -165,7 +165,10 @@ export default function ProgramCatalog({ programs, enrolledSlugs }: Props) {
 
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {progs.map((program) => {
-                const img = PROGRAM_IMAGES[program.slug] || "/images/programs/adult.jpg";
+                const img = resolveProgramImage(
+                  program.slug,
+                  (program as { coverUrl?: string | null }).coverUrl,
+                );
                 const price = getProgramListPrice(program);
                 const isEnrolled = enrolledSet.has(program.slug);
                 const inCart = cartSlugs.includes(program.slug);
@@ -277,7 +280,10 @@ export default function ProgramCatalog({ programs, enrolledSlugs }: Props) {
             <ul className="max-h-[50vh] overflow-y-auto divide-y divide-[var(--border)]">
               {cartItems.map((program) => {
                 const price = getProgramListPrice(program);
-                const img = PROGRAM_IMAGES[program.slug] || "/images/programs/adult.jpg";
+                const img = resolveProgramImage(
+                  program.slug,
+                  (program as { coverUrl?: string | null }).coverUrl,
+                );
                 return (
                   <li key={program.slug} className="flex gap-3 px-4 py-3">
                     <div className="h-14 w-20 shrink-0 overflow-hidden rounded-lg">

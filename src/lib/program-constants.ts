@@ -4,6 +4,7 @@ export const DAYS_PER_WEEK = 7;
 export const PROGRAM_CYCLE_DAYS = 28;
 export const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+/** Default catalog art (repo static files). Prefer Program.coverUrl when set in DB/admin. */
 export const PROGRAM_IMAGES: Record<string, string> = {
   adult: "/images/programs/adult.jpg",
   "strength-training": "/images/programs/strength.jpg",
@@ -14,6 +15,16 @@ export const PROGRAM_IMAGES: Record<string, string> = {
   speaking: "/images/programs/speaking.jpg",
   speaking_fee: "/images/programs/speaking.jpg",
 };
+
+/** Resolve card art: coach-uploaded coverUrl wins over static defaults. */
+export function resolveProgramImage(
+  slug: string,
+  coverUrl?: string | null,
+): string {
+  const custom = coverUrl?.trim();
+  if (custom) return custom;
+  return PROGRAM_IMAGES[slug] || "/images/programs/adult.jpg";
+}
 
 export const CATEGORY_LABELS: Record<string, string> = {
   workout: "Workouts",

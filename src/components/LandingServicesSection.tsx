@@ -2,7 +2,7 @@
 
 import { usePurchaseAuth } from "@/hooks/usePurchaseAuth";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
-import { PROGRAM_IMAGES } from "@/lib/program-constants";
+import { resolveProgramImage } from "@/lib/program-constants";
 import { SERVICE_OFFERS } from "@/lib/product-offers";
 
 export default function LandingServicesSection({
@@ -33,7 +33,7 @@ export default function LandingServicesSection({
 
       <div className="mx-auto mt-8 grid max-w-4xl gap-3 sm:grid-cols-2">
         {SERVICE_OFFERS.map((offer) => {
-          const img = PROGRAM_IMAGES[offer.id];
+          const img = resolveProgramImage(offer.id);
           const isSpeaking = offer.id === "speaking_fee";
           return (
             <button

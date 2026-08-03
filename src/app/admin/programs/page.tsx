@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ExportSeedButton from "@/components/ExportSeedButton";
+import AdminProgramCoverField from "@/components/AdminProgramCoverField";
 import { getEnrollmentStatsByProgramSlug } from "@/lib/coach-content-alerts";
 import { assessProgramReadiness } from "@/lib/program-readiness";
 import { listPrograms } from "@/lib/program-data";
@@ -120,6 +121,13 @@ export default async function ProgramsAdminPage() {
                   </p>
                 </div>
               </Link>
+              <div className="card -mt-1 rounded-t-none border-t-0 px-4 pb-3">
+                <AdminProgramCoverField
+                  slug={program.slug}
+                  name={program.name}
+                  coverUrl={(program as { coverUrl?: string | null }).coverUrl}
+                />
+              </div>
             </li>
           );
         })}
