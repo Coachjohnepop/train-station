@@ -658,9 +658,6 @@ export default function LandingSeeInsideTour({
                       className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.03]"
                     />
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#1a0b2e] via-transparent to-transparent" />
-                    <span className="absolute left-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#c4b5fd] backdrop-blur-sm">
-                      Left
-                    </span>
                   </div>
                   <div className="flex flex-1 flex-col p-2 sm:p-2.5">
                     <p className="text-sm font-semibold leading-tight text-white sm:text-base">
@@ -689,12 +686,6 @@ export default function LandingSeeInsideTour({
                       className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.03]"
                     />
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#12081f] via-transparent to-transparent" />
-                    <span className="absolute left-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/60 backdrop-blur-sm">
-                      Right
-                    </span>
-                    <span className="absolute right-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#c4b5fd] backdrop-blur-sm">
-                      Programs
-                    </span>
                   </div>
                   <div className="flex flex-1 flex-col p-2 sm:p-2.5">
                     <p className="text-sm font-semibold leading-tight text-white sm:text-base">
