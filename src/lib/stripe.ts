@@ -56,7 +56,8 @@ export async function stripePriceIdForPlan(plan: SignupPlan): Promise<string | n
 }
 
 export async function stripeConfiguredForPlan(plan: SignupPlan): Promise<boolean> {
-  if (!isPaidSignupPlan(plan)) return true;
+  // Free / quote plans do not use Stripe checkout.
+  if (!isPaidSignupPlan(plan)) return false;
   if (!isStripePaymentsEnabled()) return false;
   const offer = getOfferDefinition(plan);
   if (!offer) return false;

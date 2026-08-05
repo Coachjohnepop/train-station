@@ -26,7 +26,7 @@ import {
 } from "@/lib/youtube-embed-control";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
-import { requestBackgroundMusicPlay } from "@/lib/background-music-control";
+import MembershipSeatArt from "@/components/MembershipSeatArt";
 
 /** Free-ticket Jeremy intro: 3× louder than admin content volume offset. */
 const JEREMY_WORD_VOLUME_MULT = 3;
@@ -40,7 +40,8 @@ const JEREMY_WORD_VOLUME_MULT = 3;
  *
  * Signed-in members: skip gag → Jeremy intro only (or empty CTA if not uploaded).
  *
- * Free is a real product path (Explorer), not a joke-only dead end.
+ * Mobile layout: **video on top**, free ticket art + CTAs scroll below.
+ * Free enroll is an explicit secondary action (not auto, not primary).
  */
 export default function FreeTicketModal({
   open,
@@ -78,6 +79,7 @@ export default function FreeTicketModal({
   const rickrollKickGen = useRef(0);
   /** After handoff, never send another command to the gag iframe. */
   const gagLiveRef = useRef(false);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const signedIn = Boolean(purchaseAuth.signedIn);
   const gag = productFreeTicketGag({ signedIn });
@@ -86,6 +88,16 @@ export default function FreeTicketModal({
   useEffect(() => {
     setEmbedOrigin(window.location.origin);
   }, []);
+
+  // Lock body scroll while open (mobile sheet)
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
 
   // One Free Explorer clip: free-ticket slot (synced with plan explorer) → overall welcome.
   // Never use rickroll as Jeremy.
@@ -125,9 +137,6 @@ export default function FreeTicketModal({
       : null;
   const showJeremyFile = loadJeremy && hasJeremy && jeremyIsDirect && Boolean(jeremyVideoUrl);
 
-  const gagDurationMs = gag.enabled ? gag.durationMs : 0;
-  const preloadMs = Math.max(0, gagDurationMs - 3_000);
-
   function clearTimers() {
     timersRef.current.forEach((id) => window.clearTimeout(id));
     timersRef.current = [];
@@ -160,7 +169,7 @@ export default function FreeTicketModal({
       setHideRickroll(false);
       setLoadJeremy(false);
       setBackgroundMusicOverlay(false);
-      requestBackgroundMusicPlay();
+      // Do not force theme song back — user may have muted; video just finished.
       return;
     }
 
@@ -170,6 +179,11 @@ export default function FreeTicketModal({
     setHideRickroll(false);
     setLoadJeremy(false);
     gagLiveRef.current = gag.enabled;
+
+    // Scroll panel to top so video is first thing visible
+    requestAnimationFrame(() => {
+      panelRef.current?.scrollTo(0, 0);
+    });
 
     if (!gag.enabled) {
       setLoadJeremy(true);
@@ -278,46 +292,47 @@ export default function FreeTicketModal({
 
   if (!open) return null;
 
+  const freeHref = purchaseHref("explorer", purchaseAuth);
+
+  function handleContinueFree() {
+    onClose();
+    onContinueFree?.();
+  }
+
   return (
     <div
-      className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center bg-black/90 p-2 sm:p-6 backdrop-blur-sm"
+      className="fixed inset-0 z-[110] flex items-end justify-center bg-black/90 sm:items-center sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="free-ticket-title"
       onClick={onClose}
     >
+      {/* Full-height mobile sheet; scroll so video stays first, ticket + CTAs below */}
       <div
-        className="flex h-[min(92vh,720px)] w-full max-w-lg flex-col rounded-2xl border border-amber-500/30 bg-[#140a22] p-3 sm:p-5 shadow-2xl"
+        ref={panelRef}
+        className="flex max-h-[100dvh] w-full max-w-lg flex-col overflow-y-auto overscroll-contain rounded-t-2xl border border-amber-500/30 bg-[#140a22] shadow-2xl sm:max-h-[min(92vh,760px)] sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400">
-          Explorer ticket
-        </p>
-        <h2 id="free-ticket-title" className="mt-1 text-lg font-semibold text-white sm:text-xl">
-          {showJeremy ? (
-            <>
-              A word from <span className="text-amber-300">Coach Jeremy</span>
-            </>
-          ) : (
-            <>
-              Start small — <span className="text-amber-300">no strings</span>
-            </>
-          )}
-        </h2>
-        <p className="mt-1 text-xs text-[#9d8ab8] leading-relaxed sm:text-sm">
-          {showJeremy
-            ? hasJeremy
-              ? "Explorer is real access — starter programs, about 20% of Coach Class power. No homework required."
-              : "Coach intro not uploaded yet — Free still works. Continue below, or coach can set Free Explorer under Admin → Videos."
-            : "You tapped Free. Enjoy the chorus… then hear from your coach."}
-        </p>
+        {/* Safe area top on notched phones */}
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-white/5 bg-[#140a22]/95 px-3 py-2 backdrop-blur-md sm:px-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400">
+            Explorer ticket
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full px-3 py-1.5 text-xs font-medium text-[#9d8ab8] hover:bg-white/5 hover:text-white"
+            aria-label="Close"
+          >
+            Close
+          </button>
+        </div>
 
-        <div className="relative mt-3 min-h-0 flex-1 overflow-hidden rounded-xl bg-black ring-1 ring-amber-500/20">
-          {/* Never show gag once Jeremy title is up (avoids “A word from Jeremy” + chorus). */}
+        {/* VIDEO FIRST — always at top of scroll content on phone */}
+        <div className="relative aspect-video w-full shrink-0 bg-black sm:mt-0">
           {rickrollSrc && !hideRickroll && !showJeremy && (
             <iframe
               ref={rickrollRef}
-              // One stable iframe for this open — remount = second play
               key="free-gag-rickroll"
               className="absolute inset-0 h-full w-full"
               src={rickrollSrc}
@@ -326,7 +341,6 @@ export default function FreeTicketModal({
               allowFullScreen
               onLoad={() => {
                 if (!gagLiveRef.current) return;
-                // Autoplay already running — unmute only, never playVideo
                 ensureYoutubeAudible(rickrollRef.current);
               }}
             />
@@ -377,8 +391,8 @@ export default function FreeTicketModal({
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 p-4 text-center text-xs text-[#9d8ab8]">
               <p className="font-medium text-white">Coach intro coming soon</p>
               <p className="mt-2 max-w-xs leading-relaxed">
-                Free / Explorer still opens real access. Grab your ticket below — Jeremy will add his
-                free-tier intro under{" "}
+                Free / Explorer still opens real access. Scroll for your ticket — Jeremy will add
+                his free-tier intro under{" "}
                 <Link href="/admin/videos" className="text-[#7c3aed] underline">
                   Admin → Videos
                 </Link>
@@ -388,39 +402,75 @@ export default function FreeTicketModal({
           )}
         </div>
 
-        <div className="mt-3 flex shrink-0 flex-col gap-2">
+        {/* Ticket + copy + CTAs — scroll into view under the video */}
+        <div className="flex flex-col gap-3 px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-5 sm:pb-5">
+          <div className="flex items-start gap-3">
+            <div className="w-[88px] shrink-0 overflow-hidden rounded-xl border border-amber-500/25 shadow-lg sm:w-[104px]">
+              <MembershipSeatArt ticketId="free" priority className="w-full" alt="Free Explorer ticket" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 id="free-ticket-title" className="text-lg font-semibold leading-snug text-white sm:text-xl">
+                {showJeremy ? (
+                  <>
+                    A word from <span className="text-amber-300">Coach Jeremy</span>
+                  </>
+                ) : (
+                  <>
+                    Start small — <span className="text-amber-300">no strings</span>
+                  </>
+                )}
+              </h2>
+              <p className="mt-1 text-xs leading-relaxed text-[#9d8ab8] sm:text-sm">
+                {showJeremy
+                  ? hasJeremy
+                    ? "Explorer is real access — starter programs, about 20% of Coach Class. Scroll for your ticket."
+                    : "Coach intro not uploaded yet — Free still works. Your ticket is below."
+                  : "You tapped Free. Enjoy the chorus… then hear from your coach."}
+              </p>
+            </div>
+          </div>
+
+          <p className="text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-400/90">
+            Scroll for ticket · nothing enrolls until you tap below
+          </p>
+
           <button
             type="button"
             onClick={() => {
               onClose();
               onUpgrade();
             }}
-            className="h-11 rounded-full bg-[#7c3aed] text-sm font-semibold text-white hover:bg-[#6d2dd6] transition"
+            className="h-12 rounded-full bg-[#7c3aed] text-sm font-semibold text-white transition hover:bg-[#6d2dd6]"
           >
             Show me Coach Class &amp; 1st Class →
           </button>
+
           {onContinueFree ? (
             <button
               type="button"
-              onClick={() => {
-                onClose();
-                onContinueFree();
-              }}
-              className="inline-flex h-11 items-center justify-center rounded-full border border-[#3d2660] text-sm font-semibold text-[#9d8ab8] hover:text-white hover:border-[#7c3aed]/40 transition"
+              onClick={handleContinueFree}
+              className="inline-flex h-11 items-center justify-center rounded-full border border-[#3d2660] text-sm font-medium text-[#9d8ab8] transition hover:border-[#7c3aed]/40 hover:text-white"
             >
               Continue with Free / Explorer
             </button>
           ) : (
             <Link
-              href={purchaseHref("explorer", purchaseAuth)}
-              className="inline-flex h-11 items-center justify-center rounded-full border border-[#3d2660] text-sm font-semibold text-[#9d8ab8] hover:text-white hover:border-[#7c3aed]/40 transition"
+              href={freeHref}
+              className="inline-flex h-11 items-center justify-center rounded-full border border-[#3d2660] text-sm font-medium text-[#9d8ab8] transition hover:border-[#7c3aed]/40 hover:text-white"
               onClick={onClose}
+              // Avoid accidental form/Enter activation from parent focus
+              tabIndex={0}
             >
               Continue with Free / Explorer
             </Link>
           )}
-          <button type="button" onClick={onClose} className="text-xs text-[#9d8ab8] hover:text-white py-1">
-            Never mind
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="py-2 text-xs text-[#9d8ab8] hover:text-white"
+          >
+            Never mind — back to tickets
           </button>
         </div>
       </div>

@@ -88,7 +88,7 @@ export default function BackgroundMusic() {
   const unlockedRef = useRef(false);
   /**
    * Session-only mute from the corner speaker (not persisted).
-   * First two non-speaker taps can still clear this and start Theme Song.
+   * Once muted, only the speaker button may start music again (not page taps).
    */
   const speakerMutedRef = useRef(false);
   /** Ignore activation that is the same click as the speaker mute (capture fires first). */
@@ -224,12 +224,17 @@ export default function BackgroundMusic() {
       if (!autoPlayAllowedRef.current && !opts?.fromSpeakerButton) {
         return false;
       }
-      // Tap anywhere / speaker play — clear session speaker mute
-      // (unless this call is the mute side of the speaker toggle)
-      if (!opts?.fromSpeakerMute) {
+      // Explicit speaker mute wins over everything except the speaker button
+      if (speakerMutedRef.current && !opts?.fromSpeakerButton) {
+        setSoundLive(false);
+        setOff(true);
+        return false;
+      }
+      // Speaker play path clears mute; mute path stays quiet
+      if (opts?.fromSpeakerButton) {
         speakerMutedRef.current = false;
         setOff(false);
-      } else if (speakerMutedRef.current) {
+      } else if (opts?.fromSpeakerMute || speakerMutedRef.current) {
         setSoundLive(false);
         return false;
       }
@@ -306,6 +311,22 @@ export default function BackgroundMusic() {
         stopMusicQuiet(audio);
         return;
       }
+      // User muted via speaker — stay quiet until they tap the speaker again
+      if (speakerMutedRef.current) {
+        audio.muted = true;
+        audio.pause();
+        setSoundLive(false);
+        setOff(true);
+        return;
+      }
+      // After two tap-anywhere unlocks, only the speaker may start music again
+      if (gestureUnlockCountRef.current >= MAX_GESTURE_UNLOCKS) {
+        if (!audio.paused && !audio.muted) {
+          setSoundLive(true);
+          setOff(false);
+        }
+        return;
+      }
 
       showFingerForAtLeastTwentySeconds();
 
@@ -337,6 +358,7 @@ export default function BackgroundMusic() {
       }
       // Gesture may have unlocked during load wait — never remute after that
       if (unlockedRef.current || speakerMutedRef.current) return;
+      if (gestureUnlockCountRef.current >= MAX_GESTURE_UNLOCKS) return;
 
       // Try audible autoplay a few times
       for (let i = 0; i < 5; i++) {
@@ -347,6 +369,7 @@ export default function BackgroundMusic() {
         if (unlockedRef.current || speakerMutedRef.current) {
           return;
         }
+        if (gestureUnlockCountRef.current >= MAX_GESTURE_UNLOCKS) return;
         audio.muted = false;
         audio.volume = VOLUME;
         try {
@@ -365,7 +388,7 @@ export default function BackgroundMusic() {
         return;
       }
 
-      // Buffer muted — icon stays muted; any gesture will unlock (funnel only)
+      // Buffer muted — icon stays muted; gesture unlock (up to budget) can start song
       audio.muted = true;
       try {
         await audio.play();
@@ -402,13 +425,22 @@ export default function BackgroundMusic() {
         return;
       }
       if (overlayPauseRef.current) return;
-      void forceAudible(audio);
+      // Never un-mute or re-unlock just because the tab came back
+      if (speakerMutedRef.current) return;
+      if (gestureUnlockCountRef.current >= MAX_GESTURE_UNLOCKS && (audio.paused || audio.muted)) {
+        return;
+      }
+      // Only resume if already unlocked and was playing path
+      if (unlockedRef.current && !audio.muted) {
+        void forceAudible(audio);
+      }
     };
     const onPageShow = () => {
       if (adminRouteRef.current || !autoPlayAllowedRef.current) {
         stopMusicQuiet(audio);
         return;
       }
+      if (speakerMutedRef.current) return;
       void startMusicWithFinger(audio);
     };
 
@@ -431,6 +463,7 @@ export default function BackgroundMusic() {
 
   // First two real gestures on funnel pages start Theme Song.
   // After login / member app: no tap-anywhere unlock — speaker only.
+  // After speaker mute: never un-mute on a random page tap (speaker only).
   useEffect(() => {
     const opts: AddEventListenerOptions = { capture: true, passive: true };
     const onActivation = (e: Event) => {
@@ -453,8 +486,12 @@ export default function BackgroundMusic() {
       if (!autoPlayAllowedRef.current) {
         return;
       }
+      // Explicit mute: do not treat page taps as unlock
+      if (speakerMutedRef.current) {
+        return;
+      }
       // Already playing unmuted — don't burn an unlock or re-fire
-      if (!audio.paused && !audio.muted && !speakerMutedRef.current) {
+      if (!audio.paused && !audio.muted) {
         return;
       }
       if (gestureUnlockCountRef.current >= MAX_GESTURE_UNLOCKS) {
@@ -486,6 +523,11 @@ export default function BackgroundMusic() {
       if (speakerMutedRef.current) return;
       // Don't resume into logged-in member app unless they used speaker
       if (!autoPlayAllowedRef.current) return;
+      // Don't force theme song back after free-ticket / intro video unless already unlocked
+      if (!unlockedRef.current) return;
+      if (gestureUnlockCountRef.current >= MAX_GESTURE_UNLOCKS && (audio.paused || audio.muted)) {
+        return;
+      }
       void forceAudible(audio);
     };
     window.addEventListener(BG_MUSIC_OVERLAY_EVENT, onOverlay);
@@ -498,6 +540,12 @@ export default function BackgroundMusic() {
       if (!audio || adminRouteRef.current) return;
       // FreeTicketModal / intro close may request play — only on funnel routes
       if (!autoPlayAllowedRef.current) return;
+      // Never override speaker mute or restart after gesture budget
+      if (speakerMutedRef.current) return;
+      if (!unlockedRef.current) return;
+      if (gestureUnlockCountRef.current >= MAX_GESTURE_UNLOCKS && (audio.paused || audio.muted)) {
+        return;
+      }
       void forceAudible(audio);
     };
     window.addEventListener(BG_MUSIC_REQUEST_PLAY_EVENT, onRequestPlay);
@@ -505,6 +553,7 @@ export default function BackgroundMusic() {
   }, [forceAudible]);
 
   // Route / auth change: stop on admin + registered member app; funnel may start.
+  // Preserve speaker mute across navigations (user already chose quiet).
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -515,9 +564,13 @@ export default function BackgroundMusic() {
       stopMusicQuiet(audio);
       return;
     }
-    // Fresh funnel page: never carry mute into autoplay attempt
-    speakerMutedRef.current = false;
-    setOff(false);
+    if (speakerMutedRef.current) {
+      audio.muted = true;
+      audio.pause();
+      setSoundLive(false);
+      setOff(true);
+      return;
+    }
     void startMusicWithFinger(audio);
   }, [onAdmin, autoPlayAllowed, authReady, pathname, startMusicWithFinger, stopMusicQuiet]);
 

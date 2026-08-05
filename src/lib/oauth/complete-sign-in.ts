@@ -17,7 +17,7 @@ import {
 } from "@/lib/email-history-cookies";
 import { enrollUserInProgram } from "@/lib/data/user-data";
 import { notifyNewLead } from "@/lib/lead-notify";
-import { memberCheckoutPath } from "@/lib/member-gates";
+import { isPaidSignupPlan, memberCheckoutPath } from "@/lib/member-gates";
 import { appBaseUrl } from "@/lib/oauth/config";
 import { getAllSignInAccounts, registerMember, upsertSignInAccount } from "@/lib/member-accounts-store";
 import { ensureMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
@@ -127,7 +127,9 @@ async function provisionNewOAuthMember(
   });
 
   const quoteRequest = isQuoteOffer(plan);
-  const needsCheckout = !quoteRequest && (await stripeConfiguredForPlan(plan));
+  // Paid only — free Explorer goes to onboard, not checkout.
+  const needsCheckout =
+    !quoteRequest && isPaidSignupPlan(plan) && (await stripeConfiguredForPlan(plan));
 
   if (!needsCheckout) {
     const welcomeSent = await sendMemberWelcomeEmail({

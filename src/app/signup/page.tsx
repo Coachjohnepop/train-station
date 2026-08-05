@@ -21,6 +21,8 @@ function SignupForm() {
   const prefillEmail = searchParams.get("email") || "";
   const referralCode = searchParams.get("ref") || searchParams.get("referral") || "";
   const isWaitlistOnly = Boolean(interest && !plan);
+  /** No plan in URL = user did not pick a ticket yet — do not default to Free. */
+  const hasExplicitPlan = Boolean(plan.trim());
 
   const [email, setEmail] = useState(prefillEmail);
   const [firstName, setFirstName] = useState("");
@@ -32,7 +34,13 @@ function SignupForm() {
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
-  const ticketPlan = normalizeSignupPlan(plan || "explorer");
+  const ticketPlan = hasExplicitPlan ? normalizeSignupPlan(plan) : null;
+
+  // Membership signup always starts from a ticket pick (Free is intentional).
+  useEffect(() => {
+    if (isWaitlistOnly || hasExplicitPlan) return;
+    router.replace("/join#tickets");
+  }, [isWaitlistOnly, hasExplicitPlan, router]);
 
   useFormAutofillSync(formRef, ["username", "password", "password-confirm"], (values) => {
     if (values.username) setEmail(values.username);
@@ -109,6 +117,13 @@ function SignupForm() {
         }
       }
 
+      if (!ticketPlan) {
+        setError("Pick a ticket first — Free, Coach Class, or higher.");
+        setLoading(false);
+        router.push("/join#tickets");
+        return;
+      }
+
       const res = await fetch("/api/signup/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -148,13 +163,25 @@ function SignupForm() {
           name: [firstName.trim(), lastName.trim()].filter(Boolean).join(" "),
         });
       }
-      window.location.href = data.redirectTo || `/member/onboard?plan=${encodeURIComponent(ticketPlan)}`;
+      window.location.href =
+        data.redirectTo || `/member/onboard?plan=${encodeURIComponent(ticketPlan)}`;
       return;
     } catch {
       setError("Something went wrong — try again.");
     } finally {
       setLoading(false);
     }
+  }
+
+  if (!isWaitlistOnly && !ticketPlan) {
+    return (
+      <div className="min-h-screen bg-[#0a0612] flex flex-col items-center justify-center gap-3 px-6 text-center text-[#9d8ab8] text-sm">
+        <p>Pick a ticket first…</p>
+        <Link href="/join#tickets" className="text-[#c4b5fd] underline">
+          Choose Free / Coach / 1st Class
+        </Link>
+      </div>
+    );
   }
 
   return (
@@ -187,7 +214,7 @@ function SignupForm() {
           </div>
 
           {/* Ticket image for the plan they picked — lives here, not on join hero */}
-          {!isWaitlistOnly && (
+          {!isWaitlistOnly && ticketPlan && (
             <div className="mb-6 flex flex-col items-center">
               <div className="w-full max-w-[220px] overflow-hidden rounded-2xl border border-[#3d2660] shadow-[0_12px_40px_rgba(124,58,237,0.35)]">
                 <MembershipSeatArt
@@ -203,7 +230,7 @@ function SignupForm() {
             </div>
           )}
 
-          {!isWaitlistOnly && (
+          {!isWaitlistOnly && ticketPlan && (
             <>
               <OAuthButtons mode="signup" plan={ticketPlan} className="mb-4" />
               <p className="mb-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-[#9d8ab8]">
@@ -333,7 +360,7 @@ function SignupForm() {
               </p>
             )}
 
-            {!isWaitlistOnly && (plan || ticketPlan) && (
+            {!isWaitlistOnly && ticketPlan && (
               <p className="text-xs text-[#7c3aed]">
                 Ticket: <span className="font-semibold">{signupPlanLabel(ticketPlan)}</span>
               </p>

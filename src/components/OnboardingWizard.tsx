@@ -23,12 +23,7 @@ import { isPaidOffer } from "@/lib/product-offers";
 import { recommendedProgramStartDate } from "@/lib/member-program-block";
 import type { ProgramStartSettings } from "@/lib/program-start-settings";
 import { weekdayLabel } from "@/lib/program-start-settings";
-import { TICKET_TIERS } from "@/lib/landing-tickets";
-import {
-  DUAL_TICKETS_FAN_SRC,
-  membershipThemeTierFromPlan,
-  seatArtForPlan,
-} from "@/lib/membership-theme";
+import { membershipThemeTierFromPlan } from "@/lib/membership-theme";
 import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
 
 async function saveProgress(body: Record<string, unknown>) {
@@ -158,11 +153,27 @@ export default function OnboardingWizard({
   }
 
   const tier = membershipThemeTierFromPlan(plan);
-  const seatSrc = seatArtForPlan(plan as SignupPlan);
 
   return (
-    <div className="max-w-md mx-auto px-4 py-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-md space-y-4 px-0 py-2 sm:px-4 sm:py-6 sm:space-y-6">
+      {/* Step 1: video first on phone — minimal chrome above the fold */}
+      {currentStep === 1 && planWelcomeUrl ? (
+        <div className="overflow-hidden rounded-none bg-black ring-1 ring-[#3d2660] sm:rounded-xl">
+          <div className="aspect-video w-full">
+            <PlayableVideoFrame
+              className="h-full w-full"
+              videoUrl={planWelcomeUrl}
+              title="Welcome video"
+              autoplay
+              kickPlayback
+              duckBackgroundMusic
+              volumeDb={introVolumeDb}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      <div className="flex items-center justify-between px-4 sm:px-0">
         <span className="rounded-full bg-[#7c3aed]/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#c4b5fd]">
           {signupPlanLabel(plan)}
         </span>
@@ -171,96 +182,60 @@ export default function OnboardingWizard({
         </div>
       </div>
 
-      <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]">
+      <div className="mx-4 h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)] sm:mx-0">
         <div
           className="h-full rounded-full bg-[#7c3aed] transition-all duration-300"
           style={{ width: `${(currentStep / totalSteps) * 100}%` }}
         />
       </div>
 
-      <div className="card p-5 sm:p-6 space-y-4">
+      <div className="card mx-4 space-y-4 p-4 sm:mx-0 sm:p-6">
         {currentStep === 1 && (
           <>
-            {/* Dual tickets fan + your seat art */}
-            <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-2)]">
-              <div className="px-4 pt-4 pb-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={DUAL_TICKETS_FAN_SRC}
-                  alt="Membership tickets fanned like playing cards"
-                  className="mx-auto w-full max-w-[260px] drop-shadow-[0_8px_28px_rgba(124,58,237,0.4)]"
-                  width={1152}
-                  height={864}
-                />
-              </div>
-              <div className="payment-seat-card">
+            {/* No plan welcome URL: still do not lead with dual fan / huge seat */}
+            {!planWelcomeUrl ? (
+              <p className="text-xs italic text-[var(--muted)]">
+                Your coach welcome clip will appear here soon — setup works either way.
+              </p>
+            ) : null}
+
+            <h1 className="text-xl font-bold">Welcome aboard</h1>
+            <p className="text-sm leading-relaxed text-[var(--muted)]">
+              You&apos;re on <strong className="text-[var(--text)]">{signupPlanLabel(plan)}</strong>.
+              A quick setup for texts and your profile — then your dashboard.
+            </p>
+
+            {/* Compact ticket only — scroll to see; never dual Coach/1st fan on phones */}
+            <div className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-2.5">
+              <div className="w-[72px] shrink-0 overflow-hidden rounded-lg sm:w-[96px]">
                 <MembershipSeatArt
                   plan={plan as SignupPlan}
                   membershipTier={tier}
                   className="w-full"
                   priority
+                  alt={`${signupPlanLabel(plan)} ticket`}
                 />
               </div>
-              <div className="flex gap-1.5 overflow-x-auto p-2">
-                {TICKET_TIERS.map((t) => {
-                  const active = t.signupPlan === plan;
-                  return (
-                    <div
-                      key={t.id}
-                      className={`relative h-12 w-16 shrink-0 overflow-hidden rounded-lg border ${
-                        active
-                          ? "border-accent ring-1 ring-accent"
-                          : "border-[var(--border)] opacity-60"
-                      }`}
-                      title={t.title}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={t.seatArtSrc || seatSrc || "/images/tickets/coach-class.jpg"}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                      {active ? (
-                        <span className="absolute inset-x-0 bottom-0 bg-black/70 px-0.5 py-0.5 text-center text-[7px] font-bold uppercase tracking-wide text-white">
-                          Yours
-                        </span>
-                      ) : null}
-                    </div>
-                  );
-                })}
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent)]">
+                  Your ticket
+                </p>
+                <p className="text-sm font-semibold text-[var(--text)]">{signupPlanLabel(plan)}</p>
+                <p className="mt-0.5 text-[11px] text-[var(--muted)]">
+                  {planWelcomeUrl
+                    ? "Coach video is above · tap Start when ready"
+                    : "Tap Start setup when ready"}
+                </p>
               </div>
             </div>
 
-            <h1 className="text-xl font-bold">Welcome aboard</h1>
-            <p className="text-sm text-[var(--muted)] leading-relaxed">
-              You&apos;re on <strong className="text-[var(--text)]">{signupPlanLabel(plan)}</strong>.
-              A quick setup for texts and your profile — then your dashboard walks you through booking
-              your coach intro and warming up.
-            </p>
             <p className="text-xs text-[var(--muted)]">
               Need something first?{" "}
               <Link href="/member/account" className="font-semibold text-accent hover:underline">
                 Open Account
-              </Link>{" "}
-              (payment confirmation, settings). Today and Home will bring you back here until setup
-              is done.
+              </Link>
+              .
             </p>
-            {planWelcomeUrl ? (
-              <div className="aspect-video overflow-hidden rounded-xl bg-black ring-1 ring-[#3d2660]">
-                <PlayableVideoFrame
-                  className="h-full w-full"
-                  videoUrl={planWelcomeUrl}
-                  title="Welcome video"
-                  autoplay
-                  kickPlayback={currentStep === 1}
-                  volumeDb={introVolumeDb}
-                />
-              </div>
-            ) : (
-              <p className="text-xs text-[var(--muted)] italic">
-                Your coach welcome clip will appear here soon — your train seat is ready either way.
-              </p>
-            )}
             <button type="button" onClick={() => void nextStep()} className="btn-primary w-full">
               Start setup
             </button>

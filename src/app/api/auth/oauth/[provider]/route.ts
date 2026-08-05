@@ -15,8 +15,13 @@ export async function GET(request: Request, { params }: Params) {
 
   const url = new URL(request.url);
   const redirect = url.searchParams.get("redirect") || "";
-  const plan = url.searchParams.get("plan") || "explorer";
   const mode = url.searchParams.get("mode") === "signup" ? "signup" : "login";
+  const planParam = (url.searchParams.get("plan") || "").trim();
+  // Signup must carry an intentional ticket plan — never silent Free default.
+  if (mode === "signup" && !planParam) {
+    return NextResponse.redirect(new URL("/join#tickets", request.url));
+  }
+  const plan = planParam || "explorer";
 
   const state = createOAuthState({ provider, redirect, plan, mode });
   const res = NextResponse.redirect(buildProviderAuthUrl(provider, state));

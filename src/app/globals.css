@@ -104,19 +104,39 @@
 
 html {
   min-height: 100%;
+  min-height: 100dvh;
   background-color: var(--bg);
+  /* Kill sideways pan / “page slides around” on iOS Safari + Chrome */
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+  width: 100%;
+  max-width: 100%;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+  /* Vertical scroll only at the document root — prevents diagonal/side drag */
+  overscroll-behavior-y: contain;
   color: var(--text);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+  /* Stop iOS from resizing text (feels like the app “resizes”) */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* Deep purple canvas — member, admin, and marketing home */
 .app-shell-bg {
   min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
   background-color: var(--bg);
   background-image:
     radial-gradient(
@@ -139,8 +159,15 @@ body {
       var(--tier-trim-soft),
       transparent
     );
-  background-attachment: fixed;
+  /* fixed backgrounds pan/jitter on iOS and feel like the app is sliding */
+  background-attachment: scroll;
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+@media (min-width: 768px) {
+  .app-shell-bg {
+    background-attachment: fixed;
+  }
 }
 
 [data-theme-mode="light"] .app-shell-bg {

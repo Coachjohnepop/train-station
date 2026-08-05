@@ -11,7 +11,7 @@ import {
   sessionFromStoredAccount,
   syncMemberGateCookies,
 } from "@/lib/auth";
-import { memberCheckoutPath } from "@/lib/member-gates";
+import { isPaidSignupPlan, memberCheckoutPath } from "@/lib/member-gates";
 import { stripeConfiguredForPlan } from "@/lib/stripe";
 import { registerMember } from "@/lib/member-accounts-store";
 import { ensureMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
@@ -43,6 +43,13 @@ export async function POST(request: Request) {
 
   const { email, firstName, lastName, phone, plan: rawPlan, password, referralCode } =
     parsed.data;
+  // Require an intentional ticket — never silent Free default from empty plan.
+  if (!rawPlan?.trim()) {
+    return NextResponse.json(
+      { error: "Pick a ticket first (Free, Coach Class, or higher)." },
+      { status: 400 },
+    );
+  }
   const plan = normalizeSignupPlan(rawPlan);
   const quoteRequest = isQuoteOffer(plan);
   const referral = referralCode ? await resolveReferralDiscount(referralCode) : null;
@@ -121,7 +128,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Account created but sign-in failed." }, { status: 500 });
     }
 
-    const needsCheckout = !quoteRequest && (await stripeConfiguredForPlan(plan));
+    // Paid only — free Explorer goes straight to onboard (never auto-checkout).
+    const needsCheckout =
+      !quoteRequest && isPaidSignupPlan(plan) && (await stripeConfiguredForPlan(plan));
 
     // Paid plans: welcome email fires after Stripe payment (markMemberPaid).
     // Free/quote paths: only send once signup fully succeeded.

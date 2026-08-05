@@ -32,6 +32,8 @@ export default function MemberShell({
   intakePending = false,
   paymentGateActive = false,
   checkoutPlan = "member",
+  /** Setup wizard: hide Live Class / maintain chrome so video fits on phone. */
+  setupMode = false,
 }: {
   children: React.ReactNode;
   tierLabel?: string;
@@ -43,6 +45,7 @@ export default function MemberShell({
   intakePending?: boolean;
   paymentGateActive?: boolean;
   checkoutPlan?: SignupPlan;
+  setupMode?: boolean;
 }) {
   const tierLabel = MEMBERSHIP_THEME_LABELS[membershipTier] || tierLabelProp || "Member";
 
@@ -100,24 +103,31 @@ export default function MemberShell({
         ) : null}
 
         {/* In-progress maintain: top action banner (above Live Class) so it never gets lost */}
-        {!paymentGateActive && memberUserId ? (
+        {!setupMode && !paymentGateActive && memberUserId ? (
           <Suspense fallback={null}>
             <MemberMaintainResumeStrip memberUserId={memberUserId} embedded />
           </Suspense>
         ) : null}
 
-        {!paymentGateActive ? (
+        {/* Live Class strip is noise during first-time onboard on a phone */}
+        {!setupMode && !paymentGateActive ? (
           <Suspense fallback={null}>
             <MemberLiveZoomStrip embedded />
           </Suspense>
         ) : null}
       </div>
 
-      <main className="mx-auto w-full min-w-0 max-w-lg overflow-x-clip md:max-w-3xl lg:max-w-6xl xl:max-w-7xl flex-1 px-4 py-6 md:px-6 lg:px-8">
-        <div className="mb-3 space-y-2">
-          <PwaInstallHint compact />
-          <PushAlertEnable compact />
-        </div>
+      <main
+        className={`mx-auto w-full min-w-0 max-w-lg flex-1 overflow-x-clip md:max-w-3xl lg:max-w-6xl xl:max-w-7xl md:px-6 lg:px-8 ${
+          setupMode ? "px-0 py-2 md:px-6 md:py-6" : "px-4 py-6"
+        }`}
+      >
+        {!setupMode ? (
+          <div className="mb-3 space-y-2 px-4 md:px-0">
+            <PwaInstallHint compact />
+            <PushAlertEnable compact />
+          </div>
+        ) : null}
         {children}
       </main>
       <Suspense fallback={null}>

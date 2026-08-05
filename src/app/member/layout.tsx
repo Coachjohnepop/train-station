@@ -52,6 +52,17 @@ export default async function MemberLayout({
     : false;
   const checkoutPlan = (profile?.plan ?? "member") as SignupPlan;
 
+  const pathname =
+    headerStore.get("x-pathname") ||
+    headerStore.get("x-invoke-path") ||
+    headerStore.get("next-url") ||
+    "";
+  const pathOnly = pathname.startsWith("http")
+    ? new URL(pathname).pathname
+    : pathname;
+  const setupMode =
+    pathOnly.startsWith("/member/onboard") || pathOnly.startsWith("/member/speaking");
+
   // Server-side onboard gate (DB), not cookie-only. Incomplete free Explorer
   // must finish the wizard before Today / training.
   if (
@@ -59,14 +70,6 @@ export default async function MemberLayout({
     profileUserId?.startsWith("member-") &&
     (!profile || !profile.onboardingComplete)
   ) {
-    const pathname =
-      headerStore.get("x-pathname") ||
-      headerStore.get("x-invoke-path") ||
-      headerStore.get("next-url") ||
-      "";
-    const pathOnly = pathname.startsWith("http")
-      ? new URL(pathname).pathname
-      : pathname;
     const onExempt =
       !pathOnly ||
       pathOnly === "/member" ||
@@ -94,6 +97,7 @@ export default async function MemberLayout({
       intakePending={intakePending}
       paymentGateActive={paymentGateActive}
       checkoutPlan={checkoutPlan}
+      setupMode={setupMode}
     >
       {children}
     </MemberShell>
