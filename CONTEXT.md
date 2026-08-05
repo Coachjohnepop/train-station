@@ -354,13 +354,31 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-03  
-**Status:** Prod `main` includes measurements sheet, hero/SEO, free gag. **Stripe master = Jeremy Live on Vercel** (verified public surface).  
+**Date:** 2026-08-05  
+**Status:** Prod `main` @ `499de23` — mobile free-signup UX + viewport snap. John signing off; will retest free onboard later.  
 **Rule reaffirmed:** **any new module / data element → Postgres first** (see Durable product rules).  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
 **Branches:** `preview` / `main` · prod: https://www.thetrainstation.co · preview alias: `https://train-station-git-preview-johnepop-s-projects.vercel.app`
 
-### Stripe master — **WRONG ACCOUNT on Production (2026-08-03)**
+### Session 2026-08-05 — mobile free signup polish (shipped)
+
+| Item | Detail |
+|------|--------|
+| **Commit** | `499de23` → `main` + `preview` |
+| **Theme song** | Speaker mute sticks; no force-restart after free video / route; after 2 gesture unlocks only speaker |
+| **Free ticket modal** | Video first on phone; compact ticket + CTAs scroll below; free enroll secondary |
+| **Onboard step 1** | Welcome video first; compact ticket row; hide Live Class chrome in setup mode |
+| **No silent Free** | Signup without `?plan=` → `/join#tickets`; register rejects empty plan; free skips checkout |
+| **Viewport snap** | `userScalable: false`, maxScale 1, overflow-x clip, no fixed bg on mobile (stops slide/resize) |
+| **Test account** | `john@lemonvoice.com` **fully purged** (Postgres + blob + waitlist). Ready for fresh Free signup |
+| **Journey feedback** | Music good · rickroll good · path tickets → free modal → signup OK |
+
+**When John returns — retest:**
+1. Sign out / clear site data on phone  
+2. https://www.thetrainstation.co/join#tickets → Free → Continue Free → create `john@lemonvoice.com`  
+3. Confirm: no “already exists”; video-on-top free modal; onboard video first; page doesn’t slide/resize  
+
+### Stripe master — **WRONG ACCOUNT on Production (2026-08-03)** (still open)
 
 John reported Admin Billing shows **his** Stripe balances. That means Production `STRIPE_SECRET_KEY` is **John’s Live account** (`pk_live_51SuLDr…`), not Jeremy’s Train Station business.
 
