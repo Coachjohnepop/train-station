@@ -6,6 +6,10 @@ import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { isDatabaseConfigured } from "@/lib/database-config";
 import { getGamificationPointsConfig } from "@/lib/gamification-config";
 import {
+  awardPointsForPlan,
+  isPaidScoringPlan,
+  PAID_POINTS_MULTIPLIER,
+  snapFreePoints,
   type GamificationEvent,
   type GamificationEventType,
   type UserGamification,
@@ -248,9 +252,22 @@ async function awardDb(input: {
     return { awarded: false, totalPoints: user.totalPoints, pointsEarned: 0 };
   }
 
-  // Daily point cap (season economy)
+  // Daily point cap (season economy). Cap is free-scale; Coach+ get ×8 room.
   const levers = await getGamificationLevers();
-  if (levers.dailyPointCap > 0) {
+  let planForCap: string | null = "explorer";
+  try {
+    const profile = await getMemberProfile(input.userId);
+    planForCap = profile?.plan ?? "explorer";
+  } catch {
+    /* ignore */
+  }
+  const dailyCap =
+    levers.dailyPointCap > 0
+      ? isPaidScoringPlan(planForCap)
+        ? levers.dailyPointCap * PAID_POINTS_MULTIPLIER
+        : levers.dailyPointCap
+      : 0;
+  if (dailyCap > 0) {
     const dayStart = new Date();
     dayStart.setUTCHours(0, 0, 0, 0);
     const todaySum = await prisma.gamificationEvent.aggregate({
@@ -258,12 +275,12 @@ async function awardDb(input: {
       _sum: { points: true },
     });
     const used = todaySum._sum.points ?? 0;
-    if (used >= levers.dailyPointCap) {
+    if (used >= dailyCap) {
       const user = await getUserGamificationDb(input.userId);
       return { awarded: false, totalPoints: user.totalPoints, pointsEarned: 0 };
     }
     // Truncate points to remaining cap
-    const remaining = levers.dailyPointCap - used;
+    const remaining = dailyCap - used;
     if (input.points > remaining) {
       input = { ...input, points: remaining };
     }
@@ -296,13 +313,7 @@ async function awardDb(input: {
   }
 
   // Refresh season score
-  let division = divisionForPlan("explorer");
-  try {
-    const profile = await getMemberProfile(input.userId);
-    division = divisionForPlan(profile?.plan);
-  } catch {
-    /* ignore */
-  }
+  let division = divisionForPlan(planForCap);
   try {
     await recomputeUserSeasonScore(input.userId, division, levers);
   } catch (e) {
@@ -322,7 +333,21 @@ export async function awardGamificationPoints(input: {
   programSlug?: string | null;
 }): Promise<{ awarded: boolean; totalPoints: number; pointsEarned: number }> {
   const pointsConfig = await getGamificationPointsConfig();
-  const points = input.points ?? pointsConfig[input.type];
+  // Config is Free Explorer scale (10s). Coach+ awards 8×; totals roll over either way.
+  let plan: string | null = "explorer";
+  try {
+    const profile = await getMemberProfile(input.userId);
+    plan = profile?.plan ?? "explorer";
+  } catch {
+    /* explorer */
+  }
+  // Config / explicit points are Free Explorer scale. Snap config defaults to 10s;
+  // explicit (e.g. late workout %) may be smaller and is left as-is before ×8 for paid.
+  const freeScale =
+    input.points != null
+      ? Math.max(0, Math.round(input.points))
+      : snapFreePoints(pointsConfig[input.type]);
+  const points = awardPointsForPlan(freeScale, plan);
 
   if (isDatabaseConfigured()) {
     try {

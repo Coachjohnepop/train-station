@@ -465,8 +465,10 @@ export default function CoachSettingsPanel() {
         <div>
           <h2 className="text-lg font-semibold">Gamification points</h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Point values members earn for each accomplishment on Today. Changes apply to new awards
-            only — past ledger entries keep their original values.
+            Values below are <strong className="text-[var(--text)]">Free Explorer</strong> awards
+            (steps of 10). Coach Class, Business, and 1st Class earn{" "}
+            <strong className="text-[var(--text)]">8×</strong> the same action. Totals always roll
+            over. Changes apply to new awards only — past ledger entries keep their original values.
           </p>
         </div>
         <div className="space-y-2">
@@ -484,8 +486,10 @@ export default function CoachSettingsPanel() {
                 type="number"
                 min={0}
                 max={10000}
+                step={10}
                 value={settings.gamificationPoints[type]}
                 onChange={(e) => updateGamificationPoint(type, Number(e.target.value))}
+                title={`Free: ${settings.gamificationPoints[type]} · Coach+: ${settings.gamificationPoints[type] * 8}`}
               />
             </label>
           ))}

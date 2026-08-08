@@ -382,11 +382,30 @@ export default function MemberLeaderboard() {
           <details className="card p-3 text-xs text-[var(--muted)]">
             <summary className="cursor-pointer font-semibold text-accent">How to earn points</summary>
             <ul className="mt-2 space-y-1">
-              <li>Warm-ups before live — {pointValues.warmup_before_live} pts (once per day)</li>
-              <li>Book intro call — {pointValues.intake_scheduled} pts</li>
-              <li>Log a workout — {pointValues.workout_logged} pts</li>
-              <li>Coach intake complete — {pointValues.intake_complete} pts</li>
-              <li>Finish account setup — {pointValues.onboarding_complete} pts</li>
+              <li>
+                Free Explorer earns in steps of 10 (totals roll over). Coach Class+ earns about 8×
+                the same actions.
+              </li>
+              <li>
+                Warm-ups before live — Free {pointValues.warmup_before_live} / Coach+{" "}
+                {pointValues.warmup_before_live * 8} pts (once per day)
+              </li>
+              <li>
+                Book intro call — Free {pointValues.intake_scheduled} / Coach+{" "}
+                {pointValues.intake_scheduled * 8} pts
+              </li>
+              <li>
+                Log a workout — Free {pointValues.workout_logged} / Coach+{" "}
+                {pointValues.workout_logged * 8} pts
+              </li>
+              <li>
+                Coach intake complete — Free {pointValues.intake_complete} / Coach+{" "}
+                {pointValues.intake_complete * 8} pts
+              </li>
+              <li>
+                Finish account setup — Free {pointValues.onboarding_complete} / Coach+{" "}
+                {pointValues.onboarding_complete * 8} pts
+              </li>
             </ul>
           </details>
         </div>

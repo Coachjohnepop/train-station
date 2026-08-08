@@ -2,8 +2,10 @@ import "server-only";
 
 import { getGamificationPointsConfig } from "@/lib/gamification-config";
 import {
+  awardPointsForPlan,
   DEFAULT_GAMIFICATION_POINTS,
   GAMIFICATION_EVENT_LABELS,
+  PAID_POINTS_MULTIPLIER,
   type GamificationEvent,
   type GamificationEventType,
   type GamificationPointsMap,
@@ -204,7 +206,13 @@ export function buildMemberScoreProgress(
 ): MemberScoreProgress {
   const events = gamification.events;
   const earnedPoints = events.reduce((sum, e) => sum + e.points, 0);
-  const journeyDefs = journeyMilestones(pointsConfig);
+  const plan = profile?.plan ?? "explorer";
+  // Config is free-scale; show what this ticket actually earns (Free +10 / Coach+ ×8).
+  const tierPts = (freeScale: number) => awardPointsForPlan(freeScale, plan);
+  const journeyDefs = journeyMilestones(pointsConfig).map((def) => ({
+    ...def,
+    points: tierPts(def.points),
+  }));
 
   const milestones: ScoreMilestone[] = journeyDefs.map((def) => {
     const state = def.isComplete(events, profile);
@@ -223,19 +231,24 @@ export function buildMemberScoreProgress(
 
   const workoutEvents = events.filter((e) => e.type === "workout_logged");
   const workoutEarned = workoutEvents.reduce((sum, e) => sum + e.points, 0);
+  const nextWorkoutPts = tierPts(pointsConfig.workout_logged);
 
   milestones.push({
     id: "workout:next",
     type: "workout_logged",
     label: GAMIFICATION_EVENT_LABELS.workout_logged,
-    points: pointsConfig.workout_logged,
+    points: nextWorkoutPts,
     status: "incomplete",
     earnedPoints: workoutEarned,
     completedAt: workoutEvents.length
       ? [...workoutEvents].sort((a, b) => b.at.localeCompare(a.at))[0].at
       : null,
     repeatable: true,
-    earnHint: `Log a workout from Today — +${pointsConfig.workout_logged} pts once per scheduled workout per day.`,
+    earnHint: `Log a workout from Today — +${nextWorkoutPts} pts once per scheduled workout per day.${
+      plan === "explorer" || !plan
+        ? ` Free Explorer steps of 10; Coach Class earns ${PAID_POINTS_MULTIPLIER}×.`
+        : ""
+    }`,
     href: "/member/today",
   });
 
@@ -253,7 +266,7 @@ export function buildMemberScoreProgress(
     workoutLogs: {
       count: workoutEvents.length,
       earnedPoints: workoutEarned,
-      nextPoints: pointsConfig.workout_logged,
+      nextPoints: nextWorkoutPts,
     },
   };
 }
