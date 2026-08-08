@@ -20,6 +20,8 @@ import {
 import { getUserEnrollments } from "@/lib/data/user-data";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 import { resolveMemberUserId } from "@/lib/current-user";
+import { getMemberProfile } from "@/lib/member-profiles-store";
+import { getEffectiveMembershipPlan } from "@/lib/gamification-promos";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +62,8 @@ export default async function MemberChatPage({ searchParams }: Props) {
   }
 
   const staffViewingSelf = staff && uid === session?.id;
+  const profile = await getMemberProfile(uid);
+  const membershipPlan = await getEffectiveMembershipPlan(uid, profile?.plan);
 
   return (
     <div className="space-y-4">
@@ -98,7 +102,12 @@ export default async function MemberChatPage({ searchParams }: Props) {
         </p>
       )}
 
-      <MemberChatWorkspace initialThreads={threads} memberId={uid} asCoach={staff} />
+      <MemberChatWorkspace
+        initialThreads={threads}
+        memberId={uid}
+        asCoach={staff}
+        membershipPlan={membershipPlan}
+      />
     </div>
   );
 }

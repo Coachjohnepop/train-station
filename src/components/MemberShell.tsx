@@ -112,7 +112,20 @@ export default function MemberShell({
         {/* Live Class strip is noise during first-time onboard on a phone */}
         {!setupMode && !paymentGateActive ? (
           <Suspense fallback={null}>
-            <MemberLiveZoomStrip embedded />
+            <MemberLiveZoomStrip
+              embedded
+              membershipPlan={
+                membershipTier === "explorer"
+                  ? "explorer"
+                  : membershipTier === "member"
+                    ? "member"
+                    : membershipTier === "business"
+                      ? "business"
+                      : membershipTier === "pro"
+                        ? "pro"
+                        : "explorer"
+              }
+            />
           </Suspense>
         ) : null}
       </div>

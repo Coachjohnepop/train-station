@@ -345,6 +345,7 @@ export default function MemberTodayShell({
             scheduleLabel={scheduleLabel}
             calendarDateLabel={calendarDateLabel}
             onEngage={notifyMaintainWorkoutEngage}
+            membershipPlan={contentAccess?.plan ?? "explorer"}
           />
         </MemberMaintainConsoleStage>
       </div>
@@ -559,6 +560,7 @@ export default function MemberTodayShell({
               targetUserId={targetUserId}
               liveSyncUserId={targetUserId}
               liveSessionDate={selectedDate}
+              membershipPlan={contentAccess?.plan ?? "explorer"}
               scheduleLabel={
                 multiPart && dayParts
                   ? `${dayParts.find((p) => p.partIndex === activePartIndex)?.label || "Session"}${

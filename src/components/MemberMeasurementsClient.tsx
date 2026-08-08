@@ -99,8 +99,11 @@ function KeyField({
 
 export default function MemberMeasurementsClient({
   introVideoUrl = null,
+  freeExplorer = false,
 }: {
   introVideoUrl?: string | null;
+  /** Soft glass ceiling: full multi-check-in archive is Coach Class+. */
+  freeExplorer?: boolean;
 }) {
   const [rows, setRows] = useState<MeasurementRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1467,7 +1470,13 @@ export default function MemberMeasurementsClient({
           </p>
         ) : (
           <ul className="relative z-[1] space-y-2">
-            {rows.map((row) => (
+            {freeExplorer && rows.length > 1 ? (
+              <li className="rounded border border-amber-500/30 bg-amber-500/10 px-3 py-2 font-serif text-xs text-[var(--ms-ink-soft)]">
+                Free Explorer keeps your latest check-in clear. Full adventure log history is Coach
+                Class+.
+              </li>
+            ) : null}
+            {(freeExplorer ? rows.slice(0, 1) : rows).map((row) => (
               <li key={row.id} className="ms-log-row rounded px-3 py-2.5">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <p className="font-serif text-sm font-semibold text-[var(--ms-ink)]">

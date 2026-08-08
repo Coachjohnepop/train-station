@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ChatFeed from "@/components/ChatFeed";
 import ChatThreadReply from "@/components/ChatThreadReply";
+import FreeUpgradeTease from "@/components/FreeUpgradeTease";
 import type { ChatMessage, ChatThread } from "@/lib/coach-chat";
 import { applyChatMessageLoad } from "@/lib/chat-message-merge";
 import { DEMO_COACH } from "@/lib/demo-coach";
@@ -12,6 +13,7 @@ import {
   useDesktopChatLayout,
   useStoredPanelSize,
 } from "@/lib/chat-panel-resize";
+import { FREE_COACH_CHAT_SOFT_CAP, isFreeExplorerPlan } from "@/lib/free-tier-product";
 
 /** Stick thread tabs just under the frozen MemberShell chrome. */
 function useMemberChromeOffset(): number {
@@ -57,11 +59,14 @@ export default function MemberChatWorkspace({
   memberId,
   /** Staff (John/Jeremy) post as coach so group sends work from this UI. */
   asCoach = false,
+  membershipPlan = null,
 }: {
   initialThreads: ChatThread[];
   memberId: string;
   asCoach?: boolean;
+  membershipPlan?: string | null;
 }) {
+  const freeExplorer = isFreeExplorerPlan(membershipPlan) && !asCoach;
   const orderedInitial = useMemo(() => orderThreads(initialThreads), [initialThreads]);
   const defaultDirect = orderedInitial.find((t) => t.kind === "member");
   const defaultCommunity = orderedInitial.find((t) => t.kind === "cohort");
@@ -114,10 +119,15 @@ export default function MemberChatWorkspace({
 
   const orderedThreads = useMemo(() => orderThreads(threads), [threads]);
   const activeThread = threads.find((t) => t.id === activeId) || null;
+  const freeOnCohort = freeExplorer && activeThread?.kind === "cohort";
   const feedThread = displayThread(activeThread);
   const visibleMessages = useMemo(
     () => messages.filter((m) => m.threadId === activeId),
     [messages, activeId],
+  );
+  const freeMemberMsgCount = useMemo(
+    () => visibleMessages.filter((m) => m.authorRole === "member").length,
+    [visibleMessages],
   );
 
   const loadMessages = useCallback(
@@ -202,6 +212,28 @@ export default function MemberChatWorkspace({
 
   return (
     <div className="space-y-3">
+      {freeExplorer ? (
+        <FreeUpgradeTease
+          compact
+          title="Coach 1:1 on Free Explorer"
+          body="Group / community posts are Coach Class+. Keep messaging Jeremy here — upgrade to post in every room."
+        />
+      ) : null}
+      {freeOnCohort ? (
+        <FreeUpgradeTease
+          title="This group is behind the velvet rope"
+          body="You can read the vibe. Coach Class unlocks posting in program communities."
+        />
+      ) : null}
+      {freeExplorer &&
+      !freeOnCohort &&
+      freeMemberMsgCount >= FREE_COACH_CHAT_SOFT_CAP ? (
+        <FreeUpgradeTease
+          compact
+          title="You're active with coach"
+          body={`After ${FREE_COACH_CHAT_SOFT_CAP}+ messages, Coach Class adds groups, macros, and priority reply.`}
+        />
+      ) : null}
       {/*
         Sticky under MemberShell chrome: all threads + badges stay on screen while
         page title / message feed scroll. Outside overflow-hidden shell so sticky works.

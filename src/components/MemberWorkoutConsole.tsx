@@ -39,6 +39,14 @@ import {
   clearMaintainResume,
   writeMaintainResume,
 } from "@/lib/member-maintain-resume";
+import FreeUpgradeTease from "@/components/FreeUpgradeTease";
+import FreePostWorkoutTicketShelf from "@/components/FreePostWorkoutTicketShelf";
+import {
+  FREE_PREVIEW_EXERCISES,
+  freePreviewOpenCount,
+  isFreeExplorerPlan,
+  isFreePreviewExerciseLocked,
+} from "@/lib/free-tier-product";
 
 export type MemberExerciseBlock = {
   id: string;
@@ -228,6 +236,7 @@ export default function MemberWorkoutConsole({
   onCoachFloorFinished,
   /** Maintain: notify parent/stage when member starts (weight / set / finish). */
   onEngage,
+  membershipPlan = null,
 }: {
   workout: MemberWorkoutView;
   backHref?: string;
@@ -255,9 +264,20 @@ export default function MemberWorkoutConsole({
   onCoachFloorFinished?: () => void;
   /** First real training action this session (maintain fullscreen auto-enter). */
   onEngage?: () => void;
+  /** Membership plan for Free Explorer soft limits (preview sets + ticket shelf). */
+  membershipPlan?: string | null;
 }) {
   const engageOnceRef = useRef(false);
   const isMaintainSession = programSlug === "maintain";
+  const freeExplorer = isFreeExplorerPlan(membershipPlan) && !coachFloorMode && !reviewMode;
+  const freeOpenCount = freePreviewOpenCount(workout.exercises.length);
+  const freeLockedExerciseIds = new Set(
+    freeExplorer
+      ? workout.exercises
+          .map((ex, i) => (isFreePreviewExerciseLocked(i, membershipPlan) ? ex.id : null))
+          .filter((id): id is string => Boolean(id))
+      : [],
+  );
   const markMaintainResume = useCallback(() => {
     if (!isMaintainSession || reviewMode) return;
     const uid = liveSyncUserId || targetUserId;
@@ -1508,6 +1528,7 @@ export default function MemberWorkoutConsole({
 
   const toggleSet = useCallback(
     (blockId: string, setNum: number, originEl?: HTMLElement) => {
+      if (freeLockedExerciseIds.has(blockId)) return;
       const wasDone = completedSets[blockId]?.has(setNum) ?? false;
 
       if (wasDone) {
@@ -1803,8 +1824,14 @@ export default function MemberWorkoutConsole({
   }, [workout.exercises, queueLiveSave, onCoachFloorFinished]);
 
   const totalExercises = workout.exercises.length;
+  const countableExerciseIds = freeExplorer
+    ? workout.exercises.slice(0, freeOpenCount).map((e) => e.id)
+    : workout.exercises.map((e) => e.id);
+  const finishedCountable = countableExerciseIds.filter((id) => finishedExercises.has(id)).length;
   const allExercisesFinished =
-    !reviewMode && totalExercises > 0 && finishedExercises.size === totalExercises;
+    !reviewMode &&
+    countableExerciseIds.length > 0 &&
+    finishedCountable >= countableExerciseIds.length;
 
   useEffect(() => {
     if (allExercisesFinished) setFinishedListExpanded(false);
@@ -1817,8 +1844,12 @@ export default function MemberWorkoutConsole({
     // This ensures the "log your sets" buttons (per-set toggles) actually contribute setsCompleted to the log.
     const blocksWithSets = Object.keys(completedSets).filter(id => (completedSets[id]?.size ?? 0) > 0);
     let idsToLog = Array.from(new Set([...finishedExercises, ...blocksWithSets]));
+    // Free Explorer: only log preview-open exercises (rest are soft-locked teases).
+    if (freeExplorer && freeLockedExerciseIds.size > 0) {
+      idsToLog = idsToLog.filter((id) => !freeLockedExerciseIds.has(id));
+    }
 
-    const total = workout.exercises.length;
+    const total = freeExplorer ? freeOpenCount || workout.exercises.length : workout.exercises.length;
     const progress = total > 0 ? Math.round((idsToLog.length / total) * 100) : 0;
 
     // Log whatever the current state is (supports 0% partial or "just noting progress")
@@ -2157,6 +2188,11 @@ export default function MemberWorkoutConsole({
               <p>Logged {new Date(logResult.performedAt).toLocaleString()}</p>
             </div>
           )}
+          {freeExplorer ? (
+            <div className="mt-3">
+              <FreePostWorkoutTicketShelf visible />
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -2229,8 +2265,39 @@ export default function MemberWorkoutConsole({
         </button>
       ) : null}
 
+      {freeExplorer && freeLockedExerciseIds.size > 0 ? (
+        <p className="mt-3 text-[11px] leading-snug text-[var(--muted)]">
+          Free Explorer: log the first {freeOpenCount} exercise
+          {freeOpenCount === 1 ? "" : "s"} fully — the rest of the day is a preview. Coach Class
+          unlocks the full session.
+        </p>
+      ) : null}
+
       <div className="mt-4 space-y-3">
-        {workout.exercises.map((block) => {
+        {workout.exercises.map((block, exerciseIndex) => {
+          if (freeLockedExerciseIds.has(block.id)) {
+            return (
+              <div
+                key={block.id}
+                id={`member-exercise-${block.id}`}
+                className="member-exercise-anchor relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]/80 p-3 opacity-90"
+              >
+                <p className="text-sm font-semibold text-[var(--text)]">{block.name}</p>
+                <p className="mt-0.5 text-[11px] text-[var(--muted)]">
+                  On the board — unlock with Coach Class
+                </p>
+                <div className="pointer-events-none absolute inset-0 bg-[var(--bg)]/35 backdrop-blur-[1px]" />
+                <div className="relative z-10 mt-2">
+                  <FreeUpgradeTease
+                    compact
+                    title="Preview only"
+                    body={`Free logs ${FREE_PREVIEW_EXERCISES} moves per open day. This is exercise ${exerciseIndex + 1}.`}
+                  />
+                </div>
+              </div>
+            );
+          }
+
           const isFinished =
             finishedExercises.has(block.id) && !reviewMode && editingExerciseId !== block.id;
           const isEditingFinished = editingExerciseId === block.id;

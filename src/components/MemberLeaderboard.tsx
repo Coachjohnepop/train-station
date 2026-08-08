@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import MemberScoreProgressPanel from "@/components/MemberScoreProgress";
+import FreeUpgradeTease from "@/components/FreeUpgradeTease";
 import {
   DEFAULT_GAMIFICATION_POINTS,
   type GamificationPointsMap,
@@ -10,6 +11,7 @@ import {
   type LeaderboardScope,
 } from "@/lib/gamification-types";
 import type { MemberScoreProgress } from "@/lib/gamification-types";
+import { isFreeExplorerPlan } from "@/lib/free-tier-product";
 import { signupPlanLabel, type SignupPlan } from "@/lib/signup-plans";
 import { formatApiErrorDetail } from "@/lib/api-errors";
 
@@ -519,17 +521,35 @@ export default function MemberLeaderboard() {
               <p className="text-[10px] font-bold uppercase tracking-widest text-amber-200">
                 Hall of Fame
               </p>
-              <ul className="space-y-1 text-sm">
-                {hall.slice(0, 6).map((p) => (
-                  <li key={p.id} className="flex justify-between gap-2">
-                    <span className="font-semibold text-amber-100">{p.label}</span>
-                    <span className="text-xs text-[var(--muted)]">
-                      {p.freeDays ? `${p.freeDays}d free · ` : ""}
-                      {new Date(p.awardedAt).toLocaleDateString()}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              {division && isFreeExplorerPlan(division.division) ? (
+                <>
+                  <ul className="space-y-1 text-sm opacity-50 blur-[0.5px]">
+                    {hall.slice(0, 2).map((p) => (
+                      <li key={p.id} className="flex justify-between gap-2">
+                        <span className="font-semibold text-amber-100">{p.label}</span>
+                        <span className="text-xs text-[var(--muted)]">···</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <FreeUpgradeTease
+                    compact
+                    title="Prize band is Coach Class+"
+                    body="Climb Free division for a free week sample — full Hall of Fame and season prizes unlock on a paid ticket."
+                  />
+                </>
+              ) : (
+                <ul className="space-y-1 text-sm">
+                  {hall.slice(0, 6).map((p) => (
+                    <li key={p.id} className="flex justify-between gap-2">
+                      <span className="font-semibold text-amber-100">{p.label}</span>
+                      <span className="text-xs text-[var(--muted)]">
+                        {p.freeDays ? `${p.freeDays}d free · ` : ""}
+                        {new Date(p.awardedAt).toLocaleDateString()}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           ) : null}
 

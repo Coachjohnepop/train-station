@@ -116,7 +116,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Thread not found" }, { status: 404 });
   }
   if (!(await memberCanPostToThread(uid, thread))) {
-    return NextResponse.json({ error: "You cannot post to this thread" }, { status: 403 });
+    // Free Explorer on group: soft refuse with upgrade hint (not a hard outage).
+    return NextResponse.json(
+      {
+        error: "Group Messages are Coach Class+. Message your coach 1:1 on Free Explorer.",
+        freeUpgradeTease: true,
+        upgradePlan: "member",
+      },
+      { status: 403 },
+    );
   }
 
   const created = await addChatMessage({
@@ -129,5 +137,29 @@ export async function POST(request: Request) {
     mediaUrl: imageUrl || undefined,
   });
 
-  return NextResponse.json({ ok: true, message: created });
+  let freeUpgradeTease: { show: boolean; memberMessageCount: number; softCap: number } | null =
+    null;
+  try {
+    const { getMemberProfile } = await import("@/lib/member-profiles-store");
+    const { getEffectiveMembershipPlan } = await import("@/lib/gamification-promos");
+    const { isFreeExplorerPlan, FREE_COACH_CHAT_SOFT_CAP } = await import(
+      "@/lib/free-tier-product"
+    );
+    const { getMessagesForThread } = await import("@/lib/coach-chat");
+    const profile = await getMemberProfile(uid);
+    const plan = await getEffectiveMembershipPlan(uid, profile?.plan);
+    if (isFreeExplorerPlan(plan) && thread.kind === "member") {
+      const msgs = getMessagesForThread(thread.id, 500);
+      const memberMessageCount = msgs.filter((m) => m.authorRole === "member").length;
+      freeUpgradeTease = {
+        show: memberMessageCount >= FREE_COACH_CHAT_SOFT_CAP,
+        memberMessageCount,
+        softCap: FREE_COACH_CHAT_SOFT_CAP,
+      };
+    }
+  } catch {
+    /* ignore tease failures */
+  }
+
+  return NextResponse.json({ ok: true, message: created, freeUpgradeTease });
 }

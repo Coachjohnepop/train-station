@@ -232,6 +232,20 @@ export function listThreadsForCoach(): ChatThread[] {
 }
 
 export async function memberCanPostToThread(memberId: string, thread: ChatThread): Promise<boolean> {
+  // Free Explorer: coach 1:1 only (group / community is a paid tease).
+  try {
+    const { getMemberProfile } = await import("@/lib/member-profiles-store");
+    const { getEffectiveMembershipPlan } = await import("@/lib/gamification-promos");
+    const { isFreeExplorerPlan } = await import("@/lib/free-tier-product");
+    const profile = await getMemberProfile(memberId);
+    const plan = await getEffectiveMembershipPlan(memberId, profile?.plan);
+    if (isFreeExplorerPlan(plan) && thread.kind !== "member") {
+      return false;
+    }
+  } catch {
+    /* fail open to prior rules if profile/plan lookup fails */
+  }
+
   if (thread.kind === "member") {
     return thread.memberId === memberId;
   }

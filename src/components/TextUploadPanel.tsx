@@ -71,6 +71,10 @@ export type CycleUploadContext = {
   trainingLocation?: "gym" | "home";
 };
 
+/**
+ * Coach/admin paste-to-program UI only.
+ * APIs: POST /api/text-upload/* use requireStaff() — members never call this path.
+ */
 export default function TextUploadPanel({
   mode,
   programSlug,
