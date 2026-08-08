@@ -1657,17 +1657,22 @@ html[data-landing-tour="open"] [data-global-theme-toggle] {
   min-height: 0;
 }
 
+/* Same art band on Free / Coach / Business / 1st — matches seat photos (1024×683). */
 .ticket-card__art {
   position: relative;
-  height: 5.25rem;
   width: 100%;
+  height: auto;
+  aspect-ratio: 1024 / 683;
   flex-shrink: 0;
+  min-height: 0;
 }
 
-@media (min-width: 640px) {
-  .ticket-card__art {
-    height: 6.75rem;
-  }
+.ticket-card__art .membership-seat-art,
+.ticket-card__art.membership-seat-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .ticket-card__body {

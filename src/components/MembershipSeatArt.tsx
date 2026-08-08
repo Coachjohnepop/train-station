@@ -51,6 +51,12 @@ export default function MembershipSeatArt({
             ? "1st Class train seating"
             : "Train seating");
 
+  // Free seat photo is a tighter subject; keep cover framing consistent with paid cabins.
+  const objectPosition =
+    ticketId === "free" || (plan && plan === "explorer")
+      ? "object-[center_40%]"
+      : "object-center";
+
   return (
     <div className={`membership-seat-art ${className}`.trim()}>
       <Image
@@ -58,7 +64,7 @@ export default function MembershipSeatArt({
         alt={label}
         fill
         sizes="(max-width: 640px) 50vw, 25vw"
-        className="object-cover"
+        className={`object-cover ${objectPosition}`}
         priority={priority}
       />
       <div className="membership-seat-art__shade" aria-hidden />
