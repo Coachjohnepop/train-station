@@ -354,29 +354,52 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-05  
-**Status:** Prod `main` @ `499de23` — mobile free-signup UX + viewport snap. John signing off; will retest free onboard later.  
+**Date:** 2026-08-08  
+**Status:** Prod `main` @ `7dc9bb3` (preview same). John signing off (guitar).  
 **Rule reaffirmed:** **any new module / data element → Postgres first** (see Durable product rules).  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
 **Branches:** `preview` / `main` · prod: https://www.thetrainstation.co · preview alias: `https://train-station-git-preview-johnepop-s-projects.vercel.app`
 
-### Session 2026-08-05 — mobile free signup polish (shipped)
+### Session 2026-08-08 — shipped (this stretch)
+
+| Commit | What |
+|--------|------|
+| `096a94c` | Light/dark text contrast site-wide (theme tokens + hardcode sweep + force-dark heroes) |
+| `0596cd4` | Free scores **+10 steps**; Coach/Business/1st **8×** same actions; totals roll over |
+| `c5ce80f` | Free soft teases: preview first 3 exercises, Live join tease, coach 1:1 chat only on Free, measure/hall glass, post-workout ticket shelf. Text upload stays **staff-only** |
+| `7dc9bb3` | Free **card-on-file** optional gate: Admin → Gamification → **freeRequiresPaymentMethod** (**default OFF**). When ON: Free → `/member/payment-setup` ($0 Stripe Setup, card only) → onboard → Today. No charge until upgrade |
+
+**Onboard loop (prod):** `scripts/onboard-tier-loop.mjs` — **55/55** Explorer/Coach/Business/1st (register redirects, wizard steps, unpaid paid→checkout, free→Today + soft-tease strings).
+
+**Product decisions this stretch:**
+- Paste / text-upload = **coach/admin only** (not a member upgrade perk)
+- Free teases = **soft** (see it, limited use) not hard 404s
+- Free card barrier = **admin toggle, default off**; ACH not used
+
+### NEXT SESSION — pick up here (priority)
+
+1. **Free card-on-file live test** (toggle was shipped default OFF — not QA’d with lever ON)  
+   - Admin → Gamification → Levers → enable *Free Explorer requires card on file* → Save  
+   - Fresh Free signup → expect `/member/payment-setup` → save test card → onboard → Today  
+   - Confirm: no charge; profile `paymentMethod: card_on_file`; upgrade path still works  
+   - Turn **OFF** after test unless Jeremy wants it on  
+2. **Stripe master still wrong on Production** (see below — Eco Delight keys) — real money risk  
+3. **Phone pass free journey** (optional): soft teases + free modal on real device  
+4. **Jeremy content** still open: Admin → Videos intros; free-ticket intro after gag  
+5. Optional: short note in `JEREMY_ADMIN_MANUAL.md` for free card lever  
+
+**Re-run onboard smoke anytime:**  
+`BASE_URL=https://www.thetrainstation.co node scripts/onboard-tier-loop.mjs`
+
+### Session 2026-08-05 — mobile free signup polish (still true / prior)
 
 | Item | Detail |
 |------|--------|
 | **Commit** | `499de23` → `main` + `preview` |
-| **Theme song** | Speaker mute sticks; no force-restart after free video / route; after 2 gesture unlocks only speaker |
-| **Free ticket modal** | Video first on phone; compact ticket + CTAs scroll below; free enroll secondary |
-| **Onboard step 1** | Welcome video first; compact ticket row; hide Live Class chrome in setup mode |
-| **No silent Free** | Signup without `?plan=` → `/join#tickets`; register rejects empty plan; free skips checkout |
-| **Viewport snap** | `userScalable: false`, maxScale 1, overflow-x clip, no fixed bg on mobile (stops slide/resize) |
-| **Test account** | `john@lemonvoice.com` **fully purged** (Postgres + blob + waitlist). Ready for fresh Free signup |
-| **Journey feedback** | Music good · rickroll good · path tickets → free modal → signup OK |
-
-**When John returns — retest:**
-1. Sign out / clear site data on phone  
-2. https://www.thetrainstation.co/join#tickets → Free → Continue Free → create `john@lemonvoice.com`  
-3. Confirm: no “already exists”; video-on-top free modal; onboard video first; page doesn’t slide/resize  
+| **Theme song** | Speaker mute sticks; no force-restart after free video / route |
+| **Free ticket modal** | Video first on phone; free enroll secondary |
+| **No silent Free** | Register rejects empty plan |
+| **Test account** | `john@lemonvoice.com` for fresh Free signup (purge if reused) |
 
 ### Stripe master — **WRONG ACCOUNT on Production (2026-08-03)** (still open)
 
