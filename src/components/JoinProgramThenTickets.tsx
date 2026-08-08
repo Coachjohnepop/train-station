@@ -47,15 +47,15 @@ export default function JoinProgramThenTickets({
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#7c3aed]">
             Memberships
           </p>
-          <h2 className="mt-1 text-2xl font-semibold text-white sm:text-3xl">
+          <h2 className="mt-1 text-2xl font-semibold text-[var(--text)] sm:text-3xl">
             Choose your ticket
           </h2>
           {selected ? (
-            <p className="mt-1 text-sm text-[#c4b5fd]">
-              For program: <span className="font-semibold text-white">{selected.name}</span>
+            <p className="mt-1 text-sm text-[var(--accent-fg)]">
+              For program: <span className="font-semibold text-[var(--text)]">{selected.name}</span>
             </p>
           ) : (
-            <p className="mt-1 text-sm text-[#9d8ab8]">
+            <p className="mt-1 text-sm text-[var(--muted)]">
               Free · Coach · Business · 1st Class — pay anytime
             </p>
           )}
@@ -71,10 +71,10 @@ export default function JoinProgramThenTickets({
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#7c3aed]">
             Programs
           </p>
-          <h2 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">
+          <h2 className="mt-2 text-2xl font-semibold text-[var(--text)] sm:text-3xl">
             Pick your program
           </h2>
-          <p className="mx-auto mt-2 max-w-lg text-sm text-[#9d8ab8]">
+          <p className="mx-auto mt-2 max-w-lg text-sm text-[var(--muted)]">
             {fromTour
               ? "Same station you just toured — choose the track you want to train on."
               : "Optional track — ticket payment works with or without a program pick."}
@@ -95,23 +95,23 @@ export default function JoinProgramThenTickets({
                 className={`rounded-2xl border p-4 text-left transition ${
                   active
                     ? "border-[#7c3aed] bg-[#7c3aed]/15 ring-2 ring-[#7c3aed]/40"
-                    : "border-[#3d2660] bg-[#0a0612]/80 hover:border-[#7c3aed]/50 hover:bg-[#1a1428]"
+                    : "border-[var(--border)] bg-[var(--bg)]/80 hover:border-[#7c3aed]/50 hover:bg-[#1a1428]"
                 }`}
               >
                 {soon ? (
-                  <span className="mb-1 inline-block rounded-full bg-[#7c3aed]/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#a78bfa]">
+                  <span className="mb-1 inline-block rounded-full bg-[#7c3aed]/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--accent-fg)]">
                     Soon
                   </span>
                 ) : null}
-                <p className="text-sm font-semibold text-white">{p.name}</p>
+                <p className="text-sm font-semibold text-[var(--text)]">{p.name}</p>
                 {p.description ? (
-                  <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-[#9d8ab8]">
+                  <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-[var(--muted)]">
                     {p.description}
                   </p>
                 ) : null}
                 <span
                   className={`mt-3 inline-block text-[10px] font-semibold ${
-                    active ? "text-[#c4b5fd]" : "text-[#7c3aed]"
+                    active ? "text-[var(--accent-fg)]" : "text-[#7c3aed]"
                   }`}
                 >
                   {active ? "Selected ✓" : "Select →"}
@@ -120,7 +120,7 @@ export default function JoinProgramThenTickets({
             );
           })}
         </div>
-        <p className="mx-auto mt-4 max-w-lg px-2 pb-6 text-center text-sm text-[#9d8ab8]">
+        <p className="mx-auto mt-4 max-w-lg px-2 pb-6 text-center text-sm text-[var(--muted)]">
           Tickets are above — pay anytime. Program is optional and editable later in Settings.
         </p>
       </section>

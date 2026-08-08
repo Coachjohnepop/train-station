@@ -858,7 +858,7 @@ export default function AdminCommissionClient() {
               <div
                 className={`rounded-lg border px-3 py-2 text-sm ${
                   data.payoutMinimum.met
-                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-[var(--success)]"
                     : "border-amber-500/40 bg-amber-500/10 text-amber-100"
                 }`}
               >
@@ -919,7 +919,7 @@ export default function AdminCommissionClient() {
                       </span>
                     )}
                   </span>
-                  <span className="font-medium text-white">
+                  <span className="font-medium text-[var(--text)]">
                     Active rate: {data.commission.activeRatePercent ?? data.commission.tier1RatePercent}%
                   </span>
                 </div>
@@ -1021,7 +1021,7 @@ export default function AdminCommissionClient() {
             </div>
             <p className="text-sm text-[var(--muted)]">
               Manual transfer for period{" "}
-              <strong className="text-white">{data.periodSuggested}</strong>.
+              <strong className="text-[var(--text)]">{data.periodSuggested}</strong>.
               {data.mode === "flat"
                 ? " Company share stays on the platform account — no transfer needed."
                 : " Enabled partner shares must total 100% of the partner pool."}

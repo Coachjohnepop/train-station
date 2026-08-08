@@ -28,9 +28,9 @@ export default function ComingSoonPrograms({ compact = false }: { compact?: bool
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#7c3aed]">
             On the platform
           </p>
-          <h2 className="mt-2 text-xl font-semibold text-white sm:text-2xl">Programs</h2>
+          <h2 className="mt-2 text-xl font-semibold text-[var(--text)] sm:text-2xl">Programs</h2>
           {!compact && (
-            <p className="mx-auto mt-2 max-w-lg text-sm text-[#9d8ab8]">
+            <p className="mx-auto mt-2 max-w-lg text-sm text-[var(--muted)]">
               Live tracks you can board now — plus waitlist programs Jeremy is still writing.
             </p>
           )}
@@ -57,7 +57,7 @@ export default function ComingSoonPrograms({ compact = false }: { compact?: bool
               <Link
                 key={prog.slug}
                 href={href}
-                className="group relative overflow-hidden rounded-2xl border border-[#3d2660] bg-[#0a0612]/80 transition hover:border-[#7c3aed]/50 hover:bg-[#1a1428]"
+                className="group relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg)]/80 transition hover:border-[#7c3aed]/50 hover:bg-[#1a1428]"
               >
                 {img ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -70,7 +70,7 @@ export default function ComingSoonPrograms({ compact = false }: { compact?: bool
                   <div className="aspect-[5/3] w-full bg-gradient-to-br from-[#1a0b2e] to-[#0a0612]" />
                 )}
                 {isSoon ? (
-                  <span className="absolute right-3 top-3 rounded-full bg-[#7c3aed]/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#a78bfa]">
+                  <span className="absolute right-3 top-3 rounded-full bg-[#7c3aed]/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--accent-fg)]">
                     {badge}
                   </span>
                 ) : (
@@ -79,10 +79,10 @@ export default function ComingSoonPrograms({ compact = false }: { compact?: bool
                   </span>
                 )}
                 <div className="p-3 sm:p-4">
-                  <h3 className="text-sm font-semibold text-white group-hover:text-[#c4b5fd]">
+                  <h3 className="text-sm font-semibold text-[var(--text)] group-hover:text-[var(--accent-fg)]">
                     {prog.name}
                   </h3>
-                  <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-[#9d8ab8]">
+                  <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-[var(--muted)]">
                     {prog.description}
                   </p>
                   <span className="mt-3 inline-block text-[10px] font-medium text-[#7c3aed] group-hover:underline">
@@ -106,18 +106,18 @@ export default function ComingSoonPrograms({ compact = false }: { compact?: bool
             <Link
               key={prog.slug}
               href={`/signup?interest=${encodeURIComponent(prog.slug)}`}
-              className="group relative overflow-hidden rounded-2xl border border-[#3d2660] bg-[#0a0612]/80 p-4 transition hover:border-[#7c3aed]/50 hover:bg-[#1a1428]"
+              className="group relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg)]/80 p-4 transition hover:border-[#7c3aed]/50 hover:bg-[#1a1428]"
             >
-              <span className="absolute right-3 top-3 rounded-full bg-[#7c3aed]/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#a78bfa]">
+              <span className="absolute right-3 top-3 rounded-full bg-[#7c3aed]/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--accent-fg)]">
                 Soon
               </span>
               <span className="text-2xl" aria-hidden>
                 {prog.emoji}
               </span>
-              <h3 className="mt-2 text-sm font-semibold text-white group-hover:text-[#c4b5fd]">
+              <h3 className="mt-2 text-sm font-semibold text-[var(--text)] group-hover:text-[var(--accent-fg)]">
                 {prog.name}
               </h3>
-              <p className="mt-1 text-[11px] leading-snug text-[#9d8ab8]">{prog.blurb}</p>
+              <p className="mt-1 text-[11px] leading-snug text-[var(--muted)]">{prog.blurb}</p>
               <span className="mt-3 inline-block text-[10px] font-medium text-[#7c3aed] group-hover:underline">
                 Notify me →
               </span>

@@ -648,7 +648,7 @@ export default function ProgramTemplatePastePanel({
 
       {/* A — Save first (this is what coaches need for Adult → Athletes) */}
       <div className="space-y-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 p-2">
-        <p className="text-[11px] font-bold text-emerald-100">
+        <p className="text-[11px] font-bold text-[var(--success)]">
           A · Save current workout as template
         </p>
         {!focusWorkoutId ? (
@@ -657,7 +657,7 @@ export default function ProgramTemplatePastePanel({
             then you can save it here.
           </p>
         ) : (
-          <p className="text-[10px] text-emerald-100/80">
+          <p className="text-[10px] text-[var(--success)]/80">
             Source workout:{" "}
             <span className="font-semibold text-[var(--text)]">
               {focusWorkoutLabel || "current workout"}
@@ -667,7 +667,7 @@ export default function ProgramTemplatePastePanel({
           </p>
         )}
         <div className="space-y-1.5">
-          <p className="text-[10px] font-medium text-emerald-100/90">
+          <p className="text-[10px] font-medium text-[var(--success)]/90">
             Quick title (tap one) or type your own — required to save:
           </p>
           <div className="flex flex-wrap gap-1.5">

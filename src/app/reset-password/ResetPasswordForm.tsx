@@ -100,7 +100,7 @@ export default function ResetPasswordForm({
   if (done) {
     return (
       <div className="card space-y-4 text-sm">
-        <p className="text-emerald-100">Password updated for {savedEmail || accountEmail}.</p>
+        <p className="text-[var(--success)]">Password updated for {savedEmail || accountEmail}.</p>
         <p className="text-[var(--muted)]">
           {credentialPrompted
             ? "If your browser or keychain showed a save prompt, choose Update or Save so future sign-ins use this password."
@@ -122,7 +122,7 @@ export default function ResetPasswordForm({
       className="card space-y-4"
     >
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200 space-y-2">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-[var(--danger)] space-y-2">
           <p>{error}</p>
           {error.includes("invalid or has expired") && (
             <p>

@@ -42,34 +42,34 @@ export default function LandingWelcomeBack({
             <button
               type="button"
               onClick={signOut}
-              className="inline-flex h-12 items-center justify-center rounded-full border border-[#3d2660] px-8 text-sm font-semibold text-[#9d8ab8] hover:text-white hover:border-[#7c3aed]/50 transition"
+              className="inline-flex h-12 items-center justify-center rounded-full border border-[var(--border)] px-8 text-sm font-semibold text-[var(--muted)] hover:text-[var(--text)] hover:border-[#7c3aed]/50 transition"
             >
               Sign out
             </button>
           </div>
 
           {email && (
-            <p className="mt-6 text-xs text-[#9d8ab8]/80">
-              Signed in as <span className="text-[#f2ecf9]">{email}</span>
+            <p className="mt-6 text-xs text-[var(--muted)]/80">
+              Signed in as <span className="text-[var(--text)]">{email}</span>
             </p>
           )}
 
-          <div className="mt-8 text-xs text-[#9d8ab8]/70 tracking-widest">
+          <div className="mt-8 text-xs text-[var(--muted)]/70 tracking-widest">
             THE TRAIN STATION — YOUR TRAINING HUB
           </div>
         </div>
       </div>
 
-      <footer className="border-t border-[#3d2660] py-6 text-center text-xs text-[#9d8ab8]">
-        <Link href="/login" className="hover:text-white transition mx-3">
+      <footer className="border-t border-[var(--border)] py-6 text-center text-xs text-[var(--muted)]">
+        <Link href="/login" className="hover:text-[var(--text)] transition mx-3">
           Sign in as someone else
         </Link>
         <span className="mx-1">·</span>
-        <Link href="/forgot-password" className="hover:text-white transition mx-3">
+        <Link href="/forgot-password" className="hover:text-[var(--text)] transition mx-3">
           Forgot password
         </Link>
         <span className="mx-1">·</span>
-        <Link href="/signup" className="hover:text-white transition mx-3">
+        <Link href="/signup" className="hover:text-[var(--text)] transition mx-3">
           Join waitlist
         </Link>
       </footer>

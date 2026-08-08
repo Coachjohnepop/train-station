@@ -217,7 +217,7 @@ function customSettingOptions(day: ProgramDay, partIndex = 1): DayOption[] {
 
 function beanButtonClass(active: boolean): string {
   return active
-    ? "rounded-full border border-emerald-400 bg-emerald-500/25 px-2.5 py-1 text-[10px] font-bold text-emerald-100 ring-1 ring-emerald-400/60"
+    ? "rounded-full border border-emerald-400 bg-emerald-500/25 px-2.5 py-1 text-[10px] font-bold text-[var(--success)] ring-1 ring-emerald-400/60"
     : "rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 text-[10px] font-medium text-[var(--muted)] hover:border-emerald-400/40 hover:text-[var(--text)]";
 }
 
@@ -241,7 +241,7 @@ function dayGridTextClass(isSelected: boolean, published: boolean, variant: "tit
   if (variant === "title") {
     return highlighted ? "text-emerald-50 font-bold" : "text-[var(--text)] font-bold";
   }
-  return highlighted ? "text-emerald-100/80" : "text-[var(--muted)]";
+  return highlighted ? "text-[var(--success)]/80" : "text-[var(--muted)]";
 }
 
 function dayOptionsNeedCleanup(day: ProgramDay): boolean {

@@ -302,7 +302,7 @@ export default function MemberEquipmentShop() {
                       type="button"
                       className={`w-full rounded-lg px-2 py-1.5 text-[10px] font-semibold transition ${
                         hasIt
-                          ? "bg-emerald-500/20 text-emerald-100"
+                          ? "bg-emerald-500/20 text-[var(--success)]"
                           : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--text)]"
                       }`}
                       disabled={togglingId === item.id}

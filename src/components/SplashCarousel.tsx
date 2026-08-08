@@ -46,7 +46,7 @@ export default function SplashCarousel({
 
       <div className="relative z-10 flex h-full items-center justify-center px-6 text-center">
         <div className="max-w-4xl">
-          <h1 className="text-5xl font-bold tracking-tighter text-white sm:text-6xl md:text-7xl">
+          <h1 className="text-5xl font-bold tracking-tighter text-[var(--text)] sm:text-6xl md:text-7xl">
             All aboard your<br />fitness journey
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-xl text-white/80">

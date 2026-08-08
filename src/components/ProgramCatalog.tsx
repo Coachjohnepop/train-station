@@ -206,7 +206,7 @@ export default function ProgramCatalog({ programs, enrolledSlugs }: Props) {
                             Enrolled
                           </div>
                         )}
-                        <h3 className="absolute bottom-3 left-3 right-3 text-lg font-semibold leading-snug tracking-tight text-white drop-shadow">
+                        <h3 className="absolute bottom-3 left-3 right-3 text-lg font-semibold leading-snug tracking-tight text-[var(--text)] drop-shadow">
                           {program.name}
                         </h3>
                       </div>
@@ -272,7 +272,7 @@ export default function ProgramCatalog({ programs, enrolledSlugs }: Props) {
           <div className="relative z-10 w-full max-w-lg rounded-t-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl sm:rounded-2xl">
             <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
               <h2 className="font-semibold">Your cart</h2>
-              <button type="button" onClick={() => setCartOpen(false)} className="text-sm text-[var(--muted)] hover:text-white">
+              <button type="button" onClick={() => setCartOpen(false)} className="text-sm text-[var(--muted)] hover:text-[var(--text)]">
                 Close
               </button>
             </div>

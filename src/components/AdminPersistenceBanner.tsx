@@ -36,7 +36,7 @@ export default function AdminPersistenceBanner() {
         isWarning
           ? "border-amber-500/50 bg-amber-950/30 text-amber-100"
           : isDatabase
-            ? "border-emerald-500/35 bg-emerald-950/25 text-emerald-100"
+            ? "border-emerald-500/35 bg-emerald-950/25 text-[var(--success)]"
             : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)]"
       }`}
       role="status"

@@ -51,7 +51,7 @@ export const CHAT_KIND_COLORS: Record<
   member_sms: {
     bubble: "bg-emerald-600/30 ring-1 ring-emerald-400/40",
     badge: "bg-emerald-500/30",
-    badgeText: "text-emerald-100",
+    badgeText: "text-[var(--success)]",
   },
   workout_update: {
     bubble: "bg-amber-600/20 ring-1 ring-amber-400/40",

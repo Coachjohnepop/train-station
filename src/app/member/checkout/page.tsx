@@ -220,7 +220,7 @@ function MemberCheckoutInner() {
               </div>
             )}
             {feeLabel ? (
-              <p className="text-xs font-medium uppercase tracking-wide text-[#c4b5fd]">
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--accent-fg)]">
                 {feeLabel}
                 {priceLabel ? ` · ${priceLabel}` : ""}
               </p>

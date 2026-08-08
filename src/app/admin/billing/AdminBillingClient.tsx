@@ -819,7 +819,7 @@ export default function AdminBillingClient() {
         </p>
       )}
       {shareMsg && (
-        <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+        <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-[var(--success)]">
           {shareMsg}
         </p>
       )}

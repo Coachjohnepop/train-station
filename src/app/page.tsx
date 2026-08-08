@@ -42,7 +42,10 @@ export default async function HomePage() {
       "Coach";
     return (
       <>
-        <div className="sticky top-0 z-50 border-b border-[#7c3aed]/40 bg-[#1a0b2e]/95 px-3 py-2 text-center backdrop-blur-md sm:px-4">
+        <div
+          className="force-dark sticky top-0 z-50 border-b border-[#7c3aed]/40 bg-[#1a0b2e]/95 px-3 py-2 text-center backdrop-blur-md sm:px-4"
+          data-force-dark
+        >
           <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-2 text-xs sm:justify-between sm:text-sm">
             <p className="text-white/80">
               Signed in as <span className="font-semibold text-white">{displayName}</span>

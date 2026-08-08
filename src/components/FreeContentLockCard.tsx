@@ -16,7 +16,7 @@ export default function FreeContentLockCard({ access }: Props) {
       <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-300">
         Free ticket · {access.freeContentPercent}% of cycle
       </p>
-      <h2 className="text-xl font-bold text-white">This day is behind the velvet rope</h2>
+      <h2 className="text-xl font-bold text-[var(--text)]">This day is behind the velvet rope</h2>
       <p className="text-sm text-[var(--muted)]">
         {access.reason ||
           `Free Explorer includes about ${access.freeContentPercent}% of the program (days 1–${access.freeDaysInCycle} of each ${access.cycleDays}-day cycle).`}

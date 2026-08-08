@@ -98,7 +98,7 @@ export default function EmbeddedStripeCheckoutModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full px-2 py-1 text-sm text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-white"
+            className="rounded-full px-2 py-1 text-sm text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
             aria-label="Close checkout"
           >
             ✕

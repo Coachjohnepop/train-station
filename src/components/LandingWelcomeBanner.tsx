@@ -92,7 +92,7 @@ export default function LandingWelcomeBanner({
           />
         )}
 
-        <div className="relative z-10 mx-auto max-w-4xl px-3 pb-6 pt-10 text-center sm:px-6 sm:pb-8 sm:pt-14">
+        <div className="force-dark relative z-10 mx-auto max-w-4xl px-3 pb-6 pt-10 text-center sm:px-6 sm:pb-8 sm:pt-14" data-force-dark>
           <TrainStationBrand variant="compact" className="mb-5 brightness-110 drop-shadow-md" />
           <h1 className="text-3xl font-semibold tracking-tight text-white drop-shadow-md sm:text-4xl">
             Welcome back, {displayName}.
@@ -171,7 +171,7 @@ export default function LandingWelcomeBanner({
 
         {isFreeTier && !isEstablishedMember && (
           <div className="mx-auto mt-6 max-w-lg rounded-2xl border border-[#7c3aed]/35 bg-[#7c3aed]/10 px-4 py-4 text-left sm:px-5">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#c4b5fd]">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--accent-fg)]">
               Ready for the full ride?
             </p>
             <p className="mt-2 text-sm leading-relaxed text-[var(--text)]">

@@ -55,7 +55,7 @@ export function ExerciseCatalogMatchSummary({
 
   return (
     <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs">
-      <p className="font-semibold text-white">Exercise library check</p>
+      <p className="font-semibold text-[var(--text)]">Exercise library check</p>
       <p className="mt-1 text-[var(--muted)]">
         <span className="text-emerald-300">{matched} already in your library</span>
         {newCount > 0 ? (

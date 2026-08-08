@@ -9,12 +9,12 @@ export type PasswordPurpose = "new" | "confirm" | "current";
 const VARIANT_CLASS: Record<Variant, string> = {
   default: "input pr-11 w-full",
   signup:
-    "w-full rounded-full border border-[#3d2660] bg-[#0a0612] px-4 py-3 pr-11 text-sm text-white placeholder:text-[#9d8ab8]",
+    "w-full rounded-full border border-[var(--border)] bg-[var(--bg)] px-4 py-3 pr-11 text-sm text-[var(--text)] placeholder:text-[var(--muted)]",
 };
 
 const TOGGLE_CLASS: Record<Variant, string> = {
   default: "text-[var(--muted)] hover:text-[var(--foreground)]",
-  signup: "text-[#9d8ab8] hover:text-white",
+  signup: "text-[var(--muted)] hover:text-[var(--text)]",
 };
 
 const PURPOSE_AUTOCOMPLETE: Record<PasswordPurpose, string> = {

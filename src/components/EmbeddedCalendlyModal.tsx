@@ -96,7 +96,7 @@ export default function EmbeddedCalendlyModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full px-2.5 py-1 text-lg leading-none text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-white"
+            className="rounded-full px-2.5 py-1 text-lg leading-none text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
             aria-label="Close scheduling"
           >
             ✕

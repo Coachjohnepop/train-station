@@ -71,7 +71,7 @@ export default function ForgotPasswordPage() {
 
         <form onSubmit={handleSubmit} className="card space-y-4">
           {error && (
-            <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+            <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-[var(--danger)]">
               {error}
             </p>
           )}
@@ -79,7 +79,7 @@ export default function ForgotPasswordPage() {
             <div
               className={`space-y-2 rounded-lg border px-3 py-2 text-sm ${
                 emailed
-                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-[var(--success)]"
                   : message.includes("couldn't send")
                     ? "border-amber-500/30 bg-amber-500/10 text-amber-100"
                     : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--foreground)]"

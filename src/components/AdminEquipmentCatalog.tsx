@@ -58,7 +58,7 @@ function equipmentPublishStatus(item: {
   if (hasProduct && hasImage) {
     return {
       label: "On Gear ✓",
-      className: "bg-emerald-500/20 text-emerald-100",
+      className: "bg-emerald-500/20 text-[var(--success)]",
       title: "Members see this in Gear shop (product link + photo).",
     };
   }

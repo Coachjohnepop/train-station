@@ -218,7 +218,7 @@ export default function AdminSeoClient() {
           </span>
         </label>
 
-        <div className="rounded-xl border border-[var(--border)] bg-[#0b0f1a] p-4">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
             Google-style preview
           </p>

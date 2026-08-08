@@ -106,11 +106,11 @@ export default function ProgramStartDatePicker({
         );
       })}
       {showWeekdayNudge && pickerOpts.recommendWeekday != null && (
-        <p className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-3 py-2 text-[10px] text-emerald-100/90">
+        <p className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-3 py-2 text-[10px] text-[var(--success)]/90">
           Tip: Starting on{" "}
           <button
             type="button"
-            className="font-semibold underline underline-offset-2 hover:text-white"
+            className="font-semibold underline underline-offset-2 hover:text-[var(--text)]"
             onClick={() => onChange(recommended)}
           >
             {formatProgramStartOption(recommended)}

@@ -9,11 +9,17 @@
   --border: #3d2660;
   --text: #f2ecf9;
   --muted: #9d8ab8;
+  /* Alias used by a few components; always track primary text */
+  --foreground: var(--text);
   --accent: #7c3aed;
   --accent-light: #c4b5fd;
+  /* Readable accent for labels/links/icons on the canvas (may differ from --accent-light) */
+  --accent-fg: #c4b5fd;
   --accent-deep: #5b21b6;
   --accent-hover: #a78bfa;
   --accent-glow: rgba(124, 58, 237, 0.28);
+  /* Text on solid accent / danger / success chips (always high-contrast) */
+  --on-accent: #faf8ff;
   --tier-trim: #c4b5fd;
   --tier-trim-strong: #7c3aed;
   --tier-trim-glow: rgba(124, 58, 237, 0.32);
@@ -32,6 +38,7 @@
 [data-membership-tier="member"] {
   --accent: #6d28d9;
   --accent-light: #c4b5fd;
+  --accent-fg: #c4b5fd;
   --accent-deep: #4c1d95;
   --accent-hover: #8b5cf6;
   --accent-glow: rgba(109, 40, 217, 0.3);
@@ -46,6 +53,7 @@
 [data-membership-tier="business"] {
   --accent: #7c3aed;
   --accent-light: #ddd6fe;
+  --accent-fg: #e8ebf2;
   --accent-deep: #5b21b6;
   --accent-hover: #a78bfa;
   --accent-glow: rgba(192, 200, 212, 0.28);
@@ -60,6 +68,7 @@
 [data-membership-tier="pro"] {
   --accent: #7c3aed;
   --accent-light: #fde68a;
+  --accent-fg: #fde68a;
   --accent-deep: #5b21b6;
   --accent-hover: #c4a24a;
   --accent-glow: rgba(212, 175, 55, 0.32);
@@ -70,37 +79,198 @@
   --border: color-mix(in srgb, #d4af37 36%, #3d2660);
 }
 
-/* Light mode — shared lift; trim metals stay visible */
+/* Light mode — shared lift; trim metals stay visible; accent TEXT must stay readable */
 [data-theme-mode="light"] {
   --bg: #f4effb;
   --surface: #ffffff;
   --surface-2: #ebe4f7;
   --text: #1a1028;
-  --muted: #6b5b80;
+  --muted: #5c4d70;
+  --foreground: var(--text);
+  /* Pale lavender fails WCAG on white — use deep violet for any text/icon use */
+  --accent-light: #5b21b6;
+  --accent-fg: #5b21b6;
   --accent-glow: color-mix(in srgb, var(--accent) 18%, transparent);
-  --ramp-gold-deep: #a16207;
-  --ramp-gold-light: #ca8a04;
+  --on-accent: #faf8ff;
+  --ramp-gold-deep: #92400e;
+  --ramp-gold-light: #a16207;
+  --success: #15803d;
+  --danger: #b91c1c;
 }
 
 [data-theme-mode="light"][data-membership-tier="explorer"] {
   --border: #d8c9f0;
+  --accent-light: #5b21b6;
+  --accent-fg: #5b21b6;
 }
 
 [data-theme-mode="light"][data-membership-tier="member"] {
   --border: color-mix(in srgb, #7c3aed 28%, #d8c9f0);
+  --accent-light: #4c1d95;
+  --accent-fg: #4c1d95;
 }
 
 [data-theme-mode="light"][data-membership-tier="business"] {
   --border: color-mix(in srgb, #9ca3af 45%, #d8c9f0);
   --tier-trim-strong: #6b7280;
   --tier-trim: #9ca3af;
+  --accent-light: #4b5563;
+  --accent-fg: #374151;
 }
 
 [data-theme-mode="light"][data-membership-tier="pro"] {
   --border: color-mix(in srgb, #d4af37 40%, #e8dcf8);
   --tier-trim-strong: #b8860b;
   --tier-trim: #c9a227;
+  --accent-light: #a16207;
+  --accent-fg: #92400e;
 }
+
+/*
+ * Always-dark surfaces (hero photo, See inside tour, video overlays).
+ * Re-scopes canvas tokens so light-mode users still get light text on dark art.
+ */
+[data-force-dark],
+.force-dark {
+  --bg: #0a0612;
+  --surface: #140a22;
+  --surface-2: #1f1035;
+  --border: #3d2660;
+  --text: #f2ecf9;
+  --muted: #9d8ab8;
+  --foreground: #f2ecf9;
+  --accent-light: #c4b5fd;
+  --accent-fg: #c4b5fd;
+  --success: #4ade9a;
+  --danger: #f07178;
+  --ramp-gold-light: #fde68a;
+  --ramp-gold-deep: #b8860b;
+  color: var(--text);
+}
+
+/*
+ * Light mode contrast: pale Tailwind text utilities (100–300) were designed for
+ * dark canvases. Remap them to mid/deep tones on light pages. Force-dark islands
+ * keep the original pale colors via the block below.
+ */
+[data-theme-mode="light"] .text-emerald-100,
+[data-theme-mode="light"] .text-emerald-200,
+[data-theme-mode="light"] .text-emerald-300 {
+  color: #047857;
+}
+[data-theme-mode="light"] .text-amber-100,
+[data-theme-mode="light"] .text-amber-200,
+[data-theme-mode="light"] .text-amber-300 {
+  color: #b45309;
+}
+[data-theme-mode="light"] .text-sky-100,
+[data-theme-mode="light"] .text-sky-200,
+[data-theme-mode="light"] .text-sky-300 {
+  color: #0369a1;
+}
+[data-theme-mode="light"] .text-violet-100,
+[data-theme-mode="light"] .text-violet-200,
+[data-theme-mode="light"] .text-violet-300 {
+  color: #6d28d9;
+}
+[data-theme-mode="light"] .text-rose-100,
+[data-theme-mode="light"] .text-rose-200,
+[data-theme-mode="light"] .text-rose-300 {
+  color: #be123c;
+}
+[data-theme-mode="light"] .text-red-100,
+[data-theme-mode="light"] .text-red-200,
+[data-theme-mode="light"] .text-red-300 {
+  color: #b91c1c;
+}
+[data-theme-mode="light"] .text-blue-100,
+[data-theme-mode="light"] .text-blue-200,
+[data-theme-mode="light"] .text-blue-300 {
+  color: #1d4ed8;
+}
+[data-theme-mode="light"] .text-fuchsia-100,
+[data-theme-mode="light"] .text-fuchsia-200,
+[data-theme-mode="light"] .text-fuchsia-300 {
+  color: #a21caf;
+}
+[data-theme-mode="light"] .text-orange-100,
+[data-theme-mode="light"] .text-orange-200,
+[data-theme-mode="light"] .text-orange-300 {
+  color: #c2410c;
+}
+[data-theme-mode="light"] .text-purple-100,
+[data-theme-mode="light"] .text-purple-200,
+[data-theme-mode="light"] .text-purple-300 {
+  color: #7e22ce;
+}
+[data-theme-mode="light"] .text-indigo-100,
+[data-theme-mode="light"] .text-indigo-200,
+[data-theme-mode="light"] .text-indigo-300 {
+  color: #4338ca;
+}
+[data-theme-mode="light"] .text-yellow-100,
+[data-theme-mode="light"] .text-yellow-200,
+[data-theme-mode="light"] .text-yellow-300 {
+  color: #a16207;
+}
+[data-theme-mode="light"] .text-lime-100,
+[data-theme-mode="light"] .text-lime-200,
+[data-theme-mode="light"] .text-lime-300 {
+  color: #4d7c0f;
+}
+[data-theme-mode="light"] .text-cyan-100,
+[data-theme-mode="light"] .text-cyan-200,
+[data-theme-mode="light"] .text-cyan-300 {
+  color: #0e7490;
+}
+[data-theme-mode="light"] .text-green-100,
+[data-theme-mode="light"] .text-green-200,
+[data-theme-mode="light"] .text-green-300 {
+  color: #15803d;
+}
+[data-theme-mode="light"] .text-pink-100,
+[data-theme-mode="light"] .text-pink-200,
+[data-theme-mode="light"] .text-pink-300 {
+  color: #be185d;
+}
+
+/* Inside always-dark surfaces, restore pale utilities for dark art */
+[data-force-dark] .text-emerald-100,
+.force-dark .text-emerald-100 { color: #d1fae5; }
+[data-force-dark] .text-emerald-200,
+.force-dark .text-emerald-200 { color: #a7f3d0; }
+[data-force-dark] .text-emerald-300,
+.force-dark .text-emerald-300 { color: #6ee7b7; }
+[data-force-dark] .text-amber-100,
+.force-dark .text-amber-100 { color: #fef3c7; }
+[data-force-dark] .text-amber-200,
+.force-dark .text-amber-200 { color: #fde68a; }
+[data-force-dark] .text-amber-300,
+.force-dark .text-amber-300 { color: #fcd34d; }
+[data-force-dark] .text-sky-100,
+.force-dark .text-sky-100 { color: #e0f2fe; }
+[data-force-dark] .text-sky-200,
+.force-dark .text-sky-200 { color: #bae6fd; }
+[data-force-dark] .text-sky-300,
+.force-dark .text-sky-300 { color: #7dd3fc; }
+[data-force-dark] .text-violet-100,
+.force-dark .text-violet-100 { color: #ede9fe; }
+[data-force-dark] .text-violet-200,
+.force-dark .text-violet-200 { color: #ddd6fe; }
+[data-force-dark] .text-violet-300,
+.force-dark .text-violet-300 { color: #c4b5fd; }
+[data-force-dark] .text-rose-100,
+.force-dark .text-rose-100 { color: #ffe4e6; }
+[data-force-dark] .text-rose-200,
+.force-dark .text-rose-200 { color: #fecdd3; }
+[data-force-dark] .text-rose-300,
+.force-dark .text-rose-300 { color: #fda4af; }
+[data-force-dark] .text-red-100,
+.force-dark .text-red-100 { color: #fee2e2; }
+[data-force-dark] .text-red-200,
+.force-dark .text-red-200 { color: #fecaca; }
+[data-force-dark] .text-red-300,
+.force-dark .text-red-300 { color: #fca5a5; }
 
 html {
   min-height: 100%;
@@ -215,12 +385,18 @@ a {
   padding: 0.65rem 1.25rem;
   border-radius: 9999px;
   background: linear-gradient(180deg, var(--accent-hover) 0%, var(--accent-deep) 100%);
-  color: #faf8ff;
+  color: var(--on-accent);
   font-weight: 600;
   font-size: 0.9rem;
-  border: 1px solid color-mix(in srgb, var(--accent-light) 25%, var(--accent-deep));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--accent-deep));
   cursor: pointer;
   transition: background 0.15s, box-shadow 0.15s, filter 0.15s;
+}
+
+/* Solid purple / brand CTAs — always light text on purple (never inherit canvas --text) */
+.btn-on-accent,
+.cta-on-accent {
+  color: var(--on-accent) !important;
 }
 
 .btn-primary:hover {
@@ -308,7 +484,7 @@ a {
   border-radius: 0.75rem;
   border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
   background: color-mix(in srgb, var(--accent) 12%, var(--surface));
-  color: var(--accent-light);
+  color: var(--accent-fg);
   transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
 }
 
@@ -329,12 +505,12 @@ a {
 
 .day-wheel-spin--prev .day-wheel-spin__glyph {
   margin-left: 4px;
-  border-right: 16px solid var(--accent-light);
+  border-right: 16px solid var(--accent-fg);
 }
 
 .day-wheel-spin--next .day-wheel-spin__glyph {
   margin-right: 4px;
-  border-left: 16px solid var(--accent-light);
+  border-left: 16px solid var(--accent-fg);
 }
 
 .day-wheel-spin:hover:not(:disabled) {
@@ -418,7 +594,7 @@ a {
   border-radius: 1rem;
   border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
   background: color-mix(in srgb, var(--accent) 14%, var(--surface));
-  color: var(--accent-light);
+  color: var(--accent-fg);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent);
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
@@ -481,7 +657,7 @@ a {
   padding: 0.5rem 0.75rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--accent-light);
+  color: var(--accent-fg);
 }
 
 .warmup-nav-arrow-mobile:disabled {
@@ -552,13 +728,22 @@ table.data th {
   font-size: 0.75rem;
 }
 
-/* Shared accent utilities (Prince purple) */
+/* Shared accent utilities (Prince purple) — use --accent-fg so light mode stays readable */
 .text-accent {
-  color: var(--accent-light);
+  color: var(--accent-fg);
 }
 
 .text-accent-deep {
-  color: var(--accent-hover);
+  color: var(--accent-deep);
+}
+
+/* Body text that used to be hard-coded white / dark-only lavender */
+.text-canvas {
+  color: var(--text);
+}
+
+.text-muted-canvas {
+  color: var(--muted);
 }
 
 .border-accent-soft {
@@ -1138,7 +1323,7 @@ table.data th {
 .badge-accent {
   border: 1px solid color-mix(in srgb, var(--tier-trim-strong) 55%, var(--border));
   background: color-mix(in srgb, var(--tier-trim-soft) 65%, transparent);
-  color: var(--accent-light);
+  color: var(--accent-fg);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tier-trim) 25%, transparent);
 }
 
@@ -1599,12 +1784,12 @@ html[data-landing-tour="open"] [data-global-theme-toggle] {
 
 .step-badge-active {
   background: color-mix(in srgb, var(--accent) 22%, transparent);
-  color: var(--accent-light);
+  color: var(--accent-fg);
 }
 
 .step-badge-dot-active {
   background: var(--accent);
-  color: #faf8ff;
+  color: var(--on-accent);
 }
 
 .card-accent-frame {
@@ -1708,7 +1893,7 @@ html[data-landing-tour="open"] [data-global-theme-toggle] {
 
 .nav-tab-active {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent-light);
+  color: var(--accent-fg);
 }
 
 /* Ramp-up / intake — gold “your next step” (distinct from tier purple accent) */

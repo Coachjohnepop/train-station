@@ -200,20 +200,20 @@ function LoginForm() {
         </div>
 
         {switchAccount && (
-          <p className="mb-4 rounded-lg border border-[#7c3aed]/30 bg-[#7c3aed]/10 px-3 py-2 text-sm text-[#c4b5fd]">
+          <p className="mb-4 rounded-lg border border-[#7c3aed]/30 bg-[#7c3aed]/10 px-3 py-2 text-sm text-[var(--accent-fg)]">
             Signed out — enter the email for the account you want, or pick one from your history.
           </p>
         )}
 
         {passwordUpdated && (
-          <p className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+          <p className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-[var(--success)]">
             Password reset complete — sign in with your new password. Face ID / Touch ID quick
             sign-in still works if you already set it up on this device.
           </p>
         )}
 
         {oauthError && (
-          <p className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+          <p className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-[var(--danger)]">
             {oauthError === "missing_email"
               ? "Social sign-in did not share an email — try another provider or use email and password."
               : oauthError === "invalid_state"
@@ -306,7 +306,7 @@ function LoginForm() {
         {showPassword && (
           <form ref={formRef} onSubmit={handleSubmit} autoComplete="on" className="card space-y-4">
             {error && (
-              <div className="space-y-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+              <div className="space-y-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-[var(--danger)]">
                 <p>{error}</p>
                 {error.includes("Forgot password") && (
                   <p>

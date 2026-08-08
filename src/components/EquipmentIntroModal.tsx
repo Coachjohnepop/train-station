@@ -91,7 +91,7 @@ export default function EquipmentIntroModal({
     >
       <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-[#7c3aed]/40 bg-[var(--surface)] shadow-2xl">
         <div className="border-b border-[var(--border)] px-4 py-3 sm:px-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#a78bfa]">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent-fg)]">
             From Coach Jeremy
           </p>
           <h2 id={titleId} className="mt-1 text-lg font-semibold text-[var(--text)]">

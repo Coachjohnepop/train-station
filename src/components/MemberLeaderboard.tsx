@@ -286,7 +286,7 @@ export default function MemberLeaderboard() {
         <p className="relative text-[10px] font-bold uppercase tracking-[0.35em] text-accent">
           The Train Station
         </p>
-        <h1 className="relative mt-1 font-mono text-3xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl">
+        <h1 className="relative mt-1 font-mono text-3xl font-black uppercase tracking-[0.2em] text-[var(--text)] sm:text-4xl">
           {scoresTab === "mine" ? "My Scores" : "High Scores"}
         </h1>
         <p className="relative mt-2 text-xs text-[var(--muted)]">
@@ -299,7 +299,7 @@ export default function MemberLeaderboard() {
       <ScoresTabBar active={scoresTab} onChange={setScoresTab} />
 
       {claimMsg ? (
-        <p className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+        <p className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-[var(--success)]">
           {claimMsg}
         </p>
       ) : null}

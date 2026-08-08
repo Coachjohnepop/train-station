@@ -310,18 +310,18 @@ export default function FreeTicketModal({
       {/* Full-height mobile sheet; scroll so video stays first, ticket + CTAs below */}
       <div
         ref={panelRef}
-        className="flex max-h-[100dvh] w-full max-w-lg flex-col overflow-y-auto overscroll-contain rounded-t-2xl border border-amber-500/30 bg-[#140a22] shadow-2xl sm:max-h-[min(92vh,760px)] sm:rounded-2xl"
+        className="flex max-h-[100dvh] w-full max-w-lg flex-col overflow-y-auto overscroll-contain rounded-t-2xl border border-amber-500/30 bg-[var(--surface)] shadow-2xl sm:max-h-[min(92vh,760px)] sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Safe area top on notched phones */}
-        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-white/5 bg-[#140a22]/95 px-3 py-2 backdrop-blur-md sm:px-5">
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-white/5 bg-[var(--surface)]/95 px-3 py-2 backdrop-blur-md sm:px-5">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400">
             Explorer ticket
           </p>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full px-3 py-1.5 text-xs font-medium text-[#9d8ab8] hover:bg-white/5 hover:text-white"
+            className="rounded-full px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-white/5 hover:text-[var(--text)]"
             aria-label="Close"
           >
             Close
@@ -388,7 +388,7 @@ export default function FreeTicketModal({
           )}
 
           {showJeremy && !hasJeremy && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 p-4 text-center text-xs text-[#9d8ab8]">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 p-4 text-center text-xs text-[var(--muted)]">
               <p className="font-medium text-white">Coach intro coming soon</p>
               <p className="mt-2 max-w-xs leading-relaxed">
                 Free / Explorer still opens real access. Scroll for your ticket — Jeremy will add
@@ -409,7 +409,7 @@ export default function FreeTicketModal({
               <MembershipSeatArt ticketId="free" priority className="w-full" alt="Free Explorer ticket" />
             </div>
             <div className="min-w-0 flex-1">
-              <h2 id="free-ticket-title" className="text-lg font-semibold leading-snug text-white sm:text-xl">
+              <h2 id="free-ticket-title" className="text-lg font-semibold leading-snug text-[var(--text)] sm:text-xl">
                 {showJeremy ? (
                   <>
                     A word from <span className="text-amber-300">Coach Jeremy</span>
@@ -420,7 +420,7 @@ export default function FreeTicketModal({
                   </>
                 )}
               </h2>
-              <p className="mt-1 text-xs leading-relaxed text-[#9d8ab8] sm:text-sm">
+              <p className="mt-1 text-xs leading-relaxed text-[var(--muted)] sm:text-sm">
                 {showJeremy
                   ? hasJeremy
                     ? "Explorer is real access — starter programs, about 20% of Coach Class. Scroll for your ticket."
@@ -449,14 +449,14 @@ export default function FreeTicketModal({
             <button
               type="button"
               onClick={handleContinueFree}
-              className="inline-flex h-11 items-center justify-center rounded-full border border-[#3d2660] text-sm font-medium text-[#9d8ab8] transition hover:border-[#7c3aed]/40 hover:text-white"
+              className="inline-flex h-11 items-center justify-center rounded-full border border-[var(--border)] text-sm font-medium text-[var(--muted)] transition hover:border-[#7c3aed]/40 hover:text-[var(--text)]"
             >
               Continue with Free / Explorer
             </button>
           ) : (
             <Link
               href={freeHref}
-              className="inline-flex h-11 items-center justify-center rounded-full border border-[#3d2660] text-sm font-medium text-[#9d8ab8] transition hover:border-[#7c3aed]/40 hover:text-white"
+              className="inline-flex h-11 items-center justify-center rounded-full border border-[var(--border)] text-sm font-medium text-[var(--muted)] transition hover:border-[#7c3aed]/40 hover:text-[var(--text)]"
               onClick={onClose}
               // Avoid accidental form/Enter activation from parent focus
               tabIndex={0}
@@ -468,7 +468,7 @@ export default function FreeTicketModal({
           <button
             type="button"
             onClick={onClose}
-            className="py-2 text-xs text-[#9d8ab8] hover:text-white"
+            className="py-2 text-xs text-[var(--muted)] hover:text-[var(--text)]"
           >
             Never mind — back to tickets
           </button>

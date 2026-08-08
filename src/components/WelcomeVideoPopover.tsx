@@ -75,7 +75,7 @@ export default function WelcomeVideoPopover({
       <p>Welcome video not set yet.</p>
       <p className="mt-2 text-xs">
         Coach: upload your intro under{" "}
-        <Link href="/admin/videos" className="text-[#c4b5fd] underline">
+        <Link href="/admin/videos" className="text-[var(--accent-fg)] underline">
           Admin → Videos
         </Link>
         .
@@ -94,17 +94,17 @@ export default function WelcomeVideoPopover({
             onClick={hide}
           >
             <div
-              className="flex w-full max-w-[min(96vw,56rem)] flex-col rounded-2xl border border-white/15 bg-[#0a0612] p-3 shadow-2xl sm:p-5"
+              className="flex w-full max-w-[min(96vw,56rem)] flex-col rounded-2xl border border-white/15 bg-[var(--bg)] p-3 shadow-2xl sm:p-5"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mb-2 flex items-center justify-between gap-3 sm:mb-3">
-                <p id={titleId} className="text-sm font-semibold text-white sm:text-base">
+                <p id={titleId} className="text-sm font-semibold text-[var(--text)] sm:text-base">
                   Welcome — a word from Coach Jeremy
                 </p>
                 <button
                   type="button"
                   onClick={hide}
-                  className="shrink-0 rounded-full border border-white/15 px-3 py-1 text-xs font-semibold text-white/70 hover:bg-white/10 hover:text-white"
+                  className="shrink-0 rounded-full border border-white/15 px-3 py-1 text-xs font-semibold text-white/70 hover:bg-white/10 hover:text-[var(--text)]"
                 >
                   Close
                 </button>

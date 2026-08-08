@@ -410,7 +410,7 @@ export default function MemberProgramSchedule({
       )}
 
       <details id={fullScheduleId} className="group">
-        <summary className="flex items-center gap-2 cursor-pointer list-none text-sm font-semibold uppercase tracking-wide text-[var(--muted)] group-open:text-white transition mb-2">
+        <summary className="flex items-center gap-2 cursor-pointer list-none text-sm font-semibold uppercase tracking-wide text-[var(--muted)] group-open:text-[var(--text)] transition mb-2">
           <span className="text-xs text-accent group-open:rotate-90 transition-transform">▶</span>
           Full program schedule
           <span className="text-[10px] normal-case font-normal text-[var(--muted)]">
@@ -428,7 +428,7 @@ export default function MemberProgramSchedule({
                 className="group/week"
                 open={isCalendarWeek}
               >
-                <summary className="text-sm font-semibold uppercase tracking-wide text-accent cursor-pointer list-none flex items-center gap-2 hover:text-white transition">
+                <summary className="text-sm font-semibold uppercase tracking-wide text-accent cursor-pointer list-none flex items-center gap-2 hover:text-[var(--text)] transition">
                   <span className="group-open/week:rotate-90 transition-transform text-xs">▶</span>
                   Week {week.weekNumber}
                   {isCalendarWeek && (

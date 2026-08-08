@@ -236,7 +236,7 @@ export default function BookClient() {
                     }}
                     className={`px-3 py-1 rounded text-sm border ${
                       selectedDate === d
-                        ? "bg-accent text-white border-accent"
+                        ? "bg-accent text-[var(--text)] border-accent"
                         : "border-[var(--border)] hover:bg-[var(--surface-2)]"
                     }`}
                   >

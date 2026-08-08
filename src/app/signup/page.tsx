@@ -175,9 +175,9 @@ function SignupForm() {
 
   if (!isWaitlistOnly && !ticketPlan) {
     return (
-      <div className="min-h-screen bg-[#0a0612] flex flex-col items-center justify-center gap-3 px-6 text-center text-[#9d8ab8] text-sm">
+      <div className="min-h-screen bg-[var(--bg)] flex flex-col items-center justify-center gap-3 px-6 text-center text-[var(--muted)] text-sm">
         <p>Pick a ticket first…</p>
-        <Link href="/join#tickets" className="text-[#c4b5fd] underline">
+        <Link href="/join#tickets" className="text-[var(--accent-fg)] underline">
           Choose Free / Coach / 1st Class
         </Link>
       </div>
@@ -185,13 +185,13 @@ function SignupForm() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0612] text-[#f2ecf9] flex flex-col">
-      <div className="border-b border-[#3d2660] bg-[#140a22]">
+    <div className="app-shell-bg min-h-screen text-[var(--text)] flex flex-col">
+      <div className="border-b border-[var(--border)] bg-[var(--surface)]">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
           <Link href="/" className="font-semibold tracking-tight text-lg hover:text-[var(--accent)]">
             The Train Station
           </Link>
-          <Link href="/login" className="text-sm text-[#9d8ab8] hover:text-white transition">
+          <Link href="/login" className="text-sm text-[var(--muted)] hover:text-[var(--text)] transition">
             Already have an account? Sign in
           </Link>
         </div>
@@ -206,7 +206,7 @@ function SignupForm() {
             <h1 className="text-4xl font-semibold tracking-tight">
               {isWaitlistOnly ? "Join the waitlist" : "Create your account"}
             </h1>
-            <p className="mt-3 text-[#9d8ab8] text-sm leading-relaxed">
+            <p className="mt-3 text-[var(--muted)] text-sm leading-relaxed">
               {isWaitlistOnly
                 ? "We'll notify you when this program track launches."
                 : "Next you'll set up texts, book your coach, and open your training dashboard."}
@@ -216,7 +216,7 @@ function SignupForm() {
           {/* Ticket image for the plan they picked — lives here, not on join hero */}
           {!isWaitlistOnly && ticketPlan && (
             <div className="mb-6 flex flex-col items-center">
-              <div className="w-full max-w-[220px] overflow-hidden rounded-2xl border border-[#3d2660] shadow-[0_12px_40px_rgba(124,58,237,0.35)]">
+              <div className="w-full max-w-[220px] overflow-hidden rounded-2xl border border-[var(--border)] shadow-[0_12px_40px_rgba(124,58,237,0.35)]">
                 <MembershipSeatArt
                   plan={ticketPlan}
                   priority
@@ -224,7 +224,7 @@ function SignupForm() {
                   alt={`${signupPlanLabel(ticketPlan)} membership`}
                 />
               </div>
-              <p className="mt-2 text-sm font-semibold text-[#c4b5fd]">
+              <p className="mt-2 text-sm font-semibold text-[var(--accent-fg)]">
                 {signupPlanLabel(ticketPlan)}
               </p>
             </div>
@@ -233,7 +233,7 @@ function SignupForm() {
           {!isWaitlistOnly && ticketPlan && (
             <>
               <OAuthButtons mode="signup" plan={ticketPlan} className="mb-4" />
-              <p className="mb-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-[#9d8ab8]">
+              <p className="mb-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
                 or create with email
               </p>
             </>
@@ -243,10 +243,10 @@ function SignupForm() {
             ref={formRef}
             onSubmit={handleSubmit}
             autoComplete="on"
-            className="rounded-3xl border border-[#3d2660] bg-[#140a22] p-8 space-y-4"
+            className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-8 space-y-4"
           >
             {error && (
-              <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+              <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-[var(--danger)]">
                 {error}{" "}
                 {(error.includes("exists") || error.includes("sign-in failed")) && (
                   <Link href={`/login?email=${encodeURIComponent(email)}`} className="underline">
@@ -257,7 +257,7 @@ function SignupForm() {
             )}
 
             <div>
-              <label htmlFor="signup-username" className="block text-xs text-[#9d8ab8] mb-1">
+              <label htmlFor="signup-username" className="block text-xs text-[var(--muted)] mb-1">
                 Email
               </label>
               <EmailInput
@@ -276,7 +276,7 @@ function SignupForm() {
             {!isWaitlistOnly && (
               <>
                 <div>
-                  <label htmlFor="signup-password" className="block text-xs text-[#9d8ab8] mb-1">
+                  <label htmlFor="signup-password" className="block text-xs text-[var(--muted)] mb-1">
                     Password{" "}
                     <span className="text-[#6b5b86]">(required in production — min 8 characters)</span>
                   </label>
@@ -293,7 +293,7 @@ function SignupForm() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="signup-password-confirm" className="block text-xs text-[#9d8ab8] mb-1">
+                  <label htmlFor="signup-password-confirm" className="block text-xs text-[var(--muted)] mb-1">
                     Confirm password
                   </label>
                   <PasswordInput
@@ -313,7 +313,7 @@ function SignupForm() {
 
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className="block text-xs text-[#9d8ab8] mb-1">First name</label>
+                <label className="block text-xs text-[var(--muted)] mb-1">First name</label>
                 <input
                   type="text"
                   name="given-name"
@@ -322,11 +322,11 @@ function SignupForm() {
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   placeholder="First"
-                  className="w-full rounded-full border border-[#3d2660] bg-[#0a0612] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
+                  className="w-full rounded-full border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-sm text-[var(--text)] placeholder:text-[var(--muted)]"
                 />
               </div>
               <div className="flex-1">
-                <label className="block text-xs text-[#9d8ab8] mb-1">Last name</label>
+                <label className="block text-xs text-[var(--muted)] mb-1">Last name</label>
                 <input
                   type="text"
                   name="family-name"
@@ -335,13 +335,13 @@ function SignupForm() {
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder="Last"
-                  className="w-full rounded-full border border-[#3d2660] bg-[#0a0612] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
+                  className="w-full rounded-full border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-sm text-[var(--text)] placeholder:text-[var(--muted)]"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs text-[#9d8ab8] mb-1">
+              <label className="block text-xs text-[var(--muted)] mb-1">
                 Phone <span className="text-[#6b5b86]">(optional — used for workout texts)</span>
               </label>
               <PhoneInput
@@ -349,7 +349,7 @@ function SignupForm() {
                 value={phone}
                 onChange={setPhone}
                 placeholder="916.284.1994"
-                className="w-full rounded-full border border-[#3d2660] bg-[#0a0612] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
+                className="w-full rounded-full border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-sm text-[var(--text)] placeholder:text-[var(--muted)]"
               />
             </div>
 
@@ -387,7 +387,7 @@ function SignupForm() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-xs text-[#9d8ab8]">
+          <p className="mt-6 text-center text-xs text-[var(--muted)]">
             Coaches can{" "}
             <Link href="/login" className="text-[#7c3aed] hover:underline">
               sign in here
@@ -404,7 +404,7 @@ export default function SignupPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#0a0612] flex items-center justify-center text-[#9d8ab8] text-sm">
+        <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center text-[var(--muted)] text-sm">
           Loading…
         </div>
       }

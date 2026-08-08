@@ -50,7 +50,7 @@ function WarmupPreviewPanel({
 
       {tier === "label" ? (
         <div className="mt-6 space-y-3 text-center">
-          <p className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+          <p className="text-3xl font-bold tracking-tight text-[var(--text)] sm:text-4xl">
             {summary.themeLabel || summary.workoutName || summary.dayLabel}
           </p>
           <p className="text-sm text-[var(--muted)]">

@@ -781,7 +781,7 @@ export default function CoachLessonPlanBuilder({
       {step === 3 && deployResult && (
         <div className="card space-y-4 border-emerald-500/35 bg-emerald-500/10">
           <div>
-            <h2 className="font-semibold text-lg text-emerald-100">
+            <h2 className="font-semibold text-lg text-[var(--success)]">
               {isLiveReplace ? "Replaced & sent" : "Published"}
             </h2>
             <p className="mt-1 text-xs text-[var(--muted)]">

@@ -64,7 +64,7 @@ function ActionButton({
     "inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-40";
   const styles =
     variant === "primary"
-      ? "bg-accent text-white hover:opacity-90"
+      ? "bg-accent text-[var(--text)] hover:opacity-90"
       : variant === "danger"
         ? "border border-red-500/60 bg-red-950/40 text-red-300 hover:bg-red-950/70"
         : "border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:border-accent/60";
@@ -88,7 +88,7 @@ function ActionLink({
     "inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold transition";
   const styles =
     variant === "primary"
-      ? "bg-accent text-white hover:opacity-90"
+      ? "bg-accent text-[var(--text)] hover:opacity-90"
       : "border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:border-accent/60";
   return (
     <Link href={href} className={`${base} ${styles}`}>
@@ -509,7 +509,7 @@ export default function WorkoutDayBrowser() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-500/50 bg-red-950/30 px-4 py-3 text-sm text-red-200">
+        <div className="rounded-lg border border-red-500/50 bg-red-950/30 px-4 py-3 text-sm text-[var(--danger)]">
           {error}
         </div>
       )}
@@ -536,7 +536,7 @@ export default function WorkoutDayBrowser() {
                       isUploadTarget
                         ? "ring-2 ring-inset ring-sky-400 bg-sky-950/50"
                         : isSelected
-                          ? "bg-accent text-white"
+                          ? "bg-accent text-[var(--text)]"
                           : "hover:bg-[var(--surface)]"
                     }`}
                     onClick={() => {

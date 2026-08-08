@@ -14,7 +14,7 @@ import { useSiteBrand } from "@/components/SiteBrandProvider";
 const WORDMARK: Record<Exclude<BrandLogoVariant, "icon">, string> = {
   hero: "text-lg font-semibold tracking-[0.12em] text-white/95 sm:text-xl",
   compact: "text-base font-semibold tracking-[0.1em] text-white sm:text-lg",
-  header: "text-sm font-semibold tracking-[0.08em] text-[#f2ecf9]",
+  header: "text-sm font-semibold tracking-[0.08em] text-[var(--text)]",
 };
 
 function resolveBrand(

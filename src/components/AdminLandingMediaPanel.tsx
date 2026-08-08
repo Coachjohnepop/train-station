@@ -107,34 +107,34 @@ export default function AdminLandingMediaPanel({
 
   return (
     <div className="space-y-8">
-      <div className="rounded-2xl border border-[#7c3aed]/30 bg-[#7c3aed]/5 p-4 text-sm text-[#c4b5fd]">
-        <p className="font-semibold text-white">Where these show up</p>
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-[#9d8ab8]">
+      <div className="rounded-2xl border border-[#7c3aed]/30 bg-[#7c3aed]/5 p-4 text-sm text-[var(--accent-fg)]">
+        <p className="font-semibold text-[var(--text)]">Where these show up</p>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-[var(--muted)]">
           <li>
-            <strong className="text-white">Welcome videos</strong> — onboarding step 1 per ticket
+            <strong className="text-[var(--text)]">Welcome videos</strong> — onboarding step 1 per ticket
             (Free Explorer, Coach Class, Business Class, 1st Class). Falls back to the default clip.
           </li>
           <li>
-            <strong className="text-white">Free-ticket video</strong> — Jeremy&apos;s free-tier intro
+            <strong className="text-[var(--text)]">Free-ticket video</strong> — Jeremy&apos;s free-tier intro
             after the built-in 5s chorus gag when someone taps{" "}
-            <span className="text-[#c4b5fd]">Free</span>. Site music
+            <span className="text-[var(--accent-fg)]">Free</span>. Site music
             mutes automatically.
           </li>
           <li>
-            <strong className="text-white">Venmo QR</strong> — member checkout backup when Stripe is
+            <strong className="text-[var(--text)]">Venmo QR</strong> — member checkout backup when Stripe is
             still Test or the member prefers Venmo. Funds go to the{" "}
-            <strong className="text-white">same business bank account</strong> as Stripe payouts
+            <strong className="text-[var(--text)]">same business bank account</strong> as Stripe payouts
             (Jeremy’s Train Station business). After they pay,{" "}
-            <strong className="text-white">Admin → Members → Mark paid (Venmo)</strong>.
+            <strong className="text-[var(--text)]">Admin → Members → Mark paid (Venmo)</strong>.
           </li>
         </ul>
-        <p className="mt-3 text-xs text-[#9d8ab8]">
+        <p className="mt-3 text-xs text-[var(--muted)]">
           Prefer uploading coach intros under{" "}
-          <a href="/admin/videos" className="text-[#c4b5fd] underline">
+          <a href="/admin/videos" className="text-[var(--accent-fg)] underline">
             Admin → Videos
           </a>{" "}
           (stored on site). You can still paste a YouTube URL here. Venmo QR can be{" "}
-          <code className="text-[10px] text-[#c4b5fd]">
+          <code className="text-[10px] text-[var(--accent-fg)]">
             https://www.thetrainstation.co/images/venmo-jeremy-qr.png
           </code>{" "}
           or any https image URL of your QR.
@@ -143,7 +143,7 @@ export default function AdminLandingMediaPanel({
 
       <div className="card space-y-4">
         <div>
-          <p className="text-sm font-semibold text-white">Welcome videos (onboarding)</p>
+          <p className="text-sm font-semibold text-[var(--text)]">Welcome videos (onboarding)</p>
           <p className="mt-1 text-xs text-[var(--muted)]">
             Upload (recommended) under Admin → Videos, or paste a YouTube / stored URL here. Members
             see their plan&apos;s clip on setup step 1.
@@ -194,7 +194,7 @@ export default function AdminLandingMediaPanel({
 
       <div className="card space-y-3">
         <div>
-          <label htmlFor="venmo-qr" className="text-sm font-semibold text-white">
+          <label htmlFor="venmo-qr" className="text-sm font-semibold text-[var(--text)]">
             Venmo QR image
           </label>
           <p className="mt-1 text-xs text-[var(--muted)]">
@@ -213,7 +213,7 @@ export default function AdminLandingMediaPanel({
           onChange={(e) => setVenmoQrUrl(e.target.value)}
         />
         {venmoQrUrl.trim() ? (
-          <div className="mx-auto max-w-[220px] overflow-hidden rounded-xl bg-white p-3 ring-1 ring-[#3d2660]">
+          <div className="mx-auto max-w-[220px] overflow-hidden rounded-xl bg-white p-3 ring-1 ring-[var(--border)]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={venmoQrUrl.trim()}
@@ -257,7 +257,7 @@ export default function AdminLandingMediaPanel({
           type="button"
           onClick={() => void handleSave()}
           disabled={saving}
-          className="inline-flex h-11 items-center justify-center rounded-full bg-[#7c3aed] px-8 text-sm font-semibold text-white hover:bg-[#6d2dd6] disabled:opacity-60"
+          className="inline-flex h-11 items-center justify-center rounded-full bg-[#7c3aed] px-8 text-sm font-semibold text-[var(--text)] hover:bg-[#6d2dd6] disabled:opacity-60"
         >
           {saving ? "Saving…" : "Save landing media"}
         </button>
@@ -310,7 +310,7 @@ function VideoField({
   return (
     <div className={`space-y-3 ${compact ? "rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-3" : "card"}`}>
       <div>
-        <label htmlFor={id} className="text-sm font-semibold text-white">
+        <label htmlFor={id} className="text-sm font-semibold text-[var(--text)]">
           {label}
         </label>
         <p className="mt-1 text-xs text-[var(--muted)]">{hint}</p>
@@ -324,7 +324,7 @@ function VideoField({
         onChange={(e) => onChange(e.target.value)}
       />
       {previewVideo ? (
-        <div className="aspect-video overflow-hidden rounded-xl bg-black ring-1 ring-[#3d2660]">
+        <div className="aspect-video overflow-hidden rounded-xl bg-black ring-1 ring-[var(--border)]">
           <PlayableVideoFrame
             className="h-full w-full"
             videoUrl={previewVideo}

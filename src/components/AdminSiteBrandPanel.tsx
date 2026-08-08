@@ -91,9 +91,9 @@ export default function AdminSiteBrandPanel({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-[#7c3aed]/30 bg-[#7c3aed]/5 p-4 text-sm text-[#c4b5fd]">
-        <p className="font-semibold text-white">White-label brand</p>
-        <p className="mt-2 text-[#9d8ab8]">
+      <div className="rounded-2xl border border-[#7c3aed]/30 bg-[#7c3aed]/5 p-4 text-sm text-[var(--accent-fg)]">
+        <p className="font-semibold text-[var(--text)]">White-label brand</p>
+        <p className="mt-2 text-[var(--muted)]">
           Use a transparent PNG for the cleanest result. The editor preserves alpha through zoom,
           crop, and rotation — then publishes optimized site logos.
         </p>
@@ -117,7 +117,7 @@ export default function AdminSiteBrandPanel({
       />
 
       <div className="card space-y-4">
-        <p className="text-sm font-semibold text-white">Published sizes</p>
+        <p className="text-sm font-semibold text-[var(--text)]">Published sizes</p>
         <div className="flex flex-wrap gap-4">
           <PreviewTile label="Header" url={preview.logoUrl} />
           <PreviewTile label="Icon" url={preview.logoIconUrl} small />
@@ -183,7 +183,7 @@ export default function AdminSiteBrandPanel({
           type="button"
           onClick={() => void handleSave()}
           disabled={saving}
-          className="inline-flex h-11 items-center justify-center rounded-full bg-[#7c3aed] px-8 text-sm font-semibold text-white hover:bg-[#6d2dd6] disabled:opacity-60"
+          className="inline-flex h-11 items-center justify-center rounded-full bg-[#7c3aed] px-8 text-sm font-semibold text-[var(--text)] hover:bg-[#6d2dd6] disabled:opacity-60"
         >
           {saving ? "Saving…" : "Save brand text"}
         </button>
@@ -213,7 +213,7 @@ function PreviewTile({
   return (
     <div className="text-center">
       <div
-        className={`mx-auto flex items-center justify-center overflow-hidden rounded-xl ring-1 ring-[#3d2660] ${
+        className={`mx-auto flex items-center justify-center overflow-hidden rounded-xl ring-1 ring-[var(--border)] ${
           small ? "h-14 w-14" : "h-20 w-32"
         }`}
         style={{ background: checkerboard }}

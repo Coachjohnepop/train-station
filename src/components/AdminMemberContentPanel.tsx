@@ -83,19 +83,19 @@ export default function AdminMemberContentPanel({
 
   return (
     <div className="space-y-8">
-      <div className="rounded-2xl border border-[#7c3aed]/30 bg-[#7c3aed]/5 p-4 text-sm text-[#c4b5fd]">
-        <p className="font-semibold text-white">Member page content</p>
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-[#9d8ab8]">
+      <div className="rounded-2xl border border-[#7c3aed]/30 bg-[#7c3aed]/5 p-4 text-sm text-[var(--accent-fg)]">
+        <p className="font-semibold text-[var(--text)]">Member page content</p>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-[var(--muted)]">
           <li>
-            <strong className="text-white">Weekly video</strong> — top of{" "}
-            <span className="text-[#c4b5fd]">/member/today</span>, hover to play
+            <strong className="text-[var(--text)]">Weekly video</strong> — top of{" "}
+            <span className="text-[var(--accent-fg)]">/member/today</span>, hover to play
           </li>
           <li>
-            <strong className="text-white">What&apos;s for dinner</strong> — second card on Today
+            <strong className="text-[var(--text)]">What&apos;s for dinner</strong> — second card on Today
           </li>
           <li>
-            <strong className="text-white">Nutrition</strong> — link to sample calorie-day templates
-            on <span className="text-[#c4b5fd]">/member/nutrition</span>
+            <strong className="text-[var(--text)]">Nutrition</strong> — link to sample calorie-day templates
+            on <span className="text-[var(--accent-fg)]">/member/nutrition</span>
           </li>
         </ul>
       </div>
@@ -124,7 +124,7 @@ export default function AdminMemberContentPanel({
 
       <div className="card space-y-4">
         <div>
-          <p className="text-sm font-semibold text-white">Nutritional guidance</p>
+          <p className="text-sm font-semibold text-[var(--text)]">Nutritional guidance</p>
           <p className="mt-1 text-xs text-[var(--muted)]">
             Intro text and sample daily diets by calorie level. Members tap a tier to expand.
           </p>
@@ -180,7 +180,7 @@ export default function AdminMemberContentPanel({
           type="button"
           onClick={() => void handleSave()}
           disabled={saving}
-          className="inline-flex h-11 items-center justify-center rounded-full bg-[#7c3aed] px-8 text-sm font-semibold text-white hover:bg-[#6d2dd6] disabled:opacity-60"
+          className="inline-flex h-11 items-center justify-center rounded-full bg-[#7c3aed] px-8 text-sm font-semibold text-[var(--text)] hover:bg-[#6d2dd6] disabled:opacity-60"
         >
           {saving ? "Saving…" : "Save member content"}
         </button>
@@ -232,7 +232,7 @@ function VideoField({
   return (
     <div className="card space-y-3">
       <div>
-        <label htmlFor={`${id}-label`} className="text-sm font-semibold text-white">
+        <label htmlFor={`${id}-label`} className="text-sm font-semibold text-[var(--text)]">
           {label}
         </label>
         <p className="mt-1 text-xs text-[var(--muted)]">{hint}</p>
@@ -253,7 +253,7 @@ function VideoField({
         onChange={(e) => onUrlChange(e.target.value)}
       />
       {previewVideo ? (
-        <div className="aspect-video overflow-hidden rounded-xl bg-black ring-1 ring-[#3d2660]">
+        <div className="aspect-video overflow-hidden rounded-xl bg-black ring-1 ring-[var(--border)]">
           <YoutubeAutoplayFrame className="h-full w-full" videoUrl={previewVideo} title={label} />
         </div>
       ) : (

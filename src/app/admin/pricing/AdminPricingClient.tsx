@@ -120,7 +120,7 @@ export default function AdminPricingClient() {
 
   if (error && !snapshot) {
     return (
-      <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+      <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-[var(--danger)]">
         {error}
       </div>
     );
@@ -129,16 +129,16 @@ export default function AdminPricingClient() {
   return (
     <div className="space-y-6">
       <div className="rounded-lg border border-[#7c3aed]/30 bg-[#7c3aed]/5 p-4 text-sm text-[var(--muted)]">
-        <p className="font-medium text-white">Membership packages — two fee types</p>
+        <p className="font-medium text-[var(--text)]">Membership packages — two fee types</p>
         <p className="mt-2">
           Every paid package is either a{" "}
-          <span className="text-white">monthly subscription</span> (recurring) or a{" "}
-          <span className="text-white">one-time fee</span> (pay once). Dollar amounts can
+          <span className="text-[var(--text)]">monthly subscription</span> (recurring) or a{" "}
+          <span className="text-[var(--text)]">one-time fee</span> (pay once). Dollar amounts can
           change; the fee type stays the same for checkout (Stripe subscription vs payment mode).
         </p>
         <p className="mt-2">
-          Use <span className="text-white">Save display only</span> for landing labels, or{" "}
-          <span className="text-white">Save &amp; sync Stripe</span> to create a new Stripe price
+          Use <span className="text-[var(--text)]">Save display only</span> for landing labels, or{" "}
+          <span className="text-[var(--text)]">Save &amp; sync Stripe</span> to create a new Stripe price
           and point checkout at it.
         </p>
         <p className="mt-2">
@@ -150,12 +150,12 @@ export default function AdminPricingClient() {
       </div>
 
       {message && (
-        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-100">
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-[var(--success)]">
           {message}
         </div>
       )}
       {error && snapshot && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-[var(--danger)]">
           {error}
         </div>
       )}
@@ -190,7 +190,7 @@ export default function AdminPricingClient() {
                   </p>
                 </div>
                 {offer.stripePriceId && (
-                  <code className="max-w-full truncate rounded bg-black/30 px-2 py-1 text-[10px] text-[#c4b5fd]">
+                  <code className="max-w-full truncate rounded bg-black/30 px-2 py-1 text-[10px] text-[var(--accent-fg)]">
                     {offer.stripePriceId}
                   </code>
                 )}

@@ -8,7 +8,7 @@ type Variant = "default" | "signup";
 const VARIANT_CLASS: Record<Variant, string> = {
   default: "input w-full",
   signup:
-    "w-full rounded-full border border-[#3d2660] bg-[#0a0612] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]",
+    "w-full rounded-full border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-sm text-[var(--text)] placeholder:text-[var(--muted)]",
 };
 
 export default function EmailInput({

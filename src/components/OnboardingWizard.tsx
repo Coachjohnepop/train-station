@@ -158,7 +158,7 @@ export default function OnboardingWizard({
     <div className="mx-auto max-w-md space-y-4 px-0 py-2 sm:px-4 sm:py-6 sm:space-y-6">
       {/* Step 1: video first on phone — minimal chrome above the fold */}
       {currentStep === 1 && planWelcomeUrl ? (
-        <div className="overflow-hidden rounded-none bg-black ring-1 ring-[#3d2660] sm:rounded-xl">
+        <div className="overflow-hidden rounded-none bg-black ring-1 ring-[var(--border)] sm:rounded-xl">
           <div className="aspect-video w-full">
             <PlayableVideoFrame
               className="h-full w-full"
@@ -174,7 +174,7 @@ export default function OnboardingWizard({
       ) : null}
 
       <div className="flex items-center justify-between px-4 sm:px-0">
-        <span className="rounded-full bg-[#7c3aed]/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#c4b5fd]">
+        <span className="rounded-full bg-[#7c3aed]/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--accent-fg)]">
           {signupPlanLabel(plan)}
         </span>
         <div className="text-xs text-[var(--muted)]">
@@ -264,7 +264,7 @@ export default function OnboardingWizard({
             </p>
             <p className="rounded-lg border border-[#7c3aed]/35 bg-[#7c3aed]/10 px-3 py-2 text-xs text-[var(--text)]">
               Missing something? Look up — tap{" "}
-              <strong className="text-[#c4b5fd]">Gear</strong> in the nav to shop on this site
+              <strong className="text-[var(--accent-fg)]">Gear</strong> in the nav to shop on this site
               anytime.
             </p>
             <MemberHomeEquipment defaultOpen />

@@ -104,14 +104,14 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
             <div
               key={plan.id}
               onClick={() => setSelected(plan.id)}
-              className={`relative flex cursor-pointer flex-col rounded-3xl border bg-[#140a22] p-8 transition-all hover:shadow-lg ${
+              className={`relative flex cursor-pointer flex-col rounded-3xl border bg-[var(--surface)] p-8 transition-all hover:shadow-lg ${
                 active
                   ? "scale-[1.01] border-[#7c3aed] ring-2 ring-[#7c3aed]"
                   : rec
                     ? "border-[#7c3aed] ring-1 ring-[#7c3aed]/40"
                     : plan.popular
                       ? "border-[#7c3aed]"
-                      : "border-[#3d2660]"
+                      : "border-[var(--border)]"
               }`}
             >
               {plan.popular ? (
@@ -138,11 +138,11 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
                 <div className="mt-2 flex items-baseline gap-1">
                   <span className="text-4xl font-semibold tracking-tight">{plan.price}</span>
                   {plan.priceNote ? (
-                    <span className="text-[#9d8ab8]">{plan.priceNote}</span>
+                    <span className="text-[var(--muted)]">{plan.priceNote}</span>
                   ) : null}
                 </div>
                 {plan.feeLabel ? (
-                  <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-[#c4b5fd]">
+                  <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-[var(--accent-fg)]">
                     {plan.feeLabel}
                   </p>
                 ) : null}
@@ -154,17 +154,17 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
                   </li>
                 ))}
                 {plan.muted.map((p) => (
-                  <li key={p} className="flex gap-2 text-[#9d8ab8]">
+                  <li key={p} className="flex gap-2 text-[var(--muted)]">
                     — {p}
                   </li>
                 ))}
               </ul>
 
-              <div className="mt-6 border-t border-[#3d2660] pt-4">
+              <div className="mt-6 border-t border-[var(--border)] pt-4">
                 <p className="mb-1 text-xs uppercase tracking-widest text-[#7c3aed]">
                   A message from the instructor
                 </p>
-                <p className="mb-3 text-sm italic text-[#9d8ab8]">&ldquo;{plan.quote}&rdquo;</p>
+                <p className="mb-3 text-sm italic text-[var(--muted)]">&ldquo;{plan.quote}&rdquo;</p>
                 {plan.video ? (
                   <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
                     <YoutubeAutoplayFrame
@@ -187,13 +187,13 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
                 className={`mt-8 inline-flex h-11 items-center justify-center rounded-full text-sm font-semibold transition-all hover:scale-[1.05] ${
                   plan.popular
                     ? "bg-[#7c3aed] text-white hover:bg-[#6d2dd6]"
-                    : "border border-[#3d2660] !text-[#7c3aed] hover:bg-white/5"
+                    : "border border-[var(--border)] !text-[#7c3aed] hover:bg-white/5"
                 }`}
               >
                 Select this plan
               </button>
               {plan.feeLabel === "Monthly subscription" ? (
-                <p className="mt-2 text-center text-[10px] text-[#9d8ab8]">
+                <p className="mt-2 text-center text-[10px] text-[var(--muted)]">
                   Billed monthly. Cancel anytime.
                 </p>
               ) : null}
@@ -205,7 +205,7 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
       {selectedPlan ? (
         <div
           id="inline-signup"
-          className="mx-auto mt-8 max-w-2xl rounded-3xl border border-[#7c3aed] bg-[#140a22] p-8"
+          className="mx-auto mt-8 max-w-2xl rounded-3xl border border-[#7c3aed] bg-[var(--surface)] p-8"
         >
           <div className="mb-6 text-center">
             <div className="mb-2 text-xs font-semibold uppercase tracking-[3px] text-[#7c3aed]">
@@ -214,13 +214,13 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
             <h3 className="text-2xl font-semibold tracking-tight">
               {selectedPlan.title}
               {selectedPlan.feeLabel ? (
-                <span className="mt-1 block text-sm font-normal text-[#9d8ab8]">
+                <span className="mt-1 block text-sm font-normal text-[var(--muted)]">
                   {selectedPlan.feeLabel} · {selectedPlan.price}
                   {selectedPlan.priceNote}
                 </span>
               ) : null}
             </h3>
-            <p className="mt-2 text-sm text-[#9d8ab8]">
+            <p className="mt-2 text-sm text-[var(--muted)]">
               {selectedPlan.id === "explorer"
                 ? "Create a free account to explore starter programs."
                 : "Sign up, then pay with Stripe (card). You’ll land in onboarding after payment."}
@@ -233,9 +233,9 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
             >
               {selectedPlan.id === "explorer" ? "Continue free" : "Sign up & get your ticket"}
             </Link>
-            <p className="text-center text-xs text-[#9d8ab8]">
+            <p className="text-center text-xs text-[var(--muted)]">
               Already have an account?{" "}
-              <Link href="/login" className="text-[#c4b5fd] underline">
+              <Link href="/login" className="text-[var(--accent-fg)] underline">
                 Sign in
               </Link>
               {selectedPlan.id !== "explorer" ? (
@@ -244,7 +244,7 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
                   then open{" "}
                   <Link
                     href={`/member/checkout?plan=${encodeURIComponent(selectedPlan.id)}`}
-                    className="text-[#c4b5fd] underline"
+                    className="text-[var(--accent-fg)] underline"
                   >
                     checkout
                   </Link>
@@ -255,9 +255,9 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
         </div>
       ) : null}
 
-      <p className="mt-6 text-center text-xs text-[#9d8ab8]">
+      <p className="mt-6 text-center text-xs text-[var(--muted)]">
         Prefer the main site flow?{" "}
-        <Link href="/" className="text-[#c4b5fd] underline">
+        <Link href="/" className="text-[var(--accent-fg)] underline">
           Home tickets
         </Link>{" "}
         use the same checkout. Selecting a plan here opens signup — not a waitlist-only form.

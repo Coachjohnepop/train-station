@@ -80,7 +80,7 @@ export default function LandingMemberStatus({
           />
         )}
 
-        <div className="relative z-10 mx-auto max-w-4xl px-3 pb-6 pt-10 text-center sm:px-6 sm:pb-8 sm:pt-14">
+        <div className="force-dark relative z-10 mx-auto max-w-4xl px-3 pb-6 pt-10 text-center sm:px-6 sm:pb-8 sm:pt-14" data-force-dark>
           <TrainStationBrand variant="compact" className="mb-5 brightness-110 drop-shadow-md" />
 
           {displayName ? (

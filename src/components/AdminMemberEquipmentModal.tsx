@@ -139,7 +139,7 @@ export default function AdminMemberEquipmentModal({ userId, memberName, onClose 
                     type="button"
                     onClick={() => setAll(false)}
                     disabled={saving}
-                    className="text-[var(--muted)] hover:text-white hover:underline disabled:opacity-50"
+                    className="text-[var(--muted)] hover:text-[var(--text)] hover:underline disabled:opacity-50"
                   >
                     Clear all
                   </button>

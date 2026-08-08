@@ -2142,7 +2142,7 @@ export default function MemberWorkoutConsole({
           </div>
           {loggedDetailsOpen && (
             <div className="mt-2 space-y-1 border-t border-[var(--success)]/20 pt-2 text-xs text-[var(--muted)]">
-              <p className="font-medium text-white">{workout.workoutName}</p>
+              <p className="font-medium text-[var(--text)]">{workout.workoutName}</p>
               <p>
                 {logResult.count > 0
                   ? `${logResult.count} exercise${logResult.count === 1 ? "" : "s"} saved — silhouettes updated.`
@@ -2166,7 +2166,7 @@ export default function MemberWorkoutConsole({
             {calendarDateLabel ? "Scheduled workout" : "Today\u2019s workout"}
           </p>
           {calendarDateLabel && (
-            <p className="mt-1 text-sm font-medium text-white">{calendarDateLabel}</p>
+            <p className="mt-1 text-sm font-medium text-[var(--text)]">{calendarDateLabel}</p>
           )}
           {scheduleLabel && (
             <p className="mt-0.5 text-xs text-[var(--muted)]">{scheduleLabel}</p>

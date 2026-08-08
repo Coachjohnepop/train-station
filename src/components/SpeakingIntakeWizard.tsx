@@ -86,7 +86,7 @@ export default function SpeakingIntakeWizard({
   return (
     <div className="mx-auto max-w-md space-y-6 px-4 py-6">
       <div className="flex items-center justify-between">
-        <span className="rounded-full bg-[#7c3aed]/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#c4b5fd]">
+        <span className="rounded-full bg-[#7c3aed]/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--accent-fg)]">
           Speaking intake
         </span>
         <div className="text-xs text-[var(--muted)]">

@@ -457,7 +457,7 @@ export default function AdminChatWorkspace({
               >
                 <span className="relative">
                   <span
-                    className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold text-white ${memberAvatarColor(m.id)}`}
+                    className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold text-[var(--text)] ${memberAvatarColor(m.id)}`}
                   >
                     {memberInitials(m.name)}
                   </span>
@@ -494,7 +494,7 @@ export default function AdminChatWorkspace({
                 title={unread > 0 ? `${t.title} · ${unread} unread` : t.title}
               >
                 <span className="relative">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-600 text-[10px] font-bold text-white">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-600 text-[10px] font-bold text-[var(--text)]">
                     G
                   </span>
                   {unread > 0 ? (
@@ -618,7 +618,7 @@ export default function AdminChatWorkspace({
               </button>
               {activeMember && activeThread?.kind === "member" && (
                 <span
-                  className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${memberAvatarColor(activeMember.id)}`}
+                  className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-[var(--text)] ${memberAvatarColor(activeMember.id)}`}
                 >
                   {memberInitials(activeMember.name)}
                   {(activeId && unreadByThread[activeId] ? unreadByThread[activeId] : 0) > 0 && (

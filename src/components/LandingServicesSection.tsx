@@ -23,10 +23,10 @@ export default function LandingServicesSection({
         <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#7c3aed]">
           Services &amp; extras
         </p>
-        <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+        <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text)] sm:text-3xl">
           Custom work beyond membership
         </h2>
-        <p className="mx-auto mt-2 max-w-lg text-sm text-[#9d8ab8]">
+        <p className="mx-auto mt-2 max-w-lg text-sm text-[var(--muted)]">
           Teams, speaking, bespoke training, and merch — priced per scope or configured by your coach.
         </p>
       </div>
@@ -46,7 +46,7 @@ export default function LandingServicesSection({
               key={offer.id}
               type="button"
               onClick={() => openOffer(offer.id)}
-              className="overflow-hidden rounded-xl border border-[#3d2660]/80 bg-gradient-to-b from-[#1a1028]/80 to-[#0a0612] text-left transition hover:border-[#7c3aed]/50"
+              className="overflow-hidden rounded-xl border border-[var(--border)]/80 bg-gradient-to-b from-[#1a1028]/80 to-[#0a0612] text-left transition hover:border-[#7c3aed]/50"
             >
               {img ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -65,12 +65,12 @@ export default function LandingServicesSection({
                 <div className="text-[10px] font-bold uppercase tracking-widest text-[#7c3aed]">
                   {offer.category}
                 </div>
-                <div className="mt-1 pr-16 text-lg font-semibold text-white">{offer.label}</div>
-                <div className="mt-1 text-sm font-medium text-[#c4b5fd]">
+                <div className="mt-1 pr-16 text-lg font-semibold text-[var(--text)]">{offer.label}</div>
+                <div className="mt-1 text-sm font-medium text-[var(--accent-fg)]">
                   {offer.priceLabel}
                   {offer.priceNote ? ` ${offer.priceNote}` : ""}
                 </div>
-                <p className="mt-2 text-xs leading-relaxed text-[#9d8ab8]">{offer.description}</p>
+                <p className="mt-2 text-xs leading-relaxed text-[var(--muted)]">{offer.description}</p>
                 <span className="mt-3 inline-block text-xs font-semibold text-[#7c3aed]">
                   {isSpeaking
                     ? "Book speaking →"

@@ -689,7 +689,7 @@ export default function ExerciseLibrary() {
               onClick={() => toggleCategory(cat)}
               className={`text-xs px-2 py-1 rounded border transition ${
                 selectedCategories.includes(cat)
-                  ? "bg-accent text-white border-accent"
+                  ? "bg-accent text-[var(--text)] border-accent"
                   : "bg-[var(--surface)] border-[var(--border)] hover:bg-[var(--surface-2)]"
               }`}
             >
@@ -924,7 +924,7 @@ export default function ExerciseLibrary() {
           onClick={() => setLibraryTab("all")}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
             libraryTab === "all"
-              ? "bg-accent text-white"
+              ? "bg-accent text-[var(--text)]"
               : "border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]"
           }`}
         >

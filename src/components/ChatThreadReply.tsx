@@ -257,7 +257,7 @@ export default function ChatThreadReply({
         />
         <button
           type="button"
-          className={`shrink-0 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition disabled:opacity-40 ${
+          className={`shrink-0 rounded-lg px-4 py-2.5 text-sm font-semibold text-[var(--text)] transition disabled:opacity-40 ${
             role === "coach"
               ? "bg-violet-600 hover:bg-violet-500"
               : "btn-primary"

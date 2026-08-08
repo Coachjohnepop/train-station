@@ -135,7 +135,7 @@ export default function CoachNeedsDonePanel({
                         key={s.id}
                         className={`flex items-start gap-2 rounded-md px-2 py-1 text-[11px] ${
                           s.done
-                            ? "bg-emerald-500/10 text-emerald-100/90"
+                            ? "bg-emerald-500/10 text-[var(--success)]/90"
                             : "bg-amber-500/10 text-amber-50"
                         }`}
                       >

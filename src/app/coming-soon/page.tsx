@@ -11,7 +11,7 @@ function ComingSoonContent({
   const greeting = name ? `Thanks, ${name.split(" ")[0]}.` : "You're on the list.";
 
   return (
-    <div className="min-h-screen bg-[#0a0612] text-[#f2ecf9] flex flex-col">
+    <div className="app-shell-bg min-h-screen text-[var(--text)] flex flex-col">
       <div className="flex-1 flex items-center justify-center px-6 py-16">
         <div className="max-w-lg text-center">
           <p className="text-sm font-semibold tracking-tight text-[#7c3aed] mb-8">The Train Station</p>
@@ -22,18 +22,18 @@ function ComingSoonContent({
 
           <h1 className="text-4xl font-semibold tracking-tight mb-4">{greeting}</h1>
 
-          <p className="text-lg text-[#9d8ab8] leading-relaxed">
+          <p className="text-lg text-[var(--muted)] leading-relaxed">
             The Train Station member app is almost ready. We&apos;re rolling out access to coaches and early members first — you&apos;ll hear from us at{" "}
             {email ? (
-              <span className="text-white font-medium">{email}</span>
+              <span className="text-[var(--text)] font-medium">{email}</span>
             ) : (
               "the email you provided"
             )}{" "}
             when your spot opens up.
           </p>
 
-          <div className="mt-8 rounded-2xl border border-[#3d2660] bg-[#140a22] p-6 text-left text-sm text-[#9d8ab8] space-y-2">
-            <p className="font-medium text-white">What&apos;s launching:</p>
+          <div className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-left text-sm text-[var(--muted)] space-y-2">
+            <p className="font-medium text-[var(--text)]">What&apos;s launching:</p>
             <ul className="space-y-1.5">
               <li>✓ Coach-led programs with real schedules</li>
               <li>✓ SMS workouts &amp; Patreon-style coach messages</li>
@@ -45,7 +45,7 @@ function ComingSoonContent({
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               href="/"
-              className="inline-flex h-11 items-center justify-center rounded-full border border-[#3d2660] px-8 text-sm font-semibold hover:bg-white/5 transition"
+              className="inline-flex h-11 items-center justify-center rounded-full border border-[var(--border)] px-8 text-sm font-semibold hover:bg-white/5 transition"
             >
               Back to home
             </Link>

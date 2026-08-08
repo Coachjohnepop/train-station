@@ -37,7 +37,7 @@ export default function MemberTrainingLocationToggle({ programSlug, initialLocat
         type="button"
         className={`rounded-md px-3 py-1.5 font-medium transition ${
           location === "gym"
-            ? "bg-accent text-white shadow-sm"
+            ? "bg-accent text-[var(--text)] shadow-sm"
             : "text-[var(--muted)] hover:text-[var(--text)]"
         }`}
         disabled={saving}
@@ -49,7 +49,7 @@ export default function MemberTrainingLocationToggle({ programSlug, initialLocat
         type="button"
         className={`rounded-md px-3 py-1.5 font-medium transition ${
           location === "home"
-            ? "bg-accent text-white shadow-sm"
+            ? "bg-accent text-[var(--text)] shadow-sm"
             : "text-[var(--muted)] hover:text-[var(--text)]"
         }`}
         disabled={saving}

@@ -22,7 +22,7 @@ export default async function ResetPasswordPage({
           <p className="text-sm font-semibold tracking-tight text-[var(--accent)]">The Train Station</p>
           <h1 className="mt-4 text-2xl font-bold">Set a new password</h1>
           {accountEmail ? (
-            <p className="mt-2 text-sm text-white">
+            <p className="mt-2 text-sm text-[var(--text)]">
               For <span className="font-medium text-accent">{accountEmail}</span>
             </p>
           ) : null}

@@ -53,7 +53,7 @@ function MemberButton({
             : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"
         }`}
       >
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white ${avatarBg}`}>
+        <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-[var(--text)] ${avatarBg}`}>
           {memberInitials(member.name)}
         </span>
         {member.name.split(" ")[0]}
@@ -84,7 +84,7 @@ function MemberButton({
         } ${active || unread > 0 ? "opacity-100" : "opacity-40"}`}
       />
       <span
-        className={`relative ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${avatarBg}`}
+        className={`relative ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-[var(--text)] ${avatarBg}`}
       >
         {memberInitials(member.name)}
         {unread > 0 ? (

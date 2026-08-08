@@ -86,13 +86,13 @@ export default function JoinQuestionsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0612] text-[#f2ecf9]">
-      <div className="border-b border-[#3d2660] bg-[#140a22]">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
+      <div className="border-b border-[var(--border)] bg-[var(--surface)]">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
           <Link href="/join" className="font-semibold tracking-tight text-lg hover:text-[var(--accent)]">
             The Train Station
           </Link>
-          <Link href="/join" className="text-sm text-[#9d8ab8] hover:text-white">Skip to pricing</Link>
+          <Link href="/join" className="text-sm text-[var(--muted)] hover:text-[var(--text)]">Skip to pricing</Link>
         </div>
       </div>
 
@@ -100,7 +100,7 @@ export default function JoinQuestionsPage() {
         <div className="text-center mb-10">
           <div className="uppercase tracking-[3px] text-xs font-semibold text-[#7c3aed] mb-3">GET STARTED</div>
           <h1 className="text-4xl font-semibold tracking-[-1.5px] mb-4">Tell us a bit about where you are today</h1>
-          <p className="text-[#9d8ab8]">A few quick questions so we can recommend the best fit for you. (We'll refine the packages and recommendations soon.)</p>
+          <p className="text-[var(--muted)]">A few quick questions so we can recommend the best fit for you. (We'll refine the packages and recommendations soon.)</p>
         </div>
 
         {!submitted ? (
@@ -110,7 +110,7 @@ export default function JoinQuestionsPage() {
               <select
                 value={answers.exerciseFreq}
                 onChange={(e) => updateAnswer("exerciseFreq", e.target.value)}
-                className="w-full bg-[#140a22] border border-[#3d2660] rounded-xl px-4 py-3 text-white"
+                className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text)]"
                 required
               >
                 <option value="">Select...</option>
@@ -145,7 +145,7 @@ export default function JoinQuestionsPage() {
               <select
                 value={answers.eating}
                 onChange={(e) => updateAnswer("eating", e.target.value)}
-                className="w-full bg-[#140a22] border border-[#3d2660] rounded-xl px-4 py-3 text-white"
+                className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text)]"
                 required
               >
                 <option value="">Select...</option>
@@ -160,7 +160,7 @@ export default function JoinQuestionsPage() {
               <select
                 value={answers.goal}
                 onChange={(e) => updateAnswer("goal", e.target.value)}
-                className="w-full bg-[#140a22] border border-[#3d2660] rounded-xl px-4 py-3 text-white"
+                className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text)]"
                 required
               >
                 <option value="">Select...</option>
@@ -180,12 +180,12 @@ export default function JoinQuestionsPage() {
           </form>
         ) : (
           <div className="space-y-8">
-            <div className="rounded-3xl border border-[#7c3aed] bg-[#140a22] p-8">
+            <div className="rounded-3xl border border-[#7c3aed] bg-[var(--surface)] p-8">
               <div className="uppercase tracking-[2px] text-xs font-semibold text-[#7c3aed] mb-2">RECOMMENDATION</div>
               <div className="text-3xl font-semibold tracking-tight mb-2">{recommendation?.name}</div>
-              <p className="text-[#9d8ab8] mb-6">{recommendation?.reason}</p>
+              <p className="text-[var(--muted)] mb-6">{recommendation?.reason}</p>
 
-              <div className="text-sm text-[#9d8ab8]">
+              <div className="text-sm text-[var(--muted)]">
                 This is based on your current habits. We'll refine the exact packages and pricing soon — this is just to help you get started in the right place.
               </div>
             </div>
@@ -195,14 +195,14 @@ export default function JoinQuestionsPage() {
                 <input
                   type="text"
                   placeholder="Your name (optional)"
-                  className="w-full rounded-full border border-[#3d2660] bg-[#140a22] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
+                  className="w-full rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--text)] placeholder:text-[var(--muted)]"
                   value={joinName}
                   onChange={(e) => setJoinName(e.target.value)}
                 />
                 <input
                   type="email"
                   placeholder="Email (optional for demo)"
-                  className="w-full rounded-full border border-[#3d2660] bg-[#140a22] px-4 py-3 text-sm text-white placeholder:text-[#9d8ab8]"
+                  className="w-full rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--text)] placeholder:text-[var(--muted)]"
                   value={joinEmail}
                   onChange={(e) => setJoinEmail(e.target.value)}
                 />
@@ -211,7 +211,7 @@ export default function JoinQuestionsPage() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
                   href={`/join${recommendation ? `?rec=${encodeURIComponent(recommendation.name)}` : ''}`}
-                  className="flex-1 inline-flex h-12 items-center justify-center rounded-full border border-[#3d2660] text-sm font-semibold hover:bg-white/5 transition-all"
+                  className="flex-1 inline-flex h-12 items-center justify-center rounded-full border border-[var(--border)] text-sm font-semibold hover:bg-white/5 transition-all"
                 >
                   See all membership options
                 </Link>
@@ -225,7 +225,7 @@ export default function JoinQuestionsPage() {
               </div>
             </div>
 
-            <p className="text-center text-xs text-[#9d8ab8]">
+            <p className="text-center text-xs text-[var(--muted)]">
               Your answers help us guide you. You can always change plans later.
             </p>
           </div>

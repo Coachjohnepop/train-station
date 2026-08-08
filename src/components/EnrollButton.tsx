@@ -74,7 +74,7 @@ export default function EnrollButton({
         handleEnroll();
       }}
       disabled={loading}
-      className="member-set-btn text-base px-5 py-2 min-w-[140px] bg-accent text-white border-accent font-semibold active:scale-[0.96] hover:border-accent/70"
+      className="member-set-btn text-base px-5 py-2 min-w-[140px] bg-accent text-[var(--text)] border-accent font-semibold active:scale-[0.96] hover:border-accent/70"
     >
       <span className="member-set-btn__num text-base">{loading ? "..." : "Start"}</span>
       <span className="member-set-btn__label text-[10px] tracking-[0.5px]">Start program</span>

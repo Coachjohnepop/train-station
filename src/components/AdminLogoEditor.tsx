@@ -147,7 +147,7 @@ export default function AdminLogoEditor({
   return (
     <div className="space-y-4 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/50 p-4">
       <div>
-        <p className="text-sm font-semibold text-white">Logo editor</p>
+        <p className="text-sm font-semibold text-[var(--text)]">Logo editor</p>
         <p className="mt-1 text-xs text-[var(--muted)]">
           Checkerboard = transparency. Zoom, crop, rotate, then publish optimized PNGs for nav,
           hero, and favicon.
@@ -156,7 +156,7 @@ export default function AdminLogoEditor({
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div
-          className="relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl ring-1 ring-[#3d2660]"
+          className="relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl ring-1 ring-[var(--border)]"
           style={{ background: CHECKERBOARD }}
         >
           {previewUrl ? (
@@ -295,7 +295,7 @@ function Slider({
   return (
     <div>
       <div className="flex items-center justify-between gap-2">
-        <label className="text-xs font-medium text-white">{label}</label>
+        <label className="text-xs font-medium text-[var(--text)]">{label}</label>
         <span className="text-xs text-[#7c3aed]">{display}</span>
       </div>
       <p className="text-[10px] text-[var(--muted)]">{hint}</p>
