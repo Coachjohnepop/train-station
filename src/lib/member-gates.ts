@@ -97,6 +97,66 @@ export function memberNeedsPayment(
   return false;
 }
 
+/** Free Explorer already has a card saved ($0 setup) — not the same as paid. */
+export function freeMemberHasCardOnFile(
+  profile: Pick<MemberProfile, "paymentMethod" | "paymentStatus" | "stripeCustomerId"> | null,
+): boolean {
+  if (!profile) return false;
+  if (profile.paymentMethod === "card_on_file") return true;
+  // Paid stripe/venmo also implies a rail exists (upgrade path).
+  if (profile.paymentStatus === "paid" && profile.paymentMethod === "stripe") return true;
+  return false;
+}
+
+/**
+ * Free Explorer must complete card-on-file when admin lever is ON.
+ * Sync path: only uses profile stamp (card_on_file). Prefer async for Stripe live check.
+ */
+export function memberNeedsFreePaymentMethod(
+  profile: Pick<
+    MemberProfile,
+    "plan" | "paymentMethod" | "paymentStatus" | "stripeCustomerId"
+  > | null,
+  userId: string,
+  freeRequiresPaymentMethod: boolean,
+): boolean {
+  if (!freeRequiresPaymentMethod) return false;
+  if (!isSelfRegisteredMember(userId)) return false;
+  if (!isStripePaymentsEnabled()) return false;
+  const plan = profile?.plan ?? "explorer";
+  if (isPaidSignupPlan(plan)) return false;
+  if (freeMemberHasCardOnFile(profile)) return false;
+  return true;
+}
+
+/**
+ * Async Free card gate: respects lever + Stripe customer payment methods.
+ * Staff manual grants on free (rare) skip via paymentMethod manual + paid.
+ */
+export async function memberNeedsFreePaymentMethodAsync(
+  profile: Pick<
+    MemberProfile,
+    "plan" | "paymentMethod" | "paymentStatus" | "stripeCustomerId"
+  > | null,
+  userId: string,
+): Promise<boolean> {
+  try {
+    const { getGamificationLevers } = await import("@/lib/gamification-config-store");
+    const levers = await getGamificationLevers();
+    if (!levers.freeRequiresPaymentMethod) return false;
+    if (!memberNeedsFreePaymentMethod(profile, userId, true)) return false;
+    // Live Stripe check: card may exist without profile stamp (race / legacy).
+    if (profile?.stripeCustomerId) {
+      const { customerHasSavedPaymentMethod } = await import("@/lib/stripe-customer");
+      const has = await customerHasSavedPaymentMethod(profile.stripeCustomerId);
+      if (has) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Same as memberNeedsPayment, but claimed free-week promos grant access without a
  * paid Stripe/Venmo stamp (product access only — not money).
@@ -156,6 +216,7 @@ export async function memberHasFullAccessAsync(
 
 export {
   memberCheckoutPath,
+  memberFreePaymentSetupPath,
   MEMBER_PENDING_PATH,
   MEMBER_PATHS_EXEMPT_FROM_PAYMENT_GATE,
   isMemberPathExemptFromPaymentGate,

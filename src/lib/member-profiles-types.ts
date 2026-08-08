@@ -1,7 +1,8 @@
 import type { ApprovalStatus, PaymentStatus } from "@/lib/member-gates";
 import type { SignupPlan } from "@/lib/signup-plans";
 
-export type PaymentMethod = "stripe" | "venmo" | "manual" | "other";
+/** card_on_file = Free Explorer saved a card via Setup (not charged). */
+export type PaymentMethod = "stripe" | "venmo" | "manual" | "other" | "card_on_file";
 
 export type MemberProfile = {
   userId: string;

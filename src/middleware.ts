@@ -8,6 +8,7 @@ import { memberPathRequiresPayment } from "@/lib/member-route-gates";
 const NEEDS_ONBOARD_COOKIE = "ts_needs_onboard";
 const SIGNUP_PLAN_COOKIE = "ts_signup_plan";
 const NEEDS_PAYMENT_COOKIE = "ts_needs_payment";
+const NEEDS_FREE_PM_COOKIE = "ts_needs_free_pm";
 const PENDING_APPROVAL_COOKIE = "ts_pending_approval";
 
 /** Public pages — no session required. */
@@ -176,8 +177,15 @@ export async function middleware(request: NextRequest) {
     // (cookie-only was skipping free Explorer past the onboarding wizard).
     if (
       session.role === "MEMBER" &&
+      request.cookies.get(NEEDS_FREE_PM_COOKIE)?.value === "1"
+    ) {
+      return NextResponse.redirect(new URL("/member/payment-setup", request.url));
+    }
+    if (
+      session.role === "MEMBER" &&
       request.cookies.get(NEEDS_ONBOARD_COOKIE)?.value === "1" &&
-      request.cookies.get(NEEDS_PAYMENT_COOKIE)?.value !== "1"
+      request.cookies.get(NEEDS_PAYMENT_COOKIE)?.value !== "1" &&
+      request.cookies.get(NEEDS_FREE_PM_COOKIE)?.value !== "1"
     ) {
       const plan =
         request.nextUrl.searchParams.get("plan") ||
@@ -215,15 +223,26 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(checkout);
       }
 
+      // Free Explorer card-on-file (admin lever) — before onboard/Today.
+      if (
+        memberPathRequiresPayment(pathname) &&
+        request.cookies.get(NEEDS_FREE_PM_COOKIE)?.value === "1" &&
+        !pathname.startsWith("/member/payment-setup")
+      ) {
+        return NextResponse.redirect(new URL("/member/payment-setup", request.url));
+      }
+
       // While onboarding: keep them in the wizard for Today / training routes,
       // but allow Account (settings, payment confirmation) and checkout paths.
       if (
         request.cookies.get(NEEDS_ONBOARD_COOKIE)?.value === "1" &&
-        request.cookies.get(NEEDS_PAYMENT_COOKIE)?.value !== "1"
+        request.cookies.get(NEEDS_PAYMENT_COOKIE)?.value !== "1" &&
+        request.cookies.get(NEEDS_FREE_PM_COOKIE)?.value !== "1"
       ) {
         const onboardAllowed =
           pathname.startsWith("/member/onboard") ||
           pathname.startsWith("/member/checkout") ||
+          pathname.startsWith("/member/payment-setup") ||
           pathname.startsWith("/member/account") ||
           pathname.startsWith("/member/speaking") ||
           pathname.startsWith("/member/book") ||

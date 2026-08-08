@@ -128,9 +128,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Account created but sign-in failed." }, { status: 500 });
     }
 
-    // Paid only — free Explorer goes straight to onboard (never auto-checkout).
+    // Paid only — free Explorer goes straight to onboard (never auto-checkout),
+    // unless admin requires Free card-on-file → /member/payment-setup.
     const needsCheckout =
       !quoteRequest && isPaidSignupPlan(plan) && (await stripeConfiguredForPlan(plan));
+
+    let freeNeedsCard = false;
+    if (!needsCheckout && !quoteRequest && plan === "explorer") {
+      try {
+        const { getGamificationLevers } = await import("@/lib/gamification-config-store");
+        const { isStripePaymentsEnabled } = await import("@/lib/member-gates");
+        const levers = await getGamificationLevers();
+        freeNeedsCard = Boolean(levers.freeRequiresPaymentMethod && isStripePaymentsEnabled());
+      } catch {
+        freeNeedsCard = false;
+      }
+    }
 
     // Paid plans: welcome email fires after Stripe payment (markMemberPaid).
     // Free/quote paths: only send once signup fully succeeded.
@@ -155,7 +168,9 @@ export async function POST(request: Request) {
           ? `/member/quote-received?plan=${encodeURIComponent(plan)}`
           : needsCheckout
             ? memberCheckoutPath(plan)
-            : `/member/onboard?plan=${encodeURIComponent(plan)}`;
+            : freeNeedsCard
+              ? "/member/payment-setup"
+              : `/member/onboard?plan=${encodeURIComponent(plan)}`;
     const res = NextResponse.json({
       ok: true,
       redirectTo,

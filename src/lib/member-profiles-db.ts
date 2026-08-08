@@ -30,7 +30,15 @@ function parseOptionalDate(value: string | null | undefined): Date | null | unde
 
 function normalizePaymentMethod(raw: string | null | undefined): PaymentMethod | null {
   const v = typeof raw === "string" ? raw.trim().toLowerCase() : "";
-  if (v === "stripe" || v === "venmo" || v === "manual" || v === "other") return v;
+  if (
+    v === "stripe" ||
+    v === "venmo" ||
+    v === "manual" ||
+    v === "other" ||
+    v === "card_on_file"
+  ) {
+    return v;
+  }
   return null;
 }
 

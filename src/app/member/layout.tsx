@@ -9,8 +9,14 @@ import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import { isCoachIntakeComplete } from "@/lib/member-intake";
 import { membershipThemeTierFromPlan } from "@/lib/membership-theme";
-import { memberNeedsPaymentAsync } from "@/lib/member-gates";
-import { isMemberPathExemptFromPaymentGate } from "@/lib/member-route-gates";
+import {
+  memberNeedsFreePaymentMethodAsync,
+  memberNeedsPaymentAsync,
+} from "@/lib/member-gates";
+import {
+  isMemberPathExemptFromPaymentGate,
+  memberFreePaymentSetupPath,
+} from "@/lib/member-route-gates";
 import type { SignupPlan } from "@/lib/signup-plans";
 
 export default async function MemberLayout({
@@ -50,6 +56,9 @@ export default async function MemberLayout({
   const paymentGateActive = profileUserId
     ? await memberNeedsPaymentAsync(profile, profileUserId)
     : false;
+  const freePmGateActive =
+    !!profileUserId &&
+    (await memberNeedsFreePaymentMethodAsync(profile, profileUserId));
   const checkoutPlan = (profile?.plan ?? "member") as SignupPlan;
 
   const pathname =
@@ -61,13 +70,28 @@ export default async function MemberLayout({
     ? new URL(pathname).pathname
     : pathname;
   const setupMode =
-    pathOnly.startsWith("/member/onboard") || pathOnly.startsWith("/member/speaking");
+    pathOnly.startsWith("/member/onboard") ||
+    pathOnly.startsWith("/member/speaking") ||
+    pathOnly.startsWith("/member/payment-setup");
+
+  // Free Explorer card-on-file (admin lever) — before onboard/Today.
+  if (
+    session?.role === "MEMBER" &&
+    profileUserId?.startsWith("member-") &&
+    freePmGateActive &&
+    pathOnly.startsWith("/member") &&
+    !pathOnly.startsWith("/member/payment-setup") &&
+    !isMemberPathExemptFromPaymentGate(pathOnly)
+  ) {
+    redirect(memberFreePaymentSetupPath());
+  }
 
   // Server-side onboard gate (DB), not cookie-only. Incomplete free Explorer
   // must finish the wizard before Today / training.
   if (
     session?.role === "MEMBER" &&
     profileUserId?.startsWith("member-") &&
+    !freePmGateActive &&
     (!profile || !profile.onboardingComplete)
   ) {
     const onExempt =

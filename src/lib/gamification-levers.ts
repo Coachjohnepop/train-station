@@ -20,6 +20,11 @@ export type GamificationLevers = {
   cooldownDaysPerEdge: number;
   anonymizeRivals: boolean;
   featureEnabled: boolean;
+  /**
+   * When true, Free Explorer must save a card (Stripe Setup — $0) before onboard/Today.
+   * Default off. ACH not used. Does not charge until they upgrade.
+   */
+  freeRequiresPaymentMethod: boolean;
 };
 
 export const DEFAULT_GAMIFICATION_LEVERS: GamificationLevers = {
@@ -39,6 +44,7 @@ export const DEFAULT_GAMIFICATION_LEVERS: GamificationLevers = {
   cooldownDaysPerEdge: 90,
   anonymizeRivals: false,
   featureEnabled: true,
+  freeRequiresPaymentMethod: false,
 };
 
 function clampInt(raw: unknown, min: number, max: number, fallback: number): number {
@@ -77,6 +83,7 @@ export function normalizeGamificationLevers(raw: unknown): GamificationLevers {
     cooldownDaysPerEdge: clampInt(o.cooldownDaysPerEdge, 0, 365, d.cooldownDaysPerEdge),
     anonymizeRivals: o.anonymizeRivals === true,
     featureEnabled: o.featureEnabled === false ? false : true,
+    freeRequiresPaymentMethod: o.freeRequiresPaymentMethod === true,
   };
 }
 

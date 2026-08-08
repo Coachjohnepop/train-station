@@ -382,6 +382,10 @@ export default function AdminGamificationClient() {
                 ["crossDivisionPeek", "Coach top % peeks upstairs"],
                 ["prizeBandEnabled", "Prize band"],
                 ["anonymizeRivals", "Anonymize rivals"],
+                [
+                  "freeRequiresPaymentMethod",
+                  "Free Explorer requires card on file ($0 — no charge until upgrade)",
+                ],
               ] as const
             ).map(([key, label]) => (
               <label key={key} className="flex items-center gap-2">
@@ -394,6 +398,10 @@ export default function AdminGamificationClient() {
               </label>
             ))}
           </div>
+          <p className="text-xs text-[var(--muted)]">
+            Card-on-file uses Stripe Setup (card only, not ACH). Default is off. When on, new Free
+            signups go to Payment setup before onboard; training stays locked until a card is saved.
+          </p>
           <button type="button" className="btn-primary" disabled={busy} onClick={() => void saveLevers()}>
             Save levers
           </button>

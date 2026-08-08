@@ -3,9 +3,11 @@ import {
   MEMBER_PENDING_PATH,
   memberCheckoutPath,
   memberNeedsApproval,
+  memberNeedsFreePaymentMethodAsync,
   memberNeedsPayment,
   memberNeedsPaymentAsync,
 } from "@/lib/member-gates";
+import { memberFreePaymentSetupPath } from "@/lib/member-route-gates";
 
 /** Member dashboard entry — routes to the Today hub. */
 export function memberDashboardPath(): string {
@@ -44,6 +46,9 @@ export async function memberPostOnboardPathAsync(
 ): Promise<string> {
   if (await memberNeedsPaymentAsync(profile, userId)) {
     return memberCheckoutPath(profile?.plan);
+  }
+  if (await memberNeedsFreePaymentMethodAsync(profile, userId)) {
+    return memberFreePaymentSetupPath();
   }
   if (memberNeedsApproval(profile, userId)) return MEMBER_PENDING_PATH;
   return memberDashboardPath();

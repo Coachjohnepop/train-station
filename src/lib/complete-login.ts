@@ -19,8 +19,10 @@ import {
 } from "@/lib/email-history-cookies";
 import {
   memberCheckoutPath,
+  memberFreePaymentSetupPath,
   MEMBER_PENDING_PATH,
   memberNeedsApproval,
+  memberNeedsFreePaymentMethodAsync,
   memberNeedsPaymentAsync,
 } from "@/lib/member-gates";
 import { isMemberPathExemptFromPaymentGate } from "@/lib/member-route-gates";
@@ -40,10 +42,13 @@ export async function resolveLoginDestination(
       (profile && !profile.onboardingComplete) ||
       (!profile && user.id.startsWith("member-"));
     const needsPayment = await memberNeedsPaymentAsync(profile, user.id);
+    const needsFreePm = await memberNeedsFreePaymentMethodAsync(profile, user.id);
     const needsApproval = memberNeedsApproval(profile, user.id);
 
     if (needsPayment) {
       destination = memberCheckoutPath(plan);
+    } else if (needsFreePm) {
+      destination = memberFreePaymentSetupPath();
     } else if (needsOnboard) {
       destination = plan
         ? `/member/onboard?plan=${encodeURIComponent(plan)}`
@@ -53,14 +58,21 @@ export async function resolveLoginDestination(
     }
 
     if (redirect && redirect.startsWith("/") && !redirect.startsWith("//") && redirect.startsWith("/member")) {
-      // Never let a deep link skip payment, onboard, or pending gates.
+      // Never let a deep link skip payment, free card setup, onboard, or pending gates.
       // Exempt surfaces (checkout, book, chat, account, onboard) stay reachable.
       if (needsPayment && !isMemberPathExemptFromPaymentGate(redirect)) {
         // keep checkout
       } else if (
+        needsFreePm &&
+        !redirect.startsWith("/member/payment-setup") &&
+        !isMemberPathExemptFromPaymentGate(redirect)
+      ) {
+        // keep free payment setup
+      } else if (
         needsOnboard &&
         !redirect.startsWith("/member/onboard") &&
-        !redirect.startsWith("/member/checkout")
+        !redirect.startsWith("/member/checkout") &&
+        !redirect.startsWith("/member/payment-setup")
       ) {
         // keep onboard
       } else if (needsApproval && !redirect.startsWith("/member/pending")) {

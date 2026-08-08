@@ -229,6 +229,9 @@ function gateCookieOptions() {
   };
 }
 
+/** Free Explorer card-on-file gate (when admin lever freeRequiresPaymentMethod is on). */
+export const NEEDS_FREE_PM_COOKIE = "ts_needs_free_pm";
+
 /** Keep payment + approval + onboarding gate cookies aligned with the member profile. */
 export async function syncMemberGateCookies(
   res: CookieWriter,
@@ -236,12 +239,20 @@ export async function syncMemberGateCookies(
 ) {
   const clear = { path: "/", maxAge: 0 };
   const opts = gateCookieOptions();
-  const { memberNeedsPaymentAsync } = await import("@/lib/member-gates");
+  const { memberNeedsPaymentAsync, memberNeedsFreePaymentMethodAsync } = await import(
+    "@/lib/member-gates"
+  );
 
   if (await memberNeedsPaymentAsync(input.profile, input.userId)) {
     res.cookies.set(NEEDS_PAYMENT_COOKIE, "1", opts);
   } else {
     res.cookies.set(NEEDS_PAYMENT_COOKIE, "", clear);
+  }
+
+  if (await memberNeedsFreePaymentMethodAsync(input.profile, input.userId)) {
+    res.cookies.set(NEEDS_FREE_PM_COOKIE, "1", opts);
+  } else {
+    res.cookies.set(NEEDS_FREE_PM_COOKIE, "", clear);
   }
 
   if (memberNeedsApproval(input.profile, input.userId)) {

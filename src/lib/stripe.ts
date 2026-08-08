@@ -417,6 +417,137 @@ export async function createSignupCheckoutSession(input: {
 }
 
 /**
+ * Free Explorer — save a card with $0 Setup Checkout (no charge).
+ * Used when admin lever freeRequiresPaymentMethod is ON.
+ */
+export async function createFreeCardSetupSession(input: {
+  userId: string;
+  email: string;
+  name: string;
+}): Promise<
+  { clientSecret: string; sessionId: string; hasSavedCard: boolean } | { error: string }
+> {
+  const stripe = getStripe();
+  if (!stripe) return { error: "Stripe is not configured." };
+
+  const customer = await checkoutCustomerFields({
+    userId: input.userId,
+    email: input.email,
+    name: input.name,
+  });
+  if (!customer.customerId) {
+    return { error: "Could not create a Stripe customer for card setup." };
+  }
+
+  if (customer.hasSavedCard) {
+    // Stamp profile if Stripe already has a card (toggle flipped after legacy free).
+    await updateMemberProfile(input.userId, {
+      stripeCustomerId: customer.customerId,
+      paymentMethod: "card_on_file",
+      paymentNote: "Free Explorer card on file (not charged)",
+    });
+    return { clientSecret: "", sessionId: "", hasSavedCard: true };
+  }
+
+  const base = appBaseUrl();
+  const sessionParams: import("stripe").Stripe.Checkout.SessionCreateParams = {
+    mode: "setup",
+    currency: "usd",
+    ui_mode: "embedded_page",
+    return_url: `${base}/member/payment-setup/complete?session_id={CHECKOUT_SESSION_ID}`,
+    redirect_on_completion: "if_required",
+    customer: customer.customerId,
+    customer_update: { address: "auto", name: "auto" },
+    billing_address_collection: "required",
+    payment_method_types: ["card"],
+    client_reference_id: input.userId,
+    metadata: {
+      kind: "free_card_on_file",
+      userId: input.userId,
+      plan: "explorer",
+    },
+    setup_intent_data: {
+      metadata: {
+        kind: "free_card_on_file",
+        userId: input.userId,
+        plan: "explorer",
+      },
+    },
+  };
+
+  const session = await createCheckoutSession(stripe, sessionParams);
+  if ("error" in session) return session;
+  return { ...session, hasSavedCard: false };
+}
+
+/** After Setup Checkout completes — stamp Free Explorer card_on_file (still unpaid). */
+export async function confirmFreeCardSetupSession(input: {
+  userId: string;
+  sessionId: string;
+}): Promise<{ ok: true; already?: boolean } | { error: string }> {
+  const stripe = getStripe();
+  if (!stripe) return { error: "Stripe is not configured." };
+
+  let session: import("stripe").Stripe.Checkout.Session;
+  try {
+    session = await stripe.checkout.sessions.retrieve(input.sessionId, {
+      expand: ["setup_intent", "customer"],
+    });
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : "Could not load setup session." };
+  }
+
+  if (session.mode !== "setup") {
+    return { error: "Not a card setup session." };
+  }
+  if (session.status !== "complete") {
+    return { error: "Card setup is not complete yet." };
+  }
+
+  const metaUser = session.metadata?.userId || session.client_reference_id;
+  if (metaUser && metaUser !== input.userId) {
+    return { error: "This setup session belongs to a different account." };
+  }
+
+  const customerId =
+    typeof session.customer === "string"
+      ? session.customer
+      : session.customer && typeof session.customer === "object" && "id" in session.customer
+        ? session.customer.id
+        : null;
+
+  // Ensure default payment method on customer when SetupIntent finished
+  try {
+    const si =
+      typeof session.setup_intent === "string"
+        ? await stripe.setupIntents.retrieve(session.setup_intent)
+        : session.setup_intent;
+    const pmId =
+      si && typeof si.payment_method === "string"
+        ? si.payment_method
+        : si?.payment_method && typeof si.payment_method === "object"
+          ? si.payment_method.id
+          : null;
+    if (customerId && pmId) {
+      await stripe.customers.update(customerId, {
+        invoice_settings: { default_payment_method: pmId },
+      });
+    }
+  } catch (e) {
+    console.warn("[stripe] free card setup default PM", e);
+  }
+
+  await updateMemberProfile(input.userId, {
+    stripeCustomerId: customerId,
+    paymentMethod: "card_on_file",
+    // Explicitly not paid — Free stays free
+    paymentNote: "Free Explorer card on file (not charged)",
+  });
+
+  return { ok: true };
+}
+
+/**
  * Standalone one-time coach tip (Account, Messages soft link, etc.).
  * Does not change membership plan or paymentStatus.
  */

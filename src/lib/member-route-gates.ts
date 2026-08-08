@@ -8,11 +8,17 @@ export function memberCheckoutPath(plan?: string): string {
   return qs ? `/member/checkout?${qs}` : "/member/checkout";
 }
 
+/** Free Explorer card-on-file setup ($0 Stripe Setup). */
+export function memberFreePaymentSetupPath(): string {
+  return "/member/payment-setup";
+}
+
 export const MEMBER_PENDING_PATH = "/member/pending";
 
 /** Member routes reachable before first payment (coach contact, billing, intake booking). */
 export const MEMBER_PATHS_EXEMPT_FROM_PAYMENT_GATE = [
   "/member/checkout",
+  "/member/payment-setup",
   "/member/onboard",
   "/member/account",
   "/member/book",
