@@ -186,10 +186,6 @@ export default function AdminBooksPanel() {
     }
   }
 
-  function exportCsv(type: "trial" | "chart" | "journals") {
-    window.location.href = `/api/admin/accounting/books/export?type=${type}`;
-  }
-
   if (loading) {
     return <p className="text-sm text-[var(--muted)]">Loading general ledger…</p>;
   }
@@ -232,8 +228,9 @@ export default function AdminBooksPanel() {
         <div>
           <h2 className="text-lg font-semibold">{data.entity?.name} · Books</h2>
           <p className="mt-0.5 text-xs text-[var(--muted)]">
-            Double-entry general ledger · {data.counts?.accounts ?? 0} accounts ·{" "}
-            {data.counts?.journals ?? 0} journals shown · {data.counts?.parties ?? 0} parties
+            In-app general ledger (source of truth for TS books) ·{" "}
+            {data.counts?.accounts ?? 0} accounts · {data.counts?.journals ?? 0} journals ·{" "}
+            {data.counts?.parties ?? 0} parties · bank feed later
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -248,36 +245,6 @@ export default function AdminBooksPanel() {
           >
             {showForm ? "Close form" : "Add journal"}
           </button>
-          <div className="relative">
-            <details className="group">
-              <summary className="btn-ghost cursor-pointer list-none text-xs [&::-webkit-details-marker]:hidden">
-                Export CSV ▾
-              </summary>
-              <div className="absolute right-0 z-20 mt-1 min-w-[10rem] rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-xl">
-                <button
-                  type="button"
-                  className="block w-full px-3 py-2 text-left text-xs hover:bg-[var(--surface-2)]"
-                  onClick={() => exportCsv("trial")}
-                >
-                  Trial balance
-                </button>
-                <button
-                  type="button"
-                  className="block w-full px-3 py-2 text-left text-xs hover:bg-[var(--surface-2)]"
-                  onClick={() => exportCsv("chart")}
-                >
-                  Chart of accounts
-                </button>
-                <button
-                  type="button"
-                  className="block w-full px-3 py-2 text-left text-xs hover:bg-[var(--surface-2)]"
-                  onClick={() => exportCsv("journals")}
-                >
-                  Journals (lines)
-                </button>
-              </div>
-            </details>
-          </div>
           <button type="button" className="btn-ghost text-xs" onClick={() => void load()}>
             Refresh
           </button>
@@ -549,11 +516,6 @@ export default function AdminBooksPanel() {
 
       {tab === "chart" && (
         <div className="space-y-2">
-          <div className="flex justify-end">
-            <button type="button" className="btn-ghost text-xs" onClick={() => exportCsv("chart")}>
-              Download chart CSV
-            </button>
-          </div>
           <div className="overflow-hidden rounded-xl border border-[var(--border)]">
             <table className="w-full text-left text-sm">
               <thead className="bg-[var(--surface-2)] text-[10px] uppercase tracking-wide text-[var(--muted)]">
@@ -589,11 +551,6 @@ export default function AdminBooksPanel() {
 
       {tab === "trial" && (
         <div className="space-y-3">
-          <div className="flex justify-end">
-            <button type="button" className="btn-ghost text-xs" onClick={() => exportCsv("trial")}>
-              Download trial balance CSV
-            </button>
-          </div>
           <div className="overflow-hidden rounded-xl border border-[var(--border)]">
             <table className="w-full text-left text-sm">
               <thead className="bg-[var(--surface-2)] text-[10px] uppercase tracking-wide text-[var(--muted)]">
@@ -647,7 +604,8 @@ export default function AdminBooksPanel() {
             </table>
           </div>
           <p className="text-[11px] text-[var(--muted)]">
-            Trial balance from posted journals only. Debits must equal credits.
+            Trial balance from posted journals only. Debits must equal credits. Bank reconciliation
+            and feeds will land here later — no CSV export path.
           </p>
         </div>
       )}

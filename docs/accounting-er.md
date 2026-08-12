@@ -144,6 +144,12 @@ For every **POSTED** journal:
 Idempotency: unique `(sourceSystem, sourceType, sourceId)`  
 e.g. `STRIPE` + `FactSubscriptionPayment` + fact row id.
 
+## Product direction
+
+- **Source of truth** is this Postgres GL + payment facts — not QuickBooks export.
+- **No CSV / file export path** for ops; bank integration and reconciliation will attach to these tables later.
+- Stripe Admin “money desk” remains for live processor balances; TS **Books** is the permanent ledger.
+
 ## Ops
 
 ```bash
