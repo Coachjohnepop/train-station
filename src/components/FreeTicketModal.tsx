@@ -70,8 +70,12 @@ export default function FreeTicketModal({
   const [fadeJeremyIn, setFadeJeremyIn] = useState(false);
   const [hideRickroll, setHideRickroll] = useState(false);
   const [loadJeremy, setLoadJeremy] = useState(false);
-  /** Stable after mount so iframe src does not change (remount = restart hitch). */
-  const [embedOrigin, setEmbedOrigin] = useState<string | undefined>(undefined);
+  /**
+   * Pin gag embed URL for this open session only. Changing iframe `src` remounts
+   * YouTube and restarts the chorus — never rebuild this string mid-gag.
+   */
+  const [gagEmbedSrc, setGagEmbedSrc] = useState<string | null>(null);
+  const [jeremyEmbedSrc, setJeremyEmbedSrc] = useState<string | null>(null);
   const timersRef = useRef<number[]>([]);
   const rickrollRef = useRef<HTMLIFrameElement>(null);
   const jeremyIframeRef = useRef<HTMLIFrameElement>(null);
@@ -79,15 +83,13 @@ export default function FreeTicketModal({
   const rickrollKickGen = useRef(0);
   /** After handoff, never send another command to the gag iframe. */
   const gagLiveRef = useRef(false);
+  /** One unMute for the gag per open — more kicks restart audio on iOS. */
+  const gagUnmutedRef = useRef(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
   const signedIn = Boolean(purchaseAuth.signedIn);
   const gag = productFreeTicketGag({ signedIn });
   const volumeDb = useUploadedContentVolumeDb();
-
-  useEffect(() => {
-    setEmbedOrigin(window.location.origin);
-  }, []);
 
   // Lock body scroll while open (mobile sheet)
   useEffect(() => {
@@ -114,27 +116,6 @@ export default function FreeTicketModal({
     jeremyVideoUrl && !jeremyIsYoutube && isDirectVideoUrl(jeremyVideoUrl),
   );
 
-  /**
-   * Embed autoplays once (user just tapped Free). We never postMessage playVideo
-   * on the gag — only unMute/volume. At handoff we kill + unmount the iframe so
-   * YouTube cannot restart the chorus (~:49) for a few bars.
-   */
-  const rickrollSrc =
-    gag.enabled && embedOrigin
-      ? landingVideoEmbedSrc(gag.videoUrl, true, {
-          mute: false,
-          origin: embedOrigin,
-          startSeconds: gag.startSec,
-        })
-      : null;
-
-  const jeremyYtSrc =
-    loadJeremy && hasJeremy && jeremyIsYoutube && embedOrigin
-      ? landingVideoEmbedSrc(jeremyVideoUrl, true, {
-          mute: true,
-          origin: embedOrigin,
-        })
-      : null;
   const showJeremyFile = loadJeremy && hasJeremy && jeremyIsDirect && Boolean(jeremyVideoUrl);
 
   function clearTimers() {
@@ -157,10 +138,11 @@ export default function FreeTicketModal({
     volumeDb + linearMultiplierToDb(JEREMY_WORD_VOLUME_MULT),
   );
 
-  // Open / close — only restart when the modal opens/closes (not when hasJeremy/volume changes).
-  // Re-running mid-open remounted the gag and caused a second chorus.
+  // Open / close — only arm when `open` flips. Never rebuild gag mid-session.
   useEffect(() => {
     clearTimers();
+    rickrollKickGen.current += 1;
+    gagUnmutedRef.current = false;
 
     if (!open) {
       gagLiveRef.current = false;
@@ -168,16 +150,20 @@ export default function FreeTicketModal({
       setFadeJeremyIn(false);
       setHideRickroll(false);
       setLoadJeremy(false);
+      setGagEmbedSrc(null);
+      setJeremyEmbedSrc(null);
       setBackgroundMusicOverlay(false);
       // Do not force theme song back — user may have muted; video just finished.
       return;
     }
 
+    const origin = window.location.origin;
     setBackgroundMusicOverlay(true);
     setShowJeremy(false);
     setFadeJeremyIn(false);
     setHideRickroll(false);
     setLoadJeremy(false);
+    setJeremyEmbedSrc(null);
     gagLiveRef.current = gag.enabled;
 
     // Scroll panel to top so video is first thing visible
@@ -186,10 +172,20 @@ export default function FreeTicketModal({
     });
 
     if (!gag.enabled) {
+      // Signed-in / gag off: Jeremy only, one load.
+      if (hasJeremy && jeremyIsYoutube) {
+        setJeremyEmbedSrc(
+          landingVideoEmbedSrc(jeremyVideoUrl, true, {
+            mute: true,
+            origin,
+          }),
+        );
+      }
       setLoadJeremy(true);
       setShowJeremy(true);
       setFadeJeremyIn(true);
       setHideRickroll(true);
+      setGagEmbedSrc(null);
       gagLiveRef.current = false;
       return () => {
         clearTimers();
@@ -197,19 +193,34 @@ export default function FreeTicketModal({
       };
     }
 
+    /**
+     * Mobile-clean gag:
+     * - Start muted autoplay from chorus (reliable after the Free tap).
+     * - UnMute once (onReady or single fallback) — never playVideo (restarts).
+     * - Do NOT mount Jeremy while gag is live (second YT iframe restarts the gag on iOS).
+     * - Pin src once in state so re-renders cannot remount the iframe.
+     */
+    const pinnedGag = landingVideoEmbedSrc(gag.videoUrl, true, {
+      mute: true,
+      origin,
+      startSeconds: gag.startSec,
+    });
+    setGagEmbedSrc(pinnedGag);
+
     const duration = FREE_TICKET_RICKROLL_DURATION_MS;
-    const preload = Math.max(0, duration - 3_000);
 
-    // Preload Jeremy under gag (audio still gag-only until handoff)
-    schedule(() => {
-      if (!gagLiveRef.current) return;
-      setLoadJeremy(true);
-    }, preload);
-
-    // Handoff: kill gag iframe first, THEN show Jeremy (never both at once).
+    // Handoff: kill gag completely, then mount Jeremy once (never both YT embeds).
     schedule(() => {
       killGagNow();
-      // Load Jeremy if preload hasn't run yet
+      setGagEmbedSrc(null);
+      if (hasJeremy && jeremyIsYoutube) {
+        setJeremyEmbedSrc(
+          landingVideoEmbedSrc(jeremyVideoUrl, true, {
+            mute: true,
+            origin,
+          }),
+        );
+      }
       setLoadJeremy(true);
       setShowJeremy(true);
       requestAnimationFrame(() => setFadeJeremyIn(true));
@@ -225,18 +236,22 @@ export default function FreeTicketModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Gag: autoplay already running. UnMute/volume only while gag is live — never after handoff.
+  // Gag audio: one unMute after autoplay — never playVideo (that restarts from start=).
   useEffect(() => {
-    if (!open || !rickrollSrc || !gag.enabled) return;
+    if (!open || !gagEmbedSrc || !gag.enabled) return;
     const gen = ++rickrollKickGen.current;
     gagLiveRef.current = true;
+    gagUnmutedRef.current = false;
 
-    const audibleOnly = () => {
+    const unmuteOnce = () => {
       if (gen !== rickrollKickGen.current || !gagLiveRef.current) return;
+      if (gagUnmutedRef.current) return;
+      gagUnmutedRef.current = true;
       ensureYoutubeAudible(rickrollRef.current);
     };
 
-    const ids = [150, 500].map((ms) => window.setTimeout(audibleOnly, ms));
+    // Single fallback if onReady is late; do not stack 150/500/onLoad kicks.
+    const fallbackId = window.setTimeout(unmuteOnce, 400);
 
     const onMsg = (e: MessageEvent) => {
       if (gen !== rickrollKickGen.current || !gagLiveRef.current) return;
@@ -250,28 +265,36 @@ export default function FreeTicketModal({
       }
       if (!data || typeof data !== "object") return;
       if ((data as { event?: string }).event === "onReady") {
-        audibleOnly();
+        unmuteOnce();
       }
     };
     window.addEventListener("message", onMsg);
 
     return () => {
-      ids.forEach((id) => window.clearTimeout(id));
+      window.clearTimeout(fallbackId);
       window.removeEventListener("message", onMsg);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, rickrollSrc]);
+  }, [open, gagEmbedSrc]);
 
-  // Jeremy: play + unMute once he fades in; 3× louder than admin content volume.
+  // Jeremy: one play/unMute after fade-in (stacked playVideo restarts on mobile).
   useEffect(() => {
     if (!fadeJeremyIn || !hasJeremy) return;
+    let cancelled = false;
+    let playSent = false;
+
     const kick = () => {
+      if (cancelled || playSent) return;
       if (jeremyIsYoutube) {
         const iframe = jeremyIframeRef.current;
+        if (!iframe?.contentWindow) return;
+        playSent = true;
         kickYoutubeAudible(iframe);
-        const pct = volumeDbToYoutubePercent(jeremyVolumeDb);
-        postYoutubeEmbedCommand(iframe, "setVolume", pct);
-      } else if (jeremyVideoRef.current) {
+        postYoutubeEmbedCommand(iframe, "setVolume", volumeDbToYoutubePercent(jeremyVolumeDb));
+        return;
+      }
+      if (jeremyVideoRef.current) {
+        playSent = true;
         const el = jeremyVideoRef.current;
         el.muted = false;
         applyMediaVolumeDb(el, jeremyVolumeDb);
@@ -280,13 +303,13 @@ export default function FreeTicketModal({
         });
       }
     };
-    const t1 = window.setTimeout(kick, 200);
-    const t2 = window.setTimeout(kick, 600);
-    const t3 = window.setTimeout(kick, 1200);
+
+    const t1 = window.setTimeout(kick, 350);
+    const t2 = window.setTimeout(kick, 900); // only runs if t1 found no iframe yet
     return () => {
+      cancelled = true;
       window.clearTimeout(t1);
       window.clearTimeout(t2);
-      window.clearTimeout(t3);
     };
   }, [fadeJeremyIn, hasJeremy, jeremyIsYoutube, jeremyVolumeDb]);
 
@@ -330,23 +353,20 @@ export default function FreeTicketModal({
 
         {/* VIDEO FIRST — always at top of scroll content on phone */}
         <div className="relative aspect-video w-full shrink-0 bg-black sm:mt-0">
-          {rickrollSrc && !hideRickroll && !showJeremy && (
+          {gagEmbedSrc && !hideRickroll && !showJeremy && (
             <iframe
               ref={rickrollRef}
               key="free-gag-rickroll"
               className="absolute inset-0 h-full w-full"
-              src={rickrollSrc}
+              src={gagEmbedSrc}
               title="You picked free"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
-              onLoad={() => {
-                if (!gagLiveRef.current) return;
-                ensureYoutubeAudible(rickrollRef.current);
-              }}
+              // No onLoad unMute — stacked kicks restart the gag on mobile.
             />
           )}
 
-          {jeremyYtSrc && (
+          {jeremyEmbedSrc && loadJeremy && jeremyIsYoutube && (
             <iframe
               ref={jeremyIframeRef}
               key="jeremy-yt"
@@ -354,7 +374,7 @@ export default function FreeTicketModal({
                 fadeJeremyIn ? "opacity-100" : "pointer-events-none opacity-0"
               }`}
               style={{ transitionDuration: `${FREE_TICKET_RICKROLL_FADE_MS}ms` }}
-              src={jeremyYtSrc}
+              src={jeremyEmbedSrc}
               title="Coach Jeremy"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
