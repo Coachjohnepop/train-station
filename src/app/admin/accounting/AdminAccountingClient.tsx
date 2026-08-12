@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import AdminBooksPanel from "./AdminBooksPanel";
 
 type QueueItem = {
   id: string;
@@ -132,7 +134,14 @@ function Kpi({
   );
 }
 
+type DeskTab = "overview" | "books";
+
 export default function AdminAccountingClient() {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const [deskTab, setDeskTab] = useState<DeskTab>(() =>
+    tabParam === "books" ? "books" : "overview",
+  );
   const [data, setData] = useState<AccountingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -161,11 +170,16 @@ export default function AdminAccountingClient() {
     void load();
   }, [load]);
 
-  if (loading) {
+  useEffect(() => {
+    if (tabParam === "books") setDeskTab("books");
+    else if (tabParam === "overview") setDeskTab("overview");
+  }, [tabParam]);
+
+  if (loading && deskTab === "overview") {
     return <p className="text-sm text-[var(--muted)]">Loading accounting desk…</p>;
   }
 
-  if (error || !data) {
+  if ((error || !data) && deskTab === "overview") {
     return (
       <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-100">
         {error || "No data."}
@@ -176,42 +190,67 @@ export default function AdminAccountingClient() {
     );
   }
 
-  const bal = data.stripeBalance;
+  const bal = data?.stripeBalance;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Accounting</h1>
           <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-            Executive rollup: balance, holding minimums, projected partner shares, membership
-            revenue. Day-to-day money ops (platform + partner accounts, share, bank history,
-            charges) live on{" "}
-            <Link href={data.links.billing} className="text-accent hover:underline">
+            {deskTab === "books"
+              ? "In-app general ledger (QuickBooks-style). Chart, journals, trial balance."
+              : "Executive rollup and partner minimums. Open Books for the double-entry ledger."}
+            {" · "}
+            <Link href="/admin/billing" className="text-accent hover:underline">
               Stripe money
             </Link>
-            . Run partner share on{" "}
-            <Link href={data.links.moneyDesk} className="text-accent hover:underline">
-              Share tab
-            </Link>
-            .
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {data.testMode ? (
+          {data?.testMode ? (
             <span className="rounded-full bg-amber-500/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-200">
               Stripe Test mode
             </span>
-          ) : (
+          ) : data ? (
             <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-200">
               Stripe Live
             </span>
-          )}
-          <button type="button" className="btn-ghost text-xs" onClick={() => void load()}>
-            Refresh
-          </button>
+          ) : null}
+          {deskTab === "overview" ? (
+            <button type="button" className="btn-ghost text-xs" onClick={() => void load()}>
+              Refresh
+            </button>
+          ) : null}
         </div>
       </div>
+
+      <div className="flex flex-wrap gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-1">
+        {(
+          [
+            { id: "overview" as const, label: "Overview" },
+            { id: "books" as const, label: "Books (GL)" },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setDeskTab(t.id)}
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+              deskTab === t.id
+                ? "bg-[var(--surface)] text-[var(--text)] shadow-sm"
+                : "text-[var(--muted)] hover:text-[var(--text)]"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {deskTab === "books" ? <AdminBooksPanel /> : null}
+
+      {deskTab === "overview" && data && bal ? (
+        <div className="space-y-8">
 
       {/* Balance + minimums */}
       <section className="space-y-3">
@@ -524,7 +563,10 @@ export default function AdminAccountingClient() {
       </section>
 
       <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-4 text-xs">
-        <Link href={data.links.moneyDesk} className="btn-primary px-3 py-2">
+        <button type="button" className="btn-primary px-3 py-2" onClick={() => setDeskTab("books")}>
+          Open Books (GL)
+        </button>
+        <Link href={data.links.moneyDesk} className="btn-ghost px-3 py-2">
           Money desk
         </Link>
         <Link href={data.links.billing} className="btn-ghost px-3 py-2">
@@ -541,6 +583,8 @@ export default function AdminAccountingClient() {
           {data.commissionEnabled ? "enabled" : "disabled"}
         </p>
       </div>
+        </div>
+      ) : null}
     </div>
   );
 }
