@@ -354,11 +354,23 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-12  
-**Status:** Prod `main` / `preview` current (accounting Books GL + member payment ledger; card checkout UX normal).  
+**Date:** 2026-08-12 (end of day — John signing off ~11:30 PT)  
+**Status:** Prod `main` / `preview` at **`f2e92d3`** (rickroll mobile fix + message groups + Free Tour nav + coach badges/alerts).  
 **Rule reaffirmed:** **any new module / data element → Postgres first** (see Durable product rules).  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
 **Branches:** `preview` / `main` · prod: https://www.thetrainstation.co  
+
+### Live members (2026-08-12 traffic)
+
+| When (PT) | Who | Plan | Notes |
+|-----------|-----|------|--------|
+| ~10:42 | **Will Popham** `williampopham20@gmail.com` | Free Explorer | Onboarded |
+| ~10:47 | **Quinn C** `quinlan.creighton@gmail.com` | Free Explorer | Onboarded |
+| ~10:50 | **Bella Roy** `bellaroyy03@gmail.com` | **Member paid** (~10:53) | **Onboard incomplete** — follow up |
+| Earlier | **Ali Fletcher** | Member paid (Aug 10) | Still on board |
+| Lead only | Bella also hit Nutrition “Notify me” before paid signup | | |
+
+In-app coach Messages **did** get system notes for Will (signup, equipment, onboard). **Email/push did not land** (see NEXT SESSION #1–2).
 
 ### Explicit decision 2026-08-12 — Stripe merchant (interim, intentional)
 
@@ -376,7 +388,9 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Later (when ready):** `.env.jeremy.live` with Jeremy Live `sk`/`pk`/prices/`whsec` → `scripts/wire-jeremy-master-stripe.mjs --identify` then `--push-vercel` → redeploy → verify brand name. Existing Eco subs stay on Eco; new charges after cutover on Jeremy.
 
-### Session 2026-08-12 — shipped (money / accounting stretch)
+### Session 2026-08-12 — shipped
+
+**Money / accounting (earlier same day):**
 
 | Area | What |
 |------|------|
@@ -385,13 +399,45 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 | Books GL | Double-entry `Acct*` tables; seed COA; auto-post cash receipts; Admin → Accounting → **Books** |
 | Ali Fletcher | Paid Coach Class, async/on-demand, ~$5 LETSGO26 backfilled + JE-00001 |
 | Card pause | Tried then **reverted** — keep normal card UX on Eco |
+| Stripe cutover | **Parked** — Eco interim (`8ba170a`) |
+
+**Coach awareness + landing UX (afternoon):**
+
+| Area | What | Commit-ish |
+|------|------|------------|
+| Purple People badges | New signups + leads next to Msgs | `8ffbe87` |
+| All-channel alerts | Free/paid signup + first payment (in-app + email + push plumbing) | `6f25d8d` |
+| Jelly-bean thread tabs | Compact wrap beans; per-bean unread (no side-scroll hunt) | `4841864` |
+| Free Tour top nav | Guests: top **Free Tour** (opens overlay); hamburger Free Tour + Sign in; kill hero CTA pulse | `005935e` |
+| Message groups access | Coach Class = Coach 1:1 + **enrolled only**; Free = Coach only; no always-on Station/Adult | `63976bc` |
+| Rickroll mobile | Pin gag src; mute→single unMute; never dual YT iframes (no chorus restart) | `f2e92d3` |
 
 ### NEXT SESSION — pick up here (priority)
 
-1. **Normal product work** — don’t re-open Stripe cutover unless John has Jeremy Live keys in `.env.jeremy.live`  
-2. Optional: free card-on-file lever QA (still default OFF)  
-3. Jeremy content: Admin → Videos intros  
-4. When cutover resumes: wire script + redeploy only (plumbing)  
+**P0 — coach actually gets notified (ops, ~1h)**
+
+1. **Resend** — verify domain `send.thetrainstation.co` at resend.com/domains; Vercel Production set:
+   - `RESEND_FROM=The Train Station <accounts@send.thetrainstation.co>`
+   - `RESEND_SEND_DOMAIN=send.thetrainstation.co`
+   - `RESEND_REPLY_TO=jeremy@thetrainstation.co` (**one** address only)
+   - `LEAD_NOTIFY_REPLY_TO=jeremy@thetrainstation.co` (not multi-email — was 422)
+   - Redeploy. Today’s failures: **Resend 403 domain not verified** + **422 invalid reply_to**.
+2. **Web Push** — Production `VAPID_PUBLIC_KEY` must match `VAPID_PRIVATE_KEY` (public was **empty**); set `VAPID_SUBJECT=mailto:jeremy@thetrainstation.co`; redeploy. Then Jeremy (and John) on phone: Home Screen app → Coach settings → **Enable alerts** → Send test. Today: push **`skipped_no_recipient`** (0 staff subs).
+3. **Confirm** next free signup hits: in-app Messages + email + phone push.
+
+**P1 — live members / product**
+
+4. **Bella Roy** — paid Member, **onboard incomplete** — coach follow-up / finish setup.  
+5. Optional: free card-on-file lever QA (still default OFF).  
+6. Jeremy content: Admin → Videos intros (placeholders empty).  
+7. Coach **“needs done”** durable checklist (signup → equipment → start date → intro → first workout) — still thin vs Jul 27 voice note.  
+8. Don’t re-open **Stripe cutover** unless `.env.jeremy.live` has Jeremy Live keys.  
+
+**Parked (do not un-park without explicit ask)**
+
+- Twilio SMS (prefer Messages + Resend)  
+- Jeremy Stripe merchant cutover / $400 commission Connect  
+- Eco name on Stripe checkout (accepted interim)  
 
 **Re-run onboard smoke anytime:**  
 `BASE_URL=https://www.thetrainstation.co node scripts/onboard-tier-loop.mjs`
