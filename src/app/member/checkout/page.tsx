@@ -18,8 +18,6 @@ import { isPaidOffer } from "@/lib/product-offers";
 
 type PaymentsPublic = {
   stripeEnabled: boolean;
-  stripeConfigured?: boolean;
-  publicCardCheckout?: boolean;
   stripePublishableKey: string | null;
   memberships: Array<{
     plan: string;
@@ -332,32 +330,21 @@ function MemberCheckoutInner() {
             )}
             {!paymentsLoading && !stripeReady && !venmoReady && (
               <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
-                {payments?.stripeConfigured
-                  ? "This plan is not ready for checkout yet. Message coach Jeremy."
+                {payments?.stripeEnabled
+                  ? "This plan is not ready for card checkout yet. Contact Jeremy to complete signup."
                   : "Online checkout is not configured yet. Contact Jeremy to complete signup."}
               </p>
             )}
-            {!paymentsLoading && !stripeReady && venmoReady ? (
-              <p className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-center text-xs text-emerald-100/95">
-                Pay with <strong className="text-[var(--text)]">Venmo to Coach Jeremy</strong> — same
-                Train Station business. Card checkout is paused until our processor shows The Train
-                Station name (not a third-party brand).
-              </p>
-            ) : null}
             {venmoReady && payments?.venmo && (
-              <div className="space-y-3 rounded-xl border border-accent/30 bg-[var(--surface-2)] p-4">
+              <div className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
                 <p className="text-center text-xs font-semibold uppercase tracking-[2px] text-accent">
-                  {stripeReady ? "Or pay with Venmo" : "Pay with Venmo"}
+                  Or pay with Venmo
                 </p>
                 <p className="text-center text-[11px] text-[var(--muted)]">
-                  {stripeReady
-                    ? "Same Train Station business bank account as card deposits — pick card or Venmo."
-                    : "Scan Jeremy’s business Venmo. Include your full name in the note. He unlocks your ticket in the app after it posts."}
+                  Same Train Station business bank account as Stripe deposits — pick card or Venmo.
                 </p>
                 {payments.venmo.handle && (
-                  <p className="text-center text-lg font-semibold tracking-wide">
-                    {payments.venmo.handle}
-                  </p>
+                  <p className="text-center text-sm font-medium">{payments.venmo.handle}</p>
                 )}
                 <div className="mx-auto max-w-[200px] overflow-hidden rounded-lg bg-white p-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
