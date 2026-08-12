@@ -1538,30 +1538,11 @@ body:has([data-landing-nav]) [data-global-theme-toggle] {
   -webkit-text-fill-color: #0f0a1a !important;
 }
 
-.landing-hero-cta-pulse {
-  animation: landing-cta-pulse 2.4s ease-in-out infinite;
-}
-
-@keyframes landing-cta-pulse {
-  0%,
-  100% {
-    box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.35) inset,
-      0 10px 36px rgba(124, 58, 237, 0.55),
-      0 0 48px rgba(167, 139, 250, 0.35);
-  }
-  50% {
-    box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.5) inset,
-      0 12px 44px rgba(124, 58, 237, 0.75),
-      0 0 64px rgba(196, 181, 253, 0.55);
-  }
-}
+/* Pulse removed — was reading as the Free Tour CTA “flashing clear”. Solid fill only. */
 
 @media (prefers-reduced-motion: reduce) {
   .landing-hero-slide,
-  .landing-hero-stack,
-  .landing-hero-cta-pulse {
+  .landing-hero-stack {
     animation: none !important;
     transition: opacity 0.3s ease !important;
   }

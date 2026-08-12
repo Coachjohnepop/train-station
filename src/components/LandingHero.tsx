@@ -5,6 +5,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import TrainStationBrand from "@/components/TrainStationBrand";
 import WelcomeVideoPopover from "@/components/WelcomeVideoPopover";
 import LandingSeeInsideTour from "@/components/LandingSeeInsideTour";
+import { FREE_QUICK_TOUR_EVENT } from "@/lib/free-quick-tour";
 import {
   activeHeroSlides,
   DEFAULT_HERO_SLIDES,
@@ -63,6 +64,28 @@ export default function LandingHero({
     const active = activeHeroSlides(heroSlides);
     return active.length ? active : DEFAULT_HERO_SLIDES;
   }, [heroSlides]);
+
+  // Nav "Free Tour" + deep link ?tour=1 open the same overlay as the hero CTA.
+  useEffect(() => {
+    const open = () => setTourOpen(true);
+    window.addEventListener(FREE_QUICK_TOUR_EVENT, open);
+
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tour") === "1" || params.get("openTour") === "1") {
+        setTourOpen(true);
+        params.delete("tour");
+        params.delete("openTour");
+        const next = params.toString();
+        const clean = `${window.location.pathname}${next ? `?${next}` : ""}${window.location.hash || ""}`;
+        window.history.replaceState({}, "", clean);
+      }
+    } catch {
+      /* ignore */
+    }
+
+    return () => window.removeEventListener(FREE_QUICK_TOUR_EVENT, open);
+  }, []);
 
   // Images can crossfade immediately
   useEffect(() => {
@@ -143,7 +166,7 @@ export default function LandingHero({
               <button
                 type="button"
                 onClick={() => setTourOpen(true)}
-                className="landing-hero-early-signup landing-hero-cta-pulse inline-flex h-[3.5rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg"
+                className="landing-hero-early-signup inline-flex h-[3.5rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg"
               >
                 Free Quick Tour
               </button>

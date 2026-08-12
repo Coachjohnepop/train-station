@@ -14,6 +14,7 @@ import {
 import { logoutUrl } from "@/lib/logout-url";
 import ThemeModeToggle from "@/components/ThemeModeToggle";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
+import { openFreeQuickTour } from "@/lib/free-quick-tour";
 
 export default function LandingNav({
   variant = "public",
@@ -200,6 +201,12 @@ export default function LandingNav({
                 Today
               </Link>
             ) : null}
+            {/* Desktop has no hamburger — keep Sign in available (muted). Free Tour is top-right. */}
+            {!isWelcome && !purchaseAuth.signedIn ? (
+              <Link href="/login" className="landing-nav__link text-[var(--muted)]" onClick={closeMenus}>
+                Sign in
+              </Link>
+            ) : null}
           </nav>
         </div>
 
@@ -215,12 +222,21 @@ export default function LandingNav({
               </Link>
             ) : (
               <>
-                <Link
-                  href="/login"
-                  className={`landing-nav__link ${overHero ? "hidden sm:inline-flex text-white/90" : "hidden md:inline-flex"}`}
+                {/* Guests: Free Tour primary in top bar; Sign in lives in the hamburger. */}
+                <button
+                  type="button"
+                  className={`landing-nav__link font-semibold ${
+                    overHero
+                      ? "inline-flex text-white/95 sm:text-white"
+                      : "inline-flex text-[var(--accent)]"
+                  }`}
+                  onClick={() => {
+                    closeMenus();
+                    openFreeQuickTour();
+                  }}
                 >
-                  Sign in
-                </Link>
+                  Free Tour
+                </button>
                 {!overHero ? (
                   <Link
                     href="/join#tickets"
@@ -309,9 +325,19 @@ export default function LandingNav({
               </>
             ) : (
               <>
+                <button
+                  type="button"
+                  className="block w-full rounded-lg px-2 py-2 text-left text-sm font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
+                  onClick={() => {
+                    closeMenus();
+                    openFreeQuickTour();
+                  }}
+                >
+                  Free Tour
+                </button>
                 <Link
                   href="/join#tickets"
-                  className="block rounded-lg px-2 py-2 text-sm font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
+                  className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]"
                   onClick={closeMenus}
                 >
                   Choose your ticket
@@ -321,7 +347,7 @@ export default function LandingNav({
                   className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]"
                   onClick={closeMenus}
                 >
-                  Member sign in
+                  Sign in
                 </Link>
               </>
             )}
