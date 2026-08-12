@@ -10,6 +10,7 @@ import PushAlertEnable from "@/components/PushAlertEnable";
 
 import MemberNav from "@/components/MemberNav";
 import MemberHeaderHomeLink from "@/components/MemberHeaderHomeLink";
+import MemberGateCookieSync from "@/components/MemberGateCookieSync";
 import LogoutButton from "@/components/LogoutButton";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
 import ThemeModeToggle from "@/components/ThemeModeToggle";
@@ -51,6 +52,7 @@ export default function MemberShell({
 
   return (
     <div className="app-shell-bg flex min-h-screen flex-col">
+      <MemberGateCookieSync />
       <Suspense fallback={null}>
         <ResumePathTracker area="member" />
       </Suspense>

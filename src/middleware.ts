@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifySessionTokenEdge, SESSION_COOKIE } from "@/lib/auth-session-edge";
 import { isStaffRole, staffAdminRedirect } from "@/lib/staff-access";
+import {
+  isMemberLandingSidePath,
+  memberAppEntryFromGateCookies,
+} from "@/lib/member-app-entry";
 import { purchaseHref } from "@/lib/member-purchase-path";
 import { memberPathRequiresPayment } from "@/lib/member-route-gates";
 
@@ -11,7 +15,7 @@ const NEEDS_PAYMENT_COOKIE = "ts_needs_payment";
 const NEEDS_FREE_PM_COOKIE = "ts_needs_free_pm";
 const PENDING_APPROVAL_COOKIE = "ts_pending_approval";
 
-/** Public pages — no session required. */
+/** Public pages — no session required (members are redirected off marketing surfaces). */
 const PUBLIC_PAGE_PREFIXES = [
   "/login",
   "/forgot-password",
@@ -20,6 +24,16 @@ const PUBLIC_PAGE_PREFIXES = [
   "/coming-soon",
   "/join",
 ];
+
+function memberEntryFromRequest(request: NextRequest): string {
+  return memberAppEntryFromGateCookies({
+    needsPayment: request.cookies.get(NEEDS_PAYMENT_COOKIE)?.value === "1",
+    needsFreePm: request.cookies.get(NEEDS_FREE_PM_COOKIE)?.value === "1",
+    needsOnboard: request.cookies.get(NEEDS_ONBOARD_COOKIE)?.value === "1",
+    pendingApproval: request.cookies.get(PENDING_APPROVAL_COOKIE)?.value === "1",
+    plan: request.cookies.get(SIGNUP_PLAN_COOKIE)?.value,
+  });
+}
 
 /** Public API routes — webhooks, auth, signup only. Everything else requires a session. */
 const PUBLIC_API_PREFIXES = [
@@ -126,15 +140,42 @@ export async function middleware(request: NextRequest) {
       const interest = request.nextUrl.searchParams.get("interest");
       const isWaitlistOnly = Boolean(interest && !plan);
       if (!isWaitlistOnly) {
+        // Already a member — never restart public signup; enter the app.
+        if (session.role === "MEMBER") {
+          return NextResponse.redirect(new URL(memberEntryFromRequest(request), request.url));
+        }
         const href = purchaseHref(plan || "explorer", { signedIn: true, role: session.role }, {
           quote: request.nextUrl.searchParams.get("quote") === "1",
         });
-        if (session.role === "MEMBER" || isStaffRole(session.role)) {
+        if (isStaffRole(session.role)) {
           return NextResponse.redirect(new URL(href, request.url));
         }
       }
     }
     return NextResponse.next();
+  }
+
+  // Logged-in members stay in the member app — not landing / join / home marketing.
+  if (isMemberLandingSidePath(pathname)) {
+    const session = await sessionFromRequest(request);
+    if (session?.role === "MEMBER") {
+      return NextResponse.redirect(new URL(memberEntryFromRequest(request), request.url));
+    }
+  }
+
+  // Already signed in → skip the public login form.
+  if (pathname === "/login" || pathname.startsWith("/login/")) {
+    const session = await sessionFromRequest(request);
+    if (session?.role === "MEMBER") {
+      const redirectParam = request.nextUrl.searchParams.get("redirect");
+      if (redirectParam?.startsWith("/member")) {
+        return NextResponse.redirect(new URL(redirectParam, request.url));
+      }
+      return NextResponse.redirect(new URL(memberEntryFromRequest(request), request.url));
+    }
+    if (session && isStaffRole(session.role)) {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    }
   }
 
   if (isPublicPage(pathname)) {
@@ -201,17 +242,6 @@ export async function middleware(request: NextRequest) {
     const plan =
       request.nextUrl.searchParams.get("plan") ||
       request.cookies.get(SIGNUP_PLAN_COOKIE)?.value;
-
-    // Landing home while still onboarding → back to wizard
-    if (
-      (pathname === "/" || pathname === "") &&
-      request.cookies.get(NEEDS_ONBOARD_COOKIE)?.value === "1" &&
-      request.cookies.get(NEEDS_PAYMENT_COOKIE)?.value !== "1"
-    ) {
-      const onboard = new URL("/member/onboard", request.url);
-      if (plan) onboard.searchParams.set("plan", plan);
-      return NextResponse.redirect(onboard);
-    }
 
     if (pathname.startsWith("/member")) {
       if (

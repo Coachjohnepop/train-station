@@ -75,6 +75,9 @@ export default function LandingNav({
   }
 
   const isWelcome = variant === "welcome";
+  /** Signed-in members should not re-enter marketing/join surfaces from the nav. */
+  const memberHomeHref = "/member/today";
+  const brandHref = purchaseAuth.signedIn ? memberHomeHref : "/";
 
   return (
     <header
@@ -90,7 +93,7 @@ export default function LandingNav({
       <div className="mx-auto flex max-w-6xl items-center gap-1.5 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
         <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
           <Link
-            href="/"
+            href={brandHref}
             className="flex min-w-0 shrink-0 items-center gap-2 transition hover:opacity-90"
             onClick={closeMenus}
           >
@@ -107,24 +110,34 @@ export default function LandingNav({
 
           {isWelcome ? (
             <div className="flex min-w-0 items-center gap-0.5 sm:gap-1">
-              <Link
-                href="/join"
-                className="landing-nav__link landing-nav__link--compact"
-                onClick={closeMenus}
-              >
-                Memberships
-              </Link>
               {purchaseAuth.signedIn ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    window.location.href = logoutUrl();
-                  }}
+                <>
+                  <Link
+                    href={memberHomeHref}
+                    className="landing-nav__link landing-nav__link--compact"
+                    onClick={closeMenus}
+                  >
+                    Today
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.location.href = logoutUrl();
+                    }}
+                    className="landing-nav__link landing-nav__link--compact"
+                  >
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <Link
+                  href="/join"
                   className="landing-nav__link landing-nav__link--compact"
+                  onClick={closeMenus}
                 >
-                  Sign out
-                </button>
-              ) : null}
+                  Memberships
+                </Link>
+              )}
             </div>
           ) : null}
 
@@ -145,7 +158,7 @@ export default function LandingNav({
               </Link>
             ))}
 
-            {!isWelcome ? (
+            {!isWelcome && !purchaseAuth.signedIn ? (
               <div
                 className="relative"
                 onMouseEnter={() => setMembershipsOpen(true)}
@@ -159,11 +172,7 @@ export default function LandingNav({
                     {memberships.map((tier) => (
                       <Link
                         key={tier.id}
-                        href={
-                          purchaseAuth.signedIn
-                            ? purchaseHref(tier.signupPlan, purchaseAuth)
-                            : tier.signupHref
-                        }
+                        href={tier.signupHref}
                         onClick={(e) => {
                           e.preventDefault();
                           membershipAction(tier);
@@ -186,27 +195,42 @@ export default function LandingNav({
                 )}
               </div>
             ) : null}
+            {!isWelcome && purchaseAuth.signedIn ? (
+              <Link href={memberHomeHref} className="landing-nav__link" onClick={closeMenus}>
+                Today
+              </Link>
+            ) : null}
           </nav>
         </div>
 
         <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
           {variant === "public" ? (
-            <>
+            purchaseAuth.signedIn ? (
               <Link
-                href="/login"
-                className={`landing-nav__link ${overHero ? "hidden sm:inline-flex text-white/90" : "hidden md:inline-flex"}`}
+                href={memberHomeHref}
+                className={`btn-primary hidden px-4 py-2 text-xs font-bold md:inline-flex ${overHero ? "sm:inline-flex" : ""}`}
+                onClick={closeMenus}
               >
-                Sign in
+                Open Today
               </Link>
-              {!overHero ? (
+            ) : (
+              <>
                 <Link
-                  href="/join#tickets"
-                  className="btn-primary hidden px-4 py-2 text-xs font-bold md:inline-flex"
+                  href="/login"
+                  className={`landing-nav__link ${overHero ? "hidden sm:inline-flex text-white/90" : "hidden md:inline-flex"}`}
                 >
-                  Choose ticket
+                  Sign in
                 </Link>
-              ) : null}
-            </>
+                {!overHero ? (
+                  <Link
+                    href="/join#tickets"
+                    className="btn-primary hidden px-4 py-2 text-xs font-bold md:inline-flex"
+                  >
+                    Choose ticket
+                  </Link>
+                ) : null}
+              </>
+            )
           ) : null}
           {/* Theme lives in-nav so it never sits on the hamburger */}
           <div className="global-theme-toggle">
@@ -243,17 +267,17 @@ export default function LandingNav({
                 {section.label}
               </Link>
             ))}
-            {isWelcome && purchaseAuth.signedIn ? (
+            {purchaseAuth.signedIn ? (
               <>
                 <a
-                  href="/member/today"
+                  href={memberHomeHref}
                   className="block rounded-lg px-2 py-2 text-sm font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
                   onClick={closeMenus}
                 >
                   Today
                 </a>
                 <a
-                  href="/member/today"
+                  href={memberHomeHref}
                   className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]"
                   onClick={closeMenus}
                 >
@@ -265,6 +289,13 @@ export default function LandingNav({
                   onClick={closeMenus}
                 >
                   Account &amp; billing
+                </Link>
+                <Link
+                  href="/member/programs"
+                  className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]"
+                  onClick={closeMenus}
+                >
+                  My programs
                 </Link>
                 <button
                   type="button"
@@ -295,6 +326,7 @@ export default function LandingNav({
               </>
             )}
           </div>
+          {!purchaseAuth.signedIn ? (
           <div className="mt-3 border-t border-[var(--border)] pt-3">
             <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--muted)]">
               Memberships
@@ -303,11 +335,7 @@ export default function LandingNav({
               {memberships.map((tier) => (
                 <Link
                   key={tier.id}
-                  href={
-                    purchaseAuth.signedIn
-                      ? purchaseHref(tier.signupPlan, purchaseAuth)
-                      : tier.signupHref
-                  }
+                  href={tier.signupHref}
                   onClick={(e) => {
                     e.preventDefault();
                     membershipAction(tier);
@@ -327,6 +355,7 @@ export default function LandingNav({
               </Link>
             </div>
           </div>
+          ) : null}
         </div>
       )}
     </header>

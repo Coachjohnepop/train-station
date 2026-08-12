@@ -28,6 +28,7 @@ export type MemberMembershipSnapshot = {
   paymentMethod: MemberProfile["paymentMethod"];
   paidAt: string | null;
   approvalStatus: MemberProfile["approvalStatus"];
+  onboardingComplete: boolean;
   referralCode: string | null;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
@@ -165,6 +166,7 @@ export async function getMemberMembershipSnapshot(
     paymentMethod: profile.paymentMethod,
     paidAt: profile.paidAt,
     approvalStatus: profile.approvalStatus,
+    onboardingComplete: Boolean(profile.onboardingComplete),
     referralCode: profile.referralCode,
     stripeCustomerId: profile.stripeCustomerId,
     stripeSubscriptionId: profile.stripeSubscriptionId,

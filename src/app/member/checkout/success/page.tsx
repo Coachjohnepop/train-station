@@ -58,6 +58,34 @@ function CheckoutSuccessInner() {
       if (cancelled) return;
 
       if (!confirmRes.ok) {
+        // Webhook may have already marked paid (Ali-style race). Re-sync gates and recover.
+        const gatesRes = await fetch("/api/member/sync-gates", {
+          method: "POST",
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+        const gatesData = await gatesRes.json().catch(() => ({}));
+        if (
+          gatesRes.ok &&
+          gatesData.paymentStatus === "paid" &&
+          typeof gatesData.redirectTo === "string"
+        ) {
+          setContinueHref(gatesData.redirectTo);
+          setReceipt({
+            sessionId,
+            amountTotalLabel: null,
+            planLabel: null,
+            productName: "Membership",
+            paidAt: new Date().toISOString(),
+            customerEmail: null,
+            cardBrand: null,
+            cardLast4: null,
+            paymentStatus: "paid",
+            receiptUrl: null,
+          });
+          setPhase("ready");
+          return;
+        }
         setPhase("error");
         setError(
           confirmData.error ||

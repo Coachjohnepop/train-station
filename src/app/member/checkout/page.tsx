@@ -91,25 +91,47 @@ function MemberCheckoutInner() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [paymentsRes, membershipRes] = await Promise.all([
+      const [paymentsRes, membershipRes, gatesRes] = await Promise.all([
         fetch("/api/payments/public"),
         fetch("/api/member/membership"),
+        // Re-sync gate cookies every checkout visit (webhook may have paid without clearing browser cookies).
+        fetch("/api/member/sync-gates", { method: "POST", credentials: "same-origin", cache: "no-store" }),
       ]);
       const paymentsData = await paymentsRes.json().catch(() => ({}));
       const membershipData = await membershipRes.json().catch(() => ({}));
-      if (!cancelled) {
-        setPayments(paymentsRes.ok ? paymentsData : null);
-        setHasSavedCard(Boolean(membershipData.hasSavedPaymentMethod));
-        setPaymentStatus(
-          typeof membershipData.paymentStatus === "string" ? membershipData.paymentStatus : null,
-        );
-        setPaymentsLoading(false);
+      const gatesData = await gatesRes.json().catch(() => ({}));
+      if (cancelled) return;
+
+      setPayments(paymentsRes.ok ? paymentsData : null);
+      setHasSavedCard(Boolean(membershipData.hasSavedPaymentMethod));
+      const status =
+        typeof membershipData.paymentStatus === "string" ? membershipData.paymentStatus : null;
+      setPaymentStatus(status);
+      setPaymentsLoading(false);
+
+      // Paid signup (not intentional upgrade/downgrade): leave checkout for onboard/Today.
+      // Fixes Ali-style “ticket paid but stuck on Get your Ticket”.
+      if (
+        !isDowngradeIntent &&
+        status === "paid" &&
+        gatesRes.ok &&
+        typeof gatesData.redirectTo === "string" &&
+        gatesData.redirectTo &&
+        !gatesData.needsPayment
+      ) {
+        // Stay on checkout only when they are upgrading to a different plan (URL plan ≠ profile).
+        const profilePlan =
+          typeof membershipData.plan === "string" ? membershipData.plan : null;
+        const sameTicket = !profilePlan || profilePlan === plan;
+        if (sameTicket) {
+          window.location.replace(gatesData.redirectTo as string);
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isDowngradeIntent, plan]);
 
   const membershipOffer = payments?.memberships?.find((m) => m.plan === plan);
   const merchOffer = payments?.merchandise?.find((m) => m.id === merchandiseSkuId);
@@ -160,6 +182,10 @@ function MemberCheckoutInner() {
       if (res.ok && data.planChanged && data.redirectTo) {
         setPlanChanging(true);
         window.location.href = data.redirectTo;
+        return;
+      }
+      if (res.ok && data.alreadyPaid && data.redirectTo) {
+        window.location.replace(data.redirectTo);
         return;
       }
       if (res.ok && data.clientSecret && data.sessionId) {
@@ -344,13 +370,12 @@ function MemberCheckoutInner() {
                 </Link>
               ) : (
                 <>
-                  {!isSignupCheckout && (
-                    <Link href="/join" className="hover:text-accent">
-                      Compare train seats
-                    </Link>
-                  )}
-                  <Link href="/" className="hover:text-accent">
-                    Back to home
+                  {/* Stay inside the member app — no landing / join escapes while signed in. */}
+                  <Link href="/member/account" className="hover:text-accent">
+                    Account &amp; billing
+                  </Link>
+                  <Link href="/member/chat" className="hover:text-accent">
+                    Message coach
                   </Link>
                 </>
               )}
@@ -384,8 +409,8 @@ function MemberCheckoutInner() {
                 Open free dashboard
               </Link>
               {" · "}
-              <Link href="/join" className="hover:text-accent">
-                Back to home tickets
+              <Link href="/member/account" className="hover:text-accent">
+                Account
               </Link>
             </p>
           </div>

@@ -42,6 +42,30 @@ export async function POST(request: Request) {
     const existingProfile = await getMemberProfile(session.id);
     const plan = normalizeSignupPlan(parsed.data.plan || existingProfile?.plan || "explorer");
 
+    // Already paid for this ticket — do not open another Checkout session.
+    // Clear stale payment-gate cookies and send them into onboard / Today.
+    if (
+      existingProfile?.paymentStatus === "paid" &&
+      existingProfile.plan === plan &&
+      !parsed.data.customOfferId &&
+      !parsed.data.merchandiseSkuId
+    ) {
+      const redirectTo = existingProfile.onboardingComplete
+        ? "/member/today"
+        : `/member/onboard?plan=${encodeURIComponent(existingProfile.plan)}`;
+      const res = NextResponse.json({
+        ok: true,
+        alreadyPaid: true,
+        redirectTo,
+        plan: existingProfile.plan,
+      });
+      await syncMemberGateCookies(res, {
+        userId: session.id,
+        profile: existingProfile,
+      });
+      return res;
+    }
+
     if (
       existingProfile?.paymentStatus !== "paid" &&
       existingProfile?.plan &&
