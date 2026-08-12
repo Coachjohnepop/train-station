@@ -6,6 +6,10 @@ import {
   syncMemberGateCookies,
 } from "@/lib/auth";
 import { isCoachTipCheckoutMetadata } from "@/lib/coach-tips";
+import {
+  paymentIntentIdFromUnknown,
+  recordSubscriptionPaymentFact,
+} from "@/lib/analytics-facts";
 import { markMemberPaid, attachPaidMemberCookies } from "@/lib/mark-member-paid";
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import { getStripe } from "@/lib/stripe";
@@ -68,6 +72,9 @@ export async function POST(request: Request) {
     return res;
   }
 
+  const amountCents = typeof checkout.amount_total === "number" ? checkout.amount_total : 0;
+  const currency = checkout.currency ?? "usd";
+
   const updated = await markMemberPaid({
     userId: sessionUser.id,
     method: "stripe",
@@ -76,6 +83,8 @@ export async function POST(request: Request) {
     stripeCustomerId: checkoutCustomerId(checkout),
     stripeSubscriptionId: checkoutSubscriptionId(checkout),
     stripeCheckoutSessionId: checkout.id,
+    amountCents: amountCents > 0 ? amountCents : null,
+    currency,
     actor: {
       userId: sessionUser.id,
       email: sessionUser.email,
@@ -88,11 +97,37 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Member profile not found." }, { status: 404 });
   }
 
+  if (amountCents > 0) {
+    await recordSubscriptionPaymentFact({
+      userId: sessionUser.id,
+      stripePaymentIntentId: paymentIntentIdFromUnknown(checkout.payment_intent),
+      stripeSubscriptionId: checkoutSubscriptionId(checkout),
+      stripeCustomerId: checkoutCustomerId(checkout),
+      amountCents,
+      currency,
+      status: "paid",
+      planId: checkout.metadata?.plan ?? updated.plan,
+      tierSlug: checkout.metadata?.plan ?? updated.plan,
+      billingReason: checkout.mode === "subscription" ? "subscription_create" : "checkout",
+      paidAt: new Date((checkout.created ?? Math.floor(Date.now() / 1000)) * 1000),
+      properties: {
+        kind: "membership_checkout",
+        checkoutSessionId: checkout.id,
+        mode: checkout.mode,
+        source: "stripe.confirm",
+        referralCode: checkout.metadata?.referralCode ?? null,
+        amountSubtotal: checkout.amount_subtotal ?? null,
+      },
+    });
+  }
+
   const plan = updated.plan;
 
   const res = NextResponse.json({
     ok: true,
     redirectTo: `/member/onboard?plan=${encodeURIComponent(plan)}`,
+    amountCents: amountCents > 0 ? amountCents : null,
+    currency: checkout.currency ?? "usd",
   });
   await syncMemberGateCookies(res, { userId: sessionUser.id, profile: updated });
   await attachPaidMemberCookies(res, sessionUser.id, updated);

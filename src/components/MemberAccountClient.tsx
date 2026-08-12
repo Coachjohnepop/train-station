@@ -25,6 +25,10 @@ type MembershipData = {
   paidAt: string | null;
   approvalStatus: string;
   referralCode: string | null;
+  lastPaymentAmountCents?: number | null;
+  lastPaymentCurrency?: string | null;
+  lastPaymentAt?: string | null;
+  lastPaymentLabel?: string | null;
   canManageBilling: boolean;
   canCompleteCheckout: boolean;
   hasSavedPaymentMethod: boolean;
@@ -225,6 +229,25 @@ export default function MemberAccountClient({
               {membership.paymentMethod ? ` · Paid via ${membership.paymentMethod}` : ""}
             </p>
           )}
+          {membership.lastPaymentLabel ? (
+            <p className="text-sm text-[var(--text)]">
+              <span className="font-medium">Last payment: {membership.lastPaymentLabel}</span>
+              {membership.lastPaymentAt ? (
+                <span className="text-[var(--muted)]">
+                  {" "}
+                  ·{" "}
+                  {new Date(membership.lastPaymentAt).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
+              ) : null}
+              {membership.referralCode ? (
+                <span className="text-[var(--muted)]"> · code {membership.referralCode}</span>
+              ) : null}
+            </p>
+          ) : null}
 
           {membership.approvalStatus === "pending" && (
             <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">

@@ -26,6 +26,9 @@ export async function markMemberPaid(input: {
   stripeSubscriptionId?: string | null;
   stripeCheckoutSessionId?: string | null;
   customOfferId?: string | null;
+  /** Optional charge amount for audit trail (ledger is FactSubscriptionPayment). */
+  amountCents?: number | null;
+  currency?: string | null;
   /** Staff or system actor for M&A audit trail. */
   actor?: AuditActor;
   /** e.g. admin.mark_paid | stripe.webhook | stripe.confirm */
@@ -89,6 +92,8 @@ export async function markMemberPaid(input: {
       stripeCheckoutSessionId: input.stripeCheckoutSessionId ?? null,
       stripeSubscriptionId: input.stripeSubscriptionId ?? null,
       customOfferId: input.customOfferId ?? null,
+      amountCents: input.amountCents ?? null,
+      currency: input.currency ?? null,
     },
   });
 

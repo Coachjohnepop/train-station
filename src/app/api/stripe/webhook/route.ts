@@ -14,7 +14,10 @@ import {
   isCheckoutSessionPaid,
   isSubscriptionActive,
 } from "@/lib/stripe-payment-verify";
-import { recordSubscriptionPaymentFact } from "@/lib/analytics-facts";
+import {
+  paymentIntentIdFromUnknown,
+  recordSubscriptionPaymentFact,
+} from "@/lib/analytics-facts";
 
 export const dynamic = "force-dynamic";
 
@@ -107,6 +110,10 @@ export async function POST(request: Request) {
 
       await persistCheckoutPaymentMethod(session);
 
+      // Ledger amount at checkout (invoice.paid may lag or miss — net-new must still have $ in DB).
+      const amountCents = typeof session.amount_total === "number" ? session.amount_total : 0;
+      const currency = session.currency ?? "usd";
+
       await markMemberPaid({
         userId,
         method: "stripe",
@@ -115,9 +122,35 @@ export async function POST(request: Request) {
         stripeCustomerId: checkoutCustomerId(session),
         stripeSubscriptionId: subscriptionId,
         stripeCheckoutSessionId: session.id,
+        amountCents: amountCents > 0 ? amountCents : null,
+        currency,
         actor: { role: "system" },
         auditSource: "stripe.webhook.checkout.session.completed",
       });
+
+      if (amountCents > 0) {
+        await recordSubscriptionPaymentFact({
+          userId,
+          stripePaymentIntentId: paymentIntentIdFromUnknown(session.payment_intent),
+          stripeSubscriptionId: subscriptionId,
+          stripeCustomerId: checkoutCustomerId(session),
+          amountCents,
+          currency,
+          status: "paid",
+          planId: session.metadata?.plan ?? null,
+          tierSlug: session.metadata?.plan ?? null,
+          billingReason: session.mode === "subscription" ? "subscription_create" : "checkout",
+          paidAt: new Date((session.created ?? Math.floor(Date.now() / 1000)) * 1000),
+          stripeEventId: event.id,
+          properties: {
+            kind: "membership_checkout",
+            checkoutSessionId: session.id,
+            mode: session.mode,
+            referralCode: session.metadata?.referralCode ?? null,
+            amountSubtotal: session.amount_subtotal ?? null,
+          },
+        });
+      }
       break;
     }
     case "invoice.paid": {

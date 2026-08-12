@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getLatestPaidPaymentFact } from "@/lib/analytics-facts";
 import { getMemberProfile, type MemberProfile } from "@/lib/member-profiles-store";
 import { isPaidSignupPlan, isStripePaymentsEnabled } from "@/lib/member-gates";
 import { getEffectiveMembershipOffer } from "@/lib/pricing-catalog";
@@ -32,6 +33,11 @@ export type MemberMembershipSnapshot = {
   referralCode: string | null;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
+  /** Latest ledger amount from FactSubscriptionPayment (what she actually paid). */
+  lastPaymentAmountCents: number | null;
+  lastPaymentCurrency: string | null;
+  lastPaymentAt: string | null;
+  lastPaymentLabel: string | null;
   canManageBilling: boolean;
   canCompleteCheckout: boolean;
   hasSavedPaymentMethod: boolean;
@@ -157,6 +163,15 @@ export async function getMemberMembershipSnapshot(
   // Downgrades only for active paid members (settings + confirm)
   const downgradePlans: SignupPlan[] = paidActive ? downgradeMembershipPlansFrom(plan) : [];
 
+  const lastPay = paidActive ? await getLatestPaidPaymentFact(userId) : null;
+  const lastPaymentAmountCents = lastPay?.amountCents ?? null;
+  const lastPaymentCurrency = lastPay?.currency ?? null;
+  const lastPaymentAt = lastPay?.paidAt ? lastPay.paidAt.toISOString() : null;
+  const lastPaymentLabel =
+    lastPaymentAmountCents != null
+      ? formatMoneyCents(lastPaymentAmountCents, lastPaymentCurrency || "usd")
+      : null;
+
   return {
     plan,
     planLabel: signupPlanLabel(plan),
@@ -170,6 +185,10 @@ export async function getMemberMembershipSnapshot(
     referralCode: profile.referralCode,
     stripeCustomerId: profile.stripeCustomerId,
     stripeSubscriptionId: profile.stripeSubscriptionId,
+    lastPaymentAmountCents,
+    lastPaymentCurrency,
+    lastPaymentAt,
+    lastPaymentLabel,
     canManageBilling: Boolean(
       stripeReady &&
         profile.paymentMethod === "stripe" &&
@@ -196,6 +215,17 @@ export async function getMemberMembershipSnapshot(
 
 export function formatMembershipPaymentStatus(snapshot: MemberMembershipSnapshot): string {
   return paymentStatusLabel(snapshot.paymentStatus);
+}
+
+function formatMoneyCents(cents: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: (currency || "usd").toUpperCase(),
+    }).format(cents / 100);
+  } catch {
+    return `$${(cents / 100).toFixed(2)}`;
+  }
 }
 
 /** Signed-in member who finished setup or has an active paid plan — not a prospect picking a ticket. */
