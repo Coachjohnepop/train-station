@@ -187,6 +187,161 @@ export async function getLatestPaidPaymentFact(userId: string): Promise<{
 
 export { paymentIntentIdFromUnknown };
 
+export type PaymentLedgerRow = {
+  id: string;
+  userId: string | null;
+  amountCents: number;
+  amountRefundedCents: number;
+  currency: string;
+  status: string;
+  planId: string | null;
+  billingReason: string | null;
+  paidAt: Date;
+  stripeInvoiceId: string | null;
+  stripePaymentIntentId: string | null;
+  stripeSubscriptionId: string | null;
+  stripeCustomerId: string | null;
+  properties: unknown;
+  memberName?: string | null;
+  memberEmail?: string | null;
+};
+
+function formatUsdFromCentsLocal(cents: number, currency = "usd"): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: (currency || "usd").toUpperCase(),
+    }).format(cents / 100);
+  } catch {
+    return `$${(cents / 100).toFixed(2)}`;
+  }
+}
+
+/** App ledger of membership / tip payments (Postgres). */
+export async function listPaymentLedger(options?: {
+  userId?: string;
+  limit?: number;
+  status?: string;
+}): Promise<{
+  rows: Array<
+    PaymentLedgerRow & {
+      amountLabel: string;
+      paidAtLabel: string;
+    }
+  >;
+  totalPaidCents: number;
+  totalPaidLabel: string;
+  count: number;
+}> {
+  const empty = {
+    rows: [] as Array<PaymentLedgerRow & { amountLabel: string; paidAtLabel: string }>,
+    totalPaidCents: 0,
+    totalPaidLabel: formatUsdFromCentsLocal(0),
+    count: 0,
+  };
+  if (!isDatabaseConfigured() || isDemoMode()) return empty;
+
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    const limit = Math.min(Math.max(options?.limit ?? 50, 1), 200);
+    const where: {
+      userId?: string;
+      status?: string;
+    } = {};
+    if (options?.userId) where.userId = options.userId;
+    if (options?.status) where.status = options.status;
+
+    const rows = await prisma.factSubscriptionPayment.findMany({
+      where,
+      orderBy: { paidAt: "desc" },
+      take: limit,
+      include: {
+        user: { select: { name: true, email: true } },
+      },
+    });
+
+    const mapped = rows.map((r) => {
+      const amountLabel = formatUsdFromCentsLocal(r.amountCents, r.currency);
+      return {
+        id: r.id,
+        userId: r.userId,
+        amountCents: r.amountCents,
+        amountRefundedCents: r.amountRefundedCents,
+        currency: r.currency,
+        status: r.status,
+        planId: r.planId,
+        billingReason: r.billingReason,
+        paidAt: r.paidAt,
+        stripeInvoiceId: r.stripeInvoiceId,
+        stripePaymentIntentId: r.stripePaymentIntentId,
+        stripeSubscriptionId: r.stripeSubscriptionId,
+        stripeCustomerId: r.stripeCustomerId,
+        properties: r.properties,
+        memberName: r.user?.name ?? null,
+        memberEmail: r.user?.email ?? null,
+        amountLabel,
+        paidAtLabel: r.paidAt.toISOString(),
+      };
+    });
+
+    const totalPaidCents = mapped
+      .filter((r) => r.status === "paid")
+      .reduce((sum, r) => sum + r.amountCents - (r.amountRefundedCents || 0), 0);
+
+    return {
+      rows: mapped,
+      totalPaidCents,
+      totalPaidLabel: formatUsdFromCentsLocal(totalPaidCents),
+      count: mapped.length,
+    };
+  } catch (e: unknown) {
+    console.error(
+      "[analytics-facts] listPaymentLedger failed:",
+      e instanceof Error ? e.message : e,
+    );
+    return empty;
+  }
+}
+
+/** Latest paid amount per userId (for admin members list). */
+export async function getLatestPaidAmountsByUserIds(
+  userIds: string[],
+): Promise<Map<string, { amountCents: number; currency: string; paidAt: Date }>> {
+  const map = new Map<string, { amountCents: number; currency: string; paidAt: Date }>();
+  if (!userIds.length || !isDatabaseConfigured() || isDemoMode()) return map;
+
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    // One query: recent paid rows, keep first per user
+    const rows = await prisma.factSubscriptionPayment.findMany({
+      where: {
+        userId: { in: userIds },
+        status: "paid",
+        amountCents: { gt: 0 },
+      },
+      orderBy: { paidAt: "desc" },
+      select: {
+        userId: true,
+        amountCents: true,
+        currency: true,
+        paidAt: true,
+      },
+      take: Math.min(userIds.length * 5, 500),
+    });
+    for (const r of rows) {
+      if (!r.userId || map.has(r.userId)) continue;
+      map.set(r.userId, {
+        amountCents: r.amountCents,
+        currency: r.currency,
+        paidAt: r.paidAt,
+      });
+    }
+  } catch {
+    /* ignore */
+  }
+  return map;
+}
+
 export async function recordCommissionPayoutFact(input: {
   partnerId?: string | null;
   partnerEmail?: string | null;

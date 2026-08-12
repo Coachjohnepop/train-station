@@ -80,6 +80,22 @@ type AccountingData = {
     mode: string;
     weekdayLabel: string;
   };
+  paymentBooks?: {
+    count: number;
+    totalPaidLabel: string;
+    totalPaidCents: number;
+    rows: Array<{
+      id: string;
+      amountLabel: string;
+      status: string;
+      planId: string | null;
+      billingReason: string | null;
+      paidAt: string;
+      memberName: string | null;
+      memberEmail: string | null;
+      userId: string | null;
+    }>;
+  };
   links: {
     moneyDesk: string;
     billing: string;
@@ -403,6 +419,71 @@ export default function AdminAccountingClient() {
             <li className="text-sm text-[var(--muted)]">Queue empty for this period.</li>
           ) : null}
         </ul>
+      </section>
+
+      {/* App books — Postgres ledger (membership + Venmo mark-paid + tips) */}
+      <section className="space-y-3" id="books">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
+              Books (app ledger)
+            </h2>
+            <p className="mt-0.5 text-xs text-[var(--muted)]">
+              Postgres payment rows — Stripe checkouts, Venmo mark-paid, tips. Stays even if Stripe
+              keys change.
+            </p>
+          </div>
+          {data.paymentBooks ? (
+            <p className="text-sm font-semibold tabular-nums text-emerald-300">
+              {data.paymentBooks.totalPaidLabel}
+              <span className="ml-1 text-xs font-normal text-[var(--muted)]">
+                · {data.paymentBooks.count} recent
+              </span>
+            </p>
+          ) : null}
+        </div>
+        <div className="overflow-hidden rounded-xl border border-[var(--border)]">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-[var(--surface-2)] text-[10px] uppercase tracking-wide text-[var(--muted)]">
+              <tr>
+                <th className="px-3 py-2 font-semibold">When</th>
+                <th className="px-3 py-2 font-semibold">Member</th>
+                <th className="px-3 py-2 font-semibold">Amount</th>
+                <th className="px-3 py-2 font-semibold">Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {!data.paymentBooks?.rows?.length ? (
+                <tr>
+                  <td colSpan={4} className="px-3 py-4 text-[var(--muted)]">
+                    No ledger rows yet. New card checkouts and Mark paid (with amount) write here.
+                  </td>
+                </tr>
+              ) : (
+                data.paymentBooks.rows.map((r) => (
+                  <tr key={r.id} className="border-t border-[var(--border)]">
+                    <td className="px-3 py-2.5 text-xs text-[var(--muted)]">
+                      {new Date(r.paidAt).toLocaleString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <p className="font-medium">{r.memberName || "—"}</p>
+                      <p className="text-[11px] text-[var(--muted)]">{r.memberEmail || r.userId}</p>
+                    </td>
+                    <td className="px-3 py-2.5 tabular-nums font-semibold">{r.amountLabel}</td>
+                    <td className="px-3 py-2.5 text-xs text-[var(--muted)]">
+                      {r.billingReason || r.planId || "payment"}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       {/* Recent payouts */}

@@ -29,6 +29,10 @@ type MemberRow = {
   staffGrantedBy: string | null;
   onboardingComplete: boolean;
   paidAt: string | null;
+  lastPaymentAmountCents?: number | null;
+  lastPaymentCurrency?: string | null;
+  lastPaymentAt?: string | null;
+  lastPaymentLabel?: string | null;
   approvedAt: string | null;
   createdAt: string;
   completedAt: string | null;
@@ -38,6 +42,16 @@ type MemberRow = {
   coachMeetingRequestNote: string | null;
   rampStartedAt: string | null;
   coachingMode: MemberCoachingMode;
+};
+
+type PaymentHistoryRow = {
+  id: string;
+  amountLabel: string;
+  status: string;
+  planId: string | null;
+  billingReason: string | null;
+  paidAt: string;
+  memberName?: string | null;
 };
 
 function isStaffGrantRow(m: MemberRow): boolean {
@@ -101,10 +115,13 @@ export default function AdminMembersPage() {
   const [meetingRequesting, setMeetingRequesting] = useState<string | null>(null);
   const [markingPaid, setMarkingPaid] = useState<string | null>(null);
   const [markPaidTarget, setMarkPaidTarget] = useState<MemberRow | null>(null);
-  const [markPaidMethod, setMarkPaidMethod] = useState<"venmo" | "manual" | "stripe" | "other">(
-    "venmo",
-  );
+  const [markPaidMethod, setMarkPaidMethod] = useState<"venmo" | "manual" | "other">("venmo");
   const [markPaidNote, setMarkPaidNote] = useState("");
+  const [markPaidAmount, setMarkPaidAmount] = useState("25");
+  const [paymentsTarget, setPaymentsTarget] = useState<MemberRow | null>(null);
+  const [paymentsRows, setPaymentsRows] = useState<PaymentHistoryRow[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [paymentsTotal, setPaymentsTotal] = useState<string | null>(null);
   const [staffGrantTarget, setStaffGrantTarget] = useState<MemberRow | null>(null);
   const [staffGrantPlan, setStaffGrantPlan] = useState<"member" | "business" | "pro">("member");
   const [staffGrantNote, setStaffGrantNote] = useState("");
@@ -188,6 +205,11 @@ export default function AdminMembersPage() {
 
   async function submitMarkPaid() {
     if (!markPaidTarget) return;
+    const dollars = Number(markPaidAmount);
+    if (!Number.isFinite(dollars) || dollars <= 0) {
+      setError("Enter a payment amount in dollars (e.g. 25).");
+      return;
+    }
     setMarkingPaid(markPaidTarget.userId);
     setError("");
     const res = await fetch(
@@ -198,6 +220,7 @@ export default function AdminMembersPage() {
         body: JSON.stringify({
           method: markPaidMethod,
           note: markPaidNote.trim() || undefined,
+          amountDollars: dollars,
         }),
       },
     );
@@ -207,9 +230,35 @@ export default function AdminMembersPage() {
     } else {
       setMarkPaidTarget(null);
       setMarkPaidNote("");
+      setMarkPaidAmount("25");
       await loadMembers();
     }
     setMarkingPaid(null);
+  }
+
+  async function openPaymentHistory(member: MemberRow) {
+    setPaymentsTarget(member);
+    setPaymentsLoading(true);
+    setPaymentsRows([]);
+    setPaymentsTotal(null);
+    setError("");
+    try {
+      const res = await fetch(
+        `/api/admin/members/${encodeURIComponent(member.userId)}/payments`,
+        { cache: "no-store" },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Could not load payment history.");
+      } else {
+        setPaymentsRows(data.rows || []);
+        setPaymentsTotal(data.totalPaidLabel || null);
+      }
+    } catch {
+      setError("Could not load payment history.");
+    } finally {
+      setPaymentsLoading(false);
+    }
   }
 
   async function submitStaffGrant() {
@@ -446,6 +495,27 @@ export default function AdminMembersPage() {
                           {member.paidAt ? ` · ${formatWhen(member.paidAt)}` : ""}
                         </span>
                       )}
+                      {member.lastPaymentLabel ? (
+                        <button
+                          type="button"
+                          className="text-left text-[10px] font-semibold text-accent hover:underline"
+                          onClick={() => void openPaymentHistory(member)}
+                        >
+                          Last: {member.lastPaymentLabel}
+                          {member.lastPaymentAt
+                            ? ` · ${formatWhen(member.lastPaymentAt)}`
+                            : ""}{" "}
+                          · history
+                        </button>
+                      ) : member.paymentStatus === "paid" ? (
+                        <button
+                          type="button"
+                          className="text-left text-[10px] text-[var(--muted)] hover:text-accent hover:underline"
+                          onClick={() => void openPaymentHistory(member)}
+                        >
+                          Payment history
+                        </button>
+                      ) : null}
                       {isStaffGrantRow(member) && member.staffGrantExpiresAt ? (
                         <span
                           className={`text-[10px] font-semibold ${
@@ -642,6 +712,30 @@ export default function AdminMembersPage() {
             <p className="text-sm text-[var(--muted)]">
               {markPaidTarget.name} · {markPaidTarget.planLabel}
             </p>
+            <p className="text-xs text-[var(--muted)]">
+              Amount is required so Accounting books stay complete (Venmo / cash / other).
+            </p>
+            <div>
+              <label htmlFor="pay-amount" className="text-xs font-medium text-[var(--muted)]">
+                Amount received (USD) *
+              </label>
+              <div className="relative mt-1">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--muted)]">
+                  $
+                </span>
+                <input
+                  id="pay-amount"
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  inputMode="decimal"
+                  className="input w-full pl-7"
+                  placeholder="25.00"
+                  value={markPaidAmount}
+                  onChange={(e) => setMarkPaidAmount(e.target.value)}
+                />
+              </div>
+            </div>
             <div>
               <label htmlFor="pay-method" className="text-xs font-medium text-[var(--muted)]">
                 Payment method
@@ -651,12 +745,11 @@ export default function AdminMembersPage() {
                 className="input mt-1 w-full"
                 value={markPaidMethod}
                 onChange={(e) =>
-                  setMarkPaidMethod(e.target.value as "venmo" | "manual" | "stripe" | "other")
+                  setMarkPaidMethod(e.target.value as "venmo" | "manual" | "other")
                 }
               >
                 <option value="venmo">Venmo</option>
                 <option value="manual">Manual / cash</option>
-                <option value="stripe">Stripe (manual confirm)</option>
                 <option value="other">Other</option>
               </select>
             </div>
@@ -667,7 +760,7 @@ export default function AdminMembersPage() {
               <input
                 id="pay-note"
                 className="input mt-1 w-full"
-                placeholder="e.g. Venmo @john — June signup"
+                placeholder="e.g. Venmo @JeremyByrdCSCS — June signup"
                 value={markPaidNote}
                 onChange={(e) => setMarkPaidNote(e.target.value)}
               />
@@ -689,6 +782,64 @@ export default function AdminMembersPage() {
                 {markingPaid === markPaidTarget.userId ? "Saving…" : "Confirm paid"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {paymentsTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="card max-h-[85vh] w-full max-w-lg space-y-4 overflow-y-auto p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">Payment history</h2>
+                <p className="text-sm text-[var(--muted)]">
+                  {paymentsTarget.name} · {paymentsTarget.email}
+                </p>
+                {paymentsTotal ? (
+                  <p className="mt-1 text-sm font-semibold text-emerald-300">
+                    Recorded total: {paymentsTotal}
+                  </p>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                className="btn-ghost text-sm"
+                onClick={() => setPaymentsTarget(null)}
+              >
+                Close
+              </button>
+            </div>
+            {paymentsLoading ? (
+              <p className="text-sm text-[var(--muted)]">Loading…</p>
+            ) : paymentsRows.length === 0 ? (
+              <p className="text-sm text-[var(--muted)]">
+                No ledger rows yet. Stripe checkouts after the ledger fix, or Mark paid with an
+                amount, will show here.
+              </p>
+            ) : (
+              <ul className="divide-y divide-[var(--border)] rounded-xl border border-[var(--border)]">
+                {paymentsRows.map((row) => (
+                  <li key={row.id} className="flex items-start justify-between gap-3 px-3 py-2.5">
+                    <div>
+                      <p className="font-semibold tabular-nums">{row.amountLabel}</p>
+                      <p className="text-[11px] text-[var(--muted)]">
+                        {row.billingReason || row.planId || "payment"} · {row.status}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-[11px] text-[var(--muted)]">
+                      {formatWhen(row.paidAt)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="text-[11px] text-[var(--muted)]">
+              Source: app books (Postgres). Full desk:{" "}
+              <Link href="/admin/accounting" className="text-accent hover:underline">
+                Accounting
+              </Link>
+              .
+            </p>
           </div>
         </div>
       )}

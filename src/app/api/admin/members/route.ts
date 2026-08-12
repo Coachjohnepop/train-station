@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getLatestPaidAmountsByUserIds } from "@/lib/analytics-facts";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { listSelfRegisteredAccounts } from "@/lib/member-accounts-store";
 import { listMemberProfiles } from "@/lib/member-profiles-store";
@@ -7,6 +8,17 @@ import { getMemberCoachPrefsMap } from "@/lib/member-coach-prefs-store";
 import { coachingModeFromPrefs } from "@/lib/member-coaching-mode";
 
 export const dynamic = "force-dynamic";
+
+function formatMoneyCents(cents: number, currency = "usd"): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency.toUpperCase(),
+    }).format(cents / 100);
+  } catch {
+    return `$${(cents / 100).toFixed(2)}`;
+  }
+}
 
 async function requireStaff() {
   const session = await getSessionUser();
@@ -24,9 +36,12 @@ export async function GET() {
     getMemberCoachPrefsMap(),
   ]);
   const profileByUserId = new Map(profiles.map((p) => [p.userId, p]));
+  const userIds = accounts.map(({ account }) => account.userId);
+  const lastPaidMap = await getLatestPaidAmountsByUserIds(userIds);
 
   const members = accounts.map(({ email, account }) => {
     const profile = profileByUserId.get(account.userId) ?? null;
+    const lastPay = lastPaidMap.get(account.userId) ?? null;
     return {
       userId: account.userId,
       email,
@@ -43,6 +58,12 @@ export async function GET() {
       staffGrantedBy: profile?.staffGrantedBy ?? null,
       onboardingComplete: profile?.onboardingComplete ?? false,
       paidAt: profile?.paidAt ?? null,
+      lastPaymentAmountCents: lastPay?.amountCents ?? null,
+      lastPaymentCurrency: lastPay?.currency ?? null,
+      lastPaymentAt: lastPay?.paidAt?.toISOString?.() ?? lastPay?.paidAt ?? null,
+      lastPaymentLabel: lastPay
+        ? formatMoneyCents(lastPay.amountCents, lastPay.currency)
+        : null,
       approvedAt: profile?.approvedAt ?? null,
       createdAt: account.createdAt,
       completedAt: profile?.completedAt ?? null,

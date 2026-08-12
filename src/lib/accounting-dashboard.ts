@@ -28,6 +28,7 @@ import { previewPlatformAdminFee } from "@/lib/platform-admin-fee";
 import { getBillingAdminOverview } from "@/lib/stripe-billing-admin";
 import { getStripe, getStripePublishableKey } from "@/lib/stripe";
 import { isStripeTestMode } from "@/lib/stripe-price-ids";
+import { listPaymentLedger } from "@/lib/analytics-facts";
 import { prisma } from "@/lib/prisma";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { isDatabaseConfigured } from "@/lib/database-config";
@@ -142,6 +143,7 @@ export async function getAccountingDashboard() {
     platformAdmin,
     members,
     coachSettings,
+    paymentBooks,
   ] = await Promise.all([
     getBillingAdminOverview().catch((e: unknown) => ({
       configured: false as const,
@@ -160,6 +162,12 @@ export async function getAccountingDashboard() {
     })),
     memberMoneyStats(),
     getCoachSettings(),
+    listPaymentLedger({ limit: 40, status: "paid" }).catch(() => ({
+      rows: [],
+      totalPaidCents: 0,
+      totalPaidLabel: formatUsdFromCents(0),
+      count: 0,
+    })),
   ]);
 
   const mode = commissionSplitMode();
@@ -312,11 +320,29 @@ export async function getAccountingDashboard() {
         COMMISSION_PAYOUT_WEEKDAYS.find((d) => d.value === coachSettings.commissionPayoutWeekday)
           ?.label ?? "Friday",
     },
+    /** App ledger (Postgres) — survives Stripe key / merchant changes. */
+    paymentBooks: {
+      count: paymentBooks.count,
+      totalPaidLabel: paymentBooks.totalPaidLabel,
+      totalPaidCents: paymentBooks.totalPaidCents,
+      rows: paymentBooks.rows.slice(0, 25).map((r) => ({
+        id: r.id,
+        amountLabel: r.amountLabel,
+        status: r.status,
+        planId: r.planId,
+        billingReason: r.billingReason,
+        paidAt: r.paidAtLabel,
+        memberName: r.memberName,
+        memberEmail: r.memberEmail,
+        userId: r.userId,
+      })),
+    },
     links: {
       moneyDesk: "/admin/billing?tab=share",
       billing: "/admin/billing",
       discounts: "/admin/discounts",
       members: "/admin/members",
+      paymentsApi: "/api/admin/accounting/payments",
     },
   };
 }
