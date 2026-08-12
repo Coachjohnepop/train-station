@@ -97,6 +97,29 @@ export async function markMemberPaid(input: {
     },
   });
 
+  // First time paid only — alert Jeremy (email / push / SMS / Messages / purple badge).
+  if (!wasPaid) {
+    try {
+      const { prisma } = await import("@/lib/prisma");
+      const user = await prisma.user.findUnique({
+        where: { id: input.userId },
+        select: { name: true, email: true },
+      });
+      const { notifyCoachMemberPaid } = await import("@/lib/coach-member-notify");
+      const { signupPlanLabel } = await import("@/lib/signup-plans");
+      await notifyCoachMemberPaid({
+        userId: input.userId,
+        name: user?.name || profile.email || input.userId,
+        email: user?.email || profile.email,
+        plan: signupPlanLabel(plan),
+        method,
+        amountCents: input.amountCents ?? null,
+      });
+    } catch (e) {
+      console.warn("[mark-member-paid] coach notify failed", e);
+    }
+  }
+
   return updated;
 }
 

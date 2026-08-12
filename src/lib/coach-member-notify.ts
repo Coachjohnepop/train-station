@@ -21,6 +21,7 @@ const DEFAULT_COACH_EMAILS = [
 /** Funnel + member progress — always email coaches (and Messages for progress). */
 const FORCE_EMAIL_EVENTS: ReadonlySet<CoachAlertEvent> = new Set([
   "newMember",
+  "memberPaid",
   "equipmentSelected",
   "programStartChosen",
   "messagesOpened",
@@ -32,6 +33,7 @@ const FORCE_EMAIL_EVENTS: ReadonlySet<CoachAlertEvent> = new Set([
 /** Always post system note into the member’s Messages thread for coaches. */
 const FORCE_IN_APP_EVENTS: ReadonlySet<CoachAlertEvent> = new Set([
   "newMember",
+  "memberPaid",
   "equipmentSelected",
   "programStartChosen",
   "messagesOpened",
@@ -46,6 +48,7 @@ const FORCE_IN_APP_EVENTS: ReadonlySet<CoachAlertEvent> = new Set([
  */
 const FORCE_SMS_EVENTS: ReadonlySet<CoachAlertEvent> = new Set([
   "newMember",
+  "memberPaid",
   "equipmentSelected",
   "programStartChosen",
   "messagesOpened",
@@ -195,16 +198,25 @@ export async function notifyCoachForMemberEvent(params: {
     result.sms = await deliverSms(coachPhone, smsBody);
   }
 
-  // Web push to staff devices that enabled alerts (Jeremy / John).
+  // Web push: staff roles + any user row matching coach notify emails
+  // (so Enable alerts works if they logged in under a different user id).
   try {
     const { sendPushToUserIds } = await import("@/lib/web-push");
     const { prisma } = await import("@/lib/prisma");
     if (!isDemoMode()) {
+      const notifyEmails = coachEmails;
       const staff = await prisma.user.findMany({
-        where: { role: { in: ["ADMIN", "INSTRUCTOR", "PLATFORM_ADMIN"] } },
+        where: {
+          OR: [
+            { role: { in: ["ADMIN", "INSTRUCTOR", "PLATFORM_ADMIN"] } },
+            ...(notifyEmails.length
+              ? [{ email: { in: notifyEmails, mode: "insensitive" as const } }]
+              : []),
+          ],
+        },
         select: { id: true },
       });
-      const ids = staff.map((s) => s.id);
+      const ids = [...new Set(staff.map((s) => s.id))];
       if (ids.length) {
         const push = await sendPushToUserIds(ids, {
           title: params.subject,
@@ -407,7 +419,7 @@ export async function notifyCoachMessagesOpened(params: {
   });
 }
 
-/** Fired at account create (signup) — email + in-app Messages. */
+/** Fired at account create (signup) — free or paid ticket — all coach channels. */
 export async function notifyCoachNewSignup(params: {
   userId: string;
   name: string;
@@ -415,20 +427,58 @@ export async function notifyCoachNewSignup(params: {
   plan: string;
   phone?: string | null;
   source?: string | null;
-}): Promise<{ inApp: boolean; email: boolean; sms: boolean }> {
+}): Promise<{ inApp: boolean; email: boolean; sms: boolean; push: boolean }> {
   const phoneLine = params.phone?.trim() ? `\nPhone: ${params.phone.trim()}` : "";
   const sourceLine = params.source ? `\nSource: ${params.source}` : "";
+  const planLower = params.plan.toLowerCase();
+  const freeish =
+    planLower.includes("free") ||
+    planLower.includes("explorer") ||
+    planLower === "explorer";
+  const planTag = freeish ? "Free / Explorer" : params.plan;
   return notifyCoachForMemberEvent({
     event: "newMember",
     memberUserId: params.userId,
     memberName: params.name,
     memberEmail: params.email,
-    subject: "New signup",
+    subject: freeish ? "New free signup" : "New signup",
     message:
       `${params.name} just created an account.\n` +
-      `Plan: ${params.plan}${phoneLine}${sourceLine}\n\n` +
-      `They still need to finish setup / payment and book their intro call.`,
-    deepLink: `${appBaseUrl()}/admin/queue`,
+      `Plan: ${planTag}${phoneLine}${sourceLine}\n\n` +
+      (freeish
+        ? `Free path — still needs setup / onboarding.`
+        : `They still need to finish setup / payment and book their intro call.`),
+    deepLink: `${appBaseUrl()}/admin/members`,
+  });
+}
+
+/** First time paymentStatus becomes paid (Stripe webhook / Venmo Mark paid). */
+export async function notifyCoachMemberPaid(params: {
+  userId: string;
+  name: string;
+  email: string;
+  plan: string;
+  method?: string | null;
+  amountCents?: number | null;
+}): Promise<{ inApp: boolean; email: boolean; sms: boolean; push: boolean }> {
+  const method = params.method?.trim() || "card";
+  const amount =
+    params.amountCents != null && params.amountCents > 0
+      ? `$${(params.amountCents / 100).toFixed(2)}`
+      : null;
+  return notifyCoachForMemberEvent({
+    event: "memberPaid",
+    memberUserId: params.userId,
+    memberName: params.name,
+    memberEmail: params.email,
+    subject: "Member paid",
+    message:
+      `${params.name} is paid.\n` +
+      `Plan: ${params.plan}\n` +
+      `Method: ${method}` +
+      (amount ? `\nAmount: ${amount}` : "") +
+      `\n\nOpen Members to continue intake if needed.`,
+    deepLink: `${appBaseUrl()}/admin/members`,
   });
 }
 

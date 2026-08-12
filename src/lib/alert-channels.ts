@@ -6,6 +6,7 @@ export type AlertChannels = {
 
 export type CoachAlertEvent =
   | "newMember"
+  | "memberPaid"
   | "equipmentSelected"
   | "programStartChosen"
   | "messagesOpened"
@@ -31,6 +32,8 @@ export const FUNNEL_ALERT_CHANNELS: AlertChannels = {
 export function defaultCoachAlertPrefs(): CoachAlertPrefs {
   return {
     newMember: { ...FUNNEL_ALERT_CHANNELS },
+    /** First paid (Stripe / Venmo mark-paid) — same urgency as signup. */
+    memberPaid: { ...FUNNEL_ALERT_CHANNELS },
     equipmentSelected: { ...FUNNEL_ALERT_CHANNELS },
     programStartChosen: { ...FUNNEL_ALERT_CHANNELS },
     messagesOpened: { ...FUNNEL_ALERT_CHANNELS },
@@ -57,6 +60,7 @@ export function normalizeCoachAlertPrefs(raw: unknown): CoachAlertPrefs {
   const data = raw as Partial<Record<CoachAlertEvent, unknown>>;
   return {
     newMember: normalizeAlertChannels(data.newMember ?? defaults.newMember),
+    memberPaid: normalizeAlertChannels(data.memberPaid ?? defaults.memberPaid),
     equipmentSelected: normalizeAlertChannels(
       data.equipmentSelected ?? defaults.equipmentSelected,
     ),

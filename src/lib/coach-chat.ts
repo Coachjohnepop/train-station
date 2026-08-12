@@ -482,11 +482,15 @@ export function getUnreadCountForCoach(): number {
   return Object.values(getUnreadCountsByThreadForCoach()).reduce((n, c) => n + c, 0);
 }
 
-/** Per-thread unread member messages (for inbox badges). */
+/**
+ * Per-thread unread for coach inbox badges.
+ * Counts member replies AND system notes (e.g. "New signup") so coaches see
+ * red Msgs badge when someone signs up, not only when they reply.
+ */
 export function getUnreadCountsByThreadForCoach(): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const m of readStore().messages) {
-    if (m.authorRole !== "member") continue;
+    if (m.authorRole !== "member" && m.authorRole !== "system") continue;
     if (m.readByUserIds.includes(COACH_READER_ID)) continue;
     counts[m.threadId] = (counts[m.threadId] || 0) + 1;
   }
