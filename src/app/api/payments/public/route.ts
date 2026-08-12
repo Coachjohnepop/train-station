@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { listMerchandiseSkus } from "@/lib/merchandise-store";
 import { getLandingMedia } from "@/lib/landing-media-store";
-import { isStripePaymentsEnabled } from "@/lib/member-gates";
+import { isPublicCardCheckoutEnabled, isStripePaymentsEnabled } from "@/lib/member-gates";
 import { getEffectiveMembershipOffers, resolveStripePriceId } from "@/lib/pricing-catalog";
 import { diagnoseMembershipStripePrices } from "@/lib/stripe-price-diagnostics";
 import { getStripePublishableKey } from "@/lib/stripe";
@@ -17,7 +17,10 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const config = await getLandingMedia();
-  const stripeEnabled = isStripePaymentsEnabled();
+  /** Processor keys present (admin / webhooks). */
+  const stripeConfigured = isStripePaymentsEnabled();
+  /** Member can open card Checkout (off while merchant brand is interim). */
+  const stripeEnabled = isPublicCardCheckoutEnabled();
   const merchandise = await listMerchandiseSkus();
   const tips = publicTipConfig();
 
@@ -46,6 +49,9 @@ export async function GET() {
 
   return NextResponse.json({
     stripeEnabled,
+    /** Keys on server even if public card is paused. */
+    stripeConfigured,
+    publicCardCheckout: stripeEnabled,
     stripePublishableKey: stripeEnabled ? getStripePublishableKey() : null,
     ...(isStripeTestMode()
       ? {
@@ -73,7 +79,7 @@ export async function GET() {
       priceLabel: sku.priceLabel,
       feeCategory: "one_time" as const,
       feeCategoryLabel: feeCategoryLabel("one_time"),
-      stripeReady: stripeEnabled && Boolean(sku.stripePriceId),
+      stripeReady: stripeEnabled && Boolean(sku.stripePriceId) && stripeConfigured,
     })),
     /** All paid packages fall under one of these two fee types. */
     feeCategories: [

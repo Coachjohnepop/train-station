@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser, syncMemberGateCookies } from "@/lib/auth";
 import { ensureMemberProfile, getMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
-import { memberCheckoutPath } from "@/lib/member-gates";
+import { isPublicCardCheckoutEnabled, memberCheckoutPath } from "@/lib/member-gates";
 import {
   isMembershipPlan,
   membershipPlanRank,
@@ -41,6 +41,18 @@ export async function POST(request: Request) {
 
     const existingProfile = await getMemberProfile(session.id);
     const plan = normalizeSignupPlan(parsed.data.plan || existingProfile?.plan || "explorer");
+
+    if (!isPublicCardCheckoutEnabled()) {
+      return NextResponse.json(
+        {
+          error:
+            "Card checkout is paused. Pay with Venmo on this screen — Coach Jeremy will unlock your ticket after payment posts.",
+          redirectTo: memberCheckoutPath(plan),
+          publicCardCheckout: false,
+        },
+        { status: 503 },
+      );
+    }
 
     // Already paid for this ticket — do not open another Checkout session.
     // Clear stale payment-gate cookies and send them into onboard / Today.

@@ -20,6 +20,22 @@ export function isStripePaymentsEnabled(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY?.trim());
 }
 
+/**
+ * Member-facing card Checkout (embedded Stripe).
+ * When false, members only see Venmo / coach Mark paid — use while merchant
+ * brand is wrong (e.g. Eco Delight name on shared Live keys) until Jeremy’s
+ * Train Station Stripe is on Vercel. Webhooks + Admin money desk still work
+ * if STRIPE_SECRET_KEY is set.
+ *
+ * Env: STRIPE_PUBLIC_CARD_CHECKOUT=false|0|off
+ */
+export function isPublicCardCheckoutEnabled(): boolean {
+  if (!isStripePaymentsEnabled()) return false;
+  const raw = process.env.STRIPE_PUBLIC_CARD_CHECKOUT?.trim().toLowerCase();
+  if (raw === "0" || raw === "false" || raw === "off" || raw === "no") return false;
+  return true;
+}
+
 export function stripeAutoApproveOnPay(): boolean {
   return process.env.STRIPE_AUTO_APPROVE === "true";
 }
