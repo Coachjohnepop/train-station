@@ -46,6 +46,19 @@ function threadLabel(thread: ChatThread) {
   return `Coach · ${DEMO_COACH.displayName}`;
 }
 
+/** Short jelly-bean label — fits many groups on one phone screen without side-scroll. */
+function beanLabel(thread: ChatThread) {
+  if (thread.kind === "member") return "Coach";
+  const raw = (thread.title || "Group").trim();
+  // Drop noisy suffixes so beans stay tiny: "Adult · Group" → "Adult"
+  const short = raw
+    .replace(/\s*[·•|-]\s*group\s*$/i, "")
+    .replace(/\s+group\s*$/i, "")
+    .trim();
+  if (short.length <= 14) return short || "Group";
+  return `${short.slice(0, 12)}…`;
+}
+
 function displayThread(thread: ChatThread | null): ChatThread | null {
   if (!thread) return null;
   if (thread.kind === "member") {
@@ -251,31 +264,41 @@ export default function MemberChatWorkspace({
               </span>
             ) : null}
           </p>
-          <p className="text-[10px] text-[var(--muted)]">Locked top · badges always visible</p>
+          <p className="text-[10px] text-[var(--muted)]">
+            {totalUnread > 0 ? "Tap the red bean" : "All groups on one row"}
+          </p>
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {/*
+          True jelly beans: wrap (no side-scroll). New members see every group + per-bean
+          unread in one glance — the nav "8" is one tap away, not scroll-then-tap.
+        */}
+        <div className="flex flex-wrap content-start gap-1.5">
           {orderedThreads.length === 0 ? (
             <p className="px-1 text-xs text-[var(--muted)]">No threads yet.</p>
           ) : (
             orderedThreads.map((t) => {
               const count = unreadByThread[t.id] || 0;
               const active = t.id === activeId;
+              const fullLabel = threadLabel(t);
               return (
                 <button
                   key={t.id}
                   type="button"
+                  title={count > 0 ? `${fullLabel} · ${count} unread` : fullLabel}
+                  aria-label={count > 0 ? `${fullLabel}, ${count} unread` : fullLabel}
+                  aria-pressed={active}
                   onClick={() => setActiveId(t.id)}
-                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition ${
+                  className={`inline-flex max-w-full items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold leading-tight transition ${
                     active
                       ? "bg-accent/20 text-accent ring-1 ring-accent/50"
                       : count > 0
-                        ? "bg-rose-500/10 text-[var(--text)] ring-1 ring-rose-400/40"
+                        ? "bg-rose-500/15 text-[var(--text)] ring-1 ring-rose-400/45"
                         : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"
                   }`}
                 >
-                  {threadLabel(t)}
+                  <span className="truncate">{beanLabel(t)}</span>
                   {count > 0 ? (
-                    <span className="inline-flex h-5 min-w-[18px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[10px] font-bold text-white">
+                    <span className="inline-flex h-4 min-w-[16px] shrink-0 items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[9px] font-bold text-white">
                       {count > 9 ? "9+" : count}
                     </span>
                   ) : null}
