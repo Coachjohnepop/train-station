@@ -8,17 +8,10 @@ import {
   listThreadsForCoach,
   listThreadsForMember,
 } from "@/lib/coach-chat";
-import {
-  COMMUNITY_FEED_PROGRAM_SLUG,
-  COMMUNITY_FEED_TITLE,
-  STATION_COMMUNITY_SLUG,
-  STATION_COMMUNITY_TITLE,
-  alwaysOnCommunitySlugs,
-  cohortTitleForSlug,
-} from "@/lib/community-feed";
+import { cohortTitleForSlug } from "@/lib/community-feed";
+import { resolveMemberVisibleCohortSlugs } from "@/lib/member-chat-access";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { assertUserScope } from "@/lib/api-auth";
-import { getUserEnrollments } from "@/lib/data/user-data";
 
 export async function POST(request: Request) {
   const session = await getSessionUser();
@@ -42,12 +35,6 @@ export async function POST(request: Request) {
   return NextResponse.json({ thread });
 }
 
-/** Station + legacy community + optional query programs + live enrollments. */
-async function resolveMemberProgramSlugs(uid: string, queryPrograms: string[]): Promise<string[]> {
-  const enrolled = Object.keys(await getUserEnrollments(uid));
-  return [...new Set([...alwaysOnCommunitySlugs(), ...queryPrograms, ...enrolled])];
-}
-
 export async function GET(request: Request) {
   const session = await getSessionUser();
   if (!session) {
@@ -56,7 +43,6 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const role = searchParams.get("role") || "member";
-  const queryPrograms = searchParams.get("programs")?.split(",").filter(Boolean) || [];
 
   await hydrateCoachChat({ preferFresh: true });
 
@@ -77,11 +63,10 @@ export async function GET(request: Request) {
 
   const uid = session.id;
   await ensureMemberThread(uid);
-  await ensureCohortThread(STATION_COMMUNITY_SLUG, STATION_COMMUNITY_TITLE);
-  await ensureCohortThread(COMMUNITY_FEED_PROGRAM_SLUG, COMMUNITY_FEED_TITLE);
-  const slugs = await resolveMemberProgramSlugs(uid, queryPrograms);
+  // Coach Class+: enrolled program groups only. Free Explorer: none (Coach 1:1 only).
+  // Do not honor ?programs= — that was an access bypass.
+  const slugs = await resolveMemberVisibleCohortSlugs(uid);
   for (const slug of slugs) {
-    if (slug === STATION_COMMUNITY_SLUG || slug === COMMUNITY_FEED_PROGRAM_SLUG) continue;
     await ensureCohortThread(slug, cohortTitleForSlug(slug));
   }
 

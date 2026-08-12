@@ -250,9 +250,8 @@ export async function memberCanPostToThread(memberId: string, thread: ChatThread
     return thread.memberId === memberId;
   }
   if (thread.kind === "cohort") {
-    const { alwaysOnCommunitySlugs } = await import("@/lib/community-feed");
+    // Enrolled program groups only — no always-on Station/Adult for everyone.
     const slug = thread.programSlug || COMMUNITY_FEED_PROGRAM_SLUG;
-    if (alwaysOnCommunitySlugs().includes(slug)) return true;
     const enrolled = Object.keys(await getUserEnrollments(memberId));
     return enrolled.includes(slug);
   }

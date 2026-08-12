@@ -6,7 +6,6 @@
 import webpush from "web-push";
 import { prisma } from "@/lib/prisma";
 import { isDemoMode } from "@/lib/demo-enrollments";
-import { alwaysOnCommunitySlugs } from "@/lib/community-feed";
 import type { ChatMessage, ChatThread } from "@/lib/coach-chat-types";
 
 export type PushPayload = {
@@ -197,14 +196,7 @@ async function memberIdsForCohort(programSlug: string | null | undefined): Promi
   const slug = programSlug || "";
   if (!slug) return [];
 
-  if (alwaysOnCommunitySlugs().includes(slug)) {
-    const members = await prisma.user.findMany({
-      where: { role: "MEMBER", status: "active", hidden: false },
-      select: { id: true },
-    });
-    return members.map((m) => m.id);
-  }
-
+  // Enrollment-only — do not blast every member for Station/Adult always-on slugs.
   const enrolled = await prisma.programEnrollment.findMany({
     where: { program: { slug } },
     select: { userId: true },

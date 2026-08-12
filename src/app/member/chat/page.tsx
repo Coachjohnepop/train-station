@@ -8,16 +8,8 @@ import {
   listThreadsForCoach,
   listThreadsForMember,
 } from "@/lib/coach-chat";
-import {
-  COMMUNITY_FEED_PROGRAM_SLUG,
-  COMMUNITY_FEED_TITLE,
-  STATION_COMMUNITY_SLUG,
-  STATION_COMMUNITY_TITLE,
-  alwaysOnCommunitySlugs,
-  cohortTitleForSlug,
-  communityProgramTargets,
-} from "@/lib/community-feed";
-import { getUserEnrollments } from "@/lib/data/user-data";
+import { cohortTitleForSlug, communityProgramTargets } from "@/lib/community-feed";
+import { resolveMemberVisibleCohortSlugs } from "@/lib/member-chat-access";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 import { resolveMemberUserId } from "@/lib/current-user";
 import { getMemberProfile } from "@/lib/member-profiles-store";
@@ -36,11 +28,9 @@ export default async function MemberChatPage({ searchParams }: Props) {
   const staff = Boolean(session && isStaffRole(session.role));
   await hydrateCoachChat({ preferFresh: true });
   await ensureMemberThread(uid);
-  // Station-wide + legacy community + every enrolled program group
-  await ensureCohortThread(STATION_COMMUNITY_SLUG, STATION_COMMUNITY_TITLE);
-  await ensureCohortThread(COMMUNITY_FEED_PROGRAM_SLUG, COMMUNITY_FEED_TITLE);
-  const enrolledSlugs = Object.keys(await getUserEnrollments(uid));
-  for (const slug of enrolledSlugs) {
+  // Visible groups = enrolled programs only (Free Explorer → none). No always-on Station/Adult.
+  const programSlugs = await resolveMemberVisibleCohortSlugs(uid);
+  for (const slug of programSlugs) {
     await ensureCohortThread(slug, cohortTitleForSlug(slug));
   }
   // Coaches (John + Jeremy) get every program group so they can post anywhere while testing.
@@ -49,7 +39,6 @@ export default async function MemberChatPage({ searchParams }: Props) {
       await ensureCohortThread(p.slug, cohortTitleForSlug(p.slug));
     }
   }
-  const programSlugs = [...new Set([...alwaysOnCommunitySlugs(), ...enrolledSlugs])];
   let threads = listThreadsForMember(uid, programSlugs);
   if (staff) {
     const byId = new Map(threads.map((t) => [t.id, t]));
@@ -73,7 +62,8 @@ export default async function MemberChatPage({ searchParams }: Props) {
       <div>
         <h1 className="text-2xl font-bold">Messages</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Coach tab (default) — private 1:1 with your coach. Group tab — community posts with the sender&apos;s name on every message. Workouts with checklists are on Go to Today.
+          Coach (default) — private 1:1. Groups appear only for programs you&apos;re enrolled in.
+          Workouts with checklists are on Go to Today.
         </p>
       </div>
 

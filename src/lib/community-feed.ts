@@ -32,7 +32,11 @@ export function cohortTitleForSlug(slug: string): string {
   return hit ? `${hit.name} · Group` : `${slug} · Group`;
 }
 
-/** Slugs every member should always have access to (station + legacy community). */
+/**
+ * @deprecated Member Messages no longer auto-show these groups.
+ * Kept for coach compose targets / historical callers. Visibility is enrollment-only
+ * via `resolveMemberVisibleCohortSlugs` (see member-chat-access.ts).
+ */
 export function alwaysOnCommunitySlugs(): string[] {
   return [STATION_COMMUNITY_SLUG, COMMUNITY_FEED_PROGRAM_SLUG];
 }
