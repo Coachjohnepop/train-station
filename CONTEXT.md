@@ -354,39 +354,44 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-08  
-**Status:** Prod `main` @ `7dc9bb3` (preview same). John signing off (guitar).  
+**Date:** 2026-08-12  
+**Status:** Prod `main` / `preview` current (accounting Books GL + member payment ledger; card checkout UX normal).  
 **Rule reaffirmed:** **any new module / data element → Postgres first** (see Durable product rules).  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
-**Branches:** `preview` / `main` · prod: https://www.thetrainstation.co · preview alias: `https://train-station-git-preview-johnepop-s-projects.vercel.app`
+**Branches:** `preview` / `main` · prod: https://www.thetrainstation.co  
 
-### Session 2026-08-08 — shipped (this stretch)
+### Explicit decision 2026-08-12 — Stripe merchant (interim, intentional)
 
-| Commit | What |
-|--------|------|
-| `096a94c` | Light/dark text contrast site-wide (theme tokens + hardcode sweep + force-dark heroes) |
-| `0596cd4` | Free scores **+10 steps**; Coach/Business/1st **8×** same actions; totals roll over |
-| `c5ce80f` | Free soft teases: preview first 3 exercises, Live join tease, coach 1:1 chat only on Free, measure/hall glass, post-workout ticket shelf. Text upload stays **staff-only** |
-| `7dc9bb3` | Free **card-on-file** optional gate: Admin → Gamification → **freeRequiresPaymentMethod** (**default OFF**). When ON: Free → `/member/payment-setup` ($0 Stripe Setup, card only) → onboard → Today. No charge until upgrade |
+**Keep Production on Eco Delight Live Stripe for now** so card checkout **works**. Do **not** block product or force Venmo-only.
 
-**Onboard loop (prod):** `scripts/onboard-tier-loop.mjs` — **55/55** Explorer/Coach/Business/1st (register redirects, wizard steps, unpaid paid→checkout, free→Today + soft-tease strings).
+| Item | Decision |
+|------|----------|
+| **Merchant of record (interim)** | Eco Delight Live (`pk_live_51SuLDr…` on Vercel Production) |
+| **Why park Jeremy cutover** | Admin invite / 2FA / time — not worth another long Zoom; site must keep working |
+| **Customer brand** | Checkout may still say Eco Delight until keys swap — accepted for now |
+| **Money trail** | **FactSubscriptionPayment** + **AcctJournalEntry** (Books GL) log every card/Venmo mark-paid amount — transfer/reconcile to Jeremy’s TS Stripe later when cutover happens |
+| **Venmo** | Still Jeremy `@JeremyByrdCSCS` (unchanged) |
+| **$400 commission min** | **Not urgent** — fee-pool payout gate; won’t hit soon. Connect/cutover can wait |
+| **Do not** | Remove Eco keys, pause card UX, or rename Eco’s Stripe business name |
 
-**Product decisions this stretch:**
-- Paste / text-upload = **coach/admin only** (not a member upgrade perk)
-- Free teases = **soft** (see it, limited use) not hard 404s
-- Free card barrier = **admin toggle, default off**; ACH not used
+**Later (when ready):** `.env.jeremy.live` with Jeremy Live `sk`/`pk`/prices/`whsec` → `scripts/wire-jeremy-master-stripe.mjs --identify` then `--push-vercel` → redeploy → verify brand name. Existing Eco subs stay on Eco; new charges after cutover on Jeremy.
+
+### Session 2026-08-12 — shipped (money / accounting stretch)
+
+| Area | What |
+|------|------|
+| Paid-stuck fix | Gate cookie re-sync; paid → onboard; members stay off landing |
+| Payment ledger | `FactSubscriptionPayment` on checkout + Mark paid amount required |
+| Books GL | Double-entry `Acct*` tables; seed COA; auto-post cash receipts; Admin → Accounting → **Books** |
+| Ali Fletcher | Paid Coach Class, async/on-demand, ~$5 LETSGO26 backfilled + JE-00001 |
+| Card pause | Tried then **reverted** — keep normal card UX on Eco |
 
 ### NEXT SESSION — pick up here (priority)
 
-1. **Free card-on-file live test** (toggle was shipped default OFF — not QA’d with lever ON)  
-   - Admin → Gamification → Levers → enable *Free Explorer requires card on file* → Save  
-   - Fresh Free signup → expect `/member/payment-setup` → save test card → onboard → Today  
-   - Confirm: no charge; profile `paymentMethod: card_on_file`; upgrade path still works  
-   - Turn **OFF** after test unless Jeremy wants it on  
-2. **Stripe master still wrong on Production** (see below — Eco Delight keys) — real money risk  
-3. **Phone pass free journey** (optional): soft teases + free modal on real device  
-4. **Jeremy content** still open: Admin → Videos intros; free-ticket intro after gag  
-5. Optional: short note in `JEREMY_ADMIN_MANUAL.md` for free card lever  
+1. **Normal product work** — don’t re-open Stripe cutover unless John has Jeremy Live keys in `.env.jeremy.live`  
+2. Optional: free card-on-file lever QA (still default OFF)  
+3. Jeremy content: Admin → Videos intros  
+4. When cutover resumes: wire script + redeploy only (plumbing)  
 
 **Re-run onboard smoke anytime:**  
 `BASE_URL=https://www.thetrainstation.co node scripts/onboard-tier-loop.mjs`
