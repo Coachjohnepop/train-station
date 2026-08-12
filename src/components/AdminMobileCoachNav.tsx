@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import ChatNavBadge from "@/components/ChatNavBadge";
+import PeopleAttentionBadge from "@/components/PeopleAttentionBadge";
 import { openCoachHelpPanel } from "@/lib/coach-help-events";
 
 type Props = {
@@ -32,6 +33,8 @@ export default function AdminMobileCoachNav({ onOpenMenu }: Props) {
   const onDash = pathname.startsWith("/admin/day") || pathname === "/admin";
   const onToday = pathname.startsWith("/admin/today");
   const onLive = pathname.startsWith("/admin/live");
+  const onPeople =
+    pathname.startsWith("/admin/members") || pathname.startsWith("/admin/leads");
   const onChat = pathname.startsWith("/admin/chat");
 
   return (
@@ -53,11 +56,15 @@ export default function AdminMobileCoachNav({ onOpenMenu }: Props) {
           </span>
           Today
         </Link>
-        <Link href="/admin/live" className={tabClass(onLive)}>
-          <span className="coach-quick-nav-icon leading-none" aria-hidden>
-            ▣
+        {/* People: purple = new signups + leads. Red stays on Msgs only. */}
+        <Link href="/admin/members" className={tabClass(onPeople)}>
+          <span className="relative inline-flex">
+            <span className="coach-quick-nav-icon leading-none" aria-hidden>
+              ◎
+            </span>
+            <PeopleAttentionBadge placement="corner" />
           </span>
-          Live
+          People
         </Link>
         <Link href="/admin/chat" className={tabClass(onChat)}>
           <span className="relative inline-flex">

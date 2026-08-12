@@ -4,6 +4,8 @@ export type AdminNavItem = {
   match: (pathname: string) => boolean;
   badge?: "chat";
   leadsBadge?: boolean;
+  /** Purple: new self-registered signups since last Members visit */
+  membersBadge?: boolean;
   queueBadge?: boolean;
   coachSuggestionsBadge?: boolean;
 };
@@ -27,6 +29,7 @@ const peopleItems: AdminNavItem[] = [
     href: "/admin/members",
     label: "Members",
     match: (p) => p.startsWith("/admin/members"),
+    membersBadge: true,
   },
   ...(SHOW_LEADS
     ? [

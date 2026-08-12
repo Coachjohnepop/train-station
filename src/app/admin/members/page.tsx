@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import AdminMemberEquipmentModal from "@/components/AdminMemberEquipmentModal";
 import AdminMemberMeasurementsModal from "@/components/AdminMemberMeasurementsModal";
+import MembersSeenMarker from "@/components/MembersSeenMarker";
 import {
   COACHING_MODE_LABELS,
   type MemberCoachingMode,
@@ -373,6 +374,7 @@ export default function AdminMembersPage() {
 
   return (
     <div className="space-y-6">
+      <MembersSeenMarker />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Members</h1>
