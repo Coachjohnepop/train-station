@@ -199,11 +199,11 @@ export default function AdminAccountingClient() {
           <h1 className="text-2xl font-bold">Accounting</h1>
           <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
             {deskTab === "books"
-              ? "In-app general ledger (QuickBooks-style). Chart, journals, trial balance."
-              : "Executive rollup and partner minimums. Open Books for the double-entry ledger."}
+              ? "In-app general ledger. Stripe is the bank for now — cash posts to 1000 (Stripe clearing)."
+              : "Executive rollup and partner minimums. Stripe holds the cash; Books is the permanent ledger."}
             {" · "}
             <Link href="/admin/billing" className="text-accent hover:underline">
-              Stripe money
+              Stripe money desk
             </Link>
           </p>
         </div>

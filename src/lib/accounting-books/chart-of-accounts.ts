@@ -20,11 +20,12 @@ export type SeedAccountDef = {
 export const SYSTEM_CHART: SeedAccountDef[] = [
   {
     code: "1000",
-    name: "Cash — Stripe clearing",
+    name: "Cash — Stripe (bank)",
     type: "ASSET",
     subtype: "bank",
     normalBalance: "DEBIT",
-    description: "Card settlements held in the connected Stripe merchant balance.",
+    description:
+      "Primary cash account for now: Stripe is the bank. Card settlements in the merchant balance.",
     sortOrder: 100,
   },
   {
@@ -33,7 +34,7 @@ export const SYSTEM_CHART: SeedAccountDef[] = [
     type: "ASSET",
     subtype: "bank",
     normalBalance: "DEBIT",
-    description: "Venmo and cash received before (or instead of) bank deposit.",
+    description: "Venmo and cash received outside Stripe until treated as banked.",
     sortOrder: 110,
   },
   {

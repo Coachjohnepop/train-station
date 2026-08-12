@@ -228,9 +228,9 @@ export default function AdminBooksPanel() {
         <div>
           <h2 className="text-lg font-semibold">{data.entity?.name} · Books</h2>
           <p className="mt-0.5 text-xs text-[var(--muted)]">
-            In-app general ledger (source of truth for TS books) ·{" "}
+            In-app general ledger · Stripe is the bank for now (acct 1000 cash clearing) ·{" "}
             {data.counts?.accounts ?? 0} accounts · {data.counts?.journals ?? 0} journals ·{" "}
-            {data.counts?.parties ?? 0} parties · bank feed later
+            {data.counts?.parties ?? 0} parties
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -604,8 +604,8 @@ export default function AdminBooksPanel() {
             </table>
           </div>
           <p className="text-[11px] text-[var(--muted)]">
-            Trial balance from posted journals only. Debits must equal credits. Bank reconciliation
-            and feeds will land here later — no CSV export path.
+            Trial balance from posted journals only. Debits must equal credits. Cash lives in Stripe
+            today (1000); Venmo/manual land in 1010 until deposited.
           </p>
         </div>
       )}

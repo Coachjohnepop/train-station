@@ -147,8 +147,10 @@ e.g. `STRIPE` + `FactSubscriptionPayment` + fact row id.
 ## Product direction
 
 - **Source of truth** is this Postgres GL + payment facts — not QuickBooks export.
-- **No CSV / file export path** for ops; bank integration and reconciliation will attach to these tables later.
-- Stripe Admin “money desk” remains for live processor balances; TS **Books** is the permanent ledger.
+- **For now Stripe is the bank:** card money settles into the merchant Stripe balance. In the chart that is **1000 Cash — Stripe clearing**. Live balances / charges still show on Admin → **Stripe money**; Books records the same story as double-entry.
+- **Venmo / cash** use **1010** (undeposited) until we treat them as banked.
+- **Later:** native bank feed / recon can still attach to these accounts — no file export path.
+- TS **Books** is the permanent ledger; Stripe is the cash rail + processor UI.
 
 ## Ops
 
