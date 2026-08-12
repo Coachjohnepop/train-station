@@ -137,6 +137,48 @@ export async function recordSubscriptionPaymentFact(
       },
       select: { id: true },
     });
+
+    // Double-entry books (non-blocking if chart not ready / demo)
+    if (input.status === "paid" && input.amountCents > 0) {
+      try {
+        const { postMembershipCashReceipt } = await import("@/lib/accounting-books");
+        let memberName: string | null = null;
+        let memberEmail: string | null = null;
+        if (input.userId) {
+          const user = await prisma.user.findUnique({
+            where: { id: input.userId },
+            select: { name: true, email: true },
+          });
+          memberName = user?.name ?? null;
+          memberEmail = user?.email ?? null;
+        }
+        const method =
+          typeof input.properties?.method === "string"
+            ? input.properties.method
+            : input.billingReason?.includes("venmo")
+              ? "venmo"
+              : "stripe";
+        await postMembershipCashReceipt({
+          factId: row.id,
+          userId: input.userId,
+          amountCents: input.amountCents,
+          currency: input.currency,
+          paidAt: input.paidAt,
+          planId: input.planId,
+          billingReason: input.billingReason,
+          method,
+          memberName,
+          memberEmail,
+          stripeCustomerId: input.stripeCustomerId,
+        });
+      } catch (glErr: unknown) {
+        console.error(
+          "[analytics-facts] GL post failed (fact still saved):",
+          glErr instanceof Error ? glErr.message : glErr,
+        );
+      }
+    }
+
     return row;
   } catch (e: unknown) {
     console.error(

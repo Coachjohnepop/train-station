@@ -82,6 +82,8 @@ model User {
   subscriptionPayments FactSubscriptionPayment[]
   memberDailySnapshots MartMemberDailySnapshot[]
   auditEventsAsActor AuditEvent[]        @relation("AuditActor")
+  acctParties          AcctParty[]
+  acctJournalCreated   AcctJournalEntry[] @relation("AcctJournalCreatedBy")
 }
 
 model SubscriptionTier {
@@ -1421,4 +1423,196 @@ model GamificationAuditLog {
   @@index([actorId, at])
   @@index([action, at])
   @@index([targetId, at])
+}
+
+// ---------------------------------------------------------------------------
+// Accounting books (QuickBooks-style double-entry framework)
+// Train Station’s own general ledger — not a Stripe mirror.
+// ---------------------------------------------------------------------------
+
+enum AcctAccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum AcctNormalBalance {
+  DEBIT
+  CREDIT
+}
+
+enum AcctJournalStatus {
+  DRAFT
+  POSTED
+  VOID
+}
+
+enum AcctPartyKind {
+  CUSTOMER
+  VENDOR
+  PARTNER
+  OTHER
+}
+
+enum AcctSourceSystem {
+  STRIPE
+  VENMO
+  MANUAL
+  COMMISSION
+  SYSTEM
+  IMPORT
+}
+
+/** Company / books entity (single TS books row to start; multi-entity later). */
+model AcctEntity {
+  id                   String   @id @default(cuid())
+  /** Stable slug e.g. train-station */
+  code                 String   @unique
+  name                 String
+  legalName            String?
+  currency             String   @default("usd")
+  /** 1 = January */
+  fiscalYearStartMonth Int      @default(1)
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  accounts  AcctAccount[]
+  parties   AcctParty[]
+  periods   AcctPeriod[]
+  journals  AcctJournalEntry[]
+}
+
+/** Chart of accounts. */
+model AcctAccount {
+  id            String            @id @default(cuid())
+  entityId      String
+  /** e.g. 1000, 4000 */
+  code          String
+  name          String
+  type          AcctAccountType
+  /** e.g. bank, ar, membership, stripe_fees */
+  subtype       String?
+  normalBalance AcctNormalBalance
+  parentId      String?
+  description   String?           @db.Text
+  isActive      Boolean           @default(true)
+  /** System seed accounts — do not renumber casually */
+  isSystem      Boolean           @default(false)
+  sortOrder     Int               @default(0)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  entity   AcctEntity      @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  parent   AcctAccount?    @relation("AcctAccountTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children AcctAccount[]   @relation("AcctAccountTree")
+  lines    AcctJournalLine[]
+
+  @@unique([entityId, code])
+  @@index([entityId, type])
+  @@index([entityId, isActive])
+}
+
+/** Customer / vendor / partner in the books (may link to app User). */
+model AcctParty {
+  id               String        @id @default(cuid())
+  entityId         String
+  kind             AcctPartyKind @default(CUSTOMER)
+  name             String
+  email            String?
+  phone            String?
+  userId           String?
+  stripeCustomerId String?
+  notes            String?       @db.Text
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  entity AcctEntity        @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  user   User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  lines  AcctJournalLine[]
+
+  @@index([entityId, kind])
+  @@index([userId])
+  @@index([email])
+  @@index([stripeCustomerId])
+}
+
+/** Fiscal / reporting period (optional close). */
+model AcctPeriod {
+  id        String   @id @default(cuid())
+  entityId  String
+  label     String
+  startsOn  DateTime @db.Date
+  endsOn    DateTime @db.Date
+  isClosed  Boolean  @default(false)
+  closedAt  DateTime?
+  createdAt DateTime @default(now())
+
+  entity   AcctEntity         @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  journals AcctJournalEntry[]
+
+  @@unique([entityId, label])
+  @@index([entityId, startsOn, endsOn])
+}
+
+/**
+ * Journal entry header. Double-entry: sum(debits) == sum(credits) when POSTED.
+ * Idempotent import via (sourceSystem, sourceType, sourceId).
+ */
+model AcctJournalEntry {
+  id              String            @id @default(cuid())
+  entityId        String
+  /** Human sequence per entity e.g. JE-00042 */
+  entryNumber     String
+  entryDate       DateTime          @db.Date
+  status          AcctJournalStatus @default(DRAFT)
+  memo            String?           @db.Text
+  sourceSystem    AcctSourceSystem  @default(SYSTEM)
+  /** e.g. FactSubscriptionPayment | admin_mark_paid | stripe_fee */
+  sourceType      String?
+  sourceId        String?
+  periodId        String?
+  currency        String            @default("usd")
+  postedAt        DateTime?
+  voidedAt        DateTime?
+  voidReason      String?
+  createdByUserId String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  entity    AcctEntity       @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  period    AcctPeriod?      @relation(fields: [periodId], references: [id], onDelete: SetNull)
+  createdBy User?            @relation("AcctJournalCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  lines     AcctJournalLine[]
+
+  @@unique([entityId, entryNumber])
+  @@unique([sourceSystem, sourceType, sourceId])
+  @@index([entityId, entryDate])
+  @@index([entityId, status, entryDate])
+  @@index([sourceType, sourceId])
+}
+
+/** Debit / credit line. Exactly one of debitCents or creditCents should be > 0. */
+model AcctJournalLine {
+  id          String  @id @default(cuid())
+  entryId     String
+  accountId   String
+  partyId     String?
+  lineNo      Int     @default(0)
+  debitCents  Int     @default(0)
+  creditCents Int     @default(0)
+  memo        String?
+  /** Optional dimensions: program, plan, coach, etc. */
+  dimensions  Json?
+
+  entry   AcctJournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  account AcctAccount      @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  party   AcctParty?       @relation(fields: [partyId], references: [id], onDelete: SetNull)
+
+  @@index([entryId, lineNo])
+  @@index([accountId])
+  @@index([partyId])
 }
