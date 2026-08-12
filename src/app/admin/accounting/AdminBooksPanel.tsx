@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type ChartRow = {
   code: string;
@@ -60,6 +60,13 @@ type BooksData = {
 
 type Tab = "journals" | "chart" | "trial";
 
+type FormLine = {
+  accountCode: string;
+  debitDollars: string;
+  creditDollars: string;
+  memo: string;
+};
+
 const TYPE_TONE: Record<string, string> = {
   ASSET: "text-sky-300",
   LIABILITY: "text-amber-300",
@@ -68,12 +75,32 @@ const TYPE_TONE: Record<string, string> = {
   EXPENSE: "text-rose-300",
 };
 
+function emptyLine(): FormLine {
+  return { accountCode: "1000", debitDollars: "", creditDollars: "", memo: "" };
+}
+
+function todayIsoDate(): string {
+  const d = new Date();
+  return d.toISOString().slice(0, 10);
+}
+
 export default function AdminBooksPanel() {
   const [tab, setTab] = useState<Tab>("journals");
   const [data, setData] = useState<BooksData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+
+  const [showForm, setShowForm] = useState(false);
+  const [formDate, setFormDate] = useState(todayIsoDate);
+  const [formMemo, setFormMemo] = useState("");
+  const [formLines, setFormLines] = useState<FormLine[]>([
+    { accountCode: "1000", debitDollars: "", creditDollars: "", memo: "" },
+    { accountCode: "4000", debitDollars: "", creditDollars: "", memo: "" },
+  ]);
+  const [posting, setPosting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formOk, setFormOk] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -99,6 +126,70 @@ export default function AdminBooksPanel() {
     void load();
   }, [load]);
 
+  const formTotals = useMemo(() => {
+    let d = 0;
+    let c = 0;
+    for (const line of formLines) {
+      d += Number(line.debitDollars) || 0;
+      c += Number(line.creditDollars) || 0;
+    }
+    return {
+      debit: d,
+      credit: c,
+      balanced: Math.abs(d - c) < 0.005 && d > 0,
+    };
+  }, [formLines]);
+
+  async function submitJournal() {
+    setFormError(null);
+    setFormOk(null);
+    if (!formMemo.trim()) {
+      setFormError("Memo is required.");
+      return;
+    }
+    if (!formTotals.balanced) {
+      setFormError("Debits must equal credits and be greater than zero.");
+      return;
+    }
+    setPosting(true);
+    try {
+      const res = await fetch("/api/admin/accounting/books/journal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          entryDate: formDate,
+          memo: formMemo.trim(),
+          lines: formLines.map((l) => ({
+            accountCode: l.accountCode,
+            debitDollars: Number(l.debitDollars) || 0,
+            creditDollars: Number(l.creditDollars) || 0,
+            memo: l.memo.trim() || undefined,
+          })),
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setFormError(body.error || "Could not post journal.");
+        return;
+      }
+      setFormOk(`Posted ${body.entryNumber}`);
+      setFormMemo("");
+      setFormLines([emptyLine(), emptyLine()]);
+      setShowForm(false);
+      setTab("journals");
+      await load();
+      if (body.id) setOpenId(body.id);
+    } catch {
+      setFormError("Could not post journal.");
+    } finally {
+      setPosting(false);
+    }
+  }
+
+  function exportCsv(type: "trial" | "chart" | "journals") {
+    window.location.href = `/api/admin/accounting/books/export?type=${type}`;
+  }
+
   if (loading) {
     return <p className="text-sm text-[var(--muted)]">Loading general ledger…</p>;
   }
@@ -119,12 +210,16 @@ export default function AdminBooksPanel() {
       <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
         {data.message || "Books not configured."}
         <p className="mt-2 text-xs text-amber-100/80">
-          Run <code className="rounded bg-black/20 px-1">node scripts/seed-accounting-books-prod.mjs</code>
+          Run{" "}
+          <code className="rounded bg-black/20 px-1">
+            node scripts/seed-accounting-books-prod.mjs
+          </code>
         </p>
       </div>
     );
   }
 
+  const accountOptions = data.chart || [];
   const tabs: { id: Tab; label: string }[] = [
     { id: "journals", label: "Journals" },
     { id: "chart", label: "Chart of accounts" },
@@ -141,10 +236,214 @@ export default function AdminBooksPanel() {
             {data.counts?.journals ?? 0} journals shown · {data.counts?.parties ?? 0} parties
           </p>
         </div>
-        <button type="button" className="btn-ghost text-xs" onClick={() => void load()}>
-          Refresh
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="btn-primary text-xs"
+            onClick={() => {
+              setShowForm((v) => !v);
+              setFormError(null);
+              setFormOk(null);
+            }}
+          >
+            {showForm ? "Close form" : "Add journal"}
+          </button>
+          <div className="relative">
+            <details className="group">
+              <summary className="btn-ghost cursor-pointer list-none text-xs [&::-webkit-details-marker]:hidden">
+                Export CSV ▾
+              </summary>
+              <div className="absolute right-0 z-20 mt-1 min-w-[10rem] rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-xl">
+                <button
+                  type="button"
+                  className="block w-full px-3 py-2 text-left text-xs hover:bg-[var(--surface-2)]"
+                  onClick={() => exportCsv("trial")}
+                >
+                  Trial balance
+                </button>
+                <button
+                  type="button"
+                  className="block w-full px-3 py-2 text-left text-xs hover:bg-[var(--surface-2)]"
+                  onClick={() => exportCsv("chart")}
+                >
+                  Chart of accounts
+                </button>
+                <button
+                  type="button"
+                  className="block w-full px-3 py-2 text-left text-xs hover:bg-[var(--surface-2)]"
+                  onClick={() => exportCsv("journals")}
+                >
+                  Journals (lines)
+                </button>
+              </div>
+            </details>
+          </div>
+          <button type="button" className="btn-ghost text-xs" onClick={() => void load()}>
+            Refresh
+          </button>
+        </div>
       </div>
+
+      {formOk ? (
+        <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+          {formOk}
+        </p>
+      ) : null}
+
+      {showForm ? (
+        <div className="space-y-3 rounded-xl border border-accent/30 bg-accent/5 p-4">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-semibold">New journal entry</h3>
+              <p className="text-[11px] text-[var(--muted)]">
+                Debits must equal credits. Posts immediately to the GL.
+              </p>
+            </div>
+            <p
+              className={`text-xs font-semibold tabular-nums ${
+                formTotals.balanced ? "text-emerald-300" : "text-amber-300"
+              }`}
+            >
+              Dr ${formTotals.debit.toFixed(2)} · Cr ${formTotals.credit.toFixed(2)}
+              {formTotals.balanced ? " · balanced" : " · out of balance"}
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-medium text-[var(--muted)]" htmlFor="je-date">
+                Date
+              </label>
+              <input
+                id="je-date"
+                type="date"
+                className="input mt-1 w-full"
+                value={formDate}
+                onChange={(e) => setFormDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[var(--muted)]" htmlFor="je-memo">
+                Memo *
+              </label>
+              <input
+                id="je-memo"
+                className="input mt-1 w-full"
+                placeholder="e.g. Reclass bank fee · July"
+                value={formMemo}
+                onChange={(e) => setFormMemo(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {formLines.map((line, idx) => (
+              <div
+                key={idx}
+                className="grid gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2 sm:grid-cols-12"
+              >
+                <div className="sm:col-span-4">
+                  <label className="text-[10px] text-[var(--muted)]">Account</label>
+                  <select
+                    className="input mt-0.5 w-full text-xs"
+                    value={line.accountCode}
+                    onChange={(e) => {
+                      const next = [...formLines];
+                      next[idx] = { ...next[idx], accountCode: e.target.value };
+                      setFormLines(next);
+                    }}
+                  >
+                    {accountOptions.map((a) => (
+                      <option key={a.code} value={a.code}>
+                        {a.code} · {a.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="text-[10px] text-[var(--muted)]">Debit $</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    className="input mt-0.5 w-full text-xs"
+                    value={line.debitDollars}
+                    onChange={(e) => {
+                      const next = [...formLines];
+                      next[idx] = {
+                        ...next[idx],
+                        debitDollars: e.target.value,
+                        creditDollars: e.target.value ? "" : next[idx].creditDollars,
+                      };
+                      setFormLines(next);
+                    }}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="text-[10px] text-[var(--muted)]">Credit $</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    className="input mt-0.5 w-full text-xs"
+                    value={line.creditDollars}
+                    onChange={(e) => {
+                      const next = [...formLines];
+                      next[idx] = {
+                        ...next[idx],
+                        creditDollars: e.target.value,
+                        debitDollars: e.target.value ? "" : next[idx].debitDollars,
+                      };
+                      setFormLines(next);
+                    }}
+                  />
+                </div>
+                <div className="sm:col-span-3">
+                  <label className="text-[10px] text-[var(--muted)]">Line memo</label>
+                  <input
+                    className="input mt-0.5 w-full text-xs"
+                    value={line.memo}
+                    onChange={(e) => {
+                      const next = [...formLines];
+                      next[idx] = { ...next[idx], memo: e.target.value };
+                      setFormLines(next);
+                    }}
+                  />
+                </div>
+                <div className="flex items-end sm:col-span-1">
+                  <button
+                    type="button"
+                    className="btn-ghost w-full px-2 py-2 text-xs"
+                    disabled={formLines.length <= 2}
+                    onClick={() => setFormLines(formLines.filter((_, i) => i !== idx))}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn-ghost text-xs"
+              onClick={() => setFormLines([...formLines, emptyLine()])}
+            >
+              + Line
+            </button>
+            <button
+              type="button"
+              className="btn-primary text-xs"
+              disabled={posting || !formTotals.balanced}
+              onClick={() => void submitJournal()}
+            >
+              {posting ? "Posting…" : "Post journal"}
+            </button>
+          </div>
+          {formError ? <p className="text-sm text-amber-200">{formError}</p> : null}
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-1">
         {tabs.map((t) => (
@@ -167,8 +466,8 @@ export default function AdminBooksPanel() {
         <div className="space-y-2">
           {(data.journals || []).length === 0 ? (
             <p className="rounded-xl border border-[var(--border)] px-4 py-6 text-sm text-[var(--muted)]">
-              No journal entries yet. Card checkouts and Mark paid (with amount) post here
-              automatically.
+              No journal entries yet. Use <strong>Add journal</strong>, or wait for card / Mark paid
+              posts.
             </p>
           ) : (
             (data.journals || []).map((j) => {
@@ -249,40 +548,52 @@ export default function AdminBooksPanel() {
       )}
 
       {tab === "chart" && (
-        <div className="overflow-hidden rounded-xl border border-[var(--border)]">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-[var(--surface-2)] text-[10px] uppercase tracking-wide text-[var(--muted)]">
-              <tr>
-                <th className="px-3 py-2">Code</th>
-                <th className="px-3 py-2">Account</th>
-                <th className="px-3 py-2">Type</th>
-                <th className="px-3 py-2 text-right">Balance</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(data.chart || []).map((a) => (
-                <tr key={a.code} className="border-t border-[var(--border)]">
-                  <td className="px-3 py-2 font-mono text-xs text-accent">{a.code}</td>
-                  <td className="px-3 py-2 font-medium">{a.name}</td>
-                  <td className={`px-3 py-2 text-xs font-semibold ${TYPE_TONE[a.type] || ""}`}>
-                    {a.type}
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums font-semibold">
-                    {a.balanceCents === 0 ? (
-                      <span className="text-[var(--muted)]">—</span>
-                    ) : (
-                      a.balanceLabel
-                    )}
-                  </td>
+        <div className="space-y-2">
+          <div className="flex justify-end">
+            <button type="button" className="btn-ghost text-xs" onClick={() => exportCsv("chart")}>
+              Download chart CSV
+            </button>
+          </div>
+          <div className="overflow-hidden rounded-xl border border-[var(--border)]">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-[var(--surface-2)] text-[10px] uppercase tracking-wide text-[var(--muted)]">
+                <tr>
+                  <th className="px-3 py-2">Code</th>
+                  <th className="px-3 py-2">Account</th>
+                  <th className="px-3 py-2">Type</th>
+                  <th className="px-3 py-2 text-right">Balance</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(data.chart || []).map((a) => (
+                  <tr key={a.code} className="border-t border-[var(--border)]">
+                    <td className="px-3 py-2 font-mono text-xs text-accent">{a.code}</td>
+                    <td className="px-3 py-2 font-medium">{a.name}</td>
+                    <td className={`px-3 py-2 text-xs font-semibold ${TYPE_TONE[a.type] || ""}`}>
+                      {a.type}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums font-semibold">
+                      {a.balanceCents === 0 ? (
+                        <span className="text-[var(--muted)]">—</span>
+                      ) : (
+                        a.balanceLabel
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {tab === "trial" && (
         <div className="space-y-3">
+          <div className="flex justify-end">
+            <button type="button" className="btn-ghost text-xs" onClick={() => exportCsv("trial")}>
+              Download trial balance CSV
+            </button>
+          </div>
           <div className="overflow-hidden rounded-xl border border-[var(--border)]">
             <table className="w-full text-left text-sm">
               <thead className="bg-[var(--surface-2)] text-[10px] uppercase tracking-wide text-[var(--muted)]">
