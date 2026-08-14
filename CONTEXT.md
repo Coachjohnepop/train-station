@@ -423,7 +423,7 @@ In-app coach Messages **did** get system notes for Will (signup, equipment, onbo
 
 **P0 — coach actually gets notified (ops, ~1h)**
 
-1. **Resend (2026-08-13)** — DNS for `send.thetrainstation.co` is live, but Resend has **not verified** that domain (or the apex). Send-only API key cannot verify it. Interim: FROM envelope is verified Eco `accounts@send.buyecodelight.com` (display name still **The Train Station**); `reply_to` is sanitized to a **single** address. Flip to `accounts@send.thetrainstation.co` after Verify at resend.com/domains.
+1. **Resend (2026-08-13 — DONE, off Eco)** — Team **thetrainstation** (`john@thetrainstation.co`). Domain `send.thetrainstation.co` verified. Production `RESEND_API_KEY` is the TS key (not Eco). `RESEND_FROM` = `The Train Station <accounts@send.thetrainstation.co>`. Probe password-reset to `john@thetrainstation.co` **Delivered** in that dashboard. Eco `send.buyecodelight.com` no longer used for TS mail.
 2. **Web Push** — Production `VAPID_PUBLIC_KEY` must match `VAPID_PRIVATE_KEY` (public was **empty**); set `VAPID_SUBJECT=mailto:jeremy@thetrainstation.co`; redeploy. Then Jeremy (and John) on phone: Home Screen app → Coach settings → **Enable alerts** → Send test. Today: push **`skipped_no_recipient`** (0 staff subs).
 3. **Confirm** next free signup hits: in-app Messages + email + phone push.
 
