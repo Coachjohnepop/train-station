@@ -279,6 +279,7 @@ html {
   /* Kill sideways pan / “page slides around” on iOS Safari + Chrome */
   overflow-x: clip;
   overscroll-behavior-x: none;
+  overscroll-behavior-y: none;
   width: 100%;
   max-width: 100%;
 }
@@ -291,8 +292,8 @@ body {
   max-width: 100%;
   overflow-x: clip;
   overscroll-behavior-x: none;
-  /* Vertical scroll only at the document root — prevents diagonal/side drag */
-  overscroll-behavior-y: contain;
+  /* none (not contain): stop iOS/Android pull-to-refresh from reloading mid-workout */
+  overscroll-behavior-y: none;
   color: var(--text);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   /* Stop iOS from resizing text (feels like the app “resizes”) */
@@ -307,6 +308,7 @@ body {
   width: 100%;
   max-width: 100%;
   overflow-x: clip;
+  overscroll-behavior-y: none;
   background-color: var(--bg);
   background-image:
     radial-gradient(
