@@ -153,7 +153,7 @@ function wrapHtml(bodyText: string, ctaUrl?: string, ctaLabel?: string): string 
 <p style="margin:0 0 20px;font-weight:700;color:#7c3aed;">${BRAND_NAME}</p>
 ${paragraphs}
 ${cta}
-<p style="margin:24px 0 0;font-size:12px;color:#6b7280;">Questions? Reply to this email or message your coach in the app.</p>
+<p style="margin:24px 0 0;font-size:12px;color:#6b7280;">Reply to this or hit Messages in the app.</p>
 <p style="margin:12px 0 0;font-size:11px;color:#9ca3af;">${BRAND_NAME} · ${site}</p>
 </div></body></html>`;
 }
@@ -321,7 +321,7 @@ export function transactionalSubject(kind: string): string {
     case "welcome":
       return `Welcome to ${BRAND_NAME}`;
     case "workout-complete":
-      return `Workout logged — nice work`;
+      return `Workout logged. Nice work`;
     default:
       return BRAND_NAME;
   }

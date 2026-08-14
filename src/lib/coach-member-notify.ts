@@ -181,7 +181,7 @@ export async function notifyCoachForMemberEvent(params: {
     for (const to of coachEmails) {
       const ok = await sendResendEmail({
         to,
-        subject: `${params.subject} — ${BRAND_NAME}`,
+        subject: `${params.subject} · ${BRAND_NAME}`,
         text: `${params.message}\n\nMember: ${params.memberName} <${params.memberEmail}>\n\nOpen: ${link}`,
         ctaUrl: link,
         ctaLabel: "Open coach dashboard",
@@ -646,18 +646,18 @@ export async function notifyMemberWorkoutLogged(params: {
       ? "100% complete"
       : `${Math.max(0, Math.min(100, params.progress))}% logged`;
   const lateLine = params.late
-    ? "\n(Catch-up day — score is reduced a bit for logging late.)\n"
+    ? "\n(Catch-up day. Score is a bit lower because this was logged late.)\n"
     : "\n";
   const todayUrl = `${appBaseUrl()}/member/today`;
 
   const text =
-    `Hi ${hi},\n\n` +
-    `Nice work — your ${kind} is saved.\n\n` +
+    `Hey ${hi},\n\n` +
+    `Nice work. Your ${kind} is saved.\n\n` +
     `${params.workoutName}\n` +
     `Date: ${params.sessionDate} · ${progressLabel}` +
     lateLine +
-    `Your coach can see this in Messages. Day Complete is on for today — come back tomorrow for the next session.\n\n` +
-    `— ${BRAND_NAME}\n` +
+    `Jeremy can see this in Messages. Day Complete is on for today. Come back tomorrow.\n\n` +
+    `${BRAND_NAME}\n` +
     todayUrl;
 
   return sendResendEmail({

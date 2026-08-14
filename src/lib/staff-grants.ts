@@ -126,7 +126,7 @@ export async function notifyStaffGrantAdmins(params: {
   for (const to of emails) {
     const ok = await sendResendEmail({
       to,
-      subject: `${eventTitle} · ${params.memberName} — ${BRAND_NAME}`,
+      subject: `${eventTitle} · ${params.memberName} · ${BRAND_NAME}`,
       text,
       ctaUrl: membersUrl,
       ctaLabel: "Open Admin Members",

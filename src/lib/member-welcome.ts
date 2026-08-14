@@ -36,11 +36,11 @@ export async function sendMemberWelcomeEmail(input: WelcomeEmailInput): Promise<
   if (input.stage === "signup") {
     const onboardUrl = `${base}/member/onboard?plan=${encodeURIComponent(String(input.plan || "explorer"))}`;
     const text =
-      `Hi ${hi},\n\n` +
-      `Thanks for joining ${BRAND_NAME} (${planLabel}).\n\n` +
+      `Hey ${hi},\n\n` +
+      `You're in on ${planLabel} at ${BRAND_NAME}.\n\n` +
       (input.note ? `${input.note}\n\n` : "") +
-      `Next step: complete your 2-minute setup so we can tailor workouts and coach messages.\n\n` +
-      `— Coach Jeremy`;
+      `Take a couple minutes and finish setup so we can get your workouts lined up.\n\n` +
+      `Jeremy`;
     return sendResendEmail({
       to: input.email,
       subject: transactionalSubject("welcome"),
@@ -56,16 +56,16 @@ export async function sendMemberWelcomeEmail(input: WelcomeEmailInput): Promise<
   const bookUrl = `${base}/member/book`;
   const messagesUrl = `${base}/member/chat`;
 
-  const subject = `You're in — start Day 1 with Coach Jeremy`;
+  const subject = `You're in. Start Day 1`;
   const text =
-    `Hi ${hi},\n\n` +
-    `Welcome to ${BRAND_NAME}! Your setup is complete.\n\n` +
+    `Hey ${hi},\n\n` +
+    `Setup's done. You're in.\n\n` +
     `Start Day 1:\n${startUrl}\n\n` +
-    `Book your 15-min intro call (Zoom via Calendly):\n${bookUrl}\n` +
-    `Or open Calendly directly: ${COACH_CALENDLY_URL}\n\n` +
-    `Message your coach anytime:\n${messagesUrl}\n\n` +
-    `Plan: ${planLabel}\n\n` +
-    `— Coach Jeremy\n` +
+    `Book a 15-min intro (Zoom):\n${bookUrl}\n` +
+    `Or Calendly: ${COACH_CALENDLY_URL}\n\n` +
+    `Message me anytime:\n${messagesUrl}\n\n` +
+    `${planLabel}\n\n` +
+    `Jeremy\n` +
     `${base}`;
 
   return sendResendEmail({

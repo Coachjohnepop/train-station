@@ -273,7 +273,7 @@ export function coachAlertMessage(params: {
     : `${base}/member/chat`;
   const hi = params.firstName ? `Hi ${params.firstName}, ` : "";
   const coach = params.coachName || "your coach";
-  return `${hi}New update from ${coach} — open The Train Station: ${link}`;
+  return `${hi}New update from ${coach}. Open The Train Station: ${link}`;
 }
 
 function coachReplySmsBody(message: string, firstName?: string, coachName?: string) {
@@ -282,7 +282,7 @@ function coachReplySmsBody(message: string, firstName?: string, coachName?: stri
   const hi = firstName ? `Hi ${firstName}, ` : "";
   const coach = coachName || "Your coach";
   const preview = message.length > 140 ? `${message.slice(0, 137)}…` : message;
-  return `${hi}${coach}: ${preview} — Reply: ${link}`;
+  return `${hi}${coach}: ${preview} Reply: ${link}`;
 }
 
 function welcomeSmsBody(params: { firstName: string; programSlug?: string }) {
@@ -290,9 +290,9 @@ function welcomeSmsBody(params: { firstName: string; programSlug?: string }) {
   const slug = params.programSlug || "adult";
   const start = `${base}${memberProgramStartPath(slug)}`;
   return (
-    `Hi ${params.firstName}, welcome to The Train Station! Coach Jeremy here. ` +
-    `Your setup is done — start Day 1: ${start} ` +
-    `Book your intro call: ${COACH_CALENDLY_URL}`
+    `Hey ${params.firstName}, Jeremy here. You're in at The Train Station. ` +
+    `Setup's done. Start Day 1: ${start} ` +
+    `Book your intro: ${COACH_CALENDLY_URL}`
   );
 }
 

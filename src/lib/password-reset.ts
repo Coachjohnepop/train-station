@@ -65,12 +65,12 @@ async function resolveSignInAccount(email: string): Promise<SignInAccountRef | n
 
 async function sendResetEmail(to: string, resetUrl: string): Promise<boolean> {
   const text =
-    `Hello,\n\n` +
-    `We received a request to reset the password for ${to} on ${BRAND_NAME}.\n\n` +
-    `Open this link to choose a new password (expires in 1 hour):\n` +
+    `Hey,\n\n` +
+    `Someone asked to reset the password for ${to} on ${BRAND_NAME}.\n\n` +
+    `Here's the link (good for an hour):\n` +
     `${resetUrl}\n\n` +
-    `If you did not request a password reset, you can safely ignore this email. Your password will not change.\n\n` +
-    `— ${BRAND_NAME}\n` +
+    `If that wasn't you, ignore this. Nothing changes.\n\n` +
+    `${BRAND_NAME}\n` +
     `https://www.thetrainstation.co`;
 
   return sendResendEmail({

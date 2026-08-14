@@ -188,11 +188,11 @@ export async function sendHubNotification(params: {
 
   const subject = params.subject || transactionalSubject("hub");
   const text =
-    `Hi ${first},\n\n` +
-    `${coach} sent you an update:\n\n` +
+    `Hey ${first},\n\n` +
+    `${coach} sent you a note:\n\n` +
     `${preview}\n\n` +
-    `Open in The Train Station to read and reply. Your coach never sees your phone number.\n\n` +
-    `— ${BRAND_NAME}`;
+    `Open The Train Station to read and reply.\n\n` +
+    `${BRAND_NAME}`;
 
   const emailed = await sendHubEmail({
     to: params.recipient.email,
@@ -273,7 +273,7 @@ export async function notifyCoachOfMemberReply(params: {
   for (const to of coachEmails) {
     await sendHubEmail({
       to,
-      subject: `${params.memberName} replied — ${BRAND_NAME}`,
+      subject: `${params.memberName} replied · ${BRAND_NAME}`,
       text:
         `${params.memberName} (${params.memberEmail}) sent a message:\n\n` +
         `${preview}\n\n` +

@@ -503,7 +503,7 @@ export async function sendDailyReminders() {
         recipient: du,
         message,
         source: "reminder",
-        subject: "Your workout reminder — The Train Station",
+        subject: "Your workout reminder",
         deepLink: hubMemberChatUrl(),
       });
       return [{ user: du.email, phone: du.phone || du.email, message, sentAt: result.sentAt }];
