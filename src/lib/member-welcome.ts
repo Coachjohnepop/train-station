@@ -17,6 +17,8 @@ type WelcomeEmailInput = {
   plan?: SignupPlan | string | null;
   stage: "signup" | "complete";
   programSlug?: string;
+  /** Extra paragraph (e.g. duplicate apology). */
+  note?: string;
 };
 
 function firstName(name: string, email: string) {
@@ -36,6 +38,7 @@ export async function sendMemberWelcomeEmail(input: WelcomeEmailInput): Promise<
     const text =
       `Hi ${hi},\n\n` +
       `Thanks for joining ${BRAND_NAME} (${planLabel}).\n\n` +
+      (input.note ? `${input.note}\n\n` : "") +
       `Next step: complete your 2-minute setup so we can tailor workouts and coach messages.\n\n` +
       `— Coach Jeremy`;
     return sendResendEmail({
