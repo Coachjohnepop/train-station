@@ -354,22 +354,59 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-12 (late — John signing off)  
-**Status:** Prod still at **`49e058b` / `f2e92d3`**. Tonight’s gag + `/free` share work is **local / uncommitted** — not on thetrainstation.co until commit + deploy.  
+**Date:** 2026-08-13  
+**Status:** Prod on **`main` through `25c28ff`** (onboard-on-resume). Resend is **off Eco**. Stripe card merchant is **still Eco Live**. Gag + `/free` share loop is **local / uncommitted**.  
 **Rule reaffirmed:** **any new module / data element → Postgres first** (see Durable product rules).  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
-**Branches:** `preview` / `main` · prod: https://www.thetrainstation.co  
+**Branches:** `preview` / `main` (same tip after this session) · prod: https://www.thetrainstation.co  
 
-### Live members (2026-08-12 traffic)
+### Live members (2026-08-13)
 
-| When (PT) | Who | Plan | Notes |
-|-----------|-----|------|--------|
-| ~10:42 | ~~Will Popham~~ `williampopham20@gmail.com` | Free Explorer | **Fully purged 2026-08-12** (account, profile, waitlist, chat, notifs, blob, quick-auth). Can sign up from scratch. |
-| ~10:47 | ~~Quinn C~~ `quinlan.creighton@gmail.com` | Free Explorer | **Fully purged 2026-08-12** — same as Will. |
-| ~10:50 | **Bella Roy** `bellaroyy03@gmail.com` | **Member paid** (~10:53) | **Onboard incomplete** — follow up |
-| Earlier | **Ali Fletcher** | Member paid (Aug 10) | Still on board |
+| Who | Plan | Notes |
+|-----|------|--------|
+| **Ali Fletcher** `fletcherboys@att.net` | Coach Class paid (Aug 10, LETSGO26 ~$5) | Async/on-demand. **Onboard incomplete.** Welcome retried from TS Resend (apology line). Next login → `/member/onboard?plan=member`. |
+| **Bella Roy** `bellaroyy03@gmail.com` | Coach Class paid (Aug 12) | **Onboard incomplete.** Same welcome retry + onboard gate. |
+| **Stephanie Popham** `sprealty9@gmail.com` | Member paid | Onboard done. |
+| **John Popham** `john@bcxvoice.com` | Business paid | Member smoke. Onboard done. |
+| **Jeremy Byrd 2** `coachbyrd84@aol.com` | Business paid | Onboard done. |
+| Coop Fletcher `cooperfletcher892@gmail.com` | Merchandise | Payment pending, onboard incomplete. |
+| ~~Will / Quinn~~ | — | Purged 2026-08-12. |
 
-In-app coach Messages **did** get system notes for Will (signup, equipment, onboard). **Email/push did not land** (see NEXT SESSION #1–2). Those notes were deleted with the purge.
+**Auth note:** Jeremy + John **admin** accounts have passwords (blank login is dead). Soak scripts still try `CoachTest123!`. 2026-08-13 admin crawl used a one-shot password on `john@thetrainstation.co` then sent **Forgot password** to that inbox — John should set his own password from that email.
+
+### Session 2026-08-13 — shipped
+
+| Area | What | Commit / ops |
+|------|------|----------------|
+| **Resend off Eco** | Team **thetrainstation** (`john@thetrainstation.co`). Domain `send.thetrainstation.co` already verified. Prod `RESEND_API_KEY` = TS key (not Eco send-only). `RESEND_FROM` = `The Train Station <accounts@send.thetrainstation.co>`. `reply_to` sanitized to one address. | `3c9c536` `00044d5` `6447400` + Vercel env |
+| Welcome retries | Ali + Bella welcome resent from TS domain: “IT fixed this, sorry for the duplicate.” | `9692834` `4582ed5` |
+| Email/SMS voice | No em dashes / “Next step” / “— Coach Jeremy”. Sign-off **Jeremy**. | `66aee7f` |
+| Onboard on resume | Login already aimed unfinished paid members at setup. Stale `ts_needs_payment` + empty-path hole let Today stay open. Sync-gates now navigates; member layout no longer treats missing pathname as exempt. | `25c28ff` |
+| Site sweep | Public 79/80 (only `/free` 404). Admin crawl as John: all coach + platform pages 200 except wrong slugs `/admin/programs/athletes` + `/military` (real: `strength-training`, `boot-camp-preparation`). | — |
+
+**Still on Eco (infra):** Stripe Live keys (`pk_live_51Su…`). Checkout says Eco Delight Coffee. Billing ~$803 available / $125 MRR is Eco’s account. Venmo already Jeremy. Partners / coffee affiliate **keep** Eco on purpose.
+
+**Uncommitted (this machine only):** in-app 5s chorus + `/free` share loop (`src/app/free/`, `public/videos/`, FreeTicketModal, etc.). Prod gag is still YouTube Rick 5s @ 0:43.
+
+### NEXT SESSION — pick up here (priority)
+
+1. **Ali + Bella** — after `25c28ff` is Ready, they sign out/in once → setup wizard. Confirm they finish onboard.  
+2. **John admin password** — use the Forgot password mail to `john@thetrainstation.co`.  
+3. **Ship gag + `/free`** (or it only lives here): commit chorus + share loop; phone check signed-out Safari; iMessage `/free` OG must be Train Station ticket.  
+4. **Web Push** — still `skipped_no_recipient` (0 staff device subs). Jeremy Home Screen → Enable alerts.  
+5. **Stripe cutover** — John back in SMS range; log into Jeremy TS Stripe (`acct_1TmKSW…`, Live). Don’t copy keys until the top-left name is The Train Station, not Eco. Then `.env.jeremy.live` → `scripts/wire-jeremy-master-stripe.mjs --identify`.  
+6. **Zoom** — not connected. Status host on John’s session was `john@thetrainstation.co`; Jeremy must Connect as himself for live class.  
+7. Queue cleanup: `loop-*@example.com`, Stripe E2E leftover. Weekly/dinner video slots still empty.
+
+**Parked (do not un-park without explicit ask)**
+
+- Twilio SMS (prefer Messages + Resend)  
+- $400 commission Connect (after Jeremy is merchant)  
+- Eco name on Stripe checkout (until key swap)  
+- **Rickroll clip license** — in-app 5s chorus is gray on purpose. Plays only on **Free Explorer**. If a rights holder writes: same day Production **`NEXT_PUBLIC_FREE_TICKET_GAG_MODE=youtube`** and redeploy **or** Admin → Videos gag kill switch.  
+
+**Re-run onboard smoke anytime:**  
+`BASE_URL=https://www.thetrainstation.co node scripts/onboard-tier-loop.mjs`
 
 ### Explicit decision 2026-08-12 — Stripe merchant (interim, intentional)
 
@@ -412,38 +449,6 @@ In-app coach Messages **did** get system notes for Will (signup, equipment, onbo
 | Rickroll mobile | Pin gag src; mute→single unMute; never dual YT iframes (no chorus restart) | `f2e92d3` |
 | In-app chorus | Free gag is local 5s file (`/videos/free-ticket-chorus.mp4` + mp3). Play starts on the Free tap; YouTube iframe gone. | uncommitted |
 | Free share loop | After gag: **Send this Free ticket to a friend**. Share URL is `/free` (Train Station OG + ticket art — not YouTube). Recipient taps Open → same gag. UTM `gag / share / free_ticket`. | uncommitted |
-
-### NEXT SESSION — pick up here (priority)
-
-**First: ship tonight’s work** (or it only lives on this machine)
-
-1. Commit + deploy the in-app chorus + `/free` share loop.  
-2. Phone check, signed out / private Safari: `/join` → Free → 5s local chorus (no restart) → Jeremy → **Send this Free ticket to a friend**.  
-3. iMessage yourself `https://www.thetrainstation.co/free` — preview must be Train Station ticket, not YouTube.
-
-**P0 — coach actually gets notified (ops, ~1h)**
-
-1. **Resend (2026-08-13 — DONE, off Eco)** — Team **thetrainstation** (`john@thetrainstation.co`). Domain `send.thetrainstation.co` verified. Production `RESEND_API_KEY` is the TS key (not Eco). `RESEND_FROM` = `The Train Station <accounts@send.thetrainstation.co>`. Probe password-reset to `john@thetrainstation.co` **Delivered** in that dashboard. Eco `send.buyecodelight.com` no longer used for TS mail.
-2. **Web Push** — Production `VAPID_PUBLIC_KEY` must match `VAPID_PRIVATE_KEY` (public was **empty**); set `VAPID_SUBJECT=mailto:jeremy@thetrainstation.co`; redeploy. Then Jeremy (and John) on phone: Home Screen app → Coach settings → **Enable alerts** → Send test. Today: push **`skipped_no_recipient`** (0 staff subs).
-3. **Confirm** next free signup hits: in-app Messages + email + phone push.
-
-**P1 — live members / product**
-
-4. **Bella Roy** — paid Member, **onboard incomplete** — coach follow-up / finish setup.  
-5. Optional: free card-on-file lever QA (still default OFF).  
-6. Jeremy content: Admin → Videos intros (placeholders empty).  
-7. Coach **“needs done”** durable checklist (signup → equipment → start date → intro → first workout) — still thin vs Jul 27 voice note.  
-8. Don’t re-open **Stripe cutover** unless `.env.jeremy.live` has Jeremy Live keys.  
-
-**Parked (do not un-park without explicit ask)**
-
-- Twilio SMS (prefer Messages + Resend)  
-- Jeremy Stripe merchant cutover / $400 commission Connect  
-- Eco name on Stripe checkout (accepted interim)  
-- **Rickroll clip license** — in-app 5s chorus is gray on purpose. Plays only on **Free Explorer** (no charge for the gag; not a paid feature). If a rights holder writes (C&D / Vercel DMCA): same day set Production **`NEXT_PUBLIC_FREE_TICKET_GAG_MODE=youtube`** and redeploy (official embed from chorus) **or** Admin → Videos gag kill switch. Then buy **sync + master** if we want the local file back. Tell the broker: 5s, Free-tier tap only, no ads on the clip, no sale of the song. Not BMI/ASCAP, not YouTube Premium. Brokers: Easy Song / Songfile-class “app or game” sync. Do not wait to license unless asked.  
-
-**Re-run onboard smoke anytime:**  
-`BASE_URL=https://www.thetrainstation.co node scripts/onboard-tier-loop.mjs`
 
 ### Session 2026-08-05 — mobile free signup polish (still true / prior)
 
