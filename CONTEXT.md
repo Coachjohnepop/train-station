@@ -390,11 +390,13 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ### NEXT SESSION — pick up here (priority)
 
-1. **Ali + Bella** — after `25c28ff` is Ready, they sign out/in once → setup wizard. Confirm they finish onboard.  
-2. **John admin password** — use the Forgot password mail to `john@thetrainstation.co`.  
-3. **Ship gag + `/free`** (or it only lives here): commit chorus + share loop; phone check signed-out Safari; iMessage `/free` OG must be Train Station ticket.  
-4. **Web Push** — still `skipped_no_recipient` (0 staff device subs). Jeremy Home Screen → Enable alerts.  
-5. **Stripe cutover** — John back in SMS range; log into Jeremy TS Stripe (`acct_1TmKSW…`, Live). Don’t copy keys until the top-left name is The Train Station, not Eco. Then `.env.jeremy.live` → `scripts/wire-jeremy-master-stripe.mjs --identify`.  
+**2026-08-14 morning (John): Stripe first.** SMS is back. Log into Jeremy’s Train Station Stripe (`acct_1TmKSW…`, **Live**). Wrong account if Eco Delight / `acct_1Su…`. Don’t copy keys until the top-left name is The Train Station. Then `.env.jeremy.live` (`sk_live` / `pk_live` / prices / `whsec`) → `node scripts/wire-jeremy-master-stripe.mjs --identify` (confirm id + business name) → `--push-vercel` → redeploy → checkout no longer says Eco Delight. Existing Ali/Bella Eco subs stay on Eco; new charges go to Jeremy.
+
+1. **Stripe cutover** — as above.  
+2. **Ali + Bella** — they sign out/in once → setup wizard. Confirm they finish onboard.  
+3. **John admin password** — use the Forgot password mail to `john@thetrainstation.co`.  
+4. **Ship gag + `/free`** (or it only lives here): commit chorus + share loop; phone check signed-out Safari; iMessage `/free` OG must be Train Station ticket.  
+5. **Web Push** — still `skipped_no_recipient` (0 staff device subs). Jeremy Home Screen → Enable alerts.  
 6. **Zoom** — not connected. Status host on John’s session was `john@thetrainstation.co`; Jeremy must Connect as himself for live class.  
 7. Queue cleanup: `loop-*@example.com`, Stripe E2E leftover. Weekly/dinner video slots still empty.
 
