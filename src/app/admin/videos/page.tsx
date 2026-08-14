@@ -1,4 +1,8 @@
 import AdminSiteVideosPanel from "@/components/AdminSiteVideosPanel";
+import {
+  freeChastiseVideoUrlFromConfig,
+  welcomeVideoUrlFromConfig,
+} from "@/lib/landing-media";
 import { getLandingMedia } from "@/lib/landing-media-store";
 import { getMemberContent } from "@/lib/member-content-store";
 import { ensureLibraryHasUrls } from "@/lib/site-video-library-store";
@@ -21,9 +25,11 @@ export default async function AdminVideosPage() {
       title: `${signupPlanLabel(plan)} intro`,
     }),
   );
+  const welcomeUrl = welcomeVideoUrlFromConfig(landing.welcomeVideoUrl);
+  const freeUrl = freeChastiseVideoUrlFromConfig(landing.freeChastiseVideoUrl);
   const library = await ensureLibraryHasUrls([
-    { url: landing.welcomeVideoUrl, title: "Overall intro" },
-    { url: landing.freeChastiseVideoUrl, title: "Free Explorer intro" },
+    { url: welcomeUrl, title: "Overall intro" },
+    { url: freeUrl, title: "Free Explorer intro" },
     { url: landing.equipmentIntroVideoUrl, title: "Gear / equipment intro" },
     { url: landing.measurementsIntroVideoUrl, title: "Measurements how-to" },
     ...planTitles,
@@ -35,13 +41,14 @@ export default async function AdminVideosPage() {
         <h1 className="text-2xl font-bold">Videos</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
           Upload or replace Jeremy&apos;s intros on each slot, watch them here, then Save. Free
-          Explorer is the clip after the fixed gag. YouTube for thank-you, weekly, dinner, daily.
+          Explorer is the clip after the gag. Welcome and Free intros are site files (not
+          YouTube). Thank-you, weekly, dinner, daily can still be YouTube.
         </p>
       </div>
       <AdminSiteVideosPanel
-        initialWelcomeUrl={landing.welcomeVideoUrl ?? ""}
+        initialWelcomeUrl={welcomeUrl}
         initialWelcomeVideosByPlan={landing.welcomeVideosByPlan}
-        initialFreeUrl={landing.freeChastiseVideoUrl ?? ""}
+        initialFreeUrl={freeUrl}
         initialGagUrl={landing.gagVideoUrl ?? ""}
         initialGagStartSec={landing.gagStartSec}
         initialGagDurationSec={landing.gagDurationSec}

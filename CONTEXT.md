@@ -386,7 +386,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Still on Eco (infra):** Stripe Live keys (`pk_live_51Su…`). Checkout says Eco Delight Coffee. Billing ~$803 available / $125 MRR is Eco’s account. Venmo already Jeremy. Partners / coffee affiliate **keep** Eco on purpose.
 
-**Shipped 2026-08-14 (after EOD):** in-app 5s chorus + `/free` share loop. Prod gag is the local file. Free tap never loads YouTube (too slow). Jeremy after gag only if the intro is an uploaded file. `/free` 200, OG is the Free ticket art.
+**Shipped 2026-08-14 (after EOD):** in-app 5s chorus + `/free` share loop. Welcome + Free Explorer intros are site files (`/videos/jeremy-welcome.mp4`, `/videos/jeremy-free-intro.mp4`). Free tap never loads YouTube.
 
 ### Workouts are Postgres only
 
@@ -580,7 +580,7 @@ John reported Admin Billing shows **his** Stripe balances. That means Production
 
 | Rule | Decision |
 |------|----------|
-| Guest Free | Always **5s in-app chorus file** → Jeremy only if that intro is an uploaded file. No YouTube on this path. |
+| Guest Free | Always **5s in-app chorus file** → Jeremy Free Explorer file (`/videos/jeremy-free-intro.mp4`). No YouTube. |
 | Signed-in | **No gag** — straight to Jeremy intro |
 | Free product | Real Explorer path (~20% of Coach Class capabilities), not joke-only |
 | Autoplay | Yes — mute-first then unMute ASAP after Free tap |

@@ -1,7 +1,9 @@
 {
-  "welcomeVideoUrl": null,
-  "welcomeVideosByPlan": {},
-  "freeChastiseVideoUrl": null,
+  "welcomeVideoUrl": "/videos/jeremy-welcome.mp4",
+  "welcomeVideosByPlan": {
+    "explorer": "/videos/jeremy-free-intro.mp4"
+  },
+  "freeChastiseVideoUrl": "/videos/jeremy-free-intro.mp4",
   "gagVideoUrl": null,
   "gagStartSec": 43,
   "gagDurationSec": 10,

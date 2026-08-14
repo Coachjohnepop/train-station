@@ -1,7 +1,8 @@
 import type { SignupPlan } from "@/lib/signup-plans";
 import { MEMBERSHIP_PLANS, normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 import type { WelcomeVideosByPlan } from "@/lib/landing-media-store";
-import { youtubeEmbedUrl } from "@/lib/youtube";
+import { isDirectVideoUrl } from "@/lib/site-video";
+import { isYoutubeUrl, youtubeEmbedUrl } from "@/lib/youtube";
 
 /** Optional Vercel fallback if blob config is empty (full URL or bare video id). */
 function envFallback(key: string): string | null {
@@ -58,11 +59,37 @@ export function resolveLandingVideoUrl(
   return null;
 }
 
+/** Overall Jeremy welcome — site file, not YouTube. */
+export const JEREMY_WELCOME_VIDEO_SRC = "/videos/jeremy-welcome.mp4";
+/** Free Explorer intro after the gag — site file, not YouTube. */
+export const JEREMY_FREE_INTRO_VIDEO_SRC = "/videos/jeremy-free-intro.mp4";
+
+const LEGACY_BLOB_INTRO_RE =
+  /8454de13-15b8-41f3-a476-b6b613c83983|28a8e280-bcf3-4e43-938d-2060a53527c4/i;
+
+function resolveCoachIntroFile(
+  stored: string | null | undefined,
+  fallback: string,
+): string {
+  const trimmed = stored?.trim();
+  if (
+    trimmed &&
+    !isYoutubeUrl(trimmed) &&
+    !isRickrollVideoUrl(trimmed) &&
+    !LEGACY_BLOB_INTRO_RE.test(trimmed) &&
+    isDirectVideoUrl(trimmed)
+  ) {
+    return trimmed;
+  }
+  return fallback;
+}
+
 export function welcomeVideoUrlFromConfig(stored: string | null | undefined) {
-  return resolveLandingVideoUrl(stored, [
+  const resolved = resolveLandingVideoUrl(stored, [
     "NEXT_PUBLIC_WELCOME_VIDEO_URL",
     "NEXT_PUBLIC_WELCOME_VIDEO_YT",
   ]);
+  return resolveCoachIntroFile(resolved, JEREMY_WELCOME_VIDEO_SRC);
 }
 
 /** First-visit Gear tab intro (Jeremy home-gym buying guide). */
@@ -201,6 +228,5 @@ export function freeChastiseVideoUrlFromConfig(stored: string | null | undefined
     "NEXT_PUBLIC_FREE_CHASTISE_VIDEO_URL",
     "NEXT_PUBLIC_FREE_CHASTISE_VIDEO_YT",
   ]);
-  if (!resolved || isRickrollVideoUrl(resolved)) return null;
-  return resolved;
+  return resolveCoachIntroFile(resolved, JEREMY_FREE_INTRO_VIDEO_SRC);
 }
