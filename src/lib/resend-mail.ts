@@ -61,11 +61,11 @@ function isUnverifiedApex(domain: string | null): boolean {
   return domain === "thetrainstation.co";
 }
 
-/** Known-working envelope while send.thetrainstation.co is unverified in Resend. */
+/** Fallback FROM — same TS send domain unless RESEND_FROM_FALLBACK is set. */
 export function resendFallbackFrom(): string {
   return (
     process.env.RESEND_FROM_FALLBACK?.trim() ||
-    `${BRAND_NAME} <accounts@send.buyecodelight.com>`
+    `${BRAND_NAME} <accounts@${resendSendingDomain()}>`
   );
 }
 
