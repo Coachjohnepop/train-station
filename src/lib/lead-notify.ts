@@ -1,4 +1,4 @@
-import { sendResendEmail } from "@/lib/resend-mail";
+import { firstEmailAddress, sendResendEmail } from "@/lib/resend-mail";
 
 /**
  * New-lead email notification (Resend).
@@ -30,7 +30,9 @@ export async function notifyNewLead(lead: Lead): Promise<void> {
   try {
     const ok = await sendResendEmail({
       to: RECIPIENTS,
-      replyTo: process.env.LEAD_NOTIFY_REPLY_TO?.trim() || process.env.COACH_NOTIFY_EMAIL?.trim(),
+      replyTo:
+        firstEmailAddress(process.env.LEAD_NOTIFY_REPLY_TO) ||
+        firstEmailAddress(process.env.COACH_NOTIFY_EMAIL),
       subject: `New ${lead.source?.includes("signup") ? "signup" : "lead"}: ${lead.name || "Guest"} (${lead.email})`,
       text:
         `New ${lead.source?.includes("signup") ? "member signup" : "lead"}\n\n` +

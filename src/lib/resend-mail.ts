@@ -36,7 +36,40 @@ export function resendSendingDomain(): string {
   return `send.${siteHostname()}`;
 }
 
-/** Derive accounts@… from the verified LEAD_NOTIFY_FROM address (e.g. john@thetrainstation.co). */
+/** First usable address from a raw env/input (comma lists are invalid as Resend reply_to). */
+export function firstEmailAddress(raw?: string | null): string | undefined {
+  if (!raw?.trim()) return undefined;
+  for (const part of raw.split(/[,;]/)) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const angled = trimmed.match(/^(.*)<([^>]+)>\s*$/);
+    const email = (angled?.[2] || trimmed).trim();
+    if (/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) {
+      return angled ? trimmed : email;
+    }
+  }
+  return undefined;
+}
+
+function domainFromAddress(from: string): string | null {
+  const match = from.match(/<([^>]+)>/);
+  const addr = (match?.[1] || from).trim();
+  return addr.split("@")[1]?.toLowerCase() || null;
+}
+
+function isUnverifiedApex(domain: string | null): boolean {
+  return domain === "thetrainstation.co";
+}
+
+/** Known-working envelope while send.thetrainstation.co is unverified in Resend. */
+export function resendFallbackFrom(): string {
+  return (
+    process.env.RESEND_FROM_FALLBACK?.trim() ||
+    `${BRAND_NAME} <accounts@send.buyecodelight.com>`
+  );
+}
+
+/** Derive accounts@… from LEAD_NOTIFY_FROM only when that domain is not the unverified apex. */
 function accountsFromLeadNotifyFrom(): string | null {
   const leadFrom = process.env.LEAD_NOTIFY_FROM?.trim();
   if (!leadFrom) return null;
@@ -45,6 +78,8 @@ function accountsFromLeadNotifyFrom(): string | null {
   const email = (match?.[1] || leadFrom).trim();
   const at = email.lastIndexOf("@");
   if (at <= 0) return null;
+  const domain = email.slice(at + 1).toLowerCase();
+  if (isUnverifiedApex(domain)) return null;
 
   return `${BRAND_NAME} <accounts${email.slice(at)}>`;
 }
@@ -56,28 +91,30 @@ export function resendFromAddress(): string {
     process.env.PASSWORD_RESET_FROM?.trim() ||
     process.env.MESSAGE_HUB_FROM?.trim() ||
     process.env.MEMBER_WELCOME_FROM?.trim();
-  if (explicit) return explicit;
+  if (explicit && !isUnverifiedApex(domainFromAddress(explicit))) return explicit;
 
   const leadAccounts = accountsFromLeadNotifyFrom();
   if (leadAccounts) return leadAccounts;
 
   const domain = resendSendingDomain();
-  return `${BRAND_NAME} <accounts@${domain}>`;
+  if (!isUnverifiedApex(domain)) {
+    return `${BRAND_NAME} <accounts@${domain}>`;
+  }
+
+  return resendFallbackFrom();
 }
 
 export function resendReplyTo(): string {
   return (
-    process.env.RESEND_REPLY_TO?.trim() ||
-    process.env.COACH_NOTIFY_EMAIL?.trim()?.split(",")[0]?.trim() ||
+    firstEmailAddress(process.env.RESEND_REPLY_TO) ||
+    firstEmailAddress(process.env.LEAD_NOTIFY_REPLY_TO) ||
+    firstEmailAddress(process.env.COACH_NOTIFY_EMAIL) ||
     "jeremy@thetrainstation.co"
   );
 }
 
 export function resendFromDomain(): string | null {
-  const match = resendFromAddress().match(/<([^>]+)>/);
-  const addr = match?.[1] || resendFromAddress();
-  const domain = addr.split("@")[1]?.toLowerCase();
-  return domain || null;
+  return domainFromAddress(resendFromAddress());
 }
 
 export function resendFromLooksMisconfigured(): boolean {
@@ -95,9 +132,7 @@ export function resendFromLooksMisconfigured(): boolean {
 }
 
 function resendFromDomainFromAddress(from: string): string | null {
-  const match = from.match(/<([^>]+)>/);
-  const addr = match?.[1] || from;
-  return addr.split("@")[1]?.toLowerCase() || null;
+  return domainFromAddress(from);
 }
 
 function wrapHtml(bodyText: string, ctaUrl?: string, ctaLabel?: string): string {
@@ -176,6 +211,7 @@ export async function sendResendEmail(input: ResendEmailInput): Promise<boolean>
   }
 
   const to = toList;
+  const replyTo = firstEmailAddress(input.replyTo) || resendReplyTo();
   const headers: Record<string, string> = {
     "X-Entity-Ref-ID": `ts-${Date.now()}`,
     ...input.headers,
@@ -191,7 +227,7 @@ export async function sendResendEmail(input: ResendEmailInput): Promise<boolean>
       body: JSON.stringify({
         from: resendFromAddress(),
         to,
-        reply_to: input.replyTo || resendReplyTo(),
+        reply_to: replyTo,
         subject: input.subject,
         text: input.text,
         html: input.html || wrapHtml(input.text, input.ctaUrl, input.ctaLabel),
@@ -204,7 +240,7 @@ export async function sendResendEmail(input: ResendEmailInput): Promise<boolean>
       const body = await res.text();
       console.error("[RESEND] send failed:", res.status, body, "from:", resendFromAddress());
 
-      const fallback = accountsFromLeadNotifyFrom();
+      const fallback = resendFallbackFrom();
       const primary = resendFromAddress();
       if (
         res.status === 403 &&
@@ -221,7 +257,7 @@ export async function sendResendEmail(input: ResendEmailInput): Promise<boolean>
           body: JSON.stringify({
             from: fallback,
             to,
-            reply_to: input.replyTo || resendReplyTo(),
+            reply_to: replyTo,
             subject: input.subject,
             text: input.text,
             html: input.html || wrapHtml(input.text, input.ctaUrl, input.ctaLabel),

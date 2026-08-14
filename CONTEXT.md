@@ -354,8 +354,8 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-12 (end of day — John signing off ~11:30 PT)  
-**Status:** Prod `main` / `preview` at **`f2e92d3`** (rickroll mobile fix + message groups + Free Tour nav + coach badges/alerts).  
+**Date:** 2026-08-12 (late — John signing off)  
+**Status:** Prod still at **`49e058b` / `f2e92d3`**. Tonight’s gag + `/free` share work is **local / uncommitted** — not on thetrainstation.co until commit + deploy.  
 **Rule reaffirmed:** **any new module / data element → Postgres first** (see Durable product rules).  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
 **Branches:** `preview` / `main` · prod: https://www.thetrainstation.co  
@@ -364,13 +364,12 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 | When (PT) | Who | Plan | Notes |
 |-----------|-----|------|--------|
-| ~10:42 | **Will Popham** `williampopham20@gmail.com` | Free Explorer | Onboarded |
-| ~10:47 | **Quinn C** `quinlan.creighton@gmail.com` | Free Explorer | Onboarded |
+| ~10:42 | ~~Will Popham~~ `williampopham20@gmail.com` | Free Explorer | **Fully purged 2026-08-12** (account, profile, waitlist, chat, notifs, blob, quick-auth). Can sign up from scratch. |
+| ~10:47 | ~~Quinn C~~ `quinlan.creighton@gmail.com` | Free Explorer | **Fully purged 2026-08-12** — same as Will. |
 | ~10:50 | **Bella Roy** `bellaroyy03@gmail.com` | **Member paid** (~10:53) | **Onboard incomplete** — follow up |
 | Earlier | **Ali Fletcher** | Member paid (Aug 10) | Still on board |
-| Lead only | Bella also hit Nutrition “Notify me” before paid signup | | |
 
-In-app coach Messages **did** get system notes for Will (signup, equipment, onboard). **Email/push did not land** (see NEXT SESSION #1–2).
+In-app coach Messages **did** get system notes for Will (signup, equipment, onboard). **Email/push did not land** (see NEXT SESSION #1–2). Those notes were deleted with the purge.
 
 ### Explicit decision 2026-08-12 — Stripe merchant (interim, intentional)
 
@@ -411,17 +410,20 @@ In-app coach Messages **did** get system notes for Will (signup, equipment, onbo
 | Free Tour top nav | Guests: top **Free Tour** (opens overlay); hamburger Free Tour + Sign in; kill hero CTA pulse | `005935e` |
 | Message groups access | Coach Class = Coach 1:1 + **enrolled only**; Free = Coach only; no always-on Station/Adult | `63976bc` |
 | Rickroll mobile | Pin gag src; mute→single unMute; never dual YT iframes (no chorus restart) | `f2e92d3` |
+| In-app chorus | Free gag is local 5s file (`/videos/free-ticket-chorus.mp4` + mp3). Play starts on the Free tap; YouTube iframe gone. | uncommitted |
+| Free share loop | After gag: **Send this Free ticket to a friend**. Share URL is `/free` (Train Station OG + ticket art — not YouTube). Recipient taps Open → same gag. UTM `gag / share / free_ticket`. | uncommitted |
 
 ### NEXT SESSION — pick up here (priority)
 
+**First: ship tonight’s work** (or it only lives on this machine)
+
+1. Commit + deploy the in-app chorus + `/free` share loop.  
+2. Phone check, signed out / private Safari: `/join` → Free → 5s local chorus (no restart) → Jeremy → **Send this Free ticket to a friend**.  
+3. iMessage yourself `https://www.thetrainstation.co/free` — preview must be Train Station ticket, not YouTube.
+
 **P0 — coach actually gets notified (ops, ~1h)**
 
-1. **Resend** — verify domain `send.thetrainstation.co` at resend.com/domains; Vercel Production set:
-   - `RESEND_FROM=The Train Station <accounts@send.thetrainstation.co>`
-   - `RESEND_SEND_DOMAIN=send.thetrainstation.co`
-   - `RESEND_REPLY_TO=jeremy@thetrainstation.co` (**one** address only)
-   - `LEAD_NOTIFY_REPLY_TO=jeremy@thetrainstation.co` (not multi-email — was 422)
-   - Redeploy. Today’s failures: **Resend 403 domain not verified** + **422 invalid reply_to**.
+1. **Resend (2026-08-13)** — DNS for `send.thetrainstation.co` is live, but Resend has **not verified** that domain (or the apex). Send-only API key cannot verify it. Interim: FROM envelope is verified Eco `accounts@send.buyecodelight.com` (display name still **The Train Station**); `reply_to` is sanitized to a **single** address. Flip to `accounts@send.thetrainstation.co` after Verify at resend.com/domains.
 2. **Web Push** — Production `VAPID_PUBLIC_KEY` must match `VAPID_PRIVATE_KEY` (public was **empty**); set `VAPID_SUBJECT=mailto:jeremy@thetrainstation.co`; redeploy. Then Jeremy (and John) on phone: Home Screen app → Coach settings → **Enable alerts** → Send test. Today: push **`skipped_no_recipient`** (0 staff subs).
 3. **Confirm** next free signup hits: in-app Messages + email + phone push.
 
@@ -438,6 +440,7 @@ In-app coach Messages **did** get system notes for Will (signup, equipment, onbo
 - Twilio SMS (prefer Messages + Resend)  
 - Jeremy Stripe merchant cutover / $400 commission Connect  
 - Eco name on Stripe checkout (accepted interim)  
+- **Rickroll clip license** — in-app 5s chorus is gray on purpose. Plays only on **Free Explorer** (no charge for the gag; not a paid feature). If a rights holder writes (C&D / Vercel DMCA): same day set Production **`NEXT_PUBLIC_FREE_TICKET_GAG_MODE=youtube`** and redeploy (official embed from chorus) **or** Admin → Videos gag kill switch. Then buy **sync + master** if we want the local file back. Tell the broker: 5s, Free-tier tap only, no ads on the clip, no sale of the song. Not BMI/ASCAP, not YouTube Premium. Brokers: Easy Song / Songfile-class “app or game” sync. Do not wait to license unless asked.  
 
 **Re-run onboard smoke anytime:**  
 `BASE_URL=https://www.thetrainstation.co node scripts/onboard-tier-loop.mjs`
