@@ -354,8 +354,8 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-13  
-**Status:** Prod on **`main` through `25c28ff`** (onboard-on-resume). Resend is **off Eco**. Stripe card merchant is **still Eco Live**. Gag + `/free` share loop is **local / uncommitted**.  
+**Date:** 2026-08-14  
+**Status:** Ali tested this morning. Paid Today was stuck on empty warmup (intake gate + explorer stamp). Fix: program workout shows after setup; paid plan stamp; bigger workout type. Stripe cutover still first for money. Gag + `/free` still local / uncommitted.  
 **Rule reaffirmed:** **any new module / data element → Postgres first** (see Durable product rules).  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
 **Branches:** `preview` / `main` (same tip after this session) · prod: https://www.thetrainstation.co  
@@ -364,7 +364,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 | Who | Plan | Notes |
 |-----|------|--------|
-| **Ali Fletcher** `fletcherboys@att.net` | Coach Class paid (Aug 10, LETSGO26 ~$5) | Async/on-demand. **Onboard incomplete.** Welcome retried from TS Resend (apology line). Next login → `/member/onboard?plan=member`. |
+| **Ali Fletcher** `fletcherboys@att.net` | Coach Class paid (Aug 10, LETSGO26 ~$5) | Async/on-demand. **Onboard done 2026-08-14.** Profile plan restamped `member`. After deploy she should see Adult calendar (Fri 8/14 = Shoulder/Tricep/Ab/Calves), not warmup. |
 | **Bella Roy** `bellaroyy03@gmail.com` | Coach Class paid (Aug 12) | **Onboard incomplete.** Same welcome retry + onboard gate. |
 | **Stephanie Popham** `sprealty9@gmail.com` | Member paid | Onboard done. |
 | **John Popham** `john@bcxvoice.com` | Business paid | Member smoke. Onboard done. |
@@ -388,23 +388,43 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Uncommitted (this machine only):** in-app 5s chorus + `/free` share loop (`src/app/free/`, `public/videos/`, FreeTicketModal, etc.). Prod gag is still YouTube Rick 5s @ 0:43.
 
+### Session 2026-08-14 AM — Ali test + content gate
+
+Ali (`fletcherboys@att.net`) onboarded 7:42 PT then hammered `/member/today`. Videos “didn’t play” because she was on **pre-intake warmup** (`videoUrl: null`), not Jeremy’s Adult day. Friday 8/14 Adult is **Shoulder/Tricep/Ab/Calves** (7). Intake no longer blocks the program player. Paid explorer stamps resolve to Coach Class. Workout fine print (set/weight labels) enlarged.
+
 ### NEXT SESSION — pick up here (priority)
 
-**2026-08-14 morning (John): Stripe first.** SMS is back. Log into Jeremy’s Train Station Stripe (`acct_1TmKSW…`, **Live**). Wrong account if Eco Delight / `acct_1Su…`. Don’t copy keys until the top-left name is The Train Station. Then `.env.jeremy.live` (`sk_live` / `pk_live` / prices / `whsec`) → `node scripts/wire-jeremy-master-stripe.mjs --identify` (confirm id + business name) → `--push-vercel` → redeploy → checkout no longer says Eco Delight. Existing Ali/Bella Eco subs stay on Eco; new charges go to Jeremy.
+**Stripe still first for money.** Log into Jeremy’s Train Station Stripe (`acct_1TmKSW…`, **Live**). Wrong account if Eco Delight / `acct_1Su…`. Don’t copy keys until the top-left name is The Train Station. Then `.env.jeremy.live` (`sk_live` / `pk_live` / prices / `whsec`) → `node scripts/wire-jeremy-master-stripe.mjs --identify` → `--push-vercel` → redeploy. Existing Ali/Bella Eco subs stay on Eco; new charges go to Jeremy.
 
 1. **Stripe cutover** — as above.  
-2. **Ali + Bella** — they sign out/in once → setup wizard. Confirm they finish onboard.  
-3. **John admin password** — use the Forgot password mail to `john@thetrainstation.co`.  
-4. **Ship gag + `/free`** (or it only lives here): commit chorus + share loop; phone check signed-out Safari; iMessage `/free` OG must be Train Station ticket.  
-5. **Web Push** — still `skipped_no_recipient` (0 staff device subs). Jeremy Home Screen → Enable alerts.  
-6. **Zoom** — not connected. Status host on John’s session was `john@thetrainstation.co`; Jeremy must Connect as himself for live class.  
-7. Queue cleanup: `loop-*@example.com`, Stripe E2E leftover. Weekly/dinner video slots still empty.
+2. **Then: Google + Apple account create/sign-in** — see decision below. Credentials only (buttons already built). Smoke: new paid signup + existing-email link.  
+3. **Ali** — hard-refresh Today after this deploy; confirm Shoulder/Tricep (not warmup). Bella still needs onboard.  
+4. **John admin password** — use the Forgot password mail to `john@thetrainstation.co`.  
+5. **Ship gag + `/free`** (or it only lives here): commit chorus + share loop; phone check signed-out Safari; iMessage `/free` OG must be Train Station ticket.  
+6. **Web Push** — still `skipped_no_recipient` (0 staff device subs). Jeremy Home Screen → Enable alerts.  
+7. **Zoom** — not connected. Status host on John’s session was `john@thetrainstation.co`; Jeremy must Connect as himself for live class.  
+8. Queue cleanup: `loop-*@example.com`, Stripe E2E leftover. Weekly/dinner video slots still empty.
+
+### Explicit decision 2026-08-13 — social login (after Stripe)
+
+**Do this next after the Stripe key swap.** Code is already there (`OAuthButtons` on `/signup?plan=…` + `/login`; `completeOAuthSignIn`). Buttons stay hidden until env is set.
+
+| Do | Don’t |
+|----|--------|
+| **Google** + **Apple** only | Facebook (coded — leave env unset) |
+| Ticket pick first, then Continue with Google/Apple | Landing-hero “create account” via social |
+| Keep email + password as fallback | TikTok or Instagram as identity / create-account |
+| Same-email Google/Apple **links** to existing member | Merge by name if emails differ |
+| Phone still collected in onboard | Treat TikTok/IG as login (they are share/megaphone only) |
+
+**Enable:** `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` + Apple (`APPLE_CLIENT_ID` / `APPLE_TEAM_ID` / `APPLE_KEY_ID` / `APPLE_PRIVATE_KEY`) on Vercel → redeploy. Callback: `/api/auth/oauth/{google\|apple}/callback`. OAuth fails closed without a verified email — that is why TikTok/IG are out.
 
 **Parked (do not un-park without explicit ask)**
 
 - Twilio SMS (prefer Messages + Resend)  
 - $400 commission Connect (after Jeremy is merchant)  
 - Eco name on Stripe checkout (until key swap)  
+- Facebook / TikTok / Instagram **login** (share links only)  
 - **Rickroll clip license** — in-app 5s chorus is gray on purpose. Plays only on **Free Explorer**. If a rights holder writes: same day Production **`NEXT_PUBLIC_FREE_TICKET_GAG_MODE=youtube`** and redeploy **or** Admin → Videos gag kill switch.  
 
 **Re-run onboard smoke anytime:**  

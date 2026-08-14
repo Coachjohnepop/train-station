@@ -171,8 +171,12 @@ const VIDEO_HINTS: Array<{ pattern: RegExp; videoUrl: string }> = [
     videoUrl: "https://www.youtube.com/watch?v=C_VtOYc6j5c",
   },
   {
-    pattern: /stretch|cool\s*down|warm\s*up/i,
-    videoUrl: "https://www.youtube.com/watch?v=C_VtOYc6j5c",
+    pattern: /shoulder mobility|mobility|resistance band|band pull/i,
+    videoUrl: "https://www.youtube.com/watch?v=2-LAMcpzODU",
+  },
+  {
+    pattern: /stretch|cool\s*down|warm\s*up|warm up well|bike|row/i,
+    videoUrl: "https://www.youtube.com/watch?v=ultWZbUMr08",
   },
 ];
 

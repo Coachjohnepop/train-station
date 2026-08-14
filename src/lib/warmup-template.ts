@@ -1,4 +1,5 @@
 import type { MemberExerciseBlock, MemberWorkoutView } from "@/components/MemberWorkoutConsole";
+import { resolveExerciseVideoUrl } from "@/lib/exercise-video-hints";
 
 /** Jeremy's typical pre-session warm-up blocks (editable by coach in settings). */
 export type WarmupBlockTemplate = {
@@ -90,7 +91,7 @@ export function buildWarmupWorkoutView(
     exerciseId: b.exerciseId || b.id,
     name: b.name,
     description: b.notes,
-    videoUrl: null,
+    videoUrl: resolveExerciseVideoUrl({ name: b.name, videoUrl: null }),
     setScheme: b.setScheme,
     repPattern: b.repPattern,
     reps: b.reps,

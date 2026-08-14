@@ -19,6 +19,34 @@ export function isMembershipPlan(plan: SignupPlan): plan is MembershipPlan {
   return (MEMBERSHIP_PLANS as readonly string[]).includes(plan);
 }
 
+export function isPaidMembershipPlan(
+  plan: string | null | undefined,
+): plan is (typeof PAID_MEMBERSHIP_PLANS)[number] {
+  return (PAID_MEMBERSHIP_PLANS as readonly string[]).includes(String(plan || ""));
+}
+
+/**
+ * Plan used for content gates.
+ * Paid members keep Coach Class (or their ticket) even if the profile
+ * stamp was left on explorer after onboard.
+ */
+export function resolveEffectiveMembershipPlan(input: {
+  profilePlan?: string | null;
+  signupPlan?: string | null;
+  paymentStatus?: string | null;
+}): MembershipPlan {
+  const stamped = normalizeSignupPlan(input.profilePlan);
+  const signup = normalizeSignupPlan(input.signupPlan);
+  if (input.paymentStatus === "paid") {
+    if (isPaidMembershipPlan(stamped)) return stamped;
+    if (isPaidMembershipPlan(signup)) return signup;
+    return "member";
+  }
+  if (isMembershipPlan(stamped)) return stamped;
+  if (isMembershipPlan(signup)) return signup;
+  return "explorer";
+}
+
 export function membershipPlanRank(plan: SignupPlan): number | null {
   return isMembershipPlan(plan) ? MEMBERSHIP_PLAN_RANK[plan] : null;
 }

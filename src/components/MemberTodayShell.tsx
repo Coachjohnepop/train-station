@@ -232,8 +232,7 @@ export default function MemberTodayShell({
     (!isToday && !isLateCatchUp && selectedDate > todayIso);
   /** Today or yesterday catch-up may open the full console. */
   const showFullWorkout =
-    forceShowWorkout ||
-    ((isToday || isLateCatchUp) && !!workout && (intakeComplete || hasCoachSession));
+    forceShowWorkout || ((isToday || isLateCatchUp) && !!workout);
 
   const maintainHref = useCallback(
     (workoutId: string) => {
@@ -252,7 +251,11 @@ export default function MemberTodayShell({
   }, [searchParams]);
   const multiPart = Boolean(dayParts && dayParts.length > 1);
   const showWarmupFlow =
-    !intakeComplete && !!warmupWorkout && days.length > 0 && !hasCoachSession;
+    !showFullWorkout &&
+    !intakeComplete &&
+    !!warmupWorkout &&
+    days.length > 0 &&
+    !hasCoachSession;
 
   const selectDate = useCallback(
     (iso: string) => {

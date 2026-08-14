@@ -4,6 +4,9 @@ import { getSessionUser } from "@/lib/auth";
 import { getResolvedLandingVideos } from "@/lib/landing-media-server";
 import { getCoachSettings } from "@/lib/coach-settings-store";
 import { programStartSettingsFromCoach } from "@/lib/program-start-settings";
+import { getMemberProfile } from "@/lib/member-profiles-store";
+import { resolveEffectiveMembershipPlan } from "@/lib/signup-plans";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +17,20 @@ export default async function OnboardingPage() {
     getCoachSettings(),
   ]);
   const programStartSettings = programStartSettingsFromCoach(coachSettings);
+  let initialPlan: string | undefined;
+  if (session?.id) {
+    const [profile, user] = await Promise.all([
+      getMemberProfile(session.id),
+      prisma.user
+        .findUnique({ where: { id: session.id }, select: { signupPlan: true } })
+        .catch(() => null),
+    ]);
+    initialPlan = resolveEffectiveMembershipPlan({
+      profilePlan: profile?.plan,
+      signupPlan: user?.signupPlan,
+      paymentStatus: profile?.paymentStatus,
+    });
+  }
 
   return (
     <Suspense
@@ -28,6 +45,7 @@ export default async function OnboardingPage() {
         welcomeVideoUrl={landingVideos.welcomeVideoUrl}
         welcomeVideosByPlan={landingVideos.welcomeVideosByPlan}
         programStartSettings={programStartSettings}
+        initialPlan={initialPlan}
       />
     </Suspense>
   );

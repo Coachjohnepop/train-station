@@ -2407,12 +2407,16 @@ export default function MemberWorkoutConsole({
                         {block.coachNotes}
                       </p>
                     ) : block.description ? (
-                      <p className="text-sm text-[var(--muted)]">{block.description}</p>
+                      <p className="text-sm text-[color-mix(in_srgb,var(--text)_82%,var(--muted))]">
+                        {block.description}
+                      </p>
                     ) : null}
                     {block.coachNotes &&
                     block.libraryDescription &&
                     block.libraryDescription !== block.coachNotes ? (
-                      <p className="text-xs text-[var(--muted)]">{block.libraryDescription}</p>
+                      <p className="text-sm text-[color-mix(in_srgb,var(--text)_78%,var(--muted))]">
+                        {block.libraryDescription}
+                      </p>
                     ) : null}
                   </div>
                 )}
@@ -2441,14 +2445,14 @@ export default function MemberWorkoutConsole({
                         href={block.videoUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-accent hover:underline"
+                        className="text-sm text-accent hover:underline"
                         onClick={(e) => e.stopPropagation()}
                       >
                         YouTube link →
                       </a>
                     </div>
                   ) : (
-                    <p className="text-xs italic text-[var(--muted)]">
+                    <p className="text-sm text-[color-mix(in_srgb,var(--text)_80%,var(--muted))]">
                       No demo video linked yet — tell your instructor to add one in the exercise library.
                     </p>
                   )}
@@ -2457,17 +2461,23 @@ export default function MemberWorkoutConsole({
                 {/* Compact two-column: scheme info (left) + weight + sets (right) — same row as live floor */}
                 <div className="mt-3 flex gap-3 text-sm">
                   {/* Left: Approach / Prescription / Weight tier - tighter */}
-                  <div className="w-5/12 space-y-1 rounded-lg bg-[var(--surface-2)] p-2 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-[var(--muted)]">Approach</span>
+                  <div className="w-5/12 space-y-1 rounded-lg bg-[var(--surface-2)] p-2 text-sm">
+                    <div className="flex justify-between gap-2">
+                      <span className="text-[color-mix(in_srgb,var(--text)_72%,var(--muted))]">
+                        Approach
+                      </span>
                       <span className="font-medium text-accent-deep">{approachLabel(prescription.approach)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--muted)]">Prescription</span>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-[color-mix(in_srgb,var(--text)_72%,var(--muted))]">
+                        Prescription
+                      </span>
                       <span className="font-medium">{summary}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--muted)]">Weight tier</span>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-[color-mix(in_srgb,var(--text)_72%,var(--muted))]">
+                        Weight tier
+                      </span>
                       <span className="font-medium">{weightTierLabel(block.weightTier)}</span>
                     </div>
                   </div>
@@ -2482,8 +2492,8 @@ export default function MemberWorkoutConsole({
                     {isTimed ? (
                       <>
                         <div className="flex items-baseline justify-between gap-1">
-                          <p className="text-xs font-semibold">Weight &amp; timed set</p>
-                          <p className="text-[10px] text-[var(--muted)]">
+                          <p className="text-sm font-semibold">Weight &amp; timed set</p>
+                          <p className="text-xs text-[color-mix(in_srgb,var(--text)_75%,var(--muted))]">
                             {allSetsDone ? "Done" : summary}
                           </p>
                         </div>
@@ -2524,7 +2534,7 @@ export default function MemberWorkoutConsole({
                             <span className="member-set-btn__num text-sm">
                               {allSetsDone ? "✓" : "▶"}
                             </span>
-                            <span className="member-set-btn__label text-[8px]">
+                            <span className="member-set-btn__label">
                               {allSetsDone ? "Done" : "Mark"}
                             </span>
                           </button>
@@ -2534,7 +2544,7 @@ export default function MemberWorkoutConsole({
                           if (!holdSec) return null;
                           const restS = resolveSecondsForBlock(block);
                           return (
-                            <p className="mt-1 text-[10px] text-[var(--muted)]">
+                            <p className="mt-1 text-xs text-[color-mix(in_srgb,var(--text)_78%,var(--muted))]">
                               Green hold {holdSec >= 60 ? `${Math.round(holdSec / 60)} min` : `${holdSec}s`}
                               {restS ? ` → rest ${restS}s` : ""} · uncheck stays off until you re-mark
                             </p>
@@ -2544,8 +2554,8 @@ export default function MemberWorkoutConsole({
                     ) : (
                       <>
                         <div className="flex items-baseline justify-between gap-1">
-                          <p className="text-xs font-semibold">Weight &amp; sets</p>
-                          <p className="text-[10px] text-[var(--muted)]">
+                          <p className="text-sm font-semibold">Weight &amp; sets</p>
+                          <p className="text-xs text-[color-mix(in_srgb,var(--text)_75%,var(--muted))]">
                             {doneForBlock.size}/{block.setCount}
                           </p>
                         </div>
@@ -2592,7 +2602,7 @@ export default function MemberWorkoutConsole({
                                 <span className="member-set-btn__num text-sm">
                                   {done ? "✓" : setNum}
                                 </span>
-                                <span className="member-set-btn__label text-[8px]">Set</span>
+                                <span className="member-set-btn__label">Set</span>
                               </button>
                             );
                           })}
@@ -2602,7 +2612,7 @@ export default function MemberWorkoutConsole({
                           const restS = resolveSecondsForBlock(block);
                           if (holdSec) {
                             return (
-                              <p className="mt-1 text-[10px] text-[var(--muted)]">
+                              <p className="mt-1 text-xs text-[color-mix(in_srgb,var(--text)_78%,var(--muted))]">
                                 Green hold {holdSec >= 60 ? `${Math.round(holdSec / 60)} min` : `${holdSec}s`}
                                 {restS ? ` → rest ${restS}s` : ""} · uncheck stays off until you re-mark
                               </p>
@@ -2610,7 +2620,7 @@ export default function MemberWorkoutConsole({
                           }
                           if (!restS) return null;
                           return (
-                            <p className="mt-1 text-[10px] text-[var(--muted)]">
+                            <p className="mt-1 text-xs text-[color-mix(in_srgb,var(--text)_78%,var(--muted))]">
                               Rest {restS}s — opens on set, closes when it buzzes
                             </p>
                           );
@@ -2618,7 +2628,7 @@ export default function MemberWorkoutConsole({
                       </>
                     )}
                     {allSetsDone && (
-                      <p className="mt-1 text-center text-[10px] font-medium text-[var(--ramp-gold-light)]">
+                      <p className="mt-1 text-center text-xs font-medium text-[var(--ramp-gold-light)]">
                         {isTimed ? "Timed complete" : "Sets logged"}
                       </p>
                     )}
@@ -2629,7 +2639,7 @@ export default function MemberWorkoutConsole({
 
                 {/* Peek next exercise - space efficient teaser */}
                 {nextExercise && isActive && (
-                  <div className="mt-1 text-[10px] text-[var(--muted)] flex items-center gap-1">
+                  <div className="mt-1 flex items-center gap-1 text-xs text-[color-mix(in_srgb,var(--text)_78%,var(--muted))]">
                     <span>Next:</span>{" "}
                     <span className="font-medium text-[var(--text)] truncate">{nextExercise.name}</span>
                   </div>

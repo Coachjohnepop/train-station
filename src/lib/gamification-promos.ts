@@ -14,7 +14,11 @@ import {
 } from "@/lib/gamification-levers";
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import type { MembershipPlan } from "@/lib/signup-plans";
-import { isMembershipPlan } from "@/lib/signup-plans";
+import {
+  isMembershipPlan,
+  isPaidMembershipPlan,
+  resolveEffectiveMembershipPlan,
+} from "@/lib/signup-plans";
 
 export type PromoDto = {
   id: string;
@@ -93,8 +97,30 @@ export async function getEffectiveMembershipPlan(
 ): Promise<MembershipPlan> {
   const override = await getActiveAccessOverride(userId);
   if (override) return override.plan;
-  const plan = profilePlan ?? (await getMemberProfile(userId))?.plan ?? "explorer";
-  return isMembershipPlan(plan as MembershipPlan) ? (plan as MembershipPlan) : "explorer";
+  if (isPaidMembershipPlan(profilePlan)) return profilePlan;
+
+  const profile = await getMemberProfile(userId);
+  const stamped = profilePlan ?? profile?.plan ?? "explorer";
+  if (isPaidMembershipPlan(stamped)) return stamped;
+
+  let signupPlan: string | null = null;
+  if (profile?.paymentStatus === "paid" || !isMembershipPlan(stamped as MembershipPlan)) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { signupPlan: true },
+      });
+      signupPlan = user?.signupPlan ?? null;
+    } catch {
+      /* non-fatal */
+    }
+  }
+
+  return resolveEffectiveMembershipPlan({
+    profilePlan: stamped,
+    signupPlan,
+    paymentStatus: profile?.paymentStatus ?? null,
+  });
 }
 
 export async function listPromosForUser(userId: string): Promise<PromoDto[]> {

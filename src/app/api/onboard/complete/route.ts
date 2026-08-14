@@ -23,6 +23,8 @@ import { isValidProgramStartDate, recommendedProgramStartDate } from "@/lib/memb
 import { localTodayIso } from "@/lib/program-calendar";
 import { getCoachSettings } from "@/lib/coach-settings-store";
 import { programStartSettingsFromCoach } from "@/lib/program-start-settings";
+import { resolveEffectiveMembershipPlan } from "@/lib/signup-plans";
+import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
   measurements: z
@@ -89,6 +91,23 @@ export async function POST(request: Request) {
     phone: phone || null,
   });
 
+  const existingProfile = await getMemberProfile(session.id);
+  let signupPlan: string | null = null;
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: session.id },
+      select: { signupPlan: true },
+    });
+    signupPlan = user?.signupPlan ?? null;
+  } catch {
+    /* non-fatal */
+  }
+  const nextPlan = resolveEffectiveMembershipPlan({
+    profilePlan: plan || existingProfile?.plan,
+    signupPlan,
+    paymentStatus: existingProfile?.paymentStatus ?? null,
+  });
+
   const completedAt = new Date().toISOString();
   const profile = await updateMemberProfile(session.id, {
     phone: phone || null,
@@ -97,6 +116,7 @@ export async function POST(request: Request) {
     notes: measurements?.notes || notes || null,
     city: location?.city || null,
     state: location?.state || null,
+    plan: nextPlan,
     onboardingComplete: true,
     completedAt,
     rampStartedAt: completedAt,

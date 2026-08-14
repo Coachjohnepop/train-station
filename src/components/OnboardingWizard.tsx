@@ -39,14 +39,16 @@ export default function OnboardingWizard({
   welcomeVideoUrl = null,
   welcomeVideosByPlan = {},
   programStartSettings,
+  initialPlan,
 }: {
   email?: string;
   welcomeVideoUrl?: string | null;
   welcomeVideosByPlan?: Record<string, string | null | undefined>;
   programStartSettings?: ProgramStartSettings;
+  initialPlan?: string;
 }) {
   const searchParams = useSearchParams();
-  const plan = normalizeSignupPlan(searchParams.get("plan"));
+  const plan = normalizeSignupPlan(searchParams.get("plan") || initialPlan);
   const programSlug = searchParams.get("program");
 
   const needsStartDate = isPaidOffer(plan);
@@ -385,8 +387,9 @@ export default function OnboardingWizard({
           <>
             <h2 className="text-lg font-semibold">Daily workout texts</h2>
             <p className="text-sm text-[var(--muted)]">
-              Get a morning reminder in Messages (and a home-screen badge if you installed the app). On your dashboard next,
-              you&apos;ll book your 15-minute coach intro and start your guided warm-ups.
+              Get a morning reminder in Messages (and a home-screen badge if you installed the app).
+              After this you go to Today — Jeremy&apos;s program workouts are ready. An intro call
+              is optional.
             </p>
             <div className="space-y-3 pt-1">
               <div>
