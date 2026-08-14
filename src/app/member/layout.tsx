@@ -95,14 +95,14 @@ export default async function MemberLayout({
     (!profile || !profile.onboardingComplete)
   ) {
     const onExempt =
-      !pathOnly ||
       pathOnly === "/member" ||
       pathOnly.startsWith("/member/onboard") ||
       pathOnly.startsWith("/member/speaking") ||
       isMemberPathExemptFromPaymentGate(pathOnly);
-    // Exempt includes checkout/account/chat/book/pending/onboard/speaking — allow those.
+    // Empty pathname: still gate (don't treat "unknown" as exempt).
+    // Exempt includes checkout/account/chat/book/pending/onboard/speaking.
     // Block Today, programs, workout, equipment, live, etc.
-    if (!onExempt && pathOnly.startsWith("/member")) {
+    if (!onExempt && (!pathOnly || pathOnly.startsWith("/member"))) {
       const plan = profile?.plan || "explorer";
       if (plan === "speaking_fee") {
         redirect("/member/speaking");
