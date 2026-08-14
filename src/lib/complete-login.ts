@@ -55,6 +55,22 @@ export async function resolveLoginDestination(
         : memberOnboardPath();
     } else if (needsApproval) {
       destination = MEMBER_PENDING_PATH;
+    } else if (profile?.coachIntakeCompleteAt) {
+      const { listUserMeasurements } = await import("@/lib/measurements-store");
+      const { memberNeedsFirstTapeMeasurements } = await import(
+        "@/lib/member-measurement-schedule"
+      );
+      const { MEMBER_FIRST_MEASUREMENTS_PATH } = await import("@/lib/member-intake");
+      const checkIns = await listUserMeasurements(user.id, 1);
+      if (
+        memberNeedsFirstTapeMeasurements({
+          onboardingComplete: true,
+          coachIntakeCompleteAt: profile.coachIntakeCompleteAt,
+          hasCheckIn: checkIns.length > 0,
+        })
+      ) {
+        destination = MEMBER_FIRST_MEASUREMENTS_PATH;
+      }
     }
 
     if (redirect && redirect.startsWith("/") && !redirect.startsWith("//") && redirect.startsWith("/member")) {

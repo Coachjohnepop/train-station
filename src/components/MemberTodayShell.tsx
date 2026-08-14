@@ -23,6 +23,7 @@ import MemberMaintainConsoleStage, {
   notifyMaintainWorkoutEngage,
 } from "@/components/MemberMaintainConsoleStage";
 import MemberMaintainWorkouts from "@/components/MemberMaintainWorkouts";
+import MemberMeasurementSessionCard from "@/components/MemberMeasurementSessionCard";
 import type {
   MaintainAccess,
   MaintainWorkoutCard,
@@ -66,6 +67,9 @@ type Props = {
   maintainAccess?: MaintainAccess | null;
   /** Open console even when selected day is not today (e.g. maintain session). */
   forceShowWorkout?: boolean;
+  /** Recurring tape check-in after intake + first sheet. */
+  measurementDay?: "today" | "tomorrow" | null;
+  measurementCompletedToday?: boolean;
 };
 
 function DaySummaryCard({
@@ -222,6 +226,8 @@ export default function MemberTodayShell({
   activeMaintainId = null,
   maintainAccess = null,
   forceShowWorkout = false,
+  measurementDay = null,
+  measurementCompletedToday = false,
 }: Props) {
   const canUseMaintain = Boolean(maintainAccess?.allowed);
   const router = useRouter();
@@ -477,6 +483,13 @@ export default function MemberTodayShell({
         <MemberIntakeIntroCard initialStatus={intakeStatus} />
       )}
 
+      {isToday && measurementDay === "tomorrow" ? (
+        <MemberMeasurementSessionCard mode="tomorrow" />
+      ) : null}
+      {isToday && measurementDay === "today" ? (
+        <MemberMeasurementSessionCard mode="today" completedToday={measurementCompletedToday} />
+      ) : null}
+
       {showWarmupFlow && (
         <>
           {showIntroCard && <MemberIntakeIntroCard initialStatus={intakeStatus} />}
@@ -581,10 +594,12 @@ export default function MemberTodayShell({
         <div className="card border-dashed border-[color-mix(in_srgb,var(--ramp-gold)_35%,var(--border))] bg-[color-mix(in_srgb,var(--ramp-gold)_6%,var(--surface))] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ramp-gold-light)]">
             Tomorrow —{" "}
-            {scheduleDayHeadline(tomorrowDay.workoutName, tomorrowDay.dayLabel, {
-              phase: "future",
-              visibilityTier: tomorrowDay.visibilityTier,
-            })}
+            {measurementDay === "tomorrow"
+              ? "Measurement day"
+              : scheduleDayHeadline(tomorrowDay.workoutName, tomorrowDay.dayLabel, {
+                  phase: "future",
+                  visibilityTier: tomorrowDay.visibilityTier,
+                })}
           </p>
           {tomorrowDay.visibilityTier === "names" && tomorrowDay.exerciseNames.length > 0 ? (
             <>

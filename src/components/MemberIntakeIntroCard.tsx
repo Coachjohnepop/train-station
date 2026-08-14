@@ -16,10 +16,14 @@ type IntakeStatus = {
 export default function MemberIntakeIntroCard({
   initialStatus = null,
   followUpOnly = false,
+  onBooked,
+  compact = false,
 }: {
   initialStatus?: IntakeStatus | null;
   /** When true, only show the card for a coach-requested follow-up (post sign-off). */
   followUpOnly?: boolean;
+  onBooked?: () => void;
+  compact?: boolean;
 }) {
   const [calendlyUrl, setCalendlyUrl] = useState(COACH_CALENDLY_URL);
   const [memberEmail, setMemberEmail] = useState<string | undefined>();
@@ -109,6 +113,7 @@ export default function MemberIntakeIntroCard({
           label: "Intro booked",
         });
       }
+      onBooked?.();
     } finally {
       setBooking(false);
     }
@@ -132,9 +137,9 @@ export default function MemberIntakeIntroCard({
           {introBooked ? (meetingRequested ? "Follow-up requested" : "Intro scheduled") : "Your next step"}
         </p>
         <h2
-          className={`intake-next-step-title text-xl font-bold leading-tight sm:text-2xl ${
-            introBooked ? "intake-next-step-title--booked" : ""
-          }`}
+          className={`intake-next-step-title font-bold leading-tight ${
+            compact ? "text-lg" : "text-xl sm:text-2xl"
+          } ${introBooked ? "intake-next-step-title--booked" : ""}`}
         >
           {meetingRequested && introBooked
             ? "Coach requested another check-in"

@@ -100,10 +100,12 @@ function KeyField({
 export default function MemberMeasurementsClient({
   introVideoUrl = null,
   freeExplorer = false,
+  firstOnboard = false,
 }: {
   introVideoUrl?: string | null;
   /** Soft glass ceiling: full multi-check-in archive is Coach Class+. */
   freeExplorer?: boolean;
+  firstOnboard?: boolean;
 }) {
   const [rows, setRows] = useState<MeasurementRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -467,6 +469,10 @@ export default function MemberMeasurementsClient({
         throw new Error(data.error || "Save failed.");
       }
       setMessage("Saved to your sheet and the adventure log. Your coach can see this too.");
+      if (firstOnboard) {
+        window.location.assign("/member/today");
+        return;
+      }
       setForm(emptyMeasurementForm());
       setNotes("");
       setNowPhotoUrl(null);

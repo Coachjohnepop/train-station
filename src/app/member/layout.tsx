@@ -111,6 +111,33 @@ export default async function MemberLayout({
     }
   }
 
+  if (
+    session?.role === "MEMBER" &&
+    profileUserId?.startsWith("member-") &&
+    profile?.onboardingComplete &&
+    profile.coachIntakeCompleteAt &&
+    !pathOnly.startsWith("/member/measurements") &&
+    pathOnly !== "/member/book" &&
+    pathOnly !== "/member/chat" &&
+    pathOnly !== "/member/account" &&
+    !pathOnly.startsWith("/member/checkout")
+  ) {
+    const { listUserMeasurements } = await import("@/lib/measurements-store");
+    const { memberNeedsFirstTapeMeasurements } = await import(
+      "@/lib/member-measurement-schedule"
+    );
+    const checkIns = await listUserMeasurements(profileUserId, 1);
+    if (
+      memberNeedsFirstTapeMeasurements({
+        onboardingComplete: true,
+        coachIntakeCompleteAt: profile.coachIntakeCompleteAt,
+        hasCheckIn: checkIns.length > 0,
+      })
+    ) {
+      redirect("/member/measurements?first=1");
+    }
+  }
+
   return (
     <MemberShell
       tierLabel={tierLabel}

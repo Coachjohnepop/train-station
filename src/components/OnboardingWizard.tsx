@@ -16,6 +16,7 @@ import {
 import TimeScrollPicker from "@/components/TimeScrollPicker";
 import PhoneInput from "@/components/PhoneInput";
 import QuickAuthSetupPrompt from "@/components/QuickAuthSetupPrompt";
+import MemberIntakeIntroCard from "@/components/MemberIntakeIntroCard";
 import CityStateInput from "@/components/CityStateInput";
 import ProgramStartDatePicker from "@/components/ProgramStartDatePicker";
 import { localTodayIso } from "@/lib/program-calendar";
@@ -57,7 +58,8 @@ export default function OnboardingWizard({
   const programSlug = searchParams.get("program");
 
   const needsStartDate = isPaidOffer(plan);
-  const totalSteps = needsStartDate ? 7 : 6;
+  const totalSteps = needsStartDate ? 8 : 7;
+  const bookStep = totalSteps;
   const stepStorageKey = `ts-onboard-step:${plan}`;
   const [currentStep, setCurrentStep] = useState(1);
   const [stepReady, setStepReady] = useState(false);
@@ -103,6 +105,10 @@ export default function OnboardingWizard({
   async function nextStep() {
     setError(null);
     if (currentStep === 4) {
+      if (!gender) {
+        setError("Pick man or woman so we can set the right goals.");
+        return;
+      }
       await saveProgress({
         plan,
         gender,
@@ -118,6 +124,13 @@ export default function OnboardingWizard({
         state: location.state || null,
       });
     }
+    const smsStep = needsStartDate ? 7 : 6;
+    if (currentStep === smsStep) {
+      await saveProgress({
+        phone: sms.phone || null,
+        dailyReminderTime: sms.dailyReminderTime || null,
+      });
+    }
     setCurrentStep((s) => Math.min(totalSteps, s + 1));
   }
 
@@ -130,7 +143,7 @@ export default function OnboardingWizard({
     setError(null);
     try {
       const smsStep = needsStartDate ? 7 : 6;
-      if (currentStep === smsStep) {
+      if (currentStep === smsStep || currentStep === bookStep) {
         await saveProgress({
           phone: sms.phone || null,
           dailyReminderTime: sms.dailyReminderTime || null,
@@ -299,12 +312,14 @@ export default function OnboardingWizard({
         {currentStep === 4 && (
           <>
             <h2 className="text-lg font-semibold">
-              {womanPath ? "Your goals" : "Quick measurements"}
+              {womanPath ? "Your goals" : gender === "man" ? "Weight & goals" : "About you"}
             </h2>
             <p className="text-sm text-[var(--muted)]">
               {womanPath
-                ? "Tell Jeremy what you want to lose and by when — no scale number needed."
-                : "Optional — helps your coach track progress."}
+                ? "What do you want to lose, and by when? Tape measurements come after your 15-minute intro with Jeremy."
+                : gender === "man"
+                  ? "Starting weight and what you want to work on. Tape measurements come after your 15-minute intro with Jeremy."
+                  : "Pick man or woman — the next questions match your path."}
             </p>
             <div className="space-y-3 pt-1">
               <div>
@@ -387,14 +402,16 @@ export default function OnboardingWizard({
                 </div>
               )}
               <div>
-                <label className="mb-1 block text-xs text-[var(--muted)]">Notes (optional)</label>
+                <label className="mb-1 block text-xs text-[var(--muted)]">
+                  {womanPath ? "Anything else for Jeremy (optional)" : "Goals"}
+                </label>
                 <textarea
                   value={measurements.notes}
                   onChange={(e) => setMeasurements({ ...measurements, notes: e.target.value })}
                   placeholder={
                     womanPath
                       ? "Injuries, preferences, what has or hasn’t worked…"
-                      : "Injuries, goals, preferences…"
+                      : "e.g. Get stronger, drop body fat, train 4 days a week…"
                   }
                   className="input h-20 w-full"
                 />
@@ -506,21 +523,28 @@ export default function OnboardingWizard({
               <button type="button" onClick={prevStep} className="btn-ghost flex-1">
                 Back
               </button>
-              <button
-                type="button"
-                onClick={() => void handleFinish()}
-                disabled={finishing}
-                className="btn-primary flex-1"
-              >
-                {finishing
-                  ? "Finishing…"
-                  : needsStartDate
-                    ? "Finish setup"
-                    : programSlug
-                      ? "Finish & start Day 1"
-                      : "Finish & go to dashboard"}
+              <button type="button" onClick={() => void nextStep()} className="btn-primary flex-1">
+                Continue
               </button>
             </div>
+          </>
+        )}
+
+        {currentStep === bookStep && (
+          <>
+            <h2 className="text-lg font-semibold">Book your free 15-minute intro</h2>
+            <p className="text-sm text-[var(--muted)]">
+              This is the next required step. Jeremy uses it to lock your plan. Tape measurements
+              happen after that call — not now.
+            </p>
+            <MemberIntakeIntroCard compact onBooked={() => void handleFinish()} />
+            {finishing ? (
+              <p className="text-sm text-[var(--muted)]">Saving setup…</p>
+            ) : (
+              <button type="button" onClick={prevStep} className="btn-ghost w-full">
+                Back
+              </button>
+            )}
           </>
         )}
       </div>

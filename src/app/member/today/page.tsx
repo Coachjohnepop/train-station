@@ -46,6 +46,11 @@ import {
   resolveMaintainAccess,
 } from "@/lib/member-maintain-workouts";
 import { getMemberWorkoutById } from "@/lib/member-workout";
+import { listUserMeasurements } from "@/lib/measurements-store";
+import {
+  isoDateFromTimestamp,
+  resolveMeasurementDay,
+} from "@/lib/member-measurement-schedule";
 import { normalizeSignupPlan } from "@/lib/signup-plans";
 
 export const dynamic = "force-dynamic";
@@ -122,6 +127,14 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const rawViewDate = sp.date || programTodayKey;
   const intakeComplete =
     !uid.startsWith("member-") || isCoachIntakeComplete(profile);
+  const latestMeasures = await listUserMeasurements(uid, 1);
+  const lastMeasuredIso = isoDateFromTimestamp(latestMeasures[0]?.measuredAt ?? null);
+  const measurementSchedule = resolveMeasurementDay({
+    intakeComplete,
+    lastMeasuredIso,
+    todayIso: calendarToday,
+  });
+  const measurementCompletedToday = lastMeasuredIso === calendarToday;
   const warmupWorkout = !intakeComplete
     ? buildWarmupWorkoutView(memberName, coachSettings.warmupBlocks)
     : null;
@@ -343,6 +356,8 @@ export default async function MemberTodayPage({ searchParams }: Props) {
               activeMaintainId={maintainId}
               maintainAccess={maintainAccess}
               forceShowWorkout={consoleIsMaintain}
+              measurementDay={measurementSchedule.kind === "today" || measurementSchedule.kind === "tomorrow" ? measurementSchedule.kind : null}
+              measurementCompletedToday={measurementCompletedToday}
             />
           </Suspense>
 

@@ -8,7 +8,13 @@ import { isFreeExplorerPlan } from "@/lib/free-tier-product";
 
 export const dynamic = "force-dynamic";
 
-export default async function MemberMeasurementsPage() {
+export default async function MemberMeasurementsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ first?: string }>;
+}) {
+  const sp = await searchParams;
+  const firstOnboard = sp.first === "1";
   const [videos, uid] = await Promise.all([
     getResolvedLandingVideos(),
     resolveMemberUserId(),
@@ -19,6 +25,19 @@ export default async function MemberMeasurementsPage() {
 
   return (
     <div className="space-y-4">
+      {firstOnboard ? (
+        <div className="card border-accent/40 bg-accent/10 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+            After your intro
+          </p>
+          <h1 className="mt-1 text-xl font-bold">First measurement session</h1>
+          <p className="mt-1 text-sm text-[color-mix(in_srgb,var(--text)_82%,var(--muted))]">
+            Jeremy signed off your 15-minute call. Log tape + photos now — this is the last
+            setup block. Later check-ins show up on Today like a workout day, announced the
+            day before.
+          </p>
+        </div>
+      ) : null}
       {freeExplorer ? (
         <FreeUpgradeTease
           title="Measure on Free · full history on Coach Class"
@@ -28,6 +47,7 @@ export default async function MemberMeasurementsPage() {
       <MemberMeasurementsClient
         introVideoUrl={videos.measurementsIntroVideoUrl}
         freeExplorer={freeExplorer}
+        firstOnboard={firstOnboard}
       />
     </div>
   );

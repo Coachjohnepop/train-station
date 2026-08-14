@@ -10,3 +10,5 @@ export function memberNeedsIntake(profile: MemberProfile | null): boolean {
   if (!profile?.onboardingComplete) return false;
   return !isCoachIntakeComplete(profile);
 }
+
+export const MEMBER_FIRST_MEASUREMENTS_PATH = "/member/measurements?first=1";

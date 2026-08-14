@@ -364,7 +364,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 | Who | Plan | Notes |
 |-----|------|--------|
-| **Ali Fletcher** `fletcherboys@att.net` | Coach Class paid (Aug 10, LETSGO26 ~$5) | Async/on-demand. **Onboard done 2026-08-14.** Profile plan restamped `member`. After deploy she should see Adult calendar (Fri 8/14 = Shoulder/Tricep/Ab/Calves), not warmup. |
+| **Ali Fletcher** `fletcherboys@att.net` | Coach Class paid (Aug 10, LETSGO26 ~$5) | Async/on-demand. **Onboard reset 2026-08-14 PM** (paid kept). Sign-in → `/member/onboard?plan=member`. Checkout alreadyPaid, no second charge. |
 | **Bella Roy** `bellaroyy03@gmail.com` | Coach Class paid (Aug 12) | **Onboard incomplete.** Same welcome retry + onboard gate. |
 | **Stephanie Popham** `sprealty9@gmail.com` | Member paid | Onboard done. |
 | **John Popham** `john@bcxvoice.com` | Business paid | Member smoke. Onboard done. |
@@ -387,6 +387,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 **Still on Eco (infra):** Stripe Live keys (`pk_live_51Su…`). Checkout says Eco Delight Coffee. Billing ~$803 available / $125 MRR is Eco’s account. Venmo already Jeremy. Partners / coffee affiliate **keep** Eco on purpose.
 
 **Uncommitted (this machine only):** in-app 5s chorus + `/free` share loop (`src/app/free/`, `public/videos/`, FreeTicketModal, etc.). Prod gag is still YouTube Rick 5s @ 0:43.
+
+### Session 2026-08-14 PM — onboard path (women / men / intro / measurements)
+
+Setup no longer asks for tape. After equipment: **gender**. Women = weight-loss goal + timeline. Men = weight + goals. Last wizard step **must book** the free 15-min Calendly intro. After Jeremy marks intake complete, first tape sheet is required (`/member/measurements?first=1`). Later check-ins land on **Today like a workout block**, announced the day before (every 28 days).
 
 ### Session 2026-08-14 AM — Ali test + content gate
 
