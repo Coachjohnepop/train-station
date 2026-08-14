@@ -2,11 +2,15 @@
 
 `fletcherboys@att.net` · Coach Class, already paid · on-demand only
 
+**Voice (John):** short lines, casual, a little incomplete is fine. No AI polish. No em dashes. No "Hey Ali we put you back." Just say the thing.
+
 ---
 
 ## Text Ali
 
-Hey Ali. We put you back at the start so you can set things up the right way. You're still paid. Don't buy again.
+You back at the start
+So you can review the onboard flow again.
+You're still paid. Don't buy again.
 
 Open thetrainstation.co and sign in.
 
@@ -14,15 +18,17 @@ You'll see the tickets. Tap Free first. Watch the joke, then Jeremy. Close it. D
 
 Then tap Coach Class. Then tap Continue already paid.
 
-Setup will ask if you're a man or a woman. Pick woman. Then your weight loss goal and how long you want to take.
+Setup will ask if you're a man or a woman.
+Then your weight loss goal and how long you want to take.
 
-Last step is booking 15 minutes with Jeremy. That's required. After you book, you're in.
+Last step is booking 15 minutes with Jeremy. That's required. After you book, you're in again.
 
-Today is your workouts. You should see about two weeks ahead so you can look at Jeremy's calendar. Videos should play. Skip any Join Live stuff. That's not for you.
+"Today” is your workouts. You should see about two weeks ahead so you can look at what is coming up. Videos should play. Skip any Join Live stuff. That's not for you this go around.
 
 If a page asks you to pay, stop and tell us. Something's wrong.
 
-Jeremy's in Messages if you get stuck.
+Live now.
+best practice: open private window to view (not the link on your phone this time) so you get a fresh cache.
 
 ---
 

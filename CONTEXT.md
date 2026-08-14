@@ -354,8 +354,8 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-14 (gag ship)  
-**Status:** John signed off earlier. **Free gag + `/free` share is live on prod** (`47faf4d`, tip `1a0e992`). Prod was red on woman-onboard profile types until that fix. Ali is reset to re-onboard (still paid). Member pull-down reload stays **off**. Set checkoffs persist. Workouts are Postgres only. Stripe cutover still first for money.  
+**Date:** 2026-08-14 night  
+**Status:** John out. Ali is mid re-onboard (still paid). She was texted to tap Free first (joke), then Coach Class → Continue already paid. Gag + Jeremy intros are site files. Paid checkout Free tap plays the gag and does not downgrade her (`ce77353`). Stripe cutover still first for money.  
 **Rule reaffirmed:** **any new module / data element → Postgres first** (see Durable product rules).  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
 **Branches:** `preview` / `main` (same tip after this session) · prod: https://www.thetrainstation.co  
@@ -364,7 +364,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 | Who | Plan | Notes |
 |-----|------|--------|
-| **Ali Fletcher** `fletcherboys@att.net` | Coach Class paid (Aug 10, LETSGO26 ~$5) | Async/on-demand. **Re-onboard.** Sign-in → ticket picker → **Continue already paid** → setup (Woman, goals, book Jeremy). Temp **14-day** Today preview. |
+| **Ali Fletcher** `fletcherboys@att.net` | Coach Class paid (Aug 10, LETSGO26 ~$5) | Async/on-demand. **Re-onboard.** Texted: private window, Free joke first, then Coach Class → Continue already paid → woman → goals → book Jeremy. Temp **14-day** Today preview. Copy: `ALI_FLETCHER_SCRIPT.md`. |
 | **Bella Roy** `bellaroyy03@gmail.com` | Coach Class paid (Aug 12) | **Onboard incomplete.** Same welcome retry + onboard gate. |
 | **Stephanie Popham** `sprealty9@gmail.com` | Member paid | Onboard done. |
 | **John Popham** `john@bcxvoice.com` | Business paid | Member smoke. Onboard done. |
@@ -380,7 +380,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 |------|------|----------------|
 | **Resend off Eco** | Team **thetrainstation** (`john@thetrainstation.co`). Domain `send.thetrainstation.co` already verified. Prod `RESEND_API_KEY` = TS key (not Eco send-only). `RESEND_FROM` = `The Train Station <accounts@send.thetrainstation.co>`. `reply_to` sanitized to one address. | `3c9c536` `00044d5` `6447400` + Vercel env |
 | Welcome retries | Ali + Bella welcome resent from TS domain: “IT fixed this, sorry for the duplicate.” | `9692834` `4582ed5` |
-| Email/SMS voice | No em dashes / “Next step” / “— Coach Jeremy”. Sign-off **Jeremy**. | `66aee7f` |
+| Email/SMS voice | No em dashes / “Next step” / “— Coach Jeremy”. Sign-off **Jeremy**. John’s member texts: short lines, casual, a little incomplete is fine. Canonical Ali copy: `ALI_FLETCHER_SCRIPT.md`. | `66aee7f` |
 | Onboard on resume | Login already aimed unfinished paid members at setup. Stale `ts_needs_payment` + empty-path hole let Today stay open. Sync-gates now navigates; member layout no longer treats missing pathname as exempt. | `25c28ff` |
 | Site sweep | Public 79/80 (only `/free` 404). Admin crawl as John: all coach + platform pages 200 except wrong slugs `/admin/programs/athletes` + `/military` (real: `strength-training`, `boot-camp-preparation`). | — |
 
