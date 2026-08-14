@@ -355,7 +355,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ## WHERE WE LEFT OFF
 
 **Date:** 2026-08-14 (gag ship)  
-**Status:** John signed off earlier. **Free gag + `/free` share is on prod** (`47faf4d`). Ali is reset to re-onboard (still paid). Member pull-down reload stays **off**. Set checkoffs persist. Workouts are Postgres only. Stripe cutover still first for money.  
+**Status:** John signed off earlier. **Free gag + `/free` share is live on prod** (`47faf4d`, tip `1a0e992`). Prod was red on woman-onboard profile types until that fix. Ali is reset to re-onboard (still paid). Member pull-down reload stays **off**. Set checkoffs persist. Workouts are Postgres only. Stripe cutover still first for money.  
 **Rule reaffirmed:** **any new module / data element → Postgres first** (see Durable product rules).  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
 **Branches:** `preview` / `main` (same tip after this session) · prod: https://www.thetrainstation.co  
@@ -386,7 +386,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Still on Eco (infra):** Stripe Live keys (`pk_live_51Su…`). Checkout says Eco Delight Coffee. Billing ~$803 available / $125 MRR is Eco’s account. Venmo already Jeremy. Partners / coffee affiliate **keep** Eco on purpose.
 
-**Shipped 2026-08-14 (after EOD):** in-app 5s chorus + `/free` share loop (`47faf4d`). Prod gag is the local file, not YouTube. Kill switch: Production `NEXT_PUBLIC_FREE_TICKET_GAG_MODE=youtube` + redeploy.
+**Shipped 2026-08-14 (after EOD):** in-app 5s chorus + `/free` share loop (`47faf4d`). Prod gag is the local file, not YouTube. `/free` 200, OG is the Free ticket art, chorus mp4/mp3 live. Kill switch: Production `NEXT_PUBLIC_FREE_TICKET_GAG_MODE=youtube` + redeploy. Unblocked prod typecheck with `1a0e992`.
 
 ### Workouts are Postgres only
 
