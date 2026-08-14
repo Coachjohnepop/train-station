@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Reset Free-ticket gag store to product defaults (classic 5s Rickroll).
+ * Reset Free-ticket gag store to product defaults (in-app 5s chorus file).
  * Clears a bad custom gag (e.g. YouTube Short @ 60s) that broke Free for kids.
  *
  *   npx tsx scripts/reset-free-gag-product-defaults-prod.mjs
@@ -29,7 +29,7 @@ async function main() {
   const merged = {
     ...prev,
     gagVideoUrl: null,
-    gagStartSec: 43,
+    gagStartSec: 0,
     gagDurationSec: 5,
     gagEnabled: true,
     updatedAt: new Date().toISOString(),
@@ -47,7 +47,7 @@ async function main() {
   const { saveLandingMedia } = await import("../src/lib/landing-media-store.ts");
   await saveLandingMedia({
     gagVideoUrl: null,
-    gagStartSec: 43,
+    gagStartSec: 0,
     gagDurationSec: 5,
     gagEnabled: true,
   });

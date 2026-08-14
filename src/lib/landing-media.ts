@@ -104,7 +104,7 @@ export const WELCOME_VIDEO_PLAN_OPTIONS = MEMBERSHIP_PLANS.map((plan) => ({
 
 /**
  * Free / Explorer ticket gag — **product defaults are fixed** (not admin-overridable):
- * classic Rick Astley from the chorus, exactly ~5s, then Jeremy free-tier intro.
+ * in-app 5s chorus file, then Jeremy free-tier intro.
  *
  * Who gets the gag:
  * - Anonymous / not signed in on landing Free → always on
@@ -113,12 +113,28 @@ export const WELCOME_VIDEO_PLAN_OPTIONS = MEMBERSHIP_PLANS.map((plan) => ({
  * Admin → Videos: one Free Explorer intro (after gag + Free onboard). Gag is
  * product-fixed; no admin gag upload.
  */
-/** Watch URL without t= — start second is set only via embed start= (avoid double-start). */
+/** Local chorus clip (starts at the hook — no YouTube seek). */
+export const FREE_TICKET_GAG_SRC = "/videos/free-ticket-chorus.mp4";
+export const FREE_TICKET_GAG_POSTER = "/videos/free-ticket-chorus.jpg";
+export const FREE_TICKET_GAG_AUDIO_SRC = "/audio/free-ticket-chorus.mp3";
+
+/** Official video — fallback if we drop the local file (C&D / env flip). */
 export const FREE_TICKET_RICKROLL_URL =
   "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 
-/** Chorus start second for Never Gonna Give You Up. */
+/** Chorus start on the YouTube original. Local file is already trimmed. */
 export const FREE_TICKET_RICKROLL_CHORUS_START_SEC = 43;
+
+/**
+ * `file` = in-app 5s clip (default). `youtube` = official embed from chorus.
+ * Emergency: Vercel Production `NEXT_PUBLIC_FREE_TICKET_GAG_MODE=youtube` + redeploy.
+ */
+export const FREE_TICKET_GAG_MODE: "file" | "youtube" =
+  process.env.NEXT_PUBLIC_FREE_TICKET_GAG_MODE === "youtube" ? "youtube" : "file";
+
+export function isFreeTicketGagYoutube(): boolean {
+  return FREE_TICKET_GAG_MODE === "youtube";
+}
 
 /** How long the gag plays before cutting over to Jeremy. */
 export const FREE_TICKET_RICKROLL_DURATION_MS = 5_000;
@@ -142,10 +158,11 @@ export function productFreeTicketGag(opts: {
   /** Signed-in members never get the rickroll — only landing guests. */
   signedIn: boolean;
 }): FreeTicketGagConfig {
+  const youtube = isFreeTicketGagYoutube();
   return {
     enabled: !opts.signedIn,
-    videoUrl: FREE_TICKET_RICKROLL_URL,
-    startSec: FREE_TICKET_RICKROLL_CHORUS_START_SEC,
+    videoUrl: youtube ? FREE_TICKET_RICKROLL_URL : FREE_TICKET_GAG_SRC,
+    startSec: youtube ? FREE_TICKET_RICKROLL_CHORUS_START_SEC : 0,
     durationMs: FREE_TICKET_RICKROLL_DURATION_MS,
   };
 }
@@ -162,17 +179,22 @@ export function resolveFreeTicketGag(input?: {
   gagDurationSec?: number | null;
 } | null): FreeTicketGagConfig {
   const killSwitch = input?.gagEnabled === false;
+  const youtube = isFreeTicketGagYoutube();
   return {
     enabled: !killSwitch,
-    videoUrl: FREE_TICKET_RICKROLL_URL,
-    startSec: FREE_TICKET_RICKROLL_CHORUS_START_SEC,
+    videoUrl: youtube ? FREE_TICKET_RICKROLL_URL : FREE_TICKET_GAG_SRC,
+    startSec: youtube ? FREE_TICKET_RICKROLL_CHORUS_START_SEC : 0,
     durationMs: FREE_TICKET_RICKROLL_DURATION_MS,
   };
 }
 
 export function isRickrollVideoUrl(url: string | null | undefined): boolean {
   if (!url?.trim()) return false;
-  return /dQw4w9WgXcQ/i.test(url) || /rick.?roll/i.test(url);
+  return (
+    /dQw4w9WgXcQ/i.test(url) ||
+    /rick.?roll/i.test(url) ||
+    /free-ticket-chorus/i.test(url)
+  );
 }
 
 /**

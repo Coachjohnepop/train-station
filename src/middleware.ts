@@ -23,6 +23,7 @@ const PUBLIC_PAGE_PREFIXES = [
   "/signup",
   "/coming-soon",
   "/join",
+  "/free",
 ];
 
 function memberEntryFromRequest(request: NextRequest): string {
@@ -95,7 +96,7 @@ export async function middleware(request: NextRequest) {
     pathname === "/manifest.webmanifest" ||
     pathname === "/manifest.json" ||
     pathname === "/sw.js" ||
-    pathname.match(/\.(png|jpg|jpeg|svg|ico|webp|webmanifest)$/)
+    pathname.match(/\.(png|jpg|jpeg|svg|ico|webp|webmanifest|mp4|mp3)$/)
   ) {
     return NextResponse.next();
   }

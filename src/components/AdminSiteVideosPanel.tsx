@@ -17,7 +17,8 @@ import {
   type CoachIntroSlotId,
 } from "@/lib/coach-intro-slots";
 import {
-  FREE_TICKET_RICKROLL_CHORUS_START_SEC,
+  FREE_TICKET_GAG_MODE,
+  FREE_TICKET_GAG_SRC,
   FREE_TICKET_RICKROLL_DURATION_MS,
   FREE_TICKET_RICKROLL_URL,
 } from "@/lib/landing-media";
@@ -652,7 +653,7 @@ export default function AdminSiteVideosPanel({
       freeChastiseVideoUrl: freeExplorerUrl,
       // Product Free path: fixed 5s Rickroll (never persist custom Shorts / long gag).
       gagVideoUrl: null,
-      gagStartSec: 43,
+      gagStartSec: 0,
       gagDurationSec: 5,
       gagEnabled,
       purchaseThankYouVideoUrl: purchaseUrl.trim() || null,
@@ -1104,17 +1105,22 @@ export default function AdminSiteVideosPanel({
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">3 · Free ticket gag (product-fixed)</h2>
         <p className="text-xs text-[var(--muted)] leading-relaxed">
-          <strong className="text-[var(--text)]">Guests</strong> who tap Free always get the classic{" "}
-          Rick Astley chorus (~{Math.round(FREE_TICKET_RICKROLL_DURATION_MS / 1000)}s from{" "}
-          {FREE_TICKET_RICKROLL_CHORUS_START_SEC}s), then your{" "}
+          <strong className="text-[var(--text)]">Guests</strong> who tap Free always get the in-app{" "}
+          chorus clip (~{Math.round(FREE_TICKET_RICKROLL_DURATION_MS / 1000)}s), then your{" "}
           <strong className="text-[var(--text)]">Free Explorer intro</strong> from section 2.{" "}
           <strong className="text-[var(--text)]">Signed-in members</strong> skip the gag. The gag
           itself is not uploadable — product-fixed only.
         </p>
         <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--muted)]">
-          Default gag: <code className="text-[var(--text)]">{FREE_TICKET_RICKROLL_URL}</code> · start{" "}
-          {FREE_TICKET_RICKROLL_CHORUS_START_SEC}s · play{" "}
-          {Math.round(FREE_TICKET_RICKROLL_DURATION_MS / 1000)}s
+          Now playing: <code className="text-[var(--text)]">{FREE_TICKET_GAG_MODE}</code>
+          {" · "}
+          <code className="text-[var(--text)]">
+            {FREE_TICKET_GAG_MODE === "youtube" ? FREE_TICKET_RICKROLL_URL : FREE_TICKET_GAG_SRC}
+          </code>
+          {" · "}
+          {Math.round(FREE_TICKET_RICKROLL_DURATION_MS / 1000)}s. Emergency flip: Vercel{" "}
+          <code className="text-[var(--text)]">NEXT_PUBLIC_FREE_TICKET_GAG_MODE=youtube</code> +
+          redeploy.
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm">
@@ -1136,17 +1142,19 @@ export default function AdminSiteVideosPanel({
         {watchingGag ? (
           <div className="space-y-2">
             <p className="text-[11px] text-[var(--muted)]">
-              Admin preview starts at the chorus. On the live Free ticket, playback stops after ~
-              {Math.round(FREE_TICKET_RICKROLL_DURATION_MS / 1000)}s and cuts to Free Explorer intro.
+              Admin preview is the same in-app file guests hear. On the live Free ticket it
+              stops after ~{Math.round(FREE_TICKET_RICKROLL_DURATION_MS / 1000)}s and cuts to
+              Free Explorer intro.
             </p>
             <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-black">
               <PlayableVideoFrame
                 className="aspect-video w-full max-h-[28rem]"
-                videoUrl={FREE_TICKET_RICKROLL_URL}
+                videoUrl={
+                  FREE_TICKET_GAG_MODE === "youtube" ? FREE_TICKET_RICKROLL_URL : FREE_TICKET_GAG_SRC
+                }
                 title="Free ticket gag"
                 autoplay={false}
                 duckBackgroundMusic
-                embedOptions={{ startSeconds: FREE_TICKET_RICKROLL_CHORUS_START_SEC }}
               />
             </div>
           </div>
