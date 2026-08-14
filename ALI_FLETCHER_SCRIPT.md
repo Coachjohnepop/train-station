@@ -1,70 +1,37 @@
-# Ali Fletcher — recovery + on-demand path
+# Ali Fletcher
 
-**Account:** Ali Fletcher · `fletcherboys@att.net` · `210.478.7886`  
-**Plan:** Coach Class (paid Stripe live, 2026-08-10)  
-**Mode:** **On-demand only (async)** — no live Zoom sessions  
-**Family note:** Coop Fletcher (`cooperfletcher892@gmail.com`) is a separate merch signup
+`fletcherboys@att.net` · Coach Class, already paid · on-demand only
 
 ---
 
-## What went wrong
+## Text Ali
 
-She paid successfully, but never landed on payment confirmation, so the browser kept a **“needs payment”** cookie. Every tap of **Today** bounced her back to checkout (“complete your ticket first”), and she wandered into public **join/programs** screens while already enrolled in Adult.
+Hey Ali. We put you back at the start so you can set things up the right way. You're still paid. Don't buy again.
 
-Product fix shipped: gate cookies re-sync from the DB; paid members leave checkout → onboard; logged-in members stay out of landing/join.
+Open thetrainstation.co and sign in.
 
----
+You'll see the tickets. Tap Free first. Watch the joke, then Jeremy. Close it. Don't tap continue with free.
 
-## Ops (John) — run once after deploy
+Then tap Coach Class. Then tap Continue already paid.
 
-```bash
-cd ~/projects/train-station
-node scripts/rescue-ali-fletcher-prod.mjs
-# dry run first if you want:
-# DRY_RUN=1 node scripts/rescue-ali-fletcher-prod.mjs
-```
+Setup will ask if you're a man or a woman. Pick woman. Then your weight loss goal and how long you want to take.
 
-That script:
+Last step is booking 15 minutes with Jeremy. That's required. After you book, you're in.
 
-1. Confirms she is still **paid**
-2. Sets **coaching mode = async** (on-demand only)
-3. Adds coach notes so Jeremy sees “no live sessions”
+Today is your workouts. You should see about two weeks ahead so you can look at Jeremy's calendar. Videos should play. Skip any Join Live stuff. That's not for you.
 
-Optional Admin check: **Admin → Members → Ali Fletcher** → coaching mode **Asynch**.
+If a page asks you to pay, stop and tell us. Something's wrong.
+
+Jeremy's in Messages if you get stuck.
 
 ---
 
-## Script for Ali (text her / call)
+## Jeremy
 
-Hi Ali — your payment went through; the app just got stuck after checkout. Here’s the clean path:
+Paid Coach Class. On-demand only, no live class.
 
-1. Open **https://www.thetrainstation.co** on your phone  
-2. **Sign in** with `fletcherboys@att.net` (same password you set)  
-3. If you still see a pay screen for a second, wait or pull to refresh — you should **not** pay again  
-4. Finish **setup / onboarding** (program is already Adult)  
-5. After setup, use **Today** for your workouts  
+She is redoing setup: tap Free (joke only, she stays paid) → Coach Class → Continue already paid → woman → goal + timeline → book you for 15.
 
-**Important for your plan:** you’re set up as **on-demand only** — your own schedule and workouts in the app. You do **not** need live Zoom class times. If you ever see a “Join Live” banner, ignore it; message Jeremy if anything looks off.
+After the call, send her to measurements. Then Today.
 
-Questions → Messages in the app, or Jeremy.
-
----
-
-## Script for Jeremy (coach)
-
-- Ali is **paid Coach Class**, referral `LETSGO26`, Adult enrolled W1/D1 gym  
-- **On-demand / async only** — no live floor / Zoom expectation  
-- She never finished onboarding; after deploy + rescue she should land in **setup**, then **Today**  
-- Welcome her in **Messages** when you can (system only so far)  
-- Optional: intro call only if *she* wants one — not required for on-demand path  
-
-Admin: Members → Ali → mode **Asynch**.
-
----
-
-## Verify (John, 2 min)
-
-1. Deploy includes payment-gate + landing isolation commits  
-2. `node scripts/rescue-ali-fletcher-prod.mjs` → `coachingMode = async`  
-3. Incognito: log in as Ali (or she does) → **onboard**, not checkout pay wall  
-4. After onboard → **Today** loads; no payment banner  
+She can see 14 days of Adult workouts on purpose. We scale that back later.

@@ -54,6 +54,8 @@ export default function FreeTicketModal({
   /** @deprecated Product gag is fixed; prop ignored for URL/duration. */
   gagConfig: _gagConfig = null,
   purchaseAuth = { signedIn: false },
+  forceGag = false,
+  alreadyPaid = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -65,6 +67,10 @@ export default function FreeTicketModal({
   welcomeVideoUrl?: string | null;
   gagConfig?: unknown;
   purchaseAuth?: PurchaseAuth;
+  /** Play the chorus even if they are signed in. */
+  forceGag?: boolean;
+  /** Paid member testing Free. Do not send them down Explorer. */
+  alreadyPaid?: boolean;
 }) {
   void _gagConfig;
   const [showJeremy, setShowJeremy] = useState(false);
@@ -78,7 +84,7 @@ export default function FreeTicketModal({
   const panelRef = useRef<HTMLDivElement>(null);
 
   const signedIn = Boolean(purchaseAuth.signedIn);
-  const gag = productFreeTicketGag({ signedIn });
+  const gag = productFreeTicketGag({ signedIn, force: forceGag });
   const volumeDb = useUploadedContentVolumeDb();
 
   useEffect(() => {
@@ -308,10 +314,12 @@ export default function FreeTicketModal({
               </h2>
               <p className="mt-1 text-xs leading-relaxed text-[var(--muted)] sm:text-sm">
                 {showJeremy
-                  ? hasJeremy
-                    ? "Gotcha — it's a real Free ticket. Send it to a friend (our link, not YouTube)."
-                    : "Gotcha — Free still works. Send this ticket to a friend. Coach intro comes later."
-                  : "You tapped Free. Enjoy the chorus… then hear from your coach."}
+                  ? alreadyPaid
+                    ? "That's the joke. You're still on your paid ticket. Close this and tap that seat."
+                    : hasJeremy
+                      ? "Gotcha. It's a real Free ticket. Send it to a friend (our link, not YouTube)."
+                      : "Gotcha. Free still works. Send this ticket to a friend. Coach intro comes later."
+                  : "You tapped Free. Enjoy the chorus, then hear from your coach."}
               </p>
             </div>
           </div>
@@ -336,7 +344,7 @@ export default function FreeTicketModal({
             Show me Coach Class &amp; 1st Class →
           </button>
 
-          {onContinueFree ? (
+          {alreadyPaid ? null : onContinueFree ? (
             <button
               type="button"
               onClick={handleContinueFree}

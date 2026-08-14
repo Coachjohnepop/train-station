@@ -5,8 +5,13 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import EmbeddedStripeCheckoutModal from "@/components/EmbeddedStripeCheckoutModal";
 import CheckoutUpgradeOptions from "@/components/CheckoutUpgradeOptions";
+import FreeTicketModal from "@/components/FreeTicketModal";
 import MembershipPaymentCard from "@/components/MembershipPaymentCard";
 import MembershipTicketGrid from "@/components/MembershipTicketGrid";
+import {
+  preloadFreeTicketGag,
+  startFreeTicketGagFromGesture,
+} from "@/lib/play-free-ticket-gag";
 import {
   isMembershipPlan,
   normalizeSignupPlan,
@@ -86,6 +91,11 @@ function MemberCheckoutInner() {
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
   const [planChanging, setPlanChanging] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [freeModalOpen, setFreeModalOpen] = useState(false);
+  const [landingVideos, setLandingVideos] = useState<{
+    freeChastiseVideoUrl: string | null;
+    welcomeVideoUrl: string | null;
+  }>({ freeChastiseVideoUrl: null, welcomeVideoUrl: null });
   const [promoCode, setPromoCode] = useState(promoFromUrl.toUpperCase());
   const [promoHint, setPromoHint] = useState<string | null>(
     promoFromUrl ? `Code ${promoFromUrl.toUpperCase()} will apply at checkout.` : null,
@@ -146,6 +156,25 @@ function MemberCheckoutInner() {
       cancelled = true;
     };
   }, [isDowngradeIntent, plan]);
+
+  useEffect(() => {
+    preloadFreeTicketGag();
+    let cancelled = false;
+    void fetch("/api/landing-media")
+      .then((res) => res.json())
+      .then((body) => {
+        if (cancelled) return;
+        setLandingVideos({
+          freeChastiseVideoUrl:
+            typeof body.freeChastiseVideoUrl === "string" ? body.freeChastiseVideoUrl : null,
+          welcomeVideoUrl: typeof body.welcomeVideoUrl === "string" ? body.welcomeVideoUrl : null,
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const membershipOffer = payments?.memberships?.find((m) => m.plan === plan);
   const merchOffer = payments?.merchandise?.find((m) => m.id === merchandiseSkuId);
@@ -435,9 +464,13 @@ function MemberCheckoutInner() {
                 heading="Membership tickets"
                 subheading={
                   alreadyPaidPass
-                    ? "Tap the ticket you already paid. We check this email and the current period before you continue."
+                    ? "Tap Free first if you want the joke. Then tap the ticket you already paid."
                     : "Tap a ticket. Same train seats as home. We'll take you to pay, or Today if you stay free."
                 }
+                onFreeSelect={() => {
+                  startFreeTicketGagFromGesture();
+                  setFreeModalOpen(true);
+                }}
               />
             )}
             <p className="text-center text-[11px] text-[var(--muted)]">
@@ -456,6 +489,19 @@ function MemberCheckoutInner() {
           </div>
         )}
       </div>
+
+      {freeModalOpen ? (
+        <FreeTicketModal
+          open
+          forceGag
+          alreadyPaid={alreadyPaidPass}
+          freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
+          welcomeVideoUrl={landingVideos.welcomeVideoUrl}
+          purchaseAuth={{ signedIn: true }}
+          onClose={() => setFreeModalOpen(false)}
+          onUpgrade={() => setFreeModalOpen(false)}
+        />
+      ) : null}
 
       {publishableKey && (
         <EmbeddedStripeCheckoutModal

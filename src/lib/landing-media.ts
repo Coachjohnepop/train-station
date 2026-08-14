@@ -178,11 +178,12 @@ export type FreeTicketGagConfig = {
 
 /** Product gag for Free ticket UI (ignores admin custom gag URL / duration). */
 export function productFreeTicketGag(opts: {
-  /** Signed-in members never get the rickroll — only landing guests. */
+  /** Signed-in members skip the joke, unless force is set (re-onboard / QA). */
   signedIn: boolean;
+  force?: boolean;
 }): FreeTicketGagConfig {
   return {
-    enabled: !opts.signedIn,
+    enabled: Boolean(opts.force) || !opts.signedIn,
     videoUrl: FREE_TICKET_GAG_SRC,
     startSec: 0,
     durationMs: FREE_TICKET_RICKROLL_DURATION_MS,

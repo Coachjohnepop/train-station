@@ -156,6 +156,19 @@ export default function MembershipTicketGrid({
           }`;
 
           if (mode === "checkout" && isFree) {
+            if (onFreeSelect) {
+              return (
+                <button
+                  key={tier.id}
+                  id={`ticket-${tier.id}`}
+                  type="button"
+                  onClick={() => onFreeSelect()}
+                  className={cardClass}
+                >
+                  {inner}
+                </button>
+              );
+            }
             return (
               <Link key={tier.id} id={`ticket-${tier.id}`} href="/member/today" className={cardClass}>
                 {inner}
