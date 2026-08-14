@@ -354,8 +354,8 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-14  
-**Status:** Ali tested this morning. Paid Today was stuck on empty warmup (intake gate + explorer stamp). Fix: program workout shows after setup; paid plan stamp; bigger workout type. Stripe cutover still first for money. Gag + `/free` still local / uncommitted.  
+**Date:** 2026-08-14 EOD  
+**Status:** John signed off. Ali is reset to re-onboard (still paid). Member pull-down reload stays **off**. Set checkoffs persist. Workouts are Postgres only. Gag + `/free` still local / uncommitted. Stripe cutover still first for money.  
 **Rule reaffirmed:** **any new module / data element → Postgres first** (see Durable product rules).  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
 **Branches:** `preview` / `main` (same tip after this session) · prod: https://www.thetrainstation.co  
@@ -364,7 +364,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 | Who | Plan | Notes |
 |-----|------|--------|
-| **Ali Fletcher** `fletcherboys@att.net` | Coach Class paid (Aug 10, LETSGO26 ~$5) | Async/on-demand. **Onboard reset 2026-08-14 PM** (paid kept). Sign-in → `/member/onboard?plan=member`. Checkout alreadyPaid, no second charge. |
+| **Ali Fletcher** `fletcherboys@att.net` | Coach Class paid (Aug 10, LETSGO26 ~$5) | Async/on-demand. **Re-onboard.** Sign-in → ticket picker → **Continue already paid** → setup (Woman, goals, book Jeremy). Temp **14-day** Today preview. |
 | **Bella Roy** `bellaroyy03@gmail.com` | Coach Class paid (Aug 12) | **Onboard incomplete.** Same welcome retry + onboard gate. |
 | **Stephanie Popham** `sprealty9@gmail.com` | Member paid | Onboard done. |
 | **John Popham** `john@bcxvoice.com` | Business paid | Member smoke. Onboard done. |
@@ -411,18 +411,35 @@ Setup no longer asks for tape. After equipment: **gender**. Women = weight-loss 
 
 Ali (`fletcherboys@att.net`) onboarded 7:42 PT then hammered `/member/today`. Videos “didn’t play” because she was on **pre-intake warmup** (`videoUrl: null`), not Jeremy’s Adult day. Friday 8/14 Adult is **Shoulder/Tricep/Ab/Calves** (7). Intake no longer blocks the program player. Paid explorer stamps resolve to Coach Class. Workout fine print (set/weight labels) enlarged.
 
+### Explicit decision 2026-08-14 — no member pull-down reload
+
+Leave iOS/Android pull-to-refresh **off** on member screens (`DisablePullToRefresh` + `overscroll-behavior-y: none`). It is not a product feature. Do not turn it back on.
+
+### Session 2026-08-14 EOD — shipped (on `main`)
+
+| Area | What |
+|------|------|
+| Pull-down | Off on member app |
+| Set progress | Postgres `LiveWorkoutSession` + local cache; empty GET cannot wipe |
+| Finish workout | Phone buzz with score confetti (`99d6990`) |
+| Catalog | No workout blob read/write when Postgres is live (`69226d7`) |
+| Re-onboard pay | Ticket picker + **Continue already paid** after coverage check (`17b2212`) |
+| Ali preview | 14 upcoming days, scale back by **2026-09-01** |
+| Onboard path | Gender → women goals/timeline or men weight/goals → book Jeremy; tape after intake |
+
 ### NEXT SESSION — pick up here (priority)
 
 **Stripe still first for money.** Log into Jeremy’s Train Station Stripe (`acct_1TmKSW…`, **Live**). Wrong account if Eco Delight / `acct_1Su…`. Don’t copy keys until the top-left name is The Train Station. Then `.env.jeremy.live` (`sk_live` / `pk_live` / prices / `whsec`) → `node scripts/wire-jeremy-master-stripe.mjs --identify` → `--push-vercel` → redeploy. Existing Ali/Bella Eco subs stay on Eco; new charges go to Jeremy.
 
 1. **Stripe cutover** — as above.  
 2. **Then: Google + Apple account create/sign-in** — see decision below. Credentials only (buttons already built). Smoke: new paid signup + existing-email link.  
-3. **Ali** — hard-refresh Today after this deploy; confirm Shoulder/Tricep (not warmup). Bella still needs onboard.  
-4. **John admin password** — use the Forgot password mail to `john@thetrainstation.co`.  
-5. **Ship gag + `/free`** (or it only lives here): commit chorus + share loop; phone check signed-out Safari; iMessage `/free` OG must be Train Station ticket.  
-6. **Web Push** — still `skipped_no_recipient` (0 staff device subs). Jeremy Home Screen → Enable alerts.  
-7. **Zoom** — not connected. Status host on John’s session was `john@thetrainstation.co`; Jeremy must Connect as himself for live class.  
-8. Queue cleanup: `loop-*@example.com`, Stripe E2E leftover. Weekly/dinner video slots still empty.
+3. **Ali** — she re-onboards: tickets → Continue already paid → Woman → goals → book Jeremy. Then Today 14-day preview. Bella still needs onboard.  
+4. **Scale back Ali 14-day preview** after Jeremy calendar check (`src/lib/member-schedule-preview.ts`).  
+5. **John admin password** — use the Forgot password mail to `john@thetrainstation.co`.  
+6. **Ship gag + `/free`** (or it only lives here): commit chorus + share loop; phone check signed-out Safari; iMessage `/free` OG must be Train Station ticket.  
+7. **Web Push** — still `skipped_no_recipient` (0 staff device subs). Jeremy Home Screen → Enable alerts.  
+8. **Zoom** — Jeremy must Connect as himself for live class.  
+9. Queue cleanup: `loop-*@example.com`, Stripe E2E leftover. Weekly/dinner video slots still empty.
 
 ### Explicit decision 2026-08-13 — social login (after Stripe)
 
