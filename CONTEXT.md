@@ -388,6 +388,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Uncommitted (this machine only):** in-app 5s chorus + `/free` share loop (`src/app/free/`, `public/videos/`, FreeTicketModal, etc.). Prod gag is still YouTube Rick 5s @ 0:43.
 
+### Paid re-onboard checkout
+
+If someone is kicked back to setup and already paid this period, login goes to ticket picker. They tap their seat again. Checkout shows **Continue already paid** only after `resolvePaidCoverage` matches email + paid stamp + ledger/grant still in period. Different ticket still charges. File: `src/lib/paid-coverage.ts`.
+
 ### TEMP — Ali 14-day schedule preview (scale back)
 
 **Do not forget.** `fletcherboys@att.net` can see **14 upcoming days** of Adult workouts (names + exercises) so we can verify Jeremy’s calendar. Default members stay yesterday/today/tomorrow.

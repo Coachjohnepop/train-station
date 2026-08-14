@@ -42,28 +42,31 @@ export async function POST(request: Request) {
     const existingProfile = await getMemberProfile(session.id);
     const plan = normalizeSignupPlan(parsed.data.plan || existingProfile?.plan || "explorer");
 
-    // Already paid for this ticket — do not open another Checkout session.
-    // Clear stale payment-gate cookies and send them into onboard / Today.
-    if (
-      existingProfile?.paymentStatus === "paid" &&
-      existingProfile.plan === plan &&
-      !parsed.data.customOfferId &&
-      !parsed.data.merchandiseSkuId
-    ) {
-      const redirectTo = existingProfile.onboardingComplete
-        ? "/member/today"
-        : `/member/onboard?plan=${encodeURIComponent(existingProfile.plan)}`;
-      const res = NextResponse.json({
-        ok: true,
-        alreadyPaid: true,
-        redirectTo,
-        plan: existingProfile.plan,
-      });
-      await syncMemberGateCookies(res, {
+    // Already paid this ticket for the current period. Prove it, then pass through.
+    if (!parsed.data.customOfferId && !parsed.data.merchandiseSkuId) {
+      const { resolvePaidCoverage } = await import("@/lib/paid-coverage");
+      const coverage = await resolvePaidCoverage({
         userId: session.id,
-        profile: existingProfile,
+        sessionEmail: session.email,
+        requestedPlan: plan,
       });
-      return res;
+      if (coverage.ok) {
+        const redirectTo = existingProfile?.onboardingComplete
+          ? "/member/today"
+          : `/member/onboard?plan=${encodeURIComponent(coverage.plan || plan)}`;
+        const res = NextResponse.json({
+          ok: true,
+          alreadyPaid: true,
+          redirectTo,
+          plan: coverage.plan,
+          periodEnd: coverage.periodEnd,
+        });
+        await syncMemberGateCookies(res, {
+          userId: session.id,
+          profile: existingProfile,
+        });
+        return res;
+      }
     }
 
     if (

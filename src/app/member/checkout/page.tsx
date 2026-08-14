@@ -65,7 +65,9 @@ function planFeeLabel(plan: string, payments: PaymentsPublic | null): string {
 
 function MemberCheckoutInner() {
   const searchParams = useSearchParams();
-  const plan = normalizeSignupPlan(searchParams.get("plan") || "member");
+  const planParam = searchParams.get("plan");
+  const plan = normalizeSignupPlan(planParam || "member");
+  const pickingTicket = !planParam;
   const customOfferId = searchParams.get("offerId") || "";
   const merchandiseSkuId = searchParams.get("sku") || "";
   const canceled = searchParams.get("canceled") === "1";
@@ -79,6 +81,9 @@ function MemberCheckoutInner() {
   const [paymentsLoading, setPaymentsLoading] = useState(true);
   const [hasSavedCard, setHasSavedCard] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [alreadyPaidPass, setAlreadyPaidPass] = useState(false);
+  const [alreadyPaidPlan, setAlreadyPaidPlan] = useState<string | null>(null);
+  const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
   const [planChanging, setPlanChanging] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [promoCode, setPromoCode] = useState(promoFromUrl.toUpperCase());
@@ -107,19 +112,28 @@ function MemberCheckoutInner() {
       const status =
         typeof membershipData.paymentStatus === "string" ? membershipData.paymentStatus : null;
       setPaymentStatus(status);
+      setAlreadyPaidPass(Boolean(membershipData.alreadyPaidPass));
+      setAlreadyPaidPlan(
+        typeof membershipData.alreadyPaidPlan === "string" ? membershipData.alreadyPaidPlan : null,
+      );
+      setOnboardingComplete(
+        typeof membershipData.onboardingComplete === "boolean"
+          ? membershipData.onboardingComplete
+          : null,
+      );
       setPaymentsLoading(false);
 
-      // Paid signup (not intentional upgrade/downgrade): leave checkout for onboard/Today.
-      // Fixes Ali-style “ticket paid but stuck on Get your Ticket”.
+      // Finished members who already paid this ticket: leave checkout.
+      // Re-onboard stays here so they can tap their ticket and Continue already paid.
       if (
         !isDowngradeIntent &&
         status === "paid" &&
+        membershipData.onboardingComplete === true &&
         gatesRes.ok &&
         typeof gatesData.redirectTo === "string" &&
         gatesData.redirectTo &&
         !gatesData.needsPayment
       ) {
-        // Stay on checkout only when they are upgrading to a different plan (URL plan ≠ profile).
         const profilePlan =
           typeof membershipData.plan === "string" ? membershipData.plan : null;
         const sameTicket = !profilePlan || profilePlan === plan;
@@ -207,7 +221,11 @@ function MemberCheckoutInner() {
     }
   }
 
-  const showMembershipCard = isPaidOffer(plan);
+  const coverageMatchesThisTicket =
+    alreadyPaidPass && (!alreadyPaidPlan || alreadyPaidPlan === plan);
+  const showTicketPicker =
+    pickingTicket && !customOfferId && !merchandiseSkuId && !isDowngradeIntent;
+  const showMembershipCard = !showTicketPicker && isPaidOffer(plan);
   const publishableKey = payments?.stripePublishableKey || "";
   const isSignupCheckout = paymentStatus !== "paid";
   // Never offer upgrades while intentionally downgrading from Account.
@@ -217,7 +235,9 @@ function MemberCheckoutInner() {
       : [];
   const payCta = isDowngradeIntent
     ? `Confirm ${signupPlanLabel(plan)}`
-    : "Get your Ticket";
+    : coverageMatchesThisTicket
+      ? "Continue already paid"
+      : "Get your Ticket";
 
   return (
     <>
@@ -263,7 +283,13 @@ function MemberCheckoutInner() {
             {confirming && (
               <p className="text-sm text-[var(--muted)]">Confirming payment…</p>
             )}
-            {stripeReady && !isDowngradeIntent && (
+            {coverageMatchesThisTicket ? (
+              <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+                This email already has {signupPlanLabel(plan)} for the current period. Pick
+                that ticket and continue. No second charge.
+              </p>
+            ) : null}
+            {stripeReady && !isDowngradeIntent && !coverageMatchesThisTicket && (
               <div className="space-y-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
                 <label className="block text-xs font-semibold text-[var(--text)]" htmlFor="promo-code">
                   Discount code
@@ -292,7 +318,7 @@ function MemberCheckoutInner() {
                 )}
               </div>
             )}
-            {stripeReady && payments?.tips?.enabled && !isDowngradeIntent && (
+            {stripeReady && payments?.tips?.enabled && !isDowngradeIntent && !coverageMatchesThisTicket && (
               <p className="rounded-lg border border-accent/25 bg-accent/10 px-3 py-2 text-xs text-[var(--muted)]">
                 Checkout may show an optional{" "}
                 <strong className="text-[var(--text)]">tip for Coach Jeremy</strong> (you can set
@@ -303,7 +329,7 @@ function MemberCheckoutInner() {
                 .
               </p>
             )}
-            {stripeReady && (
+            {(stripeReady || coverageMatchesThisTicket) && (
               <div className="space-y-3">
                 <button
                   type="button"
@@ -322,9 +348,11 @@ function MemberCheckoutInner() {
                           : payCta}
                 </button>
                 <p className="text-center text-[11px] text-[var(--muted)]">
-                  {hasSavedCard
-                    ? "Your saved card should be pre-selected in checkout. If you only see an empty form, enter your card once more with your billing address — it will prefill next time."
-                    : "After your first payment, check “save for future purchases” in checkout to reuse your card next time."}
+                  {coverageMatchesThisTicket
+                    ? "Server checks this email and the current paid period before it lets you through."
+                    : hasSavedCard
+                      ? "Your saved card should be pre-selected in checkout. If you only see an empty form, enter your card once more with your billing address. It will prefill next time."
+                      : "After your first payment, check save for future purchases in checkout to reuse your card next time."}
                 </p>
               </div>
             )}
@@ -335,7 +363,7 @@ function MemberCheckoutInner() {
                   : "Online checkout is not configured yet. Contact Jeremy to complete signup."}
               </p>
             )}
-            {venmoReady && payments?.venmo && (
+            {venmoReady && payments?.venmo && !coverageMatchesThisTicket && (
               <div className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
                 <p className="text-center text-xs font-semibold uppercase tracking-[2px] text-accent">
                   Or pay with Venmo
@@ -385,11 +413,14 @@ function MemberCheckoutInner() {
           <div className="space-y-6">
             <div className="mx-auto max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-4 text-center sm:px-6">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent">
-                You&apos;re signed in · Free Explorer
+                {alreadyPaidPass
+                  ? "You're signed in · ticket already paid"
+                  : "You're signed in · pick a ticket"}
               </p>
               <p className="mt-2 text-sm text-[var(--muted)]">
-                Same seats as the landing page. Tap a paid ticket for card or Venmo checkout —
-                or stay free for now.
+                {alreadyPaidPass
+                  ? `Tap ${alreadyPaidPlan ? signupPlanLabel(alreadyPaidPlan as SignupPlan) : "your ticket"} again. The next screen says Continue already paid. A different ticket still goes to payment.`
+                  : "Same seats as the landing page. Tap a paid ticket for card or Venmo checkout, or stay free for now."}
               </p>
               {error ? <p className="mt-2 text-sm text-amber-400">{error}</p> : null}
             </div>
@@ -400,15 +431,24 @@ function MemberCheckoutInner() {
                 mode="checkout"
                 promoCode={promoCode}
                 showBrand
+                highlightPaid={alreadyPaidPass}
                 heading="Membership tickets"
-                subheading="Tap a ticket — same train seats as home. We'll take you to pay (or Today if you stay free)."
+                subheading={
+                  alreadyPaidPass
+                    ? "Tap the ticket you already paid. We check this email and the current period before you continue."
+                    : "Tap a ticket. Same train seats as home. We'll take you to pay, or Today if you stay free."
+                }
               />
             )}
             <p className="text-center text-[11px] text-[var(--muted)]">
-              <Link href="/member/today" className="font-semibold text-accent hover:underline">
-                Open free dashboard
-              </Link>
-              {" · "}
+              {alreadyPaidPass ? null : (
+                <>
+                  <Link href="/member/today" className="font-semibold text-accent hover:underline">
+                    Open free dashboard
+                  </Link>
+                  {" · "}
+                </>
+              )}
               <Link href="/member/account" className="hover:text-accent">
                 Account
               </Link>

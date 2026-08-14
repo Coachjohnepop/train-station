@@ -38,6 +38,10 @@ export type MemberMembershipSnapshot = {
   lastPaymentCurrency: string | null;
   lastPaymentAt: string | null;
   lastPaymentLabel: string | null;
+  /** Re-onboard pass: this email already paid this ticket for the current period. */
+  alreadyPaidPass: boolean;
+  alreadyPaidPlan: string | null;
+  alreadyPaidPeriodEnd: string | null;
   canManageBilling: boolean;
   canCompleteCheckout: boolean;
   hasSavedPaymentMethod: boolean;
@@ -164,6 +168,24 @@ export async function getMemberMembershipSnapshot(
   const downgradePlans: SignupPlan[] = paidActive ? downgradeMembershipPlansFrom(plan) : [];
 
   const lastPay = paidActive ? await getLatestPaidPaymentFact(userId) : null;
+  let alreadyPaidPass = false;
+  let alreadyPaidPlan: string | null = null;
+  let alreadyPaidPeriodEnd: string | null = null;
+  if (paidActive) {
+    try {
+      const { resolvePaidCoverage } = await import("@/lib/paid-coverage");
+      const coverage = await resolvePaidCoverage({
+        userId,
+        sessionEmail: profile.email,
+        requestedPlan: plan,
+      });
+      alreadyPaidPass = coverage.ok;
+      alreadyPaidPlan = coverage.plan;
+      alreadyPaidPeriodEnd = coverage.periodEnd;
+    } catch {
+      alreadyPaidPass = false;
+    }
+  }
   const lastPaymentAmountCents = lastPay?.amountCents ?? null;
   const lastPaymentCurrency = lastPay?.currency ?? null;
   const lastPaymentAt = lastPay?.paidAt ? lastPay.paidAt.toISOString() : null;
@@ -189,6 +211,9 @@ export async function getMemberMembershipSnapshot(
     lastPaymentCurrency,
     lastPaymentAt,
     lastPaymentLabel,
+    alreadyPaidPass,
+    alreadyPaidPlan,
+    alreadyPaidPeriodEnd,
     canManageBilling: Boolean(
       stripeReady &&
         profile.paymentMethod === "stripe" &&

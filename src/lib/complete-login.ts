@@ -50,9 +50,13 @@ export async function resolveLoginDestination(
     } else if (needsFreePm) {
       destination = memberFreePaymentSetupPath();
     } else if (needsOnboard) {
-      destination = plan
-        ? `/member/onboard?plan=${encodeURIComponent(plan)}`
-        : memberOnboardPath();
+      // Paid re-onboard: pick the ticket again. Checkout proves coverage before Continue.
+      destination =
+        profile?.paymentStatus === "paid" && plan && plan !== "explorer"
+          ? "/member/checkout"
+          : plan
+            ? `/member/onboard?plan=${encodeURIComponent(plan)}`
+            : memberOnboardPath();
     } else if (needsApproval) {
       destination = MEMBER_PENDING_PATH;
     } else if (profile?.coachIntakeCompleteAt) {

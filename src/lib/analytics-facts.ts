@@ -194,6 +194,8 @@ export async function getLatestPaidPaymentFact(userId: string): Promise<{
   amountCents: number;
   currency: string;
   paidAt: Date;
+  periodStart: Date | null;
+  periodEnd: Date | null;
   planId: string | null;
   billingReason: string | null;
   stripeInvoiceId: string | null;
@@ -212,6 +214,8 @@ export async function getLatestPaidPaymentFact(userId: string): Promise<{
         amountCents: true,
         currency: true,
         paidAt: true,
+        periodStart: true,
+        periodEnd: true,
         planId: true,
         billingReason: true,
         stripeInvoiceId: true,

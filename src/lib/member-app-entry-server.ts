@@ -32,6 +32,9 @@ export async function resolveMemberAppEntryPath(
     return MEMBER_PENDING_PATH;
   }
   if (!profile?.onboardingComplete) {
+    if (profile && profile.paymentStatus === "paid" && profile.plan && profile.plan !== "explorer") {
+      return "/member/checkout";
+    }
     return memberOnboardEntryPath(profile?.plan);
   }
   if (profile.coachIntakeCompleteAt) {
