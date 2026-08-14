@@ -106,12 +106,18 @@ export async function middleware(request: NextRequest) {
       return nextWithPath(request, pathname);
     }
 
-    // Ops bootstrap: Bearer OPS_BOOTSTRAP_SECRET / CRON_SECRET (no session cookie).
-    if (pathname === "/api/admin/ops/stripe-bootstrap") {
-      const secret =
-        process.env.OPS_BOOTSTRAP_SECRET?.trim() || process.env.CRON_SECRET?.trim() || "";
+    // Ops bootstrap / mail retry: Bearer secret (no session cookie).
+    if (
+      pathname === "/api/admin/ops/stripe-bootstrap" ||
+      pathname === "/api/admin/ops/retry-welcome"
+    ) {
+      const secrets = [
+        process.env.OPS_BOOTSTRAP_SECRET?.trim(),
+        process.env.CRON_SECRET?.trim(),
+        process.env.RESEND_RETRY_TOKEN?.trim(),
+      ].filter(Boolean);
       const header = request.headers.get("authorization") || "";
-      if (secret && header === `Bearer ${secret}`) {
+      if (secrets.some((s) => header === `Bearer ${s}`)) {
         return NextResponse.next();
       }
       // else fall through — staff session still allowed
