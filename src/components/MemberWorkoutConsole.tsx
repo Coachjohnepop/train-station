@@ -47,6 +47,11 @@ import {
   isFreeExplorerPlan,
   isFreePreviewExerciseLocked,
 } from "@/lib/free-tier-product";
+import {
+  progressCacheHasWork,
+  readMemberWorkoutProgressCache,
+  writeMemberWorkoutProgressCache,
+} from "@/lib/member-workout-progress-cache";
 
 export type MemberExerciseBlock = {
   id: string;
@@ -464,7 +469,8 @@ export default function MemberWorkoutConsole({
 
   // Keep coach + member nearly in lockstep (SSE hot path + very fast poll across instances).
   const LIVE_POLL_MS = 150;
-  const liveSessionScope = progressMode === "live" && !!liveSyncUserId && !reviewMode;
+  // Warmup used a blob store; checkoffs still belong in LiveWorkoutSession (Postgres).
+  const liveSessionScope = !!liveSyncUserId && !reviewMode;
   const warmupSyncEnabled = progressMode === "warmup" && !!liveSyncUserId && !reviewMode;
   const [liveSessionHydrated, setLiveSessionHydrated] = useState(false);
   /** Wait for first remote snapshot so we don't overwrite partner history with empty local state. */
@@ -508,6 +514,28 @@ export default function MemberWorkoutConsole({
       return out;
     },
     [],
+  );
+
+  const persistProgressCache = useCallback(
+    (snap?: {
+      completedSets: Record<string, Set<number>>;
+      finishedExercises: Set<string>;
+      weights: Record<string, string>;
+      activeId: string;
+    }) => {
+      if (!liveSyncUserId || reviewMode) return;
+      const s = snap ?? stateRef.current;
+      writeMemberWorkoutProgressCache({
+        userId: liveSyncUserId,
+        workoutId: workout.workoutId,
+        sessionDate: liveSessionDate,
+        completedSets: serializeCompletedSets(s.completedSets),
+        finishedExercises: Array.from(s.finishedExercises),
+        weights: s.weights,
+        activeId: s.activeId,
+      });
+    },
+    [liveSyncUserId, reviewMode, workout.workoutId, liveSessionDate, serializeCompletedSets],
   );
 
   useEffect(() => {
@@ -679,6 +707,23 @@ export default function MemberWorkoutConsole({
       }
 
       const localSnap = stateRef.current;
+      const localSetCount = Object.values(localSnap.completedSets).reduce(
+        (n, set) => n + set.size,
+        0,
+      );
+      const remoteSetCount = Object.values(session.completedSets || {}).reduce(
+        (n, nums) => n + (Array.isArray(nums) ? nums.length : 0),
+        0,
+      );
+      const localHasWork =
+        localSetCount > 0 || localSnap.finishedExercises.size > 0;
+      const remoteEmpty = remoteSetCount === 0 && session.finishedExercises.length === 0;
+      // Don't let an empty first GET wipe sets the member already checked (or restored).
+      if (localHasWork && remoteEmpty && session.updatedBy !== "coach") {
+        skipAutoPushAfterRemote.current = false;
+        pendingImmediatePushRef.current = true;
+        return;
+      }
       const sets: Record<string, Set<number>> = {};
       for (const [blockId, nums] of Object.entries(session.completedSets)) {
         sets[blockId] = new Set(nums);
@@ -798,7 +843,7 @@ export default function MemberWorkoutConsole({
   }, [warmupSyncEnabled, liveSyncUserId, liveSessionDate, serializeCompletedSets]);
 
   const flushLiveSave = useCallback(() => {
-    if (!livePushEnabled || !liveSyncUserId) return;
+    if (!liveSessionScope || !liveSyncUserId) return;
 
     saveChain.current = saveChain.current.catch(() => {}).then(async () => {
       const snap = stateRef.current;
@@ -837,11 +882,13 @@ export default function MemberWorkoutConsole({
       const baseRev = Math.max(lastAppliedRevision.current, lastPushedRevision.current);
       if (baseRev > 0) payload.baseRevision = baseRev;
 
+      persistProgressCache();
       const res = await fetch(`/api/workouts/${workout.workoutId}/live-session`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
         cache: "no-store",
+        keepalive: true,
       });
       if (!res.ok) return;
       const data = await res.json();
@@ -862,7 +909,7 @@ export default function MemberWorkoutConsole({
 
     return saveChain.current;
   }, [
-    livePushEnabled,
+    liveSessionScope,
     liveSyncUserId,
     liveSessionDate,
     instructorName,
@@ -871,29 +918,29 @@ export default function MemberWorkoutConsole({
     applyRemoteSession,
     coachFloorMode,
     canCoachRestSettings,
+    persistProgressCache,
   ]);
 
   const queueLiveSave = useCallback(
     (immediate = false) => {
+      persistProgressCache();
       if (!livePushEnabled && !warmupSyncEnabled) {
-        if (immediate && liveSessionScope) pendingImmediatePushRef.current = true;
+        if (liveSessionScope) pendingImmediatePushRef.current = true;
         return;
       }
       if (saveTimer.current) clearTimeout(saveTimer.current);
+      const run = () => {
+        if (warmupSyncEnabled) void flushWarmupSave();
+        if (liveSessionScope) void flushLiveSave();
+      };
       if (immediate) {
         // Fire on the next microtask so React state/stateRef settle first.
-        saveTimer.current = setTimeout(() => {
-          if (warmupSyncEnabled) void flushWarmupSave();
-          else void flushLiveSave();
-        }, 0);
+        saveTimer.current = setTimeout(run, 0);
         return;
       }
       // Tiny debounce for continuous weight typing; set checkoffs use immediate.
       const delay = instructorName ? 40 : 60;
-      saveTimer.current = setTimeout(() => {
-        if (warmupSyncEnabled) void flushWarmupSave();
-        else void flushLiveSave();
-      }, delay);
+      saveTimer.current = setTimeout(run, delay);
     },
     [
       livePushEnabled,
@@ -902,6 +949,8 @@ export default function MemberWorkoutConsole({
       instructorName,
       flushLiveSave,
       flushWarmupSave,
+      persistProgressCache,
+      liveSessionScope,
     ],
   );
 
@@ -920,20 +969,52 @@ export default function MemberWorkoutConsole({
     setEditingExerciseId(null);
   }, [liveSyncUserId, liveSessionDate, workout.workoutId]);
 
+  // Restore last checkoffs instantly so a pull-to-refresh does not look empty.
+  useEffect(() => {
+    if (!liveSyncUserId || reviewMode) return;
+    const cached = readMemberWorkoutProgressCache({
+      userId: liveSyncUserId,
+      workoutId: workout.workoutId,
+      sessionDate: liveSessionDate,
+    });
+    if (!progressCacheHasWork(cached) || !cached) return;
+    const sets: Record<string, Set<number>> = {};
+    for (const [blockId, nums] of Object.entries(cached.completedSets)) {
+      sets[blockId] = new Set(nums);
+    }
+    setCompletedSets(sets);
+    setFinishedExercises(new Set(cached.finishedExercises));
+    if (cached.weights && Object.keys(cached.weights).length > 0) {
+      setWeights((prev) => ({ ...prev, ...cached.weights }));
+    }
+    stateRef.current = {
+      ...stateRef.current,
+      completedSets: sets,
+      finishedExercises: new Set(cached.finishedExercises),
+      weights: { ...stateRef.current.weights, ...cached.weights },
+      activeId: cached.activeId || stateRef.current.activeId,
+    };
+    pendingImmediatePushRef.current = true;
+  }, [liveSyncUserId, reviewMode, workout.workoutId, liveSessionDate]);
+
   useEffect(() => {
     if (!warmupSyncEnabled || !liveSessionDate) return;
     void fetch(`/api/member/warmup-progress?date=${liveSessionDate}`, { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!data?.progress) return;
+        const incomingSets = (data.progress.completedSets || {}) as Record<string, number[]>;
+        const incomingFinished = (data.progress.finishedExercises || []) as string[];
+        const hasWork =
+          incomingFinished.length > 0 ||
+          Object.values(incomingSets).some((nums) => Array.isArray(nums) && nums.length > 0);
+        if (!hasWork) return;
         const sets: Record<string, Set<number>> = {};
-        for (const [blockId, nums] of Object.entries(
-          data.progress.completedSets as Record<string, number[]>,
-        )) {
+        for (const [blockId, nums] of Object.entries(incomingSets)) {
           sets[blockId] = new Set(nums);
         }
         setCompletedSets(sets);
-        setFinishedExercises(new Set(data.progress.finishedExercises || []));
+        setFinishedExercises(new Set(incomingFinished));
       })
       .catch(() => {});
   }, [warmupSyncEnabled, liveSessionDate]);
@@ -988,18 +1069,20 @@ export default function MemberWorkoutConsole({
     const query = q.toString();
 
     const poll = async () => {
-      if (document.visibilityState === "hidden") return;
+      if (document.visibilityState === "hidden" && liveSessionHydrated) return;
       try {
         const res = await fetch(
           `/api/workouts/${workout.workoutId}/live-session?${query}`,
           { cache: "no-store" },
         );
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.session) applyRemoteSession(data.session);
-        setLiveSessionHydrated(true);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.session) applyRemoteSession(data.session);
+        }
       } catch {
-        /* ignore */
+        /* still mark hydrated so local checkoffs can persist */
+      } finally {
+        setLiveSessionHydrated(true);
       }
     };
 
@@ -1040,6 +1123,27 @@ export default function MemberWorkoutConsole({
     workout.workoutId,
     applyRemoteSession,
   ]);
+
+  useEffect(() => {
+    if (!liveSessionScope) return;
+    const flush = () => {
+      persistProgressCache();
+      void flushLiveSave();
+    };
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onHide);
+    };
+  }, [liveSessionScope, persistProgressCache, flushLiveSave]);
+
+  useEffect(() => {
+    persistProgressCache();
+  }, [completedSets, finishedExercises, weights, activeId, persistProgressCache]);
 
   // Seed local completedSets from past when opening in (pure) review mode.
   // Pre-render completed sets with gold checkmarks (member-set-btn--done)
