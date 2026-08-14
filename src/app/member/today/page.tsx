@@ -51,6 +51,10 @@ import {
   isoDateFromTimestamp,
   resolveMeasurementDay,
 } from "@/lib/member-measurement-schedule";
+import {
+  previewRollingDays,
+  schedulePreviewForEmail,
+} from "@/lib/member-schedule-preview";
 import { normalizeSignupPlan } from "@/lib/signup-plans";
 
 export const dynamic = "force-dynamic";
@@ -114,11 +118,14 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     enrollments[primaryProgram?.slug ?? "adult"]?.trainingLocation,
   );
 
-  // Today ± 1 day only (swipe window: yesterday | today | tomorrow).
+  const schedulePreview = schedulePreviewForEmail(profile?.email);
+  // Default: yesterday · today · tomorrow. Ali has a TEMP 14-day preview.
   const dayWindow = primaryProgram
     ? await buildMemberDayWindow(uid, primaryProgram.slug, loggedSet, {
-        rollingDays: 3,
-        daysBefore: 1,
+        rollingDays: schedulePreview ? previewRollingDays(schedulePreview) : 3,
+        daysBefore: schedulePreview?.daysBefore ?? 1,
+        upcomingDays: schedulePreview?.upcomingDays,
+        futureVisibility: schedulePreview?.futureVisibility,
       })
     : null;
 
@@ -211,7 +218,9 @@ export default async function MemberTodayPage({ searchParams }: Props) {
         ? "Your 28-day block has ended — renew to continue"
         : source === "program"
           ? `Program schedule — ${scheduleLabel}`
-          : "Swipe yesterday · today · tomorrow — only 3 days.";
+          : schedulePreview
+            ? `Preview · ${schedulePreview.upcomingDays} days ahead (temp content review)`
+            : "Swipe yesterday · today · tomorrow — only 3 days.";
 
   const selectedSummary = memberDays.find((d) => d.iso === viewDate) ?? null;
   const stretchPreview = memberDays.length ? nextDayStretchPreview(memberDays, programTodayKey) : [];
@@ -225,7 +234,8 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     })(),
   );
   const canStartThisDate = viewDate === programTodayKey || viewDate === yesterdayIso;
-  const memberWorkout = canStartThisDate ? workout : null;
+  const canPreviewThisDate = Boolean(schedulePreview && workout && allowedIsos.has(viewDate));
+  const memberWorkout = canStartThisDate || canPreviewThisDate ? workout : null;
   const isLateCatchUp = viewDate === yesterdayIso;
   const clampedViewDate = viewDate;
 
@@ -355,7 +365,9 @@ export default async function MemberTodayPage({ searchParams }: Props) {
               maintainWorkouts={maintainList}
               activeMaintainId={maintainId}
               maintainAccess={maintainAccess}
-              forceShowWorkout={consoleIsMaintain}
+              forceShowWorkout={consoleIsMaintain || canPreviewThisDate}
+              schedulePreviewChips={schedulePreview?.visibleChips}
+              previewFutureReadOnly={Boolean(schedulePreview && !canStartThisDate && canPreviewThisDate)}
               measurementDay={measurementSchedule.kind === "today" || measurementSchedule.kind === "tomorrow" ? measurementSchedule.kind : null}
               measurementCompletedToday={measurementCompletedToday}
             />

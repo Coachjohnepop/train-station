@@ -388,6 +388,13 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Uncommitted (this machine only):** in-app 5s chorus + `/free` share loop (`src/app/free/`, `public/videos/`, FreeTicketModal, etc.). Prod gag is still YouTube Rick 5s @ 0:43.
 
+### TEMP — Ali 14-day schedule preview (scale back)
+
+**Do not forget.** `fletcherboys@att.net` can see **14 upcoming days** of Adult workouts (names + exercises) so we can verify Jeremy’s calendar. Default members stay yesterday/today/tomorrow.
+
+- Code: `src/lib/member-schedule-preview.ts`
+- Pull back after review (aim **2026-09-01**): remove her row from `OVERRIDES`.
+
 ### Session 2026-08-14 PM — onboard path (women / men / intro / measurements)
 
 Setup no longer asks for tape. After equipment: **gender**. Women = weight-loss goal + timeline. Men = weight + goals. Last wizard step **must book** the free 15-min Calendly intro. After Jeremy marks intake complete, first tape sheet is required (`/member/measurements?first=1`). Later check-ins land on **Today like a workout block**, announced the day before (every 28 days).

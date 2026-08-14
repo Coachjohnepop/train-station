@@ -292,7 +292,13 @@ export async function buildMemberDayWindow(
   userId: string,
   programSlug: string,
   loggedWorkoutIds: Set<string>,
-  opts?: { rollingDays?: number; daysBefore?: number },
+  opts?: {
+    rollingDays?: number;
+    daysBefore?: number;
+    /** Override future-day visibility (used for temp content-review previews). */
+    futureVisibility?: "names" | "full";
+    upcomingDays?: number;
+  },
 ): Promise<{
   days: MemberDaySummary[];
   rollup: MemberDayWindowRollup;
@@ -306,6 +312,8 @@ export async function buildMemberDayWindow(
   const calendarToday = localTodayIso();
   const rollingDays = opts?.rollingDays ?? 5;
   const daysBefore = opts?.daysBefore ?? 2;
+  const upcomingDays = opts?.upcomingDays;
+  const futureVisibility = opts?.futureVisibility;
   const enrolls = await getUserEnrollments(userId);
   const enrollment = enrolls[programSlug] || {
     currentWeek: 1,
@@ -346,7 +354,10 @@ export async function buildMemberDayWindow(
       const calendarDate = calendarDateForBlockDay(block.programStartDate, linearDay);
       const phase = blockPhaseForCalendarDate(calendarDate, calendarToday);
       const offset = daysFromToday(calendarDate, calendarToday);
-      const visibilityTier = dayVisibilityTier(calendarDate, calendarToday);
+      const visibilityTier =
+        offset > 0 && futureVisibility
+          ? futureVisibility
+          : dayVisibilityTier(calendarDate, calendarToday);
       const entry = {
         key: enrollmentDayKey(coord.weekNumber, coord.dayNumber),
         weekNumber: coord.weekNumber,
@@ -379,10 +390,18 @@ export async function buildMemberDayWindow(
       days.push(summary);
     }
 
-    const past = days.filter((d) => d.phase === "past");
-    const future = days.filter((d) => d.phase === "future");
+    const windowed =
+      upcomingDays != null
+        ? days.filter((d) => {
+            const off = d.daysFromToday;
+            return off >= -daysBefore && off <= upcomingDays;
+          })
+        : days;
+
+    const past = windowed.filter((d) => d.phase === "past");
+    const future = windowed.filter((d) => d.phase === "future");
     return {
-      days,
+      days: windowed,
       programTodayKey,
       block,
       rollup: {
@@ -408,6 +427,8 @@ export async function buildMemberDayWindow(
   const days: MemberDaySummary[] = [];
 
   for (const entry of rolling) {
+    const visibilityTier =
+      entry.offset > 0 && futureVisibility ? futureVisibility : undefined;
     days.push(
       await summarizeProgramDay(
         userId,
@@ -416,6 +437,7 @@ export async function buildMemberDayWindow(
         entry,
         loggedWorkoutIds,
         calendarToday,
+        visibilityTier ? { visibilityTier } : undefined,
       ),
     );
   }

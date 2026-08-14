@@ -66,7 +66,7 @@ export function scheduleDayHeadline(
   dayLabel: string,
   opts?: { phase?: "past" | "today" | "future"; visibilityTier?: DayVisibilityTier },
 ): string {
-  if (opts?.phase === "future") {
+  if (opts?.phase === "future" && opts.visibilityTier === "label") {
     return themeLabelForDay(workoutName, dayLabel);
   }
   return workoutName || dayLabel || "No session scheduled";

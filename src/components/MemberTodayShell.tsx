@@ -70,6 +70,10 @@ type Props = {
   /** Recurring tape check-in after intake + first sheet. */
   measurementDay?: "today" | "tomorrow" | null;
   measurementCompletedToday?: boolean;
+  /** TEMP content-review: more day chips (Ali). */
+  schedulePreviewChips?: number;
+  /** Future day opened for viewing only. */
+  previewFutureReadOnly?: boolean;
 };
 
 function DaySummaryCard({
@@ -228,6 +232,8 @@ export default function MemberTodayShell({
   forceShowWorkout = false,
   measurementDay = null,
   measurementCompletedToday = false,
+  schedulePreviewChips,
+  previewFutureReadOnly = false,
 }: Props) {
   const canUseMaintain = Boolean(maintainAccess?.allowed);
   const router = useRouter();
@@ -464,6 +470,7 @@ export default function MemberTodayShell({
           todayIso={todayIso}
           onSelect={selectDate}
           highlightTodayGold={todayGold}
+          visibleDays={schedulePreviewChips}
         />
       )}
 
@@ -574,8 +581,9 @@ export default function MemberTodayShell({
               backHref="/member/today"
               programSlug={programSlug}
               targetUserId={targetUserId}
-              liveSyncUserId={targetUserId}
+              liveSyncUserId={previewFutureReadOnly ? undefined : targetUserId}
               liveSessionDate={selectedDate}
+              reviewMode={previewFutureReadOnly}
               membershipPlan={contentAccess?.plan ?? "explorer"}
               scheduleLabel={
                 multiPart && dayParts

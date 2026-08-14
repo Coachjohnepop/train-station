@@ -7,8 +7,8 @@ const MAX_CHIP_W = 76;
 const MIN_CHIP_W = 48;
 const GAP_DESKTOP = 8;
 const GAP_MOBILE = 4;
-/** Member Today shows a 3-day window (yesterday · today · tomorrow). */
-const VISIBLE_DAYS = 3;
+/** Default member Today: yesterday · today · tomorrow. Preview members can pass more. */
+const DEFAULT_VISIBLE_DAYS = 3;
 
 type WheelMetrics = {
   chipW: number;
@@ -23,14 +23,19 @@ type Props = {
   onSelect: (iso: string) => void;
   /** @deprecated Today chip is always gold; prop kept for API compatibility */
   highlightTodayGold?: boolean;
+  visibleDays?: number;
 };
 
-function windowStartIndex(days: MemberDaySummary[], selectedIdx: number): number {
-  if (days.length <= VISIBLE_DAYS) return 0;
-  const half = Math.floor(VISIBLE_DAYS / 2);
+function windowStartIndex(
+  days: MemberDaySummary[],
+  selectedIdx: number,
+  visibleDays: number,
+): number {
+  if (days.length <= visibleDays) return 0;
+  const half = Math.floor(visibleDays / 2);
   let start = selectedIdx - half;
   if (start < 0) start = 0;
-  if (start + VISIBLE_DAYS > days.length) start = days.length - VISIBLE_DAYS;
+  if (start + visibleDays > days.length) start = days.length - visibleDays;
   return start;
 }
 
@@ -50,6 +55,7 @@ export default function MemberDayWheel({
   selectedIso,
   todayIso,
   onSelect,
+  visibleDays = DEFAULT_VISIBLE_DAYS,
 }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [metrics, setMetrics] = useState<WheelMetrics>({
@@ -62,11 +68,11 @@ export default function MemberDayWheel({
   const currentIdx = selectedIdx >= 0 ? selectedIdx : days.findIndex((d) => d.iso === todayIso);
   const canPrev = currentIdx > 0;
   const canNext = currentIdx >= 0 && currentIdx < days.length - 1;
-  const visibleCount = Math.min(VISIBLE_DAYS, days.length);
+  const visibleCount = Math.min(Math.max(3, visibleDays), days.length);
 
   const startIdx = useMemo(
-    () => windowStartIndex(days, currentIdx >= 0 ? currentIdx : 0),
-    [days, currentIdx],
+    () => windowStartIndex(days, currentIdx >= 0 ? currentIdx : 0, visibleCount),
+    [days, currentIdx, visibleCount],
   );
 
   useLayoutEffect(() => {
@@ -104,7 +110,7 @@ export default function MemberDayWheel({
   if (!days.length) return null;
 
   const compactChip = metrics.chipW < 58;
-  const allDaysVisible = days.length <= VISIBLE_DAYS;
+  const allDaysVisible = days.length <= visibleCount;
 
   return (
     <div className="day-wheel-shell mx-auto flex w-full min-w-0 max-w-full items-center justify-center gap-1 sm:gap-2">
@@ -133,7 +139,7 @@ export default function MemberDayWheel({
         >
           {days.map((day) => {
             const isSelected = day.iso === selectedIso;
-            const isToday = day.iso === todayIso;
+            const isToday = day.iso === todayIso || day.calendarDate === todayIso;
             const todayGold = isToday;
             const chipClass = todayGold
               ? isSelected
