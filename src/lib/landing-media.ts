@@ -118,22 +118,18 @@ export const FREE_TICKET_GAG_SRC = "/videos/free-ticket-chorus.mp4";
 export const FREE_TICKET_GAG_POSTER = "/videos/free-ticket-chorus.jpg";
 export const FREE_TICKET_GAG_AUDIO_SRC = "/audio/free-ticket-chorus.mp3";
 
-/** Official video — fallback if we drop the local file (C&D / env flip). */
+/** Legacy watch URL — never played. YouTube is too slow for Free tap. */
 export const FREE_TICKET_RICKROLL_URL =
   "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 
-/** Chorus start on the YouTube original. Local file is already trimmed. */
+/** Legacy chorus start. Local file is already trimmed. */
 export const FREE_TICKET_RICKROLL_CHORUS_START_SEC = 43;
 
-/**
- * `file` = in-app 5s clip (default). `youtube` = official embed from chorus.
- * Emergency: Vercel Production `NEXT_PUBLIC_FREE_TICKET_GAG_MODE=youtube` + redeploy.
- */
-export const FREE_TICKET_GAG_MODE: "file" | "youtube" =
-  process.env.NEXT_PUBLIC_FREE_TICKET_GAG_MODE === "youtube" ? "youtube" : "file";
+/** Gag is the in-app file only. YouTube embeds are not used. */
+export const FREE_TICKET_GAG_MODE = "file" as const;
 
 export function isFreeTicketGagYoutube(): boolean {
-  return FREE_TICKET_GAG_MODE === "youtube";
+  return false;
 }
 
 /** How long the gag plays before cutting over to Jeremy. */
@@ -158,11 +154,10 @@ export function productFreeTicketGag(opts: {
   /** Signed-in members never get the rickroll — only landing guests. */
   signedIn: boolean;
 }): FreeTicketGagConfig {
-  const youtube = isFreeTicketGagYoutube();
   return {
     enabled: !opts.signedIn,
-    videoUrl: youtube ? FREE_TICKET_RICKROLL_URL : FREE_TICKET_GAG_SRC,
-    startSec: youtube ? FREE_TICKET_RICKROLL_CHORUS_START_SEC : 0,
+    videoUrl: FREE_TICKET_GAG_SRC,
+    startSec: 0,
     durationMs: FREE_TICKET_RICKROLL_DURATION_MS,
   };
 }
@@ -179,11 +174,10 @@ export function resolveFreeTicketGag(input?: {
   gagDurationSec?: number | null;
 } | null): FreeTicketGagConfig {
   const killSwitch = input?.gagEnabled === false;
-  const youtube = isFreeTicketGagYoutube();
   return {
     enabled: !killSwitch,
-    videoUrl: youtube ? FREE_TICKET_RICKROLL_URL : FREE_TICKET_GAG_SRC,
-    startSec: youtube ? FREE_TICKET_RICKROLL_CHORUS_START_SEC : 0,
+    videoUrl: FREE_TICKET_GAG_SRC,
+    startSec: 0,
     durationMs: FREE_TICKET_RICKROLL_DURATION_MS,
   };
 }

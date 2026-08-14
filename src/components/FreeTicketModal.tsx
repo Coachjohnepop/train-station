@@ -7,25 +7,16 @@ import {
   FREE_TICKET_GAG_POSTER,
   FREE_TICKET_RICKROLL_DURATION_MS,
   FREE_TICKET_RICKROLL_FADE_MS,
-  isFreeTicketGagYoutube,
   isRickrollVideoUrl,
-  landingVideoEmbedSrc,
   productFreeTicketGag,
 } from "@/lib/landing-media";
 import {
   applyMediaVolumeDb,
   clampVolumeDb,
   linearMultiplierToDb,
-  volumeDbToYoutubePercent,
 } from "@/lib/media-volume";
 import { isDirectVideoUrl } from "@/lib/site-video";
 import { isYoutubeUrl } from "@/lib/youtube";
-import {
-  ensureYoutubeAudible,
-  kickYoutubeAudible,
-  killYoutubeEmbed,
-  postYoutubeEmbedCommand,
-} from "@/lib/youtube-embed-control";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
@@ -45,7 +36,8 @@ const JEREMY_WORD_VOLUME_MULT = 3;
  *
  * Guests (not signed in):
  *   1) In-app ~5s chorus file (started on the Free tap)
- *   2) Crossfade to Jeremy’s free-tier intro (Admin free-ticket slot, else welcome)
+ *   2) Crossfade to Jeremy’s free-tier intro if that slot is an uploaded file
+ *      (YouTube intros are skipped — embeds take too long on a Free tap)
  *
  * Signed-in members: skip gag → Jeremy intro only (or empty CTA if not uploaded).
  *
@@ -79,19 +71,14 @@ export default function FreeTicketModal({
   const [fadeJeremyIn, setFadeJeremyIn] = useState(false);
   const [hideRickroll, setHideRickroll] = useState(false);
   const [loadJeremy, setLoadJeremy] = useState(false);
-  const [jeremyEmbedSrc, setJeremyEmbedSrc] = useState<string | null>(null);
-  const [gagEmbedSrc, setGagEmbedSrc] = useState<string | null>(null);
   const timersRef = useRef<number[]>([]);
   const cancelFadeRef = useRef<(() => void) | null>(null);
-  const jeremyIframeRef = useRef<HTMLIFrameElement>(null);
   const jeremyVideoRef = useRef<HTMLVideoElement>(null);
   const gagHostRef = useRef<HTMLDivElement>(null);
-  const gagIframeRef = useRef<HTMLIFrameElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   const signedIn = Boolean(purchaseAuth.signedIn);
   const gag = productFreeTicketGag({ signedIn });
-  const gagIsYoutube = isFreeTicketGagYoutube();
   const volumeDb = useUploadedContentVolumeDb();
 
   useEffect(() => {
@@ -103,21 +90,15 @@ export default function FreeTicketModal({
     };
   }, [open]);
 
-  // One Free Explorer clip: free-ticket slot → overall welcome. Never use gag as Jeremy.
+  // Uploaded Jeremy clip only. YouTube intros are skipped so Free never waits on an embed.
   const jeremyVideoUrl = (() => {
-    const free = freeChastiseVideoUrl?.trim();
-    if (free && !isRickrollVideoUrl(free)) return free;
-    const welcome = welcomeVideoUrl?.trim();
-    if (welcome && !isRickrollVideoUrl(welcome)) return welcome;
-    return null;
+    const pick = [freeChastiseVideoUrl, welcomeVideoUrl]
+      .map((u) => u?.trim() || "")
+      .find((u) => u && !isRickrollVideoUrl(u) && !isYoutubeUrl(u) && isDirectVideoUrl(u));
+    return pick || null;
   })();
   const hasJeremy = Boolean(jeremyVideoUrl);
-  const jeremyIsYoutube = Boolean(jeremyVideoUrl && isYoutubeUrl(jeremyVideoUrl));
-  const jeremyIsDirect = Boolean(
-    jeremyVideoUrl && !jeremyIsYoutube && isDirectVideoUrl(jeremyVideoUrl),
-  );
-
-  const showJeremyFile = loadJeremy && hasJeremy && jeremyIsDirect && Boolean(jeremyVideoUrl);
+  const showJeremyFile = loadJeremy && hasJeremy && Boolean(jeremyVideoUrl);
 
   function clearTimers() {
     timersRef.current.forEach((id) => window.clearTimeout(id));
@@ -138,7 +119,6 @@ export default function FreeTicketModal({
     if (!open) return undefined;
 
     clearTimers();
-    const origin = window.location.origin;
     setBackgroundMusicOverlay(true);
 
     requestAnimationFrame(() => {
@@ -147,12 +127,7 @@ export default function FreeTicketModal({
 
     if (!gag.enabled) {
       stopFreeTicketGag();
-      const jeremySrc =
-        hasJeremy && jeremyIsYoutube
-          ? landingVideoEmbedSrc(jeremyVideoUrl, true, { mute: true, origin })
-          : null;
       queueMicrotask(() => {
-        setJeremyEmbedSrc(jeremySrc);
         setLoadJeremy(true);
         setShowJeremy(true);
         setFadeJeremyIn(true);
@@ -164,63 +139,31 @@ export default function FreeTicketModal({
       };
     }
 
-    if (gagIsYoutube) {
-      stopFreeTicketGag();
-      const pinned = landingVideoEmbedSrc(gag.videoUrl, true, {
-        mute: true,
-        origin,
-        startSeconds: gag.startSec,
-      });
-      queueMicrotask(() => setGagEmbedSrc(pinned));
-    } else {
-      requestAnimationFrame(() => {
-        if (gagHostRef.current) attachFreeTicketGag(gagHostRef.current);
-      });
-    }
+    requestAnimationFrame(() => {
+      if (gagHostRef.current) attachFreeTicketGag(gagHostRef.current);
+    });
 
     const fadeAt = Math.max(0, FREE_TICKET_RICKROLL_DURATION_MS - FREE_TICKET_RICKROLL_FADE_MS);
     schedule(() => {
-      if (gagIsYoutube) {
-        killYoutubeEmbed(gagIframeRef.current);
-      } else {
-        cancelFadeRef.current = fadeStopFreeTicketGag(FREE_TICKET_RICKROLL_FADE_MS);
-      }
+      cancelFadeRef.current = fadeStopFreeTicketGag(FREE_TICKET_RICKROLL_FADE_MS);
     }, fadeAt);
 
     schedule(() => {
       setHideRickroll(true);
-      setGagEmbedSrc(null);
       parkFreeTicketGag();
-      killYoutubeEmbed(gagIframeRef.current);
-      if (hasJeremy && jeremyIsYoutube) {
-        setJeremyEmbedSrc(
-          landingVideoEmbedSrc(jeremyVideoUrl, true, {
-            mute: true,
-            origin,
-          }),
-        );
-      }
       setLoadJeremy(true);
       setShowJeremy(true);
       requestAnimationFrame(() => setFadeJeremyIn(true));
     }, FREE_TICKET_RICKROLL_DURATION_MS);
 
-    const gagFrame = gagIframeRef.current;
     return () => {
       clearTimers();
       stopFreeTicketGag();
-      killYoutubeEmbed(gagFrame);
       setBackgroundMusicOverlay(false);
     };
     // Mounted only while open (parent unmounts on close).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-
-  useEffect(() => {
-    if (!open || !gagIsYoutube || !gagEmbedSrc || !gag.enabled) return;
-    const t = window.setTimeout(() => ensureYoutubeAudible(gagIframeRef.current), 400);
-    return () => window.clearTimeout(t);
-  }, [open, gagIsYoutube, gagEmbedSrc, gag.enabled]);
 
   useEffect(() => {
     if (!fadeJeremyIn || !hasJeremy) return;
@@ -229,14 +172,6 @@ export default function FreeTicketModal({
 
     const kick = () => {
       if (cancelled || playSent) return;
-      if (jeremyIsYoutube) {
-        const iframe = jeremyIframeRef.current;
-        if (!iframe?.contentWindow) return;
-        playSent = true;
-        kickYoutubeAudible(iframe);
-        postYoutubeEmbedCommand(iframe, "setVolume", volumeDbToYoutubePercent(jeremyVolumeDb));
-        return;
-      }
       if (jeremyVideoRef.current) {
         playSent = true;
         const el = jeremyVideoRef.current;
@@ -255,7 +190,7 @@ export default function FreeTicketModal({
       window.clearTimeout(t1);
       window.clearTimeout(t2);
     };
-  }, [fadeJeremyIn, hasJeremy, jeremyIsYoutube, jeremyVolumeDb]);
+  }, [fadeJeremyIn, hasJeremy, jeremyVolumeDb]);
 
   if (!open) return null;
 
@@ -301,19 +236,7 @@ export default function FreeTicketModal({
         </div>
 
         <div className="relative aspect-video w-full shrink-0 bg-black sm:mt-0">
-          {gag.enabled && !hideRickroll && !showJeremy && gagIsYoutube && gagEmbedSrc ? (
-            <iframe
-              ref={gagIframeRef}
-              key="free-gag-youtube"
-              className="absolute inset-0 h-full w-full"
-              src={gagEmbedSrc}
-              title="You picked free"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            />
-          ) : null}
-
-          {gag.enabled && !hideRickroll && !showJeremy && !gagIsYoutube ? (
+          {gag.enabled && !hideRickroll && !showJeremy ? (
             <div
               ref={gagHostRef}
               className="absolute inset-0 bg-black"
@@ -324,21 +247,6 @@ export default function FreeTicketModal({
               }}
             />
           ) : null}
-
-          {jeremyEmbedSrc && loadJeremy && jeremyIsYoutube && (
-            <iframe
-              ref={jeremyIframeRef}
-              key="jeremy-yt"
-              className={`absolute inset-0 h-full w-full transition-opacity ease-in-out ${
-                fadeJeremyIn ? "opacity-100" : "pointer-events-none opacity-0"
-              }`}
-              style={{ transitionDuration: `${FREE_TICKET_RICKROLL_FADE_MS}ms` }}
-              src={jeremyEmbedSrc}
-              title="Coach Jeremy"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            />
-          )}
 
           {showJeremyFile && jeremyVideoUrl && (
             <video

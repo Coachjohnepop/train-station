@@ -6,7 +6,6 @@ import FreeTicketModal from "@/components/FreeTicketModal";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
 import ShareFreeTicketButton from "@/components/ShareFreeTicketButton";
 import { usePurchaseAuth } from "@/hooks/usePurchaseAuth";
-import { isFreeTicketGagYoutube } from "@/lib/landing-media";
 import { startFreeTicketGagFromGesture } from "@/lib/play-free-ticket-gag";
 import type { PurchaseAuth } from "@/lib/member-purchase-path";
 
@@ -23,7 +22,7 @@ export default function FreeTicketGiftLanding({
   const purchaseAuth = usePurchaseAuth(purchaseAuthProp);
 
   function openTicket() {
-    if (!purchaseAuth.signedIn && !isFreeTicketGagYoutube()) {
+    if (!purchaseAuth.signedIn) {
       startFreeTicketGagFromGesture();
     }
     setOpen(true);

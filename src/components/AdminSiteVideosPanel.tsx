@@ -17,10 +17,8 @@ import {
   type CoachIntroSlotId,
 } from "@/lib/coach-intro-slots";
 import {
-  FREE_TICKET_GAG_MODE,
   FREE_TICKET_GAG_SRC,
   FREE_TICKET_RICKROLL_DURATION_MS,
-  FREE_TICKET_RICKROLL_URL,
 } from "@/lib/landing-media";
 import type { WelcomeVideosByPlan } from "@/lib/landing-media-store";
 import type {
@@ -1112,15 +1110,10 @@ export default function AdminSiteVideosPanel({
           itself is not uploadable — product-fixed only.
         </p>
         <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--muted)]">
-          Now playing: <code className="text-[var(--text)]">{FREE_TICKET_GAG_MODE}</code>
+          In-app file only: <code className="text-[var(--text)]">{FREE_TICKET_GAG_SRC}</code>
           {" · "}
-          <code className="text-[var(--text)]">
-            {FREE_TICKET_GAG_MODE === "youtube" ? FREE_TICKET_RICKROLL_URL : FREE_TICKET_GAG_SRC}
-          </code>
-          {" · "}
-          {Math.round(FREE_TICKET_RICKROLL_DURATION_MS / 1000)}s. Emergency flip: Vercel{" "}
-          <code className="text-[var(--text)]">NEXT_PUBLIC_FREE_TICKET_GAG_MODE=youtube</code> +
-          redeploy.
+          {Math.round(FREE_TICKET_RICKROLL_DURATION_MS / 1000)}s. YouTube is not used here. It
+          takes too long to start.
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm">
@@ -1149,9 +1142,7 @@ export default function AdminSiteVideosPanel({
             <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-black">
               <PlayableVideoFrame
                 className="aspect-video w-full max-h-[28rem]"
-                videoUrl={
-                  FREE_TICKET_GAG_MODE === "youtube" ? FREE_TICKET_RICKROLL_URL : FREE_TICKET_GAG_SRC
-                }
+                videoUrl={FREE_TICKET_GAG_SRC}
                 title="Free ticket gag"
                 autoplay={false}
                 duckBackgroundMusic

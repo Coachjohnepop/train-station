@@ -386,7 +386,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Still on Eco (infra):** Stripe Live keys (`pk_live_51Su…`). Checkout says Eco Delight Coffee. Billing ~$803 available / $125 MRR is Eco’s account. Venmo already Jeremy. Partners / coffee affiliate **keep** Eco on purpose.
 
-**Shipped 2026-08-14 (after EOD):** in-app 5s chorus + `/free` share loop (`47faf4d`). Prod gag is the local file, not YouTube. `/free` 200, OG is the Free ticket art, chorus mp4/mp3 live. Kill switch: Production `NEXT_PUBLIC_FREE_TICKET_GAG_MODE=youtube` + redeploy. Unblocked prod typecheck with `1a0e992`.
+**Shipped 2026-08-14 (after EOD):** in-app 5s chorus + `/free` share loop. Prod gag is the local file. Free tap never loads YouTube (too slow). Jeremy after gag only if the intro is an uploaded file. `/free` 200, OG is the Free ticket art.
 
 ### Workouts are Postgres only
 
@@ -461,7 +461,7 @@ Leave iOS/Android pull-to-refresh **off** on member screens (`DisablePullToRefre
 - $400 commission Connect (after Jeremy is merchant)  
 - Eco name on Stripe checkout (until key swap)  
 - Facebook / TikTok / Instagram **login** (share links only)  
-- **Rickroll clip license** — in-app 5s chorus is gray on purpose. Plays only on **Free Explorer**. If a rights holder writes: same day Production **`NEXT_PUBLIC_FREE_TICKET_GAG_MODE=youtube`** and redeploy **or** Admin → Videos gag kill switch.  
+- **Rickroll clip license** — in-app 5s chorus is gray on purpose. Plays only on **Free Explorer**. If a rights holder writes: Admin → Videos gag kill switch (do not flip back to YouTube — embeds are too slow).  
 
 **Re-run onboard smoke anytime:**  
 `BASE_URL=https://www.thetrainstation.co node scripts/onboard-tier-loop.mjs`
@@ -580,7 +580,7 @@ John reported Admin Billing shows **his** Stripe balances. That means Production
 
 | Rule | Decision |
 |------|----------|
-| Guest Free | Always **5s in-app chorus file** → Jeremy free-ticket intro. Emergency flip: `NEXT_PUBLIC_FREE_TICKET_GAG_MODE=youtube` (chorus @ 43s) |
+| Guest Free | Always **5s in-app chorus file** → Jeremy only if that intro is an uploaded file. No YouTube on this path. |
 | Signed-in | **No gag** — straight to Jeremy intro |
 | Free product | Real Explorer path (~20% of Coach Class capabilities), not joke-only |
 | Autoplay | Yes — mute-first then unMute ASAP after Free tap |

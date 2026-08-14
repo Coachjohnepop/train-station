@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import FreeTicketModal from "@/components/FreeTicketModal";
 import MembershipTicketGrid from "@/components/MembershipTicketGrid";
 import { usePurchaseAuth } from "@/hooks/usePurchaseAuth";
-import { isFreeTicketGagYoutube, type FreeTicketGagConfig } from "@/lib/landing-media";
+import type { FreeTicketGagConfig } from "@/lib/landing-media";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 import type { TicketTierId } from "@/lib/landing-tickets";
 import { TICKET_TIERS } from "@/lib/landing-tickets";
@@ -30,11 +30,11 @@ export default function LandingTicketPicker({
   const purchaseAuth = usePurchaseAuth(purchaseAuthProp);
 
   useEffect(() => {
-    if (!isFreeTicketGagYoutube()) preloadFreeTicketGag();
+    preloadFreeTicketGag();
   }, []);
 
   function openFreeTicket() {
-    if (!purchaseAuth.signedIn && !isFreeTicketGagYoutube()) {
+    if (!purchaseAuth.signedIn) {
       startFreeTicketGagFromGesture();
     }
     setFreeModalOpen(true);
