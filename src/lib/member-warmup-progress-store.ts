@@ -2,6 +2,7 @@ import "server-only";
 
 import path from "path";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import { isDatabaseConfigured } from "@/lib/database-config";
 
 export type WarmupProgressEntry = {
   userId: string;
@@ -54,6 +55,10 @@ function normalizeEntry(raw: unknown, userId: string, sessionDate: string): Warm
 }
 
 async function getStore(): Promise<ProgressStore> {
+  if (isDatabaseConfigured()) {
+    if (!memoryStore) memoryStore = {};
+    return memoryStore;
+  }
   const hydrated = await hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
@@ -95,14 +100,16 @@ export async function saveWarmupProgress(input: {
     updatedAt: new Date().toISOString(),
   };
   store[key] = next;
-  await persistJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    data: store,
-    setMemory: (v) => {
-      memoryStore = v as ProgressStore;
-    },
-  });
+  if (!isDatabaseConfigured()) {
+    await persistJsonStore({
+      blobPath: BLOB_PATH,
+      localPath: DEV_FILE,
+      data: store,
+      setMemory: (v) => {
+        memoryStore = v as ProgressStore;
+      },
+    });
+  }
   return next;
 }
 

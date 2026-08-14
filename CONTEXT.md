@@ -388,6 +388,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Uncommitted (this machine only):** in-app 5s chorus + `/free` share loop (`src/app/free/`, `public/videos/`, FreeTicketModal, etc.). Prod gag is still YouTube Rick 5s @ 0:43.
 
+### Workouts are Postgres only
+
+When a real `DATABASE_URL` is set, program days, workout lines, and member workout views come from Prisma. Seed blob (`demo/seed-data.json`) and schedule-override blob are not read or written. Demo JSON is local-only if Postgres is missing.
+
 ### Paid re-onboard checkout
 
 If someone is kicked back to setup and already paid this period, login goes to ticket picker. They tap their seat again. Checkout shows **Continue already paid** only after `resolvePaidCoverage` matches email + paid stamp + ledger/grant still in period. Different ticket still charges. File: `src/lib/paid-coverage.ts`.

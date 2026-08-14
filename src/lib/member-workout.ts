@@ -146,9 +146,10 @@ export async function getMemberWorkoutById(
     try {
       const fromDb = await getMemberWorkoutFromPrisma(workoutId, opts);
       if (fromDb) return fromDb;
-    } catch {
-      /* fall through to seed */
+    } catch (e) {
+      console.error("[member-workout] postgres read failed", e);
     }
+    return null;
   }
 
   const data = (await getDemoSeed({ preferFresh: true })) as any;

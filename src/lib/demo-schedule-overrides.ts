@@ -1,5 +1,6 @@
 import path from "path";
 import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
+import { isDatabaseConfigured } from "@/lib/database-config";
 
 export type ScheduleDayOverride = {
   dayId: string;
@@ -31,6 +32,11 @@ function setMemory(store: OverrideStore) {
 }
 
 export async function hydrateScheduleOverrides(): Promise<OverrideStore> {
+  if (isDatabaseConfigured()) {
+    const empty = emptyStore();
+    setMemory(empty);
+    return empty;
+  }
   return hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
@@ -47,6 +53,10 @@ function readStore(): OverrideStore {
 }
 
 async function writeStore(store: OverrideStore) {
+  if (isDatabaseConfigured()) {
+    setMemory(emptyStore());
+    return;
+  }
   await persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,

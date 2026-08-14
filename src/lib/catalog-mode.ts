@@ -7,6 +7,11 @@ export function isCoachCatalogDemo(): boolean {
   return url.includes("dummy");
 }
 
+/** Workouts, program days, and exercise lines live in Postgres. No blob catalog. */
+export function catalogUsesDatabase(): boolean {
+  return !isCoachCatalogDemo();
+}
+
 export function catalogStorageLabel(): "demo" | "database" {
   return isCoachCatalogDemo() ? "demo" : "database";
 }

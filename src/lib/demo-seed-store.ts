@@ -8,6 +8,7 @@ import {
   readLocalJson,
   writeBlobJson,
 } from "@/lib/demo-json-blob";
+import { isDatabaseConfigured } from "@/lib/database-config";
 
 const SEED_FILE = path.join(process.cwd(), "prisma", "seed-data.json");
 const BLOB_PATH = "demo/seed-data.json";
@@ -46,6 +47,12 @@ function setMemory(data: DemoSeedData) {
 }
 
 export async function hydrateDemoSeed(opts?: { preferFresh?: boolean }): Promise<DemoSeedData> {
+  // Prod catalog is Postgres. Do not serve workouts from Vercel Blob.
+  if (isDatabaseConfigured()) {
+    const bundled = loadBundledSeed();
+    setMemory(bundled);
+    return bundled;
+  }
   // preferFresh must return blob/disk as-is — never overlay stale instance memory
   // (on Vercel, warm lambdas kept old programDayOptions and masked coach edits).
   return hydrateJsonStore({
@@ -81,6 +88,10 @@ function seedProgramSnapshot(seed: DemoSeedData): string {
 }
 
 export async function persistDemoSeed(data: DemoSeedData): Promise<{ blobSaved: boolean }> {
+  if (isDatabaseConfigured()) {
+    setMemory(data);
+    return { blobSaved: true };
+  }
   const expected = seedProgramSnapshot(data);
   let { blobSaved } = await persistJsonStore({
     blobPath: BLOB_PATH,

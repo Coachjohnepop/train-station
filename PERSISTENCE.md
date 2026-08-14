@@ -9,6 +9,7 @@
 - **Do not add new JSON- or Blob-only stores.** New tables + migrations instead.
 - **Object storage (Blob)** is fine for **binary media** (images, short videos); **rows that point at them live in the DB** (e.g. `UserMeasurement.photoUrl`, `MemberProfile.beforePhotoUrl`).
 - **Seed / `*.dev.json`:** snapshots for shipping content with git — not the runtime source of truth when DB is configured.
+- **Workouts:** Postgres only when the database is configured. Do not read or write `demo/seed-data.json` / schedule-override blobs for live catalog or member Today.
 - **Measurements:** `UserMeasurement` (each check-in + now photo URL); originals derived from history; identity extras on `MemberProfile` / `User`.
 - **Notifications (email / push / SMS):** must leave a row in Postgres when we try to send.
   - SMS → `SmsLog` (+ `SmsDeliveryEvent`)
