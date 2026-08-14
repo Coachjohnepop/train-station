@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MemberScoreCelebrateDetail } from "@/lib/member-score-celebrate";
-import { confettiOriginFromElement, runConfetti } from "@/lib/workout-confetti";
+import { buzzScoreCelebrate, confettiOriginFromElement, runConfetti } from "@/lib/workout-confetti";
 
 /** Grow phase: header-sized → near full-width 3D gold +points */
 const GROW_MS = 1500;
@@ -145,6 +145,9 @@ export default function IntakeBookingCelebrate() {
       setDetail(normalized);
       setPhase("grow");
       setFlyStyle({});
+      buzzScoreCelebrate(
+        normalized.celebration === "workout-complete" ? "workout-complete" : "standard",
+      );
 
       // Confetti from the number once it has laid out and started growing
       timersRef.current.push(

@@ -92,6 +92,21 @@ export function runConfetti(
   return () => cancelAnimationFrame(raf);
 }
 
+/** Phone buzz with the score pop. Needs a tap in the same turn on most browsers. */
+export function buzzScoreCelebrate(kind: "standard" | "workout-complete" = "standard") {
+  if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  try {
+    if (kind === "workout-complete") {
+      navigator.vibrate([45, 55, 90, 40, 130]);
+    } else {
+      navigator.vibrate(40);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Quick burst for coach last-set checkoffs — origin is viewport coords (scroll-safe). */
 export function fireWorkoutConfetti(origin?: ConfettiOrigin, durationMs = 1600) {
   if (typeof window === "undefined") return;
