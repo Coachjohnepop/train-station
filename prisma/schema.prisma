@@ -687,6 +687,10 @@ model MemberProfile {
   gender                      String?
   /// Sheet identity age in years (optional shortcut vs birthdate).
   ageYears                    Int?
+  /// Weight-loss target in the member's words (women onboard).
+  weightLossGoal              String?
+  /// Target window, e.g. "12 weeks" (women onboard).
+  weightLossTimeline          String?
   notes                       String?   @db.Text
   onboardingComplete          Boolean   @default(false)
   completedAt                 DateTime?

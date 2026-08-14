@@ -25,6 +25,11 @@ import type { ProgramStartSettings } from "@/lib/program-start-settings";
 import { weekdayLabel } from "@/lib/program-start-settings";
 import { membershipThemeTierFromPlan } from "@/lib/membership-theme";
 import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
+import {
+  WEIGHT_LOSS_TIMELINES,
+  isWomanOnboardPath,
+  type OnboardGender,
+} from "@/lib/onboard-path";
 
 async function saveProgress(body: Record<string, unknown>) {
   await fetch("/api/member/onboard-progress", {
@@ -79,7 +84,11 @@ export default function OnboardingWizard({
     }
   }, [currentStep, stepReady, stepStorageKey]);
 
+  const [gender, setGender] = useState<OnboardGender | null>(null);
   const [measurements, setMeasurements] = useState({ weight: "", notes: "" });
+  const [weightLossGoal, setWeightLossGoal] = useState("");
+  const [weightLossTimeline, setWeightLossTimeline] = useState("");
+  const womanPath = isWomanOnboardPath(gender);
   const [location, setLocation] = useState({ city: "", state: "" });
   const [sms, setSms] = useState({ phone: "", dailyReminderTime: "07:30" });
   const [programStartDate, setProgramStartDate] = useState(() =>
@@ -96,7 +105,10 @@ export default function OnboardingWizard({
     if (currentStep === 4) {
       await saveProgress({
         plan,
-        weightLbs: measurements.weight || null,
+        gender,
+        weightLbs: womanPath ? null : measurements.weight || null,
+        weightLossGoal: womanPath ? weightLossGoal.trim() || null : null,
+        weightLossTimeline: womanPath ? weightLossTimeline.trim() || null : null,
         notes: measurements.notes || null,
       });
     }
@@ -129,7 +141,10 @@ export default function OnboardingWizard({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          measurements,
+          measurements: womanPath ? { notes: measurements.notes } : measurements,
+          gender: gender || undefined,
+          weightLossGoal: womanPath ? weightLossGoal.trim() || undefined : undefined,
+          weightLossTimeline: womanPath ? weightLossTimeline.trim() || undefined : undefined,
           notes: measurements.notes,
           location,
           phone: sms.phone,
@@ -283,27 +298,105 @@ export default function OnboardingWizard({
 
         {currentStep === 4 && (
           <>
-            <h2 className="text-lg font-semibold">Quick measurements</h2>
-            <p className="text-sm text-[var(--muted)]">Optional — helps your coach track progress.</p>
+            <h2 className="text-lg font-semibold">
+              {womanPath ? "Your goals" : "Quick measurements"}
+            </h2>
+            <p className="text-sm text-[var(--muted)]">
+              {womanPath
+                ? "Tell Jeremy what you want to lose and by when — no scale number needed."
+                : "Optional — helps your coach track progress."}
+            </p>
             <div className="space-y-3 pt-1">
               <div>
-                <label className="text-xs text-[var(--muted)] block mb-1">Current weight (lbs)</label>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={measurements.weight}
-                  onChange={(e) => setMeasurements({ ...measurements, weight: e.target.value })}
-                  placeholder="e.g. 185"
-                  className="input w-full"
-                />
+                <p className="mb-1.5 block text-xs text-[var(--muted)]">I am</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["man", "woman"] as const).map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setGender(option)}
+                      className={`rounded-xl border px-3 py-2.5 text-sm font-semibold capitalize ${
+                        gender === option
+                          ? "border-accent bg-accent/15 text-[var(--text)]"
+                          : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)]"
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
               </div>
+              {womanPath ? (
+                <>
+                  <div>
+                    <label className="mb-1 block text-xs text-[var(--muted)]">
+                      Weight loss goal
+                    </label>
+                    <input
+                      type="text"
+                      value={weightLossGoal}
+                      onChange={(e) => setWeightLossGoal(e.target.value)}
+                      placeholder="e.g. Lose 20 pounds"
+                      className="input w-full"
+                    />
+                  </div>
+                  <div>
+                    <p className="mb-1.5 block text-xs text-[var(--muted)]">Timeline</p>
+                    <div className="flex flex-wrap gap-2">
+                      {WEIGHT_LOSS_TIMELINES.map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => setWeightLossTimeline(option)}
+                          className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${
+                            weightLossTimeline === option
+                              ? "border-accent bg-accent/15 text-[var(--text)]"
+                              : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)]"
+                          }`}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      type="text"
+                      value={
+                        (WEIGHT_LOSS_TIMELINES as readonly string[]).includes(weightLossTimeline)
+                          ? ""
+                          : weightLossTimeline
+                      }
+                      onChange={(e) => setWeightLossTimeline(e.target.value)}
+                      placeholder="Or type your own — e.g. by Thanksgiving"
+                      className="input mt-2 w-full"
+                    />
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <label className="mb-1 block text-xs text-[var(--muted)]">
+                    Current weight (lbs)
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={measurements.weight}
+                    onChange={(e) => setMeasurements({ ...measurements, weight: e.target.value })}
+                    placeholder="e.g. 185"
+                    className="input w-full"
+                  />
+                </div>
+              )}
               <div>
-                <label className="text-xs text-[var(--muted)] block mb-1">Notes (optional)</label>
+                <label className="mb-1 block text-xs text-[var(--muted)]">Notes (optional)</label>
                 <textarea
                   value={measurements.notes}
                   onChange={(e) => setMeasurements({ ...measurements, notes: e.target.value })}
-                  placeholder="Injuries, goals, preferences…"
-                  className="input w-full h-20"
+                  placeholder={
+                    womanPath
+                      ? "Injuries, preferences, what has or hasn’t worked…"
+                      : "Injuries, goals, preferences…"
+                  }
+                  className="input h-20 w-full"
                 />
               </div>
             </div>

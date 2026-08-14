@@ -24,6 +24,7 @@ import { localTodayIso } from "@/lib/program-calendar";
 import { getCoachSettings } from "@/lib/coach-settings-store";
 import { programStartSettingsFromCoach } from "@/lib/program-start-settings";
 import { resolveEffectiveMembershipPlan } from "@/lib/signup-plans";
+import { isWomanOnboardPath, normalizeOnboardGender } from "@/lib/onboard-path";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
@@ -33,6 +34,9 @@ const schema = z.object({
       notes: z.string().optional(),
     })
     .optional(),
+  gender: z.string().max(20).optional(),
+  weightLossGoal: z.string().max(240).optional(),
+  weightLossTimeline: z.string().max(80).optional(),
   notes: z.string().optional(),
   location: z
     .object({
@@ -60,6 +64,9 @@ export async function POST(request: Request) {
 
   const {
     measurements,
+    gender,
+    weightLossGoal,
+    weightLossTimeline,
     notes,
     location,
     phone,
@@ -68,6 +75,8 @@ export async function POST(request: Request) {
     programStartDate,
     plan,
   } = body.data;
+  const genderNorm = normalizeOnboardGender(gender);
+  const womanPath = isWomanOnboardPath(genderNorm);
 
   const todayIso = localTodayIso();
   const coachSettings = await getCoachSettings();
@@ -112,7 +121,10 @@ export async function POST(request: Request) {
   const profile = await updateMemberProfile(session.id, {
     phone: phone || null,
     dailyReminderTime: dailyReminderTime || null,
-    weightLbs: measurements?.weight || null,
+    weightLbs: womanPath ? null : measurements?.weight || null,
+    gender: genderNorm,
+    weightLossGoal: womanPath ? weightLossGoal?.trim() || null : null,
+    weightLossTimeline: womanPath ? weightLossTimeline?.trim() || null : null,
     notes: measurements?.notes || notes || null,
     city: location?.city || null,
     state: location?.state || null,
@@ -145,9 +157,16 @@ Ticket plan: ${profile.plan}
 Program context: ${programSlug || "general"}
 Program start (Day 1): ${startIso}
 
-Measurements:
+${
+    womanPath
+      ? `Goals:
+- Weight loss: ${weightLossGoal?.trim() || "not provided"}
+- Timeline: ${weightLossTimeline?.trim() || "not provided"}
+- Notes: ${measurements?.notes || notes || "none"}`
+      : `Measurements:
 - Weight: ${measurements?.weight || "not provided"} lbs
-- Notes: ${measurements?.notes || notes || "none"}
+- Notes: ${measurements?.notes || notes || "none"}`
+  }
 
 Location: ${location?.city || "—"}, ${location?.state || "—"}
 SMS phone: ${phone || "not set"}
@@ -191,6 +210,10 @@ Coach intro booking: on dashboard after setup
     programSlug: enrolledSlug,
     equipmentSummary,
     phone: phone || profile.phone || null,
+    gender: genderNorm,
+    weightLbs: womanPath ? null : measurements?.weight || null,
+    weightLossGoal: womanPath ? weightLossGoal?.trim() || null : null,
+    weightLossTimeline: womanPath ? weightLossTimeline?.trim() || null : null,
   });
 
   await awardGamificationPoints({

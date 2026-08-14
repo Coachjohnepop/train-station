@@ -292,6 +292,10 @@ export async function notifyCoachNewMember(params: {
   programSlug?: string | null;
   equipmentSummary?: string | null;
   phone?: string | null;
+  gender?: string | null;
+  weightLbs?: string | null;
+  weightLossGoal?: string | null;
+  weightLossTimeline?: string | null;
 }): Promise<void> {
   const startLine = params.programStartDate?.trim()
     ? `\nProgram start (Day 1): ${params.programStartDate.trim()}`
@@ -303,6 +307,13 @@ export async function notifyCoachNewMember(params: {
     ? `\nHome equipment: ${params.equipmentSummary.trim()}`
     : "";
   const phoneLine = params.phone?.trim() ? `\nPhone: ${params.phone.trim()}` : "";
+  const genderLine = params.gender?.trim() ? `\nPath: ${params.gender.trim()}` : "";
+  const goalLine = params.weightLossGoal?.trim()
+    ? `\nWeight-loss goal: ${params.weightLossGoal.trim()}` +
+      (params.weightLossTimeline?.trim() ? ` · ${params.weightLossTimeline.trim()}` : "")
+    : params.weightLbs?.trim()
+      ? `\nStarting weight: ${params.weightLbs.trim()} lbs`
+      : "";
 
   await notifyCoachForMemberEvent({
     event: "newMember",
@@ -312,7 +323,7 @@ export async function notifyCoachNewMember(params: {
     subject: "New member finished onboarding",
     message:
       `${params.name} completed setup and is ready for a 15-minute intake.\n` +
-      `Plan: ${params.plan}${programLine}${startLine}${equipLine}${phoneLine}`,
+      `Plan: ${params.plan}${genderLine}${programLine}${startLine}${equipLine}${phoneLine}${goalLine}`,
     deepLink: `${appBaseUrl()}/admin/members`,
   });
 

@@ -12,6 +12,9 @@ const patchSchema = z.object({
   phone: z.string().max(30).nullable().optional(),
   dailyReminderTime: z.string().max(10).nullable().optional(),
   weightLbs: z.string().max(20).nullable().optional(),
+  gender: z.string().max(20).nullable().optional(),
+  weightLossGoal: z.string().max(240).nullable().optional(),
+  weightLossTimeline: z.string().max(80).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
   city: z.string().max(80).nullable().optional(),
   state: z.string().max(2).nullable().optional(),
@@ -41,6 +44,11 @@ export async function PATCH(request: Request) {
     ...(patch.phone !== undefined ? { phone: patch.phone } : {}),
     ...(patch.dailyReminderTime !== undefined ? { dailyReminderTime: patch.dailyReminderTime } : {}),
     ...(patch.weightLbs !== undefined ? { weightLbs: patch.weightLbs } : {}),
+    ...(patch.gender !== undefined ? { gender: patch.gender } : {}),
+    ...(patch.weightLossGoal !== undefined ? { weightLossGoal: patch.weightLossGoal } : {}),
+    ...(patch.weightLossTimeline !== undefined
+      ? { weightLossTimeline: patch.weightLossTimeline }
+      : {}),
     ...(patch.notes !== undefined ? { notes: patch.notes } : {}),
     ...(patch.city !== undefined ? { city: patch.city } : {}),
     ...(patch.state !== undefined ? { state: patch.state } : {}),

@@ -11,6 +11,9 @@ export type MemberProfile = {
   phone: string | null;
   dailyReminderTime: string | null;
   weightLbs: string | null;
+  gender: string | null;
+  weightLossGoal: string | null;
+  weightLossTimeline: string | null;
   notes: string | null;
   city: string | null;
   state: string | null;
@@ -56,6 +59,9 @@ export type MemberProfilePatch = Partial<
     | "phone"
     | "dailyReminderTime"
     | "weightLbs"
+    | "gender"
+    | "weightLossGoal"
+    | "weightLossTimeline"
     | "notes"
     | "city"
     | "state"
