@@ -354,8 +354,8 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-14 EOD  
-**Status:** John signed off. Ali is reset to re-onboard (still paid). Member pull-down reload stays **off**. Set checkoffs persist. Workouts are Postgres only. Gag + `/free` still local / uncommitted. Stripe cutover still first for money.  
+**Date:** 2026-08-14 (gag ship)  
+**Status:** John signed off earlier. **Free gag + `/free` share is on prod** (`47faf4d`). Ali is reset to re-onboard (still paid). Member pull-down reload stays **off**. Set checkoffs persist. Workouts are Postgres only. Stripe cutover still first for money.  
 **Rule reaffirmed:** **any new module / data element → Postgres first** (see Durable product rules).  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
 **Branches:** `preview` / `main` (same tip after this session) · prod: https://www.thetrainstation.co  
@@ -386,7 +386,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Still on Eco (infra):** Stripe Live keys (`pk_live_51Su…`). Checkout says Eco Delight Coffee. Billing ~$803 available / $125 MRR is Eco’s account. Venmo already Jeremy. Partners / coffee affiliate **keep** Eco on purpose.
 
-**Uncommitted (this machine only):** in-app 5s chorus + `/free` share loop (`src/app/free/`, `public/videos/`, FreeTicketModal, etc.). Prod gag is still YouTube Rick 5s @ 0:43.
+**Shipped 2026-08-14 (after EOD):** in-app 5s chorus + `/free` share loop (`47faf4d`). Prod gag is the local file, not YouTube. Kill switch: Production `NEXT_PUBLIC_FREE_TICKET_GAG_MODE=youtube` + redeploy.
 
 ### Workouts are Postgres only
 
@@ -436,7 +436,7 @@ Leave iOS/Android pull-to-refresh **off** on member screens (`DisablePullToRefre
 3. **Ali** — she re-onboards: tickets → Continue already paid → Woman → goals → book Jeremy. Then Today 14-day preview. Bella still needs onboard.  
 4. **Scale back Ali 14-day preview** after Jeremy calendar check (`src/lib/member-schedule-preview.ts`).  
 5. **John admin password** — use the Forgot password mail to `john@thetrainstation.co`.  
-6. **Ship gag + `/free`** (or it only lives here): commit chorus + share loop; phone check signed-out Safari; iMessage `/free` OG must be Train Station ticket.  
+6. **Gag shipped** (`47faf4d`) — still do the phone check: signed-out Safari Free tap, then iMessage `https://www.thetrainstation.co/free` OG must be the Train Station ticket (not YouTube).  
 7. **Web Push** — still `skipped_no_recipient` (0 staff device subs). Jeremy Home Screen → Enable alerts.  
 8. **Zoom** — Jeremy must Connect as himself for live class.  
 9. Queue cleanup: `loop-*@example.com`, Stripe E2E leftover. Weekly/dinner video slots still empty.
@@ -505,8 +505,8 @@ Leave iOS/Android pull-to-refresh **off** on member screens (`DisablePullToRefre
 | Free Tour top nav | Guests: top **Free Tour** (opens overlay); hamburger Free Tour + Sign in; kill hero CTA pulse | `005935e` |
 | Message groups access | Coach Class = Coach 1:1 + **enrolled only**; Free = Coach only; no always-on Station/Adult | `63976bc` |
 | Rickroll mobile | Pin gag src; mute→single unMute; never dual YT iframes (no chorus restart) | `f2e92d3` |
-| In-app chorus | Free gag is local 5s file (`/videos/free-ticket-chorus.mp4` + mp3). Play starts on the Free tap; YouTube iframe gone. | uncommitted |
-| Free share loop | After gag: **Send this Free ticket to a friend**. Share URL is `/free` (Train Station OG + ticket art — not YouTube). Recipient taps Open → same gag. UTM `gag / share / free_ticket`. | uncommitted |
+| In-app chorus | Free gag is local 5s file (`/videos/free-ticket-chorus.mp4` + mp3). Play starts on the Free tap; YouTube iframe gone. | `47faf4d` |
+| Free share loop | After gag: **Send this Free ticket to a friend**. Share URL is `/free` (Train Station OG + ticket art — not YouTube). Recipient taps Open → same gag. UTM `gag / share / free_ticket`. | `47faf4d` |
 
 ### Session 2026-08-05 — mobile free signup polish (still true / prior)
 
@@ -580,7 +580,7 @@ John reported Admin Billing shows **his** Stripe balances. That means Production
 
 | Rule | Decision |
 |------|----------|
-| Guest Free | Always **10s classic Rickroll** (chorus @ 43s) → Jeremy free-ticket intro |
+| Guest Free | Always **5s in-app chorus file** → Jeremy free-ticket intro. Emergency flip: `NEXT_PUBLIC_FREE_TICKET_GAG_MODE=youtube` (chorus @ 43s) |
 | Signed-in | **No gag** — straight to Jeremy intro |
 | Free product | Real Explorer path (~20% of Coach Class capabilities), not joke-only |
 | Autoplay | Yes — mute-first then unMute ASAP after Free tap |
@@ -602,7 +602,7 @@ John reported Admin Billing shows **his** Stripe balances. That means Production
 ### Jeremy next (content, not code)
 
 1. **Admin → Videos** — upload intros, assign Overall / Free-ticket / Coach Class / Business / etc., Save.  
-2. Confirm free path: gag ~10s → free-ticket intro.  
+2. Confirm free path: gag ~5s in-app chorus → free-ticket intro.  
 3. Fill empty program week shells when ready.  
 4. Session times ops: 11–12, 1–2, 2:45–3:45.
 
