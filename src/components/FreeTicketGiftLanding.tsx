@@ -1,21 +1,27 @@
 "use client";
 
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
 import FreeTicketModal from "@/components/FreeTicketModal";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
 import ShareFreeTicketButton from "@/components/ShareFreeTicketButton";
 import { usePurchaseAuth } from "@/hooks/usePurchaseAuth";
-import { startFreeTicketGagFromGesture } from "@/lib/play-free-ticket-gag";
+import {
+  FREE_TICKET_GAG_HOST_ID,
+  startFreeTicketGagFromGesture,
+} from "@/lib/play-free-ticket-gag";
 import type { PurchaseAuth } from "@/lib/member-purchase-path";
 
 export default function FreeTicketGiftLanding({
   freeChastiseVideoUrl = null,
   welcomeVideoUrl = null,
+  gagFullSrc = undefined,
   purchaseAuth: purchaseAuthProp,
 }: {
   freeChastiseVideoUrl?: string | null;
   welcomeVideoUrl?: string | null;
+  gagFullSrc?: string;
   purchaseAuth?: PurchaseAuth;
 }) {
   const [open, setOpen] = useState(false);
@@ -23,7 +29,9 @@ export default function FreeTicketGiftLanding({
 
   function openTicket() {
     if (!purchaseAuth.signedIn) {
-      startFreeTicketGagFromGesture();
+      flushSync(() => setOpen(true));
+      startFreeTicketGagFromGesture(document.getElementById(FREE_TICKET_GAG_HOST_ID));
+      return;
     }
     setOpen(true);
   }
@@ -72,19 +80,18 @@ export default function FreeTicketGiftLanding({
         See Coach Class &amp; 1st Class
       </Link>
 
-      {open ? (
-        <FreeTicketModal
-          open
-          freeChastiseVideoUrl={freeChastiseVideoUrl}
-          welcomeVideoUrl={welcomeVideoUrl}
-          purchaseAuth={purchaseAuth}
-          onClose={() => setOpen(false)}
-          onUpgrade={() => {
-            setOpen(false);
-            window.location.href = "/join#tickets";
-          }}
-        />
-      ) : null}
+      <FreeTicketModal
+        open={open}
+        freeChastiseVideoUrl={freeChastiseVideoUrl}
+        welcomeVideoUrl={welcomeVideoUrl}
+        purchaseAuth={purchaseAuth}
+        gagFullSrc={gagFullSrc}
+        onClose={() => setOpen(false)}
+        onUpgrade={() => {
+          setOpen(false);
+          window.location.href = "/join#tickets";
+        }}
+      />
     </div>
   );
 }

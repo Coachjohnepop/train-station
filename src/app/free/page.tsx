@@ -65,6 +65,7 @@ export default async function FreeTicketSharePage() {
       <FreeTicketGiftLanding
         freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
         welcomeVideoUrl={landingVideos.welcomeVideoUrl}
+        gagFullSrc={landingVideos.freeTicketFullUrl}
       />
 
       <LandingSiteFooter />

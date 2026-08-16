@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import EmbeddedStripeCheckoutModal from "@/components/EmbeddedStripeCheckoutModal";
@@ -9,6 +10,7 @@ import FreeTicketModal from "@/components/FreeTicketModal";
 import MembershipPaymentCard from "@/components/MembershipPaymentCard";
 import MembershipTicketGrid from "@/components/MembershipTicketGrid";
 import {
+  FREE_TICKET_GAG_HOST_ID,
   preloadFreeTicketGag,
   startFreeTicketGagFromGesture,
 } from "@/lib/play-free-ticket-gag";
@@ -95,7 +97,8 @@ function MemberCheckoutInner() {
   const [landingVideos, setLandingVideos] = useState<{
     freeChastiseVideoUrl: string | null;
     welcomeVideoUrl: string | null;
-  }>({ freeChastiseVideoUrl: null, welcomeVideoUrl: null });
+    freeTicketFullUrl: string | null;
+  }>({ freeChastiseVideoUrl: null, welcomeVideoUrl: null, freeTicketFullUrl: null });
   const [promoCode, setPromoCode] = useState(promoFromUrl.toUpperCase());
   const [promoHint, setPromoHint] = useState<string | null>(
     promoFromUrl ? `Code ${promoFromUrl.toUpperCase()} will apply at checkout.` : null,
@@ -168,6 +171,8 @@ function MemberCheckoutInner() {
           freeChastiseVideoUrl:
             typeof body.freeChastiseVideoUrl === "string" ? body.freeChastiseVideoUrl : null,
           welcomeVideoUrl: typeof body.welcomeVideoUrl === "string" ? body.welcomeVideoUrl : null,
+          freeTicketFullUrl:
+            typeof body.freeTicketFullUrl === "string" ? body.freeTicketFullUrl : null,
         });
       })
       .catch(() => {});
@@ -468,8 +473,8 @@ function MemberCheckoutInner() {
                     : "Tap a ticket. Same train seats as home. We'll take you to pay, or Today if you stay free."
                 }
                 onFreeSelect={() => {
-                  startFreeTicketGagFromGesture();
-                  setFreeModalOpen(true);
+                  flushSync(() => setFreeModalOpen(true));
+                  startFreeTicketGagFromGesture(document.getElementById(FREE_TICKET_GAG_HOST_ID));
                 }}
               />
             )}
@@ -490,18 +495,17 @@ function MemberCheckoutInner() {
         )}
       </div>
 
-      {freeModalOpen ? (
-        <FreeTicketModal
-          open
-          forceGag
-          alreadyPaid={alreadyPaidPass}
-          freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
-          welcomeVideoUrl={landingVideos.welcomeVideoUrl}
-          purchaseAuth={{ signedIn: true }}
-          onClose={() => setFreeModalOpen(false)}
-          onUpgrade={() => setFreeModalOpen(false)}
-        />
-      ) : null}
+      <FreeTicketModal
+        open={freeModalOpen}
+        forceGag
+        alreadyPaid={alreadyPaidPass}
+        freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
+        welcomeVideoUrl={landingVideos.welcomeVideoUrl}
+        purchaseAuth={{ signedIn: true }}
+        gagFullSrc={landingVideos.freeTicketFullUrl || undefined}
+        onClose={() => setFreeModalOpen(false)}
+        onUpgrade={() => setFreeModalOpen(false)}
+      />
 
       {publishableKey && (
         <EmbeddedStripeCheckoutModal

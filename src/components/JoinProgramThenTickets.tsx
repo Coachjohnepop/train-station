@@ -12,10 +12,12 @@ import { TOP_LEVEL_PROGRAMS } from "@/lib/programs";
 export default function JoinProgramThenTickets({
   freeChastiseVideoUrl = null,
   welcomeVideoUrl = null,
+  gagFullSrc = undefined,
   fromTour = false,
 }: {
   freeChastiseVideoUrl?: string | null;
   welcomeVideoUrl?: string | null;
+  gagFullSrc?: string;
   fromTour?: boolean;
 }) {
   const [program, setProgram] = useState<string | null>(null);
@@ -63,6 +65,7 @@ export default function JoinProgramThenTickets({
         <LandingTicketPicker
           freeChastiseVideoUrl={freeChastiseVideoUrl}
           welcomeVideoUrl={welcomeVideoUrl}
+          gagFullSrc={gagFullSrc}
         />
       </div>
 

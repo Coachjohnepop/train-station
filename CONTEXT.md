@@ -146,6 +146,20 @@ Freeform (not only adult/athletes): yoga, meditation, nutrition, martial arts, d
 
 ### Search / SEO (Admin → Search)
 Public findability for **thetrainstation.co**. Desk: titles, OG, robots, sitemap, Google/Bing recrawl ping. Stored in Postgres `SiteSeoSettings` (Blob fallback). Third-word list (`src/lib/search-third-words.ts`) + public `/find`. **Do not expect** generic “train station” (Safari/maps/railroad) to rank — win “The Train Station fitness / workout / Jeremy Byrd / …”. Recrawl hours–days; snippets 2–14 days; third-word ranks 2–8 weeks. Live on `main` 2026-08-16. Man/woman copy still preview-only.
+
+### User feedback videos (phone recordings) — **check every session**
+
+Drop folder:
+
+`~/Desktop/Stuff/Lemon Voice/The Train Station/App Feedback Video/`
+
+| Rule | Meaning |
+|------|---------|
+| **Look first** | List that folder by modification time at the start of a Train Station session (and any time John points at it). Newest `.mp4` / `.mov` wins unless he names a file. Two files minutes apart = one walkthrough — process both. |
+| **New file = at least one issue** | If a recording was put in this folder, **assume something is still wrong.** Do not treat the path as done. Review the video (skill: `feedback-video-review` → `scripts/prepare-feedback-video-review.mjs`) and fix what you see. |
+| **John says when it is perfect** | Only stop iterating this path when John explicitly says the video is perfect. Until then, keep watching new drops and keep fixing. |
+| **Do not** | Claim you watched it without the review pack + frames. Do not ignore a newer file because an older one was already processed. |
+
 ### Do not
 - Put joke soak names as warm-ups on **live member** program days  
 - Push WIP to `main` without John asking for prod  
@@ -357,8 +371,11 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ## WHERE WE LEFT OFF
 
 **Date:** 2026-08-16  
-**Status:** Welcome / Free / per-ticket intros are **site files** (`/videos/jeremy-welcome.mp4`, `/videos/jeremy-free-intro.mp4`) — same model as the Free ticket clip. Admin cannot save YouTube on those slots. Stripe cutover still started: Production checkout is **Eco Delight Live** (`pk_live_51SuLDr…`). Jeremy master target is `acct_1TmKSWQWWnajU9uyk`. `.env.jeremy.live` is **missing** — blocked on Jeremy Live `sk`/`pk`/`whsec` plus a copy of today’s Eco keys as `*_LEGACY`. Webhook code now accepts a leftover Eco secret so Ali/Bella/Jeremy2 renewals keep working after the swap. Gender/man-woman stays **preview-only**.  
-**Prior (2026-08-15):** Landing conversion shipped: **Join** = 7-day Coach Class look (`/signup?plan=explorer&week=1` + `grantLandingFreeWeek`), **Free Tour** stays the 15s peek, return visitors get ticket-first chrome + sticky Join/Tour. Confetti on Join tap and account create. Tickets still at `/join#tickets`.  
+**Status:** Landing + Free-ticket fixes **on prod (`main`)**. Man/woman stays **preview-only** (`6a13984` — do not merge). Stripe cutover still parked: Production checkout is **Eco Delight Live**.  
+**Feedback videos:** always check `~/Desktop/Stuff/Lemon Voice/The Train Station/App Feedback Video/`. A new drop means **at least one issue**. John will say when the video is perfect. Latest (2026-08-16): Free Tour → tickets → Free Explorer.  
+**Free concat job:** changing Admin → Videos **Free Explorer intro** queues `scripts/rebuild-free-ticket-full.mjs` (5s chorus + that intro → `free-ticket-full.mp4`). Manual: `npm run free-ticket:rebuild` or Admin **Rebuild gag + intro now**. Cron safety net every 15m. Needs `ffmpeg`.  
+**Prior (2026-08-16 landing):** Guest home has **three choices only** — **Free Tour**, **Start membership**, **Explore Content** (triangle fold for programs / services / footer). White nav Join pill is gone. Explore tap = confetti + phone vibrate. Sign in lives in the hamburger.  
+**Prior (2026-08-15):** Landing conversion shipped: **Join** = 7-day Coach Class look (`/signup?plan=explorer&week=1` + `grantLandingFreeWeek`), **Free Tour** stays the 15s peek. Tickets still at `/join#tickets`.  
 **Prior (2026-08-14 night):** John out. Ali is mid re-onboard (still paid). She was texted to tap Free first (joke), then Coach Class → Continue already paid. Gag + Jeremy intros are site files. Paid checkout Free tap plays the gag and does not downgrade her (`ce77353`).  
 **Rule reaffirmed:** **any new module / data element → Postgres first** (see Durable product rules).  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
@@ -433,7 +450,9 @@ Leave iOS/Android pull-to-refresh **off** on member screens (`DisablePullToRefre
 
 ### NEXT SESSION — pick up here (priority)
 
-**Stripe still first for money.** Log into Jeremy’s Train Station Stripe (`acct_1TmKSW…`, **Live**). Wrong account if Eco Delight / `acct_1Su…`. Don’t copy keys until the top-left name is The Train Station. Then `.env.jeremy.live` (`sk_live` / `pk_live` / prices / `whsec`) → `node scripts/wire-jeremy-master-stripe.mjs --identify` → `--push-vercel` → redeploy. Existing Ali/Bella Eco subs stay on Eco; new charges go to Jeremy.
+**Check the feedback-video folder first** (`~/Desktop/Stuff/Lemon Voice/The Train Station/App Feedback Video/`). Newest `.mp4` / `.mov` by mtime. If a new file is there, there is at least one issue — review it before other work. Path is not done until John says the video is perfect.
+
+**Stripe still first for money.** Log into Jeremy’s Train Station Stripe (`acct_1TmKSW…`, **Live**). Wrong account if Eco Delight / `acct_1Su…`. Don’t copy keys until the top-left name is The Train Station. Then `.env.jeremy.live` (`sk_live` / `pk_live` / prices / `whsec` + Eco `*_LEGACY`) → `node scripts/wire-jeremy-master-stripe.mjs --identify` → `--push-vercel` → redeploy. Existing Ali/Bella/Jeremy2 Eco subs stay on Eco; new charges go to Jeremy.
 
 1. **Stripe cutover** — as above.  
 2. **Then: Google + Apple account create/sign-in** — see decision below. Credentials only (buttons already built). Smoke: new paid signup + existing-email link.  

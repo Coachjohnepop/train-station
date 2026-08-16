@@ -56,6 +56,7 @@ export default async function JoinPage({
         fromTour={fromTour}
         freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
         welcomeVideoUrl={landingVideos.welcomeVideoUrl}
+        gagFullSrc={landingVideos.freeTicketFullUrl}
       />
 
       <div className="mx-auto mb-4 max-w-2xl px-6 text-center">

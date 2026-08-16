@@ -62,7 +62,7 @@ export function resolveLandingVideoUrl(
 /** Overall Jeremy welcome — site file, not YouTube. */
 export const JEREMY_WELCOME_VIDEO_SRC = "/videos/jeremy-welcome.mp4";
 /** Free Explorer intro after the gag — site file, not YouTube. */
-export const JEREMY_FREE_INTRO_VIDEO_SRC = "/videos/jeremy-free-intro.mp4";
+export const JEREMY_FREE_INTRO_VIDEO_SRC = "/videos/jeremy-free-intro.mp4?v=20260816";
 
 const LEGACY_BLOB_INTRO_RE =
   /8454de13-15b8-41f3-a476-b6b613c83983|28a8e280-bcf3-4e43-938d-2060a53527c4/i;
@@ -147,10 +147,17 @@ export const WELCOME_VIDEO_PLAN_OPTIONS = MEMBERSHIP_PLANS.map((plan) => ({
  */
 /** Local chorus clip (starts at the hook — no YouTube seek). */
 export const FREE_TICKET_GAG_SRC = "/videos/free-ticket-chorus.mp4";
-export const FREE_TICKET_GAG_POSTER = "/videos/free-ticket-chorus.jpg";
+export const FREE_TICKET_GAG_POSTER = "/videos/free-ticket-chorus.jpg?v=20260816";
 export const FREE_TICKET_GAG_AUDIO_SRC = "/audio/free-ticket-chorus.mp3";
 /** Chorus + Jeremy intro in one file — no swap, no YouTube. */
-export const FREE_TICKET_FULL_SRC = "/videos/free-ticket-full.mp4";
+export const FREE_TICKET_FULL_SRC = "/videos/free-ticket-full.mp4?v=20260816";
+
+/** Prefer the last rebuild (Blob) so a new Jeremy intro is live without a deploy. */
+export function freeTicketFullSrcFromConfig(url: string | null | undefined): string {
+  const trimmed = url?.trim();
+  if (trimmed && !isYoutubeUrl(trimmed)) return trimmed;
+  return FREE_TICKET_FULL_SRC;
+}
 
 /** Legacy watch URL — never played. YouTube is too slow for Free tap. */
 export const FREE_TICKET_RICKROLL_URL =

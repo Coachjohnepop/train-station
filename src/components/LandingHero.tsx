@@ -3,7 +3,6 @@
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
 import TrainStationBrand from "@/components/TrainStationBrand";
-import WelcomeVideoPopover from "@/components/WelcomeVideoPopover";
 import LandingSeeInsideTour from "@/components/LandingSeeInsideTour";
 import { FREE_QUICK_TOUR_EVENT } from "@/lib/free-quick-tour";
 import {
@@ -53,9 +52,11 @@ const ROTATING = [
  * Members never hit this shell (home is welcome + status after join).
  */
 export default function LandingHero({
-  welcomeVideoUrl = null,
+  welcomeVideoUrl: _welcomeVideoUrl = null,
   heroSlides = null,
   returning = false,
+  exploreOpen = false,
+  onExplore,
 }: {
   welcomeVideoUrl?: string | null;
   /** @deprecated Tour no longer hosts free ticket; kept optional for callers. */
@@ -64,6 +65,8 @@ export default function LandingHero({
   heroSlides?: HeroSlide[] | null;
   /** Second+ visit or hamburger-abandon — lead with tickets, not the tour. */
   returning?: boolean;
+  exploreOpen?: boolean;
+  onExplore?: (origin: HTMLElement) => void;
 }) {
   const [imageTick, setImageTick] = useState(0);
   const [phraseTick, setPhraseTick] = useState(0);
@@ -211,17 +214,6 @@ export default function LandingHero({
 
             <div className="mt-7 w-full max-w-sm sm:mt-9">
               <div className="flex w-full flex-col gap-3">
-                <Link
-                  href={JOIN_WEEK_HREF}
-                  data-analytics-action={returnMode ? "hero-join-return" : "hero-join"}
-                  onClick={(e) => {
-                    markLandingConverted();
-                    fireLandingJoinHook(e.currentTarget);
-                  }}
-                  className="landing-hero-early-signup inline-flex h-[3.5rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg"
-                >
-                  Join
-                </Link>
                 <button
                   type="button"
                   data-analytics-action={returnMode ? "hero-free-tour-return" : "hero-free-tour"}
@@ -230,34 +222,36 @@ export default function LandingHero({
                 >
                   Free Tour
                 </button>
+                <Link
+                  href={JOIN_WEEK_HREF}
+                  data-analytics-action={returnMode ? "hero-start-membership-return" : "hero-start-membership"}
+                  onClick={(e) => {
+                    markLandingConverted();
+                    fireLandingJoinHook(e.currentTarget);
+                  }}
+                  className="landing-hero-early-signup inline-flex h-[3.5rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg"
+                >
+                  Start membership
+                </Link>
+                <button
+                  type="button"
+                  data-analytics-action="hero-explore-content"
+                  aria-expanded={exploreOpen}
+                  aria-controls="explore-content"
+                  onClick={(e) => onExplore?.(e.currentTarget)}
+                  className="landing-hero-explore-cta inline-flex h-[3.25rem] w-full items-center justify-center gap-2.5 rounded-full px-8 text-[16px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg"
+                >
+                  Explore Content
+                  <span
+                    className={`landing-hero-explore-caret ${exploreOpen ? "landing-hero-explore-caret--open" : ""}`}
+                    aria-hidden
+                  />
+                </button>
               </div>
               <p className="mt-2.5 text-center text-[12px] font-medium text-white/55">
                 {returnMode
                   ? "7 free days in the app · or peek first"
-                  : "Join = 7 days free in the app · Tour is ~15 sec"}
-              </p>
-
-              <p className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[13px] font-semibold text-white/70">
-                <Link
-                  href="/login"
-                  data-analytics-action="hero-sign-in"
-                  className="underline decoration-white/35 underline-offset-[5px] transition hover:text-white hover:decoration-white"
-                >
-                  Member sign in
-                </Link>
-                {welcomeVideoUrl?.trim() ? (
-                  <>
-                    <span className="text-white/30" aria-hidden>
-                      ·
-                    </span>
-                    <WelcomeVideoPopover
-                      welcomeVideoUrl={welcomeVideoUrl}
-                      buttonClassName="underline decoration-white/35 underline-offset-[5px] transition hover:text-white hover:decoration-white"
-                    >
-                      Watch intro
-                    </WelcomeVideoPopover>
-                  </>
-                ) : null}
+                  : "Tour is ~15 sec · membership is 7 days free"}
               </p>
             </div>
           </div>

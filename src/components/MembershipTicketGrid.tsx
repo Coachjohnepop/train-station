@@ -99,13 +99,19 @@ export default function MembershipTicketGrid({
             />
           </div>
         ) : null}
-        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--accent)]">
-          When you&apos;re ready
-        </p>
-        <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text)] sm:text-3xl">
-          {heading}
-        </h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-[var(--muted)]">{subheading}</p>
+        {heading ? (
+          <>
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--accent)]">
+              When you&apos;re ready
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text)] sm:text-3xl">
+              {heading}
+            </h2>
+            {subheading ? (
+              <p className="mx-auto mt-2 max-w-md text-sm text-[var(--muted)]">{subheading}</p>
+            ) : null}
+          </>
+        ) : null}
       </div>
 
       <div className="mx-auto mt-8 grid max-w-4xl grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">

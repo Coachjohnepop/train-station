@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { setBackgroundMusicOverlay } from "@/lib/background-music-control";
 import {
+  FREE_TICKET_FULL_SRC,
   FREE_TICKET_GAG_POSTER,
   FREE_TICKET_RICKROLL_DURATION_MS,
   JEREMY_FREE_INTRO_VIDEO_SRC,
@@ -22,8 +23,10 @@ import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
 import ShareFreeTicketButton from "@/components/ShareFreeTicketButton";
 import {
-  attachFreeTicketGag,
+  FREE_TICKET_GAG_HOST_ID,
+  FREE_TICKET_GAG_VIDEO_ID,
   stopFreeTicketGag,
+  stripNativeVideoChrome,
 } from "@/lib/play-free-ticket-gag";
 
 /** Free-ticket Jeremy intro: 3× louder than admin content volume offset. */
@@ -52,6 +55,7 @@ export default function FreeTicketModal({
   purchaseAuth = { signedIn: false },
   forceGag = false,
   alreadyPaid = false,
+  gagFullSrc = FREE_TICKET_FULL_SRC,
 }: {
   open: boolean;
   onClose: () => void;
@@ -67,6 +71,8 @@ export default function FreeTicketModal({
   forceGag?: boolean;
   /** Paid member testing Free. Do not send them down Explorer. */
   alreadyPaid?: boolean;
+  /** Concat file (gag + current intro). Defaults to the site file. */
+  gagFullSrc?: string;
 }) {
   void _gagConfig;
   const [showJeremy, setShowJeremy] = useState(false);
@@ -83,8 +89,10 @@ export default function FreeTicketModal({
     if (!open) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    document.documentElement.dataset.freeTicket = "open";
     return () => {
       document.body.style.overflow = prev;
+      delete document.documentElement.dataset.freeTicket;
     };
   }, [open]);
 
@@ -111,7 +119,12 @@ export default function FreeTicketModal({
   );
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open) {
+      stopFreeTicketGag();
+      setShowJeremy(false);
+      setBackgroundMusicOverlay(false);
+      return;
+    }
 
     clearTimers();
     setBackgroundMusicOverlay(true);
@@ -130,17 +143,17 @@ export default function FreeTicketModal({
     }
 
     requestAnimationFrame(() => {
-      if (gagHostRef.current) attachFreeTicketGag(gagHostRef.current);
+      const el = document.getElementById(FREE_TICKET_GAG_VIDEO_ID) as HTMLVideoElement | null;
+      if (el) stripNativeVideoChrome(el);
     });
 
     schedule(() => setShowJeremy(true), FREE_TICKET_RICKROLL_DURATION_MS);
 
     return () => {
       clearTimers();
-      stopFreeTicketGag();
       setBackgroundMusicOverlay(false);
     };
-    // Mounted only while open (parent unmounts on close).
+    // Do not stop the gag in this cleanup — Strict Mode remount would rewind it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -167,7 +180,7 @@ export default function FreeTicketModal({
 
   return (
     <div
-      className="fixed inset-0 z-[110] flex items-end justify-center bg-black/90 sm:items-center sm:p-6"
+      className="fixed inset-0 z-[220] flex items-end justify-center bg-black/92 sm:items-center sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="free-ticket-title"
@@ -181,26 +194,10 @@ export default function FreeTicketModal({
         className="flex max-h-[100dvh] w-full max-w-xl flex-col overflow-y-auto overscroll-contain rounded-t-2xl border border-amber-500/30 bg-[var(--surface)] shadow-2xl sm:max-h-[min(94vh,820px)] sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-white/5 bg-[var(--surface)]/95 px-3 py-2.5 backdrop-blur-md sm:px-5">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-400">
-            Explorer ticket
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              stopFreeTicketGag();
-              onClose();
-            }}
-            className="rounded-full px-3 py-2 text-sm font-medium text-[var(--muted)] hover:bg-white/5 hover:text-[var(--text)]"
-            aria-label="Close"
-          >
-            Close
-          </button>
-        </div>
-
-        <div className="relative w-full shrink-0 bg-black aspect-[9/16] max-h-[min(58dvh,34rem)] sm:max-h-[min(62vh,36rem)]">
+        <div className="relative w-full shrink-0 bg-black aspect-[9/16] max-h-[min(62dvh,36rem)] sm:max-h-[min(66vh,38rem)]">
           {gag.enabled ? (
             <div
+              id={FREE_TICKET_GAG_HOST_ID}
               ref={gagHostRef}
               className="absolute inset-0 bg-black"
               style={{
@@ -208,20 +205,38 @@ export default function FreeTicketModal({
                 backgroundSize: "cover",
                 backgroundPosition: "center",
               }}
-            />
+            >
+              <video
+                id={FREE_TICKET_GAG_VIDEO_ID}
+                className="ts-inapp-video absolute inset-0 h-full w-full object-cover bg-black"
+                src={gagFullSrc}
+                poster={FREE_TICKET_GAG_POSTER}
+                title="The Train Station — Free ticket"
+                playsInline
+                preload="auto"
+                disablePictureInPicture
+                controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"
+                onLoadedMetadata={(e) => {
+                  stripNativeVideoChrome(e.currentTarget);
+                  e.currentTarget.muted = false;
+                }}
+              />
+            </div>
           ) : hasJeremy && jeremyVideoUrl ? (
             <video
               ref={jeremyVideoRef}
               key="jeremy-file"
-              className="absolute inset-0 h-full w-full object-contain bg-black"
+              className="ts-inapp-video absolute inset-0 h-full w-full object-cover bg-black"
               src={jeremyVideoUrl}
               title="Coach Jeremy"
               playsInline
-              controls
               muted={false}
               autoPlay
               preload="auto"
+              disablePictureInPicture
+              controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"
               onLoadedMetadata={(e) => {
+                stripNativeVideoChrome(e.currentTarget);
                 e.currentTarget.muted = false;
                 applyMediaVolumeDb(e.currentTarget, jeremyVolumeDb);
               }}
@@ -238,6 +253,22 @@ export default function FreeTicketModal({
               </p>
             </div>
           )}
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between bg-gradient-to-b from-black/70 to-transparent px-3 pb-10 pt-3">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-amber-300">
+              Explorer ticket
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                stopFreeTicketGag();
+                onClose();
+              }}
+              className="pointer-events-auto inline-flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-lg leading-none text-white/90 ring-1 ring-white/20 backdrop-blur-sm hover:bg-black/75"
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col gap-3 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-5 sm:pb-5">
@@ -262,7 +293,7 @@ export default function FreeTicketModal({
                   ? alreadyPaid
                     ? "That's the joke. You're still on your paid ticket. Close this and tap that seat."
                     : "Gotcha. It's a real Free ticket. Send it to a friend (our link, not YouTube)."
-                  : "You tapped Free. The joke and Jeremy play as one clip — stay here."}
+                  : "Five-second joke, then Coach Jeremy. Nothing enrolls until you tap below."}
               </p>
             </div>
           </div>

@@ -1572,6 +1572,58 @@ body:has([data-landing-nav]) [data-global-theme-toggle] {
   -webkit-text-fill-color: #fff !important;
 }
 
+.landing-hero-explore-cta {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.38) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+}
+
+.landing-hero-explore-cta:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.landing-hero-explore-caret {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 8px solid currentColor;
+  transform: translateY(1px);
+  transition: transform 0.25s ease;
+}
+
+.landing-hero-explore-caret--open {
+  transform: translateY(1px) rotate(180deg);
+}
+
+/* Free-ticket in-app clip: never show iOS/Safari transport (skip arrows, mute, AirPlay). */
+.ts-inapp-video {
+  pointer-events: none;
+}
+.ts-inapp-video::-webkit-media-controls,
+.ts-inapp-video::-webkit-media-controls-panel,
+.ts-inapp-video::-webkit-media-controls-enclosure,
+.ts-inapp-video::-webkit-media-controls-overlay-play-button,
+.ts-inapp-video::-webkit-media-controls-start-playback-button,
+.ts-inapp-video::-webkit-media-controls-play-button,
+.ts-inapp-video::-webkit-media-controls-mute-button,
+.ts-inapp-video::-webkit-media-controls-volume-slider,
+.ts-inapp-video::-webkit-media-controls-timeline,
+.ts-inapp-video::-webkit-media-controls-current-time-display,
+.ts-inapp-video::-webkit-media-controls-time-remaining-display,
+.ts-inapp-video::-webkit-media-controls-fullscreen-button,
+.ts-inapp-video::-webkit-media-controls-toggle-closed-captions-button {
+  display: none !important;
+  -webkit-appearance: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 /* Pulse removed — was reading as the Free Tour CTA “flashing clear”. Solid fill only. */
 
 @media (prefers-reduced-motion: reduce) {
@@ -1684,6 +1736,13 @@ body:has(.landing-hero) [data-global-theme-toggle] {
 /* Free Quick Tour is full-screen cinematic dark — hide Light/Dark so it doesn’t
    stack on Song / Skip / Close (toggle is z-200, tour chrome is lower). */
 html[data-landing-tour="open"] [data-global-theme-toggle] {
+  display: none !important;
+}
+
+/* Free ticket modal: hide theme + Theme Song chrome so they don't sit on Close / CTAs. */
+html[data-free-ticket="open"] [data-global-theme-toggle],
+html[data-free-ticket="open"] .landing-nav .theme-mode-toggle,
+html[data-free-ticket="open"] .bg-music-control-cluster {
   display: none !important;
 }
 
