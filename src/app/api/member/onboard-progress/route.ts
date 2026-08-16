@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/auth";
 import { ensureMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
 import { isDemoMode, updateDemoUserSettings } from "@/lib/demo-reminders";
 import { normalizeSignupPlan } from "@/lib/signup-plans";
+import { normalizeOnboardGender } from "@/lib/onboard-path";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,9 @@ export async function PATCH(request: Request) {
     ...(patch.phone !== undefined ? { phone: patch.phone } : {}),
     ...(patch.dailyReminderTime !== undefined ? { dailyReminderTime: patch.dailyReminderTime } : {}),
     ...(patch.weightLbs !== undefined ? { weightLbs: patch.weightLbs } : {}),
-    ...(patch.gender !== undefined ? { gender: patch.gender } : {}),
+    ...(patch.gender !== undefined
+      ? { gender: patch.gender == null || patch.gender === "" ? null : normalizeOnboardGender(patch.gender) }
+      : {}),
     ...(patch.weightLossGoal !== undefined ? { weightLossGoal: patch.weightLossGoal } : {}),
     ...(patch.weightLossTimeline !== undefined
       ? { weightLossTimeline: patch.weightLossTimeline }

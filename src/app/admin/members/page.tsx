@@ -18,6 +18,7 @@ type MemberRow = {
   userId: string;
   email: string;
   name: string;
+  gender: string | null;
   phone: string | null;
   plan: string;
   planLabel: string;
@@ -503,6 +504,11 @@ export default function AdminMembersPage() {
                 >
                   <td className="px-4 py-3">
                     <div className="font-medium">{member.name}</div>
+                    {member.gender ? (
+                      <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+                        {member.gender}
+                      </div>
+                    ) : null}
                     <a
                       href={`mailto:${member.email}`}
                       className="text-xs text-accent hover:underline"

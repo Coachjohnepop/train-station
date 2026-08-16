@@ -329,13 +329,13 @@ export default function OnboardingWizard({
                       key={option}
                       type="button"
                       onClick={() => setGender(option)}
-                      className={`rounded-xl border px-3 py-2.5 text-sm font-semibold capitalize ${
+                      className={`rounded-xl border px-3 py-2.5 text-sm font-semibold ${
                         gender === option
                           ? "border-accent bg-accent/15 text-[var(--text)]"
                           : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)]"
                       }`}
                     >
-                      {option}
+                      {option === "man" ? "Man" : "Woman"}
                     </button>
                   ))}
                 </div>
