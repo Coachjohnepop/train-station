@@ -11,6 +11,13 @@ import {
   DEFAULT_HERO_SLIDES,
   type HeroSlide,
 } from "@/lib/hero-slides";
+import {
+  JOIN_WEEK_HREF,
+  LANDING_RETURN_EVENT,
+  fireLandingJoinHook,
+  markLandingConverted,
+  trackLandingCustom,
+} from "@/lib/landing-return-visit";
 
 /** Locked first headline so SMS open doesn’t fight a rotating word. */
 const FIRST_HEADLINE = (
@@ -48,22 +55,38 @@ const ROTATING = [
 export default function LandingHero({
   welcomeVideoUrl = null,
   heroSlides = null,
+  returning = false,
 }: {
   welcomeVideoUrl?: string | null;
   /** @deprecated Tour no longer hosts free ticket; kept optional for callers. */
   freeChastiseVideoUrl?: string | null;
   /** From Admin → Landing hero editor. Falls back to built-in defaults. */
   heroSlides?: HeroSlide[] | null;
+  /** Second+ visit or hamburger-abandon — lead with tickets, not the tour. */
+  returning?: boolean;
 }) {
   const [imageTick, setImageTick] = useState(0);
   const [phraseTick, setPhraseTick] = useState(0);
   const [canRotateCopy, setCanRotateCopy] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
+  const [liveReturn, setLiveReturn] = useState(false);
+  const returnMode = returning || liveReturn;
 
   const images = useMemo(() => {
     const active = activeHeroSlides(heroSlides);
     return active.length ? active : DEFAULT_HERO_SLIDES;
   }, [heroSlides]);
+
+  useEffect(() => {
+    if (!returnMode) return;
+    trackLandingCustom("landing_return_shown");
+  }, [returnMode]);
+
+  useEffect(() => {
+    const onReturn = () => setLiveReturn(true);
+    window.addEventListener(LANDING_RETURN_EVENT, onReturn);
+    return () => window.removeEventListener(LANDING_RETURN_EVENT, onReturn);
+  }, []);
 
   // Nav "Free Tour" + deep link ?tour=1 open the same overlay as the hero CTA.
   useEffect(() => {
@@ -107,7 +130,17 @@ export default function LandingHero({
   }, [canRotateCopy]);
 
   const imageIndex = images.length ? imageTick % images.length : 0;
-  const headline = canRotateCopy ? ROTATING[phraseTick % ROTATING.length] : FIRST_HEADLINE;
+  const headline = returnMode ? (
+    <>
+      Still here?
+      <br />
+      <span className="landing-hero-accent">Pick a seat.</span>
+    </>
+  ) : canRotateCopy ? (
+    ROTATING[phraseTick % ROTATING.length]
+  ) : (
+    FIRST_HEADLINE
+  );
 
   return (
     <section
@@ -144,7 +177,11 @@ export default function LandingHero({
           <TrainStationBrand variant="hero" />
         </div>
 
-        <div className="mt-auto flex flex-1 flex-col items-center justify-end px-5 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+3.5rem))] pt-28 text-center sm:justify-center sm:px-8 sm:pb-24 sm:pt-32">
+        <div className={`mt-auto flex flex-1 flex-col items-center justify-end px-5 pt-28 text-center sm:justify-center sm:px-8 sm:pb-24 sm:pt-32 ${
+          returnMode
+            ? "pb-[max(5.5rem,calc(env(safe-area-inset-bottom)+6.25rem))]"
+            : "pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+3.5rem))]"
+        }`}>
           <div className="landing-hero-stack flex w-full max-w-md flex-col items-center sm:max-w-lg">
             <p className="mb-2.5 text-[10px] font-extrabold uppercase tracking-[0.4em] text-[#e9d5ff] drop-shadow-[0_2px_14px_rgba(0,0,0,0.95)] sm:mb-3 sm:text-[11px] sm:tracking-[0.45em]">
               The Train Station
@@ -155,37 +192,55 @@ export default function LandingHero({
             </h1>
 
             <p className="max-w-[18.5rem] text-[15px] font-semibold leading-snug text-white/95 sm:max-w-sm sm:text-xl">
-              Coach Jeremy. Real programs.
-              <span className="mt-1 block font-medium text-white/72 sm:mt-0 sm:inline sm:before:content-['\00a0']">
-                On your phone.
-              </span>
+              {returnMode ? (
+                <>
+                  You already found us.
+                  <span className="mt-1 block font-medium text-white/72 sm:mt-0 sm:inline sm:before:content-['\00a0']">
+                    Board in one tap.
+                  </span>
+                </>
+              ) : (
+                <>
+                  Coach Jeremy. Real programs.
+                  <span className="mt-1 block font-medium text-white/72 sm:mt-0 sm:inline sm:before:content-['\00a0']">
+                    On your phone.
+                  </span>
+                </>
+              )}
             </p>
 
-            {/* Single primary ask: guided tour, not free signup */}
             <div className="mt-7 w-full max-w-sm sm:mt-9">
-              <button
-                type="button"
-                onClick={() => setTourOpen(true)}
-                className="landing-hero-early-signup inline-flex h-[3.5rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg"
-              >
-                Free Quick Tour
-              </button>
+              <div className="flex w-full flex-col gap-3">
+                <Link
+                  href={JOIN_WEEK_HREF}
+                  data-analytics-action={returnMode ? "hero-join-return" : "hero-join"}
+                  onClick={(e) => {
+                    markLandingConverted();
+                    fireLandingJoinHook(e.currentTarget);
+                  }}
+                  className="landing-hero-early-signup inline-flex h-[3.5rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg"
+                >
+                  Join
+                </Link>
+                <button
+                  type="button"
+                  data-analytics-action={returnMode ? "hero-free-tour-return" : "hero-free-tour"}
+                  onClick={() => setTourOpen(true)}
+                  className="landing-hero-secondary-cta inline-flex h-[3.5rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg"
+                >
+                  Free Tour
+                </button>
+              </div>
               <p className="mt-2.5 text-center text-[12px] font-medium text-white/55">
-                ~15 sec · then tickets or programs on the site
+                {returnMode
+                  ? "7 free days in the app · or peek first"
+                  : "Join = 7 days free in the app · Tour is ~15 sec"}
               </p>
 
               <p className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[13px] font-semibold text-white/70">
                 <Link
-                  href="/join?from=tour#tickets"
-                  className="underline decoration-white/35 underline-offset-[5px] transition hover:text-white hover:decoration-white"
-                >
-                  Choose your ticket
-                </Link>
-                <span className="text-white/30" aria-hidden>
-                  ·
-                </span>
-                <Link
                   href="/login"
+                  data-analytics-action="hero-sign-in"
                   className="underline decoration-white/35 underline-offset-[5px] transition hover:text-white hover:decoration-white"
                 >
                   Member sign in

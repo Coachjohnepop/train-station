@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import TrainStationBrand from "@/components/TrainStationBrand";
 import { usePurchaseAuth } from "@/hooks/usePurchaseAuth";
@@ -15,6 +15,14 @@ import { logoutUrl } from "@/lib/logout-url";
 import ThemeModeToggle from "@/components/ThemeModeToggle";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 import { openFreeQuickTour } from "@/lib/free-quick-tour";
+import {
+  JOIN_TICKETS_HREF,
+  JOIN_WEEK_HREF,
+  fireLandingJoinHook,
+  markLandingConverted,
+  markLandingReturnPending,
+  trackLandingCustom,
+} from "@/lib/landing-return-visit";
 
 export default function LandingNav({
   variant = "public",
@@ -30,6 +38,7 @@ export default function LandingNav({
   const onHomePage = pathname === "/";
   const [membershipsOpen, setMembershipsOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const menuConvertedRef = useRef(false);
   const [memberships, setMemberships] = useState<LandingMembershipNavItem[]>(() =>
     buildMembershipNavItems(null),
   );
@@ -53,9 +62,31 @@ export default function LandingNav({
     };
   }, []);
 
+  function noteMenuItem() {
+    menuConvertedRef.current = true;
+  }
+
+  function noteConverted() {
+    menuConvertedRef.current = true;
+    markLandingConverted();
+  }
+
   function closeMenus() {
+    const wasOpen = mobileOpen;
     setMembershipsOpen(false);
     setMobileOpen(false);
+    if (wasOpen && !purchaseAuth.signedIn && !menuConvertedRef.current) {
+      markLandingReturnPending();
+      trackLandingCustom("menu_abandon");
+    }
+  }
+
+  function openMobileMenu() {
+    menuConvertedRef.current = false;
+    setMobileOpen(true);
+    if (!purchaseAuth.signedIn) {
+      trackLandingCustom("menu_open");
+    }
   }
 
   function scrollToHash(href: string) {
@@ -67,6 +98,7 @@ export default function LandingNav({
   }
 
   function membershipAction(tier: LandingMembershipNavItem) {
+    noteConverted();
     closeMenus();
     if (purchaseAuth.signedIn) {
       window.location.href = purchaseHref(tier.signupPlan, purchaseAuth);
@@ -78,7 +110,12 @@ export default function LandingNav({
   const isWelcome = variant === "welcome";
   /** Signed-in members should not re-enter marketing/join surfaces from the nav. */
   const memberHomeHref = "/member/today";
-  const brandHref = purchaseAuth.signedIn ? memberHomeHref : "/";
+  /** On home, logo used to reload `/` — that visitor tapped it looking for a door. */
+  const brandHref = purchaseAuth.signedIn
+    ? memberHomeHref
+    : onHomePage
+      ? JOIN_WEEK_HREF
+      : "/";
 
   return (
     <header
@@ -96,7 +133,21 @@ export default function LandingNav({
           <Link
             href={brandHref}
             className="flex min-w-0 shrink-0 items-center gap-2 transition hover:opacity-90"
-            onClick={closeMenus}
+            aria-label={
+              purchaseAuth.signedIn
+                ? "The Train Station — Today"
+                : onHomePage
+                  ? "The Train Station — pick a ticket"
+                  : "The Train Station home"
+            }
+            data-analytics-action={onHomePage && !purchaseAuth.signedIn ? "logo-to-join-week" : "logo-home"}
+            onClick={(e) => {
+              if (onHomePage && !purchaseAuth.signedIn) {
+                noteConverted();
+                fireLandingJoinHook(e.currentTarget);
+              }
+              closeMenus();
+            }}
           >
             <span className="md:hidden">
               <TrainStationBrand variant="icon" />
@@ -165,7 +216,15 @@ export default function LandingNav({
                 onMouseEnter={() => setMembershipsOpen(true)}
                 onMouseLeave={() => setMembershipsOpen(false)}
               >
-                <Link href="/join#tickets" className="landing-nav__link" onClick={closeMenus}>
+                <Link
+                  href={JOIN_TICKETS_HREF}
+                  className="landing-nav__link"
+                  data-analytics-action="nav-memberships"
+                  onClick={() => {
+                    noteConverted();
+                    closeMenus();
+                  }}
+                >
                   Memberships
                 </Link>
                 {membershipsOpen && (
@@ -186,8 +245,11 @@ export default function LandingNav({
                     ))}
                     <div className="my-1 border-t border-[var(--border)]" />
                     <Link
-                      href="/join#tickets"
-                      onClick={closeMenus}
+                      href={JOIN_TICKETS_HREF}
+                      onClick={() => {
+                        noteConverted();
+                        closeMenus();
+                      }}
                       className="block px-3 py-2 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
                     >
                       All ticket levels →
@@ -222,29 +284,35 @@ export default function LandingNav({
               </Link>
             ) : (
               <>
-                {/* Guests: Free Tour primary in top bar; Sign in lives in the hamburger. */}
                 <button
                   type="button"
-                  className={`landing-nav__link font-semibold ${
-                    overHero
-                      ? "inline-flex text-white/95 sm:text-white"
-                      : "inline-flex text-[var(--accent)]"
+                  data-analytics-action="nav-free-tour"
+                  className={`landing-nav__link hidden font-semibold sm:inline-flex ${
+                    overHero ? "text-white/95" : "text-[var(--accent)]"
                   }`}
                   onClick={() => {
+                    noteConverted();
                     closeMenus();
                     openFreeQuickTour();
                   }}
                 >
                   Free Tour
                 </button>
-                {!overHero ? (
-                  <Link
-                    href="/join#tickets"
-                    className="btn-primary hidden px-4 py-2 text-xs font-bold md:inline-flex"
-                  >
-                    Choose ticket
-                  </Link>
-                ) : null}
+                <Link
+                  href={JOIN_WEEK_HREF}
+                  data-analytics-action="nav-join-week"
+                  onClick={(e) => {
+                    noteConverted();
+                    fireLandingJoinHook(e.currentTarget);
+                  }}
+                  className={`inline-flex h-8 items-center rounded-full px-3 text-[11px] font-extrabold sm:h-9 sm:px-4 sm:text-xs ${
+                    overHero
+                      ? "bg-white text-black shadow-sm"
+                      : "btn-primary"
+                  }`}
+                >
+                  Join
+                </Link>
               </>
             )
           ) : null}
@@ -257,7 +325,11 @@ export default function LandingNav({
             className="landing-nav__menu-btn md:hidden"
             aria-expanded={mobileOpen}
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
-            onClick={() => setMobileOpen((v) => !v)}
+            data-analytics-action={mobileOpen ? "close-menu" : "open-menu"}
+            onClick={() => {
+              if (mobileOpen) closeMenus();
+              else openMobileMenu();
+            }}
           >
             {mobileOpen ? "✕" : "☰"}
           </button>
@@ -272,6 +344,7 @@ export default function LandingNav({
                 key={section.id}
                 href={landingNavHref(section.href, onHomePage)}
                 onClick={(e) => {
+                  noteMenuItem();
                   if (onHomePage && section.href.startsWith("#")) {
                     e.preventDefault();
                     scrollToHash(section.href);
@@ -327,8 +400,10 @@ export default function LandingNav({
               <>
                 <button
                   type="button"
+                  data-analytics-action="menu-free-tour"
                   className="block w-full rounded-lg px-2 py-2 text-left text-sm font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
                   onClick={() => {
+                    noteConverted();
                     closeMenus();
                     openFreeQuickTour();
                   }}
@@ -336,16 +411,25 @@ export default function LandingNav({
                   Free Tour
                 </button>
                 <Link
-                  href="/join#tickets"
-                  className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]"
-                  onClick={closeMenus}
+                  href={JOIN_WEEK_HREF}
+                  data-analytics-action="menu-join-week"
+                  className="block rounded-lg px-2 py-2 text-sm font-bold hover:bg-[var(--surface-2)]"
+                  onClick={(e) => {
+                    noteConverted();
+                    fireLandingJoinHook(e.currentTarget);
+                    closeMenus();
+                  }}
                 >
-                  Choose your ticket
+                  Join — free week
                 </Link>
                 <Link
                   href="/login"
+                  data-analytics-action="menu-sign-in"
                   className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]"
-                  onClick={closeMenus}
+                  onClick={() => {
+                    noteConverted();
+                    closeMenus();
+                  }}
                 >
                   Sign in
                 </Link>
@@ -373,8 +457,11 @@ export default function LandingNav({
                 </Link>
               ))}
               <Link
-                href="/join#tickets"
-                onClick={closeMenus}
+                href={JOIN_TICKETS_HREF}
+                onClick={() => {
+                  noteConverted();
+                  closeMenus();
+                }}
                 className="block rounded-lg px-2 py-2 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
               >
                 Compare plans →

@@ -354,8 +354,9 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-14 night  
-**Status:** John out. Ali is mid re-onboard (still paid). She was texted to tap Free first (joke), then Coach Class → Continue already paid. Gag + Jeremy intros are site files. Paid checkout Free tap plays the gag and does not downgrade her (`ce77353`). Stripe cutover still first for money.  
+**Date:** 2026-08-15  
+**Status:** Landing conversion shipped: **Join** = 7-day Coach Class look (`/signup?plan=explorer&week=1` + `grantLandingFreeWeek`), **Free Tour** stays the 15s peek, return visitors get ticket-first chrome + sticky Join/Tour. Confetti on Join tap and account create. Tickets still at `/join#tickets`. Stripe cutover still first for money.  
+**Prior (2026-08-14 night):** John out. Ali is mid re-onboard (still paid). She was texted to tap Free first (joke), then Coach Class → Continue already paid. Gag + Jeremy intros are site files. Paid checkout Free tap plays the gag and does not downgrade her (`ce77353`).  
 **Rule reaffirmed:** **any new module / data element → Postgres first** (see Durable product rules).  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
 **Branches:** `preview` / `main` (same tip after this session) · prod: https://www.thetrainstation.co  

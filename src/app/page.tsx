@@ -21,6 +21,7 @@ import { getMemberProfile } from "@/lib/member-profiles-store";
 import { membershipThemeTierFromPlan } from "@/lib/membership-theme";
 import { signupPlanLabel } from "@/lib/signup-plans";
 import { buildRootMetadata } from "@/lib/site-seo-server";
+import { LANDING_RETURN_COOKIE, isLandingReturnCookie } from "@/lib/landing-return-visit";
 
 /** Home share preview — driven by Admin → SEO desk. */
 export async function generateMetadata(): Promise<Metadata> {
@@ -66,6 +67,8 @@ export default async function HomePage() {
           welcomeVideoUrl={landingVideos.welcomeVideoUrl}
           freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
           heroSlides={landingVideos.heroSlides}
+          returning={false}
+          rememberReturn={false}
         />
       </>
     );
@@ -141,11 +144,13 @@ export default async function HomePage() {
   }
 
   // Cold traffic / SMS — full send POP only (no floating memberships FAB).
+  const returning = isLandingReturnCookie(cookieStore.get(LANDING_RETURN_COOKIE)?.value);
   return (
     <LandingConversion
       welcomeVideoUrl={landingVideos.welcomeVideoUrl}
       freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
       heroSlides={landingVideos.heroSlides}
+      returning={returning}
     />
   );
 }

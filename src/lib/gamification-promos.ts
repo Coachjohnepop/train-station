@@ -62,6 +62,33 @@ function toDto(row: {
   };
 }
 
+/** Landing Join — one claimed 7-day Coach Class look per member. */
+export async function grantLandingFreeWeek(userId: string): Promise<boolean> {
+  if (!isDatabaseConfigured()) return false;
+  try {
+    const existing = await getActiveAccessOverride(userId);
+    if (existing) return true;
+    const levers = await getGamificationLevers();
+    const now = new Date();
+    const days = levers.freeWeekDays || 7;
+    await prisma.gamificationPromo.create({
+      data: {
+        userId,
+        kind: "landing_free_week",
+        fromPlan: "explorer",
+        toPlan: "member",
+        status: "claimed",
+        claimedAt: now,
+        trialEndsAt: new Date(now.getTime() + days * 86_400_000),
+        notes: "Landing Join — 7-day Coach Class look",
+      },
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Active free-week override if claimed and not expired. */
 export async function getActiveAccessOverride(
   userId: string,

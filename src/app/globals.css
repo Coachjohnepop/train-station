@@ -1541,6 +1541,22 @@ body:has([data-landing-nav]) [data-global-theme-toggle] {
   -webkit-text-fill-color: #0f0a1a !important;
 }
 
+/* Same size as Join — outlined so both reads as a real button */
+.landing-hero-secondary-cta {
+  background: rgba(0, 0, 0, 0.35) !important;
+  border: 2px solid rgba(255, 255, 255, 0.88) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+.landing-hero-secondary-cta:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: #fff !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+}
+
 /* Pulse removed — was reading as the Free Tour CTA “flashing clear”. Solid fill only. */
 
 @media (prefers-reduced-motion: reduce) {

@@ -33,6 +33,7 @@ const schema = z.object({
   plan: z.string().max(40).optional(),
   password: z.string().max(128).optional(),
   referralCode: z.string().max(40).optional(),
+  week: z.boolean().optional(),
 });
 
 export async function POST(request: Request) {
@@ -41,8 +42,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Please fill in email and name." }, { status: 400 });
   }
 
-  const { email, firstName, lastName, phone, plan: rawPlan, password, referralCode } =
+  const { email, firstName, lastName, phone, plan: rawPlan, password, referralCode, week } =
     parsed.data;
+  const weekTrial = Boolean(week);
   // Require an intentional ticket — never silent Free default from empty plan.
   if (!rawPlan?.trim()) {
     return NextResponse.json(
@@ -88,6 +90,11 @@ export async function POST(request: Request) {
     }
 
     await enrollUserInProgram("adult", account.userId);
+
+    if (weekTrial && plan === "explorer") {
+      const { grantLandingFreeWeek } = await import("@/lib/gamification-promos");
+      await grantLandingFreeWeek(account.userId);
+    }
 
     const normalizedEmail = email.trim().toLowerCase();
     await addToWaitlist({
@@ -139,7 +146,8 @@ export async function POST(request: Request) {
         const { getGamificationLevers } = await import("@/lib/gamification-config-store");
         const { isStripePaymentsEnabled } = await import("@/lib/member-gates");
         const levers = await getGamificationLevers();
-        freeNeedsCard = Boolean(levers.freeRequiresPaymentMethod && isStripePaymentsEnabled());
+        freeNeedsCard =
+          !weekTrial && Boolean(levers.freeRequiresPaymentMethod && isStripePaymentsEnabled());
       } catch {
         freeNeedsCard = false;
       }
