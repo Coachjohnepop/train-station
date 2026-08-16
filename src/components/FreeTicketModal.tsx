@@ -178,7 +178,7 @@ export default function FreeTicketModal({
     >
       <div
         ref={panelRef}
-        className="flex max-h-[100dvh] w-full max-w-lg flex-col overflow-y-auto overscroll-contain rounded-t-2xl border border-amber-500/30 bg-[var(--surface)] shadow-2xl sm:max-h-[min(92vh,760px)] sm:rounded-2xl"
+        className="flex max-h-[100dvh] w-full max-w-xl flex-col overflow-y-auto overscroll-contain rounded-t-2xl border border-amber-500/30 bg-[var(--surface)] shadow-2xl sm:max-h-[min(94vh,820px)] sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 z-20 flex items-center justify-between border-b border-white/5 bg-[var(--surface)]/95 px-3 py-2.5 backdrop-blur-md sm:px-5">
@@ -198,7 +198,7 @@ export default function FreeTicketModal({
           </button>
         </div>
 
-        <div className="relative mx-auto w-full max-h-[min(52dvh,28rem)] shrink-0 bg-black aspect-[9/16] sm:max-h-[min(56vh,32rem)]">
+        <div className="relative w-full shrink-0 bg-black aspect-[9/16] max-h-[min(58dvh,34rem)] sm:max-h-[min(62vh,36rem)]">
           {gag.enabled ? (
             <div
               ref={gagHostRef}
