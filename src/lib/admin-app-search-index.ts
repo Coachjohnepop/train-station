@@ -168,7 +168,7 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
     href: "/admin/landing",
     workspace: "coach",
     group: "Site",
-    keywords: ["youtube", "welcome", "free ticket", "brand", "media", "venmo qr"],
+    keywords: ["welcome", "free ticket", "videos", "brand", "media", "venmo qr"],
   },
   {
     id: "coach-sponsorship",

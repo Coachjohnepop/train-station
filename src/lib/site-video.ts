@@ -1,5 +1,3 @@
-import { isYoutubeUrl } from "@/lib/youtube";
-
 /** Coach intro / per-ticket clips stored on Blob (or local uploads). */
 export const SITE_VIDEO_MAX_BYTES = 200 * 1024 * 1024;
 export const SITE_VIDEO_ALLOWED_MIME = new Set([
@@ -51,13 +49,11 @@ export function isDirectVideoUrl(url: string | null | undefined): boolean {
 }
 
 /**
- * Coach intro + per-ticket-class slots: stored upload **or** YouTube
- * (legacy YouTube links still play).
+ * Coach intro + per-ticket-class slots: site file only (public/videos,
+ * Blob upload, or another direct MP4/WebM/MOV). YouTube is not allowed.
  */
 export function isAllowedCoachIntroVideoUrl(url: string | null | undefined): boolean {
-  if (!url?.trim()) return false;
-  const t = url.trim();
-  return isYoutubeUrl(t) || isStoredSiteVideoUrl(t) || isDirectVideoUrl(t);
+  return isDirectVideoUrl(url);
 }
 
 export function siteVideoMimeFromName(name: string, fallback = "video/mp4"): string {

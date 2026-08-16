@@ -43,7 +43,7 @@ export default function AdminLandingMediaPanel({
 
     if (welcome && !isAllowedCoachIntroVideoUrl(welcome)) {
       setError(true);
-      setMessage("Default welcome video must be an uploaded file or YouTube link.");
+      setMessage("Default welcome video must be an uploaded site file (MP4/WebM/MOV).");
       setSaving(false);
       return;
     }
@@ -51,14 +51,14 @@ export default function AdminLandingMediaPanel({
       const url = welcomeByPlan[plan]?.trim();
       if (url && !isAllowedCoachIntroVideoUrl(url)) {
         setError(true);
-        setMessage(`${label} welcome video must be an uploaded file or YouTube link.`);
+        setMessage(`${label} welcome video must be an uploaded site file (MP4/WebM/MOV).`);
         setSaving(false);
         return;
       }
     }
     if (free && !isAllowedCoachIntroVideoUrl(free)) {
       setError(true);
-      setMessage("Free-ticket video must be an uploaded file or YouTube link.");
+      setMessage("Free-ticket video must be an uploaded site file (MP4/WebM/MOV).");
       setSaving(false);
       return;
     }
@@ -129,11 +129,11 @@ export default function AdminLandingMediaPanel({
           </li>
         </ul>
         <p className="mt-3 text-xs text-[var(--muted)]">
-          Prefer uploading coach intros under{" "}
+          Upload coach intros under{" "}
           <a href="/admin/videos" className="text-[var(--accent-fg)] underline">
             Admin → Videos
           </a>{" "}
-          (stored on site). You can still paste a YouTube URL here. Venmo QR can be{" "}
+          — they are stored on this site like the Free ticket clip, not YouTube. Venmo QR can be{" "}
           <code className="text-[10px] text-[var(--accent-fg)]">
             https://www.thetrainstation.co/images/venmo-jeremy-qr.png
           </code>{" "}
@@ -145,8 +145,8 @@ export default function AdminLandingMediaPanel({
         <div>
           <p className="text-sm font-semibold text-[var(--text)]">Welcome videos (onboarding)</p>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            Upload (recommended) under Admin → Videos, or paste a YouTube / stored URL here. Members
-            see their plan&apos;s clip on setup step 1.
+            Upload under Admin → Videos (site file only). Members see their plan&apos;s clip on
+            setup step 1.
           </p>
         </div>
         {WELCOME_VIDEO_PLAN_OPTIONS.map(({ plan, label }) => {
@@ -185,7 +185,7 @@ export default function AdminLandingMediaPanel({
       <VideoField
         id="free"
         label="Free-ticket intro (Jeremy)"
-        hint="Coach free-tier intro (uploaded file or YouTube). App always plays a 5s chorus gag first, then cuts over to this clip (falls back to Welcome if empty). Don’t paste Rickroll here — that’s built-in."
+        hint="Coach free-tier intro (uploaded site file). App always plays a 5s chorus gag first, then cuts over to this clip. Don’t paste Rickroll here — that’s built-in."
         value={freeUrl}
         onChange={setFreeUrl}
         previewUrl={freeUrl}
@@ -319,7 +319,7 @@ function VideoField({
       <input
         id={id}
         className="input w-full"
-        placeholder="Uploaded URL or https://www.youtube.com/watch?v=…"
+        placeholder="/videos/jeremy-welcome.mp4 or an uploaded site file"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />

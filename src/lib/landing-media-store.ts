@@ -13,8 +13,19 @@ import {
   normalizeHeroSlides,
   type HeroSlide,
 } from "@/lib/hero-slides";
-import { isAllowedCoachIntroVideoUrl } from "@/lib/site-video";
+import { isAllowedCoachIntroVideoUrl, isDirectVideoUrl } from "@/lib/site-video";
 import { isYoutubeUrl } from "@/lib/youtube";
+
+/** Product defaults — same files as Free ticket, served from this app. */
+const DEFAULT_WELCOME_FILE = "/videos/jeremy-welcome.mp4";
+const DEFAULT_FREE_INTRO_FILE = "/videos/jeremy-free-intro.mp4";
+
+function isUsableIntroFile(url: string | null): url is string {
+  if (!url) return false;
+  if (isYoutubeUrl(url)) return false;
+  if (/dQw4w9WgXcQ|rick.?roll/i.test(url)) return false;
+  return isDirectVideoUrl(url);
+}
 
 export type WelcomeVideosByPlan = Partial<Record<MembershipPlan, string | null>>;
 export type { HeroSlide };
@@ -43,7 +54,7 @@ export type LandingMediaConfig = {
   purchaseThankYouVideoUrl: string | null;
   /**
    * First visit to member Gear / equipment — Jeremy explains home gym buying.
-   * Upload under Admin → Videos or paste YouTube / library URL.
+   * Upload under Admin → Videos (site file only — no YouTube).
    */
   equipmentIntroVideoUrl: string | null;
   /**
@@ -52,7 +63,7 @@ export type LandingMediaConfig = {
    */
   measurementsIntroVideoUrl: string | null;
   /**
-   * Relative volume for uploaded coach intros / free intro / gear intro (HTML5 + YT).
+   * Relative volume for uploaded coach intros / free intro / gear intro (HTML5 files).
    * Multiples of 3 dB from native (0). Default +6 dB (louder intros).
    */
   uploadedContentVolumeDb: number;
@@ -73,16 +84,18 @@ function normalizeWelcomeVideosByPlan(raw: unknown): WelcomeVideosByPlan {
   const out: WelcomeVideosByPlan = {};
   for (const plan of MEMBERSHIP_PLANS) {
     const value = data[plan];
-    if (typeof value === "string" && value.trim()) out[plan] = value.trim();
+    if (typeof value === "string" && isUsableIntroFile(value.trim())) {
+      out[plan] = value.trim();
+    }
   }
   return out;
 }
 
 function emptyConfig(): LandingMediaConfig {
   return {
-    welcomeVideoUrl: null,
-    welcomeVideosByPlan: {},
-    freeChastiseVideoUrl: null,
+    welcomeVideoUrl: DEFAULT_WELCOME_FILE,
+    welcomeVideosByPlan: { explorer: DEFAULT_FREE_INTRO_FILE },
+    freeChastiseVideoUrl: DEFAULT_FREE_INTRO_FILE,
     heroSlides: DEFAULT_HERO_SLIDES.map((s) => ({ ...s })),
     gagVideoUrl: null,
     gagStartSec: 43,
@@ -111,14 +124,29 @@ function clampInt(raw: unknown, fallback: number, min: number, max: number): num
   return Math.max(min, Math.min(max, Math.round(n)));
 }
 
+function storedIntroOrDefault(raw: unknown, fallback: string): string {
+  const url = normalizeUrl(raw);
+  return isUsableIntroFile(url) ? url : fallback;
+}
+
+function storedIntroOrNull(raw: unknown): string | null {
+  const url = normalizeUrl(raw);
+  return isUsableIntroFile(url) ? url : null;
+}
+
 function normalize(raw: unknown): LandingMediaConfig {
   if (!raw || typeof raw !== "object") return emptyConfig();
   const data = raw as Partial<LandingMediaConfig> & { gagEnabled?: unknown };
   const defaults = emptyConfig();
+  const byPlan = normalizeWelcomeVideosByPlan(data.welcomeVideosByPlan);
+  const free = storedIntroOrDefault(
+    data.freeChastiseVideoUrl || byPlan.explorer,
+    DEFAULT_FREE_INTRO_FILE,
+  );
   return {
-    welcomeVideoUrl: normalizeUrl(data.welcomeVideoUrl),
-    welcomeVideosByPlan: normalizeWelcomeVideosByPlan(data.welcomeVideosByPlan),
-    freeChastiseVideoUrl: normalizeUrl(data.freeChastiseVideoUrl),
+    welcomeVideoUrl: storedIntroOrDefault(data.welcomeVideoUrl, DEFAULT_WELCOME_FILE),
+    welcomeVideosByPlan: { ...byPlan, explorer: free },
+    freeChastiseVideoUrl: free,
     heroSlides: normalizeHeroSlides(
       (data as { heroSlides?: unknown }).heroSlides ?? DEFAULT_HERO_SLIDES,
     ),
@@ -127,8 +155,8 @@ function normalize(raw: unknown): LandingMediaConfig {
     gagDurationSec: clampInt(data.gagDurationSec, defaults.gagDurationSec, 3, 60),
     gagEnabled: data.gagEnabled === false ? false : true,
     purchaseThankYouVideoUrl: normalizeUrl(data.purchaseThankYouVideoUrl),
-    equipmentIntroVideoUrl: normalizeUrl(data.equipmentIntroVideoUrl),
-    measurementsIntroVideoUrl: normalizeUrl(data.measurementsIntroVideoUrl),
+    equipmentIntroVideoUrl: storedIntroOrNull(data.equipmentIntroVideoUrl),
+    measurementsIntroVideoUrl: storedIntroOrNull(data.measurementsIntroVideoUrl),
     uploadedContentVolumeDb: clampVolumeDb(
       (data as { uploadedContentVolumeDb?: unknown }).uploadedContentVolumeDb,
       DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
@@ -197,10 +225,10 @@ export async function saveLandingMedia(
     const url = patch.welcomeVideoUrl?.trim() || null;
     if (url && !isAllowedCoachIntroVideoUrl(url)) {
       throw new Error(
-        "Welcome video must be an uploaded coach intro (MP4/WebM/MOV) or a YouTube URL.",
+        "Welcome video must be an uploaded coach intro (MP4/WebM/MOV) on this site.",
       );
     }
-    next.welcomeVideoUrl = url;
+    next.welcomeVideoUrl = url || DEFAULT_WELCOME_FILE;
   }
 
   if (patch.welcomeVideosByPlan !== undefined) {
@@ -209,21 +237,28 @@ export async function saveLandingMedia(
       const url = normalized[plan];
       if (url && !isAllowedCoachIntroVideoUrl(url)) {
         throw new Error(
-          `${plan} welcome video must be an uploaded file or a YouTube URL.`,
+          `${plan} welcome video must be an uploaded file on this site.`,
         );
       }
     }
-    next.welcomeVideosByPlan = normalized;
+    next.welcomeVideosByPlan = {
+      ...normalized,
+      explorer: normalized.explorer || next.freeChastiseVideoUrl || DEFAULT_FREE_INTRO_FILE,
+    };
   }
 
   if (patch.freeChastiseVideoUrl !== undefined) {
     const url = patch.freeChastiseVideoUrl?.trim() || null;
     if (url && !isAllowedCoachIntroVideoUrl(url)) {
       throw new Error(
-        "Free-ticket intro must be an uploaded file or a YouTube URL.",
+        "Free-ticket intro must be an uploaded file on this site.",
       );
     }
-    next.freeChastiseVideoUrl = url;
+    next.freeChastiseVideoUrl = url || DEFAULT_FREE_INTRO_FILE;
+    next.welcomeVideosByPlan = {
+      ...next.welcomeVideosByPlan,
+      explorer: next.freeChastiseVideoUrl,
+    };
   }
 
   if (patch.heroSlides !== undefined) {
@@ -273,7 +308,7 @@ export async function saveLandingMedia(
     const url = patch.equipmentIntroVideoUrl?.trim() || null;
     if (url && !isAllowedCoachIntroVideoUrl(url)) {
       throw new Error(
-        "Equipment intro must be an uploaded coach intro (MP4/WebM/MOV) or a YouTube URL.",
+        "Equipment intro must be an uploaded coach intro (MP4/WebM/MOV) on this site.",
       );
     }
     next.equipmentIntroVideoUrl = url;
@@ -283,7 +318,7 @@ export async function saveLandingMedia(
     const url = patch.measurementsIntroVideoUrl?.trim() || null;
     if (url && !isAllowedCoachIntroVideoUrl(url)) {
       throw new Error(
-        "Measurements how-to must be an uploaded coach intro (MP4/WebM/MOV) or a YouTube URL.",
+        "Measurements how-to must be an uploaded coach intro (MP4/WebM/MOV) on this site.",
       );
     }
     next.measurementsIntroVideoUrl = url;

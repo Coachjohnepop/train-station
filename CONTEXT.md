@@ -356,8 +356,9 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-15  
-**Status:** Landing conversion shipped: **Join** = 7-day Coach Class look (`/signup?plan=explorer&week=1` + `grantLandingFreeWeek`), **Free Tour** stays the 15s peek, return visitors get ticket-first chrome + sticky Join/Tour. Confetti on Join tap and account create. Tickets still at `/join#tickets`. Stripe cutover still first for money.  
+**Date:** 2026-08-16  
+**Status:** Welcome / Free / per-ticket intros are **site files** (`/videos/jeremy-welcome.mp4`, `/videos/jeremy-free-intro.mp4`) — same model as the Free ticket clip. Admin cannot save YouTube on those slots. Stripe cutover still started: Production checkout is **Eco Delight Live** (`pk_live_51SuLDr…`). Jeremy master target is `acct_1TmKSWQWWnajU9uyk`. `.env.jeremy.live` is **missing** — blocked on Jeremy Live `sk`/`pk`/`whsec` plus a copy of today’s Eco keys as `*_LEGACY`. Webhook code now accepts a leftover Eco secret so Ali/Bella/Jeremy2 renewals keep working after the swap. Gender/man-woman stays **preview-only**.  
+**Prior (2026-08-15):** Landing conversion shipped: **Join** = 7-day Coach Class look (`/signup?plan=explorer&week=1` + `grantLandingFreeWeek`), **Free Tour** stays the 15s peek, return visitors get ticket-first chrome + sticky Join/Tour. Confetti on Join tap and account create. Tickets still at `/join#tickets`.  
 **Prior (2026-08-14 night):** John out. Ali is mid re-onboard (still paid). She was texted to tap Free first (joke), then Coach Class → Continue already paid. Gag + Jeremy intros are site files. Paid checkout Free tap plays the gag and does not downgrade her (`ce77353`).  
 **Rule reaffirmed:** **any new module / data element → Postgres first** (see Durable product rules).  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
@@ -595,9 +596,9 @@ John reported Admin Billing shows **his** Stripe balances. That means Production
 
 | Item | Detail |
 |------|--------|
-| Video model | **Stored:** overall + free-ticket + per ticket class (Explorer / Coach / Business / 1st). **YouTube:** gag, purchase thank-you, weekly, dinner, daily, exercises. |
+| Video model | **Stored site files:** overall + free-ticket + per ticket class (Explorer / Coach / Business / 1st) + gear/measurements. **YouTube:** purchase thank-you, weekly, dinner, daily, exercises. Gag is the in-app chorus file. |
 | Admin → Videos | Multi-upload library (MP4/WebM/MOV, max 200 MB, Blob client upload) → rename → assign to slots → **Save all videos**. Gag on/off + start/duration still in section 3. |
-| Playback | `PlayableVideoFrame` (YouTube or HTML5). Free-ticket modal: Rickroll ~10s then Jeremy intro (file or YT). |
+| Playback | `PlayableVideoFrame` (HTML5 for intros). Free ticket is one local file (`/videos/free-ticket-full.mp4`). Welcome slots refuse YouTube. |
 | APIs | `POST /api/admin/landing-media/upload` · `GET/POST/DELETE /api/admin/site-videos/library` · store `demo/site-video-library.json` |
 | Loop script | `scripts/pages-admin-videos-loop.mjs` — post-deploy verified library + upload routes **200** |
 | Weeks / builder | Athletes / Military / Mom-Dads **22 weeks**; cross-program **Import week** (earlier same day) |
@@ -617,16 +618,17 @@ John reported Admin Billing shows **his** Stripe balances. That means Production
 
 ### Video storage model (product decision)
 
-| Stored (upload) | YouTube links |
-|-----------------|---------------|
-| Default welcome / coach intro | Free-ticket gag (Rickroll etc.) |
-| Per ticket class welcome (`welcomeVideosByPlan`) | Purchase thank-you |
-| Free-ticket intro (Jeremy after gag) | Weekly / dinner / daily inspiration |
-| | Exercise library demos |
+| Stored (upload / `public/videos`) | YouTube links |
+|-----------------------------------|----------------|
+| Default welcome (`/videos/jeremy-welcome.mp4`) | Purchase thank-you |
+| Per ticket class welcome (`welcomeVideosByPlan`) | Weekly / dinner / daily inspiration |
+| Free-ticket intro (`/videos/jeremy-free-intro.mp4`) | Exercise library demos |
+| Free gag + Jeremy (`/videos/free-ticket-full.mp4`) | |
+| Gear / measurements intros | |
 
 **Library UX:** Admin → Videos — multi-upload into **Jeremy’s video library**, rename clips, then **assign** to Overall / Free-ticket / Free Explorer / Coach Class / Business Class / 1st Class. Save publishes slot URLs into landing-media.
 
-API: `POST /api/admin/landing-media/upload` · library `/api/admin/site-videos/library`. Player: `PlayableVideoFrame` (YouTube or HTML5).
+API: `POST /api/admin/landing-media/upload` · library `/api/admin/site-videos/library`. Player: `PlayableVideoFrame` (HTML5 for intros; YouTube only for thank-you / weekly / dinner / daily).
 
 ### Jeremy voice (Jul 28) — reply checklist
 

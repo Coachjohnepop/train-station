@@ -1,7 +1,10 @@
 {
   "welcomeVideoUrl": "/videos/jeremy-welcome.mp4",
   "welcomeVideosByPlan": {
-    "explorer": "/videos/jeremy-free-intro.mp4"
+    "explorer": "/videos/jeremy-free-intro.mp4",
+    "member": "/videos/jeremy-welcome.mp4",
+    "business": "/videos/jeremy-welcome.mp4",
+    "pro": "/videos/jeremy-welcome.mp4"
   },
   "freeChastiseVideoUrl": "/videos/jeremy-free-intro.mp4",
   "gagVideoUrl": null,

@@ -102,7 +102,7 @@ export async function addSiteVideoLibraryItem(input: {
 }): Promise<SiteVideoLibraryItem> {
   const url = input.url?.trim();
   if (!url || !isAllowedCoachIntroVideoUrl(url)) {
-    throw new Error("Video URL must be an uploaded site file or YouTube link.");
+    throw new Error("Video URL must be an uploaded site file (MP4/WebM/MOV).");
   }
 
   const current = await getSiteVideoLibrary();
@@ -153,7 +153,7 @@ export async function updateSiteVideoLibraryItem(
   if (patch.url !== undefined) {
     const url = patch.url.trim();
     if (!url || !isAllowedCoachIntroVideoUrl(url)) {
-      throw new Error("Video URL must be an uploaded site file or YouTube link.");
+      throw new Error("Video URL must be an uploaded site file (MP4/WebM/MOV).");
     }
     // Another library row already owns this URL — don't create a dupe key.
     const clash = current.items.find((i) => i.id !== id && i.url === url);
