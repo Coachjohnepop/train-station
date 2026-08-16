@@ -144,16 +144,7 @@ export default function LandingWelcomeBanner({
                 </a>
               ) : null}
             </div>
-            {welcomeVideoUrl?.trim() ? (
-              <a
-                href={welcomeVideoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-accent hover:underline"
-              >
-                YouTube link →
-              </a>
-            ) : null}
+
           </div>
         ) : null}
 
