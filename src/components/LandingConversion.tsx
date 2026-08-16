@@ -76,7 +76,7 @@ export default function LandingConversion({
                 markLandingConverted();
                 fireLandingJoinHook(e.currentTarget);
               }}
-              className="landing-hero-early-signup inline-flex h-12 flex-1 items-center justify-center rounded-full text-[15px] font-extrabold"
+              className="landing-hero-early-signup inline-flex h-14 flex-1 items-center justify-center rounded-full text-base font-extrabold"
             >
               Join
             </a>
@@ -84,7 +84,7 @@ export default function LandingConversion({
               type="button"
               data-analytics-action="sticky-free-tour"
               onClick={() => openFreeQuickTour()}
-              className="landing-hero-secondary-cta inline-flex h-12 flex-1 items-center justify-center rounded-full text-[15px] font-extrabold"
+              className="landing-hero-secondary-cta inline-flex h-14 flex-1 items-center justify-center rounded-full text-base font-extrabold"
             >
               Free Tour
             </button>
