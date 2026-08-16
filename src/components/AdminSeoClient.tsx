@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SiteSeoConfig } from "@/lib/site-seo-store";
+import {
+  SEARCH_THIRD_WORD_ALIASES,
+  SEARCH_THIRD_WORDS,
+} from "@/lib/search-third-words";
 
 type SeoResponse = {
   ok?: boolean;
@@ -174,11 +178,38 @@ export default function AdminSeoClient() {
           app. We cannot outrank the world’s train stations for those two words.
         </p>
         <p className="text-sm text-[var(--muted)]">
-          What we can win: <strong className="text-[var(--text)]">The Train Station</strong>,{" "}
-          <strong className="text-[var(--text)]">The Train Station coaching</strong>,{" "}
-          <strong className="text-[var(--text)]">thetrainstation.co</strong>, and{" "}
-          <strong className="text-[var(--text)]">Coach Jeremy Train Station</strong>. Ask people
-          (and your wife) to search those.
+          Tell people: search <strong className="text-[var(--text)]">The Train Station</strong> plus
+          a third word. Each chip below is the same site.
+        </p>
+        <ul className="flex flex-wrap gap-1.5">
+          {[...SEARCH_THIRD_WORDS, ...SEARCH_THIRD_WORD_ALIASES].map((word) => (
+            <li
+              key={word}
+              className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs"
+            >
+              The Train Station <span className="font-semibold">{word}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="grid gap-2 text-xs text-[var(--muted)] sm:grid-cols-3">
+          <p>
+            <strong className="text-[var(--text)]">Hours–3 days</strong> — recrawl after ping
+          </p>
+          <p>
+            <strong className="text-[var(--text)]">2–14 days</strong> — new title/snippet in Google
+          </p>
+          <p>
+            <strong className="text-[var(--text)]">2–8 weeks</strong> — “The Train Station fitness”
+            and the other third-word phrases. Never for “train” or “station” alone.
+          </p>
+        </div>
+        <p className="text-xs text-[var(--muted)]">
+          Public page for this list:{" "}
+          <a href="/find" className="text-accent hover:underline">
+            /find
+          </a>
+          . Jeremy Byrd is the spelling; <strong className="text-[var(--text)]">Bird</strong> is
+          included because people will type the bird.
         </p>
         <div className="flex flex-wrap gap-2">
           <button
@@ -282,7 +313,7 @@ export default function AdminSeoClient() {
             onChange={(e) => patch("keywords", e.target.value)}
             placeholder="comma, separated, terms"
             className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm"
-            maxLength={400}
+            maxLength={800}
           />
           <span className="mt-1 block text-[11px] text-[var(--muted)]">
             Low ranking weight — useful for notes and legacy tools.

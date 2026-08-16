@@ -1,5 +1,6 @@
 import path from "path";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import { searchKeywordsCsv } from "@/lib/search-third-words";
 
 /**
  * Site-wide SEO + social share settings (Admin → Search).
@@ -35,16 +36,15 @@ const DEV_FILE = path.join(process.cwd(), "prisma", "site-seo.dev.json");
 const BLOB_PATH = "demo/site-seo.json";
 
 const DEFAULTS: Omit<SiteSeoConfig, "updatedAt"> = {
-  metaTitle: "The Train Station — Online coaching with Jeremy",
+  metaTitle: "The Train Station fitness & workout — Coach Jeremy Byrd",
   metaDescription:
-    "The Train Station is Coach Jeremy’s online training app: real programs, live class, and accountability on your phone. Join at thetrainstation.co.",
-  ogTitle: "The Train Station — Online coaching with Jeremy",
+    "Look up The Train Station fitness, workout, exercise, program, or Jeremy Byrd. Online coaching, weight loss, live class, and accountability at thetrainstation.co.",
+  ogTitle: "The Train Station fitness & workout — Coach Jeremy Byrd",
   ogDescription:
-    "Coach Jeremy. Real programs. Live class. On your phone. The Train Station — thetrainstation.co.",
+    "The Train Station is Coach Jeremy Byrd’s training app. Search The Train Station fitness — not the railroad.",
   ogImageUrl: "/images/splash/black-guy.jpg",
-  ogImageAlt: "The Train Station — Coach Jeremy training",
-  keywords:
-    "The Train Station, The Train Station coaching, Train Station fitness, Coach Jeremy, Jeremy Byrd, online personal training, thetrainstation.co",
+  ogImageAlt: "The Train Station — Coach Jeremy Byrd training",
+  keywords: searchKeywordsCsv(),
   robotsIndex: true,
   robotsFollow: true,
   googleSiteVerification: "",
@@ -85,7 +85,10 @@ function normalize(raw: unknown): SiteSeoConfig {
   if (!raw || typeof raw !== "object") return emptyConfig();
   const data = raw as Partial<SiteSeoConfig>;
   const storedTitle = typeof data.metaTitle === "string" ? data.metaTitle.trim() : "";
-  const branded = !storedTitle || storedTitle === "The Train Station — Train with purpose";
+  const branded =
+    !storedTitle ||
+    storedTitle === "The Train Station — Train with purpose" ||
+    storedTitle === "The Train Station — Online coaching with Jeremy";
   return {
     metaTitle: branded ? DEFAULTS.metaTitle : clampText(data.metaTitle, 120, DEFAULTS.metaTitle),
     metaDescription: branded
@@ -97,7 +100,7 @@ function normalize(raw: unknown): SiteSeoConfig {
       : clampText(data.ogDescription, 320, DEFAULTS.ogDescription),
     ogImageUrl: normalizeUrl(data.ogImageUrl, DEFAULTS.ogImageUrl),
     ogImageAlt: clampText(data.ogImageAlt, 200, DEFAULTS.ogImageAlt),
-    keywords: branded ? DEFAULTS.keywords : clampText(data.keywords, 400, DEFAULTS.keywords),
+    keywords: branded ? DEFAULTS.keywords : clampText(data.keywords, 800, DEFAULTS.keywords),
     robotsIndex: data.robotsIndex !== false,
     robotsFollow: data.robotsFollow !== false,
     googleSiteVerification: clampText(data.googleSiteVerification, 120, ""),
@@ -198,6 +201,7 @@ export const SEO_PUBLIC_PATHS: Array<{
   priority: number;
 }> = [
   { path: "/", changeFrequency: "weekly", priority: 1 },
+  { path: "/find", changeFrequency: "weekly", priority: 0.96 },
   { path: "/join", changeFrequency: "weekly", priority: 0.95 },
   { path: "/free", changeFrequency: "weekly", priority: 0.9 },
   { path: "/powered-by", changeFrequency: "monthly", priority: 0.4 },

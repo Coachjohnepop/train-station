@@ -448,6 +448,15 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
     keywords: ["thetrainstation", "marketing", "homepage"],
   },
   {
+    id: "public-find",
+    title: "Find us in search",
+    description: "The Train Station + fitness / workout / Jeremy Byrd",
+    href: "/find",
+    workspace: "public",
+    group: "Public",
+    keywords: ["seo", "google", "safari", "look me up", "third word", "bird"],
+  },
+  {
     id: "public-join",
     title: "Join / tickets",
     description: "Membership plan picker",

@@ -145,7 +145,7 @@ Templates, **28-day packs**, and **catalog exercises** use `archivedAt`:
 Freeform (not only adult/athletes): yoga, meditation, nutrition, martial arts, dog training, etc.
 
 ### Search / SEO (Admin → Search)
-Public findability for **thetrainstation.co**. Desk: titles, OG, robots, sitemap, Google/Bing recrawl ping. Stored in Postgres `SiteSeoSettings` (Blob fallback). Third-word list + public `/find`. **Do not expect** generic “train station” (Safari/maps/railroad) to rank — win “The Train Station fitness / workout / Jeremy Byrd / …”. Recrawl hours–days; snippets 2–14 days; third-word ranks 2–8 weeks. Live on `main` 2026-08-16. Man/woman copy still preview-only.
+Public findability for **thetrainstation.co**. Desk: titles, OG, robots, sitemap, Google/Bing recrawl ping. Stored in Postgres `SiteSeoSettings` (Blob fallback). Third-word list (`src/lib/search-third-words.ts`) + public `/find`. **Do not expect** generic “train station” (Safari/maps/railroad) to rank — win “The Train Station fitness / workout / Jeremy Byrd / …”. Recrawl hours–days; snippets 2–14 days; third-word ranks 2–8 weeks. Live on `main` 2026-08-16. Man/woman copy still preview-only.
 ### Do not
 - Put joke soak names as warm-ups on **live member** program days  
 - Push WIP to `main` without John asking for prod  

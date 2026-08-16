@@ -18,7 +18,7 @@ const patchSchema = z.object({
   ogDescription: z.string().max(320).optional(),
   ogImageUrl: z.string().max(500).optional(),
   ogImageAlt: z.string().max(200).optional(),
-  keywords: z.string().max(400).optional(),
+  keywords: z.string().max(800).optional(),
   robotsIndex: z.boolean().optional(),
   robotsFollow: z.boolean().optional(),
   googleSiteVerification: z.string().max(120).optional(),

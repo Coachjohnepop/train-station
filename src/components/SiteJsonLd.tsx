@@ -2,6 +2,7 @@ import { getResolvedSiteBrand } from "@/lib/site-brand-server";
 import { getSiteSeo, absoluteSeoUrl } from "@/lib/site-seo-store";
 import { siteOrigin } from "@/lib/site-seo-server";
 import { BRAND_NAME } from "@/lib/brand";
+import { trainStationSearchPhrases } from "@/lib/search-third-words";
 
 /** Public structured data so Google/Bing know this is The Train Station coaching site. */
 export default async function SiteJsonLd() {
@@ -17,7 +18,7 @@ export default async function SiteJsonLd() {
         "@type": "WebSite",
         "@id": `${origin}/#website`,
         name,
-        alternateName: ["The Train Station", "Train Station coaching", "thetrainstation.co"],
+        alternateName: trainStationSearchPhrases(),
         url: origin,
         description: seo.metaDescription,
         inLanguage: "en-US",
