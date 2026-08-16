@@ -8,12 +8,13 @@ import {
   fireWorkoutConfetti,
 } from "@/lib/workout-confetti";
 import { PROGRAM_IMAGES } from "@/lib/program-constants";
+import { JOIN_WEEK_HREF } from "@/lib/landing-return-visit";
 
 /**
  * See inside — full auto-play tour for cold traffic only.
  *
  * Auto: workout ×5 → Business → Adult → equip blank/all → book open/day/confirm
- * Ends at “Where next?” → exits into normal site nav (/join#tickets | /join#programs).
+ * Ends at “Where next?” → Join free week, tickets, or programs.
  * Wizard never continues after that. Members never see this (home is welcome shell).
  */
 const STEP_MS = 2000;
@@ -266,7 +267,7 @@ export default function LandingSeeInsideTour({
 
   const coachLine =
     phase === "end"
-      ? "Ticket, program, or Create Account & Pay — all open the real site. Wizard ends here."
+      ? "Join a free week, pick a ticket, or choose a program — tour ends here."
       : current === "w_weight"
         ? "Log the weight you used."
         : current === "w_set1"
@@ -641,7 +642,7 @@ export default function LandingSeeInsideTour({
                 Where next?
               </h3>
               <p className="mt-0.5 text-center text-[11px] text-white/55">
-                Tour ends here — open real tickets or programs on the site.
+                Tour ends here — start a free week, or browse tickets and programs.
               </p>
               <div className="mt-2.5 grid grid-cols-2 gap-2 sm:mt-3 sm:gap-2.5">
                 {/* Left — ticket art → /join#tickets */}
@@ -702,13 +703,14 @@ export default function LandingSeeInsideTour({
               </div>
               <button
                 type="button"
-                onClick={() => exitToSite("/join?from=tour#tickets")}
+                data-analytics-action="tour-join-week"
+                onClick={() => exitToSite(JOIN_WEEK_HREF)}
                 className="landing-hero-early-signup mt-3 inline-flex h-12 w-full items-center justify-center rounded-full text-[15px] font-extrabold"
               >
-                Create Account &amp; Pay
+                Join — free week
               </button>
               <p className="mt-2 text-center text-[11px] text-white/45">
-                Opens real memberships — wizard ends. Start date still needs full onboard.
+                7 days in the app. Tickets stay available if you already know your seat.
               </p>
             </div>
           )}

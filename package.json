@@ -75,6 +75,7 @@
     "copy:adult-week2": "node scripts/copy-adult-week1-to-week2.mjs",
     "seed:adult-week1": "node scripts/seed-adult-week1-template.mjs",
     "test:jeremy-loop": "node scripts/jeremy-feedback-full-loop.mjs",
+    "test:landing-join-loop": "node scripts/landing-join-engagement-loop.mjs",
     "test:jeremy-migration": "node scripts/jeremy-migration-test.mjs",
     "cleanup:qa-test-data": "npx tsx scripts/cleanup-qa-test-data.mjs",
     "cleanup:migration-test-data": "npx tsx scripts/cleanup-migration-test-data.mjs",
