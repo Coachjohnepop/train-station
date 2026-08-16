@@ -92,14 +92,22 @@ export function welcomeVideoUrlFromConfig(stored: string | null | undefined) {
   return resolveCoachIntroFile(resolved, JEREMY_WELCOME_VIDEO_SRC);
 }
 
-/** First-visit Gear tab intro (Jeremy home-gym buying guide). */
-export function equipmentIntroVideoUrlFromConfig(stored: string | null | undefined) {
-  return resolveLandingVideoUrl(stored, ["NEXT_PUBLIC_EQUIPMENT_INTRO_VIDEO_URL"]);
+function fileOnlyIntro(stored: string | null | undefined, envKeys: string[]): string | null {
+  const raw = resolveLandingVideoUrl(stored, envKeys);
+  if (!raw || isYoutubeUrl(raw) || isRickrollVideoUrl(raw) || !isDirectVideoUrl(raw)) {
+    return null;
+  }
+  return raw;
 }
 
-/** First-visit Measurements tab — how to take body measurements. */
+/** First-visit Gear tab intro (Jeremy home-gym buying guide). File only — no YouTube. */
+export function equipmentIntroVideoUrlFromConfig(stored: string | null | undefined) {
+  return fileOnlyIntro(stored, ["NEXT_PUBLIC_EQUIPMENT_INTRO_VIDEO_URL"]);
+}
+
+/** First-visit Measurements tab — how to take body measurements. File only — no YouTube. */
 export function measurementsIntroVideoUrlFromConfig(stored: string | null | undefined) {
-  return resolveLandingVideoUrl(stored, ["NEXT_PUBLIC_MEASUREMENTS_INTRO_VIDEO_URL"]);
+  return fileOnlyIntro(stored, ["NEXT_PUBLIC_MEASUREMENTS_INTRO_VIDEO_URL"]);
 }
 
 export function welcomeVideoUrlForPlan(
@@ -111,15 +119,12 @@ export function welcomeVideoUrlForPlan(
 ): string | null {
   const normalized = normalizeSignupPlan(plan);
   if (normalized === "explorer") {
-    const free =
-      freeExplorerUrl?.trim() ||
-      byPlan.explorer?.trim() ||
-      null;
-    if (free && !isRickrollVideoUrl(free)) return free;
+    const free = freeExplorerUrl?.trim() || byPlan.explorer?.trim() || null;
+    return resolveCoachIntroFile(free, JEREMY_FREE_INTRO_VIDEO_SRC);
   }
   if ((MEMBERSHIP_PLANS as readonly string[]).includes(normalized)) {
     const planUrl = byPlan[normalized as keyof WelcomeVideosByPlan];
-    if (planUrl?.trim() && !isRickrollVideoUrl(planUrl)) return planUrl.trim();
+    return resolveCoachIntroFile(planUrl, welcomeVideoUrlFromConfig(storedDefault));
   }
   return welcomeVideoUrlFromConfig(storedDefault);
 }

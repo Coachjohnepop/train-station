@@ -6,6 +6,9 @@ import { createPortal } from "react-dom";
 import PlayableVideoFrame from "@/components/PlayableVideoFrame";
 import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
 import { requestBackgroundMusicPlay } from "@/lib/background-music-control";
+import { JEREMY_WELCOME_VIDEO_SRC } from "@/lib/landing-media";
+import { isDirectVideoUrl } from "@/lib/site-video";
+import { isYoutubeUrl } from "@/lib/youtube";
 
 const DEFAULT_TRIGGER =
   "inline-flex h-14 items-center justify-center rounded-full bg-[#7c3aed] px-10 text-sm font-bold text-white shadow-lg shadow-[#7c3aed]/30 transition-all hover:bg-[#6d2dd6] hover:scale-[1.05] active:scale-[0.98]";
@@ -58,11 +61,17 @@ export default function WelcomeVideoPopover({
     };
   }, [open, hide]);
 
-  const videoBody = welcomeVideoUrl?.trim() ? (
+  const fileUrl = (() => {
+    const u = welcomeVideoUrl?.trim() || "";
+    if (u && !isYoutubeUrl(u) && isDirectVideoUrl(u)) return u;
+    return JEREMY_WELCOME_VIDEO_SRC;
+  })();
+
+  const videoBody = fileUrl ? (
     <div className="aspect-video w-full overflow-hidden rounded-xl bg-black sm:rounded-2xl">
       <PlayableVideoFrame
         className="h-full w-full"
-        videoUrl={welcomeVideoUrl}
+        videoUrl={fileUrl}
         title="Welcome video"
         autoplay
         kickPlayback={open}

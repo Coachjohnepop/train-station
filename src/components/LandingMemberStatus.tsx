@@ -137,16 +137,7 @@ export default function LandingMemberStatus({
               Today
             </a>
           </div>
-          {welcomeVideoUrl?.trim() ? (
-            <a
-              href={welcomeVideoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-accent hover:underline"
-            >
-              YouTube link →
-            </a>
-          ) : null}
+
         </div>
 
         <div className="mx-auto mt-6 flex max-w-md flex-col items-stretch gap-3 sm:flex-row sm:justify-center">
