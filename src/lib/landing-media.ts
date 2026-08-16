@@ -144,6 +144,8 @@ export const WELCOME_VIDEO_PLAN_OPTIONS = MEMBERSHIP_PLANS.map((plan) => ({
 export const FREE_TICKET_GAG_SRC = "/videos/free-ticket-chorus.mp4";
 export const FREE_TICKET_GAG_POSTER = "/videos/free-ticket-chorus.jpg";
 export const FREE_TICKET_GAG_AUDIO_SRC = "/audio/free-ticket-chorus.mp3";
+/** Chorus + Jeremy intro in one file — no swap, no YouTube. */
+export const FREE_TICKET_FULL_SRC = "/videos/free-ticket-full.mp4";
 
 /** Legacy watch URL — never played. YouTube is too slow for Free tap. */
 export const FREE_TICKET_RICKROLL_URL =

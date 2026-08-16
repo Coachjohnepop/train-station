@@ -57,13 +57,13 @@ export default function ShareFreeTicketButton({
         data-analytics-label="Send Free ticket gag"
         className={
           className ||
-          "inline-flex h-12 items-center justify-center rounded-full bg-amber-400 text-sm font-semibold text-black transition hover:bg-amber-300"
+          "inline-flex h-14 items-center justify-center rounded-full bg-amber-400 text-base font-semibold text-black transition hover:bg-amber-300"
         }
       >
         {label}
       </button>
       {statusLabel ? (
-        <p className="text-center text-[11px] text-amber-300/90">{statusLabel}</p>
+        <p className="text-center text-sm text-amber-300/90">{statusLabel}</p>
       ) : null}
     </div>
   );

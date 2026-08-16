@@ -299,10 +299,10 @@ export default function LandingSeeInsideTour({
     >
       <div className="flex shrink-0 items-center justify-between gap-2 px-3 pb-1 pt-[max(0.4rem,env(safe-area-inset-top))] sm:px-5">
         <div className="min-w-0">
-          <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-[var(--accent-fg)]">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--accent-fg)]">
             Free Quick Tour
           </p>
-          <h2 id="see-inside-title" className="text-xs font-semibold text-[var(--text)] sm:text-sm">
+          <h2 id="see-inside-title" className="text-base font-semibold text-[var(--text)] sm:text-lg">
             Station tour
           </h2>
         </div>
@@ -315,7 +315,7 @@ export default function LandingSeeInsideTour({
                 clearTimers();
                 setPhase("end");
               }}
-              className="h-8 rounded-full border border-white/20 bg-white/5 px-2.5 text-[11px] font-semibold text-white/85"
+              className="h-10 rounded-full border border-white/20 bg-white/5 px-3 text-sm font-semibold text-white/90"
             >
               Skip to choices
             </button>
@@ -385,15 +385,15 @@ export default function LandingSeeInsideTour({
               }`}
               aria-hidden={!onWorkout}
             >
-            <div className="w-full max-w-[270px] overflow-hidden rounded-2xl border border-white/15 bg-[#12081f] shadow-[0_16px_48px_rgba(0,0,0,0.65)] sm:max-w-[290px]">
-              <div className="flex items-center justify-between border-b border-white/10 px-3 py-1.5">
+            <div className="w-full max-w-[320px] overflow-hidden rounded-2xl border border-white/15 bg-[#12081f] shadow-[0_16px_48px_rgba(0,0,0,0.65)] sm:max-w-[340px]">
+              <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
                 <div>
-                  <p className="text-[8px] font-bold uppercase tracking-[0.18em] text-[var(--accent-fg)]">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--accent-fg)]">
                     Live session
                   </p>
-                  <p className="text-sm font-semibold leading-tight text-[var(--text)]">Today · Lower day</p>
+                  <p className="text-base font-semibold leading-tight text-[var(--text)]">Today · Lower day</p>
                 </div>
-                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[9px] font-bold text-emerald-300">
+                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold text-emerald-300">
                   LIVE
                 </span>
               </div>
@@ -401,11 +401,11 @@ export default function LandingSeeInsideTour({
                 <div className="rounded-lg border border-[#7c3aed]/35 bg-[#1a0b2e]/90 p-2.5">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="text-[9px] font-semibold uppercase text-[var(--accent-fg)]/80">Now</p>
-                      <h3 className="text-[15px] font-semibold leading-tight text-[var(--text)]">
+                      <p className="text-[11px] font-semibold uppercase text-[var(--accent-fg)]/80">Now</p>
+                      <h3 className="text-lg font-semibold leading-tight text-[var(--text)]">
                         Goblet squat
                       </h3>
-                      <p className="text-[10px] text-white/55">3 × 8 · Medium</p>
+                      <p className="text-xs text-white/70">3 × 8 · Medium</p>
                     </div>
                     <span className="text-xs font-bold tabular-nums text-[#fde68a]">
                       {displayWeight}
@@ -583,7 +583,7 @@ export default function LandingSeeInsideTour({
                       JB
                     </span>
                     <div>
-                      <p className="text-xs font-semibold text-[var(--text)] sm:text-sm">
+                      <p className="text-sm font-semibold text-[var(--text)] sm:text-base">
                         Coach Jeremy Byrd
                       </p>
                       <p className="text-[10px] text-emerald-300/90">15-min intro · Calendly</p>
@@ -635,13 +635,13 @@ export default function LandingSeeInsideTour({
           {/* ── END: exit wizard into normal site nav ── */}
           {phase === "end" && (
             <div className="w-full max-w-lg">
-              <p className="text-center text-[9px] font-bold uppercase tracking-[0.24em] text-[var(--accent-fg)]">
+              <p className="text-center text-xs font-bold uppercase tracking-[0.2em] text-[var(--accent-fg)]">
                 Your move
               </p>
-              <h3 className="mt-0.5 text-center text-xl font-semibold leading-tight text-[var(--text)] sm:text-2xl">
+              <h3 className="mt-1 text-center text-2xl font-semibold leading-tight text-[var(--text)] sm:text-3xl">
                 Where next?
               </h3>
-              <p className="mt-0.5 text-center text-[11px] text-white/55">
+              <p className="mt-1.5 text-center text-sm text-white/70">
                 Tour ends here — start a free week, or browse tickets and programs.
               </p>
               <div className="mt-2.5 grid grid-cols-2 gap-2 sm:mt-3 sm:gap-2.5">
@@ -661,13 +661,13 @@ export default function LandingSeeInsideTour({
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#1a0b2e] via-transparent to-transparent" />
                   </div>
                   <div className="flex flex-1 flex-col p-2 sm:p-2.5">
-                    <p className="text-sm font-semibold leading-tight text-[var(--text)] sm:text-base">
+                    <p className="text-base font-semibold leading-tight text-[var(--text)] sm:text-lg">
                       Choose ticket level
                     </p>
-                    <p className="mt-0.5 text-[10px] leading-snug text-white/60">
+                    <p className="mt-1 text-xs leading-snug text-white/70">
                       Free · Coach · Business · 1st
                     </p>
-                    <span className="mt-1 text-[11px] font-semibold text-[var(--accent-fg)]">
+                    <span className="mt-1.5 text-sm font-semibold text-[var(--accent-fg)]">
                       Open levels →
                     </span>
                   </div>
@@ -689,13 +689,13 @@ export default function LandingSeeInsideTour({
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#12081f] via-transparent to-transparent" />
                   </div>
                   <div className="flex flex-1 flex-col p-2 sm:p-2.5">
-                    <p className="text-sm font-semibold leading-tight text-[var(--text)] sm:text-base">
+                    <p className="text-base font-semibold leading-tight text-[var(--text)] sm:text-lg">
                       Choose program
                     </p>
-                    <p className="mt-0.5 text-[10px] leading-snug text-white/60">
+                    <p className="mt-1 text-xs leading-snug text-white/70">
                       Adult, Athletes, Military…
                     </p>
-                    <span className="mt-1 text-[11px] font-semibold text-[var(--accent-fg)]">
+                    <span className="mt-1.5 text-sm font-semibold text-[var(--accent-fg)]">
                       Open programs →
                     </span>
                   </div>
@@ -705,17 +705,17 @@ export default function LandingSeeInsideTour({
                 type="button"
                 data-analytics-action="tour-join-week"
                 onClick={() => exitToSite(JOIN_WEEK_HREF)}
-                className="landing-hero-early-signup mt-3 inline-flex h-12 w-full items-center justify-center rounded-full text-[15px] font-extrabold"
+                className="landing-hero-early-signup mt-3 inline-flex h-14 w-full items-center justify-center rounded-full text-base font-extrabold"
               >
                 Join — free week
               </button>
-              <p className="mt-2 text-center text-[11px] text-white/45">
+              <p className="mt-2.5 text-center text-sm text-white/60">
                 7 days in the app. Tickets stay available if you already know your seat.
               </p>
             </div>
           )}
 
-          <p className="max-w-sm text-center text-[12px] font-semibold leading-snug text-[var(--text)] sm:text-[13px]">
+          <p className="max-w-sm text-center text-[15px] font-semibold leading-snug text-[var(--text)] sm:text-base">
             {coachLine}
           </p>
         </div>
