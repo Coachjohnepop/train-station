@@ -76,7 +76,7 @@ Sign in → left sidebar. Paths below are full URLs on prod.
 ### Site
 | Screen | URL | What lives here |
 |--------|-----|-----------------|
-| **Landing** | `/admin/landing` | Public landing copy, **YouTube links** (welcome, free-ticket chastise, weekly coach, dinner) |
+| **Landing** | `/admin/landing` | Public landing copy + Venmo. Welcome / Free intros are **site files** (Admin → Videos). Weekly / dinner stay YouTube. |
 | **Settings** | `/admin/settings` | Coach prefs, warm-up, **Zoom Connect / disconnect**, messaging toggles, **Phone app alerts** |
 
 ### One-time: phone alerts on *your* iPhone (home-screen badge)

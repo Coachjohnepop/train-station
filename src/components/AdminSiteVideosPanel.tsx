@@ -577,7 +577,7 @@ export default function AdminSiteVideosPanel({
       const t = url.trim();
       if (t && !isAllowedCoachIntroVideoUrl(t)) {
         setError(true);
-        setMessage(`${label} must be a library video or YouTube link.`);
+        setMessage(`${label} must be an uploaded site file (MP4/WebM/MOV).`);
         return false;
       }
       return true;
@@ -611,7 +611,7 @@ export default function AdminSiteVideosPanel({
       const url = urlForSlot(slot.id, assignments);
       if (url && !isAllowedCoachIntroVideoUrl(url)) {
         setError(true);
-        setMessage(`${slot.label} must be a library video or YouTube link.`);
+        setMessage(`${slot.label} must be an uploaded site file (MP4/WebM/MOV).`);
         setSaving(false);
         return;
       }
@@ -738,8 +738,8 @@ export default function AdminSiteVideosPanel({
         <h2 className="text-lg font-semibold">Playback volume · uploaded intros</h2>
         <p className="mt-1 text-xs text-[var(--muted)]">
           Relative to native file volume, in <strong className="text-[var(--text)]">3 dB</strong>{" "}
-          steps. Applies to overall / free / plan / gear intros (uploaded files; YouTube can only
-          get quieter or stay full). Default is +6 dB so intros cut through.
+          steps. Applies to overall / free / plan / gear intros (uploaded site files). Default is
+          +6 dB so intros cut through.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button
