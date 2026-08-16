@@ -342,7 +342,7 @@ export default function LandingSeeInsideTour({
         className={`relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-4 ${
           phase === "end"
             ? "justify-start pt-3 sm:pt-5"
-            : "justify-center pt-1.5"
+            : "justify-start pt-3 sm:justify-center sm:pt-1.5"
         }`}
       >
         {/* Left / right nav */}
@@ -351,7 +351,7 @@ export default function LandingSeeInsideTour({
           onClick={goPrev}
           disabled={phase === "auto" && beat === 0}
           className={`absolute left-1.5 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/50 text-lg font-bold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/15 disabled:pointer-events-none disabled:opacity-25 sm:left-3 ${
-            phase === "end" ? "top-8" : "top-1/2 -translate-y-1/2"
+            phase === "end" ? "top-8" : "top-[9.75rem] sm:top-1/2 sm:-translate-y-1/2"
           }`}
           aria-label="Previous step"
         >
@@ -361,7 +361,7 @@ export default function LandingSeeInsideTour({
           type="button"
           onClick={goNext}
           className={`absolute right-1.5 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/50 text-lg font-bold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/15 sm:right-3 ${
-            phase === "end" ? "top-8" : "top-1/2 -translate-y-1/2"
+            phase === "end" ? "top-8" : "top-[9.75rem] sm:top-1/2 sm:-translate-y-1/2"
           }`}
           aria-label="Next step"
         >

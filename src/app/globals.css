@@ -1389,6 +1389,10 @@ body:has([data-landing-nav]) [data-global-theme-toggle] {
   align-items: center;
 }
 
+.landing-nav {
+  color: var(--text);
+}
+
 .landing-nav__link {
   display: inline-flex;
   align-items: center;
@@ -1399,6 +1403,17 @@ body:has([data-landing-nav]) [data-global-theme-toggle] {
   color: var(--muted);
   transition: color 0.15s, background 0.15s;
   white-space: nowrap;
+}
+
+/* .landing-nav__link { display:inline-flex } used to override Tailwind `hidden` */
+.landing-nav__link.hidden {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .landing-nav__link.sm\:inline-flex {
+    display: inline-flex;
+  }
 }
 
 .landing-nav__link--compact {
@@ -1573,11 +1588,11 @@ body:has([data-landing-nav]) [data-global-theme-toggle] {
   }
 }
 
-/* See-inside tour — compact stage height for mobile + desktop */
+/* See-inside tour — size to the slide, don’t leave a tall empty band on phones */
 .landing-see-inside__stage {
   position: relative;
   width: 100%;
-  min-height: min(18.5rem, 48vh);
+  min-height: 0;
 }
 
 @media (min-width: 640px) {
@@ -1614,31 +1629,54 @@ body:has([data-landing-nav]) [data-global-theme-toggle] {
   }
 }
 
-/* Transparent nav over cinematic hero on public home (mobile POP) */
+/* Transparent nav over cinematic hero on public home (mobile POP).
+   Light type on a dark wash — only while the bar is still over the photo. */
 .landing-nav--over-hero {
+  color: #fff;
   border-bottom-color: transparent !important;
   background: linear-gradient(
     to bottom,
-    rgba(0, 0, 0, 0.5) 0%,
-    rgba(0, 0, 0, 0.12) 75%,
-    transparent 100%
+    rgba(0, 0, 0, 0.72) 0%,
+    rgba(0, 0, 0, 0.42) 70%,
+    rgba(0, 0, 0, 0.18) 100%
   ) !important;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
 
 .landing-nav--over-hero .landing-nav__link {
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.landing-nav--over-hero .landing-nav__wordmark {
+  color: #fff;
 }
 
 .landing-nav--over-hero .landing-nav__menu-btn {
   color: #fff;
-  border-color: rgba(255, 255, 255, 0.3);
-  background: rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.45);
 }
 
-/* Global theme toggle sits high-right — don’t fight the hero ask on home */
-html:has(.landing-hero) .global-theme-toggle,
+.landing-nav--over-hero .theme-mode-toggle {
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(0, 0, 0, 0.45);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.landing-nav--over-hero .theme-mode-toggle:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* Join on the photo bar — `a { color: inherit }` would make this white-on-white */
+.landing-nav--over-hero .landing-nav__join {
+  background: #fff !important;
+  color: #111 !important;
+  -webkit-text-fill-color: #111 !important;
+}
+
+/* Floating (not in-nav) theme control only — in-nav toggle must stay readable */
 body:has(.landing-hero) [data-global-theme-toggle] {
   opacity: 0.55;
 }
