@@ -29,6 +29,7 @@ export default function AdminSeoClient() {
   const [publicPaths, setPublicPaths] = useState<Array<{ path: string; priority: number }>>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [pinging, setPinging] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,11 +93,39 @@ export default function AdminSeoClient() {
         return;
       }
       setSeo(body.seo);
-      setMessage("SEO settings saved — live metadata, robots, and sitemap use these values.");
+      setMessage("Search settings saved — titles, robots, and sitemap use these values.");
     } catch {
       setError("Save failed.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handlePingEngines() {
+    setPinging(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/seo/submit", { method: "POST" });
+      const body = (await res.json()) as {
+        ok?: boolean;
+        sitemap?: string;
+        results?: Array<{ engine: string; ok: boolean; detail: string }>;
+        error?: string;
+        note?: string;
+      };
+      if (!res.ok) {
+        setError(body.error || "Could not ping search engines.");
+        return;
+      }
+      const lines = (body.results || [])
+        .map((r) => `${r.engine}: ${r.ok ? "asked" : r.detail}`)
+        .join(" · ");
+      setMessage(`${lines}. ${body.note || ""}`.trim());
+    } catch {
+      setError("Could not ping search engines.");
+    } finally {
+      setPinging(false);
     }
   }
 
@@ -129,13 +158,55 @@ export default function AdminSeoClient() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">SEO</h1>
+        <h1 className="text-2xl font-bold">Search</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          Search titles, social share previews, robots, and sitemap for{" "}
-          <span className="font-medium text-[var(--text)]">{origin}</span>. Changes apply after Save
-          (next page render / revalidation).
+          Get <span className="font-medium text-[var(--text)]">thetrainstation.co</span> found as{" "}
+          <strong>The Train Station</strong> — Coach Jeremy’s training app. Titles, share cards,
+          robots, sitemap, and “please recrawl” pings for Google and Bing (Safari uses Google).
         </p>
       </div>
+
+      <section className="space-y-3 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4">
+        <h2 className="text-lg font-semibold">Why Safari showed a railroad</h2>
+        <p className="text-sm text-[var(--muted)]">
+          Typing <strong className="text-[var(--text)]">train station</strong> on an iPhone is a
+          maps query. Apple and Google will show Amtrak, metro stops, and “near me” — not a coaching
+          app. We cannot outrank the world’s train stations for those two words.
+        </p>
+        <p className="text-sm text-[var(--muted)]">
+          What we can win: <strong className="text-[var(--text)]">The Train Station</strong>,{" "}
+          <strong className="text-[var(--text)]">The Train Station coaching</strong>,{" "}
+          <strong className="text-[var(--text)]">thetrainstation.co</strong>, and{" "}
+          <strong className="text-[var(--text)]">Coach Jeremy Train Station</strong>. Ask people
+          (and your wife) to search those.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => void handlePingEngines()}
+            disabled={pinging}
+            className="btn-primary px-4 py-2 text-sm font-semibold"
+          >
+            {pinging ? "Asking Google & Bing…" : "Ask Google & Bing to recrawl us"}
+          </button>
+          <a
+            href="https://search.google.com/search-console"
+            target="_blank"
+            rel="noreferrer"
+            className="btn-ghost px-4 py-2 text-sm"
+          >
+            Google Search Console
+          </a>
+          <a
+            href="https://www.bing.com/webmasters"
+            target="_blank"
+            rel="noreferrer"
+            className="btn-ghost px-4 py-2 text-sm"
+          >
+            Bing Webmaster
+          </a>
+        </div>
+      </section>
 
       <section className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">

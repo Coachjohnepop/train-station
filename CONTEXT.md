@@ -144,6 +144,9 @@ Templates, **28-day packs**, and **catalog exercises** use `archivedAt`:
 ### Template categories
 Freeform (not only adult/athletes): yoga, meditation, nutrition, martial arts, dog training, etc.
 
+### Search / SEO (Admin → Search)
+Public findability for **thetrainstation.co**. Desk: titles, OG, robots, sitemap, Google/Bing recrawl ping. Stored in Postgres `SiteSeoSettings` (Blob fallback). **Do not expect** generic “train station” (Safari/maps/railroad) to rank — brand queries only (“The Train Station coaching”). Preview until John ships main.
+
 ### Man / woman (product, not a sermon)
 Members are **man** or **woman** only (sex). Onboard, measurements, and coach roster use those two. No third gender, no “prefer not to say” on sex, no Bible/Christian copy on the site. Paths differ (women: weight-loss goal + timeline; men: starting weight + goals). Do not add preaching.
 

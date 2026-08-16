@@ -150,6 +150,11 @@ export const COACH_NAV_GROUPS: AdminNavGroup[] = [
         match: (p) => p.startsWith("/admin/videos"),
       },
       {
+        href: "/admin/seo",
+        label: "Search",
+        match: (p) => p.startsWith("/admin/seo"),
+      },
+      {
         href: "/admin/sponsorship",
         label: "Sponsorships",
         match: (p) => p.startsWith("/admin/sponsorship"),
@@ -238,7 +243,7 @@ export const PLATFORM_NAV_GROUPS: AdminNavGroup[] = [
       },
       {
         href: "/admin/seo",
-        label: "SEO",
+        label: "Search",
         match: (p) => p.startsWith("/admin/seo"),
       },
       {
@@ -280,7 +285,6 @@ const PLATFORM_PATH_PREFIXES = [
   "/admin/users",
   "/admin/audit",
   "/admin/analytics",
-  "/admin/seo",
   "/admin/reports",
   "/admin/insights",
   "/admin/coach-suggestions",

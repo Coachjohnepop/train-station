@@ -1173,6 +1173,23 @@ model UserMeasurement {
   @@index([userId, measuredAt])
 }
 
+/// Singleton public SEO / share settings (Admin → Search).
+model SiteSeoSettings {
+  id                      String   @id @default("default")
+  metaTitle               String
+  metaDescription         String   @db.Text
+  ogTitle                 String
+  ogDescription           String   @db.Text
+  ogImageUrl              String
+  ogImageAlt              String
+  keywords                String   @db.Text
+  robotsIndex             Boolean  @default(true)
+  robotsFollow            Boolean  @default(true)
+  googleSiteVerification  String   @default("")
+  bingSiteVerification    String   @default("")
+  updatedAt               DateTime @updatedAt
+}
+
 // ---------------------------------------------------------------------------
 // Data warehouse — behavioral events, payment facts, daily marts
 // ---------------------------------------------------------------------------
