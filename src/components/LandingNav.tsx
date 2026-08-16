@@ -38,11 +38,23 @@ export default function LandingNav({
   const onHomePage = pathname === "/";
   const [membershipsOpen, setMembershipsOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [heroSolid, setHeroSolid] = useState(false);
   const menuConvertedRef = useRef(false);
   const [memberships, setMemberships] = useState<LandingMembershipNavItem[]>(() =>
     buildMembershipNavItems(null),
   );
   const purchaseAuth = usePurchaseAuth(purchaseAuthProp);
+
+  useEffect(() => {
+    if (!overHero) {
+      setHeroSolid(false);
+      return;
+    }
+    const sync = () => setHeroSolid(window.scrollY > 56);
+    sync();
+    window.addEventListener("scroll", sync, { passive: true });
+    return () => window.removeEventListener("scroll", sync);
+  }, [overHero]);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,8 +120,10 @@ export default function LandingNav({
   }
 
   const isWelcome = variant === "welcome";
+  /** Photo wash + light type only at the top of the hero. After scroll or when
+   *  the hamburger is open, use solid themed chrome so light/dark both read. */
+  const cinematic = overHero && !heroSolid && !mobileOpen;
   /** Signed-in members should not re-enter marketing/join surfaces from the nav. */
-  const memberHomeHref = "/member/today";
   /** On home, logo used to reload `/` — that visitor tapped it looking for a door. */
   const brandHref = purchaseAuth.signedIn
     ? memberHomeHref
@@ -121,7 +135,7 @@ export default function LandingNav({
     <header
       data-landing-nav=""
       className={`landing-nav sticky top-0 z-40 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] backdrop-blur-md ${
-        overHero ? "landing-nav--over-hero" : ""
+        cinematic ? "landing-nav--over-hero" : ""
       }`}
     >
       {/*
@@ -155,7 +169,7 @@ export default function LandingNav({
             <span className="hidden md:block">
               <TrainStationBrand variant="header" />
             </span>
-            <span className="hidden max-w-[10.5rem] text-[11px] font-semibold uppercase leading-tight tracking-[0.14em] text-[var(--text)] sm:inline md:hidden">
+            <span className="landing-nav__wordmark hidden max-w-[10.5rem] text-[11px] font-semibold uppercase leading-tight tracking-[0.14em] text-[var(--text)] sm:inline md:hidden">
               The Train Station
             </span>
           </Link>
@@ -277,7 +291,7 @@ export default function LandingNav({
             purchaseAuth.signedIn ? (
               <Link
                 href={memberHomeHref}
-                className={`btn-primary hidden px-4 py-2 text-xs font-bold md:inline-flex ${overHero ? "sm:inline-flex" : ""}`}
+                className={`btn-primary hidden px-4 py-2 text-xs font-bold md:inline-flex ${cinematic ? "sm:inline-flex" : ""}`}
                 onClick={closeMenus}
               >
                 Open Today
@@ -288,7 +302,7 @@ export default function LandingNav({
                   type="button"
                   data-analytics-action="nav-free-tour"
                   className={`landing-nav__link hidden font-semibold sm:inline-flex ${
-                    overHero ? "text-white/95" : "text-[var(--accent)]"
+                    cinematic ? "text-white/95" : "text-[var(--accent-fg)]"
                   }`}
                   onClick={() => {
                     noteConverted();
@@ -305,11 +319,16 @@ export default function LandingNav({
                     noteConverted();
                     fireLandingJoinHook(e.currentTarget);
                   }}
-                  className={`inline-flex h-8 items-center rounded-full px-3 text-[11px] font-extrabold sm:h-9 sm:px-4 sm:text-xs ${
-                    overHero
-                      ? "bg-white text-black shadow-sm"
+                  className={`landing-nav__join inline-flex h-8 items-center rounded-full px-3 text-[11px] font-extrabold sm:h-9 sm:px-4 sm:text-xs ${
+                    cinematic
+                      ? "bg-white shadow-sm"
                       : "btn-primary"
                   }`}
+                  style={
+                    cinematic
+                      ? { color: "#111", WebkitTextFillColor: "#111" }
+                      : undefined
+                  }
                 >
                   Join
                 </Link>
@@ -337,7 +356,7 @@ export default function LandingNav({
       </div>
 
       {mobileOpen && (
-        <div className="border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 md:hidden">
+        <div className="border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[var(--text)] md:hidden">
           <div className="space-y-1">
             {LANDING_NAV_SECTIONS.map((section) => (
               <Link
@@ -351,7 +370,7 @@ export default function LandingNav({
                   }
                   closeMenus();
                 }}
-                className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]"
+                className="block rounded-lg px-2 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-2)]"
               >
                 {section.label}
               </Link>
@@ -360,35 +379,35 @@ export default function LandingNav({
               <>
                 <a
                   href={memberHomeHref}
-                  className="block rounded-lg px-2 py-2 text-sm font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
+                  className="block rounded-lg px-2 py-2 text-sm font-semibold text-[var(--accent-fg)] hover:bg-[var(--surface-2)]"
                   onClick={closeMenus}
                 >
                   Today
                 </a>
                 <a
                   href={memberHomeHref}
-                  className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]"
+                  className="block rounded-lg px-2 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-2)]"
                   onClick={closeMenus}
                 >
                   Open dashboard
                 </a>
                 <Link
                   href="/member/account"
-                  className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]"
+                  className="block rounded-lg px-2 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-2)]"
                   onClick={closeMenus}
                 >
                   Account &amp; billing
                 </Link>
                 <Link
                   href="/member/programs"
-                  className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]"
+                  className="block rounded-lg px-2 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-2)]"
                   onClick={closeMenus}
                 >
                   My programs
                 </Link>
                 <button
                   type="button"
-                  className="block w-full rounded-lg px-2 py-2 text-left text-sm hover:bg-[var(--surface-2)]"
+                  className="block w-full rounded-lg px-2 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--surface-2)]"
                   onClick={() => {
                     window.location.href = logoutUrl();
                   }}
@@ -401,7 +420,7 @@ export default function LandingNav({
                 <button
                   type="button"
                   data-analytics-action="menu-free-tour"
-                  className="block w-full rounded-lg px-2 py-2 text-left text-sm font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
+                  className="block w-full rounded-lg px-2 py-2 text-left text-sm font-semibold text-[var(--accent-fg)] hover:bg-[var(--surface-2)]"
                   onClick={() => {
                     noteConverted();
                     closeMenus();
@@ -413,7 +432,7 @@ export default function LandingNav({
                 <Link
                   href={JOIN_WEEK_HREF}
                   data-analytics-action="menu-join-week"
-                  className="block rounded-lg px-2 py-2 text-sm font-bold hover:bg-[var(--surface-2)]"
+                  className="block rounded-lg px-2 py-2 text-sm font-bold text-[var(--text)] hover:bg-[var(--surface-2)]"
                   onClick={(e) => {
                     noteConverted();
                     fireLandingJoinHook(e.currentTarget);
@@ -425,7 +444,7 @@ export default function LandingNav({
                 <Link
                   href="/login"
                   data-analytics-action="menu-sign-in"
-                  className="block rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]"
+                  className="block rounded-lg px-2 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-2)]"
                   onClick={() => {
                     noteConverted();
                     closeMenus();
@@ -450,7 +469,7 @@ export default function LandingNav({
                     e.preventDefault();
                     membershipAction(tier);
                   }}
-                  className="flex items-center justify-between rounded-lg px-2 py-2 text-sm hover:bg-[var(--surface-2)]"
+                  className="flex items-center justify-between rounded-lg px-2 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-2)]"
                 >
                   <span>{tier.shortLabel}</span>
                   <span className="text-xs text-[var(--muted)]">{tier.priceDisplay}</span>
@@ -462,7 +481,7 @@ export default function LandingNav({
                   noteConverted();
                   closeMenus();
                 }}
-                className="block rounded-lg px-2 py-2 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
+                className="block rounded-lg px-2 py-2 text-xs font-semibold text-[var(--accent-fg)] hover:bg-[var(--surface-2)]"
               >
                 Compare plans →
               </Link>
