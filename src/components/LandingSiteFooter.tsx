@@ -12,6 +12,10 @@ export default function LandingSiteFooter() {
         </Link>
       </p>
       <p className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+        <Link href="/find" className="hover:text-[var(--accent)]">
+          Find us
+        </Link>
+        <span aria-hidden>·</span>
         <Link href="/join" className="hover:text-[var(--accent)]">
           Memberships
         </Link>
