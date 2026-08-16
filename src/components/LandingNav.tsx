@@ -14,7 +14,9 @@ import {
 import { logoutUrl } from "@/lib/logout-url";
 import ThemeModeToggle from "@/components/ThemeModeToggle";
 import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
+import { isStaffRole } from "@/lib/staff-access";
 import { openFreeQuickTour } from "@/lib/free-quick-tour";
+import { openLandingExplore } from "@/lib/landing-explore";
 import {
   JOIN_TICKETS_HREF,
   JOIN_WEEK_HREF,
@@ -105,8 +107,10 @@ export default function LandingNav({
     closeMenus();
     if (!href.startsWith("#")) return;
     if (!onHomePage) return;
-    const el = document.querySelector(href);
-    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    openLandingExplore();
+    window.setTimeout(() => {
+      document.querySelector(href)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
   }
 
   function membershipAction(tier: LandingMembershipNavItem) {
@@ -124,12 +128,11 @@ export default function LandingNav({
    *  the hamburger is open, use solid themed chrome so light/dark both read. */
   const cinematic = overHero && !heroSolid && !mobileOpen;
   /** Signed-in members should not re-enter marketing/join surfaces from the nav. */
-  /** On home, logo used to reload `/` — that visitor tapped it looking for a door. */
-  const brandHref = purchaseAuth.signedIn
-    ? memberHomeHref
-    : onHomePage
-      ? JOIN_WEEK_HREF
-      : "/";
+  const memberHomeHref = purchaseAuth.role && isStaffRole(purchaseAuth.role) ? "/admin" : "/member/today";
+  /** Home logo stays on the landing — Join / Start membership live in the hero only. */
+  const brandHref = purchaseAuth.signedIn ? memberHomeHref : "/";
+  /** Guest home: no white Join pill, no extra top CTAs. Hero has the three choices. */
+  const guestHome = onHomePage && !purchaseAuth.signedIn && variant === "public";
 
   return (
     <header
@@ -150,16 +153,10 @@ export default function LandingNav({
             aria-label={
               purchaseAuth.signedIn
                 ? "The Train Station — Today"
-                : onHomePage
-                  ? "The Train Station — pick a ticket"
-                  : "The Train Station home"
+                : "The Train Station home"
             }
-            data-analytics-action={onHomePage && !purchaseAuth.signedIn ? "logo-to-join-week" : "logo-home"}
-            onClick={(e) => {
-              if (onHomePage && !purchaseAuth.signedIn) {
-                noteConverted();
-                fireLandingJoinHook(e.currentTarget);
-              }
+            data-analytics-action="logo-home"
+            onClick={() => {
               closeMenus();
             }}
           >
@@ -207,7 +204,7 @@ export default function LandingNav({
             </div>
           ) : null}
 
-          <nav className="ml-1 hidden items-center gap-1 md:flex">
+          <nav className={`ml-1 hidden items-center gap-1 md:flex ${guestHome ? "!hidden" : ""}`}>
             {LANDING_NAV_SECTIONS.map((section) => (
               <Link
                 key={section.id}
@@ -296,7 +293,7 @@ export default function LandingNav({
               >
                 Open Today
               </Link>
-            ) : (
+            ) : guestHome ? null : (
               <>
                 <button
                   type="button"
@@ -319,18 +316,9 @@ export default function LandingNav({
                     noteConverted();
                     fireLandingJoinHook(e.currentTarget);
                   }}
-                  className={`landing-nav__join inline-flex h-8 items-center rounded-full px-3 text-[11px] font-extrabold sm:h-9 sm:px-4 sm:text-xs ${
-                    cinematic
-                      ? "bg-white shadow-sm"
-                      : "btn-primary"
-                  }`}
-                  style={
-                    cinematic
-                      ? { color: "#111", WebkitTextFillColor: "#111" }
-                      : undefined
-                  }
+                  className="landing-nav__join btn-primary inline-flex h-8 items-center rounded-full px-3 text-[11px] font-extrabold sm:h-9 sm:px-4 sm:text-xs"
                 >
-                  Join
+                  Start membership
                 </Link>
               </>
             )
@@ -341,7 +329,7 @@ export default function LandingNav({
           </div>
           <button
             type="button"
-            className="landing-nav__menu-btn md:hidden"
+            className={`landing-nav__menu-btn ${guestHome ? "" : "md:hidden"}`}
             aria-expanded={mobileOpen}
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             data-analytics-action={mobileOpen ? "close-menu" : "open-menu"}
@@ -356,7 +344,7 @@ export default function LandingNav({
       </div>
 
       {mobileOpen && (
-        <div className="border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[var(--text)] md:hidden">
+        <div className={`border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[var(--text)] ${guestHome ? "" : "md:hidden"}`}>
           <div className="space-y-1">
             {LANDING_NAV_SECTIONS.map((section) => (
               <Link
@@ -439,7 +427,7 @@ export default function LandingNav({
                     closeMenus();
                   }}
                 >
-                  Join — free week
+                  Start membership
                 </Link>
                 <Link
                   href="/login"

@@ -71,6 +71,7 @@
     "test:zoom-connect": "node scripts/zoom-connect-smoke.mjs",
     "test:zoom-diagnose": "node scripts/zoom-oauth-diagnose.mjs",
     "feedback:prepare-video": "node scripts/prepare-feedback-video-review.mjs",
+    "free-ticket:rebuild": "node scripts/rebuild-free-ticket-full.mjs",
     "test:program-order": "node scripts/program-exercise-order-test.mjs",
     "copy:adult-week2": "node scripts/copy-adult-week1-to-week2.mjs",
     "seed:adult-week1": "node scripts/seed-adult-week1-template.mjs",

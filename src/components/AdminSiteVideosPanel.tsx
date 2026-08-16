@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
 import {
   saveLandingMediaAction,
@@ -1132,6 +1132,7 @@ export default function AdminSiteVideosPanel({
             {watchingGag ? "Hide gag player" : "Watch gag (admin)"}
           </button>
         </div>
+        <FreeTicketFullRebuildRow />
         {watchingGag ? (
           <div className="space-y-2">
             <p className="text-[11px] text-[var(--muted)]">
@@ -1267,6 +1268,54 @@ export default function AdminSiteVideosPanel({
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+function FreeTicketFullRebuildRow() {
+  const [job, setJob] = useState<{
+    status?: string;
+    builtAt?: string | null;
+    error?: string | null;
+  } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function refresh() {
+    const res = await fetch("/api/admin/jobs/rebuild-free-ticket-full");
+    if (!res.ok) return;
+    setJob((await res.json()) as { status?: string; builtAt?: string | null; error?: string | null });
+  }
+
+  useEffect(() => {
+    void refresh();
+  }, []);
+
+  async function rebuild() {
+    setBusy(true);
+    try {
+      await fetch("/api/admin/jobs/rebuild-free-ticket-full", { method: "POST" });
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const status = job?.status || "idle";
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--muted)]">
+      <span>
+        Concat job: <strong className="text-[var(--text)]">{status}</strong>
+        {job?.builtAt ? ` · last ${job.builtAt.slice(0, 16).replace("T", " ")}` : ""}
+        {job?.error ? ` · ${job.error}` : ""}
+      </span>
+      <button
+        type="button"
+        className="btn-ghost px-3 py-1 text-xs font-semibold"
+        disabled={busy}
+        onClick={() => void rebuild()}
+      >
+        {busy ? "Rebuilding…" : "Rebuild gag + intro now"}
+      </button>
     </div>
   );
 }

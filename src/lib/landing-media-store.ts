@@ -70,6 +70,12 @@ export type LandingMediaConfig = {
   venmoQrUrl: string | null;
   venmoHandle: string | null;
   venmoInstructions: string | null;
+  /** Concat output (5s gag + current Free Explorer intro). Blob or /videos/…. */
+  freeTicketFullUrl: string | null;
+  freeTicketFullBuiltAt: string | null;
+  freeTicketFullIntroSource: string | null;
+  freeTicketFullStatus: "idle" | "queued" | "running" | "ok" | "error";
+  freeTicketFullError: string | null;
   updatedAt: string;
 };
 
@@ -108,6 +114,11 @@ function emptyConfig(): LandingMediaConfig {
     venmoQrUrl: null,
     venmoHandle: null,
     venmoInstructions: null,
+    freeTicketFullUrl: null,
+    freeTicketFullBuiltAt: null,
+    freeTicketFullIntroSource: null,
+    freeTicketFullStatus: "idle",
+    freeTicketFullError: null,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -164,9 +175,23 @@ function normalize(raw: unknown): LandingMediaConfig {
     venmoQrUrl: normalizeUrl(data.venmoQrUrl),
     venmoHandle: normalizeUrl(data.venmoHandle),
     venmoInstructions: normalizeUrl(data.venmoInstructions),
+    freeTicketFullUrl: normalizeUrl(data.freeTicketFullUrl),
+    freeTicketFullBuiltAt:
+      typeof data.freeTicketFullBuiltAt === "string" ? data.freeTicketFullBuiltAt : null,
+    freeTicketFullIntroSource: normalizeUrl(data.freeTicketFullIntroSource),
+    freeTicketFullStatus: parseJobStatus(data.freeTicketFullStatus),
+    freeTicketFullError:
+      typeof data.freeTicketFullError === "string" ? data.freeTicketFullError : null,
     updatedAt:
       typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
   };
+}
+
+function parseJobStatus(raw: unknown): LandingMediaConfig["freeTicketFullStatus"] {
+  if (raw === "queued" || raw === "running" || raw === "ok" || raw === "error" || raw === "idle") {
+    return raw;
+  }
+  return "idle";
 }
 
 function isHttpUrl(url: string): boolean {
@@ -212,6 +237,11 @@ export async function saveLandingMedia(
       | "venmoQrUrl"
       | "venmoHandle"
       | "venmoInstructions"
+      | "freeTicketFullUrl"
+      | "freeTicketFullBuiltAt"
+      | "freeTicketFullIntroSource"
+      | "freeTicketFullStatus"
+      | "freeTicketFullError"
     >
   >,
 ): Promise<LandingMediaConfig> {
@@ -347,6 +377,31 @@ export async function saveLandingMedia(
     next.venmoInstructions = patch.venmoInstructions?.trim() || null;
   }
 
+  if (patch.freeTicketFullUrl !== undefined) {
+    next.freeTicketFullUrl = patch.freeTicketFullUrl?.trim() || null;
+  }
+  if (patch.freeTicketFullBuiltAt !== undefined) {
+    next.freeTicketFullBuiltAt = patch.freeTicketFullBuiltAt;
+  }
+  if (patch.freeTicketFullIntroSource !== undefined) {
+    next.freeTicketFullIntroSource = patch.freeTicketFullIntroSource?.trim() || null;
+  }
+  if (patch.freeTicketFullStatus !== undefined) {
+    next.freeTicketFullStatus = patch.freeTicketFullStatus;
+  }
+  if (patch.freeTicketFullError !== undefined) {
+    next.freeTicketFullError = patch.freeTicketFullError;
+  }
+
+  const introChanged =
+    patch.freeChastiseVideoUrl !== undefined &&
+    current.freeChastiseVideoUrl !== next.freeChastiseVideoUrl;
+  if (introChanged) {
+    next.freeTicketFullStatus = "queued";
+    next.freeTicketFullError = null;
+    next.freeTicketFullIntroSource = next.freeChastiseVideoUrl;
+  }
+
   await persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
@@ -355,6 +410,20 @@ export async function saveLandingMedia(
       memoryStore = normalize(v);
     },
   });
+
+  if (introChanged && next.freeChastiseVideoUrl) {
+    const introUrl = next.freeChastiseVideoUrl;
+    void import("@/lib/free-ticket-full-job")
+      .then((job) =>
+        job.triggerRebuildFreeTicketFull({
+          introUrl,
+          reason: "free-intro-changed",
+        }),
+      )
+      .catch((err) => {
+        console.warn("free-ticket-full rebuild trigger failed", err);
+      });
+  }
 
   return next;
 }

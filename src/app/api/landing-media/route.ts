@@ -3,6 +3,7 @@ import { getLandingMedia } from "@/lib/landing-media-store";
 import {
   equipmentIntroVideoUrlFromConfig,
   freeChastiseVideoUrlFromConfig,
+  freeTicketFullSrcFromConfig,
   resolveFreeTicketGag,
   welcomeVideoUrlFromConfig,
 } from "@/lib/landing-media";
@@ -17,6 +18,7 @@ export async function GET() {
   return NextResponse.json({
     welcomeVideoUrl: welcomeVideoUrlFromConfig(config.welcomeVideoUrl),
     freeChastiseVideoUrl: freeChastiseVideoUrlFromConfig(config.freeChastiseVideoUrl),
+    freeTicketFullUrl: freeTicketFullSrcFromConfig(config.freeTicketFullUrl),
     purchaseThankYouVideoUrl: config.purchaseThankYouVideoUrl?.trim() || null,
     equipmentIntroVideoUrl: equipmentIntroVideoUrlFromConfig(config.equipmentIntroVideoUrl),
     heroSlides,

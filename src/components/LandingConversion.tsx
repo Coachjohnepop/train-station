@@ -1,25 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import LandingHero from "@/components/LandingHero";
 import LandingServicesSection from "@/components/LandingServicesSection";
 import ComingSoonPrograms from "@/components/ComingSoonPrograms";
 import LandingNav from "@/components/LandingNav";
 import LandingSiteFooter from "@/components/LandingSiteFooter";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
+import WelcomeVideoPopover from "@/components/WelcomeVideoPopover";
 import type { HeroSlide } from "@/lib/hero-slides";
-import { openFreeQuickTour } from "@/lib/free-quick-tour";
+import { LANDING_EXPLORE_EVENT } from "@/lib/landing-explore";
 import {
-  JOIN_WEEK_HREF,
   LANDING_RETURN_EVENT,
   armLandingReturnOnLeave,
-  fireLandingJoinHook,
-  markLandingConverted,
 } from "@/lib/landing-return-visit";
 
 /**
  * Public landing for guests / SMS traffic.
- * Ticket theater stays in onboarding only — never lead the marketing site with seat cards.
+ * Hero has three choices only: Free Tour, Start membership, Explore Content.
+ * Ticket theater stays in onboarding — never lead the marketing site with seat cards.
  */
 export default function LandingConversion({
   welcomeVideoUrl = null,
@@ -37,7 +36,42 @@ export default function LandingConversion({
   rememberReturn?: boolean;
 }) {
   const [liveReturn, setLiveReturn] = useState(false);
+  const [exploreOpen, setExploreOpen] = useState(false);
   const returnMode = returning || liveReturn;
+
+  const revealExplore = useCallback((origin?: HTMLElement | null, celebrate = true) => {
+    setExploreOpen((was) => {
+      if (!was && celebrate) {
+        void import("@/lib/workout-confetti").then(
+          ({ buzzScoreCelebrate, confettiOriginFromElement, fireWorkoutConfetti }) => {
+            buzzScoreCelebrate("standard");
+            fireWorkoutConfetti(
+              origin ? confettiOriginFromElement(origin) : undefined,
+              1800,
+            );
+          },
+        );
+      }
+      return true;
+    });
+    window.setTimeout(() => {
+      document.getElementById("explore-content")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 60);
+  }, []);
+
+  const onExplore = useCallback(
+    (origin: HTMLElement) => {
+      if (exploreOpen) {
+        setExploreOpen(false);
+        return;
+      }
+      revealExplore(origin, true);
+    },
+    [exploreOpen, revealExplore],
+  );
 
   useEffect(() => {
     if (!rememberReturn) return;
@@ -50,8 +84,22 @@ export default function LandingConversion({
     };
   }, [rememberReturn]);
 
+  useEffect(() => {
+    const open = () => revealExplore(null, false);
+    window.addEventListener(LANDING_EXPLORE_EVENT, open);
+    try {
+      const hash = window.location.hash;
+      if (hash === "#programs" || hash === "#services" || hash === "#explore-content") {
+        revealExplore(null, false);
+      }
+    } catch {
+      /* ignore */
+    }
+    return () => window.removeEventListener(LANDING_EXPLORE_EVENT, open);
+  }, [revealExplore]);
+
   return (
-    <div className={`relative min-h-screen bg-black ${returnMode ? "pb-20 md:pb-0" : ""}`}>
+    <div className="relative min-h-screen bg-black">
       <ThemeAttributesSync membershipTier="explorer" />
       {/* Transparent nav over hero so SMS open is full-bleed athletes, not a grey header */}
       <LandingNav overHero />
@@ -60,37 +108,33 @@ export default function LandingConversion({
         freeChastiseVideoUrl={freeChastiseVideoUrl}
         heroSlides={heroSlides}
         returning={returnMode}
+        exploreOpen={exploreOpen}
+        onExplore={onExplore}
       />
-      <div className="app-shell-bg">
-        <ComingSoonPrograms />
-        <LandingServicesSection />
-        <LandingSiteFooter />
-      </div>
-      {returnMode ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black/90 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md md:hidden">
-          <div className="flex gap-2">
-            <a
-              href={JOIN_WEEK_HREF}
-              data-analytics-action="sticky-join"
-              onClick={(e) => {
-                markLandingConverted();
-                fireLandingJoinHook(e.currentTarget);
-              }}
-              className="landing-hero-early-signup inline-flex h-14 flex-1 items-center justify-center rounded-full text-base font-extrabold"
-            >
-              Join
-            </a>
-            <button
-              type="button"
-              data-analytics-action="sticky-free-tour"
-              onClick={() => openFreeQuickTour()}
-              className="landing-hero-secondary-cta inline-flex h-14 flex-1 items-center justify-center rounded-full text-base font-extrabold"
-            >
-              Free Tour
-            </button>
+      <div
+        id="explore-content"
+        className={`grid scroll-mt-16 transition-[grid-template-rows] duration-500 ease-out ${
+          exploreOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="app-shell-bg">
+            {welcomeVideoUrl?.trim() ? (
+              <div className="border-b border-[var(--border)] px-4 py-4 text-center">
+                <WelcomeVideoPopover
+                  welcomeVideoUrl={welcomeVideoUrl}
+                  buttonClassName="text-sm font-semibold text-[var(--accent-fg)] underline decoration-[var(--accent)]/40 underline-offset-4"
+                >
+                  Watch intro
+                </WelcomeVideoPopover>
+              </div>
+            ) : null}
+            <ComingSoonPrograms />
+            <LandingServicesSection />
+            <LandingSiteFooter />
           </div>
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }

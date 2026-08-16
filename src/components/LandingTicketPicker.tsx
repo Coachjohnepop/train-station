@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import FreeTicketModal from "@/components/FreeTicketModal";
 import MembershipTicketGrid from "@/components/MembershipTicketGrid";
 import { usePurchaseAuth } from "@/hooks/usePurchaseAuth";
@@ -10,6 +11,7 @@ import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
 import type { TicketTierId } from "@/lib/landing-tickets";
 import { TICKET_TIERS } from "@/lib/landing-tickets";
 import {
+  FREE_TICKET_GAG_HOST_ID,
   preloadFreeTicketGag,
   startFreeTicketGagFromGesture,
 } from "@/lib/play-free-ticket-gag";
@@ -18,11 +20,13 @@ export default function LandingTicketPicker({
   freeChastiseVideoUrl = null,
   welcomeVideoUrl = null,
   gagConfig = null,
+  gagFullSrc = undefined,
   purchaseAuth: purchaseAuthProp,
 }: {
   freeChastiseVideoUrl?: string | null;
   welcomeVideoUrl?: string | null;
   gagConfig?: Partial<FreeTicketGagConfig> | null;
+  gagFullSrc?: string;
   purchaseAuth?: PurchaseAuth;
 }) {
   const [freeModalOpen, setFreeModalOpen] = useState(false);
@@ -30,12 +34,14 @@ export default function LandingTicketPicker({
   const purchaseAuth = usePurchaseAuth(purchaseAuthProp);
 
   useEffect(() => {
-    preloadFreeTicketGag();
-  }, []);
+    preloadFreeTicketGag(gagFullSrc);
+  }, [gagFullSrc]);
 
   function openFreeTicket() {
     if (!purchaseAuth.signedIn) {
-      startFreeTicketGagFromGesture();
+      flushSync(() => setFreeModalOpen(true));
+      startFreeTicketGagFromGesture(document.getElementById(FREE_TICKET_GAG_HOST_ID));
+      return;
     }
     setFreeModalOpen(true);
   }
@@ -71,8 +77,8 @@ export default function LandingTicketPicker({
           mode="landing"
           showBrand={false}
           showFanArt={false}
-          heading="Choose your ticket"
-          subheading="Free Explorer, Coach Class, Business Class, First Class — pick your seat and we’ll get you rolling."
+          heading=""
+          subheading=""
           onFreeSelect={openFreeTicket}
           onPaidSelect={(tierId) => handleTicketClick(tierId)}
           highlightPaid={highlightPaid}
@@ -94,21 +100,20 @@ export default function LandingTicketPicker({
         ) : null}
       </div>
 
-      {freeModalOpen ? (
-        <FreeTicketModal
-          open
-          freeChastiseVideoUrl={freeChastiseVideoUrl}
-          welcomeVideoUrl={welcomeVideoUrl}
-          gagConfig={gagConfig}
-          purchaseAuth={purchaseAuth}
-          onClose={() => setFreeModalOpen(false)}
-          onUpgrade={() => {
-            setHighlightPaid(true);
-            scrollToTickets();
-            setTimeout(() => setHighlightPaid(false), 4000);
-          }}
-        />
-      ) : null}
+      <FreeTicketModal
+        open={freeModalOpen}
+        freeChastiseVideoUrl={freeChastiseVideoUrl}
+        welcomeVideoUrl={welcomeVideoUrl}
+        gagConfig={gagConfig}
+        purchaseAuth={purchaseAuth}
+        gagFullSrc={gagFullSrc}
+        onClose={() => setFreeModalOpen(false)}
+        onUpgrade={() => {
+          setHighlightPaid(true);
+          scrollToTickets();
+          setTimeout(() => setHighlightPaid(false), 4000);
+        }}
+      />
     </section>
   );
 }
