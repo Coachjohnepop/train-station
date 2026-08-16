@@ -15,6 +15,13 @@ export function normalizeOnboardGender(raw: string | null | undefined): OnboardG
   return null;
 }
 
+export function onboardGenderLabel(gender: string | null | undefined): string | null {
+  const n = normalizeOnboardGender(gender);
+  if (n === "man") return "Man";
+  if (n === "woman") return "Woman";
+  return null;
+}
+
 export function isWomanOnboardPath(gender: string | null | undefined): boolean {
   return normalizeOnboardGender(gender) === "woman";
 }

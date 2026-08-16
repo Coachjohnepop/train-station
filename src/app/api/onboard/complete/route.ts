@@ -76,6 +76,12 @@ export async function POST(request: Request) {
     plan,
   } = body.data;
   const genderNorm = normalizeOnboardGender(gender);
+  if (!genderNorm) {
+    return NextResponse.json(
+      { error: "Pick man or woman so we can set the right goals." },
+      { status: 400 },
+    );
+  }
   const womanPath = isWomanOnboardPath(genderNorm);
 
   const todayIso = localTodayIso();

@@ -11,7 +11,7 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 
 | Who | Role | Notes |
 |-----|------|--------|
-| **John** (you) | Builder / product | Repo owner; deploys; soaks; coaches Jeremy. **App admin: `john@thetrainstation.co`**. **Member smoke account: `john@bcxvoice.com`** (not staff). **Vercel/GitHub deploy login: `john@bcxvoice.com`** (CLI `john-9066`) — platform only, not member role. **`john@lemonvoice.com` free** for fresh paid-signup tests (demo John & Steph = `johnsteph@thetrainstation.co`). |
+| **John** (you) | Builder / product | Repo owner; deploys; soaks; coaches Jeremy. **App admin: `john@thetrainstation.co`**. **Member smoke account: `john@bcxvoice.com`** (not staff). **Vercel/GitHub deploy login: `john@bcxvoice.com`** (CLI `john-9066`) — platform only, not member role. **`john@lemonvoice.com` free** for fresh paid-signup tests (demo John & Steph = `johnsteph@thetrainstation.co`). **Stripe Dashboard login (TheTrainStation Brave profile): Google `john@bcxvoice.com`** — sees BCX Voice + Eco Delight only until Jeremy invites that same email to TS Live. |
 | **Jeremy** | Customer coach | Primary admin user; stress-tests clone/templates/calendar; email `jeremy@thetrainstation.co` |
 | **John & Steph** | Demo member journey | Program subs, floating video, schedule greens in demos |
 | **Grok** (xAI) | Coding agent in this TUI | Not Claude — may share this file |
@@ -143,6 +143,9 @@ Templates, **28-day packs**, and **catalog exercises** use `archivedAt`:
 
 ### Template categories
 Freeform (not only adult/athletes): yoga, meditation, nutrition, martial arts, dog training, etc.
+
+### Man / woman (product, not a sermon)
+Members are **man** or **woman** only (sex). Onboard, measurements, and coach roster use those two. No third gender, no “prefer not to say” on sex, no Bible/Christian copy on the site. Paths differ (women: weight-loss goal + timeline; men: starting weight + goals). Do not add preaching.
 
 ### Do not
 - Put joke soak names as warm-ups on **live member** program days  
@@ -354,11 +357,14 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-15  
-**Status:** Landing conversion shipped: **Join** = 7-day Coach Class look (`/signup?plan=explorer&week=1` + `grantLandingFreeWeek`), **Free Tour** stays the 15s peek, return visitors get ticket-first chrome + sticky Join/Tour. Confetti on Join tap and account create. Tickets still at `/join#tickets`. Stripe cutover still first for money.  
+**Date:** 2026-08-16  
+**Status:** Stripe cutover started. Production checkout is still **Eco Delight Live** (`pk_live_51SuLDr…`). Jeremy master target is `acct_1TmKSWQWWnajU9uyk`. `.env.jeremy.live` is **missing** — blocked on Jeremy Live `sk`/`pk`/`whsec` plus a copy of today’s Eco keys as `*_LEGACY`. Webhook code now accepts a leftover Eco secret so Ali/Bella/Jeremy2 renewals keep working after the swap.  
+**Prior (2026-08-15):** Landing conversion shipped: **Join** = 7-day Coach Class look (`/signup?plan=explorer&week=1` + `grantLandingFreeWeek`), **Free Tour** stays the 15s peek, return visitors get ticket-first chrome + sticky Join/Tour. Confetti on Join tap and account create. Tickets still at `/join#tickets`.  
 **Prior (2026-08-14 night):** John out. Ali is mid re-onboard (still paid). She was texted to tap Free first (joke), then Coach Class → Continue already paid. Gag + Jeremy intros are site files. Paid checkout Free tap plays the gag and does not downgrade her (`ce77353`).  
 **Rule reaffirmed:** **any new module / data element → Postgres first** (see Durable product rules).  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
+**Brave profile for TS work:** **TheTrainStation** (keep using this for future logins).  
+**Stripe user in that profile (2026-08-16, remember this):** John Popham · login/Google **`john@bcxvoice.com`** · backup **`john@lemonvoice.com`** · phone **+1 (279) 282-4208** · 2FA authenticator (added Apr 8, 2026). Accounts on this login: **BCX Voice** (`acct_1SyIMCBB…`) and **Eco Delight Coffee** (`acct_1SuLDr…`). **The Train Station is not on this user.** Jeremy must invite **`john@bcxvoice.com`** (not `john@thetrainstation.co`) onto Live `acct_1TmKSW…`. Earlier TS Dashboard access was a different Brave profile (Capital Audio / Unpaid Invoices bookmarks).  
 **Branches:** `preview` / `main` (same tip after this session) · prod: https://www.thetrainstation.co  
 
 ### Live members (2026-08-13)
@@ -430,9 +436,9 @@ Leave iOS/Android pull-to-refresh **off** on member screens (`DisablePullToRefre
 
 ### NEXT SESSION — pick up here (priority)
 
-**Stripe still first for money.** Log into Jeremy’s Train Station Stripe (`acct_1TmKSW…`, **Live**). Wrong account if Eco Delight / `acct_1Su…`. Don’t copy keys until the top-left name is The Train Station. Then `.env.jeremy.live` (`sk_live` / `pk_live` / prices / `whsec`) → `node scripts/wire-jeremy-master-stripe.mjs --identify` → `--push-vercel` → redeploy. Existing Ali/Bella Eco subs stay on Eco; new charges go to Jeremy.
+**Stripe still first for money.** Log into Jeremy’s Train Station Stripe (`acct_1TmKSW…`, **Live**). Wrong account if Eco Delight / `acct_1Su…`. Don’t copy keys until the top-left name is The Train Station. Then `.env.jeremy.live` (`sk_live` / `pk_live` / prices / `whsec` + Eco `*_LEGACY`) → `node scripts/wire-jeremy-master-stripe.mjs --identify` → `--push-vercel` → redeploy. Existing Ali/Bella/Jeremy2 Eco subs stay on Eco; new charges go to Jeremy.
 
-1. **Stripe cutover** — as above.  
+1. **Stripe cutover** — paste Jeremy Live keys into `.env.jeremy.live` (gitignored). Also copy current Vercel Production Eco `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` into `STRIPE_SECRET_KEY_LEGACY` / `STRIPE_WEBHOOK_SECRET_LEGACY`. Then `--identify` (must print `acct_1TmKSW…` + The Train Station) → `--push-vercel` → redeploy.  
 2. **Then: Google + Apple account create/sign-in** — see decision below. Credentials only (buttons already built). Smoke: new paid signup + existing-email link.  
 3. **Ali** — she re-onboards: tickets → Continue already paid → Woman → goals → book Jeremy. Then Today 14-day preview. Bella still needs onboard.  
 4. **Scale back Ali 14-day preview** after Jeremy calendar check (`src/lib/member-schedule-preview.ts`).  

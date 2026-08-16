@@ -1,6 +1,7 @@
 import "server-only";
 
 import { isDatabaseConfigured } from "@/lib/database-config";
+import { normalizeOnboardGender } from "@/lib/onboard-path";
 import {
   parseMeasurementPayload,
   serializeMeasurementRow,
@@ -96,7 +97,7 @@ export async function getMeasurementSheetIdentity(
       profile?.ageYears != null && Number.isFinite(profile.ageYears)
         ? profile.ageYears
         : fromBirth,
-    gender: profile?.gender?.trim() || null,
+    gender: normalizeOnboardGender(profile?.gender),
     beforePhotoUrl: profile?.beforePhotoUrl?.trim() || null,
     beforePhotoFocusX: profile?.beforePhotoFocusX ?? 50,
     beforePhotoFocusY: profile?.beforePhotoFocusY ?? 25,
@@ -128,7 +129,16 @@ export async function saveMeasurementSheetIdentity(
 
   const profilePatch: { gender?: string | null; ageYears?: number | null } = {};
   if (input.gender !== undefined) {
-    profilePatch.gender = input.gender?.trim().slice(0, 40) || null;
+    const raw = input.gender?.trim() || "";
+    if (!raw) {
+      profilePatch.gender = null;
+    } else {
+      const normalized = normalizeOnboardGender(raw);
+      if (!normalized) {
+        throw new Error("Choose man or woman.");
+      }
+      profilePatch.gender = normalized;
+    }
   }
   if (input.ageYears !== undefined) {
     const n = input.ageYears;

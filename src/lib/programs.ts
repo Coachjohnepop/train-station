@@ -42,7 +42,7 @@ export const TOP_LEVEL_PROGRAMS: CatalogProgramDef[] = [
     slug: "mom-dads-little-time",
     name: "Mom & Dads with Little Time",
     description:
-      "Efficient strength training for busy parents — short sessions that fit real life.",
+      "Efficient strength training for busy moms and dads — short sessions that fit real life.",
     sortOrder: 4,
     category: "workout",
     catalogStatus: "live",

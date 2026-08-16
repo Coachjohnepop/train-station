@@ -193,7 +193,10 @@ export default function MemberMeasurementsClient({
           if (id.ageYears != null && Number.isFinite(Number(id.ageYears))) {
             setAgeYears(String(id.ageYears));
           }
-          if (typeof id.gender === "string") setGender(id.gender);
+          if (typeof id.gender === "string") {
+            const g = id.gender.trim().toLowerCase();
+            setGender(g === "man" || g === "male" || g === "m" ? "man" : g === "woman" || g === "female" || g === "f" ? "woman" : "");
+          }
           // Fresh form for a new check-in (originals show from history separately)
           setForm(emptyMeasurementForm());
         }
@@ -487,7 +490,16 @@ export default function MemberMeasurementsClient({
         if (typeof data.identity.name === "string") setDisplayName(data.identity.name);
         if (data.identity.ageYears != null) setAgeYears(String(data.identity.ageYears));
         else setAgeYears("");
-        if (typeof data.identity.gender === "string") setGender(data.identity.gender);
+        if (typeof data.identity.gender === "string") {
+          const g = data.identity.gender.trim().toLowerCase();
+          setGender(
+            g === "man" || g === "male" || g === "m"
+              ? "man"
+              : g === "woman" || g === "female" || g === "f"
+                ? "woman"
+                : "",
+          );
+        }
       }
       if (typeof data.beforePhotoUrl === "string" && data.beforePhotoUrl.trim()) {
         setBeforePhotoUrl(data.beforePhotoUrl.trim());
@@ -959,7 +971,7 @@ export default function MemberMeasurementsClient({
                 placeholder="—"
               />
             </KeyField>
-            <KeyField label="Gender">
+            <KeyField label="Man or woman">
               <select
                 value={gender}
                 onChange={(e) => setGender(e.target.value)}
@@ -967,11 +979,8 @@ export default function MemberMeasurementsClient({
                 className="ms-key__input"
               >
                 <option value="">—</option>
-                <option value="Female">Female</option>
-                <option value="Male">Male</option>
-                <option value="Non-binary">Non-binary</option>
-                <option value="Prefer not to say">Prefer not to say</option>
-                <option value="Other">Other</option>
+                <option value="man">Man</option>
+                <option value="woman">Woman</option>
               </select>
             </KeyField>
             <p className="mb-1 mt-2 text-[9px] font-bold uppercase tracking-wider text-[var(--ms-gold)]">

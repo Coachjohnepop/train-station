@@ -8,6 +8,7 @@ import { postCoachSystemMessage } from "@/lib/coach-chat";
 import { sendResendEmail, transactionalSubject } from "@/lib/resend-mail";
 import { deliverSms } from "@/lib/sms";
 import { isDemoMode } from "@/lib/demo-enrollments";
+import { onboardGenderLabel } from "@/lib/onboard-path";
 
 function appBaseUrl() {
   return process.env.NEXT_PUBLIC_APP_URL || "https://www.thetrainstation.co";
@@ -307,7 +308,8 @@ export async function notifyCoachNewMember(params: {
     ? `\nHome equipment: ${params.equipmentSummary.trim()}`
     : "";
   const phoneLine = params.phone?.trim() ? `\nPhone: ${params.phone.trim()}` : "";
-  const genderLine = params.gender?.trim() ? `\nPath: ${params.gender.trim()}` : "";
+  const genderLabel = onboardGenderLabel(params.gender);
+  const genderLine = genderLabel ? `\nMan or woman: ${genderLabel}` : "";
   const goalLine = params.weightLossGoal?.trim()
     ? `\nWeight-loss goal: ${params.weightLossGoal.trim()}` +
       (params.weightLossTimeline?.trim() ? ` · ${params.weightLossTimeline.trim()}` : "")
