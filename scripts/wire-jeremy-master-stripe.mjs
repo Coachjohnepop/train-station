@@ -12,6 +12,8 @@
  *   #      STRIPE_SECRET_KEY=sk_live_...
  *   #      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
  *   #      STRIPE_WEBHOOK_SECRET=whsec_...   # optional now; set after webhook exists
+#      STRIPE_SECRET_KEY_LEGACY=sk_live_...   # current Eco Production secret
+#      STRIPE_WEBHOOK_SECRET_LEGACY=whsec_... # current Eco Production webhook
  *
  *   # 2) Identify only (no Vercel writes):
  *   node scripts/wire-jeremy-master-stripe.mjs --identify
@@ -120,12 +122,22 @@ async function main() {
     process.env.STRIPE_WEBHOOK_SECRET?.trim() ||
     fileEnv.STRIPE_WEBHOOK_SECRET?.trim() ||
     "";
+  const legacySecret =
+    process.env.STRIPE_SECRET_KEY_LEGACY?.trim() ||
+    fileEnv.STRIPE_SECRET_KEY_LEGACY?.trim() ||
+    "";
+  const legacyWebhook =
+    process.env.STRIPE_WEBHOOK_SECRET_LEGACY?.trim() ||
+    fileEnv.STRIPE_WEBHOOK_SECRET_LEGACY?.trim() ||
+    "";
 
   console.log("Train Station — wire Jeremy master Stripe\n");
   console.log(`Env file: ${ENV_FILE} ${existsSync(ENV_FILE) ? "(found)" : "(missing)"}`);
   console.log(`Secret:      ${mask(secret)}`);
   console.log(`Publishable: ${mask(publishable)}`);
   console.log(`Webhook:     ${mask(webhook)}`);
+  console.log(`Legacy sk:   ${mask(legacySecret)}`);
+  console.log(`Legacy wh:   ${mask(legacyWebhook)}`);
 
   if (!secret) {
     console.error(`
@@ -192,13 +204,18 @@ Then re-run:
   if (identifyOnly && !push) {
     console.log(`
 Next:
-  1. Confirm the account above is Jeremy’s Train Station (not John’s personal).
+  1. Confirm the account above is Jeremy’s Train Station (not Eco Delight / not John’s personal).
   2. Create Live webhook → https://www.thetrainstation.co/api/stripe/webhook
-  3. Put whsec_… in .env.jeremy.live
-  4. node scripts/wire-jeremy-master-stripe.mjs --push-vercel
-  5. Redeploy Production
-  6. node scripts/stripe-live-status.mjs
-  7. ONLY THEN wire John’s Connect for commission (Admin → Dev & partnership)
+  3. Put Jeremy whsec_… in .env.jeremy.live as STRIPE_WEBHOOK_SECRET
+  4. Copy CURRENT Production Eco keys into the same file as:
+       STRIPE_SECRET_KEY_LEGACY=sk_live_…   # today’s Eco STRIPE_SECRET_KEY
+       STRIPE_WEBHOOK_SECRET_LEGACY=whsec_… # today’s Eco STRIPE_WEBHOOK_SECRET
+     (Vercel → train-station → Settings → Environment Variables → Production)
+  5. node scripts/wire-jeremy-master-stripe.mjs --push-vercel
+  6. Redeploy Production
+  7. node scripts/stripe-live-status.mjs  (expect pk prefix NOT 51SuLDr)
+  8. $25 smoke on a fresh email; Ali/Bella stay Continue already paid
+  9. ONLY THEN wire John’s Connect for commission (Admin → Dev & partnership)
 `);
     return;
   }
@@ -215,6 +232,20 @@ Next:
     vercelEnvSet("STRIPE_WEBHOOK_SECRET", webhook, "production");
   } else {
     console.log("  · STRIPE_WEBHOOK_SECRET skipped (set when you have Live whsec_)");
+  }
+  if (legacySecret.includes("live")) {
+    vercelEnvSet("STRIPE_SECRET_KEY_LEGACY", legacySecret, "production");
+  } else {
+    console.log(
+      "  ⚠ STRIPE_SECRET_KEY_LEGACY missing — Eco leftover subs (Ali/Bella/Jeremy2) will not retrieve after swap.",
+    );
+  }
+  if (legacyWebhook.startsWith("whsec_")) {
+    vercelEnvSet("STRIPE_WEBHOOK_SECRET_LEGACY", legacyWebhook, "production");
+  } else {
+    console.log(
+      "  ⚠ STRIPE_WEBHOOK_SECRET_LEGACY missing — Eco invoice.paid will 400 after swap.",
+    );
   }
 
   // Price IDs if provided in env file

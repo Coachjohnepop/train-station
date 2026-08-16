@@ -4,6 +4,11 @@ import { isCoachTipCheckoutMetadata } from "@/lib/coach-tips";
 import { markMemberPaid } from "@/lib/mark-member-paid";
 import { getStripe } from "@/lib/stripe";
 import {
+  constructStripeWebhookEvent,
+  retrieveSubscriptionAnyAccount,
+  webhookSecrets,
+} from "@/lib/stripe-webhook-verify";
+import {
   checkoutCustomerId,
   checkoutSubscriptionId,
   persistCheckoutPaymentMethod,
@@ -23,8 +28,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   const stripe = getStripe();
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
-  if (!stripe || !webhookSecret) {
+  if (!stripe || !webhookSecrets().length) {
     return NextResponse.json({ error: "Stripe webhook is not configured." }, { status: 503 });
   }
 
@@ -36,7 +40,7 @@ export async function POST(request: Request) {
   const body = await request.text();
   let event: import("stripe").Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    event = constructStripeWebhookEvent(stripe, body, signature);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Invalid signature";
     return NextResponse.json({ error: message }, { status: 400 });
@@ -104,7 +108,7 @@ export async function POST(request: Request) {
 
       const subscriptionId = checkoutSubscriptionId(session);
       if (subscriptionId) {
-        const sub = await stripe.subscriptions.retrieve(subscriptionId);
+        const sub = await retrieveSubscriptionAnyAccount(subscriptionId);
         if (!isSubscriptionActive(sub)) break;
       }
 
@@ -158,7 +162,7 @@ export async function POST(request: Request) {
       const subscriptionRef = (invoice as { subscription?: string | null }).subscription;
       if (typeof subscriptionRef !== "string") break;
 
-      const sub = await stripe.subscriptions.retrieve(subscriptionRef);
+      const sub = await retrieveSubscriptionAnyAccount(subscriptionRef);
       if (!isSubscriptionActive(sub)) break;
 
       await promoteCustomerFromInvoice(invoice);
@@ -210,7 +214,7 @@ export async function POST(request: Request) {
       const subscriptionRef = (invoice as { subscription?: string | null }).subscription;
       if (typeof subscriptionRef !== "string") break;
 
-      const sub = await stripe.subscriptions.retrieve(subscriptionRef);
+      const sub = await retrieveSubscriptionAnyAccount(subscriptionRef);
       const userId = sub.metadata?.userId;
       if (userId) {
         await updateMemberProfile(userId, {

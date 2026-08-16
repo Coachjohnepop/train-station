@@ -37,18 +37,33 @@ import {
 type StripeClient = import("stripe").default;
 
 let stripeClient: StripeClient | null = null;
+let stripeLegacyClient: StripeClient | null = null;
+
+const STRIPE_API_VERSION = "2026-05-27.dahlia" as const;
+
+function makeStripeClient(rawKey: string | null | undefined): StripeClient | null {
+  const key = normalizeStripeSecretKey(rawKey);
+  if (!key) return null;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const Stripe = require("stripe") as typeof import("stripe").default;
+  return new Stripe(key, { apiVersion: STRIPE_API_VERSION });
+}
 
 export function getStripe(): StripeClient | null {
   if (!isStripePaymentsEnabled()) return null;
   if (stripeClient) return stripeClient;
-
-  const key = normalizeStripeSecretKey(process.env.STRIPE_SECRET_KEY);
-  if (!key) return null;
-
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Stripe = require("stripe") as typeof import("stripe").default;
-  stripeClient = new Stripe(key, { apiVersion: "2026-05-27.dahlia" });
+  stripeClient = makeStripeClient(process.env.STRIPE_SECRET_KEY);
   return stripeClient;
+}
+
+/** Eco Delight (or prior merchant) during Jeremy master cutover. Used only to read leftover subs. */
+export function getStripeLegacy(): StripeClient | null {
+  if (stripeLegacyClient) return stripeLegacyClient;
+  const legacy = process.env.STRIPE_SECRET_KEY_LEGACY?.trim();
+  const primary = process.env.STRIPE_SECRET_KEY?.trim();
+  if (!legacy || legacy === primary) return null;
+  stripeLegacyClient = makeStripeClient(legacy);
+  return stripeLegacyClient;
 }
 
 export async function stripePriceIdForPlan(plan: SignupPlan): Promise<string | null> {
