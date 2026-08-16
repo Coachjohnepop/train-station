@@ -339,7 +339,7 @@ export default function LandingSeeInsideTour({
       </div>
 
       <div
-        className={`relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] ${
+        className={`relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-4 ${
           phase === "end"
             ? "justify-start pt-3 sm:pt-5"
             : "justify-center pt-1.5"
@@ -369,8 +369,8 @@ export default function LandingSeeInsideTour({
         </button>
 
         <div
-          className={`flex w-full flex-col items-center gap-1.5 px-8 sm:gap-2 sm:px-10 ${
-            phase === "end" ? "max-w-lg" : "max-w-md"
+          className={`flex w-full flex-col items-center gap-2 px-1 sm:gap-2.5 sm:px-8 ${
+            phase === "end" ? "max-w-xl" : "max-w-lg"
           }`}
         >
           {/* Stacked slides — only during auto (stage min-height would leave a blank band on end) */}
@@ -385,7 +385,7 @@ export default function LandingSeeInsideTour({
               }`}
               aria-hidden={!onWorkout}
             >
-            <div className="w-full max-w-[320px] overflow-hidden rounded-2xl border border-white/15 bg-[#12081f] shadow-[0_16px_48px_rgba(0,0,0,0.65)] sm:max-w-[340px]">
+            <div className="w-full overflow-hidden rounded-2xl border border-white/15 bg-[#12081f] shadow-[0_16px_48px_rgba(0,0,0,0.65)]">
               <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--accent-fg)]">
@@ -426,7 +426,7 @@ export default function LandingSeeInsideTour({
                         <div
                           key={n}
                           ref={isThird ? lastSetRef : undefined}
-                          className={`flex h-10 flex-1 flex-col items-center justify-center rounded-md border text-[11px] font-bold transition-colors duration-500 ${
+                          className={`flex h-12 flex-1 flex-col items-center justify-center rounded-md border text-sm font-bold transition-colors duration-500 ${
                             done
                               ? isThird && set3JustDone
                                 ? "border-[#c4b5fd]/70 bg-[#7c3aed]/25 text-[#e9d5ff]"
@@ -456,14 +456,14 @@ export default function LandingSeeInsideTour({
               }`}
               aria-hidden={current !== "access_business"}
             >
-            <div className="w-full max-w-[17.5rem] rounded-2xl border border-[#7c3aed]/40 bg-[var(--surface)] p-3 sm:max-w-sm sm:p-3.5">
+            <div className="w-full rounded-2xl border border-[#7c3aed]/40 bg-[var(--surface)] p-4 sm:p-4">
               <p className="text-center text-[9px] font-bold uppercase tracking-[0.24em] text-[var(--accent-fg)]">
                 How to access
               </p>
               <h3 className="mt-0.5 text-center text-lg font-semibold leading-tight text-[var(--text)]">
                 Pick a Ticket Class
               </h3>
-              <div className="mx-auto mt-2 max-w-[160px] overflow-hidden rounded-lg border-2 border-[#a78bfa] shadow-[0_0_20px_rgba(124,58,237,0.4)] ring-2 ring-[#7c3aed]/50 sm:max-w-[180px]">
+              <div className="mx-auto mt-2 w-[min(100%,220px)] overflow-hidden rounded-lg border-2 border-[#a78bfa] shadow-[0_0_20px_rgba(124,58,237,0.4)] ring-2 ring-[#7c3aed]/50">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/images/tickets/business-class.jpg"
@@ -487,7 +487,7 @@ export default function LandingSeeInsideTour({
               }`}
               aria-hidden={current !== "pick_adult"}
             >
-            <div className="w-full max-w-[17.5rem] rounded-2xl border border-white/15 bg-[#12081f] p-3 sm:max-w-sm">
+            <div className="w-full rounded-2xl border border-white/15 bg-[#12081f] p-4">
               <p className="text-center text-[9px] font-bold uppercase tracking-[0.24em] text-[var(--accent-fg)]">
                 Program
               </p>
@@ -520,7 +520,7 @@ export default function LandingSeeInsideTour({
               }`}
               aria-hidden={current !== "equip_blank" && current !== "equip_all"}
             >
-            <div className="w-full max-w-[17.5rem] rounded-2xl border border-white/15 bg-[#12081f] p-3 sm:max-w-sm">
+            <div className="w-full rounded-2xl border border-white/15 bg-[#12081f] p-4">
               <p className="text-center text-[9px] font-bold uppercase tracking-[0.24em] text-[var(--accent-fg)]">
                 Gear at home
               </p>
@@ -570,7 +570,7 @@ export default function LandingSeeInsideTour({
                 current !== "book_confirm"
               }
             >
-              <div className="w-full max-w-[17.5rem] rounded-2xl border border-emerald-500/30 bg-[#0c1a14] p-3 sm:max-w-sm">
+              <div className="w-full rounded-2xl border border-emerald-500/30 bg-[#0c1a14] p-4">
                 <p className="text-center text-[9px] font-bold uppercase tracking-[0.24em] text-emerald-300/90">
                   Book Call
                 </p>
@@ -634,7 +634,7 @@ export default function LandingSeeInsideTour({
 
           {/* ── END: exit wizard into normal site nav ── */}
           {phase === "end" && (
-            <div className="w-full max-w-lg">
+            <div className="w-full">
               <p className="text-center text-xs font-bold uppercase tracking-[0.2em] text-[var(--accent-fg)]">
                 Your move
               </p>
@@ -660,7 +660,7 @@ export default function LandingSeeInsideTour({
                     />
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#1a0b2e] via-transparent to-transparent" />
                   </div>
-                  <div className="flex flex-1 flex-col p-2 sm:p-2.5">
+                  <div className="flex flex-1 flex-col p-3 sm:p-3.5">
                     <p className="text-base font-semibold leading-tight text-[var(--text)] sm:text-lg">
                       Choose ticket level
                     </p>
@@ -688,7 +688,7 @@ export default function LandingSeeInsideTour({
                     />
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#12081f] via-transparent to-transparent" />
                   </div>
-                  <div className="flex flex-1 flex-col p-2 sm:p-2.5">
+                  <div className="flex flex-1 flex-col p-3 sm:p-3.5">
                     <p className="text-base font-semibold leading-tight text-[var(--text)] sm:text-lg">
                       Choose program
                     </p>
