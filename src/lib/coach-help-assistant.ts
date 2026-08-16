@@ -12,7 +12,7 @@ Coach admin (mobile bottom nav):
 - Dashboard (/admin/day) — plan today's workout (paste + Grok), roster stoplights, Go to Today
 - Live (/admin/live) — live floor view during class
 - Messages (/admin/chat) — member chat
-- More (menu) — Members, Bookings, Programs, Dev & partnership fees, Coach settings
+- More (menu) — Members, Bookings, Programs, Search (Google/Bing), Dev & partnership fees, Coach settings
 
 Key flows:
 - Assign workout: Class → New workout (paste text) or Plan → save → members see it on /member/today same date

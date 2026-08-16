@@ -7,6 +7,7 @@ import { SiteBrandProvider } from "@/components/SiteBrandProvider";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
 import GlobalThemeToggle from "@/components/GlobalThemeToggle";
 import AnalyticsTrackerRoot from "@/components/AnalyticsTrackerRoot";
+import SiteJsonLd from "@/components/SiteJsonLd";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
@@ -43,6 +44,7 @@ export default async function RootLayout({
         <SiteBrandProvider brand={brand}>
           <ThemeAttributesSync membershipTier="explorer" />
           <GlobalThemeToggle />
+          <SiteJsonLd />
           {children}
           <AnalyticsTrackerRoot />
           <BackgroundMusic />

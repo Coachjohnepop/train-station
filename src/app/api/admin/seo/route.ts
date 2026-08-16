@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requirePlatformStaff } from "@/lib/api-auth";
+import { requireStaff } from "@/lib/api-auth";
 import {
   getSiteSeo,
   saveSiteSeo,
@@ -26,7 +26,7 @@ const patchSchema = z.object({
 });
 
 export async function GET() {
-  const auth = await requirePlatformStaff();
+  const auth = await requireStaff();
   if (!auth.ok) return auth.response;
 
   const seo = await getSiteSeo();
@@ -44,7 +44,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const auth = await requirePlatformStaff();
+  const auth = await requireStaff();
   if (!auth.ok) return auth.response;
 
   try {

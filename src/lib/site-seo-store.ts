@@ -2,8 +2,8 @@ import path from "path";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
 
 /**
- * Site-wide SEO + social share settings (platform backoffice).
- * Stored like brand/landing media — Postgres later if needed; Blob/JSON is fine for metadata.
+ * Site-wide SEO + social share settings (Admin → Search).
+ * Postgres is the system of record when DATABASE_URL is real; Blob/JSON is fallback.
  */
 export type SiteSeoConfig = {
   /** Browser tab + SERP title (default brand title if empty). */
@@ -35,15 +35,16 @@ const DEV_FILE = path.join(process.cwd(), "prisma", "site-seo.dev.json");
 const BLOB_PATH = "demo/site-seo.json";
 
 const DEFAULTS: Omit<SiteSeoConfig, "updatedAt"> = {
-  metaTitle: "The Train Station — Train with purpose",
+  metaTitle: "The Train Station — Online coaching with Jeremy",
   metaDescription:
-    "Live coaching with Coach Jeremy. Real programs, real accountability. Free quick tour — then choose your ticket.",
-  ogTitle: "The Train Station — Train with purpose",
+    "The Train Station is Coach Jeremy’s online training app: real programs, live class, and accountability on your phone. Join at thetrainstation.co.",
+  ogTitle: "The Train Station — Online coaching with Jeremy",
   ogDescription:
-    "Live coaching · real programs · on your phone. Free quick tour — then choose your ticket.",
+    "Coach Jeremy. Real programs. Live class. On your phone. The Train Station — thetrainstation.co.",
   ogImageUrl: "/images/splash/black-guy.jpg",
-  ogImageAlt: "Athlete training hard — The Train Station",
-  keywords: "personal training, online coaching, strength, Jeremy Byrd, Train Station",
+  ogImageAlt: "The Train Station — Coach Jeremy training",
+  keywords:
+    "The Train Station, The Train Station coaching, Train Station fitness, Coach Jeremy, Jeremy Byrd, online personal training, thetrainstation.co",
   robotsIndex: true,
   robotsFollow: true,
   googleSiteVerification: "",
@@ -83,14 +84,20 @@ function normalizeUrl(raw: unknown, fallback: string): string {
 function normalize(raw: unknown): SiteSeoConfig {
   if (!raw || typeof raw !== "object") return emptyConfig();
   const data = raw as Partial<SiteSeoConfig>;
+  const storedTitle = typeof data.metaTitle === "string" ? data.metaTitle.trim() : "";
+  const branded = !storedTitle || storedTitle === "The Train Station — Train with purpose";
   return {
-    metaTitle: clampText(data.metaTitle, 120, DEFAULTS.metaTitle),
-    metaDescription: clampText(data.metaDescription, 320, DEFAULTS.metaDescription),
-    ogTitle: clampText(data.ogTitle, 120, DEFAULTS.ogTitle),
-    ogDescription: clampText(data.ogDescription, 320, DEFAULTS.ogDescription),
+    metaTitle: branded ? DEFAULTS.metaTitle : clampText(data.metaTitle, 120, DEFAULTS.metaTitle),
+    metaDescription: branded
+      ? DEFAULTS.metaDescription
+      : clampText(data.metaDescription, 320, DEFAULTS.metaDescription),
+    ogTitle: branded ? DEFAULTS.ogTitle : clampText(data.ogTitle, 120, DEFAULTS.ogTitle),
+    ogDescription: branded
+      ? DEFAULTS.ogDescription
+      : clampText(data.ogDescription, 320, DEFAULTS.ogDescription),
     ogImageUrl: normalizeUrl(data.ogImageUrl, DEFAULTS.ogImageUrl),
     ogImageAlt: clampText(data.ogImageAlt, 200, DEFAULTS.ogImageAlt),
-    keywords: clampText(data.keywords, 400, DEFAULTS.keywords),
+    keywords: branded ? DEFAULTS.keywords : clampText(data.keywords, 400, DEFAULTS.keywords),
     robotsIndex: data.robotsIndex !== false,
     robotsFollow: data.robotsFollow !== false,
     googleSiteVerification: clampText(data.googleSiteVerification, 120, ""),
@@ -105,6 +112,18 @@ export function siteSeoDefaults(): SiteSeoConfig {
 }
 
 export async function getSiteSeo(): Promise<SiteSeoConfig> {
+  try {
+    const { loadSiteSeoFromDb } = await import("@/lib/site-seo-db");
+    const fromDb = await loadSiteSeoFromDb();
+    if (fromDb) {
+      const config = normalize(fromDb);
+      memoryStore = config;
+      return config;
+    }
+  } catch {
+    /* demo / missing table */
+  }
+
   const hydrated = await hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
@@ -143,6 +162,13 @@ export async function saveSiteSeo(patch: SiteSeoPatch): Promise<SiteSeoConfig> {
     ...patch,
     updatedAt: new Date().toISOString(),
   });
+
+  try {
+    const { saveSiteSeoToDb } = await import("@/lib/site-seo-db");
+    await saveSiteSeoToDb(next);
+  } catch {
+    /* keep Blob fallback */
+  }
 
   await persistJsonStore({
     blobPath: BLOB_PATH,
