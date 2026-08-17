@@ -66,11 +66,32 @@ export type HomeEquipmentCatalogRow = {
   imageUrl: string | null;
 };
 
+/** Demo / JSON rows may omit fields; normalize before filtering. */
+export type HomeEquipmentCatalogInput = {
+  id: string;
+  name: string;
+  category?: string | null;
+  description?: string | null;
+  productUrl?: string | null;
+  imageUrl?: string | null;
+};
+
+function normalizeCatalogRow(item: HomeEquipmentCatalogInput): HomeEquipmentCatalogRow {
+  return {
+    id: item.id,
+    name: item.name,
+    category: item.category ?? null,
+    description: item.description ?? null,
+    productUrl: item.productUrl ?? null,
+    imageUrl: item.imageUrl ?? null,
+  };
+}
+
 /** Original named kit + home-only rows. Shop SKUs (product links) stay off this list. */
 export function homeEquipmentFromCatalog(
-  catalog: HomeEquipmentCatalogRow[],
+  catalog: HomeEquipmentCatalogInput[],
 ): HomeEquipmentCatalogRow[] {
-  const homeOnly = catalog.filter((item) => !item.productUrl?.trim());
+  const homeOnly = catalog.map(normalizeCatalogRow).filter((item) => !item.productUrl?.trim());
   const byId = new Map(homeOnly.map((item) => [item.id, item]));
 
   const merged: HomeEquipmentCatalogRow[] = [];
