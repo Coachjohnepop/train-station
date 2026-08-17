@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AdminDiscountsPanel from "@/components/AdminDiscountsPanel";
+import LatestStripePurchaseCard from "@/components/LatestStripePurchaseCard";
 
 type Tab =
   | "overview"
@@ -78,6 +79,21 @@ type Overview = {
     failedCharges: number;
     openPaymentIntents: number;
   };
+  latestPurchase?: {
+    chargeId: string;
+    paymentIntentId: string | null;
+    amountLabel: string;
+    status: string;
+    description: string | null;
+    customerEmail: string | null;
+    customerName: string | null;
+    memberUserId: string | null;
+    memberPlan: string | null;
+    createdAt: string;
+    cardBrand: string | null;
+    cardLast4: string | null;
+    receiptUrl: string | null;
+  } | null;
 };
 
 type Tx = {
@@ -836,6 +852,7 @@ export default function AdminBillingClient() {
               {overview.message || "Configure STRIPE_SECRET_KEY on Vercel."}
             </p>
           )}
+          <LatestStripePurchaseCard purchase={overview.latestPurchase} />
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Kpi
               title="Available"

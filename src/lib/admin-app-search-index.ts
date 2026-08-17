@@ -303,6 +303,8 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
       "mark paid",
       "revenue",
       "books",
+      "income",
+      "latest purchase",
     ],
   },
   {
