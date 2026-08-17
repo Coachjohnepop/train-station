@@ -171,9 +171,8 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const todayWorkout = await resolveTodayPageWorkout(uid, viewDate, memberName, {
     partIndex,
   });
-  const { session, workout, programSlug, source, scheduleLabel, parts, activePartIndex } =
+  let { session, workout, programSlug, source, scheduleLabel, parts, activePartIndex } =
     todayWorkout;
-  const hasWorkout = !!workout;
   const coachMembers = asInstructor
     ? (await listCoachMembersForUi()).map((m) => ({
         id: m.id,
@@ -223,6 +222,14 @@ export default async function MemberTodayPage({ searchParams }: Props) {
             : "Swipe yesterday · today · tomorrow — only 3 days.";
 
   const selectedSummary = memberDays.find((d) => d.iso === viewDate) ?? null;
+  if (!workout && selectedSummary?.workoutId) {
+    workout = await getMemberWorkoutById(selectedSummary.workoutId, {
+      userId: uid,
+      memberName,
+    });
+    if (workout) source = source ?? "program";
+  }
+  const hasWorkout = !!workout;
   const stretchPreview = memberDays.length ? nextDayStretchPreview(memberDays, programTodayKey) : [];
   const tomorrowDay = memberDays.length ? nextMemberDay(memberDays, programTodayKey) : null;
   // Today and yesterday may run the full workout; tomorrow is preview only.

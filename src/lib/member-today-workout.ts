@@ -113,6 +113,7 @@ async function resolveEnrollmentProgramWorkout(
     slug,
     effectiveEnrollment,
     dayNumber,
+    weekNumber,
   );
   const parts = multi?.parts ?? [];
   if (!parts.length) {
@@ -121,6 +122,7 @@ async function resolveEnrollmentProgramWorkout(
       slug,
       effectiveEnrollment,
       dayNumber,
+      weekNumber,
     );
     if (!resolved?.workoutId) return null;
     const workout = await getMemberWorkoutById(resolved.workoutId, {

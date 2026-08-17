@@ -140,10 +140,10 @@ function DaySummaryCard({
         <p className="text-xs text-amber-300">Coach assigned a custom workout for this day.</p>
       )}
 
-      {phase === "past" && exerciseNames.length > 0 && (
+      {(phase === "past" || (isToday && !previewOnly)) && exerciseNames.length > 0 && (
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Movements logged
+            {phase === "past" ? "Movements logged" : "Today's movements"}
           </p>
           <ul className="mt-1.5 space-y-1 text-sm text-[var(--muted)]">
             {exerciseNames.map((name) => (
@@ -657,7 +657,7 @@ export default function MemberTodayShell({
         </div>
       )}
 
-      {isToday && !showFullWorkout && !hasCoachSession && (
+      {isToday && !showFullWorkout && !hasCoachSession && !selectedSummary?.hasWorkout && (
         <div className="card p-3 text-sm text-[var(--muted)]">
           <p>Your coach can assign a workout — it will show here on the day.</p>
           <Link href="/member/chat" className="mt-2 inline-block text-xs font-medium text-accent hover:underline">
