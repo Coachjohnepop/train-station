@@ -12,15 +12,13 @@ export type HomeEquipmentDefault = {
 export const ORIGINAL_HOME_EQUIPMENT: HomeEquipmentDefault[] = [
   { id: "eq-bodyweightonly", name: "Bodyweight only", category: "bodyweight" },
   { id: "eq-dumbbellspair", name: "Dumbbells (pair)", category: "dumbbells" },
+  { id: "eqmq4prcy7", name: "Adjustable Dumbbells", category: "dumbbells" },
   { id: "eq-resistancebands", name: "Resistance bands", category: "bands" },
+  { id: "eqmq4prcy8", name: "Resistance Bands with Handles", category: "bands" },
   { id: "eq-pullupbar", name: "Pull-up bar", category: "pullup" },
   { id: "eq-bench", name: "Bench", category: "bench" },
   { id: "eq-kettlebell", name: "Kettlebell", category: "kettlebell" },
-  { id: "eqmq4prcy7", name: "Adjustable Dumbbells", category: "dumbbells" },
-  { id: "eqmq4prcy8", name: "Resistance Bands with Handles", category: "bands" },
   { id: "eqmq4prcy9", name: "Stability Ball", category: "accessory" },
-  { id: "eqmq4prcya", name: "Pull-up Bar / Doorway Bar", category: "pullup" },
-  { id: "eqmq4prcyb", name: "Bench or Sturdy Chair", category: "bench" },
 ];
 
 export const ORIGINAL_HOME_EQUIPMENT_IDS = new Set(
@@ -69,6 +67,10 @@ export function homeEquipmentFromCatalog(
 
   for (const item of homeOnly) {
     if (ORIGINAL_HOME_EQUIPMENT_IDS.has(item.id)) continue;
+    const name = item.name.trim();
+    const custom = (item.category || "").trim().toLowerCase() === "custom";
+    if (!custom) continue;
+    if (/^amazon\.com/i.test(name) || /^https?:\/\//i.test(name)) continue;
     merged.push({ ...item, productUrl: null });
   }
 
