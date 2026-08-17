@@ -310,6 +310,8 @@ export function playRestComplete(
       const start = () => {
         if (started) return;
         started = true;
+        audio.muted = false;
+        audio.volume = volume;
         try {
           audio.currentTime = 0;
         } catch {
@@ -319,6 +321,8 @@ export function playRestComplete(
           .play()
           .then(() => {
             audioUnlocked = true;
+            audio.muted = false;
+            audio.volume = volume;
             sampleCache.set(src, audio);
           })
           .catch(fail);

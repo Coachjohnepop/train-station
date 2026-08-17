@@ -19,7 +19,7 @@ export function playCybertruckHorn(): void {
       });
     }
     // Match rest-complete Cybertruck level (hotter than whistle/bell/buzzer).
-    hornAudio.volume = 0.85;
+    hornAudio.volume = 1;
     hornRelease?.();
     hornRelease = holdBackgroundMusicForMedia();
     hornAudio.currentTime = 0;
