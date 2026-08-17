@@ -14,6 +14,10 @@ import {
 } from "@/lib/demo-equipment";
 import { extractAmazonAsin } from "@/lib/link-preview";
 import { resolveWorkingEquipmentImage } from "@/lib/equipment-image";
+import {
+  ORIGINAL_HOME_EQUIPMENT,
+  homeEquipmentFromCatalog,
+} from "@/lib/home-equipment-defaults";
 
 export type EquipmentCatalogItem = {
   id: string;
@@ -301,6 +305,29 @@ export async function deleteEquipmentItem(id: string): Promise<void> {
   }
 }
 
+async function ensureOriginalHomeEquipmentRows(): Promise<void> {
+  if (isDemoMode()) return;
+  const existing = await prisma.equipment.findMany({ select: { id: true } });
+  const have = new Set(existing.map((row) => row.id));
+  for (const seed of ORIGINAL_HOME_EQUIPMENT) {
+    if (have.has(seed.id)) continue;
+    try {
+      await prisma.equipment.create({
+        data: {
+          id: seed.id,
+          name: seed.name,
+          category: seed.category,
+          description: null,
+          productUrl: null,
+          imageUrl: null,
+        },
+      });
+    } catch (err) {
+      if (!isPrismaUniqueError(err)) throw err;
+    }
+  }
+}
+
 export async function getMemberEquipmentWithStatus(
   userId: string,
 ): Promise<EquipmentWithUserStatus[]> {
@@ -311,7 +338,7 @@ export async function getMemberEquipmentWithStatus(
       name: item.name,
       category: item.category ?? null,
       description: item.description ?? null,
-      productUrl: item.productUrl ?? null,
+      productUrl: null,
       imageUrl: item.imageUrl ?? null,
       hasAtHome: item.hasAtHome,
       quantity: item.quantity ?? 1,
@@ -319,11 +346,13 @@ export async function getMemberEquipmentWithStatus(
     }));
   }
 
-  const [catalog, userItems] = await Promise.all([
+  await ensureOriginalHomeEquipmentRows();
+  const [catalogRows, userItems] = await Promise.all([
     prisma.equipment.findMany({ orderBy: { name: "asc" } }),
     prisma.userEquipment.findMany({ where: { userId } }),
   ]);
 
+  const catalog = homeEquipmentFromCatalog(catalogRows.map(mapCatalogRow));
   const userMap = new Map(userItems.map((row) => [row.equipmentId, row]));
 
   return catalog.map((eq) => {
@@ -333,7 +362,7 @@ export async function getMemberEquipmentWithStatus(
       name: eq.name,
       category: eq.category,
       description: eq.description,
-      productUrl: eq.productUrl,
+      productUrl: null,
       imageUrl: eq.imageUrl,
       hasAtHome: userItem
         ? userItem.hasAtHome
@@ -355,6 +384,7 @@ export async function setMemberEquipment(
     return getMemberEquipmentWithStatus(userId);
   }
 
+  await ensureOriginalHomeEquipmentRows();
   const catalogIds = new Set(
     (await prisma.equipment.findMany({ select: { id: true } })).map((row) => row.id),
   );
