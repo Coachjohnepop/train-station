@@ -167,25 +167,28 @@ export async function getMemberMembershipSnapshot(
   // Downgrades only for active paid members (settings + confirm)
   const downgradePlans: SignupPlan[] = paidActive ? downgradeMembershipPlansFrom(plan) : [];
 
-  const lastPay = paidActive ? await getLatestPaidPaymentFact(userId) : null;
   let alreadyPaidPass = false;
   let alreadyPaidPlan: string | null = null;
   let alreadyPaidPeriodEnd: string | null = null;
-  if (paidActive) {
-    try {
-      const { resolvePaidCoverage } = await import("@/lib/paid-coverage");
-      const coverage = await resolvePaidCoverage({
-        userId,
-        sessionEmail: profile.email,
-        requestedPlan: plan,
-      });
-      alreadyPaidPass = coverage.ok;
-      alreadyPaidPlan = coverage.plan;
-      alreadyPaidPeriodEnd = coverage.periodEnd;
-    } catch {
-      alreadyPaidPass = false;
+  try {
+    const { resolvePaidCoverage } = await import("@/lib/paid-coverage");
+    const coverage = await resolvePaidCoverage({
+      userId,
+      sessionEmail: profile.email,
+      requestedPlan: plan,
+    });
+    alreadyPaidPass = coverage.ok;
+    alreadyPaidPlan = coverage.plan;
+    alreadyPaidPeriodEnd = coverage.periodEnd;
+    if (coverage.ok && profile.paymentStatus !== "paid") {
+      const repaired = await getMemberProfile(userId);
+      if (repaired) profile = repaired;
     }
+  } catch {
+    alreadyPaidPass = false;
   }
+  const lastPay =
+    profile.paymentStatus === "paid" ? await getLatestPaidPaymentFact(userId) : null;
   const lastPaymentAmountCents = lastPay?.amountCents ?? null;
   const lastPaymentCurrency = lastPay?.currency ?? null;
   const lastPaymentAt = lastPay?.paidAt ? lastPay.paidAt.toISOString() : null;

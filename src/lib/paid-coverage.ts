@@ -1,7 +1,9 @@
 import "server-only";
 
 import { getLatestPaidPaymentFact } from "@/lib/analytics-facts";
-import { getMemberProfile } from "@/lib/member-profiles-store";
+import { isDatabaseConfigured } from "@/lib/database-config";
+import { getMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
+import { prisma } from "@/lib/prisma";
 import { isPaidMembershipPlan, normalizeSignupPlan } from "@/lib/signup-plans";
 
 /** Monthly tickets get a short grace so a mid-cycle re-onboard still counts. */
@@ -42,6 +44,12 @@ export async function resolvePaidCoverage(input: {
     return { ok: false, plan: profile.plan, periodEnd: null, reason: "email_mismatch" };
   }
   if (profile.paymentStatus !== "paid") {
+    const restored = await restorePaidCoverageFromEmailHistory({
+      userId: input.userId,
+      email: input.sessionEmail || profile.email,
+      requested,
+    });
+    if (restored) return restored;
     return { ok: false, plan: profile.plan, periodEnd: null, reason: "not_paid" };
   }
   if (!isPaidMembershipPlan(profile.plan)) {
@@ -83,4 +91,59 @@ export async function resolvePaidCoverage(input: {
     periodEnd: periodEnd?.toISOString() ?? null,
     reason: fact?.periodEnd ? "ledger_period" : profile.staffGrantedAt ? "staff_grant" : "paid_window",
   };
+}
+
+/**
+ * Same email paid this ticket earlier (then the account was purged / re-signed).
+ * Audit survives the delete. Re-attach the paid stamp so checkout does not charge twice.
+ */
+async function restorePaidCoverageFromEmailHistory(input: {
+  userId: string;
+  email?: string | null;
+  requested: ReturnType<typeof normalizeSignupPlan>;
+}): Promise<PaidCoverage | null> {
+  const email = input.email?.trim().toLowerCase();
+  if (!email || !isDatabaseConfigured()) return null;
+
+  try {
+    const rows = await prisma.auditEvent.findMany({
+      where: {
+        action: "member.mark_paid",
+        outcome: "success",
+        actorEmail: { equals: email, mode: "insensitive" },
+      },
+      orderBy: { occurredAt: "desc" },
+      take: 20,
+    });
+    const now = new Date();
+    for (const row of rows) {
+      const meta = (row.metadata ?? {}) as { plan?: unknown };
+      const paidPlan = normalizeSignupPlan(
+        typeof meta.plan === "string" ? meta.plan : input.requested,
+      );
+      if (!isPaidMembershipPlan(paidPlan)) continue;
+      if (isPaidMembershipPlan(input.requested) && input.requested !== paidPlan) continue;
+      if (!inPaidWindow(row.occurredAt, null, now)) continue;
+
+      await updateMemberProfile(input.userId, {
+        plan: paidPlan,
+        paymentStatus: "paid",
+        paymentMethod: "stripe",
+        paidAt: row.occurredAt.toISOString(),
+      });
+      return {
+        ok: true,
+        plan: paidPlan,
+        periodEnd: null,
+        reason: "email_history",
+      };
+    }
+  } catch (e) {
+    console.warn(
+      "[paid-coverage] email history lookup failed",
+      email,
+      e instanceof Error ? e.message : e,
+    );
+  }
+  return null;
 }
