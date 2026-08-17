@@ -60,10 +60,10 @@ export default function GearTabShopHint() {
         aria-hidden
       />
       <div className="gear-tab-shop-hint__bubble rounded-lg bg-[#7c3aed] px-2.5 py-1.5 text-center shadow-lg shadow-[#7c3aed]/40 ring-1 ring-white/15">
-        <p className="text-[11px] font-semibold leading-snug text-white">
+        <p className="text-sm font-semibold leading-snug text-white">
           Shop gear here too
         </p>
-        <p className="mt-0.5 text-[9px] leading-snug text-white/85">
+        <p className="mt-0.5 text-xs leading-snug text-white/85">
           Tap <span className="font-bold">Gear</span> anytime to browse &amp; buy on this site
         </p>
       </div>

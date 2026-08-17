@@ -17,6 +17,7 @@ import { resolveWorkingEquipmentImage } from "@/lib/equipment-image";
 import {
   ORIGINAL_HOME_EQUIPMENT,
   homeEquipmentFromCatalog,
+  homeEquipmentNote,
 } from "@/lib/home-equipment-defaults";
 
 export type EquipmentCatalogItem = {
@@ -368,7 +369,7 @@ export async function getMemberEquipmentWithStatus(
         ? userItem.hasAtHome
         : eq.id === BODYWEIGHT_EQUIPMENT_ID,
       quantity: userItem?.quantity ?? 1,
-      notes: userItem?.notes ?? eq.description ?? "",
+      notes: homeEquipmentNote(userItem?.notes) || homeEquipmentNote(eq.description),
     };
   });
 }
