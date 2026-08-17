@@ -374,7 +374,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ## WHERE WE LEFT OFF
 
 **Date:** 2026-08-17  
-**Status:** Shipping to **main**: drop Eco Wilton coffee pickup from checkout; larger Scores/Gear locks; **man/woman** onboard (`6a13984`) is no longer preview-only. Merchant = Jeremy TS Live `acct_1TmKSWQWnajU9uyk`. Next: $25 smoke, tip price env on Vercel, revoke old secret, John Connect.  
+**Status:** Jeremy TS Live catalog is complete — Coach $25 / Business $50 / 1st $850 + tip prices. Webhook now includes `invoice.payment_failed`. Do **not** recreate products. Left for John in Stripe: confirm webhook 200, revoke **Eco** old `sk_live` (not Jeremy’s), Connect Express for payouts. Optional new-email $25 smoke (Lemon John already paid).  
 **Feedback videos:** always check `~/Desktop/Stuff/Lemon Voice/The Train Station/App Feedback Video/`. A new drop means **at least one issue**. John will say when the video is perfect — do not close the path before that. Latest (2026-08-16): Free-ticket rickroll timing confirmed good. Phone screenshot still showed Amazon home-kit titles + 10px nav — this session.  
 **Free concat job:** changing Admin → Videos **Free Explorer intro** queues `scripts/rebuild-free-ticket-full.mjs` (5s chorus + that intro → `free-ticket-full.mp4`). Manual: `npm run free-ticket:rebuild` or Admin **Rebuild gag + intro now**. Cron safety net every 15m. Needs `ffmpeg`.  
 **Prior (2026-08-16 landing):** Guest home has **three choices only** — **Free Tour**, **Start membership**, **Explore Content** (triangle fold for programs / services / footer). White nav Join pill is gone. Explore tap = confetti + phone vibrate. Sign in lives in the hamburger.  
@@ -971,7 +971,7 @@ Signing-off notes from Jeremy’s first AM client era; SMS audit migration **app
 - Multi-part = sequential sessions; Gym/Home = tracks *inside* a part  
 - Zoom host for recordings = **jeremy@thetrainstation.co** (`ZOOM_HOST_EMAIL`)  
 - Equipment with product link must have a **fetchable** image to publish to Gear  
-- Rest timer: sticky countdown (default 90s); **skip last set**; ticks **last 5s** + soft complete buzz; live partner checkoff starts rest on both sides
+- Rest timer: sticky countdown (default **45s**, always); ticks **last 5s** + Cybertruck; after every set including last; live partner checkoff starts rest on both sides
 
 ### Multi-coach Zoom (shipped Jul 16 · verified Jul 19)
 - **Per-coach OAuth:** `CoachZoomOAuth.id` = lower-case coach login email (not singleton `coach`).

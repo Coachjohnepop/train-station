@@ -1,3 +1,5 @@
+import { DEFAULT_REST_TIMER_SECONDS } from "@/lib/rest-timer";
+
 export type DayPrescription = {
   defaultSets: number;
   defaultReps: string;
@@ -7,7 +9,7 @@ export type DayPrescription = {
 export const DEFAULT_DAY_PRESCRIPTION: DayPrescription = {
   defaultSets: 3,
   defaultReps: "8-10",
-  defaultRestSec: 60,
+  defaultRestSec: DEFAULT_REST_TIMER_SECONDS,
 };
 
 export function readDayPrescription(day: {

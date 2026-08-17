@@ -8,6 +8,7 @@ import PrescriptionRowEditor from "@/components/PrescriptionRowEditor";
 import { formatApiErrorDetail } from "@/lib/api-errors";
 import { legacyWorkoutItemToPrescriptionDraft } from "@/lib/prescription-from-legacy";
 import { prescriptionToLegacy } from "@/lib/prescription-to-legacy";
+import { DEFAULT_REST_TIMER_SECONDS } from "@/lib/rest-timer";
 import type { PrescriptionDraft } from "@/lib/prescription-example-types";
 import {
   approachLabel,
@@ -196,7 +197,7 @@ export default function WorkoutBuilder({
           setScheme: "standard",
           reps: "10",
           sets: 3,
-          restSec: 90,
+          restSec: DEFAULT_REST_TIMER_SECONDS,
           notes: null,
         },
         exerciseName,

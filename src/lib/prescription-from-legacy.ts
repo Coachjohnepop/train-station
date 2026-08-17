@@ -1,6 +1,7 @@
 import type { PrescriptionExampleRow } from "@/lib/prescription-example-types";
 import { inferPrescriptionFromLegacy } from "@/lib/workout-prescription-backfill";
 import type { SetApproachId } from "@/lib/workout-schemes";
+import { DEFAULT_REST_TIMER_SECONDS } from "@/lib/rest-timer";
 
 type LegacyItem = {
   setScheme: string | null;
@@ -40,7 +41,7 @@ export function legacyWorkoutItemToPrescriptionDraft(
       setScheme: item.setScheme,
       exerciseName: exerciseName ?? item.exercise?.name ?? null,
     },
-    { defaultRestBetweenSetsSec: item.restSec ?? 90 },
+    { defaultRestBetweenSetsSec: item.restSec ?? DEFAULT_REST_TIMER_SECONDS },
   );
 
   const patternType = backfill ? patternFromBackfill(backfill.pattern) : "standard_reps";
@@ -70,7 +71,7 @@ export function legacyWorkoutItemToPrescriptionDraft(
     patternType,
     sampleExercise: exerciseName ?? item.exercise?.name ?? "Exercise",
     setCount: rx?.setCount ?? item.sets ?? 1,
-    restBetweenSetsSec: rx?.restBetweenSetsSec ?? item.restSec ?? 90,
+    restBetweenSetsSec: rx?.restBetweenSetsSec ?? item.restSec ?? DEFAULT_REST_TIMER_SECONDS,
     weightTier,
     phase1Type: phaseType(p1?.phaseType),
     phase1DurationSec: p1?.durationSec ?? null,

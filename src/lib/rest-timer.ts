@@ -9,7 +9,7 @@ export const REST_TIMER_PRESETS = [
 ] as const;
 
 /** Default when coach has not set per-exercise rest (still skippable). */
-export const DEFAULT_REST_TIMER_SECONDS = 90;
+export const DEFAULT_REST_TIMER_SECONDS = 45;
 
 export function formatRestCountdown(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
