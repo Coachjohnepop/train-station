@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { localTodayIso } from "@/lib/program-calendar";
+import { DEFAULT_REST_TIMER_SECONDS } from "@/lib/rest-timer";
 import {
   membershipPlanRank,
   normalizeSignupPlan,
@@ -580,7 +581,7 @@ async function pickExercisesByHints(hints: string[], limit = 7): Promise<string[
  */
 const MAINTAIN_SETS = 3;
 const MAINTAIN_REPS = "10";
-const MAINTAIN_REST_SEC = 90;
+const MAINTAIN_REST_SEC = DEFAULT_REST_TIMER_SECONDS;
 const MAINTAIN_HOLD_SEC = 45;
 
 function isHoldStyleExercise(name: string): boolean {

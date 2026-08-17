@@ -7,7 +7,7 @@ import { BLOB_TOKEN } from "@/lib/demo-json-blob";
 import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { prisma } from "@/lib/prisma";
 import { isSmsWorkoutId } from "@/lib/sms-workout-builder-api";
-import { normalizeRestTimerSeconds } from "@/lib/rest-timer";
+import { DEFAULT_REST_TIMER_SECONDS, normalizeRestTimerSeconds } from "@/lib/rest-timer";
 import {
   DEFAULT_REST_TIMER_SOUND,
   normalizeRestTimerSound,
@@ -34,7 +34,7 @@ export async function PUT(request: Request, { params }: Params) {
   }
 
   const enabled = parsed.data.enabled;
-  const seconds = normalizeRestTimerSeconds(parsed.data.seconds ?? 90);
+  const seconds = normalizeRestTimerSeconds(parsed.data.seconds ?? DEFAULT_REST_TIMER_SECONDS);
   const sound = normalizeRestTimerSound(parsed.data.sound ?? DEFAULT_REST_TIMER_SOUND);
 
   if (isSmsWorkoutId(id)) {
