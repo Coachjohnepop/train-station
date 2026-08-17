@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AdminMemberEquipmentModal from "@/components/AdminMemberEquipmentModal";
 import AdminMemberMeasurementsModal from "@/components/AdminMemberMeasurementsModal";
 import MembersSeenMarker from "@/components/MembersSeenMarker";
@@ -129,6 +129,14 @@ export default function AdminMembersPage() {
   const [staffGranting, setStaffGranting] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<MemberFilter>("all");
+  const listRef = useRef<HTMLDivElement | null>(null);
+
+  function snapToFilter(next: MemberFilter) {
+    setFilter((current) => (current === next ? "all" : next));
+    window.requestAnimationFrame(() => {
+      listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
   const [removing, setRemoving] = useState<string | null>(null);
   const [savingMode, setSavingMode] = useState<string | null>(null);
   const [equipmentTarget, setEquipmentTarget] = useState<MemberRow | null>(null);
@@ -392,24 +400,48 @@ export default function AdminMembersPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-center">
-            <div className="text-2xl font-semibold text-accent">{pendingCount}</div>
-            <div className="text-[10px] uppercase tracking-[2px] text-[var(--muted)]">
-              Pending approval
-            </div>
-          </div>
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-center">
-            <div className="text-2xl font-semibold text-amber-300">{unpaidCount}</div>
-            <div className="text-[10px] uppercase tracking-[2px] text-[var(--muted)]">
-              Awaiting payment
-            </div>
-          </div>
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-center">
-            <div className="text-2xl font-semibold text-sky-300">{intakePendingCount}</div>
-            <div className="text-[10px] uppercase tracking-[2px] text-[var(--muted)]">
-              Needs intake
-            </div>
-          </div>
+          {(
+            [
+              {
+                id: "pending" as const,
+                count: pendingCount,
+                label: "Pending approval",
+                countClass: "text-accent",
+              },
+              {
+                id: "unpaid" as const,
+                count: unpaidCount,
+                label: "Awaiting payment",
+                countClass: "text-amber-300",
+              },
+              {
+                id: "intake" as const,
+                count: intakePendingCount,
+                label: "Needs intake",
+                countClass: "text-sky-300",
+              },
+            ] as const
+          ).map((card) => {
+            const active = filter === card.id;
+            return (
+              <button
+                key={card.id}
+                type="button"
+                onClick={() => snapToFilter(card.id)}
+                aria-pressed={active}
+                className={`min-w-[7.5rem] rounded-lg border px-4 py-2 text-center transition ${
+                  active
+                    ? "border-accent bg-accent/15 ring-1 ring-accent/40"
+                    : "border-[var(--border)] bg-[var(--surface-2)] hover:border-accent/50 hover:bg-[var(--surface)]"
+                }`}
+              >
+                <div className={`text-2xl font-semibold ${card.countClass}`}>{card.count}</div>
+                <div className="text-[10px] uppercase tracking-[2px] text-[var(--muted)]">
+                  {card.label}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -418,7 +450,7 @@ export default function AdminMembersPage() {
           <button
             key={btn.id}
             type="button"
-            onClick={() => setFilter(btn.id)}
+            onClick={() => snapToFilter(btn.id)}
             className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
               filter === btn.id
                 ? "nav-tab-active text-accent"
@@ -433,6 +465,7 @@ export default function AdminMembersPage() {
 
       {error && <p className="text-sm text-amber-400">{error}</p>}
 
+      <div ref={listRef}>
       {loading ? (
         <p className="text-sm text-[var(--muted)]">Loading members…</p>
       ) : visibleMembers.length === 0 ? (
@@ -690,6 +723,7 @@ export default function AdminMembersPage() {
           </table>
         </div>
       )}
+      </div>
 
       {equipmentTarget && (
         <AdminMemberEquipmentModal
