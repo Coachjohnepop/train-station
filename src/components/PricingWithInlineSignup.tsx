@@ -178,20 +178,17 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
                 ) : null}
               </div>
 
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelected(plan.id);
-                }}
+              <Link
+                href={`/signup?plan=${encodeURIComponent(plan.id)}`}
+                onClick={(e) => e.stopPropagation()}
                 className={`mt-8 inline-flex h-11 items-center justify-center rounded-full text-sm font-semibold transition-all hover:scale-[1.05] ${
                   plan.popular
                     ? "bg-[#7c3aed] text-white hover:bg-[#6d2dd6]"
                     : "border border-[var(--border)] !text-[#7c3aed] hover:bg-white/5"
                 }`}
               >
-                Select this plan
-              </button>
+                {plan.id === "explorer" ? "Board free" : "Board this seat"}
+              </Link>
               {plan.feeLabel === "Monthly subscription" ? (
                 <p className="mt-2 text-center text-[10px] text-[var(--muted)]">
                   Billed monthly. Cancel anytime.

@@ -18,10 +18,11 @@ export default function JoinQuestionsPage() {
     goal: "",
   });
   const [submitted, setSubmitted] = useState(false);
-  const [recommendation, setRecommendation] = useState<{ name: string; reason: string } | null>(null);
-  const [joinName, setJoinName] = useState("");
-  const [joinEmail, setJoinEmail] = useState("");
-  const [joining, setJoining] = useState(false);
+  const [recommendation, setRecommendation] = useState<{
+    name: string;
+    label: string;
+    reason: string;
+  } | null>(null);
 
   const updateAnswer = (key: keyof Answers, value: string) => {
     setAnswers((prev) => ({ ...prev, [key]: value }));
@@ -35,8 +36,9 @@ export default function JoinQuestionsPage() {
     }
 
     // Simple recommendation logic (will be refined when packages are adjusted)
-    let recName = "Explorer";
-    let reason = "Perfect starting point to build consistency without overwhelm.";
+    let recName = "explorer";
+    let recLabel = "Free";
+    let reason = "Start on the floor. Build the habit. Upgrade when you want Jeremy in your corner.";
 
     const freq = answers.exerciseFreq;
     const hasStructure = answers.structured === "yes";
@@ -44,45 +46,17 @@ export default function JoinQuestionsPage() {
     const seriousGoal = ["build-muscle", "lose-fat"].includes(answers.goal);
 
     if (freq === "4+" && hasStructure && tracksEating) {
-      recName = "Pro";
-      reason = "You're already putting in the work — this gives you the deepest support and best value.";
+      recName = "pro";
+      recLabel = "1st Class";
+      reason = "You're already in it. Eight private sessions + the full station — go deep.";
     } else if ((freq === "2-3" || freq === "4+") && (hasStructure || tracksEating || seriousGoal)) {
-      recName = "Member";
-      reason = "Solid structure and accountability to take your results to the next level.";
-    } else {
-      recName = "Explorer";
-      reason = "Great entry point to build the habit with less commitment.";
+      recName = "member";
+      recLabel = "Coach Class";
+      reason = "This is the accountability seat. Programs, texts, and Jeremy on the line.";
     }
 
-    setRecommendation({ name: recName, reason });
+    setRecommendation({ name: recName, label: recLabel, reason });
     setSubmitted(true);
-  };
-
-  const handleRealJoin = async () => {
-    setJoining(true);
-    try {
-      const res = await fetch("/api/join", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: joinName || "New Member",
-          email: joinEmail || undefined,
-          plan: recommendation?.name?.toLowerCase(),
-          programSlug: "adult", // default to the core workout program so the site is immediately useful
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.redirectTo) {
-        window.location.href = data.redirectTo;
-      } else {
-        // fallback: still take them to member (cookie may be set or demo)
-        window.location.href = data.redirectTo || "/login";
-      }
-    } catch {
-      window.location.href = "/login";
-    } finally {
-      setJoining(false);
-    }
   };
 
   return (
@@ -98,9 +72,15 @@ export default function JoinQuestionsPage() {
 
       <div className="mx-auto max-w-2xl px-6 pt-12 pb-20">
         <div className="text-center mb-10">
-          <div className="uppercase tracking-[3px] text-xs font-semibold text-[#7c3aed] mb-3">GET STARTED</div>
-          <h1 className="text-4xl font-semibold tracking-[-1.5px] mb-4">Tell us a bit about where you are today</h1>
-          <p className="text-[var(--muted)]">A few quick questions so we can recommend the best fit for you. (We'll refine the packages and recommendations soon.)</p>
+          <div className="uppercase tracking-[3px] text-xs font-semibold text-[#7c3aed] mb-3">
+            60 seconds
+          </div>
+          <h1 className="text-4xl font-semibold tracking-[-1.5px] mb-4">
+            Where are you starting?
+          </h1>
+          <p className="text-[var(--muted)]">
+            Four taps. We point you at a seat — Free, Coach Class, or 1st.
+          </p>
         </div>
 
         {!submitted ? (
@@ -175,39 +155,22 @@ export default function JoinQuestionsPage() {
               type="submit"
               className="w-full mt-4 inline-flex h-12 items-center justify-center rounded-full bg-[#7c3aed] text-sm font-semibold text-white hover:bg-[#6d2dd6] transition-all"
             >
-              See my recommendation
+              Show me a seat
             </button>
           </form>
         ) : (
           <div className="space-y-8">
             <div className="rounded-3xl border border-[#7c3aed] bg-[var(--surface)] p-8">
-              <div className="uppercase tracking-[2px] text-xs font-semibold text-[#7c3aed] mb-2">RECOMMENDATION</div>
-              <div className="text-3xl font-semibold tracking-tight mb-2">{recommendation?.name}</div>
-              <p className="text-[var(--muted)] mb-6">{recommendation?.reason}</p>
-
-              <div className="text-sm text-[var(--muted)]">
-                This is based on your current habits. We'll refine the exact packages and pricing soon — this is just to help you get started in the right place.
+              <div className="uppercase tracking-[2px] text-xs font-semibold text-[#7c3aed] mb-2">
+                Your seat
               </div>
+              <div className="text-3xl font-semibold tracking-tight mb-2">
+                {recommendation?.label}
+              </div>
+              <p className="text-[var(--muted)] mb-6">{recommendation?.reason}</p>
             </div>
 
             <div className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <input
-                  type="text"
-                  placeholder="Your name (optional)"
-                  className="w-full rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--text)] placeholder:text-[var(--muted)]"
-                  value={joinName}
-                  onChange={(e) => setJoinName(e.target.value)}
-                />
-                <input
-                  type="email"
-                  placeholder="Email (optional for demo)"
-                  className="w-full rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--text)] placeholder:text-[var(--muted)]"
-                  value={joinEmail}
-                  onChange={(e) => setJoinEmail(e.target.value)}
-                />
-              </div>
-
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
                   href={`/join${recommendation ? `?rec=${encodeURIComponent(recommendation.name)}` : ''}`}
@@ -215,13 +178,12 @@ export default function JoinQuestionsPage() {
                 >
                   See all membership options
                 </Link>
-                <button
-                  onClick={handleRealJoin}
-                  disabled={joining}
-                  className="flex-1 inline-flex h-12 items-center justify-center rounded-full bg-[#7c3aed] text-sm font-semibold text-white hover:bg-[#6d2dd6] transition-all disabled:opacity-60"
+                <Link
+                  href={`/signup?plan=${encodeURIComponent(recommendation?.name || "explorer")}`}
+                  className="flex-1 inline-flex h-12 items-center justify-center rounded-full bg-[#7c3aed] text-sm font-semibold text-white hover:bg-[#6d2dd6] transition-all"
                 >
-                  {joining ? "Creating your account..." : `Start with the recommended (Back to the Program)`}
-                </button>
+                  Board {recommendation?.label || "now"}
+                </Link>
               </div>
             </div>
 

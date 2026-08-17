@@ -37,6 +37,7 @@
     "test:s3b": "node scripts/s3b-workout-logs-db-test.mjs",
     "test:s3c": "node scripts/s3c-today-sessions-db-test.mjs",
     "test:s7": "node scripts/s7-landing-brand-test.mjs",
+    "test:landing-paid": "node scripts/landing-to-paid-loop.mjs",
     "test:jeremy-coach": "node scripts/jeremy-video-test-coach.mjs",
     "test:jeremy-member": "node scripts/jeremy-video-test-member.mjs",
     "test:s2": "node scripts/s2-program-builder-test.mjs",
