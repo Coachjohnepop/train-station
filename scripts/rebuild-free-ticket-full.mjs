@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 /**
  * Rebuild public/videos/free-ticket-full.mp4
- *   5s in-app chorus (9:16 cover) + current Free Explorer intro (9:16).
+ *   5s chorus + top of Jeremy's intro (logo, he is not on screen) + Free Explorer clip.
  *
  *   node scripts/rebuild-free-ticket-full.mjs
- *   node scripts/rebuild-free-ticket-full.mjs --intro https://…/jeremy.mp4
  *   node scripts/rebuild-free-ticket-full.mjs --intro ./public/videos/jeremy-free-intro.mp4
  *
  * Triggered when Admin saves the Free Explorer intro (see src/lib/free-ticket-full-job.ts).
@@ -19,6 +18,10 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_CHORUS = path.join(root, "public/videos/free-ticket-chorus.mp4");
 const DEFAULT_INTRO = path.join(root, "public/videos/jeremy-free-intro.mp4");
+/** Welcome file starts with the logo card — Jeremy is not on screen yet. */
+const DEFAULT_OPEN = path.join(root, "public/videos/jeremy-welcome.mp4");
+/** Seconds of that logo card before Jeremy first appears (~9s). */
+const OPEN_SEC = 8;
 const DEFAULT_OUT = path.join(root, "public/videos/free-ticket-full.mp4");
 
 function parseArgs(argv) {
@@ -104,14 +107,40 @@ async function main() {
     const intro916 = path.join(tmp, "intro-916.mp4");
     cover916(ffmpeg, args.chorus, chorus916);
     cover916(ffmpeg, introPath, intro916);
+
+    const pieces = [chorus916];
+    if (fs.existsSync(DEFAULT_OPEN)) {
+      const openRaw = path.join(tmp, "open-raw.mp4");
+      const open916 = path.join(tmp, "open-916.mp4");
+      run(ffmpeg, [
+        "-y",
+        "-i",
+        DEFAULT_OPEN,
+        "-t",
+        String(OPEN_SEC),
+        "-c",
+        "copy",
+        openRaw,
+      ]);
+      cover916(ffmpeg, openRaw, open916);
+      pieces.push(open916);
+    }
+    pieces.push(intro916);
+
+    const n = pieces.length;
+    const inputArgs = pieces.flatMap((p) => ["-i", p]);
+    const labels = pieces
+      .map(
+        (_, i) =>
+          `[${i}:v]fps=30,format=yuv420p,setsar=1[v${i}];[${i}:a]aformat=sample_rates=48000:channel_layouts=stereo[a${i}]`,
+      )
+      .join(";");
+    const concatIn = pieces.map((_, i) => `[v${i}][a${i}]`).join("");
     run(ffmpeg, [
       "-y",
-      "-i",
-      chorus916,
-      "-i",
-      intro916,
+      ...inputArgs,
       "-filter_complex",
-      "[0:v]fps=30,format=yuv420p,setsar=1[v0];[1:v]fps=30,format=yuv420p,setsar=1[v1];[0:a]aformat=sample_rates=48000:channel_layouts=stereo[a0];[1:a]aformat=sample_rates=48000:channel_layouts=stereo[a1];[v0][a0][v1][a1]concat=n=2:v=1:a=1[v][a]",
+      `${labels};${concatIn}concat=n=${n}:v=1:a=1[v][a]`,
       "-map",
       "[v]",
       "-map",
