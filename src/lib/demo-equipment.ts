@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
+import { homeEquipmentFromCatalog } from "@/lib/home-equipment-defaults";
 
 const DEV_FILE = path.join(process.cwd(), "prisma", "user-equipment.dev.json");
 const BLOB_PATH = "demo/user-equipment.json";
@@ -277,7 +278,7 @@ export async function deleteDemoEquipmentItem(id: string): Promise<void> {
 }
 
 export async function getAllEquipmentWithUserStatus(userId?: string) {
-  const visibleCatalog = await loadEquipmentCatalogStore();
+  const visibleCatalog = homeEquipmentFromCatalog(await loadEquipmentCatalogStore());
   const uid = userId || "demo-user";
   const userEq = await getUserEquipment(uid);
   const userMap = new Map(userEq.map((u) => [u.equipmentId, u]));
