@@ -17,7 +17,7 @@ import {
   cloneWorkoutContentName,
   defaultTrackWorkoutTitle,
   findCatalogHomeForProgramDay,
-  isGarbageWorkoutTitle,
+  repairedStoredWorkoutTitle,
   workoutContentTitle,
   workoutsMatchByContentTitle,
 } from "@/lib/workout-content-name";
@@ -1371,7 +1371,7 @@ export default function ProgramCalendarBuilder({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: cloneWorkoutContentName(sourceWorkout?.name || "Workout", "Home"),
+          name: cloneWorkoutContentName(sourceWorkout?.name || "Unassigned", "Home"),
         }),
       });
       if (!cloneRes.ok) {
@@ -1493,13 +1493,13 @@ export default function ProgramCalendarBuilder({
     const applyTitle = (rawName: string) => {
       const clean = workoutContentTitle(rawName);
       setWorkoutTitle(clean);
-      // Silent DB repair when schedule/tech IDs leaked into the title (e.g. "S1D-… W2 Sat Gym")
-      if (isGarbageWorkoutTitle(rawName) || clean !== String(rawName || "").trim()) {
-        if (clean && clean !== String(rawName || "").trim()) {
+      const persist = repairedStoredWorkoutTitle(rawName);
+      // Only persist ID/schedule noise → a real content title. Never write "Workout".
+      if (persist) {
           void fetch(`/api/workouts/${workoutId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: clean }),
+            body: JSON.stringify({ name: persist }),
           })
             .then((r) => (r.ok ? r.json() : null))
             .then((updated) => {
@@ -1511,7 +1511,6 @@ export default function ProgramCalendarBuilder({
               );
             })
             .catch(() => {});
-        }
       }
     };
 

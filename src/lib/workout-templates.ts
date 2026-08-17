@@ -10,7 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
 import { BLOB_TOKEN } from "@/lib/demo-json-blob";
 import { requireBlobPersisted } from "@/lib/demo-persistence";
-import { workoutContentTitle } from "@/lib/workout-content-name";
+import { cloneWorkoutContentName, workoutContentTitle } from "@/lib/workout-content-name";
 import { TEMPLATE_CATEGORIES } from "@/lib/workout-template-constants";
 
 export type WorkoutTemplateRecord = {
@@ -375,7 +375,10 @@ export async function pasteWorkoutOntoProgramDay(input: {
     input.sourceTemplateName?.trim() || sourceName,
   );
   const requestedTitle = (input.contentName || "").trim();
-  let baseTitle = workoutContentTitle(requestedTitle || sourceName) || "Workout";
+  let baseTitle = workoutContentTitle(requestedTitle || sourceName);
+  if (!baseTitle || /^workout$/i.test(baseTitle)) {
+    baseTitle = cloneWorkoutContentName(sourceName || requestedTitle || "Unassigned");
+  }
 
   if (input.requireRename) {
     if (!requestedTitle) {
