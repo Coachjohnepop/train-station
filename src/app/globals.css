@@ -1926,7 +1926,7 @@ html[data-free-ticket="open"] .bg-music-control-cluster {
   background: color-mix(in srgb, var(--accent-deep) 12%, var(--surface));
 }
 
-/* Member top nav — 4×2 on phones so Messages / Gear stay readable. */
+/* Member top nav — daily tabs + More hamburger. */
 .member-nav {
   min-height: 2.75rem;
 }
@@ -2003,6 +2003,58 @@ html[data-free-ticket="open"] .bg-music-control-cluster {
 
 .member-nav-item {
   min-height: 3.15rem;
+}
+
+.member-nav-more-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.member-nav-more-panel {
+  position: absolute;
+  z-index: 60;
+  left: 0.5rem;
+  right: 0.5rem;
+  top: calc(100% - 0.35rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.4rem;
+  border-radius: 0.9rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 16px 40px color-mix(in srgb, #000 38%, transparent);
+}
+
+@media (min-width: 1024px) {
+  .member-nav-more-panel {
+    left: auto;
+    right: max(1.5rem, calc((100% - 72rem) / 2 + 1.5rem));
+    width: 16.5rem;
+  }
+}
+
+.member-nav-more-link {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2.75rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.7rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.member-nav-more-link:hover,
+.member-nav-more-link:focus-visible {
+  background: var(--surface-2);
+}
+
+.member-nav-more-link--active {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent-fg);
 }
 
 @media (min-width: 640px) {
