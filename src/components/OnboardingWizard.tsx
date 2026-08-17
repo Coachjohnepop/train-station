@@ -104,6 +104,7 @@ export default function OnboardingWizard({
   const [programStartDate, setProgramStartDate] = useState(() =>
     recommendedProgramStartDate(localTodayIso(), programStartSettings),
   );
+  const [skipHealth, setSkipHealth] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -113,24 +114,13 @@ export default function OnboardingWizard({
   async function nextStep() {
     setError(null);
     if (currentStep === 4) {
-      if (!gender) {
-        setError("Pick man or woman so we can set the right goals.");
-        return;
-      }
-      if (!primaryGoal) {
-        setError("Pick a main goal so Jeremy can personalize the plan.");
-        return;
-      }
-      if (!workoutSchedule) {
-        setError("Tell us how often you train now.");
-        return;
-      }
       await saveProgress({
         plan,
-        gender,
+        gender: gender || null,
         weightLbs: measurements.weight || null,
-        primaryGoal,
-        workoutSchedule,
+        startWeightLbs: measurements.weight || null,
+        primaryGoal: primaryGoal || null,
+        workoutSchedule: workoutSchedule || null,
         weightLossGoal: fatLoss ? weightLossGoal.trim() || null : null,
         weightLossTimeline: fatLoss ? weightLossTimeline.trim() || null : null,
         notes: measurements.notes || null,
@@ -149,11 +139,28 @@ export default function OnboardingWizard({
         dailyReminderTime: sms.dailyReminderTime || null,
       });
     }
+    if (currentStep === 3 && skipHealth) {
+      setCurrentStep(5);
+      return;
+    }
     setCurrentStep((s) => Math.min(totalSteps, s + 1));
   }
 
   function prevStep() {
+    if (currentStep === 5 && skipHealth) {
+      setCurrentStep(3);
+      return;
+    }
     setCurrentStep((s) => Math.max(1, s - 1));
+  }
+
+  async function skipHealthForLater() {
+    setSkipHealth(true);
+    setError(null);
+    if (gender) {
+      await saveProgress({ plan, gender });
+    }
+    await nextStep();
   }
 
   async function handleFinish() {
@@ -279,6 +286,26 @@ export default function OnboardingWizard({
               </div>
             </div>
 
+            <div>
+              <p className="mb-1.5 block text-xs text-[var(--muted)]">I am (optional)</p>
+              <div className="grid grid-cols-2 gap-2">
+                {(["man", "woman"] as const).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setGender(option)}
+                    className={`rounded-xl border px-3 py-2.5 text-sm font-semibold ${
+                      gender === option
+                        ? "border-accent bg-accent/15 text-[var(--text)]"
+                        : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)]"
+                    }`}
+                  >
+                    {option === "man" ? "Man" : "Woman"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <p className="text-xs text-[var(--muted)]">
               Need something first?{" "}
               <Link href="/member/account" className="font-semibold text-accent hover:underline">
@@ -288,6 +315,13 @@ export default function OnboardingWizard({
             </p>
             <button type="button" onClick={() => void nextStep()} className="btn-primary w-full">
               Start setup
+            </button>
+            <button
+              type="button"
+              onClick={() => void skipHealthForLater()}
+              className="btn-ghost w-full"
+            >
+              Skip health details — I&apos;ll add them later
             </button>
           </>
         )}
@@ -332,8 +366,9 @@ export default function OnboardingWizard({
           <>
             <h2 className="text-lg font-semibold">About you</h2>
             <p className="text-sm text-[var(--muted)]">
-              A few taps so Jeremy can make this personal. Tape measurements come after
-              your 15-minute intro — not now.
+              Same questions for everyone. All optional — skip anything and add it later.
+              Weight you enter here is your starting weight on file. Tape still waits
+              until after Jeremy&apos;s intro.
             </p>
             <div className="space-y-4 pt-1">
               <div>
@@ -357,7 +392,7 @@ export default function OnboardingWizard({
               </div>
               <div>
                 <label className="mb-1 block text-xs text-[var(--muted)]">
-                  Current weight (lbs)
+                  Current weight (lbs, optional)
                 </label>
                 <input
                   type="number"
@@ -473,9 +508,16 @@ export default function OnboardingWizard({
                 Back
               </button>
               <button type="button" onClick={() => void nextStep()} className="btn-primary flex-1">
-                Save &amp; continue
+                Continue
               </button>
             </div>
+            <button
+              type="button"
+              onClick={() => void nextStep()}
+              className="w-full text-center text-xs text-[var(--muted)] underline-offset-2 hover:underline"
+            >
+              Skip these for now
+            </button>
           </>
         )}
 

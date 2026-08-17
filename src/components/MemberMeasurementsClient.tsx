@@ -124,7 +124,9 @@ function WeightTrioField({
     <div className="ms-dual">
       <div className="ms-dual__title">
         <span className="ms-stat__label">Weight</span>
-        <span className="ms-dual__hint">Starting + goal stay put. Check-in is today.</span>
+        <span className="ms-dual__hint">
+          Starting comes from setup if you already entered it. Check-in is today only.
+        </span>
       </div>
       <div className="ms-dual__cols ms-dual__cols--three">
         <div className="ms-dual__cell">
