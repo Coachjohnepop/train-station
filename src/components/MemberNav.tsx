@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import ChatNavBadge from "@/components/ChatNavBadge";
@@ -18,7 +18,7 @@ type NavItem = {
   openDuringPayment?: boolean;
 };
 
-const items: NavItem[] = [
+const primaryItems: NavItem[] = [
   {
     href: "/member/today",
     label: "Today",
@@ -46,6 +46,9 @@ const items: NavItem[] = [
     label: "Gear",
     match: (p: string) => p.startsWith("/member/equipment"),
   },
+];
+
+const moreItems: NavItem[] = [
   {
     href: "/member/measurements",
     label: "Measure",
@@ -75,6 +78,24 @@ function navHref(item: NavItem, paymentGateActive: boolean, checkoutPlan: Signup
   return memberCheckoutPath(checkoutPlan);
 }
 
+function homeIcon() {
+  return (
+    <svg
+      className="member-nav-home-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5" />
+    </svg>
+  );
+}
+
 export default function MemberNav({
   intakePending = false,
   paymentGateActive = false,
@@ -86,6 +107,8 @@ export default function MemberNav({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [scorePoints, setScorePoints] = useState<number | null>(null);
   const [scorePulse, setScorePulse] = useState(false);
 
@@ -105,6 +128,28 @@ export default function MemberNav({
   }, [refreshScore]);
 
   useEffect(() => {
+    setMoreOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMoreOpen(false);
+    }
+    function onPointer(e: PointerEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setMoreOpen(false);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onPointer);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onPointer);
+    };
+  }, [moreOpen]);
+
+  useEffect(() => {
     function onScoreUpdated(e: Event) {
       const custom = e as CustomEvent<{ totalPoints?: number }>;
       const total = custom.detail?.totalPoints;
@@ -120,121 +165,149 @@ export default function MemberNav({
     return () => window.removeEventListener("member-score-updated", onScoreUpdated);
   }, [refreshScore]);
 
-  function homeIcon() {
-    return (
-      <svg
-        className="member-nav-home-icon"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        <path d="M3 10.5 12 3l9 7.5" />
-        <path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5" />
-      </svg>
-    );
+  const onCheckout = pathname.startsWith("/member/checkout");
+  const moreActive = !onCheckout && moreItems.some((item) => item.match(pathname));
+
+  function tabClass(active: boolean, rampHighlight: boolean) {
+    if (rampHighlight) {
+      return active ? "nav-tab-ramp-active font-semibold" : "nav-tab-ramp font-semibold";
+    }
+    return active
+      ? "nav-tab-active text-accent"
+      : "text-[var(--muted)] hover:bg-[var(--surface-2)]";
   }
 
   return (
-    <nav
-      className="member-nav mx-auto grid w-full max-w-lg grid-cols-4 items-stretch gap-1.5 px-2 pb-2.5 md:max-w-3xl md:px-6 lg:flex lg:max-w-6xl lg:justify-center lg:gap-1 lg:px-8 xl:max-w-7xl"
-      aria-label="Member dashboard"
-    >
-      {items.map((item) => {
-        const href = navHref(item, paymentGateActive, checkoutPlan);
-        const locked = paymentGateActive && !item.openDuringPayment;
-        const onCheckout = pathname.startsWith("/member/checkout");
-        const active = !onCheckout && item.match(pathname);
-        const isTodayTab = item.href === "/member/today";
-        const isScoresTab = item.href === "/member/leaderboard";
-        const rampHighlight = intakePending && isTodayTab && !locked;
-        const tabClass = rampHighlight
-          ? active
-            ? "nav-tab-ramp-active font-semibold"
-            : "nav-tab-ramp font-semibold"
-          : active
-            ? "nav-tab-active text-accent"
-            : "text-[var(--muted)] hover:bg-[var(--surface-2)]";
+    <div ref={wrapRef} className="relative">
+      <nav
+        className="member-nav mx-auto flex w-full max-w-lg items-stretch gap-1 px-2 pb-2.5 md:max-w-3xl md:px-6 lg:max-w-6xl lg:justify-center lg:px-8 xl:max-w-7xl"
+        aria-label="Member dashboard"
+      >
+        {primaryItems.map((item) => {
+          const href = navHref(item, paymentGateActive, checkoutPlan);
+          const locked = paymentGateActive && !item.openDuringPayment;
+          const active = !onCheckout && item.match(pathname);
+          const isTodayTab = item.href === "/member/today";
+          const isScoresTab = item.href === "/member/leaderboard";
+          const isGearTab = item.href === "/member/equipment";
+          const rampHighlight = intakePending && isTodayTab && !locked;
 
-        if (isTodayTab) {
+          if (isTodayTab) {
+            return (
+              <Link
+                key={item.href}
+                id="member-nav-today"
+                href={href}
+                aria-label={locked ? "Today — complete your ticket first" : "Home — Today dashboard"}
+                title={locked ? "Complete your ticket to unlock Today" : "Home — your daily dashboard"}
+                onClick={(e) => {
+                  if (locked) return;
+                  e.preventDefault();
+                  goMemberTodayHome(router);
+                }}
+                className={`member-nav-home member-nav-home--ramp relative flex min-h-[3.15rem] flex-[1.05] flex-col items-center justify-center rounded-xl border text-center transition lg:min-w-[3.2rem] lg:max-w-[4.5rem] lg:flex-[0.67] lg:px-2 ${
+                  active ? "member-nav-home--active nav-tab-ramp-active" : "nav-tab-ramp"
+                } ${locked ? "opacity-80" : ""}`}
+              >
+                {homeIcon()}
+                <span className="member-nav-home-label">{item.label}</span>
+                <span className="member-nav-home-sublabel">Home</span>
+                {rampHighlight && !active ? (
+                  <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[var(--ramp-gold)] ring-2 ring-[var(--surface)]" />
+                ) : null}
+              </Link>
+            );
+          }
+
           return (
             <Link
               key={item.href}
-              id="member-nav-today"
+              id={
+                isScoresTab ? "member-nav-scores" : isGearTab ? "member-nav-gear" : undefined
+              }
               href={href}
-              aria-label={locked ? "Today — complete your ticket first" : "Home — Today dashboard"}
-              title={locked ? "Complete your ticket to unlock Today" : "Home — your daily dashboard"}
-              onClick={(e) => {
-                if (locked) return;
-                e.preventDefault();
-                goMemberTodayHome(router);
-              }}
-              className={`member-nav-home member-nav-home--ramp relative flex min-h-[3.15rem] flex-col items-center justify-center rounded-xl border text-center transition lg:min-w-[3.2rem] lg:max-w-[4.5rem] lg:flex-[0.67] lg:px-2 ${
-                active ? "member-nav-home--active nav-tab-ramp-active" : "nav-tab-ramp"
-              } ${locked ? "opacity-80" : ""}`}
+              title={
+                locked
+                  ? "Complete your ticket to unlock"
+                  : isGearTab
+                    ? "Gear shop — browse & buy equipment"
+                    : undefined
+              }
+              className={`member-nav-item relative flex min-h-[3.15rem] flex-1 flex-col items-center justify-center rounded-lg px-1 py-2 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:flex-none lg:min-w-[4.75rem] lg:px-5 ${tabClass(
+                active,
+                false,
+              )} ${isScoresTab && scorePulse ? "member-nav-score-pulse" : ""} ${
+                locked ? "opacity-75" : ""
+              }`}
             >
-              {homeIcon()}
-              <span className="member-nav-home-label">{item.label}</span>
-              <span className="member-nav-home-sublabel">Home</span>
-              {rampHighlight && !active ? (
-                <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[var(--ramp-gold)] ring-2 ring-[var(--surface)]" />
+              {item.label}
+              {locked ? (
+                <span className="absolute -right-0.5 -top-0.5 text-[8px] leading-none opacity-70" aria-hidden>
+                  🔒
+                </span>
+              ) : null}
+              {isScoresTab && scorePoints != null && scorePoints > 0 ? (
+                <span
+                  className={`member-nav-score-badge ${scorePulse ? "member-nav-score-badge--pulse" : ""}`}
+                >
+                  {scorePoints}
+                </span>
+              ) : null}
+              {"badge" in item && item.badge ? (
+                <ChatNavBadge role="member" placement="corner" />
               ) : null}
             </Link>
           );
-        }
+        })}
 
-        const isAccountTab = item.href === "/member/account";
-        const isGearTab = item.href === "/member/equipment";
+        <button
+          type="button"
+          id="member-nav-more"
+          aria-expanded={moreOpen}
+          aria-controls="member-nav-more-panel"
+          aria-label={moreOpen ? "Close menu" : "Open menu"}
+          title="More"
+          onClick={() => setMoreOpen((open) => !open)}
+          className={`member-nav-item relative flex min-h-[3.15rem] flex-[0.9] flex-col items-center justify-center rounded-lg px-1 py-2 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:flex-none lg:min-w-[4.25rem] lg:px-4 ${tabClass(
+            moreActive || moreOpen,
+            false,
+          )}`}
+        >
+          <span className="member-nav-more-icon" aria-hidden>
+            {moreOpen ? "✕" : "☰"}
+          </span>
+          <span>More</span>
+        </button>
+      </nav>
 
-        return (
-          <Link
-            key={item.href}
-            id={
-              isScoresTab
-                ? "member-nav-scores"
-                : isGearTab
-                  ? "member-nav-gear"
-                  : undefined
-            }
-            href={href}
-            title={
-              locked
-                ? "Complete your ticket to unlock"
-                : isGearTab
-                  ? "Gear shop — browse & buy equipment"
-                  : undefined
-            }
-            className={`member-nav-item relative flex min-h-[3.15rem] flex-col items-center justify-center rounded-lg px-1 py-2 text-center text-[13px] font-semibold leading-tight tracking-tight transition sm:text-sm lg:flex-none lg:min-w-[4.75rem] lg:px-5 ${tabClass} ${
-              isScoresTab && scorePulse ? "member-nav-score-pulse" : ""
-            } ${locked ? "opacity-75" : ""}`}
-          >
-            {isAccountTab ? (
-              <span className="mb-0.5 inline-flex">
-                <UserBicepAvatar size={20} title="Account" />
-              </span>
-            ) : null}
-            {item.label}
-            {locked ? (
-              <span className="absolute -right-0.5 -top-0.5 text-[8px] leading-none opacity-70" aria-hidden>
-                🔒
-              </span>
-            ) : null}
-            {isScoresTab && scorePoints != null && scorePoints > 0 ? (
-              <span
-                className={`member-nav-score-badge ${scorePulse ? "member-nav-score-badge--pulse" : ""}`}
+      {moreOpen ? (
+        <div
+          id="member-nav-more-panel"
+          className="member-nav-more-panel"
+          aria-label="More member pages"
+        >
+          {moreItems.map((item) => {
+            const href = navHref(item, paymentGateActive, checkoutPlan);
+            const locked = paymentGateActive && !item.openDuringPayment;
+            const active = !onCheckout && item.match(pathname);
+            const isAccountTab = item.href === "/member/account";
+            return (
+              <Link
+                key={item.href}
+                href={href}
+                onClick={() => setMoreOpen(false)}
+                className={`member-nav-more-link ${active ? "member-nav-more-link--active" : ""} ${
+                  locked ? "opacity-75" : ""
+                }`}
               >
-                {scorePoints}
-              </span>
-            ) : null}
-            {"badge" in item && item.badge ? (
-              <ChatNavBadge role="member" placement="corner" />
-            ) : null}
-          </Link>
-        );
-      })}
-    </nav>
+                {isAccountTab ? <UserBicepAvatar size={22} title="Account" /> : null}
+                <span>{item.label}</span>
+                {locked ? <span aria-hidden>🔒</span> : null}
+              </Link>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
   );
 }
