@@ -108,15 +108,38 @@ export async function resolveMemberProgramWorkout(
   };
 }
 
+export function weekRowForDay(
+  program: { weeks: ProgramWeekLike[] },
+  programSlug: string,
+  enrollment: EnrollmentSlice,
+  weekNumber?: number,
+) {
+  const phases = macroPhasesForProgramSlug(programSlug);
+  const wantWeek = weekNumber ?? enrollment.currentWeek;
+  // Block / calendar position is an absolute week number (W3 = day 15–21).
+  // findEnrollmentWeek treats currentWeek as week-in-phase, so W3 + phase 1
+  // misses Adult week 3 (tagged hypertrophy / phase-week 1).
+  return (
+    program.weeks.find((w) => w.weekNumber === wantWeek) ||
+    findEnrollmentWeek(program.weeks, enrollment, phases)
+  );
+}
+
 export function resolveDayWorkoutForEnrollment(
   program: { weeks: ProgramWeekLike[] },
   programSlug: string,
   enrollment: EnrollmentSlice,
   dayNumber = enrollment.currentDay,
+  weekNumber?: number,
 ): Omit<ResolvedProgramWorkout, "workoutName"> & { workoutName?: string; dayId?: string } | null {
-  const phases = macroPhasesForProgramSlug(programSlug);
-  const week = findEnrollmentWeek(program.weeks, enrollment, phases);
-  const multi = resolveDayPartsForEnrollment(program, programSlug, enrollment, dayNumber);
+  const week = weekRowForDay(program, programSlug, enrollment, weekNumber);
+  const multi = resolveDayPartsForEnrollment(
+    program,
+    programSlug,
+    enrollment,
+    dayNumber,
+    weekNumber,
+  );
   if (!multi?.parts.length) return null;
   const primary = multi.parts[0];
   return {
@@ -141,10 +164,10 @@ export function resolveDayPartsForEnrollment(
   programSlug: string,
   enrollment: EnrollmentSlice,
   dayNumber = enrollment.currentDay,
+  weekNumber?: number,
 ): ResolvedProgramDayParts | null {
-  const phases = macroPhasesForProgramSlug(programSlug);
   const location = normalizeTrainingLocation(enrollment.trainingLocation);
-  const week = findEnrollmentWeek(program.weeks, enrollment, phases);
+  const week = weekRowForDay(program, programSlug, enrollment, weekNumber);
   const day = week?.days?.find((d) => d.dayNumber === dayNumber);
   if (!week || !day) return null;
 
