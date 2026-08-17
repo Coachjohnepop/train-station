@@ -140,7 +140,7 @@ export default function MemberNav({
 
   return (
     <nav
-      className="member-nav mx-auto flex w-full max-w-lg items-stretch md:max-w-3xl lg:max-w-6xl xl:max-w-7xl gap-1 px-2 pb-2 md:px-6 lg:px-8 lg:justify-center"
+      className="member-nav mx-auto grid w-full max-w-lg grid-cols-4 items-stretch gap-1.5 px-2 pb-2.5 md:max-w-3xl md:px-6 lg:flex lg:max-w-6xl lg:justify-center lg:gap-1 lg:px-8 xl:max-w-7xl"
       aria-label="Member dashboard"
     >
       {items.map((item) => {
@@ -172,7 +172,7 @@ export default function MemberNav({
                 e.preventDefault();
                 goMemberTodayHome(router);
               }}
-              className={`member-nav-home member-nav-home--ramp relative flex flex-[0.67] flex-col items-center justify-center rounded-xl border text-center transition lg:min-w-[3.2rem] lg:max-w-[4.5rem] lg:px-2 ${
+              className={`member-nav-home member-nav-home--ramp relative flex min-h-[3.15rem] flex-col items-center justify-center rounded-xl border text-center transition lg:min-w-[3.2rem] lg:max-w-[4.5rem] lg:flex-[0.67] lg:px-2 ${
                 active ? "member-nav-home--active nav-tab-ramp-active" : "nav-tab-ramp"
               } ${locked ? "opacity-80" : ""}`}
             >
@@ -207,13 +207,13 @@ export default function MemberNav({
                   ? "Gear shop — browse & buy equipment"
                   : undefined
             }
-            className={`member-nav-item relative flex flex-1 flex-col items-center justify-center rounded-lg px-1 py-2 text-center text-[10px] font-medium transition sm:text-xs lg:flex-none lg:min-w-[4.75rem] lg:px-5 ${tabClass} ${
+            className={`member-nav-item relative flex min-h-[3.15rem] flex-col items-center justify-center rounded-lg px-1 py-2 text-center text-[13px] font-semibold leading-tight tracking-tight transition sm:text-sm lg:flex-none lg:min-w-[4.75rem] lg:px-5 ${tabClass} ${
               isScoresTab && scorePulse ? "member-nav-score-pulse" : ""
             } ${locked ? "opacity-75" : ""}`}
           >
             {isAccountTab ? (
               <span className="mb-0.5 inline-flex">
-                <UserBicepAvatar size={22} title="Account" />
+                <UserBicepAvatar size={20} title="Account" />
               </span>
             ) : null}
             {item.label}

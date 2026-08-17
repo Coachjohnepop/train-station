@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
-import { homeEquipmentFromCatalog } from "@/lib/home-equipment-defaults";
+import { homeEquipmentFromCatalog, homeEquipmentNote } from "@/lib/home-equipment-defaults";
 
 const DEV_FILE = path.join(process.cwd(), "prisma", "user-equipment.dev.json");
 const BLOB_PATH = "demo/user-equipment.json";
@@ -291,7 +291,7 @@ export async function getAllEquipmentWithUserStatus(userId?: string) {
         ? userItem.hasAtHome
         : eq.id === BODYWEIGHT_EQUIPMENT_ID,
       quantity: userItem?.quantity ?? 1,
-      notes: userItem?.notes ?? eq.description ?? "",
+      notes: homeEquipmentNote(userItem?.notes) || homeEquipmentNote(eq.description),
     };
   });
 }

@@ -76,20 +76,20 @@ export default function MemberShell({
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">Hi, {memberName}</p>
                   {memberEmail && (
-                    <p className="truncate text-[10px] text-[var(--muted)]">{memberEmail}</p>
+                    <p className="truncate text-xs text-[var(--muted)]">{memberEmail}</p>
                   )}
                 </div>
               </Link>
             </div>
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
-              <span className="badge-accent inline-block max-w-[7.5rem] truncate rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-tight tracking-wide sm:max-w-none">
+              <span className="badge-accent inline-block max-w-[7.5rem] truncate rounded-full px-2 py-0.5 text-xs font-semibold leading-tight tracking-wide sm:max-w-none">
                 {tierLabel}
               </span>
               {/* Reuse .global-theme-toggle so label stays icon-only on narrow screens */}
               <div className="global-theme-toggle">
                 <ThemeModeToggle />
               </div>
-              <LogoutButton />
+              <LogoutButton className="text-sm" />
             </div>
           </div>
           <MemberNav

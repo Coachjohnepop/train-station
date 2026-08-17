@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  homeEquipmentNote,
+  isHomeEquipmentChecklistItem,
+} from "@/lib/home-equipment-defaults";
 
 type EquipmentItem = {
   id: string;
@@ -10,6 +14,12 @@ type EquipmentItem = {
   quantity?: number;
   notes?: string;
 };
+
+function sanitizeHomeEquipment(list: EquipmentItem[]): EquipmentItem[] {
+  return list
+    .filter(isHomeEquipmentChecklistItem)
+    .map((item) => ({ ...item, notes: homeEquipmentNote(item.notes) }));
+}
 
 export default function MemberHomeEquipment({ defaultOpen = false }: { defaultOpen?: boolean }) {
   const [items, setItems] = useState<EquipmentItem[]>([]);
@@ -26,7 +36,7 @@ export default function MemberHomeEquipment({ defaultOpen = false }: { defaultOp
     try {
       const res = await fetch("/api/equipment");
       const json = await res.json();
-      setItems(json.equipment || []);
+      setItems(sanitizeHomeEquipment(json.equipment || []));
     } catch (e) {
       setMessage("Failed to load equipment list");
     }
@@ -50,7 +60,7 @@ export default function MemberHomeEquipment({ defaultOpen = false }: { defaultOp
       });
       if (res.ok) {
         const json = await res.json();
-        setItems(json.equipment || updated);
+        setItems(sanitizeHomeEquipment(json.equipment || updated));
         setMessage("Saved!");
         setTimeout(() => setMessage(null), 1500);
       } else {
@@ -97,7 +107,7 @@ export default function MemberHomeEquipment({ defaultOpen = false }: { defaultOp
         setMessage(json.error || "Could not add item");
         return;
       }
-      setItems(json.equipment || []);
+      setItems(sanitizeHomeEquipment(json.equipment || []));
       setNewName("");
       setShowAdd(false);
       setMessage("Added!");
@@ -116,15 +126,15 @@ export default function MemberHomeEquipment({ defaultOpen = false }: { defaultOp
   const selectedCount = items.filter((i) => i.hasAtHome).length;
 
   if (loading) {
-    return <div className="card text-xs p-3 bg-[var(--surface-2)]">Loading your home equipment...</div>;
+    return <div className="card p-3 text-sm bg-[var(--surface-2)]">Loading your home equipment...</div>;
   }
 
   const hasItems = items.length > 0;
 
   return (
-    <div className="card text-xs p-3 bg-[var(--surface-2)]">
+    <div className="card p-3 text-sm bg-[var(--surface-2)]">
       <div
-        className="font-semibold text-sm mb-1 flex items-center gap-2 cursor-pointer select-none"
+        className="mb-1 flex cursor-pointer select-none items-center gap-2 text-base font-semibold"
         onClick={() => setIsOpen(!isOpen)}
       >
         <span className={`text-xs text-accent transition-transform ${isOpen ? "rotate-90" : ""}`}>▶</span>
@@ -145,7 +155,7 @@ export default function MemberHomeEquipment({ defaultOpen = false }: { defaultOp
             <div className="text-[var(--muted)]">No equipment catalog loaded.</div>
           ) : (
             <>
-            <div className="mt-1 flex items-center gap-3 text-[11px]">
+            <div className="mt-1 flex items-center gap-3 text-sm">
               <button
                 type="button"
                 onClick={() => setAll(true)}
@@ -165,26 +175,26 @@ export default function MemberHomeEquipment({ defaultOpen = false }: { defaultOp
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 mt-1">
+            <div className="mt-1.5 grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
               {items.map((item) => (
-                <label key={item.id} className="flex items-start gap-2 cursor-pointer hover:bg-[var(--surface)]/50 px-1 py-1 rounded">
+                <label key={item.id} className="flex cursor-pointer items-start gap-2.5 rounded px-1 py-1.5 hover:bg-[var(--surface)]/50">
                   <input
                     type="checkbox"
                     checked={item.hasAtHome}
                     onChange={() => toggle(item.id)}
                     disabled={saving}
-                    className="mt-0.5 accent-accent"
+                    className="mt-1 h-4 w-4 accent-accent"
                   />
-                  <span className={item.hasAtHome ? "font-medium" : "text-[var(--muted)]"}>
+                  <span className={item.hasAtHome ? "font-medium leading-snug" : "leading-snug text-[var(--muted)]"}>
                     {item.name}
                     {item.category && item.category !== "custom" ? (
-                      <span className="text-[9px] ml-1 opacity-60">({item.category})</span>
+                      <span className="ml-1 text-xs opacity-60">({item.category})</span>
                     ) : null}
                     {item.category === "custom" ? (
-                      <span className="text-[9px] ml-1 text-accent/80">custom</span>
+                      <span className="ml-1 text-xs text-accent/80">custom</span>
                     ) : null}
                     {item.notes ? (
-                      <span className="block text-[9px] text-[var(--muted)] font-normal">
+                      <span className="mt-0.5 block text-xs font-normal text-[var(--muted)]">
                         — {item.notes}
                       </span>
                     ) : null}
@@ -196,7 +206,7 @@ export default function MemberHomeEquipment({ defaultOpen = false }: { defaultOp
             {!showAdd ? (
               <button
                 type="button"
-                className="mt-2 text-[11px] font-semibold text-accent hover:underline"
+                className="mt-3 text-sm font-semibold text-accent hover:underline"
                 onClick={() => setShowAdd(true)}
               >
                 + Add item not listed

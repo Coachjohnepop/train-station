@@ -371,14 +371,16 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ## WHERE WE LEFT OFF
 
 **Date:** 2026-08-16  
-**Status:** Landing + Free-ticket fixes **on prod (`main`)**. Man/woman stays **preview-only** (`6a13984` — do not merge). Stripe cutover still parked: Production checkout is **Eco Delight Live**.  
-**Feedback videos:** always check `~/Desktop/Stuff/Lemon Voice/The Train Station/App Feedback Video/`. A new drop means **at least one issue**. John will say when the video is perfect. Latest (2026-08-16): Free Tour → tickets → Free Explorer.  
+**Status:** Ship member mobile nav + home-kit filter to **prod (`main`)**. Man/woman (sermon-adjacent gender path) stays **preview-only** — do not merge `6a13984` to main. Checkout merchant is **Jeremy TS Live** (`acct_1TmKSWQWnajU9uyk`); leftover Eco purchases were dropped. Home kit = original 9 names + custom add-ons (Amazon titles stay on Gear). Mobile member nav is a 4×2 grid at 13px so Messages / Gear stay readable.  
+**Feedback videos:** always check `~/Desktop/Stuff/Lemon Voice/The Train Station/App Feedback Video/`. A new drop means **at least one issue**. John will say when the video is perfect — do not close the path before that. Latest (2026-08-16): Free-ticket rickroll timing confirmed good. Phone screenshot still showed Amazon home-kit titles + 10px nav — this session.  
 **Free concat job:** changing Admin → Videos **Free Explorer intro** queues `scripts/rebuild-free-ticket-full.mjs` (5s chorus + that intro → `free-ticket-full.mp4`). Manual: `npm run free-ticket:rebuild` or Admin **Rebuild gag + intro now**. Cron safety net every 15m. Needs `ffmpeg`.  
 **Prior (2026-08-16 landing):** Guest home has **three choices only** — **Free Tour**, **Start membership**, **Explore Content** (triangle fold for programs / services / footer). White nav Join pill is gone. Explore tap = confetti + phone vibrate. Sign in lives in the hamburger.  
 **Prior (2026-08-15):** Landing conversion shipped: **Join** = 7-day Coach Class look (`/signup?plan=explorer&week=1` + `grantLandingFreeWeek`), **Free Tour** stays the 15s peek. Tickets still at `/join#tickets`.  
 **Prior (2026-08-14 night):** John out. Ali is mid re-onboard (still paid). She was texted to tap Free first (joke), then Coach Class → Continue already paid. Gag + Jeremy intros are site files. Paid checkout Free tap plays the gag and does not downgrade her (`ce77353`).  
 **Rule reaffirmed:** **any new module / data element → Postgres first** (see Durable product rules).  
 **Vercel login:** `john@bcxvoice.com` · CLI `john-9066` · team johnepop's projects.  
+**Brave profile for TS work:** **TheTrainStation** (keep using this for future logins).  
+**Stripe user in that profile (2026-08-16, remember this):** John Popham · login/Google **`john@bcxvoice.com`** · backup **`john@lemonvoice.com`** · phone **+1 (279) 282-4208** · 2FA authenticator (added Apr 8, 2026). Accounts on this login: **BCX Voice**, **Eco Delight Coffee**, and **TS Live** after Jeremy invite (`acct_1TmKSWQWnajU9uyk` — note one W; older notes had an extra W typo). Authenticator lives on **bcxvoice**, not `john@thetrainstation.co`.  
 **Branches:** `preview` / `main` (same tip after this session) · prod: https://www.thetrainstation.co  
 
 ### Live members (2026-08-13)
