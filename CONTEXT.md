@@ -105,6 +105,19 @@ Do not add new features that write only to JSON files, Vercel Blob JSON, localSt
 When in doubt: **if a coach or member would lose work when a deploy restarts, it belongs in Postgres.**  
 Same bar for **new** work: if it is product data, it is a **database** concern first.
 
+### Client profile — ask once, store once
+**`MemberProfile` is the client record.** Anything gathered at onboard (man/woman, starting weight, goal chips, schedule, notes, city, phone) writes there. Later screens **read** it. Do not invent a second weight box that ignores onboard.
+
+| Fact | Column |
+|------|--------|
+| Man / woman | `gender` |
+| Starting / onboard weight | `startWeightLbs` (+ `weightLbs` until first check-in) |
+| Goal scale weight | `goalWeightLbs` |
+| Goal chip / timeline | `primaryGoal`, `weightLossGoal`, `weightLossTimeline` |
+| How often they train | `workoutSchedule` |
+
+Onboard fields stay **optional** — same screens for everyone. Skip health at the start if they want to move. Check-in weight is a new visit, not a re-ask of starting weight.
+
 See `PERSISTENCE.md` for demo-vs-DB matrix and blob→Postgres cutover.
 
 ### Measurements (member sheet · coach visibility) — **Postgres**
@@ -375,7 +388,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Date:** 2026-08-17  
 **Status:** **Active.** Bella onboard feedback: more personal questions.  
-**Shipped this pass:** Onboard step 4 asks everyone current weight, main goal chips, and training schedule. Measurement sheet now has **Starting + Goal + Check-in** (Original was locked; Bella + John could not type start/goal). `startWeightLbs` / `goalWeightLbs` on MemberProfile. John’s onboard 180 backfills as starting.  
+**Shipped this pass:** Same About-you screen for everyone. Health fields optional (weight included). Welcome: man/woman + **Skip health details — I’ll add them later**. Onboard writes `MemberProfile` once; measurements Starting reads it — no second required weight.  
 **Prior park (same day):** Member floor + Today + catalog + warm-ups. `/fitness` → `/`. Finish tap lock + next undone rises. Adult week 3+ Today. Generic `Workout` titles cleaned. Warm-up on 82 non-rest days. ER PDF: `docs/programs-workouts-exercises-er.pdf`.  
 **Stripe leftover (John, not code):** confirm webhook 200 on Jeremy TS Live, revoke **Eco** old `sk_live` (not Jeremy’s), Connect Express for payouts. Optional new-email $25 smoke (Lemon John already paid).  
 **Do not:** farm `/workout` pages, blast AI searches, or share one Workout row across days.  
