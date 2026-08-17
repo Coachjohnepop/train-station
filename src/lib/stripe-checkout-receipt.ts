@@ -3,7 +3,6 @@ import "server-only";
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import { getStripe } from "@/lib/stripe";
 import { signupPlanLabel, normalizeSignupPlan } from "@/lib/signup-plans";
-import { fulfillmentOption, fulfillmentSummary } from "@/lib/checkout-fulfillment";
 import type Stripe from "stripe";
 
 export type CheckoutReceipt = {
@@ -25,8 +24,6 @@ export type CheckoutReceipt = {
   invoiceId: string | null;
   receiptUrl: string | null;
   nextPath: string;
-  fulfillmentLabel: string | null;
-  fulfillmentDisclaimer: string | null;
 };
 
 function money(cents: number | null | undefined, currency = "usd"): string | null {
@@ -140,16 +137,6 @@ export async function buildCheckoutReceiptForUser(
     invoiceId,
     receiptUrl,
     nextPath,
-    fulfillmentLabel: session.metadata?.fulfillment
-      ? fulfillmentSummary(session.metadata.fulfillment)
-      : session.custom_fields?.find((field) => field.key === "fulfillment")?.dropdown?.value
-        ? fulfillmentSummary(
-            session.custom_fields.find((field) => field.key === "fulfillment")?.dropdown?.value,
-          )
-        : null,
-    fulfillmentDisclaimer: session.metadata?.fulfillment
-      ? fulfillmentOption(session.metadata.fulfillment).disclaimer
-      : null,
   };
 }
 
