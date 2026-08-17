@@ -999,7 +999,7 @@ export default function ProgramCalendarBuilder({
         const createRes = await fetch("/api/workouts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: suggestedName, seedWarmups: false }),
+          body: JSON.stringify({ name: suggestedName, seedWarmups: true }),
         });
         if (!createRes.ok) {
           setMessage("Could not create fasted cardio workout.");

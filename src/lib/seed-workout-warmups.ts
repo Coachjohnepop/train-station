@@ -18,7 +18,9 @@ import {
 } from "@/lib/workout-schemes";
 import {
   DEFAULT_WARMUP_BLOCKS,
+  isRestOrDayOffContent,
   type WarmupBlockTemplate,
+  workoutHasStandardWarmup,
 } from "@/lib/warmup-template";
 
 export type SeedWarmupsResult = {
@@ -122,11 +124,13 @@ function findInCatalog(list: CatalogEx[], block: WarmupBlockTemplate): CatalogEx
   return null;
 }
 
-function formatResult(r: Omit<SeedWarmupsResult, "message">): SeedWarmupsResult {
+function formatResult(
+  r: Omit<SeedWarmupsResult, "message"> & { message?: string },
+): SeedWarmupsResult {
   if (r.skipped) {
     return {
       ...r,
-      message: "Warm-ups not added — workout already has exercises.",
+      message: r.message || "Warm-ups not added — already present or rest / day off.",
     };
   }
   if (r.added === 0) {
@@ -244,8 +248,8 @@ async function loadWarmupBlocks(
 }
 
 /**
- * Prepend coach Settings warm-up blocks onto an empty workout.
- * No-op if the workout already has exercises (so deletes / clones stay intact).
+ * Prepend coach Settings warm-up blocks when the workout has no standard warm-up.
+ * Skips rest / day-off content. Existing main lifts stay; they are shifted down.
  */
 export async function seedWarmupsIntoWorkout(
   workoutId: string,
@@ -267,6 +271,47 @@ export async function seedWarmupsIntoWorkout(
   return seedDb(workoutId, lines, missing);
 }
 
+/** Load name + lines, skip rest/off, otherwise seed. */
+export async function ensureWarmupsOnWorkout(
+  workoutId: string,
+  opts?: { optionLabel?: string | null },
+): Promise<SeedWarmupsResult> {
+  if (isCoachCatalogDemo()) {
+    return seedWarmupsIntoWorkout(workoutId);
+  }
+  const workout = await prisma.workout.findUnique({
+    where: { id: workoutId },
+    select: {
+      id: true,
+      name: true,
+      exercises: {
+        orderBy: { sortOrder: "asc" },
+        include: { exercise: { select: { name: true } } },
+      },
+    },
+  });
+  if (!workout) {
+    return formatResult({ added: 0, missing: [], skipped: false, seeded: [] });
+  }
+  const exerciseNames = workout.exercises.map((we) => we.exercise?.name || "");
+  if (
+    isRestOrDayOffContent({
+      workoutName: workout.name,
+      optionLabel: opts?.optionLabel,
+      exerciseNames,
+    })
+  ) {
+    return formatResult({
+      added: 0,
+      missing: [],
+      skipped: true,
+      seeded: [],
+      message: "Rest / day off — no warm-up.",
+    });
+  }
+  return seedWarmupsIntoWorkout(workoutId);
+}
+
 async function seedDb(
   workoutId: string,
   lines: ResolvedLine[],
@@ -274,13 +319,38 @@ async function seedDb(
 ): Promise<SeedWarmupsResult> {
   const workout = await prisma.workout.findUnique({
     where: { id: workoutId },
-    select: { id: true, _count: { select: { exercises: true } } },
+    select: {
+      id: true,
+      exercises: {
+        orderBy: { sortOrder: "asc" },
+        include: { exercise: { select: { name: true } } },
+      },
+    },
   });
   if (!workout) {
     return formatResult({ added: 0, missing, skipped: false, seeded: [] });
   }
-  if (workout._count.exercises > 0) {
-    return formatResult({ added: 0, missing: [], skipped: true, seeded: [] });
+  const existingNames = workout.exercises.map((we) => we.exercise?.name || "");
+  if (workoutHasStandardWarmup(existingNames)) {
+    return formatResult({
+      added: 0,
+      missing: [],
+      skipped: true,
+      seeded: [],
+      message: "Warm-ups not added — workout already has a warm-up.",
+    });
+  }
+
+  const shift = lines.length;
+  if (workout.exercises.length > 0) {
+    await prisma.$transaction(
+      [...workout.exercises].reverse().map((we) =>
+        prisma.workoutExercise.update({
+          where: { id: we.id },
+          data: { sortOrder: we.sortOrder + shift },
+        }),
+      ),
+    );
   }
 
   const seeded: string[] = [];
@@ -328,9 +398,15 @@ async function seedDemo(
     const existing = (data.workoutExercises as any[]).filter(
       (we) => we.workoutId === workoutId,
     );
-    if (existing.length > 0) {
+    const existingNames = existing.map((we) => we.exercise?.name || we.blockName || "");
+    if (workoutHasStandardWarmup(existingNames)) {
       skipped = true;
       return;
+    }
+
+    const shift = lines.length;
+    for (const we of existing) {
+      we.sortOrder = (we.sortOrder ?? 0) + shift;
     }
 
     let sortOrder = 0;
