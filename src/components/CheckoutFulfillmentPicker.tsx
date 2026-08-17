@@ -7,6 +7,7 @@ type FulfillmentChoice = {
   label: string;
   addressLines: string[];
   hint: string;
+  disclaimer?: string | null;
 };
 
 export default function CheckoutFulfillmentPicker({
@@ -48,6 +49,11 @@ export default function CheckoutFulfillmentPicker({
                   </span>
                 ))}
                 <span className="mt-1 block text-[11px] text-[var(--muted)]">{option.hint}</span>
+                {selected && option.disclaimer ? (
+                  <span className="mt-2 block rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-2 text-xs leading-snug text-amber-100">
+                    {option.disclaimer}
+                  </span>
+                ) : null}
               </span>
             </label>
           );
