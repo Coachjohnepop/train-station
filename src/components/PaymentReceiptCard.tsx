@@ -15,6 +15,7 @@ export type PaymentReceiptView = {
   receiptUrl: string | null;
   nextPath?: string;
   fulfillmentLabel?: string | null;
+  fulfillmentDisclaimer?: string | null;
 };
 
 function formatWhen(iso: string | null): string {
@@ -83,6 +84,11 @@ export default function PaymentReceiptCard({
             <dt className="text-[var(--muted)]">Pickup</dt>
             <dd className="text-right">{receipt.fulfillmentLabel}</dd>
           </div>
+        ) : null}
+        {receipt.fulfillmentDisclaimer ? (
+          <p className="rounded-md border border-amber-500/25 bg-amber-500/10 px-2.5 py-2 text-xs leading-snug text-amber-100">
+            {receipt.fulfillmentDisclaimer}
+          </p>
         ) : null}
         {receipt.customerEmail ? (
           <div className="flex justify-between gap-3">

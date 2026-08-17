@@ -7,16 +7,21 @@ export type CheckoutFulfillmentOption = {
   label: string;
   addressLines: string[];
   hint: string;
+  disclaimer: string | null;
   stripeOptionLabel: string;
 };
+
+export const WILTON_PICKUP_DISCLAIMER =
+  "Coffee is available for pickup at the Wilton Post Office during regular office hours. Please bring a valid photo ID to collect your order.";
 
 export const CHECKOUT_FULFILLMENT_OPTIONS: CheckoutFulfillmentOption[] = [
   {
     id: PICKUP_WILTON_ID,
     label: "Pickup in Wilton",
     addressLines: ["Jeff Brian Rd", "Wilton, CA"],
-    hint: "We’ll confirm a pickup window after you pay.",
-    stripeOptionLabel: "Pickup in Wilton — Jeff Brian Rd",
+    hint: "Collect at the Wilton Post Office during office hours.",
+    disclaimer: WILTON_PICKUP_DISCLAIMER,
+    stripeOptionLabel: "Pickup in Wilton — Wilton Post Office",
   },
 ];
 
@@ -42,6 +47,7 @@ export function applyCheckoutFulfillment(
     fulfillment: option.id,
     pickupLabel: option.label,
     pickupAddress: option.addressLines.join(", "),
+    pickupDisclaimer: option.disclaimer || "",
   };
   sessionParams.custom_fields = [
     ...(sessionParams.custom_fields || []),
@@ -60,7 +66,9 @@ export function applyCheckoutFulfillment(
   sessionParams.custom_text = {
     ...(sessionParams.custom_text || {}),
     submit: {
-      message: `${option.label} at ${option.addressLines.join(", ")}.`,
+      message: option.disclaimer
+        ? `${option.label}. ${option.disclaimer}`
+        : `${option.label} at ${option.addressLines.join(", ")}.`,
     },
   };
 

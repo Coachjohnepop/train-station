@@ -61,6 +61,7 @@ type PaymentsPublic = {
       label: string;
       addressLines: string[];
       hint: string;
+      disclaimer?: string | null;
     }>;
   };
 };
