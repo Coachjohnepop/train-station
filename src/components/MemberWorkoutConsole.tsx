@@ -52,6 +52,12 @@ import {
   readMemberWorkoutProgressCache,
   writeMemberWorkoutProgressCache,
 } from "@/lib/member-workout-progress-cache";
+import {
+  FINISH_TAP_LOCK_MS,
+  isFinishTapLocked,
+  nextUnfinishedExerciseId,
+  shouldAutoFinishExercise,
+} from "@/lib/member-exercise-finish";
 
 export type MemberExerciseBlock = {
   id: string;
@@ -235,6 +241,7 @@ export default function MemberWorkoutConsole({
   liveSessionDate,
   progressMode = "live",
   hideLogButton = false,
+  futurePreview = false,
   headerNote,
   embedded = false,
   coachFloorMode = false,
@@ -260,6 +267,8 @@ export default function MemberWorkoutConsole({
   /** Persist checkoffs to warmup-progress API (pre-intake warm-ups). */
   progressMode?: "live" | "warmup";
   hideLogButton?: boolean;
+  /** Future calendar day — look only; do not pretend it is already logged. */
+  futurePreview?: boolean;
   headerNote?: string;
   /** Hide title block when nested inside warm-up day navigator */
   embedded?: boolean;
@@ -337,7 +346,9 @@ export default function MemberWorkoutConsole({
     null,
   );
   const [isLogging, setIsLogging] = useState(false);
+  const [logError, setLogError] = useState<string | null>(null);
   const [logResult, setLogResult] = useState<null | { performedAt: string; count: number; progress?: number }>(null);
+  const finishLockUntilRef = useRef(0);
   const [finishedListExpanded, setFinishedListExpanded] = useState(false);
   const [coachLive, setCoachLive] = useState(false);
   const [partnerLive, setPartnerLive] = useState(false);
@@ -1841,18 +1852,20 @@ export default function MemberWorkoutConsole({
 
   const advanceToNextExercise = useCallback(
     (blockId: string, finished: Set<string>) => {
-      const idx = workout.exercises.findIndex((e) => e.id === blockId);
-      const upcoming = workout.exercises.slice(idx + 1).find((e) => !finished.has(e.id));
-      if (!upcoming) return;
-      setActiveId(upcoming.id);
-      stateRef.current = { ...stateRef.current, activeId: upcoming.id };
-      scrollMemberToExercise(upcoming.id);
+      const upcomingId = nextUnfinishedExerciseId(workout.exercises, blockId, finished);
+      if (!upcomingId) return;
+      setActiveId(upcomingId);
+      stateRef.current = { ...stateRef.current, activeId: upcomingId };
+      // Stay in list order — scrolling the next card under the same finger
+      // finishes it by accident (Ali: finished + next both jump to the top).
     },
-    [workout.exercises, scrollMemberToExercise],
+    [workout.exercises],
   );
 
   const markExerciseFinished = useCallback(
     (blockId: string) => {
+      if (isFinishTapLocked(finishLockUntilRef.current)) return;
+      finishLockUntilRef.current = Date.now() + FINISH_TAP_LOCK_MS;
       fireEngage();
       setVideoModalBlockId((openId) => (openId === blockId ? null : openId));
       const next = new Set(finishedExercises);
@@ -1895,16 +1908,24 @@ export default function MemberWorkoutConsole({
         sets: block.setCount,
       });
       const isTimedBlock = isTimedApproach(prescription.approach);
-      const allSetsDoneForBlock = isTimedBlock
-        ? doneForBlock.has(1)
-        : doneForBlock.size >= block.setCount;
-      if (allSetsDoneForBlock) toFinish.push(block.id);
+      if (
+        shouldAutoFinishExercise({
+          alreadyFinished: false,
+          setCount: block.setCount,
+          completedSetCount: doneForBlock.size,
+          isTimed: isTimedBlock,
+          completedHasFirstSet: doneForBlock.has(1),
+        })
+      ) {
+        toFinish.push(block.id);
+      }
     }
     if (toFinish.length === 0) return;
 
     const next = new Set(finishedExercises);
     for (const id of toFinish) next.add(id);
     const lastFinished = toFinish[toFinish.length - 1];
+    finishLockUntilRef.current = Date.now() + FINISH_TAP_LOCK_MS;
     setFinishedExercises(next);
     stateRef.current = { ...stateRef.current, finishedExercises: next };
     if (lastFinished) advanceToNextExercise(lastFinished, next);
@@ -1943,12 +1964,15 @@ export default function MemberWorkoutConsole({
   }, [allExercisesFinished]);
 
   const handleLogComplete = useCallback(async () => {
-    if (logResult || isLogging) return;
+    if (logResult || isLogging || futurePreview) return;
+    setLogError(null);
 
     // Collect all exercises that were explicitly finished OR have per-set progress marked.
     // This ensures the "log your sets" buttons (per-set toggles) actually contribute setsCompleted to the log.
     const blocksWithSets = Object.keys(completedSets).filter(id => (completedSets[id]?.size ?? 0) > 0);
-    let idsToLog = Array.from(new Set([...finishedExercises, ...blocksWithSets]));
+    let idsToLog = Array.from(new Set([...finishedExercises, ...blocksWithSets])).filter((id) =>
+      workout.exercises.some((b) => b.id === id),
+    );
     // Free Explorer: only log preview-open exercises (rest are soft-locked teases).
     if (freeExplorer && freeLockedExerciseIds.size > 0) {
       idsToLog = idsToLog.filter((id) => !freeLockedExerciseIds.has(id));
@@ -1960,10 +1984,13 @@ export default function MemberWorkoutConsole({
     // Log whatever the current state is (supports 0% partial or "just noting progress")
     setIsLogging(true);
     try {
-      const exercisesPayload = idsToLog.map((blockId) => {
-        const block = workout.exercises.find((b) => b.id === blockId)!;
+      const exercisesPayload = idsToLog.flatMap((blockId) => {
+        const block = workout.exercises.find((b) => b.id === blockId);
+        if (!block) return [];
         const w = weights[blockId];
-        const startingWeightLbs = w ? parseFloat(w) : (block.past?.startingWeightLbs ?? null);
+        const parsed = w ? parseFloat(w) : (block.past?.startingWeightLbs ?? null);
+        const startingWeightLbs =
+          typeof parsed === "number" && Number.isFinite(parsed) && parsed > 0 ? parsed : null;
         const doneForBlock = completedSets[blockId] ?? new Set<number>();
         const setsCompleted = doneForBlock.size;
         let repsCompleted = setsCompleted * 5; // default ~5 reps/set
@@ -1975,18 +2002,20 @@ export default function MemberWorkoutConsole({
         if (block.setScheme?.toLowerCase().includes("time") || block.setScheme?.toLowerCase().includes("timed")) {
           repsCompleted = setsCompleted > 0 ? 12 : 0;
         }
-        return {
-          workoutExerciseId: block.id,
-          exerciseId: block.exerciseId,
-          setScheme: block.setScheme,
-          repPattern: block.repPattern,
-          reps: block.reps,
-          sets: block.setCount,
-          weightTier: block.weightTier,
-          startingWeightLbs: Number.isFinite(startingWeightLbs) ? startingWeightLbs : null,
-          repsCompleted,
-          setsCompleted,
-        };
+        return [
+          {
+            workoutExerciseId: block.id,
+            exerciseId: block.exerciseId,
+            setScheme: block.setScheme,
+            repPattern: block.repPattern,
+            reps: block.reps,
+            sets: block.setCount,
+            weightTier: block.weightTier,
+            startingWeightLbs,
+            repsCompleted,
+            setsCompleted,
+          },
+        ];
       });
 
       const payload: any = { exercises: exercisesPayload, progress };
@@ -2042,7 +2071,7 @@ export default function MemberWorkoutConsole({
     } catch (e: any) {
       const msg = e?.message || "Could not save. Check connection and try again.";
       if (!/gamification points/i.test(msg)) {
-        alert(msg);
+        setLogError(msg);
       }
     } finally {
       setIsLogging(false);
@@ -2061,6 +2090,7 @@ export default function MemberWorkoutConsole({
     clearLiveSession,
     logResult,
     isLogging,
+    futurePreview,
   ]);
 
   const showLoggedSuccess = !reviewMode && !hideLogButton && !!logResult;
@@ -2775,7 +2805,9 @@ export default function MemberWorkoutConsole({
                     disabled={reviewMode && !instructorName}
                   >
                     {reviewMode && !instructorName
-                      ? "Session already logged (review)"
+                      ? futurePreview
+                        ? "Look only — log when this day opens"
+                        : "Session already logged (review)"
                       : instructorName
                         ? "Mark done for member"
                         : "Exercise finished"}
@@ -2789,15 +2821,30 @@ export default function MemberWorkoutConsole({
       </>
       ) : null}
 
-      {!showLoggedSuccess && !reviewMode && !hideLogButton ? (
-        <button
-          type="button"
-          className="btn-primary mt-10 w-full"
-          onClick={handleLogComplete}
-          disabled={isLogging}
-        >
-          {isLogging ? "Saving your session..." : "Log workout complete"}
-        </button>
+      {!showLoggedSuccess && !hideLogButton ? (
+        futurePreview ? (
+          <p className="mt-10 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-center text-sm text-[var(--muted)]">
+            This day isn’t open yet
+            {calendarDateLabel ? ` (${calendarDateLabel})` : ""}. Look around — log it when the
+            day arrives.
+          </p>
+        ) : !reviewMode ? (
+          <div className="mt-10 space-y-2">
+            {logError ? (
+              <p className="text-center text-sm text-[var(--danger,#c44)]" role="alert">
+                {logError}
+              </p>
+            ) : null}
+            <button
+              type="button"
+              className="btn-primary w-full"
+              onClick={handleLogComplete}
+              disabled={isLogging}
+            >
+              {isLogging ? "Saving your session..." : "Log workout complete"}
+            </button>
+          </div>
+        ) : null
       ) : null}
 
       {videoModalBlock?.videoUrl && (

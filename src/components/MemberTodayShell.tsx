@@ -584,6 +584,7 @@ export default function MemberTodayShell({
               liveSyncUserId={previewFutureReadOnly ? undefined : targetUserId}
               liveSessionDate={selectedDate}
               reviewMode={previewFutureReadOnly}
+              futurePreview={previewFutureReadOnly}
               membershipPlan={contentAccess?.plan ?? "explorer"}
               scheduleLabel={
                 multiPart && dayParts

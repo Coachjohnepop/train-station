@@ -21,6 +21,7 @@ import { matchExerciseInCatalog, sanitizeSmsExerciseName } from "@/lib/exercise-
 import { isCoachCatalogDemo } from "@/lib/catalog-mode";
 import { hintVideoUrlForExerciseName, resolveExerciseVideoUrl } from "@/lib/exercise-video-hints";
 import { DEFAULT_REST_TIMER_SECONDS, normalizeRestTimerSeconds } from "@/lib/rest-timer";
+import { collapseConsecutiveCloneExercises } from "@/lib/member-workout-lines";
 import {
   DEFAULT_REST_TIMER_SOUND,
   normalizeRestTimerSound,
@@ -291,7 +292,7 @@ export async function getSmsGeneratedWorkout(
     .sort((a, b) => a.sortOrder - b.sortOrder);
   const exById = await loadExercisesByIds(items.map((item) => item.exerciseId));
 
-  const blocks = items.map((item) => {
+  const blocks = collapseConsecutiveCloneExercises(items.map((item) => {
     const ex = exById[item.exerciseId] || { name: "Exercise" };
     const displayName =
       sanitizeSmsExerciseName(item.blockName || "") || ex.name || "Exercise";
@@ -308,7 +309,7 @@ export async function getSmsGeneratedWorkout(
       weightTier: item.weightTier ?? "medium",
       past: null,
     };
-  });
+  }));
 
   const uid = userId || (await resolveUserId());
   const pastByBlockId: Record<string, any> = {};

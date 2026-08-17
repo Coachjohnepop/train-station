@@ -20,7 +20,12 @@ const logExerciseSchema = z.object({
   reps: z.string().nullable().optional(),
   sets: z.number().int().nullable().optional(),
   weightTier: z.string(),
-  startingWeightLbs: z.number().positive().optional().nullable(),
+  startingWeightLbs: z
+    .number()
+    .nonnegative()
+    .optional()
+    .nullable()
+    .transform((v) => (v && v > 0 ? v : null)),
   repsCompleted: z.number().int().optional().nullable(),
   setsCompleted: z.number().int().optional().nullable(),
 });
