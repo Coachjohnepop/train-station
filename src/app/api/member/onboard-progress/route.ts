@@ -4,7 +4,11 @@ import { getSessionUser } from "@/lib/auth";
 import { ensureMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
 import { isDemoMode, updateDemoUserSettings } from "@/lib/demo-reminders";
 import { normalizeSignupPlan } from "@/lib/signup-plans";
-import { normalizeOnboardGender } from "@/lib/onboard-path";
+import {
+  normalizeOnboardGender,
+  normalizePrimaryGoal,
+  normalizeWorkoutSchedule,
+} from "@/lib/onboard-path";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +20,8 @@ const patchSchema = z.object({
   gender: z.string().max(20).nullable().optional(),
   weightLossGoal: z.string().max(240).nullable().optional(),
   weightLossTimeline: z.string().max(80).nullable().optional(),
+  primaryGoal: z.string().max(40).nullable().optional(),
+  workoutSchedule: z.string().max(40).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
   city: z.string().max(80).nullable().optional(),
   state: z.string().max(2).nullable().optional(),
@@ -51,6 +57,16 @@ export async function PATCH(request: Request) {
     ...(patch.weightLossGoal !== undefined ? { weightLossGoal: patch.weightLossGoal } : {}),
     ...(patch.weightLossTimeline !== undefined
       ? { weightLossTimeline: patch.weightLossTimeline }
+      : {}),
+    ...(patch.primaryGoal !== undefined
+      ? { primaryGoal: patch.primaryGoal ? normalizePrimaryGoal(patch.primaryGoal) : null }
+      : {}),
+    ...(patch.workoutSchedule !== undefined
+      ? {
+          workoutSchedule: patch.workoutSchedule
+            ? normalizeWorkoutSchedule(patch.workoutSchedule)
+            : null,
+        }
       : {}),
     ...(patch.notes !== undefined ? { notes: patch.notes } : {}),
     ...(patch.city !== undefined ? { city: patch.city } : {}),

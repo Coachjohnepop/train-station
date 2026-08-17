@@ -51,6 +51,8 @@ function emptyProfile(userId: string, email: string, plan: SignupPlan): MemberPr
     gender: null,
     weightLossGoal: null,
     weightLossTimeline: null,
+    primaryGoal: null,
+    workoutSchedule: null,
     notes: null,
     city: null,
     state: null,
@@ -120,6 +122,9 @@ function normalizeProfile(raw: unknown, userId: string): MemberProfile | null {
     weightLossGoal: typeof data.weightLossGoal === "string" ? data.weightLossGoal : null,
     weightLossTimeline:
       typeof data.weightLossTimeline === "string" ? data.weightLossTimeline : null,
+    primaryGoal: typeof data.primaryGoal === "string" ? data.primaryGoal : null,
+    workoutSchedule:
+      typeof data.workoutSchedule === "string" ? data.workoutSchedule : null,
     notes: data.notes ?? null,
     city: data.city ?? null,
     state: data.state ?? null,

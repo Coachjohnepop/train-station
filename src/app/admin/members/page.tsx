@@ -19,6 +19,9 @@ type MemberRow = {
   email: string;
   name: string;
   gender: string | null;
+  primaryGoal: string | null;
+  workoutSchedule: string | null;
+  weightLbs: string | null;
   phone: string | null;
   plan: string;
   planLabel: string;
@@ -507,6 +510,14 @@ export default function AdminMembersPage() {
                     {member.gender ? (
                       <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
                         {member.gender}
+                        {member.weightLbs ? ` · ${member.weightLbs} lb` : ""}
+                      </div>
+                    ) : null}
+                    {member.primaryGoal || member.workoutSchedule ? (
+                      <div className="text-[11px] text-[var(--muted)]">
+                        {[member.primaryGoal, member.workoutSchedule]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </div>
                     ) : null}
                     <a

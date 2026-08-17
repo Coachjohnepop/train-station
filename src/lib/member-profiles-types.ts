@@ -14,6 +14,8 @@ export type MemberProfile = {
   gender: string | null;
   weightLossGoal: string | null;
   weightLossTimeline: string | null;
+  primaryGoal: string | null;
+  workoutSchedule: string | null;
   notes: string | null;
   city: string | null;
   state: string | null;
@@ -62,6 +64,8 @@ export type MemberProfilePatch = Partial<
     | "gender"
     | "weightLossGoal"
     | "weightLossTimeline"
+    | "primaryGoal"
+    | "workoutSchedule"
     | "notes"
     | "city"
     | "state"

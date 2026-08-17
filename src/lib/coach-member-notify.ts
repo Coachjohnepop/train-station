@@ -297,6 +297,8 @@ export async function notifyCoachNewMember(params: {
   weightLbs?: string | null;
   weightLossGoal?: string | null;
   weightLossTimeline?: string | null;
+  primaryGoal?: string | null;
+  workoutSchedule?: string | null;
 }): Promise<void> {
   const startLine = params.programStartDate?.trim()
     ? `\nProgram start (Day 1): ${params.programStartDate.trim()}`
@@ -310,12 +312,16 @@ export async function notifyCoachNewMember(params: {
   const phoneLine = params.phone?.trim() ? `\nPhone: ${params.phone.trim()}` : "";
   const genderLabel = onboardGenderLabel(params.gender);
   const genderLine = genderLabel ? `\nMan or woman: ${genderLabel}` : "";
-  const goalLine = params.weightLossGoal?.trim()
-    ? `\nWeight-loss goal: ${params.weightLossGoal.trim()}` +
-      (params.weightLossTimeline?.trim() ? ` · ${params.weightLossTimeline.trim()}` : "")
-    : params.weightLbs?.trim()
-      ? `\nStarting weight: ${params.weightLbs.trim()} lbs`
-      : "";
+  const goalBits = [
+    params.primaryGoal?.trim() ? `Goal: ${params.primaryGoal.trim()}` : null,
+    params.workoutSchedule?.trim() ? `Trains: ${params.workoutSchedule.trim()}` : null,
+    params.weightLbs?.trim() ? `Starting weight: ${params.weightLbs.trim()} lbs` : null,
+    params.weightLossGoal?.trim()
+      ? `Fat-loss target: ${params.weightLossGoal.trim()}` +
+        (params.weightLossTimeline?.trim() ? ` · ${params.weightLossTimeline.trim()}` : "")
+      : null,
+  ].filter(Boolean);
+  const goalLine = goalBits.length ? `\n${goalBits.join(" · ")}` : "";
 
   await notifyCoachForMemberEvent({
     event: "newMember",

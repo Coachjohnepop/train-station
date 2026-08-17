@@ -691,6 +691,10 @@ model MemberProfile {
   weightLossGoal              String?
   /// Target window, e.g. "12 weeks" (women onboard).
   weightLossTimeline          String?
+  /// Main training goal chip (lose-fat, tone, gain-muscle, …).
+  primaryGoal                 String?
+  /// How often they train now (starting, 1-2, 3-4, 5+).
+  workoutSchedule             String?
   notes                       String?   @db.Text
   onboardingComplete          Boolean   @default(false)
   completedAt                 DateTime?

@@ -274,6 +274,9 @@ function normalizeImportedProfile(raw: unknown, userId: string): MemberProfile |
     weightLossGoal: typeof data.weightLossGoal === "string" ? data.weightLossGoal : null,
     weightLossTimeline:
       typeof data.weightLossTimeline === "string" ? data.weightLossTimeline : null,
+    primaryGoal: typeof data.primaryGoal === "string" ? data.primaryGoal : null,
+    workoutSchedule:
+      typeof data.workoutSchedule === "string" ? data.workoutSchedule : null,
     notes: data.notes ?? null,
     city: data.city ?? null,
     state: data.state ?? null,
