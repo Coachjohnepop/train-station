@@ -12,6 +12,7 @@ import {
   feeCategoryLabel,
 } from "@/lib/product-offers";
 import { publicTipConfig } from "@/lib/stripe-checkout-tips";
+import { CHECKOUT_FULFILLMENT_OPTIONS, PICKUP_WILTON_ID } from "@/lib/checkout-fulfillment";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,10 @@ export async function GET() {
       feeCategoryLabel: feeCategoryLabel("one_time"),
       stripeReady: stripeEnabled && Boolean(sku.stripePriceId),
     })),
+    fulfillment: {
+      defaultId: PICKUP_WILTON_ID,
+      options: CHECKOUT_FULFILLMENT_OPTIONS,
+    },
     /** All paid packages fall under one of these two fee types. */
     feeCategories: [
       { id: "subscription", label: "Monthly subscription" },

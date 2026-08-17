@@ -33,6 +33,7 @@ import {
   buildMembershipTipOptionalItems,
   resolveCoachTipLineItem,
 } from "@/lib/stripe-checkout-tips";
+import { applyCheckoutFulfillment } from "@/lib/checkout-fulfillment";
 
 type StripeClient = import("stripe").default;
 
@@ -289,6 +290,7 @@ export async function createSignupCheckoutSession(input: {
   customOfferId?: string | null;
   merchandiseSkuId?: string | null;
   quantity?: number;
+  fulfillment?: string | null;
 }): Promise<
   { clientSecret: string; sessionId: string; hasSavedCard: boolean } | { error: string }
 > {
@@ -352,6 +354,7 @@ export async function createSignupCheckoutSession(input: {
       },
     };
     applyReferralDiscounts(sessionParams, input.discount);
+    applyCheckoutFulfillment(sessionParams, input.fulfillment);
     const session = await createCheckoutSession(stripe, sessionParams);
     if ("error" in session) return session;
     await updateCustomTrainingOffer(customOffer.id, {
@@ -385,6 +388,7 @@ export async function createSignupCheckoutSession(input: {
       },
     };
     applyReferralDiscounts(sessionParams, input.discount);
+    applyCheckoutFulfillment(sessionParams, input.fulfillment, { includeShippingRate: true });
     const session = await createCheckoutSession(stripe, sessionParams);
     if ("error" in session) return session;
     return { ...session, hasSavedCard: customer.hasSavedCard };
@@ -408,6 +412,7 @@ export async function createSignupCheckoutSession(input: {
     };
     applyReferralDiscounts(sessionParams, input.discount);
     await applyMembershipTipOptionalItems(sessionParams);
+    applyCheckoutFulfillment(sessionParams, input.fulfillment);
     const session = await createCheckoutSession(stripe, sessionParams);
     if ("error" in session) return session;
     return { ...session, hasSavedCard: customer.hasSavedCard };
@@ -438,6 +443,7 @@ export async function createSignupCheckoutSession(input: {
     applyReferralDiscounts(sessionParams, input.discount);
     // One-time tip add-ons alongside the subscription (optional at Checkout).
     await applyMembershipTipOptionalItems(sessionParams);
+    applyCheckoutFulfillment(sessionParams, input.fulfillment);
     const session = await createCheckoutSession(stripe, sessionParams);
     if ("error" in session) return session;
     return { ...session, hasSavedCard: customer.hasSavedCard };

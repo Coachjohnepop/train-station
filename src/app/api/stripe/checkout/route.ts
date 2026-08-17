@@ -25,6 +25,7 @@ const schema = z.object({
   customOfferId: z.string().max(80).optional(),
   merchandiseSkuId: z.string().max(80).optional(),
   quantity: z.number().int().min(1).max(99).optional(),
+  fulfillment: z.string().max(40).optional(),
 });
 
 export async function POST(request: Request) {
@@ -168,6 +169,7 @@ export async function POST(request: Request) {
       customOfferId: parsed.data.customOfferId,
       merchandiseSkuId: parsed.data.merchandiseSkuId,
       quantity: parsed.data.quantity,
+      fulfillment: parsed.data.fulfillment,
     });
 
     if ("error" in checkout) {

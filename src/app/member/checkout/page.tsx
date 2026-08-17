@@ -5,7 +5,9 @@ import { flushSync } from "react-dom";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import EmbeddedStripeCheckoutModal from "@/components/EmbeddedStripeCheckoutModal";
+import CheckoutFulfillmentPicker from "@/components/CheckoutFulfillmentPicker";
 import CheckoutUpgradeOptions from "@/components/CheckoutUpgradeOptions";
+import { PICKUP_WILTON_ID } from "@/lib/checkout-fulfillment";
 import FreeTicketModal from "@/components/FreeTicketModal";
 import MembershipPaymentCard from "@/components/MembershipPaymentCard";
 import MembershipTicketGrid from "@/components/MembershipTicketGrid";
@@ -51,6 +53,15 @@ type PaymentsPublic = {
     enabled: boolean;
     presets: number[];
     customEnabled: boolean;
+  };
+  fulfillment?: {
+    defaultId: string;
+    options: Array<{
+      id: string;
+      label: string;
+      addressLines: string[];
+      hint: string;
+    }>;
   };
 };
 
@@ -105,6 +116,7 @@ function MemberCheckoutInner() {
   );
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [fulfillment, setFulfillment] = useState(PICKUP_WILTON_ID);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,6 +133,9 @@ function MemberCheckoutInner() {
       if (cancelled) return;
 
       setPayments(paymentsRes.ok ? paymentsData : null);
+      if (paymentsRes.ok && typeof paymentsData?.fulfillment?.defaultId === "string") {
+        setFulfillment(paymentsData.fulfillment.defaultId);
+      }
       setHasSavedCard(Boolean(membershipData.hasSavedPaymentMethod));
       const status =
         typeof membershipData.paymentStatus === "string" ? membershipData.paymentStatus : null;
@@ -224,6 +239,7 @@ function MemberCheckoutInner() {
           merchandiseSkuId: merchandiseSkuId || undefined,
           promoCode: promoCode.trim() || undefined,
           referralCode: promoCode.trim() || undefined,
+          fulfillment,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -323,6 +339,13 @@ function MemberCheckoutInner() {
                 that ticket and continue. No second charge.
               </p>
             ) : null}
+            {stripeReady && !isDowngradeIntent && !coverageMatchesThisTicket && (
+              <CheckoutFulfillmentPicker
+                value={fulfillment}
+                onChange={setFulfillment}
+                options={payments?.fulfillment?.options}
+              />
+            )}
             {stripeReady && !isDowngradeIntent && !coverageMatchesThisTicket && (
               <div className="space-y-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
                 <label className="block text-xs font-semibold text-[var(--text)]" htmlFor="promo-code">
