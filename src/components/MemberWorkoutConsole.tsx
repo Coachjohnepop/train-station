@@ -1842,10 +1842,12 @@ export default function MemberWorkoutConsole({
         return true;
       };
 
-      // Wait for finished exercise to collapse before measuring next card.
+      // Wait for the finished card to leave the list so the next undone sits at the top.
       window.setTimeout(() => {
-        if (!scroll()) window.setTimeout(scroll, 120);
-      }, 60);
+        requestAnimationFrame(() => {
+          if (!scroll()) window.setTimeout(scroll, 160);
+        });
+      }, 160);
     },
     [coachFloorMode, instructorName, reviewMode],
   );
@@ -1856,10 +1858,10 @@ export default function MemberWorkoutConsole({
       if (!upcomingId) return;
       setActiveId(upcomingId);
       stateRef.current = { ...stateRef.current, activeId: upcomingId };
-      // Stay in list order — scrolling the next card under the same finger
-      // finishes it by accident (Ali: finished + next both jump to the top).
+      setFinishedListExpanded(false);
+      scrollMemberToExercise(upcomingId);
     },
-    [workout.exercises],
+    [workout.exercises, scrollMemberToExercise],
   );
 
   const markExerciseFinished = useCallback(
@@ -2378,7 +2380,7 @@ export default function MemberWorkoutConsole({
         </span>
       </div>
 
-      {allExercisesFinished ? (
+      {finishedExercises.size > 0 && !reviewMode ? (
         <button
           type="button"
           className="member-workout-finished-collapse mt-4 w-full"
@@ -2392,10 +2394,11 @@ export default function MemberWorkoutConsole({
             ▶
           </span>
           <span className="member-workout-finished-collapse__label">
-            {finishedExercises.size} exercises complete
+            {finishedExercises.size}{" "}
+            {finishedExercises.size === 1 ? "exercise" : "exercises"} complete
           </span>
           <span className="member-workout-finished-collapse__hint">
-            {finishedListExpanded ? "Tap to collapse" : "Tap to review"}
+            {finishedListExpanded ? "Tap to hide" : "Tap to review"}
           </span>
         </button>
       ) : null}
@@ -2438,7 +2441,7 @@ export default function MemberWorkoutConsole({
           const isEditingFinished = editingExerciseId === block.id;
 
           if (isFinished) {
-            if (allExercisesFinished && !finishedListExpanded) return null;
+            if (!finishedListExpanded) return null;
             const loggedWeight = weights[block.id]?.trim();
             return (
               <div

@@ -374,7 +374,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ## WHERE WE LEFT OFF
 
 **Date:** 2026-08-17  
-**Status:** Ali feedback (finish + next card jumping, duplicate curls, couldn’t log): finish no longer scrolls the next card under the same tap; 800ms finish lock; consecutive clone lines collapsed; future preview says look-only instead of hiding log. Prod clone rows dropped. Stripe leftover unchanged: confirm webhook 200, revoke **Eco** old `sk_live` (not Jeremy’s), Connect Express for payouts.  
+**Status:** Member floor flow: finished cards tuck into “N complete”; next undone rises to the top of the screen (800ms finish-tap lock so the next Finish isn’t a ghost tap). Duplicate curls dropped. Stripe leftover unchanged: confirm webhook 200, revoke **Eco** old `sk_live` (not Jeremy’s), Connect Express for payouts.  
 **Feedback videos:** always check `~/Desktop/Stuff/Lemon Voice/The Train Station/App Feedback Video/`. A new drop means **at least one issue**. John will say when the video is perfect — do not close the path before that. Latest (2026-08-16): Free-ticket rickroll timing confirmed good. Phone screenshot still showed Amazon home-kit titles + 10px nav — this session.  
 **Free concat job:** changing Admin → Videos **Free Explorer intro** queues `scripts/rebuild-free-ticket-full.mjs` (5s chorus + that intro → `free-ticket-full.mp4`). Manual: `npm run free-ticket:rebuild` or Admin **Rebuild gag + intro now**. Cron safety net every 15m. Needs `ffmpeg`.  
 **Prior (2026-08-16 landing):** Guest home has **three choices only** — **Free Tour**, **Start membership**, **Explore Content** (triangle fold for programs / services / footer). White nav Join pill is gone. Explore tap = confetti + phone vibrate. Sign in lives in the hamburger.  
