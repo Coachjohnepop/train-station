@@ -70,19 +70,39 @@ function pickStripePriceId(envId: string | null, catalogId: string | null): stri
   if (!envId) return catalogId;
   if (!catalogId) return envId;
   if (envId === catalogId) return envId;
-  // Truncated env typos have shown up in Vercel — prefer the longer, complete ID.
-  return envId.length >= catalogId.length ? envId : catalogId;
+  // Env is the current merchant. Catalog can still hold a prior account's price_.
+  return envId;
+}
+
+async function firstRetrievablePriceId(ids: Array<string | null>): Promise<string | null> {
+  const stripe = getStripe();
+  const seen = new Set<string>();
+  for (const raw of ids) {
+    const id = raw?.trim() || "";
+    if (!id.startsWith("price_") || seen.has(id)) continue;
+    seen.add(id);
+    if (!stripe) return id;
+    try {
+      await stripe.prices.retrieve(id);
+      return id;
+    } catch {
+      /* price is from another Stripe account or deleted */
+    }
+  }
+  return null;
 }
 
 export async function resolveStripePriceId(planId: string): Promise<string | null> {
   const canonical = canonicalMembershipPriceId(planId);
-  if (canonical) return canonical;
-
   const record = PAID_PLANS.includes(planId as MembershipPlan)
     ? await getPricingPlanRecord(planId as MembershipPlan)
     : null;
   const catalogId = record?.enabled && record.stripePriceId ? record.stripePriceId : null;
-  return pickStripePriceId(envStripePriceId(planId), catalogId);
+  return firstRetrievablePriceId([
+    canonical,
+    envStripePriceId(planId),
+    catalogId,
+  ]);
 }
 
 async function buildEffectiveOffer(
