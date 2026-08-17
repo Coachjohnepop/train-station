@@ -375,7 +375,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Date:** 2026-08-17  
 **Status:** **Active.** Bella onboard feedback: more personal questions.  
-**Shipped this pass:** Onboard step 4 asks everyone current weight, main goal chips (lose fat / lose a lot fast / tone / gain muscle / stronger / consistency), and current training schedule. Fat-loss still gets timeline. Tape still after Jeremy intro. Man/woman only.  
+**Shipped this pass:** Onboard step 4 asks everyone current weight, main goal chips, and training schedule. Measurement sheet now has **Starting + Goal + Check-in** (Original was locked; Bella + John could not type start/goal). `startWeightLbs` / `goalWeightLbs` on MemberProfile. John’s onboard 180 backfills as starting.  
 **Prior park (same day):** Member floor + Today + catalog + warm-ups. `/fitness` → `/`. Finish tap lock + next undone rises. Adult week 3+ Today. Generic `Workout` titles cleaned. Warm-up on 82 non-rest days. ER PDF: `docs/programs-workouts-exercises-er.pdf`.  
 **Stripe leftover (John, not code):** confirm webhook 200 on Jeremy TS Live, revoke **Eco** old `sk_live` (not Jeremy’s), Connect Express for payouts. Optional new-email $25 smoke (Lemon John already paid).  
 **Do not:** farm `/workout` pages, blast AI searches, or share one Workout row across days.  

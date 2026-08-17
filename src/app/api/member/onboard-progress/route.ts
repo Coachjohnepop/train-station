@@ -50,7 +50,9 @@ export async function PATCH(request: Request) {
     ...(patch.plan ? { plan: normalizeSignupPlan(patch.plan) } : {}),
     ...(patch.phone !== undefined ? { phone: patch.phone } : {}),
     ...(patch.dailyReminderTime !== undefined ? { dailyReminderTime: patch.dailyReminderTime } : {}),
-    ...(patch.weightLbs !== undefined ? { weightLbs: patch.weightLbs } : {}),
+    ...(patch.weightLbs !== undefined
+      ? { weightLbs: patch.weightLbs, startWeightLbs: patch.weightLbs }
+      : {}),
     ...(patch.gender !== undefined
       ? { gender: patch.gender == null || patch.gender === "" ? null : normalizeOnboardGender(patch.gender) }
       : {}),

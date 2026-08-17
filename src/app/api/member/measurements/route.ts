@@ -37,6 +37,8 @@ export async function GET(request: Request) {
         name: identity.name,
         ageYears: identity.ageYears,
         gender: identity.gender,
+        startWeightLbs: identity.startWeightLbs,
+        goalWeightLbs: identity.goalWeightLbs,
       },
       databaseConfigured: isDatabaseConfigured(),
     });
@@ -90,7 +92,9 @@ export async function POST(request: Request) {
     if (
       body.name !== undefined ||
       body.ageYears !== undefined ||
-      body.gender !== undefined
+      body.gender !== undefined ||
+      body.startWeightLbs !== undefined ||
+      body.goalWeightLbs !== undefined
     ) {
       await saveMeasurementSheetIdentity(auth.session.id, {
         name: body.name === undefined ? undefined : (body.name as string | null),
@@ -101,15 +105,53 @@ export async function POST(request: Request) {
               ? null
               : Number(body.ageYears),
         gender: body.gender === undefined ? undefined : (body.gender as string | null),
+        startWeightLbs:
+          body.startWeightLbs === undefined
+            ? undefined
+            : body.startWeightLbs === null
+              ? null
+              : String(body.startWeightLbs),
+        goalWeightLbs:
+          body.goalWeightLbs === undefined
+            ? undefined
+            : body.goalWeightLbs === null
+              ? null
+              : String(body.goalWeightLbs),
       });
     }
 
-    const measurement = await createUserMeasurement({
-      userId: auth.session.id,
-      body,
-      source: "member",
-      recordedByUserId: auth.session.id,
+    const measureIds = [
+      "weightLbs",
+      "neckIn",
+      "shouldersIn",
+      "chestIn",
+      "waistIn",
+      "hipsIn",
+      "leftBicepIn",
+      "rightBicepIn",
+      "leftThighIn",
+      "rightThighIn",
+      "leftCalfIn",
+      "rightCalfIn",
+      "bodyFatPct",
+    ];
+    const hasMeasure = measureIds.some((id) => {
+      const v = body[id];
+      return v != null && String(v).trim() !== "";
     });
+    const hasPhoto = typeof body.photoUrl === "string" && body.photoUrl.trim() !== "";
+    const note = typeof body.notes === "string" ? body.notes.trim() : "";
+    const hasRealNote = Boolean(note) && note !== "Identity update";
+
+    let measurement = null;
+    if (hasMeasure || hasPhoto || hasRealNote) {
+      measurement = await createUserMeasurement({
+        userId: auth.session.id,
+        body,
+        source: "member",
+        recordedByUserId: auth.session.id,
+      });
+    }
     const identity = await getMeasurementSheetIdentity(auth.session.id);
     return NextResponse.json({
       ok: true,
@@ -118,6 +160,8 @@ export async function POST(request: Request) {
         name: identity.name,
         ageYears: identity.ageYears,
         gender: identity.gender,
+        startWeightLbs: identity.startWeightLbs,
+        goalWeightLbs: identity.goalWeightLbs,
       },
       beforePhotoUrl: identity.beforePhotoUrl,
       beforePhotoCrop: {

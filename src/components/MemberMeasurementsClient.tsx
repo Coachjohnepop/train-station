@@ -28,12 +28,14 @@ import {
 } from "@/lib/photo-crop";
 import { isYoutubeUrl } from "@/lib/youtube";
 
-/** Label + original (left, locked) + check-in (right, editable). */
+/** Label + original (left) + check-in (right). Left is an input until a start exists. */
 function DualMeasureField({
   field,
   original,
   value,
   onChange,
+  originalDraft,
+  onOriginalChange,
   disabled,
   compact,
 }: {
@@ -41,10 +43,13 @@ function DualMeasureField({
   original: number | null | undefined;
   value: string;
   onChange: (v: string) => void;
+  originalDraft?: string;
+  onOriginalChange?: (v: string) => void;
   disabled?: boolean;
   compact?: boolean;
 }) {
   const origLabel = formatMeasurementValue(original, field.unit);
+  const canEditOriginal = Boolean(onOriginalChange) && (original == null || !Number.isFinite(original));
   return (
     <div className={`ms-dual ${compact ? "ms-dual--compact" : ""}`}>
       <div className="ms-dual__title">
@@ -55,10 +60,26 @@ function DualMeasureField({
       </div>
       <div className="ms-dual__cols">
         <div className="ms-dual__cell ms-dual__cell--orig">
-          <span className="ms-dual__col-label">Original</span>
-          <span className="ms-dual__orig-value" title="First value you ever logged">
-            {origLabel}
-          </span>
+          <span className="ms-dual__col-label">Starting</span>
+          {canEditOriginal ? (
+            <input
+              type="number"
+              inputMode="decimal"
+              step={field.step}
+              min={field.min}
+              max={field.max}
+              value={originalDraft ?? ""}
+              onChange={(e) => onOriginalChange?.(e.target.value)}
+              disabled={disabled}
+              placeholder="—"
+              className="ms-stat__input ms-dual__input"
+              aria-label={`${field.label} starting (${field.unit})`}
+            />
+          ) : (
+            <span className="ms-dual__orig-value" title="First value you logged">
+              {origLabel}
+            </span>
+          )}
         </div>
         <div className="ms-dual__cell ms-dual__cell--now">
           <span className="ms-dual__col-label">Check-in</span>
@@ -78,6 +99,84 @@ function DualMeasureField({
         </div>
       </div>
       <span className="ms-stat__unit">{field.unit}</span>
+    </div>
+  );
+}
+
+function WeightTrioField({
+  start,
+  goal,
+  checkIn,
+  onStart,
+  onGoal,
+  onCheckIn,
+  disabled,
+}: {
+  start: string;
+  goal: string;
+  checkIn: string;
+  onStart: (v: string) => void;
+  onGoal: (v: string) => void;
+  onCheckIn: (v: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="ms-dual">
+      <div className="ms-dual__title">
+        <span className="ms-stat__label">Weight</span>
+        <span className="ms-dual__hint">Starting + goal stay put. Check-in is today.</span>
+      </div>
+      <div className="ms-dual__cols ms-dual__cols--three">
+        <div className="ms-dual__cell">
+          <span className="ms-dual__col-label">Starting</span>
+          <input
+            type="number"
+            inputMode="decimal"
+            step={0.1}
+            min={50}
+            max={500}
+            value={start}
+            onChange={(e) => onStart(e.target.value)}
+            disabled={disabled}
+            placeholder="—"
+            className="ms-stat__input ms-dual__input"
+            aria-label="Starting weight (lbs)"
+          />
+        </div>
+        <div className="ms-dual__cell">
+          <span className="ms-dual__col-label">Goal</span>
+          <input
+            type="number"
+            inputMode="decimal"
+            step={0.1}
+            min={50}
+            max={500}
+            value={goal}
+            onChange={(e) => onGoal(e.target.value)}
+            disabled={disabled}
+            placeholder="—"
+            className="ms-stat__input ms-dual__input"
+            aria-label="Goal weight (lbs)"
+          />
+        </div>
+        <div className="ms-dual__cell ms-dual__cell--now">
+          <span className="ms-dual__col-label">Check-in</span>
+          <input
+            type="number"
+            inputMode="decimal"
+            step={0.1}
+            min={50}
+            max={500}
+            value={checkIn}
+            onChange={(e) => onCheckIn(e.target.value)}
+            disabled={disabled}
+            placeholder="—"
+            className="ms-stat__input ms-dual__input"
+            aria-label="Check-in weight (lbs)"
+          />
+        </div>
+      </div>
+      <span className="ms-stat__unit">lbs</span>
     </div>
   );
 }
@@ -135,6 +234,9 @@ export default function MemberMeasurementsClient({
   const [displayName, setDisplayName] = useState("");
   const [ageYears, setAgeYears] = useState("");
   const [gender, setGender] = useState("");
+  const [startWeightLbs, setStartWeightLbs] = useState("");
+  const [goalWeightLbs, setGoalWeightLbs] = useState("");
+  const [baseline, setBaseline] = useState(emptyMeasurementForm);
   /** Local preview while upload in flight (object URL). */
   const [beforePreviewLocal, setBeforePreviewLocal] = useState<string | null>(null);
   const [nowPreviewLocal, setNowPreviewLocal] = useState<string | null>(null);
@@ -197,8 +299,15 @@ export default function MemberMeasurementsClient({
             const g = id.gender.trim().toLowerCase();
             setGender(g === "man" || g === "male" || g === "m" ? "man" : g === "woman" || g === "female" || g === "f" ? "woman" : "");
           }
+          if (id.startWeightLbs != null && String(id.startWeightLbs).trim()) {
+            setStartWeightLbs(String(id.startWeightLbs).trim());
+          }
+          if (id.goalWeightLbs != null && String(id.goalWeightLbs).trim()) {
+            setGoalWeightLbs(String(id.goalWeightLbs).trim());
+          }
           // Fresh form for a new check-in (originals show from history separately)
           setForm(emptyMeasurementForm());
+          setBaseline(emptyMeasurementForm());
         }
         if (!opts?.preserveNow) {
           setNowPhotoUrl(null);
@@ -419,22 +528,30 @@ export default function MemberMeasurementsClient({
         name: displayName.trim() || null,
         ageYears: ageNum,
         gender: gender.trim() || null,
+        startWeightLbs: startWeightLbs.trim() || null,
+        goalWeightLbs: goalWeightLbs.trim() || null,
       };
       for (const f of MEASUREMENT_FIELDS) {
-        body[f.id] = form[f.id] === "" ? null : form[f.id];
+        const nowVal = form[f.id]?.trim() || "";
+        const startVal = baseline[f.id]?.trim() || "";
+        body[f.id] = nowVal || startVal || null;
       }
 
-      const hasMeasure = MEASUREMENT_FIELDS.some((f) => form[f.id]?.trim());
+      const hasMeasure = MEASUREMENT_FIELDS.some(
+        (f) => form[f.id]?.trim() || baseline[f.id]?.trim(),
+      );
       const hasNote = Boolean(notes.trim());
       const hasNow = Boolean(nowPhotoUrl);
+      const hasWeights = Boolean(startWeightLbs.trim() || goalWeightLbs.trim());
       if (!hasMeasure && !hasNote && !hasNow) {
-        // Identity-only: update profile without inventing a fake measurement row
-        // only when they actually typed identity fields.
         const hasIdentity =
-          Boolean(displayName.trim()) || ageRaw !== "" || Boolean(gender.trim());
+          Boolean(displayName.trim()) ||
+          ageRaw !== "" ||
+          Boolean(gender.trim()) ||
+          hasWeights;
         if (!hasIdentity) {
           throw new Error(
-            "Nothing to save — enter a check-in number, take a Now photo, or add a note.",
+            "Nothing to save — enter starting, goal, or check-in weight, take a Now photo, or add a note.",
           );
         }
         const idRes = await fetch("/api/member/measurements", {
@@ -445,15 +562,19 @@ export default function MemberMeasurementsClient({
             name: body.name,
             ageYears: body.ageYears,
             gender: body.gender,
-            notes: "Identity update",
-            measuredAt: body.measuredAt,
+            startWeightLbs: body.startWeightLbs,
+            goalWeightLbs: body.goalWeightLbs,
           }),
         });
         const idData = await idRes.json().catch(() => ({}));
         if (!idRes.ok) {
           throw new Error(idData.error || "Could not save identity.");
         }
-        setMessage("Identity saved.");
+        setMessage(
+          hasWeights
+            ? "Starting and goal weight saved."
+            : "Identity saved.",
+        );
         // Release spinner before refresh so Save never looks stuck
         savingRef.current = false;
         setSaving(false);
@@ -843,6 +964,9 @@ export default function MemberMeasurementsClient({
           gap: 0.35rem;
           align-items: end;
         }
+        .ms-dual__cols--three {
+          grid-template-columns: 1fr 1fr 1fr;
+        }
         .ms-dual__cell {
           min-width: 0;
         }
@@ -984,15 +1108,16 @@ export default function MemberMeasurementsClient({
               </select>
             </KeyField>
             <p className="mb-1 mt-2 text-[9px] font-bold uppercase tracking-wider text-[var(--ms-gold)]">
-              Original · left · · Check-in · right
+              Starting · Goal · Check-in
             </p>
-            <DualMeasureField
-              field={MEASUREMENT_FIELDS.find((f) => f.id === "weightLbs")!}
-              original={originals.weightLbs}
-              value={form.weightLbs}
-              onChange={(v) => setField("weightLbs", v)}
+            <WeightTrioField
+              start={startWeightLbs}
+              goal={goalWeightLbs}
+              checkIn={form.weightLbs}
+              onStart={setStartWeightLbs}
+              onGoal={setGoalWeightLbs}
+              onCheckIn={(v) => setField("weightLbs", v)}
               disabled={saving}
-              compact
             />
             <div className="mt-2">
               <DualMeasureField
@@ -1000,6 +1125,10 @@ export default function MemberMeasurementsClient({
                 original={originals.bodyFatPct}
                 value={form.bodyFatPct}
                 onChange={(v) => setField("bodyFatPct", v)}
+                originalDraft={baseline.bodyFatPct}
+                onOriginalChange={(v) =>
+                  setBaseline((prev) => ({ ...prev, bodyFatPct: v }))
+                }
                 disabled={saving}
                 compact
               />
@@ -1358,9 +1487,9 @@ export default function MemberMeasurementsClient({
           <div className="min-w-0 sm:col-span-3">
             <h2 className="ms-section-label">Measurements · Tape (inches)</h2>
             <p className="mb-2 font-serif text-[11px] italic text-[var(--ms-ink-soft)]">
-              Each field: <strong className="text-[var(--ms-gold)]">Original</strong> (first ever,
-              left) · <strong className="text-[var(--ms-gold)]">Check-in</strong> (enter now,
-              right). First time you log a number, it becomes the all-time original.
+              Each tape field: <strong className="text-[var(--ms-gold)]">Starting</strong> (left —
+              type here if it&apos;s still blank) ·{" "}
+              <strong className="text-[var(--ms-gold)]">Check-in</strong> (today, right).
             </p>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {TAPE_MEASUREMENT_FIELDS.map((field) => (
@@ -1370,6 +1499,10 @@ export default function MemberMeasurementsClient({
                   original={originals[field.id]}
                   value={form[field.id]}
                   onChange={(v) => setField(field.id, v)}
+                  originalDraft={baseline[field.id]}
+                  onOriginalChange={(v) =>
+                    setBaseline((prev) => ({ ...prev, [field.id]: v }))
+                  }
                   disabled={saving}
                 />
               ))}
@@ -1414,7 +1547,7 @@ export default function MemberMeasurementsClient({
                 ? "Saving your check-in…"
                 : message
                   ? message
-                  : "Writes this visit to Postgres (adventure log). Originals stay locked as first-ever values."}
+                  : "Save starting + goal anytime. Check-in is this visit."}
             </p>
           </div>
         </div>

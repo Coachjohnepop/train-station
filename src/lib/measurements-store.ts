@@ -42,11 +42,22 @@ export type MeasurementSheetIdentity = {
   name: string | null;
   ageYears: number | null;
   gender: string | null;
+  startWeightLbs: string | null;
+  goalWeightLbs: string | null;
   beforePhotoUrl: string | null;
   beforePhotoFocusX: number | null;
   beforePhotoFocusY: number | null;
   beforePhotoZoom: number | null;
 };
+
+export function parsePoundsFromText(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const m = raw.match(/(\d+(?:\.\d+)?)\s*(?:lb|lbs|pound|pounds)?/i);
+  if (!m) return null;
+  const n = Number(m[1]);
+  if (!Number.isFinite(n) || n < 50 || n > 500) return null;
+  return String(Math.round(n * 10) / 10);
+}
 
 function ageYearsFromBirthdate(birthdate: Date | null | undefined): number | null {
   if (!birthdate) return null;
@@ -66,6 +77,8 @@ export async function getMeasurementSheetIdentity(
       name: null,
       ageYears: null,
       gender: null,
+      startWeightLbs: null,
+      goalWeightLbs: null,
       beforePhotoUrl: null,
       beforePhotoFocusX: 50,
       beforePhotoFocusY: 25,
@@ -87,10 +100,18 @@ export async function getMeasurementSheetIdentity(
         beforePhotoZoom: true,
         gender: true,
         ageYears: true,
+        startWeightLbs: true,
+        goalWeightLbs: true,
+        weightLbs: true,
       },
     }),
   ]);
   const fromBirth = ageYearsFromBirthdate(user?.birthdate ?? null);
+  const start =
+    profile?.startWeightLbs?.trim() ||
+    profile?.weightLbs?.trim() ||
+    null;
+  const goal = profile?.goalWeightLbs?.trim() || null;
   return {
     name: user?.name?.trim() || null,
     ageYears:
@@ -98,6 +119,8 @@ export async function getMeasurementSheetIdentity(
         ? profile.ageYears
         : fromBirth,
     gender: normalizeOnboardGender(profile?.gender),
+    startWeightLbs: start,
+    goalWeightLbs: goal,
     beforePhotoUrl: profile?.beforePhotoUrl?.trim() || null,
     beforePhotoFocusX: profile?.beforePhotoFocusX ?? 50,
     beforePhotoFocusY: profile?.beforePhotoFocusY ?? 25,
@@ -112,7 +135,13 @@ export async function getMemberBeforePhotoUrl(userId: string): Promise<string | 
 
 export async function saveMeasurementSheetIdentity(
   userId: string,
-  input: { name?: string | null; ageYears?: number | null; gender?: string | null },
+  input: {
+    name?: string | null;
+    ageYears?: number | null;
+    gender?: string | null;
+    startWeightLbs?: string | null;
+    goalWeightLbs?: string | null;
+  },
 ): Promise<MeasurementSheetIdentity> {
   if (!isDatabaseConfigured()) {
     throw new Error("Database is required to save sheet identity.");
@@ -127,7 +156,12 @@ export async function saveMeasurementSheetIdentity(
     });
   }
 
-  const profilePatch: { gender?: string | null; ageYears?: number | null } = {};
+  const profilePatch: {
+    gender?: string | null;
+    ageYears?: number | null;
+    startWeightLbs?: string | null;
+    goalWeightLbs?: string | null;
+  } = {};
   if (input.gender !== undefined) {
     const raw = input.gender?.trim() || "";
     if (!raw) {
@@ -139,6 +173,20 @@ export async function saveMeasurementSheetIdentity(
       }
       profilePatch.gender = normalized;
     }
+  }
+  if (input.startWeightLbs !== undefined) {
+    const parsed = parsePoundsFromText(input.startWeightLbs);
+    if (input.startWeightLbs && input.startWeightLbs.trim() && !parsed) {
+      throw new Error("Starting weight must be between 50 and 500 lbs.");
+    }
+    profilePatch.startWeightLbs = parsed;
+  }
+  if (input.goalWeightLbs !== undefined) {
+    const parsed = parsePoundsFromText(input.goalWeightLbs);
+    if (input.goalWeightLbs && input.goalWeightLbs.trim() && !parsed) {
+      throw new Error("Goal weight must be between 50 and 500 lbs.");
+    }
+    profilePatch.goalWeightLbs = parsed;
   }
   if (input.ageYears !== undefined) {
     const n = input.ageYears;
@@ -304,12 +352,21 @@ export async function createUserMeasurement(input: {
     select: prismaSelect(),
   });
 
-  // Keep MemberProfile.weightLbs in sync with latest weight when provided.
+  // Latest check-in weight lives on weightLbs. Do not overwrite startWeightLbs.
   if (values.weightLbs != null) {
     try {
+      const existing = await prisma.memberProfile.findUnique({
+        where: { userId: input.userId },
+        select: { startWeightLbs: true },
+      });
       await prisma.memberProfile.updateMany({
         where: { userId: input.userId },
-        data: { weightLbs: String(values.weightLbs) },
+        data: {
+          weightLbs: String(values.weightLbs),
+          ...(existing && !existing.startWeightLbs?.trim()
+            ? { startWeightLbs: String(values.weightLbs) }
+            : {}),
+        },
       });
     } catch {
       /* profile may not exist yet */

@@ -32,9 +32,9 @@ export default async function MemberMeasurementsPage({
           </p>
           <h1 className="mt-1 text-xl font-bold">First measurement session</h1>
           <p className="mt-1 text-sm text-[color-mix(in_srgb,var(--text)_82%,var(--muted))]">
-            Jeremy signed off your 15-minute call. Log tape + photos now — this is the last
-            setup block. Later check-ins show up on Today like a workout day, announced the
-            day before.
+            Jeremy signed off your 15-minute call. Type starting weight and goal weight
+            first — then today&apos;s check-in, tape, and photos. Later check-ins show up
+            on Today like a workout day.
           </p>
         </div>
       ) : null}
