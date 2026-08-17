@@ -102,6 +102,99 @@ function labelDiscountProducts(
   return [...new Set(names)].join(" · ");
 }
 
+export type LatestStripePurchase = {
+  chargeId: string;
+  paymentIntentId: string | null;
+  amountCents: number;
+  amountLabel: string;
+  currency: string;
+  status: string;
+  description: string | null;
+  customerEmail: string | null;
+  customerName: string | null;
+  memberUserId: string | null;
+  memberPlan: string | null;
+  createdAt: string;
+  cardBrand: string | null;
+  cardLast4: string | null;
+  receiptUrl: string | null;
+};
+
+export async function getLatestStripePurchase(): Promise<LatestStripePurchase | null> {
+  const stripe = getStripe();
+  if (!stripe) return null;
+
+  const [list, profiles] = await Promise.all([
+    stripe.charges.list({
+      limit: 20,
+      expand: ["data.customer"],
+    }),
+    listMemberProfiles().catch(() => []),
+  ]);
+
+  const charge = list.data.find((c) => c.paid && c.status === "succeeded") ?? null;
+  if (!charge) return null;
+
+  const custId = customerIdOf(charge.customer);
+  const email =
+    customerEmail(charge.customer) ||
+    charge.billing_details?.email ||
+    charge.receipt_email ||
+    null;
+  const byCustomer = new Map(
+    profiles.filter((p) => p.stripeCustomerId).map((p) => [p.stripeCustomerId as string, p]),
+  );
+  const byEmail = new Map(profiles.filter((p) => p.email).map((p) => [p.email.toLowerCase(), p]));
+  const member =
+    (custId && byCustomer.get(custId)) ||
+    (email && byEmail.get(email.toLowerCase())) ||
+    null;
+
+  const purchase: LatestStripePurchase = {
+    chargeId: charge.id,
+    paymentIntentId:
+      typeof charge.payment_intent === "string"
+        ? charge.payment_intent
+        : charge.payment_intent?.id || null,
+    amountCents: charge.amount,
+    amountLabel: money(charge.amount, charge.currency),
+    currency: charge.currency,
+    status: charge.status,
+    description: charge.description || charge.calculated_statement_descriptor || null,
+    customerEmail: email,
+    customerName: customerName(charge.customer) || charge.billing_details?.name || null,
+    memberUserId: member?.userId || null,
+    memberPlan: member?.plan || null,
+    createdAt: new Date(charge.created * 1000).toISOString(),
+    cardBrand: charge.payment_method_details?.card?.brand || null,
+    cardLast4: charge.payment_method_details?.card?.last4 || null,
+    receiptUrl: charge.receipt_url || null,
+  };
+
+  try {
+    const { recordSubscriptionPaymentFact } = await import("@/lib/analytics-facts");
+    await recordSubscriptionPaymentFact({
+      userId: purchase.memberUserId,
+      amountCents: purchase.amountCents,
+      currency: purchase.currency,
+      status: "paid",
+      stripePaymentIntentId: purchase.paymentIntentId,
+      stripeCustomerId: custId,
+      billingReason: purchase.description || "stripe_charge",
+      planId: purchase.memberPlan,
+      paidAt: new Date(purchase.createdAt),
+      properties: {
+        chargeId: purchase.chargeId,
+        source: "latest-stripe-purchase",
+      },
+    });
+  } catch {
+    /* ledger write is best-effort — the card still shows live Stripe */
+  }
+
+  return purchase;
+}
+
 export type BillingSubscription = {
   id: string;
   status: string;
@@ -158,13 +251,14 @@ export async function getBillingAdminOverview() {
     };
   }
 
-  const [balanceSnap, lastPayout, mrr, charges, refunds, openPi] = await Promise.all([
+  const [balanceSnap, lastPayout, mrr, charges, refunds, openPi, latestPurchase] = await Promise.all([
     getStripeBalanceSnapshot("platform"),
     getLastBankPayout("platform"),
     fetchActiveMrrCents(),
     stripe.charges.list({ limit: 100 }),
     stripe.refunds.list({ limit: 50 }),
     stripe.paymentIntents.list({ limit: 30, expand: [] }),
+    getLatestStripePurchase(),
   ]);
 
   const now = Date.now();
@@ -238,6 +332,7 @@ export async function getBillingAdminOverview() {
       failedCharges: failed,
       openPaymentIntents: requiresAction,
     },
+    latestPurchase,
   };
 }
 

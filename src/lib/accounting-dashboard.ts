@@ -337,6 +337,8 @@ export async function getAccountingDashboard() {
         userId: r.userId,
       })),
     },
+    latestPurchase:
+      billing && "latestPurchase" in billing ? billing.latestPurchase ?? null : null,
     links: {
       moneyDesk: "/admin/billing?tab=share",
       billing: "/admin/billing",

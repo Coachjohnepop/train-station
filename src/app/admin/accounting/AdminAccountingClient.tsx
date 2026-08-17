@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import LatestStripePurchaseCard from "@/components/LatestStripePurchaseCard";
 import AdminBooksPanel from "./AdminBooksPanel";
 
 type QueueItem = {
@@ -98,6 +99,21 @@ type AccountingData = {
       userId: string | null;
     }>;
   };
+  latestPurchase?: {
+    chargeId: string;
+    paymentIntentId: string | null;
+    amountLabel: string;
+    status: string;
+    description: string | null;
+    customerEmail: string | null;
+    customerName: string | null;
+    memberUserId: string | null;
+    memberPlan: string | null;
+    createdAt: string;
+    cardBrand: string | null;
+    cardLast4: string | null;
+    receiptUrl: string | null;
+  } | null;
   links: {
     moneyDesk: string;
     billing: string;
@@ -251,6 +267,8 @@ export default function AdminAccountingClient() {
 
       {deskTab === "overview" && data && bal ? (
         <div className="space-y-8">
+
+      <LatestStripePurchaseCard purchase={data.latestPurchase} />
 
       {/* Balance + minimums */}
       <section className="space-y-3">
