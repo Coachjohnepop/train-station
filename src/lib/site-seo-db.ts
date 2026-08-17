@@ -15,6 +15,7 @@ function rowToConfig(row: {
   robotsFollow: boolean;
   googleSiteVerification: string;
   bingSiteVerification: string;
+  lastRecrawlPingAt?: Date | null;
   updatedAt: Date;
 }): SiteSeoConfig {
   return {
@@ -29,6 +30,7 @@ function rowToConfig(row: {
     robotsFollow: row.robotsFollow,
     googleSiteVerification: row.googleSiteVerification,
     bingSiteVerification: row.bingSiteVerification,
+    lastRecrawlPingAt: row.lastRecrawlPingAt ? row.lastRecrawlPingAt.toISOString() : null,
     updatedAt: row.updatedAt.toISOString(),
   };
 }
@@ -63,6 +65,7 @@ export async function saveSiteSeoToDb(config: SiteSeoConfig): Promise<boolean> {
         robotsFollow: config.robotsFollow,
         googleSiteVerification: config.googleSiteVerification,
         bingSiteVerification: config.bingSiteVerification,
+        lastRecrawlPingAt: config.lastRecrawlPingAt ? new Date(config.lastRecrawlPingAt) : null,
       },
       update: {
         metaTitle: config.metaTitle,
@@ -76,6 +79,7 @@ export async function saveSiteSeoToDb(config: SiteSeoConfig): Promise<boolean> {
         robotsFollow: config.robotsFollow,
         googleSiteVerification: config.googleSiteVerification,
         bingSiteVerification: config.bingSiteVerification,
+        lastRecrawlPingAt: config.lastRecrawlPingAt ? new Date(config.lastRecrawlPingAt) : null,
       },
     });
     return true;

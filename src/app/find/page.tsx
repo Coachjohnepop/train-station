@@ -1,43 +1,101 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import LandingNav from "@/components/LandingNav";
 import LandingSiteFooter from "@/components/LandingSiteFooter";
+import FindPhraseCopy from "@/components/FindPhraseCopy";
 import {
   SEARCH_THIRD_WORD_ALIASES,
   SEARCH_THIRD_WORDS,
 } from "@/lib/search-third-words";
+import { JOIN_WEEK_HREF } from "@/lib/landing-return-visit";
+import { siteOrigin } from "@/lib/site-seo-server";
 
 export const metadata: Metadata = {
-  title: "Find The Train Station — fitness, workout, Jeremy Byrd",
+  title: "Find The Train Station fitness",
   description:
-    "If someone says look me up on The Train Station, add a third word: fitness, workout, exercise, program, weight loss, or Jeremy Byrd. That search is this site — thetrainstation.co.",
+    "Search The Train Station fitness — not the railroad. This is Coach Jeremy Byrd’s workout app at thetrainstation.co. Also works with workout, exercise, coaching, or Jeremy Byrd.",
+  alternates: { canonical: "/find" },
+  openGraph: {
+    title: "Find The Train Station fitness — Coach Jeremy Byrd",
+    description:
+      "“Train station” is the railroad. “The Train Station fitness” is Jeremy Byrd’s training app.",
+    url: "/find",
+  },
 };
 
 const WORDS = [...SEARCH_THIRD_WORDS, ...SEARCH_THIRD_WORD_ALIASES];
 
+const FAQS = [
+  {
+    q: "Why doesn’t “train station” find this site?",
+    a: "Those two words are a railroad and maps query. Apple and Google show Amtrak, metro stops, and “near me.” This app is The Train Station fitness — Coach Jeremy Byrd’s workouts at thetrainstation.co.",
+  },
+  {
+    q: "What should I search?",
+    a: "Type The Train Station plus one more word: fitness, workout, exercise, coaching, Jeremy Byrd, weight loss, or program. Every one of those is this site.",
+  },
+  {
+    q: "Who is Jeremy Byrd?",
+    a: "Coach Jeremy Byrd, CSCS. He runs The Train Station — live class, written programs, and day-to-day accountability. Not a gym chain and not a commuter stop.",
+  },
+  {
+    q: "Is this an app or a gym?",
+    a: "It’s a training app. Members open Today on their phone, check off sets, rest 45 seconds, and join Jeremy on Zoom when class is live. Tickets start with a 7-day look.",
+  },
+];
+
 export default function FindTheTrainStationPage() {
+  const origin = siteOrigin();
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQS.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: { "@type": "Answer", text: item.a },
+    })),
+  };
+  const webPageLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: "Find The Train Station fitness",
+    url: `${origin}/find`,
+    description:
+      "Search The Train Station fitness — not the railroad. Coach Jeremy Byrd’s workout app at thetrainstation.co.",
+    isPartOf: { "@id": `${origin}/#website` },
+    about: { "@id": `${origin}/#jeremy` },
+  };
+
   return (
     <div className="app-shell-bg min-h-screen text-[var(--text)]">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
+      <LandingNav />
       <main className="mx-auto max-w-2xl px-6 py-12">
-        <Link href="/" className="text-sm text-[var(--accent-fg)] hover:text-[var(--text)]">
-          ← The Train Station
-        </Link>
-        <p className="mt-8 text-[10px] font-extrabold uppercase tracking-[0.35em] text-[var(--muted)]">
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.35em] text-[var(--muted)]">
           How to find us
         </p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-          Look up <span className="text-[var(--accent-fg)]">The Train Station</span> plus one more word.
+          Search <span className="text-[var(--accent-fg)]">The Train Station fitness</span>
         </h1>
-        <p className="mt-4 text-sm leading-relaxed text-[var(--muted)]">
+        <p className="mt-4 text-base leading-relaxed text-[var(--muted)]">
           “Train station” by itself is the railroad. This is Coach Jeremy Byrd’s training app —
-          workouts, exercise, fitness, weight loss, and programs at{" "}
+          workouts, live class, and accountability at{" "}
           <strong className="text-[var(--text)]">thetrainstation.co</strong>.
         </p>
-        <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
-          Tell people: search <strong className="text-[var(--text)]">The Train Station</strong> and
-          any word below. Every one of these is us.
+        <p className="mt-3 text-base leading-relaxed text-[var(--text)]">
+          Tell a friend: search <strong>The Train Station fitness</strong>. That search is us.
         </p>
 
-        <ul className="mt-8 flex flex-wrap gap-2">
+        <div className="mt-6">
+          <FindPhraseCopy />
+        </div>
+
+        <h2 className="mt-10 text-lg font-semibold">Any of these third words works</h2>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          Same site. Same coach. The extra word keeps you off the Amtrak results.
+        </p>
+        <ul className="mt-4 flex flex-wrap gap-2">
           {WORDS.map((word) => (
             <li key={word}>
               <span className="inline-block rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm">
@@ -48,12 +106,25 @@ export default function FindTheTrainStationPage() {
           ))}
         </ul>
 
+        <section className="mt-12 space-y-6">
+          <h2 className="text-lg font-semibold">Questions people actually ask</h2>
+          {FAQS.map((item) => (
+            <div key={item.q}>
+              <h3 className="text-sm font-semibold text-[var(--text)]">{item.q}</h3>
+              <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">{item.a}</p>
+            </div>
+          ))}
+        </section>
+
         <div className="mt-10 flex flex-wrap gap-3">
-          <Link href="/join" className="btn-primary px-5 py-2.5 text-sm font-semibold">
-            Join
+          <Link href={JOIN_WEEK_HREF} className="btn-primary px-5 py-2.5 text-sm font-semibold">
+            Start membership — 7 days
           </Link>
-          <Link href="/" className="btn-ghost px-5 py-2.5 text-sm">
-            See the home page
+          <Link href="/?tour=1" className="btn-ghost px-5 py-2.5 text-sm">
+            Free Tour
+          </Link>
+          <Link href="/jeremy" className="btn-ghost px-5 py-2.5 text-sm">
+            Meet Jeremy
           </Link>
         </div>
       </main>

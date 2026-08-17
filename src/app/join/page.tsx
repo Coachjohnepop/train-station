@@ -40,10 +40,10 @@ export default async function JoinPage({
           {fromTour ? "You saw inside" : "Board the station"}
         </div>
         <h1 className="mb-3 text-4xl font-semibold tracking-[-1.5px] sm:text-5xl sm:tracking-[-1.8px]">
-          Pick a program, then your ticket
+          Pick your ticket
         </h1>
         <p className="mx-auto max-w-xl text-lg text-[var(--muted)] sm:text-xl">
-          Train on the track you want — then choose Free, Coach Class, Business Class, or 1st Class.
+          Free, Coach Class, Business, or 1st Class. Program is optional — you can choose a track below.
         </p>
         {fromTour ? (
           <p className="mx-auto mt-3 max-w-md text-sm font-medium text-[var(--accent-fg)]/90">
@@ -64,7 +64,7 @@ export default async function JoinPage({
           NOT SURE?
         </div>
         <p className="text-sm text-[var(--muted)]">
-          Answer 4 quick questions — we&apos;ll recommend a seat.
+          Not sure? Four questions — we point you at a seat.
         </p>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
           <Link
@@ -73,9 +73,6 @@ export default async function JoinPage({
           >
             Take the 1-minute assessment →
           </Link>
-          <a href="#plans" className="text-sm text-[var(--muted)] underline hover:text-[var(--text)]">
-            or compare plan details
-          </a>
         </div>
       </div>
 

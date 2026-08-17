@@ -30,6 +30,18 @@ export default async function SiteJsonLd() {
         url: origin,
         logo,
         description: seo.metaDescription,
+        founder: { "@id": `${origin}/#jeremy` },
+        employee: { "@id": `${origin}/#jeremy` },
+        sameAs: [`${origin}/jeremy`, `${origin}/find`],
+      },
+      {
+        "@type": "Person",
+        "@id": `${origin}/#jeremy`,
+        name: "Jeremy Byrd",
+        jobTitle: "Strength and conditioning coach",
+        url: `${origin}/jeremy`,
+        image: `${origin}/images/programs/speaking.jpg`,
+        worksFor: { "@id": `${origin}/#org` },
       },
     ],
   };

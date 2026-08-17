@@ -37,6 +37,13 @@ export default function AdminSeoClient() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const lastPingMs = seo?.lastRecrawlPingAt ? Date.parse(seo.lastRecrawlPingAt) : 0;
+  const pingCooldownMs = 24 * 60 * 60 * 1000;
+  const pingOnCooldown = Boolean(lastPingMs && Date.now() - lastPingMs < pingCooldownMs);
+  const pingHoursLeft = pingOnCooldown
+    ? Math.ceil((pingCooldownMs - (Date.now() - lastPingMs)) / (60 * 60 * 1000))
+    : 0;
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -117,10 +124,17 @@ export default function AdminSeoClient() {
         results?: Array<{ engine: string; ok: boolean; detail: string }>;
         error?: string;
         note?: string;
+        lastRecrawlPingAt?: string | null;
       };
       if (!res.ok) {
         setError(body.error || "Could not ping search engines.");
+        if (body.lastRecrawlPingAt) {
+          setSeo((prev) => (prev ? { ...prev, lastRecrawlPingAt: body.lastRecrawlPingAt! } : prev));
+        }
         return;
+      }
+      if (body.lastRecrawlPingAt) {
+        setSeo((prev) => (prev ? { ...prev, lastRecrawlPingAt: body.lastRecrawlPingAt! } : prev));
       }
       const lines = (body.results || [])
         .map((r) => `${r.engine}: ${r.ok ? "asked" : r.detail}`)
@@ -211,14 +225,24 @@ export default function AdminSeoClient() {
           . Jeremy Byrd is the spelling; <strong className="text-[var(--text)]">Bird</strong> is
           included because people will type the bird.
         </p>
+        <p className="text-xs text-[var(--muted)]">
+          Ping once after you change titles. Not every day — engines ignore noisy sitemaps.
+          {seo.lastRecrawlPingAt
+            ? ` Last ping ${new Date(seo.lastRecrawlPingAt).toLocaleString()}.`
+            : " No ping recorded yet."}
+        </p>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => void handlePingEngines()}
-            disabled={pinging}
-            className="btn-primary px-4 py-2 text-sm font-semibold"
+            disabled={pinging || pingOnCooldown}
+            className="btn-primary px-4 py-2 text-sm font-semibold disabled:opacity-50"
           >
-            {pinging ? "Asking Google & Bing…" : "Ask Google & Bing to recrawl us"}
+            {pinging
+              ? "Asking Google & Bing…"
+              : pingOnCooldown
+                ? `Already pinged — wait ~${pingHoursLeft}h`
+                : "Ask Google & Bing to recrawl us"}
           </button>
           <a
             href="https://search.google.com/search-console"

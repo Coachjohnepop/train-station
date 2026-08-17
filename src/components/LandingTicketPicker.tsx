@@ -86,13 +86,6 @@ export default function LandingTicketPicker({
       </div>
 
       <div className="mx-auto mt-6 flex max-w-md flex-col items-center gap-2 sm:flex-row sm:justify-center">
-        <Link
-          href="/join/questions"
-          className="text-sm font-medium text-[var(--accent)] hover:text-[var(--accent-hover)] hover:underline"
-        >
-          Not sure? 1-minute assessment →
-        </Link>
-        <span className="hidden text-[#3d2660] sm:inline">·</span>
         {!purchaseAuth.signedIn ? (
           <Link href="/login" className="text-sm text-[var(--muted)] hover:text-[var(--text)]">
             Already have access? Sign in

@@ -145,7 +145,7 @@ Templates, **28-day packs**, and **catalog exercises** use `archivedAt`:
 Freeform (not only adult/athletes): yoga, meditation, nutrition, martial arts, dog training, etc.
 
 ### Search / SEO (Admin → Search)
-Public findability for **thetrainstation.co**. Desk: titles, OG, robots, sitemap, Google/Bing recrawl ping. Stored in Postgres `SiteSeoSettings` (Blob fallback). Third-word list (`src/lib/search-third-words.ts`) + public `/find`. **Do not expect** generic “train station” (Safari/maps/railroad) to rank — win “The Train Station fitness / workout / Jeremy Byrd / …”. Recrawl hours–days; snippets 2–14 days; third-word ranks 2–8 weeks. Preview until John ships main.
+Public findability for **thetrainstation.co**. Desk: titles, OG, robots, sitemap, Google/Bing recrawl ping (**once per 24h**). Stored in Postgres `SiteSeoSettings`. Third-word list + `/find` + coach story `/jeremy`. Guest hamburger is Free Tour / Start membership / Sign in only. **Do not expect** generic “train station” to rank — win “The Train Station fitness / workout / Jeremy Byrd”. Recrawl hours–days; snippets 2–14 days; third-word ranks 2–8 weeks. Do **not** blast AI searches.
 
 ### Man / woman (product, not a sermon)
 Members are **man** or **woman** only (sex). Onboard, measurements, and coach roster use those two. No third gender, no “prefer not to say” on sex, no Bible/Christian copy on the site. Paths differ (women: weight-loss goal + timeline; men: starting weight + goals). Do not add preaching.

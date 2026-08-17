@@ -27,6 +27,24 @@ Use it when something breaks, when you need a password reset on a third-party to
 | **Stripe (membership money)** | **You (Jeremy) = master merchant account** · John wires Vercel keys + Connect payouts | Card money lands in **your** Stripe first; John’s share is a later transfer (see Stripe section) |
 | **Domain / site uptime** | John (Vercel + DNS) | Report outages to John |
 
+## 1b. How people should search (say this out loud)
+
+Do **not** tell people to Google “train station.” They will get Amtrak.
+
+Say:
+
+> Search **The Train Station fitness**.
+
+Also works: The Train Station workout · The Train Station Jeremy Byrd · thetrainstation.co
+
+Chip list + copy button: **https://www.thetrainstation.co/find**  
+Your story page: **https://www.thetrainstation.co/jeremy**  
+Messages has a **Find us** quick reply that pastes this for you.
+
+Admin → **Search** can ping Google/Bing **once a day** after you change titles. Daily pings do not help.
+
+---
+
 **Rule of thumb**
 - If you can fix it **inside** https://www.thetrainstation.co → try Admin first.  
 - If it needs a **vendor dashboard** (Twilio, Stripe, Zoom Marketplace, email DNS) → John usually holds keys; ask him before changing billing or production secrets.
