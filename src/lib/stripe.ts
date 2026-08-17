@@ -252,12 +252,27 @@ function applyReferralDiscounts(
 }
 
 /** Optional coach tips at membership Checkout (fixed presets and/or $1 adjustable). */
-function applyMembershipTipOptionalItems(
+async function applyMembershipTipOptionalItems(
   sessionParams: import("stripe").Stripe.Checkout.SessionCreateParams,
 ) {
   const tips = buildMembershipTipOptionalItems();
   if (tips.length === 0) return;
-  sessionParams.optional_items = tips;
+  const stripe = getStripe();
+  const usable: typeof tips = [];
+  for (const tip of tips) {
+    if (!stripe) {
+      usable.push(tip);
+      continue;
+    }
+    try {
+      await stripe.prices.retrieve(tip.price);
+      usable.push(tip);
+    } catch {
+      /* leftover Eco / deleted tip price — do not block membership checkout */
+    }
+  }
+  if (usable.length === 0) return;
+  sessionParams.optional_items = usable;
   sessionParams.metadata = {
     ...(sessionParams.metadata || {}),
     tipsEnabled: "true",
@@ -392,7 +407,7 @@ export async function createSignupCheckoutSession(input: {
       },
     };
     applyReferralDiscounts(sessionParams, input.discount);
-    applyMembershipTipOptionalItems(sessionParams);
+    await applyMembershipTipOptionalItems(sessionParams);
     const session = await createCheckoutSession(stripe, sessionParams);
     if ("error" in session) return session;
     return { ...session, hasSavedCard: customer.hasSavedCard };
@@ -422,7 +437,7 @@ export async function createSignupCheckoutSession(input: {
     };
     applyReferralDiscounts(sessionParams, input.discount);
     // One-time tip add-ons alongside the subscription (optional at Checkout).
-    applyMembershipTipOptionalItems(sessionParams);
+    await applyMembershipTipOptionalItems(sessionParams);
     const session = await createCheckoutSession(stripe, sessionParams);
     if ("error" in session) return session;
     return { ...session, hasSavedCard: customer.hasSavedCard };
