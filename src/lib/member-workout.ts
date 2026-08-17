@@ -11,6 +11,7 @@ import {
 } from "@/lib/demo-workout-items";
 import { resolveExerciseVideoUrl } from "@/lib/exercise-video-hints";
 import { prisma } from "@/lib/prisma";
+import { collapseConsecutiveCloneExercises } from "@/lib/member-workout-lines";
 
 function mapItemToBlock(item: {
   id: string;
@@ -108,21 +109,23 @@ async function getMemberWorkoutFromPrisma(
   if (!workout) return null;
 
   const exercises = await attachPasts(
-    workout.exercises.map((item) =>
-      mapItemToBlock({
-        id: item.id,
-        exerciseId: item.exerciseId,
-        exercise: item.exercise,
-        setScheme: item.setScheme,
-        repPattern: item.repPattern,
-        reps: item.reps,
-        // Prefer structured setCount; fall back to legacy sets column.
-        sets: item.setCount ?? item.sets,
-        weightTier: item.weightTier,
-        notes: item.notes,
-        restSec: item.restSec,
-        restBetweenSetsSec: item.restBetweenSetsSec,
-      }),
+    collapseConsecutiveCloneExercises(
+      workout.exercises.map((item) =>
+        mapItemToBlock({
+          id: item.id,
+          exerciseId: item.exerciseId,
+          exercise: item.exercise,
+          setScheme: item.setScheme,
+          repPattern: item.repPattern,
+          reps: item.reps,
+          // Prefer structured setCount; fall back to legacy sets column.
+          sets: item.setCount ?? item.sets,
+          weightTier: item.weightTier,
+          notes: item.notes,
+          restSec: item.restSec,
+          restBetweenSetsSec: item.restBetweenSetsSec,
+        }),
+      ),
     ),
     opts?.userId,
   );
@@ -189,13 +192,15 @@ export async function getMemberWorkoutById(
         }));
 
   const exercises = await attachPasts(
-    items.map((item: any) => {
-      const ex = item.exercise?.id ? item.exercise : exById[item.exerciseId] || {};
-      return mapItemToBlock({
-        ...item,
-        exercise: ex,
-      });
-    }),
+    collapseConsecutiveCloneExercises(
+      items.map((item: any) => {
+        const ex = item.exercise?.id ? item.exercise : exById[item.exerciseId] || {};
+        return mapItemToBlock({
+          ...item,
+          exercise: ex,
+        });
+      }),
+    ),
     opts?.userId,
   );
 
