@@ -374,7 +374,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ## WHERE WE LEFT OFF
 
 **Date:** 2026-08-17  
-**Status:** Warm-up on every accessible program day (not rest / day off): prepended coach standard blocks on 82 workouts; 22 rest days labeled Rest day. New clones / creates get the same seed. Stripe leftover unchanged: confirm webhook 200, revoke **Eco** old `sk_live` (not Jeremy’s), Connect Express for payouts.  
+**Status:** **Parked.** Member floor + Today + catalog + warm-ups shipped this session (see below). Next open: Ali/Jeremy pull-to-refresh smoke on Today; leftover Stripe is human-only.  
+**Shipped this session (main = prod):** `/fitness` → `/` (308). Finish-exercise tap lock + next undone rises to top; clone curls dropped. Adult week 3+ Today resolves (absolute week number). 139 generic `Workout` titles renamed from exercises. Standard warm-up prepended on 82 non-rest days; 22 rest days labeled **Rest day**. ER PDF: `docs/programs-workouts-exercises-er.pdf`.  
+**Stripe leftover (John, not code):** confirm webhook 200 on Jeremy TS Live, revoke **Eco** old `sk_live` (not Jeremy’s), Connect Express for payouts. Optional new-email $25 smoke (Lemon John already paid).  
+**Do not:** farm `/workout` pages, blast AI searches, or share one Workout row across days.  
 **Feedback videos:** always check `~/Desktop/Stuff/Lemon Voice/The Train Station/App Feedback Video/`. A new drop means **at least one issue**. John will say when the video is perfect — do not close the path before that. Latest (2026-08-16): Free-ticket rickroll timing confirmed good. Phone screenshot still showed Amazon home-kit titles + 10px nav — this session.  
 **Free concat job:** changing Admin → Videos **Free Explorer intro** queues `scripts/rebuild-free-ticket-full.mjs` (5s chorus + that intro → `free-ticket-full.mp4`). Manual: `npm run free-ticket:rebuild` or Admin **Rebuild gag + intro now**. Cron safety net every 15m. Needs `ffmpeg`.  
 **Prior (2026-08-16 landing):** Guest home has **three choices only** — **Free Tour**, **Start membership**, **Explore Content** (triangle fold for programs / services / footer). White nav Join pill is gone. Explore tap = confetti + phone vibrate. Sign in lives in the hamburger.  
