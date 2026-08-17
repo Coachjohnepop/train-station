@@ -32,6 +32,29 @@
   --ramp-gold-light: #fde68a;
   --ramp-gold-deep: #b8860b;
   --ramp-gold-glow: rgba(212, 175, 55, 0.38);
+  /* Fixed coach tab bar (gold circles + label). Add safe-area + extra so last
+     form actions stay above the bar — do not use max(N, safe-area) or the
+     inset replaces the bar height instead of stacking. */
+  --app-bottom-nav-height: 5.75rem;
+  --app-bottom-nav-clearance: calc(
+    var(--app-bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 1.75rem
+  );
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --app-bottom-nav-clearance: 2rem;
+  }
+}
+
+html {
+  scroll-padding-bottom: var(--app-bottom-nav-clearance);
+}
+
+.admin-main,
+.coach-messages-main {
+  padding-bottom: var(--app-bottom-nav-clearance);
+  scroll-padding-bottom: var(--app-bottom-nav-clearance);
 }
 
 /* Coach Class — violet-indigo (purple-adjacent) */

@@ -208,7 +208,7 @@ export default function AdminShell({
             </div>
           </div>
         </header>
-        <main className="coach-messages-main min-h-0 flex-1 overflow-y-auto px-2 py-2 pb-[max(5.5rem,env(safe-area-inset-bottom))] sm:px-3 xl:pb-4">
+        <main className="coach-messages-main min-h-0 flex-1 overflow-y-auto px-2 py-2 sm:px-3">
           <div className="mb-2 space-y-2">
             <PwaInstallHint compact />
             <PushAlertEnable compact />
@@ -549,7 +549,7 @@ export default function AdminShell({
             </Link>
           </div>
         </div>
-        <main className="admin-main mx-auto w-full max-w-6xl flex-1 px-3 py-4 pb-[max(6rem,env(safe-area-inset-bottom))] md:max-w-7xl md:px-6 md:py-6 xl:max-w-[min(100%,96rem)] xl:px-8 xl:pb-8">
+        <main className="admin-main mx-auto w-full max-w-6xl flex-1 px-3 py-4 md:max-w-7xl md:px-6 md:py-6 xl:max-w-[min(100%,96rem)] xl:px-8">
           <AdminPersistenceBanner />
           <div className="mb-3 space-y-2">
             <PwaInstallHint compact />
