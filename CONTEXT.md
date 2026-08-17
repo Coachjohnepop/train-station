@@ -145,7 +145,7 @@ Templates, **28-day packs**, and **catalog exercises** use `archivedAt`:
 Freeform (not only adult/athletes): yoga, meditation, nutrition, martial arts, dog training, etc.
 
 ### Search / SEO (Admin → Search)
-Public findability for **thetrainstation.co**. Desk: titles, OG, robots, sitemap, Google/Bing recrawl ping (**once per 24h**). Stored in Postgres `SiteSeoSettings`. Third-word list + `/find` + coach story `/jeremy`. Guest hamburger is Free Tour / Start membership / Sign in only. **Do not expect** generic “train station” to rank — win “The Train Station fitness / workout / Jeremy Byrd”. Recrawl hours–days; snippets 2–14 days; third-word ranks 2–8 weeks. Do **not** blast AI searches.
+Public findability for **thetrainstation.co**. Desk: titles, OG, robots, sitemap, Google/Bing recrawl ping (**once per 24h**). Stored in Postgres `SiteSeoSettings`. Third-word list + `/find` + coach story `/jeremy`. Spoken vanity **`/fitness` → `/`** (301) — not a fourth article, not in the sitemap. Guest hamburger is Free Tour / Start membership / Sign in only. **Do not expect** generic “train station” to rank — win “The Train Station fitness / workout / Jeremy Byrd”. Recrawl hours–days; snippets 2–14 days; third-word ranks 2–8 weeks. Do **not** blast AI searches. Do **not** farm `/workout` / `/exercise` pages.
 
 ### Man / woman (product, not a sermon)
 Members are **man** or **woman** only (sex). Onboard, measurements, and coach roster use those two. No third gender, no “prefer not to say” on sex, no Bible/Christian copy on the site. Paths differ (women: weight-loss goal + timeline; men: starting weight + goals). Do not add preaching.
@@ -374,7 +374,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ## WHERE WE LEFT OFF
 
 **Date:** 2026-08-17  
-**Status:** Jeremy TS Live catalog is complete — Coach $25 / Business $50 / 1st $850 + tip prices. Webhook now includes `invoice.payment_failed`. Do **not** recreate products. Left for John in Stripe: confirm webhook 200, revoke **Eco** old `sk_live` (not Jeremy’s), Connect Express for payouts. Optional new-email $25 smoke (Lemon John already paid).  
+**Status:** `/fitness` is a 301 to home (spoken URL), not a new article. `/find` mentions it. Stripe leftover unchanged: confirm webhook 200, revoke **Eco** old `sk_live` (not Jeremy’s), Connect Express for payouts. Optional new-email $25 smoke (Lemon John already paid).  
 **Feedback videos:** always check `~/Desktop/Stuff/Lemon Voice/The Train Station/App Feedback Video/`. A new drop means **at least one issue**. John will say when the video is perfect — do not close the path before that. Latest (2026-08-16): Free-ticket rickroll timing confirmed good. Phone screenshot still showed Amazon home-kit titles + 10px nav — this session.  
 **Free concat job:** changing Admin → Videos **Free Explorer intro** queues `scripts/rebuild-free-ticket-full.mjs` (5s chorus + that intro → `free-ticket-full.mp4`). Manual: `npm run free-ticket:rebuild` or Admin **Rebuild gag + intro now**. Cron safety net every 15m. Needs `ffmpeg`.  
 **Prior (2026-08-16 landing):** Guest home has **three choices only** — **Free Tour**, **Start membership**, **Explore Content** (triangle fold for programs / services / footer). White nav Join pill is gone. Explore tap = confetti + phone vibrate. Sign in lives in the hamburger.  
