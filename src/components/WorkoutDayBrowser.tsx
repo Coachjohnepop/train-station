@@ -286,7 +286,7 @@ export default function WorkoutDayBrowser() {
 
       let id = workoutId;
       if (!id) {
-        const workout = await createWorkout(title?.trim() || "Workout");
+        const workout = await createWorkout(title?.trim() || "Unassigned");
         id = workout.id;
       } else if (!freshLibrary.some((w) => w.id === id)) {
         throw new Error(

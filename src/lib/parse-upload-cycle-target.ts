@@ -66,7 +66,7 @@ export function parseUploadCycleTarget(input: string): UploadCycleTarget {
 
   const { location, text: afterLoc } = stripLocationHints(text);
   const contentTitle =
-    stripLocationSuffixFromWorkoutName(stripDayPrefixFromWorkoutName(afterLoc)) || afterLoc || "Workout";
+    stripLocationSuffixFromWorkoutName(stripDayPrefixFromWorkoutName(afterLoc)) || afterLoc || "Unassigned";
 
   return {
     cycleDay,

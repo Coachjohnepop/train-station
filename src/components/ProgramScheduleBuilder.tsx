@@ -627,7 +627,7 @@ export default function ProgramScheduleBuilder({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: cloneWorkoutContentName(sourceWorkout?.name || "Workout", "Home"),
+          name: cloneWorkoutContentName(sourceWorkout?.name || "Unassigned", "Home"),
         }),
       });
       if (!cloneRes.ok) {
