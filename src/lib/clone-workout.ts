@@ -115,6 +115,8 @@ export async function cloneWorkout(
           cloneItemCount >= expectedSourceCount &&
           cloneItemCount >= created.copiedItemCount
         ) {
+          const { ensureWarmupsOnWorkout } = await import("@/lib/seed-workout-warmups");
+          await ensureWarmupsOnWorkout(created.workout.id);
           return {
             id: created.workout.id,
             name: created.workout.name,
@@ -174,6 +176,9 @@ export async function cloneWorkout(
       },
     },
   });
+
+  const { ensureWarmupsOnWorkout } = await import("@/lib/seed-workout-warmups");
+  await ensureWarmupsOnWorkout(workout.id);
 
   return {
     id: workout.id,

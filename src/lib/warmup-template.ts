@@ -66,8 +66,37 @@ export const DEFAULT_WARMUP_BLOCKS: WarmupBlockTemplate[] = [
 const WARMUP_NAME_RE =
   /warm[- ]?up|mobility|stretch|foam|band|cardio warm|5 min bike|up with bands/i;
 
+/** Coach standard warm-up lines (not “band lat pulldown” or a cooldown stretch). */
+const STANDARD_WARMUP_LINE_RE =
+  /warm[- ]?up|warm up well|general warm up|shoulder mobility warm|up with bands|low intensity cardio warmup/i;
+
+const REST_OR_OFF_RE = /rest\s*day|day\s*off|^off$|active recovery/i;
+
 export function isWarmupExerciseName(name: string): boolean {
   return WARMUP_NAME_RE.test(name);
+}
+
+export function isStandardWarmupLineName(name: string): boolean {
+  return STANDARD_WARMUP_LINE_RE.test(String(name || ""));
+}
+
+export function workoutHasStandardWarmup(exerciseNames: string[]): boolean {
+  return exerciseNames.some((n) => isStandardWarmupLineName(n));
+}
+
+/** Rest / day-off — no warm-up. Fasted cardio and run finishers are training days. */
+export function isRestOrDayOffContent(input: {
+  workoutName?: string | null;
+  optionLabel?: string | null;
+  exerciseNames?: string[];
+}): boolean {
+  const name = String(input.workoutName || "").trim();
+  const label = String(input.optionLabel || "").trim();
+  const names = input.exerciseNames || [];
+  if (/^day\s*off$/i.test(label)) return true;
+  if (REST_OR_OFF_RE.test(name) || REST_OR_OFF_RE.test(label)) return true;
+  if (names.some((n) => REST_OR_OFF_RE.test(n))) return true;
+  return false;
 }
 
 export function splitWarmupAndMain<T extends { name: string }>(
