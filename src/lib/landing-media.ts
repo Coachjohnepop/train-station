@@ -136,7 +136,8 @@ export const WELCOME_VIDEO_PLAN_OPTIONS = MEMBERSHIP_PLANS.map((plan) => ({
 
 /**
  * Free / Explorer ticket gag — **product defaults are fixed** (not admin-overridable):
- * in-app 5s chorus file, then Jeremy free-tier intro.
+ * in-app 5s chorus, then the top of Jeremy's intro (logo — he is not on
+ * screen yet), then the Free Explorer talking clip.
  *
  * Who gets the gag:
  * - Anonymous / not signed in on landing Free → always on
@@ -150,7 +151,7 @@ export const FREE_TICKET_GAG_SRC = "/videos/free-ticket-chorus.mp4";
 export const FREE_TICKET_GAG_POSTER = "/videos/free-ticket-chorus.jpg?v=20260816";
 export const FREE_TICKET_GAG_AUDIO_SRC = "/audio/free-ticket-chorus.mp3";
 /** Chorus + Jeremy intro in one file — no swap, no YouTube. */
-export const FREE_TICKET_FULL_SRC = "/videos/free-ticket-full.mp4?v=20260816";
+export const FREE_TICKET_FULL_SRC = "/videos/free-ticket-full.mp4?v=20260816c";
 
 /** Prefer the last rebuild (Blob) so a new Jeremy intro is live without a deploy. */
 export function freeTicketFullSrcFromConfig(url: string | null | undefined): string {
