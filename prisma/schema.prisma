@@ -677,6 +677,10 @@ model MemberProfile {
   email                       String
   plan                        String
   weightLbs                   String?
+  /// First scale weight they claim as the start (sheet “Starting”).
+  startWeightLbs              String?
+  /// Target scale weight (sheet “Goal”).
+  goalWeightLbs               String?
   /// Baseline progress photo (“before”) for measurements sheet.
   beforePhotoUrl              String?
   /// Display crop for before photo (object-position style + zoom).

@@ -270,6 +270,8 @@ function normalizeImportedProfile(raw: unknown, userId: string): MemberProfile |
     phone: data.phone ?? null,
     dailyReminderTime: data.dailyReminderTime ?? null,
     weightLbs: data.weightLbs ?? null,
+    startWeightLbs: typeof data.startWeightLbs === "string" ? data.startWeightLbs : null,
+    goalWeightLbs: typeof data.goalWeightLbs === "string" ? data.goalWeightLbs : null,
     gender: typeof data.gender === "string" ? data.gender : null,
     weightLossGoal: typeof data.weightLossGoal === "string" ? data.weightLossGoal : null,
     weightLossTimeline:

@@ -153,6 +153,7 @@ export async function POST(request: Request) {
     phone: phone || null,
     dailyReminderTime: dailyReminderTime || null,
     weightLbs: measurements?.weight || null,
+    startWeightLbs: measurements?.weight || null,
     gender: genderNorm,
     weightLossGoal: fatLoss ? weightLossGoal?.trim() || null : null,
     weightLossTimeline: fatLoss ? weightLossTimeline?.trim() || null : null,
