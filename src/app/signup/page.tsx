@@ -199,9 +199,9 @@ function SignupForm() {
   if (!isWaitlistOnly && !ticketPlan) {
     return (
       <div className="min-h-screen bg-[var(--bg)] flex flex-col items-center justify-center gap-3 px-6 text-center text-[var(--muted)] text-sm">
-        <p>Pick a ticket first…</p>
+        <p className="text-base font-semibold text-[var(--text)]">Grab a seat first.</p>
         <Link href="/join#tickets" className="text-[var(--accent-fg)] underline">
-          Choose Free / Coach / 1st Class
+          Free · Coach Class · 1st
         </Link>
       </div>
     );

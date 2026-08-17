@@ -37,17 +37,17 @@ export default async function JoinPage({
 
       <div className="mx-auto max-w-3xl px-6 pb-4 pt-12 text-center sm:pt-14">
         <div className="mb-3 text-xs font-semibold uppercase tracking-[3px] text-[#7c3aed]">
-          {fromTour ? "You saw inside" : "Board the station"}
+          {fromTour ? "You saw the floor" : "Grab a seat"}
         </div>
         <h1 className="mb-3 text-4xl font-semibold tracking-[-1.5px] sm:text-5xl sm:tracking-[-1.8px]">
-          Pick your ticket
+          {fromTour ? "Now board." : "Your ticket. One tap."}
         </h1>
         <p className="mx-auto max-w-xl text-lg text-[var(--muted)] sm:text-xl">
-          Free, Coach Class, Business, or 1st Class. Program is optional — you can choose a track below.
+          Free peek, Coach Class, Business, or 1st. Program is extra credit — pick a seat and go.
         </p>
         {fromTour ? (
           <p className="mx-auto mt-3 max-w-md text-sm font-medium text-[var(--accent-fg)]/90">
-            That live session you just saw? Same console after you board.
+            That session you just watched? Same console after you board.
           </p>
         ) : null}
       </div>
