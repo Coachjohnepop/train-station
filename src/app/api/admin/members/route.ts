@@ -4,7 +4,11 @@ import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { listSelfRegisteredAccounts } from "@/lib/member-accounts-store";
 import { listMemberProfiles } from "@/lib/member-profiles-store";
 import { signupPlanLabel } from "@/lib/signup-plans";
-import { onboardGenderLabel } from "@/lib/onboard-path";
+import {
+  onboardGenderLabel,
+  primaryGoalLabel,
+  workoutScheduleLabel,
+} from "@/lib/onboard-path";
 import { getMemberCoachPrefsMap } from "@/lib/member-coach-prefs-store";
 import { coachingModeFromPrefs } from "@/lib/member-coaching-mode";
 
@@ -48,6 +52,12 @@ export async function GET() {
       email,
       name: account.name,
       gender: onboardGenderLabel(profile?.gender),
+      primaryGoal: primaryGoalLabel(profile?.primaryGoal) ?? profile?.primaryGoal ?? null,
+      workoutSchedule:
+        workoutScheduleLabel(profile?.workoutSchedule) ??
+        profile?.workoutSchedule ??
+        null,
+      weightLbs: profile?.weightLbs ?? null,
       phone: profile?.phone ?? account.phone ?? null,
       plan: profile?.plan ?? "explorer",
       planLabel: signupPlanLabel(profile?.plan ?? "explorer"),

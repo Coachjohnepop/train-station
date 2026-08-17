@@ -374,8 +374,9 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ## WHERE WE LEFT OFF
 
 **Date:** 2026-08-17  
-**Status:** **Parked.** Member floor + Today + catalog + warm-ups shipped this session (see below). Next open: Ali/Jeremy pull-to-refresh smoke on Today; leftover Stripe is human-only.  
-**Shipped this session (main = prod):** `/fitness` → `/` (308). Finish-exercise tap lock + next undone rises to top; clone curls dropped. Adult week 3+ Today resolves (absolute week number). 139 generic `Workout` titles renamed from exercises. Standard warm-up prepended on 82 non-rest days; 22 rest days labeled **Rest day**. ER PDF: `docs/programs-workouts-exercises-er.pdf`.  
+**Status:** **Active.** Bella onboard feedback: more personal questions.  
+**Shipped this pass:** Onboard step 4 asks everyone current weight, main goal chips (lose fat / lose a lot fast / tone / gain muscle / stronger / consistency), and current training schedule. Fat-loss still gets timeline. Tape still after Jeremy intro. Man/woman only.  
+**Prior park (same day):** Member floor + Today + catalog + warm-ups. `/fitness` → `/`. Finish tap lock + next undone rises. Adult week 3+ Today. Generic `Workout` titles cleaned. Warm-up on 82 non-rest days. ER PDF: `docs/programs-workouts-exercises-er.pdf`.  
 **Stripe leftover (John, not code):** confirm webhook 200 on Jeremy TS Live, revoke **Eco** old `sk_live` (not Jeremy’s), Connect Express for payouts. Optional new-email $25 smoke (Lemon John already paid).  
 **Do not:** farm `/workout` pages, blast AI searches, or share one Workout row across days.  
 **Feedback videos:** always check `~/Desktop/Stuff/Lemon Voice/The Train Station/App Feedback Video/`. A new drop means **at least one issue**. John will say when the video is perfect — do not close the path before that. Latest (2026-08-16): Free-ticket rickroll timing confirmed good. Phone screenshot still showed Amazon home-kit titles + 10px nav — this session.  

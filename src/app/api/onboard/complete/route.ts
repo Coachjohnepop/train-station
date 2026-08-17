@@ -24,7 +24,14 @@ import { localTodayIso } from "@/lib/program-calendar";
 import { getCoachSettings } from "@/lib/coach-settings-store";
 import { programStartSettingsFromCoach } from "@/lib/program-start-settings";
 import { resolveEffectiveMembershipPlan } from "@/lib/signup-plans";
-import { isWomanOnboardPath, normalizeOnboardGender } from "@/lib/onboard-path";
+import {
+  isFatLossGoal,
+  normalizeOnboardGender,
+  normalizePrimaryGoal,
+  normalizeWorkoutSchedule,
+  primaryGoalLabel,
+  workoutScheduleLabel,
+} from "@/lib/onboard-path";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
@@ -37,6 +44,8 @@ const schema = z.object({
   gender: z.string().max(20).optional(),
   weightLossGoal: z.string().max(240).optional(),
   weightLossTimeline: z.string().max(80).optional(),
+  primaryGoal: z.string().max(40).optional(),
+  workoutSchedule: z.string().max(40).optional(),
   notes: z.string().optional(),
   location: z
     .object({
@@ -67,6 +76,8 @@ export async function POST(request: Request) {
     gender,
     weightLossGoal,
     weightLossTimeline,
+    primaryGoal,
+    workoutSchedule,
     notes,
     location,
     phone,
@@ -82,7 +93,21 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  const womanPath = isWomanOnboardPath(genderNorm);
+  const goalNorm = normalizePrimaryGoal(primaryGoal);
+  const scheduleNorm = normalizeWorkoutSchedule(workoutSchedule);
+  if (!goalNorm) {
+    return NextResponse.json(
+      { error: "Pick a main goal so Jeremy can personalize the plan." },
+      { status: 400 },
+    );
+  }
+  if (!scheduleNorm) {
+    return NextResponse.json(
+      { error: "Tell us how often you train now." },
+      { status: 400 },
+    );
+  }
+  const fatLoss = isFatLossGoal(goalNorm);
 
   const todayIso = localTodayIso();
   const coachSettings = await getCoachSettings();
@@ -127,10 +152,12 @@ export async function POST(request: Request) {
   const profile = await updateMemberProfile(session.id, {
     phone: phone || null,
     dailyReminderTime: dailyReminderTime || null,
-    weightLbs: womanPath ? null : measurements?.weight || null,
+    weightLbs: measurements?.weight || null,
     gender: genderNorm,
-    weightLossGoal: womanPath ? weightLossGoal?.trim() || null : null,
-    weightLossTimeline: womanPath ? weightLossTimeline?.trim() || null : null,
+    weightLossGoal: fatLoss ? weightLossGoal?.trim() || null : null,
+    weightLossTimeline: fatLoss ? weightLossTimeline?.trim() || null : null,
+    primaryGoal: goalNorm,
+    workoutSchedule: scheduleNorm,
     notes: measurements?.notes || notes || null,
     city: location?.city || null,
     state: location?.state || null,
@@ -163,16 +190,13 @@ Ticket plan: ${profile.plan}
 Program context: ${programSlug || "general"}
 Program start (Day 1): ${startIso}
 
-${
-    womanPath
-      ? `Goals:
-- Weight loss: ${weightLossGoal?.trim() || "not provided"}
-- Timeline: ${weightLossTimeline?.trim() || "not provided"}
-- Notes: ${measurements?.notes || notes || "none"}`
-      : `Measurements:
+Goals:
+- Main: ${primaryGoalLabel(goalNorm)}
+- Train now: ${workoutScheduleLabel(scheduleNorm)}
 - Weight: ${measurements?.weight || "not provided"} lbs
-- Notes: ${measurements?.notes || notes || "none"}`
-  }
+- Fat-loss target: ${fatLoss ? weightLossGoal?.trim() || "not provided" : "n/a"}
+- Timeline: ${fatLoss ? weightLossTimeline?.trim() || "not provided" : "n/a"}
+- Notes: ${measurements?.notes || notes || "none"}
 
 Location: ${location?.city || "—"}, ${location?.state || "—"}
 SMS phone: ${phone || "not set"}
@@ -217,9 +241,11 @@ Coach intro booking: on dashboard after setup
     equipmentSummary,
     phone: phone || profile.phone || null,
     gender: genderNorm,
-    weightLbs: womanPath ? null : measurements?.weight || null,
-    weightLossGoal: womanPath ? weightLossGoal?.trim() || null : null,
-    weightLossTimeline: womanPath ? weightLossTimeline?.trim() || null : null,
+    weightLbs: measurements?.weight || null,
+    weightLossGoal: fatLoss ? weightLossGoal?.trim() || null : null,
+    weightLossTimeline: fatLoss ? weightLossTimeline?.trim() || null : null,
+    primaryGoal: primaryGoalLabel(goalNorm),
+    workoutSchedule: workoutScheduleLabel(scheduleNorm),
   });
 
   await awardGamificationPoints({

@@ -27,9 +27,13 @@ import { weekdayLabel } from "@/lib/program-start-settings";
 import { membershipThemeTierFromPlan } from "@/lib/membership-theme";
 import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
 import {
+  PRIMARY_GOALS,
   WEIGHT_LOSS_TIMELINES,
-  isWomanOnboardPath,
+  WORKOUT_SCHEDULES,
+  isFatLossGoal,
   type OnboardGender,
+  type PrimaryGoalId,
+  type WorkoutScheduleId,
 } from "@/lib/onboard-path";
 
 async function saveProgress(body: Record<string, unknown>) {
@@ -88,9 +92,13 @@ export default function OnboardingWizard({
 
   const [gender, setGender] = useState<OnboardGender | null>(null);
   const [measurements, setMeasurements] = useState({ weight: "", notes: "" });
+  const [primaryGoal, setPrimaryGoal] = useState<PrimaryGoalId | null>(null);
+  const [workoutSchedule, setWorkoutSchedule] = useState<WorkoutScheduleId | null>(
+    null,
+  );
   const [weightLossGoal, setWeightLossGoal] = useState("");
   const [weightLossTimeline, setWeightLossTimeline] = useState("");
-  const womanPath = isWomanOnboardPath(gender);
+  const fatLoss = isFatLossGoal(primaryGoal);
   const [location, setLocation] = useState({ city: "", state: "" });
   const [sms, setSms] = useState({ phone: "", dailyReminderTime: "07:30" });
   const [programStartDate, setProgramStartDate] = useState(() =>
@@ -109,12 +117,22 @@ export default function OnboardingWizard({
         setError("Pick man or woman so we can set the right goals.");
         return;
       }
+      if (!primaryGoal) {
+        setError("Pick a main goal so Jeremy can personalize the plan.");
+        return;
+      }
+      if (!workoutSchedule) {
+        setError("Tell us how often you train now.");
+        return;
+      }
       await saveProgress({
         plan,
         gender,
-        weightLbs: womanPath ? null : measurements.weight || null,
-        weightLossGoal: womanPath ? weightLossGoal.trim() || null : null,
-        weightLossTimeline: womanPath ? weightLossTimeline.trim() || null : null,
+        weightLbs: measurements.weight || null,
+        primaryGoal,
+        workoutSchedule,
+        weightLossGoal: fatLoss ? weightLossGoal.trim() || null : null,
+        weightLossTimeline: fatLoss ? weightLossTimeline.trim() || null : null,
         notes: measurements.notes || null,
       });
     }
@@ -154,10 +172,12 @@ export default function OnboardingWizard({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          measurements: womanPath ? { notes: measurements.notes } : measurements,
+          measurements,
           gender: gender || undefined,
-          weightLossGoal: womanPath ? weightLossGoal.trim() || undefined : undefined,
-          weightLossTimeline: womanPath ? weightLossTimeline.trim() || undefined : undefined,
+          primaryGoal: primaryGoal || undefined,
+          workoutSchedule: workoutSchedule || undefined,
+          weightLossGoal: fatLoss ? weightLossGoal.trim() || undefined : undefined,
+          weightLossTimeline: fatLoss ? weightLossTimeline.trim() || undefined : undefined,
           notes: measurements.notes,
           location,
           phone: sms.phone,
@@ -310,17 +330,12 @@ export default function OnboardingWizard({
 
         {currentStep === 4 && (
           <>
-            <h2 className="text-lg font-semibold">
-              {womanPath ? "Your goals" : gender === "man" ? "Weight & goals" : "About you"}
-            </h2>
+            <h2 className="text-lg font-semibold">About you</h2>
             <p className="text-sm text-[var(--muted)]">
-              {womanPath
-                ? "What do you want to lose, and by when? Tape measurements come after your 15-minute intro with Jeremy."
-                : gender === "man"
-                  ? "Starting weight and what you want to work on. Tape measurements come after your 15-minute intro with Jeremy."
-                  : "Pick man or woman — the next questions match your path."}
+              A few taps so Jeremy can make this personal. Tape measurements come after
+              your 15-minute intro — not now.
             </p>
-            <div className="space-y-3 pt-1">
+            <div className="space-y-4 pt-1">
               <div>
                 <p className="mb-1.5 block text-xs text-[var(--muted)]">I am</p>
                 <div className="grid grid-cols-2 gap-2">
@@ -340,11 +355,66 @@ export default function OnboardingWizard({
                   ))}
                 </div>
               </div>
-              {womanPath ? (
+              <div>
+                <label className="mb-1 block text-xs text-[var(--muted)]">
+                  Current weight (lbs)
+                </label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={measurements.weight}
+                  onChange={(e) => setMeasurements({ ...measurements, weight: e.target.value })}
+                  placeholder="e.g. 165"
+                  className="input w-full"
+                />
+              </div>
+              <div>
+                <p className="mb-1.5 block text-xs text-[var(--muted)]">
+                  What&apos;s the main goal?
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {PRIMARY_GOALS.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setPrimaryGoal(option.id)}
+                      className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${
+                        primaryGoal === option.id
+                          ? "border-accent bg-accent/15 text-[var(--text)]"
+                          : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)]"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="mb-1.5 block text-xs text-[var(--muted)]">
+                  How often do you train now?
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {WORKOUT_SCHEDULES.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setWorkoutSchedule(option.id)}
+                      className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${
+                        workoutSchedule === option.id
+                          ? "border-accent bg-accent/15 text-[var(--text)]"
+                          : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)]"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {fatLoss ? (
                 <>
                   <div>
                     <label className="mb-1 block text-xs text-[var(--muted)]">
-                      Weight loss goal
+                      How much, if you know (optional)
                     </label>
                     <input
                       type="text"
@@ -385,33 +455,15 @@ export default function OnboardingWizard({
                     />
                   </div>
                 </>
-              ) : (
-                <div>
-                  <label className="mb-1 block text-xs text-[var(--muted)]">
-                    Current weight (lbs)
-                  </label>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    value={measurements.weight}
-                    onChange={(e) => setMeasurements({ ...measurements, weight: e.target.value })}
-                    placeholder="e.g. 185"
-                    className="input w-full"
-                  />
-                </div>
-              )}
+              ) : null}
               <div>
                 <label className="mb-1 block text-xs text-[var(--muted)]">
-                  {womanPath ? "Anything else for Jeremy (optional)" : "Goals"}
+                  Anything else for Jeremy (optional)
                 </label>
                 <textarea
                   value={measurements.notes}
                   onChange={(e) => setMeasurements({ ...measurements, notes: e.target.value })}
-                  placeholder={
-                    womanPath
-                      ? "Injuries, preferences, what has or hasn’t worked…"
-                      : "e.g. Get stronger, drop body fat, train 4 days a week…"
-                  }
+                  placeholder="Injuries, preferences, what has or hasn’t worked…"
                   className="input h-20 w-full"
                 />
               </div>
