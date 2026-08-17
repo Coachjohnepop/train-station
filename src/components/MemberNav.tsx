@@ -96,6 +96,24 @@ function homeIcon() {
   );
 }
 
+function lockIcon() {
+  return (
+    <svg
+      className="member-nav-lock-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
+
 export default function MemberNav({
   intakePending = false,
   paymentGateActive = false,
@@ -241,11 +259,7 @@ export default function MemberNav({
               }`}
             >
               {item.label}
-              {locked ? (
-                <span className="absolute -right-0.5 -top-0.5 text-[8px] leading-none opacity-70" aria-hidden>
-                  🔒
-                </span>
-              ) : null}
+              {locked ? lockIcon() : null}
               {isScoresTab && scorePoints != null && scorePoints > 0 ? (
                 <span
                   className={`member-nav-score-badge ${scorePulse ? "member-nav-score-badge--pulse" : ""}`}

@@ -2005,6 +2005,14 @@ html[data-free-ticket="open"] .bg-music-control-cluster {
   min-height: 3.15rem;
 }
 
+.member-nav-lock-icon {
+  position: absolute;
+  top: 0.12rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  opacity: 0.9;
+}
+
 .member-nav-more-icon {
   font-size: 1.05rem;
   line-height: 1;
