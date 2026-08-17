@@ -356,6 +356,7 @@ export default function MemberWorkoutConsole({
   const [coachExpandedBlockId, setCoachExpandedBlockId] = useState<string | null>(null);
   const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
   const restHornPlayedRef = useRef(false);
+  const coachUnmutedThisSessionRef = useRef(false);
   const restTickAnnouncedRef = useRef<Set<number>>(new Set());
   /** Tracks open timer identity so duration retargets don't re-fire start/tick/complete storms. */
   const restTimerIdentityRef = useRef<string>("");
@@ -369,19 +370,22 @@ export default function MemberWorkoutConsole({
   const canCoachRestSettings = Boolean(instructorName || coachFloorMode);
 
   useEffect(() => {
-    // Coach floor stays muted unless they tap Unmute (same-room double-horn fix).
+    // Coach floor starts muted (same-room double-horn). If they unmute, keep it.
     if (coachFloorMode) {
-      setRestMuted(true);
-      restMutedRef.current = true;
+      if (!coachUnmutedThisSessionRef.current) {
+        setRestMuted(true);
+        restMutedRef.current = true;
+      }
       return;
     }
+    // Members always hear rest sounds. Old localStorage mute was leaving phones silent.
     try {
-      const muted = localStorage.getItem(REST_MUTE_KEY) === "1";
-      setRestMuted(muted);
-      restMutedRef.current = muted;
+      localStorage.removeItem(REST_MUTE_KEY);
     } catch {
       /* ignore */
     }
+    setRestMuted(false);
+    restMutedRef.current = false;
   }, [coachFloorMode]);
 
   // iOS/Safari: rest-end is timer-driven (no gesture). Unlock WebAudio + HTMLAudio
@@ -456,16 +460,13 @@ export default function MemberWorkoutConsole({
   const toggleRestMute = useCallback(() => {
     setRestMuted((prev) => {
       const next = !prev;
-      try {
-        localStorage.setItem(REST_MUTE_KEY, next ? "1" : "0");
-      } catch {
-        /* ignore */
+      if (!next) {
+        if (coachFloorMode) coachUnmutedThisSessionRef.current = true;
+        unlockRestAudio(restSoundRef.current);
       }
-      // Unmute is a gesture — prime audio so the next rest-end isn't blocked.
-      if (!next) unlockRestAudio(restSoundRef.current);
       return next;
     });
-  }, []);
+  }, [coachFloorMode]);
 
   // Keep coach + member nearly in lockstep (SSE hot path + very fast poll across instances).
   const LIVE_POLL_MS = 150;
@@ -1469,15 +1470,15 @@ export default function MemberWorkoutConsole({
     setRestCompleting(false);
 
     const finishAndClose = () => {
-      if (cancelled || restHornPlayedRef.current) return;
+      if (restHornPlayedRef.current) return;
       restHornPlayedRef.current = true;
-      setRestCompleting(true);
-      setRestSecondsLeft(0);
-      // Real rest-end: force so global de-dupe never swallows the horn.
-      // Coach floor stays silent via restMuted default; members always try to play.
+      // Horn first, even if this effect is tearing down from a live retarget.
       if (!restMutedRef.current) {
         playRestComplete(restSoundRef.current, { force: true });
       }
+      if (cancelled) return;
+      setRestCompleting(true);
+      setRestSecondsLeft(0);
       // Cybertruck / end samples ~1.1s+ — keep popup open long enough to finish.
       // Do not depend on effect cleanup for sound (remote null can cancel this timer).
       closeTimer = window.setTimeout(() => {

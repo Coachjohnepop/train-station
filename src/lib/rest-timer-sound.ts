@@ -26,8 +26,8 @@ export const DEFAULT_REST_TIMER_SOUND: RestTimerSoundId = "cybertruck";
  * Bell / buzzer stay a bit quieter.
  * Cybertruck + train whistle stay hot so they cut through the gym floor.
  */
-export const REST_COMPLETE_VOLUME_SCALE = 0.5;
-export const REST_CYBERTRUCK_VOLUME_SCALE = 0.85;
+export const REST_COMPLETE_VOLUME_SCALE = 0.7;
+export const REST_CYBERTRUCK_VOLUME_SCALE = 1;
 /** Full level for the robust station whistle sample. */
 export const REST_WHISTLE_VOLUME_SCALE = 1;
 /** Uploaded coach clips at full level (they control length/loudness). */
@@ -49,7 +49,7 @@ export type RestTimerSoundOption = {
  * All system clips are pure instrument / effect synthesis — no speech or vocal samples.
  */
 /** Bump when replacing files so browsers drop stale (quiet/broken) cache entries. */
-const AUDIO_CACHE_BUST = "20260729b";
+const AUDIO_CACHE_BUST = "20260817a";
 
 export const REST_TIMER_SOUND_OPTIONS: RestTimerSoundOption[] = [
   {
