@@ -30,6 +30,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Spoken vanity: “thetrainstation.co/fitness” → home’s three doors.
+  // Not a fourth article — /find stays the page Google quotes.
+  async redirects() {
+    return [{ source: "/fitness", destination: "/", permanent: true }];
+  },
   // Legacy PWA probes some browsers still hit
   async rewrites() {
     return [

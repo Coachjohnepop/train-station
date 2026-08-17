@@ -94,6 +94,11 @@ export default function FindTheTrainStationPage() {
         <h2 className="mt-10 text-lg font-semibold">Any of these third words works</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
           Same site. Same coach. The extra word keeps you off the Amtrak results.
+          The spoken URL is{" "}
+          <a href="/fitness" className="font-semibold text-[var(--accent-fg)] underline-offset-2 hover:underline">
+            thetrainstation.co/fitness
+          </a>
+          — that lands on the same three doors as home.
         </p>
         <ul className="mt-4 flex flex-wrap gap-2">
           {WORDS.map((word) => (
