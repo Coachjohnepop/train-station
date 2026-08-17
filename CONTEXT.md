@@ -11,7 +11,7 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 
 | Who | Role | Notes |
 |-----|------|--------|
-| **John** (you) | Builder / product | Repo owner; deploys; soaks; coaches Jeremy. **App admin: `john@thetrainstation.co`**. **Member smoke account: `john@bcxvoice.com`** (not staff). **Vercel/GitHub deploy login: `john@bcxvoice.com`** (CLI `john-9066`) — platform only, not member role. **`john@lemonvoice.com` free** for fresh paid-signup tests (demo John & Steph = `johnsteph@thetrainstation.co`). |
+| **John** (you) | Builder / product | Repo owner; deploys; soaks; coaches Jeremy. **App admin: `john@thetrainstation.co`**. **Member smoke account: `john@bcxvoice.com`** (not staff). **Vercel/GitHub deploy login: `john@bcxvoice.com`** (CLI `john-9066`) — platform only, not member role. **`john@lemonvoice.com` free** for fresh paid-signup tests (demo John & Steph = `johnsteph@thetrainstation.co`). **Stripe Dashboard login (TheTrainStation Brave profile): Google `john@bcxvoice.com`** — sees BCX Voice + Eco Delight only until Jeremy invites that same email to TS Live. |
 | **Jeremy** | Customer coach | Primary admin user; stress-tests clone/templates/calendar; email `jeremy@thetrainstation.co` |
 | **John & Steph** | Demo member journey | Program subs, floating video, schedule greens in demos |
 | **Grok** (xAI) | Coding agent in this TUI | Not Claude — may share this file |
@@ -145,7 +145,10 @@ Templates, **28-day packs**, and **catalog exercises** use `archivedAt`:
 Freeform (not only adult/athletes): yoga, meditation, nutrition, martial arts, dog training, etc.
 
 ### Search / SEO (Admin → Search)
-Public findability for **thetrainstation.co**. Desk: titles, OG, robots, sitemap, Google/Bing recrawl ping. Stored in Postgres `SiteSeoSettings` (Blob fallback). Third-word list (`src/lib/search-third-words.ts`) + public `/find`. **Do not expect** generic “train station” (Safari/maps/railroad) to rank — win “The Train Station fitness / workout / Jeremy Byrd / …”. Recrawl hours–days; snippets 2–14 days; third-word ranks 2–8 weeks. Live on `main` 2026-08-16. Man/woman copy still preview-only.
+Public findability for **thetrainstation.co**. Desk: titles, OG, robots, sitemap, Google/Bing recrawl ping (**once per 24h**). Stored in Postgres `SiteSeoSettings`. Third-word list + `/find` + coach story `/jeremy`. Guest hamburger is Free Tour / Start membership / Sign in only. **Do not expect** generic “train station” to rank — win “The Train Station fitness / workout / Jeremy Byrd”. Recrawl hours–days; snippets 2–14 days; third-word ranks 2–8 weeks. Do **not** blast AI searches.
+
+### Man / woman (product, not a sermon)
+Members are **man** or **woman** only (sex). Onboard, measurements, and coach roster use those two. No third gender, no “prefer not to say” on sex, no Bible/Christian copy on the site. Paths differ (women: weight-loss goal + timeline; men: starting weight + goals). Do not add preaching.
 
 ### User feedback videos (phone recordings) — **check every session**
 
@@ -456,7 +459,7 @@ Leave iOS/Android pull-to-refresh **off** on member screens (`DisablePullToRefre
 
 **Stripe still first for money.** Log into Jeremy’s Train Station Stripe (`acct_1TmKSW…`, **Live**). Wrong account if Eco Delight / `acct_1Su…`. Don’t copy keys until the top-left name is The Train Station. Then `.env.jeremy.live` (`sk_live` / `pk_live` / prices / `whsec` + Eco `*_LEGACY`) → `node scripts/wire-jeremy-master-stripe.mjs --identify` → `--push-vercel` → redeploy. Existing Ali/Bella/Jeremy2 Eco subs stay on Eco; new charges go to Jeremy.
 
-1. **Stripe cutover** — as above.  
+1. **Stripe cutover** — paste Jeremy Live keys into `.env.jeremy.live` (gitignored). Also copy current Vercel Production Eco `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` into `STRIPE_SECRET_KEY_LEGACY` / `STRIPE_WEBHOOK_SECRET_LEGACY`. Then `--identify` (must print `acct_1TmKSW…` + The Train Station) → `--push-vercel` → redeploy.  
 2. **Then: Google + Apple account create/sign-in** — see decision below. Credentials only (buttons already built). Smoke: new paid signup + existing-email link.  
 3. **Ali** — she re-onboards: tickets → Continue already paid → Woman → goals → book Jeremy. Then Today 14-day preview. Bella still needs onboard.  
 4. **Scale back Ali 14-day preview** after Jeremy calendar check (`src/lib/member-schedule-preview.ts`).  

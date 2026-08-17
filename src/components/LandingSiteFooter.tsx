@@ -16,16 +16,16 @@ export default function LandingSiteFooter() {
           Find us
         </Link>
         <span aria-hidden>·</span>
+        <Link href="/jeremy" className="hover:text-[var(--accent)]">
+          Coach Jeremy
+        </Link>
+        <span aria-hidden>·</span>
         <Link href="/join" className="hover:text-[var(--accent)]">
-          Memberships
+          Tickets
         </Link>
         <span aria-hidden>·</span>
         <Link href="/login" className="hover:text-[var(--accent)]">
           Sign in
-        </Link>
-        <span aria-hidden>·</span>
-        <Link href="/powered-by" className="hover:text-[var(--accent)]">
-          Platform
         </Link>
         <span aria-hidden>·</span>
         <Link href="/privacy" className="hover:text-[var(--accent)]">
@@ -35,15 +35,6 @@ export default function LandingSiteFooter() {
         <Link href="/terms" className="hover:text-[var(--accent)]">
           Terms
         </Link>
-        <span aria-hidden>·</span>
-        <a
-          href="https://www.lemonvoice.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:text-[var(--accent)]"
-        >
-          Lemonvoice
-        </a>
       </p>
     </footer>
   );

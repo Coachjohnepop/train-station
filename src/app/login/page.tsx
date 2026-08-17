@@ -345,8 +345,8 @@ function LoginForm() {
 
             <p className="text-center text-xs text-[var(--muted)]">
               New here?{" "}
-              <Link href="/signup" className="text-accent hover:underline">
-                Create an account
+              <Link href="/signup?plan=explorer&week=1" className="text-accent hover:underline">
+                Start a free week
               </Link>
             </p>
           </form>

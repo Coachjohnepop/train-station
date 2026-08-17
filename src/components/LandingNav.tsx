@@ -7,18 +7,15 @@ import TrainStationBrand from "@/components/TrainStationBrand";
 import { usePurchaseAuth } from "@/hooks/usePurchaseAuth";
 import {
   LANDING_NAV_SECTIONS,
-  buildMembershipNavItems,
   landingNavHref,
-  type LandingMembershipNavItem,
 } from "@/lib/landing-nav";
 import { logoutUrl } from "@/lib/logout-url";
 import ThemeModeToggle from "@/components/ThemeModeToggle";
-import { purchaseHref, type PurchaseAuth } from "@/lib/member-purchase-path";
+import { type PurchaseAuth } from "@/lib/member-purchase-path";
 import { isStaffRole } from "@/lib/staff-access";
 import { openFreeQuickTour } from "@/lib/free-quick-tour";
 import { openLandingExplore } from "@/lib/landing-explore";
 import {
-  JOIN_TICKETS_HREF,
   JOIN_WEEK_HREF,
   fireLandingJoinHook,
   markLandingConverted,
@@ -38,13 +35,9 @@ export default function LandingNav({
 }) {
   const pathname = usePathname();
   const onHomePage = pathname === "/";
-  const [membershipsOpen, setMembershipsOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [heroSolid, setHeroSolid] = useState(false);
   const menuConvertedRef = useRef(false);
-  const [memberships, setMemberships] = useState<LandingMembershipNavItem[]>(() =>
-    buildMembershipNavItems(null),
-  );
   const purchaseAuth = usePurchaseAuth(purchaseAuthProp);
 
   useEffect(() => {
@@ -58,24 +51,6 @@ export default function LandingNav({
     return () => window.removeEventListener("scroll", sync);
   }, [overHero]);
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch("/api/pricing/public");
-        if (!res.ok) return;
-        const body = await res.json();
-        if (cancelled || !Array.isArray(body.tickets)) return;
-        setMemberships(buildMembershipNavItems(body.tickets));
-      } catch {
-        // Static fallback from buildMembershipNavItems(null).
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   function noteMenuItem() {
     menuConvertedRef.current = true;
   }
@@ -87,7 +62,6 @@ export default function LandingNav({
 
   function closeMenus() {
     const wasOpen = mobileOpen;
-    setMembershipsOpen(false);
     setMobileOpen(false);
     if (wasOpen && !purchaseAuth.signedIn && !menuConvertedRef.current) {
       markLandingReturnPending();
@@ -111,16 +85,6 @@ export default function LandingNav({
     window.setTimeout(() => {
       document.querySelector(href)?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 80);
-  }
-
-  function membershipAction(tier: LandingMembershipNavItem) {
-    noteConverted();
-    closeMenus();
-    if (purchaseAuth.signedIn) {
-      window.location.href = purchaseHref(tier.signupPlan, purchaseAuth);
-      return;
-    }
-    window.location.href = tier.signupHref || tier.href || "/join";
   }
 
   const isWelcome = variant === "welcome";
@@ -222,52 +186,18 @@ export default function LandingNav({
             ))}
 
             {!isWelcome && !purchaseAuth.signedIn ? (
-              <div
-                className="relative"
-                onMouseEnter={() => setMembershipsOpen(true)}
-                onMouseLeave={() => setMembershipsOpen(false)}
+              <Link
+                href={JOIN_WEEK_HREF}
+                className="landing-nav__link"
+                data-analytics-action="nav-memberships"
+                onClick={(e) => {
+                  noteConverted();
+                  fireLandingJoinHook(e.currentTarget);
+                  closeMenus();
+                }}
               >
-                <Link
-                  href={JOIN_TICKETS_HREF}
-                  className="landing-nav__link"
-                  data-analytics-action="nav-memberships"
-                  onClick={() => {
-                    noteConverted();
-                    closeMenus();
-                  }}
-                >
-                  Memberships
-                </Link>
-                {membershipsOpen && (
-                  <div className="absolute left-0 top-full z-50 mt-1 min-w-[15rem] rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-xl">
-                    {memberships.map((tier) => (
-                      <Link
-                        key={tier.id}
-                        href={tier.signupHref}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          membershipAction(tier);
-                        }}
-                        className="flex items-center justify-between gap-3 px-3 py-2 text-sm transition hover:bg-[var(--surface-2)]"
-                      >
-                        <span className="font-medium text-[var(--text)]">{tier.shortLabel}</span>
-                        <span className="text-xs text-[var(--muted)]">{tier.priceDisplay}</span>
-                      </Link>
-                    ))}
-                    <div className="my-1 border-t border-[var(--border)]" />
-                    <Link
-                      href={JOIN_TICKETS_HREF}
-                      onClick={() => {
-                        noteConverted();
-                        closeMenus();
-                      }}
-                      className="block px-3 py-2 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--surface-2)]"
-                    >
-                      All ticket levels →
-                    </Link>
-                  </div>
-                )}
-              </div>
+                Start membership
+              </Link>
             ) : null}
             {!isWelcome && purchaseAuth.signedIn ? (
               <Link href={memberHomeHref} className="landing-nav__link" onClick={closeMenus}>
@@ -346,23 +276,25 @@ export default function LandingNav({
       {mobileOpen && (
         <div className={`border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[var(--text)] ${guestHome ? "" : "md:hidden"}`}>
           <div className="space-y-1">
-            {LANDING_NAV_SECTIONS.map((section) => (
-              <Link
-                key={section.id}
-                href={landingNavHref(section.href, onHomePage)}
-                onClick={(e) => {
-                  noteMenuItem();
-                  if (onHomePage && section.href.startsWith("#")) {
-                    e.preventDefault();
-                    scrollToHash(section.href);
-                  }
-                  closeMenus();
-                }}
-                className="block rounded-lg px-2 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-2)]"
-              >
-                {section.label}
-              </Link>
-            ))}
+            {purchaseAuth.signedIn
+              ? LANDING_NAV_SECTIONS.map((section) => (
+                  <Link
+                    key={section.id}
+                    href={landingNavHref(section.href, onHomePage)}
+                    onClick={(e) => {
+                      noteMenuItem();
+                      if (onHomePage && section.href.startsWith("#")) {
+                        e.preventDefault();
+                        scrollToHash(section.href);
+                      }
+                      closeMenus();
+                    }}
+                    className="block rounded-lg px-2 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-2)]"
+                  >
+                    {section.label}
+                  </Link>
+                ))
+              : null}
             {purchaseAuth.signedIn ? (
               <>
                 <a
@@ -443,39 +375,7 @@ export default function LandingNav({
               </>
             )}
           </div>
-          {!purchaseAuth.signedIn ? (
-          <div className="mt-3 border-t border-[var(--border)] pt-3">
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--muted)]">
-              Memberships
-            </p>
-            <div className="space-y-1">
-              {memberships.map((tier) => (
-                <Link
-                  key={tier.id}
-                  href={tier.signupHref}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    membershipAction(tier);
-                  }}
-                  className="flex items-center justify-between rounded-lg px-2 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-2)]"
-                >
-                  <span>{tier.shortLabel}</span>
-                  <span className="text-xs text-[var(--muted)]">{tier.priceDisplay}</span>
-                </Link>
-              ))}
-              <Link
-                href={JOIN_TICKETS_HREF}
-                onClick={() => {
-                  noteConverted();
-                  closeMenus();
-                }}
-                className="block rounded-lg px-2 py-2 text-xs font-semibold text-[var(--accent-fg)] hover:bg-[var(--surface-2)]"
-              >
-                Compare plans →
-              </Link>
-            </div>
-          </div>
-          ) : null}
+
         </div>
       )}
     </header>

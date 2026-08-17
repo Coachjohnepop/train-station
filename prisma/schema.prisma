@@ -1187,6 +1187,7 @@ model SiteSeoSettings {
   robotsFollow            Boolean  @default(true)
   googleSiteVerification  String   @default("")
   bingSiteVerification    String   @default("")
+  lastRecrawlPingAt       DateTime?
   updatedAt               DateTime @updatedAt
 }
 

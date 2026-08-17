@@ -29,6 +29,8 @@ export type SiteSeoConfig = {
   googleSiteVerification: string;
   /** Optional Bing / other verification meta content. */
   bingSiteVerification: string;
+  /** Last Google/Bing sitemap ping (ISO). Used to block daily spam pings. */
+  lastRecrawlPingAt: string | null;
   updatedAt: string;
 };
 
@@ -49,6 +51,7 @@ const DEFAULTS: Omit<SiteSeoConfig, "updatedAt"> = {
   robotsFollow: true,
   googleSiteVerification: "",
   bingSiteVerification: "",
+  lastRecrawlPingAt: null,
 };
 
 let memoryStore: SiteSeoConfig | null = null;
@@ -105,6 +108,10 @@ function normalize(raw: unknown): SiteSeoConfig {
     robotsFollow: data.robotsFollow !== false,
     googleSiteVerification: clampText(data.googleSiteVerification, 120, ""),
     bingSiteVerification: clampText(data.bingSiteVerification, 120, ""),
+    lastRecrawlPingAt:
+      typeof data.lastRecrawlPingAt === "string" && data.lastRecrawlPingAt.trim()
+        ? data.lastRecrawlPingAt
+        : null,
     updatedAt:
       typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
   };
@@ -155,6 +162,7 @@ export type SiteSeoPatch = Partial<
     | "robotsFollow"
     | "googleSiteVerification"
     | "bingSiteVerification"
+    | "lastRecrawlPingAt"
   >
 >;
 
@@ -202,6 +210,7 @@ export const SEO_PUBLIC_PATHS: Array<{
 }> = [
   { path: "/", changeFrequency: "weekly", priority: 1 },
   { path: "/find", changeFrequency: "weekly", priority: 0.96 },
+  { path: "/jeremy", changeFrequency: "monthly", priority: 0.94 },
   { path: "/join", changeFrequency: "weekly", priority: 0.95 },
   { path: "/free", changeFrequency: "weekly", priority: 0.9 },
   { path: "/powered-by", changeFrequency: "monthly", priority: 0.4 },

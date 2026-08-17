@@ -92,7 +92,7 @@ export default function JoinQuestionsPage() {
           <Link href="/join" className="font-semibold tracking-tight text-lg hover:text-[var(--accent)]">
             The Train Station
           </Link>
-          <Link href="/join" className="text-sm text-[var(--muted)] hover:text-[var(--text)]">Skip to pricing</Link>
+          <Link href="/join" className="text-sm text-[var(--muted)] hover:text-[var(--text)]">Skip to tickets</Link>
         </div>
       </div>
 

@@ -15,6 +15,18 @@ export type CoachQuickReply = {
 
 export const COACH_QUICK_REPLIES: CoachQuickReply[] = [
   {
+    id: "find-us",
+    label: "Find us",
+    title: "How to search The Train Station",
+    body: `{name} — if you want to send someone here, tell them to search:
+
+The Train Station fitness
+
+Not just “train station” (that’s the railroad). Fitness, workout, or Jeremy Byrd after the name all land on thetrainstation.co.
+
+They can tap https://www.thetrainstation.co or start a free week from the home screen.`,
+  },
+  {
     id: "macros",
     label: "Macros",
     title: "Personal nutrition / macros",
