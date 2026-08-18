@@ -6,6 +6,7 @@
  */
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { LIVE_CLASS_POLL_MS } from "@/lib/session-live-poll";
 import { localTodayIso } from "@/lib/program-calendar";
 
 type ZoomRoom = {
@@ -73,8 +74,6 @@ export default function CoachJoinLiveNavStrip() {
 
   useEffect(() => {
     void refresh();
-    // Keep host/live flag in sync quickly with member Join strip.
-    const id = setInterval(() => void refresh(), 5_000);
     const onVisible = () => {
       if (document.visibilityState === "visible") void refresh();
     };
@@ -82,11 +81,19 @@ export default function CoachJoinLiveNavStrip() {
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onFocus);
     return () => {
-      clearInterval(id);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onFocus);
     };
   }, [refresh]);
+
+  useEffect(() => {
+    if (!hostStarted) return;
+    const id = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      void refresh();
+    }, LIVE_CLASS_POLL_MS);
+    return () => clearInterval(id);
+  }, [hostStarted, refresh]);
 
   async function joinLiveNow() {
     setBusy(true);

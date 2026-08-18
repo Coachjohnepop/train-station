@@ -5,6 +5,10 @@ import {
   nextHeldLiveZoomStatus,
   sameLiveZoomStatus,
 } from "@/lib/live-zoom-status-hold";
+import {
+  LIVE_CLASS_POLL_MS,
+  isLiveClassSessionGoing,
+} from "@/lib/session-live-poll";
 
 export type MemberLiveZoomStatus = {
   sessionDate: string;
@@ -14,9 +18,6 @@ export type MemberLiveZoomStatus = {
   joinUrl: string | null;
   livePageUrl: string;
 };
-
-/** Backup when SSE lands on another serverless instance. SSE is the instant path. */
-const POLL_MS = 2_500;
 
 type Listener = (status: MemberLiveZoomStatus | null) => void;
 
@@ -31,7 +32,10 @@ let started = false;
 function emit(next: MemberLiveZoomStatus | null) {
   const held = nextHeldLiveZoomStatus(sharedStatus, next, { notLiveSince }, Date.now());
   notLiveSince = held.notLiveSince;
-  if (sameLiveZoomStatus(sharedStatus, held.status)) return;
+  if (sameLiveZoomStatus(sharedStatus, held.status)) {
+    syncBackupPoll();
+    return;
+  }
   sharedStatus = held.status;
   for (const l of listeners) {
     try {
@@ -40,6 +44,7 @@ function emit(next: MemberLiveZoomStatus | null) {
       /* ignore */
     }
   }
+  syncBackupPoll();
 }
 
 async function loadOnce() {
@@ -49,6 +54,26 @@ async function loadOnce() {
     emit((await res.json()) as MemberLiveZoomStatus);
   } catch {
     /* ignore */
+  }
+}
+
+/** Interval only while coach is live and the tab is visible. */
+function syncBackupPoll() {
+  const should =
+    isLiveClassSessionGoing(sharedStatus) &&
+    typeof document !== "undefined" &&
+    document.visibilityState === "visible";
+  if (should) {
+    if (pollId) return;
+    pollId = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      void loadOnce();
+    }, LIVE_CLASS_POLL_MS);
+    return;
+  }
+  if (pollId) {
+    clearInterval(pollId);
+    pollId = null;
   }
 }
 
@@ -69,16 +94,15 @@ function ensureBus() {
       }
     };
     es.onerror = () => {
-      // Browser will retry EventSource; poll covers the gap.
+      // Browser will retry EventSource; no idle poll.
     };
   } catch {
     /* EventSource unavailable */
   }
 
-  pollId = setInterval(() => void loadOnce(), POLL_MS);
-
   const onVisible = () => {
     if (document.visibilityState === "visible") void loadOnce();
+    syncBackupPoll();
   };
   const onFocus = () => void loadOnce();
   document.addEventListener("visibilitychange", onVisible);
@@ -104,8 +128,8 @@ function releaseBus() {
 }
 
 /**
- * Instant coach→member Zoom status: shared SSE + half-second poll + focus refresh.
- * Multiple UI surfaces share one connection.
+ * Coach→member Zoom status: one GET, SSE, focus/tab return.
+ * Backup poll runs only while hostStarted (live class).
  */
 export function useMemberLiveZoomStatus() {
   const [status, setStatus] = useState<MemberLiveZoomStatus | null>(sharedStatus);

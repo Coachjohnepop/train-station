@@ -2,6 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useMemberLiveZoomStatus } from "@/lib/use-member-live-zoom-status";
+import {
+  LIVE_CLASS_POLL_MS,
+  isLiveClassSessionGoing,
+} from "@/lib/session-live-poll";
 
 /**
  * Refresh when coach publishes/replaces the member's class for this date.
@@ -23,6 +28,7 @@ export default function TodayPageLiveRefresh({
   assignmentStamp?: string | null;
 }) {
   const router = useRouter();
+  const liveClassOn = isLiveClassSessionGoing(useMemberLiveZoomStatus());
   const lastSessionId = useRef(sessionId ?? null);
   const lastWorkoutId = useRef(workoutId ?? null);
   const lastStamp = useRef(assignmentStamp ?? null);
@@ -63,9 +69,14 @@ export default function TodayPageLiveRefresh({
       }
     };
 
-    const id = setInterval(poll, 2500);
+    void poll();
+    if (!liveClassOn) return;
+    const id = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      void poll();
+    }, LIVE_CLASS_POLL_MS);
     return () => clearInterval(id);
-  }, [userId, viewDate, router]);
+  }, [userId, viewDate, router, liveClassOn]);
 
   return null;
 }

@@ -74,6 +74,10 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 | Item | Value |
 |------|--------|
 | **Live site** | https://www.thetrainstation.co |
+| **Live Postgres** | Supabase **`train-station-catalog`** · ref **`mattccorhcxghwyfgklp`** · org **johnepop's projects**. Prisma only (no Supabase Auth/Storage). 41 users / 28 MB. |
+| **Not prod** | Org **The Train Station** Free project **`dptxndclpkezrqrsdezf`** — paused unused duplicate. Do **not** Resume-and-point Vercel here. |
+| **Supabase billing** | Live org is still **Free**. Banner 2026-08-18: over quota last cycle → **restricted 30 Aug 2026** unless under quota or **Upgrade to Pro** (~$25, already in the $275 platform fee). Free also = **no backups**. Click **Review usage or billing** on that banner. |
+| **PostgREST lock** | 2026-08-18: revoked `anon`/`authenticated` on all public tables + enabled RLS (no policies, no FORCE). App is Prisma-as-postgres so it still works. Re-run `npm run db:lockdown-postgrest` after migrate. |
 | **Repo** | `train-station` · GitHub `Coachjohnepop/train-station` |
 | **Production branch** | `main` only — **default: ship straight to main** (Jeremy tests only on live thetrainstation.co; few users, OK) |
 | **Preview branch** | `preview` → Vercel Preview URL — optional when John wants a gated pass first |
@@ -386,8 +390,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-18  
-**Status:** **Active.** Live rest timer + sounds for coach and member.  
+**Date:** 2026-08-18 (EOD — John napping)  
+**Status:** **Stable.** Stripe done (John). Zoom works (John). Site up.  
+**Supabase (same day):** live **`train-station-catalog`** / **`mattccorhcxghwyfgklp`** is Healthy. Paused **`dptxndcl…`** is not prod. PostgREST locked (RLS on, `anon` revoked). Do **not** put TS on Eco Delight’s Pro org. **Still:** Upgrade **`johnepop's projects`** (or TS org, then transfer) to Pro before **30 Aug 2026** — Free = no backups + restriction.  
+**Stay Free (dev):** live-class backup polls only while **`hostStarted`** (or coach card open). Idle = one GET + SSE + tab-focus, no interval. 5s poll during class. Rest timer is local+SSE, not that loop. Not deployed until John ships. Still no backups on Free — watch **Review usage** before **30 Aug**.  
 **Shipped this pass:** Checking a “5 min” bike set starts 45–60s rest (not another 5-min hold). Live rest `phase` persists. Catalog workouts default rest ON. Coach floor is no longer auto-muted.  
 **Prior (same day):** Jeremy class-for-today save fix. Publish writes the CoachTodaySession first. Today’s class is **Warm-Up and Lower Body Strength Session** (`sms-w-1e20b57b`) for Lemon John + paid roster.  
 **Prior (same day):** Join Zoom flicker fix. Member Join Live no longer flaps on stale polls. Host flag writes await Postgres. Embed no longer leave/rejoin when the floor SSE re-renders.  
