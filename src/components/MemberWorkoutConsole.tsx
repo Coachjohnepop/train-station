@@ -16,8 +16,8 @@ import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
 import WorkoutRestTimer from "@/components/WorkoutRestTimer";
 import { useMemberLiveZoomStatus } from "@/lib/use-member-live-zoom-status";
 import {
-  LIVE_CLASS_POLL_MS,
   isLiveClassSessionGoing,
+  startLiveClassBackupPoll,
 } from "@/lib/session-live-poll";
 import {
   playRestComplete,
@@ -1092,17 +1092,15 @@ export default function MemberWorkoutConsole({
     };
     document.addEventListener("visibilitychange", onVisible);
 
-    let pollId: ReturnType<typeof setInterval> | undefined;
-    if (liveClassOn) {
-      pollId = setInterval(() => {
-        if (document.visibilityState === "hidden") return;
-        void loadRemote();
-      }, LIVE_CLASS_POLL_MS);
-    }
+    const stopPoll = liveClassOn
+      ? startLiveClassBackupPoll(() => {
+          void loadRemote();
+        })
+      : undefined;
 
     return () => {
       es?.close();
-      if (pollId) clearInterval(pollId);
+      stopPoll?.();
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [

@@ -6,7 +6,7 @@
  */
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { LIVE_CLASS_POLL_MS } from "@/lib/session-live-poll";
+import { startLiveClassBackupPoll } from "@/lib/session-live-poll";
 import { localTodayIso } from "@/lib/program-calendar";
 
 type ZoomRoom = {
@@ -88,11 +88,9 @@ export default function CoachJoinLiveNavStrip() {
 
   useEffect(() => {
     if (!hostStarted) return;
-    const id = setInterval(() => {
-      if (document.visibilityState === "hidden") return;
+    return startLiveClassBackupPoll(() => {
       void refresh();
-    }, LIVE_CLASS_POLL_MS);
-    return () => clearInterval(id);
+    });
   }, [hostStarted, refresh]);
 
   async function joinLiveNow() {

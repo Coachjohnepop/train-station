@@ -4,8 +4,8 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useMemberLiveZoomStatus } from "@/lib/use-member-live-zoom-status";
 import {
-  LIVE_CLASS_POLL_MS,
   isLiveClassSessionGoing,
+  startLiveClassBackupPoll,
 } from "@/lib/session-live-poll";
 
 /**
@@ -71,11 +71,9 @@ export default function TodayPageLiveRefresh({
 
     void poll();
     if (!liveClassOn) return;
-    const id = setInterval(() => {
-      if (document.visibilityState === "hidden") return;
+    return startLiveClassBackupPoll(() => {
       void poll();
-    }, LIVE_CLASS_POLL_MS);
-    return () => clearInterval(id);
+    });
   }, [userId, viewDate, router, liveClassOn]);
 
   return null;
