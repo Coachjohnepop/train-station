@@ -614,7 +614,7 @@ function maintainExerciseRx(exerciseName: string): {
       sets: MAINTAIN_SETS,
       setCount: MAINTAIN_SETS,
       weightTier: "light",
-      restBetweenSetsSec: 60,
+      restBetweenSetsSec: MAINTAIN_REST_SEC,
       notes: `Hold solid form ~${MAINTAIN_HOLD_SEC}s — ${MAINTAIN_SETS} rounds. Maintain pace.`,
       phase: { phaseType: "TIMED", reps: null, durationSec: MAINTAIN_HOLD_SEC },
     };

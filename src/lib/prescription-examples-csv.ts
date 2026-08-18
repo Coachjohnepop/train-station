@@ -84,7 +84,7 @@ export function parsePrescriptionExamplesCsv(text: string): PrescriptionExampleR
       patternType: asPatternType(get("pattern_type")),
       sampleExercise: get("sample_exercise").trim(),
       setCount: Number(get("set_count")) || 1,
-      restBetweenSetsSec: Number(get("rest_between_sets_sec")) || 90,
+      restBetweenSetsSec: Number(get("rest_between_sets_sec")) || 45,
       weightTier: get("weight_tier").trim() || "medium",
       phase1Type: asPhaseType(get("phase_1_type")),
       phase1DurationSec: intOrNull(get("phase_1_duration_sec")),

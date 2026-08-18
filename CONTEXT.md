@@ -386,9 +386,12 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-17  
-**Status:** **Active.** Bella onboard feedback: more personal questions.  
-**Shipped this pass:** Same About-you screen for everyone. Health fields optional (weight included). Welcome: man/woman + **Skip health details — I’ll add them later**. Onboard writes `MemberProfile` once; measurements Starting reads it — no second required weight.  
+**Date:** 2026-08-18  
+**Status:** **Active.** Live rest timer + sounds for coach and member.  
+**Shipped this pass:** Checking a “5 min” bike set starts 45–60s rest (not another 5-min hold). Live rest `phase` persists. Catalog workouts default rest ON. Coach floor is no longer auto-muted.  
+**Prior (same day):** Jeremy class-for-today save fix. Publish writes the CoachTodaySession first. Today’s class is **Warm-Up and Lower Body Strength Session** (`sms-w-1e20b57b`) for Lemon John + paid roster.  
+**Prior (same day):** Join Zoom flicker fix. Member Join Live no longer flaps on stale polls. Host flag writes await Postgres. Embed no longer leave/rejoin when the floor SSE re-renders.  
+**Prior (2026-08-17):** Bella onboard feedback: more personal questions. Same About-you screen for everyone. Health fields optional (weight included). Welcome: man/woman + **Skip health details — I’ll add them later**. Onboard writes `MemberProfile` once; measurements Starting reads it — no second required weight.  
 **Prior park (same day):** Member floor + Today + catalog + warm-ups. `/fitness` → `/`. Finish tap lock + next undone rises. Adult week 3+ Today. Generic `Workout` titles cleaned. Warm-up on 82 non-rest days. ER PDF: `docs/programs-workouts-exercises-er.pdf`.  
 **Stripe leftover (John, not code):** confirm webhook 200 on Jeremy TS Live, revoke **Eco** old `sk_live` (not Jeremy’s), Connect Express for payouts. Optional new-email $25 smoke (Lemon John already paid).  
 **Do not:** farm `/workout` pages, blast AI searches, or share one Workout row across days.  

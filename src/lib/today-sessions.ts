@@ -130,6 +130,42 @@ async function writeStore(store: TodaySessionStore) {
   });
 }
 
+/** Write one class row first so a slow rest-timer rewrite cannot drop the publish. */
+async function persistSessionAndCleanup(
+  store: TodaySessionStore,
+  session: TodaySession,
+  emptiedIds: string[],
+) {
+  store.sessions[session.id] = session;
+  setMemory(store);
+  if (!isDemoMode()) {
+    await upsertSessionDb(session);
+    for (const id of emptiedIds) {
+      await deleteSessionFromDb(id);
+    }
+    return;
+  }
+  await persistJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    data: store,
+    setMemory,
+  });
+}
+
+async function applyRestTimerAfterSave(
+  workoutId: string,
+  restTimer: WorkoutRestTimerSettings | undefined,
+  alreadyApplied: boolean,
+) {
+  if (!restTimer || alreadyApplied) return;
+  try {
+    await updateWorkoutRestTimer(workoutId, restTimer);
+  } catch (err) {
+    console.error("class saved; rest timer update failed", err);
+  }
+}
+
 function userIdsKey(userIds: string[]) {
   return [...userIds].sort().join(",");
 }
@@ -252,12 +288,12 @@ export async function createTodaySessionFromSms(input: {
   let workoutId = input.workoutId || samePlan?.workoutId;
   let newExerciseIds: string[] = [];
 
+  let restAlreadyOnWorkout = false;
   if (!workoutId) {
     const built = await buildWorkoutFromParsedSms(parsed, undefined, input.restTimer);
     workoutId = built.workoutId;
     newExerciseIds = built.newExerciseIds;
-  } else if (input.restTimer) {
-    await updateWorkoutRestTimer(workoutId, input.restTimer);
+    restAlreadyOnWorkout = Boolean(input.restTimer);
   }
 
   // Mid-live replace: members must leave their previous class session first.
@@ -288,14 +324,8 @@ export async function createTodaySessionFromSms(input: {
       // Bump createdAt so member poll + "latest assignment" prefer this push.
       createdAt: new Date().toISOString(),
     };
-    store.sessions[session.id] = session;
-    await writeStore(store);
-    // Clean emptied sessions from DB when not in demo (delete was memory-only above)
-    if (!isDemoMode()) {
-      for (const id of emptiedBefore) {
-        await deleteSessionFromDb(id);
-      }
-    }
+    await persistSessionAndCleanup(store, session, emptiedBefore);
+    await applyRestTimerAfterSave(workoutId, input.restTimer, restAlreadyOnWorkout);
     return {
       session,
       parsed,
@@ -326,13 +356,8 @@ export async function createTodaySessionFromSms(input: {
     createdBy: input.createdBy,
   };
 
-  store.sessions[session.id] = session;
-  await writeStore(store);
-  if (!isDemoMode()) {
-    for (const id of emptiedBefore) {
-      await deleteSessionFromDb(id);
-    }
-  }
+  await persistSessionAndCleanup(store, session, emptiedBefore);
+  await applyRestTimerAfterSave(workoutId, input.restTimer, restAlreadyOnWorkout);
   return {
     session,
     parsed,

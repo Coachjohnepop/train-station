@@ -118,19 +118,44 @@ export function recommendedProgramStartDate(
   return todayIso;
 }
 
-/** Recommended date first, then remaining dates chronologically. */
+/**
+ * Default pick when the member just taps Continue.
+ * Same-day is always offered and is the default so they can start
+ * if the coach is ready. Recommended weekday stays a labeled option.
+ */
+export function defaultProgramStartDate(
+  todayIso: string,
+  opts?: Partial<ProgramStartPickerOptions>,
+): string {
+  const maxOffset = opts?.maxOffsetDays ?? DEFAULT_PROGRAM_START_MAX_OFFSET_DAYS;
+  if (maxOffset < 0) return todayIso;
+  return todayIso;
+}
+
+/** Today first (same-day start), then recommended weekday, then the rest. */
 export function orderedProgramStartDateOptions(
   todayIso: string,
   opts?: Partial<ProgramStartPickerOptions>,
-): Array<{ iso: string; recommended: boolean }> {
+): Array<{ iso: string; recommended: boolean; sameDay: boolean }> {
   const maxOffset = opts?.maxOffsetDays ?? DEFAULT_PROGRAM_START_MAX_OFFSET_DAYS;
   const recommended = recommendedProgramStartDate(todayIso, opts);
   const all = allowedProgramStartDates(todayIso, maxOffset);
-  const rest = all.filter((iso) => iso !== recommended);
-  return [
-    { iso: recommended, recommended: true },
-    ...rest.map((iso) => ({ iso, recommended: false })),
-  ];
+  const rest = all.filter((iso) => iso !== todayIso && iso !== recommended);
+  const rows: Array<{ iso: string; recommended: boolean; sameDay: boolean }> = [];
+  if (all.includes(todayIso)) {
+    rows.push({
+      iso: todayIso,
+      recommended: recommended === todayIso,
+      sameDay: true,
+    });
+  }
+  if (recommended !== todayIso && all.includes(recommended)) {
+    rows.push({ iso: recommended, recommended: true, sameDay: false });
+  }
+  for (const iso of rest) {
+    rows.push({ iso, recommended: false, sameDay: false });
+  }
+  return rows;
 }
 
 export function formatProgramStartOption(iso: string): string {

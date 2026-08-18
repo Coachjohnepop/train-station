@@ -32,7 +32,7 @@ export type BackfillResult = {
   summary: string;
 };
 
-const DEFAULT_REST_SEC = 90;
+const DEFAULT_REST_SEC = 45;
 
 function normalizeText(s: string): string {
   return s.replace(/\s+/g, " ").trim();

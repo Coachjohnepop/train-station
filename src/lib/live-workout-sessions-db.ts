@@ -42,12 +42,14 @@ function parseRestActive(raw: unknown): LiveRestActive | null | undefined {
   if (typeof o.endsAt !== "number") return undefined;
   if (typeof o.totalSeconds !== "number") return undefined;
   const startedBy = o.startedBy === "member" ? "member" : "coach";
+  const phase = o.phase === "exercise" || o.phase === "rest" ? o.phase : undefined;
   return {
     blockId: o.blockId,
     completedSetNum: o.completedSetNum,
     endsAt: o.endsAt,
     totalSeconds: o.totalSeconds,
     startedBy,
+    phase,
   };
 }
 

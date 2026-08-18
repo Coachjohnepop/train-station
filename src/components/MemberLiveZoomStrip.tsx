@@ -143,32 +143,6 @@ export default function MemberLiveZoomStrip({
     );
   }
 
-  // ── Loading ─────────────────────────────────────────────────────
-  if (!status) {
-    return (
-      <div
-        className={`border-b border-sky-500/20 bg-sky-950/70 ${
-          embedded ? "" : "sticky top-0 z-40"
-        }`}
-      >
-        <div className="mx-auto flex w-full max-w-lg items-center justify-between gap-2 px-4 py-2 md:max-w-3xl lg:max-w-6xl xl:max-w-7xl md:px-6 lg:px-8">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-sky-300/80">
-              Live class
-            </p>
-            <p className="truncate text-xs text-sky-100/70">Checking Zoom…</p>
-          </div>
-          <Link
-            href="/member/live"
-            className="btn-ghost shrink-0 border border-sky-400/30 bg-sky-500/10 px-3 py-2 text-xs font-bold text-sky-100/90 sm:px-4 sm:text-sm"
-          >
-            Live Zoom
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   // ── Free Explorer: see live, soft-block join ───────────────────
   if (showFreeLiveTease) {
     return (
@@ -219,12 +193,12 @@ export default function MemberLiveZoomStrip({
           <p className="truncate text-xs text-sky-100/80">
             {showJoin
               ? "Coach is live — join the room"
-              : status.roomReady
+              : status?.roomReady
                 ? "Room ready — waiting for coach to start"
                 : "Waiting for coach to open Zoom"}
           </p>
         </div>
-        {showJoin && status.joinUrl ? (
+        {showJoin && status?.joinUrl ? (
           <a
             href={status.joinUrl}
             target="_blank"

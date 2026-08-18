@@ -38,12 +38,29 @@ export default function ZoomMeetingEmbed({
   height = 360,
   onJoined,
   onError,
-  onLeft,
+  onLeft: _onLeft,
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const clientRef = useRef<ZoomClient | null>(null);
+  const onJoinedRef = useRef(onJoined);
+  const onErrorRef = useRef(onError);
+  const credsRef = useRef(credentials);
+  onJoinedRef.current = onJoined;
+  onErrorRef.current = onError;
+  credsRef.current = credentials;
   const [status, setStatus] = useState<"idle" | "joining" | "joined" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const credKey = [
+    credentials.signature,
+    credentials.meetingNumber,
+    credentials.password ?? "",
+    credentials.userName,
+    credentials.userEmail ?? "",
+    credentials.zak ?? "",
+    String(credentials.role),
+    credentials.speakerView ? "1" : "0",
+  ].join("|");
 
   useEffect(() => {
     let cancelled = false;
@@ -59,12 +76,13 @@ export default function ZoomMeetingEmbed({
         const client = ZoomMtgEmbedded.createClient() as unknown as ZoomClient;
         clientRef.current = client;
 
+        const creds = credsRef.current;
         await client.init({
           zoomAppRoot: rootRef.current,
           language: "en-US",
           patchJsMedia: true,
           leaveOnPageUnload: true,
-          customize: credentials.speakerView
+          customize: creds.speakerView
             ? {
                 video: {
                   defaultViewType: "speaker",
@@ -77,24 +95,24 @@ export default function ZoomMeetingEmbed({
         if (cancelled) return;
 
         const joinArgs: Record<string, unknown> = {
-          signature: credentials.signature,
-          meetingNumber: credentials.meetingNumber,
-          password: credentials.password || "",
-          userName: credentials.userName,
+          signature: creds.signature,
+          meetingNumber: creds.meetingNumber,
+          password: creds.password || "",
+          userName: creds.userName,
         };
-        if (credentials.userEmail) joinArgs.userEmail = credentials.userEmail;
-        if (credentials.zak && credentials.role === 1) joinArgs.zak = credentials.zak;
+        if (creds.userEmail) joinArgs.userEmail = creds.userEmail;
+        if (creds.zak && creds.role === 1) joinArgs.zak = creds.zak;
 
         await client.join(joinArgs);
         if (cancelled) return;
         setStatus("joined");
-        onJoined?.();
+        onJoinedRef.current?.();
       } catch (err) {
         if (cancelled) return;
         const message = err instanceof Error ? err.message : "Could not join Zoom meeting.";
         setStatus("error");
         setErrorMessage(message);
-        onError?.(message);
+        onErrorRef.current?.(message);
       }
     }
 
@@ -105,10 +123,14 @@ export default function ZoomMeetingEmbed({
       const client = clientRef.current;
       clientRef.current = null;
       if (client) {
-        void client.leaveMeeting().catch(() => undefined).finally(() => onLeft?.());
+        // Leave the meeting only. Do not call onLeft here — parent re-renders
+        // (live-floor SSE) used to treat cleanup as "user left" and unmount Join.
+        void client.leaveMeeting().catch(() => undefined);
       }
     };
-  }, [credentials, onJoined, onError, onLeft]);
+    // Primitive key so a new credentials object with the same join does not rejoin.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- credKey covers credentials
+  }, [credKey]);
 
   return (
     <div className="zoom-embed-shell overflow-hidden rounded-xl border border-[var(--border)] bg-black/90">

@@ -241,8 +241,9 @@ export default function CoachSettingsPanel() {
         <div>
           <h2 className="text-lg font-semibold">New member program start</h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            After payment, members pick when Day 1 begins. Defaults encourage Monday for weekend
-            trainers.
+            After payment, members pick when Day 1 begins. Start today is always first — use it
+            when you are ready for them. A recommended weekday (Monday) stays an option for
+            weekend trainers.
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">

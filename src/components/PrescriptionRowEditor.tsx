@@ -9,6 +9,7 @@ import {
 } from "@/lib/prescription-example-types";
 import { buildPrescriptionSummary } from "@/lib/prescription-example-summary";
 import { WEIGHT_TIERS, type WeightTierId } from "@/lib/workout-schemes";
+import { DEFAULT_REST_TIMER_SECONDS } from "@/lib/rest-timer";
 
 type Props = {
   exerciseName: string;
@@ -22,7 +23,7 @@ type Props = {
 const SET_COUNTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 const REP_PRESETS = [5, 8, 10, 12, 15, 20, 25, 30] as const;
 const HOLD_PRESETS = [10, 15, 20, 30, 45, 60] as const;
-const REST_PRESETS = [60, 90, 120] as const;
+const REST_PRESETS = [30, 45, 60, 90, 120] as const;
 
 function patternUsesPhase2(pattern: PrescriptionPatternType): boolean {
   return ["hold_burnout", "hold_fixed_reps", "hold_then_timed"].includes(pattern);
@@ -45,7 +46,7 @@ export default function PrescriptionRowEditor({
   );
   const [setCount, setSetCount] = useState(initial.setCount ?? 3);
   const [restBetweenSetsSec, setRestBetweenSetsSec] = useState(
-    initial.restBetweenSetsSec ?? 90,
+    initial.restBetweenSetsSec ?? DEFAULT_REST_TIMER_SECONDS,
   );
   const [weightTier, setWeightTier] = useState<WeightTierId>(
     (initial.weightTier as WeightTierId) || "medium",

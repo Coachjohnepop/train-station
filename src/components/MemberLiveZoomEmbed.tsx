@@ -72,10 +72,10 @@ export default function MemberLiveZoomEmbed({
     }
   }
 
-  function closeEmbed() {
+  const closeEmbed = useCallback(() => {
     setEmbedVisible(false);
     setEmbedCreds(null);
-  }
+  }, []);
 
   if (!canJoin) return null;
 

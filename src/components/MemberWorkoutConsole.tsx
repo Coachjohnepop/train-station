@@ -26,6 +26,7 @@ import {
   DEFAULT_REST_TIMER_SECONDS,
   REST_TIMER_PRESETS,
   normalizeRestTimerSeconds,
+  resolveExerciseHoldSeconds,
 } from "@/lib/rest-timer";
 import {
   DEFAULT_REST_TIMER_SOUND,
@@ -111,41 +112,14 @@ type ActiveRestTimer = {
   phase: "exercise" | "rest";
 };
 
-/** Parse hold duration from prescription text: "45s", "90 sec", "2 min", "1:30". */
-function parseDurationSecondsFromReps(reps: string | null | undefined): number | null {
-  if (!reps?.trim()) return null;
-  const raw = reps.trim().toLowerCase();
-  const mmss = raw.match(/^(\d{1,2}):(\d{2})$/);
-  if (mmss) {
-    const total = Number(mmss[1]) * 60 + Number(mmss[2]);
-    if (Number.isFinite(total) && total >= 5 && total <= 1800) return total;
-  }
-  const min = raw.match(/^(\d+(?:\.\d+)?)\s*(m|min|mins|minute|minutes)\b/);
-  if (min) {
-    const n = Number(min[1]);
-    if (Number.isFinite(n) && n > 0 && n <= 30) return Math.round(n * 60);
-  }
-  // Explicit seconds only — bare "10" stays as rep count, not a hold.
-  const sec = raw.match(/^(\d+(?:\.\d+)?)\s*(s|sec|secs|second|seconds)\b/);
-  if (sec) {
-    const n = Number(sec[1]);
-    if (Number.isFinite(n) && n >= 5 && n <= 1800) return Math.round(n);
-  }
-  return null;
-}
-
-/**
- * Green "Time of Exercise" duration:
- * 1) reps like "45s" / "2 min" (maintain holds, timed cues)
- * 2) timed approach setCount as minutes (1–4)
- */
+/** Green hold after a set tap — timed-approach only (not "5 min" bike work). */
 function exerciseHoldDurationSec(block: MemberExerciseBlock): number | null {
-  const fromReps = parseDurationSecondsFromReps(block.reps);
-  if (fromReps != null) return fromReps;
-  if (!isTimedApproach(block.setScheme)) return null;
-  const mins = Number(block.setCount);
-  if (!Number.isFinite(mins) || mins < 1) return null;
-  return Math.min(30, Math.max(1, Math.round(mins))) * 60;
+  return resolveExerciseHoldSeconds({
+    setScheme: block.setScheme,
+    reps: block.reps,
+    setCount: block.setCount,
+    timedApproach: isTimedApproach(block.setScheme),
+  });
 }
 
 function sortedSet(nums: number[]): number[] {
@@ -381,28 +355,23 @@ export default function MemberWorkoutConsole({
   const canCoachRestSettings = Boolean(instructorName || coachFloorMode);
 
   useEffect(() => {
-    // Coach floor starts muted (same-room double-horn). If they unmute, keep it.
-    if (coachFloorMode) {
-      if (!coachUnmutedThisSessionRef.current) {
-        setRestMuted(true);
-        restMutedRef.current = true;
-      }
-      return;
-    }
-    // Members always hear rest sounds. Old localStorage mute was leaving phones silent.
+    // Both sides hear rest. Coach can mute if they are standing next to the member.
     try {
       localStorage.removeItem(REST_MUTE_KEY);
     } catch {
       /* ignore */
+    }
+    if (coachFloorMode && coachUnmutedThisSessionRef.current) {
+      return;
     }
     setRestMuted(false);
     restMutedRef.current = false;
   }, [coachFloorMode]);
 
   // iOS/Safari: rest-end is timer-driven (no gesture). Unlock WebAudio + HTMLAudio
-  // on first member touch so Stephanie's phone can play when rest hits 0.
+  // on first tap so the rest-end sample can play when the countdown hits 0.
   useEffect(() => {
-    if (coachFloorMode || typeof window === "undefined") return;
+    if (typeof window === "undefined") return;
     const unlock = () => unlockRestAudio(restSoundRef.current);
     window.addEventListener("pointerdown", unlock, { passive: true });
     window.addEventListener("touchstart", unlock, { passive: true });
@@ -412,7 +381,7 @@ export default function MemberWorkoutConsole({
       window.removeEventListener("touchstart", unlock);
       window.removeEventListener("keydown", unlock);
     };
-  }, [coachFloorMode]);
+  }, []);
 
   // Seed rest settings from workout prescription (coach can change mid-session).
   useEffect(() => {
@@ -432,11 +401,8 @@ export default function MemberWorkoutConsole({
     // Live floor defaults rest ON so set checkoffs always spin a timer unless coach turns it off.
     const enabled = workout.restTimerEnabled !== false;
     setSessionRestEnabled(enabled);
-    // Maintain always defaults to Cybertruck; null workout sound → cybertruck.
     const sound = normalizeRestTimerSound(
-      programSlug === "maintain"
-        ? workout.restTimerSound || DEFAULT_REST_TIMER_SOUND
-        : workout.restTimerSound,
+      workout.restTimerSound || DEFAULT_REST_TIMER_SOUND,
     );
     setSessionRestSound(sound);
     restSoundRef.current = sound;
@@ -696,21 +662,16 @@ export default function MemberWorkoutConsole({
         setSessionRestSeconds(secs);
         restSettingsRef.current = { ...restSettingsRef.current, seconds: secs };
       }
-      // Coach floor may push a chosen sound; members keep workout/default (Cybertruck).
-      // Old live rows often still say "whistle" from the previous default — don't clobber.
-      if (
-        canCoachRestSettings &&
-        typeof session.restTimerSound === "string" &&
-        session.restTimerSound
-      ) {
+      // Coach can pick a sound mid-session. Missing / empty → Cybertruck.
+      if (typeof session.restTimerSound === "string" && session.restTimerSound.trim()) {
         const sound = normalizeRestTimerSound(session.restTimerSound);
         setSessionRestSound(sound);
         restSoundRef.current = sound;
         restSettingsRef.current = { ...restSettingsRef.current, sound };
         preloadRestCompleteSound(sound);
-      } else if (programSlug === "maintain" || !session.restTimerSound) {
+      } else {
         const sound = normalizeRestTimerSound(
-          workout.restTimerSound ?? DEFAULT_REST_TIMER_SOUND,
+          workout.restTimerSound || DEFAULT_REST_TIMER_SOUND,
         );
         setSessionRestSound(sound);
         restSoundRef.current = sound;
@@ -883,13 +844,12 @@ export default function MemberWorkoutConsole({
         payload.restActive = restActiveRef.current;
       }
       if (!coachFloorMode) payload.activeId = snap.activeId;
-      // Coach owns rest duration/enabled — members must not push defaults over coach.
-      if (canCoachRestSettings) {
-        const rest = restSettingsRef.current;
-        payload.restTimerEnabled = rest.enabled;
-        payload.restTimerSeconds = normalizeRestTimerSeconds(rest.seconds);
-        payload.restTimerSound = rest.sound;
-      }
+      // Coach owns rest duration/enabled. Members seed only when the live row
+      // has no coach settings yet (server ignores later member rest writes).
+      const rest = restSettingsRef.current;
+      payload.restTimerEnabled = rest.enabled;
+      payload.restTimerSeconds = normalizeRestTimerSeconds(rest.seconds);
+      payload.restTimerSound = rest.sound;
       // Helps server detect stale member overwrites of newer coach revisions.
       const baseRev = Math.max(lastAppliedRevision.current, lastPushedRevision.current);
       if (baseRev > 0) payload.baseRevision = baseRev;
@@ -1783,7 +1743,9 @@ export default function MemberWorkoutConsole({
           ) : (
             <span className="text-[10px] text-[var(--muted)]">
               {sessionRestEnabled
-                ? `${sessionRestSeconds}s · after every set · live for member`
+                ? `${sessionRestSeconds}s · after every set · live for member${
+                    restMuted ? " · muted here" : " · sounds on"
+                  }`
                 : "Off"}
             </span>
           )}

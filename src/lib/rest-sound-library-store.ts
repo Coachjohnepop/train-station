@@ -25,7 +25,7 @@ let memoryStore: RestSoundLibraryConfig | null = null;
 function emptyConfig(): RestSoundLibraryConfig {
   return {
     items: [],
-    defaultSoundKey: null,
+    defaultSoundKey: "cybertruck",
     updatedAt: new Date().toISOString(),
   };
 }
@@ -81,7 +81,7 @@ function normalize(raw: unknown): RestSoundLibraryConfig {
     defaultSoundKey:
       typeof data.defaultSoundKey === "string" && data.defaultSoundKey.trim()
         ? data.defaultSoundKey.trim()
-        : null,
+        : "cybertruck",
     updatedAt:
       typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
   };

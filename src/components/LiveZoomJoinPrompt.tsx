@@ -14,10 +14,7 @@ export default function LiveZoomJoinPrompt() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (!status) {
-      setVisible(false);
-      return;
-    }
+    if (!status) return;
     // Don't nag after they've joined Zoom for this class day.
     if (readZoomJoined(status.sessionDate)) {
       setVisible(false);
@@ -26,7 +23,9 @@ export default function LiveZoomJoinPrompt() {
     const dismissed = sessionStorage.getItem(dismissKey(status.sessionDate)) === "1";
     const shouldShow =
       Boolean(status.hostStarted && status.canJoin && status.joinUrl) && !dismissed;
-    setVisible(shouldShow);
+    // Only flip visibility when the live bits actually change — a new status
+    // object every poll used to remount this dialog (Join flicker).
+    setVisible((was) => (was === shouldShow ? was : shouldShow));
   }, [status]);
 
   function dismiss() {
