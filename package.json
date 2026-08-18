@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build && node scripts/fix-pricing-catalog-prod.mjs && node scripts/reset-demo-email-on-prod-build.mjs",
+    "build": "node scripts/guard-hot-polls.mjs && prisma generate && next build && node scripts/fix-pricing-catalog-prod.mjs && node scripts/reset-demo-email-on-prod-build.mjs",
+    "test:hot-polls": "node scripts/guard-hot-polls.mjs && npx tsx --test src/lib/session-live-poll.test.ts",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",

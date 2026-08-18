@@ -89,6 +89,10 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 
 ## Durable product rules (don’t forget)
 
+### Never hot-poll Postgres (non-negotiable)
+**No `setInterval` hitting `/api/*` or Prisma faster than 5 seconds.**  
+The 150ms live-session loop (Aug 2026) is why Free usage went off the charts. Live-class backup polls use `startLiveClassBackupPoll` and run **only while the coach is live** (`hostStarted`). Idle screens: one GET, SSE, refresh on tab-focus. `scripts/guard-hot-polls.mjs` runs on `npm run build` and fails the deploy if someone puts a faster network poll back. Rest-timer 200ms tick is local UI only.
+
 ### Always use the database (Postgres) for app data — **non-negotiable**
 **Every new module, feature, or data element that a member or coach relies on must persist in PostgreSQL (Prisma).**  
 No exceptions for “quick” features, admin desks, measurements, SEO copy, hero slides, check-ins, photos metadata, or future modules.
@@ -393,7 +397,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 **Date:** 2026-08-18 (EOD — John napping)  
 **Status:** **Stable.** Stripe done (John). Zoom works (John). Site up.  
 **Supabase (same day):** live **`train-station-catalog`** / **`mattccorhcxghwyfgklp`** is Healthy. Paused **`dptxndcl…`** is not prod. PostgREST locked (RLS on, `anon` revoked). Do **not** put TS on Eco Delight’s Pro org. **Still:** Upgrade **`johnepop's projects`** (or TS org, then transfer) to Pro before **30 Aug 2026** — Free = no backups + restriction.  
-**Stay Free (dev):** live-class backup polls only while **`hostStarted`** (or coach card open). Idle = one GET + SSE + tab-focus, no interval. 5s poll during class. Rest timer is local+SSE, not that loop. Not deployed until John ships. Still no backups on Free — watch **Review usage** before **30 Aug**.  
+**Stay Free (dev):** live-class backup polls only while **`hostStarted`** (or coach card open). Idle = one GET + SSE + tab-focus, no interval. 5s poll during class. Rest timer is local+SSE, not that loop. **Shipped** `5175c2a` → `main` (Vercel Production). Still no backups on Free — watch **Review usage** before **30 Aug**.  
 **Shipped this pass:** Checking a “5 min” bike set starts 45–60s rest (not another 5-min hold). Live rest `phase` persists. Catalog workouts default rest ON. Coach floor is no longer auto-muted.  
 **Prior (same day):** Jeremy class-for-today save fix. Publish writes the CoachTodaySession first. Today’s class is **Warm-Up and Lower Body Strength Session** (`sms-w-1e20b57b`) for Lemon John + paid roster.  
 **Prior (same day):** Join Zoom flicker fix. Member Join Live no longer flaps on stale polls. Host flag writes await Postgres. Embed no longer leave/rejoin when the floor SSE re-renders.  

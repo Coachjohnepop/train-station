@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import CoachLiveFloorZoomPanel from "@/components/CoachLiveFloorZoomPanel";
+import { startLiveClassBackupPoll } from "@/lib/session-live-poll";
 import MemberWorkoutConsole, { type MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 
 type LiveFloorTile = {
@@ -93,11 +94,9 @@ export default function CoachLiveFloor({ initialDate }: { initialDate: string })
   // Backup poll only while someone is in-session or a card is open.
   useEffect(() => {
     if (!sessionGoing) return;
-    const id = setInterval(() => {
-      if (document.visibilityState === "hidden") return;
+    return startLiveClassBackupPoll(() => {
       void load();
-    }, 5_000);
-    return () => clearInterval(id);
+    });
   }, [load, sessionGoing]);
 
   useEffect(() => {

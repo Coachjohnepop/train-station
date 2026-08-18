@@ -6,8 +6,8 @@ import {
   sameLiveZoomStatus,
 } from "@/lib/live-zoom-status-hold";
 import {
-  LIVE_CLASS_POLL_MS,
   isLiveClassSessionGoing,
+  startLiveClassBackupPoll,
 } from "@/lib/session-live-poll";
 
 export type MemberLiveZoomStatus = {
@@ -25,7 +25,7 @@ let sharedStatus: MemberLiveZoomStatus | null = null;
 let notLiveSince: number | null = null;
 const listeners = new Set<Listener>();
 let es: EventSource | null = null;
-let pollId: ReturnType<typeof setInterval> | null = null;
+let stopPoll: (() => void) | null = null;
 let refCount = 0;
 let started = false;
 
@@ -64,16 +64,15 @@ function syncBackupPoll() {
     typeof document !== "undefined" &&
     document.visibilityState === "visible";
   if (should) {
-    if (pollId) return;
-    pollId = setInterval(() => {
-      if (document.visibilityState === "hidden") return;
+    if (stopPoll) return;
+    stopPoll = startLiveClassBackupPoll(() => {
       void loadOnce();
-    }, LIVE_CLASS_POLL_MS);
+    });
     return;
   }
-  if (pollId) {
-    clearInterval(pollId);
-    pollId = null;
+  if (stopPoll) {
+    stopPoll();
+    stopPoll = null;
   }
 }
 
@@ -112,8 +111,8 @@ function ensureBus() {
   (ensureBus as unknown as { _cleanup?: () => void })._cleanup = () => {
     es?.close();
     es = null;
-    if (pollId) clearInterval(pollId);
-    pollId = null;
+    if (stopPoll) stopPoll();
+    stopPoll = null;
     document.removeEventListener("visibilitychange", onVisible);
     window.removeEventListener("focus", onFocus);
     started = false;
