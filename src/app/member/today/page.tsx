@@ -458,7 +458,10 @@ export default async function MemberTodayPage({ searchParams }: Props) {
                 targetUserId={uid}
                 instructorName="Coach"
                 liveSyncUserId={uid}
-                liveSessionDate={viewDate}
+                liveSessionDate={
+                  selectedSummary?.calendarDate ||
+                  (/^\d{4}-\d{2}-\d{2}$/.test(viewDate) ? viewDate : calendarToday)
+                }
                 scheduleLabel={scheduleLabel}
                 calendarDateLabel={formatDateLabel(viewDate)}
               />

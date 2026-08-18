@@ -356,7 +356,7 @@ export default function MemberTodayShell({
             programSlug={programSlug}
             targetUserId={targetUserId}
             liveSyncUserId={targetUserId}
-            liveSessionDate={selectedDate}
+            liveSessionDate={selectedSummary?.calendarDate}
             scheduleLabel={scheduleLabel}
             calendarDateLabel={calendarDateLabel}
             onEngage={notifyMaintainWorkoutEngage}
@@ -582,7 +582,7 @@ export default function MemberTodayShell({
               programSlug={programSlug}
               targetUserId={targetUserId}
               liveSyncUserId={previewFutureReadOnly ? undefined : targetUserId}
-              liveSessionDate={selectedDate}
+              liveSessionDate={selectedSummary?.calendarDate}
               reviewMode={previewFutureReadOnly}
               futurePreview={previewFutureReadOnly}
               membershipPlan={contentAccess?.plan ?? "explorer"}

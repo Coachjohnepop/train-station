@@ -43,9 +43,17 @@ export type LiveWorkoutSession = {
   revision: number;
 };
 
-/** Always scope live sync to a calendar day so coach/member keys match. */
+const CALENDAR_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Live progress is keyed by calendar day (YYYY-MM-DD), never enrollment
+ * keys like M1D1 / W1D1. Those used to write a row the next window
+ * could not find after a private-browser login.
+ */
 export function normalizeLiveSessionDate(sessionDate?: string): string {
-  return sessionDate?.trim() || localTodayIso();
+  const raw = sessionDate?.trim();
+  if (raw && CALENDAR_ISO.test(raw)) return raw;
+  return localTodayIso();
 }
 
 type LiveSessionStore = {
