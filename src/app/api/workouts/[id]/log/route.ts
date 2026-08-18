@@ -10,6 +10,7 @@ import {
   lateAdjustedPoints,
   lateScoreLabel,
 } from "@/lib/member-workout-late";
+import { resolveLogSessionDate } from "@/lib/member-workout-log";
 import { localTodayIso } from "@/lib/program-calendar";
 
 const logExerciseSchema = z.object({
@@ -35,7 +36,8 @@ const logBodySchema = z.object({
   programSlug: z.string().optional(),
   progress: z.number().int().min(0).max(100).optional(),
   targetUserId: z.string().optional(),
-  sessionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  // Enrollment keys (W1D1 / M1D1) used to 400 the whole log. Coerce later.
+  sessionDate: z.string().optional(),
 });
 
 type Params = { params: Promise<{ id: string }> };
@@ -98,6 +100,15 @@ export async function POST(request: Request, { params }: Params) {
     }
   }
 
+  const todayIso = localTodayIso();
+  const sessionDate = resolveLogSessionDate(parsed.data.sessionDate, todayIso);
+  if (!isStaffRole(auth.session.role)) {
+    const allowed = canLogSessionDate(sessionDate, todayIso);
+    if (!allowed.ok) {
+      return NextResponse.json({ detail: allowed.reason, locked: true }, { status: 403 });
+    }
+  }
+
   try {
     const result = await createWorkoutLogAndPerformances({
       workoutId,
@@ -111,14 +122,6 @@ export async function POST(request: Request, { params }: Params) {
     let gamificationWarning: string | null = null;
     let lateScore: { late: boolean; hitPercent: number } | null = null;
     try {
-      const sessionDate = parsed.data.sessionDate || localTodayIso();
-      const todayIso = localTodayIso();
-      if (!isStaffRole(auth.session.role)) {
-        const allowed = canLogSessionDate(sessionDate, todayIso);
-        if (!allowed.ok) {
-          return NextResponse.json({ detail: allowed.reason, locked: true }, { status: 403 });
-        }
-      }
       const pointsConfig = await getGamificationPointsConfig();
       const adjusted = lateAdjustedPoints(
         pointsConfig.workout_logged,
@@ -158,7 +161,6 @@ export async function POST(request: Request, { params }: Params) {
     try {
       const { prisma } = await import("@/lib/prisma");
       const { isDemoMode } = await import("@/lib/demo-enrollments");
-      const sessionDate = parsed.data.sessionDate || localTodayIso();
       const progress = parsed.data.progress ?? result.progress ?? 100;
 
       let workoutName = "Workout";

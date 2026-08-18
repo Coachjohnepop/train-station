@@ -59,6 +59,11 @@ import {
   nextUnfinishedExerciseId,
   shouldAutoFinishExercise,
 } from "@/lib/member-exercise-finish";
+import {
+  buildCompleteWorkoutLog,
+  logFailureMessage,
+  normalizeLogSessionDate,
+} from "@/lib/member-workout-log";
 
 export type MemberExerciseBlock = {
   id: string;
@@ -321,6 +326,7 @@ export default function MemberWorkoutConsole({
   );
   const [isLogging, setIsLogging] = useState(false);
   const [logError, setLogError] = useState<string | null>(null);
+  const [confirmIncompleteLog, setConfirmIncompleteLog] = useState(false);
   const [logResult, setLogResult] = useState<null | { performedAt: string; count: number; progress?: number }>(null);
   const finishLockUntilRef = useRef(0);
   const [finishedListExpanded, setFinishedListExpanded] = useState(false);
@@ -1922,70 +1928,51 @@ export default function MemberWorkoutConsole({
     !reviewMode &&
     countableExerciseIds.length > 0 &&
     finishedCountable >= countableExerciseIds.length;
+  const unmarkedCompleteCount = countableExerciseIds.filter((id) => {
+    if (finishedExercises.has(id)) return false;
+    return (completedSets[id]?.size ?? 0) <= 0;
+  }).length;
 
   useEffect(() => {
     if (allExercisesFinished) setFinishedListExpanded(false);
   }, [allExercisesFinished]);
 
-  const handleLogComplete = useCallback(async () => {
+  const handleLogComplete = useCallback(async (opts?: { confirmed?: boolean }) => {
     if (logResult || isLogging || futurePreview) return;
     setLogError(null);
 
-    // Collect all exercises that were explicitly finished OR have per-set progress marked.
-    // This ensures the "log your sets" buttons (per-set toggles) actually contribute setsCompleted to the log.
-    const blocksWithSets = Object.keys(completedSets).filter(id => (completedSets[id]?.size ?? 0) > 0);
-    let idsToLog = Array.from(new Set([...finishedExercises, ...blocksWithSets])).filter((id) =>
-      workout.exercises.some((b) => b.id === id),
-    );
-    // Free Explorer: only log preview-open exercises (rest are soft-locked teases).
-    if (freeExplorer && freeLockedExerciseIds.size > 0) {
-      idsToLog = idsToLog.filter((id) => !freeLockedExerciseIds.has(id));
+    const plan = buildCompleteWorkoutLog({
+      exercises: workout.exercises,
+      finishedIds: finishedExercises,
+      completedSets,
+      weights,
+      freeLockedIds: freeExplorer ? freeLockedExerciseIds : null,
+    });
+
+    // Checkoffs are optional. Ask once if any countable line is still unmarked.
+    if (plan.unfinished.length > 0 && !opts?.confirmed) {
+      setConfirmIncompleteLog(true);
+      return;
+    }
+    setConfirmIncompleteLog(false);
+
+    if (plan.unfinished.length > 0) {
+      const next = new Set(finishedExercises);
+      for (const block of plan.exercises) next.add(block.workoutExerciseId);
+      setFinishedExercises(next);
+      stateRef.current = { ...stateRef.current, finishedExercises: next };
     }
 
-    const total = freeExplorer ? freeOpenCount || workout.exercises.length : workout.exercises.length;
-    const progress = total > 0 ? Math.round((idsToLog.length / total) * 100) : 0;
-
-    // Log whatever the current state is (supports 0% partial or "just noting progress")
     setIsLogging(true);
     try {
-      const exercisesPayload = idsToLog.flatMap((blockId) => {
-        const block = workout.exercises.find((b) => b.id === blockId);
-        if (!block) return [];
-        const w = weights[blockId];
-        const parsed = w ? parseFloat(w) : (block.past?.startingWeightLbs ?? null);
-        const startingWeightLbs =
-          typeof parsed === "number" && Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-        const doneForBlock = completedSets[blockId] ?? new Set<number>();
-        const setsCompleted = doneForBlock.size;
-        let repsCompleted = setsCompleted * 5; // default ~5 reps/set
-        if (block.reps) {
-          const repNum = parseInt(block.reps, 10) || 5;
-          repsCompleted = setsCompleted * repNum;
-        }
-        // treat timed as ~12 "rep equiv" if the set was completed
-        if (block.setScheme?.toLowerCase().includes("time") || block.setScheme?.toLowerCase().includes("timed")) {
-          repsCompleted = setsCompleted > 0 ? 12 : 0;
-        }
-        return [
-          {
-            workoutExerciseId: block.id,
-            exerciseId: block.exerciseId,
-            setScheme: block.setScheme,
-            repPattern: block.repPattern,
-            reps: block.reps,
-            sets: block.setCount,
-            weightTier: block.weightTier,
-            startingWeightLbs,
-            repsCompleted,
-            setsCompleted,
-          },
-        ];
-      });
-
-      const payload: any = { exercises: exercisesPayload, progress };
+      const payload: Record<string, unknown> = {
+        exercises: plan.exercises,
+        progress: plan.progress,
+      };
       if (programSlug) payload.programSlug = programSlug;
       if (targetUserId) payload.targetUserId = targetUserId;
-      if (liveSessionDate) payload.sessionDate = liveSessionDate;
+      const sessionDate = normalizeLogSessionDate(liveSessionDate);
+      if (sessionDate) payload.sessionDate = sessionDate;
       const res = await fetch(`/api/workouts/${workout.workoutId}/log`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1994,14 +1981,7 @@ export default function MemberWorkoutConsole({
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        const detail = err?.detail;
-        const message =
-          typeof detail === "string"
-            ? detail
-            : typeof detail === "object" && detail !== null
-              ? "Failed to log workout"
-              : "Failed to log workout";
-        throw new Error(message);
+        throw new Error(logFailureMessage(err));
       }
 
       const data = await res.json();
@@ -2011,13 +1991,10 @@ export default function MemberWorkoutConsole({
       }
       setLogResult({
         performedAt: data.performedAt,
-        count: data.performances || idsToLog.length,
-        progress: data.progress ?? progress,
+        count: data.performances || plan.exercises.length,
+        progress: data.progress ?? plan.progress,
       });
       const gamification = data.gamification;
-      const fullWorkout =
-        progress >= 100 ||
-        (total > 0 && finishedExercises.size >= total && idsToLog.length >= total);
       if (gamification && typeof gamification.totalPoints === "number") {
         const pointsEarned = gamification.awarded
           ? gamification.pointsEarned ?? GAMIFICATION_POINTS.workout_logged
@@ -2025,8 +2002,8 @@ export default function MemberWorkoutConsole({
         dispatchMemberScoreCelebrate({
           pointsEarned,
           totalPoints: gamification.totalPoints,
-          label: fullWorkout ? "Workout complete!" : "Workout logged",
-          celebration: fullWorkout ? "workout-complete" : "standard",
+          label: "Workout complete!",
+          celebration: "workout-complete",
         });
       }
       requestAnimationFrame(() => {
@@ -2045,7 +2022,6 @@ export default function MemberWorkoutConsole({
     workout,
     weights,
     completedSets,
-    activeId,
     programSlug,
     targetUserId,
     liveSessionDate,
@@ -2055,6 +2031,8 @@ export default function MemberWorkoutConsole({
     logResult,
     isLogging,
     futurePreview,
+    freeExplorer,
+    freeLockedExerciseIds,
   ]);
 
   const showLoggedSuccess = !reviewMode && !hideLogButton && !!logResult;
@@ -2800,14 +2778,55 @@ export default function MemberWorkoutConsole({
                 {logError}
               </p>
             ) : null}
-            <button
-              type="button"
-              className="btn-primary w-full"
-              onClick={handleLogComplete}
-              disabled={isLogging}
-            >
-              {isLogging ? "Saving your session..." : "Log workout complete"}
-            </button>
+            {confirmIncompleteLog ? (
+              <div
+                className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 space-y-3"
+                role="alertdialog"
+                aria-labelledby="log-complete-confirm-title"
+                aria-describedby="log-complete-confirm-copy"
+              >
+                <p id="log-complete-confirm-title" className="text-sm font-semibold text-[var(--text)]">
+                  {unmarkedCompleteCount === 0
+                    ? "Log this workout as complete?"
+                    : unmarkedCompleteCount >= countableExerciseIds.length
+                      ? "None of the exercises are marked done."
+                      : unmarkedCompleteCount === 1
+                        ? "1 exercise isn’t marked done."
+                        : `${unmarkedCompleteCount} exercises aren’t marked done.`}
+                </p>
+                <p id="log-complete-confirm-copy" className="text-xs text-[var(--muted)]">
+                  Checkoffs are optional. If you did the work, log it complete and we’ll save the
+                  full session.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="btn-ghost flex-1"
+                    onClick={() => setConfirmIncompleteLog(false)}
+                    disabled={isLogging}
+                  >
+                    Keep working
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary flex-1"
+                    onClick={() => void handleLogComplete({ confirmed: true })}
+                    disabled={isLogging}
+                  >
+                    {isLogging ? "Saving your session..." : "Yes, I finished"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="btn-primary w-full"
+                onClick={() => void handleLogComplete()}
+                disabled={isLogging}
+              >
+                {isLogging ? "Saving your session..." : "Log workout complete"}
+              </button>
+            )}
           </div>
         ) : null
       ) : null}
