@@ -12,6 +12,8 @@ import {
 import { resolveExerciseVideoUrl } from "@/lib/exercise-video-hints";
 import { prisma } from "@/lib/prisma";
 import { collapseConsecutiveCloneExercises } from "@/lib/member-workout-lines";
+import { DEFAULT_REST_TIMER_SECONDS, normalizeRestTimerSeconds } from "@/lib/rest-timer";
+import { DEFAULT_REST_TIMER_SOUND } from "@/lib/rest-timer-sound";
 
 function mapItemToBlock(item: {
   id: string;
@@ -135,9 +137,14 @@ async function getMemberWorkoutFromPrisma(
     workoutName: workout.name || "Workout",
     memberName: opts?.memberName || "Member",
     exercises,
-    restTimerEnabled: Boolean(workout.restTimerEnabled),
-    restTimerSeconds: workout.restTimerSeconds ?? undefined,
-    restTimerSound: workout.restTimerSound ?? undefined,
+    restTimerEnabled:
+      workout.restTimerEnabled === true || typeof workout.restTimerSeconds === "number"
+        ? workout.restTimerEnabled !== false
+        : true,
+    restTimerSeconds: normalizeRestTimerSeconds(
+      workout.restTimerSeconds ?? DEFAULT_REST_TIMER_SECONDS,
+    ),
+    restTimerSound: workout.restTimerSound || DEFAULT_REST_TIMER_SOUND,
   };
 }
 
@@ -217,8 +224,14 @@ export async function getMemberWorkoutById(
     workoutName: seedWorkout.name || "Workout",
     memberName: opts?.memberName || "Demo Member",
     exercises,
-    restTimerEnabled: Boolean(seedWorkout.restTimerEnabled),
-    restTimerSeconds: seedWorkout.restTimerSeconds ?? undefined,
-    restTimerSound: seedWorkout.restTimerSound ?? undefined,
+    restTimerEnabled:
+      seedWorkout.restTimerEnabled === true ||
+      typeof seedWorkout.restTimerSeconds === "number"
+        ? seedWorkout.restTimerEnabled !== false
+        : true,
+    restTimerSeconds: normalizeRestTimerSeconds(
+      seedWorkout.restTimerSeconds ?? DEFAULT_REST_TIMER_SECONDS,
+    ),
+    restTimerSound: seedWorkout.restTimerSound || DEFAULT_REST_TIMER_SOUND,
   };
 }

@@ -70,7 +70,28 @@ async function saveStore(store: LiveClassZoomStore): Promise<void> {
 
 async function publishRecord(record: LiveClassZoomRecord): Promise<void> {
   setHotLiveClassZoom(record.sessionDate, record);
-  void upsertLiveClassZoomToDb(record.sessionDate, record);
+  // Await so other instances see hostStarted on the next member poll (no Join flicker).
+  await upsertLiveClassZoomToDb(record.sessionDate, record);
+}
+
+function hostStartedAtMs(record: LiveClassZoomRecord | null | undefined): number {
+  if (!record?.hostStartedAt) return 0;
+  const started = new Date(record.hostStartedAt).getTime();
+  return Number.isNaN(started) ? 0 : started;
+}
+
+function preferRicherLiveClassZoom(
+  a: LiveClassZoomRecord | null | undefined,
+  b: LiveClassZoomRecord | null | undefined,
+): LiveClassZoomRecord | null {
+  if (!a) return b ?? null;
+  if (!b) return a;
+  const aStart = hostStartedAtMs(a);
+  const bStart = hostStartedAtMs(b);
+  if (bStart > aStart) return b;
+  if (aStart > bStart) return a;
+  if (!a.joinUrl && b.joinUrl) return b;
+  return a;
 }
 
 export async function getLiveClassZoom(sessionDate?: string): Promise<LiveClassZoomRecord | null> {
@@ -80,9 +101,11 @@ export async function getLiveClassZoom(sessionDate?: string): Promise<LiveClassZ
   if (hot) return hot;
 
   const fromDb = await getLiveClassZoomFromDb(date);
-  if (fromDb) {
-    setHotLiveClassZoom(date, fromDb);
-    return fromDb;
+  const hotAfterDb = getHotLiveClassZoom(date);
+  const best = preferRicherLiveClassZoom(hotAfterDb, fromDb);
+  if (best) {
+    setHotLiveClassZoom(date, best);
+    return best;
   }
 
   const store = await loadStore({ preferFresh: true });
@@ -350,6 +373,17 @@ export function isLiveClassHostActive(
   return nowMs - started < LIVE_CLASS_HOST_ACTIVE_MS;
 }
 
+/** True only when the 2h host window has elapsed — not when joinUrl is briefly missing. */
+export function isLiveClassHostWindowExpired(
+  record: LiveClassZoomRecord | null | undefined,
+  nowMs = Date.now(),
+): boolean {
+  if (!record?.hostStartedAt) return false;
+  const started = new Date(record.hostStartedAt).getTime();
+  if (Number.isNaN(started)) return false;
+  return nowMs - started >= LIVE_CLASS_HOST_ACTIVE_MS;
+}
+
 export async function memberLiveZoomStatus(input: {
   memberEmail: string;
   userId?: string | null;
@@ -379,8 +413,9 @@ export async function memberLiveZoomStatus(input: {
     };
   }
 
-  // Auto-clear a stale host-started flag so Join doesn't stick all day.
-  if (record.hostStartedAt && !isLiveClassHostActive(record)) {
+  // Auto-clear only after the 2h window. A missing joinUrl on a stale blob
+  // must not wipe hostStartedAt — that flickered Join for members.
+  if (isLiveClassHostWindowExpired(record)) {
     await clearLiveClassHostStarted(date);
     record = (await getLiveClassZoom(date)) || record;
   }

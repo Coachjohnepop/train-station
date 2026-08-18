@@ -13,7 +13,8 @@ const individualSchema = z.object({
 const restTimerSchema = z.object({
   enabled: z.boolean(),
   seconds: z.number().int().min(15).max(600),
-  sound: z.enum(["whistle", "bell", "buzzer", "cybertruck"]).optional(),
+  // Built-in id or coach-uploaded URL — rejecting custom sounds used to 400 the whole publish.
+  sound: z.string().min(1).max(500).optional(),
 });
 
 const schema = z.object({
@@ -28,7 +29,7 @@ const schema = z.object({
   cascade: z
     .object({
       rawSms: z.string().min(1),
-      userIds: z.array(z.string()).min(1),
+      userIds: z.array(z.string()).default([]),
       title: z.string().optional(),
       workoutId: z.string().optional(),
     })
@@ -57,9 +58,9 @@ export async function POST(request: Request) {
     individuals = [],
   } = parsed.data;
 
-  if (!cascade?.userIds?.length && individuals.length === 0) {
+  if (!cascade?.workoutId && !cascade?.userIds?.length && individuals.length === 0) {
     return NextResponse.json(
-      { error: "Assign at least one student (cascade group or individual)." },
+      { error: "Assign at least one student, or save a class workout first." },
       { status: 400 },
     );
   }
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
   try {
     await hydrateTodaySessions();
 
-    if (cascade && cascade.userIds.length > 0) {
+    if (cascade && (cascade.userIds.length > 0 || cascade.workoutId || cascade.rawSms)) {
       const result = await createTodaySessionFromSms({
         sessionDate,
         scheduledAt,

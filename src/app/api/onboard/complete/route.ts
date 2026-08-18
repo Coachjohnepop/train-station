@@ -19,7 +19,7 @@ import { sendWelcomeSms } from "@/lib/sms";
 import { notifyCoachNewMember } from "@/lib/coach-member-notify";
 import { awardGamificationPoints } from "@/lib/member-gamification-store";
 import { enrollUserInProgram } from "@/lib/data/user-data";
-import { isValidProgramStartDate, recommendedProgramStartDate } from "@/lib/member-program-block";
+import { isValidProgramStartDate } from "@/lib/member-program-block";
 import { localTodayIso } from "@/lib/program-calendar";
 import { getCoachSettings } from "@/lib/coach-settings-store";
 import { programStartSettingsFromCoach } from "@/lib/program-start-settings";
@@ -94,9 +94,7 @@ export async function POST(request: Request) {
   const todayIso = localTodayIso();
   const coachSettings = await getCoachSettings();
   const startSettings = programStartSettingsFromCoach(coachSettings);
-  const startIso =
-    programStartDate?.trim() ||
-    recommendedProgramStartDate(todayIso, startSettings);
+  const startIso = programStartDate?.trim() || todayIso;
   if (!isValidProgramStartDate(startIso, todayIso, startSettings.maxOffsetDays)) {
     return NextResponse.json(
       {

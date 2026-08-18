@@ -83,19 +83,34 @@ export async function loadSmsWorkoutsFromDb(): Promise<SmsWorkoutStore> {
   return { workouts, workoutExercises };
 }
 
+export async function persistSmsWorkoutRestTimerToDb(
+  workoutId: string,
+  rest: {
+    enabled: boolean;
+    seconds: number | null;
+    sound: string | null;
+  },
+): Promise<boolean> {
+  const existing = await prisma.workout.findUnique({
+    where: { id: workoutId },
+    select: { id: true },
+  });
+  if (!existing) return false;
+  await prisma.workout.update({
+    where: { id: workoutId },
+    data: {
+      restTimerEnabled: rest.enabled,
+      restTimerSeconds: rest.seconds,
+      restTimerSound: rest.sound,
+    },
+  });
+  return true;
+}
+
 export async function persistSmsWorkoutStoreToDb(store: SmsWorkoutStore): Promise<void> {
-  const smsIds = new Set(store.workouts.map((w) => w.id));
-
+  // Upsert only what we have. Never delete other SMS workouts — a partial
+  // in-memory store used to wipe rows (and then fail the class publish).
   await prisma.$transaction(async (tx) => {
-    const existing = await tx.workout.findMany({
-      where: { source: "sms" },
-      select: { id: true },
-    });
-    const toDelete = existing.map((w) => w.id).filter((id) => !smsIds.has(id));
-    if (toDelete.length > 0) {
-      await tx.workout.deleteMany({ where: { id: { in: toDelete } } });
-    }
-
     for (const workout of store.workouts) {
       await tx.workout.upsert({
         where: { id: workout.id },

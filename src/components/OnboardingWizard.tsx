@@ -21,7 +21,7 @@ import CityStateInput from "@/components/CityStateInput";
 import ProgramStartDatePicker from "@/components/ProgramStartDatePicker";
 import { localTodayIso } from "@/lib/program-calendar";
 import { isPaidOffer } from "@/lib/product-offers";
-import { recommendedProgramStartDate } from "@/lib/member-program-block";
+import { defaultProgramStartDate } from "@/lib/member-program-block";
 import type { ProgramStartSettings } from "@/lib/program-start-settings";
 import { weekdayLabel } from "@/lib/program-start-settings";
 import { membershipThemeTierFromPlan } from "@/lib/membership-theme";
@@ -102,7 +102,7 @@ export default function OnboardingWizard({
   const [location, setLocation] = useState({ city: "", state: "" });
   const [sms, setSms] = useState({ phone: "", dailyReminderTime: "07:30" });
   const [programStartDate, setProgramStartDate] = useState(() =>
-    recommendedProgramStartDate(localTodayIso(), programStartSettings),
+    defaultProgramStartDate(localTodayIso(), programStartSettings),
   );
   const [skipHealth, setSkipHealth] = useState(false);
   const [finishing, setFinishing] = useState(false);
@@ -552,23 +552,22 @@ export default function OnboardingWizard({
             <h2 className="text-lg font-semibold">When do you want to start?</h2>
             <p className="text-sm text-[var(--muted)]">
               Your membership unlocks {programStartSettings?.blockDays ?? 28} days of workouts.
+              You can start <strong>today</strong> if your coach is ready, or pick another day
               {programStartSettings?.recommendWeekday != null ? (
                 <>
                   {" "}
-                  We recommend starting on{" "}
+                  (we also recommend{" "}
                   <strong className="text-emerald-200">
                     {weekdayLabel(programStartSettings.recommendWeekday)}
                   </strong>{" "}
                   so Day 1 matches the training week
                   {programStartSettings.recommendWeekday === 1
-                    ? " — especially if you lift on weekends"
+                    ? " — handy if you lift on weekends"
                     : ""}
-                  .
+                  )
                 </>
-              ) : (
-                " Pick when Day 1 begins."
-              )}{" "}
-              You can schedule up to {programStartSettings?.maxOffsetDays ?? 6} days out.
+              ) : null}
+              . You can schedule up to {programStartSettings?.maxOffsetDays ?? 6} days out.
             </p>
             <ProgramStartDatePicker
               value={programStartDate}

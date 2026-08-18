@@ -37,32 +37,35 @@ export default function CoachJoinLiveNavStrip() {
         fetch("/api/admin/zoom/status", { cache: "no-store" }),
         fetch(`/api/admin/live-floor/zoom?date=${sessionDate}`, { cache: "no-store" }),
       ]);
-      if (statusRes.ok) {
-        const s = await statusRes.json();
-        setReady(Boolean(s.ready));
+      const s = statusRes.ok ? await statusRes.json() : null;
+      const z = zoomRes.ok ? await zoomRes.json() : null;
+
+      if (s) {
         setConnected(Boolean(s.connected));
         setWrongHost(Boolean(s.wrongHostAccount));
       }
-      if (zoomRes.ok) {
-        const z = await zoomRes.json();
-        if (z.zoom?.hostUrl || z.zoom?.joinUrl) {
-          setRoom({
-            hostUrl: z.zoom.hostUrl,
-            joinUrl: z.zoom.joinUrl,
-            openUrl: z.zoom.openUrl || z.zoom.hostUrl || z.zoom.joinUrl,
-            openAs: z.zoom.openAs,
-            isHost: z.zoom.isHost,
-            hostCoachEmail: z.zoom.hostCoachEmail,
-            topic: z.zoom.topic,
-            demo: z.zoom.demo,
-          });
-        } else {
-          setRoom(null);
-        }
-        setHostStarted(Boolean(z.hostStarted));
-        // Prefer floor API ready (S2S-aware) when present.
-        if (typeof z.ready === "boolean") setReady(z.ready);
+      if (z?.zoom?.hostUrl || z?.zoom?.joinUrl) {
+        setRoom({
+          hostUrl: z.zoom.hostUrl,
+          joinUrl: z.zoom.joinUrl,
+          openUrl: z.zoom.openUrl || z.zoom.hostUrl || z.zoom.joinUrl,
+          openAs: z.zoom.openAs,
+          isHost: z.zoom.isHost,
+          hostCoachEmail: z.zoom.hostCoachEmail,
+          topic: z.zoom.topic,
+          demo: z.zoom.demo,
+        });
       }
+      if (typeof z?.hostStarted === "boolean") setHostStarted(z.hostStarted);
+
+      const statusReady = typeof s?.ready === "boolean" ? s.ready : null;
+      const zoomReady = typeof z?.ready === "boolean" ? z.ready : null;
+      // Stay ready if either API says ready so a flaky poll cannot swap
+      // Join Live Now ↔ Sign in to Zoom.
+      if (statusReady === true || zoomReady === true) setReady(true);
+      else if (statusReady === false && zoomReady === false) setReady(false);
+      else if (statusReady === false && zoomReady === null) setReady(false);
+      else if (zoomReady === false && statusReady === null) setReady(false);
     } catch {
       /* ignore */
     }

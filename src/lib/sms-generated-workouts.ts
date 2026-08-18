@@ -39,7 +39,7 @@ const BLOB_PATH = "demo/sms-workouts.json";
 export type WorkoutRestTimerSettings = {
   enabled: boolean;
   seconds: number;
-  /** End-of-rest sample; default train whistle. */
+  /** End-of-rest sample; default Cybertruck honk. */
   sound?: RestTimerSoundId | string | null;
 };
 
@@ -175,18 +175,33 @@ export async function updateWorkoutRestTimer(
   workoutId: string,
   restTimer: WorkoutRestTimerSettings,
 ): Promise<void> {
+  const enabled = restTimer.enabled;
+  const seconds = enabled ? normalizeRestTimerSeconds(restTimer.seconds) : undefined;
+  const sound = enabled
+    ? normalizeRestTimerSound(restTimer.sound)
+    : undefined;
+
+  if (!isDemoMode()) {
+    const { persistSmsWorkoutRestTimerToDb } = await import("@/lib/sms-workouts-db");
+    await persistSmsWorkoutRestTimerToDb(workoutId, {
+      enabled,
+      seconds: seconds ?? null,
+      sound: sound ?? null,
+    });
+  }
+
   await hydrateSmsWorkouts();
   const store = readSmsWorkoutStore();
   const workout = store.workouts.find((w) => w.id === workoutId);
   if (!workout) return;
-  workout.restTimerEnabled = restTimer.enabled;
-  workout.restTimerSeconds = restTimer.enabled
-    ? normalizeRestTimerSeconds(restTimer.seconds)
-    : undefined;
-  workout.restTimerSound = restTimer.enabled
-    ? normalizeRestTimerSound(restTimer.sound ?? workout.restTimerSound)
-    : workout.restTimerSound;
-  await writeSmsWorkoutStore(store);
+  workout.restTimerEnabled = enabled;
+  workout.restTimerSeconds = seconds;
+  if (sound) workout.restTimerSound = sound;
+  if (isDemoMode()) {
+    await writeSmsWorkoutStore(store);
+  } else {
+    setMemory(store);
+  }
 }
 
 export async function buildWorkoutFromParsedSms(
@@ -307,6 +322,12 @@ export async function getSmsGeneratedWorkout(
       reps: item.reps,
       setCount: item.sets ?? 3,
       weightTier: item.weightTier ?? "medium",
+      restSec:
+        workout.restTimerEnabled === false
+          ? 0
+          : normalizeRestTimerSeconds(
+              workout.restTimerSeconds ?? DEFAULT_REST_TIMER_SECONDS,
+            ),
       past: null,
     };
   }));
@@ -324,10 +345,10 @@ export async function getSmsGeneratedWorkout(
     workoutName: workout.name,
     memberName,
     exercises: blocks.map((b) => ({ ...b, past: pastByBlockId[b.id] ?? null })),
-    restTimerEnabled: Boolean(workout.restTimerEnabled),
-    restTimerSeconds: workout.restTimerEnabled
-      ? normalizeRestTimerSeconds(workout.restTimerSeconds ?? DEFAULT_REST_TIMER_SECONDS)
-      : undefined,
+    restTimerEnabled: workout.restTimerEnabled !== false,
+    restTimerSeconds: normalizeRestTimerSeconds(
+      workout.restTimerSeconds ?? DEFAULT_REST_TIMER_SECONDS,
+    ),
     restTimerSound: normalizeRestTimerSound(
       workout.restTimerSound ?? DEFAULT_REST_TIMER_SOUND,
     ),

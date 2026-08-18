@@ -345,9 +345,14 @@ export default function CoachLessonPlanBuilder({
       .map((d) => ({ userId: d.userId, rawSms: d.rawSms.trim() }));
 
     if (cascadeIds.length === 0 && individuals.length === 0) {
-      setError(true);
-      setMessage("Pick who gets the cascade workout or mark students for individual plans.");
-      return;
+      const ok = window.confirm(
+        "No students selected. Save today's class anyway so it stays on the calendar?",
+      );
+      if (!ok) {
+        setError(true);
+        setMessage("Pick who gets the cascade workout or mark students for individual plans.");
+        return;
+      }
     }
 
     if (isLiveReplace) {
@@ -387,9 +392,9 @@ export default function CoachLessonPlanBuilder({
             ? { enabled: true, seconds: restTimerSeconds, sound: restTimerSound }
             : { enabled: false, seconds: restTimerSeconds, sound: restTimerSound },
           cascade:
-            cascadeIds.length > 0
+            cascadeIds.length > 0 || individuals.length === 0
               ? {
-                  rawSms: normalized,
+                  rawSms: normalized || interpretation?.workout?.title || "Class",
                   userIds: cascadeIds,
                   title: interpretation?.workout?.title,
                   workoutId: draftWorkoutId || matchingSavedSession?.workoutId,

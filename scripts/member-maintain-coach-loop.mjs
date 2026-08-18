@@ -552,7 +552,7 @@ async function runAddedFeatureChecks(round, ctx) {
           finishedExercises: [],
           weights: {},
           restTimerEnabled: true,
-          restTimerSeconds: 60,
+          restTimerSeconds: 45,
           restTimerSound: "cybertruck",
           restActive: {
             blockId: "loop-block-a",

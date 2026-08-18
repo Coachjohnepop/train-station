@@ -165,10 +165,10 @@ export default function CoachLiveFloorZoomPanel({
     }
   }
 
-  function closeEmbed() {
+  const closeEmbed = useCallback(() => {
     setEmbedVisible(false);
     setEmbedCreds(null);
-  }
+  }, []);
 
   return (
     <section

@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  nextHeldLiveZoomStatus,
+  sameLiveZoomStatus,
+} from "@/lib/live-zoom-status-hold";
 
 export type MemberLiveZoomStatus = {
   sessionDate: string;
@@ -11,12 +15,13 @@ export type MemberLiveZoomStatus = {
   livePageUrl: string;
 };
 
-/** Fast poll backup when SSE is on another serverless instance. */
-const POLL_MS = 500;
+/** Backup when SSE lands on another serverless instance. SSE is the instant path. */
+const POLL_MS = 2_500;
 
 type Listener = (status: MemberLiveZoomStatus | null) => void;
 
 let sharedStatus: MemberLiveZoomStatus | null = null;
+let notLiveSince: number | null = null;
 const listeners = new Set<Listener>();
 let es: EventSource | null = null;
 let pollId: ReturnType<typeof setInterval> | null = null;
@@ -24,10 +29,13 @@ let refCount = 0;
 let started = false;
 
 function emit(next: MemberLiveZoomStatus | null) {
-  sharedStatus = next;
+  const held = nextHeldLiveZoomStatus(sharedStatus, next, { notLiveSince }, Date.now());
+  notLiveSince = held.notLiveSince;
+  if (sameLiveZoomStatus(sharedStatus, held.status)) return;
+  sharedStatus = held.status;
   for (const l of listeners) {
     try {
-      l(next);
+      l(sharedStatus);
     } catch {
       /* ignore */
     }
