@@ -14,6 +14,11 @@ import MemberExerciseVideoModal from "@/components/MemberExerciseVideoModal";
 import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
 import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
 import WorkoutRestTimer from "@/components/WorkoutRestTimer";
+import { useMemberLiveZoomStatus } from "@/lib/use-member-live-zoom-status";
+import {
+  LIVE_CLASS_POLL_MS,
+  isLiveClassSessionGoing,
+} from "@/lib/session-live-poll";
 import {
   playRestComplete,
   playRestStart,
@@ -451,10 +456,10 @@ export default function MemberWorkoutConsole({
     });
   }, [coachFloorMode]);
 
-  // Keep coach + member nearly in lockstep (SSE hot path + very fast poll across instances).
-  const LIVE_POLL_MS = 150;
   // Warmup used a blob store; checkoffs still belong in LiveWorkoutSession (Postgres).
   const liveSessionScope = !!liveSyncUserId && !reviewMode;
+  const liveClassOn =
+    isLiveClassSessionGoing(useMemberLiveZoomStatus()) || coachFloorMode;
   const warmupSyncEnabled = progressMode === "warmup" && !!liveSyncUserId && !reviewMode;
   const [liveSessionHydrated, setLiveSessionHydrated] = useState(false);
   /** Wait for first remote snapshot so we don't overwrite partner history with empty local state. */
@@ -1038,7 +1043,7 @@ export default function MemberWorkoutConsole({
     queueLiveSave,
   ]);
 
-  // Live read via SSE (in-memory hot cache) + fast poll fallback for other instances.
+  // Live read: one GET on open, SSE, tab-return. Interval only while class is live.
   useEffect(() => {
     if (!liveSessionScope) return;
 
@@ -1046,8 +1051,7 @@ export default function MemberWorkoutConsole({
     if (liveSessionDate) q.set("date", liveSessionDate);
     const query = q.toString();
 
-    const poll = async () => {
-      if (document.visibilityState === "hidden" && liveSessionHydrated) return;
+    const loadRemote = async () => {
       try {
         const res = await fetch(
           `/api/workouts/${workout.workoutId}/live-session?${query}`,
@@ -1064,7 +1068,7 @@ export default function MemberWorkoutConsole({
       }
     };
 
-    void poll();
+    void loadRemote();
 
     let es: EventSource | null = null;
     try {
@@ -1083,19 +1087,27 @@ export default function MemberWorkoutConsole({
       /* EventSource unavailable */
     }
 
-    const pollId = setInterval(poll, LIVE_POLL_MS);
     const onVisible = () => {
-      if (document.visibilityState === "visible") void poll();
+      if (document.visibilityState === "visible") void loadRemote();
     };
     document.addEventListener("visibilitychange", onVisible);
 
+    let pollId: ReturnType<typeof setInterval> | undefined;
+    if (liveClassOn) {
+      pollId = setInterval(() => {
+        if (document.visibilityState === "hidden") return;
+        void loadRemote();
+      }, LIVE_CLASS_POLL_MS);
+    }
+
     return () => {
       es?.close();
-      clearInterval(pollId);
+      if (pollId) clearInterval(pollId);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [
     liveSessionScope,
+    liveClassOn,
     liveSyncUserId,
     liveSessionDate,
     workout.workoutId,

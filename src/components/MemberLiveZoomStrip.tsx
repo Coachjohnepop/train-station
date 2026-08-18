@@ -7,7 +7,7 @@
  * - Chip hidden → tiny edge pill to restore
  * - Coach not live → waiting / ping affordance
  *
- * Uses SSE + 500ms poll so Join flips nearly instantly when coach starts Zoom.
+ * Uses SSE + tab-focus. Backup poll only while coach is live.
  */
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";

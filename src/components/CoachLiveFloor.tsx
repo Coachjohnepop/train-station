@@ -86,10 +86,26 @@ export default function CoachLiveFloor({ initialDate }: { initialDate: string })
     void load();
   }, [load]);
 
-  // Mid-live reassign (new plan / workout id) does not always emit SSE — poll as backup.
+  const sessionGoing =
+    Boolean(expandedUserId) ||
+    Boolean(floor?.tiles.some((t) => t.status === "active"));
+
+  // Backup poll only while someone is in-session or a card is open.
   useEffect(() => {
-    const id = setInterval(() => void load(), 5000);
+    if (!sessionGoing) return;
+    const id = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      void load();
+    }, 5_000);
     return () => clearInterval(id);
+  }, [load, sessionGoing]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, [load]);
 
   useEffect(() => {
