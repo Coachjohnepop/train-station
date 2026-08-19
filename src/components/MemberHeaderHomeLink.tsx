@@ -5,15 +5,17 @@ import { useRouter } from "next/navigation";
 import TrainStationBrand from "@/components/TrainStationBrand";
 import { goMemberTodayHome } from "@/lib/member-today-home";
 
-export default function MemberHeaderHomeLink() {
+export default function MemberHeaderHomeLink({ setupHref }: { setupHref?: string }) {
   const router = useRouter();
+  const href = setupHref || "/member/today";
 
   return (
     <Link
-      href="/member/today"
+      href={href}
       className="transition hover:opacity-90"
-      title="Home — Today"
+      title={setupHref ? "Continue setup" : "Home — Today"}
       onClick={(e) => {
+        if (setupHref) return;
         e.preventDefault();
         goMemberTodayHome(router);
       }}

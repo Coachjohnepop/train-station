@@ -140,7 +140,8 @@ export default function MemberDayWheel({
           {days.map((day) => {
             const isSelected = day.iso === selectedIso;
             const isToday = day.iso === todayIso || day.calendarDate === todayIso;
-            const todayGold = isToday;
+            const doneGold = day.completed || (day.finisherNames?.length ?? 0) > 0;
+            const todayGold = isToday || doneGold;
             const chipClass = todayGold
               ? isSelected
                 ? "day-wheel-chip-today-gold day-wheel-chip-today-gold--selected"
@@ -177,7 +178,7 @@ export default function MemberDayWheel({
                 </span>
                 {day.completed && (
                   <span
-                    className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--success)] text-[9px] text-white"
+                    className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--ramp-gold)] text-[9px] font-bold text-black"
                     aria-label="Completed"
                   >
                     ✓

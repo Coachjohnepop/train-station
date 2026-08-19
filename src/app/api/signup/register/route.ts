@@ -172,7 +172,7 @@ export async function POST(request: Request) {
     const redirectTo =
       plan === "speaking_fee"
         ? "/member/speaking"
-        : quoteRequest
+        : quoteRequest || plan === "custom_training"
           ? `/member/quote-received?plan=${encodeURIComponent(plan)}`
           : needsCheckout
             ? memberCheckoutPath(plan)

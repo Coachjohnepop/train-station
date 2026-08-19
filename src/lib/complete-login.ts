@@ -18,16 +18,14 @@ import {
   readEmailHistoryFromRequestCookies,
 } from "@/lib/email-history-cookies";
 import {
-  memberCheckoutPath,
-  memberFreePaymentSetupPath,
-  MEMBER_PENDING_PATH,
   memberNeedsApproval,
   memberNeedsFreePaymentMethodAsync,
   memberNeedsPaymentAsync,
 } from "@/lib/member-gates";
 import { isMemberPathExemptFromPaymentGate } from "@/lib/member-route-gates";
-import { memberOnboardPath, memberTodayPath } from "@/lib/member-destinations";
+import { memberTodayPath } from "@/lib/member-destinations";
 import { getMemberProfile } from "@/lib/member-profiles-store";
+import { resolveMemberAppEntryPath } from "@/lib/member-app-entry-server";
 
 export async function resolveLoginDestination(
   user: SessionUser,
@@ -37,7 +35,6 @@ export async function resolveLoginDestination(
 
   if (!isStaffRole(user.role)) {
     const profile = await getMemberProfile(user.id);
-    const plan = profile?.plan || "explorer";
     const needsOnboard =
       (profile && !profile.onboardingComplete) ||
       (!profile && user.id.startsWith("member-"));
@@ -45,37 +42,7 @@ export async function resolveLoginDestination(
     const needsFreePm = await memberNeedsFreePaymentMethodAsync(profile, user.id);
     const needsApproval = memberNeedsApproval(profile, user.id);
 
-    if (needsPayment) {
-      destination = memberCheckoutPath(plan);
-    } else if (needsFreePm) {
-      destination = memberFreePaymentSetupPath();
-    } else if (needsOnboard) {
-      // Paid re-onboard: pick the ticket again. Checkout proves coverage before Continue.
-      destination =
-        profile?.paymentStatus === "paid" && plan && plan !== "explorer"
-          ? "/member/checkout"
-          : plan
-            ? `/member/onboard?plan=${encodeURIComponent(plan)}`
-            : memberOnboardPath();
-    } else if (needsApproval) {
-      destination = MEMBER_PENDING_PATH;
-    } else if (profile?.coachIntakeCompleteAt) {
-      const { listUserMeasurements } = await import("@/lib/measurements-store");
-      const { memberNeedsFirstTapeMeasurements } = await import(
-        "@/lib/member-measurement-schedule"
-      );
-      const { MEMBER_FIRST_MEASUREMENTS_PATH } = await import("@/lib/member-intake");
-      const checkIns = await listUserMeasurements(user.id, 1);
-      if (
-        memberNeedsFirstTapeMeasurements({
-          onboardingComplete: true,
-          coachIntakeCompleteAt: profile.coachIntakeCompleteAt,
-          hasCheckIn: checkIns.length > 0,
-        })
-      ) {
-        destination = MEMBER_FIRST_MEASUREMENTS_PATH;
-      }
-    }
+    destination = await resolveMemberAppEntryPath(user.id, profile);
 
     if (redirect && redirect.startsWith("/") && !redirect.startsWith("//") && redirect.startsWith("/member")) {
       // Never let a deep link skip payment, free card setup, onboard, or pending gates.

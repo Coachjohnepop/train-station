@@ -3,11 +3,8 @@ import {
   MEMBER_PENDING_PATH,
   memberCheckoutPath,
   memberNeedsApproval,
-  memberNeedsFreePaymentMethodAsync,
   memberNeedsPayment,
-  memberNeedsPaymentAsync,
 } from "@/lib/member-gates";
-import { memberFreePaymentSetupPath } from "@/lib/member-route-gates";
 
 /** Member dashboard entry — routes to the Today hub. */
 export function memberDashboardPath(): string {
@@ -35,7 +32,7 @@ export function memberPostOnboardPath(
     return memberCheckoutPath(profile?.plan);
   }
   if (memberNeedsApproval(profile, userId)) return MEMBER_PENDING_PATH;
-  return memberDashboardPath();
+  return memberTodayPath();
 }
 
 /** Post-onboard redirect that honors claimed free-week promos. */
@@ -44,14 +41,8 @@ export async function memberPostOnboardPathAsync(
   userId: string,
   _programSlug: string,
 ): Promise<string> {
-  if (await memberNeedsPaymentAsync(profile, userId)) {
-    return memberCheckoutPath(profile?.plan);
-  }
-  if (await memberNeedsFreePaymentMethodAsync(profile, userId)) {
-    return memberFreePaymentSetupPath();
-  }
-  if (memberNeedsApproval(profile, userId)) return MEMBER_PENDING_PATH;
-  return memberDashboardPath();
+  const { resolveMemberAppEntryPath } = await import("@/lib/member-app-entry-server");
+  return resolveMemberAppEntryPath(userId, profile);
 }
 
 export function memberOnboardPath(programSlug?: string): string {

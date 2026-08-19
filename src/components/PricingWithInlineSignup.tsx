@@ -220,7 +220,7 @@ export default function PricingWithInlineSignup({ recParam }: { recParam?: strin
             <p className="mt-2 text-sm text-[var(--muted)]">
               {selectedPlan.id === "explorer"
                 ? "Create a free account to explore starter programs."
-                : "Sign up, then pay with Stripe (card). You’ll land in onboarding after payment."}
+                : "Sign up, then pay this seat. After that: a 2-minute setup, then Today."}
             </p>
           </div>
           <div className="flex flex-col items-center gap-3">

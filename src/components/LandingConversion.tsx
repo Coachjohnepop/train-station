@@ -14,6 +14,7 @@ import {
   LANDING_RETURN_EVENT,
   armLandingReturnOnLeave,
 } from "@/lib/landing-return-visit";
+import SiteSeenLatch from "@/components/SiteSeenLatch";
 
 /**
  * Public landing for guests / SMS traffic.
@@ -100,6 +101,7 @@ export default function LandingConversion({
 
   return (
     <div className="relative min-h-screen bg-black">
+      <SiteSeenLatch />
       <ThemeAttributesSync membershipTier="explorer" />
       {/* Transparent nav over hero so SMS open is full-bleed athletes, not a grey header */}
       <LandingNav overHero />

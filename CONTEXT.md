@@ -394,11 +394,13 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-18 (EOD — John napping)  
-**Status:** **Stable.** Stripe done (John). Zoom works (John). Site up.  
-**Supabase (same day):** live **`train-station-catalog`** / **`mattccorhcxghwyfgklp`** is Healthy. Paused **`dptxndcl…`** is not prod. PostgREST locked (RLS on, `anon` revoked). Do **not** put TS on Eco Delight’s Pro org. **Still:** Upgrade **`johnepop's projects`** (or TS org, then transfer) to Pro before **30 Aug 2026** — Free = no backups + restriction.  
-**Stay Free (dev):** live-class backup polls only while **`hostStarted`** (or coach card open). Idle = one GET + SSE + tab-focus, no interval. 5s poll during class. Rest timer is local+SSE, not that loop. **Shipped** `5175c2a` → `main` (Vercel Production). Still no backups on Free — watch **Review usage** before **30 Aug**.  
-**Shipped this pass:** Checking a “5 min” bike set starts 45–60s rest (not another 5-min hold). Live rest `phase` persists. Catalog workouts default rest ON. Coach floor is no longer auto-muted.  
+**Date:** 2026-08-19  
+**Status:** Newbie rail + gold completed days. Stripe/Zoom still stable.  
+**Supabase:** live **`train-station-catalog`** / **`mattccorhcxghwyfgklp`**. Paused **`dptxndcl…`** is not prod. PostgREST locked. Do **not** put TS on Eco Delight’s Pro org.  
+**Polls:** live-class backup **only while `hostStarted`**, 5s min. Build fails if a faster network poll is added (`scripts/guard-hot-polls.mjs`). Shipped `5175c2a` + `935f42a` → `main`.  
+**Still (not tonight):** Free = no backups. Watch **Review usage** before **30 Aug 2026**.  
+**Shipped this pass:** Newbie = first visit to the site (`ts_site_seen`), not unfinished setup. Returning members get the full app. First-visit rail + first-hour card only for that first session. Gold completed days. One `nextNewbieHref` after signup/login/complete.  
+**Prior (2026-08-18):** Checking a “5 min” bike set starts 45–60s rest (not another 5-min hold). Live rest `phase` persists. Catalog workouts default rest ON. Coach floor is no longer auto-muted.  
 **Prior (same day):** Jeremy class-for-today save fix. Publish writes the CoachTodaySession first. Today’s class is **Warm-Up and Lower Body Strength Session** (`sms-w-1e20b57b`) for Lemon John + paid roster.  
 **Prior (same day):** Join Zoom flicker fix. Member Join Live no longer flaps on stale polls. Host flag writes await Postgres. Embed no longer leave/rejoin when the floor SSE re-renders.  
 **Prior (2026-08-17):** Bella onboard feedback: more personal questions. Same About-you screen for everyone. Health fields optional (weight included). Welcome: man/woman + **Skip health details — I’ll add them later**. Onboard writes `MemberProfile` once; measurements Starting reads it — no second required weight.  
