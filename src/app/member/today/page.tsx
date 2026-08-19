@@ -283,14 +283,10 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const stretchPreview = memberDays.length ? nextDayStretchPreview(memberDays, programTodayKey) : [];
   const tomorrowDay = memberDays.length ? nextMemberDay(memberDays, programTodayKey) : null;
   // Today and yesterday may run the full workout; tomorrow is preview only.
-  const yesterdayIso = toIsoDate(
-    (() => {
-      const d = new Date(`${programTodayKey}T12:00:00`);
-      d.setDate(d.getDate() - 1);
-      return d;
-    })(),
-  );
-  const canStartThisDate = viewDate === programTodayKey || viewDate === yesterdayIso;
+  const catchUpIso = /^\d{4}-\d{2}-\d{2}$/.test(programTodayKey)
+    ? addDaysIso(programTodayKey, -1)
+    : yesterdayIso;
+  const canStartThisDate = viewDate === programTodayKey || viewDate === catchUpIso;
   const canPreviewThisDate = Boolean(schedulePreview && workout && allowedIsos.has(viewDate));
   const memberWorkout = canStartThisDate || canPreviewThisDate ? workout : null;
   const isLateCatchUp = viewDate === yesterdayIso;
@@ -506,7 +502,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
                 </details>
               )}
               <MemberWorkoutConsole
-                workout={workout}
+                workout={workout!}
                 backHref={sp.date ? `/member/today?date=${sp.date}` : "/member/today"}
                 backLabel="← Go to Today"
                 programSlug={programSlug}
