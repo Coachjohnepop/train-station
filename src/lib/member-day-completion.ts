@@ -4,7 +4,7 @@ import { addDaysIso } from "@/lib/workout-day-visibility";
 const CALENDAR_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 export function calendarDateForDay(
-  day: Pick<MemberDaySummary, "iso" | "calendarDate" | "daysFromToday">,
+  day: Pick<MemberDaySummary, "iso" | "calendarDate"> & { daysFromToday?: number },
   calendarToday?: string,
 ): string | null {
   if (day.calendarDate && CALENDAR_ISO.test(day.calendarDate)) return day.calendarDate;
@@ -17,7 +17,9 @@ export function calendarDateForDay(
 
 /** A day is done if that workout was logged, or any session was logged on that calendar date. */
 export function dayWorkoutCompleted(
-  day: Pick<MemberDaySummary, "iso" | "calendarDate" | "workoutId" | "daysFromToday">,
+  day: Pick<MemberDaySummary, "iso" | "calendarDate" | "workoutId"> & {
+    daysFromToday?: number;
+  },
   loggedWorkoutIds: Set<string>,
   loggedCalendarDates: Set<string>,
   calendarToday?: string,
