@@ -8,11 +8,16 @@ import TodaySessionPanel from "@/components/TodaySessionPanel";
 import TodayPageLiveRefresh from "@/components/TodayPageLiveRefresh";
 import MemberWorkoutConsole from "@/components/MemberWorkoutConsole";
 import { getMemberDashboard } from "@/lib/member-context";
-import { loadMemberLoggedWorkoutIds } from "@/lib/member-schedule";
+import { loadMemberLoggedCalendarDates, loadMemberLoggedWorkoutIds } from "@/lib/member-schedule";
+import { markDaysCompleted } from "@/lib/member-day-completion";
+import { attachFinisherNames } from "@/lib/day-finishers-format";
+import { listFinishersByCalendarDates } from "@/lib/day-finishers";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { resolveMemberUserId } from "@/lib/current-user";
 import { resolveTargetUserId } from "@/lib/resolve-target-user";
 import { localTodayIso, toIsoDate } from "@/lib/program-calendar";
+import { cookies } from "next/headers";
+import { SITE_SEEN_COOKIE, finishedSetupThisVisit, isFirstTimeOnSite } from "@/lib/site-visit";
 import {
   formatCycleDayFromWeekDay,
   parseEnrollmentDayKey,
@@ -104,10 +109,14 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const memberName = resolveDemoUser(uid)?.name || dashboard.user.name;
 
   const calendarToday = localTodayIso();
-  const [upcoming, loggedSet, primaryProgram, profile, coachSettings, enrollments, memberContent] =
+  const firstTimeOnSite = isFirstTimeOnSite(
+    (await cookies()).get(SITE_SEEN_COOKIE)?.value,
+  );
+  const [upcoming, loggedSet, loggedDates, primaryProgram, profile, coachSettings, enrollments, memberContent] =
     await Promise.all([
     loadMemberUpcomingSessions(uid),
     loadMemberLoggedWorkoutIds(uid),
+    loadMemberLoggedCalendarDates(uid),
     resolvePrimaryScheduleProgram(uid),
     getMemberProfile(uid),
     getCoachSettings(),
@@ -126,6 +135,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
         daysBefore: schedulePreview?.daysBefore ?? 1,
         upcomingDays: schedulePreview?.upcomingDays,
         futureVisibility: schedulePreview?.futureVisibility,
+        loggedCalendarDates: loggedDates,
       })
     : null;
 
@@ -150,15 +160,22 @@ export default async function MemberTodayPage({ searchParams }: Props) {
       ? buildIntakeRampPlaceholderDays(calendarToday, 3, 1)
       : null;
   // Always expose real yesterday · today · tomorrow chips — even with no workout assigned.
-  const calendarSwipeDays = buildCalendarSwipeDays(programTodayKey);
-  const memberDays = dayWindow?.days.length
-    ? dayWindow.days
-    : intakeRampDays?.length
-      ? intakeRampDays
-      : calendarSwipeDays;
-  const memberRollup =
-    dayWindow?.rollup ??
-    (memberDays.length ? rollupForMemberDays(memberDays) : null);
+  const calendarSwipeDays = buildCalendarSwipeDays(programTodayKey, loggedDates);
+  const rawMemberDays = markDaysCompleted(
+    dayWindow?.days.length
+      ? dayWindow.days
+      : intakeRampDays?.length
+        ? intakeRampDays
+        : calendarSwipeDays,
+    loggedSet,
+    loggedDates,
+  );
+  const finisherDates = rawMemberDays
+    .map((d) => d.calendarDate || (/^\d{4}-\d{2}-\d{2}$/.test(d.iso) ? d.iso : ""))
+    .filter(Boolean);
+  const finishersByDate = await listFinishersByCalendarDates(finisherDates);
+  const memberDays = attachFinisherNames(rawMemberDays, finishersByDate);
+  const memberRollup = memberDays.length ? rollupForMemberDays(memberDays) : null;
   // Clamp deep-links outside the 3-day window back to program today.
   const allowedIsos = new Set(memberDays.map((d) => d.iso));
   const viewDate = allowedIsos.has(rawViewDate) ? rawViewDate : programTodayKey;
@@ -362,7 +379,9 @@ export default async function MemberTodayPage({ searchParams }: Props) {
               introBookedAt={profile?.introBookedAt ?? null}
               coachMeetingRequestedAt={profile?.coachMeetingRequestedAt ?? null}
               coachMeetingRequestNote={profile?.coachMeetingRequestNote ?? null}
-              autoPromptIntroBooking={coachSettings.autoPromptIntroBooking}
+              autoPromptIntroBooking={
+                coachSettings.autoPromptIntroBooking || !profile?.introBookedAt
+              }
               autoPromptFollowUpBooking={coachSettings.autoPromptFollowUpBooking}
               programBlock={programBlock}
               contentAccess={
@@ -377,6 +396,9 @@ export default async function MemberTodayPage({ searchParams }: Props) {
               previewFutureReadOnly={Boolean(schedulePreview && !canStartThisDate && canPreviewThisDate)}
               measurementDay={measurementSchedule.kind === "today" || measurementSchedule.kind === "tomorrow" ? measurementSchedule.kind : null}
               measurementCompletedToday={measurementCompletedToday}
+              firstTimeOnSite={
+                firstTimeOnSite && finishedSetupThisVisit(profile?.completedAt)
+              }
             />
           </Suspense>
 

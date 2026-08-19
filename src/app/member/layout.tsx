@@ -1,4 +1,4 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import MemberShell from "@/components/MemberShell";
 import { getMemberDashboard } from "@/lib/member-context";
@@ -18,6 +18,7 @@ import {
   memberFreePaymentSetupPath,
 } from "@/lib/member-route-gates";
 import type { SignupPlan } from "@/lib/signup-plans";
+import { SITE_SEEN_COOKIE, isFirstTimeOnSite } from "@/lib/site-visit";
 
 export default async function MemberLayout({
   children,
@@ -72,7 +73,14 @@ export default async function MemberLayout({
   const setupMode =
     pathOnly.startsWith("/member/onboard") ||
     pathOnly.startsWith("/member/speaking") ||
-    pathOnly.startsWith("/member/payment-setup");
+    pathOnly.startsWith("/member/payment-setup") ||
+    pathOnly.startsWith("/member/quote-received") ||
+    pathOnly.startsWith("/member/checkout");
+  const cookieStore = await cookies();
+  const firstTimeOnSite = isFirstTimeOnSite(cookieStore.get(SITE_SEEN_COOKIE)?.value);
+  // Newbie = first visit to the site, not "setup unfinished".
+  // After they finish setup (or come back later) they get the full app.
+  const newbieMode = firstTimeOnSite && !profile?.onboardingComplete;
 
   // Free Explorer card-on-file (admin lever) — before onboard/Today.
   if (
@@ -149,6 +157,7 @@ export default async function MemberLayout({
       paymentGateActive={paymentGateActive}
       checkoutPlan={checkoutPlan}
       setupMode={setupMode}
+      newbieMode={newbieMode}
     >
       {children}
     </MemberShell>

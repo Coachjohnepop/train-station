@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { resolveStorageUserId } from "@/lib/enrollment-db";
 import { computeStrengthScoreFromPerfs } from "@/lib/demo-logs";
+import { localTodayIso } from "@/lib/program-calendar";
 
 export type WorkoutExercisePast = {
   setScheme: string;
@@ -26,6 +27,34 @@ export async function getLoggedWorkoutIdsDb(userId: string): Promise<Set<string>
     if (log.workoutId) ids.add(log.workoutId);
   }
   return ids;
+}
+
+/** Calendar days (business TZ) this member already logged or checked off. */
+export async function getLoggedCalendarDatesDb(userId: string): Promise<Set<string>> {
+  const storageUserId = await resolveStorageUserId(userId);
+  const dates = new Set<string>();
+  const logs = await prisma.workoutLog.findMany({
+    where: { userId: storageUserId },
+    select: { performedAt: true },
+  });
+  for (const log of logs) {
+    dates.add(localTodayIso(log.performedAt));
+  }
+  const live = await prisma.liveWorkoutSession.findMany({
+    where: { userId: storageUserId },
+    select: { sessionDate: true, finishedExercises: true, completedSets: true },
+  });
+  for (const session of live) {
+    const finished = Array.isArray(session.finishedExercises)
+      ? session.finishedExercises.length
+      : 0;
+    const sets =
+      session.completedSets && typeof session.completedSets === "object"
+        ? Object.keys(session.completedSets as object).length
+        : 0;
+    if (finished > 0 || sets > 0) dates.add(session.sessionDate);
+  }
+  return dates;
 }
 
 export async function getWorkoutLogCountDb(userId: string): Promise<number> {

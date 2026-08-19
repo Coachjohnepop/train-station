@@ -11,6 +11,7 @@ import PushAlertEnable from "@/components/PushAlertEnable";
 import MemberNav from "@/components/MemberNav";
 import MemberHeaderHomeLink from "@/components/MemberHeaderHomeLink";
 import MemberGateCookieSync from "@/components/MemberGateCookieSync";
+import SiteSeenLatch from "@/components/SiteSeenLatch";
 import DisablePullToRefresh from "@/components/DisablePullToRefresh";
 import LogoutButton from "@/components/LogoutButton";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
@@ -23,6 +24,7 @@ import {
   type MembershipThemeTier,
 } from "@/lib/membership-theme";
 import type { SignupPlan } from "@/lib/signup-plans";
+import { memberCheckoutPath } from "@/lib/member-route-gates";
 
 export default function MemberShell({
   children,
@@ -36,6 +38,8 @@ export default function MemberShell({
   checkoutPlan = "member",
   /** Setup wizard: hide Live Class / maintain chrome so video fits on phone. */
   setupMode = false,
+  /** First visit to the site (not a returning member). Slim chrome until setup is done. */
+  newbieMode = false,
 }: {
   children: React.ReactNode;
   tierLabel?: string;
@@ -48,12 +52,16 @@ export default function MemberShell({
   paymentGateActive?: boolean;
   checkoutPlan?: SignupPlan;
   setupMode?: boolean;
+  newbieMode?: boolean;
 }) {
   const tierLabel = MEMBERSHIP_THEME_LABELS[membershipTier] || tierLabelProp || "Member";
+  const hideMemberNav = setupMode || newbieMode || paymentGateActive;
+  const showContinueSetup = newbieMode && !setupMode && !paymentGateActive;
 
   return (
     <div className="app-shell-bg flex min-h-screen flex-col">
       <MemberGateCookieSync />
+      <SiteSeenLatch established={!newbieMode} />
       <DisablePullToRefresh />
       <Suspense fallback={null}>
         <ResumePathTracker area="member" />
@@ -66,7 +74,15 @@ export default function MemberShell({
         <header className="app-shell-header">
           <div className="mx-auto flex w-full max-w-lg md:max-w-3xl lg:max-w-6xl xl:max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
-              <MemberHeaderHomeLink />
+              <MemberHeaderHomeLink
+                setupHref={
+                  paymentGateActive
+                    ? memberCheckoutPath(checkoutPlan)
+                    : hideMemberNav
+                      ? "/member/onboard"
+                      : undefined
+                }
+              />
               <Link
                 href="/member/account"
                 className="flex min-w-0 items-center gap-2 rounded-lg transition hover:opacity-90"
@@ -92,12 +108,23 @@ export default function MemberShell({
               <LogoutButton className="text-sm" />
             </div>
           </div>
-          <MemberNav
-            intakePending={intakePending}
-            paymentGateActive={paymentGateActive}
-            checkoutPlan={checkoutPlan}
-          />
+          {hideMemberNav ? null : (
+            <MemberNav
+              intakePending={intakePending}
+              paymentGateActive={paymentGateActive}
+              checkoutPlan={checkoutPlan}
+            />
+          )}
         </header>
+
+        {showContinueSetup ? (
+          <p className="mx-auto w-full max-w-lg border-b border-[#7c3aed]/30 bg-[#7c3aed]/10 px-4 py-2 text-center text-[12px] text-[var(--text)] md:max-w-3xl lg:max-w-6xl xl:max-w-7xl md:px-6 lg:px-8">
+            Finish setup to unlock Today.{" "}
+            <Link href="/member/onboard" className="font-semibold text-accent hover:underline">
+              Continue setup →
+            </Link>
+          </p>
+        ) : null}
 
         {paymentGateActive ? (
           <p className="mx-auto w-full max-w-lg border-b border-amber-500/25 bg-amber-500/10 px-4 py-2 text-center text-[11px] text-amber-100 md:max-w-3xl lg:max-w-6xl xl:max-w-7xl md:px-6 lg:px-8">

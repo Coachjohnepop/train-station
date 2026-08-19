@@ -39,6 +39,7 @@ import { getDemoSeed } from "@/lib/demo-seed-store";
 import { hydrateDemoExercises, loadDemoExercises } from "@/lib/demo-exercises";
 import { buildDemoWorkoutExerciseItems } from "@/lib/demo-workout-items";
 import { isDemoMode } from "@/lib/demo-enrollments";
+import { dayWorkoutCompleted } from "@/lib/member-day-completion";
 
 const STRETCH_RE = /stretch|mobility|foam|yoga|warm[- ]?up|cool[- ]?down|flex/i;
 
@@ -112,7 +113,10 @@ export async function resolvePrimaryScheduleProgram(userId: string) {
  * Always-available yesterday · today · tomorrow calendar chips.
  * Used when no program schedule is linked so swipe still works with empty workout days.
  */
-export function buildCalendarSwipeDays(todayIso: string): MemberDaySummary[] {
+export function buildCalendarSwipeDays(
+  todayIso: string,
+  loggedCalendarDates: Set<string> = new Set(),
+): MemberDaySummary[] {
   const labels = ["Yesterday", "Today", "Tomorrow"] as const;
   const days: MemberDaySummary[] = [];
   for (let offset = -1; offset <= 1; offset++) {
@@ -120,6 +124,7 @@ export function buildCalendarSwipeDays(todayIso: string): MemberDaySummary[] {
     const phase = offset < 0 ? "past" : offset === 0 ? "today" : "future";
     days.push({
       iso,
+      calendarDate: iso,
       phase,
       weekday: formatWeekday(iso),
       shortDate: formatShortDate(iso),
@@ -129,7 +134,7 @@ export function buildCalendarSwipeDays(todayIso: string): MemberDaySummary[] {
       workoutName: null,
       workoutId: null,
       programSlug: "calendar",
-      completed: false,
+      completed: loggedCalendarDates.has(iso),
       exerciseCount: 0,
       exerciseNames: [],
       stretchNames: [],
@@ -213,7 +218,11 @@ async function summarizeProgramDay(
   },
   loggedWorkoutIds: Set<string>,
   calendarToday: string,
-  extras?: { calendarDate?: string; visibilityTier?: MemberDaySummary["visibilityTier"] },
+  extras?: {
+    calendarDate?: string;
+    visibilityTier?: MemberDaySummary["visibilityTier"];
+    loggedCalendarDates?: Set<string>;
+  },
 ): Promise<MemberDaySummary> {
   const enrollmentDayNumber = entry.enrollmentDayNumber;
   const dayLabel = `Day ${enrollmentDayNumber}`;
@@ -239,7 +248,15 @@ async function summarizeProgramDay(
         workoutName: coachSession.title,
         workoutId: coachSession.workoutId,
         programSlug,
-        completed: loggedWorkoutIds.has(coachSession.workoutId),
+        completed: dayWorkoutCompleted(
+          {
+            iso: extras?.calendarDate || entry.key,
+            calendarDate: extras?.calendarDate,
+            workoutId: coachSession.workoutId,
+          },
+          loggedWorkoutIds,
+          extras?.loggedCalendarDates ?? new Set(),
+        ),
         exerciseCount: visibleNames.length,
         exerciseNames: visibleNames,
         stretchNames: pickStretchPreview(preview),
@@ -276,7 +293,15 @@ async function summarizeProgramDay(
     workoutName: pick?.workout?.name || null,
     workoutId,
     programSlug,
-    completed: !!(workoutId && loggedWorkoutIds.has(workoutId)),
+    completed: dayWorkoutCompleted(
+      {
+        iso: extras?.calendarDate || entry.key,
+        calendarDate: extras?.calendarDate,
+        workoutId,
+      },
+      loggedWorkoutIds,
+      extras?.loggedCalendarDates ?? new Set(),
+    ),
     exerciseCount: visibleNames.length,
     exerciseNames: visibleNames,
     stretchNames: pickStretchPreview(names),
@@ -298,6 +323,7 @@ export async function buildMemberDayWindow(
     /** Override future-day visibility (used for temp content-review previews). */
     futureVisibility?: "names" | "full";
     upcomingDays?: number;
+    loggedCalendarDates?: Set<string>;
   },
 ): Promise<{
   days: MemberDaySummary[];
@@ -314,6 +340,7 @@ export async function buildMemberDayWindow(
   const daysBefore = opts?.daysBefore ?? 2;
   const upcomingDays = opts?.upcomingDays;
   const futureVisibility = opts?.futureVisibility;
+  const loggedCalendarDates = opts?.loggedCalendarDates ?? new Set<string>();
   const enrolls = await getUserEnrollments(userId);
   const enrollment = enrolls[programSlug] || {
     currentWeek: 1,
@@ -375,7 +402,7 @@ export async function buildMemberDayWindow(
         entry,
         loggedWorkoutIds,
         calendarToday,
-        { calendarDate, visibilityTier },
+        { calendarDate, visibilityTier, loggedCalendarDates },
       );
 
       if (block.status === "pending") {
@@ -437,7 +464,9 @@ export async function buildMemberDayWindow(
         entry,
         loggedWorkoutIds,
         calendarToday,
-        visibilityTier ? { visibilityTier } : undefined,
+        visibilityTier
+          ? { visibilityTier, loggedCalendarDates }
+          : { loggedCalendarDates },
       ),
     );
   }

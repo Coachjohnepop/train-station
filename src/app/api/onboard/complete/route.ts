@@ -87,6 +87,12 @@ export async function POST(request: Request) {
     plan,
   } = body.data;
   const genderNorm = normalizeOnboardGender(gender);
+  if (!genderNorm) {
+    return NextResponse.json(
+      { error: "Pick man or woman so we can set the right goals." },
+      { status: 400 },
+    );
+  }
   const goalNorm = normalizePrimaryGoal(primaryGoal);
   const scheduleNorm = normalizeWorkoutSchedule(workoutSchedule);
   const fatLoss = isFatLossGoal(goalNorm);

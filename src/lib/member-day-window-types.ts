@@ -28,6 +28,8 @@ export type MemberDaySummary = {
   themeLabel: string | null;
   /** Coach pinned free sample day */
   freePool?: boolean;
+  /** First names of classmates who finished this calendar day. */
+  finisherNames?: string[];
 };
 
 export type MemberDayWindowRollup = {

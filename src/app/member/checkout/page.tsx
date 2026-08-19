@@ -454,7 +454,7 @@ function MemberCheckoutInner() {
               <p className="mt-2 text-sm text-[var(--muted)]">
                 {alreadyPaidPass
                   ? `Tap ${alreadyPaidPlan ? signupPlanLabel(alreadyPaidPlan as SignupPlan) : "your ticket"} again. The next screen says Continue already paid. A different ticket still goes to payment.`
-                  : "Same seats as the landing page. Tap a paid ticket for card or Venmo checkout, or stay free for now."}
+                  : "Pay this seat, then a 2-minute setup, then Today. Card or Venmo. Stay free if you only want Explorer."}
               </p>
               {error ? <p className="mt-2 text-sm text-amber-400">{error}</p> : null}
             </div>

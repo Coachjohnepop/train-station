@@ -37,6 +37,10 @@ export function memberAppEntryFromGateCookies(
     return memberFreePaymentSetupPath();
   }
   if (cookies.needsOnboard) {
+    if (plan === "speaking_fee" || plan === "speaking") return "/member/speaking";
+    if (plan === "team_consultation" || plan === "custom_training") {
+      return `/member/quote-received?plan=${encodeURIComponent(plan)}`;
+    }
     return memberOnboardEntryPath(plan);
   }
   if (cookies.pendingApproval) {

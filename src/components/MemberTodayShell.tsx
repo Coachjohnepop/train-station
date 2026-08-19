@@ -6,6 +6,7 @@ import Link from "next/link";
 import { MEMBER_TODAY_RESET_EVENT } from "@/lib/member-today-home";
 import MemberDayWheel from "@/components/MemberDayWheel";
 import MemberIntakeIntroCard from "@/components/MemberIntakeIntroCard";
+import MemberFirstHourCard from "@/components/MemberFirstHourCard";
 import MemberWarmupDayNavigator from "@/components/MemberWarmupDayNavigator";
 import MemberTrainingLocationToggle from "@/components/MemberTrainingLocationToggle";
 import MemberWorkoutConsole, { type MemberWorkoutView } from "@/components/MemberWorkoutConsole";
@@ -74,6 +75,8 @@ type Props = {
   schedulePreviewChips?: number;
   /** Future day opened for viewing only. */
   previewFutureReadOnly?: boolean;
+  /** First visit to the site — not a returning member. */
+  firstTimeOnSite?: boolean;
 };
 
 function DaySummaryCard({
@@ -130,7 +133,7 @@ function DaySummaryCard({
 
         </div>
         {completed && (
-          <span className="shrink-0 rounded-full bg-[var(--success)]/15 px-2 py-1 text-[10px] font-semibold text-[var(--success)]">
+          <span className="shrink-0 rounded-full bg-[color-mix(in_srgb,var(--ramp-gold)_22%,transparent)] px-2 py-1 text-[10px] font-semibold text-[var(--ramp-gold-light)]">
             Done ✓
           </span>
         )}
@@ -234,6 +237,7 @@ export default function MemberTodayShell({
   measurementCompletedToday = false,
   schedulePreviewChips,
   previewFutureReadOnly = false,
+  firstTimeOnSite = false,
 }: Props) {
   const canUseMaintain = Boolean(maintainAccess?.allowed);
   const router = useRouter();
@@ -327,10 +331,14 @@ export default function MemberTodayShell({
   }, [selectDate, todayIso]);
 
   const rampHighlight = showWarmupFlow && !intakeComplete;
-  const todayGold = isToday;
+  const todayGold =
+    isToday ||
+    Boolean(selectedSummary?.completed) ||
+    (selectedSummary?.finisherNames?.length ?? 0) > 0;
   const showFollowUpCard =
     autoPromptFollowUpBooking && isToday && !!coachMeetingRequestedAt && intakeComplete;
-  const showIntroCard = autoPromptIntroBooking && isToday;
+  const showIntroCard = !introBookedAt && isToday;
+  const showFirstHour = isToday && firstTimeOnSite && !introBookedAt;
 
   const intakeStatus = {
     introBookedAt,
@@ -463,6 +471,8 @@ export default function MemberTodayShell({
         </div>
       )}
 
+      {showFirstHour ? <MemberFirstHourCard bookedIntro={Boolean(introBookedAt)} /> : null}
+
       {days.length > 0 && (
         <MemberDayWheel
           days={days}
@@ -474,6 +484,33 @@ export default function MemberTodayShell({
         />
       )}
 
+      {(() => {
+        const selectedNames = selectedSummary?.finisherNames ?? [];
+        const yesterdayNames =
+          days.find((d) => d.phase === "past")?.finisherNames ?? [];
+        const showYesterdayOnToday = isToday && yesterdayNames.length > 0;
+        if (!selectedNames.length && !showYesterdayOnToday) return null;
+        return (
+          <div className="space-y-1 text-center">
+            {showYesterdayOnToday ? (
+              <p className="text-sm font-semibold text-[var(--ramp-gold-light)]">
+                Yesterday · {yesterdayNames.join(", ")} finished
+              </p>
+            ) : null}
+            {selectedNames.length > 0 && !showYesterdayOnToday ? (
+              <p className="text-sm font-semibold text-[var(--ramp-gold-light)]">
+                {selectedNames.join(", ")} finished
+              </p>
+            ) : null}
+            {selectedNames.length > 0 && showYesterdayOnToday && selectedSummary?.phase !== "past" ? (
+              <p className="text-xs font-medium text-[var(--ramp-gold-light)]">
+                Today · {selectedNames.join(", ")} finished
+              </p>
+            ) : null}
+          </div>
+        );
+      })()}
+
       {!showWarmupFlow && !showFullWorkout && selectedSummary ? (
         <DaySummaryCard
           summary={selectedSummary}
@@ -483,11 +520,15 @@ export default function MemberTodayShell({
       ) : null}
 
       {showFollowUpCard && (
-        <MemberIntakeIntroCard initialStatus={intakeStatus} followUpOnly />
+        <div id="member-book-intro">
+          <MemberIntakeIntroCard initialStatus={intakeStatus} followUpOnly />
+        </div>
       )}
 
-      {showIntroCard && !intakeComplete && !showFollowUpCard && !showWarmupFlow && (
-        <MemberIntakeIntroCard initialStatus={intakeStatus} />
+      {showIntroCard && !showFollowUpCard && (
+        <div id="member-book-intro">
+          <MemberIntakeIntroCard initialStatus={intakeStatus} />
+        </div>
       )}
 
       {isToday && measurementDay === "tomorrow" ? (
@@ -499,7 +540,6 @@ export default function MemberTodayShell({
 
       {showWarmupFlow && (
         <>
-          {showIntroCard && <MemberIntakeIntroCard initialStatus={intakeStatus} />}
           <MemberWarmupDayNavigator
             days={days}
             todayIso={todayIso}
@@ -513,7 +553,7 @@ export default function MemberTodayShell({
       )}
 
       {showFullWorkout && workout && (
-        <div className="min-w-0 touch-pan-y sm:mx-0">
+        <div id="member-today-workout" className="min-w-0 touch-pan-y sm:mx-0">
           {programSlug === "adult" && (
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
               <span className="text-xs text-[var(--muted)]">

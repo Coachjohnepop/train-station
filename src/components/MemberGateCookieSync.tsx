@@ -37,7 +37,8 @@ export default function MemberGateCookieSync() {
           here.startsWith("/member/account") ||
           here.startsWith("/member/book") ||
           here.startsWith("/member/chat") ||
-          here.startsWith("/member/speaking");
+          here.startsWith("/member/speaking") ||
+          here.startsWith("/member/quote-received");
         const mustMove = Boolean(data.needsOnboard || data.needsPayment || data.needsFreePm);
         if (mustMove && !allowedWhileGated) {
           window.location.replace(dest);

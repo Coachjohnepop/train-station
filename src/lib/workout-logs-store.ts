@@ -9,6 +9,7 @@ import {
   hydrateDemoLogsStore,
 } from "@/lib/demo-logs";
 import {
+  getLoggedCalendarDatesDb,
   getLoggedWorkoutIdsDb,
   getPastsForWorkoutExercisesDb,
   getPerformanceCountDb,
@@ -16,6 +17,7 @@ import {
   getWorkoutLogCountDb,
   type WorkoutExercisePast,
 } from "@/lib/workout-logs-db";
+import { localTodayIso } from "@/lib/program-calendar";
 
 export type { WorkoutExercisePast };
 
@@ -35,6 +37,24 @@ export async function loadLoggedWorkoutIds(userId: string): Promise<Set<string>>
     return loggedSet;
   }
   return getLoggedWorkoutIdsDb(userId);
+}
+
+export async function loadLoggedCalendarDates(userId: string): Promise<Set<string>> {
+  if (isDemoMode()) {
+    const dates = new Set<string>();
+    try {
+      const logsData = await hydrateDemoLogsStore({ preferFresh: true });
+      for (const log of logsData.workoutLogs || []) {
+        if (log.userId !== userId) continue;
+        const raw = (log as { performedAt?: string }).performedAt;
+        if (raw) dates.add(localTodayIso(new Date(raw)));
+      }
+    } catch {
+      // non-fatal
+    }
+    return dates;
+  }
+  return getLoggedCalendarDatesDb(userId);
 }
 
 export async function getWorkoutLogCount(userId: string): Promise<number> {

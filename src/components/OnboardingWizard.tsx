@@ -62,8 +62,11 @@ export default function OnboardingWizard({
   const programSlug = searchParams.get("program");
 
   const needsStartDate = isPaidOffer(plan);
-  const totalSteps = needsStartDate ? 8 : 7;
-  const bookStep = totalSteps;
+  const totalSteps = 6;
+  const kitStep = 3;
+  const aboutStep = 4;
+  const detailsStep = 5;
+  const bookStep = 6;
   const stepStorageKey = `ts-onboard-step:${plan}`;
   const [currentStep, setCurrentStep] = useState(1);
   const [stepReady, setStepReady] = useState(false);
@@ -113,7 +116,11 @@ export default function OnboardingWizard({
 
   async function nextStep() {
     setError(null);
-    if (currentStep === 4) {
+    if (currentStep === 1 && !gender) {
+      setError("Pick man or woman to continue.");
+      return;
+    }
+    if (currentStep === aboutStep) {
       await saveProgress({
         plan,
         gender: gender || null,
@@ -126,49 +133,50 @@ export default function OnboardingWizard({
         notes: measurements.notes || null,
       });
     }
-    if (currentStep === 5) {
+    if (currentStep === detailsStep) {
       await saveProgress({
         city: location.city || null,
         state: location.state || null,
-      });
-    }
-    const smsStep = needsStartDate ? 7 : 6;
-    if (currentStep === smsStep) {
-      await saveProgress({
         phone: sms.phone || null,
         dailyReminderTime: sms.dailyReminderTime || null,
       });
     }
-    if (currentStep === 3 && skipHealth) {
-      setCurrentStep(5);
+    if (currentStep === kitStep && skipHealth) {
+      setCurrentStep(detailsStep);
       return;
     }
     setCurrentStep((s) => Math.min(totalSteps, s + 1));
   }
 
   function prevStep() {
-    if (currentStep === 5 && skipHealth) {
-      setCurrentStep(3);
+    if (currentStep === detailsStep && skipHealth) {
+      setCurrentStep(kitStep);
       return;
     }
     setCurrentStep((s) => Math.max(1, s - 1));
   }
 
   async function skipHealthForLater() {
+    if (!gender) {
+      setError("Pick man or woman first — then you can skip the rest.");
+      return;
+    }
     setSkipHealth(true);
     setError(null);
-    if (gender) {
-      await saveProgress({ plan, gender });
-    }
-    await nextStep();
+    await saveProgress({ plan, gender });
+    setCurrentStep(2);
   }
 
   async function handleFinish() {
     setFinishing(true);
     setError(null);
     try {
-      const smsStep = needsStartDate ? 7 : 6;
-      if (currentStep === smsStep || currentStep === bookStep) {
+      if (!gender) {
+        setError("Pick man or woman so we can set the right goals.");
+        setFinishing(false);
+        return;
+      }
+      if (currentStep === detailsStep || currentStep === bookStep) {
         await saveProgress({
           phone: sms.phone || null,
           dailyReminderTime: sms.dailyReminderTime || null,
@@ -259,7 +267,7 @@ export default function OnboardingWizard({
             <h1 className="text-xl font-bold">Welcome aboard</h1>
             <p className="text-sm leading-relaxed text-[var(--muted)]">
               You&apos;re on <strong className="text-[var(--text)]">{signupPlanLabel(plan)}</strong>.
-              A quick setup for texts and your profile — then your dashboard.
+              Two minutes — then Today. Jeremy&apos;s intro is recommended, not a wall.
             </p>
 
             {/* Compact ticket only — scroll to see; never dual Coach/1st fan on phones */}
@@ -287,7 +295,7 @@ export default function OnboardingWizard({
             </div>
 
             <div>
-              <p className="mb-1.5 block text-xs text-[var(--muted)]">I am (optional)</p>
+              <p className="mb-1.5 block text-xs text-[var(--muted)]">I am</p>
               <div className="grid grid-cols-2 gap-2">
                 {(["man", "woman"] as const).map((option) => (
                   <button
@@ -313,7 +321,12 @@ export default function OnboardingWizard({
               </Link>
               .
             </p>
-            <button type="button" onClick={() => void nextStep()} className="btn-primary w-full">
+            <button
+              type="button"
+              onClick={() => void nextStep()}
+              className="btn-primary w-full"
+              disabled={!gender}
+            >
               Start setup
             </button>
             <button
@@ -362,7 +375,7 @@ export default function OnboardingWizard({
           </>
         )}
 
-        {currentStep === 4 && (
+        {currentStep === aboutStep && (
           <>
             <h2 className="text-lg font-semibold">About you</h2>
             <p className="text-sm text-[var(--muted)]">
@@ -521,94 +534,70 @@ export default function OnboardingWizard({
           </>
         )}
 
-        {currentStep === 5 && (
+        {currentStep === detailsStep && (
           <>
-            <h2 className="text-lg font-semibold">Where are you training from?</h2>
+            <h2 className="text-lg font-semibold">Where and when</h2>
             <p className="text-sm text-[var(--muted)]">
-              City and state power weather hints in your workout console.
+              City powers weather on Today. Texts are optional. You can change these later.
             </p>
-            <div className="pt-1">
+            <div className="space-y-5 pt-1">
               <CityStateInput
-                enabled={currentStep === 5}
+                enabled={currentStep === detailsStep}
                 city={location.city}
                 state={location.state}
                 onCityChange={(city) => setLocation((prev) => ({ ...prev, city }))}
                 onStateChange={(state) => setLocation((prev) => ({ ...prev, state }))}
               />
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button type="button" onClick={prevStep} className="btn-ghost flex-1">
-                Back
-              </button>
-              <button type="button" onClick={() => void nextStep()} className="btn-primary flex-1">
-                Continue
-              </button>
-            </div>
-          </>
-        )}
-
-        {needsStartDate && currentStep === 6 && (
-          <>
-            <h2 className="text-lg font-semibold">When do you want to start?</h2>
-            <p className="text-sm text-[var(--muted)]">
-              Your membership unlocks {programStartSettings?.blockDays ?? 28} days of workouts.
-              You can start <strong>today</strong> if your coach is ready, or pick another day
-              {programStartSettings?.recommendWeekday != null ? (
-                <>
-                  {" "}
-                  (we also recommend{" "}
-                  <strong className="text-emerald-200">
-                    {weekdayLabel(programStartSettings.recommendWeekday)}
-                  </strong>{" "}
-                  so Day 1 matches the training week
-                  {programStartSettings.recommendWeekday === 1
-                    ? " — handy if you lift on weekends"
-                    : ""}
-                  )
-                </>
+              {needsStartDate ? (
+                <div>
+                  <h3 className="text-sm font-semibold">When do you want Day 1?</h3>
+                  <p className="mt-1 text-xs text-[var(--muted)]">
+                    {programStartSettings?.blockDays ?? 28} days of workouts. Start today or up to{" "}
+                    {programStartSettings?.maxOffsetDays ?? 6} days out
+                    {programStartSettings?.recommendWeekday != null ? (
+                      <>
+                        {" "}
+                        (we like{" "}
+                        <strong className="text-emerald-200">
+                          {weekdayLabel(programStartSettings.recommendWeekday)}
+                        </strong>
+                        )
+                      </>
+                    ) : null}
+                    .
+                  </p>
+                  <div className="mt-2">
+                    <ProgramStartDatePicker
+                      value={programStartDate}
+                      onChange={setProgramStartDate}
+                      settings={programStartSettings}
+                    />
+                  </div>
+                </div>
               ) : null}
-              . You can schedule up to {programStartSettings?.maxOffsetDays ?? 6} days out.
-            </p>
-            <ProgramStartDatePicker
-              value={programStartDate}
-              onChange={setProgramStartDate}
-              settings={programStartSettings}
-            />
-            <div className="flex gap-3 pt-2">
-              <button type="button" onClick={prevStep} className="btn-ghost flex-1">
-                Back
-              </button>
-              <button type="button" onClick={() => void nextStep()} className="btn-primary flex-1">
-                Continue
-              </button>
-            </div>
-          </>
-        )}
-
-        {currentStep === (needsStartDate ? 7 : 6) && (
-          <>
-            <h2 className="text-lg font-semibold">Daily workout texts</h2>
-            <p className="text-sm text-[var(--muted)]">
-              Get a morning reminder in Messages (and a home-screen badge if you installed the app).
-              After this you go to Today — Jeremy&apos;s program workouts are ready. An intro call
-              is optional.
-            </p>
-            <div className="space-y-3 pt-1">
               <div>
-                <label className="text-xs text-[var(--muted)] block mb-1">Mobile number</label>
-                <PhoneInput
-                  value={sms.phone}
-                  onChange={(phone) => setSms({ ...sms, phone })}
-                  placeholder="916.284.1994"
-                  className="input w-full"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-[var(--muted)] block mb-2">Reminder time</label>
-                <TimeScrollPicker
-                  value={sms.dailyReminderTime}
-                  onChange={(dailyReminderTime) => setSms({ ...sms, dailyReminderTime })}
-                />
+                <h3 className="text-sm font-semibold">Daily workout texts</h3>
+                <p className="mt-1 mb-2 text-xs text-[var(--muted)]">
+                  Morning reminder in Messages. Skip if you just want the app.
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-[var(--muted)] block mb-1">Mobile number</label>
+                    <PhoneInput
+                      value={sms.phone}
+                      onChange={(phone) => setSms({ ...sms, phone })}
+                      placeholder="916.284.1994"
+                      className="input w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-[var(--muted)] block mb-2">Reminder time</label>
+                    <TimeScrollPicker
+                      value={sms.dailyReminderTime}
+                      onChange={(dailyReminderTime) => setSms({ ...sms, dailyReminderTime })}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
             <div className="flex gap-3 pt-2">
@@ -626,16 +615,25 @@ export default function OnboardingWizard({
           <>
             <h2 className="text-lg font-semibold">Book your free 15-minute intro</h2>
             <p className="text-sm text-[var(--muted)]">
-              This is the next required step. Jeremy uses it to lock your plan. Tape measurements
-              happen after that call — not now.
+              Jeremy uses this to lock your plan. Tape waits until after that call. You can
+              book now or from Today.
             </p>
             <MemberIntakeIntroCard compact onBooked={() => void handleFinish()} />
             {finishing ? (
               <p className="text-sm text-[var(--muted)]">Saving setup…</p>
             ) : (
-              <button type="button" onClick={prevStep} className="btn-ghost w-full">
-                Back
-              </button>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => void handleFinish()}
+                  className="btn-primary w-full"
+                >
+                  Go to Today — I&apos;ll book from there
+                </button>
+                <button type="button" onClick={prevStep} className="btn-ghost w-full">
+                  Back
+                </button>
+              </div>
             )}
           </>
         )}
