@@ -16,6 +16,7 @@ import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { resolveMemberUserId } from "@/lib/current-user";
 import { resolveTargetUserId } from "@/lib/resolve-target-user";
 import { localTodayIso, toIsoDate } from "@/lib/program-calendar";
+import { addDaysIso } from "@/lib/workout-day-visibility";
 import { cookies } from "next/headers";
 import { SITE_SEEN_COOKIE, finishedSetupThisVisit, isFirstTimeOnSite } from "@/lib/site-visit";
 import {
@@ -140,7 +141,10 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     : null;
 
   const programBlock = dayWindow?.block ?? null;
-  const programTodayKey = dayWindow?.programTodayKey ?? calendarToday;
+  const useCalendarStrip = !schedulePreview;
+  const programTodayKey = useCalendarStrip
+    ? calendarToday
+    : (dayWindow?.programTodayKey ?? calendarToday);
   const rawViewDate = sp.date || programTodayKey;
   const intakeComplete =
     !uid.startsWith("member-") || isCoachIntakeComplete(profile);
@@ -160,21 +164,40 @@ export default async function MemberTodayPage({ searchParams }: Props) {
       ? buildIntakeRampPlaceholderDays(calendarToday, 3, 1)
       : null;
   // Always expose real yesterday · today · tomorrow chips — even with no workout assigned.
-  const calendarSwipeDays = buildCalendarSwipeDays(programTodayKey, loggedDates);
-  const rawMemberDays = markDaysCompleted(
-    dayWindow?.days.length
+  const calendarSwipeDays = buildCalendarSwipeDays(calendarToday, loggedDates);
+  const sourceDays = useCalendarStrip
+    ? calendarSwipeDays
+    : dayWindow?.days.length
       ? dayWindow.days
       : intakeRampDays?.length
         ? intakeRampDays
-        : calendarSwipeDays,
+        : calendarSwipeDays;
+  const rawMemberDays = markDaysCompleted(
+    sourceDays,
     loggedSet,
     loggedDates,
+    calendarToday,
   );
-  const finisherDates = rawMemberDays
-    .map((d) => d.calendarDate || (/^\d{4}-\d{2}-\d{2}$/.test(d.iso) ? d.iso : ""))
-    .filter(Boolean);
+  const yesterdayIso = addDaysIso(calendarToday, -1);
+  const finisherDates = [
+    ...new Set(
+      [
+        yesterdayIso,
+        calendarToday,
+        addDaysIso(calendarToday, 1),
+        ...rawMemberDays.map((d) => d.calendarDate || ""),
+      ].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)),
+    ),
+  ];
   const finishersByDate = await listFinishersByCalendarDates(finisherDates);
-  const memberDays = attachFinisherNames(rawMemberDays, finishersByDate);
+  const memberDays = attachFinisherNames(rawMemberDays, finishersByDate).map((day) => {
+    const date = day.calendarDate;
+    const classFinished = Boolean(date && (finishersByDate[date]?.length ?? 0) > 0);
+    return {
+      ...day,
+      completed: day.completed || classFinished,
+    };
+  });
   const memberRollup = memberDays.length ? rollupForMemberDays(memberDays) : null;
   // Clamp deep-links outside the 3-day window back to program today.
   const allowedIsos = new Set(memberDays.map((d) => d.iso));

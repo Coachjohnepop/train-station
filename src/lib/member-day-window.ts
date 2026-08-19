@@ -464,9 +464,11 @@ export async function buildMemberDayWindow(
         entry,
         loggedWorkoutIds,
         calendarToday,
-        visibilityTier
-          ? { visibilityTier, loggedCalendarDates }
-          : { loggedCalendarDates },
+        {
+          calendarDate: addDaysIso(calendarToday, entry.offset),
+          visibilityTier,
+          loggedCalendarDates,
+        },
       ),
     );
   }

@@ -139,7 +139,10 @@ export default function MemberDayWheel({
         >
           {days.map((day) => {
             const isSelected = day.iso === selectedIso;
-            const isToday = day.iso === todayIso || day.calendarDate === todayIso;
+            const isToday =
+              day.iso === todayIso ||
+              day.calendarDate === todayIso ||
+              day.daysFromToday === 0;
             const doneGold = day.completed || (day.finisherNames?.length ?? 0) > 0;
             const todayGold = isToday || doneGold;
             const chipClass = todayGold
