@@ -74,4 +74,29 @@ describe("dayWorkoutCompleted", () => {
     assert.equal(days[0].completed, true);
     assert.equal(days[1].completed, false);
   });
+
+  it("marks the enrollment day left of today complete from the calendar date", () => {
+    const days = markDaysCompleted(
+      [
+        stub({
+          iso: "W1D1",
+          calendarDate: undefined,
+          daysFromToday: -1,
+          workoutId: "w-upper",
+        }),
+        stub({
+          iso: "W1D2",
+          calendarDate: undefined,
+          daysFromToday: 0,
+          workoutId: "w-lower",
+        }),
+      ],
+      new Set(),
+      new Set(["2026-08-18"]),
+      "2026-08-19",
+    );
+    assert.equal(days[0].completed, true);
+    assert.equal(days[0].calendarDate, "2026-08-18");
+    assert.equal(days[1].completed, false);
+  });
 });
