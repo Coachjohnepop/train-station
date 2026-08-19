@@ -19,9 +19,15 @@ import {
 import {
   DEFAULT_WARMUP_BLOCKS,
   isRestOrDayOffContent,
+  isStandardWarmupLineName,
+  isStandardWarmupWorkoutId,
+  STANDARD_WARMUP_WORKOUT_ID,
   type WarmupBlockTemplate,
   workoutHasStandardWarmup,
 } from "@/lib/warmup-template";
+import { notesMarkWarmup } from "@/lib/warmup-group";
+
+export { STANDARD_WARMUP_WORKOUT_ID, isStandardWarmupWorkoutId } from "@/lib/warmup-template";
 
 export type SeedWarmupsResult = {
   added: number;
@@ -31,6 +37,8 @@ export type SeedWarmupsResult = {
   /** Human-readable status for coach UI. */
   message: string;
 };
+
+
 
 /** Alternate catalog names when default / settings IDs drift. */
 const WARMUP_NAME_ALIASES: Record<string, string[]> = {
@@ -93,7 +101,9 @@ function prescriptionForBlock(block: WarmupBlockTemplate): {
     reps,
     sets,
     weightTier: block.weightTier || "light",
-    notes: block.notes || (block.name.match(/warm|mobility|band/i) ? "Warm-up" : null),
+    notes: [block.notes, notesMarkWarmup(block.notes || "") ? null : "Warm-up block"]
+      .filter(Boolean)
+      .join(" · ") || "Warm-up block",
   };
 }
 
@@ -234,10 +244,182 @@ async function resolveBlocks(
   return { lines, missing };
 }
 
+function workoutRowsToBlocks(
+  rows: Array<{
+    id: string;
+    exerciseId: string;
+    setScheme?: string | null;
+    repPattern?: string | null;
+    reps?: string | null;
+    sets?: number | null;
+    setCount?: number | null;
+    weightTier?: string | null;
+    notes?: string | null;
+    exercise?: { name?: string | null } | null;
+    blockName?: string | null;
+  }>,
+): WarmupBlockTemplate[] {
+  return rows.map((row, i) => ({
+    id: row.id || `wu-${i}`,
+    name: row.exercise?.name || row.blockName || "Warm-up",
+    exerciseId: row.exerciseId,
+    setCount: (row.setCount ?? row.sets ?? 1) || 1,
+    setScheme: row.setScheme || "standard",
+    repPattern: row.repPattern ?? null,
+    reps: row.reps ?? null,
+    weightTier: row.weightTier || "light",
+    notes: row.notes || "Warm-up block",
+  }));
+}
+
+async function readStandardWarmupBlocks(): Promise<WarmupBlockTemplate[]> {
+  if (isCoachCatalogDemo()) {
+    const { getDemoSeed } = await import("@/lib/demo-seed-store");
+    const data = await getDemoSeed({ preferFresh: true });
+    const items = ((data.workoutExercises as any[]) || [])
+      .filter((we) => we.workoutId === STANDARD_WARMUP_WORKOUT_ID)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    return workoutRowsToBlocks(items);
+  }
+  const workout = await prisma.workout.findUnique({
+    where: { id: STANDARD_WARMUP_WORKOUT_ID },
+    select: {
+      exercises: {
+        orderBy: { sortOrder: "asc" },
+        include: { exercise: { select: { name: true } } },
+      },
+    },
+  });
+  if (!workout) return [];
+  return workoutRowsToBlocks(workout.exercises);
+}
+
+/** Create the standard warm-up workout once; later edits live in WorkoutBuilder. */
+export async function ensureStandardWarmupWorkout(): Promise<{
+  workoutId: string;
+  created: boolean;
+  exerciseCount: number;
+}> {
+  const existing = await readStandardWarmupBlocks();
+  if (existing.length > 0) {
+    return {
+      workoutId: STANDARD_WARMUP_WORKOUT_ID,
+      created: false,
+      exerciseCount: existing.length,
+    };
+  }
+
+  let initial = DEFAULT_WARMUP_BLOCKS.map((b) => ({ ...b }));
+  try {
+    const settings = await getCoachSettings();
+    if (settings.warmupBlocks?.length) initial = settings.warmupBlocks;
+  } catch {
+    /* defaults */
+  }
+
+  const { lines } = await resolveBlocks(initial);
+
+  if (isCoachCatalogDemo()) {
+    const { mutateDemoSeed } = await import("@/lib/demo-seed-store");
+    const { resolveDemoExercise } = await import("@/lib/demo-workout-items");
+    const { loadDemoExercises } = await import("@/lib/demo-exercises");
+    await mutateDemoSeed((data) => {
+      if (!data.workouts) data.workouts = [];
+      if (!data.workoutExercises) data.workoutExercises = [];
+      const workouts = data.workouts as any[];
+      if (!workouts.some((w) => w.id === STANDARD_WARMUP_WORKOUT_ID)) {
+        const now = new Date().toISOString();
+        workouts.push({
+          id: STANDARD_WARMUP_WORKOUT_ID,
+          name: "Standard warm-up",
+          description:
+            "Jeremy's default warm-up. Seeded onto new workouts. Members see these as one card.",
+          source: "warmup",
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+      const already = (data.workoutExercises as any[]).some(
+        (we) => we.workoutId === STANDARD_WARMUP_WORKOUT_ID,
+      );
+      if (already) return;
+      const exList = loadDemoExercises();
+      let sortOrder = 0;
+      for (const line of lines) {
+        (data.workoutExercises as any[]).push({
+          id: `demo-we-wu-std-${sortOrder}`,
+          workoutId: STANDARD_WARMUP_WORKOUT_ID,
+          exerciseId: line.exerciseId,
+          sortOrder: sortOrder++,
+          setScheme: line.setScheme,
+          repPattern: line.repPattern,
+          reps: line.reps,
+          sets: line.sets,
+          weightTier: line.weightTier,
+          restSec: null,
+          notes: line.notes,
+          exercise: resolveDemoExercise(line.exerciseId, exList),
+        });
+      }
+    });
+    const after = await readStandardWarmupBlocks();
+    return {
+      workoutId: STANDARD_WARMUP_WORKOUT_ID,
+      created: true,
+      exerciseCount: after.length,
+    };
+  }
+
+  await prisma.workout.upsert({
+    where: { id: STANDARD_WARMUP_WORKOUT_ID },
+    create: {
+      id: STANDARD_WARMUP_WORKOUT_ID,
+      name: "Standard warm-up",
+      description:
+        "Jeremy's default warm-up. Seeded onto new workouts. Members see these as one card.",
+      source: "warmup",
+    },
+    update: {},
+  });
+
+  const current = await prisma.workoutExercise.count({
+    where: { workoutId: STANDARD_WARMUP_WORKOUT_ID },
+  });
+  if (current === 0) {
+    let sortOrder = 0;
+    for (const line of lines) {
+      await prisma.workoutExercise.create({
+        data: {
+          workoutId: STANDARD_WARMUP_WORKOUT_ID,
+          exerciseId: line.exerciseId,
+          sortOrder: sortOrder++,
+          setScheme: line.setScheme,
+          repPattern: line.repPattern,
+          reps: line.reps,
+          sets: line.sets,
+          weightTier: line.weightTier,
+          restSec: null,
+          notes: line.notes,
+        },
+      });
+    }
+  }
+
+  const after = await readStandardWarmupBlocks();
+  return {
+    workoutId: STANDARD_WARMUP_WORKOUT_ID,
+    created: current === 0,
+    exerciseCount: after.length,
+  };
+}
+
 async function loadWarmupBlocks(
   blocks?: WarmupBlockTemplate[],
 ): Promise<WarmupBlockTemplate[]> {
   if (blocks?.length) return blocks;
+  await ensureStandardWarmupWorkout();
+  const fromWorkout = await readStandardWarmupBlocks();
+  if (fromWorkout.length) return fromWorkout;
   try {
     const settings = await getCoachSettings();
     if (settings.warmupBlocks?.length) return settings.warmupBlocks;
@@ -255,6 +437,15 @@ export async function seedWarmupsIntoWorkout(
   workoutId: string,
   blocks?: WarmupBlockTemplate[],
 ): Promise<SeedWarmupsResult> {
+  if (isStandardWarmupWorkoutId(workoutId)) {
+    return formatResult({
+      added: 0,
+      missing: [],
+      skipped: true,
+      seeded: [],
+      message: "This is the standard warm-up workout — edit its lines directly.",
+    });
+  }
   const resolvedBlocks = await loadWarmupBlocks(blocks);
   if (!resolvedBlocks.length) {
     return formatResult({ added: 0, missing: [], skipped: false, seeded: [] });
@@ -331,7 +522,14 @@ async function seedDb(
     return formatResult({ added: 0, missing, skipped: false, seeded: [] });
   }
   const existingNames = workout.exercises.map((we) => we.exercise?.name || "");
-  if (workoutHasStandardWarmup(existingNames)) {
+  const existingHasWarmup =
+    workoutHasStandardWarmup(existingNames) ||
+    workout.exercises.some(
+      (we) =>
+        notesMarkWarmup(we.notes || "") ||
+        isStandardWarmupLineName(we.exercise?.name || ""),
+    );
+  if (existingHasWarmup) {
     return formatResult({
       added: 0,
       missing: [],
@@ -399,7 +597,14 @@ async function seedDemo(
       (we) => we.workoutId === workoutId,
     );
     const existingNames = existing.map((we) => we.exercise?.name || we.blockName || "");
-    if (workoutHasStandardWarmup(existingNames)) {
+    const existingHasWarmup =
+      workoutHasStandardWarmup(existingNames) ||
+      existing.some(
+        (we) =>
+          notesMarkWarmup(String(we.notes || "")) ||
+          isStandardWarmupLineName(String(we.exercise?.name || we.blockName || "")),
+      );
+    if (existingHasWarmup) {
       skipped = true;
       return;
     }

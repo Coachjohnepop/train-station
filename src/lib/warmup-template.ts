@@ -1,6 +1,13 @@
 import type { MemberExerciseBlock, MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import { resolveExerciseVideoUrl } from "@/lib/exercise-video-hints";
 
+/** Canonical warm-up workout id — real Workout row edited in admin. */
+export const STANDARD_WARMUP_WORKOUT_ID = "warmup-standard";
+
+export function isStandardWarmupWorkoutId(id: string): boolean {
+  return id === STANDARD_WARMUP_WORKOUT_ID;
+}
+
 /** Jeremy's typical pre-session warm-up blocks (editable by coach in settings). */
 export type WarmupBlockTemplate = {
   id: string;
@@ -16,50 +23,92 @@ export type WarmupBlockTemplate = {
 
 export const DEFAULT_WARMUP_BLOCKS: WarmupBlockTemplate[] = [
   {
-    id: "wu-cardio",
-    name: "Warm up well 5 min bike",
-    // Low Intensity Cardio Warmup / bike — not Upper body (was wrong ID)
+    id: "wu-bike",
+    name: "Bike, row, or brisk walk",
     exerciseId: "ex_8cdc7b709d784cccbbd7ddb3260ff062",
     setCount: 1,
     setScheme: "timed",
     repPattern: null,
     reps: "5 min",
     weightTier: "light",
-    notes: "Low to medium intensity — bike, row, or brisk walk",
+    notes: "Warm-up block",
   },
   {
-    id: "wu-upper",
-    name: "Upper body warm up",
-    exerciseId: "ex_fba6bb97ed534562b2d638c964ffbe9f",
-    setCount: 2,
+    id: "wu-wall-taps",
+    name: "Wall taps",
+    exerciseId: null,
+    setCount: 1,
     setScheme: "standard",
     repPattern: null,
-    reps: "10",
+    reps: "20",
     weightTier: "light",
-    notes: null,
+    notes: "Warm-up block",
   },
   {
-    id: "wu-shoulder",
-    name: "Shoulder mobility warm",
-    exerciseId: "ex_516ddb6929424c8c82e1c634ae0ba8fd",
-    setCount: 2,
-    setScheme: "standard",
-    repPattern: null,
-    reps: "10",
-    weightTier: "light",
-    notes: "Light weight bands",
-  },
-  {
-    id: "wu-bands",
-    name: "Up with bands",
-    // Band Rear Delt Extensions — "Up with bands" is often missing from catalog
+    id: "wu-band-pull",
+    name: "Band pull-aparts",
     exerciseId: "cmpzjajeu000195rzcjo4p43p",
-    setCount: 2,
+    setCount: 1,
     setScheme: "standard",
     repPattern: null,
     reps: "15",
     weightTier: "light",
-    notes: "Band pull-aparts, rear delt extensions, or similar",
+    notes: "Warm-up block",
+  },
+  {
+    id: "wu-light-curls",
+    name: "Lightweight bicep curls",
+    exerciseId: null,
+    setCount: 1,
+    setScheme: "standard",
+    repPattern: null,
+    reps: "15",
+    weightTier: "light",
+    notes: "Warm-up block",
+  },
+  {
+    id: "wu-light-press",
+    name: "Light shoulder press",
+    exerciseId: null,
+    setCount: 1,
+    setScheme: "standard",
+    repPattern: null,
+    reps: "15",
+    weightTier: "light",
+    notes: "Warm-up block",
+  },
+  {
+    id: "wu-shrugs",
+    name: "Shrugs",
+    exerciseId: null,
+    setCount: 1,
+    setScheme: "standard",
+    repPattern: null,
+    reps: "15",
+    weightTier: "light",
+    notes: "Warm-up block",
+  },
+  {
+    id: "wu-bosu",
+    name: "Bosu ball squats",
+    exerciseId: null,
+    setCount: 1,
+    setScheme: "standard",
+    repPattern: null,
+    reps: "10",
+    weightTier: "light",
+    notes: "Warm-up block",
+  },
+  {
+    id: "wu-jump-squats",
+    name: "Jump squats",
+    exerciseId: null,
+    setCount: 1,
+    setScheme: "standard",
+    repPattern: null,
+    reps: "10",
+    weightTier: "light",
+    notes: "Warm-up block",
   },
 ];
 

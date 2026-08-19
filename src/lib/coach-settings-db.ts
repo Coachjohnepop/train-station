@@ -26,6 +26,10 @@ import {
   normalizeWarmupBlocks,
   type WarmupBlockTemplate,
 } from "@/lib/warmup-template";
+import {
+  DEFAULT_WARMUP_REST_SECONDS,
+  normalizeWarmupRestSeconds,
+} from "@/lib/warmup-group";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -54,6 +58,7 @@ function defaultSettings(): CoachSettings {
     programStartMaxOffsetDays: normalizeProgramStartMaxOffsetDays(null),
     programStartRecommendWeekday: normalizeProgramStartRecommendWeekday(1),
     programBlockDays: normalizeProgramBlockDays(null),
+    warmupRestSeconds: DEFAULT_WARMUP_REST_SECONDS,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -73,6 +78,7 @@ function rowToSettings(row: {
   programStartMaxOffsetDays: number;
   programStartRecommendWeekday: number | null;
   programBlockDays: number;
+  warmupRestSeconds?: number;
   updatedAt: Date;
 }): CoachSettings {
   return {
@@ -92,6 +98,9 @@ function rowToSettings(row: {
       row.programStartRecommendWeekday,
     ),
     programBlockDays: normalizeProgramBlockDays(row.programBlockDays),
+    warmupRestSeconds: normalizeWarmupRestSeconds(
+      row.warmupRestSeconds ?? DEFAULT_WARMUP_REST_SECONDS,
+    ),
     updatedAt: toIso(row.updatedAt),
   };
 }
@@ -113,6 +122,7 @@ function settingsToRow(settings: CoachSettings) {
     programStartMaxOffsetDays: settings.programStartMaxOffsetDays,
     programStartRecommendWeekday: settings.programStartRecommendWeekday,
     programBlockDays: settings.programBlockDays,
+    warmupRestSeconds: settings.warmupRestSeconds,
     updatedAt: new Date(settings.updatedAt),
   };
 }
@@ -143,6 +153,7 @@ export async function persistCoachSettingsToDb(settings: CoachSettings): Promise
       programStartMaxOffsetDays: data.programStartMaxOffsetDays,
       programStartRecommendWeekday: data.programStartRecommendWeekday,
       programBlockDays: data.programBlockDays,
+      warmupRestSeconds: data.warmupRestSeconds,
       updatedAt: data.updatedAt,
     },
   });

@@ -4,11 +4,13 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import TextUploadPanel from "@/components/TextUploadPanel";
 import { formatApiErrorDetail } from "@/lib/api-errors";
+import { isStandardWarmupWorkoutId } from "@/lib/warmup-template";
 
 type WorkoutRow = {
   id: string;
   name: string;
   description: string | null;
+  source?: string;
   _count: { exercises: number };
 };
 
@@ -73,7 +75,14 @@ export default function WorkoutList() {
               href={`/admin/workouts/${w.id}`}
               className="card flex items-center justify-between transition hover-accent-border"
             >
-              <span className="font-medium">{w.name}</span>
+              <span className="font-medium">
+                {w.name}
+                {isStandardWarmupWorkoutId(w.id) || w.source === "warmup" ? (
+                  <span className="ml-2 rounded-full bg-[color-mix(in_srgb,var(--ramp-gold)_22%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--ramp-gold-light)]">
+                    Warm-up
+                  </span>
+                ) : null}
+              </span>
               <span className="text-sm text-[var(--muted)]">
                 {w._count.exercises} exercises
               </span>

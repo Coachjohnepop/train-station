@@ -1,5 +1,6 @@
 import type { WorkoutSetPhaseInput } from "./workout-prescription";
 import { enrichLegacyExerciseRows } from "./workout-prescription-backfill";
+import { expandParsedWarmupExercises } from "./warmup-group";
 
 export type ParsedSmsExercise = {
   name: string;
@@ -164,13 +165,16 @@ export function parseSmsWorkout(rawText: string): ParsedSmsWorkout {
 
   const flushWarmup = () => {
     if (warmupLines.length === 0) return;
-    exercises.push({
-      name: "Warm-up",
-      sets: 1,
-      reps: "—",
-      notes: warmupLines.join("\n"),
-      section: "warmup",
-    });
+    const expanded = expandParsedWarmupExercises([
+      {
+        name: "Warm-up",
+        sets: 1,
+        reps: "—",
+        notes: warmupLines.join("\n"),
+        section: "warmup" as const,
+      },
+    ]);
+    exercises.push(...expanded);
     warmupLines.length = 0;
   };
 

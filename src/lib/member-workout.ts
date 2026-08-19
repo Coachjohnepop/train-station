@@ -14,6 +14,8 @@ import { prisma } from "@/lib/prisma";
 import { collapseConsecutiveCloneExercises } from "@/lib/member-workout-lines";
 import { DEFAULT_REST_TIMER_SECONDS, normalizeRestTimerSeconds } from "@/lib/rest-timer";
 import { DEFAULT_REST_TIMER_SOUND } from "@/lib/rest-timer-sound";
+import { DEFAULT_WARMUP_REST_SECONDS } from "@/lib/warmup-group";
+import { getCoachSettings } from "@/lib/coach-settings-store";
 
 function mapItemToBlock(item: {
   id: string;
@@ -145,7 +147,17 @@ async function getMemberWorkoutFromPrisma(
       workout.restTimerSeconds ?? DEFAULT_REST_TIMER_SECONDS,
     ),
     restTimerSound: workout.restTimerSound || DEFAULT_REST_TIMER_SOUND,
+    warmupRestSeconds: await loadWarmupRestSeconds(),
   };
+}
+
+async function loadWarmupRestSeconds(): Promise<number> {
+  try {
+    const settings = await getCoachSettings();
+    return settings.warmupRestSeconds || DEFAULT_WARMUP_REST_SECONDS;
+  } catch {
+    return DEFAULT_WARMUP_REST_SECONDS;
+  }
 }
 
 export async function getMemberWorkoutById(
@@ -233,5 +245,6 @@ export async function getMemberWorkoutById(
       seedWorkout.restTimerSeconds ?? DEFAULT_REST_TIMER_SECONDS,
     ),
     restTimerSound: seedWorkout.restTimerSound || DEFAULT_REST_TIMER_SOUND,
+    warmupRestSeconds: await loadWarmupRestSeconds(),
   };
 }

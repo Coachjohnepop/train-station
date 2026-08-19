@@ -53,7 +53,9 @@ const parsed = parseSmsWorkout(LOWER_DAY);
 const names = parsed.exercises.map((e) => e.name);
 
 const expected = [
-  "Warm-up",
+  "Bicycle or walk at 3.3 on treadmill at 7.0 incline",
+  "Upper body warm up",
+  "Band exercises",
   "Dumbbell bicep curls",
   "Dumbbell shoulder press",
   "Air squats",
@@ -85,4 +87,4 @@ if (failed) {
   console.error("FAIL — Lower Day SMS parse regression");
   process.exit(1);
 }
-console.log("OK — Lower Day SMS → 10 blocks with correct names");
+console.log(`OK — Lower Day SMS → ${names.length} blocks with correct names`);

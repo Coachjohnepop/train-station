@@ -15,6 +15,7 @@ import { mutateDemoSeed, getDemoSeed } from "@/lib/demo-seed-store";
 import { parseExerciseList, type ParsedExerciseLine } from "@/lib/exercise-list-parser";
 import { parseProgramWeekText, type ParsedWeekDaySlot } from "@/lib/program-week-parser";
 import { parseSmsWorkout, type ParsedSmsWorkout } from "@/lib/sms-workout-parser";
+import { expandParsedWarmupExercises } from "@/lib/warmup-group";
 import { NEWLY_ADDED_EXERCISE_TAG } from "@/lib/text-upload-exercises";
 import { normalizeProgramSlug } from "@/lib/programs";
 import { workoutContentTitle } from "@/lib/workout-content-name";
@@ -142,7 +143,7 @@ export async function buildSeedWorkoutFromParsed(
   const workoutExercises: any[] = [];
   const workoutId = `w-upload-${Date.now()}`;
 
-  for (const [idx, ex] of parsed.exercises.entries()) {
+  for (const [idx, ex] of expandParsedWarmupExercises(parsed.exercises).entries()) {
     const { exercise, created } = await ensureExercise(ex.name, ex.notes);
     if (created) newExerciseIds.push(exercise.id);
     workoutExercises.push({

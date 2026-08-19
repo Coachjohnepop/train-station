@@ -19,6 +19,10 @@ import {
   type WarmupBlockTemplate,
 } from "@/lib/warmup-template";
 import {
+  DEFAULT_WARMUP_REST_SECONDS,
+  normalizeWarmupRestSeconds,
+} from "@/lib/warmup-group";
+import {
   DEFAULT_RAMP_WEEKS,
   normalizeRampWeeks,
   type RampWeekTemplate,
@@ -62,6 +66,8 @@ export type CoachSettings = {
   programStartRecommendWeekday: number | null;
   /** Paid block length in calendar days. */
   programBlockDays: number;
+  /** Rest after each warm-up movement (seconds). */
+  warmupRestSeconds: number;
   updatedAt: string;
 };
 
@@ -129,6 +135,7 @@ function defaultSettings(): CoachSettings {
     programStartMaxOffsetDays: normalizeProgramStartMaxOffsetDays(null),
     programStartRecommendWeekday: normalizeProgramStartRecommendWeekday(1),
     programBlockDays: normalizeProgramBlockDays(null),
+    warmupRestSeconds: DEFAULT_WARMUP_REST_SECONDS,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -161,6 +168,9 @@ function normalizeSettings(raw: unknown): CoachSettings {
       data.programBlockDays === undefined
         ? defaults.programBlockDays
         : normalizeProgramBlockDays(data.programBlockDays),
+    warmupRestSeconds: normalizeWarmupRestSeconds(
+      data.warmupRestSeconds ?? defaults.warmupRestSeconds,
+    ),
     updatedAt: data.updatedAt || new Date().toISOString(),
   };
 }
@@ -207,6 +217,7 @@ export async function saveCoachSettings(
       | "programStartMaxOffsetDays"
       | "programStartRecommendWeekday"
       | "programBlockDays"
+      | "warmupRestSeconds"
     >
   >,
 ): Promise<CoachSettings> {
@@ -254,6 +265,10 @@ export async function saveCoachSettings(
       patch.programBlockDays === undefined
         ? current.programBlockDays
         : normalizeProgramBlockDays(patch.programBlockDays),
+    warmupRestSeconds:
+      patch.warmupRestSeconds === undefined
+        ? current.warmupRestSeconds
+        : normalizeWarmupRestSeconds(patch.warmupRestSeconds),
     updatedAt: new Date().toISOString(),
   };
   memoryStore = next;

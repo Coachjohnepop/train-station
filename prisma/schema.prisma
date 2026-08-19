@@ -879,6 +879,8 @@ model CoachSettings {
   programStartRecommendWeekday Int?
   /// Length of paid program block in calendar days (default 28).
   programBlockDays          Int      @default(28)
+  /// Rest after each warm-up movement (seconds). Default 15.
+  warmupRestSeconds         Int      @default(15)
   updatedAt                 DateTime @updatedAt
 }
 

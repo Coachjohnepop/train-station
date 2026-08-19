@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useEffect, useRef } from "react";
+import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   approachLabel,
@@ -26,6 +26,7 @@ import {
   playSetCheckPop,
   preloadRestCompleteSound,
   unlockRestAudio,
+  warmRestAudio,
 } from "@/lib/rest-audio";
 import {
   DEFAULT_REST_TIMER_SECONDS,
@@ -64,6 +65,13 @@ import {
   nextUnfinishedExerciseId,
   shouldAutoFinishExercise,
 } from "@/lib/member-exercise-finish";
+import MemberWarmupGroupCard from "@/components/MemberWarmupGroupCard";
+import {
+  DEFAULT_WARMUP_REST_SECONDS,
+  isWarmupMovementDone,
+  resolveWarmupGroup,
+  type WarmupMovement,
+} from "@/lib/warmup-group";
 import {
   buildCompleteWorkoutLog,
   logFailureMessage,
@@ -109,6 +117,8 @@ export type MemberWorkoutView = {
   restTimerSeconds?: number;
   /** End-of-rest sample: whistle | bell | buzzer | cybertruck */
   restTimerSound?: string;
+  /** Rest after each warm-up movement (Admin). Default 15. */
+  warmupRestSeconds?: number;
 };
 
 const REST_MUTE_KEY = "ts-rest-timer-mute";
@@ -329,6 +339,10 @@ export default function MemberWorkoutConsole({
   const [videoModalBlockId, setVideoModalBlockId] = useState<string | null>(
     null,
   );
+  const [videoModalOverride, setVideoModalOverride] = useState<{
+    name: string;
+    url: string;
+  } | null>(null);
   const [isLogging, setIsLogging] = useState(false);
   const [logError, setLogError] = useState<string | null>(null);
   const [confirmIncompleteLog, setConfirmIncompleteLog] = useState(false);
@@ -1155,6 +1169,12 @@ export default function MemberWorkoutConsole({
   const videoModalBlock = workout.exercises.find(
     (b) => b.id === videoModalBlockId && b.videoUrl,
   );
+  const videoModal =
+    videoModalOverride?.url
+      ? videoModalOverride
+      : videoModalBlock?.videoUrl
+        ? { name: videoModalBlock.name, url: videoModalBlock.videoUrl }
+        : null;
 
   // For peeking next exercise (space efficient)
   const activeIdx = workout.exercises.findIndex((e) => e.id === activeId);
@@ -1177,16 +1197,23 @@ export default function MemberWorkoutConsole({
     if (livePushEnabled) queueLiveSave(true);
   }, [livePushEnabled, queueLiveSave]);
 
+  const warmupGroup = useMemo(
+    () => resolveWarmupGroup(workout.exercises),
+    [workout.exercises],
+  );
+  const warmupLeadCount = warmupGroup.leadCount;
+  const warmupRestSeconds =
+    workout.warmupRestSeconds || DEFAULT_WARMUP_REST_SECONDS;
+
   const resolveSecondsForBlock = useCallback(
-    (_block: MemberExerciseBlock): number | null => {
+    (block: MemberExerciseBlock): number | null => {
       const rest = restSettingsRef.current;
-      // Live sessions default rest ON — only skip when coach explicitly disabled.
       if (rest.enabled === false) return null;
-      // Session/floor rest always wins so coach can retune mid-session
-      // even when the workout was deployed with a different duration.
+      const idx = workout.exercises.findIndex((e) => e.id === block.id);
+      if (idx >= 0 && idx < warmupLeadCount) return warmupRestSeconds;
       return normalizeRestTimerSeconds(rest.seconds || DEFAULT_REST_TIMER_SECONDS);
     },
-    [],
+    [warmupLeadCount, warmupRestSeconds, workout.exercises],
   );
 
   const maybeStartRestTimer = useCallback(
@@ -1278,13 +1305,12 @@ export default function MemberWorkoutConsole({
         queueLiveSave(true);
       }
 
-      if (!opts?.silentStart && !restMuted) {
+      if (!opts?.silentStart && !restMutedRef.current) {
         playRestStart();
       }
     },
     [
       workout.exercises,
-      restMuted,
       resolveSecondsForBlock,
       instructorName,
       coachFloorMode,
@@ -1434,13 +1460,19 @@ export default function MemberWorkoutConsole({
     [restTimer, instructorName, coachFloorMode, livePushEnabled, flushLiveSave],
   );
 
+  const flipExerciseTimerToRestRef = useRef(flipExerciseTimerToRest);
+  flipExerciseTimerToRestRef.current = flipExerciseTimerToRest;
+  const livePushEnabledRef = useRef(livePushEnabled);
+  livePushEnabledRef.current = livePushEnabled;
+  const queueLiveSaveRef = useRef(queueLiveSave);
+  queueLiveSaveRef.current = queueLiveSave;
+
   // Countdown while popup is open; on 0 → buzz → rest closes, exercise flips to rest.
-  // Depend only on endsAt + phase so mute toggles don't cancel the auto-close timer.
+  // Depend only on endsAt + phase so mute toggles / callback identity don't cancel the horn.
   useEffect(() => {
     if (!restTimer) return;
 
     let cancelled = false;
-    let closeTimer: number | null = null;
     const endsAt = restTimer.endsAt;
     const phase = restTimer.phase;
     const blockId = restTimer.blockId;
@@ -1467,12 +1499,10 @@ export default function MemberWorkoutConsole({
       setRestCompleting(true);
       setRestSecondsLeft(0);
       // Cybertruck / end samples ~1.1s+ — keep popup open long enough to finish.
-      // Do not depend on effect cleanup for sound (remote null can cancel this timer).
-      closeTimer = window.setTimeout(() => {
+      window.setTimeout(() => {
         if (cancelled) return;
         if (phase === "exercise") {
-          // Hold done → same horn, then rest timer.
-          flipExerciseTimerToRest(blockId, setNum);
+          flipExerciseTimerToRestRef.current(blockId, setNum);
           return;
         }
         setRestTimer(null);
@@ -1481,7 +1511,7 @@ export default function MemberWorkoutConsole({
         restActiveRef.current = null;
         restActiveDirtyRef.current = true;
         lastAppliedRestEndsAt.current = 0;
-        if (livePushEnabled) queueLiveSave(true);
+        if (livePushEnabledRef.current) queueLiveSaveRef.current(true);
       }, 1600);
     };
 
@@ -1493,6 +1523,9 @@ export default function MemberWorkoutConsole({
         return;
       }
       setRestSecondsLeft(left);
+      if (left <= 8) {
+        warmRestAudio(restSoundRef.current);
+      }
       // Soft ticks only in the final 5 seconds (less gym noise).
       if (
         left <= 5 &&
@@ -1509,9 +1542,10 @@ export default function MemberWorkoutConsole({
     return () => {
       cancelled = true;
       window.clearInterval(id);
-      if (closeTimer != null) window.clearTimeout(closeTimer);
+      // Do not clear closeTimer — a remount mid-horn used to cancel the
+      // 0:00 window and (with the old HTMLAudio path) abort the sample.
     };
-  }, [restTimer?.endsAt, restTimer?.phase, flipExerciseTimerToRest, livePushEnabled, queueLiveSave]);
+  }, [restTimer?.endsAt, restTimer?.phase, restTimer?.blockId, restTimer?.completedSetNum]);
 
   // When coach or member marks a set on the other side, start rest locally so both see/hear it.
   useEffect(() => {
@@ -1694,6 +1728,79 @@ export default function MemberWorkoutConsole({
     ],
   );
 
+  const toggleWarmupMovement = useCallback(
+    (movement: WarmupMovement, originEl?: HTMLElement) => {
+      const wasDone = isWarmupMovementDone(
+        movement,
+        finishedExercises,
+        completedSets,
+      );
+      const block = workout.exercises.find((e) => e.id === movement.blockId);
+      if (!block) return;
+
+      if (wasDone) {
+        suppressAutoRestUntilRef.current = Date.now() + 4000;
+        restActiveRef.current = null;
+        restActiveDirtyRef.current = true;
+        lastAppliedRestEndsAt.current = 0;
+        setRestTimer(null);
+        setRestSecondsLeft(0);
+        setRestCompleting(false);
+      }
+
+      setCompletedSets((prev) => {
+        const next = new Set(prev[movement.blockId] ?? []);
+        if (warmupGroup.mode === "notes") {
+          if (wasDone) next.delete(movement.setNum);
+          else next.add(movement.setNum);
+        } else {
+          const count = isTimedApproach(block.setScheme)
+            ? 1
+            : Math.max(1, block.setCount);
+          if (wasDone) {
+            for (let i = 1; i <= count; i += 1) next.delete(i);
+          } else {
+            for (let i = 1; i <= count; i += 1) next.add(i);
+          }
+        }
+        const updated = { ...prev, [movement.blockId]: next };
+        stateRef.current = { ...stateRef.current, completedSets: updated };
+        return updated;
+      });
+
+      if (!wasDone) {
+        fireEngage();
+        unlockRestAudio(restSoundRef.current);
+        if (!restMutedRef.current) playSetCheckPop();
+        const holdSec = movement.holdSeconds || exerciseHoldDurationSec(block);
+        if (holdSec) {
+          maybeStartRestTimer(movement.blockId, movement.setNum, {
+            phase: "exercise",
+            secondsOverride: holdSec,
+          });
+        } else {
+          maybeStartRestTimer(movement.blockId, movement.setNum, {
+            phase: "rest",
+          });
+        }
+        if (originEl) {
+          fireWorkoutConfetti(confettiOriginFromElement(originEl));
+        }
+      } else {
+        queueLiveSave(true);
+      }
+    },
+    [
+      completedSets,
+      finishedExercises,
+      fireEngage,
+      maybeStartRestTimer,
+      queueLiveSave,
+      warmupGroup.mode,
+      workout.exercises,
+    ],
+  );
+
   /** Skip: exercise hold → rest; rest → close. Uses refs so coach skip works even if React state lags. */
   const skipActiveTimer = useCallback(() => {
     const open = restActiveRef.current;
@@ -1802,7 +1909,22 @@ export default function MemberWorkoutConsole({
     ) : null;
 
   const openVideo = useCallback((blockId: string) => {
+    setVideoModalOverride(null);
     setVideoModalBlockId(blockId);
+  }, []);
+
+  const openWarmupDemo = useCallback((movement: WarmupMovement) => {
+    if (!movement.videoUrl) return;
+    setVideoModalOverride({ name: movement.name, url: movement.videoUrl });
+    setVideoModalBlockId(movement.blockId);
+  }, []);
+
+  const followWarmupVideo = useCallback((movement: WarmupMovement) => {
+    setVideoModalOverride((open) => {
+      if (!open || !movement.videoUrl) return open;
+      if (open.name === movement.name && open.url === movement.videoUrl) return open;
+      return { name: movement.name, url: movement.videoUrl };
+    });
   }, []);
 
   const scrollMemberToExercise = useCallback(
@@ -1888,12 +2010,14 @@ export default function MemberWorkoutConsole({
         sets: block.setCount,
       });
       const isTimedBlock = isTimedApproach(prescription.approach);
+      const notesParent =
+        warmupGroup.mode === "notes" && block.id === warmupGroup.parentId;
       if (
         shouldAutoFinishExercise({
           alreadyFinished: false,
-          setCount: block.setCount,
+          setCount: notesParent ? warmupGroup.movements.length : block.setCount,
           completedSetCount: doneForBlock.size,
-          isTimed: isTimedBlock,
+          isTimed: notesParent ? false : isTimedBlock,
           completedHasFirstSet: doneForBlock.has(1),
         })
       ) {
@@ -1918,6 +2042,9 @@ export default function MemberWorkoutConsole({
     instructorName,
     queueLiveSave,
     advanceToNextExercise,
+    warmupGroup.mode,
+    warmupGroup.parentId,
+    warmupGroup.movements.length,
   ]);
 
   const markWorkoutFinished = useCallback(() => {
@@ -2362,7 +2489,20 @@ export default function MemberWorkoutConsole({
       ) : null}
 
       <div className="mt-4 space-y-3">
+        {warmupGroup.movements.length > 0 ? (
+          <MemberWarmupGroupCard
+            movements={warmupGroup.movements}
+            finishedExercises={finishedExercises}
+            completedSets={completedSets}
+            restSeconds={warmupRestSeconds}
+            videoOpen={!!videoModal}
+            onToggleMovement={toggleWarmupMovement}
+            onWatchDemo={openWarmupDemo}
+            onFocusChange={followWarmupVideo}
+          />
+        ) : null}
         {workout.exercises.map((block, exerciseIndex) => {
+          if (exerciseIndex < warmupLeadCount) return null;
           if (freeLockedExerciseIds.has(block.id)) {
             return (
               <div
@@ -2841,13 +2981,16 @@ export default function MemberWorkoutConsole({
         ) : null
       ) : null}
 
-      {videoModalBlock?.videoUrl && (
+      {videoModal?.url ? (
         <MemberExerciseVideoModal
-          exerciseName={videoModalBlock.name}
-          videoUrl={videoModalBlock.videoUrl}
-          onClose={() => setVideoModalBlockId(null)}
+          exerciseName={videoModal.name}
+          videoUrl={videoModal.url}
+          onClose={() => {
+            setVideoModalBlockId(null);
+            setVideoModalOverride(null);
+          }}
         />
-      )}
+      ) : null}
     </div>
   );
 }

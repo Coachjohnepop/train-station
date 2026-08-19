@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { CoachAlertEvent, CoachAlertPrefs } from "@/lib/alert-channels";
 import type { WarmupBlockTemplate } from "@/lib/warmup-template";
@@ -28,6 +29,7 @@ type CoachSettings = {
   programStartMaxOffsetDays: number;
   programStartRecommendWeekday: number | null;
   programBlockDays: number;
+  warmupRestSeconds: number;
   updatedAt: string;
 };
 
@@ -44,6 +46,11 @@ const EVENT_LABELS: Record<CoachAlertEvent, string> = {
 
 export default function CoachSettingsPanel() {
   const [settings, setSettings] = useState<CoachSettings | null>(null);
+  const [warmupWorkout, setWarmupWorkout] = useState<{
+    id: string;
+    href: string;
+    exerciseCount: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -55,10 +62,12 @@ export default function CoachSettingsPanel() {
     if (res.ok && data.settings) {
       setSettings({
         ...data.settings,
+        warmupRestSeconds: data.settings.warmupRestSeconds ?? 15,
         coachPhone: data.settings.coachPhone
           ? formatPhoneInputValue(data.settings.coachPhone)
           : null,
       });
+      if (data.warmupWorkout?.href) setWarmupWorkout(data.warmupWorkout);
     }
     else setMessage(data.error || "Could not load settings.");
     setLoading(false);
@@ -88,12 +97,14 @@ export default function CoachSettingsPanel() {
         programStartMaxOffsetDays: settings.programStartMaxOffsetDays,
         programStartRecommendWeekday: settings.programStartRecommendWeekday,
         programBlockDays: settings.programBlockDays,
+        warmupRestSeconds: settings.warmupRestSeconds,
       }),
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.settings) {
       setSettings({
         ...data.settings,
+        warmupRestSeconds: data.settings.warmupRestSeconds ?? 15,
         coachPhone: data.settings.coachPhone
           ? formatPhoneInputValue(data.settings.coachPhone)
           : null,
@@ -119,12 +130,7 @@ export default function CoachSettingsPanel() {
     });
   }
 
-  function updateWarmup(idx: number, patch: Partial<WarmupBlockTemplate>) {
-    if (!settings) return;
-    const blocks = [...settings.warmupBlocks];
-    blocks[idx] = { ...blocks[idx], ...patch };
-    setSettings({ ...settings, warmupBlocks: blocks });
-  }
+
 
   function updateGamificationPoint(type: GamificationEventType, value: number) {
     if (!settings) return;
@@ -426,40 +432,41 @@ export default function CoachSettingsPanel() {
         <div>
           <h2 className="text-lg font-semibold">Warm-up template</h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Auto-added to new empty workouts (program calendar, workout list). New members also see
-            these before intake sign-off — with set checkoffs. Existing workouts are never
-            re-seeded after you delete lines.
+            The standard warm-up is a real workout in the database — same editor as
+            any class day. New workouts get a copy of those lines. Members still see
+            the leading warm-up as one card.
           </p>
         </div>
-        <div className="space-y-3">
-          {settings.warmupBlocks.map((block, idx) => (
-            <div
-              key={block.id}
-              className="grid gap-2 rounded-lg border border-[var(--border)] p-3 sm:grid-cols-4"
-            >
-              <input
-                className="input sm:col-span-2"
-                value={block.name}
-                onChange={(e) => updateWarmup(idx, { name: e.target.value })}
-              />
-              <input
-                className="input"
-                type="number"
-                min={1}
-                max={10}
-                value={block.setCount}
-                onChange={(e) =>
-                  updateWarmup(idx, { setCount: Math.max(1, Number(e.target.value) || 1) })
-                }
-              />
-              <input
-                className="input"
-                value={block.reps || ""}
-                placeholder="Reps / time"
-                onChange={(e) => updateWarmup(idx, { reps: e.target.value || null })}
-              />
-            </div>
-          ))}
+        <label className="block max-w-xs">
+          <span className="mb-1 block text-xs text-[var(--muted)]">
+            Rest after each warm-up movement (seconds)
+          </span>
+          <input
+            className="input"
+            type="number"
+            min={5}
+            max={120}
+            value={settings.warmupRestSeconds ?? 15}
+            onChange={(e) =>
+              setSettings({
+                ...settings,
+                warmupRestSeconds: Math.max(5, Math.min(120, Number(e.target.value) || 15)),
+              })
+            }
+          />
+        </label>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href={warmupWorkout?.href || "/admin/workouts/warmup-standard"}
+            className="btn-primary text-sm"
+          >
+            Edit warm-up workout
+          </Link>
+          <span className="text-sm text-[var(--muted)]">
+            {warmupWorkout
+              ? `${warmupWorkout.exerciseCount} movement${warmupWorkout.exerciseCount === 1 ? "" : "s"} in the database`
+              : "Opens the Standard warm-up workout"}
+          </span>
         </div>
       </section>
 

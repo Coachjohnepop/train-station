@@ -2,6 +2,7 @@ import {
   injectWarmupIfMissing,
   lessonPlanHasWarmup,
 } from "@/lib/coach-warmup-presets";
+import { expandParsedWarmupExercises } from "@/lib/warmup-group";
 import {
   parseSmsWorkout,
   type ParsedSmsExercise,
@@ -349,6 +350,11 @@ export async function interpretLessonPlan(opts: {
       questions = detectQuestions(workout, text, { includeWarmup: includeWarmupOpt });
     }
   }
+
+  workout = {
+    ...workout,
+    exercises: expandParsedWarmupExercises(workout.exercises),
+  };
 
   const warmupInjected =
     includeWarmupOpt && !lessonPlanHasWarmup(rawText) && lessonPlanHasWarmup(text);
