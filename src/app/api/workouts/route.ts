@@ -11,7 +11,7 @@ import {
   canonicalWorkoutContentName,
   findWorkoutByContentTitle,
 } from "@/lib/workout-catalog";
-import { seedWarmupsIntoWorkout } from "@/lib/seed-workout-warmups";
+import { ensureStandardWarmupWorkout, seedWarmupsIntoWorkout } from "@/lib/seed-workout-warmups";
 
 
 const createSchema = z.object({
@@ -24,6 +24,7 @@ const createSchema = z.object({
 export async function GET() {
   const auth = await requireStaff();
   if (!auth.ok) return auth.response;
+  await ensureStandardWarmupWorkout();
   if (isCoachCatalogDemo()) {
     const data = await getDemoSeed();
     const workouts = (data.workouts || []).map((w: any) => {

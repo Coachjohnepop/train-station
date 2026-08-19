@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { normalizeProgramSlug } from "@/lib/programs";
 import { syncProgramSchedule } from "@/lib/program-schedule";
 import type { ParsedSmsWorkout } from "@/lib/sms-workout-parser";
+import { expandParsedWarmupExercises } from "@/lib/warmup-group";
 import { parseProgramWeekText, type ParsedWeekDaySlot } from "@/lib/program-week-parser";
 import { NEWLY_ADDED_EXERCISE_TAG } from "@/lib/text-upload-exercises";
 import {
@@ -142,7 +143,7 @@ export async function buildWorkoutFromParsedDb(
   const newExerciseIds: string[] = [];
   const items: WorkoutExerciseCreateInput[] = [];
 
-  for (const [idx, ex] of parsed.exercises.entries()) {
+  for (const [idx, ex] of expandParsedWarmupExercises(parsed.exercises).entries()) {
     const { exercise, created } = await ensureExerciseDb(ex.name, ex.notes, catalog);
     if (created) newExerciseIds.push(exercise.id);
     const notes =

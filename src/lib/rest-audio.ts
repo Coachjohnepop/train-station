@@ -11,8 +11,8 @@ import {
 } from "@/lib/rest-timer-sound";
 
 let audioCtx: AudioContext | null = null;
-/** One reusable element per src — recreated if a load/play errors. */
-const sampleCache = new Map<string, HTMLAudioElement>();
+const bufferCache = new Map<string, AudioBuffer>();
+const decodeInFlight = new Map<string, Promise<AudioBuffer | null>>();
 let sampleRelease: (() => void) | null = null;
 let sampleReleaseToken = 0;
 /** True after a user-gesture unlock succeeded (iOS / Safari autoplay). */
@@ -48,6 +48,19 @@ function getCtx(): AudioContext | null {
   } catch {
     return null;
   }
+}
+
+async function ensureRunningCtx(): Promise<AudioContext | null> {
+  const ctx = getCtx();
+  if (!ctx) return null;
+  if (ctx.state === "suspended") {
+    try {
+      await ctx.resume();
+    } catch {
+      /* ignore */
+    }
+  }
+  return ctx;
 }
 
 /**
@@ -142,8 +155,8 @@ export function playRestStart(): void {
 }
 
 /** Fallback buzz if the chosen sample fails — 50% quieter than prior gym level. */
-function playRestCompleteFallback(): void {
-  const ctx = getCtx();
+function playRestCompleteFallback(ctxOverride?: AudioContext | null): void {
+  const ctx = ctxOverride ?? getCtx();
   if (!ctx) return;
   try {
     const now = ctx.currentTime;
@@ -180,68 +193,141 @@ function releaseSampleHold(token: number): void {
   sampleRelease = null;
 }
 
-function getOrCreateSample(src: string): HTMLAudioElement {
-  let audio = sampleCache.get(src);
-  if (audio) return audio;
-  audio = new Audio(src);
-  audio.preload = "auto";
-  audio.addEventListener("error", () => {
-    if (sampleCache.get(src) === audio) sampleCache.delete(src);
+function decodeAudioDataCompat(ctx: AudioContext, raw: ArrayBuffer): Promise<AudioBuffer> {
+  const copy = raw.slice(0);
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const ok = (buf: AudioBuffer) => {
+      if (settled) return;
+      settled = true;
+      resolve(buf);
+    };
+    const fail = (err?: unknown) => {
+      if (settled) return;
+      settled = true;
+      reject(err);
+    };
+    try {
+      const p = ctx.decodeAudioData(copy, ok, fail);
+      if (p && typeof p.then === "function") {
+        void p.then(ok, fail);
+      }
+    } catch (err) {
+      fail(err);
+    }
   });
-  sampleCache.set(src, audio);
-  return audio;
+}
+
+function decodeSample(src: string): Promise<AudioBuffer | null> {
+  const hit = bufferCache.get(src);
+  if (hit) return Promise.resolve(hit);
+  const pending = decodeInFlight.get(src);
+  if (pending) return pending;
+
+  const work = (async () => {
+    try {
+      const ctx = await ensureRunningCtx();
+      if (!ctx) return null;
+      const res = await fetch(src, { cache: "force-cache" });
+      if (!res.ok) return null;
+      const raw = await res.arrayBuffer();
+      const buf = await decodeAudioDataCompat(ctx, raw);
+      bufferCache.set(src, buf);
+      return buf;
+    } catch {
+      return null;
+    } finally {
+      decodeInFlight.delete(src);
+    }
+  })();
+  decodeInFlight.set(src, work);
+  return work;
+}
+
+function playDecoded(
+  ctx: AudioContext,
+  buf: AudioBuffer,
+  volume: number,
+  token: number,
+): boolean {
+  try {
+    const src = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    const peak = Math.max(0.0001, Math.min(1, volume));
+    gain.gain.value = peak;
+    src.buffer = buf;
+    src.connect(gain);
+    gain.connect(ctx.destination);
+    src.onended = () => releaseSampleHold(token);
+    src.start();
+    const ms = Math.max(500, Math.ceil(buf.duration * 1000) + 80);
+    window.setTimeout(() => releaseSampleHold(token), ms);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function playHtmlSample(src: string, volume: number, token: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    try {
+      // Fresh element so a later unlock/preload cannot pause this playback.
+      const audio = new Audio(src);
+      audio.preload = "auto";
+      audio.muted = false;
+      audio.volume = Math.max(0, Math.min(1, volume));
+      let settled = false;
+      const done = (ok: boolean) => {
+        if (settled) return;
+        settled = true;
+        if (!ok) resolve(false);
+        else resolve(true);
+      };
+      audio.addEventListener("ended", () => releaseSampleHold(token), { once: true });
+      audio.addEventListener("error", () => done(false), { once: true });
+      void audio
+        .play()
+        .then(() => {
+          audioUnlocked = true;
+          done(true);
+        })
+        .catch(() => done(false));
+      window.setTimeout(() => {
+        if (!settled) done(!audio.paused);
+      }, 600);
+    } catch {
+      resolve(false);
+    }
+  });
 }
 
 /**
  * Call from a user gesture (set check, mute toggle, any touch on workout).
- * iOS/Safari block rest-end samples until AudioContext + HTMLAudio are unlocked.
+ * Resumes AudioContext and decodes the rest-end sample so a later timer
+ * (no gesture) can play through Web Audio.
  */
 export function unlockRestAudio(
   sound: RestTimerSoundId | string | null | undefined = DEFAULT_REST_TIMER_SOUND,
 ): void {
   if (typeof window === "undefined") return;
   try {
-    const ctx = getCtx();
-    if (ctx?.state === "suspended") {
-      void ctx.resume().then(() => {
-        audioUnlocked = true;
-      }).catch(() => {});
-    } else if (ctx) {
-      audioUnlocked = true;
-    }
-
     const src = restTimerSoundSrc(sound);
-    const audio = getOrCreateSample(src);
-    // Silent prime play during the gesture — required on iOS so a later
-    // timer-driven rest-end (no gesture) can call play() successfully.
-    if (audio.paused || audio.ended) {
-      const prevMuted = audio.muted;
-      const prevVol = audio.volume;
-      audio.muted = true;
-      audio.volume = 0;
-      void audio
-        .play()
-        .then(() => {
-          audio.pause();
-          try {
-            audio.currentTime = 0;
-          } catch {
-            /* ignore */
-          }
-          audio.muted = prevMuted;
-          audio.volume = prevVol > 0 ? prevVol : restTimerSoundVolume(sound);
-          audioUnlocked = true;
-        })
-        .catch(() => {
-          audio.muted = prevMuted;
-          audio.volume = prevVol;
-        });
-    } else {
-      audioUnlocked = true;
-    }
+    const alt = restTimerSoundFallbackSrc(sound);
+    void ensureRunningCtx().then((ctx) => {
+      if (ctx) audioUnlocked = true;
+    });
+    void decodeSample(src);
+    if (alt && alt !== src) void decodeSample(alt);
   } catch {
     /* ignore */
   }
+}
+
+/** Resume the audio context + keep the sample decoded during the last seconds of rest. */
+export function warmRestAudio(
+  sound: RestTimerSoundId | string | null | undefined = DEFAULT_REST_TIMER_SOUND,
+): void {
+  unlockRestAudio(sound);
 }
 
 export function isRestAudioUnlocked(): boolean {
@@ -250,8 +336,12 @@ export function isRestAudioUnlocked(): boolean {
 
 /**
  * End-of-rest alert — coach-selected sample (default Cybertruck honk).
- * Guarded so live retargets / dual clients don't stack multiple horns.
+ * Guarded so live retargets / dual clients don't stack chirps/horns.
  * Pass `{ force: true }` for the real countdown-zero path so de-dupe never swallows it.
+ *
+ * Plays the decoded buffer through AudioContext first (works after a set-tap
+ * unlock even when iOS blocks timer-driven HTMLAudio). HTMLAudio is second.
+ * Oscillator buzz is last — and it always runs if neither sample actually starts.
  */
 export function playRestComplete(
   sound: RestTimerSoundId | string | null | undefined = DEFAULT_REST_TIMER_SOUND,
@@ -265,7 +355,6 @@ export function playRestComplete(
   }
   lastCompleteAt = nowMs;
   completeInFlight = true;
-  // Reset after gap so a later legitimate end can sound.
   window.setTimeout(() => {
     completeInFlight = false;
   }, COMPLETE_GAP_MS);
@@ -275,99 +364,48 @@ export function playRestComplete(
   const fallbackSrc = restTimerSoundFallbackSrc(id);
   const volume = restTimerSoundVolume(id);
 
-  try {
-    // Best-effort unlock if something already primed the context.
-    getCtx();
+  sampleRelease?.();
+  const token = ++sampleReleaseToken;
+  sampleRelease = holdBackgroundMusicForMedia();
 
-    sampleRelease?.();
-    const token = ++sampleReleaseToken;
-    sampleRelease = holdBackgroundMusicForMedia();
-
-    let started = false;
-    const playSrc = (src: string, allowAlt: boolean) => {
-      // Reuse preloaded element so iOS unlock from set-check carries over.
-      const audio = getOrCreateSample(src);
-      audio.preload = "auto";
-      audio.volume = volume;
-      audio.muted = false;
-
-      const fail = () => {
-        if (allowAlt && fallbackSrc && fallbackSrc !== src) {
-          playSrc(fallbackSrc, false);
-          return;
-        }
-        releaseSampleHold(token);
-        // Only synthetic fallback if the sample path never started.
-        if (!started) playRestCompleteFallback();
+  void (async () => {
+    try {
+      const ctx = await ensureRunningCtx();
+      const tryBuf = async (src: string | null): Promise<boolean> => {
+        if (!src || !ctx) return false;
+        const buf = bufferCache.get(src) ?? (await decodeSample(src));
+        return Boolean(buf && playDecoded(ctx, buf, volume, token));
       };
 
-      audio.onended = () => releaseSampleHold(token);
-      audio.onerror = () => {
-        if (sampleCache.get(src) === audio) sampleCache.delete(src);
-        fail();
-      };
-
-      const start = () => {
-        if (started) return;
-        started = true;
-        audio.muted = false;
-        audio.volume = volume;
-        try {
-          audio.currentTime = 0;
-        } catch {
-          /* ignore */
-        }
-        void audio
-          .play()
-          .then(() => {
-            audioUnlocked = true;
-            audio.muted = false;
-            audio.volume = volume;
-            sampleCache.set(src, audio);
-          })
-          .catch(fail);
-      };
-
-      if (audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-        start();
-      } else {
-        let armed = false;
-        const onReady = () => {
-          if (armed) return;
-          armed = true;
-          audio.removeEventListener("canplaythrough", onReady);
-          audio.removeEventListener("canplay", onReady);
-          start();
-        };
-        audio.addEventListener("canplaythrough", onReady);
-        audio.addEventListener("canplay", onReady);
-        try {
-          audio.load();
-        } catch {
-          /* ignore */
-        }
-        window.setTimeout(() => {
-          if (!started && audio.paused && !audio.ended) start();
-        }, 400);
+      if (await tryBuf(primarySrc)) {
+        audioUnlocked = true;
+        return;
       }
-    };
-
-    playSrc(primarySrc, true);
-  } catch {
-    completeInFlight = false;
-    playRestCompleteFallback();
-  }
+      if (fallbackSrc && (await tryBuf(fallbackSrc))) {
+        audioUnlocked = true;
+        return;
+      }
+      if (await playHtmlSample(primarySrc, volume, token)) return;
+      if (fallbackSrc && fallbackSrc !== primarySrc) {
+        if (await playHtmlSample(fallbackSrc, volume, token)) return;
+      }
+      playRestCompleteFallback(ctx);
+    } catch {
+      playRestCompleteFallback();
+    }
+  })();
 }
 
-/** Preload chosen sample so the first rest-end isn't delayed. */
+/** Preload / decode chosen sample so the first rest-end isn't delayed. */
 export function preloadRestCompleteSound(
   sound: RestTimerSoundId | string | null | undefined = DEFAULT_REST_TIMER_SOUND,
 ): void {
   if (typeof window === "undefined") return;
   try {
     const src = restTimerSoundSrc(sound);
-    const audio = getOrCreateSample(src);
-    audio.load();
+    const alt = restTimerSoundFallbackSrc(sound);
+    void decodeSample(src);
+    if (alt && alt !== src) void decodeSample(alt);
   } catch {
     /* ignore */
   }

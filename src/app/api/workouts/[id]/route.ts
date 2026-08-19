@@ -16,6 +16,10 @@ import {
   isSmsWorkoutId,
   patchSmsWorkout,
 } from "@/lib/sms-workout-builder-api";
+import {
+  ensureStandardWarmupWorkout,
+  isStandardWarmupWorkoutId,
+} from "@/lib/seed-workout-warmups";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -31,6 +35,9 @@ export async function GET(_request: Request, { params }: Params) {
   const auth = await requireStaff();
   if (!auth.ok) return auth.response;
   const { id } = await params;
+  if (isStandardWarmupWorkoutId(id)) {
+    await ensureStandardWarmupWorkout();
+  }
   if (isSmsWorkoutId(id)) {
     const workout = await getSmsWorkoutForBuilder(id);
     if (!workout) {

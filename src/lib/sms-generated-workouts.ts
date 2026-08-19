@@ -21,6 +21,8 @@ import { matchExerciseInCatalog, sanitizeSmsExerciseName } from "@/lib/exercise-
 import { isCoachCatalogDemo } from "@/lib/catalog-mode";
 import { hintVideoUrlForExerciseName, resolveExerciseVideoUrl } from "@/lib/exercise-video-hints";
 import { DEFAULT_REST_TIMER_SECONDS, normalizeRestTimerSeconds } from "@/lib/rest-timer";
+import { DEFAULT_WARMUP_REST_SECONDS, expandParsedWarmupExercises } from "@/lib/warmup-group";
+import { getCoachSettings } from "@/lib/coach-settings-store";
 import { collapseConsecutiveCloneExercises } from "@/lib/member-workout-lines";
 import {
   DEFAULT_REST_TIMER_SOUND,
@@ -234,8 +236,9 @@ export async function buildWorkoutFromParsedSms(
   });
 
   const newExerciseIds: string[] = [];
+  const parsedExercises = expandParsedWarmupExercises(parsed.exercises);
 
-  for (const [idx, ex] of parsed.exercises.entries()) {
+  for (const [idx, ex] of parsedExercises.entries()) {
     const resolved = await resolveExerciseForWorkoutBlock(ex.name, ex.notes, catalog);
     catalog = resolved.catalog;
     if (resolved.created) newExerciseIds.push(resolved.exercise.id);
@@ -259,7 +262,7 @@ export async function buildWorkoutFromParsedSms(
   if (isDemoMode()) {
     requireBlobPersisted(blobSaved, "Lesson plan draft");
   }
-  return { workoutId: id, exerciseCount: parsed.exercises.length, newExerciseIds };
+  return { workoutId: id, exerciseCount: parsedExercises.length, newExerciseIds };
 }
 
 export type WorkoutExerciseBlockMeta = {
@@ -352,5 +355,15 @@ export async function getSmsGeneratedWorkout(
     restTimerSound: normalizeRestTimerSound(
       workout.restTimerSound ?? DEFAULT_REST_TIMER_SOUND,
     ),
+    warmupRestSeconds: await loadSmsWarmupRestSeconds(),
   };
+}
+
+async function loadSmsWarmupRestSeconds(): Promise<number> {
+  try {
+    const settings = await getCoachSettings();
+    return settings.warmupRestSeconds || DEFAULT_WARMUP_REST_SECONDS;
+  } catch {
+    return DEFAULT_WARMUP_REST_SECONDS;
+  }
 }

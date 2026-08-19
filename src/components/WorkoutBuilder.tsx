@@ -16,6 +16,8 @@ import {
   normalizePrescription,
   weightTierLabel,
 } from "@/lib/workout-schemes";
+import { notesMarkWarmup, withWarmupBlockNote } from "@/lib/warmup-group";
+import { isStandardWarmupWorkoutId } from "@/lib/warmup-template";
 
 type Exercise = {
   id: string;
@@ -77,6 +79,9 @@ export default function WorkoutBuilder({
   const [loading, setLoading] = useState(true);
   const [savingName, setSavingName] = useState(false);
   const [persistenceNote, setPersistenceNote] = useState<string | null>(null);
+  const [addAsWarmup, setAddAsWarmup] = useState(() =>
+    isStandardWarmupWorkoutId(workoutId),
+  );
   const nameSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
@@ -146,7 +151,7 @@ export default function WorkoutBuilder({
         sets: legacy.sets,
         weightTier: legacy.weightTier,
         restSec: legacy.restSec,
-        notes: legacy.notes,
+        notes: withWarmupBlockNote(legacy.notes, addAsWarmup),
       };
 
       const res = await fetch(`/api/workouts/${workoutId}/exercises`, {
@@ -184,10 +189,11 @@ export default function WorkoutBuilder({
         setSaveMessage(`Updated “${saved.exercise?.name ?? "exercise"}”.`);
       } else {
         setPickId("");
+        setAddAsWarmup(isStandardWarmupWorkoutId(workoutId));
         setSaveMessage(`Added “${saved.exercise?.name ?? "exercise"}”.`);
       }
     },
-    [workoutId],
+    [workoutId, addAsWarmup],
   );
 
   const defaultPrescriptionDraft = useCallback(
@@ -400,25 +406,45 @@ export default function WorkoutBuilder({
         </div>
 
         {pickedExercise && !editingItemId && (
-          <PrescriptionRowEditor
-            exerciseName={pickedExercise.name}
-            initial={defaultPrescriptionDraft(pickedExercise.name)}
-            confirmLabel="Add to workout"
-            onConfirm={(draft) => savePrescriptionDraft(pickedExercise.id, draft)}
-            onCancel={() => setPickId("")}
-          />
+          <>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={addAsWarmup}
+                onChange={(e) => setAddAsWarmup(e.target.checked)}
+              />
+              Warm-up movement (saved as its own exercise, grouped on the member card)
+            </label>
+            <PrescriptionRowEditor
+              exerciseName={pickedExercise.name}
+              initial={defaultPrescriptionDraft(pickedExercise.name)}
+              confirmLabel="Add to workout"
+              onConfirm={(draft) => savePrescriptionDraft(pickedExercise.id, draft)}
+              onCancel={() => setPickId("")}
+            />
+          </>
         )}
 
         {editingItem && (
-          <PrescriptionRowEditor
-            exerciseName={editingItem.exercise.name}
-            initial={legacyWorkoutItemToPrescriptionDraft(editingItem, editingItem.exercise.name)}
-            confirmLabel="Save changes"
-            onConfirm={(draft) =>
-              savePrescriptionDraft(editingItem.exercise.id, draft, editingItem.id)
-            }
-            onCancel={() => setEditingItemId(null)}
-          />
+          <>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={addAsWarmup}
+                onChange={(e) => setAddAsWarmup(e.target.checked)}
+              />
+              Warm-up movement (saved as its own exercise, grouped on the member card)
+            </label>
+            <PrescriptionRowEditor
+              exerciseName={editingItem.exercise.name}
+              initial={legacyWorkoutItemToPrescriptionDraft(editingItem, editingItem.exercise.name)}
+              confirmLabel="Save changes"
+              onConfirm={(draft) =>
+                savePrescriptionDraft(editingItem.exercise.id, draft, editingItem.id)
+              }
+              onCancel={() => setEditingItemId(null)}
+            />
+          </>
         )}
       </div>
 
@@ -447,6 +473,11 @@ export default function WorkoutBuilder({
               <p className="font-medium">
                 <span className="mr-2 text-xs text-[var(--muted)]">{index + 1}.</span>
                 {item.exercise.name}
+                {notesMarkWarmup(item.notes || "") ? (
+                  <span className="ml-2 rounded-full bg-[color-mix(in_srgb,var(--ramp-gold)_22%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--ramp-gold-light)]">
+                    Warm-up
+                  </span>
+                ) : null}
               </p>
               <p className="mt-0.5 text-sm text-[var(--muted)]">
                 {approachLabel(normalizePrescription(item).approach)} ·{" "}
@@ -470,6 +501,7 @@ export default function WorkoutBuilder({
                 className="btn-ghost text-sm"
                 onClick={() => {
                   setPickId("");
+                  setAddAsWarmup(notesMarkWarmup(item.notes || ""));
                   setEditingItemId(item.id);
                 }}
               >

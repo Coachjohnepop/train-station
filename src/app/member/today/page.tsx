@@ -40,6 +40,10 @@ import { getMemberProfile } from "@/lib/member-profiles-store";
 import { isCoachIntakeComplete } from "@/lib/member-intake";
 import { getCoachSettings } from "@/lib/coach-settings-store";
 import { getMemberContent } from "@/lib/member-content-store";
+import {
+  ensureStandardWarmupWorkout,
+  STANDARD_WARMUP_WORKOUT_ID,
+} from "@/lib/seed-workout-warmups";
 import { buildWarmupWorkoutView } from "@/lib/warmup-template";
 import { getUserEnrollments } from "@/lib/data/user-data";
 import { normalizeTrainingLocation } from "@/lib/program-macro-cycle";
@@ -156,9 +160,15 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     todayIso: calendarToday,
   });
   const measurementCompletedToday = lastMeasuredIso === calendarToday;
-  const warmupWorkout = !intakeComplete
-    ? buildWarmupWorkoutView(memberName, coachSettings.warmupBlocks)
-    : null;
+  let warmupWorkout = null as Awaited<ReturnType<typeof getMemberWorkoutById>>;
+  if (!intakeComplete) {
+    await ensureStandardWarmupWorkout();
+    warmupWorkout =
+      (await getMemberWorkoutById(STANDARD_WARMUP_WORKOUT_ID, {
+        userId: uid,
+        memberName,
+      })) ?? buildWarmupWorkoutView(memberName);
+  }
   const intakeRampDays =
     !intakeComplete && warmupWorkout && !(dayWindow?.days.length)
       ? buildIntakeRampPlaceholderDays(calendarToday, 3, 1)

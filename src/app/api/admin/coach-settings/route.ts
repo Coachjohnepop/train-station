@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { getCoachSettings, saveCoachSettings } from "@/lib/coach-settings-store";
+import {
+  ensureStandardWarmupWorkout,
+  STANDARD_WARMUP_WORKOUT_ID,
+} from "@/lib/seed-workout-warmups";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +24,7 @@ const patchSchema = z.object({
   programStartMaxOffsetDays: z.number().int().min(0).max(14).optional(),
   programStartRecommendWeekday: z.number().int().min(0).max(6).nullable().optional(),
   programBlockDays: z.number().int().min(7).max(56).optional(),
+  warmupRestSeconds: z.number().int().min(5).max(120).optional(),
 });
 
 async function requireStaff() {
@@ -32,7 +37,15 @@ export async function GET() {
   const session = await requireStaff();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const settings = await getCoachSettings();
-  return NextResponse.json({ settings });
+  const warmup = await ensureStandardWarmupWorkout();
+  return NextResponse.json({
+    settings,
+    warmupWorkout: {
+      id: STANDARD_WARMUP_WORKOUT_ID,
+      href: `/admin/workouts/${STANDARD_WARMUP_WORKOUT_ID}`,
+      exerciseCount: warmup.exerciseCount,
+    },
+  });
 }
 
 export async function PATCH(request: Request) {
@@ -61,6 +74,7 @@ export async function PATCH(request: Request) {
     programStartMaxOffsetDays: body.data.programStartMaxOffsetDays,
     programStartRecommendWeekday: body.data.programStartRecommendWeekday,
     programBlockDays: body.data.programBlockDays,
+    warmupRestSeconds: body.data.warmupRestSeconds,
   });
   return NextResponse.json({ settings });
 }
