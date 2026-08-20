@@ -138,14 +138,16 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     ? await buildMemberDayWindow(uid, primaryProgram.slug, loggedSet, {
         rollingDays: schedulePreview ? previewRollingDays(schedulePreview) : 3,
         daysBefore: schedulePreview?.daysBefore ?? 1,
-        upcomingDays: schedulePreview?.upcomingDays,
+        upcomingDays: schedulePreview?.upcomingDays ?? 1,
         futureVisibility: schedulePreview?.futureVisibility,
         loggedCalendarDates: loggedDates,
       })
     : null;
 
   const programBlock = dayWindow?.block ?? null;
-  const useCalendarStrip = !schedulePreview;
+  // Personal 28-day month: never swipe the shared gym calendar (that's how Todd
+  // landed on Back/Bicep). Calendar strip is only for members with no start date.
+  const useCalendarStrip = !schedulePreview && !programBlock;
   const programTodayKey = useCalendarStrip
     ? calendarToday
     : (dayWindow?.programTodayKey ?? calendarToday);
