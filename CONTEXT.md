@@ -113,6 +113,26 @@ Do not add new features that write only to JSON files, Vercel Blob JSON, localSt
 When in doubt: **if a coach or member would lose work when a deploy restarts, it belongs in Postgres.**  
 Same bar for **new** work: if it is product data, it is a **database** concern first.
 
+### Member schedule is a personal 28-day month (not the gym calendar)
+**Members never see the shared Adult gym calendar** (Adult `startDate` 2026-06-22 / `calendarDate` on program days). That board is a **coach** tool.
+
+| Rule | Meaning |
+|------|---------|
+| **Each member** | Own 28-day block from `ProgramEnrollment.programStartDate` → `blockEndsAt` |
+| **Day 1** | Adult **W1D1 Upper Body** on *their* start date |
+| **Week 1 flow** | D1 Upper · D2 Lower · D3 Fasted cardio · D4 Upper · D5 Lower · D6 rest/stretch (catalog “DAY 14 REST AND STRETCH DAY”) · D7 Rest day (includes Meal Prep) — **Jeremy’s existing catalog rows**, not new write-ups |
+| **Today / program page / labels** | Personal month only. Do not call `findProgramDayForCalendarDate` on the member path |
+| **Live class** | Only if Jeremy puts them on that day’s `CoachTodaySession.userIds` |
+| **New enroll** | Always stamp `programStartDate` (signup day unless they pick one at onboard) |
+| **Join week CTA** | `/signup?plan=explorer&week=1` → **Coach Class Checkout with 7-day trial** (card on file, $0 today, monthly after). Do **not** grant `landing_free_week` unpaid. Webhook must treat trial Checkout `payment_status=no_payment_required` as complete |
+
+**Tester exception (remove later):** `dubl-e@howerfamily.com` (**Todd Hower**, Jeremy’s BIL) starts so **today = Day 2 Lower Body** (`src/lib/member-start-exceptions.ts`). Account was fully deleted 2026-08-20 so he can re-onboard through the card trial. Leave his data alone otherwise.
+
+**Todd Day 2 Lower Body (gym = home):** Warm-up 5–7 min · Air Squats 3×8–10 · Alt. step-back lunges 3×20 · Step-ups 2×30 (no video) · Goblet squat 3×30 · Same-leg lunges 2×30 · Lateral leg raises 3×30 · Scissor kicks 2×50 · Calf raises 2×30 · Straight-leg crunches 3×10 · Cool-down/stretch.
+
+### Fake accounts
+`@example.com` **users** were purged. Waitlist loop rows purged 2026-08-20. Keep **`demo@thetrainstation.co` (Alex)** as the coach demo member. Do not recreate soak `@example.com` people on prod.
+
 ### Client profile — ask once, store once
 **`MemberProfile` is the client record.** Anything gathered at onboard (man/woman, starting weight, goal chips, schedule, notes, city, phone) writes there. Later screens **read** it. Do not invent a second weight box that ignores onboard.
 
@@ -394,8 +414,22 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-19  
-**Status:** Newbie rail + gold completed days. Stripe/Zoom still stable.  
+**Date:** 2026-08-20  
+**Status:** Member path hardened to personal 28-day month. Join week now requires card + Coach Class trial. Todd kicked so he can re-test that path (Day 2 Lower Body only for him). John signing off.
+
+**This pass (2026-08-20):**
+- **Why Todd hit Back/Bicep:** Today used Adult’s shared June calendar (Aug 20 = W9D4), not his start. Fixed: personal `programStartDate` mapping; members never swipe gym calendar; program page = their 28 days.
+- **Join week:** used to grant unpaid `landing_free_week`. Now signup `plan=explorer&week=1` → `/member/checkout?plan=member&trial=week` (Stripe `trial_period_days: 7`). After week, Stripe bills Coach Class. **Todd is a tester — do not charge/reset him from the old unpaid week; account already deleted for a clean re-onboard.**
+- **Rest timer:** iPhone sleeps on countdown — `useScreenWakeLock` on the workout console.
+- **Videos:** shrugs, bicycles, sit-ups, HIIT, standard warmup got Watch demo (library + hints). Step-ups on Lower Body still no video.
+- **Fake data:** `@example.com` users gone earlier; 41 waitlist loop rows + 2 orphan chat threads deleted this pass. 17 users remain. **Alex demo kept.**
+- **John/Stephanie:** paid, train via live class, **no Adult enroll** — do not invent a gym-calendar month for them.
+- **Coop / Jayden / Alex:** Adult enroll **without** `programStartDate` — still a hole (incomplete onboard).
+- **Jeremy Byrd 2:** 28-day block ends **2026-08-25** — day 29 is empty until we define next month.
+
+**When back:** Todd re-joins Join week (private tab) after deploy `be65f61`+ is live. Confirm checkout trial + Today = Lower Body. Then: enrollments always get a start; what happens on day 29.
+
+**Prior (2026-08-19):** Newbie rail + gold completed days. Stripe/Zoom still stable.  
 **Supabase:** live **`train-station-catalog`** / **`mattccorhcxghwyfgklp`**. Paused **`dptxndcl…`** is not prod. PostgREST locked. Do **not** put TS on Eco Delight’s Pro org.  
 **Polls:** live-class backup **only while `hostStarted`**, 5s min. Build fails if a faster network poll is added (`scripts/guard-hot-polls.mjs`). Shipped `5175c2a` + `935f42a` → `main`.  
 **Still (not tonight):** Free = no backups. Watch **Review usage** before **30 Aug 2026**.  
