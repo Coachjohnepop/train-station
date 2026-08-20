@@ -47,6 +47,13 @@ const EXACT_NAME_VIDEOS: Record<string, string> = {
   "Band Lateral Shoulder Raises":
     "https://www.youtube.com/shorts/Myim1WH6Qec",
   "Hip Abduction Machine": "https://www.youtube.com/shorts/Z6Aq5upUp4A",
+
+  "Dumbbell Shrugs": "https://www.youtube.com/shorts/rFsSeClGnNA",
+  "Abdominal Bicycles": "https://www.youtube.com/shorts/hP-ol0LxLZ8",
+  "Sit Ups": "https://www.youtube.com/shorts/q5EOcLVXwZ8",
+  "HIIT Cardio Intervals": "https://www.youtube.com/watch?v=C_VtOYc6j5c",
+  "General Warm Up + Shoulder Mobility":
+    "https://www.youtube.com/watch?v=2-LAMcpzODU",
 };
 
 /** Pattern fallbacks when name is not in EXACT_NAME_VIDEOS. More specific first. */
@@ -152,7 +159,19 @@ const VIDEO_HINTS: Array<{ pattern: RegExp; videoUrl: string }> = [
     pattern: /tricep|extension|pushdown|push.?down/i,
     videoUrl: "https://www.youtube.com/shorts/1FjkhpZsaxc",
   },
+  {
+    pattern: /shrug/i,
+    videoUrl: "https://www.youtube.com/shorts/rFsSeClGnNA",
+  },
   // Core
+  {
+    pattern: /bicycle/i,
+    videoUrl: "https://www.youtube.com/shorts/hP-ol0LxLZ8",
+  },
+  {
+    pattern: /sit[\s-]?ups?/i,
+    videoUrl: "https://www.youtube.com/shorts/q5EOcLVXwZ8",
+  },
   {
     pattern: /scissor|flutter/i,
     videoUrl: "https://www.youtube.com/watch?v=0vDI5aU402c",
