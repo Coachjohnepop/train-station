@@ -25,6 +25,8 @@ const schema = z.object({
   customOfferId: z.string().max(80).optional(),
   merchandiseSkuId: z.string().max(80).optional(),
   quantity: z.number().int().min(1).max(99).optional(),
+  /** Landing Join week — Coach Class subscription with a 7-day trial. */
+  trial: z.enum(["week"]).optional(),
 });
 
 export async function POST(request: Request) {
@@ -158,6 +160,11 @@ export async function POST(request: Request) {
       discount = fromStripe;
     }
 
+    const trialDays =
+      parsed.data.trial === "week" && getOfferDefinition(plan)?.checkoutMode === "subscription"
+        ? 7
+        : null;
+
     const checkout = await createSignupCheckoutSession({
       userId: session.id,
       email: session.email,
@@ -168,6 +175,7 @@ export async function POST(request: Request) {
       customOfferId: parsed.data.customOfferId,
       merchandiseSkuId: parsed.data.merchandiseSkuId,
       quantity: parsed.data.quantity,
+      trialDays,
     });
 
     if ("error" in checkout) {

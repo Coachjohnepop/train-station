@@ -289,6 +289,8 @@ export async function createSignupCheckoutSession(input: {
   customOfferId?: string | null;
   merchandiseSkuId?: string | null;
   quantity?: number;
+  /** Coach Class landing week — $0 now, first invoice after N days. */
+  trialDays?: number | null;
 }): Promise<
   { clientSecret: string; sessionId: string; hasSavedCard: boolean } | { error: string }
 > {
@@ -312,6 +314,14 @@ export async function createSignupCheckoutSession(input: {
   };
   if (input.referralCode?.trim()) {
     metadata.referralCode = input.referralCode.trim().toUpperCase();
+  }
+  const trialDays =
+    typeof input.trialDays === "number" && Number.isFinite(input.trialDays)
+      ? Math.min(30, Math.max(1, Math.floor(input.trialDays)))
+      : 0;
+  if (trialDays > 0) {
+    metadata.kind = "landing_free_week";
+    metadata.trialDays = String(trialDays);
   }
 
   if (offer.checkoutMode === "custom_offer") {
@@ -426,9 +436,11 @@ export async function createSignupCheckoutSession(input: {
       metadata,
       line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: {
+        ...(trialDays > 0 ? { trial_period_days: trialDays } : {}),
         metadata: {
           userId: input.userId,
           plan: input.plan,
+          ...(trialDays > 0 ? { kind: "landing_free_week" } : {}),
           ...(input.referralCode?.trim()
             ? { referralCode: input.referralCode.trim().toUpperCase() }
             : {}),

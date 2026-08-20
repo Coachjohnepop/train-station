@@ -3,7 +3,11 @@ import "server-only";
 import type Stripe from "stripe";
 
 export function isCheckoutSessionPaid(session: Stripe.Checkout.Session): boolean {
-  return session.payment_status === "paid";
+  if (session.payment_status === "paid") return true;
+  // 7-day Coach Class trial: Checkout completes with $0 due now.
+  return (
+    session.status === "complete" && session.payment_status === "no_payment_required"
+  );
 }
 
 export function isSubscriptionActive(sub: Stripe.Subscription): boolean {

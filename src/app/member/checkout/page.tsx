@@ -78,6 +78,7 @@ function MemberCheckoutInner() {
   const customOfferId = searchParams.get("offerId") || "";
   const merchandiseSkuId = searchParams.get("sku") || "";
   const canceled = searchParams.get("canceled") === "1";
+  const trialWeek = searchParams.get("trial") === "week";
   const isDowngradeIntent = searchParams.get("intent") === "downgrade";
   const promoFromUrl =
     searchParams.get("promo") || searchParams.get("code") || searchParams.get("ref") || "";
@@ -224,6 +225,7 @@ function MemberCheckoutInner() {
           merchandiseSkuId: merchandiseSkuId || undefined,
           promoCode: promoCode.trim() || undefined,
           referralCode: promoCode.trim() || undefined,
+          trial: trialWeek ? "week" : undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -271,7 +273,9 @@ function MemberCheckoutInner() {
     ? `Confirm ${signupPlanLabel(plan)}`
     : coverageMatchesThisTicket
       ? "Continue already paid"
-      : "Get your Ticket";
+      : trialWeek
+        ? "Start 7-day week — card on file"
+        : "Get your Ticket";
 
   return (
     <>
@@ -310,6 +314,12 @@ function MemberCheckoutInner() {
                 Checkout was canceled. You can try Stripe again or use Venmo below.
               </p>
             )}
+            {trialWeek && !coverageMatchesThisTicket ? (
+              <p className="rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-[var(--text)]">
+                7 days of Coach Class on us. Put a card on file and approve the monthly
+                charge after the week. You will not be billed today.
+              </p>
+            ) : null}
             {paymentsLoading && (
               <p className="text-sm text-[var(--muted)]">Loading payment options…</p>
             )}
