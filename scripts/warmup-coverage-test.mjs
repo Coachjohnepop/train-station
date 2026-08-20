@@ -21,6 +21,8 @@ assert.equal(
   }),
   true,
 );
+assert.equal(isRestOrDayOffContent({ workoutName: "Active Recovery Stretch" }), true);
+assert.equal(isRestOrDayOffContent({ workoutName: "Rest and Meal Prep" }), true);
 assert.equal(
   isRestOrDayOffContent({ optionLabel: "Day Off", workoutName: "Unassigned" }),
   true,
