@@ -75,15 +75,16 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
     }
   }
 
+  const memberUserId = resolveTargetUserId(forUser, await resolveMemberUserId());
+
   const workoutContext = program
     ? await resolveMemberWorkoutContext({
         programSlug: program,
         dateParam: date,
         optionLabel: option,
+        userId: memberUserId,
       })
     : null;
-
-  const memberUserId = resolveTargetUserId(forUser, await resolveMemberUserId());
 
   const backHref = "/member/today";
   const backLabel = program ? "← Back to program" : "← Dashboard";
