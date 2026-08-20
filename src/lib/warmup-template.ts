@@ -119,7 +119,7 @@ const WARMUP_NAME_RE =
 const STANDARD_WARMUP_LINE_RE =
   /warm[- ]?up|warm up well|general warm up|shoulder mobility warm|up with bands|low intensity cardio warmup/i;
 
-const REST_OR_OFF_RE = /rest\s*day|rest and|day\s*off|^off$|active recovery|meal prep/i;
+const REST_OR_OFF_RE = /rest\s*day|day\s*off|^off$|active recovery/i;
 
 export function isWarmupExerciseName(name: string): boolean {
   return WARMUP_NAME_RE.test(name);
