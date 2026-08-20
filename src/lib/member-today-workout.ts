@@ -2,10 +2,7 @@ import "server-only";
 
 import type { MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import { getProgramBySlug } from "@/lib/program-data";
-import {
-  resolveProgramWorkoutForCalendarDate,
-  type GoToTodayTarget,
-} from "@/lib/go-to-today";
+import { type GoToTodayTarget } from "@/lib/go-to-today";
 import { getMemberWorkoutById } from "@/lib/member-workout";
 import { getUserEnrollments } from "@/lib/data/user-data";
 import { getSmsGeneratedWorkout, hydrateSmsWorkouts } from "@/lib/sms-generated-workouts";
@@ -242,13 +239,12 @@ export async function resolveTodayPageWorkout(
 
       const enrollment = enrolls[slug];
       const personal = personalCoordinateForCalendarDate(
-        enrollment?.programStartDate,
+        enrollment?.programStartDate || viewDate,
         viewDate,
         program.durationWeeks,
         startSettings.blockDays,
       );
-      if (enrollment?.programStartDate) {
-        if (!personal) continue;
+      if (personal) {
         const resolved = await resolveEnrollmentProgramWorkout(
           userId,
           memberName,
@@ -259,25 +255,8 @@ export async function resolveTodayPageWorkout(
           opts?.partIndex,
         );
         if (resolved) return resolved;
-        continue;
       }
-
-      const resolved = resolveProgramWorkoutForCalendarDate(program, viewDate);
-      if (!resolved || resolved.smsOverride || !resolved.workoutId) continue;
-
-      const workout = await getMemberWorkoutById(resolved.workoutId, {
-        userId,
-        memberName,
-      });
-      if (!workout) continue;
-
-      return {
-        session,
-        workout,
-        programSlug: slug,
-        source: "program",
-        scheduleLabel: memberScheduleLabel(program.name, resolved.weekNumber, resolved.dayNumber),
-      };
+      continue;
     }
 
     return {

@@ -145,9 +145,9 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     : null;
 
   const programBlock = dayWindow?.block ?? null;
-  // Personal 28-day month: never swipe the shared gym calendar (that's how Todd
-  // landed on Back/Bicep). Calendar strip is only for members with no start date.
-  const useCalendarStrip = !schedulePreview && !programBlock;
+  // Members never swipe the shared gym calendar (June Adult dates). Today is
+  // their 28-day month. Calendar chips are only a last-ditch empty fallback.
+  const useCalendarStrip = false;
   const programTodayKey = useCalendarStrip
     ? calendarToday
     : (dayWindow?.programTodayKey ?? calendarToday);
