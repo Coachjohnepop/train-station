@@ -23,7 +23,10 @@ import {
 import type { ResolvedDayPart } from "@/lib/program-day-sessions";
 import { memberScheduleLabel } from "@/lib/member-day-window";
 import { localTodayIso } from "@/lib/program-calendar";
-import { resolveProgramBlock } from "@/lib/member-program-block";
+import {
+  personalCoordinateForCalendarDate,
+  resolveProgramBlock,
+} from "@/lib/member-program-block";
 import { getCoachSettings } from "@/lib/coach-settings-store";
 import { programStartSettingsFromCoach } from "@/lib/program-start-settings";
 
@@ -228,11 +231,36 @@ export async function resolveTodayPageWorkout(
       }
     }
 
+    const enrolls = await getUserEnrollments(userId);
+    const startSettings = programStartSettingsFromCoach(await getCoachSettings());
+
     for (const slug of await enrollmentSlugsForUser(userId)) {
       const program = await getProgramBySlug(slug);
       if (!program) continue;
       const cat = (program.category || "workout") as string;
       if (cat !== "workout" && cat !== "journey" && cat !== "yoga") continue;
+
+      const enrollment = enrolls[slug];
+      const personal = personalCoordinateForCalendarDate(
+        enrollment?.programStartDate,
+        viewDate,
+        program.durationWeeks,
+        startSettings.blockDays,
+      );
+      if (enrollment?.programStartDate) {
+        if (!personal) continue;
+        const resolved = await resolveEnrollmentProgramWorkout(
+          userId,
+          memberName,
+          slug,
+          personal.weekNumber,
+          personal.dayNumber,
+          session,
+          opts?.partIndex,
+        );
+        if (resolved) return resolved;
+        continue;
+      }
 
       const resolved = resolveProgramWorkoutForCalendarDate(program, viewDate);
       if (!resolved || resolved.smsOverride || !resolved.workoutId) continue;

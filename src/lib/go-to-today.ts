@@ -8,7 +8,7 @@ import {
   localTodayIso,
 } from "@/lib/program-calendar";
 import { normalizeProgramSlug } from "@/lib/programs";
-import { enrollmentDayKey, linearEnrollmentDay } from "@/lib/member-enrollment-day";
+import { linearEnrollmentDay } from "@/lib/member-enrollment-day";
 import {
   linearMacroEnrollmentDay,
   macroPhasesForProgramSlug,
@@ -23,6 +23,9 @@ import {
   resolveDayWorkoutForEnrollment,
   type ResolvedProgramWorkout,
 } from "@/lib/member-program-workout";
+import { resolveProgramBlock } from "@/lib/member-program-block";
+import { getCoachSettings } from "@/lib/coach-settings-store";
+import { programStartSettingsFromCoach } from "@/lib/program-start-settings";
 
 export type GoToTodayTarget = {
   href: string;
@@ -136,6 +139,7 @@ export async function resolveMemberGoToToday(
   }
 
   const enrolls = await getUserEnrollments(userId);
+  const startSettings = programStartSettingsFromCoach(await getCoachSettings());
   for (const slug of await enrollmentSlugsForUser(userId)) {
     const program = await getProgramBySlug(slug);
     if (!program) continue;
@@ -148,16 +152,32 @@ export async function resolveMemberGoToToday(
       currentPhase: 1,
       trainingLocation: "gym" as const,
     };
+    let positioned = enrollment;
+    if (enrollment.programStartDate) {
+      const block = resolveProgramBlock(
+        enrollment,
+        calendarDate,
+        program.durationWeeks,
+        startSettings.blockDays,
+      );
+      if (block.status !== "active") continue;
+      positioned = {
+        ...enrollment,
+        currentWeek: block.weekNumber,
+        currentDay: block.dayNumber,
+      };
+    }
+
     const phases = macroPhasesForProgramSlug(slug);
     const dayN = phases.length
       ? linearMacroEnrollmentDay(
           phases,
-          enrollment.currentPhase ?? 1,
-          enrollment.currentWeek,
-          enrollment.currentDay,
+          positioned.currentPhase ?? 1,
+          positioned.currentWeek,
+          positioned.currentDay,
         )
-      : linearEnrollmentDay(enrollment.currentWeek, enrollment.currentDay);
-    const resolved = resolveDayWorkoutForEnrollment(program, slug, enrollment);
+      : linearEnrollmentDay(positioned.currentWeek, positioned.currentDay);
+    const resolved = resolveDayWorkoutForEnrollment(program, slug, positioned);
     if (!resolved) continue;
 
     return {

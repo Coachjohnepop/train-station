@@ -233,10 +233,31 @@ export function calendarDateForBlockDay(programStartDate: string, linearDay: num
 export function linearDayForCalendarDate(
   programStartDate: string,
   calendarIso: string,
+  blockDays = PROGRAM_CYCLE_DAYS,
 ): number | null {
   const offset = daysFromToday(calendarIso, programStartDate);
-  if (offset < 0 || offset >= PROGRAM_CYCLE_DAYS) return null;
+  if (offset < 0 || offset >= Math.max(1, blockDays)) return null;
   return offset + 1;
+}
+
+/**
+ * Map a real calendar date onto the member's personal block.
+ * Day 1 of their start date is always W1D1 (Adult Upper Body), not the
+ * shared catalog calendarDate (which is anchored to the gym's June start).
+ */
+export function personalCoordinateForCalendarDate(
+  programStartDate: string | null | undefined,
+  calendarIso: string,
+  durationWeeks = 4,
+  blockDays = DEFAULT_PROGRAM_BLOCK_DAYS,
+): { weekNumber: number; dayNumber: number; linearDay: number } | null {
+  const start = programStartDate?.trim();
+  if (!start) return null;
+  const linearDay = linearDayForCalendarDate(start, calendarIso, blockDays);
+  if (!linearDay) return null;
+  const coord = coordinateFromEnrollmentDay(linearDay, durationWeeks);
+  if (!coord) return null;
+  return { ...coord, linearDay };
 }
 
 export function enrollmentDayKeyForLinear(linearDay: number, durationWeeks: number): string {
