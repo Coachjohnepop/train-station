@@ -91,10 +91,8 @@ export async function POST(request: Request) {
 
     await enrollUserInProgram("adult", account.userId);
 
-    if (weekTrial && plan === "explorer") {
-      const { grantLandingFreeWeek } = await import("@/lib/gamification-promos");
-      await grantLandingFreeWeek(account.userId);
-    }
+    // Free week is a Coach Class subscription trial (card + authorize the
+    // future charge). Do not grant access until Checkout completes.
 
     const normalizedEmail = email.trim().toLowerCase();
     await addToWaitlist({
@@ -137,8 +135,12 @@ export async function POST(request: Request) {
 
     // Paid only — free Explorer goes straight to onboard (never auto-checkout),
     // unless admin requires Free card-on-file → /member/payment-setup.
+    // Landing Join week is Coach Class with a 7-day trial (card required).
+    const weekIsCoachTrial = weekTrial && plan === "explorer";
     const needsCheckout =
-      !quoteRequest && isPaidSignupPlan(plan) && (await stripeConfiguredForPlan(plan));
+      !quoteRequest &&
+      ((isPaidSignupPlan(plan) && (await stripeConfiguredForPlan(plan))) ||
+        (weekIsCoachTrial && (await stripeConfiguredForPlan("member"))));
 
     let freeNeedsCard = false;
     if (!needsCheckout && !quoteRequest && plan === "explorer") {
@@ -146,8 +148,7 @@ export async function POST(request: Request) {
         const { getGamificationLevers } = await import("@/lib/gamification-config-store");
         const { isStripePaymentsEnabled } = await import("@/lib/member-gates");
         const levers = await getGamificationLevers();
-        freeNeedsCard =
-          !weekTrial && Boolean(levers.freeRequiresPaymentMethod && isStripePaymentsEnabled());
+        freeNeedsCard = Boolean(levers.freeRequiresPaymentMethod && isStripePaymentsEnabled());
       } catch {
         freeNeedsCard = false;
       }
@@ -174,7 +175,9 @@ export async function POST(request: Request) {
         ? "/member/speaking"
         : quoteRequest || plan === "custom_training"
           ? `/member/quote-received?plan=${encodeURIComponent(plan)}`
-          : needsCheckout
+          : weekIsCoachTrial
+            ? `${memberCheckoutPath("member")}&trial=week`
+            : needsCheckout
             ? memberCheckoutPath(plan)
             : freeNeedsCard
               ? "/member/payment-setup"
