@@ -10,6 +10,7 @@ import {
 } from "@/lib/program-macro-cycle";
 import { clampEnrollmentPosition } from "@/lib/member-enrollment-day";
 import { blockEndDateFromStart } from "@/lib/member-program-block";
+import { localTodayIso } from "@/lib/program-calendar";
 import { prisma } from "@/lib/prisma";
 
 function isoDateFromDb(value: Date | null | undefined): string | null {
@@ -72,29 +73,27 @@ export async function enrollUserInProgramDb(
   const program = await prisma.program.findUnique({ where: { slug } });
   if (!program) throw new Error("Program not found");
 
-  const startIso = opts?.programStartDate?.trim() || null;
-  const blockDates = startIso
-    ? {
-        programStartDate: parseProgramStartDate(startIso),
-        blockEndsAt: parseProgramStartDate(
-          blockEndDateFromStart(startIso, opts?.blockDays),
-        ),
-      }
-    : {};
+  const explicitStartIso = opts?.programStartDate?.trim() || null;
 
   const existing = await prisma.programEnrollment.findFirst({
     where: { userId: storageUserId, programId: program.id },
   });
   if (existing) {
-    if (startIso && !existing.programStartDate) {
+    if (explicitStartIso && !existing.programStartDate) {
       return prisma.programEnrollment.update({
         where: { id: existing.id },
-        data: blockDates,
+        data: {
+          programStartDate: parseProgramStartDate(explicitStartIso),
+          blockEndsAt: parseProgramStartDate(
+            blockEndDateFromStart(explicitStartIso, opts?.blockDays),
+          ),
+        },
       });
     }
     return existing;
   }
 
+  const createStartIso = explicitStartIso || localTodayIso();
   return prisma.programEnrollment.create({
     data: {
       userId: storageUserId,
@@ -103,7 +102,10 @@ export async function enrollUserInProgramDb(
       currentDay: 1,
       currentPhase: 1,
       trainingLocation: "gym",
-      ...blockDates,
+      programStartDate: parseProgramStartDate(createStartIso),
+      blockEndsAt: parseProgramStartDate(
+        blockEndDateFromStart(createStartIso, opts?.blockDays),
+      ),
     },
   });
 }
