@@ -32,8 +32,8 @@ Dead bug
   },
   4: { kind: "clone", label: "Gym", fromDay: 1 },
   5: { kind: "clone", label: "Gym", fromDay: 3 },
-  6: { kind: "fasted-cardio", minutes: 20 },
-  7: { kind: "day-off" },
+  6: { kind: "active-recovery" },
+  7: { kind: "meal-prep" },
 };
 
 let cookies = "";
