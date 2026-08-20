@@ -11,6 +11,7 @@ import {
 import { clampEnrollmentPosition } from "@/lib/member-enrollment-day";
 import { blockEndDateFromStart } from "@/lib/member-program-block";
 import { localTodayIso } from "@/lib/program-calendar";
+import { enrollmentStartIsoForEmail } from "@/lib/member-start-exceptions";
 import { prisma } from "@/lib/prisma";
 
 function isoDateFromDb(value: Date | null | undefined): string | null {
@@ -74,18 +75,27 @@ export async function enrollUserInProgramDb(
   if (!program) throw new Error("Program not found");
 
   const explicitStartIso = opts?.programStartDate?.trim() || null;
+  const member = await prisma.user.findUnique({
+    where: { id: storageUserId },
+    select: { email: true },
+  });
+  const startIso = enrollmentStartIsoForEmail(
+    member?.email,
+    localTodayIso(),
+    explicitStartIso,
+  );
 
   const existing = await prisma.programEnrollment.findFirst({
     where: { userId: storageUserId, programId: program.id },
   });
   if (existing) {
-    if (explicitStartIso && !existing.programStartDate) {
+    if (startIso && !existing.programStartDate) {
       return prisma.programEnrollment.update({
         where: { id: existing.id },
         data: {
-          programStartDate: parseProgramStartDate(explicitStartIso),
+          programStartDate: parseProgramStartDate(startIso),
           blockEndsAt: parseProgramStartDate(
-            blockEndDateFromStart(explicitStartIso, opts?.blockDays),
+            blockEndDateFromStart(startIso, opts?.blockDays),
           ),
         },
       });
@@ -93,7 +103,7 @@ export async function enrollUserInProgramDb(
     return existing;
   }
 
-  const createStartIso = explicitStartIso || localTodayIso();
+  const createStartIso = startIso;
   return prisma.programEnrollment.create({
     data: {
       userId: storageUserId,

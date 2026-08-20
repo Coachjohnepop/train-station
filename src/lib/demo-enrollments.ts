@@ -3,6 +3,8 @@ import path from "path";
 import { isDatabaseConfigured } from "@/lib/database-config";
 import { blockEndDateFromStart } from "@/lib/member-program-block";
 import { localTodayIso } from "@/lib/program-calendar";
+import { enrollmentStartIsoForEmail } from "@/lib/member-start-exceptions";
+import { resolveDemoUser } from "@/lib/demo-user-directory";
 import {
   getDemoEnrollmentsStoreSync,
   hydrateDemoEnrollmentsStore,
@@ -70,8 +72,10 @@ export async function enrollDemo(
   const uid = userId || "demo-user";
   const data = getUserEnrollments(uid);
   const explicitStartIso = opts?.programStartDate?.trim() || null;
+  const email = resolveDemoUser(uid)?.email ?? null;
+  const startIso = enrollmentStartIsoForEmail(email, localTodayIso(), explicitStartIso);
   if (!data[slug]) {
-    const createStartIso = explicitStartIso || localTodayIso();
+    const createStartIso = startIso;
     data[slug] = {
       currentWeek: 1,
       currentDay: 1,
@@ -81,11 +85,11 @@ export async function enrollDemo(
       blockEndsAt: blockEndDateFromStart(createStartIso, opts?.blockDays),
     };
     await setUserEnrollments(uid, data);
-  } else if (explicitStartIso && !data[slug].programStartDate) {
+  } else if (startIso && !data[slug].programStartDate) {
     data[slug] = {
       ...data[slug],
-      programStartDate: explicitStartIso,
-      blockEndsAt: blockEndDateFromStart(explicitStartIso, opts?.blockDays),
+      programStartDate: startIso,
+      blockEndsAt: blockEndDateFromStart(startIso, opts?.blockDays),
     };
     await setUserEnrollments(uid, data);
   }
