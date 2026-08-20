@@ -77,6 +77,7 @@ import {
   logFailureMessage,
   normalizeLogSessionDate,
 } from "@/lib/member-workout-log";
+import { useScreenWakeLock } from "@/hooks/useScreenWakeLock";
 
 export type MemberExerciseBlock = {
   id: string;
@@ -355,6 +356,8 @@ export default function MemberWorkoutConsole({
   const [restTimer, setRestTimer] = useState<ActiveRestTimer | null>(null);
   const [restSecondsLeft, setRestSecondsLeft] = useState(0);
   const [restMuted, setRestMuted] = useState(false);
+  /** Rest countdown is not a playing video — iOS will sleep the phone without this. */
+  useScreenWakeLock(!reviewMode && !logResult);
   /** True while buzzer plays and popup is about to auto-close. */
   const [restCompleting, setRestCompleting] = useState(false);
   /** Session override so coach can set rest on the floor without rebuilding the workout. */
