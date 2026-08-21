@@ -7,7 +7,10 @@ import {
   upsertLiveWorkoutSessionToDb,
 } from "@/lib/live-workout-sessions-db";
 import { getHotLiveSession, setHotLiveSession } from "@/lib/live-session-hot";
+import { isStaleMemberVsCoachWrite } from "@/lib/live-workout-session-merge";
 import { localTodayIso } from "@/lib/program-calendar";
+
+export { isStaleMemberVsCoachWrite } from "@/lib/live-workout-session-merge";
 
 /** Shared rest/exercise popup so coach checkoff spins the same timer on the member. */
 export type LiveRestActive = {
@@ -252,11 +255,12 @@ export async function upsertLiveWorkoutSession(input: {
     typeof input.baseRevision === "number" && Number.isFinite(input.baseRevision)
       ? input.baseRevision
       : null;
-  const staleMemberVsCoach =
-    input.updatedBy === "member" &&
-    existing?.updatedBy === "coach" &&
-    baseRevision != null &&
-    existingRev > baseRevision;
+  const staleMemberVsCoach = isStaleMemberVsCoachWrite({
+    updatedBy: input.updatedBy,
+    baseRevision,
+    existingUpdatedBy: existing?.updatedBy,
+    existingRevision: existingRev,
+  });
 
   // Rest duration/enabled: coach owns. Members must not clobber with defaults.
   let restTimerEnabled = existing?.restTimerEnabled;
