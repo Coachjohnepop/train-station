@@ -10,11 +10,22 @@ type WakeLockSentinelLike = {
   addEventListener: (type: "release", listener: () => void) => void;
 };
 
+/** iPhone Screen Wake Lock often "succeeds" then the phone still sleeps. */
+export function iosNeedsVideoKeepAwake(
+  userAgent: string,
+  maxTouchPoints = 0,
+): boolean {
+  if (/iP(hone|ad|od)/i.test(userAgent)) return true;
+  // iPadOS 13+ reports as Macintosh.
+  return /Macintosh/i.test(userAgent) && maxTouchPoints > 1;
+}
+
 /**
- * Keep the phone screen on while a workout / rest countdown is showing.
- * iOS otherwise sleeps during the rest timer (a number on screen is not a movie).
+ * Keep the phone screen on while a workout / rest / timed hold is showing.
+ * iOS otherwise sleeps during a 5-min bike count (a number on screen is not a movie).
  *
- * Prefers Screen Wake Lock; falls back to a tiny looping muted video.
+ * Prefers Screen Wake Lock on Android. On iPhone always keep a tiny looping
+ * muted video playing — Wake Lock alone does not hold the screen.
  */
 export function useScreenWakeLock(active: boolean) {
   useEffect(() => {
@@ -66,21 +77,28 @@ export function useScreenWakeLock(active: boolean) {
 
     async function lock() {
       if (cancelled || document.visibilityState !== "visible") return;
+      const ios = iosNeedsVideoKeepAwake(
+        navigator.userAgent,
+        navigator.maxTouchPoints || 0,
+      );
       try {
         const nav = navigator as Navigator & {
           wakeLock?: { request: (type: "screen") => Promise<WakeLockSentinelLike> };
         };
         if (nav.wakeLock?.request) {
-          if (sentinel && sentinel.released === false) return;
-          sentinel = await nav.wakeLock.request("screen");
-          sentinel.addEventListener("release", () => {
-            sentinel = null;
-            if (!cancelled && document.visibilityState === "visible") {
-              void lock();
-            }
-          });
-          stopVideo();
-          return;
+          if (!(sentinel && sentinel.released === false)) {
+            sentinel = await nav.wakeLock.request("screen");
+            sentinel.addEventListener("release", () => {
+              sentinel = null;
+              if (!cancelled && document.visibilityState === "visible") {
+                void lock();
+              }
+            });
+          }
+          if (!ios) {
+            stopVideo();
+            return;
+          }
         }
       } catch {
         /* NotAllowedError until a gesture, or unsupported */
