@@ -117,7 +117,7 @@ const WARMUP_NAME_RE =
 
 /** Coach standard warm-up lines (not “band lat pulldown” or a cooldown stretch). */
 const STANDARD_WARMUP_LINE_RE =
-  /warm[- ]?up|warm up well|general warm up|shoulder mobility warm|up with bands|low intensity cardio warmup/i;
+  /warm[- ]?up|warm up well|general warm up|shoulder mobility warm|up with bands|low intensity cardio warmup|band rear delt|rear delt extension/i;
 
 const REST_OR_OFF_RE = /rest\s*day|day\s*off|^off$|active recovery/i;
 
@@ -129,8 +129,17 @@ export function isStandardWarmupLineName(name: string): boolean {
   return STANDARD_WARMUP_LINE_RE.test(String(name || ""));
 }
 
+/** True for the agreed Settings / standard-warmup workout names. */
+export function isCanonicalWarmupName(name: string): boolean {
+  const n = String(name || "").trim();
+  if (!n) return false;
+  if (isStandardWarmupLineName(n)) return true;
+  const lower = n.toLowerCase();
+  return DEFAULT_WARMUP_BLOCKS.some((b) => b.name.toLowerCase() === lower);
+}
+
 export function workoutHasStandardWarmup(exerciseNames: string[]): boolean {
-  return exerciseNames.some((n) => isStandardWarmupLineName(n));
+  return exerciseNames.some((n) => isCanonicalWarmupName(n));
 }
 
 /** Rest / day-off — no warm-up. Fasted cardio and run finishers are training days. */

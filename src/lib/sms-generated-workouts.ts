@@ -262,6 +262,10 @@ export async function buildWorkoutFromParsedSms(
   if (isDemoMode()) {
     requireBlobPersisted(blobSaved, "Lesson plan draft");
   }
+
+  const { ensureWarmupsOnWorkout } = await import("@/lib/seed-workout-warmups");
+  await ensureWarmupsOnWorkout(id);
+
   return { workoutId: id, exerciseCount: parsedExercises.length, newExerciseIds };
 }
 
