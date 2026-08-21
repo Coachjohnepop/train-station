@@ -162,6 +162,7 @@ export function parseSmsWorkout(rawText: string): ParsedSmsWorkout {
   const exercises: ParsedSmsExercise[] = [];
   let current: ParsedSmsExercise | null = null;
   const warmupLines: string[] = [];
+  let pendingHeader: string | null = null;
 
   const flushWarmup = () => {
     if (warmupLines.length === 0) return;
@@ -188,11 +189,14 @@ export function parseSmsWorkout(rawText: string): ParsedSmsWorkout {
     flushWarmup();
     pushCurrent();
     const { name, reps } = parseExerciseNameAndReps(line);
+    const header = pendingHeader;
+    pendingHeader = null;
     return {
       name: titleCaseName(name),
       sets: 1,
       reps: reps || "—",
       section: "main",
+      notes: header || undefined,
     };
   };
 
@@ -292,7 +296,14 @@ export function parseSmsWorkout(rawText: string): ParsedSmsWorkout {
       }
       current.notes = [current.notes, line].filter(Boolean).join(" · ");
     } else if (!isCooldownLine(line)) {
-      warmupLines.push(line);
+      // Unknown lines after a warm-up header stay in the warm-up blob.
+      // Bare section titles ("Better for back") are notes on the next lift —
+      // they must not replace the agreed standard warm-up.
+      if (warmupLines.length > 0 || isWarmupLine(line)) {
+        warmupLines.push(line);
+      } else {
+        pendingHeader = line;
+      }
     }
   }
 

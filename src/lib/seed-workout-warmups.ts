@@ -18,14 +18,14 @@ import {
 } from "@/lib/workout-schemes";
 import {
   DEFAULT_WARMUP_BLOCKS,
+  isCanonicalWarmupName,
   isRestOrDayOffContent,
-  isStandardWarmupLineName,
   isStandardWarmupWorkoutId,
   STANDARD_WARMUP_WORKOUT_ID,
   type WarmupBlockTemplate,
   workoutHasStandardWarmup,
 } from "@/lib/warmup-template";
-import { notesMarkWarmup } from "@/lib/warmup-group";
+import { notesMarkWarmup, withWarmupBlockNote } from "@/lib/warmup-group";
 
 export { STANDARD_WARMUP_WORKOUT_ID, isStandardWarmupWorkoutId } from "@/lib/warmup-template";
 
@@ -430,6 +430,41 @@ async function loadWarmupBlocks(
 }
 
 /**
+ * Coach paste often tags a section header ("Better for back") as a Warm-up
+ * block. That must not replace the agreed standard warm-up.
+ */
+async function stripFalseWarmupTagsOnWorkout(workoutId: string): Promise<void> {
+  const workout = await prisma.workout.findUnique({
+    where: { id: workoutId },
+    select: {
+      exercises: {
+        select: {
+          id: true,
+          notes: true,
+          blockName: true,
+          exercise: { select: { name: true } },
+        },
+      },
+    },
+  });
+  if (!workout) return;
+  for (const we of workout.exercises) {
+    const name = we.exercise?.name || "";
+    const block = we.blockName || "";
+    if (!notesMarkWarmup(we.notes || "")) continue;
+    if (isCanonicalWarmupName(name) || isCanonicalWarmupName(block)) continue;
+    const next = withWarmupBlockNote(we.notes, false);
+    const data: { notes: string | null; blockName?: string | null } = { notes: next };
+    // SMS Today shows blockName as the exercise title — restore the lift name.
+    if (block && !isCanonicalWarmupName(block) && name && block !== name) {
+      data.notes = [block, next].filter(Boolean).join(" · ") || null;
+      data.blockName = name;
+    }
+    await prisma.workoutExercise.update({ where: { id: we.id }, data });
+  }
+}
+
+/**
  * Prepend coach Settings warm-up blocks when the workout has no standard warm-up.
  * Skips rest / day-off content. Existing main lifts stay; they are shifted down.
  */
@@ -521,15 +556,12 @@ async function seedDb(
   if (!workout) {
     return formatResult({ added: 0, missing, skipped: false, seeded: [] });
   }
-  const existingNames = workout.exercises.map((we) => we.exercise?.name || "");
-  const existingHasWarmup =
-    workoutHasStandardWarmup(existingNames) ||
-    workout.exercises.some(
-      (we) =>
-        notesMarkWarmup(we.notes || "") ||
-        isStandardWarmupLineName(we.exercise?.name || ""),
-    );
-  if (existingHasWarmup) {
+  await stripFalseWarmupTagsOnWorkout(workoutId);
+
+  const existingNames = workout.exercises.map(
+    (we) => we.exercise?.name || we.blockName || "",
+  );
+  if (workoutHasStandardWarmup(existingNames)) {
     return formatResult({
       added: 0,
       missing: [],
@@ -566,6 +598,7 @@ async function seedDb(
         weightTier: line.weightTier,
         restSec: null,
         notes: line.notes,
+        blockName: line.exerciseName,
       },
     });
     seeded.push(line.exerciseName);
@@ -596,15 +629,21 @@ async function seedDemo(
     const existing = (data.workoutExercises as any[]).filter(
       (we) => we.workoutId === workoutId,
     );
+    for (const we of existing) {
+      const name = String(we.exercise?.name || "");
+      const block = String(we.blockName || "");
+      if (!notesMarkWarmup(String(we.notes || ""))) continue;
+      if (isCanonicalWarmupName(name) || isCanonicalWarmupName(block)) continue;
+      const stripped = withWarmupBlockNote(we.notes, false);
+      if (block && !isCanonicalWarmupName(block) && name && block !== name) {
+        we.notes = [block, stripped].filter(Boolean).join(" · ") || null;
+        we.blockName = name;
+      } else {
+        we.notes = stripped;
+      }
+    }
     const existingNames = existing.map((we) => we.exercise?.name || we.blockName || "");
-    const existingHasWarmup =
-      workoutHasStandardWarmup(existingNames) ||
-      existing.some(
-        (we) =>
-          notesMarkWarmup(String(we.notes || "")) ||
-          isStandardWarmupLineName(String(we.exercise?.name || we.blockName || "")),
-      );
-    if (existingHasWarmup) {
+    if (workoutHasStandardWarmup(existingNames)) {
       skipped = true;
       return;
     }

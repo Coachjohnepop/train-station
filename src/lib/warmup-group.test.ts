@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { isStandardWarmupWorkoutId, STANDARD_WARMUP_WORKOUT_ID } from "./warmup-template";
+import {
+  isCanonicalWarmupName,
+  isStandardWarmupWorkoutId,
+  STANDARD_WARMUP_WORKOUT_ID,
+  workoutHasStandardWarmup,
+} from "./warmup-template";
 import {
   expandParsedWarmupExercises,
   isWarmupMovementDone,
@@ -145,6 +150,20 @@ describe("standard warmup workout id", () => {
     assert.equal(STANDARD_WARMUP_WORKOUT_ID, "warmup-standard");
     assert.equal(isStandardWarmupWorkoutId("warmup-standard"), true);
     assert.equal(isStandardWarmupWorkoutId("sms-w-1"), false);
+  });
+
+  it("does not treat a coach section like Better for back as the agreed warm-up", () => {
+    assert.equal(isCanonicalWarmupName("Better for back"), false);
+    assert.equal(isCanonicalWarmupName("Step Back Lunge with a Forward Kick"), false);
+    assert.equal(isCanonicalWarmupName("Warm up well 5-7 min"), true);
+    assert.equal(
+      workoutHasStandardWarmup(["Better for back", "Dumbbell Flat Bench Chest Press"]),
+      false,
+    );
+    assert.equal(
+      workoutHasStandardWarmup(["Warm up well 5-7 min", "Dumbbell Flat Bench Chest Press"]),
+      true,
+    );
   });
 });
 
