@@ -799,6 +799,7 @@ export default function MemberWorkoutConsole({
       } else {
         setCoachLive(fromCoach);
       }
+      persistProgressCache(stateRef.current);
       // Don't immediately re-push the state we just applied (avoids overwriting coach on race).
       skipAutoPushAfterRemote.current = true;
       applyingRemote.current = false;
@@ -811,6 +812,7 @@ export default function MemberWorkoutConsole({
       workout.exercises,
       workout.restTimerSound,
       applyRemoteRestActive,
+      persistProgressCache,
     ],
   );
 
@@ -958,6 +960,7 @@ export default function MemberWorkoutConsole({
   useEffect(() => {
     if (!livePushEnabled || !pendingImmediatePushRef.current) return;
     pendingImmediatePushRef.current = false;
+    if (skipAutoPushAfterRemote.current) return;
     queueLiveSave(true);
   }, [livePushEnabled, queueLiveSave]);
 
@@ -1133,6 +1136,7 @@ export default function MemberWorkoutConsole({
     if (!liveSessionScope) return;
     const flush = () => {
       persistProgressCache();
+      if (!livePushEnabled) return;
       void flushLiveSave();
     };
     const onHide = () => {
@@ -1144,7 +1148,7 @@ export default function MemberWorkoutConsole({
       window.removeEventListener("pagehide", flush);
       document.removeEventListener("visibilitychange", onHide);
     };
-  }, [liveSessionScope, persistProgressCache, flushLiveSave]);
+  }, [liveSessionScope, persistProgressCache, flushLiveSave, livePushEnabled]);
 
   useEffect(() => {
     persistProgressCache();
