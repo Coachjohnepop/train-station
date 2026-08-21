@@ -414,20 +414,31 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-20  
-**Status:** Member path hardened to personal 28-day month. Join week now requires card + Coach Class trial. Todd kicked so he can re-test that path (Day 2 Lower Body only for him). John signing off.
+**Date:** 2026-08-21  
+**Status:** Live class with Todd went well. John signing off. Do **not** leave monitors running.
 
-**This pass (2026-08-20):**
+**This pass (2026-08-21) — Todd re-onboard + live class:**
+- **Todd** `dubl-e@howerfamily.com` (`member-93adf8b2-cae`) re-created today 6:18 AM. Join week → Coach Class **trial checkout** (card on file) **worked**. Adult block **2026-08-20 → 2026-09-16** (Day 2 exception). Paid `member`, Stripe sub + checkout.
+- **Onboard finish was stuck:** “Go to Today — I’ll book from there” mashed ~30×. Leaving onboard restores step 6 but **drops Man/Woman**, so complete never writes and Today stays gated. Rescued in DB (`onboardingComplete`) and added him to today’s class roster so Zoom/Today weren’t blocked. **Still fix the wizard** (restore gender from profile; already-complete → hard-nav Today).
+- **Zoom:** joined from onboard at 6:28 (`zoom.us/j/81925928385`). Jeremy **Start Video** / Todd **Rejoin** ~7:10. Host stayed up.
+- **Today class:** Jeremy’s **Upper Body Workout** (`sms-w-30cfbf2a`), 15 on roster including Todd. SMS paste **“Better for back”** was tagged as the warm-up so the agreed warm-up never attached. Patched that class in prod (standard 4 warm-ups first; lunge keeps “Better for back” as a note). Code: paste always prepends Settings warm-up; section headers are not the warm-up. Shipped `main`.
+- **iPhone sleep on 5-min bike:** Wake Lock can “succeed” then still sleep. iOS now also plays silent `keep-awake.mp4`. Shipped `main`. Hard-refresh before the next long timer.
+- **Set checkoffs:** coach ↔ member same `LiveWorkoutSession`. Refresh both ways. Member reload used to PUT a stale snapshot without revision and wipe coach sets — treat that as stale vs coach; wait for live GET before save. Shipped `main`.
+- **Landing Sign out:** logged-in desktop landing hid it in the hamburger. Now on the coach preview bar and header. Shipped `main`.
+- **Watchers:** stopped at John’s request. Do not restart unless asked.
+
+**When back:** fix onboard gender restore so “Go to Today” can’t trap the next person. Still: enrollments always get a start; Jeremy Byrd 2 day 29 after **2026-08-25**; Supabase Free usage before **30 Aug 2026**.
+
+**Prior (2026-08-20):**
+
 - **Why Todd hit Back/Bicep:** Today used Adult’s shared June calendar (Aug 20 = W9D4), not his start. Fixed: personal `programStartDate` mapping; members never swipe gym calendar; program page = their 28 days.
-- **Join week:** used to grant unpaid `landing_free_week`. Now signup `plan=explorer&week=1` → `/member/checkout?plan=member&trial=week` (Stripe `trial_period_days: 7`). After week, Stripe bills Coach Class. **Todd is a tester — do not charge/reset him from the old unpaid week; account already deleted for a clean re-onboard.**
+- **Join week:** used to grant unpaid `landing_free_week`. Now signup `plan=explorer&week=1` → `/member/checkout?plan=member&trial=week` (Stripe `trial_period_days: 7`). After week, Stripe bills Coach Class. **Todd re-onboarded 2026-08-21 through that path — leave his live account alone.**
 - **Rest timer:** iPhone sleeps on countdown — `useScreenWakeLock` on the workout console.
 - **Videos:** shrugs, bicycles, sit-ups, HIIT, standard warmup got Watch demo (library + hints). Step-ups on Lower Body still no video.
 - **Fake data:** `@example.com` users gone earlier; 41 waitlist loop rows + 2 orphan chat threads deleted this pass. 17 users remain. **Alex demo kept.**
 - **John/Stephanie:** paid, train via live class, **no Adult enroll** — do not invent a gym-calendar month for them.
 - **Coop / Jayden / Alex:** Adult enroll **without** `programStartDate` — still a hole (incomplete onboard).
 - **Jeremy Byrd 2:** 28-day block ends **2026-08-25** — day 29 is empty until we define next month.
-
-**When back:** Todd re-joins Join week (private tab) after deploy `be65f61`+ is live. Confirm checkout trial + Today = Lower Body. Then: enrollments always get a start; what happens on day 29.
 
 **Prior (2026-08-19):** Newbie rail + gold completed days. Stripe/Zoom still stable.  
 **Supabase:** live **`train-station-catalog`** / **`mattccorhcxghwyfgklp`**. Paused **`dptxndcl…`** is not prod. PostgREST locked. Do **not** put TS on Eco Delight’s Pro org.  
