@@ -200,9 +200,20 @@ export default function LandingNav({
               </Link>
             ) : null}
             {!isWelcome && purchaseAuth.signedIn ? (
-              <Link href={memberHomeHref} className="landing-nav__link" onClick={closeMenus}>
-                Today
-              </Link>
+              <>
+                <Link href={memberHomeHref} className="landing-nav__link" onClick={closeMenus}>
+                  Today
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.location.href = logoutUrl();
+                  }}
+                  className="landing-nav__link"
+                >
+                  Sign out
+                </button>
+              </>
             ) : null}
             {/* Desktop has no hamburger — keep Sign in available (muted). Free Tour is top-right. */}
             {!isWelcome && !purchaseAuth.signedIn ? (
@@ -214,6 +225,17 @@ export default function LandingNav({
         </div>
 
         <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+          {!isWelcome && purchaseAuth.signedIn ? (
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = logoutUrl();
+              }}
+              className="landing-nav__link landing-nav__link--compact md:hidden"
+            >
+              Sign out
+            </button>
+          ) : null}
           {variant === "public" ? (
             purchaseAuth.signedIn ? (
               <Link

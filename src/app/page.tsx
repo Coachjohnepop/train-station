@@ -55,12 +55,20 @@ export default async function HomePage() {
                 · this is the public landing members see
               </span>
             </p>
-            <Link
-              href="/admin"
-              className="inline-flex items-center rounded-full bg-[#7c3aed] px-4 py-1.5 text-xs font-bold text-white shadow-lg shadow-[#7c3aed]/35 transition hover:bg-[#6d28d9]"
-            >
-              Coach admin →
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/api/auth/logout"
+                className="inline-flex items-center rounded-full border border-white/30 px-4 py-1.5 text-xs font-bold text-white/90 transition hover:bg-white/10"
+              >
+                Sign out
+              </Link>
+              <Link
+                href="/admin"
+                className="inline-flex items-center rounded-full bg-[#7c3aed] px-4 py-1.5 text-xs font-bold text-white shadow-lg shadow-[#7c3aed]/35 transition hover:bg-[#6d28d9]"
+              >
+                Coach admin →
+              </Link>
+            </div>
           </div>
         </div>
         <LandingConversion
@@ -69,6 +77,7 @@ export default async function HomePage() {
           heroSlides={landingVideos.heroSlides}
           returning={false}
           rememberReturn={false}
+          purchaseAuth={{ signedIn: true, role: session.role }}
         />
       </>
     );

@@ -9,6 +9,7 @@ import LandingSiteFooter from "@/components/LandingSiteFooter";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
 import WelcomeVideoPopover from "@/components/WelcomeVideoPopover";
 import type { HeroSlide } from "@/lib/hero-slides";
+import type { PurchaseAuth } from "@/lib/member-purchase-path";
 import { LANDING_EXPLORE_EVENT } from "@/lib/landing-explore";
 import {
   LANDING_RETURN_EVENT,
@@ -27,6 +28,7 @@ export default function LandingConversion({
   heroSlides = null,
   returning = false,
   rememberReturn = true,
+  purchaseAuth,
 }: {
   freeChastiseVideoUrl?: string | null;
   welcomeVideoUrl?: string | null;
@@ -35,6 +37,7 @@ export default function LandingConversion({
   returning?: boolean;
   /** Guest landing only — staff preview should not arm the return cookie. */
   rememberReturn?: boolean;
+  purchaseAuth?: PurchaseAuth;
 }) {
   const [liveReturn, setLiveReturn] = useState(false);
   const [exploreOpen, setExploreOpen] = useState(false);
@@ -104,7 +107,7 @@ export default function LandingConversion({
       <SiteSeenLatch />
       <ThemeAttributesSync membershipTier="explorer" />
       {/* Transparent nav over hero so SMS open is full-bleed athletes, not a grey header */}
-      <LandingNav overHero />
+      <LandingNav overHero purchaseAuth={purchaseAuth} />
       <LandingHero
         welcomeVideoUrl={welcomeVideoUrl}
         freeChastiseVideoUrl={freeChastiseVideoUrl}
