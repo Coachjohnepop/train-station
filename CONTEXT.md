@@ -414,10 +414,18 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-21  
-**Status:** Live class with Todd went well. John signing off. Do **not** leave monitors running.
+**Date:** 2026-08-22  
+**Status:** Switched to Capital Audio most of the day. Train Station: usage report only — no code. Do **not** leave monitors running.
 
-**This pass (2026-08-21) — Todd re-onboard + live class:**
+**This pass (2026-08-22) — usage + live-session count:**
+- Live Postgres `train-station-catalog` (`mattccorhcxghwyfgklp`): **29 MB**, **17 users**. Not a size problem.
+- Quota burn is historical: since 30 Jun, **7.4M commits** and **180 GB temp files** from the old 150ms `LiveWorkoutSession` loop. Free restriction still **30 Aug 2026**.
+- **31 `LiveWorkoutSession` rows** is leftover history (1 row per person × workout × day, never deleted). 13 are Lemon John `john@bcxvoice.com`. Yesterday’s class only 4 rows. Scary numbers are **`revision`** (14,186 / 5,953) from the old poll, not row count.
+- Runaway **is fixed**: 5s floor, backup poll only while `hostStarted`, hidden tabs skip, build guard `scripts/guard-hot-polls.mjs`. Next week of classes is the scale baseline — ignore lifetime `pg_stat` totals.
+- No Supabase Management API token on disk (only DB URL / service role). Billing banner still needs a dashboard login or `SUPABASE_ACCESS_TOKEN`.
+- Vercel CLI often sits on Eco Delight (`john-8171` / `john@buyecodelight.com`). TS deploys need **john-9066**.
+
+**Prior (2026-08-21) — Todd re-onboard + live class:**
 - **Todd** `dubl-e@howerfamily.com` (`member-93adf8b2-cae`) re-created today 6:18 AM. Join week → Coach Class **trial checkout** (card on file) **worked**. Adult block **2026-08-20 → 2026-09-16** (Day 2 exception). Paid `member`, Stripe sub + checkout.
 - **Onboard finish was stuck:** “Go to Today — I’ll book from there” mashed ~30×. Leaving onboard restores step 6 but **drops Man/Woman**, so complete never writes and Today stays gated. Rescued in DB (`onboardingComplete`) and added him to today’s class roster so Zoom/Today weren’t blocked. **Still fix the wizard** (restore gender from profile; already-complete → hard-nav Today).
 - **Zoom:** joined from onboard at 6:28 (`zoom.us/j/81925928385`). Jeremy **Start Video** / Todd **Rejoin** ~7:10. Host stayed up.
