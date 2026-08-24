@@ -422,7 +422,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - **0:00–0:17** Welcome aboard, Coach Class, Jeremy intro playing. Man/Woman never tapped. **Start setup is fully covered by iOS Safari’s bottom toolbar** (and was disabled until gender).
 - **0:18** Taps into Account (`Open Account` and/or header “Hi, Nate”). **Loading your dashboard…**
 - **0:19–0:23** Account: Coach Class Current **Payment pending**. Header badge still **Explorer**. Signed in as `natenowotny@yahoo.com`.
-- Code (local, not on `main` yet): sticky Start-setup dock above Safari chrome; gender saved on tap + restored from profile/session; header name is not an Account link during setup; already-complete onboard → hard-nav Today.
+- Shipped `083fe66` then follow-up: every onboard Continue / Go to Today sits in `OnboardActionDock` above Safari chrome. Theme Song speaker hidden on `/member/onboard` (no autoplay there either).
 - **Audio glitch (not the file):** Jeremy welcome `public/videos/jeremy-welcome.mp4` last 20s is clean (“capable of being” / “this trip”). Nate’s capture stutters those syllables ~260ms (“capy capy capy”, “trist trist trist”). Spectrogram shows repeating bars; source does not. Cause: iOS Safari `createMediaElementSource` for the +6 dB intro boost double-playing the `<video>` element. Fix: skip Web Audio boost on iOS; don’t kick `play()` twice on iPhone.
 - **Nate ops:** payment pending — checkout/trial did not land as paid. Do not treat his account as done.
 
