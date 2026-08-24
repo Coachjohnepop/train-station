@@ -414,17 +414,19 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-23  
-**Status:** Watched Nate Nowotny (`natenowotny@yahoo.com`) 23s screen recording. Phone onboard step 1 is unusable under Safari chrome. Fix is in the working tree, **not shipped**.
+**Date:** 2026-08-23 EOD  
+**Status:** John signing off. Nate iPhone onboard bugs shipped to `main`. No monitors running.
 
-**This pass (2026-08-23) — Nate feedback video:**
-- Source: iMessage `ScreenRecording_08-23-2026 22-24-53_1.mov` (copied into App Feedback Video/). Review pack: `.jeremy-review-frames/aug-23-2026-tester/`.
-- **0:00–0:17** Welcome aboard, Coach Class, Jeremy intro playing. Man/Woman never tapped. **Start setup is fully covered by iOS Safari’s bottom toolbar** (and was disabled until gender).
-- **0:18** Taps into Account (`Open Account` and/or header “Hi, Nate”). **Loading your dashboard…**
-- **0:19–0:23** Account: Coach Class Current **Payment pending**. Header badge still **Explorer**. Signed in as `natenowotny@yahoo.com`.
-- Shipped `083fe66` then follow-up: every onboard Continue / Go to Today sits in `OnboardActionDock` above Safari chrome. Theme Song speaker hidden on `/member/onboard` (no autoplay there either).
-- **Audio glitch (not the file):** Jeremy welcome `public/videos/jeremy-welcome.mp4` last 20s is clean (“capable of being” / “this trip”). Nate’s capture stutters those syllables ~260ms (“capy capy capy”, “trist trist trist”). Spectrogram shows repeating bars; source does not. Cause: iOS Safari `createMediaElementSource` for the +6 dB intro boost double-playing the `<video>` element. Fix: skip Web Audio boost on iOS; don’t kick `play()` twice on iPhone.
-- **Nate ops:** payment pending — checkout/trial did not land as paid. Do not treat his account as done.
+**This pass (2026-08-23) — Nate Nowotny screen recording, then ship:**
+- Source: iMessage `ScreenRecording_08-23-2026 22-24-53_1.mov` (copied into App Feedback Video/). Review pack: `.jeremy-review-frames/aug-23-2026-tester/`. Email `natenowotny@yahoo.com`.
+- Coach Class Welcome aboard on iPhone: Jeremy intro stuttered syllables; Start setup under Safari toolbar; name/Open Account dumped him to Account.
+- Welcome file is clean (`/videos/jeremy-welcome.mp4`). Stutter = iOS `createMediaElementSource` +6 dB boost. Shipped `083fe66` (skip Web Audio on iOS; no extra `play()` kicks).
+- Shipped `3e53fa0`: every onboard Continue / Go to Today in `OnboardActionDock` above Safari; Theme Song speaker + autoplay off on `/member/onboard`.
+- Jeremy note for Nate was sent (or ready to forward). Nate should close the tab and reopen after Vercel.
+- **Still Nate:** Coach Class **Payment pending**. Header can still say Explorer. Do not treat his account as done.
+- Parked (not tonight): 16px inputs + `userScalable: false`; time-wheel vs keyboard; Calendly `100dvh`; Stripe iframe chrome.
+
+**When back:** confirm Vercel has `3e53fa0`; Nate retry after hard close; clear his payment pending if the card went through. Still: Coop / Jayden / Alex missing `programStartDate`; Jeremy Byrd 2 day 29 after **2026-08-25**; Supabase Free usage before **30 Aug 2026**.
 
 **Prior (2026-08-22) — usage + live-session count:**
 
@@ -438,7 +440,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Prior (2026-08-21) — Todd re-onboard + live class:**
 - **Todd** `dubl-e@howerfamily.com` (`member-93adf8b2-cae`) re-created today 6:18 AM. Join week → Coach Class **trial checkout** (card on file) **worked**. Adult block **2026-08-20 → 2026-09-16** (Day 2 exception). Paid `member`, Stripe sub + checkout.
-- **Onboard finish was stuck:** “Go to Today — I’ll book from there” mashed ~30×. Leaving onboard restores step 6 but **drops Man/Woman**, so complete never writes and Today stays gated. Rescued in DB (`onboardingComplete`) and added him to today’s class roster so Zoom/Today weren’t blocked. **Still fix the wizard** (restore gender from profile; already-complete → hard-nav Today).
+- **Onboard finish was stuck:** “Go to Today — I’ll book from there” mashed ~30×. Leaving onboard restores step 6 but **drops Man/Woman**, so complete never writes and Today stays gated. Rescued in DB (`onboardingComplete`) and added him to today’s class roster so Zoom/Today weren’t blocked. **Wizard restore + already-complete hard-nav shipped 2026-08-23** (`083fe66` / `3e53fa0`).
 - **Zoom:** joined from onboard at 6:28 (`zoom.us/j/81925928385`). Jeremy **Start Video** / Todd **Rejoin** ~7:10. Host stayed up.
 - **Today class:** Jeremy’s **Upper Body Workout** (`sms-w-30cfbf2a`), 15 on roster including Todd. SMS paste **“Better for back”** was tagged as the warm-up so the agreed warm-up never attached. Patched that class in prod (standard 4 warm-ups first; lunge keeps “Better for back” as a note). Code: paste always prepends Settings warm-up; section headers are not the warm-up. Shipped `main`.
 - **iPhone sleep on 5-min bike:** Wake Lock can “succeed” then still sleep. iOS now also plays silent `keep-awake.mp4`. Shipped `main`. Hard-refresh before the next long timer.
@@ -446,7 +448,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - **Landing Sign out:** logged-in desktop landing hid it in the hamburger. Now on the coach preview bar and header. Shipped `main`.
 - **Watchers:** stopped at John’s request. Do not restart unless asked.
 
-**When back:** fix onboard gender restore so “Go to Today” can’t trap the next person. Still: enrollments always get a start; Jeremy Byrd 2 day 29 after **2026-08-25**; Supabase Free usage before **30 Aug 2026**.
+**When back (from 8/21, still true except onboard trap):** enrollments always get a start; Jeremy Byrd 2 day 29 after **2026-08-25**; Supabase Free usage before **30 Aug 2026**.
 
 **Prior (2026-08-20):**
 
