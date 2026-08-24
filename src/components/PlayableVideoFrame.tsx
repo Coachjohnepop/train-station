@@ -7,6 +7,7 @@ import {
   applyMediaVolumeDb,
   DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
 } from "@/lib/media-volume";
+import { isIosDevice } from "@/lib/ios-device";
 import { isDirectVideoUrl } from "@/lib/site-video";
 import { isYoutubeUrl, type YoutubeEmbedOptions } from "@/lib/youtube";
 
@@ -57,6 +58,8 @@ export default function PlayableVideoFrame({
 
   useEffect(() => {
     if (!autoplay || !kickPlayback) return;
+    // Extra play() retries on iOS restart the AAC decoder mid-word.
+    if (isIosDevice()) return;
     const el = videoRef.current;
     if (!el) return;
     const play = () => {

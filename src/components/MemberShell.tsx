@@ -83,19 +83,31 @@ export default function MemberShell({
                       : undefined
                 }
               />
-              <Link
-                href="/member/account"
-                className="flex min-w-0 items-center gap-2 rounded-lg transition hover:opacity-90"
-                title="Account & settings"
-              >
-                <UserBicepAvatar size={34} title="Account" />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">Hi, {memberName}</p>
-                  {memberEmail && (
-                    <p className="truncate text-xs text-[var(--muted)]">{memberEmail}</p>
-                  )}
+              {setupMode ? (
+                <div className="flex min-w-0 items-center gap-2">
+                  <UserBicepAvatar size={34} title="Account" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">Hi, {memberName}</p>
+                    {memberEmail && (
+                      <p className="truncate text-xs text-[var(--muted)]">{memberEmail}</p>
+                    )}
+                  </div>
                 </div>
-              </Link>
+              ) : (
+                <Link
+                  href="/member/account"
+                  className="flex min-w-0 items-center gap-2 rounded-lg transition hover:opacity-90"
+                  title="Account & settings"
+                >
+                  <UserBicepAvatar size={34} title="Account" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">Hi, {memberName}</p>
+                    {memberEmail && (
+                      <p className="truncate text-xs text-[var(--muted)]">{memberEmail}</p>
+                    )}
+                  </div>
+                </Link>
+              )}
             </div>
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
               <span className="badge-accent inline-block max-w-[7.5rem] truncate rounded-full px-2 py-0.5 text-xs font-semibold leading-tight tracking-wide sm:max-w-none">

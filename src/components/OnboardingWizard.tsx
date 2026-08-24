@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import GearTabShopHint from "@/components/GearTabShopHint";
@@ -31,10 +30,15 @@ import {
   WEIGHT_LOSS_TIMELINES,
   WORKOUT_SCHEDULES,
   isFatLossGoal,
+  normalizeOnboardGender,
   type OnboardGender,
   type PrimaryGoalId,
   type WorkoutScheduleId,
 } from "@/lib/onboard-path";
+
+/** iOS Safari bottom chrome sits on top of in-flow buttons. Keep the dock above it. */
+const PHONE_SAFARI_DOCK_PAD =
+  "pb-[calc(env(safe-area-inset-bottom,0px)+4.5rem)] sm:pb-0";
 
 async function saveProgress(body: Record<string, unknown>) {
   await fetch("/api/member/onboard-progress", {
@@ -50,12 +54,14 @@ export default function OnboardingWizard({
   welcomeVideosByPlan = {},
   programStartSettings,
   initialPlan,
+  initialGender = null,
 }: {
   email?: string;
   welcomeVideoUrl?: string | null;
   welcomeVideosByPlan?: Record<string, string | null | undefined>;
   programStartSettings?: ProgramStartSettings;
   initialPlan?: string;
+  initialGender?: string | null;
 }) {
   const searchParams = useSearchParams();
   const plan = normalizeSignupPlan(searchParams.get("plan") || initialPlan);
@@ -68,8 +74,12 @@ export default function OnboardingWizard({
   const detailsStep = 5;
   const bookStep = 6;
   const stepStorageKey = `ts-onboard-step:${plan}`;
+  const genderStorageKey = `ts-onboard-gender:${plan}`;
   const [currentStep, setCurrentStep] = useState(1);
   const [stepReady, setStepReady] = useState(false);
+  const [gender, setGender] = useState<OnboardGender | null>(() =>
+    normalizeOnboardGender(initialGender),
+  );
 
   useEffect(() => {
     try {
@@ -78,11 +88,13 @@ export default function OnboardingWizard({
         const n = Number.parseInt(saved, 10);
         if (n >= 1 && n <= totalSteps) setCurrentStep(n);
       }
+      const storedGender = normalizeOnboardGender(sessionStorage.getItem(genderStorageKey));
+      if (storedGender) setGender(storedGender);
     } catch {
       // ignore private browsing / storage blocks
     }
     setStepReady(true);
-  }, [stepStorageKey, totalSteps]);
+  }, [stepStorageKey, genderStorageKey, totalSteps]);
 
   useEffect(() => {
     if (!stepReady) return;
@@ -92,8 +104,6 @@ export default function OnboardingWizard({
       // ignore
     }
   }, [currentStep, stepReady, stepStorageKey]);
-
-  const [gender, setGender] = useState<OnboardGender | null>(null);
   const [measurements, setMeasurements] = useState({ weight: "", notes: "" });
   const [primaryGoal, setPrimaryGoal] = useState<PrimaryGoalId | null>(null);
   const [workoutSchedule, setWorkoutSchedule] = useState<WorkoutScheduleId | null>(
@@ -113,6 +123,17 @@ export default function OnboardingWizard({
 
   const planWelcomeUrl = welcomeVideoUrlForPlan(plan, welcomeVideoUrl, welcomeVideosByPlan);
   const introVolumeDb = useUploadedContentVolumeDb();
+
+  function pickGender(option: OnboardGender) {
+    setGender(option);
+    setError(null);
+    try {
+      sessionStorage.setItem(genderStorageKey, option);
+    } catch {
+      // ignore
+    }
+    void saveProgress({ plan, gender: option });
+  }
 
   async function nextStep() {
     setError(null);
@@ -163,6 +184,11 @@ export default function OnboardingWizard({
     }
     setSkipHealth(true);
     setError(null);
+    try {
+      sessionStorage.setItem(genderStorageKey, gender);
+    } catch {
+      // ignore
+    }
     await saveProgress({ plan, gender });
     setCurrentStep(2);
   }
@@ -171,11 +197,24 @@ export default function OnboardingWizard({
     setFinishing(true);
     setError(null);
     try {
-      if (!gender) {
+      let resolvedGender = gender;
+      if (!resolvedGender) {
+        try {
+          resolvedGender = normalizeOnboardGender(sessionStorage.getItem(genderStorageKey));
+        } catch {
+          resolvedGender = null;
+        }
+      }
+      if (!resolvedGender) {
+        resolvedGender = normalizeOnboardGender(initialGender);
+      }
+      if (!resolvedGender) {
         setError("Pick man or woman so we can set the right goals.");
+        setCurrentStep(1);
         setFinishing(false);
         return;
       }
+      if (resolvedGender !== gender) setGender(resolvedGender);
       if (currentStep === detailsStep || currentStep === bookStep) {
         await saveProgress({
           phone: sms.phone || null,
@@ -188,7 +227,7 @@ export default function OnboardingWizard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           measurements,
-          gender: gender || undefined,
+          gender: resolvedGender,
           primaryGoal: primaryGoal || undefined,
           workoutSchedule: workoutSchedule || undefined,
           weightLossGoal: fatLoss ? weightLossGoal.trim() || undefined : undefined,
@@ -206,6 +245,7 @@ export default function OnboardingWizard({
       if (!res.ok) throw new Error(data.error || "Could not finish setup");
       try {
         sessionStorage.removeItem(stepStorageKey);
+        sessionStorage.removeItem(genderStorageKey);
       } catch {
         // ignore
       }
@@ -221,10 +261,10 @@ export default function OnboardingWizard({
 
   return (
     <div className="mx-auto max-w-md space-y-4 px-0 py-2 sm:px-4 sm:py-6 sm:space-y-6">
-      {/* Step 1: video first on phone — minimal chrome above the fold */}
+      {/* Step 1: video first on phone — keep it short so Man/Woman + Start stay on screen */}
       {currentStep === 1 && planWelcomeUrl ? (
         <div className="overflow-hidden rounded-none bg-black ring-1 ring-[var(--border)] sm:rounded-xl">
-          <div className="aspect-video w-full">
+          <div className="mx-auto aspect-video w-full max-h-[28vh] sm:max-h-none">
             <PlayableVideoFrame
               className="h-full w-full"
               videoUrl={planWelcomeUrl}
@@ -288,54 +328,49 @@ export default function OnboardingWizard({
                 <p className="text-sm font-semibold text-[var(--text)]">{signupPlanLabel(plan)}</p>
                 <p className="mt-0.5 text-[11px] text-[var(--muted)]">
                   {planWelcomeUrl
-                    ? "Coach video is above · tap Start when ready"
-                    : "Tap Start setup when ready"}
+                    ? "Coach video is above · pick man or woman, then Start"
+                    : "Pick man or woman, then Start setup"}
                 </p>
               </div>
             </div>
 
-            <div>
-              <p className="mb-1.5 block text-xs text-[var(--muted)]">I am</p>
-              <div className="grid grid-cols-2 gap-2">
-                {(["man", "woman"] as const).map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => setGender(option)}
-                    className={`rounded-xl border px-3 py-2.5 text-sm font-semibold ${
-                      gender === option
-                        ? "border-accent bg-accent/15 text-[var(--text)]"
-                        : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)]"
-                    }`}
-                  >
-                    {option === "man" ? "Man" : "Woman"}
-                  </button>
-                ))}
+            <div
+              className={`sticky bottom-0 z-30 -mx-4 mt-2 space-y-3 border-t border-[var(--border)] bg-[var(--bg)]/95 px-4 pt-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:pt-0 sm:backdrop-blur-none ${PHONE_SAFARI_DOCK_PAD}`}
+            >
+              <div>
+                <p className="mb-1.5 block text-xs text-[var(--muted)]">I am</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["man", "woman"] as const).map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => pickGender(option)}
+                      className={`rounded-xl border px-3 py-2.5 text-sm font-semibold ${
+                        gender === option
+                          ? "border-accent bg-accent/15 text-[var(--text)]"
+                          : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)]"
+                      }`}
+                    >
+                      {option === "man" ? "Man" : "Woman"}
+                    </button>
+                  ))}
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={() => void nextStep()}
+                className="btn-primary w-full min-h-12"
+              >
+                Start setup
+              </button>
+              <button
+                type="button"
+                onClick={() => void skipHealthForLater()}
+                className="btn-ghost w-full"
+              >
+                Skip health details — I&apos;ll add them later
+              </button>
             </div>
-
-            <p className="text-xs text-[var(--muted)]">
-              Need something first?{" "}
-              <Link href="/member/account" className="font-semibold text-accent hover:underline">
-                Open Account
-              </Link>
-              .
-            </p>
-            <button
-              type="button"
-              onClick={() => void nextStep()}
-              className="btn-primary w-full"
-              disabled={!gender}
-            >
-              Start setup
-            </button>
-            <button
-              type="button"
-              onClick={() => void skipHealthForLater()}
-              className="btn-ghost w-full"
-            >
-              Skip health details — I&apos;ll add them later
-            </button>
           </>
         )}
 
@@ -391,7 +426,7 @@ export default function OnboardingWizard({
                     <button
                       key={option}
                       type="button"
-                      onClick={() => setGender(option)}
+                      onClick={() => pickGender(option)}
                       className={`rounded-xl border px-3 py-2.5 text-sm font-semibold ${
                         gender === option
                           ? "border-accent bg-accent/15 text-[var(--text)]"
@@ -626,7 +661,7 @@ export default function OnboardingWizard({
                 <button
                   type="button"
                   onClick={() => void handleFinish()}
-                  className="btn-primary w-full"
+                  className="btn-primary w-full min-h-12"
                 >
                   Go to Today — I&apos;ll book from there
                 </button>

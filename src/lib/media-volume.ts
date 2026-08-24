@@ -1,3 +1,5 @@
+import { isIosDevice } from "@/lib/ios-device";
+
 /**
  * Uploaded content volume relative to native (0 dB).
  * Steps of 3 dB; linear gain = 10^(dB/20).
@@ -5,6 +7,13 @@
  * HTMLMediaElement.volume is capped at 1.0. Boosts above 0 dB only use Web Audio
  * GainNode for **same-origin** media. Cross-origin Blob/CDN videos MUST NOT use
  * createMediaElementSource — without CORS that path is silent.
+ *
+ * iOS Safari: never attach createMediaElementSource to a <video>. WebKit will
+ * keep the element’s speakers AND the GainNode, so a ~250ms packet of the
+ * current syllable repeats (Nate Nowotny 2026-08-23 onboard recording:
+ * “capable” → “capy capy capy”, “trip” → “trist trist trist”). The source
+ * file is clean; desktop decode is clean. Boost is skipped on iPhone — play
+ * at native volume instead.
  */
 
 export const VOLUME_DB_STEP = 3;
@@ -95,8 +104,8 @@ export function applyMediaVolumeDb(el: HTMLMediaElement, db: number): void {
 
   el.muted = false;
 
-  // Attenuate or native: simple element volume (and drop any old graph)
-  if (linear <= 1 || !isSameOriginMedia(el)) {
+  // Attenuate, cross-origin, or iOS: simple element volume (and drop any old graph)
+  if (linear <= 1 || !isSameOriginMedia(el) || isIosDevice()) {
     tearDownGraph(el);
     el.volume = Math.max(0, Math.min(1, linear > 1 ? 1 : linear));
     return;
