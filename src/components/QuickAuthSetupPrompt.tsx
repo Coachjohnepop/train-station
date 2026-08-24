@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
+import OnboardActionDock from "@/components/OnboardActionDock";
 import PinPad from "@/components/PinPad";
 import {
   clearQuickAuthSetupSkipped,
@@ -394,16 +395,18 @@ export default function QuickAuthSetupPrompt({
         </button>
       )}
 
-      <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onContinue} className="btn-ghost flex-1" disabled={busy}>
-          {quickAuthReady ? "Continue now" : "Skip for now"}
-        </button>
-        {quickAuthReady && (
-          <button type="button" onClick={onContinue} className="btn-primary flex-1" disabled={busy}>
-            Go to dashboard
+      <OnboardActionDock>
+        <div className="flex gap-3">
+          <button type="button" onClick={onContinue} className="btn-ghost flex-1 min-h-12" disabled={busy}>
+            {quickAuthReady ? "Continue now" : "Skip for now"}
           </button>
-        )}
-      </div>
+          {quickAuthReady && (
+            <button type="button" onClick={onContinue} className="btn-primary flex-1 min-h-12" disabled={busy}>
+              Continue
+            </button>
+          )}
+        </div>
+      </OnboardActionDock>
     </div>
   );
 }

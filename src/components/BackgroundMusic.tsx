@@ -50,8 +50,8 @@ function isThemeSongFunnelRoute(pathname: string): boolean {
   if (pathname.startsWith("/login")) return true;
   if (pathname.startsWith("/pricing")) return true;
   if (pathname.startsWith("/coming-soon")) return true;
-  // Shopping / setup after account exists
-  if (pathname.startsWith("/member/onboard")) return true;
+  // Checkout can still play Theme Song. Onboard does not — speaker is hidden
+  // there so autoplay would have no mute, and it fights Jeremy's welcome clip.
   if (pathname.startsWith("/member/checkout")) return true;
   if (pathname.startsWith("/member/pending")) return true;
   return false;
@@ -66,7 +66,7 @@ function allowThemeSongAutoPlay(pathname: string, signedIn: boolean): boolean {
   if (!isThemeSongFunnelRoute(pathname)) return false;
   // Logged-in member on home welcome (/) — no autoplay after auth
   if (signedIn && (pathname === "/" || pathname === "/landing")) return false;
-  // Logged-in on join/checkout/onboard still OK (shopping / finishing setup)
+  // Logged-in on join/checkout still OK (shopping). Onboard is not a funnel route.
   return true;
 }
 
@@ -77,6 +77,7 @@ function sleep(ms: number) {
 export default function BackgroundMusic() {
   const pathname = usePathname() ?? "";
   const onAdmin = isAdminRoute(pathname);
+  const onMemberOnboard = pathname.startsWith("/member/onboard");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const overlayPauseRef = useRef(false);
   /** Keep handlers (gestures / visibility) from restarting music on admin. */
@@ -636,8 +637,8 @@ export default function BackgroundMusic() {
           : "Theme Song — click speaker to play"
         : "Theme Song — click speaker to play";
 
-  // Show speaker on funnel + logged-in member surfaces (not admin)
-  const showSpeaker = !onAdmin;
+  // Hide on admin and member setup — speaker sat on top of Start setup on iPhone.
+  const showSpeaker = !onAdmin && !onMemberOnboard;
 
   return (
     <>

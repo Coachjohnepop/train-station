@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import GearTabShopHint from "@/components/GearTabShopHint";
+import OnboardActionDock from "@/components/OnboardActionDock";
 import MemberHomeEquipment from "@/components/MemberHomeEquipment";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
 import PlayableVideoFrame from "@/components/PlayableVideoFrame";
@@ -35,10 +36,6 @@ import {
   type PrimaryGoalId,
   type WorkoutScheduleId,
 } from "@/lib/onboard-path";
-
-/** iOS Safari bottom chrome sits on top of in-flow buttons. Keep the dock above it. */
-const PHONE_SAFARI_DOCK_PAD =
-  "pb-[calc(env(safe-area-inset-bottom,0px)+4.5rem)] sm:pb-0";
 
 async function saveProgress(body: Record<string, unknown>) {
   await fetch("/api/member/onboard-progress", {
@@ -334,9 +331,7 @@ export default function OnboardingWizard({
               </div>
             </div>
 
-            <div
-              className={`sticky bottom-0 z-30 -mx-4 mt-2 space-y-3 border-t border-[var(--border)] bg-[var(--bg)]/95 px-4 pt-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:pt-0 sm:backdrop-blur-none ${PHONE_SAFARI_DOCK_PAD}`}
-            >
+            <OnboardActionDock>
               <div>
                 <p className="mb-1.5 block text-xs text-[var(--muted)]">I am</p>
                 <div className="grid grid-cols-2 gap-2">
@@ -370,7 +365,7 @@ export default function OnboardingWizard({
               >
                 Skip health details — I&apos;ll add them later
               </button>
-            </div>
+            </OnboardActionDock>
           </>
         )}
 
@@ -381,9 +376,11 @@ export default function OnboardingWizard({
         {currentStep === 2 && !email && (
           <>
             <p className="text-sm text-[var(--muted)]">Quick sign-in setup is available after sign-in.</p>
-            <button type="button" onClick={() => void nextStep()} className="btn-primary w-full">
-              Continue
-            </button>
+            <OnboardActionDock>
+              <button type="button" onClick={() => void nextStep()} className="btn-primary w-full min-h-12">
+                Continue
+              </button>
+            </OnboardActionDock>
           </>
         )}
 
@@ -399,14 +396,16 @@ export default function OnboardingWizard({
               <strong className="text-[var(--accent-fg)]">Gear</strong> in the nav.
             </p>
             <MemberHomeEquipment defaultOpen />
-            <div className="flex gap-3 pt-2">
-              <button type="button" onClick={prevStep} className="btn-ghost flex-1">
-                Back
-              </button>
-              <button type="button" onClick={() => void nextStep()} className="btn-primary flex-1">
-                Continue
-              </button>
-            </div>
+            <OnboardActionDock>
+              <div className="flex gap-3">
+                <button type="button" onClick={prevStep} className="btn-ghost flex-1 min-h-12">
+                  Back
+                </button>
+                <button type="button" onClick={() => void nextStep()} className="btn-primary flex-1 min-h-12">
+                  Continue
+                </button>
+              </div>
+            </OnboardActionDock>
           </>
         )}
 
@@ -551,21 +550,23 @@ export default function OnboardingWizard({
                 />
               </div>
             </div>
-            <div className="flex gap-3 pt-2">
-              <button type="button" onClick={prevStep} className="btn-ghost flex-1">
-                Back
+            <OnboardActionDock>
+              <div className="flex gap-3">
+                <button type="button" onClick={prevStep} className="btn-ghost flex-1 min-h-12">
+                  Back
+                </button>
+                <button type="button" onClick={() => void nextStep()} className="btn-primary flex-1 min-h-12">
+                  Continue
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => void nextStep()}
+                className="w-full text-center text-xs text-[var(--muted)] underline-offset-2 hover:underline"
+              >
+                Skip these for now
               </button>
-              <button type="button" onClick={() => void nextStep()} className="btn-primary flex-1">
-                Continue
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => void nextStep()}
-              className="w-full text-center text-xs text-[var(--muted)] underline-offset-2 hover:underline"
-            >
-              Skip these for now
-            </button>
+            </OnboardActionDock>
           </>
         )}
 
@@ -635,14 +636,16 @@ export default function OnboardingWizard({
                 </div>
               </div>
             </div>
-            <div className="flex gap-3 pt-2">
-              <button type="button" onClick={prevStep} className="btn-ghost flex-1">
-                Back
-              </button>
-              <button type="button" onClick={() => void nextStep()} className="btn-primary flex-1">
-                Continue
-              </button>
-            </div>
+            <OnboardActionDock>
+              <div className="flex gap-3">
+                <button type="button" onClick={prevStep} className="btn-ghost flex-1 min-h-12">
+                  Back
+                </button>
+                <button type="button" onClick={() => void nextStep()} className="btn-primary flex-1 min-h-12">
+                  Continue
+                </button>
+              </div>
+            </OnboardActionDock>
           </>
         )}
 
@@ -657,7 +660,7 @@ export default function OnboardingWizard({
             {finishing ? (
               <p className="text-sm text-[var(--muted)]">Saving setup…</p>
             ) : (
-              <div className="space-y-2">
+              <OnboardActionDock>
                 <button
                   type="button"
                   onClick={() => void handleFinish()}
@@ -665,10 +668,10 @@ export default function OnboardingWizard({
                 >
                   Go to Today — I&apos;ll book from there
                 </button>
-                <button type="button" onClick={prevStep} className="btn-ghost w-full">
+                <button type="button" onClick={prevStep} className="btn-ghost w-full min-h-12">
                   Back
                 </button>
-              </div>
+              </OnboardActionDock>
             )}
           </>
         )}
