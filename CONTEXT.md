@@ -414,8 +414,19 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-22  
-**Status:** Switched to Capital Audio most of the day. Train Station: usage report only — no code. Do **not** leave monitors running.
+**Date:** 2026-08-23  
+**Status:** Watched Nate Nowotny (`natenowotny@yahoo.com`) 23s screen recording. Phone onboard step 1 is unusable under Safari chrome. Fix is in the working tree, **not shipped**.
+
+**This pass (2026-08-23) — Nate feedback video:**
+- Source: iMessage `ScreenRecording_08-23-2026 22-24-53_1.mov` (copied into App Feedback Video/). Review pack: `.jeremy-review-frames/aug-23-2026-tester/`.
+- **0:00–0:17** Welcome aboard, Coach Class, Jeremy intro playing. Man/Woman never tapped. **Start setup is fully covered by iOS Safari’s bottom toolbar** (and was disabled until gender).
+- **0:18** Taps into Account (`Open Account` and/or header “Hi, Nate”). **Loading your dashboard…**
+- **0:19–0:23** Account: Coach Class Current **Payment pending**. Header badge still **Explorer**. Signed in as `natenowotny@yahoo.com`.
+- Code (local, not on `main` yet): sticky Start-setup dock above Safari chrome; gender saved on tap + restored from profile/session; header name is not an Account link during setup; already-complete onboard → hard-nav Today.
+- **Audio glitch (not the file):** Jeremy welcome `public/videos/jeremy-welcome.mp4` last 20s is clean (“capable of being” / “this trip”). Nate’s capture stutters those syllables ~260ms (“capy capy capy”, “trist trist trist”). Spectrogram shows repeating bars; source does not. Cause: iOS Safari `createMediaElementSource` for the +6 dB intro boost double-playing the `<video>` element. Fix: skip Web Audio boost on iOS; don’t kick `play()` twice on iPhone.
+- **Nate ops:** payment pending — checkout/trial did not land as paid. Do not treat his account as done.
+
+**Prior (2026-08-22) — usage + live-session count:**
 
 **This pass (2026-08-22) — usage + live-session count:**
 - Live Postgres `train-station-catalog` (`mattccorhcxghwyfgklp`): **29 MB**, **17 users**. Not a size problem.

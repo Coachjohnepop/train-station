@@ -1,10 +1,12 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import OnboardingWizard from "@/components/OnboardingWizard";
 import { getSessionUser } from "@/lib/auth";
 import { getResolvedLandingVideos } from "@/lib/landing-media-server";
 import { getCoachSettings } from "@/lib/coach-settings-store";
 import { programStartSettingsFromCoach } from "@/lib/program-start-settings";
 import { getMemberProfile } from "@/lib/member-profiles-store";
+import { memberPostOnboardPathAsync } from "@/lib/member-destinations";
 import { resolveEffectiveMembershipPlan } from "@/lib/signup-plans";
 import { prisma } from "@/lib/prisma";
 
@@ -18,6 +20,7 @@ export default async function OnboardingPage() {
   ]);
   const programStartSettings = programStartSettingsFromCoach(coachSettings);
   let initialPlan: string | undefined;
+  let initialGender: string | null = null;
   if (session?.id) {
     const [profile, user] = await Promise.all([
       getMemberProfile(session.id),
@@ -25,11 +28,15 @@ export default async function OnboardingPage() {
         .findUnique({ where: { id: session.id }, select: { signupPlan: true } })
         .catch(() => null),
     ]);
+    if (profile?.onboardingComplete) {
+      redirect(await memberPostOnboardPathAsync(profile, session.id, ""));
+    }
     initialPlan = resolveEffectiveMembershipPlan({
       profilePlan: profile?.plan,
       signupPlan: user?.signupPlan,
       paymentStatus: profile?.paymentStatus,
     });
+    initialGender = profile?.gender ?? null;
   }
 
   return (
@@ -46,6 +53,7 @@ export default async function OnboardingPage() {
         welcomeVideosByPlan={landingVideos.welcomeVideosByPlan}
         programStartSettings={programStartSettings}
         initialPlan={initialPlan}
+        initialGender={initialGender}
       />
     </Suspense>
   );
