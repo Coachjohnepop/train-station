@@ -11,7 +11,7 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 
 | Who | Role | Notes |
 |-----|------|--------|
-| **John** (you) | Builder / product | Repo owner; deploys; soaks; coaches Jeremy. **App admin: `john@thetrainstation.co`**. **Member smoke account: `john@bcxvoice.com`** (not staff). **Vercel/GitHub deploy login: `john@bcxvoice.com`** (CLI `john-9066`) — platform only, not member role. **`john@lemonvoice.com` free** for fresh paid-signup tests (demo John & Steph = `johnsteph@thetrainstation.co`). **Stripe Dashboard login (TheTrainStation Brave profile): Google `john@bcxvoice.com`** — sees BCX Voice + Eco Delight only until Jeremy invites that same email to TS Live. |
+| **John** (you) | Builder / product | Repo owner; deploys; soaks; coaches Jeremy. **App admin: `john@thetrainstation.co`**. **Member account: `john@lemonvoice.com` (Lemon John)**. **Vercel/GitHub deploy login: `john@bcxvoice.com`** (CLI `john-9066`) — platform only, **not a Train Station member**. **`john@bcxvoice.com` member was a test login — purged 2026-08-25.** Demo couple = `johnsteph@thetrainstation.co`. **Stripe Dashboard login (TheTrainStation Brave profile): Google `john@bcxvoice.com`** — sees BCX Voice + Eco Delight only until Jeremy invites that same email to TS Live. |
 | **Jeremy** | Customer coach | Primary admin user; stress-tests clone/templates/calendar; email `jeremy@thetrainstation.co` |
 | **John & Steph** | Demo member journey | Program subs, floating video, schedule greens in demos |
 | **Grok** (xAI) | Coding agent in this TUI | Not Claude — may share this file |
@@ -123,7 +123,7 @@ Same bar for **new** work: if it is product data, it is a **database** concern f
 | **Week 1 flow** | D1 Upper · D2 Lower · D3 Fasted cardio · D4 Upper · D5 Lower · D6 rest/stretch (catalog “DAY 14 REST AND STRETCH DAY”) · D7 Rest day (includes Meal Prep) — **Jeremy’s existing catalog rows**, not new write-ups |
 | **Today / program page / labels** | Personal month only. Do not call `findProgramDayForCalendarDate` on the member path |
 | **Live class** | Only if Jeremy puts them on that day’s `CoachTodaySession.userIds`. A class can be a **subset** (e.g. Lemon John + Steph only). Unassigned members stay on their personal program. Do **not** auto-select the whole roster on Assign. |
-| **John & Steph class** | Paid couple = `john@lemonvoice.com` (Lemon John) + `sprealty9@gmail.com` (Stephanie). Not `john@bcxvoice.com` (smoke login) and not demo `demo-user-john-steph`. Quick pick: `src/lib/coach-class-targets.ts`. |
+| **John & Steph class** | Paid couple = `john@lemonvoice.com` (Lemon John) + `sprealty9@gmail.com` (Stephanie). Not demo `demo-user-john-steph`. Quick pick: `src/lib/coach-class-targets.ts`. |
 | **New enroll** | Always stamp `programStartDate` (signup day unless they pick one at onboard) |
 | **Join week CTA** | `/signup?plan=explorer&week=1` → **Coach Class Checkout with 7-day trial** (card on file, $0 today, monthly after). Do **not** grant `landing_free_week` unpaid. Webhook must treat trial Checkout `payment_status=no_payment_required` as complete |
 
@@ -416,7 +416,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ## WHERE WE LEFT OFF
 
 **Date:** 2026-08-25  
-**Status:** Special-class plumbing: Jeremy can assign a workout to a subset (Lemon John + Steph). Unassigned stay on their own program. Assign no longer auto-selects the whole roster.
+**Status:** Special-class plumbing live. Purged test member `john@bcxvoice.com` from Train Station (keep that email for Vercel/GitHub only). Training member is Lemon John.
 
 **This pass (2026-08-23) — Nate Nowotny screen recording, then ship:**
 - Source: iMessage `ScreenRecording_08-23-2026 22-24-53_1.mov` (copied into App Feedback Video/). Review pack: `.jeremy-review-frames/aug-23-2026-tester/`. Email `natenowotny@yahoo.com`.
@@ -434,7 +434,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 **This pass (2026-08-22) — usage + live-session count:**
 - Live Postgres `train-station-catalog` (`mattccorhcxghwyfgklp`): **29 MB**, **17 users**. Not a size problem.
 - Quota burn is historical: since 30 Jun, **7.4M commits** and **180 GB temp files** from the old 150ms `LiveWorkoutSession` loop. Free restriction still **30 Aug 2026**.
-- **31 `LiveWorkoutSession` rows** is leftover history (1 row per person × workout × day, never deleted). 13 are Lemon John `john@bcxvoice.com`. Yesterday’s class only 4 rows. Scary numbers are **`revision`** (14,186 / 5,953) from the old poll, not row count.
+- **31 `LiveWorkoutSession` rows** is leftover history (1 row per person × workout × day, never deleted). 13 were the old `john@bcxvoice.com` test member (purged 2026-08-25). Yesterday’s class only 4 rows. Scary numbers are **`revision`** (14,186 / 5,953) from the old poll, not row count.
 - Runaway **is fixed**: 5s floor, backup poll only while `hostStarted`, hidden tabs skip, build guard `scripts/guard-hot-polls.mjs`. Next week of classes is the scale baseline — ignore lifetime `pg_stat` totals.
 - No Supabase Management API token on disk (only DB URL / service role). Billing banner still needs a dashboard login or `SUPABASE_ACCESS_TOKEN`.
 - Vercel CLI often sits on Eco Delight (`john-8171` / `john@buyecodelight.com`). TS deploys need **john-9066**.
@@ -458,7 +458,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - **Rest timer:** iPhone sleeps on countdown — `useScreenWakeLock` on the workout console.
 - **Videos:** shrugs, bicycles, sit-ups, HIIT, standard warmup got Watch demo (library + hints). Step-ups on Lower Body still no video.
 - **Fake data:** `@example.com` users gone earlier; 41 waitlist loop rows + 2 orphan chat threads deleted this pass. 17 users remain. **Alex demo kept.**
-- **John/Stephanie:** paid, train via live class, **no Adult enroll** — do not invent a gym-calendar month for them.
+- **John/Stephanie:** Lemon John (`john@lemonvoice.com`) + Stephanie train via live class. Do not recreate `john@bcxvoice.com` as a member.
 - **Coop / Jayden / Alex:** Adult enroll **without** `programStartDate` — still a hole (incomplete onboard).
 - **Jeremy Byrd 2:** 28-day block ends **2026-08-25** — day 29 is empty until we define next month.
 
@@ -492,7 +492,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 | **Ali Fletcher** `fletcherboys@att.net` | Coach Class paid (Aug 10, LETSGO26 ~$5) | Async/on-demand. **Re-onboard.** Texted: private window, Free joke first, then Coach Class → Continue already paid → woman → goals → book Jeremy. Temp **14-day** Today preview. Copy: `ALI_FLETCHER_SCRIPT.md`. |
 | **Bella Roy** `bellaroyy03@gmail.com` | Coach Class paid (Aug 12) | **Onboard incomplete.** Same welcome retry + onboard gate. |
 | **Stephanie Popham** `sprealty9@gmail.com` | Member paid | Onboard done. |
-| **John Popham** `john@bcxvoice.com` | Business paid | Member smoke. Onboard done. |
+| **Lemon John** `john@lemonvoice.com` | Paid member | Training account with Stephanie. |
 | **Jeremy Byrd 2** `coachbyrd84@aol.com` | Business paid | Onboard done. |
 | Coop Fletcher `cooperfletcher892@gmail.com` | Merchandise | Payment pending, onboard incomplete. |
 | ~~Will / Quinn~~ | — | Purged 2026-08-12. |

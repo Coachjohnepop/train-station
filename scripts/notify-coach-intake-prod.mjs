@@ -2,7 +2,7 @@
 /**
  * Send coach intake sign-off alert (email + in-app) for a member.
  *
- *   node scripts/notify-coach-intake-prod.mjs john@bcxvoice.com
+ *   node scripts/notify-coach-intake-prod.mjs john@lemonvoice.com
  */
 import { randomUUID } from "crypto";
 import { blobOptions } from "./remove-member-email.mjs";

@@ -17,7 +17,7 @@ const COACH_PASSWORD =
   process.env.COACH_PASSWORD ||
   process.env.COACH_TEST_PASSWORD ||
   "LaserChickenSoak2026!";
-const MEMBER_EMAIL = process.env.MEMBER_EMAIL || "john@bcxvoice.com";
+const MEMBER_EMAIL = process.env.MEMBER_EMAIL || "john@lemonvoice.com";
 const MEMBER_PASSWORD = process.env.MEMBER_PASSWORD || "";
 const MARK = "FULL-SITE-4-LOOP";
 const RUN = Date.now().toString(36);

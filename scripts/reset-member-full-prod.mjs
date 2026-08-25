@@ -4,7 +4,7 @@
  * gamification, chat thread, warmup progress, quick-auth, settings.
  *
  * Usage:
- *   node scripts/reset-member-full-prod.mjs john@bcxvoice.com
+ *   node scripts/reset-member-full-prod.mjs john@lemonvoice.com
  */
 import { removeMemberByEmail, blobOptions } from "./remove-member-email.mjs";
 import { head, put } from "@vercel/blob";

@@ -4,8 +4,8 @@
  * (keeps or creates the account — no signup flow required).
  *
  * Usage:
- *   node scripts/reprovision-member-onboard-prod.mjs john@bcxvoice.com 'YourPass123!'
- *   node scripts/reprovision-member-onboard-prod.mjs john@bcxvoice.com   # keeps existing password
+ *   node scripts/reprovision-member-onboard-prod.mjs john@lemonvoice.com 'YourPass123!'
+ *   node scripts/reprovision-member-onboard-prod.mjs john@lemonvoice.com   # keeps existing password
  */
 import { randomBytes, randomUUID, scryptSync } from "crypto";
 import { blobOptions } from "./remove-member-email.mjs";

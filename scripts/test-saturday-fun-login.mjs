@@ -8,7 +8,7 @@ const BASE = (process.argv[2] || "https://www.thetrainstation.co").replace(/\/$/
 const SESSION_DATE = process.argv[3] || "2026-07-04";
 
 const JEREMY = { email: "jeremy@thetrainstation.co", password: "CoachTest123!" };
-const JOHN = { email: "john@bcxvoice.com", password: process.env.JOHN_PASSWORD || "TestPass123!" };
+const JOHN = { email: "john@lemonvoice.com", password: process.env.JOHN_PASSWORD || "TestPass123!" };
 
 function parseSetCookie(headers) {
   const raw = headers.getSetCookie?.() || [];

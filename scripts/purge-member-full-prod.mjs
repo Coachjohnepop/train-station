@@ -17,8 +17,9 @@ Module._load = function (request, parent, isMain) {
   return originalLoad.call(this, request, parent, isMain);
 };
 
+dotenv.config({ path: ".env.vercel.fresh" });
 dotenv.config({ path: ".env" });
-dotenv.config({ path: ".env.go-prod", override: true });
+dotenv.config({ path: ".env.go-prod" });
 
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client.ts";
@@ -116,6 +117,19 @@ async function purgePostgres(email) {
   );
 
   const id = user.id;
+
+  const classRows = await prisma.coachTodaySession.findMany();
+  for (const row of classRows) {
+    if (!row.userIds.includes(id)) continue;
+    const next = row.userIds.filter((uid) => uid !== id);
+    if (!DRY_RUN) {
+      await prisma.coachTodaySession.update({
+        where: { id: row.id },
+        data: { userIds: next },
+      });
+    }
+    console.log(`  class ${row.sessionDate} "${row.title}": pulled off roster`);
+  }
 
   // Null out optional FKs that don't cascade
   await prisma.factSubscriptionPayment.updateMany({

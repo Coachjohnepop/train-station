@@ -61,7 +61,7 @@ HIIT jump squats to finish
 
 Stretch`;
 
-const USER_IDS = ["member-e820ae6e-62c", "member-ab2cb068-b46"];
+const USER_IDS = ["member-339f69f9-c69", "member-ab2cb068-b46"];
 
 async function main() {
   const sessionDate = new Date().toISOString().slice(0, 10);
@@ -82,7 +82,7 @@ async function main() {
   console.log(`✓ Lower Day assigned for ${sessionDate}`);
   console.log(`  Session: ${result.session.id}`);
   console.log(`  Workout: ${result.workoutId}`);
-  console.log(`  Members: john@bcxvoice.com, sprealty9@gmail.com`);
+  console.log(`  Members: john@lemonvoice.com, sprealty9@gmail.com`);
   console.log(`  Blocks: ${result.parsed.exercises.length}`);
   for (const ex of result.parsed.exercises) {
     console.log(`    · ${ex.name} (${ex.sets}× ${ex.reps})`);

@@ -51,7 +51,7 @@ HIIT jump squats to finish
 
 Stretch well`;
 
-const MEMBER_EMAILS = ["john@bcxvoice.com", "sprealty9@gmail.com"];
+const MEMBER_EMAILS = ["john@lemonvoice.com", "sprealty9@gmail.com"];
 
 async function main() {
   const { listSelfRegisteredAccounts } = await import("../src/lib/member-accounts-store");

@@ -45,7 +45,7 @@ Let's keep our intestines functioning
 
 /** Prod member emails → resolved at runtime from registered-accounts blob */
 const TARGET_EMAILS = [
-  "john@bcxvoice.com",
+  "john@lemonvoice.com",
   "sprealty9@gmail.com",
   "kaite@thetrainstation.co",
 ];
