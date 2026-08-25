@@ -415,8 +415,15 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-25  
-**Status:** Special-class plumbing live. Purged test member `john@bcxvoice.com` from Train Station (keep that email for Vercel/GitHub only). Training member is Lemon John.
+**Date:** 2026-08-25 EOD  
+**Status:** John signing off. No monitors running.
+
+**This pass (2026-08-25):**
+- Today’s class: Jeremy **Lower day** (`sms-w-944443df`). Roster is **Lemon John** + **Stephanie** only.
+- Special-class plumbing live: assign starts empty; **John & Steph** = `john@lemonvoice.com` + `sprealty9@gmail.com`; unassigned stay on their own program; emails show under names on assign chips.
+- Purged test member **`john@bcxvoice.com`** from Train Station (keep that email for Vercel/GitHub only).
+- Stephanie staff-grant **Coach Class** reapproved through **2026-09-01** (manual, no Stripe). Reapprove on the 1st.
+- Zoom today (`83017535029`) is Jeremy’s host (`jeremy@thetrainstation.co`). If John’s Zoom app looks like his, he opened it while logged in as himself.
 
 **This pass (2026-08-23) — Nate Nowotny screen recording, then ship:**
 - Source: iMessage `ScreenRecording_08-23-2026 22-24-53_1.mov` (copied into App Feedback Video/). Review pack: `.jeremy-review-frames/aug-23-2026-tester/`. Email `natenowotny@yahoo.com`.
