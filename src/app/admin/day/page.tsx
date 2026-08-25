@@ -40,6 +40,7 @@ export default async function AdminDayPage({ searchParams }: Props) {
   const coachMembers = (await listCoachMembersForUi()).map((m) => ({
     id: m.id,
     name: m.name,
+    email: m.email,
   }));
 
   const bandDates = [

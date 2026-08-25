@@ -5,6 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
 import type { CoachMemberOption } from "@/components/CoachMemberPicker";
+import {
+  JOHN_STEPH_CLASS_EMAILS,
+  memberChipLabel,
+  memberIdsForEmails,
+} from "@/lib/coach-class-targets";
 import ExerciseCatalogMatchList, {
   ExerciseCatalogMatchSummary,
   NewExerciseReviewLink,
@@ -106,10 +111,7 @@ export default function CoachLessonPlanBuilder({
     return memberOptions.filter((m) => !assigned.has(m.id));
   }, [memberOptions, cascadeIds, individualDrafts]);
 
-  useEffect(() => {
-    if (step !== 2 || cascadeIds.length > 0 || memberOptions.length === 0) return;
-    setCascadeIds(memberOptions.map((m) => m.id));
-  }, [step, cascadeIds.length, memberOptions]);
+
 
   async function openDraftEditor(
     data: InterpretResponse,
@@ -576,7 +578,7 @@ export default function CoachLessonPlanBuilder({
             workoutId={draftWorkoutId}
             embedded
             onContinue={() => void continueToAssign()}
-            continueLabel="Assign to class →"
+            continueLabel="Pick who gets it →"
             headerNote={
               interpretation?.catalogPreview ? (
                 <ExerciseCatalogMatchList
@@ -599,9 +601,9 @@ export default function CoachLessonPlanBuilder({
           <div>
             <h2 className="font-semibold text-lg">Assign class</h2>
             <p className="mt-1 text-xs text-[var(--muted)]">
-              Cascade the same workout to a group, or mark students who need their own plan (injuries,
-              different goals). You can fully replace an active live class — members get the new plan
-              on their phone within a few seconds.
+              Only the people you tap get this workout. Everyone else stays on their own program.
+              You can fully replace an active live class — those members get the new plan on their
+              phone within a few seconds.
             </p>
             {isLiveReplace ? (
               <p className="mt-2 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
@@ -632,11 +634,27 @@ export default function CoachLessonPlanBuilder({
           <div className="space-y-3 rounded-lg border border-accent/30 bg-accent/5 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-accent">Cascade — same workout</p>
-              {templateMemberId && (
-                <button type="button" onClick={cascadeFromTemplate} className="btn-ghost text-xs px-2 py-1">
-                  Everyone except custom
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCascadeIds(memberIdsForEmails(memberOptions, JOHN_STEPH_CLASS_EMAILS))}
+                  className="btn-ghost text-xs px-2 py-1"
+                >
+                  John &amp; Steph
                 </button>
-              )}
+                <button
+                  type="button"
+                  onClick={() => setCascadeIds(memberOptions.map((m) => m.id))}
+                  className="btn-ghost text-xs px-2 py-1"
+                >
+                  All students
+                </button>
+                {templateMemberId && (
+                  <button type="button" onClick={cascadeFromTemplate} className="btn-ghost text-xs px-2 py-1">
+                    Everyone except custom
+                  </button>
+                )}
+              </div>
             </div>
             <div className="flex flex-wrap gap-2">
               {memberOptions.map((m) => {
@@ -657,7 +675,7 @@ export default function CoachLessonPlanBuilder({
                     }`}
                   >
                     {on ? "✓ " : ""}
-                    {m.name}
+                    {memberChipLabel(m, memberOptions)}
                   </button>
                 );
               })}
@@ -709,8 +727,8 @@ export default function CoachLessonPlanBuilder({
           </div>
 
           {unassignedMembers.length > 0 && (
-            <p className="text-xs text-amber-300">
-              Not assigned yet: {unassignedMembers.map((m) => m.name).join(", ")}
+            <p className="text-xs text-[var(--muted)]">
+              On their own program: {unassignedMembers.map((m) => m.name).join(", ")}
             </p>
           )}
 

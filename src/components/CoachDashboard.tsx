@@ -33,7 +33,7 @@ function stoplightClass(status: AttendanceStatus): string {
 function stoplightLabel(status: AttendanceStatus): string {
   if (status === "joined") return "In workout";
   if (status === "invited") return "Invited — waiting";
-  return "Not assigned — plan a class";
+  return "On their own program";
 }
 
 function attendanceStatus(
@@ -154,6 +154,12 @@ export default function CoachDashboard({
 
   async function publishSavedToOpenStudents() {
     if (openStudents.length === 0) return;
+    const n = openStudents.length;
+    const ok = window.confirm(
+      `Add ${n} more student${n !== 1 ? "s" : ""} to the saved class?\n\n` +
+        "They currently have their own program. This turns a special (subset) class into a bigger shared class.",
+    );
+    if (!ok) return;
     setPublishingSaved(true);
     setMessage(null);
     try {
@@ -191,8 +197,8 @@ export default function CoachDashboard({
             <p className="text-xs font-semibold uppercase tracking-wider text-accent">Dashboard</p>
             <h1 className="mt-1 text-xl font-bold sm:text-2xl">{dateLabel}</h1>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              {assignedStudents.length} invited · {joinedCount} in workout · {openStudents.length} not
-              assigned
+              {assignedStudents.length} invited · {joinedCount} in workout · {openStudents.length} on
+              their own program
             </p>
             {selectedDaySummary?.hasWorkout ? (
               <p className="mt-1 text-xs text-[var(--success)]">
@@ -240,9 +246,8 @@ export default function CoachDashboard({
             <Link href="/admin/programs" className="text-accent hover:underline">
               program schedule
             </Link>{" "}
-            by default. To put everyone on a shared class for this day (or SMS), use{" "}
-            <strong className="text-[var(--text)]">Plan / assign class</strong> below — not Go to
-            Today until someone is assigned.
+            unless you assign them. A special class (John &amp; Steph only, or any subset) leaves
+            everyone else on their own program.
           </p>
           <div className="flex flex-wrap gap-2">
             <button
@@ -262,7 +267,7 @@ export default function CoachDashboard({
               {showPlanWorkout
                 ? "Cancel planning"
                 : openStudents.length > 0
-                  ? `Plan / assign class (${openStudents.length} need a workout)`
+                  ? `Plan / assign class (${openStudents.length} on their own program)`
                   : "Plan / assign class (override)"}
             </button>
           </div>
@@ -275,7 +280,9 @@ export default function CoachDashboard({
             onClick={() => void publishSavedToOpenStudents()}
             className="btn-ghost min-h-[40px] w-full text-xs"
           >
-            {publishingSaved ? "Publishing…" : `Publish saved class to ${openStudents.length} more`}
+            {publishingSaved
+              ? "Publishing…"
+              : `Add ${openStudents.length} more to this class (they have their own program)`}
           </button>
         )}
 

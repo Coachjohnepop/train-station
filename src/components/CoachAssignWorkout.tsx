@@ -15,7 +15,7 @@ export default function CoachAssignWorkout({
       asInstructor
       programSlug="adult"
       memberOptions={memberOptions}
-      defaultUserIds={memberOptions.map((m) => m.id)}
+      defaultUserIds={[]}
       defaultDate={today}
       defaultTime="06:30"
       collapsible={false}

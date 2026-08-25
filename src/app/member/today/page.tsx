@@ -229,6 +229,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     ? (await listCoachMembersForUi()).map((m) => ({
         id: m.id,
         name: m.name,
+        email: m.email,
       }))
     : [];
 

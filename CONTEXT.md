@@ -122,7 +122,8 @@ Same bar for **new** work: if it is product data, it is a **database** concern f
 | **Day 1** | Adult **W1D1 Upper Body** on *their* start date |
 | **Week 1 flow** | D1 Upper · D2 Lower · D3 Fasted cardio · D4 Upper · D5 Lower · D6 rest/stretch (catalog “DAY 14 REST AND STRETCH DAY”) · D7 Rest day (includes Meal Prep) — **Jeremy’s existing catalog rows**, not new write-ups |
 | **Today / program page / labels** | Personal month only. Do not call `findProgramDayForCalendarDate` on the member path |
-| **Live class** | Only if Jeremy puts them on that day’s `CoachTodaySession.userIds` |
+| **Live class** | Only if Jeremy puts them on that day’s `CoachTodaySession.userIds`. A class can be a **subset** (e.g. Lemon John + Steph only). Unassigned members stay on their personal program. Do **not** auto-select the whole roster on Assign. |
+| **John & Steph class** | Paid couple = `john@lemonvoice.com` (Lemon John) + `sprealty9@gmail.com` (Stephanie). Not `john@bcxvoice.com` (smoke login) and not demo `demo-user-john-steph`. Quick pick: `src/lib/coach-class-targets.ts`. |
 | **New enroll** | Always stamp `programStartDate` (signup day unless they pick one at onboard) |
 | **Join week CTA** | `/signup?plan=explorer&week=1` → **Coach Class Checkout with 7-day trial** (card on file, $0 today, monthly after). Do **not** grant `landing_free_week` unpaid. Webhook must treat trial Checkout `payment_status=no_payment_required` as complete |
 
@@ -414,8 +415,8 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-23 EOD  
-**Status:** John signing off. Nate iPhone onboard bugs shipped to `main`. No monitors running.
+**Date:** 2026-08-25  
+**Status:** Special-class plumbing: Jeremy can assign a workout to a subset (Lemon John + Steph). Unassigned stay on their own program. Assign no longer auto-selects the whole roster.
 
 **This pass (2026-08-23) — Nate Nowotny screen recording, then ship:**
 - Source: iMessage `ScreenRecording_08-23-2026 22-24-53_1.mov` (copied into App Feedback Video/). Review pack: `.jeremy-review-frames/aug-23-2026-tester/`. Email `natenowotny@yahoo.com`.

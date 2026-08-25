@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CoachMemberPicker, { type CoachMemberOption } from "@/components/CoachMemberPicker";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
-import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
 
 type ParsedExercise = {
   name: string;
@@ -14,8 +13,6 @@ type ParsedExercise = {
   notes?: string;
   section?: string;
 };
-
-const DEFAULT_COACH_MEMBERS = [DEFAULT_DEMO_MEMBER_ID];
 
 function addDaysToIso(isoDate: string, days: number): string {
   const d = new Date(`${isoDate}T12:00:00`);
@@ -66,7 +63,7 @@ export default function TodaySessionPanel({
   const [sessionDate, setSessionDate] = useState(effectiveDate);
   const [scheduledTime, setScheduledTime] = useState(defaultTime);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>(
-    defaultUserIds?.length ? defaultUserIds : asInstructor ? DEFAULT_COACH_MEMBERS : [],
+    defaultUserIds?.length ? defaultUserIds : [],
   );
   const [preview, setPreview] = useState<{ title: string; exercises: ParsedExercise[] } | null>(null);
 

@@ -8,6 +8,7 @@ export default async function AdminAssignWorkoutPage() {
   const coachMembers = (await listCoachMembersForUi()).map((m) => ({
     id: m.id,
     name: m.name,
+    email: m.email,
   }));
 
   return (

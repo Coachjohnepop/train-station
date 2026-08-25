@@ -1,9 +1,16 @@
 "use client";
 
-export type CoachMemberOption = { id: string; name: string };
+import {
+  CHAD_KAITE_CLASS_EMAILS,
+  JOHN_STEPH_CLASS_EMAILS,
+  memberChipLabel,
+  memberIdsForEmails,
+} from "@/lib/coach-class-targets";
 
-const COUPLE_ID = "demo-user-john-steph";
-const INDIVIDUALS = ["demo-user-john", "demo-user-stephanie"];
+export type CoachMemberOption = { id: string; name: string; email?: string };
+
+const DEMO_COUPLE_ID = "demo-user-john-steph";
+const DEMO_CHAD_KAITE = ["demo-user-john", "demo-user-stephanie"];
 
 export default function CoachMemberPicker({
   members,
@@ -23,14 +30,22 @@ export default function CoachMemberPicker({
   }
 
   function selectCouple() {
-    if (members.some((m) => m.id === COUPLE_ID)) {
-      onChange([COUPLE_ID]);
+    const ids = memberIdsForEmails(members, JOHN_STEPH_CLASS_EMAILS);
+    if (ids.length > 0) {
+      onChange(ids);
+      return;
     }
+    if (members.some((m) => m.id === DEMO_COUPLE_ID)) onChange([DEMO_COUPLE_ID]);
   }
 
   function selectIndividuals() {
-    const ids = INDIVIDUALS.filter((id) => members.some((m) => m.id === id));
-    onChange(ids.length ? ids : selectedIds);
+    const ids = memberIdsForEmails(members, CHAD_KAITE_CLASS_EMAILS);
+    if (ids.length > 0) {
+      onChange(ids);
+      return;
+    }
+    const demo = DEMO_CHAD_KAITE.filter((id) => members.some((m) => m.id === id));
+    if (demo.length) onChange(demo);
   }
 
   return (
@@ -67,7 +82,7 @@ export default function CoachMemberPicker({
               }`}
             >
               {on ? "✓ " : ""}
-              {m.name}
+              {memberChipLabel(m, members)}
             </button>
           );
         })}
