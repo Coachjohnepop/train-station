@@ -4,10 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
-import type { CoachMemberOption } from "@/components/CoachMemberPicker";
+import { CoachMemberNameEmail, type CoachMemberOption } from "@/components/CoachMemberPicker";
 import {
   JOHN_STEPH_CLASS_EMAILS,
-  memberChipLabel,
   memberIdsForEmails,
 } from "@/lib/coach-class-targets";
 import ExerciseCatalogMatchList, {
@@ -484,7 +483,7 @@ export default function CoachLessonPlanBuilder({
               <option value="">General class plan</option>
               {memberOptions.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.name}
+                  {m.email ? `${m.name} (${m.email})` : m.name}
                 </option>
               ))}
             </select>
@@ -666,7 +665,7 @@ export default function CoachLessonPlanBuilder({
                     type="button"
                     disabled={isCustom}
                     onClick={() => toggleCascade(m.id)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-medium border transition ${
+                    className={`rounded-xl px-3 py-1.5 text-xs font-medium border transition ${
                       isCustom
                         ? "opacity-40 cursor-not-allowed border-[var(--border)]"
                         : on
@@ -674,8 +673,7 @@ export default function CoachLessonPlanBuilder({
                           : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)]"
                     }`}
                   >
-                    {on ? "✓ " : ""}
-                    {memberChipLabel(m, memberOptions)}
+                    <CoachMemberNameEmail name={m.name} email={m.email} selected={on} />
                   </button>
                 );
               })}
@@ -699,13 +697,21 @@ export default function CoachLessonPlanBuilder({
                     draft.useCustom ? "border-amber-500/40 bg-amber-500/5" : "border-[var(--border)]"
                   }`}
                 >
-                  <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                  <label className="flex items-start gap-2 text-sm font-medium cursor-pointer">
                     <input
+                      className="mt-0.5"
                       type="checkbox"
                       checked={draft.useCustom}
                       onChange={() => toggleIndividual(m.id)}
                     />
-                    {m.name} — different workout
+                    <span>
+                      {m.name} — different workout
+                      {m.email ? (
+                        <span className="mt-0.5 block text-[10px] font-normal text-[var(--muted)]">
+                          {m.email}
+                        </span>
+                      ) : null}
+                    </span>
                   </label>
                   {draft.useCustom && (
                     <textarea

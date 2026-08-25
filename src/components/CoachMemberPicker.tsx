@@ -3,11 +3,30 @@
 import {
   CHAD_KAITE_CLASS_EMAILS,
   JOHN_STEPH_CLASS_EMAILS,
-  memberChipLabel,
   memberIdsForEmails,
 } from "@/lib/coach-class-targets";
 
 export type CoachMemberOption = { id: string; name: string; email?: string };
+
+export function CoachMemberNameEmail({
+  name,
+  email,
+  selected = false,
+}: {
+  name: string;
+  email?: string | null;
+  selected?: boolean;
+}) {
+  return (
+    <span className="flex flex-col items-start gap-0.5 text-left leading-tight">
+      <span className="text-xs font-medium">
+        {selected ? "✓ " : ""}
+        {name}
+      </span>
+      {email ? <span className="text-[10px] font-normal opacity-75">{email}</span> : null}
+    </span>
+  );
+}
 
 const DEMO_COUPLE_ID = "demo-user-john-steph";
 const DEMO_CHAD_KAITE = ["demo-user-john", "demo-user-stephanie"];
@@ -75,14 +94,13 @@ export default function CoachMemberPicker({
               key={m.id}
               type="button"
               onClick={() => toggle(m.id)}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition border ${
+              className={`rounded-xl px-3 py-1.5 text-xs font-medium transition border ${
                 on
                   ? "border-accent bg-accent/20 text-accent"
                   : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--text)]"
               }`}
             >
-              {on ? "✓ " : ""}
-              {memberChipLabel(m, members)}
+              <CoachMemberNameEmail name={m.name} email={m.email} selected={on} />
             </button>
           );
         })}
