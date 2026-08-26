@@ -2480,16 +2480,14 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 
   .member-app .member-active-card {
     display: grid;
-    grid-template-columns: minmax(0, 1.05fr) minmax(15.5rem, 1.2fr);
+    grid-template-columns: minmax(0, 0.85fr) minmax(17rem, 1.45fr);
     grid-template-areas:
       "head sets"
-      "note sets"
       "video sets"
-      "scheme sets"
       "next sets"
       "finish sets";
-    column-gap: 0.75rem;
-    row-gap: 0.2rem;
+    column-gap: 0.85rem;
+    row-gap: 0.25rem;
     align-items: start;
     padding: 0.5rem 0.65rem;
   }
@@ -2508,19 +2506,9 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
     overflow: hidden;
   }
 
-  .member-app .member-exercise-note {
-    grid-area: note;
-    margin-top: 0;
-  }
-
-  .member-app .member-exercise-note p {
-    padding: 0.2rem 0.45rem;
-    font-size: 0.75rem;
-    line-height: 1.25;
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+  .member-app .member-exercise-note,
+  .member-app .member-exercise-spec__scheme {
+    display: none;
   }
 
   .member-app .member-exercise-video {
@@ -2549,32 +2537,22 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
     display: contents;
   }
 
-  .member-app .member-exercise-spec__scheme {
-    grid-area: scheme;
-    width: auto;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem 0.65rem;
-    padding: 0.25rem 0.45rem;
-  }
-
-  .member-app .member-exercise-spec__scheme > * + * {
-    margin-top: 0;
-  }
-
-  .member-app .member-exercise-spec__label {
-    display: none;
-  }
-
-  .member-app .member-exercise-spec__value {
-    text-align: left;
-    flex: 0 1 auto;
-    font-size: 0.75rem;
-  }
-
   .member-app .member-exercise-spec__sets {
     grid-area: sets;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.25rem;
+    min-height: 5.5rem;
+  }
+
+  .member-app .member-hit-go {
+    flex: 1 1 auto;
+    min-height: 3.35rem;
+    width: 100%;
+    font-size: 1.15rem;
+    letter-spacing: 0.04em;
   }
 
   .member-app .member-exercise-spec__sets-kicker {

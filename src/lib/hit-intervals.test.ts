@@ -26,7 +26,24 @@ describe("HIT intervals", () => {
     assert.equal(hit.rounds, 10);
     assert.equal(hit.bouts, 20);
     assert.equal(hit.totalSeconds, 400);
+    assert.equal(hit.omitLastRest, false);
     assert.equal(formatHitSummary(hit), "10 × 20s · 6:40");
+  });
+
+  it("fits 5 Min HIIT at 20s intervals into 8 work + 7 rest = 5:00", () => {
+    const hit = resolveHitInterval({
+      setScheme: "standard",
+      name: "5 Min HIIT",
+      reps: "20 sec intervals",
+      setCount: 1,
+    });
+    assert.ok(hit);
+    assert.equal(hit.workSec, 20);
+    assert.equal(hit.restSec, 20);
+    assert.equal(hit.rounds, 8);
+    assert.equal(hit.omitLastRest, true);
+    assert.equal(hit.bouts, 15);
+    assert.equal(hit.totalSeconds, 300);
   });
 
   it("stores equal intervals as 20s and splits as 20/15", () => {

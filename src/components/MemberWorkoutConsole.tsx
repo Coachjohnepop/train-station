@@ -147,6 +147,7 @@ type HitSeries = {
   workSec: number;
   restSec: number;
   stage: "work" | "rest";
+  omitLastRest: boolean;
 };
 
 /** Green hold after a set tap — timed-approach only (not "5 min" bike work). */
@@ -1355,6 +1356,8 @@ export default function MemberWorkoutConsole({
       if (!block) return;
       const hit = resolveHitInterval({
         setScheme: block.setScheme,
+        name: block.name,
+        notes: block.coachNotes || block.description,
         reps: block.reps,
         setCount: block.setCount,
         restSec: block.restSec,
@@ -1369,6 +1372,7 @@ export default function MemberWorkoutConsole({
         workSec: hit.workSec,
         restSec: hit.restSec,
         stage: "work",
+        omitLastRest: hit.omitLastRest,
       };
       maybeStartRestTimer(blockId, 1, {
         phase: "exercise",
@@ -1573,6 +1577,17 @@ export default function MemberWorkoutConsole({
               stateRef.current = { ...stateRef.current, completedSets: updated };
               return updated;
             });
+            if (hit.omitLastRest && hit.round >= hit.rounds) {
+              hitSeriesRef.current = null;
+              setRestTimer(null);
+              setRestSecondsLeft(0);
+              setRestCompleting(false);
+              restActiveRef.current = null;
+              restActiveDirtyRef.current = true;
+              lastAppliedRestEndsAt.current = 0;
+              if (livePushEnabledRef.current) queueLiveSaveRef.current(true);
+              return;
+            }
             hit.stage = "rest";
             maybeStartRestTimerRef.current(blockId, hit.round, {
               phase: "rest",
@@ -1924,6 +1939,11 @@ export default function MemberWorkoutConsole({
           stateRef.current = { ...stateRef.current, completedSets: updated };
           return updated;
         });
+        if (hit.omitLastRest && hit.round >= hit.rounds) {
+          hitSeriesRef.current = null;
+          clearRestTimer();
+          return;
+        }
         hit.stage = "rest";
         maybeStartRestTimer(blockId, hit.round, {
           phase: "rest",
@@ -2716,6 +2736,8 @@ export default function MemberWorkoutConsole({
           const isTimed = isTimedApproach(prescription.approach);
           const hit = resolveHitInterval({
             setScheme: block.setScheme,
+            name: block.name,
+            notes: block.coachNotes || block.description,
             reps: block.reps,
             setCount: block.setCount,
             restSec: block.restSec,
@@ -2894,7 +2916,7 @@ export default function MemberWorkoutConsole({
                           </label>
                           <button
                             type="button"
-                            className="btn-primary px-3 py-2 text-sm font-bold"
+                            className="member-hit-go btn-primary px-3 py-2 text-sm font-bold"
                             onClick={(e) => {
                               e.stopPropagation();
                               startHitSeries(block.id);
