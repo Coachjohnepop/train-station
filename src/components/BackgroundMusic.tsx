@@ -13,14 +13,14 @@ import {
   persistBackgroundMusicPlayed,
   registerBackgroundMusicMediaDucking,
 } from "@/lib/background-music-control";
+import { allowThemeSong } from "@/lib/theme-song";
 
 /**
- * Site-wide background music + pointing-finger guide.
+ * Guest-only Theme Song + pointing-finger mute guide.
  *
- * Autoplay / “tap anywhere” Theme Song only on public marketing + join funnel
- * (landing, onboarding, membership shopping). After a registered member logs in,
- * no autoplay — corner speaker can still start music on demand.
- * One play per tab. Mute sticks for the rest of the session (including reloads).
+ * Plays on landing / explore / join / login / signup. The corner speaker is the
+ * mute for that song. Once a login exists, Theme Song is not part of the app —
+ * no speaker on workout, member, or admin.
  */
 
 const SRC = "/background-music.mp3";
@@ -34,43 +34,8 @@ const MAX_GESTURE_UNLOCKS = 1;
 // that would burn both gesture unlocks on a single tap).
 const ACTIVATION_EVENTS: (keyof WindowEventMap)[] = ["pointerdown", "keydown"];
 
-/** No theme song on any coach/platform admin surface (including /admin/day). */
 function isAdminRoute(pathname: string): boolean {
   return pathname === "/admin" || pathname.startsWith("/admin/");
-}
-
-/**
- * Routes where Theme Song may autoplay / unlock on any tap.
- * Authenticated member home and /member/* app (except onboard/checkout) are excluded
- * via the signedIn gate in allowThemeSongAutoPlay.
- */
-function isThemeSongFunnelRoute(pathname: string): boolean {
-  if (pathname === "/" || pathname === "/landing" || pathname.startsWith("/landing/")) {
-    return true;
-  }
-  if (pathname.startsWith("/join")) return true;
-  if (pathname.startsWith("/signup")) return true;
-  if (pathname.startsWith("/login")) return true;
-  if (pathname.startsWith("/pricing")) return true;
-  if (pathname.startsWith("/coming-soon")) return true;
-  // Checkout can still play Theme Song. Onboard does not — speaker is hidden
-  // there so autoplay would have no mute, and it fights Jeremy's welcome clip.
-  if (pathname.startsWith("/member/checkout")) return true;
-  if (pathname.startsWith("/member/pending")) return true;
-  return false;
-}
-
-/**
- * True → gesture unlock + bootstrap play allowed.
- * False → quiet unless user taps the speaker (registered member app, admin, etc.).
- */
-function allowThemeSongAutoPlay(pathname: string, signedIn: boolean): boolean {
-  if (isAdminRoute(pathname)) return false;
-  if (!isThemeSongFunnelRoute(pathname)) return false;
-  // Logged-in member on home welcome (/) — no autoplay after auth
-  if (signedIn && (pathname === "/" || pathname === "/landing")) return false;
-  // Logged-in on join/checkout still OK (shopping). Onboard is not a funnel route.
-  return true;
 }
 
 function sleep(ms: number) {
@@ -84,7 +49,7 @@ export default function BackgroundMusic() {
   const overlayPauseRef = useRef(false);
   /** Keep handlers (gestures / visibility) from restarting music on admin. */
   const adminRouteRef = useRef(onAdmin);
-  /** When false: no tap-anywhere autoplay; speaker still works. */
+  /** When false: no Theme Song (logged-in app, admin, non-guest paths). */
   const autoPlayAllowedRef = useRef(false);
   const signedInRef = useRef(false);
   const hintTimerRef = useRef<number | null>(null);
@@ -101,7 +66,7 @@ export default function BackgroundMusic() {
   const [signedIn, setSignedIn] = useState(false);
   const [authReady, setAuthReady] = useState(false);
 
-  const autoPlayAllowed = allowThemeSongAutoPlay(pathname, signedIn);
+  const autoPlayAllowed = allowThemeSong(pathname, signedIn);
 
   useEffect(() => {
     adminRouteRef.current = onAdmin;
@@ -224,12 +189,8 @@ export default function BackgroundMusic() {
       audio: HTMLAudioElement,
       opts?: { fromSpeakerMute?: boolean; fromSpeakerButton?: boolean },
     ) => {
-      if (adminRouteRef.current) {
+      if (adminRouteRef.current || !autoPlayAllowedRef.current) {
         stopAdminMusic(audio);
-        return false;
-      }
-      // Registered member app: only the corner speaker may start music
-      if (!autoPlayAllowedRef.current && !opts?.fromSpeakerButton) {
         return false;
       }
       // Mute is sticky for the tab — speaker included
@@ -478,9 +439,7 @@ export default function BackgroundMusic() {
     autoPlayAllowed,
   ]);
 
-  // First two real gestures on funnel pages start Theme Song.
-  // After login / member app: no tap-anywhere unlock — speaker only.
-  // After speaker mute: never un-mute on a random page tap (speaker only).
+  // Guest funnel: one “tap anywhere” starts Theme Song. After login: nothing.
   useEffect(() => {
     const opts: AddEventListenerOptions = { capture: true, passive: true };
     const onActivation = (e: Event) => {
@@ -538,7 +497,6 @@ export default function BackgroundMusic() {
       }
       // Don't auto-resume after video duck if user just muted via speaker
       if (speakerMutedRef.current) return;
-      // Don't resume into logged-in member app unless they used speaker
       if (!autoPlayAllowedRef.current) return;
       // Don't force theme song back after free-ticket / intro video unless already unlocked
       if (!unlockedRef.current) return;
@@ -600,7 +558,7 @@ export default function BackgroundMusic() {
     e.stopPropagation();
     ignoreNextActivationRef.current = true;
     const audio = audioRef.current;
-    if (!audio || adminRouteRef.current) return;
+    if (!audio || adminRouteRef.current || !autoPlayAllowedRef.current) return;
 
     speakerMutedRef.current = true;
     persistBackgroundMusicMute(true);
@@ -615,10 +573,8 @@ export default function BackgroundMusic() {
   };
 
   const onPublicHome = pathname === "/" && !signedIn;
-  const onLoggedInHome = pathname === "/" && signedIn;
-  // Finger / “tap anywhere” only on funnel autoplay routes (not logged-in member home)
-  const fingerVisible =
-    showHint && !onAdmin && autoPlayAllowed && !onPublicHome && !onLoggedInHome;
+  // Finger only while Theme Song is actually in play for guests (not the public home mute chip).
+  const fingerVisible = showHint && autoPlayAllowed && !onPublicHome;
 
   // Honest icon: only “on” when sound is confirmed live
   const showAsPlaying = !off && soundLive;
@@ -640,8 +596,9 @@ export default function BackgroundMusic() {
         ? "Theme Song — click anywhere to play"
         : "Theme Song — one play";
 
-  // Hide on admin. Stay visible on onboard so large type / Safari chrome can still mute.
-  const showSpeaker = !onAdmin;
+  // Guest explore / create-login only. Workout and every logged-in surface: no speaker.
+  const showSpeaker =
+    autoPlayAllowed && (authReady || (pathname !== "/" && pathname !== "/landing"));
 
   return (
     <>
@@ -680,7 +637,7 @@ export default function BackgroundMusic() {
             aria-label={showAsPlaying ? "Mute background music" : "Play background music"}
             title={showAsPlaying ? "Mute music" : "Play music"}
             className={`bg-music-toggle relative z-10 inline-flex shrink-0 items-center justify-center rounded-2xl border shadow-xl backdrop-blur-md transition-all hover:border-[var(--accent)] hover:bg-[var(--surface-2)] active:scale-[0.985] ${
-              onPublicHome || onLoggedInHome ? "h-10 w-10 opacity-80" : "h-11 w-11"
+              onPublicHome ? "h-10 w-10 opacity-80" : "h-11 w-11"
             } ${
               showAsPlaying
                 ? "border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_18%,var(--bg))] text-[var(--text)]"

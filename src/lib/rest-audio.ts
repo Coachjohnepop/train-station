@@ -13,10 +13,15 @@ import {
 let audioCtx: AudioContext | null = null;
 const bufferCache = new Map<string, AudioBuffer>();
 const decodeInFlight = new Map<string, Promise<AudioBuffer | null>>();
+/** Primed HTMLAudio per src — iOS only unlocks the same element later. */
+const sampleCache = new Map<string, HTMLAudioElement>();
 let sampleRelease: (() => void) | null = null;
 let sampleReleaseToken = 0;
+/** Bumped when rest-end HTMLAudio actually starts so a late unlock pause cannot kill it. */
+let htmlPlayGeneration = 0;
 /** True after a user-gesture unlock succeeded (iOS / Safari autoplay). */
 let audioUnlocked = false;
+let ctxResumeListenersBound = false;
 
 /** Global de-dupe so live coach+member retargets don't stack chirps/horns. */
 let lastStartAt = 0;
@@ -31,6 +36,25 @@ const TICK_GAP_MS = 180;
 const POP_GAP_MS = 70;
 const COMPLETE_GAP_MS = 1800;
 
+function isRunningCtx(ctx: AudioContext | null | undefined): ctx is AudioContext {
+  return Boolean(ctx && ctx.state === "running");
+}
+
+function bindCtxResumeListeners(): void {
+  if (ctxResumeListenersBound || typeof document === "undefined") return;
+  ctxResumeListenersBound = true;
+  const kick = () => {
+    if (audioCtx && audioCtx.state !== "running") {
+      void audioCtx.resume().catch(() => {});
+    }
+  };
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") kick();
+  });
+  window.addEventListener("pageshow", kick);
+  window.addEventListener("focus", kick);
+}
+
 function getCtx(): AudioContext | null {
   if (typeof window === "undefined") return null;
   try {
@@ -40,8 +64,9 @@ function getCtx(): AudioContext | null {
         (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!Ctx) return null;
       audioCtx = new Ctx();
+      bindCtxResumeListeners();
     }
-    if (audioCtx.state === "suspended") {
+    if (audioCtx.state !== "running") {
       void audioCtx.resume().catch(() => {});
     }
     return audioCtx;
@@ -53,7 +78,7 @@ function getCtx(): AudioContext | null {
 async function ensureRunningCtx(): Promise<AudioContext | null> {
   const ctx = getCtx();
   if (!ctx) return null;
-  if (ctx.state === "suspended") {
+  if (ctx.state !== "running") {
     try {
       await ctx.resume();
     } catch {
@@ -61,6 +86,22 @@ async function ensureRunningCtx(): Promise<AudioContext | null> {
     }
   }
   return ctx;
+}
+
+/** Must run in the same turn as a user gesture — a later .then() loses iOS unlock. */
+function primeWebAudioUnlock(ctx: AudioContext): void {
+  try {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    gain.gain.value = 0.0001;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.04);
+    if (ctx.state === "running") audioUnlocked = true;
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -157,7 +198,7 @@ export function playRestStart(): void {
 /** Fallback buzz if the chosen sample fails — 50% quieter than prior gym level. */
 function playRestCompleteFallback(ctxOverride?: AudioContext | null): void {
   const ctx = ctxOverride ?? getCtx();
-  if (!ctx) return;
+  if (!isRunningCtx(ctx)) return;
   try {
     const now = ctx.currentTime;
     const peak = 0.11;
@@ -244,12 +285,77 @@ function decodeSample(src: string): Promise<AudioBuffer | null> {
   return work;
 }
 
+function configureHtmlAudio(audio: HTMLAudioElement): void {
+  audio.preload = "auto";
+  audio.muted = false;
+  try {
+    (audio as HTMLAudioElement & { playsInline?: boolean }).playsInline = true;
+  } catch {
+    /* older WebKit */
+  }
+  audio.setAttribute("playsinline", "true");
+  audio.setAttribute("webkit-playsinline", "true");
+}
+
+function getOrCreateSample(src: string): HTMLAudioElement {
+  let audio = sampleCache.get(src);
+  if (audio) return audio;
+  audio = new Audio(src);
+  configureHtmlAudio(audio);
+  audio.addEventListener("error", () => {
+    if (sampleCache.get(src) === audio) sampleCache.delete(src);
+  });
+  sampleCache.set(src, audio);
+  return audio;
+}
+
+/**
+ * Silent HTMLAudio play during a user gesture. iOS only lets a later timer
+ * call play() on THIS same element.
+ */
+function primeHtmlSample(src: string, volume: number): void {
+  try {
+    const audio = getOrCreateSample(src);
+    configureHtmlAudio(audio);
+    if (!audio.paused && !audio.muted) return;
+    const gen = htmlPlayGeneration;
+    const prevMuted = audio.muted;
+    const prevVol = audio.volume;
+    audio.muted = true;
+    audio.volume = 0;
+    void audio
+      .play()
+      .then(() => {
+        if (gen !== htmlPlayGeneration) return;
+        audio.pause();
+        try {
+          audio.currentTime = 0;
+        } catch {
+          /* ignore */
+        }
+        audio.muted = prevMuted;
+        audio.volume = prevVol > 0 ? prevVol : volume;
+        audioUnlocked = true;
+      })
+      .catch(() => {
+        if (gen !== htmlPlayGeneration) return;
+        audio.muted = prevMuted;
+        audio.volume = prevVol;
+      });
+  } catch {
+    /* ignore */
+  }
+}
+
 function playDecoded(
   ctx: AudioContext,
   buf: AudioBuffer,
   volume: number,
   token: number,
 ): boolean {
+  // BufferSource.start() does not throw on a suspended/interrupted context —
+  // it just plays into silence. Treat that as failure so HTMLAudio can run.
+  if (!isRunningCtx(ctx)) return false;
   try {
     const src = ctx.createBufferSource();
     const gain = ctx.createGain();
@@ -271,29 +377,37 @@ function playDecoded(
 function playHtmlSample(src: string, volume: number, token: number): Promise<boolean> {
   return new Promise((resolve) => {
     try {
-      // Fresh element so a later unlock/preload cannot pause this playback.
-      const audio = new Audio(src);
-      audio.preload = "auto";
+      const audio = getOrCreateSample(src);
+      configureHtmlAudio(audio);
+      htmlPlayGeneration += 1;
       audio.muted = false;
       audio.volume = Math.max(0, Math.min(1, volume));
+      try {
+        audio.currentTime = 0;
+      } catch {
+        /* ignore */
+      }
       let settled = false;
       const done = (ok: boolean) => {
         if (settled) return;
         settled = true;
-        if (!ok) resolve(false);
-        else resolve(true);
+        resolve(ok);
       };
       audio.addEventListener("ended", () => releaseSampleHold(token), { once: true });
       audio.addEventListener("error", () => done(false), { once: true });
       void audio
         .play()
         .then(() => {
+          if (audio.paused || audio.muted) {
+            done(false);
+            return;
+          }
           audioUnlocked = true;
           done(true);
         })
         .catch(() => done(false));
       window.setTimeout(() => {
-        if (!settled) done(!audio.paused);
+        if (!settled) done(!audio.paused && !audio.muted);
       }, 600);
     } catch {
       resolve(false);
@@ -301,21 +415,39 @@ function playHtmlSample(src: string, volume: number, token: number): Promise<boo
   });
 }
 
+function buzzFallback(ctx: AudioContext | null | undefined): void {
+  if (isRunningCtx(ctx)) {
+    playRestCompleteFallback(ctx);
+    return;
+  }
+  playRestCompleteFallback();
+}
+
+function pulseRestVibrate(): void {
+  try {
+    navigator.vibrate?.([220, 80, 220]);
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
  * Call from a user gesture (set check, mute toggle, any touch on workout).
- * Resumes AudioContext and decodes the rest-end sample so a later timer
- * (no gesture) can play through Web Audio.
+ * Sync-resumes Web Audio and silently primes HTMLAudio so a later timer
+ * (no gesture) can play the Cybertruck on iOS / Safari.
  */
 export function unlockRestAudio(
   sound: RestTimerSoundId | string | null | undefined = DEFAULT_REST_TIMER_SOUND,
 ): void {
   if (typeof window === "undefined") return;
   try {
+    const ctx = getCtx();
+    if (ctx) primeWebAudioUnlock(ctx);
     const src = restTimerSoundSrc(sound);
     const alt = restTimerSoundFallbackSrc(sound);
-    void ensureRunningCtx().then((ctx) => {
-      if (ctx) audioUnlocked = true;
-    });
+    const volume = restTimerSoundVolume(sound);
+    primeHtmlSample(src, volume);
+    if (alt && alt !== src) primeHtmlSample(alt, volume);
     void decodeSample(src);
     if (alt && alt !== src) void decodeSample(alt);
   } catch {
@@ -323,11 +455,23 @@ export function unlockRestAudio(
   }
 }
 
-/** Resume the audio context + keep the sample decoded during the last seconds of rest. */
+/**
+ * Timer-safe warm: resume + decode only. Do not HTML-prime here — a muted
+ * play/pause in the last seconds of rest used to cancel the actual horn.
+ */
 export function warmRestAudio(
   sound: RestTimerSoundId | string | null | undefined = DEFAULT_REST_TIMER_SOUND,
 ): void {
-  unlockRestAudio(sound);
+  if (typeof window === "undefined") return;
+  try {
+    void ensureRunningCtx();
+    const src = restTimerSoundSrc(sound);
+    const alt = restTimerSoundFallbackSrc(sound);
+    void decodeSample(src);
+    if (alt && alt !== src) void decodeSample(alt);
+  } catch {
+    /* ignore */
+  }
 }
 
 export function isRestAudioUnlocked(): boolean {
@@ -339,9 +483,9 @@ export function isRestAudioUnlocked(): boolean {
  * Guarded so live retargets / dual clients don't stack chirps/horns.
  * Pass `{ force: true }` for the real countdown-zero path so de-dupe never swallows it.
  *
- * Plays the decoded buffer through AudioContext first (works after a set-tap
- * unlock even when iOS blocks timer-driven HTMLAudio). HTMLAudio is second.
- * Oscillator buzz is last — and it always runs if neither sample actually starts.
+ * Web Audio buffer only if the context is actually running (Zoom / iOS can
+ * leave it interrupted — start() would otherwise "succeed" into silence).
+ * Primed HTMLAudio is second. Oscillator buzz is last.
  */
 export function playRestComplete(
   sound: RestTimerSoundId | string | null | undefined = DEFAULT_REST_TIMER_SOUND,
@@ -367,12 +511,13 @@ export function playRestComplete(
   sampleRelease?.();
   const token = ++sampleReleaseToken;
   sampleRelease = holdBackgroundMusicForMedia();
+  pulseRestVibrate();
 
   void (async () => {
     try {
       const ctx = await ensureRunningCtx();
       const tryBuf = async (src: string | null): Promise<boolean> => {
-        if (!src || !ctx) return false;
+        if (!src || !ctx || !isRunningCtx(ctx)) return false;
         const buf = bufferCache.get(src) ?? (await decodeSample(src));
         return Boolean(buf && playDecoded(ctx, buf, volume, token));
       };
@@ -389,9 +534,9 @@ export function playRestComplete(
       if (fallbackSrc && fallbackSrc !== primarySrc) {
         if (await playHtmlSample(fallbackSrc, volume, token)) return;
       }
-      playRestCompleteFallback(ctx);
+      buzzFallback(ctx);
     } catch {
-      playRestCompleteFallback();
+      buzzFallback(audioCtx);
     }
   })();
 }
@@ -404,6 +549,8 @@ export function preloadRestCompleteSound(
   try {
     const src = restTimerSoundSrc(sound);
     const alt = restTimerSoundFallbackSrc(sound);
+    getOrCreateSample(src);
+    if (alt && alt !== src) getOrCreateSample(alt);
     void decodeSample(src);
     if (alt && alt !== src) void decodeSample(alt);
   } catch {

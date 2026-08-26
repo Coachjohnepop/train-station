@@ -196,7 +196,7 @@ export default function MemberNav({
   }
 
   return (
-    <div ref={wrapRef} className="relative">
+    <div ref={wrapRef} className="member-nav-wrap relative">
       <nav
         className="member-nav mx-auto flex w-full max-w-lg items-stretch gap-1 px-2 pb-2.5 md:max-w-3xl md:px-6 lg:max-w-6xl lg:justify-center lg:px-8 xl:max-w-7xl"
         aria-label="Member dashboard"
@@ -223,13 +223,13 @@ export default function MemberNav({
                   e.preventDefault();
                   goMemberTodayHome(router);
                 }}
-                className={`member-nav-home member-nav-home--ramp relative flex min-h-[3.15rem] flex-[1.05] flex-col items-center justify-center rounded-xl border text-center transition lg:min-w-[3.2rem] lg:max-w-[4.5rem] lg:flex-[0.67] lg:px-2 ${
+                className={`member-nav-home member-nav-home--ramp relative flex min-h-10 flex-[1.05] flex-row items-center justify-center gap-1 rounded-xl border px-1.5 py-1 text-center transition lg:min-h-[2.75rem] lg:min-w-[3.2rem] lg:max-w-[5.5rem] lg:flex-[0.67] lg:px-2 ${
                   active ? "member-nav-home--active nav-tab-ramp-active" : "nav-tab-ramp"
                 } ${locked ? "opacity-80" : ""}`}
               >
                 {homeIcon()}
                 <span className="member-nav-home-label">{item.label}</span>
-                <span className="member-nav-home-sublabel">Home</span>
+                <span className="member-nav-home-sublabel hidden lg:inline">Home</span>
                 {rampHighlight && !active ? (
                   <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[var(--ramp-gold)] ring-2 ring-[var(--surface)]" />
                 ) : null}
@@ -251,7 +251,7 @@ export default function MemberNav({
                     ? "Gear shop — browse & buy equipment"
                     : undefined
               }
-              className={`member-nav-item relative flex min-h-[3.15rem] flex-1 flex-col items-center justify-center rounded-lg px-1 py-2 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:flex-none lg:min-w-[4.75rem] lg:px-5 ${tabClass(
+              className={`member-nav-item relative flex min-h-10 flex-1 flex-col items-center justify-center rounded-lg px-1 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:flex-none lg:min-w-[4.75rem] lg:px-5 ${tabClass(
                 active,
                 false,
               )} ${isScoresTab && scorePulse ? "member-nav-score-pulse" : ""} ${
@@ -282,7 +282,7 @@ export default function MemberNav({
           aria-label={moreOpen ? "Close menu" : "Open menu"}
           title="More"
           onClick={() => setMoreOpen((open) => !open)}
-          className={`member-nav-item relative flex min-h-[3.15rem] flex-[0.9] flex-col items-center justify-center rounded-lg px-1 py-2 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:flex-none lg:min-w-[4.25rem] lg:px-4 ${tabClass(
+          className={`member-nav-item relative flex min-h-10 flex-[0.9] flex-col items-center justify-center rounded-lg px-1 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:flex-none lg:min-w-[4.25rem] lg:px-4 ${tabClass(
             moreActive || moreOpen,
             false,
           )}`}

@@ -1947,10 +1947,10 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 }
 
 .member-nav-home {
-  min-height: 3.15rem;
+  min-height: 2.5rem;
   min-width: 0;
-  padding: 0.4rem 0.15rem 0.35rem;
-  gap: 0.12rem;
+  padding: 0.25rem 0.35rem;
+  gap: 0.3rem;
   box-shadow: 0 4px 18px color-mix(in srgb, var(--accent-deep) 22%, transparent);
 }
 
@@ -2017,7 +2017,7 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 }
 
 .member-nav-item {
-  min-height: 3.15rem;
+  min-height: 2.5rem;
 }
 
 .member-nav-lock-icon {
@@ -2099,6 +2099,238 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 
   .member-nav-home-label {
     font-size: 0.8125rem;
+  }
+}
+
+.logout-btn-icon--optional {
+  display: none;
+}
+
+/*
+  Member app has two mobile views:
+  - Portrait (default markup): stacked greeting, then Today/Scores tabs
+  - Landscape: one-row identity | tabs | actions so Zoom + workout keep the height
+*/
+@media (orientation: landscape) and (hover: none) and (pointer: coarse) and (max-height: 900px),
+  (orientation: landscape) and (max-height: 520px) {
+  .member-app .member-sticky-chrome .app-shell-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "identity nav actions";
+    align-items: center;
+    column-gap: 0.35rem;
+    padding-top: max(0.12rem, env(safe-area-inset-top));
+    padding-bottom: 0.12rem;
+    padding-left: max(0.3rem, env(safe-area-inset-left));
+    padding-right: max(0.3rem, env(safe-area-inset-right));
+  }
+
+  .member-app .member-sticky-chrome .app-shell-header:not(:has(.member-nav-wrap)) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "identity actions";
+  }
+
+  .member-app .member-chrome-bar {
+    display: contents;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    gap: 0;
+  }
+
+  .member-app .member-chrome-identity {
+    grid-area: identity;
+    max-width: 9.5rem;
+    gap: 0.35rem;
+  }
+
+  .member-app .member-chrome-brand {
+    display: none;
+  }
+
+  .member-app .member-chrome-email,
+  .member-app .member-chrome-tier {
+    display: none;
+  }
+
+  .member-app .member-chrome-name {
+    font-size: 0.72rem;
+    line-height: 1.1;
+  }
+
+  .member-app .member-chrome-avatar {
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  .member-app .member-chrome-avatar > span {
+    font-size: 11px !important;
+  }
+
+  .member-app .member-nav-wrap {
+    grid-area: nav;
+    min-width: 0;
+  }
+
+  .member-app .member-chrome-actions {
+    grid-area: actions;
+    gap: 0.2rem;
+  }
+
+  .member-app .member-chrome-actions .theme-mode-toggle {
+    padding: 0.25rem 0.4rem;
+  }
+
+  .member-app .member-chrome-actions .theme-mode-toggle__label {
+    display: none;
+  }
+
+  .member-app .member-chrome-logout {
+    padding: 0.3rem;
+  }
+
+  .member-app .member-chrome-logout .logout-btn-icon--optional {
+    display: block;
+  }
+
+  .member-app .member-chrome-logout .logout-btn-label {
+    display: none;
+  }
+
+  .member-app .member-nav {
+    max-width: none !important;
+    width: 100%;
+    padding: 0.1rem 0.1rem !important;
+    gap: 0.15rem;
+    justify-content: stretch;
+  }
+
+  .member-app .member-nav-home,
+  .member-app .member-nav-item {
+    flex-direction: row !important;
+    min-height: 1.85rem !important;
+    padding: 0.15rem 0.25rem !important;
+    gap: 0.2rem !important;
+    font-size: 0.7rem;
+    line-height: 1;
+  }
+
+  .member-app .member-nav-home-icon {
+    width: 0.85rem;
+    height: 0.85rem;
+  }
+
+  .member-app .member-nav-home-label {
+    font-size: 0.7rem;
+  }
+
+  .member-app .member-nav-home-sublabel {
+    display: none !important;
+  }
+
+  .member-app .member-nav-more-icon {
+    font-size: 0.85rem;
+  }
+
+  .member-app #member-nav-more > span:last-child {
+    display: none;
+  }
+
+  .member-app .member-nav-score-badge {
+    top: -0.15rem;
+    right: 0.05rem;
+    font-size: 0.55rem;
+    min-width: 1rem;
+    padding: 0 0.2rem;
+  }
+
+  .member-app .member-nav-more-panel {
+    top: calc(100% + 0.2rem);
+  }
+
+  .member-app .member-live-strip .mx-auto {
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+  }
+
+  .member-app .member-live-strip p[class*="uppercase"] {
+    display: none;
+  }
+
+  .member-app .member-live-strip .btn-primary,
+  .member-app .member-live-strip .btn-ghost {
+    min-height: 1.85rem;
+    padding: 0.2rem 0.65rem;
+    font-size: 0.7rem;
+  }
+
+  .member-app .member-aux-hints {
+    display: none;
+  }
+
+  .member-app > main {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+  }
+
+  .member-app #member-today-top {
+    --tw-space-y-reverse: 0;
+  }
+
+  .member-app #member-today-top.space-y-4 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.5rem;
+  }
+
+  .member-app .member-today-heading h1 {
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+
+  .member-app .member-today-heading p {
+    display: none;
+  }
+
+  .member-app .day-wheel-viewport {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .member-app .day-wheel-spin {
+    min-height: 2.35rem;
+    width: 1.5rem;
+  }
+
+  .member-app .day-wheel-strip > button {
+    padding-top: 0.2rem !important;
+    padding-bottom: 0.2rem !important;
+  }
+
+  .workout-rest-player-overlay {
+    padding: 0.35rem max(0.35rem, env(safe-area-inset-right))
+      0.35rem max(0.35rem, env(safe-area-inset-left));
+  }
+
+  .workout-rest-player-stage {
+    width: min(100%, 34rem);
+  }
+
+  .workout-rest-player {
+    padding: 0.55rem 0.8rem 0.65rem;
+  }
+
+  .workout-rest-player__time {
+    font-size: 2rem;
+    line-height: 1;
+    margin: 0.15rem 0;
+  }
+
+  .workout-rest-player__hint {
+    display: none;
+  }
+
+  .workout-rest-player__exercise {
+    margin: 0;
+    font-size: 0.75rem;
   }
 }
 

@@ -59,7 +59,7 @@ export default function MemberShell({
   const showContinueSetup = newbieMode && !setupMode && !paymentGateActive;
 
   return (
-    <div className="app-shell-bg flex min-h-screen flex-col">
+    <div className="app-shell-bg member-app flex min-h-screen flex-col">
       <MemberGateCookieSync />
       <SiteSeenLatch established={!newbieMode} />
       <DisablePullToRefresh />
@@ -72,52 +72,54 @@ export default function MemberShell({
           data-member-chrome hides the root fixed theme toggle so it doesn’t sit on Business Class / Sign out. */}
       <div className="member-sticky-chrome sticky top-0 z-50" data-member-chrome="">
         <header className="app-shell-header">
-          <div className="mx-auto flex w-full max-w-lg md:max-w-3xl lg:max-w-6xl xl:max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-6 lg:px-8">
-            <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
-              <MemberHeaderHomeLink
-                setupHref={
-                  paymentGateActive
-                    ? memberCheckoutPath(checkoutPlan)
-                    : hideMemberNav
-                      ? "/member/onboard"
-                      : undefined
-                }
-              />
+          <div className="member-chrome-bar mx-auto flex w-full max-w-lg items-center justify-between gap-3 px-4 py-3 md:max-w-3xl md:px-6 lg:max-w-6xl lg:px-8 xl:max-w-7xl">
+            <div className="member-chrome-identity flex min-w-0 items-center gap-2.5 sm:gap-3">
+              <div className="member-chrome-brand">
+                <MemberHeaderHomeLink
+                  setupHref={
+                    paymentGateActive
+                      ? memberCheckoutPath(checkoutPlan)
+                      : hideMemberNav
+                        ? "/member/onboard"
+                        : undefined
+                  }
+                />
+              </div>
               {setupMode ? (
-                <div className="flex min-w-0 items-center gap-2">
-                  <UserBicepAvatar size={34} title="Account" />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">Hi, {memberName}</p>
+                <div className="member-chrome-user flex min-w-0 items-center gap-2">
+                  <UserBicepAvatar size={34} title="Account" className="member-chrome-avatar" />
+                  <div className="member-chrome-hello min-w-0">
+                    <p className="member-chrome-name truncate text-sm font-medium">Hi, {memberName}</p>
                     {memberEmail && (
-                      <p className="truncate text-xs text-[var(--muted)]">{memberEmail}</p>
+                      <p className="member-chrome-email truncate text-xs text-[var(--muted)]">{memberEmail}</p>
                     )}
                   </div>
                 </div>
               ) : (
                 <Link
                   href="/member/account"
-                  className="flex min-w-0 items-center gap-2 rounded-lg transition hover:opacity-90"
+                  className="member-chrome-user flex min-w-0 items-center gap-2 rounded-lg transition hover:opacity-90"
                   title="Account & settings"
                 >
-                  <UserBicepAvatar size={34} title="Account" />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">Hi, {memberName}</p>
+                  <UserBicepAvatar size={34} title="Account" className="member-chrome-avatar" />
+                  <div className="member-chrome-hello min-w-0">
+                    <p className="member-chrome-name truncate text-sm font-medium">Hi, {memberName}</p>
                     {memberEmail && (
-                      <p className="truncate text-xs text-[var(--muted)]">{memberEmail}</p>
+                      <p className="member-chrome-email truncate text-xs text-[var(--muted)]">{memberEmail}</p>
                     )}
                   </div>
                 </Link>
               )}
             </div>
-            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
-              <span className="badge-accent inline-block max-w-[7.5rem] truncate rounded-full px-2 py-0.5 text-xs font-semibold leading-tight tracking-wide sm:max-w-none">
+            <div className="member-chrome-actions flex shrink-0 items-center gap-1.5 sm:gap-2.5">
+              <span className="member-chrome-tier badge-accent inline-block max-w-[7.5rem] truncate rounded-full px-2 py-0.5 text-xs font-semibold leading-tight tracking-wide sm:max-w-none">
                 {tierLabel}
               </span>
               {/* Reuse .global-theme-toggle so label stays icon-only on narrow screens */}
               <div className="global-theme-toggle">
                 <ThemeModeToggle />
               </div>
-              <LogoutButton className="text-sm" />
+              <LogoutButton className="member-chrome-logout text-sm" />
             </div>
           </div>
           {hideMemberNav ? null : (
@@ -154,22 +156,24 @@ export default function MemberShell({
 
         {/* Live Class strip is noise during first-time onboard on a phone */}
         {!setupMode && !paymentGateActive ? (
-          <Suspense fallback={null}>
-            <MemberLiveZoomStrip
-              embedded
-              membershipPlan={
-                membershipTier === "explorer"
-                  ? "explorer"
-                  : membershipTier === "member"
-                    ? "member"
-                    : membershipTier === "business"
-                      ? "business"
-                      : membershipTier === "pro"
-                        ? "pro"
-                        : "explorer"
-              }
-            />
-          </Suspense>
+          <div className="member-live-strip">
+            <Suspense fallback={null}>
+              <MemberLiveZoomStrip
+                embedded
+                membershipPlan={
+                  membershipTier === "explorer"
+                    ? "explorer"
+                    : membershipTier === "member"
+                      ? "member"
+                      : membershipTier === "business"
+                        ? "business"
+                        : membershipTier === "pro"
+                          ? "pro"
+                          : "explorer"
+                }
+              />
+            </Suspense>
+          </div>
         ) : null}
       </div>
 
@@ -179,7 +183,7 @@ export default function MemberShell({
         }`}
       >
         {!setupMode ? (
-          <div className="mb-3 space-y-2 px-4 md:px-0">
+          <div className="member-aux-hints mb-3 space-y-2 px-4 md:px-0">
             <PwaInstallHint compact />
             <PushAlertEnable compact />
           </div>
