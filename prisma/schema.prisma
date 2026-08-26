@@ -236,10 +236,13 @@ model WorkoutLog {
   performedAt DateTime @default(now())
   completed   Boolean  @default(true)
   progress    Int      @default(100)  // % of exercises marked finished when logged (0-100)
+  /// Program calendar day this session made up (YYYY-MM-DD). Null = logged as that day's own work.
+  catchUpForDate String?
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   workout     Workout  @relation(fields: [workoutId], references: [id])
 
   @@index([userId, performedAt])
+  @@index([userId, catchUpForDate])
 }
 
 model Program {

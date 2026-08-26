@@ -11,7 +11,7 @@ export function daysFromToday(iso: string, todayIso: string): number {
 
 /**
  * Member schedule visibility:
- * - Today: full sets (when workout unlocked)
+ * - Today and the last 5 days (catch-up): full sets
  * - +1 / +2 days: exercise names only
  * - +3 and beyond: theme label only (e.g. "Leg day")
  */
@@ -22,7 +22,7 @@ export function dayVisibilityTier(iso: string, todayIso: string): DayVisibilityT
 
 /** Visibility from enrollment-day offset (0 = member program today). */
 export function dayVisibilityTierByOffset(offset: number): DayVisibilityTier {
-  if (offset <= 0) return offset === 0 ? "full" : "names";
+  if (offset <= 0) return "full";
   if (offset <= 2) return "names";
   return "label";
 }

@@ -7,8 +7,8 @@ const MAX_CHIP_W = 76;
 const MIN_CHIP_W = 48;
 const GAP_DESKTOP = 8;
 const GAP_MOBILE = 4;
-/** Default member Today: yesterday · today · tomorrow. Preview members can pass more. */
-const DEFAULT_VISIBLE_DAYS = 3;
+/** Default member Today: last 5 days · today · tomorrow (swipe if more). */
+const DEFAULT_VISIBLE_DAYS = 5;
 
 type WheelMetrics = {
   chipW: number;

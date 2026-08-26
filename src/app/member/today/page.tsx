@@ -8,7 +8,16 @@ import TodaySessionPanel from "@/components/TodaySessionPanel";
 import TodayPageLiveRefresh from "@/components/TodayPageLiveRefresh";
 import MemberWorkoutConsole from "@/components/MemberWorkoutConsole";
 import { getMemberDashboard } from "@/lib/member-context";
-import { loadMemberLoggedCalendarDates, loadMemberLoggedWorkoutIds } from "@/lib/member-schedule";
+import {
+  loadMemberCatchUpDates,
+  loadMemberLoggedCalendarDates,
+  loadMemberLoggedWorkoutIds,
+} from "@/lib/member-schedule";
+import {
+  MEMBER_CATCH_UP_DAYS,
+  MEMBER_UPCOMING_PREVIEW_DAYS,
+  canStartSessionDate,
+} from "@/lib/member-workout-late";
 import { markDaysCompleted } from "@/lib/member-day-completion";
 import { attachFinisherNames } from "@/lib/day-finishers-format";
 import { listFinishersByCalendarDates } from "@/lib/day-finishers";
@@ -117,11 +126,12 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const firstTimeOnSite = isFirstTimeOnSite(
     (await cookies()).get(SITE_SEEN_COOKIE)?.value,
   );
-  const [upcoming, loggedSet, loggedDates, primaryProgram, profile, coachSettings, enrollments, memberContent] =
+  const [upcoming, loggedSet, loggedDates, catchUpDates, primaryProgram, profile, coachSettings, enrollments, memberContent] =
     await Promise.all([
     loadMemberUpcomingSessions(uid),
     loadMemberLoggedWorkoutIds(uid),
     loadMemberLoggedCalendarDates(uid),
+    loadMemberCatchUpDates(uid),
     resolvePrimaryScheduleProgram(uid),
     getMemberProfile(uid),
     getCoachSettings(),
@@ -133,12 +143,16 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   );
 
   const schedulePreview = schedulePreviewForEmail(profile?.email);
-  // Default: yesterday · today · tomorrow. Ali has a TEMP 14-day preview.
+  // Default: last 5 days · today · tomorrow. Ali has a TEMP 14-day preview.
+  const daysBefore = Math.max(MEMBER_CATCH_UP_DAYS, schedulePreview?.daysBefore ?? MEMBER_CATCH_UP_DAYS);
+  const upcomingDays = schedulePreview?.upcomingDays ?? MEMBER_UPCOMING_PREVIEW_DAYS;
   const dayWindow = primaryProgram
     ? await buildMemberDayWindow(uid, primaryProgram.slug, loggedSet, {
-        rollingDays: schedulePreview ? previewRollingDays(schedulePreview) : 3,
-        daysBefore: schedulePreview?.daysBefore ?? 1,
-        upcomingDays: schedulePreview?.upcomingDays ?? 1,
+        rollingDays: schedulePreview
+          ? Math.max(previewRollingDays({ ...schedulePreview, daysBefore }), daysBefore + 1 + upcomingDays)
+          : daysBefore + 1 + upcomingDays,
+        daysBefore,
+        upcomingDays,
         futureVisibility: schedulePreview?.futureVisibility,
         loggedCalendarDates: loggedDates,
       })
@@ -173,10 +187,14 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   }
   const intakeRampDays =
     !intakeComplete && warmupWorkout && !(dayWindow?.days.length)
-      ? buildIntakeRampPlaceholderDays(calendarToday, 3, 1)
+      ? buildIntakeRampPlaceholderDays(calendarToday, daysBefore + 1 + upcomingDays, daysBefore)
       : null;
-  // Always expose real yesterday · today · tomorrow chips — even with no workout assigned.
-  const calendarSwipeDays = buildCalendarSwipeDays(calendarToday, loggedDates);
+  const calendarSwipeDays = buildCalendarSwipeDays(
+    calendarToday,
+    loggedDates,
+    daysBefore,
+    upcomingDays,
+  );
   const sourceDays = useCalendarStrip
     ? calendarSwipeDays
     : dayWindow?.days.length
@@ -189,6 +207,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     loggedSet,
     loggedDates,
     calendarToday,
+    catchUpDates,
   );
   const yesterdayIso = addDaysIso(calendarToday, -1);
   const finisherDates = [
@@ -211,7 +230,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     };
   });
   const memberRollup = memberDays.length ? rollupForMemberDays(memberDays) : null;
-  // Clamp deep-links outside the 3-day window back to program today.
+  // Clamp deep-links outside the catch-up window back to program today.
   const allowedIsos = new Set(memberDays.map((d) => d.iso));
   const viewDate = allowedIsos.has(rawViewDate) ? rawViewDate : programTodayKey;
 
@@ -272,7 +291,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
           ? `Program schedule — ${scheduleLabel}`
           : schedulePreview
             ? `Preview · ${schedulePreview.upcomingDays} days ahead (temp content review)`
-            : "Swipe yesterday · today · tomorrow — only 3 days.";
+            : `Swipe the last ${MEMBER_CATCH_UP_DAYS} days · today · tomorrow. Catch-up logs as today.`;
 
   const selectedSummary = memberDays.find((d) => d.iso === viewDate) ?? null;
   if (!workout && selectedSummary?.workoutId) {
@@ -285,14 +304,16 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const hasWorkout = !!workout;
   const stretchPreview = memberDays.length ? nextDayStretchPreview(memberDays, programTodayKey) : [];
   const tomorrowDay = memberDays.length ? nextMemberDay(memberDays, programTodayKey) : null;
-  // Today and yesterday may run the full workout; tomorrow is preview only.
-  const catchUpIso = /^\d{4}-\d{2}-\d{2}$/.test(programTodayKey)
-    ? addDaysIso(programTodayKey, -1)
-    : yesterdayIso;
-  const canStartThisDate = viewDate === programTodayKey || viewDate === catchUpIso;
+  const selectedCalDate =
+    selectedSummary?.calendarDate && /^\d{4}-\d{2}-\d{2}$/.test(selectedSummary.calendarDate)
+      ? selectedSummary.calendarDate
+      : /^\d{4}-\d{2}-\d{2}$/.test(viewDate)
+        ? viewDate
+        : calendarToday;
+  const canStartThisDate = canStartSessionDate(selectedCalDate, calendarToday);
   const canPreviewThisDate = Boolean(schedulePreview && workout && allowedIsos.has(viewDate));
   const memberWorkout = canStartThisDate || canPreviewThisDate ? workout : null;
-  const isLateCatchUp = viewDate === yesterdayIso;
+  const isLateCatchUp = canStartThisDate && selectedCalDate < calendarToday;
   const clampedViewDate = viewDate;
 
   const enrollSlug = primaryProgram?.slug ?? "adult";
@@ -398,7 +419,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
                 consoleIsMaintain
                   ? "Quick maintain (5 uses / month) — log it when you finish."
                   : isLateCatchUp
-                    ? "Catch-up day — finish yesterday’s workout (−20% score)."
+                    ? "Catch-up — this workout logs as today."
                     : subtitle
               }
               dayParts={
@@ -420,6 +441,9 @@ export default async function MemberTodayPage({ searchParams }: Props) {
                 consoleIsMaintain ? null : asInstructor ? null : contentAccess
               }
               isLateCatchUp={consoleIsMaintain ? false : isLateCatchUp}
+              logAsCalendarDate={
+                consoleIsMaintain ? undefined : isLateCatchUp ? calendarToday : selectedCalDate
+              }
               maintainWorkouts={maintainList}
               activeMaintainId={maintainId}
               maintainAccess={maintainAccess}

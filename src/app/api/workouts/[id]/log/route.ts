@@ -7,6 +7,7 @@ import { awardGamificationPoints } from "@/lib/member-gamification-store";
 import { getGamificationPointsConfig } from "@/lib/gamification-config";
 import {
   canLogSessionDate,
+  isCatchUpSessionDate,
   lateAdjustedPoints,
   lateScoreLabel,
 } from "@/lib/member-workout-late";
@@ -110,12 +111,14 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   try {
+    const catchUpForDate = isCatchUpSessionDate(sessionDate, todayIso) ? sessionDate : null;
     const result = await createWorkoutLogAndPerformances({
       workoutId,
       userId: uid,
       exercises: parsed.data.exercises as LogExerciseInput[],
       programSlug: parsed.data.programSlug,
       progress: parsed.data.progress,
+      catchUpForDate,
     });
 
     let gamification: Awaited<ReturnType<typeof awardGamificationPoints>> | null = null;

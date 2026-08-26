@@ -34,7 +34,7 @@ export async function getLoggedCalendarDatesDb(userId: string): Promise<Set<stri
   const storageUserId = await resolveStorageUserId(userId);
   const dates = new Set<string>();
   const logs = await prisma.workoutLog.findMany({
-    where: { userId: storageUserId },
+    where: { userId: storageUserId, catchUpForDate: null },
     select: { performedAt: true },
   });
   for (const log of logs) {
@@ -53,6 +53,20 @@ export async function getLoggedCalendarDatesDb(userId: string): Promise<Set<stri
         ? Object.keys(session.completedSets as object).length
         : 0;
     if (finished > 0 || sets > 0) dates.add(session.sessionDate);
+  }
+  return dates;
+}
+
+/** Program days a catch-up log credited (logged today, marked that source day done). */
+export async function getCatchUpCalendarDatesDb(userId: string): Promise<Set<string>> {
+  const storageUserId = await resolveStorageUserId(userId);
+  const dates = new Set<string>();
+  const logs = await prisma.workoutLog.findMany({
+    where: { userId: storageUserId, catchUpForDate: { not: null } },
+    select: { catchUpForDate: true },
+  });
+  for (const log of logs) {
+    if (log.catchUpForDate) dates.add(log.catchUpForDate);
   }
   return dates;
 }

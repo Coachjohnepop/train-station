@@ -1,10 +1,14 @@
 import { addDaysIso } from "@/lib/workout-day-visibility";
 
-/** Late catch-up: 20% score hit on the whole workout_logged award. */
+/** Late catch-up: 20% score hit — unused while catch-up logs as today. */
 export const LATE_WORKOUT_SCORE_MULTIPLIER = 0.8;
 export const LATE_WORKOUT_SCORE_HIT_PERCENT = 20;
 
-/** Today ± 1 day only (3 total). */
+/** Program days a member may open and complete from Today. */
+export const MEMBER_CATCH_UP_DAYS = 5;
+export const MEMBER_UPCOMING_PREVIEW_DAYS = 1;
+
+/** Today ± 1 day (legacy 3-chip window). */
 export function memberTodaySwipeWindow(todayIso: string): {
   yesterday: string;
   today: string;
@@ -17,8 +21,16 @@ export function memberTodaySwipeWindow(todayIso: string): {
   };
 }
 
-export function isLateSessionDate(sessionDate: string, todayIso: string): boolean {
+export function memberCatchUpStartIso(todayIso: string): string {
+  return addDaysIso(todayIso, -MEMBER_CATCH_UP_DAYS);
+}
+
+export function isCatchUpSessionDate(sessionDate: string, todayIso: string): boolean {
   return Boolean(sessionDate && todayIso && sessionDate < todayIso);
+}
+
+export function isLateSessionDate(sessionDate: string, todayIso: string): boolean {
+  return isCatchUpSessionDate(sessionDate, todayIso);
 }
 
 export function isFutureSessionDate(sessionDate: string, todayIso: string): boolean {
@@ -26,8 +38,9 @@ export function isFutureSessionDate(sessionDate: string, todayIso: string): bool
 }
 
 /**
- * From Today: may log today or yesterday only.
+ * From Today: last 5 calendar days + today may be worked.
  * Tomorrow is preview — cannot log until that calendar day.
+ * Catch-up still stamps the log as today (the day they actually trained).
  */
 export function canLogSessionDate(
   sessionDate: string,
@@ -39,11 +52,11 @@ export function canLogSessionDate(
   if (isFutureSessionDate(sessionDate, todayIso)) {
     return { ok: false, reason: "That day isn’t open yet — come back tomorrow." };
   }
-  const { yesterday } = memberTodaySwipeWindow(todayIso);
-  if (sessionDate < yesterday) {
+  const start = memberCatchUpStartIso(todayIso);
+  if (sessionDate < start) {
     return {
       ok: false,
-      reason: "Only yesterday and today can be worked from Today (3-day window).",
+      reason: `Only the last ${MEMBER_CATCH_UP_DAYS} days plus today can be worked from Today.`,
     };
   }
   return { ok: true };
@@ -56,18 +69,12 @@ export function canStartSessionDate(sessionDate: string, todayIso: string): bool
 
 export function lateAdjustedPoints(
   basePoints: number,
-  sessionDate: string,
-  todayIso: string,
+  _sessionDate: string,
+  _todayIso: string,
 ): { points: number; late: boolean; hitPercent: number } {
+  // Catch-up logs as today — full points. The old 20% late hit is parked.
   const base = Math.max(0, Math.round(basePoints));
-  if (!isLateSessionDate(sessionDate, todayIso)) {
-    return { points: base, late: false, hitPercent: 0 };
-  }
-  return {
-    points: Math.max(0, Math.round(base * LATE_WORKOUT_SCORE_MULTIPLIER)),
-    late: true,
-    hitPercent: LATE_WORKOUT_SCORE_HIT_PERCENT,
-  };
+  return { points: base, late: false, hitPercent: 0 };
 }
 
 export function lateScoreLabel(hitPercent = LATE_WORKOUT_SCORE_HIT_PERCENT): string {

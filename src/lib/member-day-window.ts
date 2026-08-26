@@ -110,27 +110,30 @@ export async function resolvePrimaryScheduleProgram(userId: string) {
 }
 
 /**
- * Always-available yesterday · today · tomorrow calendar chips.
+ * Always-available catch-up · today · tomorrow calendar chips.
  * Used when no program schedule is linked so swipe still works with empty workout days.
  */
 export function buildCalendarSwipeDays(
   todayIso: string,
   loggedCalendarDates: Set<string> = new Set(),
+  daysBefore = 5,
+  daysAfter = 1,
 ): MemberDaySummary[] {
-  const labels = ["Yesterday", "Today", "Tomorrow"] as const;
   const days: MemberDaySummary[] = [];
-  for (let offset = -1; offset <= 1; offset++) {
+  for (let offset = -daysBefore; offset <= daysAfter; offset++) {
     const iso = addDaysIso(todayIso, offset);
     const phase = offset < 0 ? "past" : offset === 0 ? "today" : "future";
+    const dayLabel =
+      offset === 0 ? "Today" : offset === 1 ? "Tomorrow" : offset === -1 ? "Yesterday" : formatWeekday(iso);
     days.push({
       iso,
       calendarDate: iso,
       phase,
       weekday: formatWeekday(iso),
       shortDate: formatShortDate(iso),
-      dayLabel: labels[offset + 1],
+      dayLabel,
       weekNumber: 1,
-      dayNumber: offset + 2,
+      dayNumber: offset + daysBefore + 1,
       workoutName: null,
       workoutId: null,
       programSlug: "calendar",

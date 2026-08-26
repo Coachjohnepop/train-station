@@ -19,7 +19,7 @@ import {
 import type { ResolvedDayPart } from "@/lib/program-day-sessions";
 import FreeContentLockCard from "@/components/FreeContentLockCard";
 import type { ContentAccessResult } from "@/lib/gamification-content-access";
-import { LATE_WORKOUT_SCORE_HIT_PERCENT } from "@/lib/member-workout-late";
+
 import MemberMaintainConsoleStage, {
   notifyMaintainWorkoutEngage,
 } from "@/components/MemberMaintainConsoleStage";
@@ -59,8 +59,10 @@ type Props = {
   programBlock?: ResolvedProgramBlock | null;
   /** Free-ticket content gate — keep day wheel; lock only the player. */
   contentAccess?: ContentAccessResult | null;
-  /** Viewing yesterday’s plan from Today — 20% score hit when logging. */
+  /** Catch-up: a past program day opened from Today. Logs as today. */
   isLateCatchUp?: boolean;
+  /** Calendar date to stamp live checkoffs / logs (today when catching up). */
+  logAsCalendarDate?: string;
   /** Quick maintain library (not program days). */
   maintainWorkouts?: MaintainWorkoutCard[];
   activeMaintainId?: string | null;
@@ -109,7 +111,9 @@ function DaySummaryCard({
             {previewOnly
               ? "Preview"
               : phase === "past"
-                ? "Yesterday"
+                ? summary.daysFromToday === -1
+                  ? "Yesterday"
+                  : summary.weekday
                 : phase === "future"
                   ? "Tomorrow"
                   : "Today"}
@@ -229,6 +233,7 @@ export default function MemberTodayShell({
   contentAccess = null,
   programBlock = null,
   isLateCatchUp = false,
+  logAsCalendarDate,
   maintainWorkouts = [],
   activeMaintainId = null,
   maintainAccess = null,
@@ -246,9 +251,10 @@ export default function MemberTodayShell({
   const isTomorrow =
     days.find((d) => d.iso === selectedDate)?.phase === "future" ||
     (!isToday && !isLateCatchUp && selectedDate > todayIso);
-  /** Today or yesterday catch-up may open the full console. */
+  /** Today or catch-up (last 5 days) may open the full console. */
   const showFullWorkout =
     forceShowWorkout || ((isToday || isLateCatchUp) && !!workout);
+  const liveDate = logAsCalendarDate || selectedSummary?.calendarDate;
 
   const maintainHref = useCallback(
     (workoutId: string) => {
@@ -364,7 +370,8 @@ export default function MemberTodayShell({
             programSlug={programSlug}
             targetUserId={targetUserId}
             liveSyncUserId={targetUserId}
-            liveSessionDate={selectedSummary?.calendarDate}
+            liveSessionDate={liveDate}
+            logSessionDate={selectedSummary?.calendarDate}
             scheduleLabel={scheduleLabel}
             calendarDateLabel={calendarDateLabel}
             onEngage={notifyMaintainWorkoutEngage}
@@ -410,7 +417,7 @@ export default function MemberTodayShell({
         </div>
       )}
 
-      <div>
+      <div className="member-today-heading">
         <h1
           className={`text-xl font-bold sm:text-2xl ${todayGold ? "text-ramp-gold" : ""}`}
         >
@@ -419,7 +426,7 @@ export default function MemberTodayShell({
               ? "Before Day 1"
               : "Today"
             : isLateCatchUp
-              ? "Yesterday (catch-up)"
+              ? "Catch-up (logs as today)"
               : isTomorrow
                 ? "Tomorrow (preview)"
                 : "Your schedule"}
@@ -433,17 +440,16 @@ export default function MemberTodayShell({
         )}
         {days.length >= 2 ? (
           <p className="mt-1 text-[10px] text-[var(--muted)] sm:text-xs">
-            Use the day chips (or swipe) for yesterday · today · tomorrow
+            Use the day chips (or swipe) for the last 5 days · today · tomorrow
           </p>
         ) : null}
       </div>
 
       {isLateCatchUp && showFullWorkout ? (
         <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-100">
-          <p className="font-semibold">Late catch-up</p>
+          <p className="font-semibold">Catch-up</p>
           <p className="mt-0.5 text-xs text-amber-100/90">
-            You can finish yesterday’s workout now. Score for this log is reduced by{" "}
-            {LATE_WORKOUT_SCORE_HIT_PERCENT}% (late).
+            This is a missed day. Finish it now and it logs as today — you can still do today’s workout too.
           </p>
         </div>
       ) : null}
@@ -557,7 +563,7 @@ export default function MemberTodayShell({
           {programSlug === "adult" && (
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
               <span className="text-xs text-[var(--muted)]">
-                {isLateCatchUp ? "Yesterday's track" : "Today's track"}
+                {isLateCatchUp ? "Catch-up track" : "Today's track"}
               </span>
               <MemberTrainingLocationToggle
                 programSlug={programSlug}
@@ -622,7 +628,8 @@ export default function MemberTodayShell({
               programSlug={programSlug}
               targetUserId={targetUserId}
               liveSyncUserId={previewFutureReadOnly ? undefined : targetUserId}
-              liveSessionDate={selectedSummary?.calendarDate}
+              liveSessionDate={liveDate}
+              logSessionDate={selectedSummary?.calendarDate}
               reviewMode={previewFutureReadOnly}
               futurePreview={previewFutureReadOnly}
               membershipPlan={contentAccess?.plan ?? "explorer"}

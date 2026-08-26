@@ -9,6 +9,7 @@ import {
   hydrateDemoLogsStore,
 } from "@/lib/demo-logs";
 import {
+  getCatchUpCalendarDatesDb,
   getLoggedCalendarDatesDb,
   getLoggedWorkoutIdsDb,
   getPastsForWorkoutExercisesDb,
@@ -55,6 +56,24 @@ export async function loadLoggedCalendarDates(userId: string): Promise<Set<strin
     return dates;
   }
   return getLoggedCalendarDatesDb(userId);
+}
+
+export async function loadCatchUpCalendarDates(userId: string): Promise<Set<string>> {
+  if (isDemoMode()) {
+    const dates = new Set<string>();
+    try {
+      const logsData = await hydrateDemoLogsStore({ preferFresh: true });
+      for (const log of logsData.workoutLogs || []) {
+        if (log.userId !== userId) continue;
+        const source = (log as { catchUpForDate?: string | null }).catchUpForDate;
+        if (source) dates.add(source);
+      }
+    } catch {
+      // non-fatal
+    }
+    return dates;
+  }
+  return getCatchUpCalendarDatesDb(userId);
 }
 
 export async function getWorkoutLogCount(userId: string): Promise<number> {

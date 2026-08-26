@@ -308,6 +308,8 @@ export async function createWorkoutLogAndPerformances(input: {
   exercises: LogExerciseInput[];
   programSlug?: string;
   progress?: number;
+  /** Program day made up (YYYY-MM-DD). Log still stamps performedAt as now. */
+  catchUpForDate?: string | null;
 }): Promise<CreateLogResult> {
   const progress = input.progress ?? 100;
   const completed = progress === 100;
@@ -380,6 +382,7 @@ export async function createWorkoutLogAndPerformances(input: {
       performedAt,
       completed,
       progress,
+      catchUpForDate: input.catchUpForDate ?? null,
     },
   });
 

@@ -21,7 +21,7 @@ const OVERRIDES: SchedulePreviewOverride[] = [
   {
     email: "fletcherboys@att.net",
     upcomingDays: 14,
-    daysBefore: 1,
+    daysBefore: 5,
     futureVisibility: "names",
     visibleChips: 7,
     note: "TEMP Ali content review — scale back after Jeremy calendar check",

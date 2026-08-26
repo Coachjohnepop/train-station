@@ -99,4 +99,28 @@ describe("dayWorkoutCompleted", () => {
     assert.equal(days[0].calendarDate, "2026-08-18");
     assert.equal(days[1].completed, false);
   });
+
+  it("marks a missed day caught up without completing today", () => {
+    const tue = stub({
+      iso: "W1D2",
+      calendarDate: "2026-08-18",
+      workoutId: "w-upper",
+      daysFromToday: -3,
+    });
+    const fri = stub({
+      iso: "W1D5",
+      calendarDate: "2026-08-21",
+      workoutId: "w-lower",
+      daysFromToday: 0,
+      phase: "today",
+    });
+    assert.equal(
+      dayWorkoutCompleted(tue, new Set(), new Set(), "2026-08-21", new Set(["2026-08-18"])),
+      true,
+    );
+    assert.equal(
+      dayWorkoutCompleted(fri, new Set(), new Set(), "2026-08-21", new Set(["2026-08-18"])),
+      false,
+    );
+  });
 });

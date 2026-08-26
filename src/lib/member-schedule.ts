@@ -1,4 +1,8 @@
-import { loadLoggedCalendarDates, loadLoggedWorkoutIds } from "@/lib/workout-logs-store";
+import {
+  loadCatchUpCalendarDates,
+  loadLoggedCalendarDates,
+  loadLoggedWorkoutIds,
+} from "@/lib/workout-logs-store";
 
 export async function loadMemberLoggedWorkoutIds(uid: string): Promise<Set<string>> {
   return loadLoggedWorkoutIds(uid);
@@ -6,6 +10,10 @@ export async function loadMemberLoggedWorkoutIds(uid: string): Promise<Set<strin
 
 export async function loadMemberLoggedCalendarDates(uid: string): Promise<Set<string>> {
   return loadLoggedCalendarDates(uid);
+}
+
+export async function loadMemberCatchUpDates(uid: string): Promise<Set<string>> {
+  return loadCatchUpCalendarDates(uid);
 }
 
 export function hasAssignedWorkout(day: {

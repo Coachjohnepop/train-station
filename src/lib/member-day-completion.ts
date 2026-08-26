@@ -23,9 +23,11 @@ export function dayWorkoutCompleted(
   loggedWorkoutIds: Set<string>,
   loggedCalendarDates: Set<string>,
   calendarToday?: string,
+  catchUpDates: Set<string> = new Set(),
 ): boolean {
-  if (day.workoutId && loggedWorkoutIds.has(day.workoutId)) return true;
   const date = calendarDateForDay(day, calendarToday);
+  if (date && catchUpDates.has(date)) return true;
+  if (day.workoutId && loggedWorkoutIds.has(day.workoutId)) return true;
   if (date && loggedCalendarDates.has(date)) return true;
   return false;
 }
@@ -35,6 +37,7 @@ export function markDaysCompleted(
   loggedWorkoutIds: Set<string>,
   loggedCalendarDates: Set<string>,
   calendarToday?: string,
+  catchUpDates: Set<string> = new Set(),
 ): MemberDaySummary[] {
   return days.map((day) => {
     const calendarDate = calendarDateForDay(day, calendarToday) ?? day.calendarDate;
@@ -46,6 +49,7 @@ export function markDaysCompleted(
         loggedWorkoutIds,
         loggedCalendarDates,
         calendarToday,
+        catchUpDates,
       ),
     };
   });
