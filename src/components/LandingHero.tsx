@@ -11,12 +11,13 @@ import {
   type HeroSlide,
 } from "@/lib/hero-slides";
 import {
-  JOIN_WEEK_HREF,
+  JOIN_TICKETS_HREF,
   LANDING_RETURN_EVENT,
   fireLandingJoinHook,
   markLandingConverted,
   trackLandingCustom,
 } from "@/lib/landing-return-visit";
+import EasyPathChoices from "@/components/EasyPathChoices";
 
 /** Locked first headline so SMS open doesn’t fight a rotating word. */
 const FIRST_HEADLINE = (
@@ -180,7 +181,7 @@ export default function LandingHero({
           <TrainStationBrand variant="hero" />
         </div>
 
-        <div className={`mt-auto flex flex-1 flex-col items-center justify-end px-5 pt-28 text-center sm:justify-center sm:px-8 sm:pb-24 sm:pt-32 ${
+        <div className={`flex flex-1 flex-col items-center px-5 pt-24 text-center sm:px-8 sm:pt-28 ${
           returnMode
             ? "pb-[max(5.5rem,calc(env(safe-area-inset-bottom)+6.25rem))]"
             : "pb-[max(2.75rem,calc(env(safe-area-inset-bottom)+4.5rem))]"
@@ -190,30 +191,15 @@ export default function LandingHero({
               The Train Station
             </p>
 
-            <h1 className="landing-hero-headline mb-3 text-[clamp(2.85rem,12.5vw,3.85rem)] font-semibold leading-[0.88] tracking-[-0.04em] text-white sm:mb-4 sm:text-6xl sm:tracking-[-0.05em] md:text-7xl">
-              {headline}
-            </h1>
-
-            <p className="max-w-[18.5rem] text-[15px] font-semibold leading-snug text-white/95 sm:max-w-sm sm:text-xl">
-              {returnMode ? (
-                <>
-                  You already found us.
-                  <span className="mt-1 block font-medium text-white/72 sm:mt-0 sm:inline sm:before:content-['\00a0']">
-                    Board in one tap.
-                  </span>
-                </>
-              ) : (
-                <>
-                  Coach Jeremy. Real programs.
-                  <span className="mt-1 block font-medium text-white/72 sm:mt-0 sm:inline sm:before:content-['\00a0']">
-                    On your phone.
-                  </span>
-                </>
-              )}
-            </p>
-
-            <div className="mt-7 w-full max-w-sm sm:mt-9">
-              <div className="flex w-full flex-col gap-3">
+            <div className="w-full max-w-sm">
+              <EasyPathChoices
+                kicker=""
+                hint={
+                  returnMode
+                    ? "Free peek first · or pick a ticket"
+                    : "Tour is ~15 sec · Free is a real seat"
+                }
+              >
                 <button
                   type="button"
                   data-analytics-action={returnMode ? "hero-free-tour-return" : "hero-free-tour"}
@@ -223,7 +209,7 @@ export default function LandingHero({
                   Free Tour
                 </button>
                 <Link
-                  href={JOIN_WEEK_HREF}
+                  href={JOIN_TICKETS_HREF}
                   data-analytics-action={returnMode ? "hero-start-membership-return" : "hero-start-membership"}
                   onClick={(e) => {
                     markLandingConverted();
@@ -247,13 +233,30 @@ export default function LandingHero({
                     aria-hidden
                   />
                 </button>
-              </div>
-              <p className="mt-2.5 text-center text-[12px] font-medium text-white/55">
-                {returnMode
-                  ? "7 free days in the app · or peek first"
-                  : "Tour is ~15 sec · membership is 7 days free"}
-              </p>
+              </EasyPathChoices>
             </div>
+
+            <h1 className="landing-hero-headline mt-8 mb-3 text-[clamp(2.85rem,12.5vw,3.85rem)] font-semibold leading-[0.88] tracking-[-0.04em] text-white sm:mt-10 sm:mb-4 sm:text-6xl sm:tracking-[-0.05em] md:text-7xl">
+              {headline}
+            </h1>
+
+            <p className="max-w-[18.5rem] text-[15px] font-semibold leading-snug text-white/95 sm:max-w-sm sm:text-xl">
+              {returnMode ? (
+                <>
+                  You already found us.
+                  <span className="mt-1 block font-medium text-white/72 sm:mt-0 sm:inline sm:before:content-['\00a0']">
+                    Board in one tap.
+                  </span>
+                </>
+              ) : (
+                <>
+                  Coach Jeremy. Real programs.
+                  <span className="mt-1 block font-medium text-white/72 sm:mt-0 sm:inline sm:before:content-['\00a0']">
+                    On your phone.
+                  </span>
+                </>
+              )}
+            </p>
           </div>
         </div>
       </div>

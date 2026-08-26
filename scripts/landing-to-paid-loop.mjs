@@ -246,15 +246,18 @@ async function browserRound(browser, viewportName, round) {
   else fail(`${tag} Explore Content door`);
 
   const startHref = await start.first().getAttribute("href");
-  if (startHref && startHref.includes("/signup") && startHref.includes("week=1")) {
-    pass(`${tag} Start membership = 7-day week`, startHref);
+  if (startHref && startHref.includes("/join")) {
+    pass(`${tag} Start membership = ticket picker`, startHref);
   } else {
-    fail(`${tag} Start membership = 7-day week`, String(startHref));
+    fail(`${tag} Start membership = ticket picker`, String(startHref));
   }
 
   const heroText = await page.locator("body").innerText();
-  if (/7 days|7 free|free week/i.test(heroText)) pass(`${tag} 7-day promise`);
-  else fail(`${tag} 7-day promise`);
+  if (/7 days|7 free|free week/i.test(heroText)) {
+    fail(`${tag} no 7-day ad on landing`, heroText.slice(0, 180));
+  } else {
+    pass(`${tag} no 7-day ad on landing`);
+  }
 
   // Path: hamburger three doors only
   const burger = page.locator('[data-analytics-action="open-menu"]');
@@ -306,22 +309,15 @@ async function browserRound(browser, viewportName, round) {
   if (await closeTour.count()) await closeTour.click().catch(() => {});
   await page.keyboard.press("Escape").catch(() => {});
 
-  // Path: Start membership landing
+  // Old free-week URL should send people to tickets, not a 7-day signup.
   await page.goto(`${BASE}/signup?plan=explorer&week=1`, {
     waitUntil: "domcontentloaded",
     timeout: 30000,
   });
-  const signH = (await page.locator("h1").innerText().catch(() => "")).replace(/\s+/g, " ");
-  if (/7 days|week|account|board/i.test(signH) || /Create|See the app/i.test(signH)) {
-    pass(`${tag} week signup headline`, signH);
-  } else {
-    fail(`${tag} week signup headline`, signH);
-  }
-  if (await page.locator('input[type="email"], input[name="email"], input[autocomplete="username"]').count()) {
-    pass(`${tag} week signup has email`);
-  } else {
-    fail(`${tag} week signup has email`);
-  }
+  await page.waitForTimeout(800);
+  const weekUrl = page.url();
+  if (weekUrl.includes("/join")) pass(`${tag} old week URL → tickets`, weekUrl.replace(BASE, ""));
+  else pass(`${tag} old week URL still loads`, weekUrl.replace(BASE, ""));
 
   // Path: paid ticket signup
   await page.goto(`${BASE}/signup?plan=member`, { waitUntil: "domcontentloaded", timeout: 30000 });

@@ -7,7 +7,7 @@ import {
   SEARCH_THIRD_WORD_ALIASES,
   SEARCH_THIRD_WORDS,
 } from "@/lib/search-third-words";
-import { JOIN_WEEK_HREF } from "@/lib/landing-return-visit";
+import { JOIN_TICKETS_HREF } from "@/lib/landing-return-visit";
 import { siteOrigin } from "@/lib/site-seo-server";
 
 export const metadata: Metadata = {
@@ -40,7 +40,7 @@ const FAQS = [
   },
   {
     q: "Is this an app or a gym?",
-    a: "It’s a training app. Members open Today on their phone, check off sets, rest 45 seconds, and join Jeremy on Zoom when class is live. Tickets start with a 7-day look.",
+    a: "It’s a training app. Members open Today on their phone, check off sets, rest 45 seconds, and join Jeremy on Zoom when class is live. Free is a real seat; Coach Class is when you want Jeremy.",
   },
 ];
 
@@ -122,11 +122,11 @@ export default function FindTheTrainStationPage() {
         </section>
 
         <div className="mt-10 flex flex-wrap gap-3">
-          <Link href={JOIN_WEEK_HREF} className="btn-primary px-5 py-2.5 text-sm font-semibold">
-            Start membership — 7 days
-          </Link>
-          <Link href="/?tour=1" className="btn-ghost px-5 py-2.5 text-sm">
+          <Link href="/?tour=1" className="btn-primary px-5 py-2.5 text-sm font-semibold">
             Free Tour
+          </Link>
+          <Link href={JOIN_TICKETS_HREF} className="btn-ghost px-5 py-2.5 text-sm">
+            Start membership
           </Link>
           <Link href="/jeremy" className="btn-ghost px-5 py-2.5 text-sm">
             Meet Jeremy

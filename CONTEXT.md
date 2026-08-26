@@ -125,7 +125,7 @@ Same bar for **new** work: if it is product data, it is a **database** concern f
 | **Live class** | Only if Jeremy puts them on that day’s `CoachTodaySession.userIds`. A class can be a **subset** (e.g. Lemon John + Steph only). Unassigned members stay on their personal program. Do **not** auto-select the whole roster on Assign. |
 | **John & Steph class** | Paid couple = `john@lemonvoice.com` (Lemon John) + `sprealty9@gmail.com` (Stephanie). Not demo `demo-user-john-steph`. Quick pick: `src/lib/coach-class-targets.ts`. |
 | **New enroll** | Always stamp `programStartDate` (signup day unless they pick one at onboard) |
-| **Join week CTA** | `/signup?plan=explorer&week=1` → **Coach Class Checkout with 7-day trial** (card on file, $0 today, monthly after). Do **not** grant `landing_free_week` unpaid. Webhook must treat trial Checkout `payment_status=no_payment_required` as complete |
+| **Join / trial** | Landing **Start membership** → `/join#tickets`. Free is first. **3-day trial** is a Coach Class checkout choice only (card on file, $0 today) — not a homepage ad. Do **not** grant `landing_free_week` unpaid. Webhook must treat trial Checkout `payment_status=no_payment_required` as complete |
 
 **Tester exception (remove later):** `dubl-e@howerfamily.com` (**Todd Hower**, Jeremy’s BIL) starts so **today = Day 2 Lower Body** (`src/lib/member-start-exceptions.ts`). Account was fully deleted 2026-08-20 so he can re-onboard through the card trial. Leave his data alone otherwise.
 
@@ -414,6 +414,19 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ---
 
 ## WHERE WE LEFT OFF
+
+**Date:** 2026-08-25 (Natasha session)  
+**Status:** Easy-path CTAs + 3-day Coach Class trial. Natasha Simmen (`tangledsigns@gmail.com`) is Free Explorer, onboarded, intro booked.
+
+**This pass (2026-08-25 night — Natasha sign-in):**
+- Watched her prod click trail (no raw finger coords). Keyboard + sticky Continue dock covered weight/city on max iPhone text. 7-day trial CTAs fought the Free rickroll path.
+- **Easy path at top** of every choice screen (Free Tour, Continue with Free, Skip, Go to Today, 3-day trial).
+- Landing **Start membership** → `/join#tickets` (no 7-day ad). Trial is **3 days**, **Coach Class checkout only** — Pay now vs Start 3-day trial.
+- Free gag: Continue with Free first; dropped Never mind. Book Jeremy button is purple Continue, not gold.
+- Onboard dock **hides while the keyboard is up**; inputs 16px so iOS does not zoom; time-wheel Done no longer punches through to Continue.
+- **Slim first-run (interview later):** onboard is 3 steps — man/woman → Face ID/PIN (skippable) → Continue to Today or book Jeremy. Gear, weight, city, goals wait for the intro call. Same purple **Continue** pill on purchase + setup.
+- Free Tour ~2× faster (half the hold times; skipped empty-gear and empty-calendar beats).
+- Natasha stays Free Explorer until we upgrade her.
 
 **Date:** 2026-08-25 EOD  
 **Status:** John signing off. No monitors running.

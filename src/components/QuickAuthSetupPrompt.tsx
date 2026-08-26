@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
-import OnboardActionDock from "@/components/OnboardActionDock";
+import { NextStepButton } from "@/components/NextStepButton";
 import PinPad from "@/components/PinPad";
 import {
   clearQuickAuthSetupSkipped,
@@ -260,12 +260,14 @@ export default function QuickAuthSetupPrompt({
     void savePin(draftPin, confirmPin);
   }, [confirmPin, pinStep, busy, draftPin, savePin]);
 
-  const quickAuthReady = pinEnabled || webauthnEnabled;
   const showPinSection =
     (pinEnabled && !editingPin) || editingPin || showPinSetup || !biometricReady;
 
   return (
     <div className="space-y-4">
+      <NextStepButton onClick={onContinue} disabled={busy}>
+        Continue
+      </NextStepButton>
       <div>
         <h2 className="text-lg font-semibold">Use Face ID / Touch ID for faster sign-in</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
@@ -395,18 +397,6 @@ export default function QuickAuthSetupPrompt({
         </button>
       )}
 
-      <OnboardActionDock>
-        <div className="flex gap-3">
-          <button type="button" onClick={onContinue} className="btn-ghost flex-1 min-h-12" disabled={busy}>
-            {quickAuthReady ? "Continue now" : "Skip for now"}
-          </button>
-          {quickAuthReady && (
-            <button type="button" onClick={onContinue} className="btn-primary flex-1 min-h-12" disabled={busy}>
-              Continue
-            </button>
-          )}
-        </div>
-      </OnboardActionDock>
     </div>
   );
 }

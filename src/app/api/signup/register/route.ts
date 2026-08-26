@@ -135,8 +135,8 @@ export async function POST(request: Request) {
 
     // Paid only — free Explorer goes straight to onboard (never auto-checkout),
     // unless admin requires Free card-on-file → /member/payment-setup.
-    // Landing Join week is Coach Class with a 7-day trial (card required).
-    const weekIsCoachTrial = weekTrial && plan === "explorer";
+    // Short trial is Coach Class checkout only (plan=member), not a landing CTA.
+    const weekIsCoachTrial = weekTrial && plan === "member";
     const needsCheckout =
       !quoteRequest &&
       ((isPaidSignupPlan(plan) && (await stripeConfiguredForPlan(plan))) ||

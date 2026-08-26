@@ -180,25 +180,25 @@ async function browserRound(browser, viewportName, round) {
     fail(`${tag} first visit headline`, headline);
   }
 
-  const join = page.locator('a[data-analytics-action="hero-join"], a[data-analytics-action="hero-join-return"]').first();
+  const join = page.locator('a[data-analytics-action="hero-start-membership"], a[data-analytics-action="hero-start-membership-return"]').first();
   const tour = page.locator('button[data-analytics-action="hero-free-tour"], button[data-analytics-action="hero-free-tour-return"]').first();
-  if (await join.isVisible()) pass(`${tag} hero Join visible`);
-  else fail(`${tag} hero Join visible`);
+  if (await join.isVisible()) pass(`${tag} hero Start membership visible`);
+  else fail(`${tag} hero Start membership visible`);
   if (await tour.isVisible()) pass(`${tag} hero Free Tour visible`);
   else fail(`${tag} hero Free Tour visible`);
 
   const joinHref = await join.getAttribute("href");
-  if (joinHref && joinHref.includes("/signup") && joinHref.includes("week=1")) {
-    pass(`${tag} Join href is free week`, joinHref);
+  if (joinHref && joinHref.includes("/join")) {
+    pass(`${tag} Start membership → tickets`, joinHref);
   } else {
-    fail(`${tag} Join href is free week`, String(joinHref));
+    fail(`${tag} Start membership → tickets`, String(joinHref));
   }
 
   const bodyText = await page.locator("body").innerText();
   if (/7 days|free week|7 free days/i.test(bodyText)) {
-    pass(`${tag} copy promises a free week`);
+    fail(`${tag} no 7-day ad on landing`, bodyText.slice(0, 160));
   } else {
-    fail(`${tag} copy promises a free week`, "no 7-day / free week line on hero");
+    pass(`${tag} no 7-day ad on landing`);
   }
 
   await crawlLandingHrefs(page, `${tag} home`);
@@ -247,20 +247,17 @@ async function browserRound(browser, viewportName, round) {
     }
   }
 
-  // Join click → week signup
+  // Start membership → ticket picker (Free first)
   await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
-  await page.waitForSelector('a[data-analytics-action^="hero-join"]');
-  await page.locator('a[data-analytics-action^="hero-join"]').first().click();
-  await page.waitForURL(/signup/, { timeout: 20000 });
+  await page.waitForSelector('a[data-analytics-action^="hero-start-membership"]');
+  await page.locator('a[data-analytics-action^="hero-start-membership"]').first().click();
+  await page.waitForURL(/join/, { timeout: 20000 });
   const signupUrl = page.url();
-  if (signupUrl.includes("week=1") && signupUrl.includes("explorer")) {
-    pass(`${tag} Join lands on week signup`, signupUrl.replace(BASE, ""));
+  if (signupUrl.includes("/join")) {
+    pass(`${tag} Start membership lands on tickets`, signupUrl.replace(BASE, ""));
   } else {
-    fail(`${tag} Join lands on week signup`, signupUrl);
+    fail(`${tag} Start membership lands on tickets`, signupUrl);
   }
-  const signupH = await page.locator("h1").innerText();
-  if (/See the app for 7 days/i.test(signupH)) pass(`${tag} week signup headline`, signupH);
-  else fail(`${tag} week signup headline`, signupH);
 
   const confettiCanvas = await page.locator("canvas").count();
   if (confettiCanvas > 0) pass(`${tag} confetti canvas after Join`);
@@ -303,10 +300,12 @@ async function engagementSmellTest() {
   } else {
     pass("home does not lead with paywall");
   }
-  if (home.html.includes("/signup?plan=explorer") && home.html.includes("week=1")) {
-    pass("home Join encodes week=1");
+  if (home.html.includes("/join") && !home.html.includes("week=1")) {
+    pass("home Start membership goes to tickets");
+  } else if (home.html.includes("/join#tickets") || home.html.includes("join#tickets")) {
+    pass("home Start membership goes to tickets");
   } else {
-    fail("home Join encodes week=1");
+    fail("home Start membership goes to tickets", "expected /join#tickets");
   }
 
   const tourSrc = await htmlOf("/");
@@ -319,7 +318,7 @@ async function engagementSmellTest() {
     try {
       const js = await (await fetch(`${BASE}${chunk}`)).text();
       if (js.includes("Create Account & Pay") || js.includes("Create Account &amp; Pay")) tourPay = true;
-      if (js.includes("week=1") && js.includes("explorer")) tourWeek = true;
+      if (js.includes("Continue with Free")) tourWeek = true;
       if (js.includes("Free Quick Tour") || js.includes("Free Tour")) tourFun = true;
     } catch {
       /* skip */

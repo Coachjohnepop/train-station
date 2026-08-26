@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import LandingNav from "@/components/LandingNav";
 import LandingSiteFooter from "@/components/LandingSiteFooter";
-import { JOIN_WEEK_HREF } from "@/lib/landing-return-visit";
+import { JOIN_TICKETS_HREF } from "@/lib/landing-return-visit";
 import { COACH_CALENDLY_URL } from "@/lib/brand";
 import { siteOrigin } from "@/lib/site-seo-server";
 
@@ -121,11 +121,11 @@ export default function JeremyByrdPage() {
         </section>
 
         <div className="mt-10 flex flex-wrap gap-3">
-          <Link href={JOIN_WEEK_HREF} className="btn-primary px-5 py-2.5 text-sm font-semibold">
-            Start membership — 7 days
-          </Link>
-          <Link href="/?tour=1" className="btn-ghost px-5 py-2.5 text-sm">
+          <Link href="/?tour=1" className="btn-primary px-5 py-2.5 text-sm font-semibold">
             Free Tour
+          </Link>
+          <Link href={JOIN_TICKETS_HREF} className="btn-ghost px-5 py-2.5 text-sm">
+            Start membership
           </Link>
           <a
             href={COACH_CALENDLY_URL}

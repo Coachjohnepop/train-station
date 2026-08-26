@@ -16,7 +16,7 @@ import { isStaffRole } from "@/lib/staff-access";
 import { openFreeQuickTour } from "@/lib/free-quick-tour";
 import { openLandingExplore } from "@/lib/landing-explore";
 import {
-  JOIN_WEEK_HREF,
+  JOIN_TICKETS_HREF,
   fireLandingJoinHook,
   markLandingConverted,
   markLandingReturnPending,
@@ -187,7 +187,7 @@ export default function LandingNav({
 
             {!isWelcome && !purchaseAuth.signedIn ? (
               <Link
-                href={JOIN_WEEK_HREF}
+                href={JOIN_TICKETS_HREF}
                 className="landing-nav__link"
                 data-analytics-action="nav-memberships"
                 onClick={(e) => {
@@ -262,7 +262,7 @@ export default function LandingNav({
                   Free Tour
                 </button>
                 <Link
-                  href={JOIN_WEEK_HREF}
+                  href={JOIN_TICKETS_HREF}
                   data-analytics-action="nav-join-week"
                   onClick={(e) => {
                     noteConverted();
@@ -372,7 +372,7 @@ export default function LandingNav({
                   Free Tour
                 </button>
                 <Link
-                  href={JOIN_WEEK_HREF}
+                  href={JOIN_TICKETS_HREF}
                   data-analytics-action="menu-join-week"
                   className="block rounded-lg px-2 py-2 text-sm font-bold text-[var(--text)] hover:bg-[var(--surface-2)]"
                   onClick={(e) => {

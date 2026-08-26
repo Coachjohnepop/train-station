@@ -11,6 +11,7 @@ import {
 import { resolveReferralDiscount, type CheckoutDiscount } from "@/lib/referral-discounts";
 import { resolveStripePromotionCode } from "@/lib/stripe-discount-codes";
 import { getOfferDefinition } from "@/lib/product-offers";
+import { COACH_CLASS_TRIAL_DAYS } from "@/lib/coach-class-trial";
 import {
   changeMemberSubscriptionPlan,
   createSignupCheckoutSession,
@@ -25,7 +26,7 @@ const schema = z.object({
   customOfferId: z.string().max(80).optional(),
   merchandiseSkuId: z.string().max(80).optional(),
   quantity: z.number().int().min(1).max(99).optional(),
-  /** Landing Join week — Coach Class subscription with a 7-day trial. */
+  /** Coach Class short trial (card on file). Length is COACH_CLASS_TRIAL_DAYS. */
   trial: z.enum(["week"]).optional(),
 });
 
@@ -161,8 +162,10 @@ export async function POST(request: Request) {
     }
 
     const trialDays =
-      parsed.data.trial === "week" && getOfferDefinition(plan)?.checkoutMode === "subscription"
-        ? 7
+      parsed.data.trial === "week" &&
+      plan === "member" &&
+      getOfferDefinition(plan)?.checkoutMode === "subscription"
+        ? COACH_CLASS_TRIAL_DAYS
         : null;
 
     const checkout = await createSignupCheckoutSession({

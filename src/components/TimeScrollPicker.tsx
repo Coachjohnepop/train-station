@@ -238,9 +238,12 @@ export default function TimeScrollPicker({
             <button
               type="button"
               className="btn-primary mt-4 w-full py-3 text-sm font-semibold"
-              onClick={() => {
+              onPointerUp={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 onChange(draft);
-                setOpen(false);
+                window.setTimeout(() => setOpen(false), 280);
               }}
             >
               Done

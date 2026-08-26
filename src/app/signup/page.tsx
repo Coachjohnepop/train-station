@@ -12,8 +12,7 @@ import { offerSavePassword, offerSavePasswordFromForm } from "@/lib/browser-cred
 import { useFormAutofillSync } from "@/hooks/useFormAutofillSync";
 import OAuthButtons from "@/components/OAuthButtons";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
-import { JOIN_WEEK_HOOK_KEY } from "@/lib/landing-return-visit";
-import { buzzScoreCelebrate, fireWorkoutConfetti } from "@/lib/workout-confetti";
+import { NextStepButton } from "@/components/NextStepButton";
 
 function SignupForm() {
   const router = useRouter();
@@ -45,20 +44,11 @@ function SignupForm() {
     router.replace("/join#tickets");
   }, [isWaitlistOnly, hasExplicitPlan, router]);
 
+  // Old landing "free week" URL — trial is now a Coach Class checkout choice.
   useEffect(() => {
     if (!weekTrial) return;
-    try {
-      if (sessionStorage.getItem(JOIN_WEEK_HOOK_KEY) !== "1") return;
-      sessionStorage.removeItem(JOIN_WEEK_HOOK_KEY);
-    } catch {
-      return;
-    }
-    const t = window.setTimeout(() => {
-      buzzScoreCelebrate("standard");
-      fireWorkoutConfetti(undefined, 1600);
-    }, 180);
-    return () => window.clearTimeout(t);
-  }, [weekTrial]);
+    router.replace("/join#tickets");
+  }, [weekTrial, router]);
 
   useFormAutofillSync(formRef, ["username", "password", "password-confirm"], (values) => {
     if (values.username) setEmail(values.username);
@@ -153,7 +143,7 @@ function SignupForm() {
           plan: ticketPlan,
           password: password || undefined,
           referralCode: referralCode.trim() || undefined,
-          week: weekTrial || undefined,
+          week: undefined,
         }),
       });
       const data = await res.json();
@@ -174,10 +164,6 @@ function SignupForm() {
       }
 
       rememberEmail(email);
-      if (weekTrial) {
-        buzzScoreCelebrate("workout-complete");
-        fireWorkoutConfetti(undefined, 1800);
-      }
       if (!isWaitlistOnly && password) {
         await offerSavePasswordFromForm(formRef.current);
         await offerSavePassword({
@@ -224,26 +210,19 @@ function SignupForm() {
         <div className="w-full max-w-md">
           <div className="text-center mb-6">
             <div className="uppercase tracking-[3px] text-xs font-semibold text-[#7c3aed] mb-3">
-              {isWaitlistOnly ? "Coming soon" : weekTrial ? "Free week" : "Get started"}
+              {isWaitlistOnly ? "Coming soon" : "Get started"}
             </div>
             <h1 className="text-4xl font-semibold tracking-tight">
-              {isWaitlistOnly
-                ? "Join the waitlist"
-                : weekTrial
-                  ? "See the app for 7 days"
-                  : "Create your account"}
+              {isWaitlistOnly ? "Join the waitlist" : "Create your account"}
             </h1>
             <p className="mt-3 text-[var(--muted)] text-sm leading-relaxed">
               {isWaitlistOnly
                 ? "We'll notify you when this program track launches."
-                : weekTrial
-                  ? "Coach Class access for a week. After that, pick a ticket if you want to stay."
-                  : "Next you'll set up texts, book your coach, and open your training dashboard."}
+                : "Next you'll set up texts, book your coach, and open your training dashboard."}
             </p>
           </div>
 
-          {/* Ticket image for the plan they picked — skip on free-week Join */}
-          {!isWaitlistOnly && ticketPlan && !weekTrial && (
+          {!isWaitlistOnly && ticketPlan && (
             <div className="mb-6 flex flex-col items-center">
               <div className="w-full max-w-[220px] overflow-hidden rounded-2xl border border-[var(--border)] shadow-[0_12px_40px_rgba(124,58,237,0.35)]">
                 <MembershipSeatArt
@@ -284,6 +263,16 @@ function SignupForm() {
                 )}
               </p>
             )}
+
+            <NextStepButton type="submit" disabled={loading}>
+              {loading
+                ? isWaitlistOnly
+                  ? "Joining waitlist…"
+                  : "Creating account…"
+                : isWaitlistOnly
+                  ? "Notify me when it launches"
+                  : "Continue"}
+            </NextStepButton>
 
             <div>
               <label htmlFor="signup-username" className="block text-xs text-[var(--muted)] mb-1">
@@ -401,19 +390,15 @@ function SignupForm() {
               </p>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full inline-flex h-12 items-center justify-center rounded-full bg-[#7c3aed] text-sm font-semibold text-white hover:bg-[#6d2dd6] transition-all disabled:opacity-60"
-            >
+            <NextStepButton type="submit" disabled={loading}>
               {loading
                 ? isWaitlistOnly
                   ? "Joining waitlist…"
                   : "Creating account…"
                 : isWaitlistOnly
                   ? "Notify me when it launches"
-                  : "Continue to setup →"}
-            </button>
+                  : "Continue"}
+            </NextStepButton>
           </form>
 
           <p className="mt-6 text-center text-xs text-[var(--muted)]">

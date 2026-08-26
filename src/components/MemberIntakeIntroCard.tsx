@@ -6,6 +6,7 @@ import { COACH_CALENDLY_URL } from "@/lib/brand";
 import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
 import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
 import EmbeddedCalendlyModal from "@/components/EmbeddedCalendlyModal";
+import { NextStepButton } from "@/components/NextStepButton";
 
 type IntakeStatus = {
   introBookedAt: string | null;
@@ -174,35 +175,15 @@ export default function MemberIntakeIntroCard({
           )}
 
           {showIntroBook && (
-            <div className="intake-book-btn-wrap">
-              <button
-                type="button"
-                onClick={() => setModalOpen(true)}
-                disabled={booking}
-                className="intake-book-btn w-full text-center sm:w-auto"
-              >
-                {booking ? "Saving…" : "Book 15-min intro →"}
-              </button>
-              <span className="intake-guide-pointer" aria-hidden>
-                👆
-              </span>
-            </div>
+            <NextStepButton onClick={() => setModalOpen(true)} disabled={booking}>
+              {booking ? "Saving…" : "Continue — book Jeremy"}
+            </NextStepButton>
           )}
 
           {showFollowUpBook && (
-            <div className={introBooked ? "intake-book-btn-wrap" : "intake-book-btn-wrap"}>
-              <button
-                type="button"
-                onClick={() => setModalOpen(true)}
-                disabled={booking}
-                className="intake-book-btn w-full text-center sm:w-auto"
-              >
-                {booking ? "Saving…" : "Book follow-up call →"}
-              </button>
-              <span className="intake-guide-pointer" aria-hidden>
-                👆
-              </span>
-            </div>
+            <NextStepButton onClick={() => setModalOpen(true)} disabled={booking}>
+              {booking ? "Saving…" : "Continue — book follow-up"}
+            </NextStepButton>
           )}
 
           <Link href="/member/chat" className="btn-ghost text-center text-sm sm:mb-5">

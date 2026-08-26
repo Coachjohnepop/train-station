@@ -66,7 +66,7 @@ On `/signup?plan=member` (or whichever ticket you picked):
 **Expected**:
 - No error flash.
 - You land on **/member/onboard** — not the main dashboard yet.
-- Progress shows **Step 1 of 6** and a **Coach Class** (or your ticket) badge.
+- Progress shows **Step 1 of 3** and a **Coach Class** (or your ticket) badge. Gear, weight, and city wait for the intro call.
 
 **Verify**:
 - If you try to go to `/member` manually before finishing setup, you should get bounced back to onboard.
@@ -75,7 +75,9 @@ On `/signup?plan=member` (or whichever ticket you picked):
 
 ---
 
-## 3. Onboard wizard — all 6 steps (~8 min)
+## 3. Onboard wizard — 3 steps (~3 min)
+
+Gear, weight, goals, and city are **not** in first-run setup. Jeremy fills those on the intro call (or the member adds them later under Gear / Measure).
 
 Work through every step. Use **Back** once on any step to confirm navigation feels fine.
 

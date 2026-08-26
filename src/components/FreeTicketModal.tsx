@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { setBackgroundMusicOverlay } from "@/lib/background-music-control";
 import {
@@ -28,6 +27,8 @@ import {
   stopFreeTicketGag,
   stripNativeVideoChrome,
 } from "@/lib/play-free-ticket-gag";
+import EasyPathChoices from "@/components/EasyPathChoices";
+import { NextStepButton, NextStepLink } from "@/components/NextStepButton";
 
 /** Free-ticket Jeremy intro: 3× louder than admin content volume offset. */
 const JEREMY_WORD_VOLUME_MULT = 3;
@@ -40,8 +41,7 @@ const JEREMY_WORD_VOLUME_MULT = 3;
  *
  * Signed-in members: skip gag → Jeremy intro file only.
  *
- * Mobile layout: **video on top**, free ticket art + CTAs scroll below.
- * Free enroll is an explicit secondary action (not auto, not primary).
+ * Mobile layout: **easy path at top** (Continue with Free), video under that.
  */
 export default function FreeTicketModal({
   open,
@@ -194,7 +194,42 @@ export default function FreeTicketModal({
         className="flex max-h-[100dvh] w-full max-w-xl flex-col overflow-y-auto overscroll-contain rounded-t-2xl border border-amber-500/30 bg-[var(--surface)] shadow-2xl sm:max-h-[min(94vh,820px)] sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative w-full shrink-0 bg-black aspect-[9/16] max-h-[min(62dvh,36rem)] sm:max-h-[min(66vh,38rem)]">
+        <div className="px-4 pt-4 sm:px-5">
+          {alreadyPaid ? (
+            <p className="mb-3 text-center text-sm text-[var(--muted)]">
+              That&apos;s the joke. You&apos;re still on your paid ticket.
+            </p>
+          ) : (
+            <EasyPathChoices kicker="Easy path" hint="Nothing enrolls until you tap.">
+              {onContinueFree ? (
+                <NextStepButton onClick={handleContinueFree}>Continue with Free</NextStepButton>
+              ) : (
+                <NextStepLink
+                  href={freeHref}
+                  onClick={() => {
+                    stopFreeTicketGag();
+                    onClose();
+                  }}
+                >
+                  Continue with Free
+                </NextStepLink>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  stopFreeTicketGag();
+                  onClose();
+                  onUpgrade();
+                }}
+                className="btn-ghost min-h-12 w-full"
+              >
+                Show me Coach Class
+              </button>
+            </EasyPathChoices>
+          )}
+        </div>
+
+        <div className="relative w-full shrink-0 bg-black aspect-[9/16] max-h-[min(48dvh,28rem)] sm:max-h-[min(52vh,30rem)]">
           {gag.enabled ? (
             <div
               id={FREE_TICKET_GAG_HOST_ID}
@@ -298,58 +333,23 @@ export default function FreeTicketModal({
             </div>
           </div>
 
-          <p className="text-center text-xs font-semibold uppercase tracking-[0.16em] text-amber-400/90">
-            Scroll for ticket · nothing enrolls until you tap below
-          </p>
-
           {showJeremy ? (
             <ShareFreeTicketButton label="Send this Free ticket to a friend" />
           ) : null}
 
-          <button
-            type="button"
-            onClick={() => {
-              stopFreeTicketGag();
-              onClose();
-              onUpgrade();
-            }}
-            className="h-14 rounded-full bg-[#7c3aed] text-base font-semibold text-white transition hover:bg-[#6d2dd6]"
-          >
-            Show me Coach Class &amp; 1st Class →
-          </button>
-
-          {alreadyPaid ? null : onContinueFree ? (
+          {alreadyPaid ? (
             <button
               type="button"
-              onClick={handleContinueFree}
-              className="inline-flex h-12 items-center justify-center rounded-full border border-[var(--border)] text-base font-medium text-[var(--muted)] transition hover:border-[#7c3aed]/40 hover:text-[var(--text)]"
-            >
-              Continue with Free / Explorer
-            </button>
-          ) : (
-            <Link
-              href={freeHref}
-              className="inline-flex h-12 items-center justify-center rounded-full border border-[var(--border)] text-base font-medium text-[var(--muted)] transition hover:border-[#7c3aed]/40 hover:text-[var(--text)]"
               onClick={() => {
                 stopFreeTicketGag();
                 onClose();
+                onUpgrade();
               }}
-              tabIndex={0}
+              className="btn-primary min-h-12 w-full"
             >
-              Continue with Free / Explorer
-            </Link>
-          )}
-
-          <button
-            type="button"
-            onClick={() => {
-              stopFreeTicketGag();
-              onClose();
-            }}
-            className="py-2 text-sm text-[var(--muted)] hover:text-[var(--text)]"
-          >
-            Never mind — back to tickets
-          </button>
+              Back to your ticket
+            </button>
+          ) : null}
         </div>
       </div>
     </div>

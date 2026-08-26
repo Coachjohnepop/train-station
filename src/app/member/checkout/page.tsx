@@ -22,6 +22,9 @@ import {
   type SignupPlan,
 } from "@/lib/signup-plans";
 import { isPaidOffer } from "@/lib/product-offers";
+import EasyPathChoices from "@/components/EasyPathChoices";
+import { COACH_CLASS_TRIAL_LABEL } from "@/lib/coach-class-trial";
+import { NextStepButton } from "@/components/NextStepButton";
 
 type PaymentsPublic = {
   stripeEnabled: boolean;
@@ -78,7 +81,6 @@ function MemberCheckoutInner() {
   const customOfferId = searchParams.get("offerId") || "";
   const merchandiseSkuId = searchParams.get("sku") || "";
   const canceled = searchParams.get("canceled") === "1";
-  const trialWeek = searchParams.get("trial") === "week";
   const isDowngradeIntent = searchParams.get("intent") === "downgrade";
   const promoFromUrl =
     searchParams.get("promo") || searchParams.get("code") || searchParams.get("ref") || "";
@@ -211,7 +213,7 @@ function MemberCheckoutInner() {
     setSessionId(null);
   }, [confirming]);
 
-  async function startCheckout() {
+  async function startCheckout(opts?: { trial?: boolean }) {
     setLoading(true);
     setPlanChanging(false);
     setError(null);
@@ -225,7 +227,7 @@ function MemberCheckoutInner() {
           merchandiseSkuId: merchandiseSkuId || undefined,
           promoCode: promoCode.trim() || undefined,
           referralCode: promoCode.trim() || undefined,
-          trial: trialWeek ? "week" : undefined,
+          trial: opts?.trial ? "week" : undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -273,20 +275,45 @@ function MemberCheckoutInner() {
     ? `Confirm ${signupPlanLabel(plan)}`
     : coverageMatchesThisTicket
       ? "Continue already paid"
-      : trialWeek
-        ? "Start 7-day week — card on file"
-        : "Get your Ticket";
+      : "Pay now — get started";
+  const showCoachTrialChoice =
+    plan === "member" &&
+    !isDowngradeIntent &&
+    !coverageMatchesThisTicket &&
+    Boolean(stripeReady);
 
   return (
     <>
       <div
         className={
           showMembershipCard
-            ? "mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-10"
+            ? "mx-auto flex max-w-md flex-col px-4 py-6 sm:py-10"
             : "mx-auto min-h-[70vh] max-w-4xl px-3 py-8 sm:px-6 sm:py-12"
         }
       >
         {showMembershipCard ? (
+          <>
+          {showCoachTrialChoice ? (
+            <div className="mb-6">
+              <EasyPathChoices
+                kicker="Coach Class"
+                hint={`Card on file for the ${COACH_CLASS_TRIAL_LABEL}. You will not be billed today.`}
+              >
+                <NextStepButton
+                  onClick={() => void startCheckout({ trial: true })}
+                  disabled={loading || planChanging || confirming || checkoutOpen}
+                >
+                  {loading ? "Preparing checkout…" : `Start ${COACH_CLASS_TRIAL_LABEL}`}
+                </NextStepButton>
+                <NextStepButton
+                  onClick={() => void startCheckout({ trial: false })}
+                  disabled={loading || planChanging || confirming || checkoutOpen}
+                >
+                  Pay now — get started
+                </NextStepButton>
+              </EasyPathChoices>
+            </div>
+          ) : null}
           <MembershipPaymentCard plan={plan as SignupPlan} priceLabel={priceLabel || undefined}>
             {isDowngradeIntent && (
               <div className="rounded-lg border border-rose-500/35 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
@@ -314,12 +341,7 @@ function MemberCheckoutInner() {
                 Checkout was canceled. You can try Stripe again or use Venmo below.
               </p>
             )}
-            {trialWeek && !coverageMatchesThisTicket ? (
-              <p className="rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-[var(--text)]">
-                7 days of Coach Class on us. Put a card on file and approve the monthly
-                charge after the week. You will not be billed today.
-              </p>
-            ) : null}
+
             {paymentsLoading && (
               <p className="text-sm text-[var(--muted)]">Loading payment options…</p>
             )}
@@ -373,13 +395,11 @@ function MemberCheckoutInner() {
                 .
               </p>
             )}
-            {(stripeReady || coverageMatchesThisTicket) && (
+            {(stripeReady || coverageMatchesThisTicket) && !showCoachTrialChoice && (
               <div className="space-y-3">
-                <button
-                  type="button"
+                <NextStepButton
                   onClick={() => void startCheckout()}
                   disabled={loading || planChanging || confirming}
-                  className="btn-primary w-full"
                 >
                   {planChanging
                     ? "Updating plan…"
@@ -390,7 +410,7 @@ function MemberCheckoutInner() {
                         : checkoutOpen
                           ? "Payment window open"
                           : payCta}
-                </button>
+                </NextStepButton>
                 <p className="text-center text-[11px] text-[var(--muted)]">
                   {coverageMatchesThisTicket
                     ? "Server checks this email and the current paid period before it lets you through."
@@ -453,18 +473,19 @@ function MemberCheckoutInner() {
               )}
             </div>
           </MembershipPaymentCard>
+          </>
         ) : (
           <div className="space-y-6">
             <div className="mx-auto max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-4 text-center sm:px-6">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent">
                 {alreadyPaidPass
                   ? "You're signed in · ticket already paid"
-                  : "You're signed in · pick a ticket"}
+                  : "Easy path · Free is first"}
               </p>
               <p className="mt-2 text-sm text-[var(--muted)]">
                 {alreadyPaidPass
                   ? `Tap ${alreadyPaidPlan ? signupPlanLabel(alreadyPaidPlan as SignupPlan) : "your ticket"} again. The next screen says Continue already paid. A different ticket still goes to payment.`
-                  : "Pay this seat, then a 2-minute setup, then Today. Card or Venmo. Stay free if you only want Explorer."}
+                  : "Stay free, or pick Coach Class. Trial is a choice after Coach Class — not a homepage ad."}
               </p>
               {error ? <p className="mt-2 text-sm text-amber-400">{error}</p> : null}
             </div>

@@ -8,20 +8,20 @@ import {
   fireWorkoutConfetti,
 } from "@/lib/workout-confetti";
 import { PROGRAM_IMAGES } from "@/lib/program-constants";
-import { JOIN_WEEK_HREF } from "@/lib/landing-return-visit";
+import EasyPathChoices from "@/components/EasyPathChoices";
 
 /**
  * See inside — full auto-play tour for cold traffic only.
  *
  * Auto: workout ×5 → Business → Adult → equip blank/all → book open/day/confirm
- * Ends at “Where next?” → Join free week, tickets, or programs.
+ * Ends at “Where next?” → Continue with Free, pick a ticket, or programs.
  * Wizard never continues after that. Members never see this (home is welcome shell).
  */
-const STEP_MS = 2000;
+const STEP_MS = 1000;
 /** Last set + confetti: hold so burst can play before next slide */
-const SET3_CONFETTI_HOLD_MS = 3600;
-/** After workout (access, program, gear, book) — slower so it doesn’t blur past */
-const AFTER_WORKOUT_MS = 3200;
+const SET3_CONFETTI_HOLD_MS = 1800;
+/** After workout (access, program, gear, book) */
+const AFTER_WORKOUT_MS = 1500;
 
 type AutoBeat =
   | "w_weight"
@@ -44,9 +44,7 @@ const AUTO_BEATS: AutoBeat[] = [
   "w_set3",
   "access_business",
   "pick_adult",
-  "equip_blank",
   "equip_all",
-  "book_open",
   "book_day",
   "book_confirm",
 ];
@@ -190,7 +188,7 @@ export default function LandingSeeInsideTour({
       if (cancelled || confettiFired.current) return;
       confettiFired.current = true;
       const el = lastSetRef.current;
-      const burstMs = Math.max(2400, SET3_CONFETTI_HOLD_MS - 400);
+      const burstMs = Math.max(1200, SET3_CONFETTI_HOLD_MS - 200);
       if (el) {
         fireWorkoutConfetti(confettiOriginFromElement(el), burstMs);
       } else {
@@ -267,7 +265,7 @@ export default function LandingSeeInsideTour({
 
   const coachLine =
     phase === "end"
-      ? "Join a free week, pick a ticket, or choose a program — tour ends here."
+      ? "Continue with Free, pick a ticket, or choose a program — tour ends here."
       : current === "w_weight"
         ? "Log the weight you used."
         : current === "w_set1"
@@ -635,15 +633,30 @@ export default function LandingSeeInsideTour({
           {/* ── END: exit wizard into normal site nav ── */}
           {phase === "end" && (
             <div className="w-full">
-              <p className="text-center text-xs font-bold uppercase tracking-[0.2em] text-[var(--accent-fg)]">
-                Your move
-              </p>
-              <h3 className="mt-1 text-center text-2xl font-semibold leading-tight text-[var(--text)] sm:text-3xl">
-                Where next?
+              <EasyPathChoices
+                kicker="Your move"
+                hint="Free is a real seat. Coach Class is when you want Jeremy."
+              >
+                <button
+                  type="button"
+                  data-analytics-action="tour-continue-free"
+                  onClick={() => exitToSite("/signup?plan=explorer")}
+                  className="landing-hero-early-signup inline-flex h-14 w-full items-center justify-center rounded-full text-base font-extrabold"
+                >
+                  Continue with Free
+                </button>
+                <button
+                  type="button"
+                  data-analytics-action="tour-pick-ticket"
+                  onClick={() => exitToSite("/join?from=tour#tickets")}
+                  className="landing-hero-secondary-cta inline-flex h-14 w-full items-center justify-center rounded-full text-base font-extrabold"
+                >
+                  Pick a ticket
+                </button>
+              </EasyPathChoices>
+              <h3 className="mt-4 text-center text-xl font-semibold leading-tight text-[var(--text)] sm:text-2xl">
+                Or browse
               </h3>
-              <p className="mt-1.5 text-center text-sm text-white/70">
-                Tour ends here — start a free week, or browse tickets and programs.
-              </p>
               <div className="mt-2.5 grid grid-cols-2 gap-2 sm:mt-3 sm:gap-2.5">
                 {/* Left — ticket art → /join#tickets */}
                 <button
@@ -701,16 +714,8 @@ export default function LandingSeeInsideTour({
                   </div>
                 </button>
               </div>
-              <button
-                type="button"
-                data-analytics-action="tour-join-week"
-                onClick={() => exitToSite(JOIN_WEEK_HREF)}
-                className="landing-hero-early-signup mt-3 inline-flex h-14 w-full items-center justify-center rounded-full text-base font-extrabold"
-              >
-                Join — free week
-              </button>
               <p className="mt-2.5 text-center text-sm text-white/60">
-                7 days in the app. Tickets stay available if you already know your seat.
+                Tickets first — programs are extra credit.
               </p>
             </div>
           )}

@@ -35,15 +35,15 @@ export default async function JoinPage({
         </div>
       </div>
 
-      <div className="mx-auto max-w-3xl px-6 pb-4 pt-12 text-center sm:pt-14">
-        <div className="mb-3 text-xs font-semibold uppercase tracking-[3px] text-[#7c3aed]">
-          {fromTour ? "You saw the floor" : "Grab a seat"}
+      <div className="mx-auto max-w-3xl px-6 pb-2 pt-8 text-center sm:pt-10">
+        <div className="mb-2 text-xs font-semibold uppercase tracking-[3px] text-[#7c3aed]">
+          {fromTour ? "You saw the floor" : "Easy path first"}
         </div>
-        <h1 className="mb-3 text-4xl font-semibold tracking-[-1.5px] sm:text-5xl sm:tracking-[-1.8px]">
-          {fromTour ? "Now board." : "Your ticket. One tap."}
+        <h1 className="mb-2 text-3xl font-semibold tracking-[-1.2px] sm:text-4xl sm:tracking-[-1.5px]">
+          {fromTour ? "Now board." : "Free is a seat. Tap it."}
         </h1>
-        <p className="mx-auto max-w-xl text-lg text-[var(--muted)] sm:text-xl">
-          Free peek, Coach Class, Business, or 1st. Program is extra credit — pick a seat and go.
+        <p className="mx-auto max-w-xl text-sm text-[var(--muted)] sm:text-base">
+          Free, Coach Class, Business, or 1st. Coach Class is when you want Jeremy — trial is on that ticket, not here.
         </p>
         {fromTour ? (
           <p className="mx-auto mt-3 max-w-md text-sm font-medium text-[var(--accent-fg)]/90">

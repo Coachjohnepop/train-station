@@ -7,8 +7,8 @@
 export const LANDING_RETURN_COOKIE = "ts_landing_return";
 export const LANDING_RETURN_EVENT = "ts-landing-return-mode";
 export const JOIN_TICKETS_HREF = "/join#tickets";
-/** Join CTA — 7-day look at the app (Explorer account + Coach Class trial). */
-export const JOIN_WEEK_HREF = "/signup?plan=explorer&week=1";
+/** Start membership → ticket picker. Trial is a Coach Class checkout choice, not a landing CTA. */
+export const JOIN_WEEK_HREF = JOIN_TICKETS_HREF;
 export const JOIN_WEEK_HOOK_KEY = "ts_join_week_hook";
 
 const COOKIE_MAX_AGE_SEC = 60 * 60 * 24 * 30;

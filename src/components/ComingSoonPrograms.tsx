@@ -46,7 +46,7 @@ export default function ComingSoonPrograms({ compact = false }: { compact?: bool
               ? `/signup?interest=${encodeURIComponent(prog.slug)}`
               : isSpeaking
                 ? `/signup?plan=speaking_fee&quote=1` // after account → /member/speaking intake
-                : "/signup?plan=explorer&week=1";
+                : "/join#tickets";
             const cta = isSoon
               ? "Notify me →"
               : isSpeaking
