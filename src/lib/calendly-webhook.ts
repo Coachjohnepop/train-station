@@ -114,6 +114,19 @@ export function calendlyWebhookSharedSecret(): string {
   return process.env.CALENDLY_WEBHOOK_SECRET?.trim() || "";
 }
 
+export async function resolveCalendlyWebhookAuth(): Promise<{
+  signingKey: string;
+  sharedSecret: string;
+}> {
+  const { resolveCalendlyWebhookSigningKey, envCalendlyWebhookSharedSecret } = await import(
+    "@/lib/calendly-credentials"
+  );
+  return {
+    signingKey: await resolveCalendlyWebhookSigningKey(),
+    sharedSecret: envCalendlyWebhookSharedSecret(),
+  };
+}
+
 /** Parse invitee email, name, start/end from invitee.created payload (v2 shapes). */
 export function parseCalendlyInviteePayload(body: unknown): {
   eventType: string;

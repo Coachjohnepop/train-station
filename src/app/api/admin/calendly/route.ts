@@ -1,41 +1,42 @@
 import { NextResponse } from "next/server";
 import { requireStaff } from "@/lib/api-auth";
 import {
-  calendlyApiToken,
-  createCalendlyWebhookSubscription,
+  calendlyPublicStatus,
+  clearCalendlyIntegration,
+  resolveCalendlyCredentials,
+  saveCalendlyIntegration,
+} from "@/lib/calendly-credentials";
+import {
+  backfillCalendlyBookings,
+  CALENDLY_WEBHOOK_URL,
+  ensureCalendlyWebhookForApp,
   getCalendlyMe,
   listCalendlyWebhookSubscriptions,
+  probeCalendlyToken,
   syncCalendlyBookingForEmail,
 } from "@/lib/calendly-invitee";
-import { calendlyWebhookSigningKey } from "@/lib/calendly-webhook";
 
 export const dynamic = "force-dynamic";
 
-const WEBHOOK_URL = "https://www.thetrainstation.co/api/calendly/webhook";
-
-export async function GET() {
-  const auth = await requireStaff();
-  if (!auth.ok) return auth.response;
-
-  const tokenConfigured = Boolean(calendlyApiToken());
-  const webhookKeyConfigured = Boolean(calendlyWebhookSigningKey());
-  if (!tokenConfigured) {
-    return NextResponse.json({
+async function statusPayload() {
+  const creds = await resolveCalendlyCredentials();
+  const publicStatus = calendlyPublicStatus(creds);
+  if (!publicStatus.tokenConfigured) {
+    return {
       ok: true,
-      tokenConfigured: false,
-      webhookKeyConfigured,
+      ...publicStatus,
       me: null,
       webhooks: [],
-      hint: "Create a Personal Access Token in Calendly → Integrations & apps → API & webhooks, then set CALENDLY_API_TOKEN on Vercel Production.",
-    });
+      webhookUrl: CALENDLY_WEBHOOK_URL,
+      hint: "Paste a Calendly personal access token below. Calendly → Integrations & apps → API & webhooks → Personal access tokens (Jeremy’s account).",
+    };
   }
 
   const me = await getCalendlyMe();
   const webhooks = await listCalendlyWebhookSubscriptions();
-  return NextResponse.json({
+  return {
     ok: true,
-    tokenConfigured: true,
-    webhookKeyConfigured,
+    ...publicStatus,
     me: me
       ? { email: me.email, name: me.name, hasOrganization: Boolean(me.organization) }
       : null,
@@ -44,7 +45,17 @@ export async function GET() {
       state: w.state,
       events: w.events,
     })),
-  });
+    webhookUrl: CALENDLY_WEBHOOK_URL,
+    webhookRegistered: webhooks.some((w) =>
+      w.callbackUrl.startsWith(CALENDLY_WEBHOOK_URL.split("?")[0]),
+    ),
+  };
+}
+
+export async function GET() {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth.response;
+  return NextResponse.json(await statusPayload());
 }
 
 export async function POST(request: Request) {
@@ -54,8 +65,47 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {
     action?: string;
     email?: string;
+    token?: string;
   };
   const action = body.action || "";
+
+  if (action === "connect") {
+    const token = body.token?.trim() || "";
+    if (!token) {
+      return NextResponse.json({ error: "Paste the Calendly personal access token." }, { status: 400 });
+    }
+    const me = await probeCalendlyToken(token);
+    if (!me?.uri) {
+      return NextResponse.json(
+        { error: "Calendly rejected that token. Create a new Personal access token and try again." },
+        { status: 422 },
+      );
+    }
+    await saveCalendlyIntegration({
+      apiToken: token,
+      connectedEmail: me.email,
+      connectedName: me.name,
+      connectedByEmail: auth.session.email,
+    });
+    const webhook = await ensureCalendlyWebhookForApp();
+    const status = await statusPayload();
+    return NextResponse.json({
+      ...status,
+      connected: true,
+      webhook,
+      detail: webhook.ok
+        ? `Connected as ${me.email || me.name || "Calendly"}. ${webhook.detail}`
+        : `Connected as ${me.email || me.name || "Calendly"}, but webhook failed: ${webhook.error || webhook.detail}`,
+    });
+  }
+
+  if (action === "disconnect") {
+    await clearCalendlyIntegration();
+    return NextResponse.json({
+      ...(await statusPayload()),
+      detail: "Removed the stored Calendly token. Vercel env tokens are unchanged.",
+    });
+  }
 
   if (action === "sync") {
     const email = body.email?.trim().toLowerCase();
@@ -66,29 +116,22 @@ export async function POST(request: Request) {
     return NextResponse.json(result, { status: result.ok ? 200 : 422 });
   }
 
+  if (action === "backfill") {
+    const result = await backfillCalendlyBookings();
+    return NextResponse.json(result, { status: result.ok ? 200 : 422 });
+  }
+
   if (action === "ensure-webhook") {
-    const existing = await listCalendlyWebhookSubscriptions();
-    const already = existing.find((w) => w.callbackUrl.startsWith(WEBHOOK_URL));
-    if (already) {
-      return NextResponse.json({
-        ok: true,
-        created: false,
-        callbackUrl: already.callbackUrl,
-        detail: "Webhook already registered.",
-      });
-    }
-    const created = await createCalendlyWebhookSubscription(WEBHOOK_URL);
-    if (created.error) {
-      return NextResponse.json({ ok: false, error: created.error }, { status: 502 });
+    const ensured = await ensureCalendlyWebhookForApp();
+    if (!ensured.ok) {
+      return NextResponse.json({ ok: false, error: ensured.error || ensured.detail }, { status: 502 });
     }
     return NextResponse.json({
       ok: true,
-      created: true,
-      uri: created.uri,
-      signingKey: created.signingKey,
-      hint: created.signingKey
-        ? "Save signingKey as CALENDLY_WEBHOOK_SIGNING_KEY on Vercel Production, then redeploy."
-        : "Webhook created. If Calendly did not return a signing key, copy it from the subscription in Calendly.",
+      created: ensured.created,
+      callbackUrl: ensured.callbackUrl,
+      detail: ensured.detail,
+      // Never send the signing key to the browser — it is stored server-side.
     });
   }
 

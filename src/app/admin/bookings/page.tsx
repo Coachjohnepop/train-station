@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import AdminBookingZoomActions from "@/components/AdminBookingZoomActions";
+import AdminCalendlyConnect from "@/components/AdminCalendlyConnect";
 import SmsWorkoutOverridePanel from "@/components/SmsWorkoutOverridePanel";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
 import PhoneInput from "@/components/PhoneInput";
@@ -195,6 +196,8 @@ export default function AdminBookingsPage() {
       </p>
 
       {msg && <p className="text-sm text-[var(--success)]">{msg}</p>}
+
+      <AdminCalendlyConnect />
 
       <section className="card">
         <h2 className="font-semibold mb-3">Coach Contact Info</h2>

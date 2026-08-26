@@ -415,8 +415,14 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-08-25 (Natasha session)  
-**Status:** Easy-path CTAs + 3-day Coach Class trial. Natasha Simmen (`tangledsigns@gmail.com`) is Free Explorer, onboarded, intro booked.
+**Date:** 2026-08-25 (Calendly API connect)  
+**Status:** Calendly API is wired end-to-end. **No Natasha outreach.** Husband may have told her not to use the app — leave her Free, do not resend booking email.
+
+**This pass (Calendly API anyway):**
+- Admin → Bookings → **Calendly API**: paste Jeremy’s PAT, we store it in Postgres (`CalendlyIntegration`), register `https://www.thetrainstation.co/api/calendly/webhook`, and save the signing key. Vercel env still wins if set — not required.
+- Connect also backfills missing Booking rows / reschedule URLs from Calendly (no emails sent).
+- Ghost `introBookedAt` fill is the **Backfill missing bookings** button after the token is in.
+- Still parked after API is live: coach interview desk; XXL iPhone walkthrough.
 
 **This pass (2026-08-25 night — Natasha sign-in):**
 - Watched her prod click trail (no raw finger coords). Keyboard + sticky Continue dock covered weight/city on max iPhone text. 7-day trial CTAs fought the Free rickroll path.
@@ -426,9 +432,8 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - Onboard dock **hides while the keyboard is up**; inputs 16px so iOS does not zoom; time-wheel Done no longer punches through to Continue.
 - **Slim first-run (interview later):** onboard is 3 steps — man/woman → Face ID/PIN (skippable) → Continue to Today or book Jeremy. Gear, weight, city, goals wait for the intro call. Same purple **Continue** pill on purchase + setup.
 - Free Tour ~2× faster (half the hold times; skipped empty-gear and empty-calendar beats).
-- Natasha stays Free Explorer until we upgrade her.
-- **Calendly API:** Client can GET invitee + list events by email, fill `reschedule_url`, and register the webhook. **Blocked on PAT** — none on Vercel yet. Jeremy/John: Calendly → Integrations & apps → API & webhooks → Personal access token → `CALENDLY_API_TOKEN` on Vercel Production, then `npx tsx scripts/calendly-connect.mjs` and `EMAIL=tangledsigns@gmail.com npx tsx scripts/calendly-connect.mjs`. After that: sync Natasha’s slot, then resend booking email (John still reviewing copy).
-- **Parked until Calendly API is live:** (1) ghost `introBookedAt` with no Booking row, (2) coach interview desk for gear/weight/goals after the call, (3) XXL iPhone walkthrough of Continue + mute.
+- Natasha stays Free Explorer until we upgrade her. **No outreach** — do not resend booking email.
+- **Calendly API:** paste token in Admin → Bookings (not Vercel). Backfill missing bookings after connect. Parked: interview desk, XXL iPhone walkthrough.
 
 **Date:** 2026-08-25 EOD  
 **Status:** John signing off. No monitors running.

@@ -5,8 +5,9 @@
  *   CALENDLY_API_TOKEN=... npx tsx scripts/calendly-connect.mjs
  *   EMAIL=tangledsigns@gmail.com npx tsx scripts/calendly-connect.mjs
  *
- * Token: Calendly → Integrations & apps → API & webhooks → Personal access tokens
- * (Jeremy's account). Then vercel env add CALENDLY_API_TOKEN production
+ * Token: paste in Admin → Bookings → Calendly API, or set CALENDLY_API_TOKEN.
+ * Calendly → Integrations & apps → API & webhooks → Personal access tokens
+ * (Jeremy's account).
  */
 import dotenv from "dotenv";
 import { createRequire } from "module";
@@ -24,7 +25,7 @@ dotenv.config({ path: ".env.go-prod" });
 dotenv.config({ path: ".env" });
 
 const {
-  calendlyApiToken,
+  resolveCalendlyApiToken,
   getCalendlyMe,
   listCalendlyWebhookSubscriptions,
   findCalendlyInviteeByEmail,
@@ -33,12 +34,12 @@ const {
 
 const email = (process.env.EMAIL || "").trim().toLowerCase();
 
-if (!calendlyApiToken()) {
-  console.error("CALENDLY_API_TOKEN is not set.");
+if (!(await resolveCalendlyApiToken())) {
+  console.error("Calendly API token is not set (env or Admin → Bookings).");
   console.error(
     "Create one: https://calendly.com/integrations/api_webhooks → Personal access tokens",
   );
-  console.error("Then: echo TOKEN | vercel env add CALENDLY_API_TOKEN production");
+  console.error("Paste it in Admin → Bookings → Calendly API (no Vercel env required).");
   process.exit(1);
 }
 

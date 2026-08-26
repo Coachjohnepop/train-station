@@ -666,6 +666,22 @@ model CoachZoomOAuth {
   @@index([connectedByEmail])
 }
 
+/**
+ * Calendly PAT + webhook signing key. Singleton id = "coach".
+ * Env CALENDLY_API_TOKEN / CALENDLY_WEBHOOK_SIGNING_KEY still win when set.
+ */
+model CalendlyIntegration {
+  id                 String    @id
+  apiToken           String    @db.Text
+  webhookSigningKey  String?   @db.Text
+  webhookUri         String?
+  connectedEmail     String?
+  connectedName      String?
+  connectedAt        DateTime?
+  connectedByEmail   String?
+  updatedAt          DateTime  @updatedAt
+}
+
 /** Short-lived Zoom OAuth state backup when the state cookie is missing. */
 model ZoomOAuthPendingState {
   state      String   @id

@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import {
-  calendlyWebhookSharedSecret,
-  calendlyWebhookSigningKey,
   processCalendlyWebhookBody,
+  resolveCalendlyWebhookAuth,
   verifyCalendlyWebhookSignature,
 } from "@/lib/calendly-webhook";
 
@@ -21,8 +20,7 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(request: Request) {
   const rawBody = await request.text();
-  const signingKey = calendlyWebhookSigningKey();
-  const shared = calendlyWebhookSharedSecret();
+  const { signingKey, sharedSecret: shared } = await resolveCalendlyWebhookAuth();
   const signature = request.headers.get("Calendly-Webhook-Signature");
 
   if (signingKey) {
@@ -70,13 +68,14 @@ export async function POST(request: Request) {
 
 /** Health / subscription probe — Calendly may GET the URL when testing. */
 export async function GET() {
-  const configured = Boolean(calendlyWebhookSigningKey() || calendlyWebhookSharedSecret());
+  const { signingKey, sharedSecret } = await resolveCalendlyWebhookAuth();
+  const configured = Boolean(signingKey || sharedSecret);
   return NextResponse.json({
     ok: true,
     service: "calendly-webhook",
     configured,
     hint: configured
       ? "POST invitee.created / invitee.canceled payloads here."
-      : "Set CALENDLY_API_TOKEN and CALENDLY_WEBHOOK_SIGNING_KEY on Vercel Production.",
+      : "Connect Calendly in Admin → Bookings (or set CALENDLY_API_TOKEN on Vercel).",
   });
 }

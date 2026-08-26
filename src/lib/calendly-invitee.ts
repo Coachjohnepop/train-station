@@ -1,12 +1,18 @@
 import "server-only";
 
+import {
+  calendlyApiToken,
+  resolveCalendlyApiToken,
+} from "@/lib/calendly-credentials";
+
+export { calendlyApiToken, resolveCalendlyApiToken };
+
 /**
  * Calendly API v2 — reschedule_url / cancel_url live on the invitee resource.
  *
- * Env:
- *   CALENDLY_API_TOKEN or CALENDLY_PERSONAL_ACCESS_TOKEN  — PAT from
- *     Calendly → Integrations & apps → API & webhooks → Personal access tokens
- *   CALENDLY_WEBHOOK_SIGNING_KEY — set after we create the webhook subscription
+ * Token (env wins, else Admin → Bookings paste):
+ *   CALENDLY_API_TOKEN or CALENDLY_PERSONAL_ACCESS_TOKEN
+ * Signing key stored after we create the webhook subscription.
  */
 
 export type CalendlyInviteeLinks = {
@@ -47,16 +53,8 @@ function pickIso(...vals: unknown[]): string | null {
   return null;
 }
 
-export function calendlyApiToken(): string {
-  return (
-    process.env.CALENDLY_API_TOKEN?.trim() ||
-    process.env.CALENDLY_PERSONAL_ACCESS_TOKEN?.trim() ||
-    ""
-  );
-}
-
-async function calendlyGet(url: string): Promise<unknown | null> {
-  const token = calendlyApiToken();
+async function calendlyGet(url: string, tokenOverride?: string): Promise<unknown | null> {
+  const token = tokenOverride?.trim() || (await resolveCalendlyApiToken());
   if (!token) return null;
   const res = await fetch(url, {
     headers: {
@@ -123,8 +121,13 @@ export function parseCalendlyInviteeLinks(raw: unknown): CalendlyInviteeLinks {
   };
 }
 
-export async function getCalendlyMe(): Promise<CalendlyMe | null> {
-  const body = await calendlyGet("https://api.calendly.com/users/me");
+export async function probeCalendlyToken(token: string): Promise<CalendlyMe | null> {
+  if (!token.trim()) return null;
+  return getCalendlyMe(token.trim());
+}
+
+export async function getCalendlyMe(tokenOverride?: string): Promise<CalendlyMe | null> {
+  const body = await calendlyGet("https://api.calendly.com/users/me", tokenOverride);
   const resource = asRecord(asRecord(body)?.resource);
   const uri = pickString(resource?.uri);
   if (!uri) return null;
@@ -158,7 +161,9 @@ export async function fetchCalendlyInvitee(
   inviteeUri: string,
 ): Promise<CalendlyInviteeLinks | null> {
   const uri = inviteeUri.trim();
-  if (!calendlyApiToken() || !uri.startsWith("https://api.calendly.com/")) return null;
+  if (!(await resolveCalendlyApiToken()) || !uri.startsWith("https://api.calendly.com/")) {
+    return null;
+  }
 
   const body = await calendlyGet(uri);
   if (!body) return null;
@@ -185,7 +190,7 @@ export async function findCalendlyInviteeByEmail(
   email: string,
 ): Promise<CalendlyInviteeLinks | null> {
   const normalized = email.trim().toLowerCase();
-  if (!normalized || !calendlyApiToken()) return null;
+  if (!normalized || !(await resolveCalendlyApiToken())) return null;
   const me = await getCalendlyMe();
   if (!me?.uri) return null;
 
@@ -318,7 +323,7 @@ export async function createCalendlyWebhookSubscription(callbackUrl: string): Pr
   signingKey: string | null;
   error?: string;
 }> {
-  const token = calendlyApiToken();
+  const token = await resolveCalendlyApiToken();
   const me = await getCalendlyMe();
   if (!token || !me?.uri) {
     return { uri: null, signingKey: null, error: "Calendly API token missing or /users/me failed." };
@@ -341,15 +346,114 @@ export async function createCalendlyWebhookSubscription(callbackUrl: string): Pr
   const body: unknown = await res.json().catch(() => ({}));
   if (!res.ok) {
     const rec = asRecord(body);
-    const message =
-      pickString(asRecord(rec?.title) ? null : rec?.message, rec?.title) ||
-      `HTTP ${res.status}`;
+    const message = pickString(rec?.message, rec?.title) || `HTTP ${res.status}`;
     return { uri: null, signingKey: null, error: message };
   }
   const resource = asRecord(asRecord(body)?.resource) || asRecord(body);
   return {
     uri: pickString(resource?.uri),
     signingKey: pickString(resource?.signing_key, resource?.signingKey),
+  };
+}
+
+export async function deleteCalendlyWebhookSubscription(
+  webhookUri: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const token = await resolveCalendlyApiToken();
+  const uri = webhookUri.trim();
+  if (!token || !uri.startsWith("https://api.calendly.com/webhook_subscriptions/")) {
+    return { ok: false, error: "Missing token or webhook URI." };
+  }
+  const res = await fetch(uri, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok && res.status !== 404) {
+    return { ok: false, error: `HTTP ${res.status}` };
+  }
+  return { ok: true };
+}
+
+export const CALENDLY_WEBHOOK_URL = "https://www.thetrainstation.co/api/calendly/webhook";
+
+/**
+ * Register (or recreate) the prod webhook so we get a signing key to store.
+ * Calendly only returns signing_key on create.
+ */
+export async function ensureCalendlyWebhookForApp(callbackUrl = CALENDLY_WEBHOOK_URL): Promise<{
+  ok: boolean;
+  created: boolean;
+  callbackUrl: string;
+  uri: string | null;
+  signingKey: string | null;
+  detail: string;
+  error?: string;
+}> {
+  const existing = await listCalendlyWebhookSubscriptions();
+  const already = existing.find((w) => w.callbackUrl.startsWith(callbackUrl.split("?")[0]));
+  const creds = await (await import("@/lib/calendly-credentials")).resolveCalendlyCredentials();
+
+  if (already && creds.webhookSigningKey) {
+    return {
+      ok: true,
+      created: false,
+      callbackUrl: already.callbackUrl,
+      uri: already.uri,
+      signingKey: null,
+      detail: "Webhook already registered and signing key is stored.",
+    };
+  }
+
+  if (already) {
+    const deleted = await deleteCalendlyWebhookSubscription(already.uri);
+    if (!deleted.ok) {
+      return {
+        ok: false,
+        created: false,
+        callbackUrl: already.callbackUrl,
+        uri: already.uri,
+        signingKey: null,
+        detail: "Webhook exists but we have no signing key, and delete failed.",
+        error: deleted.error,
+      };
+    }
+  }
+
+  const created = await createCalendlyWebhookSubscription(callbackUrl);
+  if (created.error) {
+    return {
+      ok: false,
+      created: false,
+      callbackUrl,
+      uri: null,
+      signingKey: null,
+      detail: created.error,
+      error: created.error,
+    };
+  }
+
+  if (created.signingKey || created.uri) {
+    try {
+      const { patchCalendlyWebhookSecrets } = await import("@/lib/calendly-credentials");
+      await patchCalendlyWebhookSecrets({
+        webhookSigningKey: created.signingKey,
+        webhookUri: created.uri,
+      });
+    } catch (e) {
+      console.warn("[calendly] could not persist webhook signing key", e);
+    }
+  }
+
+  return {
+    ok: true,
+    created: true,
+    callbackUrl,
+    uri: created.uri,
+    signingKey: created.signingKey,
+    detail: created.signingKey
+      ? "Webhook registered. Signing key saved — no Vercel env needed."
+      : "Webhook created. Copy the signing key from Calendly if emails still do not sync.",
   };
 }
 
@@ -362,8 +466,8 @@ export async function syncCalendlyBookingForEmail(email: string): Promise<{
 }> {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return { ok: false, detail: "email required" };
-  if (!calendlyApiToken()) {
-    return { ok: false, detail: "CALENDLY_API_TOKEN is not set." };
+  if (!(await resolveCalendlyApiToken())) {
+    return { ok: false, detail: "Calendly API token is not set." };
   }
 
   const links = await findCalendlyInviteeByEmail(normalized);
@@ -439,5 +543,95 @@ export async function syncCalendlyBookingForEmail(email: string): Promise<{
     bookingId,
     rescheduleUrl: links.rescheduleUrl,
     scheduledAt: links.startTime,
+  };
+}
+
+export type CalendlyBackfillRow = {
+  email: string;
+  ok: boolean;
+  detail: string;
+  bookingId?: string;
+};
+
+/** Fill Booking rows from Calendly for ghost intros and missing reschedule URLs. Does not email anyone. */
+export async function backfillCalendlyBookings(): Promise<{
+  ok: boolean;
+  scanned: number;
+  synced: number;
+  skipped: number;
+  results: CalendlyBackfillRow[];
+  detail?: string;
+}> {
+  if (!(await resolveCalendlyApiToken())) {
+    return {
+      ok: false,
+      scanned: 0,
+      synced: 0,
+      skipped: 0,
+      results: [],
+      detail: "Calendly API token is not set.",
+    };
+  }
+
+  const { listMemberProfiles } = await import("@/lib/member-profiles-store");
+  const { getBookings } = await import("@/lib/booking");
+  const profiles = await listMemberProfiles();
+  const bookings = await getBookings();
+  const emails = new Set<string>();
+
+  for (const p of profiles) {
+    if (p.introBookedAt && p.email) emails.add(p.email.trim().toLowerCase());
+  }
+  for (const b of bookings as Array<{
+    memberEmail?: string | null;
+    calendlyRescheduleUrl?: string | null;
+    status?: string;
+  }>) {
+    const email = b.memberEmail?.trim().toLowerCase();
+    if (!email || b.status === "cancelled") continue;
+    if (!b.calendlyRescheduleUrl) emails.add(email);
+  }
+
+  const results: CalendlyBackfillRow[] = [];
+  let synced = 0;
+  let skipped = 0;
+  for (const email of emails) {
+    const latest = (bookings as Array<{
+      memberEmail?: string | null;
+      calendlyRescheduleUrl?: string | null;
+      status?: string;
+      id?: string;
+    }>).find(
+      (b) =>
+        b.memberEmail?.trim().toLowerCase() === email &&
+        b.status !== "cancelled" &&
+        b.calendlyRescheduleUrl,
+    );
+    if (latest) {
+      skipped += 1;
+      results.push({
+        email,
+        ok: true,
+        detail: "already has reschedule URL",
+        bookingId: typeof latest.id === "string" ? latest.id : undefined,
+      });
+      continue;
+    }
+    const r = await syncCalendlyBookingForEmail(email);
+    if (r.ok) synced += 1;
+    results.push({
+      email,
+      ok: r.ok,
+      detail: r.detail,
+      bookingId: r.bookingId,
+    });
+  }
+
+  return {
+    ok: true,
+    scanned: emails.size,
+    synced,
+    skipped,
+    results,
   };
 }
