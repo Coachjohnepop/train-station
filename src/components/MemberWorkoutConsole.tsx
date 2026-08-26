@@ -2638,7 +2638,7 @@ export default function MemberWorkoutConsole({
                 role="button"
                 tabIndex={0}
               >
-                <div className="flex items-start justify-between gap-2">
+                <div className="member-exercise-head flex items-start justify-between gap-2">
                   <h2 className="text-lg font-semibold">{block.name}</h2>
                   {isActive && (
                     <span className="rounded-full bg-accent-muted px-2 py-0.5 text-[10px] font-semibold uppercase text-accent">
@@ -2648,7 +2648,7 @@ export default function MemberWorkoutConsole({
                 </div>
 
                 {(block.coachNotes || block.description) && (
-                  <div className="mt-2 space-y-1.5">
+                  <div className="member-exercise-note mt-2 space-y-1.5">
                     {block.coachNotes ? (
                       <p className="rounded-md border border-violet-500/25 bg-violet-500/10 px-2.5 py-1.5 text-sm text-violet-100">
                         <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-wide text-violet-300/90">
@@ -2671,7 +2671,7 @@ export default function MemberWorkoutConsole({
                   </div>
                 )}
 
-                <div className="mt-3">
+                <div className="member-exercise-video mt-3">
                   {block.videoUrl ? (
                     <div className="flex flex-wrap items-center gap-3">
                       <button
@@ -2737,7 +2737,7 @@ export default function MemberWorkoutConsole({
                   >
                     {isTimed ? (
                       <>
-                        <div className="flex items-baseline justify-between gap-1">
+                        <div className="member-exercise-spec__sets-kicker flex items-baseline justify-between gap-1">
                           <p className="text-sm font-semibold">Weight &amp; timed set</p>
                           <p className="text-xs text-[color-mix(in_srgb,var(--text)_75%,var(--muted))]">
                             {allSetsDone ? "Done" : summary}
@@ -2790,7 +2790,7 @@ export default function MemberWorkoutConsole({
                           if (!holdSec) return null;
                           const restS = resolveSecondsForBlock(block);
                           return (
-                            <p className="mt-1 text-xs text-[color-mix(in_srgb,var(--text)_78%,var(--muted))]">
+                            <p className="member-exercise-spec__rest mt-1 text-xs text-[color-mix(in_srgb,var(--text)_78%,var(--muted))]">
                               Green hold {holdSec >= 60 ? `${Math.round(holdSec / 60)} min` : `${holdSec}s`}
                               {restS ? ` → rest ${restS}s` : ""} · uncheck stays off until you re-mark
                             </p>
@@ -2799,7 +2799,7 @@ export default function MemberWorkoutConsole({
                       </>
                     ) : (
                       <>
-                        <div className="flex items-baseline justify-between gap-1">
+                        <div className="member-exercise-spec__sets-kicker flex items-baseline justify-between gap-1">
                           <p className="text-sm font-semibold">Weight &amp; sets</p>
                           <p className="text-xs text-[color-mix(in_srgb,var(--text)_75%,var(--muted))]">
                             {doneForBlock.size}/{block.setCount}
@@ -2858,7 +2858,7 @@ export default function MemberWorkoutConsole({
                           const restS = resolveSecondsForBlock(block);
                           if (holdSec) {
                             return (
-                              <p className="mt-1 text-xs text-[color-mix(in_srgb,var(--text)_78%,var(--muted))]">
+                              <p className="member-exercise-spec__rest mt-1 text-xs text-[color-mix(in_srgb,var(--text)_78%,var(--muted))]">
                                 Green hold {holdSec >= 60 ? `${Math.round(holdSec / 60)} min` : `${holdSec}s`}
                                 {restS ? ` → rest ${restS}s` : ""} · uncheck stays off until you re-mark
                               </p>
@@ -2866,7 +2866,7 @@ export default function MemberWorkoutConsole({
                           }
                           if (!restS) return null;
                           return (
-                            <p className="mt-1 text-xs text-[color-mix(in_srgb,var(--text)_78%,var(--muted))]">
+                            <p className="member-exercise-spec__rest mt-1 text-xs text-[color-mix(in_srgb,var(--text)_78%,var(--muted))]">
                               Rest {restS}s — opens on set, closes when it buzzes
                             </p>
                           );
@@ -2885,7 +2885,7 @@ export default function MemberWorkoutConsole({
 
                 {/* Peek next exercise - space efficient teaser */}
                 {nextExercise && isActive && (
-                  <div className="mt-1 flex items-center gap-1 text-xs text-[color-mix(in_srgb,var(--text)_78%,var(--muted))]">
+                  <div className="member-exercise-next mt-1 flex items-center gap-1 text-xs text-[color-mix(in_srgb,var(--text)_78%,var(--muted))]">
                     <span>Next:</span>{" "}
                     <span className="font-medium text-[var(--text)] truncate">{nextExercise.name}</span>
                   </div>
@@ -2894,7 +2894,7 @@ export default function MemberWorkoutConsole({
                 {isEditingFinished ? (
                   <button
                     type="button"
-                    className="btn-primary mt-3 w-full text-sm py-1.5"
+                    className="member-exercise-done-btn btn-primary mt-3 w-full text-sm py-1.5"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -2907,7 +2907,7 @@ export default function MemberWorkoutConsole({
                 ) : (
                   <button
                     type="button"
-                    className="btn-primary mt-3 w-full text-sm py-1.5"
+                    className="member-exercise-done-btn btn-primary mt-3 w-full text-sm py-1.5"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
