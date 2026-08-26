@@ -13,6 +13,7 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 |-----|------|--------|
 | **John** (you) | Builder / product | Repo owner; deploys; soaks; coaches Jeremy. **App admin: `john@thetrainstation.co`**. **Member account: `john@lemonvoice.com` (Lemon John)**. **Vercel/GitHub deploy login: `john@bcxvoice.com`** (CLI `john-9066`) — platform only, **not a Train Station member**. **`john@bcxvoice.com` member was a test login — purged 2026-08-25.** Demo couple = `johnsteph@thetrainstation.co`. **Stripe Dashboard login (TheTrainStation Brave profile): Google `john@bcxvoice.com`** — sees BCX Voice + Eco Delight only until Jeremy invites that same email to TS Live. |
 | **Jeremy** | Customer coach | Primary admin user; stress-tests clone/templates/calendar; email `jeremy@thetrainstation.co` |
+| **Natasha Simmen** | Member (Free Explorer) | `tangledsigns@gmail.com` · `member-f0be251f-04a`. Husband may have told her **not to use the app**. **No outreach** — do not email, resend booking mail, SMS, or chase. Leave Free. Calendly backfill of her Booking row is OK (internal, no email). |
 | **John & Steph** | Demo member journey | Program subs, floating video, schedule greens in demos |
 | **Grok** (xAI) | Coding agent in this TUI | Not Claude — may share this file |
 | **Claude** | Separate agent (e.g. Claude Code) | May read `CLAUDE.md` / this file |
@@ -208,6 +209,14 @@ Drop folder:
 ### Do not
 - Put joke soak names as warm-ups on **live member** program days  
 - Push WIP to `main` without John asking for prod  
+- **Contact Natasha Simmen** (`tangledsigns@gmail.com`) — husband may have told her not to use the app. No resend, no chase. Internal Calendly Booking backfill is fine.
+
+### Standing (2026-08-25 night)
+
+- **Calendly API is built.** Jeremy pastes PAT at **Admin → Bookings → Calendly API** (Postgres `CalendlyIntegration`; Vercel env not required). Connect registers `https://www.thetrainstation.co/api/calendly/webhook` and stores the signing key. Then **Backfill missing bookings** (no emails).
+- After token is in: fill ghost `introBookedAt` rows (including Natasha’s) in DB only.
+- **Parked until token is live, then later:** coach interview desk (gear/weight/goals after intro); XXL iPhone walkthrough of Continue + mute.
+- **Jeremy text (token):** Calendly → Integrations & apps → API & webhooks → Personal access tokens → copy once → paste at thetrainstation.co/admin/bookings → Calendly API → Connect. Or text the token to John.  
 
 ---
 
@@ -416,13 +425,17 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ## WHERE WE LEFT OFF
 
 **Date:** 2026-08-25 (Calendly API connect)  
-**Status:** Calendly API is wired end-to-end. **No Natasha outreach.** Husband may have told her not to use the app — leave her Free, do not resend booking email.
+**Status:** Calendly API shipped (`693493d`). Waiting on Jeremy’s PAT in Admin → Bookings. **No Natasha outreach.**
+
+**When back:**
+1. Jeremy pastes Calendly PAT at Admin → Bookings → Connect. Then Backfill missing bookings (no emails).
+2. Do **not** email Natasha. Husband may have told her not to use the app. Leave Free Explorer.
+3. Parked: interview desk; XXL iPhone Continue + mute walkthrough.
 
 **This pass (Calendly API anyway):**
 - Admin → Bookings → **Calendly API**: paste Jeremy’s PAT, we store it in Postgres (`CalendlyIntegration`), register `https://www.thetrainstation.co/api/calendly/webhook`, and save the signing key. Vercel env still wins if set — not required.
-- Connect also backfills missing Booking rows / reschedule URLs from Calendly (no emails sent).
-- Ghost `introBookedAt` fill is the **Backfill missing bookings** button after the token is in.
-- Still parked after API is live: coach interview desk; XXL iPhone walkthrough.
+- **Backfill missing bookings** fills ghost intros / reschedule URLs from Calendly (no emails sent).
+- Natasha (`tangledsigns@gmail.com`) stays Free. Internal Booking backfill OK; no resend of the welcome/booking email John was reviewing.
 
 **This pass (2026-08-25 night — Natasha sign-in):**
 - Watched her prod click trail (no raw finger coords). Keyboard + sticky Continue dock covered weight/city on max iPhone text. 7-day trial CTAs fought the Free rickroll path.
