@@ -234,6 +234,7 @@ export default function MemberWorkoutConsole({
   scheduleLabel,
   liveSyncUserId,
   liveSessionDate,
+  logSessionDate,
   progressMode = "live",
   hideLogButton = false,
   futurePreview = false,
@@ -259,6 +260,8 @@ export default function MemberWorkoutConsole({
   /** Member id for live coach ↔ member checkoff sync */
   liveSyncUserId?: string;
   liveSessionDate?: string;
+  /** Program day being worked (catch-up source). Defaults to liveSessionDate. */
+  logSessionDate?: string;
   /** Persist checkoffs to warmup-progress API (pre-intake warm-ups). */
   progressMode?: "live" | "warmup";
   hideLogButton?: boolean;
@@ -1824,6 +1827,18 @@ export default function MemberWorkoutConsole({
       flipExerciseTimerToRest(blockId, setNum);
       return;
     }
+    // Overlay can show 0:00 before the 200ms tick fires finishAndClose.
+    // Closing that "Rest complete" frame must still honk.
+    const endsAt = open?.endsAt ?? local?.endsAt ?? 0;
+    if (
+      !restHornPlayedRef.current &&
+      !restMutedRef.current &&
+      endsAt > 0 &&
+      endsAt <= Date.now() + 500
+    ) {
+      restHornPlayedRef.current = true;
+      playRestComplete(restSoundRef.current, { force: true });
+    }
     clearRestTimer();
   }, [restTimer, flipExerciseTimerToRest, clearRestTimer]);
 
@@ -2115,7 +2130,7 @@ export default function MemberWorkoutConsole({
       };
       if (programSlug) payload.programSlug = programSlug;
       if (targetUserId) payload.targetUserId = targetUserId;
-      const sessionDate = normalizeLogSessionDate(liveSessionDate);
+      const sessionDate = normalizeLogSessionDate(logSessionDate || liveSessionDate);
       if (sessionDate) payload.sessionDate = sessionDate;
       const res = await fetch(`/api/workouts/${workout.workoutId}/log`, {
         method: "POST",
@@ -2358,7 +2373,7 @@ export default function MemberWorkoutConsole({
 
   return (
     <div
-      className={`mx-auto w-full max-w-md md:max-w-2xl lg:max-w-2xl xl:max-w-2xl ${
+      className={`member-workout-console mx-auto w-full max-w-md md:max-w-2xl lg:max-w-2xl xl:max-w-2xl ${
         embedded ? "px-0 py-2 md:px-2" : showLoggedSuccess ? "px-4 py-2 md:px-6" : "px-4 py-6 md:px-6"
       }`}
     >
@@ -2693,33 +2708,29 @@ export default function MemberWorkoutConsole({
                   )}
                 </div>
 
-                {/* Compact two-column: scheme info (left) + weight + sets (right) — same row as live floor */}
-                <div className="mt-3 flex gap-3 text-sm">
-                  {/* Left: Approach / Prescription / Weight tier - tighter */}
-                  <div className="w-5/12 space-y-1 rounded-lg bg-[var(--surface-2)] p-2 text-sm">
-                    <div className="flex justify-between gap-2">
-                      <span className="text-[color-mix(in_srgb,var(--text)_72%,var(--muted))]">
-                        Approach
+                {/* Phone portrait: stack. Landscape / tablet: scheme left, sets right. */}
+                <div className="member-exercise-spec mt-3 text-sm">
+                  <div className="member-exercise-spec__scheme">
+                    <div className="member-exercise-spec__row">
+                      <span className="member-exercise-spec__label">Approach</span>
+                      <span className="member-exercise-spec__value font-medium text-accent-deep">
+                        {approachLabel(prescription.approach)}
                       </span>
-                      <span className="font-medium text-accent-deep">{approachLabel(prescription.approach)}</span>
                     </div>
-                    <div className="flex justify-between gap-2">
-                      <span className="text-[color-mix(in_srgb,var(--text)_72%,var(--muted))]">
-                        Prescription
-                      </span>
-                      <span className="font-medium">{summary}</span>
+                    <div className="member-exercise-spec__row">
+                      <span className="member-exercise-spec__label">Prescription</span>
+                      <span className="member-exercise-spec__value font-medium">{summary}</span>
                     </div>
-                    <div className="flex justify-between gap-2">
-                      <span className="text-[color-mix(in_srgb,var(--text)_72%,var(--muted))]">
-                        Weight tier
+                    <div className="member-exercise-spec__row">
+                      <span className="member-exercise-spec__label">Weight tier</span>
+                      <span className="member-exercise-spec__value font-medium">
+                        {weightTierLabel(block.weightTier)}
                       </span>
-                      <span className="font-medium">{weightTierLabel(block.weightTier)}</span>
                     </div>
                   </div>
 
-                  {/* Right: Weight (far left) + set checkoffs — coach live floor uses the same pattern */}
                   <div
-                    className="flex-1"
+                    className="member-exercise-spec__sets"
                     onClick={(e) => e.stopPropagation()}
                     role="group"
                     aria-label={`${block.name} weight and ${isTimed ? "timed set" : "set"} completion`}

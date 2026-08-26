@@ -324,6 +324,14 @@ body {
   text-size-adjust: 100%;
 }
 
+html[data-ts-text-scale="sm"] .member-app {
+  font-size: 93%;
+}
+
+html[data-ts-text-scale="lg"] .member-app {
+  font-size: 112%;
+}
+
 /* Deep purple canvas — member, admin, and marketing home */
 .app-shell-bg {
   min-height: 100vh;
@@ -852,6 +860,69 @@ table.data th {
   flex-wrap: wrap;
   gap: 0.25rem;
   align-items: stretch;
+}
+
+/* Phone: scheme on top, weight/sets full width. Side-by-side only when there is room. */
+.member-exercise-spec {
+  display: flex;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.member-exercise-spec__scheme {
+  width: 41.666%;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  background: var(--surface-2);
+  padding: 0.5rem;
+}
+
+.member-exercise-spec__scheme > * + * {
+  margin-top: 0.25rem;
+}
+
+.member-exercise-spec__sets {
+  flex: 1;
+  min-width: 0;
+}
+
+.member-exercise-spec__row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.15rem 0.5rem;
+}
+
+.member-exercise-spec__label {
+  color: color-mix(in srgb, var(--text) 72%, var(--muted));
+  flex: 0 0 auto;
+}
+
+.member-exercise-spec__value {
+  min-width: 0;
+  flex: 1 1 6rem;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 639px) {
+  .member-exercise-spec {
+    flex-direction: column;
+  }
+
+  .member-exercise-spec__scheme {
+    width: 100%;
+  }
+
+  /* Room for Zoom picture-in-picture over the last exercise. */
+  .member-workout-console {
+    padding-bottom: 7.5rem;
+  }
+
+  .member-exercise-anchor {
+    scroll-margin-bottom: 8rem;
+  }
 }
 
 .member-set-weight-box {
@@ -1951,6 +2022,8 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   min-width: 0;
   padding: 0.25rem 0.35rem;
   gap: 0.3rem;
+  flex-direction: row;
+  flex-wrap: nowrap;
   box-shadow: 0 4px 18px color-mix(in srgb, var(--accent-deep) 22%, transparent);
 }
 
@@ -1977,11 +2050,18 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 }
 
 .member-nav-home-sublabel {
+  display: none;
   font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   opacity: 0.72;
+}
+
+@media (min-width: 1024px) {
+  .member-nav-home-sublabel {
+    display: inline;
+  }
 }
 
 /* Onboarding: pulse highlight on Gear when shop-hint is active */
@@ -2076,6 +2156,51 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 }
 
 .member-nav-more-link--active {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent-fg);
+}
+
+.member-text-scale {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.5rem 0.55rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.2rem;
+}
+
+.member-text-scale__label {
+  flex: 1;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.member-text-scale__btn {
+  min-width: 2.4rem;
+  min-height: 2.2rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.member-text-scale__btn:nth-child(2) {
+  font-size: 0.8rem;
+}
+
+.member-text-scale__btn:nth-child(3) {
+  font-size: 0.95rem;
+}
+
+.member-text-scale__btn:nth-child(4) {
+  font-size: 1.15rem;
+}
+
+.member-text-scale__btn--on {
+  border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   color: var(--accent-fg);
 }

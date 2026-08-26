@@ -8,6 +8,11 @@ import UserBicepAvatar from "@/components/UserBicepAvatar";
 import { goMemberTodayHome } from "@/lib/member-today-home";
 import { memberCheckoutPath } from "@/lib/member-route-gates";
 import type { SignupPlan } from "@/lib/signup-plans";
+import {
+  applyMemberTextScale,
+  readMemberTextScale,
+  type MemberTextScale,
+} from "@/lib/member-text-scale";
 
 type NavItem = {
   href: string;
@@ -129,6 +134,13 @@ export default function MemberNav({
   const [moreOpen, setMoreOpen] = useState(false);
   const [scorePoints, setScorePoints] = useState<number | null>(null);
   const [scorePulse, setScorePulse] = useState(false);
+  const [textScale, setTextScale] = useState<MemberTextScale>("md");
+
+  useEffect(() => {
+    const scale = readMemberTextScale();
+    setTextScale(scale);
+    applyMemberTextScale(scale);
+  }, []);
 
   const refreshScore = useCallback(async () => {
     try {
@@ -300,6 +312,32 @@ export default function MemberNav({
           className="member-nav-more-panel"
           aria-label="More member pages"
         >
+          <div className="member-text-scale" role="group" aria-label="Text size">
+            <span className="member-text-scale__label">Text</span>
+            {(
+              [
+                ["sm", "A−", "Smaller text"],
+                ["md", "A", "Default text"],
+                ["lg", "A+", "Larger text"],
+              ] as const
+            ).map(([id, label, title]) => (
+              <button
+                key={id}
+                type="button"
+                title={title}
+                aria-pressed={textScale === id}
+                className={`member-text-scale__btn ${
+                  textScale === id ? "member-text-scale__btn--on" : ""
+                }`}
+                onClick={() => {
+                  setTextScale(id);
+                  applyMemberTextScale(id);
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           {moreItems.map((item) => {
             const href = navHref(item, paymentGateActive, checkoutPlan);
             const locked = paymentGateActive && !item.openDuringPayment;
