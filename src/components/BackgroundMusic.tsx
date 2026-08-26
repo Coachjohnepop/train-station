@@ -6,8 +6,11 @@ import {
   BG_MUSIC_OVERLAY_EVENT,
   BG_MUSIC_REQUEST_PLAY_EVENT,
   clearBackgroundMusicHolds,
-  clearPersistedBackgroundMusicMute,
+  isBackgroundMusicAlreadyPlayed,
+  isBackgroundMusicUserMuted,
   markBackgroundMusicElement,
+  persistBackgroundMusicMute,
+  persistBackgroundMusicPlayed,
   registerBackgroundMusicMediaDucking,
 } from "@/lib/background-music-control";
 
@@ -17,15 +20,15 @@ import {
  * Autoplay / “tap anywhere” Theme Song only on public marketing + join funnel
  * (landing, onboarding, membership shopping). After a registered member logs in,
  * no autoplay — corner speaker can still start music on demand.
- * Mute is session-only via the speaker — never localStorage.
+ * One play per tab. Mute sticks for the rest of the session (including reloads).
  */
 
 const SRC = "/background-music.mp3";
 const VOLUME = 0.55;
 /** Finger stays up at least this long (mute also dismisses). */
 const HINT_MS = 22_000;
-/** “Tap anywhere” unlocks Theme Song at most this many times; then only the speaker. */
-const MAX_GESTURE_UNLOCKS = 2;
+/** “Tap anywhere” unlocks Theme Song once; then it does not start again. */
+const MAX_GESTURE_UNLOCKS = 1;
 
 // pointerdown covers mouse + touch once (do not also listen to click/touchstart —
 // that would burn both gesture unlocks on a single tap).
@@ -77,7 +80,6 @@ function sleep(ms: number) {
 export default function BackgroundMusic() {
   const pathname = usePathname() ?? "";
   const onAdmin = isAdminRoute(pathname);
-  const onMemberOnboard = pathname.startsWith("/member/onboard");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const overlayPauseRef = useRef(false);
   /** Keep handlers (gestures / visibility) from restarting music on admin. */
@@ -88,8 +90,8 @@ export default function BackgroundMusic() {
   const hintTimerRef = useRef<number | null>(null);
   const unlockedRef = useRef(false);
   /**
-   * Session-only mute from the corner speaker (not persisted).
-   * Once muted, only the speaker button may start music again (not page taps).
+   * Session mute from the corner speaker (sessionStorage).
+   * Once muted, Theme Song does not start again this tab — not even from the speaker.
    */
   const speakerMutedRef = useRef(false);
   /** Ignore activation that is the same click as the speaker mute (capture fires first). */
@@ -151,12 +153,13 @@ export default function BackgroundMusic() {
   const [soundLive, setSoundLive] = useState(false);
   const [showHint, setShowHint] = useState(true);
 
-  // Never inherit mute from a previous visit; reset gesture budget each load
+  // Restore mute / already-played for this tab (signup full-page loads used to restart the song)
   useEffect(() => {
-    clearPersistedBackgroundMusicMute();
-    speakerMutedRef.current = false;
-    gestureUnlockCountRef.current = 0;
-    setOff(false);
+    const muted = isBackgroundMusicUserMuted();
+    const played = isBackgroundMusicAlreadyPlayed();
+    speakerMutedRef.current = muted;
+    if (played) gestureUnlockCountRef.current = MAX_GESTURE_UNLOCKS;
+    setOff(muted);
   }, []);
 
   const clearHintTimer = useCallback(() => {
@@ -193,7 +196,11 @@ export default function BackgroundMusic() {
       !audio.muted &&
       (audio.currentTime > t0 + 0.05 || audio.currentTime > 0.15);
     setSoundLive(advancing);
-    if (advancing) unlockedRef.current = true;
+    if (advancing) {
+      unlockedRef.current = true;
+      persistBackgroundMusicPlayed();
+      gestureUnlockCountRef.current = MAX_GESTURE_UNLOCKS;
+    }
     return advancing;
   }, []);
 
@@ -225,24 +232,22 @@ export default function BackgroundMusic() {
       if (!autoPlayAllowedRef.current && !opts?.fromSpeakerButton) {
         return false;
       }
-      // Explicit speaker mute wins over everything except the speaker button
-      if (speakerMutedRef.current && !opts?.fromSpeakerButton) {
+      // Mute is sticky for the tab — speaker included
+      if (speakerMutedRef.current) {
         setSoundLive(false);
         setOff(true);
         return false;
       }
-      // Speaker play path clears mute; mute path stays quiet
-      if (opts?.fromSpeakerButton) {
-        speakerMutedRef.current = false;
-        setOff(false);
-      } else if (opts?.fromSpeakerMute || speakerMutedRef.current) {
+      if (opts?.fromSpeakerMute) {
         setSoundLive(false);
+        return false;
+      }
+      if (isBackgroundMusicAlreadyPlayed() && audio.paused) {
         return false;
       }
 
       overlayPauseRef.current = false;
       clearBackgroundMusicHolds();
-      clearPersistedBackgroundMusicMute();
 
       audio.volume = VOLUME;
       audio.muted = false;
@@ -312,7 +317,10 @@ export default function BackgroundMusic() {
         stopMusicQuiet(audio);
         return;
       }
-      // User muted via speaker — stay quiet until they tap the speaker again
+      if (isBackgroundMusicAlreadyPlayed() && (audio.paused || audio.muted)) {
+        return;
+      }
+      // User muted via speaker — stay quiet
       if (speakerMutedRef.current) {
         audio.muted = true;
         audio.pause();
@@ -320,8 +328,7 @@ export default function BackgroundMusic() {
         setOff(true);
         return;
       }
-      // After two tap-anywhere unlocks, only the speaker may start music again
-      if (gestureUnlockCountRef.current >= MAX_GESTURE_UNLOCKS) {
+      if (isBackgroundMusicAlreadyPlayed() || gestureUnlockCountRef.current >= MAX_GESTURE_UNLOCKS) {
         if (!audio.paused && !audio.muted) {
           setSoundLive(true);
           setOff(false);
@@ -341,7 +348,7 @@ export default function BackgroundMusic() {
       setOff(false);
       setSoundLive(false);
 
-      audio.loop = true;
+      audio.loop = false;
       audio.preload = "auto";
       audio.defaultMuted = false;
       audio.setAttribute("playsinline", "true");
@@ -407,6 +414,14 @@ export default function BackgroundMusic() {
     const audio = audioRef.current;
     if (!audio) return;
     markBackgroundMusicElement(audio);
+    audio.loop = false;
+    const onEnded = () => {
+      persistBackgroundMusicPlayed();
+      gestureUnlockCountRef.current = MAX_GESTURE_UNLOCKS;
+      setSoundLive(false);
+      unlockedRef.current = false;
+    };
+    audio.addEventListener("ended", onEnded);
 
     // Wait for auth on "/" so we don't start song then kill it for signed-in members
     if (!authReady && (pathname === "/" || pathname === "/landing")) {
@@ -448,6 +463,7 @@ export default function BackgroundMusic() {
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("pageshow", onPageShow);
     return () => {
+      audio.removeEventListener("ended", onEnded);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("pageshow", onPageShow);
       clearHintTimer();
@@ -565,17 +581,20 @@ export default function BackgroundMusic() {
       stopMusicQuiet(audio);
       return;
     }
-    if (speakerMutedRef.current) {
+    if (speakerMutedRef.current || isBackgroundMusicUserMuted()) {
       audio.muted = true;
       audio.pause();
       setSoundLive(false);
       setOff(true);
       return;
     }
+    if (isBackgroundMusicAlreadyPlayed()) {
+      return;
+    }
     void startMusicWithFinger(audio);
   }, [onAdmin, autoPlayAllowed, authReady, pathname, startMusicWithFinger, stopMusicQuiet]);
 
-  /** Single mute control: corner speaker only. Session-only (not remembered). */
+  /** Single mute control. After mute, Theme Song stays off for this tab. */
   const toggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -583,24 +602,16 @@ export default function BackgroundMusic() {
     const audio = audioRef.current;
     if (!audio || adminRouteRef.current) return;
 
-    // Currently playing → mute for this session only
-    if (!off && (soundLive || !audio.paused)) {
-      speakerMutedRef.current = true;
-      setOff(true);
-      setSoundLive(false);
-      unlockedRef.current = false;
-      dismissHint();
-      clearPersistedBackgroundMusicMute();
-      audio.muted = true;
-      audio.pause();
-      return;
-    }
-
-    // Muted / waiting → play (this click is the gesture; allowed even when autoplay is off)
-    speakerMutedRef.current = false;
-    setOff(false);
-    clearPersistedBackgroundMusicMute();
-    void forceAudible(audio, { fromSpeakerButton: true });
+    speakerMutedRef.current = true;
+    persistBackgroundMusicMute(true);
+    persistBackgroundMusicPlayed();
+    gestureUnlockCountRef.current = MAX_GESTURE_UNLOCKS;
+    setOff(true);
+    setSoundLive(false);
+    unlockedRef.current = false;
+    dismissHint();
+    audio.muted = true;
+    audio.pause();
   };
 
   const onPublicHome = pathname === "/" && !signedIn;
@@ -615,37 +626,28 @@ export default function BackgroundMusic() {
   const gestureBudgetLeft =
     autoPlayAllowed && gestureUnlockCountRef.current < MAX_GESTURE_UNLOCKS;
   const bubbleMobile = off
-    ? autoPlayAllowed
-      ? gestureBudgetLeft
-        ? "Theme Song — tap to play"
-        : "Theme Song — tap speaker to play"
-      : "Theme Song — tap speaker to play"
+    ? "Theme Song muted"
     : soundLive
       ? "Theme Song — tap to mute"
-      : autoPlayAllowed
-        ? gestureBudgetLeft
-          ? "Theme Song — tap anywhere to play"
-          : "Theme Song — tap speaker to play"
-        : "Theme Song — tap speaker to play";
+      : autoPlayAllowed && gestureBudgetLeft
+        ? "Theme Song — tap anywhere to play"
+        : "Theme Song — one play";
   const bubbleDesktop = off
-    ? "Theme Song — click the speaker to play"
+    ? "Theme Song muted"
     : soundLive
-      ? "Theme Song — click to mute anytime"
-      : autoPlayAllowed
-        ? gestureBudgetLeft
-          ? "Theme Song — click anywhere to play"
-          : "Theme Song — click speaker to play"
-        : "Theme Song — click speaker to play";
+      ? "Theme Song — click to mute"
+      : autoPlayAllowed && gestureBudgetLeft
+        ? "Theme Song — click anywhere to play"
+        : "Theme Song — one play";
 
-  // Hide on admin and member setup — speaker sat on top of Start setup on iPhone.
-  const showSpeaker = !onAdmin && !onMemberOnboard;
+  // Hide on admin. Stay visible on onboard so large type / Safari chrome can still mute.
+  const showSpeaker = !onAdmin;
 
   return (
     <>
       <audio
         ref={audioRef}
         src={SRC}
-        loop
         // Never HTML autoplay on admin or logged-in member app
         autoPlay={false}
         preload={onAdmin || !autoPlayAllowed ? "none" : "auto"}
@@ -655,15 +657,9 @@ export default function BackgroundMusic() {
       />
       {showSpeaker ? (
         <div
-          className={`bg-music-control-cluster fixed z-[120] flex items-end overflow-visible ${
-            onPublicHome || onLoggedInHome ? "bottom-4 sm:bottom-7" : "bottom-6"
-          }`}
+          className="bg-music-control-cluster fixed z-[120] flex items-end overflow-visible"
           style={{
             right: "max(0.75rem, env(safe-area-inset-right, 0px))",
-            bottom:
-              onPublicHome || onLoggedInHome
-                ? undefined
-                : "max(1.25rem, env(safe-area-inset-bottom, 0px))",
           }}
         >
           {fingerVisible ? (

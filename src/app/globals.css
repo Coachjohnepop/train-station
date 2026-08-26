@@ -1780,8 +1780,7 @@ html[data-landing-tour="open"] [data-global-theme-toggle] {
 
 /* Free ticket modal: hide theme + Theme Song chrome so they don't sit on Close / CTAs. */
 html[data-free-ticket="open"] [data-global-theme-toggle],
-html[data-free-ticket="open"] .landing-nav .theme-mode-toggle,
-html[data-free-ticket="open"] .bg-music-control-cluster {
+html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   display: none !important;
 }
 
@@ -2710,6 +2709,13 @@ input:-webkit-autofill {
   overflow: visible;
   /* Above Free Quick Tour (z-100) and free/welcome modals (z-110) so mute always works */
   z-index: 120;
+  /* Sit above iOS Safari chrome + member/coach bottom bars. Natasha's max
+     Dynamic Type hid the speaker under that stack at ~1.25rem. */
+  bottom: max(
+    var(--app-bottom-nav-clearance),
+    calc(env(safe-area-inset-bottom, 0px) + 6.75rem)
+  );
+  right: max(0.75rem, env(safe-area-inset-right, 0px));
 }
 
 .bg-music-guide {
@@ -2764,8 +2770,8 @@ input:-webkit-autofill {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  /* Real OS emoji 👉🏽 — medium tan skin (one shade lighter), points right */
-  font-size: 2.85rem;
+  /* Real OS emoji 👉🏽 — cap size so the cluster cannot cover the speaker */
+  font-size: min(2.25rem, 12vw);
   line-height: 1;
   transform: translate3d(-6px, 0, 0);
   animation: bg-music-point-nudge-mobile 1.1s ease-in-out infinite;
@@ -2776,7 +2782,7 @@ input:-webkit-autofill {
 
 @media (min-width: 640px) {
   .bg-music-guide-pointer {
-    font-size: 4.75rem;
+    font-size: min(3.25rem, 8vw);
     transform: translate3d(-12px, 0, 0);
     animation: bg-music-point-nudge-desktop 1.1s ease-in-out infinite;
     filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));

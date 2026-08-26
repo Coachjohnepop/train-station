@@ -3,11 +3,10 @@
 export const BG_MUSIC_OVERLAY_EVENT = "ts-bg-music-overlay";
 /** Ask BackgroundMusic to unlock/play (call from a user gesture when possible). */
 export const BG_MUSIC_REQUEST_PLAY_EVENT = "ts-bg-music-request-play";
-/**
- * Legacy key — was used to persist mute across visits. We no longer persist mute
- * (landing should always start Theme Song on first tap). Cleared on load.
- */
+/** Session mute — once they mute, Theme Song stays off until the tab closes. */
 export const BG_MUSIC_MUTED_KEY = "ts-bg-music-muted";
+/** Session flag — Theme Song already played once this tab. */
+export const BG_MUSIC_PLAYED_KEY = "ts-bg-music-played";
 const BG_MUSIC_ATTR = "data-ts-bg-music";
 
 let overlayHold = false;
@@ -60,20 +59,47 @@ export function requestBackgroundMusicPlay(): void {
   window.dispatchEvent(new CustomEvent(BG_MUSIC_REQUEST_PLAY_EVENT));
 }
 
-/** @deprecated Mute is session-only now; always returns false after clear. */
 export function isBackgroundMusicUserMuted(): boolean {
-  return false;
+  if (typeof window === "undefined") return false;
+  try {
+    return window.sessionStorage.getItem(BG_MUSIC_MUTED_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
 
-/** Drop legacy persisted mute so private/new visits never inherit “muted”. */
-export function clearPersistedBackgroundMusicMute(): void {
+export function persistBackgroundMusicMute(muted: boolean): void {
   if (typeof window === "undefined") return;
   try {
+    if (muted) window.sessionStorage.setItem(BG_MUSIC_MUTED_KEY, "1");
+    else window.sessionStorage.removeItem(BG_MUSIC_MUTED_KEY);
     window.localStorage.removeItem(BG_MUSIC_MUTED_KEY);
-    window.sessionStorage.removeItem(BG_MUSIC_MUTED_KEY);
   } catch {
     /* ignore */
   }
+}
+
+export function isBackgroundMusicAlreadyPlayed(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.sessionStorage.getItem(BG_MUSIC_PLAYED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function persistBackgroundMusicPlayed(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(BG_MUSIC_PLAYED_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+/** @deprecated Mute is session-sticky now; use persistBackgroundMusicMute(false). */
+export function clearPersistedBackgroundMusicMute(): void {
+  persistBackgroundMusicMute(false);
 }
 
 /** Hold BG music paused until the returned release function runs (YouTube overlays, etc.). */
