@@ -19,9 +19,17 @@ export function readMemberTextScale(): MemberTextScale {
   return "md";
 }
 
+const HTML_FONT_PX: Record<MemberTextScale, string> = {
+  sm: "14px",
+  md: "16px",
+  lg: "20px",
+};
+
 export function applyMemberTextScale(scale: MemberTextScale): void {
   if (typeof document === "undefined") return;
   document.documentElement.setAttribute("data-ts-text-scale", scale);
+  // Tailwind text-* is rem off <html>. Setting the root is what actually changes type.
+  document.documentElement.style.fontSize = HTML_FONT_PX[scale];
   try {
     window.localStorage.setItem(MEMBER_TEXT_SCALE_KEY, scale);
   } catch {

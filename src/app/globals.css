@@ -324,12 +324,17 @@ body {
   text-size-adjust: 100%;
 }
 
-html[data-ts-text-scale="sm"] .member-app {
-  font-size: 93%;
+/* Tailwind text-* is rem off <html>, not inherited from .member-app. */
+html[data-ts-text-scale="sm"] {
+  font-size: 14px;
 }
 
-html[data-ts-text-scale="lg"] .member-app {
-  font-size: 112%;
+html[data-ts-text-scale="md"] {
+  font-size: 16px;
+}
+
+html[data-ts-text-scale="lg"] {
+  font-size: 20px;
 }
 
 /* Deep purple canvas — member, admin, and marketing home */

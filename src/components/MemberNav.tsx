@@ -312,7 +312,12 @@ export default function MemberNav({
           className="member-nav-more-panel"
           aria-label="More member pages"
         >
-          <div className="member-text-scale" role="group" aria-label="Text size">
+          <div
+            className="member-text-scale"
+            role="group"
+            aria-label="Text size"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
             <span className="member-text-scale__label">Text</span>
             {(
               [
@@ -329,7 +334,10 @@ export default function MemberNav({
                 className={`member-text-scale__btn ${
                   textScale === id ? "member-text-scale__btn--on" : ""
                 }`}
-                onClick={() => {
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   setTextScale(id);
                   applyMemberTextScale(id);
                 }}
