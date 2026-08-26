@@ -197,6 +197,10 @@ export async function createBooking(data: {
   userId?: string;
   notes?: string | null;
   status?: string;
+  calendlyInviteeUri?: string | null;
+  calendlyEventUri?: string | null;
+  calendlyRescheduleUrl?: string | null;
+  calendlyCancelUrl?: string | null;
 }) {
   if (isDemoMode()) {
     // find or create demo user
@@ -224,6 +228,10 @@ export async function createBooking(data: {
       zoomUrl: data.zoomUrl || null,
       status: data.status || "pending",
       notes: data.notes || null,
+      calendlyInviteeUri: data.calendlyInviteeUri || null,
+      calendlyEventUri: data.calendlyEventUri || null,
+      calendlyRescheduleUrl: data.calendlyRescheduleUrl || null,
+      calendlyCancelUrl: data.calendlyCancelUrl || null,
       createdAt: new Date().toISOString(),
       userId: du.id,
     };
@@ -256,15 +264,83 @@ export async function createBooking(data: {
       zoomUrl: data.zoomUrl || null,
       status: data.status || "pending",
       notes: data.notes?.trim() || null,
+      calendlyInviteeUri: data.calendlyInviteeUri?.trim() || null,
+      calendlyEventUri: data.calendlyEventUri?.trim() || null,
+      calendlyRescheduleUrl: data.calendlyRescheduleUrl?.trim() || null,
+      calendlyCancelUrl: data.calendlyCancelUrl?.trim() || null,
       userId: userId || null,
     },
+  });
+}
+
+export type BookingCalendlyPatch = {
+  scheduledAt?: Date;
+  notes?: string | null;
+  calendlyInviteeUri?: string | null;
+  calendlyEventUri?: string | null;
+  calendlyRescheduleUrl?: string | null;
+  calendlyCancelUrl?: string | null;
+  status?: string;
+};
+
+export async function patchBookingCalendly(id: string, patch: BookingCalendlyPatch) {
+  if (isDemoMode()) {
+    const b = demoBookings.find((bk: { id: string }) => bk.id === id);
+    if (b) Object.assign(b, patch);
+    return b || null;
+  }
+  return prisma.booking.update({
+    where: { id },
+    data: {
+      scheduledAt: patch.scheduledAt,
+      notes: patch.notes === undefined ? undefined : patch.notes,
+      calendlyInviteeUri: patch.calendlyInviteeUri,
+      calendlyEventUri: patch.calendlyEventUri,
+      calendlyRescheduleUrl: patch.calendlyRescheduleUrl,
+      calendlyCancelUrl: patch.calendlyCancelUrl,
+      status: patch.status,
+    },
+  });
+}
+
+export async function getLatestMemberBooking(userId?: string | null, email?: string | null) {
+  const id = userId?.trim() || "";
+  const mail = email?.trim().toLowerCase() || "";
+  if (!id && !mail) return null;
+  if (isDemoMode()) {
+    const rows = demoBookings.filter(
+      (b: { userId?: string; memberEmail?: string; status?: string }) =>
+        (id && b.userId === id) || (mail && b.memberEmail === mail),
+    );
+    rows.sort(
+      (a: { scheduledAt: string }, b: { scheduledAt: string }) =>
+        new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime(),
+    );
+    return rows[0] || null;
+  }
+  return prisma.booking.findFirst({
+    where: {
+      status: { not: "cancelled" },
+      OR: [
+        ...(id ? [{ userId: id }] : []),
+        ...(mail ? [{ memberEmail: mail }] : []),
+      ],
+    },
+    orderBy: { scheduledAt: "desc" },
   });
 }
 
 /** Find a booking tagged with a Calendly invitee URI (idempotent webhooks). */
 export async function findBookingByCalendlyInviteeUri(
   inviteeUri: string,
-): Promise<{ id: string; status: string; scheduledAt: Date | string; memberEmail: string } | null> {
+): Promise<{
+  id: string;
+  status: string;
+  scheduledAt: Date | string;
+  memberEmail: string;
+  userId?: string | null;
+  calendlyRescheduleUrl?: string | null;
+} | null> {
   const marker = calendlyInviteeNoteMarker(inviteeUri);
   if (isDemoMode()) {
     const hit = demoBookings.find((b: { notes?: string | null }) =>
@@ -273,7 +349,9 @@ export async function findBookingByCalendlyInviteeUri(
     return hit || null;
   }
   const rows = await prisma.booking.findMany({
-    where: { notes: { contains: marker } },
+    where: {
+      OR: [{ calendlyInviteeUri: inviteeUri.trim() }, { notes: { contains: marker } }],
+    },
     orderBy: { createdAt: "desc" },
     take: 1,
   });

@@ -97,6 +97,8 @@ export type CalendlyScheduledDetails = {
   inviteeName: string | null;
   eventUri: string | null;
   inviteeUri: string | null;
+  rescheduleUrl: string | null;
+  cancelUrl: string | null;
 };
 
 function asRecord(v: unknown): Record<string, unknown> | null {
@@ -123,6 +125,8 @@ export function parseCalendlyScheduledDetails(data: unknown): CalendlyScheduledD
     inviteeName: null,
     eventUri: null,
     inviteeUri: null,
+    rescheduleUrl: null,
+    cancelUrl: null,
   };
   if (!isCalendlyScheduledMessage(data)) return empty;
 
@@ -160,5 +164,15 @@ export function parseCalendlyScheduledDetails(data: unknown): CalendlyScheduledD
       null,
     eventUri,
     inviteeUri,
+    rescheduleUrl:
+      (typeof invitee.reschedule_url === "string" && invitee.reschedule_url) ||
+      (typeof invitee.rescheduleUrl === "string" && invitee.rescheduleUrl) ||
+      (typeof payload.reschedule_url === "string" && payload.reschedule_url) ||
+      null,
+    cancelUrl:
+      (typeof invitee.cancel_url === "string" && invitee.cancel_url) ||
+      (typeof invitee.cancelUrl === "string" && invitee.cancelUrl) ||
+      (typeof payload.cancel_url === "string" && payload.cancel_url) ||
+      null,
   };
 }

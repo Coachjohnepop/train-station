@@ -17,6 +17,7 @@ type WelcomeEmailInput = {
   plan?: SignupPlan | string | null;
   stage: "signup" | "complete";
   programSlug?: string;
+  userId?: string;
   /** Extra paragraph (e.g. duplicate apology). */
   note?: string;
 };
@@ -56,13 +57,27 @@ export async function sendMemberWelcomeEmail(input: WelcomeEmailInput): Promise<
   const bookUrl = `${base}/member/book`;
   const messagesUrl = `${base}/member/chat`;
 
+  let changeUrl = COACH_CALENDLY_URL;
+  let changeLabel = "Book a 15-min intro";
+  try {
+    const { getLatestMemberBooking } = await import("@/lib/booking");
+    const booking = await getLatestMemberBooking(input.userId || "", input.email);
+    const reschedule = booking?.calendlyRescheduleUrl?.trim();
+    if (reschedule) {
+      changeUrl = reschedule;
+      changeLabel = "Change appointment";
+    }
+  } catch {
+    /* keep Calendly new-meeting fallback */
+  }
+
   const subject = `You're in. Start Day 1`;
   const text =
     `Hey ${hi},\n\n` +
     `Setup's done. You're in.\n\n` +
     `Start Day 1:\n${startUrl}\n\n` +
-    `Book a 15-min intro (Zoom):\n${bookUrl}\n` +
-    `Or Calendly: ${COACH_CALENDLY_URL}\n\n` +
+    `${changeLabel}:\n${changeUrl}\n` +
+    (changeUrl === COACH_CALENDLY_URL ? `Or in the app: ${bookUrl}\n\n` : `\n`) +
     `Message me anytime:\n${messagesUrl}\n\n` +
     `${planLabel}\n\n` +
     `Jeremy\n` +
@@ -72,8 +87,8 @@ export async function sendMemberWelcomeEmail(input: WelcomeEmailInput): Promise<
     to: input.email,
     subject: transactionalSubject("welcome"),
     text,
-    ctaUrl: startUrl,
-    ctaLabel: "Start Day 1",
+    ctaUrl: changeUrl !== COACH_CALENDLY_URL ? changeUrl : startUrl,
+    ctaLabel: changeUrl !== COACH_CALENDLY_URL ? "Change appointment" : "Start Day 1",
     tags: [{ name: "category", value: "welcome-complete" }],
   });
 }

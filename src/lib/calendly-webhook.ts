@@ -125,6 +125,8 @@ export function parseCalendlyInviteePayload(body: unknown): {
   startTime: string | null;
   endTime: string | null;
   timezone: string | null;
+  rescheduleUrl: string | null;
+  cancelUrl: string | null;
   canceled: boolean;
 } {
   const root = asRecord(body) || {};
@@ -178,6 +180,8 @@ export function parseCalendlyInviteePayload(body: unknown): {
     startTime,
     endTime,
     timezone: pickString(payload.timezone, scheduledEvent.timezone) || null,
+    rescheduleUrl: pickString(payload.reschedule_url, payload.rescheduleUrl) || null,
+    cancelUrl: pickString(payload.cancel_url, payload.cancelUrl) || null,
     canceled:
       eventType === "invitee.canceled" ||
       pickString(payload.status) === "canceled" ||
@@ -230,8 +234,8 @@ export async function processCalendlyWebhookBody(
     };
   }
 
-  // invitee.created
-  if (!parsed.startTime) {
+  // invitee.created — keep going without start_time if we at least have a reschedule URL.
+  if (!parsed.startTime && !parsed.rescheduleUrl) {
     return {
       ok: true,
       event,
@@ -244,6 +248,32 @@ export async function processCalendlyWebhookBody(
   if (parsed.inviteeUri) {
     const existing = await findBookingByCalendlyInviteeUri(parsed.inviteeUri);
     if (existing) {
+      try {
+        const { patchBookingCalendly } = await import("@/lib/booking");
+        await patchBookingCalendly(existing.id, {
+          scheduledAt: parsed.startTime ? new Date(parsed.startTime) : undefined,
+          calendlyInviteeUri: parsed.inviteeUri,
+          calendlyEventUri: parsed.eventUri,
+          calendlyRescheduleUrl: parsed.rescheduleUrl,
+          calendlyCancelUrl: parsed.cancelUrl,
+        });
+      } catch {
+        /* ignore */
+      }
+      if (parsed.rescheduleUrl && parsed.email) {
+        try {
+          const { sendMemberIntroBookedEmail } = await import("@/lib/member-booking-email");
+          await sendMemberIntroBookedEmail({
+            email: parsed.email,
+            name: parsed.name,
+            scheduledAt: parsed.startTime,
+            rescheduleUrl: parsed.rescheduleUrl,
+            userId: existing.userId ?? undefined,
+          });
+        } catch (e) {
+          console.warn("[calendly-webhook] member booking email failed", e);
+        }
+      }
       return {
         ok: true,
         event,
@@ -267,16 +297,21 @@ export async function processCalendlyWebhookBody(
     parsed.timezone ? `tz:${parsed.timezone}` : null,
   ].filter(Boolean);
 
+  const startIso = parsed.startTime || new Date().toISOString();
   const booking = await createBooking({
     memberEmail: parsed.email,
     memberPhone: parsed.phone || undefined,
-    scheduledAt: new Date(parsed.startTime),
-    durationMin: durationMinutes(parsed.startTime, parsed.endTime),
+    scheduledAt: new Date(startIso),
+    durationMin: parsed.startTime ? durationMinutes(startIso, parsed.endTime) : 15,
     adminEmail: contact.email,
     adminPhone: contact.phone || undefined,
     userId,
     notes: notesParts.join(" · "),
     status: "confirmed",
+    calendlyInviteeUri: parsed.inviteeUri,
+    calendlyEventUri: parsed.eventUri,
+    calendlyRescheduleUrl: parsed.rescheduleUrl,
+    calendlyCancelUrl: parsed.cancelUrl,
   });
 
   let notified = false;
@@ -299,11 +334,24 @@ export async function processCalendlyWebhookBody(
       email: parsed.email,
       plan: signupPlanLabel(profile.plan),
       paymentStatus: profile.paymentStatus,
-      scheduledAt: parsed.startTime,
+      scheduledAt: parsed.startTime || startIso,
       bookingSource: "calendly",
       phone: parsed.phone || account?.phone || profile.phone || null,
     });
     notified = true;
+
+    try {
+      const { sendMemberIntroBookedEmail } = await import("@/lib/member-booking-email");
+      await sendMemberIntroBookedEmail({
+        email: parsed.email,
+        name: parsed.name || account?.name,
+        scheduledAt: parsed.startTime || startIso,
+        rescheduleUrl: parsed.rescheduleUrl,
+        userId,
+      });
+    } catch (e) {
+      console.warn("[calendly-webhook] member booking email failed", e);
+    }
 
     try {
       await awardGamificationPoints({

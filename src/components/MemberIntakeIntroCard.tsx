@@ -6,12 +6,13 @@ import { COACH_CALENDLY_URL } from "@/lib/brand";
 import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
 import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
 import EmbeddedCalendlyModal from "@/components/EmbeddedCalendlyModal";
-import { NextStepButton } from "@/components/NextStepButton";
+import { NextStepButton, NextStepLink } from "@/components/NextStepButton";
 
 type IntakeStatus = {
   introBookedAt: string | null;
   coachMeetingRequestedAt: string | null;
   coachMeetingRequestNote: string | null;
+  rescheduleUrl?: string | null;
 };
 
 export default function MemberIntakeIntroCard({
@@ -35,6 +36,7 @@ export default function MemberIntakeIntroCard({
       introBookedAt: null,
       coachMeetingRequestedAt: null,
       coachMeetingRequestNote: null,
+      rescheduleUrl: null,
     },
   );
   const [booking, setBooking] = useState(false);
@@ -67,6 +69,7 @@ export default function MemberIntakeIntroCard({
           introBookedAt: data.introBookedAt ?? null,
           coachMeetingRequestedAt: data.coachMeetingRequestedAt ?? null,
           coachMeetingRequestNote: data.coachMeetingRequestNote ?? null,
+          rescheduleUrl: data.rescheduleUrl ?? null,
         });
       }
     })();
@@ -76,6 +79,8 @@ export default function MemberIntakeIntroCard({
     scheduledAt?: string | null;
     eventUri?: string | null;
     inviteeUri?: string | null;
+    rescheduleUrl?: string | null;
+    cancelUrl?: string | null;
   }) {
     setBooking(true);
     try {
@@ -87,6 +92,8 @@ export default function MemberIntakeIntroCard({
           bookingSource: "calendly",
           calendlyEventUri: details?.eventUri || null,
           calendlyInviteeUri: details?.inviteeUri || null,
+          calendlyRescheduleUrl: details?.rescheduleUrl || null,
+          calendlyCancelUrl: details?.cancelUrl || null,
         }),
       });
       const data = await res.json();
@@ -105,6 +112,7 @@ export default function MemberIntakeIntroCard({
         introBookedAt: data.introBookedAt || prev.introBookedAt || new Date().toISOString(),
         coachMeetingRequestedAt: null,
         coachMeetingRequestNote: null,
+        rescheduleUrl: data.rescheduleUrl || details?.rescheduleUrl || prev.rescheduleUrl || null,
       }));
 
       if (!bookingFollowUp) {
@@ -163,7 +171,9 @@ export default function MemberIntakeIntroCard({
         </p>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-          {introBooked && (
+          {introBooked && status.rescheduleUrl ? (
+            <NextStepLink href={status.rescheduleUrl}>Change appointment</NextStepLink>
+          ) : introBooked ? (
             <button
               type="button"
               disabled
@@ -172,7 +182,7 @@ export default function MemberIntakeIntroCard({
             >
               ✓ Book 15-min intro — Completed
             </button>
-          )}
+          ) : null}
 
           {showIntroBook && (
             <NextStepButton onClick={() => setModalOpen(true)} disabled={booking}>

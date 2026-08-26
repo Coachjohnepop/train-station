@@ -490,10 +490,19 @@ model Booking {
   zoomMeetingId String?
   status        String   @default("pending") // pending, confirmed, completed, cancelled
   notes         String?
+  /** Calendly invitee resource URI — idempotent webhooks + reschedule fetch. */
+  calendlyInviteeUri    String?
+  calendlyEventUri      String?
+  /** Invitee reschedule page from Calendly (reschedule_url). */
+  calendlyRescheduleUrl String?
+  calendlyCancelUrl     String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @default(now()) @updatedAt
   userId        String?
   user          User?    @relation(fields: [userId], references: [id])
+
+  @@index([calendlyInviteeUri])
+  @@index([memberEmail, scheduledAt])
 }
 
 /**

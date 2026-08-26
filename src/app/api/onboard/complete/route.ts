@@ -251,6 +251,7 @@ Coach intro booking: on dashboard after setup
       plan: profile.plan,
       stage: "complete",
       programSlug: enrolledSlug,
+      userId: session.id,
     });
     if (emailSent) {
       welcomePatch.welcomeCompleteEmailSentAt = new Date().toISOString();

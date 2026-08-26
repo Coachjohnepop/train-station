@@ -11,6 +11,7 @@ import {
   slotLocalDateKey,
 } from "@/lib/booking-slot-format";
 import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
+import { NextStepLink } from "@/components/NextStepButton";
 import PhoneInput from "@/components/PhoneInput";
 import { formatPhoneDisplay } from "@/lib/sms-phone";
 
@@ -31,16 +32,18 @@ export default function BookClient() {
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [calendlyModalOpen, setCalendlyModalOpen] = useState(false);
   const [calendlyBooked, setCalendlyBooked] = useState(false);
+  const [rescheduleUrl, setRescheduleUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         // Members must NOT call /api/admin/contact (staff-only) — that hung the page.
-        const [cRes, sRes, sessionRes] = await Promise.all([
+        const [cRes, sRes, sessionRes, intakeRes] = await Promise.all([
           fetch("/api/bookings/contact", { cache: "no-store" }),
           fetch("/api/bookings?slots=true", { cache: "no-store" }),
           fetch("/api/auth/session", { cache: "no-store" }),
+          fetch("/api/member/intake-status", { cache: "no-store" }),
         ]);
         if (cancelled) return;
 
@@ -63,6 +66,12 @@ export default function BookClient() {
           const session = await sessionRes.json();
           if (session.signedIn && session.user?.email) {
             setMemberEmail(session.user.email);
+          }
+        }
+        if (intakeRes.ok) {
+          const intake = await intakeRes.json();
+          if (typeof intake.rescheduleUrl === "string" && intake.rescheduleUrl.trim()) {
+            setRescheduleUrl(intake.rescheduleUrl.trim());
           }
         }
         if (sRes.ok) {
@@ -134,6 +143,15 @@ export default function BookClient() {
       <Link href="/member" className="text-xs text-accent hover:underline">
         ← Back to dashboard
       </Link>
+
+      {rescheduleUrl ? (
+        <div className="mt-4">
+          <NextStepLink href={rescheduleUrl}>Change appointment</NextStepLink>
+          <p className="mt-2 text-center text-xs text-[var(--muted)]">
+            Opens Calendly so you can pick a new time (including earlier slots Jeremy just opened).
+          </p>
+        </div>
+      ) : null}
 
       <h1 className="mt-3 text-2xl font-bold">
         {isSpeaking ? "Book your speaking scope call" : "Book your onboarding call"}
@@ -307,11 +325,18 @@ export default function BookClient() {
                 bookingSource: "calendly",
                 calendlyEventUri: details.eventUri || null,
                 calendlyInviteeUri: details.inviteeUri || null,
+                calendlyRescheduleUrl: details.rescheduleUrl || null,
+                calendlyCancelUrl: details.cancelUrl || null,
                 phone: memberPhone || null,
               }),
             });
             if (!res.ok) return;
             const data = await res.json();
+            if (typeof data.rescheduleUrl === "string" && data.rescheduleUrl) {
+              setRescheduleUrl(data.rescheduleUrl);
+            } else if (details.rescheduleUrl) {
+              setRescheduleUrl(details.rescheduleUrl);
+            }
             dispatchMemberScoreCelebrate({
               pointsEarned: data.pointsEarned ?? 0,
               totalPoints: data.totalPoints,
