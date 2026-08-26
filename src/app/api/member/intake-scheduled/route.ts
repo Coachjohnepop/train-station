@@ -49,6 +49,7 @@ export async function POST(request: Request) {
     rescheduleUrl: body.calendlyRescheduleUrl,
     cancelUrl: body.calendlyCancelUrl,
     scheduledAt: meetingIso,
+    email: session.email,
   });
   if (!meetingIso && calendly.startTime) meetingIso = calendly.startTime;
 

@@ -427,7 +427,8 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - **Slim first-run (interview later):** onboard is 3 steps — man/woman → Face ID/PIN (skippable) → Continue to Today or book Jeremy. Gear, weight, city, goals wait for the intro call. Same purple **Continue** pill on purchase + setup.
 - Free Tour ~2× faster (half the hold times; skipped empty-gear and empty-calendar beats).
 - Natasha stays Free Explorer until we upgrade her.
-- **Calendly reschedule:** Booking stores Calendly’s `reschedule_url`. New intro-booked emails use **Change appointment** (that URL). Optional `CALENDLY_API_TOKEN` fills the URL when the embed only sends an invitee URI. Natasha’s existing booking has no Calendly invitee stored — her last welcome mail cannot be rewritten; she may still have Calendly’s own confirmation.
+- **Calendly API:** Client can GET invitee + list events by email, fill `reschedule_url`, and register the webhook. **Blocked on PAT** — none on Vercel yet. Jeremy/John: Calendly → Integrations & apps → API & webhooks → Personal access token → `CALENDLY_API_TOKEN` on Vercel Production, then `npx tsx scripts/calendly-connect.mjs` and `EMAIL=tangledsigns@gmail.com npx tsx scripts/calendly-connect.mjs`. After that: sync Natasha’s slot, then resend booking email (John still reviewing copy).
+- **Parked until Calendly API is live:** (1) ghost `introBookedAt` with no Booking row, (2) coach interview desk for gear/weight/goals after the call, (3) XXL iPhone walkthrough of Continue + mute.
 
 **Date:** 2026-08-25 EOD  
 **Status:** John signing off. No monitors running.

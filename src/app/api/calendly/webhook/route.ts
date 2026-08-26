@@ -77,6 +77,6 @@ export async function GET() {
     configured,
     hint: configured
       ? "POST invitee.created / invitee.canceled payloads here."
-      : "Set CALENDLY_WEBHOOK_SIGNING_KEY on Vercel Production.",
+      : "Set CALENDLY_API_TOKEN and CALENDLY_WEBHOOK_SIGNING_KEY on Vercel Production.",
   });
 }

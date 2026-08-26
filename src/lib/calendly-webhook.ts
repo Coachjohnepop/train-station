@@ -234,8 +234,33 @@ export async function processCalendlyWebhookBody(
     };
   }
 
+  // Embed often omits start_time / reschedule_url. Fill from Calendly API when we have a PAT.
+  let startTime = parsed.startTime;
+  let rescheduleUrl = parsed.rescheduleUrl;
+  let cancelUrl = parsed.cancelUrl;
+  let eventUri = parsed.eventUri;
+  if (parsed.inviteeUri && (!startTime || !rescheduleUrl)) {
+    try {
+      const { enrichCalendlyLinks } = await import("@/lib/calendly-invitee");
+      const filled = await enrichCalendlyLinks({
+        inviteeUri: parsed.inviteeUri,
+        eventUri: parsed.eventUri,
+        rescheduleUrl: parsed.rescheduleUrl,
+        cancelUrl: parsed.cancelUrl,
+        scheduledAt: parsed.startTime,
+        email: parsed.email,
+      });
+      startTime = filled.startTime || startTime;
+      rescheduleUrl = filled.rescheduleUrl || rescheduleUrl;
+      cancelUrl = filled.cancelUrl || cancelUrl;
+      eventUri = filled.eventUri || eventUri;
+    } catch (e) {
+      console.warn("[calendly-webhook] API enrich failed", e);
+    }
+  }
+
   // invitee.created — keep going without start_time if we at least have a reschedule URL.
-  if (!parsed.startTime && !parsed.rescheduleUrl) {
+  if (!startTime && !rescheduleUrl) {
     return {
       ok: true,
       event,
@@ -251,23 +276,23 @@ export async function processCalendlyWebhookBody(
       try {
         const { patchBookingCalendly } = await import("@/lib/booking");
         await patchBookingCalendly(existing.id, {
-          scheduledAt: parsed.startTime ? new Date(parsed.startTime) : undefined,
+          scheduledAt: startTime ? new Date(startTime) : undefined,
           calendlyInviteeUri: parsed.inviteeUri,
-          calendlyEventUri: parsed.eventUri,
-          calendlyRescheduleUrl: parsed.rescheduleUrl,
-          calendlyCancelUrl: parsed.cancelUrl,
+          calendlyEventUri: eventUri,
+          calendlyRescheduleUrl: rescheduleUrl,
+          calendlyCancelUrl: cancelUrl,
         });
       } catch {
         /* ignore */
       }
-      if (parsed.rescheduleUrl && parsed.email) {
+      if (rescheduleUrl && parsed.email) {
         try {
           const { sendMemberIntroBookedEmail } = await import("@/lib/member-booking-email");
           await sendMemberIntroBookedEmail({
             email: parsed.email,
             name: parsed.name,
-            scheduledAt: parsed.startTime,
-            rescheduleUrl: parsed.rescheduleUrl,
+            scheduledAt: startTime,
+            rescheduleUrl,
             userId: existing.userId ?? undefined,
           });
         } catch (e) {
@@ -280,7 +305,7 @@ export async function processCalendlyWebhookBody(
         action: "duplicate",
         bookingId: existing.id,
         memberEmail: parsed.email,
-        scheduledAt: parsed.startTime,
+        scheduledAt: startTime,
         notified: false,
         detail: "Already processed this Calendly invitee",
       };
@@ -293,25 +318,25 @@ export async function processCalendlyWebhookBody(
   const notesParts = [
     "Calendly webhook",
     parsed.inviteeUri ? calendlyInviteeNoteMarker(parsed.inviteeUri) : null,
-    parsed.eventUri ? `event:${parsed.eventUri}` : null,
+    eventUri ? `event:${eventUri}` : null,
     parsed.timezone ? `tz:${parsed.timezone}` : null,
   ].filter(Boolean);
 
-  const startIso = parsed.startTime || new Date().toISOString();
+  const startIso = startTime || new Date().toISOString();
   const booking = await createBooking({
     memberEmail: parsed.email,
     memberPhone: parsed.phone || undefined,
     scheduledAt: new Date(startIso),
-    durationMin: parsed.startTime ? durationMinutes(startIso, parsed.endTime) : 15,
+    durationMin: startTime ? durationMinutes(startIso, parsed.endTime) : 15,
     adminEmail: contact.email,
     adminPhone: contact.phone || undefined,
     userId,
     notes: notesParts.join(" · "),
     status: "confirmed",
     calendlyInviteeUri: parsed.inviteeUri,
-    calendlyEventUri: parsed.eventUri,
-    calendlyRescheduleUrl: parsed.rescheduleUrl,
-    calendlyCancelUrl: parsed.cancelUrl,
+    calendlyEventUri: eventUri,
+    calendlyRescheduleUrl: rescheduleUrl,
+    calendlyCancelUrl: cancelUrl,
   });
 
   let notified = false;
@@ -334,7 +359,7 @@ export async function processCalendlyWebhookBody(
       email: parsed.email,
       plan: signupPlanLabel(profile.plan),
       paymentStatus: profile.paymentStatus,
-      scheduledAt: parsed.startTime || startIso,
+      scheduledAt: startTime || startIso,
       bookingSource: "calendly",
       phone: parsed.phone || account?.phone || profile.phone || null,
     });
@@ -345,8 +370,8 @@ export async function processCalendlyWebhookBody(
       await sendMemberIntroBookedEmail({
         email: parsed.email,
         name: parsed.name || account?.name,
-        scheduledAt: parsed.startTime || startIso,
-        rescheduleUrl: parsed.rescheduleUrl,
+        scheduledAt: startTime || startIso,
+        rescheduleUrl,
         userId,
       });
     } catch (e) {
@@ -371,7 +396,7 @@ export async function processCalendlyWebhookBody(
       email: parsed.email,
       plan: "Unknown (not a signed-up member yet)",
       paymentStatus: "none",
-      scheduledAt: parsed.startTime,
+      scheduledAt: startTime,
       bookingSource: "calendly",
       phone: parsed.phone,
       skipInApp: true,
@@ -385,7 +410,7 @@ export async function processCalendlyWebhookBody(
     action: "created",
     bookingId: typeof booking.id === "string" ? booking.id : String(booking.id),
     memberEmail: parsed.email,
-    scheduledAt: parsed.startTime,
+    scheduledAt: startTime,
     notified,
   };
 }
