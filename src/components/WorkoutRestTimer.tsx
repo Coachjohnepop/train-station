@@ -26,6 +26,9 @@ type Props = {
    * rest = amber rest between sets (default)
    */
   phase?: WorkoutTimerPhase;
+  /** HIT series: current work/rest round of total rounds. */
+  hitRound?: number | null;
+  hitRounds?: number | null;
 };
 
 export default function WorkoutRestTimer({
@@ -41,8 +44,11 @@ export default function WorkoutRestTimer({
   onToggleMute,
   completing = false,
   phase = "rest",
+  hitRound = null,
+  hitRounds = null,
 }: Props) {
   const isExercise = phase === "exercise";
+  const isHit = typeof hitRound === "number" && typeof hitRounds === "number" && hitRounds > 0;
   const progress =
     totalSeconds > 0
       ? Math.min(100, ((totalSeconds - Math.max(0, secondsLeft)) / totalSeconds) * 100)
@@ -64,7 +70,15 @@ export default function WorkoutRestTimer({
     };
   }, [sticky, onSkip]);
 
-  const eyebrow = done
+  const eyebrow = isHit
+    ? done
+      ? isExercise
+        ? `HIT work ${hitRound}/${hitRounds} done`
+        : `HIT rest ${hitRound}/${hitRounds} done`
+      : isExercise
+        ? `HIT · work ${hitRound}/${hitRounds}`
+        : `HIT · rest ${hitRound}/${hitRounds}`
+    : done
     ? isExercise
       ? "Hold complete"
       : "Rest complete"
@@ -80,7 +94,17 @@ export default function WorkoutRestTimer({
       ? `Time of exercise ${formatRestCountdown(secondsLeft)} remaining`
       : `Rest ${formatRestCountdown(secondsLeft)} remaining`;
 
-  const hint = done
+  const hint = isHit
+    ? done
+      ? isExercise
+        ? "Rest next…"
+        : hitRound! >= hitRounds!
+          ? "Series complete"
+          : "Work next…"
+      : isExercise
+        ? "Work until zero — rest follows automatically"
+        : "Rest until zero — next work starts automatically"
+    : done
     ? isExercise
       ? "Alert — rest next…"
       : "Alert — closing…"
@@ -92,7 +116,11 @@ export default function WorkoutRestTimer({
         ? "Hold / timed set · cybertruck when done · then rest"
         : "After each set (including last) · closes on rest-end sound";
 
-  const skipLabel = done
+  const skipLabel = isHit
+    ? isExercise
+      ? "Skip work"
+      : "Skip rest"
+    : done
     ? "Close"
     : isExercise
       ? "Skip hold"

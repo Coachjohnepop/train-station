@@ -26,7 +26,9 @@ const HOLD_PRESETS = [10, 15, 20, 30, 45, 60] as const;
 const REST_PRESETS = [30, 45, 60, 90, 120] as const;
 
 function patternUsesPhase2(pattern: PrescriptionPatternType): boolean {
-  return ["hold_burnout", "hold_fixed_reps", "hold_then_timed"].includes(pattern);
+  return ["hold_burnout", "hold_fixed_reps", "hold_then_timed", "hit_intervals"].includes(
+    pattern,
+  );
 }
 
 function patternUsesPhase1(pattern: PrescriptionPatternType): boolean {
@@ -102,12 +104,16 @@ export default function PrescriptionRowEditor({
   ]);
 
   function submit() {
+    const hitRest =
+      patternType === "hit_intervals"
+        ? (phase2DurationSec ?? phase1DurationSec ?? 20)
+        : restBetweenSetsSec;
     const draft = {
       id: initial.id,
       patternType,
       sampleExercise: exerciseName,
       setCount,
-      restBetweenSetsSec,
+      restBetweenSetsSec: hitRest,
       weightTier,
       phase1Type: phase1TypeForPattern(patternType),
       phase1DurationSec,
@@ -145,7 +151,15 @@ export default function PrescriptionRowEditor({
               <select
                 className="input mt-1"
                 value={patternType}
-                onChange={(e) => setPatternType(e.target.value as PrescriptionPatternType)}
+                onChange={(e) => {
+                  const next = e.target.value as PrescriptionPatternType;
+                  setPatternType(next);
+                  if (next === "hit_intervals") {
+                    setSetCount((c) => (c >= 4 ? c : 10));
+                    setPhase1DurationSec((d) => d ?? 20);
+                    setPhase2DurationSec((d) => d ?? 20);
+                  }
+                }}
               >
                 {PRESCRIPTION_PATTERN_TYPES.map((id) => (
                   <option key={id} value={id}>
@@ -162,7 +176,9 @@ export default function PrescriptionRowEditor({
           )}
 
           <div>
-            <p className="text-sm font-medium">Sets</p>
+            <p className="text-sm font-medium">
+              {patternType === "hit_intervals" ? "Rounds" : "Sets"}
+            </p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {SET_COUNTS.map((n) => (
                 <button
@@ -177,6 +193,7 @@ export default function PrescriptionRowEditor({
             </div>
           </div>
 
+          {patternType !== "hit_intervals" ? (
           <div>
             <p className="text-sm font-medium">Rest between sets</p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -192,6 +209,7 @@ export default function PrescriptionRowEditor({
               ))}
             </div>
           </div>
+          ) : null}
 
           <div>
             <p className="text-sm font-medium">Weight</p>
@@ -266,16 +284,23 @@ export default function PrescriptionRowEditor({
               </>
             ) : null}
 
-            {patternType === "timed_rounds" ? (
+            {patternType === "timed_rounds" || patternType === "hit_intervals" ? (
               <div>
-                <p className="text-sm font-medium">Work interval (seconds)</p>
+                <p className="text-sm font-medium">
+                  {patternType === "hit_intervals" ? "Work (seconds)" : "Work interval (seconds)"}
+                </p>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {[15, 20, 30, 40, 45, 60].map((n) => (
+                  {[10, 15, 20, 30, 45, 60].map((n) => (
                     <button
                       key={n}
                       type="button"
                       className={`coach-floor-set-btn min-w-[2.25rem] ${phase1DurationSec === n ? "ring-2 ring-accent" : ""}`}
-                      onClick={() => setPhase1DurationSec(n)}
+                      onClick={() => {
+                        setPhase1DurationSec(n);
+                        if (patternType === "hit_intervals" && (phase2DurationSec == null || phase2DurationSec === phase1DurationSec)) {
+                          setPhase2DurationSec(n);
+                        }
+                      }}
                     >
                       {n}
                     </button>
@@ -304,6 +329,26 @@ export default function PrescriptionRowEditor({
                       type="button"
                       className={`coach-floor-set-btn min-w-[2.25rem] ${phase2Reps === n ? "ring-2 ring-accent" : ""}`}
                       onClick={() => setPhase2Reps(n)}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {patternType === "hit_intervals" ? (
+              <div>
+                <p className="text-sm font-medium">Rest (seconds)</p>
+                <p className="mt-0.5 text-[11px] text-[var(--muted)]">
+                  Same as work unless you pick a different rest.
+                </p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {[10, 15, 20, 30, 45, 60].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      className={`coach-floor-set-btn min-w-[2.25rem] ${phase2DurationSec === n ? "ring-2 ring-accent" : ""}`}
+                      onClick={() => setPhase2DurationSec(n)}
                     >
                       {n}
                     </button>
@@ -362,7 +407,7 @@ export default function PrescriptionRowEditor({
 
 function phase1TypeForPattern(pattern: PrescriptionPatternType) {
   if (pattern === "standard_reps" || pattern === "max_reps") return "reps" as const;
-  if (pattern === "timed_rounds") return "timed" as const;
+  if (pattern === "timed_rounds" || pattern === "hit_intervals") return "timed" as const;
   if (pattern === "burnout_only") return "burnout" as const;
   if (["hold_burnout", "hold_fixed_reps", "hold_only", "hold_then_timed"].includes(pattern)) {
     return "hold" as const;
@@ -373,7 +418,7 @@ function phase1TypeForPattern(pattern: PrescriptionPatternType) {
 function phase2TypeForPattern(pattern: PrescriptionPatternType) {
   if (pattern === "hold_burnout" || pattern === "burnout_only") return "burnout" as const;
   if (pattern === "hold_fixed_reps") return "reps" as const;
-  if (pattern === "hold_then_timed") return "timed" as const;
+  if (pattern === "hold_then_timed" || pattern === "hit_intervals") return "timed" as const;
   return "" as const;
 }
 

@@ -78,6 +78,11 @@ import {
   normalizeLogSessionDate,
 } from "@/lib/member-workout-log";
 import { useScreenWakeLock } from "@/hooks/useScreenWakeLock";
+import {
+  formatHitSummary,
+  isHitApproach,
+  resolveHitInterval,
+} from "@/lib/hit-intervals";
 
 export type MemberExerciseBlock = {
   id: string;
@@ -131,6 +136,17 @@ type ActiveRestTimer = {
   totalSeconds: number;
   /** exercise = green hold; rest = between-sets rest */
   phase: "exercise" | "rest";
+  hitRound?: number;
+  hitRounds?: number;
+};
+
+type HitSeries = {
+  blockId: string;
+  round: number;
+  rounds: number;
+  workSec: number;
+  restSec: number;
+  stage: "work" | "rest";
 };
 
 /** Green hold after a set tap — timed-approach only (not "5 min" bike work). */
@@ -372,6 +388,7 @@ export default function MemberWorkoutConsole({
   const [coachExpandedBlockId, setCoachExpandedBlockId] = useState<string | null>(null);
   const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
   const restHornPlayedRef = useRef(false);
+  const hitSeriesRef = useRef<HitSeries | null>(null);
   const coachUnmutedThisSessionRef = useRef(false);
   const restTickAnnouncedRef = useRef<Set<number>>(new Set());
   /** Tracks open timer identity so duration retargets don't re-fire start/tick/complete storms. */
@@ -1193,6 +1210,7 @@ export default function MemberWorkoutConsole({
     .find((e) => !finishedExercises.has(e.id));
 
   const clearRestTimer = useCallback(() => {
+    hitSeriesRef.current = null;
     setRestTimer(null);
     setRestSecondsLeft(0);
     setRestCompleting(false);
@@ -1252,7 +1270,7 @@ export default function MemberWorkoutConsole({
           ? "exercise"
           : "rest");
 
-      if (phase === "rest") {
+      if (phase === "rest" && opts?.secondsOverride == null) {
         if (restSettingsRef.current.enabled === false) return;
         restSettingsRef.current = {
           ...restSettingsRef.current,
@@ -1290,12 +1308,15 @@ export default function MemberWorkoutConsole({
 
       setRestCompleting(false);
       setRestSecondsLeft(Math.max(0, Math.ceil((endsAt - Date.now()) / 1000)));
+      const hit = hitSeriesRef.current;
       setRestTimer({
         blockId,
         completedSetNum: setNum,
         endsAt,
         totalSeconds,
         phase,
+        hitRound: hit && hit.blockId === blockId ? hit.round : undefined,
+        hitRounds: hit && hit.blockId === blockId ? hit.rounds : undefined,
       });
       restTickAnnouncedRef.current = new Set();
       restHornPlayedRef.current = false;
@@ -1326,6 +1347,35 @@ export default function MemberWorkoutConsole({
       coachFloorMode,
       queueLiveSave,
     ],
+  );
+
+  const startHitSeries = useCallback(
+    (blockId: string) => {
+      const block = workout.exercises.find((e) => e.id === blockId);
+      if (!block) return;
+      const hit = resolveHitInterval({
+        setScheme: block.setScheme,
+        reps: block.reps,
+        setCount: block.setCount,
+        restSec: block.restSec,
+      });
+      if (!hit) return;
+      unlockRestAudio(restSoundRef.current);
+      suppressAutoRestUntilRef.current = 0;
+      hitSeriesRef.current = {
+        blockId,
+        round: 1,
+        rounds: hit.rounds,
+        workSec: hit.workSec,
+        restSec: hit.restSec,
+        stage: "work",
+      };
+      maybeStartRestTimer(blockId, 1, {
+        phase: "exercise",
+        secondsOverride: hit.workSec,
+      });
+    },
+    [workout.exercises, maybeStartRestTimer],
   );
 
   /** After timed hold ends (or is skipped), open the between-set rest timer. */
@@ -1472,6 +1522,8 @@ export default function MemberWorkoutConsole({
 
   const flipExerciseTimerToRestRef = useRef(flipExerciseTimerToRest);
   flipExerciseTimerToRestRef.current = flipExerciseTimerToRest;
+  const maybeStartRestTimerRef = useRef(maybeStartRestTimer);
+  maybeStartRestTimerRef.current = maybeStartRestTimer;
   const livePushEnabledRef = useRef(livePushEnabled);
   livePushEnabledRef.current = livePushEnabled;
   const queueLiveSaveRef = useRef(queueLiveSave);
@@ -1511,6 +1563,42 @@ export default function MemberWorkoutConsole({
       // Cybertruck / end samples ~1.1s+ — keep popup open long enough to finish.
       window.setTimeout(() => {
         if (cancelled) return;
+        const hit = hitSeriesRef.current;
+        if (hit && hit.blockId === blockId) {
+          if (phase === "exercise") {
+            setCompletedSets((prev) => {
+              const next = new Set(prev[blockId] ?? []);
+              next.add(hit.round);
+              const updated = { ...prev, [blockId]: next };
+              stateRef.current = { ...stateRef.current, completedSets: updated };
+              return updated;
+            });
+            hit.stage = "rest";
+            maybeStartRestTimerRef.current(blockId, hit.round, {
+              phase: "rest",
+              secondsOverride: hit.restSec,
+            });
+            return;
+          }
+          if (hit.round >= hit.rounds) {
+            hitSeriesRef.current = null;
+            setRestTimer(null);
+            setRestSecondsLeft(0);
+            setRestCompleting(false);
+            restActiveRef.current = null;
+            restActiveDirtyRef.current = true;
+            lastAppliedRestEndsAt.current = 0;
+            if (livePushEnabledRef.current) queueLiveSaveRef.current(true);
+            return;
+          }
+          hit.round += 1;
+          hit.stage = "work";
+          maybeStartRestTimerRef.current(blockId, hit.round, {
+            phase: "exercise",
+            secondsOverride: hit.workSec,
+          });
+          return;
+        }
         if (phase === "exercise") {
           flipExerciseTimerToRestRef.current(blockId, setNum);
           return;
@@ -1522,7 +1610,7 @@ export default function MemberWorkoutConsole({
         restActiveDirtyRef.current = true;
         lastAppliedRestEndsAt.current = 0;
         if (livePushEnabledRef.current) queueLiveSaveRef.current(true);
-      }, 1600);
+      }, hitSeriesRef.current ? 500 : 1600);
     };
 
     const tick = () => {
@@ -1696,6 +1784,9 @@ export default function MemberWorkoutConsole({
           playSetCheckPop();
         }
         const block = workout.exercises.find((e) => e.id === blockId);
+        if (block && isHitApproach(block.setScheme)) {
+          return;
+        }
         // Hold / timed cue: green "Time of Exercise" first, then rest. Else rest only.
         const holdSec = block ? exerciseHoldDurationSec(block) : null;
         if (holdSec) {
@@ -1823,6 +1914,36 @@ export default function MemberWorkoutConsole({
       clearRestTimer();
       return;
     }
+    const hit = hitSeriesRef.current;
+    if (hit && hit.blockId === blockId) {
+      if (phase === "exercise") {
+        setCompletedSets((prev) => {
+          const next = new Set(prev[blockId] ?? []);
+          next.add(hit.round);
+          const updated = { ...prev, [blockId]: next };
+          stateRef.current = { ...stateRef.current, completedSets: updated };
+          return updated;
+        });
+        hit.stage = "rest";
+        maybeStartRestTimer(blockId, hit.round, {
+          phase: "rest",
+          secondsOverride: hit.restSec,
+        });
+        return;
+      }
+      if (hit.round >= hit.rounds) {
+        hitSeriesRef.current = null;
+        clearRestTimer();
+        return;
+      }
+      hit.round += 1;
+      hit.stage = "work";
+      maybeStartRestTimer(blockId, hit.round, {
+        phase: "exercise",
+        secondsOverride: hit.workSec,
+      });
+      return;
+    }
     if (phase === "exercise") {
       flipExerciseTimerToRest(blockId, setNum);
       return;
@@ -1840,7 +1961,7 @@ export default function MemberWorkoutConsole({
       playRestComplete(restSoundRef.current, { force: true });
     }
     clearRestTimer();
-  }, [restTimer, flipExerciseTimerToRest, clearRestTimer]);
+  }, [restTimer, flipExerciseTimerToRest, clearRestTimer, maybeStartRestTimer]);
 
   const restBlockName =
     restTimer != null
@@ -1867,6 +1988,8 @@ export default function MemberWorkoutConsole({
         onToggleMute={toggleRestMute}
         completing={restCompleting || displayRestSeconds <= 0}
         phase={restTimer.phase}
+        hitRound={restTimer.hitRound}
+        hitRounds={restTimer.hitRounds}
       />
     ) : null;
 
@@ -2591,6 +2714,12 @@ export default function MemberWorkoutConsole({
             sets: block.setCount,
           });
           const isTimed = isTimedApproach(prescription.approach);
+          const hit = resolveHitInterval({
+            setScheme: block.setScheme,
+            reps: block.reps,
+            setCount: block.setCount,
+            restSec: block.restSec,
+          });
           const summary = formatPrescriptionSummary({
             setScheme: block.setScheme,
             repPattern: block.repPattern,
@@ -2733,9 +2862,50 @@ export default function MemberWorkoutConsole({
                     className="member-exercise-spec__sets"
                     onClick={(e) => e.stopPropagation()}
                     role="group"
-                    aria-label={`${block.name} weight and ${isTimed ? "timed set" : "set"} completion`}
+                    aria-label={`${block.name} weight and ${hit ? "HIT intervals" : isTimed ? "timed set" : "set"} completion`}
                   >
-                    {isTimed ? (
+                    {hit ? (
+                      <>
+                        <div className="member-exercise-spec__sets-kicker flex items-baseline justify-between gap-1">
+                          <p className="text-sm font-semibold">HIT intervals</p>
+                          <p className="text-xs text-[color-mix(in_srgb,var(--text)_75%,var(--muted))]">
+                            {doneForBlock.size}/{hit.rounds}
+                          </p>
+                        </div>
+                        <p className="text-xs text-[color-mix(in_srgb,var(--text)_78%,var(--muted))]">
+                          {formatHitSummary(hit)}
+                        </p>
+                        <div className="member-set-row mt-1">
+                          <label className="member-set-weight-box">
+                            <input
+                              className="member-set-weight-box__input"
+                              type="number"
+                              inputMode="decimal"
+                              aria-label={`${block.name} weight in pounds`}
+                              placeholder="—"
+                              value={weightValueForBlock(block)}
+                              onChange={(e) => updateWeight(block.id, e.target.value)}
+                              onFocus={(e) => e.target.select()}
+                              disabled={reviewMode && !instructorName}
+                            />
+                            <span className="member-set-weight-box__label">
+                              {weightBoxLabel(block)}
+                            </span>
+                          </label>
+                          <button
+                            type="button"
+                            className="btn-primary px-3 py-2 text-sm font-bold"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startHitSeries(block.id);
+                            }}
+                            disabled={reviewMode && !instructorName}
+                          >
+                            Go
+                          </button>
+                        </div>
+                      </>
+                    ) : isTimed ? (
                       <>
                         <div className="member-exercise-spec__sets-kicker flex items-baseline justify-between gap-1">
                           <p className="text-sm font-semibold">Weight &amp; timed set</p>

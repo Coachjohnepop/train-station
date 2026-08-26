@@ -1,3 +1,10 @@
+import {
+  formatHitSummary,
+  isHitApproach,
+  parseHitReps,
+  resolveHitInterval,
+} from "@/lib/hit-intervals";
+
 /** Top-level how sets are programmed in a workout. */
 export const SET_APPROACHES = [
   { id: "standard", label: "Standard sets" },
@@ -6,6 +13,7 @@ export const SET_APPROACHES = [
   { id: "positive", label: "Positive sets" },
   { id: "negative", label: "Negative sets" },
   { id: "timed", label: "Timed sets" },
+  { id: "hit", label: "HIT intervals" },
 ] as const;
 
 export type SetApproachId = (typeof SET_APPROACHES)[number]["id"];
@@ -64,6 +72,9 @@ const LEGACY_SCHEME_MAP: Record<
   straight: { approach: "standard" },
   drop_sets: { approach: "drop_sets" },
   timed_sets: { approach: "timed" },
+  hit: { approach: "hit" },
+  hit_intervals: { approach: "hit" },
+  intervals: { approach: "hit" },
   drop: { approach: "drop_sets" },
   rep_6_8_10: { approach: "drop_sets", repPattern: "rep_6_8_10" },
   rep_8_10_12: { approach: "drop_sets", repPattern: "rep_8_10_12" },
@@ -171,18 +182,24 @@ export function repPatternLabel(id: string | null | undefined): string {
 export function setCountChoices(
   approach: string | null | undefined,
 ): readonly number[] {
+  if (isHitApproach(approach)) return SET_COUNTS;
   return isTimedApproach(approach) ? TIMED_DURATION_MINUTES : SET_COUNTS;
 }
 
 export function setCountStepLabel(approach: string | null | undefined): string {
+  if (isHitApproach(approach)) return "Rounds";
   return isTimedApproach(approach) ? "Duration" : "Sets";
 }
 
 export function setCountFieldTitle(approach: string | null | undefined): string {
+  if (isHitApproach(approach)) return "Rounds";
   return isTimedApproach(approach) ? "Duration" : "Number of sets";
 }
 
 export function setCountFieldHint(approach: string | null | undefined): string {
+  if (isHitApproach(approach)) {
+    return "How many work/rest rounds. 10 × 20s work / 20s rest = 400s.";
+  }
   return isTimedApproach(approach)
     ? "How long members perform this timed set (1–4 minutes)."
     : "How many working sets members will log (1–10).";
@@ -266,6 +283,15 @@ export function formatPrescriptionSummary(opts: {
     return `${label} · 3–7 count${count}`;
   }
 
+  if (p.approach === "hit") {
+    const hit = resolveHitInterval({
+      setScheme: "hit",
+      reps: p.reps,
+      setCount: p.sets,
+    });
+    return hit ? formatHitSummary(hit) : "HIT intervals";
+  }
+
   if (p.approach === "timed" && p.sets != null) {
     return `${approachLabel(p.approach)} · ${setCountLabel(p.sets, p.approach)}`;
   }
@@ -285,6 +311,8 @@ export function prescriptionSteps(approach: SetApproachId): readonly string[] {
       return ["approach", "sets", "weight", "notes"];
     case "timed":
       return ["approach", "sets", "weight", "notes"];
+    case "hit":
+      return ["approach", "sets", "weight", "notes"];
     default:
       return ["approach", "sets", "weight", "notes"];
   }
@@ -298,6 +326,9 @@ export function isPrescriptionComplete(opts: {
 }): boolean {
   if (opts.sets == null || !isValidSetCountForApproach(opts.sets, opts.approach)) {
     return false;
+  }
+  if (opts.approach === "hit") {
+    return parseHitReps(opts.reps) != null;
   }
   if (opts.approach === "standard") {
     const n = Number(opts.reps);

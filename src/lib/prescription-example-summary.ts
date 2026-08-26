@@ -61,6 +61,15 @@ export function buildPrescriptionSummary(
   if (row.patternType === "max_reps" && row.phase1Reps) {
     return `${row.setCount} sets × max ${row.phase1Reps} reps`;
   }
+  if (row.patternType === "hit_intervals") {
+    const work = row.phase1DurationSec ?? 20;
+    const rest = row.phase2DurationSec ?? work;
+    const total = row.setCount * (work + rest);
+    const mm = Math.floor(total / 60);
+    const ss = String(total % 60).padStart(2, "0");
+    const pair = work === rest ? `${work}s` : `${work}s / ${rest}s rest`;
+    return `${row.setCount} × ${pair} · ${mm}:${ss}`;
+  }
 
   const sets = row.setCount === 1 ? "1 set" : `${row.setCount} sets`;
   return inner ? `${sets}: ${inner}` : sets;

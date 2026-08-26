@@ -18,6 +18,7 @@ function patternFromBackfill(pattern: string): PrescriptionExampleRow["patternTy
     "hold_burnout",
     "hold_fixed_reps",
     "timed_rounds",
+    "hit_intervals",
     "burnout_only",
     "hold_only",
     "hold_then_timed",
@@ -43,6 +44,31 @@ export function legacyWorkoutItemToPrescriptionDraft(
     },
     { defaultRestBetweenSetsSec: item.restSec ?? DEFAULT_REST_TIMER_SECONDS },
   );
+
+  if ((item.setScheme || "").toLowerCase() === "hit") {
+    const workMatch = (item.reps || "20").match(/(\d+)/);
+    const pair = (item.reps || "").match(/(\d+)\s*\/\s*(\d+)/);
+    const work = Number(workMatch?.[1] || 20);
+    const rest = pair ? Number(pair[2]) : item.restSec && item.restSec > 0 ? item.restSec : work;
+    return {
+      patternType: "hit_intervals",
+      sampleExercise: exerciseName ?? item.exercise?.name ?? "Exercise",
+      setCount: item.sets ?? 10,
+      restBetweenSetsSec: rest,
+      weightTier: "medium",
+      phase1Type: "timed",
+      phase1DurationSec: work,
+      phase1Reps: null,
+      phase1RepKind: "",
+      phase1PositionCue: "",
+      phase2Type: "timed",
+      phase2DurationSec: rest,
+      phase2Reps: null,
+      phase2RepKind: "",
+      phase2PositionCue: "",
+      notes: item.notes ?? "",
+    };
+  }
 
   const patternType = backfill ? patternFromBackfill(backfill.pattern) : "standard_reps";
   const rx = backfill?.prescription;
@@ -96,6 +122,7 @@ export function legacySetSchemeHint(setScheme: string | null): SetApproachId | n
     "positive",
     "negative",
     "timed",
+    "hit",
   ];
   return allowed.includes(setScheme as SetApproachId) ? (setScheme as SetApproachId) : null;
 }

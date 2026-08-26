@@ -93,6 +93,18 @@ export function prescriptionToLegacy(
         reps: row.phase1DurationSec != null ? `${row.phase1DurationSec}s on` : null,
         notes: row.notes || null,
       };
+    case "hit_intervals": {
+      const work = row.phase1DurationSec ?? 20;
+      const rest = row.phase2DurationSec ?? row.restBetweenSetsSec ?? work;
+      return {
+        ...base,
+        setScheme: "hit",
+        repPattern: null,
+        reps: work === rest ? `${work}s` : `${work}/${rest}`,
+        restSec: rest,
+        notes: row.notes || null,
+      };
+    }
     case "burnout_only":
       return {
         ...base,
