@@ -434,14 +434,14 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - Aug 16: Videos desk, **Watch only**. No upload/save since.
 - Aug 27 morning: **Admin → Exercises** on phone — pasted YouTube Shorts onto exercises; those **did save**.
 
-**Shipped this pass:** landing / library / member-content Save **throws** if Blob write fails on Vercel. Intro client upload no longer registers an empty `onUploadCompleted` (that webhook 401’d with no session cookie).
+**Shipped this pass:** landing / library / member-content Save **throws** if Blob write fails on Vercel. Intro client upload no longer registers an empty `onUploadCompleted` (that webhook 401’d with no session cookie). **Stephanie stays Coach Class** — standing staff grant (`sprealty9@gmail.com`), expiry **2027-08-01**, cron auto-renews instead of locking.
 
 **When back:**
 1. Jeremy pastes Calendly PAT at Admin → Bookings → Connect. Then Backfill missing bookings (no emails).
 2. Do **not** email Natasha. Leave Free Explorer.
 3. New intro file → Admin → Videos → **Replace video** on the slot (1080p MP4/MOV under 200 MB).
 4. Parked: interview desk; XXL iPhone Continue + mute walkthrough.
-5. Stephanie Coach Class staff-grant expires **2026-09-01** — reapprove on the 1st.
+5. Stephanie Coach Class is a **standing staff grant** (`sprealty9@gmail.com`) — auto-renews, does not drop on the 1st. Extended through **2027-08-01** this pass.
 6. Supabase Free usage / restriction **30 Aug 2026**.
 
 **Date:** 2026-08-25 (Calendly API connect)  
@@ -475,7 +475,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 - Today’s class: Jeremy **Lower day** (`sms-w-944443df`). Roster is **Lemon John** + **Stephanie** only.
 - Special-class plumbing live: assign starts empty; **John & Steph** = `john@lemonvoice.com` + `sprealty9@gmail.com`; unassigned stay on their own program; emails show under names on assign chips.
 - Purged test member **`john@bcxvoice.com`** from Train Station (keep that email for Vercel/GitHub only).
-- Stephanie staff-grant **Coach Class** reapproved through **2026-09-01** (manual, no Stripe). Reapprove on the 1st.
+- Stephanie staff-grant **Coach Class** is **standing** (auto-renew; not the monthly 1st). Extended through **2027-08-01** on 2026-08-27.
 - Zoom today (`83017535029`) is Jeremy’s host (`jeremy@thetrainstation.co`). If John’s Zoom app looks like his, he opened it while logged in as himself.
 
 **This pass (2026-08-23) — Nate Nowotny screen recording, then ship:**
@@ -551,7 +551,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 |-----|------|--------|
 | **Ali Fletcher** `fletcherboys@att.net` | Coach Class paid (Aug 10, LETSGO26 ~$5) | Async/on-demand. **Re-onboard.** Texted: private window, Free joke first, then Coach Class → Continue already paid → woman → goals → book Jeremy. Temp **14-day** Today preview. Copy: `ALI_FLETCHER_SCRIPT.md`. |
 | **Bella Roy** `bellaroyy03@gmail.com` | Coach Class paid (Aug 12) | **Onboard incomplete.** Same welcome retry + onboard gate. |
-| **Stephanie Popham** `sprealty9@gmail.com` | Member paid | Onboard done. |
+| **Stephanie Popham** `sprealty9@gmail.com` | Coach Class · standing staff grant | Onboard done. Does not expire on the 1st. |
 | **Lemon John** `john@lemonvoice.com` | Paid member | Training account with Stephanie. |
 | **Jeremy Byrd 2** `coachbyrd84@aol.com` | Business paid | Onboard done. |
 | Coop Fletcher `cooperfletcher892@gmail.com` | Merchandise | Payment pending, onboard incomplete. |

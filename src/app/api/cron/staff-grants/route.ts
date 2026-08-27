@@ -4,8 +4,10 @@ import { listMemberProfiles, updateMemberProfile } from "@/lib/member-profiles-s
 import { signupPlanLabel } from "@/lib/signup-plans";
 import {
   isStaffGrantExpired,
+  isStandingStaffGrantEmail,
   notifyStaffGrantAdmins,
   staffGrantNotifyEmails,
+  standingStaffGrantExpiryIso,
 } from "@/lib/staff-grants";
 import { sendResendEmail } from "@/lib/resend-mail";
 import { BRAND_NAME } from "@/lib/brand";
@@ -52,6 +54,32 @@ export async function GET(request: Request) {
   }> = [];
 
   for (const p of profiles) {
+    if (isStandingStaffGrantEmail(p.email)) {
+      const expMs = p.staffGrantExpiresAt
+        ? new Date(p.staffGrantExpiresAt).getTime()
+        : 0;
+      const needsRoll =
+        p.paymentStatus !== "paid" ||
+        !p.staffGrantExpiresAt ||
+        expMs - now.getTime() < 60 * 24 * 60 * 60 * 1000;
+      if (needsRoll) {
+        const expiresAt = standingStaffGrantExpiryIso(now);
+        await updateMemberProfile(p.userId, {
+          paymentStatus: "paid",
+          paymentMethod: "manual",
+          staffGrantExpiresAt: expiresAt,
+          staffGrantedAt: now.toISOString(),
+          staffGrantedBy: "standing-auto-renew",
+          paymentNote: [
+            p.paymentNote || "Standing staff grant",
+            `Auto-renewed ${todayIso}`,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+        });
+      }
+      continue;
+    }
     if (p.paymentMethod !== "manual") continue;
     if (!p.staffGrantExpiresAt && !p.staffGrantedAt) continue;
     if (!isStaffGrantExpired(p, now)) continue;

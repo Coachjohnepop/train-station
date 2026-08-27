@@ -5,6 +5,9 @@ import { localTodayIso } from "@/lib/program-calendar";
 import { sendResendEmail } from "@/lib/resend-mail";
 import { signupPlanLabel, type SignupPlan } from "@/lib/signup-plans";
 import type { MemberProfile } from "@/lib/member-profiles-types";
+import { isStandingStaffGrantEmail } from "@/lib/staff-grant-standing";
+
+export { isStandingStaffGrantEmail, STANDING_STAFF_GRANT_EMAILS } from "@/lib/staff-grant-standing";
 
 /** John + Jeremy by default; override with STAFF_GRANT_NOTIFY_EMAILS=a@x,b@y */
 export function staffGrantNotifyEmails(): string[] {
@@ -43,14 +46,33 @@ export function nextStaffGrantExpiryIso(from = new Date()): string {
   return new Date(Date.UTC(nextY, nextM - 1, 1, 12, 0, 0)).toISOString();
 }
 
+/** Standing grants (Stephanie): ~1 year out so the 1st-of-month cron never locks them. */
+export function standingStaffGrantExpiryIso(from = new Date()): string {
+  const todayIso = localTodayIso(from);
+  const [ys, ms] = todayIso.split("-");
+  return new Date(Date.UTC(Number(ys) + 1, Number(ms) - 1, 1, 12, 0, 0)).toISOString();
+}
+
+export function staffGrantExpiryIsoForEmail(
+  email: string | null | undefined,
+  from = new Date(),
+): string {
+  return isStandingStaffGrantEmail(email)
+    ? standingStaffGrantExpiryIso(from)
+    : nextStaffGrantExpiryIso(from);
+}
+
 export function isStaffGrantActive(
   profile: Pick<
     MemberProfile,
-    "paymentMethod" | "paymentStatus" | "staffGrantExpiresAt" | "staffGrantedAt"
+    "email" | "paymentMethod" | "paymentStatus" | "staffGrantExpiresAt" | "staffGrantedAt"
   > | null,
   now = new Date(),
 ): boolean {
   if (!profile) return false;
+  if (isStandingStaffGrantEmail(profile.email) && profile.paymentStatus === "paid") {
+    return true;
+  }
   if (profile.paymentMethod !== "manual") return false;
   if (!profile.staffGrantedAt && !profile.staffGrantExpiresAt) {
     // Legacy manual paid without expiry fields — treat as grant until migrated.
@@ -62,10 +84,14 @@ export function isStaffGrantActive(
 
 /** True when this paid access came from staff grant and the calendar period ended. */
 export function isStaffGrantExpired(
-  profile: Pick<MemberProfile, "paymentMethod" | "staffGrantExpiresAt" | "staffGrantedAt"> | null,
+  profile: Pick<
+    MemberProfile,
+    "email" | "paymentMethod" | "staffGrantExpiresAt" | "staffGrantedAt"
+  > | null,
   now = new Date(),
 ): boolean {
   if (!profile) return false;
+  if (isStandingStaffGrantEmail(profile.email)) return false;
   if (profile.paymentMethod !== "manual") return false;
   if (!profile.staffGrantExpiresAt) return false;
   return new Date(profile.staffGrantExpiresAt).getTime() <= now.getTime();

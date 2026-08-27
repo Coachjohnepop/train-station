@@ -5,6 +5,7 @@ import type { SignupPlan } from "@/lib/signup-plans";
 import { isPaidOffer } from "@/lib/product-offers";
 import { isSignupPlan } from "@/lib/signup-plans";
 import { isSecurityEnforced, stripeRequiredInProduction } from "@/lib/security-config";
+import { isStandingStaffGrantEmail } from "@/lib/staff-grant-standing";
 
 export type ApprovalStatus = "pending" | "approved" | "rejected";
 export type PaymentStatus = "none" | "pending" | "paid" | "failed";
@@ -64,6 +65,7 @@ export function normalizePaymentStatus(raw: unknown, plan?: SignupPlan): Payment
 export function memberNeedsPayment(
   profile: Pick<
     MemberProfile,
+    | "email"
     | "plan"
     | "paymentStatus"
     | "onboardingComplete"
@@ -85,6 +87,9 @@ export function memberNeedsPayment(
   const plan = profile?.plan ?? "explorer";
   if (!isPaidSignupPlan(plan)) return false;
   if ((profile?.paymentStatus ?? "pending") !== "paid") return true;
+
+  // Stephanie (and any standing grant) stay paid even past the 1st-of-month stamp.
+  if (isStandingStaffGrantEmail(profile?.email)) return false;
 
   // Manual staff grants expire monthly (1st) until reapproved.
   if (
@@ -164,6 +169,7 @@ export async function memberNeedsFreePaymentMethodAsync(
 export async function memberNeedsPaymentAsync(
   profile: Pick<
     MemberProfile,
+    | "email"
     | "plan"
     | "paymentStatus"
     | "onboardingComplete"

@@ -6,8 +6,9 @@ import { getMemberProfile, updateMemberProfile } from "@/lib/member-profiles-sto
 import { attachPaidMemberCookies, markMemberPaid } from "@/lib/mark-member-paid";
 import { PAID_MEMBERSHIP_PLANS, signupPlanLabel } from "@/lib/signup-plans";
 import {
-  nextStaffGrantExpiryIso,
+  isStandingStaffGrantEmail,
   notifyStaffGrantAdmins,
+  staffGrantExpiryIsoForEmail,
 } from "@/lib/staff-grants";
 
 type RouteContext = { params: Promise<{ userId: string }> };
@@ -56,11 +57,14 @@ export async function POST(request: Request, context: RouteContext) {
 
   const planLabel = signupPlanLabel(plan);
   const actorEmail = session.email || session.id;
-  const expiresAt = nextStaffGrantExpiryIso();
+  const standing = isStandingStaffGrantEmail(profile.email);
+  const expiresAt = staffGrantExpiryIsoForEmail(profile.email);
   const reapprove = Boolean(profile.staffGrantedAt || profile.staffGrantExpiresAt);
   const note =
     parsed.data.note?.trim() ||
-    `Staff grant · ${planLabel} · ${actorEmail} · reapprove by 1st of month`;
+    (standing
+      ? `Standing staff grant · ${planLabel} · ${actorEmail} · auto-renew`
+      : `Staff grant · ${planLabel} · ${actorEmail} · reapprove by 1st of month`);
 
   let updated = await markMemberPaid({
     userId,
@@ -107,9 +111,11 @@ export async function POST(request: Request, context: RouteContext) {
   const res = NextResponse.json({
     ok: true,
     profile: updated,
-    message: reapprove
-      ? `Reapproved ${planLabel} through ${new Date(expiresAt).toLocaleDateString()}.`
-      : `Granted ${planLabel} (manual). Reapprove on the 1st of each month.`,
+    message: standing
+      ? `${planLabel} stays granted for ${profile.email} (standing, auto-renew).`
+      : reapprove
+        ? `Reapproved ${planLabel} through ${new Date(expiresAt).toLocaleDateString()}.`
+        : `Granted ${planLabel} (manual). Reapprove on the 1st of each month.`,
     notify,
     expiresAt,
   });

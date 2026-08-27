@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { isStandingStaffGrantEmail } from "@/lib/staff-grant-standing";
 import { useEffect, useRef, useState } from "react";
 import AdminMemberEquipmentModal from "@/components/AdminMemberEquipmentModal";
 import AdminMemberMeasurementsModal from "@/components/AdminMemberMeasurementsModal";
@@ -67,6 +68,7 @@ function isStaffGrantRow(m: MemberRow): boolean {
 }
 
 function staffGrantNeedsReapprove(m: MemberRow): boolean {
+  if (isStandingStaffGrantEmail(m.email)) return false;
   if (!isStaffGrantRow(m)) return false;
   if (m.paymentStatus !== "paid") return true;
   if (!m.staffGrantExpiresAt) return false;
@@ -576,7 +578,11 @@ export default function AdminMembersPage() {
                               : "text-violet-300"
                           }`}
                         >
-                          {staffGrantNeedsReapprove(member) ? "Reapprove by " : "Until "}
+                          {isStandingStaffGrantEmail(member.email)
+                            ? "Standing · "
+                            : staffGrantNeedsReapprove(member)
+                              ? "Reapprove by "
+                              : "Until "}
                           {formatWhen(member.staffGrantExpiresAt)}
                         </span>
                       ) : null}
