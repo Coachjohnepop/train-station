@@ -1,6 +1,7 @@
 import path from "path";
 import { randomUUID } from "crypto";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { isAllowedCoachIntroVideoUrl } from "@/lib/site-video";
 
 export type SiteVideoLibraryItem = {
@@ -128,7 +129,7 @@ export async function addSiteVideoLibraryItem(input: {
     updatedAt: new Date().toISOString(),
   };
 
-  await persistJsonStore({
+  const { blobSaved } = await persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
     data: next,
@@ -136,6 +137,7 @@ export async function addSiteVideoLibraryItem(input: {
       memoryStore = normalize(v);
     },
   });
+  requireBlobPersisted(blobSaved, "Video library");
 
   return item;
 }
@@ -180,7 +182,7 @@ export async function updateSiteVideoLibraryItem(
     updatedAt: new Date().toISOString(),
   };
 
-  await persistJsonStore({
+  const { blobSaved } = await persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
     data: next,
@@ -188,6 +190,7 @@ export async function updateSiteVideoLibraryItem(
       memoryStore = normalize(v);
     },
   });
+  requireBlobPersisted(blobSaved, "Video library");
 
   return nextItem;
 }
@@ -198,7 +201,7 @@ export async function removeSiteVideoLibraryItem(id: string): Promise<void> {
     items: current.items.filter((i) => i.id !== id),
     updatedAt: new Date().toISOString(),
   };
-  await persistJsonStore({
+  const { blobSaved } = await persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
     data: next,
@@ -206,6 +209,7 @@ export async function removeSiteVideoLibraryItem(id: string): Promise<void> {
       memoryStore = normalize(v);
     },
   });
+  requireBlobPersisted(blobSaved, "Video library");
 }
 
 /**

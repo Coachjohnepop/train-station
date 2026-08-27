@@ -60,9 +60,8 @@ export async function POST(request: Request) {
             tokenPayload: JSON.stringify({ coachId: session.id }),
           };
         },
-        onUploadCompleted: async () => {
-          // URL is applied client-side into landing-media on Save.
-        },
+        // No onUploadCompleted: Blob would POST back without Jeremy's session cookie (401).
+        // The client applies the returned URL into the library / Save.
       });
       return NextResponse.json(jsonResponse);
     } catch (e: unknown) {

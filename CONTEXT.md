@@ -424,6 +424,26 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-08-27 (caught up)  
+**Status:** Catch-up workouts are on `main` (`d05bfa1` + HIIT/landscape after). Migration `20260826030000_workout_log_catch_up` **already applied on prod** (2026-08-26). `WorkoutLog.catchUpForDate` is live. Calendly table exists; **Jeremy has not pasted a PAT** (0 `CalendlyIntegration` rows).
+
+**Jeremy intro (this session — not too big):**
+- Phone `.MOV`s that did upload were **~30–34 MB** (cap is 200 MB).
+- Jul 29–30 desktop: **Upload videos** + **Save all videos**. Files landed in the library. Live welcome/free stayed `/videos/jeremy-welcome.mp4` / `jeremy-free-intro.mp4` because landing-media Blob write could fail while Save still returned OK.
+- Those two old blob intros (`8454de13…`, `28a8e280…`) stay **hard-ignored** (`LEGACY_BLOB_INTRO_RE`). Do not wire them unless Jeremy asks — current live intros are the Aug site files.
+- Aug 16: Videos desk, **Watch only**. No upload/save since.
+- Aug 27 morning: **Admin → Exercises** on phone — pasted YouTube Shorts onto exercises; those **did save**.
+
+**Shipped this pass:** landing / library / member-content Save **throws** if Blob write fails on Vercel. Intro client upload no longer registers an empty `onUploadCompleted` (that webhook 401’d with no session cookie).
+
+**When back:**
+1. Jeremy pastes Calendly PAT at Admin → Bookings → Connect. Then Backfill missing bookings (no emails).
+2. Do **not** email Natasha. Leave Free Explorer.
+3. New intro file → Admin → Videos → **Replace video** on the slot (1080p MP4/MOV under 200 MB).
+4. Parked: interview desk; XXL iPhone Continue + mute walkthrough.
+5. Stephanie Coach Class staff-grant expires **2026-09-01** — reapprove on the 1st.
+6. Supabase Free usage / restriction **30 Aug 2026**.
+
 **Date:** 2026-08-25 (Calendly API connect)  
 **Status:** Calendly API shipped (`693493d`). Waiting on Jeremy’s PAT in Admin → Bookings. **No Natasha outreach.**
 

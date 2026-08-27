@@ -1,5 +1,6 @@
 import path from "path";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { isYoutubeUrl } from "@/lib/youtube";
 
 export type NutritionCalorieTier = {
@@ -221,7 +222,7 @@ export async function saveMemberContent(
     next.nutritionTiers = normalizeTiers(patch.nutritionTiers);
   }
 
-  await persistJsonStore({
+  const { blobSaved } = await persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
     data: next,
@@ -229,6 +230,7 @@ export async function saveMemberContent(
       memoryStore = normalize(v);
     },
   });
+  requireBlobPersisted(blobSaved, "Member videos");
 
   return next;
 }

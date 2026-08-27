@@ -1,5 +1,6 @@
 import path from "path";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
+import { requireBlobPersisted } from "@/lib/demo-persistence";
 import type { MembershipPlan } from "@/lib/signup-plans";
 import { MEMBERSHIP_PLANS } from "@/lib/signup-plans";
 import {
@@ -402,7 +403,7 @@ export async function saveLandingMedia(
     next.freeTicketFullIntroSource = next.freeChastiseVideoUrl;
   }
 
-  await persistJsonStore({
+  const { blobSaved } = await persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
     data: next,
@@ -410,6 +411,7 @@ export async function saveLandingMedia(
       memoryStore = normalize(v);
     },
   });
+  requireBlobPersisted(blobSaved, "Landing videos");
 
   if (introChanged && next.freeChastiseVideoUrl) {
     const introUrl = next.freeChastiseVideoUrl;
