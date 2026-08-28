@@ -297,16 +297,45 @@ function configureHtmlAudio(audio: HTMLAudioElement): void {
   audio.setAttribute("webkit-playsinline", "true");
 }
 
+function sampleHost(): HTMLElement | null {
+  if (typeof document === "undefined") return null;
+  let host = document.getElementById("ts-rest-audio-host");
+  if (host) return host;
+  host = document.createElement("div");
+  host.id = "ts-rest-audio-host";
+  host.setAttribute("aria-hidden", "true");
+  host.style.cssText =
+    "position:absolute;width:0;height:0;overflow:hidden;pointer-events:none;";
+  document.body.appendChild(host);
+  return host;
+}
+
 function getOrCreateSample(src: string): HTMLAudioElement {
   let audio = sampleCache.get(src);
   if (audio) return audio;
   audio = new Audio(src);
   configureHtmlAudio(audio);
+  try {
+    sampleHost()?.appendChild(audio);
+  } catch {
+    /* ignore */
+  }
   audio.addEventListener("error", () => {
     if (sampleCache.get(src) === audio) sampleCache.delete(src);
   });
   sampleCache.set(src, audio);
   return audio;
+}
+
+function preferPlaybackSession(): void {
+  try {
+    const session = (
+      navigator as Navigator & { audioSession?: { type?: string } }
+    ).audioSession;
+    if (session && session.type !== "playback") session.type = "playback";
+  } catch {
+    /* Safari < 16.4 */
+  }
 }
 
 /**
@@ -317,30 +346,31 @@ function primeHtmlSample(src: string, volume: number): void {
   try {
     const audio = getOrCreateSample(src);
     configureHtmlAudio(audio);
-    if (!audio.paused && !audio.muted) return;
+    if (!audio.paused && !audio.muted && audio.volume > 0.05) return;
     const gen = htmlPlayGeneration;
-    const prevMuted = audio.muted;
-    const prevVol = audio.volume;
-    audio.muted = true;
-    audio.volume = 0;
+    // iOS: muted+pause can mark the element as never-unlocked for later timer play().
+    // Near-silent unmuted play during the gesture is what later rest-end needs.
+    audio.muted = false;
+    audio.volume = 0.01;
     void audio
       .play()
       .then(() => {
         if (gen !== htmlPlayGeneration) return;
-        audio.pause();
-        try {
-          audio.currentTime = 0;
-        } catch {
-          /* ignore */
-        }
-        audio.muted = prevMuted;
-        audio.volume = prevVol > 0 ? prevVol : volume;
-        audioUnlocked = true;
+        window.setTimeout(() => {
+          if (gen !== htmlPlayGeneration) return;
+          audio.pause();
+          try {
+            audio.currentTime = 0;
+          } catch {
+            /* ignore */
+          }
+          audio.muted = false;
+          audio.volume = volume;
+          audioUnlocked = true;
+        }, 60);
       })
       .catch(() => {
-        if (gen !== htmlPlayGeneration) return;
-        audio.muted = prevMuted;
-        audio.volume = prevVol;
+        /* gesture unlock failed */
       });
   } catch {
     /* ignore */
@@ -441,6 +471,7 @@ export function unlockRestAudio(
 ): void {
   if (typeof window === "undefined") return;
   try {
+    preferPlaybackSession();
     const ctx = getCtx();
     if (ctx) primeWebAudioUnlock(ctx);
     const src = restTimerSoundSrc(sound);
@@ -483,9 +514,9 @@ export function isRestAudioUnlocked(): boolean {
  * Guarded so live retargets / dual clients don't stack chirps/horns.
  * Pass `{ force: true }` for the real countdown-zero path so de-dupe never swallows it.
  *
- * Web Audio buffer only if the context is actually running (Zoom / iOS can
- * leave it interrupted — start() would otherwise "succeed" into silence).
- * Primed HTMLAudio is second. Oscillator buzz is last.
+ * Primed HTMLAudio first — Web Audio can report "running" after Zoom/iOS
+ * interrupt and play the buffer into silence, which used to skip the horn.
+ * Oscillator buzz is last.
  */
 export function playRestComplete(
   sound: RestTimerSoundId | string | null | undefined = DEFAULT_REST_TIMER_SOUND,
@@ -508,6 +539,7 @@ export function playRestComplete(
   const fallbackSrc = restTimerSoundFallbackSrc(id);
   const volume = restTimerSoundVolume(id);
 
+  preferPlaybackSession();
   sampleRelease?.();
   const token = ++sampleReleaseToken;
   sampleRelease = holdBackgroundMusicForMedia();
@@ -515,6 +547,11 @@ export function playRestComplete(
 
   void (async () => {
     try {
+      if (await playHtmlSample(primarySrc, volume, token)) return;
+      if (fallbackSrc && fallbackSrc !== primarySrc) {
+        if (await playHtmlSample(fallbackSrc, volume, token)) return;
+      }
+
       const ctx = await ensureRunningCtx();
       const tryBuf = async (src: string | null): Promise<boolean> => {
         if (!src || !ctx || !isRunningCtx(ctx)) return false;
@@ -529,10 +566,6 @@ export function playRestComplete(
       if (fallbackSrc && (await tryBuf(fallbackSrc))) {
         audioUnlocked = true;
         return;
-      }
-      if (await playHtmlSample(primarySrc, volume, token)) return;
-      if (fallbackSrc && fallbackSrc !== primarySrc) {
-        if (await playHtmlSample(fallbackSrc, volume, token)) return;
       }
       buzzFallback(ctx);
     } catch {
