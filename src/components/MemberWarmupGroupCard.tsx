@@ -38,6 +38,11 @@ export default function MemberWarmupGroupCard({
     isWarmupMovementDone(m, finishedExercises, completedSets),
   ).length;
   const hasTimedHold = movements.some((m) => (m.holdSeconds || 0) > 0);
+  const [reviewOpen, setReviewOpen] = useState(false);
+
+  useEffect(() => {
+    if (!allDone) setReviewOpen(false);
+  }, [allDone]);
 
   useEffect(() => {
     if (!focus) return;
@@ -66,6 +71,37 @@ export default function MemberWarmupGroupCard({
 
   if (!focus) return null;
 
+  const blockAnchors = Array.from(new Set(movements.map((m) => m.blockId))).map(
+    (blockId) => (
+      <span key={blockId} id={`member-exercise-${blockId}`} className="sr-only" />
+    ),
+  );
+
+  if (allDone && !reviewOpen) {
+    return (
+      <div id="member-exercise-warmup-group" className="member-exercise-anchor">
+        {blockAnchors}
+        <button
+          type="button"
+          className="member-exercise-done w-full text-left"
+          onClick={() => setReviewOpen(true)}
+          aria-expanded={false}
+          aria-label={`Warm-up complete, ${doneCount} of ${movements.length}. Tap to review.`}
+        >
+          <span className="member-exercise-done__check" aria-hidden="true">
+            ✓
+          </span>
+          <span className="member-exercise-done__body">
+            <span className="member-exercise-done__name">Warm-up complete</span>
+            <span className="member-exercise-done__hint">
+              {doneCount}/{movements.length} · tap to review
+            </span>
+          </span>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       id="member-exercise-warmup-group"
@@ -75,9 +111,7 @@ export default function MemberWarmupGroupCard({
           : "border-[var(--border)] bg-[var(--surface)]"
       }`}
     >
-      {Array.from(new Set(movements.map((m) => m.blockId))).map((blockId) => (
-        <span key={blockId} id={`member-exercise-${blockId}`} className="sr-only" />
-      ))}
+      {blockAnchors}
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--ramp-gold-light)]">
@@ -91,9 +125,20 @@ export default function MemberWarmupGroupCard({
             <p className="mt-0.5 text-xs text-[var(--muted)]">{focus.description}</p>
           ) : null}
         </div>
-        <span className="shrink-0 text-xs font-semibold tabular-nums text-[var(--muted)]">
-          {doneCount}/{movements.length}
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="text-xs font-semibold tabular-nums text-[var(--muted)]">
+            {doneCount}/{movements.length}
+          </span>
+          {allDone ? (
+            <button
+              type="button"
+              className="text-[11px] font-semibold text-[var(--ramp-gold-light)] underline-offset-2 hover:underline"
+              onClick={() => setReviewOpen(false)}
+            >
+              Hide
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {focus.videoUrl ? (
