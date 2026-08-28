@@ -2790,7 +2790,7 @@ export default function MemberWorkoutConsole({
                 tabIndex={0}
               >
                 <div className="member-exercise-head flex items-start justify-between gap-2">
-                  <h2 className="text-lg font-semibold">{block.name}</h2>
+                  <h2 className="text-lg font-semibold leading-snug break-words">{block.name}</h2>
                   {isActive && (
                     <span className="rounded-full bg-accent-muted px-2 py-0.5 text-[10px] font-semibold uppercase text-accent">
                       Now

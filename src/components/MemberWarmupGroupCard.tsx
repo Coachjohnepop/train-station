@@ -79,25 +79,32 @@ export default function MemberWarmupGroupCard({
 
   if (allDone && !reviewOpen) {
     return (
-      <div id="member-exercise-warmup-group" className="member-exercise-anchor">
+      <div
+        id="member-exercise-warmup-group"
+        className="member-exercise-anchor space-y-2"
+      >
         {blockAnchors}
-        <button
-          type="button"
-          className="member-exercise-done w-full text-left"
-          onClick={() => setReviewOpen(true)}
-          aria-expanded={false}
-          aria-label={`Warm-up complete, ${doneCount} of ${movements.length}. Tap to review.`}
-        >
-          <span className="member-exercise-done__check" aria-hidden="true">
-            ✓
-          </span>
-          <span className="member-exercise-done__body">
-            <span className="member-exercise-done__name">Warm-up complete</span>
-            <span className="member-exercise-done__hint">
-              {doneCount}/{movements.length} · tap to review
+        {movements.map((movement) => (
+          <button
+            key={movement.key}
+            type="button"
+            className="member-exercise-done w-full text-left"
+            onClick={() => {
+              setFocusKey(movement.key);
+              setReviewOpen(true);
+            }}
+            aria-expanded={false}
+            aria-label={`${movement.name} complete. Tap to review warm-up.`}
+          >
+            <span className="member-exercise-done__check" aria-hidden="true">
+              ✓
             </span>
-          </span>
-        </button>
+            <span className="member-exercise-done__body">
+              <span className="member-exercise-done__name">{movement.name}</span>
+              <span className="member-exercise-done__hint">Tap to review</span>
+            </span>
+          </button>
+        ))}
       </div>
     );
   }
