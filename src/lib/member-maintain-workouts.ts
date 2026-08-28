@@ -519,7 +519,7 @@ export async function resolveMaintainAccess(
   );
 }
 
-function parseMaintainMeta(description: string | null | undefined): {
+export function parseMaintainMeta(description: string | null | undefined): {
   key: string | null;
   muscleGroup: string;
   blurb: string;
@@ -541,8 +541,120 @@ function parseMaintainMeta(description: string | null | undefined): {
   };
 }
 
-function encodeMaintainMeta(key: string, muscleGroup: string, blurb: string): string {
+export function encodeMaintainMeta(key: string, muscleGroup: string, blurb: string): string {
   return `maintain|${key}|${muscleGroup}|${blurb}`.slice(0, 500);
+}
+
+export function slugMaintainKey(name: string): string {
+  const slug = name
+    .replace(/^Maintain ·\s*/i, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  return slug.slice(0, 40) || `custom-${Date.now().toString(36)}`;
+}
+
+export type AdminMaintainExercise = {
+  id: string;
+  name: string;
+  sets: number | null;
+  reps: string | null;
+  videoUrl: string | null;
+};
+
+export type AdminMaintainWorkout = {
+  id: string;
+  name: string;
+  key: string | null;
+  muscleGroup: string;
+  blurb: string;
+  exerciseCount: number;
+  exercises: AdminMaintainExercise[];
+  updatedAt: string;
+};
+
+export async function listAdminMaintainWorkouts(): Promise<AdminMaintainWorkout[]> {
+  if (isDemoMode()) return [];
+  await ensureDefaultMaintainWorkouts();
+  const rows = await prisma.workout.findMany({
+    where: { source: MAINTAIN_WORKOUT_SOURCE },
+    orderBy: { name: "asc" },
+    include: {
+      exercises: {
+        orderBy: { sortOrder: "asc" },
+        include: { exercise: { select: { name: true, videoUrl: true } } },
+      },
+    },
+  });
+  return rows.map((r) => {
+    const meta = parseMaintainMeta(r.description);
+    return {
+      id: r.id,
+      name: r.name,
+      key: meta.key,
+      muscleGroup: meta.muscleGroup,
+      blurb: meta.blurb,
+      exerciseCount: r.exercises.length,
+      exercises: r.exercises.map((item) => ({
+        id: item.id,
+        name: item.exercise?.name || "Unknown",
+        sets: item.setCount ?? item.sets,
+        reps: item.reps,
+        videoUrl: item.exercise?.videoUrl ?? null,
+      })),
+      updatedAt: r.updatedAt.toISOString(),
+    };
+  });
+}
+
+export async function updateMaintainWorkoutMeta(
+  id: string,
+  patch: { name?: string; muscleGroup?: string; blurb?: string },
+): Promise<AdminMaintainWorkout | null> {
+  const row = await prisma.workout.findFirst({
+    where: { id, source: MAINTAIN_WORKOUT_SOURCE },
+    select: { id: true, name: true, description: true },
+  });
+  if (!row) return null;
+  const meta = parseMaintainMeta(row.description);
+  const name = patch.name?.trim() || row.name;
+  const muscleGroup = patch.muscleGroup?.trim() || meta.muscleGroup;
+  const blurb = patch.blurb?.trim() || meta.blurb;
+  const key = meta.key || slugMaintainKey(name);
+  await prisma.workout.update({
+    where: { id },
+    data: {
+      name,
+      description: encodeMaintainMeta(key, muscleGroup, blurb),
+    },
+  });
+  const list = await listAdminMaintainWorkouts();
+  return list.find((w) => w.id === id) ?? null;
+}
+
+export async function createEmptyMaintainWorkout(input: {
+  name: string;
+  muscleGroup?: string;
+  blurb?: string;
+}): Promise<string> {
+  const nameRaw = input.name.trim();
+  const name = nameRaw.replace(/^Maintain ·\s*/i, "");
+  const title = `Maintain · ${name}`;
+  const key = slugMaintainKey(name);
+  const muscleGroup = input.muscleGroup?.trim() || "Custom";
+  const blurb = input.blurb?.trim() || "45-minute maintain session.";
+  const workout = await prisma.workout.create({
+    data: {
+      name: title,
+      description: encodeMaintainMeta(key, muscleGroup, blurb),
+      source: MAINTAIN_WORKOUT_SOURCE,
+      restTimerEnabled: true,
+      restTimerSeconds: DEFAULT_REST_TIMER_SECONDS,
+      restTimerSound: "cybertruck",
+    },
+  });
+  return workout.id;
 }
 
 async function pickExercisesByHints(hints: string[], limit = 7): Promise<string[]> {

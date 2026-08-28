@@ -49,6 +49,12 @@ const COACH_JOBS: JobLink[] = [
     oneLiner: "Intros members hear (welcome, Gear, free ticket, etc.).",
     chip: "Video",
   },
+  {
+    href: "/admin/maintain",
+    label: "Quick maintain",
+    oneLiner: "Review and change extra sessions (leg day, upper, core).",
+    chip: "Extra",
+  },
 ];
 
 export default function CoachStartHereCard() {

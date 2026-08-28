@@ -9,6 +9,13 @@ export default function WorkoutsAdminPage() {
         the left, assign Gym/Home workouts per day, copy a finished cycle to the next month, or
         deploy a library cycle into any program.
       </p>
+      <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">
+        Extra Business Class sessions (leg day, upper, core) live on{" "}
+        <a href="/admin/maintain" className="font-semibold text-accent hover:underline">
+          Quick maintain
+        </a>
+        — review and edit those there, not on the 28-day cycle.
+      </p>
       <div className="mt-6">
         <WorkoutDayBrowser />
       </div>

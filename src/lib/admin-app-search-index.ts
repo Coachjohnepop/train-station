@@ -144,6 +144,22 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
     keywords: ["sessions", "class plan", "lesson plan", "builder"],
   },
   {
+    id: "coach-maintain",
+    title: "Quick maintain",
+    description: "Review and edit Business Class extra sessions (leg day, upper, core)",
+    href: "/admin/maintain",
+    workspace: "coach",
+    group: "Content",
+    keywords: [
+      "quick maintain",
+      "maintain",
+      "leg day",
+      "lower body",
+      "on demand",
+      "business class",
+    ],
+  },
+  {
     id: "coach-exercises",
     title: "Exercises",
     description: "Exercise catalog + archive shelf",

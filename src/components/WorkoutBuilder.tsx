@@ -41,6 +41,7 @@ type Workout = {
   id: string;
   name: string;
   description: string | null;
+  source?: string | null;
   exportText?: string | null;
   certifiedAt?: string | null;
   exercises: WorkoutItem[];
@@ -323,9 +324,23 @@ export default function WorkoutBuilder({
   return (
     <div className="space-y-6">
       {!embedded ? (
-        <Link href="/admin/workouts" className="text-sm text-accent hover:underline">
-          ← All workouts
+        <Link
+          href={workout.source === "maintain" ? "/admin/maintain" : "/admin/workouts"}
+          className="text-sm text-accent hover:underline"
+        >
+          {workout.source === "maintain" ? "← Quick maintain" : "← All workouts"}
         </Link>
+      ) : null}
+
+      {workout.source === "maintain" && !embedded ? (
+        <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm">
+          <p className="font-semibold text-amber-100">Quick maintain</p>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            Members pick this on Today as an extra session (Business Class included). Change the
+            title, add/remove exercises, sets, and demo videos here — then go back to the Quick
+            maintain desk for muscle-group copy.
+          </p>
+        </div>
       ) : null}
 
       {headerNote}
