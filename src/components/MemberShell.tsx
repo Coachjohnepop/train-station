@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import IntakeBookingCelebrate from "@/components/IntakeBookingCelebrate";
 import LiveZoomJoinPrompt from "@/components/LiveZoomJoinPrompt";
 import MemberLiveZoomStrip from "@/components/MemberLiveZoomStrip";
+import MemberZoomHeaderButton from "@/components/MemberZoomHeaderButton";
 import MemberMaintainResumeStrip from "@/components/MemberMaintainResumeStrip";
 import ResumePathTracker from "@/components/ResumePathTracker";
 import UnreadAppBadge from "@/components/UnreadAppBadge";
@@ -112,6 +113,21 @@ export default function MemberShell({
               )}
             </div>
             <div className="member-chrome-actions flex shrink-0 items-center gap-1.5 sm:gap-2.5">
+              {!setupMode && !paymentGateActive ? (
+                <MemberZoomHeaderButton
+                  membershipPlan={
+                    membershipTier === "explorer"
+                      ? "explorer"
+                      : membershipTier === "member"
+                        ? "member"
+                        : membershipTier === "business"
+                          ? "business"
+                          : membershipTier === "pro"
+                            ? "pro"
+                            : "explorer"
+                  }
+                />
+              ) : null}
               <span className="member-chrome-tier badge-accent inline-block max-w-[7.5rem] truncate rounded-full px-2 py-0.5 text-xs font-semibold leading-tight tracking-wide sm:max-w-none">
                 {tierLabel}
               </span>

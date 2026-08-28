@@ -88,7 +88,7 @@ export default function MemberLiveZoomStrip({
         <button
           type="button"
           onClick={showChip}
-          className="fixed bottom-[max(5.5rem,env(safe-area-inset-bottom))] right-3 z-[55] flex h-11 w-11 items-center justify-center rounded-full border border-sky-400/50 bg-sky-950/95 text-lg shadow-lg backdrop-blur-sm md:bottom-6"
+          className="member-zoom-float-chip fixed bottom-[max(5.5rem,env(safe-area-inset-bottom))] right-3 z-[55] flex h-11 w-11 items-center justify-center rounded-full border border-sky-400/50 bg-sky-950/95 text-lg shadow-lg backdrop-blur-sm md:bottom-6"
           aria-label="Show Zoom live controls"
           title="Zoom live"
         >
@@ -102,7 +102,7 @@ export default function MemberLiveZoomStrip({
 
     return (
       <div
-        className="fixed bottom-[max(5.5rem,env(safe-area-inset-bottom))] right-3 z-[55] flex max-w-[min(100vw-1.5rem,20rem)] items-center gap-1.5 rounded-2xl border border-sky-400/45 bg-sky-950/95 px-2.5 py-2 shadow-xl backdrop-blur-md md:bottom-6"
+        className="member-zoom-float-chip fixed bottom-[max(5.5rem,env(safe-area-inset-bottom))] right-3 z-[55] flex max-w-[min(100vw-1.5rem,20rem)] items-center gap-1.5 rounded-2xl border border-sky-400/45 bg-sky-950/95 px-2.5 py-2 shadow-xl backdrop-blur-md md:bottom-6"
         role="status"
         aria-label="In Zoom live class"
       >
