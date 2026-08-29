@@ -419,15 +419,15 @@ export default function MemberWorkoutConsole({
 
   // iOS/Safari: rest-end is timer-driven (no gesture). Unlock WebAudio + HTMLAudio
   // on first tap so the rest-end sample can play when the countdown hits 0.
+  // pointerdown covers touch — do not also bind touchstart (that double-primed
+  // the Cybertruck clip). Prime is silent; still skip extra listeners after first.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const unlock = () => unlockRestAudio(restSoundRef.current);
-    window.addEventListener("pointerdown", unlock, { passive: true });
-    window.addEventListener("touchstart", unlock, { passive: true });
-    window.addEventListener("keydown", unlock);
+    window.addEventListener("pointerdown", unlock, { passive: true, once: true });
+    window.addEventListener("keydown", unlock, { once: true });
     return () => {
       window.removeEventListener("pointerdown", unlock);
-      window.removeEventListener("touchstart", unlock);
       window.removeEventListener("keydown", unlock);
     };
   }, []);

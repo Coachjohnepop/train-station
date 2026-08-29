@@ -21,7 +21,16 @@ let sampleReleaseToken = 0;
 let htmlPlayGeneration = 0;
 /** True after a user-gesture unlock succeeded (iOS / Safari autoplay). */
 let audioUnlocked = false;
+/** Srcs whose HTMLAudio element already got a silent unmuted prime this page life. */
+const htmlPrimedSrcs = new Set<string>();
 let ctxResumeListenersBound = false;
+
+/**
+ * Unmuted but inaudible. iOS will not later-play an element that was only
+ * primed while `muted` — but volume 0.01 of the Cybertruck horn is a chirp
+ * on phone speakers when you touch Today to scroll.
+ */
+const HTML_PRIME_VOLUME = 0.0001;
 
 /** Global de-dupe so live coach+member retargets don't stack chirps/horns. */
 let lastStartAt = 0;
@@ -346,18 +355,28 @@ function primeHtmlSample(src: string, volume: number): void {
   try {
     const audio = getOrCreateSample(src);
     configureHtmlAudio(audio);
+    // Real rest-end already playing — don't steal it.
     if (!audio.paused && !audio.muted && audio.volume > 0.05) return;
+    // Already unlocked this clip; another tap/scroll must not replay it.
+    if (htmlPrimedSrcs.has(src) && audio.paused) return;
+    // Silent prime already in flight.
+    if (!audio.paused && audio.volume <= 0.05) return;
     const gen = htmlPlayGeneration;
     // iOS: muted+pause can mark the element as never-unlocked for later timer play().
-    // Near-silent unmuted play during the gesture is what later rest-end needs.
+    // Unmuted + inaudible volume is what later rest-end needs — not the horn at 1%.
     audio.muted = false;
-    audio.volume = 0.01;
+    audio.volume = HTML_PRIME_VOLUME;
     void audio
       .play()
       .then(() => {
         if (gen !== htmlPlayGeneration) return;
         window.setTimeout(() => {
           if (gen !== htmlPlayGeneration) return;
+          if (!audio.paused && audio.volume > 0.05) {
+            htmlPrimedSrcs.add(src);
+            audioUnlocked = true;
+            return;
+          }
           audio.pause();
           try {
             audio.currentTime = 0;
@@ -366,6 +385,7 @@ function primeHtmlSample(src: string, volume: number): void {
           }
           audio.muted = false;
           audio.volume = volume;
+          htmlPrimedSrcs.add(src);
           audioUnlocked = true;
         }, 60);
       })
@@ -433,6 +453,7 @@ function playHtmlSample(src: string, volume: number, token: number): Promise<boo
             return;
           }
           audioUnlocked = true;
+          htmlPrimedSrcs.add(src);
           done(true);
         })
         .catch(() => done(false));

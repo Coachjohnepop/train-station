@@ -424,6 +424,11 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-08-29 (phone Today chirp)  
+**Status:** John opened the Home Screen app → Today with progress (good). Touching near the top to scroll played a **brief Cybertruck horn**. That was the iOS rest-audio prime from `2b06d99`: unmuted play of the real horn at volume 0.01 on every `pointerdown`/`touchstart`. Prime is now inaudible (`0.0001`) and one-shot; rest-end still uses the same HTMLAudio element.
+
+**When back:** hard-refresh the phone PWA after Vercel. Scroll Today — no chirp. Check a set → rest → 0:00 should still honk.
+
 **Date:** 2026-08-27 (caught up)  
 **Status:** Catch-up workouts are on `main` (`d05bfa1` + HIIT/landscape after). Migration `20260826030000_workout_log_catch_up` **already applied on prod** (2026-08-26). `WorkoutLog.catchUpForDate` is live. Calendly table exists; **Jeremy has not pasted a PAT** (0 `CalendlyIntegration` rows).
 
