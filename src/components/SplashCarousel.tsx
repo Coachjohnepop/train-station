@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import HeroSlideMedia from "@/components/HeroSlideMedia";
 import {
   activeHeroSlides,
   DEFAULT_HERO_SLIDES,
+  heroSlideHoldMs,
   type HeroSlide,
 } from "@/lib/hero-slides";
 
@@ -21,25 +23,30 @@ export default function SplashCarousel({
 
   useEffect(() => {
     if (images.length <= 1) return;
-    const interval = setInterval(() => {
+    const slide = images[current];
+    const ms = slide ? Math.max(5000, heroSlideHoldMs(slide)) : 5000;
+    const interval = window.setTimeout(() => {
       setCurrent((prev) => (prev + 1) % images.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [images.length]);
+    }, ms);
+    return () => window.clearTimeout(interval);
+  }, [images, current]);
 
   return (
     <div className="relative h-[65vh] min-h-[420px] w-full overflow-hidden bg-black">
       {images.map((slide, index) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <div
           key={`${slide.id}-${slide.src}`}
-          src={slide.src}
-          alt={slide.alt || `Inspiring workout ${index + 1}`}
-          style={{ objectPosition: slide.objectPosition || "center center" }}
-          className={`absolute inset-0 h-full w-full object-cover brightness-[1.14] contrast-[1.04] saturate-[1.06] transition-opacity duration-1000 ease-in-out ${
+          className={`absolute inset-0 overflow-hidden brightness-[1.14] contrast-[1.04] saturate-[1.06] transition-opacity duration-1000 ease-in-out ${
             index === current ? "opacity-100" : "opacity-0"
           }`}
-        />
+        >
+          <HeroSlideMedia
+            slide={slide}
+            active={index === current}
+            className="h-full w-full object-cover"
+            alt={slide.alt || `Inspiring workout ${index + 1}`}
+          />
+        </div>
       ))}
       <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/12 to-black/40" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.1)_0%,transparent_70%)]" />

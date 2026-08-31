@@ -424,6 +424,12 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-08-31 (hero video + crop + slow-mo)
+
+**Status:** Admin → Landing hero carousel now takes **photos or videos**. Crop is pan + zoom sliders (same idea as measurements). Videos play muted/loop on the public landing; **Slow motion** is HTML5 `playbackRate` (half speed default on a new video upload). No transcode. Clips up to 80 MB.
+
+**How Jeremy uses it:** Admin → Landing → upload on a slide (Photos/Camera OK) → drag Left/right, Up/down, Zoom → Slow motion → **Save hero slides**.
+
 **Date:** 2026-08-31 (Jeremy video upload)
 
 **Status:** Jeremy’s Admin → Videos uploads were failing in two stacked ways: (1) iPhone Photos `.MOV`s (empty MIME / octet-stream) got rejected by the Blob client-upload allow-list, and the handshake used a static Blob token even when OIDC was the working auth; (2) library files could land while **slot URLs stayed on `/videos/jeremy-welcome.mp4`** because landing-media + library JSON only wrote to Blob — Save looked OK or then started throwing after `7357e02`.

@@ -5,9 +5,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import TrainStationBrand from "@/components/TrainStationBrand";
 import LandingSeeInsideTour from "@/components/LandingSeeInsideTour";
 import { FREE_QUICK_TOUR_EVENT } from "@/lib/free-quick-tour";
+import HeroSlideMedia from "@/components/HeroSlideMedia";
 import {
   activeHeroSlides,
   DEFAULT_HERO_SLIDES,
+  heroSlideHoldMs,
   type HeroSlide,
 } from "@/lib/hero-slides";
 import {
@@ -114,12 +116,14 @@ export default function LandingHero({
     return () => window.removeEventListener(FREE_QUICK_TOUR_EVENT, open);
   }, []);
 
-  // Images can crossfade immediately
+  // Photos hold ~3.2s; video slides hold longer so slow-mo is visible.
   useEffect(() => {
     if (images.length <= 1) return;
-    const id = window.setInterval(() => setImageTick((t) => t + 1), 3200);
-    return () => window.clearInterval(id);
-  }, [images.length]);
+    const current = images[imageTick % images.length];
+    const ms = current ? heroSlideHoldMs(current) : 3200;
+    const id = window.setTimeout(() => setImageTick((t) => t + 1), ms);
+    return () => window.clearTimeout(id);
+  }, [images, imageTick]);
 
   // Hold “Purpose.” for first ~3.2s so the ask is stable on open
   useEffect(() => {
@@ -153,22 +157,19 @@ export default function LandingHero({
       aria-label="The Train Station"
     >
       {images.map((image, index) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <div
           key={`${image.id}-${image.src}`}
-          src={image.src}
-          alt={image.alt}
-          fetchPriority={index === 0 ? "high" : "low"}
-          style={{
-            objectPosition:
-              index === imageIndex
-                ? image.objectPosition || "center 22%"
-                : image.objectPosition || "center 22%",
-          }}
-          className={`landing-hero-slide absolute inset-0 h-full w-full object-cover sm:object-center ${
+          className={`landing-hero-slide absolute inset-0 overflow-hidden ${
             index === imageIndex ? "landing-hero-slide--active" : "landing-hero-slide--idle"
           }`}
-        />
+        >
+          <HeroSlideMedia
+            slide={image}
+            active={index === imageIndex}
+            className="h-full w-full object-cover sm:object-center"
+            fetchPriority={index === 0 ? "high" : "low"}
+          />
+        </div>
       ))}
 
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/75 via-black/30 to-black/92" />

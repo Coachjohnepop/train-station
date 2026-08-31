@@ -3,17 +3,28 @@
  * Managed under Admin → Landing → Hero images.
  */
 
+export type HeroSlideKind = "image" | "video";
+
 export type HeroSlide = {
   id: string;
-  /** Site path (/images/…) or https Blob URL */
+  /** Site path (/images/…) or https Blob URL (photo or MP4/MOV). */
   src: string;
   alt: string;
   /**
-   * CSS object-position (e.g. "center 22%"). Controls crop framing on tall phones.
+   * CSS object-position (e.g. "center 22%"). Kept in sync with focusX/focusY.
    */
   objectPosition: string;
   /** When false, slide is skipped on the public site but kept for re-enable. */
   enabled: boolean;
+  kind: HeroSlideKind;
+  /** Horizontal focal point 0–100 (object-position x %). */
+  focusX: number;
+  /** Vertical focal point 0–100 — lower = more headroom. */
+  focusY: number;
+  /** Crop zoom 1–2.5. */
+  zoom: number;
+  /** Video only. 1 = native, 0.5 = half-speed slow-mo. */
+  playbackRate: number;
 };
 
 /**
@@ -26,9 +37,13 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
     id: "hero-black-guy",
     src: "/images/splash/black-guy.jpg",
     alt: "Athlete powering through a heavy lift",
-    // Strongest mobile drift right — pull face left a touch
     objectPosition: "58% 20%",
     enabled: true,
+    kind: "image",
+    focusX: 58,
+    focusY: 20,
+    zoom: 1,
+    playbackRate: 1,
   },
   {
     id: "hero-blonde-girl",
@@ -36,14 +51,23 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
     alt: "Athlete on cable lat pulldowns in Train Station gear",
     objectPosition: "54% 24%",
     enabled: true,
+    kind: "image",
+    focusX: 54,
+    focusY: 24,
+    zoom: 1,
+    playbackRate: 1,
   },
   {
     id: "hero-hispanic-split",
     src: "/images/splash/hispanic-split-squat.jpg",
     alt: "Athlete hitting Bulgarian split squats",
-    // Also drifted right on phone — same mild correction as black-guy
     objectPosition: "58% 22%",
     enabled: true,
+    kind: "image",
+    focusX: 58,
+    focusY: 22,
+    zoom: 1,
+    playbackRate: 1,
   },
   {
     id: "hero-asian-woman",
@@ -51,6 +75,11 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
     alt: "Athlete in an intense training session",
     objectPosition: "54% 20%",
     enabled: true,
+    kind: "image",
+    focusX: 54,
+    focusY: 20,
+    zoom: 1,
+    playbackRate: 1,
   },
 ];
 
@@ -68,14 +97,26 @@ export function applyDefaultHeroFraming(slides: HeroSlide[]): HeroSlide[] {
     if (!def) return slide;
     const pos = (slide.objectPosition || "").trim().toLowerCase();
     if (pos === LEGACY_HERO_OBJECT_POSITION || pos === "center" || pos === "50% 22%") {
-      return { ...slide, objectPosition: def.objectPosition };
+      const parsed = parseObjectPosition(def.objectPosition);
+      return {
+        ...slide,
+        objectPosition: def.objectPosition,
+        focusX: parsed.focusX,
+        focusY: parsed.focusY,
+      };
     }
     // Also match same splash src with legacy crop (id may have been regenerated)
     const sameSrc =
       slide.src.replace(/\?.*$/, "") === def.src ||
       slide.src.endsWith(def.src.replace("/images/splash/", ""));
     if (sameSrc && (pos === LEGACY_HERO_OBJECT_POSITION || pos === "50% 50%" || pos === "center center")) {
-      return { ...slide, objectPosition: def.objectPosition };
+      const parsed = parseObjectPosition(def.objectPosition);
+      return {
+        ...slide,
+        objectPosition: def.objectPosition,
+        focusX: parsed.focusX,
+        focusY: parsed.focusY,
+      };
     }
     return slide;
   });
@@ -85,22 +126,106 @@ export const HERO_SLIDE_MIN = 1;
 export const HERO_SLIDE_MAX = 24;
 /** Max upload size for a single hero image (client + server). */
 export const HERO_IMAGE_MAX_BYTES = 12 * 1024 * 1024;
+/** Hero video clips — shorter than coach intros; still big enough for a phone .MOV. */
+export const HERO_VIDEO_MAX_BYTES = 80 * 1024 * 1024;
+export const HERO_ZOOM_MIN = 1;
+export const HERO_ZOOM_MAX = 2.5;
+export const HERO_PLAYBACK_RATES = [1, 0.75, 0.5, 0.35, 0.25] as const;
 
 const IMAGE_EXT_RE = /\.(jpe?g|png|webp|gif|avif)(?:$|\?)/i;
+const VIDEO_EXT_RE = /\.(mp4|webm|mov|m4v)(?:$|\?)/i;
+
+export function isHeroVideoSrc(url: string | null | undefined): boolean {
+  if (!url?.trim()) return false;
+  return VIDEO_EXT_RE.test(url.trim());
+}
 
 export function isAllowedHeroImageUrl(url: string | null | undefined): boolean {
   if (!url?.trim()) return false;
   const t = url.trim();
-  if (t.startsWith("/images/") || t.startsWith("/uploads/")) return true;
+  if (t.startsWith("/images/") || t.startsWith("/uploads/") || t.startsWith("/videos/")) {
+    return true;
+  }
   try {
     const u = new URL(t);
     if (u.protocol !== "http:" && u.protocol !== "https:") return false;
     if (/\.public\.blob\.vercel-storage\.com$/i.test(u.hostname)) return true;
-    if (IMAGE_EXT_RE.test(u.pathname)) return true;
+    if (IMAGE_EXT_RE.test(u.pathname) || VIDEO_EXT_RE.test(u.pathname)) return true;
     return true; // allow CDN paths without extension
   } catch {
-    return false;
+    return t.startsWith("/");
   }
+}
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, n));
+}
+
+function keywordPercent(token: string, axis: "x" | "y"): number | null {
+  const t = token.trim().toLowerCase();
+  if (t === "center") return 50;
+  if (axis === "x") {
+    if (t === "left") return 0;
+    if (t === "right") return 100;
+  } else {
+    if (t === "top") return 0;
+    if (t === "bottom") return 100;
+  }
+  const m = t.match(/^(-?\d+(?:\.\d+)?)%$/);
+  if (m) return clamp(Number(m[1]), 0, 100);
+  const n = Number(t);
+  if (Number.isFinite(n)) return clamp(n, 0, 100);
+  return null;
+}
+
+/** Parse CSS object-position into 0–100 focal points. */
+export function parseObjectPosition(pos: string | null | undefined): {
+  focusX: number;
+  focusY: number;
+} {
+  const raw = (pos || "").trim();
+  if (!raw) return { focusX: 50, focusY: 22 };
+  const parts = raw.split(/\s+/);
+  const x = keywordPercent(parts[0] || "center", "x");
+  const y = keywordPercent(parts[1] || parts[0] || "center", "y");
+  return {
+    focusX: x ?? 50,
+    focusY: y ?? 22,
+  };
+}
+
+export function objectPositionFromFocus(focusX: number, focusY: number): string {
+  return `${clamp(focusX, 0, 100)}% ${clamp(focusY, 0, 100)}%`;
+}
+
+export function heroSlideCropStyle(slide: Pick<HeroSlide, "focusX" | "focusY" | "zoom" | "objectPosition">): {
+  objectFit: "cover";
+  objectPosition: string;
+  transform?: string;
+  transformOrigin: string;
+} {
+  const parsed = parseObjectPosition(slide.objectPosition);
+  const x = Number.isFinite(slide.focusX) ? slide.focusX : parsed.focusX;
+  const y = Number.isFinite(slide.focusY) ? slide.focusY : parsed.focusY;
+  const zoom = clamp(Number(slide.zoom) || 1, HERO_ZOOM_MIN, HERO_ZOOM_MAX);
+  return {
+    objectFit: "cover",
+    objectPosition: objectPositionFromFocus(x, y),
+    transform: zoom > 1.01 ? `scale(${zoom})` : undefined,
+    transformOrigin: `${x}% ${y}%`,
+  };
+}
+
+export function heroPlaybackRate(slide: Pick<HeroSlide, "playbackRate" | "kind">): number {
+  const rate = Number(slide.playbackRate);
+  if (!Number.isFinite(rate)) return 1;
+  return clamp(rate, 0.25, 1);
+}
+
+export function heroSlideHoldMs(slide: HeroSlide): number {
+  if (slide.kind !== "video" && !isHeroVideoSrc(slide.src)) return 3200;
+  const rate = heroPlaybackRate(slide);
+  return Math.min(12000, Math.max(4800, Math.round(5600 / rate)));
 }
 
 function newId(): string {
@@ -112,7 +237,7 @@ function newId(): string {
 
 export function normalizeHeroSlide(raw: unknown): HeroSlide | null {
   if (!raw || typeof raw !== "object") return null;
-  const data = raw as Partial<HeroSlide>;
+  const data = raw as Partial<HeroSlide> & { kind?: string };
   const src = typeof data.src === "string" ? data.src.trim() : "";
   if (!src || !isAllowedHeroImageUrl(src)) return null;
   const alt =
@@ -123,6 +248,33 @@ export function normalizeHeroSlide(raw: unknown): HeroSlide | null {
     typeof data.objectPosition === "string" && data.objectPosition.trim()
       ? data.objectPosition.trim().slice(0, 80)
       : "center 22%";
+  const parsed = parseObjectPosition(objectPosition);
+  const kind: HeroSlideKind =
+    data.kind === "video" || data.kind === "image"
+      ? data.kind
+      : isHeroVideoSrc(src)
+        ? "video"
+        : "image";
+  const focusX = clamp(
+    typeof data.focusX === "number" ? data.focusX : parsed.focusX,
+    0,
+    100,
+  );
+  const focusY = clamp(
+    typeof data.focusY === "number" ? data.focusY : parsed.focusY,
+    0,
+    100,
+  );
+  const zoom = clamp(
+    typeof data.zoom === "number" ? data.zoom : 1,
+    HERO_ZOOM_MIN,
+    HERO_ZOOM_MAX,
+  );
+  const playbackRate = clamp(
+    typeof data.playbackRate === "number" ? data.playbackRate : 1,
+    0.25,
+    1,
+  );
   const id =
     typeof data.id === "string" && data.id.trim()
       ? data.id.trim().slice(0, 80)
@@ -131,8 +283,13 @@ export function normalizeHeroSlide(raw: unknown): HeroSlide | null {
     id,
     src,
     alt,
-    objectPosition,
+    objectPosition: objectPositionFromFocus(focusX, focusY),
     enabled: data.enabled !== false,
+    kind,
+    focusX,
+    focusY,
+    zoom,
+    playbackRate: kind === "video" ? playbackRate : 1,
   };
 }
 
@@ -167,7 +324,12 @@ export function createEmptyHeroSlide(src = ""): HeroSlide {
     id: newId(),
     src,
     alt: "Athlete training at The Train Station",
-    objectPosition: "center 22%",
+    objectPosition: "50% 22%",
     enabled: true,
+    kind: isHeroVideoSrc(src) ? "video" : "image",
+    focusX: 50,
+    focusY: 22,
+    zoom: 1,
+    playbackRate: 1,
   };
 }

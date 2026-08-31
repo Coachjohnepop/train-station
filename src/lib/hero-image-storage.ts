@@ -39,6 +39,26 @@ export function validateHeroImageFile(file: { size: number; mimeType: string; na
   }
 }
 
+export async function storeHeroBuffer(
+  relativePath: string,
+  buffer: Buffer,
+  mimeType: string,
+): Promise<string> {
+  if (isBlobConfigured()) {
+    const blob = await put(relativePath, buffer, {
+      ...blobSdkOptions(),
+      contentType: mimeType,
+      addRandomSuffix: false,
+      allowOverwrite: true,
+    });
+    return blob.url;
+  }
+  fs.mkdirSync(LOCAL_DIR, { recursive: true });
+  const base = path.basename(relativePath);
+  fs.writeFileSync(path.join(LOCAL_DIR, base), buffer);
+  return `/uploads/hero/${base}`;
+}
+
 export async function storeHeroImage(
   buffer: Buffer,
   mimeType: string,
@@ -48,19 +68,7 @@ export async function storeHeroImage(
   validateHeroImageFile({ size: buffer.length, mimeType: mime, name: fileName });
   const ext = heroImageExtFromMime(mime);
   const relativePath = `hero/${randomUUID()}.${ext}`;
-
-  if (isBlobConfigured()) {
-    const blob = await put(relativePath, buffer, {
-      ...blobSdkOptions(),
-      contentType: mime,
-      addRandomSuffix: false,
-      allowOverwrite: true,
-    });
-    return { url: blob.url };
-  }
-
-  fs.mkdirSync(LOCAL_DIR, { recursive: true });
-  const base = path.basename(relativePath);
-  fs.writeFileSync(path.join(LOCAL_DIR, base), buffer);
-  return { url: `/uploads/hero/${base}` };
+  const url = await storeHeroBuffer(relativePath, buffer, mime);
+  return { url };
 }
+
