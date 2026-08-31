@@ -40,9 +40,9 @@ export default async function AdminVideosPage() {
       <div>
         <h1 className="text-2xl font-bold">Videos</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Upload or replace Jeremy&apos;s intros on each slot, watch them here, then Save. Free
-          Explorer is the clip after the gag. Welcome and Free intros are site files (not
-          YouTube). Thank-you, weekly, dinner, daily can still be YouTube.
+          Tap Upload video on a slot — it goes live when the green bar says so. Phone Photos and
+          Camera (.MOV) work. Free Explorer is the clip after the gag. Thank-you, weekly, dinner,
+          daily can still be YouTube.
         </p>
       </div>
       <AdminSiteVideosPanel

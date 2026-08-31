@@ -88,6 +88,19 @@ export function requireBlobPersisted(blobSaved: boolean, action: string): void {
   }
 }
 
+/**
+ * Coach video / landing saves: Postgres is enough on prod.
+ * Blob JSON is a backup. Only throw when neither path stuck.
+ */
+export function requireDurablePersisted(opts: {
+  dbSaved: boolean;
+  blobSaved: boolean;
+  action: string;
+}): void {
+  if (opts.dbSaved) return;
+  requireBlobPersisted(opts.blobSaved, opts.action);
+}
+
 function blobConfigured(): boolean {
   return isDemoBlobConfigured();
 }

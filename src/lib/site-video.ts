@@ -5,7 +5,19 @@ export const SITE_VIDEO_ALLOWED_MIME = new Set([
   "video/webm",
   "video/quicktime",
   "video/x-m4v",
+  "video/hevc",
+  "video/h264",
 ]);
+
+/** iPhone Photos often omits a MIME type or sends octet-stream. */
+export const SITE_VIDEO_CLIENT_ACCEPT =
+  "video/*,.mp4,.mov,.m4v,.webm,video/quicktime,video/mp4";
+
+export const SITE_VIDEO_UPLOAD_CONTENT_TYPES = [
+  "video/*",
+  "application/octet-stream",
+  ...Array.from(SITE_VIDEO_ALLOWED_MIME),
+];
 
 const STORED_PATH_PREFIX = "/uploads/site-videos/";
 const BLOB_HOST_RE = /\.public\.blob\.vercel-storage\.com$/i;
@@ -63,6 +75,16 @@ export function siteVideoMimeFromName(name: string, fallback = "video/mp4"): str
   if (lower.endsWith(".m4v")) return "video/x-m4v";
   if (lower.endsWith(".mp4")) return "video/mp4";
   return fallback;
+}
+
+/** MIME the Blob client should send — iPhone Camera/Photos often leave file.type empty. */
+export function clientSiteVideoMime(file: { name: string; type?: string }): string {
+  const raw = (file.type || "").trim().toLowerCase();
+  if (raw && SITE_VIDEO_ALLOWED_MIME.has(raw)) return raw;
+  const fromName = siteVideoMimeFromName(file.name, "");
+  if (fromName) return fromName;
+  if (raw.startsWith("video/")) return raw;
+  return "video/mp4";
 }
 
 export function siteVideoExtFromMime(mimeType: string): string {

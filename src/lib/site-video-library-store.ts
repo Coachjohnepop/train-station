@@ -1,7 +1,7 @@
 import path from "path";
 import { randomUUID } from "crypto";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
-import { requireBlobPersisted } from "@/lib/demo-persistence";
+import { requireDurablePersisted } from "@/lib/demo-persistence";
 import { isAllowedCoachIntroVideoUrl } from "@/lib/site-video";
 
 export type SiteVideoLibraryItem = {
@@ -80,7 +80,57 @@ function normalize(raw: unknown): SiteVideoLibraryConfig {
   };
 }
 
+async function persistLibrary(next: SiteVideoLibraryConfig): Promise<void> {
+  let dbSaved = false;
+  try {
+    const { saveSiteVideoLibraryToDb } = await import("@/lib/site-video-library-db");
+    dbSaved = await saveSiteVideoLibraryToDb(next);
+  } catch {
+    dbSaved = false;
+  }
+  const { blobSaved } = await persistJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    data: next,
+    setMemory: (v) => {
+      memoryStore = normalize(v);
+    },
+  });
+  requireDurablePersisted({ dbSaved, blobSaved, action: "Video library" });
+}
+
 export async function getSiteVideoLibrary(): Promise<SiteVideoLibraryConfig> {
+  try {
+    const { loadSiteVideoLibraryFromDb } = await import("@/lib/site-video-library-db");
+    const fromDb = await loadSiteVideoLibraryFromDb();
+    if (fromDb) {
+      const dbConfig = normalize(fromDb);
+      if (dbConfig.items.length === 0) {
+        const hydrated = await hydrateJsonStore({
+          blobPath: BLOB_PATH,
+          localPath: DEV_FILE,
+          memory: memoryStore,
+          setMemory: (v) => {
+            memoryStore = normalize(v);
+          },
+          fallback: emptyConfig,
+        });
+        const blobConfig = normalize(hydrated);
+        if (blobConfig.items.length) {
+          memoryStore = blobConfig;
+          void import("@/lib/site-video-library-db")
+            .then((db) => db.saveSiteVideoLibraryToDb(blobConfig))
+            .catch(() => null);
+          return blobConfig;
+        }
+      }
+      memoryStore = dbConfig;
+      return dbConfig;
+    }
+  } catch {
+    /* table not migrated yet */
+  }
+
   const hydrated = await hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
@@ -92,6 +142,11 @@ export async function getSiteVideoLibrary(): Promise<SiteVideoLibraryConfig> {
   });
   const config = normalize(hydrated);
   memoryStore = config;
+  if (config.items.length) {
+    void import("@/lib/site-video-library-db")
+      .then((db) => db.saveSiteVideoLibraryToDb(config))
+      .catch(() => null);
+  }
   return config;
 }
 
@@ -129,15 +184,7 @@ export async function addSiteVideoLibraryItem(input: {
     updatedAt: new Date().toISOString(),
   };
 
-  const { blobSaved } = await persistJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    data: next,
-    setMemory: (v) => {
-      memoryStore = normalize(v);
-    },
-  });
-  requireBlobPersisted(blobSaved, "Video library");
+  await persistLibrary(next);
 
   return item;
 }
@@ -182,15 +229,7 @@ export async function updateSiteVideoLibraryItem(
     updatedAt: new Date().toISOString(),
   };
 
-  const { blobSaved } = await persistJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    data: next,
-    setMemory: (v) => {
-      memoryStore = normalize(v);
-    },
-  });
-  requireBlobPersisted(blobSaved, "Video library");
+  await persistLibrary(next);
 
   return nextItem;
 }
@@ -201,15 +240,7 @@ export async function removeSiteVideoLibraryItem(id: string): Promise<void> {
     items: current.items.filter((i) => i.id !== id),
     updatedAt: new Date().toISOString(),
   };
-  const { blobSaved } = await persistJsonStore({
-    blobPath: BLOB_PATH,
-    localPath: DEV_FILE,
-    data: next,
-    setMemory: (v) => {
-      memoryStore = normalize(v);
-    },
-  });
-  requireBlobPersisted(blobSaved, "Video library");
+  await persistLibrary(next);
 }
 
 /**

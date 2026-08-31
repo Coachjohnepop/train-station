@@ -1,6 +1,6 @@
 import path from "path";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
-import { requireBlobPersisted } from "@/lib/demo-persistence";
+import { requireDurablePersisted } from "@/lib/demo-persistence";
 import type { MembershipPlan } from "@/lib/signup-plans";
 import { MEMBERSHIP_PLANS } from "@/lib/signup-plans";
 import {
@@ -205,6 +205,18 @@ function isHttpUrl(url: string): boolean {
 }
 
 export async function getLandingMedia(): Promise<LandingMediaConfig> {
+  try {
+    const { loadLandingMediaFromDb } = await import("@/lib/landing-media-db");
+    const fromDb = await loadLandingMediaFromDb();
+    if (fromDb) {
+      const config = normalize(fromDb);
+      memoryStore = config;
+      return config;
+    }
+  } catch {
+    /* table not migrated yet */
+  }
+
   const hydrated = await hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
@@ -216,6 +228,9 @@ export async function getLandingMedia(): Promise<LandingMediaConfig> {
   });
   const config = normalize(hydrated);
   memoryStore = config;
+  void import("@/lib/landing-media-db")
+    .then((db) => db.saveLandingMediaToDb(config))
+    .catch(() => null);
   return config;
 }
 
@@ -403,6 +418,14 @@ export async function saveLandingMedia(
     next.freeTicketFullIntroSource = next.freeChastiseVideoUrl;
   }
 
+  let dbSaved = false;
+  try {
+    const { saveLandingMediaToDb } = await import("@/lib/landing-media-db");
+    dbSaved = await saveLandingMediaToDb(next);
+  } catch {
+    dbSaved = false;
+  }
+
   const { blobSaved } = await persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
@@ -411,7 +434,7 @@ export async function saveLandingMedia(
       memoryStore = normalize(v);
     },
   });
-  requireBlobPersisted(blobSaved, "Landing videos");
+  requireDurablePersisted({ dbSaved, blobSaved, action: "Landing videos" });
 
   if (introChanged && next.freeChastiseVideoUrl) {
     const introUrl = next.freeChastiseVideoUrl;

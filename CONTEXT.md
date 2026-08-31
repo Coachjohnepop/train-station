@@ -424,6 +424,21 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-08-31 (Jeremy video upload)
+
+**Status:** Jeremy’s Admin → Videos uploads were failing in two stacked ways: (1) iPhone Photos `.MOV`s (empty MIME / octet-stream) got rejected by the Blob client-upload allow-list, and the handshake used a static Blob token even when OIDC was the working auth; (2) library files could land while **slot URLs stayed on `/videos/jeremy-welcome.mp4`** because landing-media + library JSON only wrote to Blob — Save looked OK or then started throwing after `7357e02`.
+
+**Shipped this pass:**
+- Postgres is now the system of record for landing intros, the video library, and member YouTube rows (`LandingMediaSettings`, `SiteVideoAsset`, `MemberContentSettings`). Blob JSON is backup. Save succeeds if DB writes even when Blob JSON misses.
+- Client upload token: OIDC first (`generateClientTokenFromReadWriteToken` + `blobSdkOptionVariants`), `video/*` + octet-stream allowed, 1h token.
+- Admin Videos: Upload on the **slot** is the Jeremy path (phone Photos/Camera). Slot replace also publishes live. Library replace publishes if that clip is assigned. Clearer errors for too-big / MIME / Blob.
+
+**When back:**
+1. Apply migration on prod: `npx prisma migrate deploy` then `npm run db:lockdown-postgrest`.
+2. Hard-refresh Admin → Videos. Jeremy taps **Upload video** on Overall / Free Explorer (not bulk library). Wait for the green “live on the site” bar.
+3. Confirm `/api/landing-media` welcome/free URLs are Blob `site-videos/…` not the default site files.
+4. Do **not** contact Natasha.
+
 **Date:** 2026-08-29 (phone Today chirp)  
 **Status:** John opened the Home Screen app → Today with progress (good). Touching near the top to scroll played a **brief Cybertruck horn**. That was the iOS rest-audio prime from `2b06d99`: unmuted play of the real horn at volume 0.01 on every `pointerdown`/`touchstart`. Prime is now inaudible (`0.0001`) and one-shot; rest-end still uses the same HTMLAudio element.
 

@@ -1229,6 +1229,57 @@ model SiteSeoSettings {
   updatedAt               DateTime @updatedAt
 }
 
+/// Singleton Admin → Videos / landing intros (URLs point at Blob files).
+model LandingMediaSettings {
+  id                         String   @id @default("default")
+  welcomeVideoUrl            String?
+  welcomeVideosByPlan        Json
+  freeChastiseVideoUrl       String?
+  heroSlides                 Json
+  gagVideoUrl                String?
+  gagStartSec                Int      @default(43)
+  gagDurationSec             Int      @default(5)
+  gagEnabled                 Boolean  @default(true)
+  purchaseThankYouVideoUrl   String?
+  equipmentIntroVideoUrl     String?
+  measurementsIntroVideoUrl  String?
+  uploadedContentVolumeDb    Int      @default(6)
+  venmoQrUrl                 String?
+  venmoHandle                String?
+  venmoInstructions          String?  @db.Text
+  freeTicketFullUrl          String?
+  freeTicketFullBuiltAt      String?
+  freeTicketFullIntroSource  String?
+  freeTicketFullStatus       String   @default("idle")
+  freeTicketFullError        String?  @db.Text
+  updatedAt                  DateTime @updatedAt
+}
+
+/// Singleton member Today YouTube strip + nutrition sample tiers.
+model MemberContentSettings {
+  id                     String   @id @default("default")
+  weeklyVideoUrl         String?
+  weeklyVideoTitle       String
+  dinnerVideoUrl         String?
+  dinnerVideoTitle       String
+  dailyInspirationClips  Json
+  nutritionIntro         String   @db.Text
+  nutritionTiers         Json
+  updatedAt              DateTime @updatedAt
+}
+
+/// Coach video library rows (Admin → Videos). Binary files stay on Blob.
+model SiteVideoAsset {
+  id        String   @id
+  title     String
+  url       String
+  fileName  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
+}
+
 // ---------------------------------------------------------------------------
 // Data warehouse — behavioral events, payment facts, daily marts
 // ---------------------------------------------------------------------------

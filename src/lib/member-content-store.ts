@@ -1,6 +1,6 @@
 import path from "path";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
-import { requireBlobPersisted } from "@/lib/demo-persistence";
+import { requireDurablePersisted } from "@/lib/demo-persistence";
 import { isYoutubeUrl } from "@/lib/youtube";
 
 export type NutritionCalorieTier = {
@@ -152,6 +152,18 @@ function normalize(raw: unknown): MemberContentConfig {
 }
 
 export async function getMemberContent(): Promise<MemberContentConfig> {
+  try {
+    const { loadMemberContentFromDb } = await import("@/lib/member-content-db");
+    const fromDb = await loadMemberContentFromDb();
+    if (fromDb) {
+      const config = normalize(fromDb);
+      memoryStore = config;
+      return config;
+    }
+  } catch {
+    /* table not migrated yet */
+  }
+
   const hydrated = await hydrateJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
@@ -163,6 +175,9 @@ export async function getMemberContent(): Promise<MemberContentConfig> {
   });
   const config = normalize(hydrated);
   memoryStore = config;
+  void import("@/lib/member-content-db")
+    .then((db) => db.saveMemberContentToDb(config))
+    .catch(() => null);
   return config;
 }
 
@@ -222,6 +237,14 @@ export async function saveMemberContent(
     next.nutritionTiers = normalizeTiers(patch.nutritionTiers);
   }
 
+  let dbSaved = false;
+  try {
+    const { saveMemberContentToDb } = await import("@/lib/member-content-db");
+    dbSaved = await saveMemberContentToDb(next);
+  } catch {
+    dbSaved = false;
+  }
+
   const { blobSaved } = await persistJsonStore({
     blobPath: BLOB_PATH,
     localPath: DEV_FILE,
@@ -230,7 +253,7 @@ export async function saveMemberContent(
       memoryStore = normalize(v);
     },
   });
-  requireBlobPersisted(blobSaved, "Member videos");
+  requireDurablePersisted({ dbSaved, blobSaved, action: "Member videos" });
 
   return next;
 }

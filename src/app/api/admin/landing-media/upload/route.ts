@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
-import { getSessionUser, isStaffRole } from "@/lib/auth";
-import { BLOB_TOKEN, isBlobConfigured } from "@/lib/demo-json-blob";
 import {
-  SITE_VIDEO_ALLOWED_MIME,
+  generateClientTokenFromReadWriteToken,
+  handleUpload,
+  type HandleUploadBody,
+} from "@vercel/blob/client";
+import { getSessionUser, isStaffRole } from "@/lib/auth";
+import {
+  BLOB_TOKEN,
+  blobSdkOptionVariants,
+  isBlobConfigured,
+} from "@/lib/demo-json-blob";
+import {
   SITE_VIDEO_MAX_BYTES,
+  SITE_VIDEO_UPLOAD_CONTENT_TYPES,
   siteVideoExtFromMime,
   siteVideoMimeFromName,
   validateSiteVideoFile,
@@ -15,10 +23,44 @@ export const dynamic = "force-dynamic";
 /** Large coach intros — client upload is preferred; keep headroom for server fallback. */
 export const maxDuration = 120;
 
+const TOKEN_TTL_MS = 60 * 60 * 1000;
+
+function assertSiteVideoPath(pathname: string) {
+  if (!pathname.startsWith("site-videos/")) {
+    throw new Error("Invalid upload path.");
+  }
+}
+
+async function issueClientToken(pathname: string): Promise<string> {
+  assertSiteVideoPath(pathname);
+  const constraints = {
+    pathname,
+    allowedContentTypes: SITE_VIDEO_UPLOAD_CONTENT_TYPES,
+    maximumSizeInBytes: SITE_VIDEO_MAX_BYTES,
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    validUntil: Date.now() + TOKEN_TTL_MS,
+  };
+  let lastError: unknown;
+  for (const auth of blobSdkOptionVariants()) {
+    try {
+      return await generateClientTokenFromReadWriteToken({
+        ...constraints,
+        ...auth,
+      });
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Could not start cloud upload. Retry on Wi-Fi.");
+}
+
 /**
  * Coach intro / per-ticket video upload.
  *
- * - JSON body → Vercel Blob client-upload token flow (`handleUpload`) for files up to 200 MB.
+ * - JSON body → Vercel Blob client-upload token (OIDC first, then static token).
  * - FormData `file` → server put (local dev or small files under ~4.5 MB on Vercel).
  */
 export async function POST(request: Request) {
@@ -43,25 +85,33 @@ export async function POST(request: Request) {
 
     try {
       const body = (await request.json()) as HandleUploadBody;
+      if (body.type === "blob.generate-client-token") {
+        const clientToken = await issueClientToken(body.payload.pathname);
+        return NextResponse.json({
+          type: "blob.generate-client-token",
+          clientToken,
+        });
+      }
+      if (body.type === "blob.upload-completed") {
+        // Client already has the URL. Do not require a session-gated webhook.
+        return NextResponse.json({ type: "blob.upload-completed", response: "ok" });
+      }
+
+      // Older Blob client versions still POST handleUpload shapes.
       const jsonResponse = await handleUpload({
         body,
         request,
-        token: BLOB_TOKEN,
+        ...(BLOB_TOKEN ? { token: BLOB_TOKEN } : {}),
         onBeforeGenerateToken: async (pathname) => {
-          // Only allow site-videos/* paths from our client.
-          if (!pathname.startsWith("site-videos/")) {
-            throw new Error("Invalid upload path.");
-          }
+          assertSiteVideoPath(pathname);
           return {
-            allowedContentTypes: Array.from(SITE_VIDEO_ALLOWED_MIME),
+            allowedContentTypes: SITE_VIDEO_UPLOAD_CONTENT_TYPES,
             maximumSizeInBytes: SITE_VIDEO_MAX_BYTES,
             addRandomSuffix: false,
             allowOverwrite: true,
-            tokenPayload: JSON.stringify({ coachId: session.id }),
+            validUntil: Date.now() + TOKEN_TTL_MS,
           };
         },
-        // No onUploadCompleted: Blob would POST back without Jeremy's session cookie (401).
-        // The client applies the returned URL into the library / Save.
       });
       return NextResponse.json(jsonResponse);
     } catch (e: unknown) {
@@ -98,7 +148,7 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     maxBytes: SITE_VIDEO_MAX_BYTES,
-    allowedMime: Array.from(SITE_VIDEO_ALLOWED_MIME),
+    allowedMime: SITE_VIDEO_UPLOAD_CONTENT_TYPES,
     clientUpload: isBlobConfigured(),
     suggestedPath: `site-videos/${crypto.randomUUID()}.mp4`,
     extForMime: {
