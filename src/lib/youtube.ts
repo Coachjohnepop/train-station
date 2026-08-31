@@ -21,11 +21,18 @@ export function youtubeVideoId(url: string): string | null {
     }
   } catch {
     const fallback = trimmed.match(
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{6,})/,
+      /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/,
     );
     return fallback?.[1] ?? null;
   }
   return null;
+}
+
+/** Store a pasted demo link as a clean watch URL when it is YouTube (Shorts included). */
+export function storedDemoVideoUrl(raw: string | null | undefined): string | null {
+  const trimmed = raw?.trim() || "";
+  if (!trimmed) return null;
+  return normalizeYoutubeWatchUrl(trimmed) || trimmed;
 }
 
 export type YoutubeEmbedOptions = {

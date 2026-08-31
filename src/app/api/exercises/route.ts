@@ -14,6 +14,7 @@ import {
 } from "@/lib/demo-persistence";
 import { requireStaff } from "@/lib/api-auth";
 import { hintVideoUrlForExerciseName } from "@/lib/exercise-video-hints";
+import { storedDemoVideoUrl } from "@/lib/youtube";
 import {
   listCatalogExercises,
   type ArchiveFilter,
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
   }
   const { name, description, videoUrl, tags } = parsed.data;
   const resolvedVideoUrl =
-    videoUrl?.trim() || hintVideoUrlForExerciseName(name.trim()) || null;
+    storedDemoVideoUrl(videoUrl) || hintVideoUrlForExerciseName(name.trim()) || null;
 
   if (isDemoMode()) {
     await hydrateDemoExercises({ preferFresh: true });

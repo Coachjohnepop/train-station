@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   heroPlaybackRate,
   heroSlideHoldMs,
+  heroSlideShouldLoadMedia,
   heroTrimDurationSec,
   heroTrimWindow,
   isHeroVideoSrc,
@@ -40,6 +41,14 @@ describe("hero video slides", () => {
     assert.equal(slide!.objectPosition, "40% 30%");
     assert.equal(heroPlaybackRate(slide!), 0.5);
     assert.ok(heroSlideHoldMs(slide!) >= 4800);
+  });
+
+  it("only loads nearby hero videos", () => {
+    const vid = { kind: "video" as const, src: "https://x.public.blob.vercel-storage.com/hero/a.mov" };
+    assert.equal(heroSlideShouldLoadMedia(0, 0, 5, vid), true);
+    assert.equal(heroSlideShouldLoadMedia(1, 0, 5, vid), true);
+    assert.equal(heroSlideShouldLoadMedia(4, 0, 5, vid), true);
+    assert.equal(heroSlideShouldLoadMedia(2, 0, 5, vid), false);
   });
 
   it("trims a window inside the file", () => {

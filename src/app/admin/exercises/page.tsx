@@ -19,8 +19,9 @@ export default function ExercisesAdminPage() {
         </ol>
         <p className="mt-3 text-xs text-[var(--muted)]">
           Works with regular links, Shorts, and{" "}
-          <code className="rounded bg-[var(--surface)] px-1">youtu.be/…</code> short links. Members see the
-          video in their workout console when they tap the exercise.
+          <code className="rounded bg-[var(--surface)] px-1">youtu.be/…</code> short links. The demo
+          plays here — you do not leave Admin. Members see it in their workout when they tap the
+          exercise.
         </p>
         <p className="mt-2 text-xs text-[var(--muted)]">
           Landing page &amp; welcome clips:{" "}

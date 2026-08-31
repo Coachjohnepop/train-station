@@ -10,6 +10,7 @@ import {
   activeHeroSlides,
   DEFAULT_HERO_SLIDES,
   heroSlideHoldMs,
+  heroSlideShouldLoadMedia,
   type HeroSlide,
 } from "@/lib/hero-slides";
 import {
@@ -163,12 +164,16 @@ export default function LandingHero({
             index === imageIndex ? "landing-hero-slide--active" : "landing-hero-slide--idle"
           }`}
         >
-          <HeroSlideMedia
-            slide={image}
-            active={index === imageIndex}
-            className="h-full w-full object-cover sm:object-center"
-            fetchPriority={index === 0 ? "high" : "low"}
-          />
+          {heroSlideShouldLoadMedia(index, imageIndex, images.length, image) ? (
+            <HeroSlideMedia
+              slide={image}
+              active={index === imageIndex}
+              className="h-full w-full object-cover sm:object-center"
+              fetchPriority={index === imageIndex ? "high" : "low"}
+            />
+          ) : (
+            <div className="h-full w-full bg-black" aria-hidden />
+          )}
         </div>
       ))}
 

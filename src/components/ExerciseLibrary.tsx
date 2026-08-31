@@ -7,6 +7,7 @@ import TextUploadPanel from "@/components/TextUploadPanel";
 import { isNewlyAddedFromTextUpload } from "@/lib/text-upload-exercises";
 import { hintVideoUrlForExerciseName } from "@/lib/exercise-video-hints";
 import { isYoutubeUrl, normalizeYoutubeWatchUrl } from "@/lib/youtube";
+import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
 
 type Exercise = {
   id: string;
@@ -138,20 +139,26 @@ function ExerciseVideoCell({
   }
 
   if (exercise.videoUrl && !editing) {
-    const label = isYoutubeUrl(exercise.videoUrl)
+    const yt = isYoutubeUrl(exercise.videoUrl);
+    const label = yt
       ? exercise.videoUrl.replace(/^https?:\/\/(www\.)?/, "")
       : "Video link";
     return (
-      <div className="space-y-1">
-        <a
-          href={exercise.videoUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="break-all text-sm text-accent hover:underline"
-          title={exercise.videoUrl}
-        >
-          {label}
-        </a>
+      <div className="space-y-2">
+        {yt ? (
+          <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-black">
+            <YoutubeAutoplayFrame
+              className="aspect-video w-full max-h-40"
+              videoUrl={exercise.videoUrl}
+              title={exercise.name}
+              autoplay={false}
+            />
+          </div>
+        ) : (
+          <p className="break-all text-sm text-[var(--muted)]" title={exercise.videoUrl}>
+            {label}
+          </p>
+        )}
         <button
           type="button"
           className="block text-xs text-[var(--muted)] hover:text-[var(--text)]"
@@ -644,7 +651,9 @@ export default function ExerciseLibrary() {
         body: JSON.stringify({
           name: editDraft.name.trim(),
           description: editDraft.description.trim() || null,
-          videoUrl: editDraft.videoUrl.trim() || null,
+          videoUrl: editDraft.videoUrl.trim()
+            ? normalizeYoutubeWatchUrl(editDraft.videoUrl) || editDraft.videoUrl.trim()
+            : null,
           tags: editDraft.tags.trim() || null,
         }),
       });
@@ -1211,7 +1220,7 @@ export default function ExerciseLibrary() {
                 <FieldLabel
                   htmlFor="edit-video"
                   label="Demo video link"
-                  hint="Paste any YouTube URL (watch or youtu.be). Optional."
+                  hint="Paste Share → Copy link (watch, Shorts, or youtu.be). Watch stays on this page."
                 />
                 <input
                   id="edit-video"
@@ -1219,10 +1228,20 @@ export default function ExerciseLibrary() {
                   type="text"
                   inputMode="url"
                   autoComplete="url"
-                  placeholder="https://www.youtube.com/watch?v=…"
+                  placeholder="https://youtube.com/shorts/… or youtube.com/watch?v=…"
                   value={editDraft.videoUrl}
                   onChange={(e) => setEditDraft({ ...editDraft, videoUrl: e.target.value })}
                 />
+                {isYoutubeUrl(editDraft.videoUrl) ? (
+                  <div className="mt-2 overflow-hidden rounded-lg border border-[var(--border)] bg-black">
+                    <YoutubeAutoplayFrame
+                      className="aspect-video w-full max-h-56"
+                      videoUrl={editDraft.videoUrl}
+                      title={editDraft.name || "Demo"}
+                      autoplay={false}
+                    />
+                  </div>
+                ) : null}
                 <SuggestedVideoHint
                   name={editDraft.name}
                   className="mt-1"

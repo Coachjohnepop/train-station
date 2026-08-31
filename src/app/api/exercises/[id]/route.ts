@@ -12,6 +12,7 @@ import {
   demoPersistenceWarning,
 } from "@/lib/demo-persistence";
 import { requireStaff } from "@/lib/api-auth";
+import { storedDemoVideoUrl } from "@/lib/youtube";
 import {
   archiveCatalogExercise,
   deleteOrArchiveCatalogExercise,
@@ -92,7 +93,7 @@ export async function PATCH(request: Request, { params }: Params) {
     data.description = parsed.data.description?.trim() || null;
   }
   if (parsed.data.videoUrl !== undefined) {
-    data.videoUrl = parsed.data.videoUrl?.trim() || null;
+    data.videoUrl = storedDemoVideoUrl(parsed.data.videoUrl);
   }
   if (parsed.data.tags !== undefined) {
     data.tags = parsed.data.tags?.trim() || null;

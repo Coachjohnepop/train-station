@@ -234,6 +234,21 @@ export function heroPlaybackRate(slide: Pick<HeroSlide, "playbackRate" | "kind">
   return clamp(rate, 0.25, 1);
 }
 
+/** Load this video slide (and neighbors) so the landing is not pulling four 60 MB clips at once. */
+export function heroSlideShouldLoadMedia(
+  index: number,
+  activeIndex: number,
+  total: number,
+  slide: Pick<HeroSlide, "kind" | "src">,
+): boolean {
+  if (slide.kind !== "video" && !isHeroVideoSrc(slide.src)) return true;
+  if (total <= 1) return true;
+  if (index === activeIndex) return true;
+  const next = (activeIndex + 1) % total;
+  const prev = (activeIndex - 1 + total) % total;
+  return index === next || index === prev;
+}
+
 export function heroSlideHoldMs(slide: HeroSlide): number {
   if (slide.kind !== "video" && !isHeroVideoSrc(slide.src)) return 3200;
   const rate = heroPlaybackRate(slide);

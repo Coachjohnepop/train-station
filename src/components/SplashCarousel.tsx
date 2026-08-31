@@ -7,6 +7,7 @@ import {
   activeHeroSlides,
   DEFAULT_HERO_SLIDES,
   heroSlideHoldMs,
+  heroSlideShouldLoadMedia,
   type HeroSlide,
 } from "@/lib/hero-slides";
 
@@ -40,12 +41,16 @@ export default function SplashCarousel({
             index === current ? "opacity-100" : "opacity-0"
           }`}
         >
-          <HeroSlideMedia
-            slide={slide}
-            active={index === current}
-            className="h-full w-full object-cover"
-            alt={slide.alt || `Inspiring workout ${index + 1}`}
-          />
+          {heroSlideShouldLoadMedia(index, current, images.length, slide) ? (
+            <HeroSlideMedia
+              slide={slide}
+              active={index === current}
+              className="h-full w-full object-cover"
+              alt={slide.alt || `Inspiring workout ${index + 1}`}
+            />
+          ) : (
+            <div className="h-full w-full bg-black" aria-hidden />
+          )}
         </div>
       ))}
       <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/12 to-black/40" />
