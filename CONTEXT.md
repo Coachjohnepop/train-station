@@ -426,9 +426,9 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Date:** 2026-08-31 (hero video + crop + slow-mo)
 
-**Status:** Admin → Landing hero carousel now takes **photos or videos**. Crop is pan + zoom sliders (same idea as measurements). Videos play muted/loop on the public landing; **Slow motion** is HTML5 `playbackRate` (half speed default on a new video upload). No transcode. Clips up to 80 MB.
+**Status:** Admin → Landing hero carousel now takes **photos or videos**. Crop is pan + zoom sliders (same idea as measurements). Videos play muted/loop on the public landing; **Slow motion** is HTML5 `playbackRate` (half speed default on a new video upload). **Trim** is start/end sliders (loops only that range). No transcode. Clips up to 80 MB.
 
-**How Jeremy uses it:** Admin → Landing → upload on a slide (Photos/Camera OK) → drag Left/right, Up/down, Zoom → Slow motion → **Save hero slides**.
+**How Jeremy uses it:** Admin → Landing → upload on a slide (Photos/Camera OK) → Trim start/end → Crop pan/zoom → Slow motion → **Save hero slides**.
 
 **Date:** 2026-08-31 (Jeremy video upload)
 

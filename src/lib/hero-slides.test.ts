@@ -3,6 +3,8 @@ import { describe, it } from "node:test";
 import {
   heroPlaybackRate,
   heroSlideHoldMs,
+  heroTrimDurationSec,
+  heroTrimWindow,
   isHeroVideoSrc,
   normalizeHeroSlide,
   parseObjectPosition,
@@ -38,5 +40,18 @@ describe("hero video slides", () => {
     assert.equal(slide!.objectPosition, "40% 30%");
     assert.equal(heroPlaybackRate(slide!), 0.5);
     assert.ok(heroSlideHoldMs(slide!) >= 4800);
+  });
+
+  it("trims a window inside the file", () => {
+    const slide = normalizeHeroSlide({
+      src: "https://example.public.blob.vercel-storage.com/hero/clip.mp4",
+      trimStartSec: 2,
+      trimEndSec: 5,
+    });
+    assert.ok(slide);
+    const window = heroTrimWindow(slide!, 10);
+    assert.equal(window.start, 2);
+    assert.equal(window.end, 5);
+    assert.equal(heroTrimDurationSec(slide!, 10), 3);
   });
 });

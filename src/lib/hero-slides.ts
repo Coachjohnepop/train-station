@@ -25,6 +25,10 @@ export type HeroSlide = {
   zoom: number;
   /** Video only. 1 = native, 0.5 = half-speed slow-mo. */
   playbackRate: number;
+  /** Video only. Seconds from the start of the file. */
+  trimStartSec: number;
+  /** Video only. Seconds; null = play through the end of the file. */
+  trimEndSec: number | null;
 };
 
 /**
@@ -44,6 +48,8 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
     focusY: 20,
     zoom: 1,
     playbackRate: 1,
+    trimStartSec: 0,
+    trimEndSec: null,
   },
   {
     id: "hero-blonde-girl",
@@ -56,6 +62,8 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
     focusY: 24,
     zoom: 1,
     playbackRate: 1,
+    trimStartSec: 0,
+    trimEndSec: null,
   },
   {
     id: "hero-hispanic-split",
@@ -68,6 +76,8 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
     focusY: 22,
     zoom: 1,
     playbackRate: 1,
+    trimStartSec: 0,
+    trimEndSec: null,
   },
   {
     id: "hero-asian-woman",
@@ -80,6 +90,8 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
     focusY: 20,
     zoom: 1,
     playbackRate: 1,
+    trimStartSec: 0,
+    trimEndSec: null,
   },
 ];
 
@@ -225,7 +237,52 @@ export function heroPlaybackRate(slide: Pick<HeroSlide, "playbackRate" | "kind">
 export function heroSlideHoldMs(slide: HeroSlide): number {
   if (slide.kind !== "video" && !isHeroVideoSrc(slide.src)) return 3200;
   const rate = heroPlaybackRate(slide);
+  const trimmed = heroTrimDurationSec(slide);
+  if (trimmed != null && trimmed > 0) {
+    return Math.min(16000, Math.max(4000, Math.round((trimmed / rate) * 1000)));
+  }
   return Math.min(12000, Math.max(4800, Math.round(5600 / rate)));
+}
+
+export const HERO_MIN_TRIM_SEC = 0.4;
+const MIN_TRIM_SEC = HERO_MIN_TRIM_SEC;
+
+export function heroTrimWindow(
+  slide: Pick<HeroSlide, "trimStartSec" | "trimEndSec">,
+  durationSec?: number | null,
+): { start: number; end: number | null } {
+  const start = Math.max(0, Number(slide.trimStartSec) || 0);
+  let end =
+    slide.trimEndSec == null || !Number.isFinite(Number(slide.trimEndSec))
+      ? null
+      : Math.max(0, Number(slide.trimEndSec));
+  const cap = durationSec && durationSec > 0 ? durationSec : null;
+  let s = cap != null ? Math.min(start, Math.max(0, cap - MIN_TRIM_SEC)) : start;
+  if (end != null) {
+    if (cap != null) end = Math.min(end, cap);
+    if (end < s + MIN_TRIM_SEC) end = s + MIN_TRIM_SEC;
+    if (cap != null && end > cap) {
+      end = cap;
+      s = Math.max(0, end - MIN_TRIM_SEC);
+    }
+  }
+  return { start: s, end };
+}
+
+export function heroTrimDurationSec(
+  slide: Pick<HeroSlide, "trimStartSec" | "trimEndSec">,
+  durationSec?: number | null,
+): number | null {
+  const { start, end } = heroTrimWindow(slide, durationSec);
+  if (end == null) return durationSec != null ? Math.max(0, durationSec - start) : null;
+  return Math.max(0, end - start);
+}
+
+export function formatHeroTime(sec: number): string {
+  if (!Number.isFinite(sec) || sec < 0) return "0:00";
+  const m = Math.floor(sec / 60);
+  const s = sec - m * 60;
+  return `${m}:${s < 10 ? "0" : ""}${s.toFixed(1)}`;
 }
 
 function newId(): string {
@@ -275,6 +332,15 @@ export function normalizeHeroSlide(raw: unknown): HeroSlide | null {
     0.25,
     1,
   );
+  const trimStartSec = Math.max(
+    0,
+    typeof data.trimStartSec === "number" ? data.trimStartSec : 0,
+  );
+  const rawEnd = data.trimEndSec;
+  const trimEndSec =
+    rawEnd == null || rawEnd === 0 || !Number.isFinite(Number(rawEnd))
+      ? null
+      : Math.max(trimStartSec + MIN_TRIM_SEC, Number(rawEnd));
   const id =
     typeof data.id === "string" && data.id.trim()
       ? data.id.trim().slice(0, 80)
@@ -290,6 +356,8 @@ export function normalizeHeroSlide(raw: unknown): HeroSlide | null {
     focusY,
     zoom,
     playbackRate: kind === "video" ? playbackRate : 1,
+    trimStartSec: kind === "video" ? trimStartSec : 0,
+    trimEndSec: kind === "video" ? trimEndSec : null,
   };
 }
 
@@ -331,5 +399,7 @@ export function createEmptyHeroSlide(src = ""): HeroSlide {
     focusY: 22,
     zoom: 1,
     playbackRate: 1,
+    trimStartSec: 0,
+    trimEndSec: null,
   };
 }

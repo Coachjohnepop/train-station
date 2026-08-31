@@ -6,12 +6,16 @@ import { saveHeroSlidesAction } from "@/app/admin/landing/actions";
 import HeroSlideMedia from "@/components/HeroSlideMedia";
 import {
   createEmptyHeroSlide,
+  formatHeroTime,
   HERO_IMAGE_MAX_BYTES,
+  HERO_MIN_TRIM_SEC,
   HERO_PLAYBACK_RATES,
   HERO_SLIDE_MAX,
   HERO_VIDEO_MAX_BYTES,
   HERO_ZOOM_MAX,
   HERO_ZOOM_MIN,
+  heroTrimDurationSec,
+  heroTrimWindow,
   isHeroVideoSrc,
   objectPositionFromFocus,
   type HeroSlide,
@@ -52,6 +56,7 @@ export default function AdminHeroImagesPanel({
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [durations, setDurations] = useState<Record<string, number>>({});
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   function updateSlide(id: string, patch: Partial<HeroSlide>) {
@@ -164,6 +169,8 @@ export default function AdminHeroImagesPanel({
               ? current.playbackRate
               : 0.5
             : 1,
+        trimStartSec: 0,
+        trimEndSec: null,
       });
       setMessage(
         video
@@ -209,9 +216,11 @@ export default function AdminHeroImagesPanel({
       <div>
         <h2 className="text-lg font-semibold">Hero images &amp; videos</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Cold-traffic home carousel. Upload a photo or a phone clip, then crop (pan + zoom) and
-          slow-mo. Only <strong className="text-[var(--text)]">enabled</strong> slides with a file
-          show on the site. Videos play muted and loop.
+          Cold-traffic home carousel. Upload a photo or a phone clip, then use the{" "}
+          <strong className="text-[var(--text)]">Trim</strong>,{" "}
+          <strong className="text-[var(--text)]">Crop</strong>, and{" "}
+          <strong className="text-[var(--text)]">Slow motion</strong> levers. Only enabled slides
+          with a file show on the site. Videos play muted and loop the trimmed range.
         </p>
         <p className="mt-1 text-xs text-[var(--muted)]">
           {slides.length} slide{slides.length === 1 ? "" : "s"} · {enabledCount} enabled · max{" "}
@@ -238,7 +247,7 @@ export default function AdminHeroImagesPanel({
               }`}
             >
               <div className="flex flex-wrap items-start gap-4">
-                <div className="w-full max-w-[11rem] shrink-0">
+                <div className="w-full max-w-[14rem] shrink-0">
                   <div className="relative aspect-[3/4] overflow-hidden rounded-xl border border-[var(--border)] bg-black">
                     {slide.src ? (
                       <HeroSlideMedia
@@ -246,6 +255,11 @@ export default function AdminHeroImagesPanel({
                         active
                         className="h-full w-full object-cover"
                         alt={slide.alt || `Hero ${index + 1}`}
+                        onDuration={(seconds) => {
+                          setDurations((prev) =>
+                            prev[slide.id] === seconds ? prev : { ...prev, [slide.id]: seconds },
+                          );
+                        }}
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center px-2 text-center text-xs text-[var(--muted)]">
@@ -307,8 +321,71 @@ export default function AdminHeroImagesPanel({
                     />
                   </label>
 
+                  {isVideo ? (
+                    <div className="space-y-2 rounded-xl border border-violet-500/25 bg-violet-500/5 p-3">
+                      <p className="text-sm font-semibold text-violet-100">1 · Trim</p>
+                      <p className="text-[11px] text-[var(--muted)]">
+                        Keep only the beat you want. The landing loops this range.
+                      </p>
+                      {(() => {
+                        const duration = durations[slide.id] || 0;
+                        const max = duration > 0 ? duration : Math.max(slide.trimEndSec || 30, slide.trimStartSec + 8);
+                        const window = heroTrimWindow(slide, duration || null);
+                        const kept = heroTrimDurationSec(slide, duration || null);
+                        const endValue = window.end ?? max;
+                        return (
+                          <>
+                            <label className="block text-xs">
+                              Start ({formatHeroTime(window.start)})
+                              <input
+                                type="range"
+                                min={0}
+                                max={Math.max(0.1, max - HERO_MIN_TRIM_SEC)}
+                                step={0.1}
+                                value={window.start}
+                                onChange={(e) =>
+                                  updateSlide(slide.id, { trimStartSec: Number(e.target.value) })
+                                }
+                                className="mt-1 w-full"
+                              />
+                            </label>
+                            <label className="block text-xs">
+                              End ({window.end == null && !duration ? "end of file" : formatHeroTime(endValue)})
+                              <input
+                                type="range"
+                                min={Math.min(max, window.start + HERO_MIN_TRIM_SEC)}
+                                max={max}
+                                step={0.1}
+                                value={endValue}
+                                onChange={(e) =>
+                                  updateSlide(slide.id, { trimEndSec: Number(e.target.value) })
+                                }
+                                className="mt-1 w-full"
+                              />
+                            </label>
+                            <p className="text-[11px] text-emerald-200/90">
+                              Keeps {kept != null ? formatHeroTime(kept) : "the full clip"}
+                              {duration ? ` of ${formatHeroTime(duration)}` : ""}
+                            </p>
+                            <button
+                              type="button"
+                              className="text-[11px] font-semibold text-[var(--accent)] underline"
+                              onClick={() =>
+                                updateSlide(slide.id, { trimStartSec: 0, trimEndSec: null })
+                              }
+                            >
+                              Reset trim (full clip)
+                            </button>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  ) : null}
+
                   <div className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-3">
-                    <p className="text-sm font-medium">Crop</p>
+                    <p className="text-sm font-semibold">
+                      {isVideo ? "2 · Crop" : "1 · Crop"}
+                    </p>
                     <p className="text-[11px] text-[var(--muted)]">
                       Pan until the face/action sits in the tall phone frame, then zoom in.
                     </p>
@@ -352,28 +429,61 @@ export default function AdminHeroImagesPanel({
                         className="mt-1 w-full"
                       />
                     </label>
+                    <button
+                      type="button"
+                      className="text-[11px] font-semibold text-[var(--accent)] underline"
+                      onClick={() =>
+                        updateSlide(slide.id, { focusX: 50, focusY: 22, zoom: 1 })
+                      }
+                    >
+                      Reset crop
+                    </button>
                   </div>
 
                   {isVideo ? (
-                    <label className="block text-sm">
-                      <span className="font-medium">Slow motion</span>
-                      <select
-                        value={String(slide.playbackRate)}
-                        onChange={(e) =>
-                          updateSlide(slide.id, { playbackRate: Number(e.target.value) })
-                        }
-                        className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm"
-                      >
-                        {HERO_PLAYBACK_RATES.map((rate) => (
-                          <option key={rate} value={rate}>
-                            {SLOW_MO_LABELS[rate] || `${rate}×`}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="mt-1 text-[11px] text-[var(--muted)]">
-                        Plays muted on the landing. Half speed is the usual slow-mo.
+                    <div className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-3">
+                      <p className="text-sm font-semibold">3 · Slow motion</p>
+                      <p className="text-[11px] text-[var(--muted)]">
+                        Playback speed on the landing (muted). Half speed is the usual slow-mo.
                       </p>
-                    </label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={HERO_PLAYBACK_RATES.length - 1}
+                        step={1}
+                        value={Math.max(
+                          0,
+                          HERO_PLAYBACK_RATES.findIndex(
+                            (rate) => Math.abs(rate - slide.playbackRate) < 0.02,
+                          ),
+                        )}
+                        onChange={(e) =>
+                          updateSlide(slide.id, {
+                            playbackRate: HERO_PLAYBACK_RATES[Number(e.target.value)] ?? 1,
+                          })
+                        }
+                        className="w-full"
+                      />
+                      <p className="text-sm font-semibold text-[var(--text)]">
+                        {SLOW_MO_LABELS[slide.playbackRate] || `${slide.playbackRate}×`}
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {HERO_PLAYBACK_RATES.map((rate) => (
+                          <button
+                            key={rate}
+                            type="button"
+                            className={`rounded-full px-2 py-1 text-[11px] font-semibold ${
+                              Math.abs(slide.playbackRate - rate) < 0.02
+                                ? "bg-[#7c3aed] text-white"
+                                : "btn-ghost"
+                            }`}
+                            onClick={() => updateSlide(slide.id, { playbackRate: rate })}
+                          >
+                            {rate === 1 ? "1×" : `${rate}×`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   ) : null}
 
                   <div className="flex flex-wrap gap-2">
