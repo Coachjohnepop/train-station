@@ -1,13 +1,13 @@
 /**
  * Theme Song is a guest-only landing / explore / join thing.
  * After a login exists it is off the app — no speaker, no autoplay, no mute control.
+ * /login is excluded: the corner mute sat on the PIN pad and ate digit taps.
  */
 
 const GUEST_PREFIXES = [
   "/landing",
   "/join",
   "/signup",
-  "/login",
   "/pricing",
   "/coming-soon",
   "/free",

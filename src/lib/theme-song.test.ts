@@ -3,11 +3,16 @@ import { describe, it } from "node:test";
 import { allowThemeSong, isGuestThemeSongPath } from "./theme-song";
 
 describe("theme song guest gate", () => {
-  it("allows landing, join, login, and explore paths", () => {
-    for (const path of ["/", "/join", "/join/questions", "/signup", "/login", "/free", "/find"]) {
+  it("allows landing, join, and explore paths", () => {
+    for (const path of ["/", "/join", "/join/questions", "/signup", "/free", "/find"]) {
       assert.equal(isGuestThemeSongPath(path), true);
       assert.equal(allowThemeSong(path, false), true);
     }
+  });
+
+  it("stays off login so the mute control cannot cover the PIN pad", () => {
+    assert.equal(isGuestThemeSongPath("/login"), false);
+    assert.equal(allowThemeSong("/login", false), false);
   });
 
   it("never plays after a login exists", () => {

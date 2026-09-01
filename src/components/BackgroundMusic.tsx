@@ -18,8 +18,9 @@ import { allowThemeSong } from "@/lib/theme-song";
 /**
  * Guest-only Theme Song + pointing-finger mute guide.
  *
- * Plays on landing / explore / join / login / signup. The corner speaker is the
- * mute for that song. Once a login exists, Theme Song is not part of the app —
+ * Plays on landing / explore / join / signup. The corner speaker is the
+ * mute for that song. Off on /login so it cannot cover the PIN pad.
+ * Once a login exists, Theme Song is not part of the app —
  * no speaker on workout, member, or admin.
  */
 

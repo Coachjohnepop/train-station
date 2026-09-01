@@ -43,11 +43,11 @@ describe("hero video slides", () => {
     assert.ok(heroSlideHoldMs(slide!) >= 4800);
   });
 
-  it("only loads nearby hero videos", () => {
+  it("only loads the on-screen hero video", () => {
     const vid = { kind: "video" as const, src: "https://x.public.blob.vercel-storage.com/hero/a.mov" };
     assert.equal(heroSlideShouldLoadMedia(0, 0, 5, vid), true);
-    assert.equal(heroSlideShouldLoadMedia(1, 0, 5, vid), true);
-    assert.equal(heroSlideShouldLoadMedia(4, 0, 5, vid), true);
+    assert.equal(heroSlideShouldLoadMedia(1, 0, 5, vid), false);
+    assert.equal(heroSlideShouldLoadMedia(4, 0, 5, vid), false);
     assert.equal(heroSlideShouldLoadMedia(2, 0, 5, vid), false);
   });
 

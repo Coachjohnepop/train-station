@@ -66,6 +66,7 @@ export default function AdminHeroImagesPanel({
   const persistAgainRef = useRef(false);
   const persistMessageRef = useRef("Hero slides saved — live on the public landing.");
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [previewId, setPreviewId] = useState<string | null>(null);
 
   function arrayMove(list: HeroSlide[], from: number, to: number): HeroSlide[] {
     if (from === to || from < 0 || to < 0 || from >= list.length || to >= list.length) {
@@ -316,7 +317,8 @@ export default function AdminHeroImagesPanel({
         <h2 className="text-lg font-semibold">Hero images &amp; videos</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
           Cold-traffic home carousel. Drag the play-order strip (or use Earlier / Later) to change
-          which clip leads — order saves live. Upload a photo or a phone clip, then use the{" "}
+          which clip leads — order saves live. Video cards stay still until you tap preview so the
+          page can open on a phone. Upload a photo or a phone clip, then use the{" "}
           <strong className="text-[var(--text)]">Trim</strong>,{" "}
           <strong className="text-[var(--text)]">Crop</strong>, and{" "}
           <strong className="text-[var(--text)]">Slow motion</strong> levers. Only enabled slides
@@ -409,17 +411,30 @@ export default function AdminHeroImagesPanel({
                 <div className="w-full max-w-[14rem] shrink-0">
                   <div className="relative aspect-[3/4] overflow-hidden rounded-xl border border-[var(--border)] bg-black">
                     {slide.src ? (
-                      <HeroSlideMedia
-                        slide={slide}
-                        active
-                        className="h-full w-full object-cover"
-                        alt={slide.alt || `Hero ${index + 1}`}
-                        onDuration={(seconds) => {
-                          setDurations((prev) =>
-                            prev[slide.id] === seconds ? prev : { ...prev, [slide.id]: seconds },
-                          );
-                        }}
-                      />
+                      isVideo && previewId !== slide.id ? (
+                        <button
+                          type="button"
+                          className="flex h-full w-full flex-col items-center justify-center gap-1 bg-black px-2 text-center text-xs font-semibold text-white"
+                          onClick={() => setPreviewId(slide.id)}
+                        >
+                          <span>Tap to preview</span>
+                          <span className="text-[10px] font-normal text-white/70">
+                            Skips loading this clip until you ask
+                          </span>
+                        </button>
+                      ) : (
+                        <HeroSlideMedia
+                          slide={slide}
+                          active={previewId === slide.id || !isVideo}
+                          className="h-full w-full object-cover"
+                          alt={slide.alt || `Hero ${index + 1}`}
+                          onDuration={(seconds) => {
+                            setDurations((prev) =>
+                              prev[slide.id] === seconds ? prev : { ...prev, [slide.id]: seconds },
+                            );
+                          }}
+                        />
+                      )
                     ) : (
                       <div className="flex h-full items-center justify-center px-2 text-center text-xs text-[var(--muted)]">
                         No file yet

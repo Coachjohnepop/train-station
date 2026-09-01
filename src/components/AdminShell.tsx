@@ -54,6 +54,32 @@ type Props = {
   showDevSwitcher: boolean;
 };
 
+function CoachMobileLandingShortcuts({ onNavClick }: { onNavClick: () => void }) {
+  return (
+    <div className="mb-4 space-y-2">
+      <p className="px-2 text-[10px] font-semibold uppercase tracking-[2px] text-[var(--muted)]">
+        Landing
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <Link
+          href="/admin/landing"
+          onClick={onNavClick}
+          className="btn-primary min-h-12 px-3 text-center text-sm font-semibold"
+        >
+          Edit landing
+        </Link>
+        <Link
+          href="/"
+          onClick={onNavClick}
+          className="btn-ghost flex min-h-12 items-center justify-center px-3 text-center text-sm font-semibold"
+        >
+          Public site
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminShell({
   children,
   session,
@@ -240,6 +266,7 @@ export default function AdminShell({
                 </button>
               </div>
               <div className="overflow-y-auto px-3 py-4">
+                <CoachMobileLandingShortcuts onNavClick={closeDrawer} />
                 <AdminAreaNav
                   dualWorkspace={dualWorkspace}
                   canCoach={canCoach}
@@ -351,6 +378,7 @@ export default function AdminShell({
               className="overflow-y-auto px-3 py-4"
               style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
             >
+              <CoachMobileLandingShortcuts onNavClick={closeDrawer} />
               <AdminAreaNav
                 dualWorkspace={dualWorkspace}
                 canCoach={canCoach}
