@@ -6,6 +6,7 @@ import ChatNavBadge from "@/components/ChatNavBadge";
 import CoachSuggestionsNavBadge from "@/components/CoachSuggestionsNavBadge";
 import LeadsNavBadge from "@/components/LeadsNavBadge";
 import MembersNavBadge from "@/components/MembersNavBadge";
+import CoachInboxNavBadge from "@/components/CoachInboxNavBadge";
 import QueueNavBadge from "@/components/QueueNavBadge";
 import type { AdminNavGroup } from "@/lib/admin-nav-sections";
 
@@ -94,6 +95,9 @@ export default function AdminSectionNav({
                       ) : null}
                       {item.membersBadge ? (
                         <MembersNavBadge placement={collapsed ? "corner" : "inline"} />
+                      ) : null}
+                      {item.inboxBadge ? (
+                        <CoachInboxNavBadge placement={collapsed ? "corner" : "inline"} />
                       ) : null}
                       {item.queueBadge ? <QueueNavBadge /> : null}
                       {item.coachSuggestionsBadge ? <CoachSuggestionsNavBadge /> : null}

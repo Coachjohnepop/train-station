@@ -34,6 +34,15 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
     keywords: ["board", "home", "day hub", "coach home", "overview"],
   },
   {
+    id: "coach-alerts",
+    title: "Alerts",
+    description: "New signups, Calendly bookings, Zoom join requests",
+    href: "/admin/alerts",
+    workspace: "coach",
+    group: "People",
+    keywords: ["notifications", "inbox", "signup", "calendly", "zoom", "booking", "bell"],
+  },
+  {
     id: "coach-queue",
     title: "Queue",
     description: "Pending approvals, mark paid, onboarding",

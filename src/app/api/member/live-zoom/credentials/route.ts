@@ -29,6 +29,16 @@ export async function GET(request: Request) {
 
   const record = await getLiveClassZoom(sessionDate);
   if (!record) {
+    void import("@/lib/coach-member-notify")
+      .then((mod) =>
+        mod.notifyCoachZoomWaiting({
+          userId: auth.session.id,
+          name: auth.session.name || auth.session.email,
+          email: auth.session.email,
+          sessionDate: sessionDate || new Date().toISOString().slice(0, 10),
+        }),
+      )
+      .catch(() => null);
     return NextResponse.json({ error: "Coach has not opened the live Zoom room yet." }, { status: 404 });
   }
 

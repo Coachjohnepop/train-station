@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import ChatNavBadge from "@/components/ChatNavBadge";
+import CoachInboxNavBadge from "@/components/CoachInboxNavBadge";
 import PeopleAttentionBadge from "@/components/PeopleAttentionBadge";
 import { openCoachHelpPanel } from "@/lib/coach-help-events";
 
@@ -34,7 +35,10 @@ export default function AdminMobileCoachNav({ onOpenMenu }: Props) {
   const onToday = pathname.startsWith("/admin/today");
   const onLive = pathname.startsWith("/admin/live");
   const onPeople =
-    pathname.startsWith("/admin/members") || pathname.startsWith("/admin/leads");
+    pathname.startsWith("/admin/members") ||
+    pathname.startsWith("/admin/leads") ||
+    pathname.startsWith("/admin/alerts");
+  const onAlerts = pathname.startsWith("/admin/alerts");
   const onChat = pathname.startsWith("/admin/chat");
 
   return (
@@ -57,7 +61,16 @@ export default function AdminMobileCoachNav({ onOpenMenu }: Props) {
           Today
         </Link>
         {/* People: purple = new signups + leads. Red stays on Msgs only. */}
-        <Link href="/admin/members" className={tabClass(onPeople)}>
+        <Link href="/admin/alerts" className={tabClass(onAlerts)}>
+          <span className="relative inline-flex">
+            <span className="coach-quick-nav-icon leading-none" aria-hidden>
+              !
+            </span>
+            <CoachInboxNavBadge placement="corner" />
+          </span>
+          Alerts
+        </Link>
+        <Link href="/admin/members" className={tabClass(onPeople && !onAlerts)}>
           <span className="relative inline-flex">
             <span className="coach-quick-nav-icon leading-none" aria-hidden>
               ◎

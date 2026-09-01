@@ -424,6 +424,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-08-31 (coach Alerts inbox)
+
+**Status:** Jeremy now has **Admin → Alerts** for **new signups**, **Calendly/intro bookings**, and **Zoom join requests** (member tapped Join Live before host is up). Email still fires; in-app used to be a system note buried in that member’s Messages thread. Phone lock-screen still needs **Enable alerts** once.
+
 **Date:** 2026-08-31 (hero video + crop + slow-mo)
 
 **Status:** Admin → Landing hero carousel now takes **photos or videos**. Crop is pan + zoom sliders (same idea as measurements). Videos play muted/loop on the public landing; **Slow motion** is HTML5 `playbackRate` (half speed default on a new video upload). **Trim** is start/end sliders (loops only that range). No transcode. Clips up to 80 MB.

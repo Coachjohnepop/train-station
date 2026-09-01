@@ -132,6 +132,8 @@ export async function notifyCoachForMemberEvent(params: {
   deepLink?: string;
   /** Skip Messages thread (e.g. Calendly guest with no member account). */
   skipInApp?: boolean;
+  /** Override inbox dedupe key. */
+  inboxClaimKey?: string;
   /**
    * Force email for funnel events even if coach prefs turned email off.
    * Default: true for signup / equipment / start / messages-open.
@@ -172,6 +174,30 @@ export async function notifyCoachForMemberEvent(params: {
     } catch (e) {
       console.error("[coach-notify] in-app failed", e);
     }
+  }
+
+  try {
+    const { inboxKindFromCoachEvent, postCoachInboxItem } = await import("@/lib/coach-inbox");
+    const kind = inboxKindFromCoachEvent(params.event);
+    if (kind) {
+      const claimKey =
+        params.inboxClaimKey?.trim() ||
+        (kind === "booking"
+          ? `booking:${params.memberUserId}:${params.subject}`
+          : `${kind}:${params.memberUserId}`);
+      await postCoachInboxItem({
+        kind,
+        title: params.subject,
+        body: params.message,
+        href: link.replace(appBaseUrl(), "") || "/admin/alerts",
+        memberUserId: params.memberUserId,
+        memberEmail: params.memberEmail,
+        memberName: params.memberName,
+        claimKey,
+      });
+    }
+  } catch (e) {
+    console.warn("[coach-notify] inbox write failed", e);
   }
 
   const coachEmails = resolveCoachNotifyEmails(settings.coachEmail);
@@ -548,7 +574,59 @@ export async function notifyCoachIntakeReady(params: {
       `Open Queue / Bookings to confirm and send Zoom if needed.`,
     deepLink: `${appBaseUrl()}/admin/bookings`,
     skipInApp: params.skipInApp,
+    inboxClaimKey: `booking:${params.userId}:${params.scheduledAt || "unscheduled"}`,
   });
+}
+
+export async function notifyCoachZoomWaiting(params: {
+  userId: string;
+  name: string;
+  email: string;
+  sessionDate: string;
+}): Promise<void> {
+  const date = params.sessionDate.trim() || new Date().toISOString().slice(0, 10);
+  try {
+    const { postCoachInboxItem } = await import("@/lib/coach-inbox");
+    const posted = await postCoachInboxItem({
+      kind: "zoom",
+      title: "Zoom request — member waiting",
+      body:
+        `${params.name} wants to Join Live Zoom for ${date}. ` +
+        `They tapped Join while the host room is not open yet. Open Go to Today and tap Join Live Now.`,
+      href: `/admin/today`,
+      memberUserId: params.userId,
+      memberEmail: params.email,
+      memberName: params.name,
+      claimKey: `zoom:${params.userId}:${date}`,
+      metadata: { sessionDate: date },
+    });
+    if (!posted.created) return;
+  } catch (e) {
+    console.warn("[coach-notify] zoom inbox failed", e);
+    return;
+  }
+
+  try {
+    const { sendPushToUserIds } = await import("@/lib/web-push");
+    const { prisma } = await import("@/lib/prisma");
+    if (!isDemoMode()) {
+      const staff = await prisma.user.findMany({
+        where: { role: { in: ["ADMIN", "INSTRUCTOR", "PLATFORM_ADMIN"] } },
+        select: { id: true },
+      });
+      const ids = [...new Set(staff.map((s) => s.id))];
+      if (ids.length) {
+        await sendPushToUserIds(ids, {
+          title: "Zoom request — member waiting",
+          body: `${params.name} tapped Join Live. Open Go to Today.`,
+          url: "/admin/today",
+          tag: `coach-zoom-${params.userId}-${date}`,
+        });
+      }
+    }
+  } catch (e) {
+    console.warn("[coach-notify] zoom push failed", e);
+  }
 }
 
 export async function notifyCoachWarmupStarted(params: {

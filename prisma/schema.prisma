@@ -605,6 +605,28 @@ model OutboundNotification {
   @@index([createdAt])
 }
 
+/// Coach-facing inbox: new signups, Calendly/intro bookings, Zoom join requests.
+model CoachInboxItem {
+  id            String    @id @default(cuid())
+  /** signup | booking | zoom */
+  kind          String
+  title         String
+  body          String    @db.Text
+  href          String?
+  memberUserId  String?
+  memberEmail   String?
+  memberName    String?
+  /** Dedupe key, e.g. signup:userId or zoom:userId:date */
+  claimKey      String    @unique
+  readAt        DateTime?
+  createdAt     DateTime  @default(now())
+  metadata      Json?
+
+  @@index([readAt, createdAt])
+  @@index([kind, createdAt])
+  @@index([memberUserId, createdAt])
+}
+
 /**
  * Append-only system audit log for diligence / SOC2-minded M&A readiness.
  * Write on security-sensitive and compliance-sensitive actions (SMS, auth admin, billing later).

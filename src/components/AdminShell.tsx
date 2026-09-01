@@ -21,6 +21,7 @@ import TrainStationBrand from "@/components/TrainStationBrand";
 import DevModeSwitcher from "@/components/DevModeSwitcher";
 import LogoutButton from "@/components/LogoutButton";
 import ChatNavBadge from "@/components/ChatNavBadge";
+import CoachInboxNavBadge from "@/components/CoachInboxNavBadge";
 import CoachJoinLiveNavStrip from "@/components/CoachJoinLiveNavStrip";
 import UnreadAppBadge from "@/components/UnreadAppBadge";
 import PwaInstallHint from "@/components/PwaInstallHint";
@@ -303,6 +304,14 @@ export default function AdminShell({
             />
           </div>
           <div className="flex shrink-0 items-center gap-1">
+            <Link
+              href="/admin/alerts"
+              className="relative inline-flex h-11 items-center rounded-lg border border-[var(--border)] px-3 text-xs font-semibold"
+              aria-label="Alerts"
+            >
+              Alerts
+              <CoachInboxNavBadge placement="corner" />
+            </Link>
             <LogoutButton compact />
           </div>
         </div>
@@ -522,6 +531,13 @@ export default function AdminShell({
                 enableHotkey
               />
             </div>
+            <Link
+              href="/admin/alerts"
+              className="relative inline-flex shrink-0 items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold"
+            >
+              Alerts
+              <CoachInboxNavBadge placement="inline" />
+            </Link>
             {onGoToToday ? (
               <>
                 <Link

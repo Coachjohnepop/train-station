@@ -8,6 +8,7 @@ export type AdminNavItem = {
   membersBadge?: boolean;
   queueBadge?: boolean;
   coachSuggestionsBadge?: boolean;
+  inboxBadge?: boolean;
 };
 
 export type AdminNavGroup = {
@@ -19,6 +20,12 @@ export type AdminNavGroup = {
 const SHOW_LEADS = process.env.NEXT_PUBLIC_SHOW_ADMIN_LEADS !== "false";
 
 const peopleItems: AdminNavItem[] = [
+  {
+    href: "/admin/alerts",
+    label: "Alerts",
+    match: (p) => p.startsWith("/admin/alerts"),
+    inboxBadge: true,
+  },
   {
     href: "/admin/queue",
     label: "Queue",
