@@ -6,14 +6,25 @@ import {
   BG_MUSIC_OVERLAY_EVENT,
   BG_MUSIC_REQUEST_PLAY_EVENT,
   clearBackgroundMusicHolds,
-  isBackgroundMusicAlreadyPlayed,
+  getBackgroundMusicUnlockCount,
   isBackgroundMusicUserMuted,
   markBackgroundMusicElement,
   persistBackgroundMusicMute,
+  persistBackgroundMusicUnlockCount,
   persistBackgroundMusicPlayed,
   registerBackgroundMusicMediaDucking,
 } from "@/lib/background-music-control";
-import { allowThemeSong } from "@/lib/theme-song";
+import {
+  applyMixVolume,
+  canStartThemeSongFromSilence,
+  clampMixVolume,
+  clampThemeSongClickStarts,
+  THEME_SONG_CLICK_STARTS_DEFAULT,
+  THEME_SONG_DEFAULT_VOLUME,
+  THEME_SONG_SRC,
+  unlockLandingMix,
+} from "@/lib/landing-mix-audio";
+import { allowThemeSong, isGuestThemeSongPath } from "@/lib/theme-song";
 
 /**
  * Guest-only Theme Song + pointing-finger mute guide.
@@ -24,12 +35,9 @@ import { allowThemeSong } from "@/lib/theme-song";
  * no speaker on workout, member, or admin.
  */
 
-const SRC = "/background-music.mp3";
-const VOLUME = 0.55;
+const SRC = THEME_SONG_SRC;
 /** Finger stays up at least this long (mute also dismisses). */
 const HINT_MS = 22_000;
-/** “Tap anywhere” unlocks Theme Song once; then it does not start again. */
-const MAX_GESTURE_UNLOCKS = 1;
 
 // pointerdown covers mouse + touch once (do not also listen to click/touchstart —
 // that would burn both gesture unlocks on a single tap).
@@ -62,12 +70,19 @@ export default function BackgroundMusic() {
   const speakerMutedRef = useRef(false);
   /** Ignore activation that is the same click as the speaker mute (capture fires first). */
   const ignoreNextActivationRef = useRef(false);
-  /** How many times “tap anywhere” has started/unmuted the song this session. */
+  /** How many times the song has started from silence this tab. */
   const gestureUnlockCountRef = useRef(0);
   const [signedIn, setSignedIn] = useState(false);
   const [authReady, setAuthReady] = useState(false);
+  const [mix, setMix] = useState({
+    enabled: true,
+    volume: THEME_SONG_DEFAULT_VOLUME,
+    clickStarts: THEME_SONG_CLICK_STARTS_DEFAULT,
+  });
+  const mixRef = useRef(mix);
+  mixRef.current = mix;
 
-  const autoPlayAllowed = allowThemeSong(pathname, signedIn);
+  const autoPlayAllowed = allowThemeSong(pathname, signedIn) && mix.enabled;
 
   useEffect(() => {
     adminRouteRef.current = onAdmin;
@@ -76,6 +91,11 @@ export default function BackgroundMusic() {
   useEffect(() => {
     autoPlayAllowedRef.current = autoPlayAllowed;
   }, [autoPlayAllowed]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) applyMixVolume(audio, mix.volume);
+  }, [mix.volume]);
 
   useEffect(() => {
     signedInRef.current = signedIn;
@@ -119,13 +139,43 @@ export default function BackgroundMusic() {
   const [soundLive, setSoundLive] = useState(false);
   const [showHint, setShowHint] = useState(true);
 
-  // Restore mute / already-played for this tab (signup full-page loads used to restart the song)
+  // Restore mute / start-count for this tab (signup full-page loads used to restart the song)
   useEffect(() => {
     const muted = isBackgroundMusicUserMuted();
-    const played = isBackgroundMusicAlreadyPlayed();
     speakerMutedRef.current = muted;
-    if (played) gestureUnlockCountRef.current = MAX_GESTURE_UNLOCKS;
+    gestureUnlockCountRef.current = getBackgroundMusicUnlockCount();
     setOff(muted);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/landing-media", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          themeSongEnabled?: boolean;
+          themeSongVolume?: unknown;
+          themeSongClickStarts?: unknown;
+        };
+        if (cancelled) return;
+        const next = {
+          enabled: data.themeSongEnabled !== false,
+          volume: clampMixVolume(data.themeSongVolume, THEME_SONG_DEFAULT_VOLUME),
+          clickStarts: clampThemeSongClickStarts(
+            data.themeSongClickStarts,
+            THEME_SONG_CLICK_STARTS_DEFAULT,
+          ),
+        };
+        mixRef.current = next;
+        setMix(next);
+      } catch {
+        /* keep defaults */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const clearHintTimer = useCallback(() => {
@@ -165,7 +215,10 @@ export default function BackgroundMusic() {
     if (advancing) {
       unlockedRef.current = true;
       persistBackgroundMusicPlayed();
-      gestureUnlockCountRef.current = MAX_GESTURE_UNLOCKS;
+      if (gestureUnlockCountRef.current < 1) {
+        gestureUnlockCountRef.current = 1;
+        persistBackgroundMusicUnlockCount(1);
+      }
     }
     return advancing;
   }, []);
@@ -204,14 +257,17 @@ export default function BackgroundMusic() {
         setSoundLive(false);
         return false;
       }
-      if (isBackgroundMusicAlreadyPlayed() && audio.paused) {
-        return false;
-      }
-
       overlayPauseRef.current = false;
       clearBackgroundMusicHolds();
 
-      audio.volume = VOLUME;
+      if (audio.paused || audio.ended) {
+        try {
+          audio.currentTime = 0;
+        } catch {
+          /* ignore */
+        }
+      }
+      applyMixVolume(audio, mixRef.current.volume);
       audio.muted = false;
       try {
         await audio.play();
@@ -279,7 +335,13 @@ export default function BackgroundMusic() {
         stopMusicQuiet(audio);
         return;
       }
-      if (isBackgroundMusicAlreadyPlayed() && (audio.paused || audio.muted)) {
+      if (
+        !canStartThemeSongFromSilence(
+          gestureUnlockCountRef.current,
+          mixRef.current.clickStarts,
+        ) &&
+        (audio.paused || audio.muted)
+      ) {
         return;
       }
       // User muted via speaker — stay quiet
@@ -290,7 +352,12 @@ export default function BackgroundMusic() {
         setOff(true);
         return;
       }
-      if (isBackgroundMusicAlreadyPlayed() || gestureUnlockCountRef.current >= MAX_GESTURE_UNLOCKS) {
+      if (
+        !canStartThemeSongFromSilence(
+          gestureUnlockCountRef.current,
+          mixRef.current.clickStarts,
+        )
+      ) {
         if (!audio.paused && !audio.muted) {
           setSoundLive(true);
           setOff(false);
@@ -319,7 +386,7 @@ export default function BackgroundMusic() {
       } catch {
         /* ignore */
       }
-      audio.volume = VOLUME;
+      applyMixVolume(audio, mixRef.current.volume);
 
       await whenCanPlay(audio);
       if (adminRouteRef.current || !autoPlayAllowedRef.current) {
@@ -328,7 +395,14 @@ export default function BackgroundMusic() {
       }
       // Gesture may have unlocked during load wait — never remute after that
       if (unlockedRef.current || speakerMutedRef.current) return;
-      if (gestureUnlockCountRef.current >= MAX_GESTURE_UNLOCKS) return;
+      if (
+        !canStartThemeSongFromSilence(
+          gestureUnlockCountRef.current,
+          mixRef.current.clickStarts,
+        )
+      ) {
+        return;
+      }
 
       // Try audible autoplay a few times
       for (let i = 0; i < 5; i++) {
@@ -339,9 +413,16 @@ export default function BackgroundMusic() {
         if (unlockedRef.current || speakerMutedRef.current) {
           return;
         }
-        if (gestureUnlockCountRef.current >= MAX_GESTURE_UNLOCKS) return;
+        if (
+          !canStartThemeSongFromSilence(
+            gestureUnlockCountRef.current,
+            mixRef.current.clickStarts,
+          )
+        ) {
+          return;
+        }
         audio.muted = false;
-        audio.volume = VOLUME;
+        applyMixVolume(audio, mixRef.current.volume);
         try {
           await audio.play();
           if (await confirmSoundLive(audio)) return;
@@ -378,8 +459,8 @@ export default function BackgroundMusic() {
     markBackgroundMusicElement(audio);
     audio.loop = false;
     const onEnded = () => {
+      persistBackgroundMusicUnlockCount(gestureUnlockCountRef.current);
       persistBackgroundMusicPlayed();
-      gestureUnlockCountRef.current = MAX_GESTURE_UNLOCKS;
       setSoundLive(false);
       unlockedRef.current = false;
     };
@@ -405,7 +486,13 @@ export default function BackgroundMusic() {
       if (overlayPauseRef.current) return;
       // Never un-mute or re-unlock just because the tab came back
       if (speakerMutedRef.current) return;
-      if (gestureUnlockCountRef.current >= MAX_GESTURE_UNLOCKS && (audio.paused || audio.muted)) {
+      if (
+        !canStartThemeSongFromSilence(
+          gestureUnlockCountRef.current,
+          mixRef.current.clickStarts,
+        ) &&
+        (audio.paused || audio.muted)
+      ) {
         return;
       }
       // Only resume if already unlocked and was playing path
@@ -455,6 +542,14 @@ export default function BackgroundMusic() {
       ) {
         return;
       }
+      const path = window.location.pathname || "";
+      if (
+        isGuestThemeSongPath(path) &&
+        !signedInRef.current &&
+        !adminRouteRef.current
+      ) {
+        unlockLandingMix();
+      }
       const audio = audioRef.current;
       if (!audio || adminRouteRef.current) {
         if (audio && adminRouteRef.current) stopAdminMusic(audio);
@@ -471,10 +566,16 @@ export default function BackgroundMusic() {
       if (!audio.paused && !audio.muted) {
         return;
       }
-      if (gestureUnlockCountRef.current >= MAX_GESTURE_UNLOCKS) {
+      if (
+        !canStartThemeSongFromSilence(
+          gestureUnlockCountRef.current,
+          mixRef.current.clickStarts,
+        )
+      ) {
         return;
       }
       gestureUnlockCountRef.current += 1;
+      persistBackgroundMusicUnlockCount(gestureUnlockCountRef.current);
       void forceAudible(audio);
     };
     ACTIVATION_EVENTS.forEach((e) => window.addEventListener(e, onActivation, opts));
@@ -501,7 +602,13 @@ export default function BackgroundMusic() {
       if (!autoPlayAllowedRef.current) return;
       // Don't force theme song back after free-ticket / intro video unless already unlocked
       if (!unlockedRef.current) return;
-      if (gestureUnlockCountRef.current >= MAX_GESTURE_UNLOCKS && (audio.paused || audio.muted)) {
+      if (
+        !canStartThemeSongFromSilence(
+          gestureUnlockCountRef.current,
+          mixRef.current.clickStarts,
+        ) &&
+        (audio.paused || audio.muted)
+      ) {
         return;
       }
       void forceAudible(audio);
@@ -519,7 +626,13 @@ export default function BackgroundMusic() {
       // Never override speaker mute or restart after gesture budget
       if (speakerMutedRef.current) return;
       if (!unlockedRef.current) return;
-      if (gestureUnlockCountRef.current >= MAX_GESTURE_UNLOCKS && (audio.paused || audio.muted)) {
+      if (
+        !canStartThemeSongFromSilence(
+          gestureUnlockCountRef.current,
+          mixRef.current.clickStarts,
+        ) &&
+        (audio.paused || audio.muted)
+      ) {
         return;
       }
       void forceAudible(audio);
@@ -547,7 +660,7 @@ export default function BackgroundMusic() {
       setOff(true);
       return;
     }
-    if (isBackgroundMusicAlreadyPlayed()) {
+    if (gestureUnlockCountRef.current > 0) {
       return;
     }
     void startMusicWithFinger(audio);
@@ -564,7 +677,8 @@ export default function BackgroundMusic() {
     speakerMutedRef.current = true;
     persistBackgroundMusicMute(true);
     persistBackgroundMusicPlayed();
-    gestureUnlockCountRef.current = MAX_GESTURE_UNLOCKS;
+    gestureUnlockCountRef.current = mixRef.current.clickStarts;
+    persistBackgroundMusicUnlockCount(gestureUnlockCountRef.current);
     setOff(true);
     setSoundLive(false);
     unlockedRef.current = false;
@@ -580,22 +694,29 @@ export default function BackgroundMusic() {
   // Honest icon: only “on” when sound is confirmed live
   const showAsPlaying = !off && soundLive;
 
-  const gestureBudgetLeft =
-    autoPlayAllowed && gestureUnlockCountRef.current < MAX_GESTURE_UNLOCKS;
+  const remainingStarts = Math.max(
+    0,
+    mix.clickStarts - gestureUnlockCountRef.current,
+  );
+  const gestureBudgetLeft = autoPlayAllowed && remainingStarts > 0;
+  const againLabel =
+    mix.clickStarts > 1 && remainingStarts > 0 && remainingStarts < mix.clickStarts
+      ? `tap to play again (${remainingStarts} left)`
+      : remainingStarts > 0
+        ? "tap anywhere to play"
+        : mix.clickStarts === 1
+          ? "one play"
+          : `${mix.clickStarts} plays used`;
   const bubbleMobile = off
     ? "Theme Song muted"
     : soundLive
       ? "Theme Song — tap to mute"
-      : autoPlayAllowed && gestureBudgetLeft
-        ? "Theme Song — tap anywhere to play"
-        : "Theme Song — one play";
+      : `Theme Song — ${againLabel}`;
   const bubbleDesktop = off
     ? "Theme Song muted"
     : soundLive
       ? "Theme Song — click to mute"
-      : autoPlayAllowed && gestureBudgetLeft
-        ? "Theme Song — click anywhere to play"
-        : "Theme Song — one play";
+      : `Theme Song — ${againLabel.replace("tap", "click")}`;
 
   // Guest explore / create-login only. Workout and every logged-in surface: no speaker.
   const showSpeaker =

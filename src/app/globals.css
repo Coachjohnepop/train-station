@@ -404,6 +404,8 @@ html[data-ts-text-scale="lg"] {
   background: color-mix(in srgb, var(--bg) 92%, var(--surface));
   backdrop-filter: blur(12px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  /* viewport-fit=cover: keep Join Zoom / greeting out from under the clock */
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .app-shell-subbar {
@@ -2245,16 +2247,27 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 */
 @media (orientation: landscape) and (hover: none) and (pointer: coarse) and (max-height: 900px),
   (orientation: landscape) and (max-height: 520px) {
+  /* Landscape inset-top is often 0 (notch is left/right) but the time bar still overlays. */
+  .member-app .member-sticky-chrome {
+    padding-top: 0;
+  }
+
   .member-app .member-sticky-chrome .app-shell-header {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas: "identity nav actions";
     align-items: center;
     column-gap: 0.35rem;
-    padding-top: max(0.12rem, env(safe-area-inset-top));
-    padding-bottom: 0.12rem;
+    padding-top: max(1.5rem, env(safe-area-inset-top, 0px));
+    padding-bottom: 0.2rem;
     padding-left: max(0.3rem, env(safe-area-inset-left));
     padding-right: max(0.3rem, env(safe-area-inset-right));
+  }
+
+  .member-app .member-zoom-header__btn {
+    min-height: 44px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.75rem;
   }
 
   .member-app .member-sticky-chrome .app-shell-header:not(:has(.member-nav-wrap)) {

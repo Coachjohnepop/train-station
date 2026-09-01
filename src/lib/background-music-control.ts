@@ -1,12 +1,16 @@
 /** Pause/resume site background music while other audio or video plays. */
 
+import { isMixAudioElement } from "@/lib/landing-mix-audio";
+
 export const BG_MUSIC_OVERLAY_EVENT = "ts-bg-music-overlay";
 /** Ask BackgroundMusic to unlock/play (call from a user gesture when possible). */
 export const BG_MUSIC_REQUEST_PLAY_EVENT = "ts-bg-music-request-play";
 /** Session mute — once they mute, Theme Song stays off until the tab closes. */
 export const BG_MUSIC_MUTED_KEY = "ts-bg-music-muted";
-/** Session flag — Theme Song already played once this tab. */
+/** Session flag — Theme Song already played once this tab (legacy boolean). */
 export const BG_MUSIC_PLAYED_KEY = "ts-bg-music-played";
+/** How many silence-starts have been used this tab. */
+export const BG_MUSIC_UNLOCK_COUNT_KEY = "ts-bg-music-unlock-count";
 const BG_MUSIC_ATTR = "data-ts-bg-music";
 
 let overlayHold = false;
@@ -97,6 +101,30 @@ export function persistBackgroundMusicPlayed(): void {
   }
 }
 
+export function getBackgroundMusicUnlockCount(): number {
+  if (typeof window === "undefined") return 0;
+  try {
+    const raw = window.sessionStorage.getItem(BG_MUSIC_UNLOCK_COUNT_KEY);
+    const n = raw != null ? Number(raw) : NaN;
+    if (Number.isFinite(n) && n >= 0) return Math.floor(n);
+    if (window.sessionStorage.getItem(BG_MUSIC_PLAYED_KEY) === "1") return 1;
+  } catch {
+    /* ignore */
+  }
+  return 0;
+}
+
+export function persistBackgroundMusicUnlockCount(count: number): void {
+  if (typeof window === "undefined") return;
+  const n = Math.max(0, Math.floor(count));
+  try {
+    window.sessionStorage.setItem(BG_MUSIC_UNLOCK_COUNT_KEY, String(n));
+    if (n > 0) window.sessionStorage.setItem(BG_MUSIC_PLAYED_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
 /** @deprecated Mute is session-sticky now; use persistBackgroundMusicMute(false). */
 export function clearPersistedBackgroundMusicMute(): void {
   persistBackgroundMusicMute(false);
@@ -129,14 +157,18 @@ function isBackgroundMusic(el: EventTarget | null): boolean {
 function onMediaPlay(e: Event) {
   if (!e.isTrusted) return;
   const el = e.target;
-  if (!(el instanceof HTMLMediaElement) || isBackgroundMusic(el)) return;
+  if (!(el instanceof HTMLMediaElement) || isBackgroundMusic(el) || isMixAudioElement(el)) {
+    return;
+  }
   playingMedia.add(el);
   emitPauseState();
 }
 
 function onMediaStop(e: Event) {
   const el = e.target;
-  if (!(el instanceof HTMLMediaElement) || isBackgroundMusic(el)) return;
+  if (!(el instanceof HTMLMediaElement) || isBackgroundMusic(el) || isMixAudioElement(el)) {
+    return;
+  }
   playingMedia.delete(el);
   emitPauseState();
 }

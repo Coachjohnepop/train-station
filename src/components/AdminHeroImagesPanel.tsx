@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { upload } from "@vercel/blob/client";
-import { saveHeroSlidesAction } from "@/app/admin/landing/actions";
+import { saveHeroSlidesAction, saveThemeSongAction } from "@/app/admin/landing/actions";
 import HeroSlideMedia from "@/components/HeroSlideMedia";
 import {
   createEmptyHeroSlide,
@@ -21,6 +21,20 @@ import {
   type HeroSlide,
 } from "@/lib/hero-slides";
 import {
+  applyMixVolume,
+  clientHeroAudioMime,
+  HERO_AUDIO_CLIENT_ACCEPT,
+  HERO_AUDIO_DEFAULT_VOLUME,
+  HERO_AUDIO_MAX_BYTES,
+  heroAudioExtFromMime,
+  isHeroAudioSrc,
+  mediaHasSrc,
+  mixVolumePercent,
+  THEME_SONG_CLICK_STARTS_MAX,
+  THEME_SONG_CLICK_STARTS_MIN,
+  THEME_SONG_SRC,
+} from "@/lib/landing-mix-audio";
+import {
   clientSiteVideoMime,
   SITE_VIDEO_CLIENT_ACCEPT,
   siteVideoExtFromMime,
@@ -28,6 +42,7 @@ import {
 
 const IMAGE_MAX_MB = Math.round(HERO_IMAGE_MAX_BYTES / (1024 * 1024));
 const VIDEO_MAX_MB = Math.round(HERO_VIDEO_MAX_BYTES / (1024 * 1024));
+const AUDIO_MAX_MB = Math.round(HERO_AUDIO_MAX_BYTES / (1024 * 1024));
 
 const SLOW_MO_LABELS: Record<number, string> = {
   1: "Normal speed",
@@ -45,8 +60,14 @@ function isVideoFile(file: File): boolean {
 
 export default function AdminHeroImagesPanel({
   initialSlides,
+  initialThemeSongEnabled = true,
+  initialThemeSongVolume = 0.55,
+  initialThemeSongClickStarts = 1,
 }: {
   initialSlides: HeroSlide[];
+  initialThemeSongEnabled?: boolean;
+  initialThemeSongVolume?: number;
+  initialThemeSongClickStarts?: number;
 }) {
   const [slides, setSlides] = useState<HeroSlide[]>(() =>
     initialSlides.length ? initialSlides.map((s) => ({ ...s })) : [],
@@ -58,6 +79,19 @@ export default function AdminHeroImagesPanel({
   const [error, setError] = useState<string | null>(null);
   const [durations, setDurations] = useState<Record<string, number>>({});
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const audioFileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const themeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const slideMixAudioRef = useRef<HTMLAudioElement | null>(null);
+  const themeSaveTimer = useRef<number | null>(null);
+  const [themeSongEnabled, setThemeSongEnabled] = useState(initialThemeSongEnabled);
+  const [themeSongVolume, setThemeSongVolume] = useState(initialThemeSongVolume);
+  const [themeSongClickStarts, setThemeSongClickStarts] = useState(
+    initialThemeSongClickStarts,
+  );
+  const [mixPlaying, setMixPlaying] = useState(false);
+  const [mixSlideId, setMixSlideId] = useState<string | null>(
+    () => initialSlides.find((s) => s.audioSrc)?.id ?? initialSlides[0]?.id ?? null,
+  );
   const dragIdRef = useRef<string | null>(null);
   const orderStripRef = useRef<HTMLDivElement | null>(null);
   const slidesRef = useRef(slides);
@@ -260,6 +294,159 @@ export default function AdminHeroImagesPanel({
   async function handleSave() {
     setMessage(null);
     await persistSlides(slidesRef.current, "Hero slides saved — live on the public landing.");
+    await persistThemeSong({
+      enabled: themeSongEnabled,
+      volume: themeSongVolume,
+      clickStarts: themeSongClickStarts,
+    });
+  }
+
+  async function persistThemeSong(next: {
+    enabled: boolean;
+    volume: number;
+    clickStarts: number;
+  }) {
+    const result = await saveThemeSongAction({
+      themeSongEnabled: next.enabled,
+      themeSongVolume: next.volume,
+      themeSongClickStarts: next.clickStarts,
+    });
+    if ("error" in result && result.error) {
+      setError(result.error);
+      return;
+    }
+    if ("ok" in result && result.ok) {
+      setThemeSongEnabled(result.storedThemeSongEnabled);
+      setThemeSongVolume(result.storedThemeSongVolume);
+      setThemeSongClickStarts(result.storedThemeSongClickStarts);
+      setMessage("Theme Song mix saved — live on the public landing.");
+    }
+  }
+
+  function queueThemeSongSave(next: {
+    enabled: boolean;
+    volume: number;
+    clickStarts: number;
+  }) {
+    if (themeSaveTimer.current != null) window.clearTimeout(themeSaveTimer.current);
+    themeSaveTimer.current = window.setTimeout(() => {
+      themeSaveTimer.current = null;
+      void persistThemeSong(next);
+    }, 450);
+  }
+
+  function mixTargetSlide(id?: string | null): HeroSlide | null {
+    const list = slidesRef.current;
+    const want = id || mixSlideId;
+    return (
+      list.find((s) => s.id === want) ||
+      list.find((s) => s.audioSrc) ||
+      list[0] ||
+      null
+    );
+  }
+
+  async function playMix(slideId?: string) {
+    const theme = themeAudioRef.current;
+    const bed = slideMixAudioRef.current;
+    const slide = mixTargetSlide(slideId);
+    setMixPlaying(true);
+    if (slide) setMixSlideId(slide.id);
+    if (theme) {
+      applyMixVolume(theme, themeSongVolume);
+      if (themeSongEnabled) {
+        theme.muted = false;
+        try {
+          await theme.play();
+        } catch {
+          /* gesture required — this click is the gesture */
+        }
+      } else {
+        theme.pause();
+      }
+    }
+    if (bed) {
+      if (slide?.audioSrc) {
+        if (!mediaHasSrc(bed, slide.audioSrc)) {
+          bed.src = slide.audioSrc;
+        }
+        applyMixVolume(bed, slide.audioVolume);
+        bed.muted = false;
+        try {
+          await bed.play();
+        } catch {
+          /* ignore */
+        }
+      } else {
+        bed.pause();
+      }
+    }
+  }
+
+  function stopMix() {
+    setMixPlaying(false);
+    themeAudioRef.current?.pause();
+    slideMixAudioRef.current?.pause();
+  }
+
+  async function uploadAudioForSlide(id: string, files: FileList | null) {
+    const file = files?.[0];
+    if (!file) return;
+    setUploadingId(id);
+    setError(null);
+    setUploadProgress(null);
+    try {
+      if (!file.type.startsWith("audio/") && !isHeroAudioSrc(file.name) && file.type !== "") {
+        throw new Error("Use MP3, M4A, AAC, WAV, or OGG.");
+      }
+      if (file.size > HERO_AUDIO_MAX_BYTES) {
+        throw new Error(`${file.name}: too large (max ${AUDIO_MAX_MB} MB).`);
+      }
+      let url: string | null = null;
+      const mime = clientHeroAudioMime(file);
+      const ext = heroAudioExtFromMime(mime, file.name);
+      const pathname = `hero/audio/${crypto.randomUUID()}.${ext}`;
+      try {
+        const blob = await upload(pathname, file, {
+          access: "public",
+          handleUploadUrl: "/api/admin/landing-media/hero-upload",
+          contentType: mime,
+          multipart: file.size > 4 * 1024 * 1024,
+          onUploadProgress: (p) => {
+            setUploadProgress(`Uploading ${file.name} (${Math.round(p.percentage)}%)`);
+          },
+        });
+        url = blob.url;
+      } catch (clientErr) {
+        if (file.size > 4.5 * 1024 * 1024) throw clientErr;
+      }
+      if (!url) {
+        const form = new FormData();
+        form.append("file", file);
+        form.append("kind", "audio");
+        const res = await fetch("/api/admin/landing-media/hero-upload", {
+          method: "POST",
+          body: form,
+        });
+        const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+        if (!res.ok || !data.url) throw new Error(data.error || "Audio upload failed");
+        url = data.url;
+      }
+      updateSlide(id, {
+        audioSrc: url,
+        audioVolume: slides.find((s) => s.id === id)?.audioVolume ?? HERO_AUDIO_DEFAULT_VOLUME,
+      });
+      setMixSlideId(id);
+      setMessage("Audio attached — Play mix to set volume against Theme Song, then Save.");
+      setUploadProgress(null);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Audio upload failed");
+      setUploadProgress(null);
+    } finally {
+      setUploadingId(null);
+      const input = audioFileRefs.current[id];
+      if (input) input.value = "";
+    }
   }
 
   function thumbIndexFromClientX(clientX: number): number | null {
@@ -310,6 +497,37 @@ export default function AdminHeroImagesPanel({
   }
 
   const enabledCount = slides.filter((s) => s.enabled && s.src).length;
+  const mixSlide = mixTargetSlide();
+
+  useEffect(() => {
+    const theme = themeAudioRef.current;
+    if (theme) applyMixVolume(theme, themeSongVolume);
+  }, [themeSongVolume]);
+
+  useEffect(() => {
+    if (!themeSongEnabled) themeAudioRef.current?.pause();
+  }, [themeSongEnabled]);
+
+  const mixAudioSrc = slides.find((s) => s.id === mixSlideId)?.audioSrc ?? null;
+  const mixAudioVolume =
+    slides.find((s) => s.id === mixSlideId)?.audioVolume ?? HERO_AUDIO_DEFAULT_VOLUME;
+
+  useEffect(() => {
+    const bed = slideMixAudioRef.current;
+    if (!bed) return;
+    if (!mixAudioSrc) {
+      bed.pause();
+      return;
+    }
+    if (!mediaHasSrc(bed, mixAudioSrc)) {
+      bed.src = mixAudioSrc;
+    }
+    applyMixVolume(bed, mixAudioVolume);
+    if (mixPlaying) {
+      const play = bed.play();
+      if (play && typeof play.catch === "function") play.catch(() => null);
+    }
+  }, [mixSlideId, mixPlaying, mixAudioSrc, mixAudioVolume]);
 
   return (
     <section className="space-y-4">
@@ -320,14 +538,120 @@ export default function AdminHeroImagesPanel({
           which clip leads — order saves live. Video cards stay still until you tap preview so the
           page can open on a phone. Upload a photo or a phone clip, then use the{" "}
           <strong className="text-[var(--text)]">Trim</strong>,{" "}
-          <strong className="text-[var(--text)]">Crop</strong>, and{" "}
-          <strong className="text-[var(--text)]">Slow motion</strong> levers. Only enabled slides
-          with a file show on the site. Videos play muted and loop the trimmed range.
+          <strong className="text-[var(--text)]">Crop</strong>,{" "}
+          <strong className="text-[var(--text)]">Slow motion</strong>, and{" "}
+          <strong className="text-[var(--text)]">Audio</strong> levers. Only enabled slides
+          with a file show on the site. Videos stay muted; attach a separate audio file for sound.
         </p>
         <p className="mt-1 text-xs text-[var(--muted)]">
           {slides.length} slide{slides.length === 1 ? "" : "s"} · {enabledCount} enabled · max{" "}
-          {HERO_SLIDE_MAX} · photos {IMAGE_MAX_MB} MB · videos {VIDEO_MAX_MB} MB
+          {HERO_SLIDE_MAX} · photos {IMAGE_MAX_MB} MB · videos {VIDEO_MAX_MB} MB · audio{" "}
+          {AUDIO_MAX_MB} MB
         </p>
+      </div>
+
+      <audio
+        ref={themeAudioRef}
+        src={THEME_SONG_SRC}
+        loop
+        preload="auto"
+        data-ts-mix-audio="true"
+      />
+      <audio
+        ref={slideMixAudioRef}
+        loop
+        preload="auto"
+        data-ts-mix-audio="true"
+      />
+
+      <div className="space-y-3 rounded-2xl border border-amber-400/30 bg-amber-400/5 p-4">
+        <p className="text-sm font-semibold text-amber-100">Theme Song + mix</p>
+        <p className="text-[11px] text-[var(--muted)]">
+          These controls are live on the public landing. Play mix on this page so you can hear
+          Theme Song against a slide’s audio and set the two volumes relative to each other.
+        </p>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={themeSongEnabled}
+            onChange={(e) => {
+              const enabled = e.target.checked;
+              setThemeSongEnabled(enabled);
+              if (!enabled) themeAudioRef.current?.pause();
+              queueThemeSongSave({
+                enabled,
+                volume: themeSongVolume,
+                clickStarts: themeSongClickStarts,
+              });
+            }}
+          />
+          Theme Song on for guests
+        </label>
+        <label className="block text-xs">
+          Theme Song volume ({mixVolumePercent(themeSongVolume)}%)
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={mixVolumePercent(themeSongVolume)}
+            onChange={(e) => {
+              const volume = Number(e.target.value) / 100;
+              setThemeSongVolume(volume);
+              if (themeAudioRef.current) applyMixVolume(themeAudioRef.current, volume);
+              queueThemeSongSave({
+                enabled: themeSongEnabled,
+                volume,
+                clickStarts: themeSongClickStarts,
+              });
+            }}
+            className="mt-1 w-full"
+          />
+        </label>
+        <label className="block text-xs">
+          Starts from silence (taps). Default 1 — first tap starts it; later taps do nothing
+          while it is playing.
+          <input
+            type="number"
+            min={THEME_SONG_CLICK_STARTS_MIN}
+            max={THEME_SONG_CLICK_STARTS_MAX}
+            step={1}
+            value={themeSongClickStarts}
+            onChange={(e) => {
+              const n = Number(e.target.value);
+              setThemeSongClickStarts(n);
+              queueThemeSongSave({
+                enabled: themeSongEnabled,
+                volume: themeSongVolume,
+                clickStarts: n,
+              });
+            }}
+            className="mt-1 w-24 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-sm"
+          />
+        </label>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="btn-primary px-4 py-2 text-sm font-semibold"
+            onClick={() => void playMix()}
+          >
+            {mixPlaying ? "Playing mix…" : "Play mix"}
+          </button>
+          <button
+            type="button"
+            className="btn-ghost px-4 py-2 text-sm font-semibold"
+            onClick={stopMix}
+          >
+            Stop
+          </button>
+          <span className="text-[11px] text-[var(--muted)]">
+            Mix uses Theme Song
+            {themeSongEnabled ? ` at ${mixVolumePercent(themeSongVolume)}%` : " (off)"}
+            {mixSlide?.audioSrc
+              ? ` + slide audio at ${mixVolumePercent(mixSlide.audioVolume)}%`
+              : " · pick a slide and attach audio"}
+          </span>
+        </div>
       </div>
 
       {slides.length > 1 ? (
@@ -426,6 +750,7 @@ export default function AdminHeroImagesPanel({
                         <HeroSlideMedia
                           slide={slide}
                           active={previewId === slide.id || !isVideo}
+                          playAudio={false}
                           className="h-full w-full object-cover"
                           alt={slide.alt || `Hero ${index + 1}`}
                           onDuration={(seconds) => {
@@ -638,9 +963,87 @@ export default function AdminHeroImagesPanel({
                     </button>
                   </div>
 
+                  <div className="space-y-2 rounded-xl border border-amber-400/25 bg-amber-400/5 p-3">
+                    <p className="text-sm font-semibold">
+                      {isVideo ? "3 · Audio" : "2 · Audio"}
+                    </p>
+                    <p className="text-[11px] text-[var(--muted)]">
+                      Separate file for this slide. Picture stays muted. Mix against Theme Song
+                      with Play mix.
+                    </p>
+                    {slide.audioSrc ? (
+                      <p className="truncate text-[11px] text-emerald-200/90">{slide.audioSrc}</p>
+                    ) : (
+                      <p className="text-[11px] text-[var(--muted)]">No audio yet</p>
+                    )}
+                    <label className="block text-xs">
+                      Slide audio volume ({mixVolumePercent(slide.audioVolume)}%)
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={mixVolumePercent(slide.audioVolume)}
+                        onChange={(e) => {
+                          const audioVolume = Number(e.target.value) / 100;
+                          updateSlide(slide.id, { audioVolume });
+                          setMixSlideId(slide.id);
+                          if (mixPlaying && slideMixAudioRef.current) {
+                            applyMixVolume(slideMixAudioRef.current, audioVolume);
+                          }
+                        }}
+                        className="mt-1 w-full"
+                      />
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      <input
+                        ref={(el) => {
+                          audioFileRefs.current[slide.id] = el;
+                        }}
+                        type="file"
+                        accept={HERO_AUDIO_CLIENT_ACCEPT}
+                        className="hidden"
+                        onChange={(e) => void uploadAudioForSlide(slide.id, e.target.files)}
+                      />
+                      <button
+                        type="button"
+                        className="btn-ghost min-h-11 px-3 py-2 text-xs font-semibold"
+                        disabled={uploadingId === slide.id}
+                        onClick={() => {
+                          setMixSlideId(slide.id);
+                          audioFileRefs.current[slide.id]?.click();
+                        }}
+                      >
+                        {slide.audioSrc ? "Replace audio" : "Upload audio"}
+                      </button>
+                      {slide.audioSrc ? (
+                        <button
+                          type="button"
+                          className="btn-ghost min-h-11 px-3 py-2 text-xs font-semibold text-rose-300"
+                          onClick={() => {
+                            updateSlide(slide.id, { audioSrc: null });
+                            if (mixSlideId === slide.id) slideMixAudioRef.current?.pause();
+                          }}
+                        >
+                          Clear audio
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="btn-ghost min-h-11 px-3 py-2 text-xs font-semibold"
+                        onClick={() => {
+                          setMixSlideId(slide.id);
+                          void playMix(slide.id);
+                        }}
+                      >
+                        Play this in mix
+                      </button>
+                    </div>
+                  </div>
+
                   {isVideo ? (
                     <div className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-3">
-                      <p className="text-sm font-semibold">3 · Slow motion</p>
+                      <p className="text-sm font-semibold">4 · Slow motion</p>
                       <p className="text-[11px] text-[var(--muted)]">
                         Playback speed on the landing (muted). Half speed is the usual slow-mo.
                       </p>

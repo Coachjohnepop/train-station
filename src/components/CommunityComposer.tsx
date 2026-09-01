@@ -10,6 +10,7 @@ import {
   communityProgramTargets,
 } from "@/lib/community-feed";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
+import { localTodayIso } from "@/lib/program-calendar";
 
 type TargetMode = "station" | "programs";
 
@@ -22,7 +23,7 @@ export default function CommunityComposer({ embedded = false }: { embedded?: boo
   );
   const [body, setBody] = useState("");
   const [rawSms, setRawSms] = useState("");
-  const [sessionDate, setSessionDate] = useState(new Date().toISOString().slice(0, 10));
+  const [sessionDate, setSessionDate] = useState(localTodayIso());
   const [scheduledTime, setScheduledTime] = useState("06:30");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);

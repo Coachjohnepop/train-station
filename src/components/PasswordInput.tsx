@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, type CSSProperties, type MouseEvent } from "react";
 
 type Variant = "default" | "signup";
 
@@ -84,6 +84,7 @@ export default function PasswordInput({
   const [visible, setVisible] = useState(false);
   // Browsers skip strong-password UI on controlled fields until the user focuses.
   const [unlocked, setUnlocked] = useState(purpose !== "new");
+  const inputRef = useRef<HTMLInputElement>(null);
   const inputClass = [VARIANT_CLASS[variant], className].filter(Boolean).join(" ");
   const resolvedAutoComplete = autoComplete ?? PURPOSE_AUTOCOMPLETE[purpose];
 
@@ -91,9 +92,35 @@ export default function PasswordInput({
     if (!unlocked) setUnlocked(true);
   }
 
+  function syncDomValue() {
+    const el = inputRef.current;
+    if (el && el.value !== value) onChange(el.value);
+  }
+
+  function toggleVisible(e: MouseEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    unlock();
+    syncDomValue();
+    setVisible((v) => !v);
+    window.requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      const len = el.value.length;
+      try {
+        el.setSelectionRange(len, len);
+      } catch {
+        /* type=password may ignore selection */
+      }
+    });
+  }
+
   return (
     <div className={["relative", wrapperClassName].filter(Boolean).join(" ")}>
       <input
+        key={visible ? "shown" : "hidden"}
+        ref={inputRef}
         id={id}
         name={name}
         type={visible ? "text" : "password"}
@@ -113,19 +140,20 @@ export default function PasswordInput({
         }}
         className={inputClass}
         placeholder={placeholder}
-        {...(purpose === "new"
-          ? { passwordRules: NEW_PASSWORD_RULES }
-          : {})}
+        style={visible ? ({ WebkitTextSecurity: "none" } as CSSProperties) : undefined}
+        {...(purpose === "new" && !visible ? { passwordRules: NEW_PASSWORD_RULES } : {})}
       />
       <button
         type="button"
         tabIndex={-1}
-        onClick={() => setVisible((v) => !v)}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={toggleVisible}
         className={[
-          "absolute right-3 top-1/2 -translate-y-1/2 transition",
+          "absolute right-3 top-1/2 z-10 -translate-y-1/2 p-1 transition",
           TOGGLE_CLASS[variant],
         ].join(" ")}
         aria-label={visible ? "Hide password" : "Show password"}
+        aria-pressed={visible}
       >
         <EyeIcon open={visible} />
       </button>

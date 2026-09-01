@@ -10,9 +10,18 @@ describe("theme song guest gate", () => {
     }
   });
 
-  it("stays off login so the mute control cannot cover the PIN pad", () => {
-    assert.equal(isGuestThemeSongPath("/login"), false);
-    assert.equal(allowThemeSong("/login", false), false);
+  it("stays off login, forgot, and reset so the song cannot cover those screens", () => {
+    for (const path of [
+      "/login",
+      "/login/",
+      "/forgot-password",
+      "/forgot-password/",
+      "/reset-password",
+      "/reset-password?token=abc",
+    ]) {
+      assert.equal(isGuestThemeSongPath(path), false);
+      assert.equal(allowThemeSong(path, false), false);
+    }
   });
 
   it("never plays after a login exists", () => {

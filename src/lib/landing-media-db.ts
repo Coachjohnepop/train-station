@@ -26,6 +26,9 @@ function rowToConfig(row: {
   freeTicketFullIntroSource: string | null;
   freeTicketFullStatus: string;
   freeTicketFullError: string | null;
+  themeSongEnabled?: boolean;
+  themeSongVolume?: number;
+  themeSongClickStarts?: number;
   updatedAt: Date;
 }): LandingMediaConfig {
   return {
@@ -49,6 +52,10 @@ function rowToConfig(row: {
     freeTicketFullIntroSource: row.freeTicketFullIntroSource,
     freeTicketFullStatus: parseStatus(row.freeTicketFullStatus),
     freeTicketFullError: row.freeTicketFullError,
+    themeSongEnabled: row.themeSongEnabled !== false,
+    themeSongVolume: typeof row.themeSongVolume === "number" ? row.themeSongVolume : 0.55,
+    themeSongClickStarts:
+      typeof row.themeSongClickStarts === "number" ? row.themeSongClickStarts : 1,
     updatedAt: row.updatedAt.toISOString(),
   };
 }
@@ -82,6 +89,9 @@ function configToRow(config: LandingMediaConfig) {
     freeTicketFullIntroSource: config.freeTicketFullIntroSource,
     freeTicketFullStatus: config.freeTicketFullStatus,
     freeTicketFullError: config.freeTicketFullError,
+    themeSongEnabled: config.themeSongEnabled,
+    themeSongVolume: config.themeSongVolume,
+    themeSongClickStarts: config.themeSongClickStarts,
   };
 }
 

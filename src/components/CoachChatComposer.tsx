@@ -7,6 +7,7 @@ import { CHAT_IMAGE_MAX_BYTES, CHAT_VIDEO_MAX_DURATION_SEC } from "@/lib/chat-vi
 import CoachMemberPicker from "@/components/CoachMemberPicker";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
 import { DEFAULT_DEMO_MEMBER_ID } from "@/lib/demo-coach";
+import { localTodayIso } from "@/lib/program-calendar";
 
 type MemberOption = { id: string; name: string; email: string };
 
@@ -21,7 +22,7 @@ export default function CoachChatComposer({
   const [selectedIds, setSelectedIds] = useState<string[]>([DEFAULT_DEMO_MEMBER_ID]);
   const [body, setBody] = useState("");
   const [rawSms, setRawSms] = useState("");
-  const [sessionDate, setSessionDate] = useState(new Date().toISOString().slice(0, 10));
+  const [sessionDate, setSessionDate] = useState(localTodayIso());
   const [scheduledTime, setScheduledTime] = useState("06:30");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);

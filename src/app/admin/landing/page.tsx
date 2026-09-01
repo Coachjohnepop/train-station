@@ -21,14 +21,14 @@ export default async function AdminLandingPage() {
     <div className="max-w-3xl">
       <h1 className="text-2xl font-bold">Site brand & landing media</h1>
       <p className="mt-2 text-[var(--muted)]">
-        Hero carousel photos or videos (play order, crop + slow-mo), logo, name, tagline, and Venmo.
+        Hero carousel photos or videos (play order, crop, slow-mo, audio mix), logo, name, tagline, and Venmo.
       </p>
       <div className="mt-4 rounded-xl border border-violet-500/30 bg-violet-500/5 px-4 py-3 text-xs text-[var(--muted)]">
         <p className="font-semibold text-violet-100">Where things live</p>
         <ol className="mt-2 list-decimal space-y-1 pl-5">
           <li>
             <strong className="text-violet-50">Hero images &amp; videos</strong> — full-screen
-            landing carousel, play order, crop, slow-mo (below)
+            landing carousel, play order, crop, slow-mo, Theme Song mix (below)
           </li>
           <li>Logo / brand + Venmo QR (below)</li>
           <li>
@@ -40,7 +40,12 @@ export default async function AdminLandingPage() {
         </ol>
       </div>
       <div className="mt-8 space-y-12">
-        <AdminHeroImagesPanel initialSlides={config.heroSlides} />
+        <AdminHeroImagesPanel
+          initialSlides={config.heroSlides}
+          initialThemeSongEnabled={config.themeSongEnabled}
+          initialThemeSongVolume={config.themeSongVolume}
+          initialThemeSongClickStarts={config.themeSongClickStarts}
+        />
         <AdminSiteBrandPanel
           initialBrandName={brandConfig.brandName}
           initialBrandTagline={brandConfig.brandTagline}

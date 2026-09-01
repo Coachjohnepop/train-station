@@ -424,6 +424,23 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-01 (Jeremy class landed on tomorrow)
+
+**Status:** Jeremy pasted a class Mon 7:57pm on **Admin → Assign**. UTC date chips saved it as **2026-09-02**, so Tue 9/1 Today was empty. Ali/John were on personal Home days; Stephanie has **no Adult enrollment** (class-only). Roster was Steph + Lemon John + Coach Ed — **Ali omitted**.
+
+**Patched live:** session `today-2026-09-02-f6d585a4` (`sms-w-d5b195d3`) moved to **2026-09-01** and Ali added. Hard-refresh Today. Code fix: Assign / Messages date chips use `localTodayIso()` not `toISOString()`.
+
+**Date:** 2026-09-01 (hero audio + Theme Song mix)
+
+**Status:** Admin → Landing hero editor now mixes **per-slide audio** with **Theme Song**. Videos stay muted; each photo or video can get its own MP3/M4A. Theme Song on/off, volume, and **starts from silence** (default 1) save to Postgres and are live for guests. Play mix on that page to hear both volumes together. Public landing plays both after the first tap (no ducking).
+
+**How Jeremy uses it:** Admin → Landing → Theme Song + mix (on/off, volume, click-starts) → Play mix. On a slide: Upload audio → volume slider → Play this in mix → Save hero slides.
+
+**When back:**
+1. Apply migration on prod: `npx prisma migrate deploy` then `npm run db:lockdown-postgrest`.
+2. Hard-refresh Admin → Landing. Play mix with Theme Song on; move both volume sliders — they must change what you hear.
+3. Guest landing: first tap starts Theme Song (once, unless click-starts > 1). Slide audio mixes with it. Speaker mute only kills Theme Song.
+
 **Date:** 2026-08-31 (coach Alerts inbox)
 
 **Status:** Jeremy now has **Admin → Alerts** for **new signups**, **Calendly/intro bookings**, and **Zoom join requests** (member tapped Join Live before host is up). Email still fires; in-app used to be a system note buried in that member’s Messages thread. Phone lock-screen still needs **Enable alerts** once.

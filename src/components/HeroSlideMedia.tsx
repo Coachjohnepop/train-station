@@ -8,9 +8,15 @@ import {
   isHeroVideoSrc,
   type HeroSlide,
 } from "@/lib/hero-slides";
+import {
+  applyMixVolume,
+  isLandingMixUnlocked,
+  onLandingMixUnlock,
+} from "@/lib/landing-mix-audio";
 
 /**
  * One landing-hero / splash frame: photo or muted looping video, with crop, trim, and slow-mo.
+ * Optional separate audio bed (video picture stays muted). Mixes with Theme Song.
  */
 export default function HeroSlideMedia({
   slide,
@@ -19,6 +25,7 @@ export default function HeroSlideMedia({
   alt,
   fetchPriority,
   onDuration,
+  playAudio,
 }: {
   slide: HeroSlide;
   active: boolean;
@@ -26,13 +33,17 @@ export default function HeroSlideMedia({
   alt?: string;
   fetchPriority?: "high" | "low" | "auto";
   onDuration?: (seconds: number) => void;
+  /** Play this slide's audioSrc. Default = active (public carousel). */
+  playAudio?: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const onDurationRef = useRef(onDuration);
   onDurationRef.current = onDuration;
   const isVideo = slide.kind === "video" || isHeroVideoSrc(slide.src);
   const crop = heroSlideCropStyle(slide);
   const label = alt || slide.alt || "Hero";
+  const audioOn = (playAudio ?? active) && Boolean(slide.audioSrc);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -92,32 +103,79 @@ export default function HeroSlideMedia({
     };
   }, [active, slide, slide.playbackRate, slide.src, slide.trimStartSec, slide.trimEndSec]);
 
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    applyMixVolume(el, slide.audioVolume);
+    const sync = () => {
+      if (!audioOn) {
+        el.pause();
+        try {
+          el.currentTime = 0;
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
+      if (!isLandingMixUnlocked()) return;
+      el.loop = true;
+      el.muted = false;
+      applyMixVolume(el, slide.audioVolume);
+      const play = el.play();
+      if (play && typeof play.catch === "function") play.catch(() => null);
+    };
+    const unsub = onLandingMixUnlock(sync);
+    sync();
+    return () => {
+      unsub();
+      el.pause();
+    };
+  }, [audioOn, slide.audioSrc, slide.audioVolume]);
+
+  const bed =
+    slide.audioSrc ? (
+      <audio
+        ref={audioRef}
+        src={slide.audioSrc}
+        loop
+        preload={audioOn ? "auto" : "none"}
+        playsInline
+        data-ts-hero-audio="true"
+      />
+    ) : null;
+
   if (isVideo) {
     const trimmed = slide.trimStartSec > 0 || slide.trimEndSec != null;
     return (
-      <video
-        ref={videoRef}
-        className={`ts-inapp-video ${className}`}
-        src={slide.src}
-        muted
-        loop={!trimmed}
-        playsInline
-        autoPlay={active}
-        preload={active ? "auto" : "metadata"}
-        aria-label={label}
-        style={crop}
-      />
+      <>
+        <video
+          ref={videoRef}
+          className={`ts-inapp-video ${className}`}
+          src={slide.src}
+          muted
+          loop={!trimmed}
+          playsInline
+          autoPlay={active}
+          preload={active ? "auto" : "metadata"}
+          aria-label={label}
+          style={crop}
+        />
+        {bed}
+      </>
     );
   }
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={slide.src}
-      alt={label}
-      fetchPriority={fetchPriority}
-      className={className}
-      style={crop}
-    />
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={slide.src}
+        alt={label}
+        fetchPriority={fetchPriority}
+        className={className}
+        style={crop}
+      />
+      {bed}
+    </>
   );
 }

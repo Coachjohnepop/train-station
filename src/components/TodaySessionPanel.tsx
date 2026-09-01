@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CoachMemberPicker, { type CoachMemberOption } from "@/components/CoachMemberPicker";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
+import { localTodayIso } from "@/lib/program-calendar";
+import { addDaysIso } from "@/lib/workout-day-visibility";
 
 type ParsedExercise = {
   name: string;
@@ -14,17 +16,10 @@ type ParsedExercise = {
   section?: string;
 };
 
-function addDaysToIso(isoDate: string, days: number): string {
-  const d = new Date(`${isoDate}T12:00:00`);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
-function quickDateLabel(offset: number): string {
+function quickDateLabel(iso: string, offset: number): string {
   if (offset === 0) return "Today";
   if (offset === 1) return "Tomorrow";
-  const d = new Date();
-  d.setDate(d.getDate() + offset);
+  const d = new Date(`${iso}T12:00:00`);
   return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 }
 
@@ -58,7 +53,8 @@ export default function TodaySessionPanel({
   showQuickDates?: boolean;
 }) {
   const router = useRouter();
-  const effectiveDate = lockSessionDate || defaultDate || new Date().toISOString().slice(0, 10);
+  const calendarToday = localTodayIso();
+  const effectiveDate = lockSessionDate || defaultDate || calendarToday;
   const [rawSms, setRawSms] = useState("");
   const [sessionDate, setSessionDate] = useState(effectiveDate);
   const [scheduledTime, setScheduledTime] = useState(defaultTime);
@@ -75,7 +71,7 @@ export default function TodaySessionPanel({
   const [assignOpen, setAssignOpen] = useState(defaultAssignOpen);
 
   useEffect(() => {
-    setSessionDate(lockSessionDate || defaultDate || new Date().toISOString().slice(0, 10));
+    setSessionDate(lockSessionDate || defaultDate || localTodayIso());
   }, [lockSessionDate, defaultDate]);
 
   useEffect(() => {
@@ -244,7 +240,7 @@ export default function TodaySessionPanel({
               {showQuickDates && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {[0, 1, 2, 3].map((offset) => {
-                    const chipDate = addDaysToIso(new Date().toISOString().slice(0, 10), offset);
+                    const chipDate = addDaysIso(calendarToday, offset);
                     const active = sessionDate === chipDate;
                     return (
                       <button
@@ -257,7 +253,7 @@ export default function TodaySessionPanel({
                             : "border-[var(--border)] text-[var(--muted)] hover:border-accent/50 hover:text-accent"
                         }`}
                       >
-                        {quickDateLabel(offset)}
+                        {quickDateLabel(chipDate, offset)}
                       </button>
                     );
                   })}

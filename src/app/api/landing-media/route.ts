@@ -23,6 +23,9 @@ export async function GET() {
     equipmentIntroVideoUrl: equipmentIntroVideoUrlFromConfig(config.equipmentIntroVideoUrl),
     heroSlides,
     uploadedContentVolumeDb: config.uploadedContentVolumeDb,
+    themeSongEnabled: config.themeSongEnabled,
+    themeSongVolume: config.themeSongVolume,
+    themeSongClickStarts: config.themeSongClickStarts,
     gag: {
       enabled: gag.enabled,
       videoUrl: gag.videoUrl,

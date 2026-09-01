@@ -2,13 +2,14 @@
 
 import TodaySessionPanel from "@/components/TodaySessionPanel";
 import type { CoachMemberOption } from "@/components/CoachMemberPicker";
+import { localTodayIso } from "@/lib/program-calendar";
 
 export default function CoachAssignWorkout({
   memberOptions,
 }: {
   memberOptions: CoachMemberOption[];
 }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localTodayIso();
 
   return (
     <TodaySessionPanel

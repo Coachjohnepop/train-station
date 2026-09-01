@@ -43,6 +43,9 @@ export async function getResolvedLandingVideos() {
     ),
     heroSlides: activeHeroSlides(config.heroSlides),
     uploadedContentVolumeDb: config.uploadedContentVolumeDb,
+    themeSongEnabled: config.themeSongEnabled,
+    themeSongVolume: config.themeSongVolume,
+    themeSongClickStarts: config.themeSongClickStarts,
     gag: {
       enabled: gag.enabled,
       videoUrl: gag.videoUrl,

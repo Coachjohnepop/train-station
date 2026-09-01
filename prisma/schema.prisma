@@ -1274,6 +1274,9 @@ model LandingMediaSettings {
   freeTicketFullIntroSource  String?
   freeTicketFullStatus       String   @default("idle")
   freeTicketFullError        String?  @db.Text
+  themeSongEnabled           Boolean  @default(true)
+  themeSongVolume            Float    @default(0.55)
+  themeSongClickStarts       Int      @default(1)
   updatedAt                  DateTime @updatedAt
 }
 

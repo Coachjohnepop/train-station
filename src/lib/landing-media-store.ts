@@ -8,6 +8,13 @@ import {
   DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
 } from "@/lib/media-volume";
 import {
+  clampMixVolume,
+  clampThemeSongClickStarts,
+  THEME_SONG_CLICK_STARTS_DEFAULT,
+  THEME_SONG_DEFAULT_ENABLED,
+  THEME_SONG_DEFAULT_VOLUME,
+} from "@/lib/landing-mix-audio";
+import {
   DEFAULT_HERO_SLIDES,
   HERO_SLIDE_MAX,
   HERO_SLIDE_MIN,
@@ -77,6 +84,12 @@ export type LandingMediaConfig = {
   freeTicketFullIntroSource: string | null;
   freeTicketFullStatus: "idle" | "queued" | "running" | "ok" | "error";
   freeTicketFullError: string | null;
+  /** Guest Theme Song on the public landing. */
+  themeSongEnabled: boolean;
+  /** Linear 0–1 HTML audio volume. */
+  themeSongVolume: number;
+  /** How many times a start-from-silence (tap or successful autoplay) is allowed this tab. */
+  themeSongClickStarts: number;
   updatedAt: string;
 };
 
@@ -120,6 +133,9 @@ function emptyConfig(): LandingMediaConfig {
     freeTicketFullIntroSource: null,
     freeTicketFullStatus: "idle",
     freeTicketFullError: null,
+    themeSongEnabled: THEME_SONG_DEFAULT_ENABLED,
+    themeSongVolume: THEME_SONG_DEFAULT_VOLUME,
+    themeSongClickStarts: THEME_SONG_CLICK_STARTS_DEFAULT,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -183,6 +199,12 @@ function normalize(raw: unknown): LandingMediaConfig {
     freeTicketFullStatus: parseJobStatus(data.freeTicketFullStatus),
     freeTicketFullError:
       typeof data.freeTicketFullError === "string" ? data.freeTicketFullError : null,
+    themeSongEnabled: data.themeSongEnabled === false ? false : true,
+    themeSongVolume: clampMixVolume(data.themeSongVolume, THEME_SONG_DEFAULT_VOLUME),
+    themeSongClickStarts: clampThemeSongClickStarts(
+      data.themeSongClickStarts,
+      THEME_SONG_CLICK_STARTS_DEFAULT,
+    ),
     updatedAt:
       typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
   };
@@ -258,6 +280,9 @@ export async function saveLandingMedia(
       | "freeTicketFullIntroSource"
       | "freeTicketFullStatus"
       | "freeTicketFullError"
+      | "themeSongEnabled"
+      | "themeSongVolume"
+      | "themeSongClickStarts"
     >
   >,
 ): Promise<LandingMediaConfig> {
@@ -407,6 +432,19 @@ export async function saveLandingMedia(
   }
   if (patch.freeTicketFullError !== undefined) {
     next.freeTicketFullError = patch.freeTicketFullError;
+  }
+
+  if (patch.themeSongEnabled !== undefined) {
+    next.themeSongEnabled = Boolean(patch.themeSongEnabled);
+  }
+  if (patch.themeSongVolume !== undefined) {
+    next.themeSongVolume = clampMixVolume(patch.themeSongVolume, THEME_SONG_DEFAULT_VOLUME);
+  }
+  if (patch.themeSongClickStarts !== undefined) {
+    next.themeSongClickStarts = clampThemeSongClickStarts(
+      patch.themeSongClickStarts,
+      THEME_SONG_CLICK_STARTS_DEFAULT,
+    );
   }
 
   const introChanged =

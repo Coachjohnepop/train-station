@@ -33,6 +33,9 @@ export async function saveLandingMediaAction(input: {
   venmoQrUrl?: string | null;
   venmoHandle?: string | null;
   venmoInstructions?: string | null;
+  themeSongEnabled?: boolean;
+  themeSongVolume?: number;
+  themeSongClickStarts?: number;
 }) {
   const session = await getSessionUser();
   if (!session || !isStaffRole(session.role)) {
@@ -56,6 +59,9 @@ export async function saveLandingMediaAction(input: {
       venmoQrUrl: input.venmoQrUrl,
       venmoHandle: input.venmoHandle,
       venmoInstructions: input.venmoInstructions,
+      themeSongEnabled: input.themeSongEnabled,
+      themeSongVolume: input.themeSongVolume,
+      themeSongClickStarts: input.themeSongClickStarts,
     });
     return {
       ok: true as const,
@@ -74,6 +80,9 @@ export async function saveLandingMediaAction(input: {
       storedVenmoQrUrl: config.venmoQrUrl,
       storedVenmoHandle: config.venmoHandle,
       storedVenmoInstructions: config.venmoInstructions,
+      storedThemeSongEnabled: config.themeSongEnabled,
+      storedThemeSongVolume: config.themeSongVolume,
+      storedThemeSongClickStarts: config.themeSongClickStarts,
       updatedAt: config.updatedAt,
     };
   } catch (e: unknown) {
@@ -92,6 +101,34 @@ export async function saveHeroSlidesAction(slides: HeroSlide[]) {
     return {
       ok: true as const,
       storedHeroSlides: config.heroSlides,
+      updatedAt: config.updatedAt,
+    };
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : "Save failed" };
+  }
+}
+
+/** Theme Song on/off, volume, and click-starts (same Admin → Landing page). */
+export async function saveThemeSongAction(input: {
+  themeSongEnabled: boolean;
+  themeSongVolume: number;
+  themeSongClickStarts: number;
+}) {
+  const session = await getSessionUser();
+  if (!session || !isStaffRole(session.role)) {
+    return { error: "Coach sign-in required. Sign out and sign in again at /login." };
+  }
+  try {
+    const config = await saveLandingMedia({
+      themeSongEnabled: input.themeSongEnabled,
+      themeSongVolume: input.themeSongVolume,
+      themeSongClickStarts: input.themeSongClickStarts,
+    });
+    return {
+      ok: true as const,
+      storedThemeSongEnabled: config.themeSongEnabled,
+      storedThemeSongVolume: config.themeSongVolume,
+      storedThemeSongClickStarts: config.themeSongClickStarts,
       updatedAt: config.updatedAt,
     };
   } catch (e: unknown) {

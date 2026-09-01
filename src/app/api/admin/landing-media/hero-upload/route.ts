@@ -17,6 +17,14 @@ import {
 } from "@/lib/hero-slides";
 import { storeHeroBuffer, storeHeroImage, validateHeroImageFile } from "@/lib/hero-image-storage";
 import {
+  clientHeroAudioMime,
+  HERO_AUDIO_MAX_BYTES,
+  HERO_AUDIO_UPLOAD_CONTENT_TYPES,
+  heroAudioExtFromMime,
+  isHeroAudioSrc,
+  validateHeroAudioFile,
+} from "@/lib/landing-mix-audio";
+import {
   SITE_VIDEO_UPLOAD_CONTENT_TYPES,
   clientSiteVideoMime,
   siteVideoExtFromMime,
@@ -34,19 +42,54 @@ function assertHeroPath(pathname: string) {
   }
 }
 
-async function issueClientToken(pathname: string): Promise<string> {
-  assertHeroPath(pathname);
-  const isVideo = isHeroVideoSrc(pathname);
-  const constraints = {
+function uploadKind(pathname: string): "audio" | "video" | "image" {
+  if (isHeroAudioSrc(pathname) || pathname.startsWith("hero/audio/")) return "audio";
+  if (isHeroVideoSrc(pathname)) return "video";
+  return "image";
+}
+
+function tokenConstraints(pathname: string) {
+  const kind = uploadKind(pathname);
+  if (kind === "audio") {
+    return {
+      pathname,
+      allowedContentTypes: HERO_AUDIO_UPLOAD_CONTENT_TYPES,
+      maximumSizeInBytes: HERO_AUDIO_MAX_BYTES,
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      validUntil: Date.now() + TOKEN_TTL_MS,
+    };
+  }
+  if (kind === "video") {
+    return {
+      pathname,
+      allowedContentTypes: SITE_VIDEO_UPLOAD_CONTENT_TYPES,
+      maximumSizeInBytes: HERO_VIDEO_MAX_BYTES,
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      validUntil: Date.now() + TOKEN_TTL_MS,
+    };
+  }
+  return {
     pathname,
-    allowedContentTypes: isVideo
-      ? SITE_VIDEO_UPLOAD_CONTENT_TYPES
-      : ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif", "image/*"],
-    maximumSizeInBytes: isVideo ? HERO_VIDEO_MAX_BYTES : HERO_IMAGE_MAX_BYTES,
+    allowedContentTypes: [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "image/avif",
+      "image/*",
+    ],
+    maximumSizeInBytes: HERO_IMAGE_MAX_BYTES,
     addRandomSuffix: false,
     allowOverwrite: true,
     validUntil: Date.now() + TOKEN_TTL_MS,
   };
+}
+
+async function issueClientToken(pathname: string): Promise<string> {
+  assertHeroPath(pathname);
+  const constraints = tokenConstraints(pathname);
   let lastError: unknown;
   for (const auth of blobSdkOptionVariants()) {
     try {
@@ -101,16 +144,8 @@ export async function POST(request: Request) {
         ...(BLOB_TOKEN ? { token: BLOB_TOKEN } : {}),
         onBeforeGenerateToken: async (pathname) => {
           assertHeroPath(pathname);
-          const isVideo = isHeroVideoSrc(pathname);
-          return {
-            allowedContentTypes: isVideo
-              ? SITE_VIDEO_UPLOAD_CONTENT_TYPES
-              : ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif", "image/*"],
-            maximumSizeInBytes: isVideo ? HERO_VIDEO_MAX_BYTES : HERO_IMAGE_MAX_BYTES,
-            addRandomSuffix: false,
-            allowOverwrite: true,
-            validUntil: Date.now() + TOKEN_TTL_MS,
-          };
+          const { pathname: _p, ...rest } = tokenConstraints(pathname);
+          return rest;
         },
       });
       return NextResponse.json(jsonResponse);
@@ -125,6 +160,19 @@ export async function POST(request: Request) {
     const file = form.get("file");
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "file is required" }, { status: 400 });
+    }
+
+    const audio =
+      isHeroAudioSrc(file.name) ||
+      file.type.startsWith("audio/") ||
+      (form.get("kind") === "audio");
+    if (audio) {
+      const mime = clientHeroAudioMime(file);
+      validateHeroAudioFile({ size: file.size, mimeType: mime, name: file.name });
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const ext = heroAudioExtFromMime(mime, file.name);
+      const url = await storeHeroBuffer(`hero/audio/${crypto.randomUUID()}.${ext}`, buffer, mime);
+      return NextResponse.json({ ok: true, url, kind: "audio" });
     }
 
     const video = isHeroVideoSrc(file.name) || file.type.startsWith("video/");
@@ -167,6 +215,7 @@ export async function GET() {
     ok: true,
     imageMaxBytes: HERO_IMAGE_MAX_BYTES,
     videoMaxBytes: HERO_VIDEO_MAX_BYTES,
+    audioMaxBytes: HERO_AUDIO_MAX_BYTES,
     clientUpload: isBlobConfigured(),
   });
 }

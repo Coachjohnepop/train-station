@@ -3,6 +3,12 @@
  * Managed under Admin → Landing → Hero images.
  */
 
+import {
+  clampMixVolume,
+  HERO_AUDIO_DEFAULT_VOLUME,
+  isAllowedHeroAudioUrl,
+} from "@/lib/landing-mix-audio";
+
 export type HeroSlideKind = "image" | "video";
 
 export type HeroSlide = {
@@ -29,6 +35,10 @@ export type HeroSlide = {
   trimStartSec: number;
   /** Video only. Seconds; null = play through the end of the file. */
   trimEndSec: number | null;
+  /** Separate audio bed for this slide (photo or video). Video picture stays muted. */
+  audioSrc: string | null;
+  /** Linear 0–1 volume for audioSrc. */
+  audioVolume: number;
 };
 
 /**
@@ -50,6 +60,8 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
     playbackRate: 1,
     trimStartSec: 0,
     trimEndSec: null,
+    audioSrc: null,
+    audioVolume: HERO_AUDIO_DEFAULT_VOLUME,
   },
   {
     id: "hero-blonde-girl",
@@ -64,6 +76,8 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
     playbackRate: 1,
     trimStartSec: 0,
     trimEndSec: null,
+    audioSrc: null,
+    audioVolume: HERO_AUDIO_DEFAULT_VOLUME,
   },
   {
     id: "hero-hispanic-split",
@@ -78,6 +92,8 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
     playbackRate: 1,
     trimStartSec: 0,
     trimEndSec: null,
+    audioSrc: null,
+    audioVolume: HERO_AUDIO_DEFAULT_VOLUME,
   },
   {
     id: "hero-asian-woman",
@@ -92,6 +108,8 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
     playbackRate: 1,
     trimStartSec: 0,
     trimEndSec: null,
+    audioSrc: null,
+    audioVolume: HERO_AUDIO_DEFAULT_VOLUME,
   },
 ];
 
@@ -352,6 +370,15 @@ export function normalizeHeroSlide(raw: unknown): HeroSlide | null {
     rawEnd == null || rawEnd === 0 || !Number.isFinite(Number(rawEnd))
       ? null
       : Math.max(trimStartSec + MIN_TRIM_SEC, Number(rawEnd));
+  const rawAudio =
+    typeof data.audioSrc === "string" && data.audioSrc.trim()
+      ? data.audioSrc.trim()
+      : "";
+  const audioSrc = rawAudio && isAllowedHeroAudioUrl(rawAudio) ? rawAudio : null;
+  const audioVolume = clampMixVolume(
+    (data as { audioVolume?: unknown }).audioVolume,
+    HERO_AUDIO_DEFAULT_VOLUME,
+  );
   const id =
     typeof data.id === "string" && data.id.trim()
       ? data.id.trim().slice(0, 80)
@@ -369,6 +396,8 @@ export function normalizeHeroSlide(raw: unknown): HeroSlide | null {
     playbackRate: kind === "video" ? playbackRate : 1,
     trimStartSec: kind === "video" ? trimStartSec : 0,
     trimEndSec: kind === "video" ? trimEndSec : null,
+    audioSrc,
+    audioVolume,
   };
 }
 
@@ -412,5 +441,7 @@ export function createEmptyHeroSlide(src = ""): HeroSlide {
     playbackRate: 1,
     trimStartSec: 0,
     trimEndSec: null,
+    audioSrc: null,
+    audioVolume: HERO_AUDIO_DEFAULT_VOLUME,
   };
 }
