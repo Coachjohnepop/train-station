@@ -104,7 +104,9 @@ export default function AdminCoachInbox() {
             key={f}
             type="button"
             className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-              filter === f ? "bg-[#7c3aed] text-white" : "btn-ghost"
+              filter === f
+                ? "bg-[var(--ramp-gold)] text-[#1a1204]"
+                : "btn-ghost"
             }`}
             onClick={() => setFilter(f)}
           >
@@ -140,17 +142,19 @@ export default function AdminCoachInbox() {
                 key={item.id}
                 className={`rounded-xl border p-4 ${
                   unreadItem
-                    ? "border-violet-500/40 bg-violet-500/10"
+                    ? "border-[var(--ramp-gold)]/50 bg-[color-mix(in_srgb,var(--ramp-gold)_12%,var(--surface))]"
                     : "border-[var(--border)] bg-[var(--surface)]"
                 }`}
               >
                 <div className="flex flex-wrap items-start gap-2">
-                  <span className="rounded-full bg-black/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-200">
+                  <span className="rounded-full bg-[var(--ramp-gold)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#1a1204]">
                     {KIND_LABEL[item.kind]}
                   </span>
                   <span className="text-[11px] text-[var(--muted)]">{whenLabel(item.createdAt)}</span>
                   {unreadItem ? (
-                    <span className="text-[10px] font-bold uppercase text-amber-300">New</span>
+                    <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--ramp-gold)] px-1.5 text-[10px] font-bold leading-none text-[#1a1204]">
+                      New
+                    </span>
                   ) : null}
                 </div>
                 <p className="mt-2 text-sm font-semibold text-[var(--text)]">{item.title}</p>

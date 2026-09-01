@@ -35,12 +35,15 @@ export default function CoachInboxNavBadge({
 
   if (count <= 0) return null;
 
+  const gold =
+    "bg-[var(--ramp-gold)] text-[#1a1204] shadow-md ring-2";
+
   return (
     <span
       className={
         placement === "corner"
-          ? "absolute -right-1.5 -top-1.5 z-10 flex h-[20px] min-w-[20px] items-center justify-center rounded-full bg-amber-400 px-1 text-[10px] font-bold leading-none text-black shadow-md ring-2 ring-[var(--bg)]"
-          : "inline-flex h-[20px] min-w-[20px] shrink-0 translate-y-[-1px] items-center justify-center rounded-full bg-amber-400 px-1.5 text-[11px] font-bold leading-none text-black shadow-md ring-2 ring-[var(--surface)]"
+          ? `absolute -right-1.5 -top-1.5 z-10 flex h-[20px] min-w-[20px] items-center justify-center rounded-full ${gold} px-1 text-[10px] font-bold leading-none ring-[var(--bg)]`
+          : `inline-flex h-[20px] min-w-[20px] shrink-0 translate-y-[-1px] items-center justify-center rounded-full ${gold} px-1.5 text-[11px] font-bold leading-none ring-[var(--surface)]`
       }
       aria-label={`${count} new alerts`}
     >
