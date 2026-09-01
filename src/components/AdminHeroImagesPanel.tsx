@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type PointerEvent } from "react";
 import { upload } from "@vercel/blob/client";
 import { saveHeroSlidesAction } from "@/app/admin/landing/actions";
 import HeroSlideMedia from "@/components/HeroSlideMedia";
@@ -58,6 +58,24 @@ export default function AdminHeroImagesPanel({
   const [error, setError] = useState<string | null>(null);
   const [durations, setDurations] = useState<Record<string, number>>({});
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const dragIdRef = useRef<string | null>(null);
+  const orderStripRef = useRef<HTMLDivElement | null>(null);
+  const slidesRef = useRef(slides);
+  slidesRef.current = slides;
+  const persistBusyRef = useRef(false);
+  const persistAgainRef = useRef(false);
+  const persistMessageRef = useRef("Hero slides saved — live on the public landing.");
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+
+  function arrayMove(list: HeroSlide[], from: number, to: number): HeroSlide[] {
+    if (from === to || from < 0 || to < 0 || from >= list.length || to >= list.length) {
+      return list;
+    }
+    const next = [...list];
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    return next;
+  }
 
   function updateSlide(id: string, patch: Partial<HeroSlide>) {
     setSlides((prev) =>
@@ -75,16 +93,66 @@ export default function AdminHeroImagesPanel({
     );
   }
 
-  function moveSlide(id: string, dir: -1 | 1) {
-    setSlides((prev) => {
-      const i = prev.findIndex((s) => s.id === id);
-      if (i < 0) return prev;
-      const j = i + dir;
-      if (j < 0 || j >= prev.length) return prev;
-      const next = [...prev];
-      [next[i], next[j]] = [next[j], next[i]];
-      return next;
-    });
+  async function persistSlides(next: HeroSlide[], okMessage: string) {
+    slidesRef.current = next;
+    persistMessageRef.current = okMessage;
+    if (persistBusyRef.current) {
+      persistAgainRef.current = true;
+      return;
+    }
+    persistBusyRef.current = true;
+    setSaving(true);
+    setError(null);
+    try {
+      do {
+        persistAgainRef.current = false;
+        const payload = slidesRef.current.map((s) => ({ ...s }));
+        const result = await saveHeroSlidesAction(payload);
+        if (persistAgainRef.current) continue;
+        if ("error" in result && result.error) {
+          setError(result.error);
+          return;
+        }
+        if ("ok" in result && result.ok && result.storedHeroSlides) {
+          setMessage(persistMessageRef.current);
+          if (!persistAgainRef.current) {
+            const stored = result.storedHeroSlides.map((s) => ({ ...s }));
+            slidesRef.current = stored;
+            setSlides(stored);
+          }
+        }
+      } while (persistAgainRef.current);
+    } catch {
+      setError("Save failed.");
+    } finally {
+      persistBusyRef.current = false;
+      setSaving(false);
+    }
+    if (persistAgainRef.current) {
+      void persistSlides(slidesRef.current, persistMessageRef.current);
+    }
+  }
+
+  function applyOrder(next: HeroSlide[]) {
+    slidesRef.current = next;
+    setSlides(next);
+    void persistSlides(next, "Play order saved — live on the landing.");
+  }
+
+  function moveSlide(id: string, dir: -1 | 1 | "first") {
+    const list = slidesRef.current;
+    const i = list.findIndex((s) => s.id === id);
+    if (i < 0) return;
+    const j = dir === "first" ? 0 : i + dir;
+    if (j < 0 || j >= list.length || j === i) return;
+    applyOrder(arrayMove(list, i, j));
+  }
+
+  function moveSlideTo(id: string, toIndex: number) {
+    const list = slidesRef.current;
+    const i = list.findIndex((s) => s.id === id);
+    if (i < 0) return;
+    applyOrder(arrayMove(list, i, toIndex));
   }
 
   function removeSlide(id: string) {
@@ -189,24 +257,55 @@ export default function AdminHeroImagesPanel({
   }
 
   async function handleSave() {
-    setSaving(true);
-    setError(null);
     setMessage(null);
-    try {
-      const result = await saveHeroSlidesAction(slides);
-      if ("error" in result && result.error) {
-        setError(result.error);
-        return;
+    await persistSlides(slidesRef.current, "Hero slides saved — live on the public landing.");
+  }
+
+  function thumbIndexFromClientX(clientX: number): number | null {
+    const strip = orderStripRef.current;
+    if (!strip) return null;
+    const thumbs = [...strip.querySelectorAll<HTMLElement>("[data-hero-order-id]")];
+    if (!thumbs.length) return null;
+    let best = 0;
+    let bestDist = Infinity;
+    thumbs.forEach((el, idx) => {
+      const r = el.getBoundingClientRect();
+      const mid = r.left + r.width / 2;
+      const dist = Math.abs(clientX - mid);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = idx;
       }
-      if ("ok" in result && result.ok && result.storedHeroSlides) {
-        setSlides(result.storedHeroSlides.map((s) => ({ ...s })));
-        setMessage("Hero slides saved — live on the public landing.");
-      }
-    } catch {
-      setError("Save failed.");
-    } finally {
-      setSaving(false);
-    }
+    });
+    return best;
+  }
+
+  function onOrderPointerDown(id: string, e: PointerEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    dragIdRef.current = id;
+    setDraggingId(id);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function onOrderPointerMove(e: PointerEvent<HTMLButtonElement>) {
+    const id = dragIdRef.current;
+    if (!id) return;
+    const to = thumbIndexFromClientX(e.clientX);
+    if (to == null) return;
+    setSlides((prev) => {
+      const from = prev.findIndex((s) => s.id === id);
+      if (from < 0 || from === to) return prev;
+      const next = arrayMove(prev, from, to);
+      slidesRef.current = next;
+      return next;
+    });
+  }
+
+  function onOrderPointerUp() {
+    if (!dragIdRef.current) return;
+    dragIdRef.current = null;
+    setDraggingId(null);
+    void persistSlides(slidesRef.current, "Play order saved — live on the landing.");
   }
 
   const enabledCount = slides.filter((s) => s.enabled && s.src).length;
@@ -216,7 +315,8 @@ export default function AdminHeroImagesPanel({
       <div>
         <h2 className="text-lg font-semibold">Hero images &amp; videos</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Cold-traffic home carousel. Upload a photo or a phone clip, then use the{" "}
+          Cold-traffic home carousel. Drag the play-order strip (or use Earlier / Later) to change
+          which clip leads — order saves live. Upload a photo or a phone clip, then use the{" "}
           <strong className="text-[var(--text)]">Trim</strong>,{" "}
           <strong className="text-[var(--text)]">Crop</strong>, and{" "}
           <strong className="text-[var(--text)]">Slow motion</strong> levers. Only enabled slides
@@ -227,6 +327,65 @@ export default function AdminHeroImagesPanel({
           {HERO_SLIDE_MAX} · photos {IMAGE_MAX_MB} MB · videos {VIDEO_MAX_MB} MB
         </p>
       </div>
+
+      {slides.length > 1 ? (
+        <div className="space-y-2 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3">
+          <p className="text-sm font-semibold">Play order</p>
+          <p className="text-[11px] text-[var(--muted)]">
+            #1 is the first thing cold traffic sees. Drag a tile, or pick a slot on a card.
+            Reorder saves to the live landing.
+          </p>
+          <div
+            ref={orderStripRef}
+            className="flex gap-2 overflow-x-auto pb-1"
+          >
+            {slides.map((slide, index) => {
+              const videoThumb = slide.kind === "video" || isHeroVideoSrc(slide.src);
+              return (
+                <button
+                  key={slide.id}
+                  type="button"
+                  data-hero-order-id={slide.id}
+                  aria-label={`Slide ${index + 1}${slide.enabled ? "" : " (off)"}. Drag to reorder.`}
+                  className={`relative h-24 w-[4.25rem] shrink-0 overflow-hidden rounded-lg border text-left ${
+                    draggingId === slide.id
+                      ? "border-[#d4af37] ring-2 ring-[#d4af37]/60"
+                      : slide.enabled
+                        ? "border-[var(--border)]"
+                        : "border-dashed border-[var(--border)] opacity-70"
+                  }`}
+                  style={{ touchAction: "none" }}
+                  onPointerDown={(e) => onOrderPointerDown(slide.id, e)}
+                  onPointerMove={onOrderPointerMove}
+                  onPointerUp={onOrderPointerUp}
+                  onPointerCancel={onOrderPointerUp}
+                >
+                  {slide.src && !videoThumb ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={slide.src} alt="" className="h-full w-full object-cover" draggable={false} />
+                  ) : (
+                    <span
+                      className={`flex h-full w-full items-center justify-center px-1 text-center text-[10px] font-semibold ${
+                        videoThumb ? "bg-black text-white" : "bg-[var(--surface-2)] text-[var(--muted)]"
+                      }`}
+                    >
+                      {slide.src ? "Video" : "Empty"}
+                    </span>
+                  )}
+                  <span className="absolute left-1 top-1 rounded-full bg-black/75 px-1.5 text-[10px] font-bold text-white">
+                    {index + 1}
+                  </span>
+                  {!slide.enabled ? (
+                    <span className="absolute inset-x-0 bottom-0 bg-black/70 py-0.5 text-center text-[9px] font-semibold text-white">
+                      Off
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
 
       {uploadProgress ? (
         <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-200">
@@ -283,26 +442,50 @@ export default function AdminHeroImagesPanel({
                       />
                       Enabled on site
                     </label>
-                    <div className="ml-auto flex flex-wrap gap-1">
+                    <div className="ml-auto flex flex-wrap gap-2">
                       <button
                         type="button"
-                        className="btn-ghost px-2 py-1 text-xs"
+                        className="btn-ghost min-h-11 px-3 py-2 text-sm font-semibold"
                         disabled={index === 0}
                         onClick={() => moveSlide(slide.id, -1)}
                       >
-                        ↑ Up
+                        ← Earlier
                       </button>
                       <button
                         type="button"
-                        className="btn-ghost px-2 py-1 text-xs"
+                        className="btn-ghost min-h-11 px-3 py-2 text-sm font-semibold"
                         disabled={index === slides.length - 1}
                         onClick={() => moveSlide(slide.id, 1)}
                       >
-                        ↓ Down
+                        Later →
                       </button>
+                      {index > 0 ? (
+                        <button
+                          type="button"
+                          className="btn-ghost min-h-11 px-3 py-2 text-sm font-semibold"
+                          onClick={() => moveSlide(slide.id, "first")}
+                        >
+                          Play first
+                        </button>
+                      ) : null}
+                      <label className="flex min-h-11 items-center gap-2 rounded-lg border border-[var(--border)] px-3 text-sm">
+                        Play as
+                        <select
+                          className="bg-transparent font-semibold"
+                          value={index}
+                          onChange={(e) => moveSlideTo(slide.id, Number(e.target.value))}
+                          aria-label={`Play slide as position`}
+                        >
+                          {slides.map((_, i) => (
+                            <option key={i} value={i}>
+                              #{i + 1}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                       <button
                         type="button"
-                        className="btn-ghost px-2 py-1 text-xs text-rose-300"
+                        className="btn-ghost min-h-11 px-3 py-2 text-sm font-semibold text-rose-300"
                         onClick={() => removeSlide(slide.id)}
                       >
                         Remove
