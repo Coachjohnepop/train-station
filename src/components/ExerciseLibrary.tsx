@@ -8,6 +8,7 @@ import { isNewlyAddedFromTextUpload } from "@/lib/text-upload-exercises";
 import { hintVideoUrlForExerciseName } from "@/lib/exercise-video-hints";
 import { isYoutubeUrl, normalizeYoutubeWatchUrl } from "@/lib/youtube";
 import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
+import PencilButton from "@/components/PencilButton";
 
 type Exercise = {
   id: string;
@@ -262,18 +263,15 @@ function ExerciseNameCell({
 
   if (!editing) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         <span className="font-medium">{exercise.name}</span>
-        <button
-          type="button"
-          className="text-xs text-[var(--muted)] hover:text-[var(--text)]"
+        <PencilButton
+          label={`Rename ${exercise.name}`}
           onClick={() => {
             setDraft(exercise.name);
             setEditing(true);
           }}
-        >
-          Edit
-        </button>
+        />
       </div>
     );
   }
@@ -625,6 +623,35 @@ export default function ExerciseLibrary() {
     await load();
   }
 
+  async function deleteExercise(id: string, exerciseName: string) {
+    const u = usages[id];
+    const usageNote =
+      u && u.workoutCount > 0
+        ? ` Used in ${u.programCount} program${u.programCount === 1 ? "" : "s"} / ${u.workoutCount} workout${u.workoutCount === 1 ? "" : "s"} — it will be removed from those workouts.`
+        : "";
+    if (
+      !confirm(
+        `Delete “${exerciseName}” from the library?${usageNote}\n\nThis cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    const res = await fetch(`/api/exercises/${id}?hard=1&force=1`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(
+        formatApiError((body as { detail?: unknown }).detail) ||
+          "Delete failed — try again.",
+      );
+      return;
+    }
+    if (editingExercise?.id === id) closeEdit();
+    setMessage(`Deleted “${exerciseName}”.`);
+    await load();
+  }
+
   function startEdit(ex: Exercise) {
     setEditingExercise(ex);
     setEditDraft({
@@ -741,8 +768,8 @@ export default function ExerciseLibrary() {
           <p className="font-medium text-[var(--text)]">How exercise edits are saved</p>
           <p className="mt-1">{persistenceStatus.message}</p>
           <p className="mt-2 text-xs text-[var(--muted)]">
-            Archive hides an exercise from pickers but keeps it on existing workouts. Permanent
-            delete is only from the archive shelf. For a permanent live snapshot, use{" "}
+            Archive hides an exercise from pickers but keeps it on existing workouts. Delete
+            removes it from the library and any workouts that use it. For a permanent live snapshot, use{" "}
             <strong>Export seed snapshot</strong> on Programs (or{" "}
             <code className="rounded bg-[var(--surface)] px-1">npm run db:export-seed</code>) and commit{" "}
             <code className="rounded bg-[var(--surface)] px-1">prisma/seed-data.json</code>.
@@ -988,7 +1015,8 @@ export default function ExerciseLibrary() {
             No exercises yet — add one above.
           </p>
         ) : filteredExercises.length > 0 && (
-          <table className="data mt-4">
+          <div className="table-wrap mt-4">
+          <table className="data table-sticky-actions">
             <thead>
               <tr>
                 <th>Name</th>
@@ -1080,28 +1108,39 @@ export default function ExerciseLibrary() {
                         <span className="text-[var(--muted)] text-[10px]">Not in any programs</span>
                       )}
                     </td>
-                    <td className="align-top flex gap-2">
-                      <button
-                        type="button"
-                        className="text-sm text-accent"
-                        onClick={() => startEdit(ex)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="text-sm text-[var(--danger)]"
-                        onClick={() => void archiveExercise(ex.id, ex.name)}
-                        title="Hide from pickers — existing workouts keep this exercise"
-                      >
-                        Archive
-                      </button>
+                    <td className="align-top">
+                      <div className="flex flex-col items-start gap-1 sm:flex-row sm:flex-wrap sm:gap-2">
+                        <button
+                          type="button"
+                          className="text-sm text-accent"
+                          onClick={() => startEdit(ex)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="text-sm text-[var(--muted)] hover:text-[var(--text)]"
+                          onClick={() => void archiveExercise(ex.id, ex.name)}
+                          title="Hide from pickers — existing workouts keep this exercise"
+                        >
+                          Archive
+                        </button>
+                        <button
+                          type="button"
+                          className="text-sm text-[var(--danger)]"
+                          onClick={() => void deleteExercise(ex.id, ex.name)}
+                          title="Permanently remove from the library and any workouts that use it"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
@@ -1118,8 +1157,8 @@ export default function ExerciseLibrary() {
           </button>
         </div>
         <p className="text-xs text-[var(--muted)]">
-          Archive = hide from workout pickers (past workouts still show the name). Permanent
-          delete only from this shelf — and only if you are sure.
+          Archive = hide from workout pickers (past workouts still show the name). Restore anytime
+          here. Delete on a live row removes it from the library and any workouts that use it.
         </p>
         {showArchiveShelf && (
           <ul className="max-h-64 space-y-1 overflow-y-auto text-sm">
@@ -1270,12 +1309,21 @@ export default function ExerciseLibrary() {
                 </p>
               )}
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-wrap gap-2 pt-2">
                 <button type="button" onClick={closeEdit} className="btn-ghost flex-1">
                   Cancel
                 </button>
                 <button type="submit" className="btn-primary flex-1">
                   Save changes
+                </button>
+                <button
+                  type="button"
+                  className="w-full text-sm text-[var(--danger)] underline"
+                  onClick={() =>
+                    void deleteExercise(editingExercise.id, editingExercise.name)
+                  }
+                >
+                  Delete exercise
                 </button>
               </div>
             </form>

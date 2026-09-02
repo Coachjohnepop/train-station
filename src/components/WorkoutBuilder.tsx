@@ -18,6 +18,7 @@ import {
 } from "@/lib/workout-schemes";
 import { notesMarkWarmup, withWarmupBlockNote } from "@/lib/warmup-group";
 import { isStandardWarmupWorkoutId } from "@/lib/warmup-template";
+import PencilButton from "@/components/PencilButton";
 
 type Exercise = {
   id: string;
@@ -83,6 +84,9 @@ export default function WorkoutBuilder({
   const [addAsWarmup, setAddAsWarmup] = useState(() =>
     isStandardWarmupWorkoutId(workoutId),
   );
+  const [renamingItemId, setRenamingItemId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [savingRename, setSavingRename] = useState(false);
   const nameSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
@@ -250,6 +254,59 @@ export default function WorkoutBuilder({
     setSaveMessage(
       item ? `Removed “${item.exercise.name}”.` : "Exercise removed.",
     );
+  }
+
+  function applyRenamedExercise(exerciseId: string, name: string) {
+    setWorkout((prev) =>
+      prev
+        ? {
+            ...prev,
+            exercises: prev.exercises.map((row) =>
+              row.exercise.id === exerciseId
+                ? { ...row, exercise: { ...row.exercise, name } }
+                : row,
+            ),
+          }
+        : prev,
+    );
+    setLibrary((prev) =>
+      prev.map((ex) => (ex.id === exerciseId ? { ...ex, name } : ex)),
+    );
+  }
+
+  async function saveExerciseRename(item: WorkoutItem) {
+    const trimmed = renameDraft.trim();
+    if (!trimmed || trimmed === item.exercise.name) {
+      setRenamingItemId(null);
+      return;
+    }
+    setSavingRename(true);
+    setSaveError(null);
+    setSaveMessage(null);
+    try {
+      const res = await fetch(`/api/exercises/${item.exercise.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as {
+          detail?: unknown;
+        } | null;
+        setSaveError(
+          formatApiErrorDetail(body?.detail) ||
+            "Could not rename exercise — try again.",
+        );
+        return;
+      }
+      applyRenamedExercise(item.exercise.id, trimmed);
+      setRenamingItemId(null);
+      setSaveMessage(
+        `Renamed to “${trimmed}” — this name updates everywhere the movement is used.`,
+      );
+    } finally {
+      setSavingRename(false);
+    }
   }
 
   const saveWorkoutName = useCallback(async (name: string) => {
@@ -487,7 +544,56 @@ export default function WorkoutBuilder({
             <div className="min-w-0 flex-1">
               <p className="font-medium">
                 <span className="mr-2 text-xs text-[var(--muted)]">{index + 1}.</span>
-                {item.exercise.name}
+                {renamingItemId === item.id ? (
+                  <span className="inline-flex max-w-full flex-wrap items-center gap-1.5 align-middle">
+                    <input
+                      className="input h-8 min-w-[10rem] flex-1 py-0 text-sm font-medium"
+                      value={renameDraft}
+                      autoFocus
+                      aria-label={`Rename ${item.exercise.name}`}
+                      disabled={savingRename}
+                      onChange={(e) => setRenameDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void saveExerciseRename(item);
+                        }
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          setRenamingItemId(null);
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn-primary px-2 py-1 text-xs"
+                      disabled={savingRename}
+                      onClick={() => void saveExerciseRename(item)}
+                    >
+                      {savingRename ? "Saving…" : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost px-2 py-1 text-xs"
+                      disabled={savingRename}
+                      onClick={() => setRenamingItemId(null)}
+                    >
+                      Cancel
+                    </button>
+                  </span>
+                ) : (
+                  <span className="inline-flex max-w-full items-center gap-1 align-middle">
+                    <span className="min-w-0 truncate">{item.exercise.name}</span>
+                    <PencilButton
+                      label={`Rename ${item.exercise.name} in the library`}
+                      onClick={() => {
+                        setRenamingItemId(item.id);
+                        setRenameDraft(item.exercise.name);
+                        setSaveError(null);
+                      }}
+                    />
+                  </span>
+                )}
                 {notesMarkWarmup(item.notes || "") ? (
                   <span className="ml-2 rounded-full bg-[color-mix(in_srgb,var(--ramp-gold)_22%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--ramp-gold-light)]">
                     Warm-up

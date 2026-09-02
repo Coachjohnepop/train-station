@@ -64,6 +64,8 @@ import ProgramContentReadinessBanner from "@/components/ProgramContentReadinessB
 import ProgramTemplatePastePanel from "@/components/ProgramTemplatePastePanel";
 import TextUploadPanel from "@/components/TextUploadPanel";
 import type { CoachContentAlert } from "@/lib/coach-content-alerts";
+import PencilButton from "@/components/PencilButton";
+import { formatApiErrorDetail } from "@/lib/api-errors";
 
 type WorkoutOption = { id: string; name: string };
 
@@ -312,6 +314,9 @@ export default function ProgramCalendarBuilder({
   const [importSourceWeek, setImportSourceWeek] = useState(1);
   const [importSourceMaxWeek, setImportSourceMaxWeek] = useState(22);
   const [importBusy, setImportBusy] = useState(false);
+  const [renamingExerciseId, setRenamingExerciseId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [savingRename, setSavingRename] = useState(false);
 
   useEffect(() => {
     try {
@@ -2625,6 +2630,59 @@ export default function ProgramCalendarBuilder({
     await moveSlot(idx, positions[targetPos]!);
   }
 
+  function applyRenamedExercise(
+    exerciseId: string,
+    previousName: string,
+    name: string,
+  ) {
+    setSlots((prev) =>
+      prev.map((slot) =>
+        slot && slot.exerciseId === exerciseId ? { ...slot, name } : slot,
+      ),
+    );
+    setLibrary((prev) =>
+      prev.map((ex) => (ex.id === exerciseId ? { ...ex, name } : ex)),
+    );
+    setWorkoutPreviews((prev) => {
+      const next: Record<string, string[]> = {};
+      for (const [id, names] of Object.entries(prev)) {
+        next[id] = names.map((n) => (n === previousName ? name : n));
+      }
+      return next;
+    });
+  }
+
+  async function saveExerciseRename(exerciseId: string, currentName: string) {
+    const trimmed = renameDraft.trim();
+    if (!trimmed || trimmed === currentName) {
+      setRenamingExerciseId(null);
+      return;
+    }
+    setSavingRename(true);
+    try {
+      const res = await fetch(`/api/exercises/${exerciseId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setMessage(
+          formatApiErrorDetail((body as { detail?: unknown }).detail) ||
+            "Could not rename exercise — try again.",
+        );
+        setTimeout(() => setMessage(null), 3000);
+        return;
+      }
+      applyRenamedExercise(exerciseId, currentName, trimmed);
+      setRenamingExerciseId(null);
+      setMessage(`Renamed to “${trimmed}” — this name updates everywhere.`);
+      setTimeout(() => setMessage(null), 2500);
+    } finally {
+      setSavingRename(false);
+    }
+  }
+
   function renderExerciseSlot(idx: number) {
     const slot = slots[idx];
     const isSelected = selectedSlotIdx === idx;
@@ -2734,15 +2792,57 @@ export default function ProgramCalendarBuilder({
             />
             {/* Not a <button> — nested inputs inside buttons break typing (Safari / Jeremy notes). */}
             <div className="min-w-0 flex-1 space-y-1">
-              <button
-                type="button"
-                className="block w-full truncate text-left text-xs font-medium hover:text-accent"
-                onClick={() => selectSlot(idx, slots, prescription)}
-              >
-                <span className={/unknown/i.test(slot.name) ? "text-amber-300" : ""}>
-                  {slot.name}
-                </span>
-              </button>
+              {renamingExerciseId === slot.exerciseId ? (
+                <div className="flex min-w-0 items-center gap-1">
+                  <input
+                    className="input h-6 min-w-0 flex-1 px-1 text-xs font-medium"
+                    value={renameDraft}
+                    autoFocus
+                    aria-label={`Rename ${slot.name}`}
+                    disabled={savingRename || saving}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => setRenameDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void saveExerciseRename(slot.exerciseId, slot.name);
+                      }
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        setRenamingExerciseId(null);
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn-primary h-6 px-1.5 text-[10px]"
+                    disabled={savingRename || saving}
+                    onClick={() => void saveExerciseRename(slot.exerciseId, slot.name)}
+                  >
+                    {savingRename ? "…" : "Save"}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex min-w-0 items-center gap-0.5">
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 truncate text-left text-xs font-medium hover:text-accent"
+                    onClick={() => selectSlot(idx, slots, prescription)}
+                  >
+                    <span className={/unknown/i.test(slot.name) ? "text-amber-300" : ""}>
+                      {slot.name}
+                    </span>
+                  </button>
+                  <PencilButton
+                    label={`Rename ${slot.name} in the library`}
+                    disabled={saving}
+                    onClick={() => {
+                      setRenamingExerciseId(slot.exerciseId);
+                      setRenameDraft(slot.name);
+                    }}
+                  />
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-1 text-[10px]">
                 {isSelected ? (
                   <>

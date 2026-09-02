@@ -424,6 +424,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-02 (coach pencil + exercise Delete)
+
+**Status:** Workout module (Admin → Workouts and program day editor) has a **pencil** next to each exercise name so coaches can rename the movement in the library without leaving the workout. Admin → Exercises has **Delete** back on each row (and in the edit modal). Archive still hides without removing from workouts. Delete permanently removes it (confirm first). Actions column sticks on phone so Delete is not off-screen.
+
 **Date:** 2026-09-02 (timed set Start)
 
 **Status:** Timed exercises (bike 5 min, holds, etc.) now show **Start** instead of **Mark** on the member Today console and the coach floor checkoff. After the hold it still flips to **Done**. HIT intervals still say **Go**. Regular sets still say **Set**. Coach “Mark done for member” is unchanged.

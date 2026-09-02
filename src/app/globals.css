@@ -783,6 +783,17 @@ table.data th {
   letter-spacing: 0.04em;
 }
 
+/* Keep row actions on screen when the table scrolls sideways on phone. */
+table.data.table-sticky-actions th:last-child,
+table.data.table-sticky-actions td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: var(--surface);
+  box-shadow: -6px 0 8px -6px color-mix(in srgb, var(--text) 18%, transparent);
+  white-space: nowrap;
+}
+
 .tag {
   display: inline-block;
   padding: 0.15rem 0.5rem;
