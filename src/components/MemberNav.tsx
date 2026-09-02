@@ -10,6 +10,7 @@ import { memberCheckoutPath } from "@/lib/member-route-gates";
 import type { SignupPlan } from "@/lib/signup-plans";
 import {
   applyMemberTextScale,
+  MEMBER_TEXT_SCALE_CHOICES,
   readMemberTextScale,
   type MemberTextScale,
 } from "@/lib/member-text-scale";
@@ -319,17 +320,12 @@ export default function MemberNav({
             onPointerDown={(e) => e.stopPropagation()}
           >
             <span className="member-text-scale__label">Text</span>
-            {(
-              [
-                ["sm", "A−", "Smaller text"],
-                ["md", "A", "Default text"],
-                ["lg", "A+", "Larger text"],
-              ] as const
-            ).map(([id, label, title]) => (
+            {MEMBER_TEXT_SCALE_CHOICES.map(({ id, label, title }) => (
               <button
                 key={id}
                 type="button"
                 title={title}
+                data-scale={id}
                 aria-pressed={textScale === id}
                 className={`member-text-scale__btn ${
                   textScale === id ? "member-text-scale__btn--on" : ""

@@ -1,11 +1,29 @@
 /** In-app member text size. Survives reloads. Does not fight iOS Settings. */
 
 export const MEMBER_TEXT_SCALE_KEY = "ts-member-text-scale";
-export const MEMBER_TEXT_SCALES = ["sm", "md", "lg"] as const;
+export const MEMBER_TEXT_SCALES = ["xs", "sm", "md", "lg", "xl"] as const;
 export type MemberTextScale = (typeof MEMBER_TEXT_SCALES)[number];
 
+export const MEMBER_TEXT_SCALE_CHOICES: ReadonlyArray<{
+  id: MemberTextScale;
+  label: string;
+  title: string;
+}> = [
+  { id: "xs", label: "A−−", title: "Smallest text" },
+  { id: "sm", label: "A−", title: "Smaller text" },
+  { id: "md", label: "A", title: "Default text" },
+  { id: "lg", label: "A+", title: "Larger text" },
+  { id: "xl", label: "A++", title: "Largest text" },
+];
+
 export function isMemberTextScale(value: unknown): value is MemberTextScale {
-  return value === "sm" || value === "md" || value === "lg";
+  return (
+    value === "xs" ||
+    value === "sm" ||
+    value === "md" ||
+    value === "lg" ||
+    value === "xl"
+  );
 }
 
 export function readMemberTextScale(): MemberTextScale {
@@ -20,9 +38,11 @@ export function readMemberTextScale(): MemberTextScale {
 }
 
 const HTML_FONT_PX: Record<MemberTextScale, string> = {
+  xs: "12px",
   sm: "14px",
   md: "16px",
   lg: "20px",
+  xl: "24px",
 };
 
 export function applyMemberTextScale(scale: MemberTextScale): void {

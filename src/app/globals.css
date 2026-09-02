@@ -325,6 +325,10 @@ body {
 }
 
 /* Tailwind text-* is rem off <html>, not inherited from .member-app. */
+html[data-ts-text-scale="xs"] {
+  font-size: 12px;
+}
+
 html[data-ts-text-scale="sm"] {
   font-size: 14px;
 }
@@ -335,6 +339,10 @@ html[data-ts-text-scale="md"] {
 
 html[data-ts-text-scale="lg"] {
   font-size: 20px;
+}
+
+html[data-ts-text-scale="xl"] {
+  font-size: 24px;
 }
 
 /* Deep purple canvas — member, admin, and marketing home */
@@ -2172,22 +2180,25 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 .member-text-scale {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  flex-wrap: wrap;
+  gap: 0.28rem;
   padding: 0.35rem 0.5rem 0.55rem;
   border-bottom: 1px solid var(--border);
   margin-bottom: 0.2rem;
 }
 
 .member-text-scale__label {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 2.5rem;
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--muted);
 }
 
 .member-text-scale__btn {
-  min-width: 2.4rem;
+  min-width: 2.05rem;
   min-height: 2.2rem;
+  padding: 0 0.2rem;
   border-radius: 0.55rem;
   border: 1px solid var(--border);
   background: var(--surface-2);
@@ -2196,16 +2207,24 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   line-height: 1;
 }
 
-.member-text-scale__btn:nth-child(2) {
+.member-text-scale__btn[data-scale="xs"] {
+  font-size: 0.65rem;
+}
+
+.member-text-scale__btn[data-scale="sm"] {
   font-size: 0.8rem;
 }
 
-.member-text-scale__btn:nth-child(3) {
+.member-text-scale__btn[data-scale="md"] {
   font-size: 0.95rem;
 }
 
-.member-text-scale__btn:nth-child(4) {
+.member-text-scale__btn[data-scale="lg"] {
   font-size: 1.15rem;
+}
+
+.member-text-scale__btn[data-scale="xl"] {
+  font-size: 1.35rem;
 }
 
 .member-text-scale__btn--on {
