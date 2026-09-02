@@ -424,6 +424,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-02 (Zoom Rejoin vs iOS clock)
+
+**Status:** After Join, members no longer get a second floating Rejoin/Live/X chip. That chip was `position:fixed` inside sticky chrome (`backdrop-filter`), so iOS pinned it to the header and it sat on the clock. Sticky header **Rejoin** is the one control and stays below the status bar.
+
 **Date:** 2026-09-02 (coach pencil + exercise Delete)
 
 **Status:** Workout module (Admin → Workouts and program day editor) has a **pencil** next to each exercise name so coaches can rename the movement in the library without leaving the workout. Admin → Exercises has **Delete** back on each row (and in the edit modal). Archive still hides without removing from workouts. Delete permanently removes it (confirm first). Actions column sticks on phone so Delete is not off-screen.

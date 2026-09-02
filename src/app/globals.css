@@ -2423,8 +2423,7 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
     top: calc(100% + 0.2rem);
   }
 
-  .member-app .member-live-strip,
-  .member-app .member-zoom-float-chip {
+  .member-app .member-live-strip {
     display: none;
   }
 
