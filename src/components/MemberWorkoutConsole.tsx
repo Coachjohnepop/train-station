@@ -2438,6 +2438,7 @@ export default function MemberWorkoutConsole({
                           type="button"
                           data-coach-last-set={block.id}
                           aria-pressed={allSetsDone}
+                          aria-label={allSetsDone ? "Timed set done" : "Start timed set"}
                           className={`coach-floor-set-btn ${allSetsDone ? "coach-floor-set-btn--done" : ""}`}
                           onClick={(e) => toggleSet(block.id, 1, e.currentTarget)}
                         >
@@ -2445,7 +2446,7 @@ export default function MemberWorkoutConsole({
                             {allSetsDone ? "✓" : "▶"}
                           </span>
                           <span className="coach-floor-set-btn__label">
-                            {allSetsDone ? "Done" : "Mark"}
+                            {allSetsDone ? "Done" : "Start"}
                           </span>
                         </button>
                       </div>
@@ -2962,6 +2963,7 @@ export default function MemberWorkoutConsole({
                           <button
                             type="button"
                             aria-pressed={allSetsDone}
+                            aria-label={allSetsDone ? "Timed set done" : "Start timed set"}
                             className={`member-set-btn text-xs py-0.5 ${allSetsDone ? "member-set-btn--done" : ""}`}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -2973,7 +2975,7 @@ export default function MemberWorkoutConsole({
                               {allSetsDone ? "✓" : "▶"}
                             </span>
                             <span className="member-set-btn__label">
-                              {allSetsDone ? "Done" : "Mark"}
+                              {allSetsDone ? "Done" : "Start"}
                             </span>
                           </button>
                         </div>
@@ -2984,7 +2986,7 @@ export default function MemberWorkoutConsole({
                           return (
                             <p className="member-exercise-spec__rest mt-1 text-xs text-[color-mix(in_srgb,var(--text)_78%,var(--muted))]">
                               Green hold {holdSec >= 60 ? `${Math.round(holdSec / 60)} min` : `${holdSec}s`}
-                              {restS ? ` → rest ${restS}s` : ""} · uncheck stays off until you re-mark
+                              {restS ? ` → rest ${restS}s` : ""} · uncheck stays off until you tap Start again
                             </p>
                           );
                         })()}

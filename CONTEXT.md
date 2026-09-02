@@ -424,6 +424,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-02 (timed set Start)
+
+**Status:** Timed exercises (bike 5 min, holds, etc.) now show **Start** instead of **Mark** on the member Today console and the coach floor checkoff. After the hold it still flips to **Done**. HIT intervals still say **Go**. Regular sets still say **Set**. Coach “Mark done for member” is unchanged.
+
 **Date:** 2026-09-01 (Jeremy class landed on tomorrow)
 
 **Status:** Jeremy pasted a class Mon 7:57pm on **Admin → Assign**. UTC date chips saved it as **2026-09-02**, so Tue 9/1 Today was empty. Ali/John were on personal Home days; Stephanie has **no Adult enrollment** (class-only). Roster was Steph + Lemon John + Coach Ed — **Ali omitted**.
