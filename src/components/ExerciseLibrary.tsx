@@ -6,7 +6,7 @@ import { formatApiError } from "@/lib/api-errors";
 import TextUploadPanel from "@/components/TextUploadPanel";
 import { isNewlyAddedFromTextUpload } from "@/lib/text-upload-exercises";
 import { hintVideoUrlForExerciseName } from "@/lib/exercise-video-hints";
-import { isYoutubeUrl, normalizeYoutubeWatchUrl } from "@/lib/youtube";
+import { isYoutubeUrl, normalizeYoutubeWatchUrl, youtubeVideoId } from "@/lib/youtube";
 import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
 import PencilButton from "@/components/PencilButton";
 
@@ -141,18 +141,21 @@ function ExerciseVideoCell({
 
   if (exercise.videoUrl && !editing) {
     const yt = isYoutubeUrl(exercise.videoUrl);
+    const thumbId = yt ? youtubeVideoId(exercise.videoUrl) : null;
     const label = yt
       ? exercise.videoUrl.replace(/^https?:\/\/(www\.)?/, "")
       : "Video link";
     return (
       <div className="space-y-2">
-        {yt ? (
+        {thumbId ? (
           <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-black">
-            <YoutubeAutoplayFrame
-              className="aspect-video w-full max-h-40"
-              videoUrl={exercise.videoUrl}
-              title={exercise.name}
-              autoplay={false}
+            {/* Static poster only — a YouTube iframe per library row OOMs iPhone Safari. */}
+            <img
+              src={`https://i.ytimg.com/vi/${thumbId}/mqdefault.jpg`}
+              alt=""
+              className="aspect-video w-full max-h-40 object-cover"
+              loading="lazy"
+              decoding="async"
             />
           </div>
         ) : (

@@ -424,6 +424,12 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-03 (Jeremy phone: Admin → Exercises froze)
+
+**Status:** Jeremy’s iPhone (Safari 18.7.5) hit landing → PIN → `/admin/day` at 7:16 PT, then again at 7:30, then `/admin/exercises` at 7:31 and went silent. Prod itself was up (no 5xx). Members (Todd, Holly, Grant) were fine on iPhone. Library has **299 live exercises / 144 with YouTube URLs**; the table mounted a YouTube iframe in every video cell, which OOMs iPhone Safari. List now uses a static thumbnail; the Edit modal still plays the embed. **No CoachTodaySession for 2026-09-03** (Thu) — Sep 1 and Sep 2 class rows only.
+
+**When back:** Hard-refresh Admin → Exercises on the phone. Scroll the library — it must stay usable. Tap Edit on a row to watch the demo. Do not re-introduce iframes in the table.
+
 **Date:** 2026-09-02 (Zoom Rejoin vs iOS clock)
 
 **Status:** After Join, members no longer get a second floating Rejoin/Live/X chip. That chip was `position:fixed` inside sticky chrome (`backdrop-filter`), so iOS pinned it to the header and it sat on the clock. Sticky header **Rejoin** is the one control and stays below the status bar.
