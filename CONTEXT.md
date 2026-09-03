@@ -424,6 +424,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-03 (Jeremy phone follow-up)
+
+**Status:** After the iframe fix he used Exercises on iPhone (Edit/Save/Add/Delete ~10:30–10:57 PT) but still PIN-logged in from landing, and the library was still too heavy: 299 rows, empty video cells opened a URL box on every row, Sign out sat in the phone header next to Alerts. Library now pages 40 at a time, video cells stay closed until Add/Change, no YouTube/ytimg in the table (Edit modal still plays). Sign out moved into the menu. Prod session cookies use `.thetrainstation.co` so www and apex share login. **Still no CoachTodaySession for Thu 2026-09-03** — do not invent a class.
+
 **Date:** 2026-09-03 (Jeremy phone: Admin → Exercises froze)
 
 **Status:** Jeremy’s iPhone (Safari 18.7.5) hit landing → PIN → `/admin/day` at 7:16 PT, then again at 7:30, then `/admin/exercises` at 7:31 and went silent. Prod itself was up (no 5xx). Members (Todd, Holly, Grant) were fine on iPhone. Library has **299 live exercises / 144 with YouTube URLs**; the table mounted a YouTube iframe in every video cell, which OOMs iPhone Safari. List now uses a static thumbnail; the Edit modal still plays the embed. **No CoachTodaySession for 2026-09-03** (Thu) — Sep 1 and Sep 2 class rows only.

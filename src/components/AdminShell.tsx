@@ -231,7 +231,6 @@ export default function AdminShell({
               >
                 Today
               </Link>
-              <LogoutButton compact className="shrink-0" />
             </div>
           </div>
         </header>
@@ -274,6 +273,9 @@ export default function AdminShell({
                   onNavClick={closeDrawer}
                   preferDashboardStorageKey="ts-admin-prefer-dashboard"
                 />
+                <div className="mt-4 border-t border-[var(--border)] pt-3">
+                  <LogoutButton className="w-full justify-center" />
+                </div>
               </div>
             </aside>
           </div>
@@ -339,7 +341,6 @@ export default function AdminShell({
               Alerts
               <CoachInboxNavBadge placement="corner" />
             </Link>
-            <LogoutButton compact />
           </div>
         </div>
       </header>
@@ -386,6 +387,9 @@ export default function AdminShell({
                 onNavClick={closeDrawer}
                 preferDashboardStorageKey="ts-admin-prefer-dashboard"
               />
+              <div className="mt-4 border-t border-[var(--border)] pt-3">
+                <LogoutButton className="w-full justify-center" />
+              </div>
             </div>
           </aside>
         </div>

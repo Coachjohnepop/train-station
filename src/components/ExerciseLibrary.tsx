@@ -6,7 +6,7 @@ import { formatApiError } from "@/lib/api-errors";
 import TextUploadPanel from "@/components/TextUploadPanel";
 import { isNewlyAddedFromTextUpload } from "@/lib/text-upload-exercises";
 import { hintVideoUrlForExerciseName } from "@/lib/exercise-video-hints";
-import { isYoutubeUrl, normalizeYoutubeWatchUrl, youtubeVideoId } from "@/lib/youtube";
+import { isYoutubeUrl, normalizeYoutubeWatchUrl } from "@/lib/youtube";
 import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
 import PencilButton from "@/components/PencilButton";
 
@@ -99,13 +99,13 @@ function ExerciseVideoCell({
   onSaved: (updated: Exercise) => void;
 }) {
   const [draft, setDraft] = useState(exercise.videoUrl ?? "");
-  const [editing, setEditing] = useState(!exercise.videoUrl);
+  const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [cellError, setCellError] = useState<string | null>(null);
 
   useEffect(() => {
     setDraft(exercise.videoUrl ?? "");
-    if (!exercise.videoUrl) setEditing(true);
+    setEditing(false);
   }, [exercise.videoUrl]);
 
   async function save() {
@@ -139,29 +139,13 @@ function ExerciseVideoCell({
     onSaved(updated);
   }
 
-  if (exercise.videoUrl && !editing) {
-    const yt = isYoutubeUrl(exercise.videoUrl);
-    const thumbId = yt ? youtubeVideoId(exercise.videoUrl) : null;
-    const label = yt
-      ? exercise.videoUrl.replace(/^https?:\/\/(www\.)?/, "")
-      : "Video link";
+  if (!editing) {
     return (
-      <div className="space-y-2">
-        {thumbId ? (
-          <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-black">
-            {/* Static poster only — a YouTube iframe per library row OOMs iPhone Safari. */}
-            <img
-              src={`https://i.ytimg.com/vi/${thumbId}/mqdefault.jpg`}
-              alt=""
-              className="aspect-video w-full max-h-40 object-cover"
-              loading="lazy"
-              decoding="async"
-            />
-          </div>
+      <div className="space-y-1">
+        {exercise.videoUrl ? (
+          <p className="text-xs font-medium text-accent">Video on file</p>
         ) : (
-          <p className="break-all text-sm text-[var(--muted)]" title={exercise.videoUrl}>
-            {label}
-          </p>
+          <p className="text-xs text-[var(--muted)]">No video</p>
         )}
         <button
           type="button"
@@ -169,9 +153,10 @@ function ExerciseVideoCell({
           onClick={() => {
             setDraft(exercise.videoUrl ?? "");
             setEditing(true);
+            setCellError(null);
           }}
         >
-          Change
+          {exercise.videoUrl ? "Change" : "Add video"}
         </button>
       </div>
     );
@@ -197,19 +182,17 @@ function ExerciseVideoCell({
           {saving ? "Saving…" : exercise.videoUrl ? "Update" : "Add"}
         </button>
       </div>
-      {exercise.videoUrl && (
-        <button
-          type="button"
-          className="text-xs text-[var(--muted)] hover:text-[var(--text)]"
-          onClick={() => {
-            setDraft(exercise.videoUrl ?? "");
-            setEditing(false);
-            setCellError(null);
-          }}
-        >
-          Cancel
-        </button>
-      )}
+      <button
+        type="button"
+        className="text-xs text-[var(--muted)] hover:text-[var(--text)]"
+        onClick={() => {
+          setDraft(exercise.videoUrl ?? "");
+          setEditing(false);
+          setCellError(null);
+        }}
+      >
+        Cancel
+      </button>
       {!exercise.videoUrl && (
         <SuggestedVideoHint
           name={exercise.name}
@@ -374,6 +357,8 @@ export default function ExerciseLibrary() {
   const [libraryTab, setLibraryTab] = useState<LibraryTab>(
     searchParams.get("tab") === "newly-added" ? "newly-added" : "all",
   );
+  const LIBRARY_PAGE_SIZE = 40;
+  const [libraryPage, setLibraryPage] = useState(1);
   const [persistenceStatus, setPersistenceStatus] = useState<PersistenceStatus | null>(null);
 
   const COMMON_CATEGORIES = ["Back", "Chest", "Legs", "Shoulders", "Arms", "Core", "Full Body", "Mobility", "Cardio"];
@@ -459,6 +444,20 @@ export default function ExerciseLibrary() {
         exTags.some((t) => t.includes(cat.toLowerCase()))
       );
     });
+
+  useEffect(() => {
+    setLibraryPage(1);
+  }, [search, libraryTab, selectedCategories]);
+
+  const libraryPageCount = Math.max(
+    1,
+    Math.ceil(filteredExercises.length / LIBRARY_PAGE_SIZE),
+  );
+  const safeLibraryPage = Math.min(libraryPage, libraryPageCount);
+  const pagedExercises = filteredExercises.slice(
+    (safeLibraryPage - 1) * LIBRARY_PAGE_SIZE,
+    safeLibraryPage * LIBRARY_PAGE_SIZE,
+  );
 
   async function openUsage(ex: Exercise) {
     setSelectedExercise(ex);
@@ -1031,7 +1030,7 @@ export default function ExerciseLibrary() {
               </tr>
             </thead>
             <tbody>
-              {filteredExercises.map((ex) => {
+              {pagedExercises.map((ex) => {
                 const u = usages[ex.id];
                 const tagList = (ex.tags || "").split(/[\s,]+/).filter(Boolean);
                 return (
@@ -1143,6 +1142,33 @@ export default function ExerciseLibrary() {
               })}
             </tbody>
           </table>
+          {filteredExercises.length > LIBRARY_PAGE_SIZE ? (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+              <p className="text-[var(--muted)]">
+                {(safeLibraryPage - 1) * LIBRARY_PAGE_SIZE + 1}–
+                {Math.min(safeLibraryPage * LIBRARY_PAGE_SIZE, filteredExercises.length)}{" "}
+                of {filteredExercises.length}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="btn-ghost px-3 py-1.5 text-xs"
+                  disabled={safeLibraryPage <= 1}
+                  onClick={() => setLibraryPage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  className="btn-ghost px-3 py-1.5 text-xs"
+                  disabled={safeLibraryPage >= libraryPageCount}
+                  onClick={() => setLibraryPage((p) => Math.min(libraryPageCount, p + 1))}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          ) : null}
           </div>
         )}
       </div>

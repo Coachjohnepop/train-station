@@ -32,6 +32,16 @@ type DemoAccount = {
 };
 
 const SESSION_DAYS = 30;
+
+/** Share www + apex on the live site. Preview/dev stay host-only. */
+function productionCookieDomain(): string | undefined {
+  return process.env.VERCEL_ENV === "production" ? ".thetrainstation.co" : undefined;
+}
+
+function withCookieDomain<T extends Record<string, unknown>>(opts: T): T & { domain?: string } {
+  const domain = productionCookieDomain();
+  return domain ? { ...opts, domain } : opts;
+}
 const AUTH_STORE_KEY = "registered-accounts" as const;
 export const NEEDS_ONBOARD_COOKIE = "ts_needs_onboard";
 export const SIGNUP_PLAN_COOKIE = "ts_signup_plan";
@@ -161,13 +171,30 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 }
 
 export function sessionCookieOptions(maxAge = SESSION_DAYS * 24 * 60 * 60) {
-  return {
+  return withCookieDomain({
     path: "/",
     maxAge,
     httpOnly: true,
     sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
-  };
+  });
+}
+
+function memberCookieOptions() {
+  return withCookieDomain({
+    path: "/",
+    maxAge: SESSION_DAYS * 24 * 60 * 60,
+  });
+}
+
+function expireCookie(
+  res: { cookies: { set: (name: string, value: string, opts?: object) => void } },
+  name: string,
+) {
+  const clear = { path: "/", maxAge: 0 };
+  res.cookies.set(name, "", clear);
+  const domain = productionCookieDomain();
+  if (domain) res.cookies.set(name, "", { ...clear, domain });
 }
 
 export function applySessionCookies(
@@ -176,33 +203,32 @@ export function applySessionCookies(
 ) {
   const token = createSessionToken(user);
   res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());
-  res.cookies.set(MEMBER_COOKIE, user.id, { path: "/", maxAge: SESSION_DAYS * 24 * 60 * 60 });
-  res.cookies.set(MEMBER_NAME_COOKIE, user.name, { path: "/", maxAge: SESSION_DAYS * 24 * 60 * 60 });
+  res.cookies.set(MEMBER_COOKIE, user.id, memberCookieOptions());
+  res.cookies.set(MEMBER_NAME_COOKIE, user.name, memberCookieOptions());
 }
 
 export function clearSessionCookies(
   res: { cookies: { set: (name: string, value: string, opts?: object) => void } },
 ) {
-  const clear = { path: "/", maxAge: 0 };
-  res.cookies.set(SESSION_COOKIE, "", clear);
-  res.cookies.set(MEMBER_COOKIE, "", clear);
-  res.cookies.set(MEMBER_NAME_COOKIE, "", clear);
-  res.cookies.set(NEEDS_ONBOARD_COOKIE, "", clear);
-  res.cookies.set(SIGNUP_PLAN_COOKIE, "", clear);
-  res.cookies.set(NEEDS_PAYMENT_COOKIE, "", clear);
-  res.cookies.set(PENDING_APPROVAL_COOKIE, "", clear);
+  expireCookie(res, SESSION_COOKIE);
+  expireCookie(res, MEMBER_COOKIE);
+  expireCookie(res, MEMBER_NAME_COOKIE);
+  expireCookie(res, NEEDS_ONBOARD_COOKIE);
+  expireCookie(res, SIGNUP_PLAN_COOKIE);
+  expireCookie(res, NEEDS_PAYMENT_COOKIE);
+  expireCookie(res, PENDING_APPROVAL_COOKIE);
 }
 
 export function applyNewMemberOnboardingCookie(
   res: { cookies: { set: (name: string, value: string, opts?: object) => void } },
   plan?: string,
 ) {
-  const cookieOpts = {
+  const cookieOpts = withCookieDomain({
     path: "/",
     maxAge: SESSION_DAYS * 24 * 60 * 60,
     sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
-  };
+  });
   res.cookies.set(NEEDS_ONBOARD_COOKIE, "1", cookieOpts);
   if (plan) {
     res.cookies.set(SIGNUP_PLAN_COOKIE, plan, cookieOpts);
@@ -212,8 +238,8 @@ export function applyNewMemberOnboardingCookie(
 export function clearNewMemberOnboardingCookie(
   res: { cookies: { set: (name: string, value: string, opts?: object) => void } },
 ) {
-  res.cookies.set(NEEDS_ONBOARD_COOKIE, "", { path: "/", maxAge: 0 });
-  res.cookies.set(SIGNUP_PLAN_COOKIE, "", { path: "/", maxAge: 0 });
+  expireCookie(res, NEEDS_ONBOARD_COOKIE);
+  expireCookie(res, SIGNUP_PLAN_COOKIE);
 }
 
 type CookieWriter = {
@@ -221,12 +247,12 @@ type CookieWriter = {
 };
 
 function gateCookieOptions() {
-  return {
+  return withCookieDomain({
     path: "/",
     maxAge: SESSION_DAYS * 24 * 60 * 60,
     sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
-  };
+  });
 }
 
 /** Free Explorer card-on-file gate (when admin lever freeRequiresPaymentMethod is on). */
@@ -237,7 +263,6 @@ export async function syncMemberGateCookies(
   res: CookieWriter,
   input: { userId: string; profile: MemberProfile | null },
 ) {
-  const clear = { path: "/", maxAge: 0 };
   const opts = gateCookieOptions();
   const { memberNeedsPaymentAsync, memberNeedsFreePaymentMethodAsync } = await import(
     "@/lib/member-gates"
@@ -246,19 +271,19 @@ export async function syncMemberGateCookies(
   if (await memberNeedsPaymentAsync(input.profile, input.userId)) {
     res.cookies.set(NEEDS_PAYMENT_COOKIE, "1", opts);
   } else {
-    res.cookies.set(NEEDS_PAYMENT_COOKIE, "", clear);
+    expireCookie(res, NEEDS_PAYMENT_COOKIE);
   }
 
   if (await memberNeedsFreePaymentMethodAsync(input.profile, input.userId)) {
     res.cookies.set(NEEDS_FREE_PM_COOKIE, "1", opts);
   } else {
-    res.cookies.set(NEEDS_FREE_PM_COOKIE, "", clear);
+    expireCookie(res, NEEDS_FREE_PM_COOKIE);
   }
 
   if (memberNeedsApproval(input.profile, input.userId)) {
     res.cookies.set(PENDING_APPROVAL_COOKIE, "1", opts);
   } else {
-    res.cookies.set(PENDING_APPROVAL_COOKIE, "", clear);
+    expireCookie(res, PENDING_APPROVAL_COOKIE);
   }
 
   // Onboarding must follow the profile, not a one-shot cookie from signup.
@@ -273,7 +298,7 @@ export async function syncMemberGateCookies(
       res.cookies.set(SIGNUP_PLAN_COOKIE, plan, opts);
     }
   } else {
-    res.cookies.set(NEEDS_ONBOARD_COOKIE, "", clear);
-    res.cookies.set(SIGNUP_PLAN_COOKIE, "", clear);
+    expireCookie(res, NEEDS_ONBOARD_COOKIE);
+    expireCookie(res, SIGNUP_PLAN_COOKIE);
   }
 }
