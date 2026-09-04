@@ -1876,6 +1876,11 @@ body:has(.landing-hero) [data-global-theme-toggle] {
   opacity: 0.55;
 }
 
+/* Landing already has a theme toggle in the nav — don't stack a second one on desktop. */
+body:has([data-landing-nav]) [data-global-theme-toggle] {
+  display: none !important;
+}
+
 /* Free Quick Tour is full-screen cinematic dark — hide Light/Dark so it doesn’t
    stack on Song / Skip / Close (toggle is z-200, tour chrome is lower). */
 html[data-landing-tour="open"] [data-global-theme-toggle] {

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
-import TrainStationBrand from "@/components/TrainStationBrand";
 import LandingSeeInsideTour from "@/components/LandingSeeInsideTour";
 import { FREE_QUICK_TOUR_EVENT } from "@/lib/free-quick-tour";
 import HeroSlideMedia from "@/components/HeroSlideMedia";
@@ -183,10 +182,6 @@ export default function LandingHero({
       <div className="landing-hero-vignette pointer-events-none absolute inset-0" />
 
       <div className="relative z-10 flex min-h-[100dvh] min-h-[100svh] flex-col">
-        <div className="absolute left-8 top-6 z-20 hidden md:block">
-          <TrainStationBrand variant="hero" />
-        </div>
-
         <div className={`flex flex-1 flex-col items-center px-5 pt-24 text-center sm:px-8 sm:pt-28 ${
           returnMode
             ? "pb-[max(5.5rem,calc(env(safe-area-inset-bottom)+6.25rem))]"
