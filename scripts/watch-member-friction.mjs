@@ -9,8 +9,8 @@
 import { appendFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import dotenv from "dotenv";
-dotenv.config({ path: ".env" });
-dotenv.config({ path: ".env.go-prod", override: true });
+dotenv.config({ path: ".env", quiet: true });
+dotenv.config({ path: ".env.go-prod", override: true, quiet: true });
 
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client.ts";
