@@ -324,6 +324,25 @@ export function resolveWarmupGroup(exercises: WarmupExerciseLike[]): WarmupGroup
   };
 }
 
+export function isWarmupGroupComplete(
+  exercises: WarmupExerciseLike[],
+  finishedExercises: ReadonlySet<string> | readonly string[],
+  completedSets: Record<string, ReadonlySet<number> | readonly number[] | undefined>,
+): boolean {
+  const group = resolveWarmupGroup(exercises);
+  if (group.movements.length === 0) return false;
+  const finished =
+    finishedExercises instanceof Set
+      ? finishedExercises
+      : new Set(finishedExercises);
+  const sets: Record<string, Set<number> | undefined> = {};
+  for (const [id, nums] of Object.entries(completedSets)) {
+    if (!nums) continue;
+    sets[id] = nums instanceof Set ? nums : new Set(nums);
+  }
+  return group.movements.every((m) => isWarmupMovementDone(m, finished, sets));
+}
+
 export function isWarmupMovementDone(
   movement: WarmupMovement,
   finishedExercises: ReadonlySet<string>,

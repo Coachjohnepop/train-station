@@ -68,6 +68,7 @@ import {
 import MemberWarmupGroupCard from "@/components/MemberWarmupGroupCard";
 import {
   DEFAULT_WARMUP_REST_SECONDS,
+  isWarmupGroupComplete,
   isWarmupMovementDone,
   resolveWarmupGroup,
   type WarmupMovement,
@@ -1231,6 +1232,61 @@ export default function MemberWorkoutConsole({
     [workout.exercises],
   );
   const warmupLeadCount = warmupGroup.leadCount;
+  const warmupComplete = useMemo(
+    () =>
+      isWarmupGroupComplete(workout.exercises, finishedExercises, completedSets),
+    [workout.exercises, finishedExercises, completedSets],
+  );
+  const warmupPointsClaimedRef = useRef(false);
+
+  useEffect(() => {
+    if (warmupSyncEnabled) return;
+    if (reviewMode || coachFloorMode) return;
+    if (!liveSyncUserId || !liveSessionDate) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(liveSessionDate)) return;
+    if (!warmupComplete || warmupPointsClaimedRef.current) return;
+    if (!liveSessionHydrated && liveSessionScope) return;
+
+    warmupPointsClaimedRef.current = true;
+    void fetch("/api/member/warmup-progress", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionDate: liveSessionDate,
+        completedSets: serializeCompletedSets(completedSets),
+        finishedExercises: Array.from(finishedExercises),
+      }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) {
+          warmupPointsClaimedRef.current = false;
+          return;
+        }
+        if (typeof data.totalPoints === "number") {
+          dispatchMemberScoreCelebrate({
+            pointsEarned: data.pointsEarned ?? 0,
+            totalPoints: data.totalPoints,
+            label: "Warm-up complete",
+          });
+        }
+      })
+      .catch(() => {
+        warmupPointsClaimedRef.current = false;
+      });
+  }, [
+    warmupComplete,
+    warmupSyncEnabled,
+    reviewMode,
+    coachFloorMode,
+    liveSyncUserId,
+    liveSessionDate,
+    liveSessionHydrated,
+    liveSessionScope,
+    completedSets,
+    finishedExercises,
+    serializeCompletedSets,
+  ]);
   const warmupRestSeconds =
     workout.warmupRestSeconds || DEFAULT_WARMUP_REST_SECONDS;
 

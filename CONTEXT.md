@@ -424,6 +424,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-04 (instant warmup points)
+
+**Status:** Finishing the Today **WARM-UP** card now awards `warmup_before_live` immediately (once per calendar day) and flies points to Scores. Previously that ledger event only ran on the pre-intake warmup navigator, so a live-session warmup (Lemon John / Back/Bicep) scored nothing until the whole workout was logged.
+
 **Date:** 2026-09-04 (Nutrition nav + collapsible days)
 
 **Status:** Member nav is Today · **Nutrition** (dropdown: breakfast / lunch / dinner ideas + Sign up for menu advisory) · Messages · Scores · Gear · More. The Today page nutrition card is gone. Day chips / rollup sit behind a control next to the **Today** heading (collapsed by default so the workout is first). Workout header no longer repeats **M1D18**. Gym/Home track stays with the workout.
