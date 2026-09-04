@@ -12,6 +12,32 @@ export default function MemberError({
 }) {
   useEffect(() => {
     console.error("[member]", error);
+    const digest = error.digest || "";
+    const message = (error.message || "member-error").slice(0, 200);
+    void fetch("/api/analytics/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session: {
+          sessionKey: `err-${Date.now()}`,
+          landingPath: typeof location !== "undefined" ? location.pathname : "/member",
+          deviceType:
+            typeof window !== "undefined" && window.innerWidth < 768 ? "mobile" : "desktop",
+          userAgent:
+            typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 500) : undefined,
+        },
+        events: [
+          {
+            eventType: "member_error",
+            pagePath: typeof location !== "undefined" ? location.pathname : "/member",
+            pageSection: "member",
+            elementText: digest || message,
+            properties: { digest: digest || null, name: error.name, message },
+          },
+        ],
+      }),
+      keepalive: true,
+    }).catch(() => {});
   }, [error]);
 
   return (

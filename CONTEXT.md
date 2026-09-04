@@ -424,6 +424,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-04 (Grant + member friction watch)
+
+**Status:** Grant Arnold upgraded to Coach Class yesterday (~7:52–8:13 PT: checkout, onboard skip, saved a measurement). No Today visit and no workout **today**. Last logged training was **Aug 20 Lower Body**. Todd was the only **Try again / Open Today** crash this morning. Member error boundary now posts `member_error` (digest) to analytics. Ops: `npx tsx scripts/watch-member-friction.mjs`.
+
 **Date:** 2026-09-04 (Ping Coach stays on Today)
 
 **Status:** **Ping Coach to Start Zoom** no longer leaves Today. A popup shows **Coach, Members are ready** with **Send**. Send posts that to Messages, writes Admin → Alerts, and tries coach push. Popup closes; member is still on the workout.
