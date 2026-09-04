@@ -424,6 +424,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-04 (Nutrition nav + collapsible days)
+
+**Status:** Member nav is Today · **Nutrition** (dropdown: breakfast / lunch / dinner ideas + Sign up for menu advisory) · Messages · Scores · Gear · More. The Today page nutrition card is gone. Day chips / rollup sit behind a control next to the **Today** heading (collapsed by default so the workout is first). Workout header no longer repeats **M1D18**. Gym/Home track stays with the workout.
+
 **Date:** 2026-09-04 (member Today chrome)
 
 **Status:** Wide Today tab no longer stacks a tiny **HOME** on **Today**. The train logo is Home. Theme toggle in member chrome is icon-only (no LIGHT label). Gym/Home track toggle is unchanged (workout location).

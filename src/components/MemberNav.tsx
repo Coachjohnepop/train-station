@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { NUTRITION_MEALS } from "@/lib/nutrition-meals";
 import ChatNavBadge from "@/components/ChatNavBadge";
 import UserBicepAvatar from "@/components/UserBicepAvatar";
 import { goMemberTodayHome } from "@/lib/member-today-home";
@@ -133,6 +134,7 @@ export default function MemberNav({
   const router = useRouter();
   const wrapRef = useRef<HTMLDivElement>(null);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [nutritionOpen, setNutritionOpen] = useState(false);
   const [scorePoints, setScorePoints] = useState<number | null>(null);
   const [scorePulse, setScorePulse] = useState(false);
   const [textScale, setTextScale] = useState<MemberTextScale>("md");
@@ -160,16 +162,21 @@ export default function MemberNav({
 
   useEffect(() => {
     setMoreOpen(false);
+    setNutritionOpen(false);
   }, [pathname]);
 
   useEffect(() => {
-    if (!moreOpen) return;
+    if (!moreOpen && !nutritionOpen) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setMoreOpen(false);
+      if (e.key === "Escape") {
+        setMoreOpen(false);
+        setNutritionOpen(false);
+      }
     }
     function onPointer(e: PointerEvent) {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
         setMoreOpen(false);
+        setNutritionOpen(false);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -178,7 +185,7 @@ export default function MemberNav({
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("pointerdown", onPointer);
     };
-  }, [moreOpen]);
+  }, [moreOpen, nutritionOpen]);
 
   useEffect(() => {
     function onScoreUpdated(e: Event) {
@@ -198,6 +205,8 @@ export default function MemberNav({
 
   const onCheckout = pathname.startsWith("/member/checkout");
   const moreActive = !onCheckout && moreItems.some((item) => item.match(pathname));
+  const nutritionActive = !onCheckout && pathname.startsWith("/member/nutrition");
+  const nutritionLocked = paymentGateActive;
 
   function tabClass(active: boolean, rampHighlight: boolean) {
     if (rampHighlight) {
@@ -225,8 +234,8 @@ export default function MemberNav({
 
           if (isTodayTab) {
             return (
+              <Fragment key="today-nutrition">
               <Link
-                key={item.href}
                 id="member-nav-today"
                 href={href}
                 aria-label={locked ? "Today — complete your ticket first" : "Today"}
@@ -246,6 +255,27 @@ export default function MemberNav({
                   <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[var(--ramp-gold)] ring-2 ring-[var(--surface)]" />
                 ) : null}
               </Link>
+              <button
+                type="button"
+                id="member-nav-nutrition"
+                aria-expanded={nutritionOpen}
+                aria-controls="member-nav-nutrition-panel"
+                aria-label={nutritionLocked ? "Nutrition — complete your ticket first" : "Nutrition"}
+                title={nutritionLocked ? "Complete your ticket to unlock" : "Nutrition"}
+                onClick={() => {
+                  if (nutritionLocked) return;
+                  setMoreOpen(false);
+                  setNutritionOpen((open) => !open);
+                }}
+                className={`member-nav-item relative flex min-h-10 flex-1 flex-col items-center justify-center rounded-lg px-1 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:flex-none lg:min-w-[4.75rem] lg:px-5 ${tabClass(
+                  nutritionActive || nutritionOpen,
+                  false,
+                )} ${nutritionLocked ? "opacity-75" : ""}`}
+              >
+                Nutrition
+                {nutritionLocked ? lockIcon() : null}
+              </button>
+              </Fragment>
             );
           }
 
@@ -293,7 +323,10 @@ export default function MemberNav({
           aria-controls="member-nav-more-panel"
           aria-label={moreOpen ? "Close menu" : "Open menu"}
           title="More"
-          onClick={() => setMoreOpen((open) => !open)}
+          onClick={() => {
+            setNutritionOpen(false);
+            setMoreOpen((open) => !open);
+          }}
           className={`member-nav-item relative flex min-h-10 flex-[0.9] flex-col items-center justify-center rounded-lg px-1 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:flex-none lg:min-w-[4.25rem] lg:px-4 ${tabClass(
             moreActive || moreOpen,
             false,
@@ -305,6 +338,32 @@ export default function MemberNav({
           <span>More</span>
         </button>
       </nav>
+
+      {nutritionOpen && !nutritionLocked ? (
+        <div
+          id="member-nav-nutrition-panel"
+          className="member-nav-more-panel member-nav-nutrition-panel"
+          aria-label="Nutrition"
+        >
+          {NUTRITION_MEALS.map((meal) => (
+            <Link
+              key={meal.id}
+              href={`/member/nutrition#${meal.id}`}
+              onClick={() => setNutritionOpen(false)}
+              className="member-nav-more-link"
+            >
+              <span>{meal.label}</span>
+            </Link>
+          ))}
+          <Link
+            href="/signup?interest=nutrition"
+            onClick={() => setNutritionOpen(false)}
+            className="member-nav-more-link member-nav-nutrition-advisory"
+          >
+            <span>Sign up for menu advisory</span>
+          </Link>
+        </div>
+      ) : null}
 
       {moreOpen ? (
         <div

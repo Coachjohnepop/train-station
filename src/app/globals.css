@@ -2178,6 +2178,13 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   color: var(--accent-fg);
 }
 
+.member-nav-nutrition-advisory {
+  margin-top: 0.25rem;
+  border-top: 1px solid var(--border);
+  border-radius: 0.7rem;
+  color: var(--accent-fg);
+}
+
 .member-text-scale {
   display: flex;
   align-items: center;
@@ -2395,6 +2402,10 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 
   .member-app #member-nav-more > span:last-child {
     display: none;
+  }
+
+  .member-app #member-nav-nutrition {
+    font-size: 0.7rem;
   }
 
   .member-app .member-nav-score-badge {

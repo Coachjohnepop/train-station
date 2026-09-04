@@ -2579,14 +2579,19 @@ export default function MemberWorkoutConsole({
       {!showLoggedSuccess && !embedded && (
         <>
           <p className="text-xs font-semibold uppercase tracking-widest text-accent">
-            {calendarDateLabel ? "Scheduled workout" : "Today\u2019s workout"}
+            {calendarDateLabel && !/^M\d+D\d+$/i.test(calendarDateLabel.trim())
+              ? "Scheduled workout"
+              : "Today\u2019s workout"}
           </p>
-          {calendarDateLabel && (
+          {calendarDateLabel && !/^M\d+D\d+$/i.test(calendarDateLabel.trim()) ? (
             <p className="mt-1 text-sm font-medium text-[var(--text)]">{calendarDateLabel}</p>
-          )}
-          {scheduleLabel && (
-            <p className="mt-0.5 text-xs text-[var(--muted)]">{scheduleLabel}</p>
-          )}
+          ) : null}
+          {scheduleLabel &&
+          scheduleLabel.replace(/\s*·\s*M\d+D\d+\s*$/i, "").trim() ? (
+            <p className="mt-0.5 text-xs text-[var(--muted)]">
+              {scheduleLabel.replace(/\s*·\s*M\d+D\d+\s*$/i, "").trim()}
+            </p>
+          ) : null}
           <h1 className={`${calendarDateLabel ? "mt-2" : "mt-1"} text-2xl font-bold`}>
             {workout.workoutName}
           </h1>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, type TouchEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type TouchEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { MEMBER_TODAY_RESET_EVENT } from "@/lib/member-today-home";
@@ -247,6 +247,29 @@ export default function MemberTodayShell({
   const canUseMaintain = Boolean(maintainAccess?.allowed);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("ts-member-today-schedule-open") === "1") {
+        setScheduleOpen(true);
+      }
+    } catch {
+      /* private mode */
+    }
+  }, []);
+
+  const toggleSchedule = useCallback(() => {
+    setScheduleOpen((open) => {
+      const next = !open;
+      try {
+        sessionStorage.setItem("ts-member-today-schedule-open", next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
   const isToday = selectedDate === todayIso;
   const isTomorrow =
     days.find((d) => d.iso === selectedDate)?.phase === "future" ||
@@ -418,29 +441,44 @@ export default function MemberTodayShell({
       )}
 
       <div className="member-today-heading">
-        <h1
-          className={`text-xl font-bold sm:text-2xl ${todayGold ? "text-ramp-gold" : ""}`}
-        >
-          {isToday
-            ? programBlock?.status === "pending"
-              ? "Before Day 1"
-              : "Today"
-            : isLateCatchUp
-              ? "Catch-up (logs as today)"
-              : isTomorrow
-                ? "Tomorrow (preview)"
-                : "Your schedule"}
-        </h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1
+            className={`text-xl font-bold sm:text-2xl ${todayGold ? "text-ramp-gold" : ""}`}
+          >
+            {isToday
+              ? programBlock?.status === "pending"
+                ? "Before Day 1"
+                : "Today"
+              : isLateCatchUp
+                ? "Catch-up (logs as today)"
+                : isTomorrow
+                  ? "Tomorrow (preview)"
+                  : "Your schedule"}
+          </h1>
+          {days.length > 0 ? (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--muted)] hover:text-[var(--text)]"
+              aria-expanded={scheduleOpen}
+              aria-controls="member-today-day-strip"
+              onClick={toggleSchedule}
+            >
+              {!scheduleOpen && selectedSummary ? (
+                <span>
+                  {selectedSummary.weekday} {selectedSummary.dayLabel}
+                </span>
+              ) : (
+                <span>{scheduleOpen ? "Hide days" : "Days"}</span>
+              )}
+              <span aria-hidden className={`text-[10px] transition ${scheduleOpen ? "rotate-180" : ""}`}>
+                ▾
+              </span>
+            </button>
+          ) : null}
+        </div>
         {isToday && rampHighlight && autoPromptIntroBooking ? (
           <p className="mt-1 text-xs font-medium text-[var(--ramp-gold-light)] sm:text-sm">
             Start here — book your intro, then warm up below.
-          </p>
-        ) : (
-          <p className="mt-1 text-xs text-[var(--muted)] sm:text-sm">{subtitle}</p>
-        )}
-        {days.length >= 2 ? (
-          <p className="mt-1 text-[10px] text-[var(--muted)] sm:text-xs">
-            Use the day chips (or swipe) for the last 5 days · today · tomorrow
           </p>
         ) : null}
       </div>
@@ -454,41 +492,45 @@ export default function MemberTodayShell({
         </div>
       ) : null}
 
-      {rollup && days.length > 0 && (
-        <div
-          className={`flex flex-wrap items-center justify-center gap-3 rounded-xl border px-3 py-2 text-center text-[11px] text-[var(--muted)] ${
-            todayGold
-              ? "border-[color-mix(in_srgb,var(--ramp-gold)_40%,var(--border))] bg-[color-mix(in_srgb,var(--ramp-gold)_8%,var(--surface))]"
-              : "border-[var(--border)] bg-[var(--surface)]/60"
-          }`}
-        >
-          <span>
-            <strong className="text-[var(--text)]">{rollup.pastDone}</strong>/{rollup.pastTotal}{" "}
-            done
-          </span>
-          <span className="text-[var(--border)]">|</span>
-          <span className={`font-semibold ${todayGold ? "text-ramp-gold" : "text-accent font-medium"}`}>
-            Today
-          </span>
-          <span className="text-[var(--border)]">|</span>
-          <span>
-            <strong className="text-[var(--text)]">{rollup.futureTotal}</strong> ahead
-          </span>
-        </div>
-      )}
-
       {showFirstHour ? <MemberFirstHourCard bookedIntro={Boolean(introBookedAt)} /> : null}
 
-      {days.length > 0 && (
-        <MemberDayWheel
-          days={days}
-          selectedIso={selectedDate}
-          todayIso={todayIso}
-          onSelect={selectDate}
-          highlightTodayGold={todayGold}
-          visibleDays={schedulePreviewChips}
-        />
-      )}
+      {days.length > 0 && scheduleOpen ? (
+        <div id="member-today-day-strip" className="space-y-3">
+          {subtitle ? (
+            <p className="text-xs text-[var(--muted)] sm:text-sm">{subtitle}</p>
+          ) : null}
+          {rollup ? (
+            <div
+              className={`flex flex-wrap items-center justify-center gap-3 rounded-xl border px-3 py-2 text-center text-[11px] text-[var(--muted)] ${
+                todayGold
+                  ? "border-[color-mix(in_srgb,var(--ramp-gold)_40%,var(--border))] bg-[color-mix(in_srgb,var(--ramp-gold)_8%,var(--surface))]"
+                  : "border-[var(--border)] bg-[var(--surface)]/60"
+              }`}
+            >
+              <span>
+                <strong className="text-[var(--text)]">{rollup.pastDone}</strong>/{rollup.pastTotal}{" "}
+                done
+              </span>
+              <span className="text-[var(--border)]">|</span>
+              <span className={`font-semibold ${todayGold ? "text-ramp-gold" : "text-accent font-medium"}`}>
+                Today
+              </span>
+              <span className="text-[var(--border)]">|</span>
+              <span>
+                <strong className="text-[var(--text)]">{rollup.futureTotal}</strong> ahead
+              </span>
+            </div>
+          ) : null}
+          <MemberDayWheel
+            days={days}
+            selectedIso={selectedDate}
+            todayIso={todayIso}
+            onSelect={selectDate}
+            highlightTodayGold={todayGold}
+            visibleDays={schedulePreviewChips}
+          />
+        </div>
+      ) : null}
 
       {(() => {
         const selectedNames = selectedSummary?.finisherNames ?? [];
