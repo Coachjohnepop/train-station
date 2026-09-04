@@ -1290,6 +1290,8 @@ model MemberContentSettings {
   dailyInspirationClips  Json
   nutritionIntro         String   @db.Text
   nutritionTiers         Json
+  nutritionCalendlyUrl   String?
+  nutritionDesk          Json     @default("{}")
   updatedAt              DateTime @updatedAt
 }
 

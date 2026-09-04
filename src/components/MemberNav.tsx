@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { NUTRITION_MEALS } from "@/lib/nutrition-meals";
+import { NUTRITION_MEALS, nutritionMealNav, type NutritionDesk } from "@/lib/nutrition-meals";
 import ChatNavBadge from "@/components/ChatNavBadge";
 import UserBicepAvatar from "@/components/UserBicepAvatar";
 import { goMemberTodayHome } from "@/lib/member-today-home";
@@ -125,10 +125,12 @@ export default function MemberNav({
   intakePending = false,
   paymentGateActive = false,
   checkoutPlan = "member",
+  nutritionDesk = null,
 }: {
   intakePending?: boolean;
   paymentGateActive?: boolean;
   checkoutPlan?: SignupPlan;
+  nutritionDesk?: NutritionDesk | null;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -207,6 +209,9 @@ export default function MemberNav({
   const moreActive = !onCheckout && moreItems.some((item) => item.match(pathname));
   const nutritionActive = !onCheckout && pathname.startsWith("/member/nutrition");
   const nutritionLocked = paymentGateActive;
+  const nutritionMeals = nutritionDesk ? nutritionMealNav(nutritionDesk) : [...NUTRITION_MEALS];
+  const nutritionTabLabel = nutritionDesk?.pageTitle?.trim() || "Nutrition";
+  const advisoryLabel = nutritionDesk?.advisoryCta || "Book a nutrition appointment";
 
   function tabClass(active: boolean, rampHighlight: boolean) {
     if (rampHighlight) {
@@ -260,8 +265,12 @@ export default function MemberNav({
                 id="member-nav-nutrition"
                 aria-expanded={nutritionOpen}
                 aria-controls="member-nav-nutrition-panel"
-                aria-label={nutritionLocked ? "Nutrition — complete your ticket first" : "Nutrition"}
-                title={nutritionLocked ? "Complete your ticket to unlock" : "Nutrition"}
+                aria-label={
+                  nutritionLocked
+                    ? `${nutritionTabLabel} — complete your ticket first`
+                    : nutritionTabLabel
+                }
+                title={nutritionLocked ? "Complete your ticket to unlock" : nutritionTabLabel}
                 onClick={() => {
                   if (nutritionLocked) return;
                   setMoreOpen(false);
@@ -272,7 +281,7 @@ export default function MemberNav({
                   false,
                 )} ${nutritionLocked ? "opacity-75" : ""}`}
               >
-                Nutrition
+                {nutritionTabLabel}
                 {nutritionLocked ? lockIcon() : null}
               </button>
               </Fragment>
@@ -343,9 +352,9 @@ export default function MemberNav({
         <div
           id="member-nav-nutrition-panel"
           className="member-nav-more-panel member-nav-nutrition-panel"
-          aria-label="Nutrition"
+          aria-label={nutritionTabLabel}
         >
-          {NUTRITION_MEALS.map((meal) => (
+          {nutritionMeals.map((meal) => (
             <Link
               key={meal.id}
               href={`/member/nutrition#${meal.id}`}
@@ -356,11 +365,11 @@ export default function MemberNav({
             </Link>
           ))}
           <Link
-            href="/signup?interest=nutrition"
+            href="/member/book?purpose=nutrition"
             onClick={() => setNutritionOpen(false)}
             className="member-nav-more-link member-nav-nutrition-advisory"
           >
-            <span>Sign up for menu advisory</span>
+            <span>{advisoryLabel}</span>
           </Link>
         </div>
       ) : null}

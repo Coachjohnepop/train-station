@@ -7,6 +7,7 @@ import type {
   MemberContentConfig,
   NutritionCalorieTier,
 } from "@/lib/member-content-store";
+import { normalizeNutritionDesk } from "@/lib/nutrition-meals";
 
 function rowToConfig(row: {
   weeklyVideoUrl: string | null;
@@ -16,8 +17,14 @@ function rowToConfig(row: {
   dailyInspirationClips: Prisma.JsonValue;
   nutritionIntro: string;
   nutritionTiers: Prisma.JsonValue;
+  nutritionCalendlyUrl?: string | null;
+  nutritionDesk?: Prisma.JsonValue;
   updatedAt: Date;
 }): MemberContentConfig {
+  const desk = normalizeNutritionDesk(row.nutritionDesk);
+  if (row.nutritionCalendlyUrl?.trim() && !desk.calendlyUrl) {
+    desk.calendlyUrl = row.nutritionCalendlyUrl.trim();
+  }
   return {
     weeklyVideoUrl: row.weeklyVideoUrl,
     weeklyVideoTitle: row.weeklyVideoTitle,
@@ -30,6 +37,7 @@ function rowToConfig(row: {
     nutritionTiers: (Array.isArray(row.nutritionTiers)
       ? row.nutritionTiers
       : []) as NutritionCalorieTier[],
+    nutritionDesk: desk,
     updatedAt: row.updatedAt.toISOString(),
   };
 }
@@ -43,6 +51,8 @@ function configToRow(config: MemberContentConfig) {
     dailyInspirationClips: config.dailyInspirationClips as Prisma.InputJsonValue,
     nutritionIntro: config.nutritionIntro,
     nutritionTiers: config.nutritionTiers as Prisma.InputJsonValue,
+    nutritionCalendlyUrl: config.nutritionDesk.calendlyUrl,
+    nutritionDesk: config.nutritionDesk as Prisma.InputJsonValue,
   };
 }
 

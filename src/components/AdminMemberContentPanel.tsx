@@ -4,6 +4,11 @@ import { useState } from "react";
 import { saveMemberContentAction } from "@/app/admin/landing/actions";
 import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
 import type { NutritionCalorieTier } from "@/lib/member-content-store";
+import {
+  DEFAULT_NUTRITION_DESK,
+  isNutritionCalendlyUrl,
+  type NutritionDesk,
+} from "@/lib/nutrition-meals";
 import { isYoutubeUrl } from "@/lib/youtube";
 
 export default function AdminMemberContentPanel({
@@ -13,6 +18,7 @@ export default function AdminMemberContentPanel({
   initialDinnerTitle = "",
   initialNutritionIntro = "",
   initialNutritionTiers = [],
+  initialNutritionDesk,
 }: {
   initialWeeklyUrl?: string;
   initialWeeklyTitle?: string;
@@ -20,6 +26,7 @@ export default function AdminMemberContentPanel({
   initialDinnerTitle?: string;
   initialNutritionIntro?: string;
   initialNutritionTiers?: NutritionCalorieTier[];
+  initialNutritionDesk?: NutritionDesk;
 }) {
   const [weeklyUrl, setWeeklyUrl] = useState(initialWeeklyUrl);
   const [weeklyTitle, setWeeklyTitle] = useState(initialWeeklyTitle);
@@ -27,12 +34,47 @@ export default function AdminMemberContentPanel({
   const [dinnerTitle, setDinnerTitle] = useState(initialDinnerTitle);
   const [nutritionIntro, setNutritionIntro] = useState(initialNutritionIntro);
   const [tiers, setTiers] = useState<NutritionCalorieTier[]>(initialNutritionTiers);
+  const [desk, setDesk] = useState<NutritionDesk>(
+    initialNutritionDesk ?? { ...DEFAULT_NUTRITION_DESK },
+  );
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState(false);
 
+  function updateDesk(patch: Partial<NutritionDesk>) {
+    setDesk((prev) => ({ ...prev, ...patch }));
+  }
+
   function updateTier(index: number, patch: Partial<NutritionCalorieTier>) {
     setTiers((prev) => prev.map((t, i) => (i === index ? { ...t, ...patch } : t)));
+  }
+
+  function addTier() {
+    setTiers((prev) => [
+      ...prev,
+      {
+        id: `tier-${Date.now().toString(36)}`,
+        calories: 2000,
+        label: "New calorie day",
+        sampleDay: "Breakfast:  · Lunch:  · Dinner:  · Snacks: ",
+      },
+    ]);
+  }
+
+  function removeTier(index: number) {
+    setTiers((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function moveTier(index: number, dir: -1 | 1) {
+    setTiers((prev) => {
+      const next = [...prev];
+      const j = index + dir;
+      if (j < 0 || j >= next.length) return prev;
+      const swap = next[index];
+      next[index] = next[j];
+      next[j] = swap;
+      return next;
+    });
   }
 
   async function handleSave() {
@@ -52,6 +94,12 @@ export default function AdminMemberContentPanel({
       setSaving(false);
       return;
     }
+    if (desk.calendlyUrl?.trim() && !isNutritionCalendlyUrl(desk.calendlyUrl)) {
+      setError(true);
+      setMessage("Nutrition appointment must be a Calendly link (https://calendly.com/…).");
+      setSaving(false);
+      return;
+    }
 
     const result = await saveMemberContentAction({
       weeklyVideoUrl: weeklyUrl.trim() || null,
@@ -60,6 +108,10 @@ export default function AdminMemberContentPanel({
       dinnerVideoTitle: dinnerTitle.trim(),
       nutritionIntro: nutritionIntro.trim(),
       nutritionTiers: tiers,
+      nutritionDesk: {
+        ...desk,
+        calendlyUrl: desk.calendlyUrl?.trim() || null,
+      },
     });
 
     if ("error" in result && result.error) {
@@ -72,7 +124,8 @@ export default function AdminMemberContentPanel({
       setDinnerTitle(result.storedDinnerVideoTitle || "");
       setNutritionIntro(result.storedNutritionIntro || "");
       setTiers(result.storedNutritionTiers || tiers);
-      setMessage("Saved — live on member Today now.");
+      if (result.storedNutritionDesk) setDesk(result.storedNutritionDesk);
+      setMessage("Saved — live on member Nutrition now.");
       setError(false);
     } else {
       setError(true);
@@ -94,8 +147,9 @@ export default function AdminMemberContentPanel({
             <strong className="text-[var(--text)]">What&apos;s for dinner</strong> — second card on Today
           </li>
           <li>
-            <strong className="text-[var(--text)]">Nutrition</strong> — link to sample calorie-day templates
-            on <span className="text-[var(--accent-fg)]">/member/nutrition</span>
+            <strong className="text-[var(--text)]">Nutrition</strong> — page copy, meal labels, calorie
+            days, custom meal planning, and Calendly on{" "}
+            <span className="text-[var(--accent-fg)]">/member/nutrition</span>
           </li>
         </ul>
       </div>
@@ -124,23 +178,107 @@ export default function AdminMemberContentPanel({
 
       <div className="card space-y-4">
         <div>
-          <p className="text-sm font-semibold text-[var(--text)]">Nutritional guidance</p>
+          <p className="text-sm font-semibold text-[var(--text)]">Nutrition page</p>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            Intro text and sample daily diets by calorie level. Members tap a tier to expand.
+            Everything members see under Nutrition — titles, meal labels, calorie days, custom meal
+            planning copy, and the Calendly appointment.
           </p>
         </div>
-        <textarea
-          className="input min-h-[80px] w-full"
-          value={nutritionIntro}
-          onChange={(e) => setNutritionIntro(e.target.value)}
-          placeholder="Short intro for the nutrition page…"
-        />
+        <div>
+          <label className="text-xs text-[var(--muted)]">Page / nav title</label>
+          <input
+            className="input mt-1 w-full"
+            value={desk.pageTitle}
+            onChange={(e) => updateDesk({ pageTitle: e.target.value })}
+            placeholder="Nutrition"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-[var(--muted)]">Intro</label>
+          <textarea
+            className="input mt-1 min-h-[80px] w-full"
+            value={nutritionIntro}
+            onChange={(e) => setNutritionIntro(e.target.value)}
+            placeholder="Short intro for the nutrition page…"
+          />
+        </div>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <div>
+            <label className="text-xs text-[var(--muted)]">Breakfast label</label>
+            <input
+              className="input mt-1 w-full"
+              value={desk.breakfastLabel}
+              onChange={(e) => updateDesk({ breakfastLabel: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-[var(--muted)]">Lunch label</label>
+            <input
+              className="input mt-1 w-full"
+              value={desk.lunchLabel}
+              onChange={(e) => updateDesk({ lunchLabel: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-[var(--muted)]">Dinner label</label>
+            <input
+              className="input mt-1 w-full"
+              value={desk.dinnerLabel}
+              onChange={(e) => updateDesk({ dinnerLabel: e.target.value })}
+            />
+          </div>
+        </div>
         <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+              Calorie days
+            </p>
+            <button
+              type="button"
+              onClick={addTier}
+              className="text-sm font-semibold text-[#7c3aed] hover:underline"
+            >
+              + Add calorie day
+            </button>
+          </div>
+          {tiers.length === 0 ? (
+            <p className="text-xs text-[var(--muted)] italic">
+              No calorie days yet — add one so breakfast / lunch / dinner have ideas to show.
+            </p>
+          ) : null}
           {tiers.map((tier, index) => (
             <div
               key={tier.id}
               className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-3 space-y-2"
             >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-medium text-[var(--text)]">Day {index + 1}</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => moveTier(index, -1)}
+                    disabled={index === 0}
+                    className="text-xs text-[var(--muted)] hover:text-[var(--text)] disabled:opacity-40"
+                  >
+                    Up
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveTier(index, 1)}
+                    disabled={index === tiers.length - 1}
+                    className="text-xs text-[var(--muted)] hover:text-[var(--text)] disabled:opacity-40"
+                  >
+                    Down
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeTier(index)}
+                    className="text-xs text-amber-400 hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
               <div className="grid gap-2 sm:grid-cols-2">
                 <div>
                   <label className="text-xs text-[var(--muted)]">Calories</label>
@@ -163,7 +301,9 @@ export default function AdminMemberContentPanel({
                 </div>
               </div>
               <div>
-                <label className="text-xs text-[var(--muted)]">Sample day (meals / notes)</label>
+                <label className="text-xs text-[var(--muted)]">
+                  Sample day (use Breakfast: / Lunch: / Dinner: so the member menu can split them)
+                </label>
                 <textarea
                   className="input mt-1 min-h-[72px] w-full"
                   value={tier.sampleDay}
@@ -172,6 +312,59 @@ export default function AdminMemberContentPanel({
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div className="card space-y-4">
+        <div>
+          <p className="text-sm font-semibold text-[var(--text)]">Custom meal planning</p>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            This is the menu-advisory card. The button books a nutrition appointment on Calendly —
+            paste Jeremy&apos;s nutrition event type below. Blank uses the intro-call calendar.
+          </p>
+        </div>
+        <div>
+          <label className="text-xs text-[var(--muted)]">Card title</label>
+          <input
+            className="input mt-1 w-full"
+            value={desk.advisoryTitle}
+            onChange={(e) => updateDesk({ advisoryTitle: e.target.value })}
+            placeholder="Custom meal planning"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-[var(--muted)]">Card body</label>
+          <textarea
+            className="input mt-1 min-h-[80px] w-full"
+            value={desk.advisoryBody}
+            onChange={(e) => updateDesk({ advisoryBody: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="text-xs text-[var(--muted)]">Button label</label>
+          <input
+            className="input mt-1 w-full"
+            value={desk.advisoryCta}
+            onChange={(e) => updateDesk({ advisoryCta: e.target.value })}
+            placeholder="Book a nutrition appointment"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-[var(--muted)]">Calendly URL for nutrition appointments</label>
+          <input
+            className="input mt-1 w-full"
+            value={desk.calendlyUrl ?? ""}
+            onChange={(e) => updateDesk({ calendlyUrl: e.target.value || null })}
+            placeholder="https://calendly.com/jeremy-thetrainstation/…"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-[var(--muted)]">Disclaimer (footer)</label>
+          <textarea
+            className="input mt-1 min-h-[64px] w-full"
+            value={desk.disclaimer}
+            onChange={(e) => updateDesk({ disclaimer: e.target.value })}
+          />
         </div>
       </div>
 

@@ -37,6 +37,10 @@ export default async function AdminLandingPage() {
               Admin → Videos
             </a>
           </li>
+          <li>
+            Member <strong className="text-violet-50">Nutrition</strong> copy, meal labels, calorie
+            days, and Calendly appointment (below)
+          </li>
         </ol>
       </div>
       <div className="mt-8 space-y-12">
@@ -73,6 +77,7 @@ export default async function AdminLandingPage() {
           initialDinnerTitle={memberContent.dinnerVideoTitle}
           initialNutritionIntro={memberContent.nutritionIntro}
           initialNutritionTiers={memberContent.nutritionTiers}
+          initialNutritionDesk={memberContent.nutritionDesk}
         />
       </div>
     </div>

@@ -25,6 +25,7 @@ import {
   type MembershipThemeTier,
 } from "@/lib/membership-theme";
 import type { SignupPlan } from "@/lib/signup-plans";
+import type { NutritionDesk } from "@/lib/nutrition-meals";
 import { memberCheckoutPath } from "@/lib/member-route-gates";
 
 export default function MemberShell({
@@ -41,6 +42,7 @@ export default function MemberShell({
   setupMode = false,
   /** First visit to the site (not a returning member). Slim chrome until setup is done. */
   newbieMode = false,
+  nutritionDesk = null,
 }: {
   children: React.ReactNode;
   tierLabel?: string;
@@ -54,6 +56,7 @@ export default function MemberShell({
   checkoutPlan?: SignupPlan;
   setupMode?: boolean;
   newbieMode?: boolean;
+  nutritionDesk?: NutritionDesk | null;
 }) {
   const tierLabel = MEMBERSHIP_THEME_LABELS[membershipTier] || tierLabelProp || "Member";
   const hideMemberNav = setupMode || newbieMode || paymentGateActive;
@@ -143,6 +146,7 @@ export default function MemberShell({
               intakePending={intakePending}
               paymentGateActive={paymentGateActive}
               checkoutPlan={checkoutPlan}
+              nutritionDesk={nutritionDesk}
             />
           )}
         </header>

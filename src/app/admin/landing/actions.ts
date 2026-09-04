@@ -201,8 +201,9 @@ export async function saveMemberContentAction(input: {
   dinnerVideoUrl: string | null;
   dinnerVideoTitle: string;
   dailyInspirationClips?: import("@/lib/member-content-store").DailyInspirationClip[];
-  nutritionIntro: string;
-  nutritionTiers: NutritionCalorieTier[];
+  nutritionIntro?: string;
+  nutritionTiers?: NutritionCalorieTier[];
+  nutritionDesk?: import("@/lib/nutrition-meals").NutritionDesk;
 }) {
   const session = await getSessionUser();
   if (!session || !isStaffRole(session.role)) {
@@ -220,6 +221,7 @@ export async function saveMemberContentAction(input: {
       storedDailyInspirationClips: config.dailyInspirationClips,
       storedNutritionIntro: config.nutritionIntro,
       storedNutritionTiers: config.nutritionTiers,
+      storedNutritionDesk: config.nutritionDesk,
       updatedAt: config.updatedAt,
     };
   } catch (e: unknown) {

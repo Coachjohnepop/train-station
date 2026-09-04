@@ -2,6 +2,12 @@ import path from "path";
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
 import { requireDurablePersisted } from "@/lib/demo-persistence";
 import { isYoutubeUrl } from "@/lib/youtube";
+import {
+  DEFAULT_NUTRITION_DESK,
+  isNutritionCalendlyUrl,
+  normalizeNutritionDesk,
+  type NutritionDesk,
+} from "@/lib/nutrition-meals";
 
 export type NutritionCalorieTier = {
   id: string;
@@ -27,6 +33,7 @@ export type MemberContentConfig = {
   dailyInspirationClips: DailyInspirationClip[];
   nutritionIntro: string;
   nutritionTiers: NutritionCalorieTier[];
+  nutritionDesk: NutritionDesk;
   updatedAt: string;
 };
 
@@ -66,7 +73,7 @@ function normalizeUrl(raw: unknown): string | null {
 }
 
 function normalizeTiers(raw: unknown): NutritionCalorieTier[] {
-  if (!Array.isArray(raw) || raw.length === 0) return DEFAULT_NUTRITION_TIERS;
+  if (!Array.isArray(raw)) return DEFAULT_NUTRITION_TIERS;
   const out: NutritionCalorieTier[] = [];
   for (const row of raw) {
     if (!row || typeof row !== "object") continue;
@@ -82,7 +89,7 @@ function normalizeTiers(raw: unknown): NutritionCalorieTier[] {
       sampleDay,
     });
   }
-  return out.length > 0 ? out : DEFAULT_NUTRITION_TIERS;
+  return out;
 }
 
 function emptyConfig(): MemberContentConfig {
@@ -93,8 +100,9 @@ function emptyConfig(): MemberContentConfig {
     dinnerVideoTitle: "What's for dinner?",
     dailyInspirationClips: [],
     nutritionIntro:
-      "Sample day templates by calorie level — swap foods to match what you like. Your coach can personalize these on your intro call.",
+      "Sample day templates by calorie level — swap foods to match what you like. Book a nutrition appointment for a plan built around you.",
     nutritionTiers: DEFAULT_NUTRITION_TIERS,
+    nutritionDesk: { ...DEFAULT_NUTRITION_DESK },
     updatedAt: new Date().toISOString(),
   };
 }
@@ -146,6 +154,7 @@ function normalize(raw: unknown): MemberContentConfig {
     nutritionIntro:
       typeof data.nutritionIntro === "string" ? data.nutritionIntro.trim() : emptyConfig().nutritionIntro,
     nutritionTiers: normalizeTiers(data.nutritionTiers),
+    nutritionDesk: normalizeNutritionDesk(data.nutritionDesk),
     updatedAt:
       typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
   };
@@ -192,6 +201,7 @@ export async function saveMemberContent(
       | "dailyInspirationClips"
       | "nutritionIntro"
       | "nutritionTiers"
+      | "nutritionDesk"
     >
   >,
 ): Promise<MemberContentConfig> {
@@ -235,6 +245,17 @@ export async function saveMemberContent(
 
   if (patch.nutritionTiers !== undefined) {
     next.nutritionTiers = normalizeTiers(patch.nutritionTiers);
+  }
+
+  if (patch.nutritionDesk !== undefined) {
+    const rawUrl =
+      patch.nutritionDesk && typeof patch.nutritionDesk === "object"
+        ? (patch.nutritionDesk as NutritionDesk).calendlyUrl
+        : null;
+    if (typeof rawUrl === "string" && rawUrl.trim() && !isNutritionCalendlyUrl(rawUrl)) {
+      throw new Error("Nutrition appointment must be a Calendly link (https://calendly.com/…).");
+    }
+    next.nutritionDesk = normalizeNutritionDesk(patch.nutritionDesk);
   }
 
   let dbSaved = false;

@@ -19,17 +19,19 @@ import {
 } from "@/lib/member-route-gates";
 import type { SignupPlan } from "@/lib/signup-plans";
 import { SITE_SEEN_COOKIE, isFirstTimeOnSite } from "@/lib/site-visit";
+import { getMemberContent } from "@/lib/member-content-store";
 
 export default async function MemberLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [dashboard, session, cookieUid, headerStore] = await Promise.all([
+  const [dashboard, session, cookieUid, headerStore, memberContent] = await Promise.all([
     getMemberDashboard(),
     getSessionUser(),
     getCurrentUserId(),
     headers(),
+    getMemberContent(),
   ]);
   const tierLabel = dashboard?.access.tierLabel ?? "Coach Class";
   const viewedMember = cookieUid ? resolveDemoUser(cookieUid) : undefined;
@@ -158,6 +160,7 @@ export default async function MemberLayout({
       checkoutPlan={checkoutPlan}
       setupMode={setupMode}
       newbieMode={newbieMode}
+      nutritionDesk={memberContent.nutritionDesk}
     >
       {children}
     </MemberShell>

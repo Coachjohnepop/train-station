@@ -21,10 +21,7 @@ import {
   FREE_TICKET_RICKROLL_DURATION_MS,
 } from "@/lib/landing-media";
 import type { WelcomeVideosByPlan } from "@/lib/landing-media-store";
-import type {
-  DailyInspirationClip,
-  NutritionCalorieTier,
-} from "@/lib/member-content-store";
+import type { DailyInspirationClip } from "@/lib/member-content-store";
 import type { SiteVideoLibraryItem } from "@/lib/site-video-library-store";
 import {
   clientSiteVideoMime,
@@ -153,8 +150,6 @@ export default function AdminSiteVideosPanel({
   initialDinnerUrl = "",
   initialDinnerTitle = "",
   initialDailyClips = [],
-  initialNutritionIntro = "",
-  initialNutritionTiers = [],
   initialLibrary = [],
   initialUploadedContentVolumeDb = DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
 }: {
@@ -173,8 +168,6 @@ export default function AdminSiteVideosPanel({
   initialDinnerUrl?: string;
   initialDinnerTitle?: string;
   initialDailyClips?: DailyInspirationClip[];
-  initialNutritionIntro?: string;
-  initialNutritionTiers?: NutritionCalorieTier[];
   initialLibrary?: SiteVideoLibraryItem[];
   initialUploadedContentVolumeDb?: number;
 }) {
@@ -198,8 +191,6 @@ export default function AdminSiteVideosPanel({
   const [dinnerUrl, setDinnerUrl] = useState(initialDinnerUrl);
   const [dinnerTitle, setDinnerTitle] = useState(initialDinnerTitle);
   const [clips, setClips] = useState<DailyInspirationClip[]>(initialDailyClips);
-  const [nutritionIntro] = useState(initialNutritionIntro);
-  const [tiers] = useState(initialNutritionTiers);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState(false);
@@ -711,8 +702,6 @@ export default function AdminSiteVideosPanel({
       dinnerVideoUrl: dinnerUrl.trim() || null,
       dinnerVideoTitle: dinnerTitle.trim(),
       dailyInspirationClips: clips.filter((c) => c.videoUrl.trim()),
-      nutritionIntro,
-      nutritionTiers: tiers,
     });
 
     if ("error" in memberResult && memberResult.error) {

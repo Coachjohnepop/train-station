@@ -21,7 +21,13 @@ export default function BookClient() {
   const searchParams = useSearchParams();
   const purpose = searchParams.get("purpose") || "";
   const isSpeaking = purpose === "speaking";
-  const [contact, setContact] = useState<{ email: string; phone?: string; calendlyUrl?: string } | null>(null);
+  const isNutrition = purpose === "nutrition";
+  const [contact, setContact] = useState<{
+    email: string;
+    phone?: string;
+    calendlyUrl?: string;
+    nutritionCalendlyUrl?: string;
+  } | null>(null);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
@@ -53,12 +59,14 @@ export default function BookClient() {
             email: c.email || "jeremy@thetrainstation.co",
             phone: c.phone || undefined,
             calendlyUrl: c.calendlyUrl || COACH_CALENDLY_URL,
+            nutritionCalendlyUrl: c.nutritionCalendlyUrl || c.calendlyUrl || COACH_CALENDLY_URL,
           });
         } else {
           // Always unblock UI with brand Calendly fallback
           setContact({
             email: "jeremy@thetrainstation.co",
             calendlyUrl: COACH_CALENDLY_URL,
+            nutritionCalendlyUrl: COACH_CALENDLY_URL,
           });
         }
 
@@ -88,6 +96,7 @@ export default function BookClient() {
           setContact({
             email: "jeremy@thetrainstation.co",
             calendlyUrl: COACH_CALENDLY_URL,
+            nutritionCalendlyUrl: COACH_CALENDLY_URL,
           });
         }
       }
@@ -136,15 +145,20 @@ export default function BookClient() {
     return <p className="mt-6 text-center text-[var(--muted)]">Loading booking info…</p>;
   }
 
-  const calendly = contact.calendlyUrl || COACH_CALENDLY_URL;
+  const calendly = isNutrition
+    ? contact.nutritionCalendlyUrl || contact.calendlyUrl || COACH_CALENDLY_URL
+    : contact.calendlyUrl || COACH_CALENDLY_URL;
 
   return (
     <div className="max-w-2xl mx-auto">
-      <Link href="/member" className="text-xs text-accent hover:underline">
-        ← Back to dashboard
+      <Link
+        href={isNutrition ? "/member/nutrition" : "/member"}
+        className="text-xs text-accent hover:underline"
+      >
+        {isNutrition ? "← Back to Nutrition" : "← Back to dashboard"}
       </Link>
 
-      {rescheduleUrl ? (
+      {rescheduleUrl && !isNutrition ? (
         <div className="mt-4">
           <NextStepLink href={rescheduleUrl}>Change appointment</NextStepLink>
           <p className="mt-2 text-center text-xs text-[var(--muted)]">
@@ -154,10 +168,20 @@ export default function BookClient() {
       ) : null}
 
       <h1 className="mt-3 text-2xl font-bold">
-        {isSpeaking ? "Book your speaking scope call" : "Book your onboarding call"}
+        {isNutrition
+          ? "Book a nutrition appointment"
+          : isSpeaking
+            ? "Book your speaking scope call"
+            : "Book your onboarding call"}
       </h1>
       <p className="mt-2 text-sm text-[var(--muted)]">
-        {isSpeaking ? (
+        {isNutrition ? (
+          <>
+            Custom meal planning with Coach Jeremy.{" "}
+            <strong className="text-[var(--foreground)]">Book a nutrition appointment on Calendly</strong>{" "}
+            — he will build a personal menu around your goals and schedule.
+          </>
+        ) : isSpeaking ? (
           <>
             15-minute Zoom with Coach Jeremy to scope your speaking engagement.{" "}
             <strong className="text-[var(--foreground)]">Book on Calendly</strong> — same open times
@@ -179,14 +203,22 @@ export default function BookClient() {
 
       <div className="mt-6 card space-y-3">
         <h2 className="font-semibold">
-          {isSpeaking ? "Book your 15-minute scope call" : "Book your intro call (recommended)"}
+          {isNutrition
+            ? "Book a nutrition appointment"
+            : isSpeaking
+              ? "Book your 15-minute scope call"
+              : "Book your intro call (recommended)"}
         </h2>
         <p className="text-sm text-[var(--muted)]">
-          Jeremy&apos;s live calendar opens right here. You&apos;ll get a confirmation email with your Zoom link.
+          {isNutrition
+            ? "Jeremy's nutrition calendar opens right here. You'll get a confirmation email."
+            : "Jeremy's live calendar opens right here. You'll get a confirmation email with your Zoom link."}
         </p>
         {calendlyBooked ? (
           <p className="rounded-lg border border-[var(--success)]/30 bg-[var(--success)]/10 px-3 py-2 text-sm text-[var(--success)]">
-            Session booked — check your email for confirmation and Zoom details.
+            {isNutrition
+              ? "Nutrition appointment booked — check your email for confirmation."
+              : "Session booked — check your email for confirmation and Zoom details."}
           </p>
         ) : (
           <button
@@ -194,7 +226,11 @@ export default function BookClient() {
             onClick={() => setCalendlyModalOpen(true)}
             className="btn-primary w-full"
           >
-            {isSpeaking ? "Book 15-minute speaking call" : "Book your session"}
+            {isNutrition
+              ? "Book a nutrition appointment"
+              : isSpeaking
+                ? "Book 15-minute speaking call"
+                : "Book your session"}
           </button>
         )}
         <p className="text-xs text-[var(--muted)]">
@@ -312,10 +348,11 @@ export default function BookClient() {
         open={calendlyModalOpen}
         calendlyUrl={calendly}
         prefill={memberEmail ? { email: memberEmail } : undefined}
-        title="Book with Coach Jeremy"
+        title={isNutrition ? "Book a nutrition appointment" : "Book with Coach Jeremy"}
         onClose={() => setCalendlyModalOpen(false)}
         onScheduled={(details) => {
           setCalendlyBooked(true);
+          if (isNutrition) return;
           void (async () => {
             const res = await fetch("/api/member/intake-scheduled", {
               method: "POST",

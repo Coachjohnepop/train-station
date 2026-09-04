@@ -61,8 +61,6 @@ export default async function AdminVideosPage() {
         initialDinnerUrl={member.dinnerVideoUrl ?? ""}
         initialDinnerTitle={member.dinnerVideoTitle}
         initialDailyClips={member.dailyInspirationClips}
-        initialNutritionIntro={member.nutritionIntro}
-        initialNutritionTiers={member.nutritionTiers}
         initialLibrary={library.items}
         initialUploadedContentVolumeDb={landing.uploadedContentVolumeDb}
       />
