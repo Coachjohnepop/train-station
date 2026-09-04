@@ -22,10 +22,8 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#0a0612" },
-    { media: "(prefers-color-scheme: light)", color: "#f4effb" },
-  ],
+  // Dark splash for the installed app — light #f4effb was a white window on relaunch.
+  themeColor: "#0a0612",
 };
 
 /** SEO desk (Admin → SEO) drives title, description, OG, robots, verification. */
@@ -39,8 +37,13 @@ export default async function RootLayout({
   const brand = await getResolvedSiteBrand();
 
   return (
-    <html lang="en" className={`${geist.variable} app-shell-bg`} suppressHydrationWarning>
-      <body className="app-shell-bg">
+    <html
+      lang="en"
+      className={`${geist.variable} app-shell-bg`}
+      style={{ backgroundColor: "#0a0612" }}
+      suppressHydrationWarning
+    >
+      <body className="app-shell-bg" style={{ backgroundColor: "#0a0612" }}>
         <SiteBrandProvider brand={brand}>
           <ThemeAttributesSync membershipTier="explorer" />
           <GlobalThemeToggle />

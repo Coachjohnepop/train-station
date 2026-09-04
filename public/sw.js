@@ -1,9 +1,10 @@
-/* Train Station PWA service worker v3
- * - Installability
- * - Web Push → notification + home-screen badge (must showNotification for iOS)
- * - Network-first (no offline cache)
+/* Train Station PWA service worker v4
+ * - Installability (fetch handler must exist)
+ * - Web Push → notification + home-screen badge
+ * - Do NOT hijack document / Next.js RSC loads — that whitescreens the
+ *   installed desktop app on relaunch (redirects + App Router flights).
  */
-const SW_VERSION = "ts-sw-v3";
+const SW_VERSION = "ts-sw-v4";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -15,7 +16,24 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  event.respondWith(fetch(event.request));
+  const req = event.request;
+  if (req.mode === "navigate") return;
+  let url;
+  try {
+    url = new URL(req.url);
+  } catch {
+    return;
+  }
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith("/_next/")) return;
+  if (url.searchParams.has("_rsc")) return;
+  if (req.headers.get("RSC") === "1") return;
+  if (req.headers.get("Next-Router-Prefetch")) return;
+  event.respondWith(
+    fetch(req).catch(
+      () => new Response("", { status: 504, statusText: "offline" }),
+    ),
+  );
 });
 
 async function setBadge(count) {

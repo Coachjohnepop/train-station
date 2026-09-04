@@ -4,7 +4,7 @@
  */
 
 /** Bump when public/sw.js changes so clients re-register. */
-export const SW_SCRIPT = "/sw.js?v=3";
+export const SW_SCRIPT = "/sw.js?v=4";
 
 /** Permanent: user completed Enable alerts — never show the banner again. */
 export const PUSH_ALERTS_ENABLED_KEY = "ts-push-alerts-enabled";
