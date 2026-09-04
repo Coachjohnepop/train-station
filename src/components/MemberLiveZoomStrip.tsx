@@ -107,7 +107,7 @@ export default function MemberLiveZoomStrip({
           </p>
           <p className="truncate text-xs text-sky-100/80">
             {showJoin
-              ? "Coach is live — join the room"
+              ? "Coach is live"
               : status?.roomReady
                 ? "Room ready — waiting for coach to start"
                 : "Waiting for coach to open Zoom"}
@@ -119,9 +119,9 @@ export default function MemberLiveZoomStrip({
             target="_blank"
             rel="noopener noreferrer"
             onClick={onJoinClick}
-            className="btn-primary shrink-0 px-3 py-2 text-xs font-bold sm:px-4 sm:text-sm"
+            className="btn-primary shrink-0 px-4 py-2 text-xs font-bold sm:px-5 sm:text-sm"
           >
-            Join Live Zoom Now
+            Join
           </a>
         ) : (
           <Link

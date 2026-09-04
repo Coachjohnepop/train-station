@@ -5,10 +5,7 @@ import {
   nextHeldLiveZoomStatus,
   sameLiveZoomStatus,
 } from "@/lib/live-zoom-status-hold";
-import {
-  isLiveClassSessionGoing,
-  startLiveClassBackupPoll,
-} from "@/lib/session-live-poll";
+import { startLiveClassBackupPoll } from "@/lib/session-live-poll";
 
 export type MemberLiveZoomStatus = {
   sessionDate: string;
@@ -57,12 +54,14 @@ async function loadOnce() {
   }
 }
 
-/** Interval only while coach is live and the tab is visible. */
+/**
+ * Poll while the tab is visible. SSE is in-memory per serverless instance, so
+ * waiting members never saw Join when the coach started Zoom on another instance.
+ * Floor is 5s (LIVE_CLASS_POLL_MS). Hidden tabs do not tick.
+ */
 function syncBackupPoll() {
   const should =
-    isLiveClassSessionGoing(sharedStatus) &&
-    typeof document !== "undefined" &&
-    document.visibilityState === "visible";
+    typeof document !== "undefined" && document.visibilityState === "visible";
   if (should) {
     if (stopPoll) return;
     stopPoll = startLiveClassBackupPoll(() => {
@@ -81,6 +80,7 @@ function ensureBus() {
   started = true;
 
   void loadOnce();
+  syncBackupPoll();
 
   try {
     es = new EventSource("/api/member/live-zoom/stream");
@@ -128,7 +128,8 @@ function releaseBus() {
 
 /**
  * Coach→member Zoom status: one GET, SSE, focus/tab return.
- * Backup poll runs only while hostStarted (live class).
+ * Visible-tab backup poll (5s) so Join flips when the coach starts on
+ * another Vercel instance (SSE is same-instance only).
  */
 export function useMemberLiveZoomStatus() {
   const [status, setStatus] = useState<MemberLiveZoomStatus | null>(sharedStatus);

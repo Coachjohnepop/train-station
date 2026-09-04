@@ -424,6 +424,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-04 (member Join when coach starts Zoom)
+
+**Status:** Waiting members now poll live-zoom status every 5s (visible tab only) so the blue bar flips from **Ping Coach** to **Join** when Jeremy starts Zoom on another Vercel instance. SSE is still in-memory per instance. Header already said Join; the strip button is now **Join** too.
+
 **Date:** 2026-09-04 (instant warmup points)
 
 **Status:** Finishing the Today **WARM-UP** card now awards `warmup_before_live` immediately (once per calendar day) and flies points to Scores. Previously that ledger event only ran on the pre-intake warmup navigator, so a live-session warmup (Lemon John / Back/Bicep) scored nothing until the whole workout was logged.

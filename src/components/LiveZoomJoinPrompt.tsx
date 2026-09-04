@@ -63,7 +63,7 @@ export default function LiveZoomJoinPrompt() {
             onClick={onJoin}
             className="btn-primary px-4 py-2 text-sm font-bold"
           >
-            Join Live Zoom Now
+            Join
           </a>
         ) : null}
         <Link href="/member/live" className="btn-ghost px-4 py-2 text-sm">

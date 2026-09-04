@@ -129,7 +129,7 @@ export default function CoachJoinLiveNavStrip() {
         if (data.notified > 0) {
           setHint(`Live as host — link sent to ${data.notified} member${data.notified === 1 ? "" : "s"}.`);
         } else {
-          setHint("You're hosting — members can Join Live Zoom Now.");
+          setHint("You're hosting — members' button is now Join.");
         }
       } else {
         setHint("Joining as participant (host is the class coach). Enter as guest if Zoom asks to log in.");
