@@ -229,20 +229,19 @@ export default function MemberNav({
                 key={item.href}
                 id="member-nav-today"
                 href={href}
-                aria-label={locked ? "Today — complete your ticket first" : "Home — Today dashboard"}
-                title={locked ? "Complete your ticket to unlock Today" : "Home — your daily dashboard"}
+                aria-label={locked ? "Today — complete your ticket first" : "Today"}
+                title={locked ? "Complete your ticket to unlock Today" : "Today"}
                 onClick={(e) => {
                   if (locked) return;
                   e.preventDefault();
                   goMemberTodayHome(router);
                 }}
-                className={`member-nav-home member-nav-home--ramp relative flex min-h-10 flex-[1.05] flex-row items-center justify-center gap-1 rounded-xl border px-1.5 py-1 text-center transition lg:min-h-[2.75rem] lg:min-w-[3.2rem] lg:max-w-[5.5rem] lg:flex-[0.67] lg:px-2 ${
+                className={`member-nav-home member-nav-home--ramp relative flex min-h-10 flex-[1.05] flex-row items-center justify-center gap-1 rounded-xl border px-1.5 py-1 text-center transition lg:min-h-[2.75rem] lg:min-w-[4.75rem] lg:flex-none lg:px-5 ${
                   active ? "member-nav-home--active nav-tab-ramp-active" : "nav-tab-ramp"
                 } ${locked ? "opacity-80" : ""}`}
               >
                 {homeIcon()}
                 <span className="member-nav-home-label">{item.label}</span>
-                <span className="member-nav-home-sublabel hidden lg:inline">Home</span>
                 {rampHighlight && !active ? (
                   <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[var(--ramp-gold)] ring-2 ring-[var(--surface)]" />
                 ) : null}

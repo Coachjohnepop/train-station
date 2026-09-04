@@ -1515,6 +1515,11 @@ table.data.table-sticky-actions td:last-child {
   }
 }
 
+/* Member chrome: icon-only theme toggle (wide used to show LIGHT next to the sun). */
+.member-app .global-theme-toggle .theme-mode-toggle__label {
+  display: none;
+}
+
 /* Member shell / landing nav own theme toggle in-header — hide the fixed global one */
 body:has([data-member-chrome]) [data-global-theme-toggle],
 body:has([data-landing-nav]) [data-global-theme-toggle] {
@@ -2077,21 +2082,6 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   letter-spacing: 0.01em;
 }
 
-.member-nav-home-sublabel {
-  display: none;
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  opacity: 0.72;
-}
-
-@media (min-width: 1024px) {
-  .member-nav-home-sublabel {
-    display: inline;
-  }
-}
-
 /* Onboarding: pulse highlight on Gear when shop-hint is active */
 .member-nav-gear--hint {
   color: var(--accent) !important;
@@ -2397,10 +2387,6 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 
   .member-app .member-nav-home-label {
     font-size: 0.7rem;
-  }
-
-  .member-app .member-nav-home-sublabel {
-    display: none !important;
   }
 
   .member-app .member-nav-more-icon {

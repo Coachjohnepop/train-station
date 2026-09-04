@@ -13,7 +13,8 @@ export default function MemberHeaderHomeLink({ setupHref }: { setupHref?: string
     <Link
       href={href}
       className="transition hover:opacity-90"
-      title={setupHref ? "Continue setup" : "Home — Today"}
+      aria-label={setupHref ? "Continue setup" : "Home"}
+      title={setupHref ? "Continue setup" : "Home"}
       onClick={(e) => {
         if (setupHref) return;
         e.preventDefault();

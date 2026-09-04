@@ -424,6 +424,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-04 (member Today chrome)
+
+**Status:** Wide Today tab no longer stacks a tiny **HOME** on **Today**. The train logo is Home. Theme toggle in member chrome is icon-only (no LIGHT label). Gym/Home track toggle is unchanged (workout location).
+
 **Date:** 2026-09-03 (Jeremy phone follow-up)
 
 **Status:** After the iframe fix he used Exercises on iPhone (Edit/Save/Add/Delete ~10:30–10:57 PT) but still PIN-logged in from landing, and the library was still too heavy: 299 rows, empty video cells opened a URL box on every row, Sign out sat in the phone header next to Alerts. Library now pages 40 at a time, video cells stay closed until Add/Change, no YouTube/ytimg in the table (Edit modal still plays). Sign out moved into the menu. Prod session cookies use `.thetrainstation.co` so www and apex share login. **Still no CoachTodaySession for Thu 2026-09-03** — do not invent a class.
