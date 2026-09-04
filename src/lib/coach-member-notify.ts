@@ -583,22 +583,25 @@ export async function notifyCoachZoomWaiting(params: {
   name: string;
   email: string;
   sessionDate: string;
+  reason?: "join" | "ping";
 }): Promise<void> {
   const date = params.sessionDate.trim() || new Date().toISOString().slice(0, 10);
+  const ping = params.reason === "ping";
   try {
     const { postCoachInboxItem } = await import("@/lib/coach-inbox");
     const posted = await postCoachInboxItem({
       kind: "zoom",
-      title: "Zoom request — member waiting",
-      body:
-        `${params.name} wants to Join Live Zoom for ${date}. ` +
-        `They tapped Join while the host room is not open yet. Open Go to Today and tap Join Live Now.`,
+      title: ping ? "Zoom ping — members ready" : "Zoom request — member waiting",
+      body: ping
+        ? `${params.name}: “Coach, Members are ready.” Open Go to Today and start Zoom.`
+        : `${params.name} wants to Join Live Zoom for ${date}. ` +
+          `They tapped Join while the host room is not open yet. Open Go to Today and tap Join Live Now.`,
       href: `/admin/today`,
       memberUserId: params.userId,
       memberEmail: params.email,
       memberName: params.name,
       claimKey: `zoom:${params.userId}:${date}`,
-      metadata: { sessionDate: date },
+      metadata: { sessionDate: date, reason: ping ? "ping" : "join" },
     });
     if (!posted.created) return;
   } catch (e) {
@@ -617,8 +620,10 @@ export async function notifyCoachZoomWaiting(params: {
       const ids = [...new Set(staff.map((s) => s.id))];
       if (ids.length) {
         await sendPushToUserIds(ids, {
-          title: "Zoom request — member waiting",
-          body: `${params.name} tapped Join Live. Open Go to Today.`,
+          title: ping ? "Zoom ping — members ready" : "Zoom request — member waiting",
+          body: ping
+            ? `${params.name}: Coach, Members are ready.`
+            : `${params.name} tapped Join Live. Open Go to Today.`,
           url: "/admin/today",
           tag: `coach-zoom-${params.userId}-${date}`,
         });

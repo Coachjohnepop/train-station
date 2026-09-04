@@ -424,6 +424,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-04 (Ping Coach stays on Today)
+
+**Status:** **Ping Coach to Start Zoom** no longer leaves Today. A popup shows **Coach, Members are ready** with **Send**. Send posts that to Messages, writes Admin → Alerts, and tries coach push. Popup closes; member is still on the workout.
+
 **Date:** 2026-09-04 (member Join when coach starts Zoom)
 
 **Status:** Waiting members now poll live-zoom status every 5s (visible tab only) so the blue bar flips from **Ping Coach** to **Join** when Jeremy starts Zoom on another Vercel instance. SSE is still in-memory per instance. Header already said Join; the strip button is now **Join** too.

@@ -13,6 +13,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import FreeUpgradeTease from "@/components/FreeUpgradeTease";
+import PingCoachZoomModal from "@/components/PingCoachZoomModal";
 import { isFreeExplorerPlan } from "@/lib/free-tier-product";
 import { markZoomJoined, readZoomJoined } from "@/lib/member-zoom-join-ui";
 import { useMemberLiveZoomStatus } from "@/lib/use-member-live-zoom-status";
@@ -31,6 +32,7 @@ export default function MemberLiveZoomStrip({
   const status = useMemberLiveZoomStatus();
   const sessionDate = status?.sessionDate ?? "";
   const [joined, setJoined] = useState(false);
+  const [pingOpen, setPingOpen] = useState(false);
   const freeExplorer = isFreeExplorerPlan(membershipPlan);
 
   // Join only while coach is actively hosting (not merely because a room object exists).
@@ -124,15 +126,21 @@ export default function MemberLiveZoomStrip({
             Join
           </a>
         ) : (
-          <Link
-            href="/member/chat?ping=zoom"
+          <button
+            type="button"
             className="btn-ghost shrink-0 border border-sky-400/40 bg-sky-500/15 px-3 py-2 text-xs font-bold text-sky-100 hover:bg-sky-500/25 sm:px-4 sm:text-sm"
-            title="Message your coach to start the live Zoom"
+            title="Ping your coach to start the live Zoom"
+            onClick={() => setPingOpen(true)}
           >
             Ping Coach to Start Zoom
-          </Link>
+          </button>
         )}
       </div>
+      <PingCoachZoomModal
+        open={pingOpen}
+        sessionDate={sessionDate || undefined}
+        onClose={() => setPingOpen(false)}
+      />
     </div>
   );
 }
