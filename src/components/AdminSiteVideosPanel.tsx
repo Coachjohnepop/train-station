@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { upload } from "@vercel/blob/client";
 import {
   saveLandingMediaAction,
@@ -114,6 +114,9 @@ function YoutubeVideoField({
 
 function formatUploadError(err: unknown, fileName: string): string {
   const msg = err instanceof Error ? err.message : String(err);
+  if (/icloud|still in iCloud|size 0|empty file/i.test(msg)) {
+    return `${fileName}: still in iCloud. Open Photos, wait for the download, then pick it again.`;
+  }
   if (/too large|maximumSize|max \d+ MB/i.test(msg)) {
     return `${fileName}: too large (max ${MAX_MB} MB). In Photos, export 1080p or trim the clip.`;
   }
@@ -124,6 +127,54 @@ function formatUploadError(err: unknown, fileName: string): string {
     return `${fileName}: cloud upload failed. Stay on Wi-Fi and try again. If it still fails, tell John.`;
   }
   return msg || `${fileName}: upload failed`;
+}
+
+/** iOS Safari ignores display:none file inputs. The tap must hit the <input> itself. */
+function PhoneVideoPicker({
+  accept,
+  disabled = false,
+  busy = false,
+  label,
+  busyLabel = "Uploading…",
+  className,
+  multiple = false,
+  onFile,
+  onFiles,
+}: {
+  accept: string;
+  disabled?: boolean;
+  busy?: boolean;
+  label: string;
+  busyLabel?: string;
+  className: string;
+  multiple?: boolean;
+  onFile?: (file: File) => void;
+  onFiles?: (files: FileList) => void;
+}) {
+  const blocked = disabled || busy;
+  return (
+    <label className={`relative inline-flex ${blocked ? "pointer-events-none opacity-60" : ""}`}>
+      <input
+        type="file"
+        accept={accept}
+        multiple={multiple}
+        disabled={blocked}
+        className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+        onChange={(e) => {
+          const picked = e.target.files ? Array.from(e.target.files) : [];
+          e.currentTarget.value = "";
+          if (!picked.length) return;
+          if (onFile) onFile(picked[0]);
+          if (onFiles) {
+            const dt = new DataTransfer();
+            for (const f of picked) dt.items.add(f);
+            onFiles(dt.files);
+          }
+        }}
+      />
+      <span className={className}>{busy ? busyLabel : label}</span>
+    </label>
+  );
 }
 
 function libraryLabel(items: SiteVideoLibraryItem[], url: string): string {
@@ -195,9 +246,6 @@ export default function AdminSiteVideosPanel({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState(false);
 
-  const fileRef = useRef<HTMLInputElement>(null);
-  const replaceFileRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const slotFileRefs = useRef<Partial<Record<CoachIntroSlotId, HTMLInputElement | null>>>({});
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -270,6 +318,9 @@ export default function AdminSiteVideosPanel({
     file: File,
     progressLabel: string,
   ): Promise<string> {
+    if (!file.size) {
+      throw new Error(`${file.name}: still in iCloud. Open Photos, wait for the download, then pick it again.`);
+    }
     if (file.size > SITE_VIDEO_MAX_BYTES) {
       throw new Error(`${file.name}: too large (max ${MAX_MB} MB).`);
     }
@@ -372,7 +423,6 @@ export default function AdminSiteVideosPanel({
       setUploadProgress(null);
     } finally {
       setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
     }
   }
 
@@ -409,14 +459,18 @@ export default function AdminSiteVideosPanel({
   }
 
   /** Upload a file and assign it to one intro slot (or replace that slot’s file). */
-  async function handleSlotUpload(slotId: CoachIntroSlotId, files: FileList | null) {
-    const file = files?.[0];
+  async function handleSlotUpload(slotId: CoachIntroSlotId, file: File | null) {
     if (!file) return;
     const slot = COACH_INTRO_SLOTS.find((s) => s.id === slotId);
     const label = slot?.label || "slot";
     setSlotUploading(slotId);
     setUploadError(null);
-    setUploadProgress(null);
+    const mb = file.size / (1024 * 1024);
+    setUploadProgress(
+      mb
+        ? `Got ${file.name} (${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB) — uploading…`
+        : `Got ${file.name} — uploading…`,
+    );
     try {
       const currentUrl = urlForSlot(slotId, assignments);
       const existing = library.find((i) => i.url === currentUrl);
@@ -455,7 +509,14 @@ export default function AdminSiteVideosPanel({
         assignedUrl = item.url;
         setPreviewId(item.id);
       }
-      const nextAssignments = setSlotUrl(assignments, slotId, assignedUrl);
+      let nextAssignments = setSlotUrl(assignments, slotId, assignedUrl);
+      if (existing) {
+        nextAssignments = assignmentsWithUrlSwap(
+          nextAssignments,
+          existing.url,
+          assignedUrl,
+        );
+      }
       setAssignments(nextAssignments);
       setWatchingSlots((prev) => ({ ...prev, [slotId]: true }));
       setUploadProgress(`${label}: publishing to live site…`);
@@ -468,14 +529,11 @@ export default function AdminSiteVideosPanel({
       setUploadProgress(null);
     } finally {
       setSlotUploading(null);
-      const input = slotFileRefs.current[slotId];
-      if (input) input.value = "";
     }
   }
 
   /** Replace the file on an existing library row; slots using the old URL follow. */
-  async function handleLibraryReplace(itemId: string, files: FileList | null) {
-    const file = files?.[0];
+  async function handleLibraryReplace(itemId: string, file: File | null) {
     if (!file) return;
     const old = library.find((i) => i.id === itemId);
     if (!old) return;
@@ -529,8 +587,6 @@ export default function AdminSiteVideosPanel({
     } finally {
       setReplacingId(null);
       setUploading(false);
-      const input = replaceFileRefs.current[itemId];
-      if (input) input.value = "";
     }
   }
 
@@ -828,9 +884,10 @@ export default function AdminSiteVideosPanel({
         <h2 className="text-lg font-semibold">1 · Upload onto a slot (goes live)</h2>
         <p className="text-xs text-[var(--muted)]">
           This is the path that works on Jeremy&apos;s phone. Tap{" "}
-          <strong className="text-[var(--text)]">Upload video</strong> on the slot — Photos / Camera
-          / Files. When the green bar says live, members see it. Free Explorer is the clip after the
-          gag.
+          <strong className="text-[var(--text)]">Upload video</strong> or{" "}
+          <strong className="text-[var(--text)]">Replace video</strong> on the slot — Photos /
+          Camera / Files. Stay on the page until the green bar says live. Clips over {MAX_MB} MB
+          will fail — export 1080p in Photos. Free Explorer is the clip after the gag.
         </p>
         <div className="space-y-3">
           {COACH_INTRO_SLOTS.map((slot) => {
@@ -873,27 +930,14 @@ export default function AdminSiteVideosPanel({
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <input
-                    ref={(el) => {
-                      slotFileRefs.current[slot.id] = el;
-                    }}
-                    type="file"
+                  <PhoneVideoPicker
                     accept={SITE_VIDEO_CLIENT_ACCEPT}
-                    className="hidden"
-                    onChange={(e) => void handleSlotUpload(slot.id, e.target.files)}
-                  />
-                  <button
-                    type="button"
+                    disabled={uploading}
+                    busy={busy}
+                    label={hasVideo ? "Replace video" : "Upload video"}
                     className="btn-primary px-3 py-1.5 text-xs font-semibold"
-                    disabled={busy || uploading}
-                    onClick={() => slotFileRefs.current[slot.id]?.click()}
-                  >
-                    {busy
-                      ? "Uploading…"
-                      : hasVideo
-                        ? "Replace video"
-                        : "Upload video"}
-                  </button>
+                    onFile={(file) => void handleSlotUpload(slot.id, file)}
+                  />
                   <button
                     type="button"
                     className="btn-ghost px-3 py-1.5 text-xs font-semibold"
@@ -1011,22 +1055,15 @@ export default function AdminSiteVideosPanel({
             </p>
           </div>
           <div>
-            <input
-              ref={fileRef}
-              type="file"
+            <PhoneVideoPicker
               accept={SITE_VIDEO_CLIENT_ACCEPT}
               multiple
-              className="hidden"
-              onChange={(e) => void handleMultiUpload(e.target.files)}
-            />
-            <button
-              type="button"
-              className="btn-primary px-4 py-2 text-sm font-semibold"
               disabled={uploading}
-              onClick={() => fileRef.current?.click()}
-            >
-              {uploading ? "Uploading…" : "Upload videos"}
-            </button>
+              busy={uploading}
+              label="Upload videos"
+              className="btn-primary px-4 py-2 text-sm font-semibold"
+              onFiles={(files) => void handleMultiUpload(files)}
+            />
           </div>
         </div>
 
@@ -1087,23 +1124,15 @@ export default function AdminSiteVideosPanel({
                       >
                         {open ? "Hide player" : "Watch"}
                       </button>
-                      <input
-                        ref={(el) => {
-                          replaceFileRefs.current[item.id] = el;
-                        }}
-                        type="file"
+                      <PhoneVideoPicker
                         accept={SITE_VIDEO_CLIENT_ACCEPT}
-                        className="hidden"
-                        onChange={(e) => void handleLibraryReplace(item.id, e.target.files)}
+                        disabled={uploading}
+                        busy={replacingId === item.id}
+                        label="Replace video"
+                        busyLabel="Replacing…"
+                        className="btn-ghost px-3 py-1.5 text-xs font-semibold"
+                        onFile={(file) => void handleLibraryReplace(item.id, file)}
                       />
-                      <button
-                        type="button"
-                        className="btn-ghost text-xs font-semibold"
-                        disabled={uploading || replacingId === item.id}
-                        onClick={() => replaceFileRefs.current[item.id]?.click()}
-                      >
-                        {replacingId === item.id ? "Replacing…" : "Replace video"}
-                      </button>
                       <button
                         type="button"
                         className="btn-ghost text-xs text-red-300"

@@ -95,7 +95,7 @@ export default function PlayableVideoFrame({
     return (
       <video
         ref={videoRef}
-        className={className}
+        className={`${className} object-contain bg-black`}
         src={videoUrl}
         title={title}
         controls
