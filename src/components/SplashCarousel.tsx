@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import HeroSlideMedia from "@/components/HeroSlideMedia";
 import {
   activeHeroSlides,
   DEFAULT_HERO_SLIDES,
+  HERO_SLIDE_FADE_MS,
   heroSlideHoldMs,
   heroSlideShouldLoadMedia,
   type HeroSlide,
@@ -21,6 +22,8 @@ export default function SplashCarousel({
     return active.length ? active : DEFAULT_HERO_SLIDES;
   }, [heroSlides]);
   const [current, setCurrent] = useState(0);
+  const [fadingOut, setFadingOut] = useState<number | null>(null);
+  const prevIndexRef = useRef(0);
 
   useEffect(() => {
     if (images.length <= 1) return;
@@ -32,16 +35,31 @@ export default function SplashCarousel({
     return () => window.clearTimeout(interval);
   }, [images, current]);
 
+  useEffect(() => {
+    const prev = prevIndexRef.current;
+    if (prev === current) return;
+    prevIndexRef.current = current;
+    setFadingOut(prev);
+    const id = window.setTimeout(() => setFadingOut(null), HERO_SLIDE_FADE_MS);
+    return () => window.clearTimeout(id);
+  }, [current]);
+
   return (
     <div className="relative h-[65vh] min-h-[420px] w-full overflow-hidden bg-black">
       {images.map((slide, index) => (
         <div
           key={`${slide.id}-${slide.src}`}
-          className={`absolute inset-0 overflow-hidden brightness-[1.14] contrast-[1.04] saturate-[1.06] transition-opacity duration-1000 ease-in-out ${
+          className={`absolute inset-0 overflow-hidden brightness-[1.14] contrast-[1.04] saturate-[1.06] transition-opacity duration-[1250ms] ease-in-out ${
             index === current ? "opacity-100" : "opacity-0"
           }`}
         >
-          {heroSlideShouldLoadMedia(index, current, images.length, slide) ? (
+          {heroSlideShouldLoadMedia(
+            index,
+            current,
+            images.length,
+            slide,
+            fadingOut != null ? [fadingOut] : [],
+          ) ? (
             <HeroSlideMedia
               slide={slide}
               active={index === current}

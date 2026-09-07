@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import LandingSeeInsideTour from "@/components/LandingSeeInsideTour";
 import { FREE_QUICK_TOUR_EVENT } from "@/lib/free-quick-tour";
 import HeroSlideMedia from "@/components/HeroSlideMedia";
 import {
   activeHeroSlides,
   DEFAULT_HERO_SLIDES,
+  HERO_SLIDE_FADE_MS,
   heroSlideHoldMs,
   heroSlideShouldLoadMedia,
   type HeroSlide,
@@ -76,6 +77,8 @@ export default function LandingHero({
   const [canRotateCopy, setCanRotateCopy] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
   const [liveReturn, setLiveReturn] = useState(false);
+  const [fadingOut, setFadingOut] = useState<number | null>(null);
+  const prevIndexRef = useRef(0);
   const returnMode = returning || liveReturn;
 
   const images = useMemo(() => {
@@ -138,6 +141,16 @@ export default function LandingHero({
   }, [canRotateCopy]);
 
   const imageIndex = images.length ? imageTick % images.length : 0;
+
+  useEffect(() => {
+    const prev = prevIndexRef.current;
+    if (prev === imageIndex) return;
+    prevIndexRef.current = imageIndex;
+    setFadingOut(prev);
+    const id = window.setTimeout(() => setFadingOut(null), HERO_SLIDE_FADE_MS);
+    return () => window.clearTimeout(id);
+  }, [imageIndex]);
+
   const headline = returnMode ? (
     <>
       Still here?
@@ -163,7 +176,13 @@ export default function LandingHero({
             index === imageIndex ? "landing-hero-slide--active" : "landing-hero-slide--idle"
           }`}
         >
-          {heroSlideShouldLoadMedia(index, imageIndex, images.length, image) ? (
+          {heroSlideShouldLoadMedia(
+            index,
+            imageIndex,
+            images.length,
+            image,
+            fadingOut != null ? [fadingOut] : [],
+          ) ? (
             <HeroSlideMedia
               slide={image}
               active={index === imageIndex}

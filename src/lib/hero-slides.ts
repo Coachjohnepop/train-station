@@ -252,15 +252,24 @@ export function heroPlaybackRate(slide: Pick<HeroSlide, "playbackRate" | "kind">
   return clamp(rate, 0.25, 1);
 }
 
-/** Load this video only while it is on screen. Neighbors were still ~60 MB iPhone .MOVs. */
+/** Crossfade length — keep in sync with `.landing-hero-slide` CSS. */
+export const HERO_SLIDE_FADE_MS = 1250;
+
+/**
+ * Photos always load. Videos: the on-screen clip, the next clip (so the fade
+ * has a decoded frame), plus any index still fading out.
+ */
 export function heroSlideShouldLoadMedia(
   index: number,
   activeIndex: number,
-  _total: number,
+  total: number,
   slide: Pick<HeroSlide, "kind" | "src">,
+  extraKeep: readonly number[] = [],
 ): boolean {
   if (slide.kind !== "video" && !isHeroVideoSrc(slide.src)) return true;
-  return index === activeIndex;
+  if (total <= 0) return index === activeIndex;
+  const next = (activeIndex + 1) % total;
+  return index === activeIndex || index === next || extraKeep.includes(index);
 }
 
 export function heroSlideHoldMs(slide: HeroSlide): number {

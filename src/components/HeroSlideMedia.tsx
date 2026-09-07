@@ -95,16 +95,33 @@ export default function HeroSlideMedia({
     el.addEventListener("timeupdate", onTime);
     applyWindow();
 
+    let cancelled = false;
+    const onPlaying = () => {
+      if (cancelled || active) return;
+      el.pause();
+      applyWindow();
+      setVideoReady(true);
+    };
+
     if (active) {
       const play = el.play();
       if (play && typeof play.catch === "function") play.catch(() => null);
     } else {
-      el.pause();
+      // Decode the first trimmed frame so the crossfade has pixels, then pause.
+      el.addEventListener("playing", onPlaying);
+      const play = el.play();
+      if (play && typeof play.catch === "function") {
+        play.catch(() => {
+          el.pause();
+        });
+      }
     }
 
     return () => {
+      cancelled = true;
       el.removeEventListener("loadedmetadata", onMeta);
       el.removeEventListener("timeupdate", onTime);
+      el.removeEventListener("playing", onPlaying);
     };
   }, [active, slide, slide.playbackRate, slide.src, slide.trimStartSec, slide.trimEndSec]);
 
@@ -163,7 +180,7 @@ export default function HeroSlideMedia({
           loop={!trimmed}
           playsInline
           autoPlay={active}
-          preload={active ? "auto" : "metadata"}
+          preload="auto"
           aria-label={label}
           style={{ ...crop, backgroundColor: "#000" }}
           onLoadedData={() => setVideoReady(true)}
