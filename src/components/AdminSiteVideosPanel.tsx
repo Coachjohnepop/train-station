@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
 import { useScreenWakeLock } from "@/hooks/useScreenWakeLock";
 import {
+  publishIntroSlotAction,
   saveLandingMediaAction,
   saveMemberContentAction,
 } from "@/app/admin/landing/actions";
@@ -503,22 +504,11 @@ export default function AdminSiteVideosPanel({
     }
   }
 
-  /** Persist intro slot URLs to landing media immediately (so members see them without a full Save). */
-  async function publishIntroSlots(next: CoachIntroAssignments) {
-    const freeExplorerUrl = next.free.trim() || null;
-    const byPlan = {
-      ...next.byPlan,
-      explorer: freeExplorerUrl,
-    };
-    const landingResult = await saveLandingMediaAction({
-      welcomeVideoUrl: next.overall.trim() || null,
-      welcomeVideosByPlan: byPlan,
-      freeChastiseVideoUrl: freeExplorerUrl,
-      equipmentIntroVideoUrl: next.equipment.trim() || null,
-      measurementsIntroVideoUrl: next.measurements.trim() || null,
-      gagEnabled,
-      uploadedContentVolumeDb: volumeDb,
-      introTrims: introTrimsRef.current,
+  /** Persist one intro slot from the live Postgres row (other slots stay put). */
+  async function publishSlot(slotId: CoachIntroSlotId, url: string) {
+    const landingResult = await publishIntroSlotAction({
+      slotId,
+      url: url.trim() || null,
     });
     if ("error" in landingResult && landingResult.error) {
       throw new Error(landingResult.error);
@@ -653,7 +643,7 @@ export default function AdminSiteVideosPanel({
       setWatchingSlots((prev) => ({ ...prev, [slotId]: true }));
       resetSlotTrim(slotId);
       setUploadProgress(`${label}: publishing to live site…`);
-      await publishIntroSlots(nextAssignments);
+      await publishSlot(slotId, assignedUrl);
       trackVideoDesk("video_upload_ok", {
         slot: slotId,
         fileName: file.name,
@@ -717,7 +707,9 @@ export default function AdminSiteVideosPanel({
       );
       if (liveSlots.length) {
         setUploadProgress(`Replaced “${data.item.title}”. Publishing to live site…`);
-        await publishIntroSlots(nextAssignments);
+        for (const s of liveSlots) {
+          await publishSlot(s.id, data.item.url);
+        }
         setUploadProgress(
           `Replaced “${data.item.title}” — live on ${liveSlots.map((s) => s.label).join(", ")}.`,
         );
@@ -1150,7 +1142,7 @@ export default function AdminSiteVideosPanel({
                       const next = setSlotUrl(assignments, slot.id, item.url);
                       setAssignments(next);
                       setWatchingSlots((prev) => ({ ...prev, [slot.id]: true }));
-                      void publishIntroSlots(next)
+                      void publishSlot(slot.id, item.url)
                         .then(() => {
                           setMessage(
                             `${slot.label} set to “${item.title}” and published live.`,

@@ -9,6 +9,11 @@ import {
 } from "@/lib/landing-media-store";
 import type { IntroTrims } from "@/lib/intro-trim";
 import {
+  assignmentsFromLanding,
+  setSlotUrl,
+  type CoachIntroSlotId,
+} from "@/lib/coach-intro-slots";
+import {
   getMemberContent,
   saveMemberContent,
   type NutritionCalorieTier,
@@ -91,6 +96,49 @@ export async function saveLandingMediaAction(input: {
     };
   } catch (e: unknown) {
     return { error: e instanceof Error ? e.message : "Save failed" };
+  }
+}
+
+/** Patch one intro slot from current Postgres row — never send stale sibling slots. */
+export async function publishIntroSlotAction(input: {
+  slotId: CoachIntroSlotId;
+  url: string | null;
+}) {
+  const session = await getSessionUser();
+  if (!session || !isStaffRole(session.role)) {
+    return { error: "Coach sign-in required. Sign out and sign in again at /login." };
+  }
+  try {
+    const current = await getLandingMedia();
+    const next = setSlotUrl(
+      assignmentsFromLanding({
+        welcomeVideoUrl: current.welcomeVideoUrl,
+        freeChastiseVideoUrl: current.freeChastiseVideoUrl,
+        equipmentIntroVideoUrl: current.equipmentIntroVideoUrl,
+        measurementsIntroVideoUrl: current.measurementsIntroVideoUrl,
+        welcomeVideosByPlan: current.welcomeVideosByPlan,
+      }),
+      input.slotId,
+      input.url?.trim() || "",
+    );
+    const config = await saveLandingMedia({
+      welcomeVideoUrl: next.overall.trim() || null,
+      welcomeVideosByPlan: next.byPlan,
+      freeChastiseVideoUrl: next.free.trim() || null,
+      equipmentIntroVideoUrl: next.equipment.trim() || null,
+      measurementsIntroVideoUrl: next.measurements.trim() || null,
+    });
+    return {
+      ok: true as const,
+      storedWelcomeVideoUrl: config.welcomeVideoUrl,
+      storedWelcomeVideosByPlan: config.welcomeVideosByPlan,
+      storedFreeChastiseVideoUrl: config.freeChastiseVideoUrl,
+      storedEquipmentIntroVideoUrl: config.equipmentIntroVideoUrl,
+      storedMeasurementsIntroVideoUrl: config.measurementsIntroVideoUrl,
+      updatedAt: config.updatedAt,
+    };
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : "Publish failed" };
   }
 }
 
