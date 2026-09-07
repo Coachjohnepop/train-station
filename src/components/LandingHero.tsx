@@ -78,7 +78,7 @@ export default function LandingHero({
   const [tourOpen, setTourOpen] = useState(false);
   const [liveReturn, setLiveReturn] = useState(false);
   const [fadingOut, setFadingOut] = useState<number | null>(null);
-  const prevIndexRef = useRef(0);
+  const fadeClearRef = useRef<number | null>(null);
   const returnMode = returning || liveReturn;
 
   const images = useMemo(() => {
@@ -119,14 +119,37 @@ export default function LandingHero({
     return () => window.removeEventListener(FREE_QUICK_TOUR_EVENT, open);
   }, []);
 
+  const imageIndex = images.length ? imageTick % images.length : 0;
+
+  function goTo(nextIndex: number) {
+    if (!images.length) return;
+    const wrapped = ((nextIndex % images.length) + images.length) % images.length;
+    if (wrapped === imageIndex) return;
+    setFadingOut(imageIndex);
+    setImageTick(wrapped);
+    if (fadeClearRef.current) window.clearTimeout(fadeClearRef.current);
+    fadeClearRef.current = window.setTimeout(() => {
+      setFadingOut(null);
+      fadeClearRef.current = null;
+    }, HERO_SLIDE_FADE_MS);
+  }
+
   // Photos hold ~3.2s; video slides hold longer so slow-mo is visible.
   useEffect(() => {
     if (images.length <= 1) return;
-    const current = images[imageTick % images.length];
+    const current = images[imageIndex];
     const ms = current ? heroSlideHoldMs(current) : 3200;
-    const id = window.setTimeout(() => setImageTick((t) => t + 1), ms);
+    const id = window.setTimeout(() => goTo(imageIndex + 1), ms);
     return () => window.clearTimeout(id);
-  }, [images, imageTick]);
+    // goTo closes over imageIndex; restart the hold when the visible slide changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [images, imageIndex]);
+
+  useEffect(() => {
+    return () => {
+      if (fadeClearRef.current) window.clearTimeout(fadeClearRef.current);
+    };
+  }, []);
 
   // Hold “Purpose.” for first ~3.2s so the ask is stable on open
   useEffect(() => {
@@ -139,17 +162,6 @@ export default function LandingHero({
     const id = window.setInterval(() => setPhraseTick((t) => t + 1), 2800);
     return () => window.clearInterval(id);
   }, [canRotateCopy]);
-
-  const imageIndex = images.length ? imageTick % images.length : 0;
-
-  useEffect(() => {
-    const prev = prevIndexRef.current;
-    if (prev === imageIndex) return;
-    prevIndexRef.current = imageIndex;
-    setFadingOut(prev);
-    const id = window.setTimeout(() => setFadingOut(null), HERO_SLIDE_FADE_MS);
-    return () => window.clearTimeout(id);
-  }, [imageIndex]);
 
   const headline = returnMode ? (
     <>
@@ -173,7 +185,11 @@ export default function LandingHero({
         <div
           key={`${image.id}-${image.src}`}
           className={`landing-hero-slide absolute inset-0 overflow-hidden ${
-            index === imageIndex ? "landing-hero-slide--active" : "landing-hero-slide--idle"
+            index === fadingOut
+              ? "landing-hero-slide--leaving"
+              : index === imageIndex
+                ? "landing-hero-slide--active"
+                : "landing-hero-slide--idle"
           }`}
         >
           {heroSlideShouldLoadMedia(
@@ -185,7 +201,7 @@ export default function LandingHero({
           ) ? (
             <HeroSlideMedia
               slide={image}
-              active={index === imageIndex}
+              active={index === imageIndex || index === fadingOut}
               className="h-full w-full object-cover sm:object-center"
               fetchPriority={index === imageIndex ? "high" : "low"}
             />
@@ -286,7 +302,7 @@ export default function LandingHero({
           <button
             key={idx}
             type="button"
-            onClick={() => setImageTick(idx)}
+            onClick={() => goTo(idx)}
             className={`pointer-events-auto h-1 rounded-full transition-all duration-500 ${
               idx === imageIndex
                 ? "w-7 bg-white shadow-[0_0_12px_rgba(255,255,255,0.7)]"

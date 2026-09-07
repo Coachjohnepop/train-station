@@ -23,34 +23,47 @@ export default function SplashCarousel({
   }, [heroSlides]);
   const [current, setCurrent] = useState(0);
   const [fadingOut, setFadingOut] = useState<number | null>(null);
-  const prevIndexRef = useRef(0);
+  const fadeClearRef = useRef<number | null>(null);
+
+  function goTo(nextIndex: number) {
+    if (!images.length) return;
+    const wrapped = ((nextIndex % images.length) + images.length) % images.length;
+    if (wrapped === current) return;
+    setFadingOut(current);
+    setCurrent(wrapped);
+    if (fadeClearRef.current) window.clearTimeout(fadeClearRef.current);
+    fadeClearRef.current = window.setTimeout(() => {
+      setFadingOut(null);
+      fadeClearRef.current = null;
+    }, HERO_SLIDE_FADE_MS);
+  }
 
   useEffect(() => {
     if (images.length <= 1) return;
     const slide = images[current];
     const ms = slide ? Math.max(5000, heroSlideHoldMs(slide)) : 5000;
-    const interval = window.setTimeout(() => {
-      setCurrent((prev) => (prev + 1) % images.length);
-    }, ms);
+    const interval = window.setTimeout(() => goTo(current + 1), ms);
     return () => window.clearTimeout(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [images, current]);
 
   useEffect(() => {
-    const prev = prevIndexRef.current;
-    if (prev === current) return;
-    prevIndexRef.current = current;
-    setFadingOut(prev);
-    const id = window.setTimeout(() => setFadingOut(null), HERO_SLIDE_FADE_MS);
-    return () => window.clearTimeout(id);
-  }, [current]);
+    return () => {
+      if (fadeClearRef.current) window.clearTimeout(fadeClearRef.current);
+    };
+  }, []);
 
   return (
     <div className="relative h-[65vh] min-h-[420px] w-full overflow-hidden bg-black">
       {images.map((slide, index) => (
         <div
           key={`${slide.id}-${slide.src}`}
-          className={`absolute inset-0 overflow-hidden brightness-[1.14] contrast-[1.04] saturate-[1.06] transition-opacity duration-[1250ms] ease-in-out ${
-            index === current ? "opacity-100" : "opacity-0"
+          className={`landing-hero-slide absolute inset-0 overflow-hidden brightness-[1.14] contrast-[1.04] saturate-[1.06] ${
+            index === fadingOut
+              ? "landing-hero-slide--leaving"
+              : index === current
+                ? "landing-hero-slide--active"
+                : "landing-hero-slide--idle"
           }`}
         >
           {heroSlideShouldLoadMedia(
@@ -62,7 +75,7 @@ export default function SplashCarousel({
           ) ? (
             <HeroSlideMedia
               slide={slide}
-              active={index === current}
+              active={index === current || index === fadingOut}
               className="h-full w-full object-cover"
               alt={slide.alt || `Inspiring workout ${index + 1}`}
             />
@@ -110,7 +123,7 @@ export default function SplashCarousel({
           <button
             key={slide.id}
             type="button"
-            onClick={() => setCurrent(idx)}
+            onClick={() => goTo(idx)}
             className={`h-1.5 rounded-full transition-all ${idx === current ? "w-8 bg-white" : "w-2 bg-white/50 hover:bg-white/70"}`}
             aria-label={`Go to slide ${idx + 1}`}
           />

@@ -252,8 +252,8 @@ export function heroPlaybackRate(slide: Pick<HeroSlide, "playbackRate" | "kind">
   return clamp(rate, 0.25, 1);
 }
 
-/** Crossfade length — keep in sync with `.landing-hero-slide` CSS. */
-export const HERO_SLIDE_FADE_MS = 1250;
+/** Dissolve length — keep in sync with `.landing-hero-slide--leaving` CSS. */
+export const HERO_SLIDE_FADE_MS = 1600;
 
 /**
  * Photos always load. Videos: the on-screen clip, the next clip (so the fade

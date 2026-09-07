@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
   heroPlaybackRate,
   heroSlideCropStyle,
@@ -40,15 +40,10 @@ export default function HeroSlideMedia({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const onDurationRef = useRef(onDuration);
   onDurationRef.current = onDuration;
-  const [videoReady, setVideoReady] = useState(false);
   const isVideo = slide.kind === "video" || isHeroVideoSrc(slide.src);
   const crop = heroSlideCropStyle(slide);
   const label = alt || slide.alt || "Hero";
   const audioOn = (playAudio ?? active) && Boolean(slide.audioSrc);
-
-  useEffect(() => {
-    setVideoReady(false);
-  }, [slide.src]);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -100,7 +95,6 @@ export default function HeroSlideMedia({
       if (cancelled || active) return;
       el.pause();
       applyWindow();
-      setVideoReady(true);
     };
 
     if (active) {
@@ -172,9 +166,7 @@ export default function HeroSlideMedia({
       <>
         <video
           ref={videoRef}
-          className={`ts-inapp-video bg-black transition-opacity duration-500 ${
-            videoReady ? "opacity-100" : "opacity-0"
-          } ${className}`}
+          className={`ts-inapp-video bg-black ${className}`}
           src={slide.src}
           muted
           loop={!trimmed}
@@ -183,8 +175,6 @@ export default function HeroSlideMedia({
           preload="auto"
           aria-label={label}
           style={{ ...crop, backgroundColor: "#000" }}
-          onLoadedData={() => setVideoReady(true)}
-          onCanPlay={() => setVideoReady(true)}
         />
         {bed}
       </>
