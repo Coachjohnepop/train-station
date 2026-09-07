@@ -18,7 +18,9 @@ import { isPaidOffer } from "@/lib/product-offers";
 import { defaultProgramStartDate } from "@/lib/member-program-block";
 import type { ProgramStartSettings } from "@/lib/program-start-settings";
 import { membershipThemeTierFromPlan } from "@/lib/membership-theme";
+import { useIntroTrim } from "@/hooks/useIntroTrim";
 import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
+import type { CoachIntroSlotId } from "@/lib/coach-intro-slots";
 import { normalizeOnboardGender, type OnboardGender } from "@/lib/onboard-path";
 import { NextStepButton } from "@/components/NextStepButton";
 
@@ -89,6 +91,13 @@ export default function OnboardingWizard({
 
   const planWelcomeUrl = welcomeVideoUrlForPlan(plan, welcomeVideoUrl, welcomeVideosByPlan);
   const introVolumeDb = useUploadedContentVolumeDb();
+  const introSlot: CoachIntroSlotId =
+    plan === "explorer"
+      ? "free"
+      : plan === "member" || plan === "business" || plan === "pro"
+        ? plan
+        : "overall";
+  const introTrim = useIntroTrim(introSlot);
   const programStartDate = defaultProgramStartDate(localTodayIso(), programStartSettings);
 
   function pickGender(option: OnboardGender) {
@@ -247,6 +256,8 @@ export default function OnboardingWizard({
                     kickPlayback
                     duckBackgroundMusic
                     volumeDb={introVolumeDb}
+                    startSec={introTrim.startSec}
+                    endSec={introTrim.endSec}
                   />
                 </div>
               </div>

@@ -1277,6 +1277,8 @@ model LandingMediaSettings {
   themeSongEnabled           Boolean  @default(true)
   themeSongVolume            Float    @default(0.55)
   themeSongClickStarts       Int      @default(1)
+  /// Per-slot playback windows { overall: { startSec, endSec }, free: … }.
+  introTrims                 Json     @default("{}")
   updatedAt                  DateTime @updatedAt
 }
 

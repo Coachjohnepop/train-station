@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useState } from "react";
 import PlayableVideoFrame from "@/components/PlayableVideoFrame";
+import { useIntroTrim } from "@/hooks/useIntroTrim";
 import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
 
 /** localStorage — first visit to Gear auto-opens Jeremy’s intro once. */
@@ -25,6 +26,7 @@ export default function EquipmentIntroModal({
   const titleId = useId();
   const url = videoUrl?.trim() || "";
   const volumeDb = useUploadedContentVolumeDb();
+  const trim = useIntroTrim("equipment");
 
   const markSeen = useCallback(() => {
     try {
@@ -111,6 +113,8 @@ export default function EquipmentIntroModal({
             kickPlayback={open}
             duckBackgroundMusic={open}
             volumeDb={volumeDb}
+            startSec={trim.startSec}
+            endSec={trim.endSec}
           />
         </div>
 

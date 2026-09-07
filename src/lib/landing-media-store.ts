@@ -23,6 +23,7 @@ import {
 } from "@/lib/hero-slides";
 import { isAllowedCoachIntroVideoUrl, isDirectVideoUrl } from "@/lib/site-video";
 import { isYoutubeUrl } from "@/lib/youtube";
+import { emptyIntroTrims, normalizeIntroTrims, type IntroTrims } from "@/lib/intro-trim";
 
 /** Product defaults — same files as Free ticket, served from this app. */
 const DEFAULT_WELCOME_FILE = "/videos/jeremy-welcome.mp4";
@@ -90,6 +91,8 @@ export type LandingMediaConfig = {
   themeSongVolume: number;
   /** How many times a start-from-silence (tap or successful autoplay) is allowed this tab. */
   themeSongClickStarts: number;
+  /** Per-slot start/end windows so Jeremy can cut dead air without re-encoding. */
+  introTrims: IntroTrims;
   updatedAt: string;
 };
 
@@ -136,6 +139,7 @@ function emptyConfig(): LandingMediaConfig {
     themeSongEnabled: THEME_SONG_DEFAULT_ENABLED,
     themeSongVolume: THEME_SONG_DEFAULT_VOLUME,
     themeSongClickStarts: THEME_SONG_CLICK_STARTS_DEFAULT,
+    introTrims: emptyIntroTrims(),
     updatedAt: new Date().toISOString(),
   };
 }
@@ -205,6 +209,7 @@ function normalize(raw: unknown): LandingMediaConfig {
       data.themeSongClickStarts,
       THEME_SONG_CLICK_STARTS_DEFAULT,
     ),
+    introTrims: normalizeIntroTrims((data as { introTrims?: unknown }).introTrims),
     updatedAt:
       typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
   };
@@ -283,6 +288,7 @@ export async function saveLandingMedia(
       | "themeSongEnabled"
       | "themeSongVolume"
       | "themeSongClickStarts"
+      | "introTrims"
     >
   >,
 ): Promise<LandingMediaConfig> {
@@ -445,6 +451,10 @@ export async function saveLandingMedia(
       patch.themeSongClickStarts,
       THEME_SONG_CLICK_STARTS_DEFAULT,
     );
+  }
+
+  if (patch.introTrims !== undefined) {
+    next.introTrims = normalizeIntroTrims(patch.introTrims);
   }
 
   const introChanged =

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import PlayableVideoFrame from "@/components/PlayableVideoFrame";
+import { useIntroTrim } from "@/hooks/useIntroTrim";
 import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
 import { requestBackgroundMusicPlay } from "@/lib/background-music-control";
 import { JEREMY_WELCOME_VIDEO_SRC } from "@/lib/landing-media";
@@ -33,6 +34,7 @@ export default function WelcomeVideoPopover({
   const [mounted, setMounted] = useState(false);
   const titleId = useId();
   const volumeDb = useUploadedContentVolumeDb();
+  const trim = useIntroTrim("overall");
 
   useEffect(() => {
     setMounted(true);
@@ -77,6 +79,8 @@ export default function WelcomeVideoPopover({
         kickPlayback={open}
         duckBackgroundMusic={open}
         volumeDb={volumeDb}
+        startSec={trim.startSec}
+        endSec={trim.endSec}
       />
     </div>
   ) : (

@@ -7,6 +7,7 @@ import {
   toLocalInputValue,
 } from "@/components/MeasurementFormFields";
 import MeasurementsIntroModal from "@/components/MeasurementsIntroModal";
+import { useIntroTrim } from "@/hooks/useIntroTrim";
 import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
 import {
   MEASUREMENT_FIELDS,
@@ -251,6 +252,7 @@ export default function MemberMeasurementsClient({
   const savingRef = useRef(false);
   const photoBusyRef = useRef<"before" | "now" | null>(null);
   const volumeDb = useUploadedContentVolumeDb();
+  const introTrim = useIntroTrim("measurements");
 
   const videoUrl = introVideoUrl?.trim() || "";
   const hasVideo = Boolean(videoUrl);
@@ -1457,6 +1459,8 @@ export default function MemberMeasurementsClient({
                   volumeDb={volumeDb}
                   autoplay={false}
                   duckBackgroundMusic
+                  startSec={introTrim.startSec}
+                  endSec={introTrim.endSec}
                 />
               </div>
             ) : (

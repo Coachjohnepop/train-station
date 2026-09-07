@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
+import { useScreenWakeLock } from "@/hooks/useScreenWakeLock";
 import {
   saveLandingMediaAction,
   saveMemberContentAction,
@@ -39,6 +40,18 @@ import {
   VOLUME_DB_MIN,
   VOLUME_DB_STEP,
 } from "@/lib/media-volume";
+import {
+  EMPTY_INTRO_TRIM,
+  formatIntroTime,
+  introTrimDurationSec,
+  introTrimForSlot,
+  introTrimWindow,
+  INTRO_MIN_TRIM_SEC,
+  isDefaultIntroTrim,
+  normalizeIntroTrims,
+  type IntroTrim,
+  type IntroTrims,
+} from "@/lib/intro-trim";
 
 const WEEKDAYS = [
   { value: "", label: "Any day" },
@@ -52,6 +65,35 @@ const WEEKDAYS = [
 ];
 
 const MAX_MB = Math.round(SITE_VIDEO_MAX_BYTES / (1024 * 1024));
+const PRIMARY_SLOTS = new Set<CoachIntroSlotId>(["overall", "free"]);
+
+function trackVideoDesk(action: string, properties?: Record<string, unknown>) {
+  if (typeof document === "undefined") return;
+  const match = document.cookie.match(/(?:^|; )ts_analytics_sid=([^;]*)/);
+  const sessionKey = match ? decodeURIComponent(match[1]) : "videos-desk";
+  void fetch("/api/analytics/events", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      session: {
+        sessionKey,
+        deviceType: window.innerWidth < 768 ? "mobile" : "desktop",
+        userAgent: navigator.userAgent.slice(0, 400),
+      },
+      events: [
+        {
+          eventType: "coach_content_edit",
+          pagePath: "/admin/videos",
+          pageSection: "admin",
+          clickAction: action,
+          elementText: action,
+          properties,
+        },
+      ],
+    }),
+    keepalive: true,
+  }).catch(() => null);
+}
 
 function titleFromFileName(name: string): string {
   const base = name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
@@ -153,7 +195,10 @@ function PhoneVideoPicker({
 }) {
   const blocked = disabled || busy;
   return (
-    <label className={`relative inline-flex ${blocked ? "pointer-events-none opacity-60" : ""}`}>
+    <label
+      className={`relative inline-flex ${blocked ? "pointer-events-none opacity-60" : ""}`}
+      data-analytics-action={label}
+    >
       <input
         type="file"
         accept={accept}
@@ -203,6 +248,7 @@ export default function AdminSiteVideosPanel({
   initialDailyClips = [],
   initialLibrary = [],
   initialUploadedContentVolumeDb = DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
+  initialIntroTrims = {},
 }: {
   initialWelcomeUrl?: string;
   initialWelcomeVideosByPlan?: WelcomeVideosByPlan;
@@ -221,6 +267,7 @@ export default function AdminSiteVideosPanel({
   initialDailyClips?: DailyInspirationClip[];
   initialLibrary?: SiteVideoLibraryItem[];
   initialUploadedContentVolumeDb?: number;
+  initialIntroTrims?: IntroTrims;
 }) {
   const [library, setLibrary] = useState<SiteVideoLibraryItem[]>(initialLibrary);
   const [volumeDb, setVolumeDb] = useState(() =>
@@ -257,6 +304,36 @@ export default function AdminSiteVideosPanel({
   const [watchingGag, setWatchingGag] = useState(false);
   const [slotUploading, setSlotUploading] = useState<CoachIntroSlotId | null>(null);
   const [replacingId, setReplacingId] = useState<string | null>(null);
+  const [introTrims, setIntroTrims] = useState<IntroTrims>(() =>
+    normalizeIntroTrims(initialIntroTrims),
+  );
+  const [slotDurations, setSlotDurations] = useState<Partial<Record<CoachIntroSlotId, number>>>(
+    {},
+  );
+  const [showExtras, setShowExtras] = useState(false);
+  const [trimNote, setTrimNote] = useState<string | null>(null);
+  const trimSaveTimer = useRef<number | null>(null);
+  const introTrimsRef = useRef(introTrims);
+  introTrimsRef.current = introTrims;
+
+  const uploadBusy = uploading || Boolean(slotUploading) || Boolean(replacingId);
+  useScreenWakeLock(uploadBusy);
+
+  useEffect(() => {
+    if (!uploadBusy) return;
+    const onLeave = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onLeave);
+    return () => window.removeEventListener("beforeunload", onLeave);
+  }, [uploadBusy]);
+
+  useEffect(() => {
+    return () => {
+      if (trimSaveTimer.current) window.clearTimeout(trimSaveTimer.current);
+    };
+  }, []);
 
   const usedUrls = useMemo(() => {
     const set = new Set<string>();
@@ -441,6 +518,7 @@ export default function AdminSiteVideosPanel({
       measurementsIntroVideoUrl: next.measurements.trim() || null,
       gagEnabled,
       uploadedContentVolumeDb: volumeDb,
+      introTrims: introTrimsRef.current,
     });
     if ("error" in landingResult && landingResult.error) {
       throw new Error(landingResult.error);
@@ -458,6 +536,54 @@ export default function AdminSiteVideosPanel({
     }
   }
 
+  function persistTrims(next: IntroTrims, note?: string) {
+    if (trimSaveTimer.current) window.clearTimeout(trimSaveTimer.current);
+    trimSaveTimer.current = window.setTimeout(() => {
+      void saveLandingMediaAction({ introTrims: next })
+        .then((result) => {
+          if ("error" in result && result.error) {
+            setUploadError(result.error);
+            return;
+          }
+          if ("ok" in result && result.ok && result.storedIntroTrims) {
+            setIntroTrims(normalizeIntroTrims(result.storedIntroTrims));
+          }
+          if (note) setTrimNote(note);
+        })
+        .catch((err: unknown) => {
+          setUploadError(err instanceof Error ? err.message : "Could not save trim.");
+        });
+    }, 700);
+  }
+
+  function updateSlotTrim(slotId: CoachIntroSlotId, patch: Partial<IntroTrim>) {
+    setIntroTrims((prev) => {
+      const merged = {
+        ...EMPTY_INTRO_TRIM,
+        ...introTrimForSlot(prev, slotId),
+        ...patch,
+      };
+      const next = { ...prev, [slotId]: merged };
+      if (slotId === "free" || slotId === "explorer") {
+        next.free = merged;
+        next.explorer = merged;
+      }
+      persistTrims(next, `${COACH_INTRO_SLOTS.find((s) => s.id === slotId)?.label || "Intro"} trim saved.`);
+      return next;
+    });
+  }
+
+  function resetSlotTrim(slotId: CoachIntroSlotId) {
+    const next = { ...introTrimsRef.current };
+    delete next[slotId];
+    if (slotId === "free" || slotId === "explorer") {
+      delete next.free;
+      delete next.explorer;
+    }
+    introTrimsRef.current = next;
+    setIntroTrims(next);
+  }
+
   /** Upload a file and assign it to one intro slot (or replace that slot’s file). */
   async function handleSlotUpload(slotId: CoachIntroSlotId, file: File | null) {
     if (!file) return;
@@ -466,10 +592,16 @@ export default function AdminSiteVideosPanel({
     setSlotUploading(slotId);
     setUploadError(null);
     const mb = file.size / (1024 * 1024);
+    trackVideoDesk("video_upload_start", {
+      slot: slotId,
+      fileName: file.name,
+      bytes: file.size,
+      mime: file.type || "",
+    });
     setUploadProgress(
       mb
-        ? `Got ${file.name} (${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB) — uploading…`
-        : `Got ${file.name} — uploading…`,
+        ? `Got ${file.name} (${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB) — stay on this page…`
+        : `Got ${file.name} — stay on this page…`,
     );
     try {
       const currentUrl = urlForSlot(slotId, assignments);
@@ -519,13 +651,28 @@ export default function AdminSiteVideosPanel({
       }
       setAssignments(nextAssignments);
       setWatchingSlots((prev) => ({ ...prev, [slotId]: true }));
+      resetSlotTrim(slotId);
       setUploadProgress(`${label}: publishing to live site…`);
       await publishIntroSlots(nextAssignments);
-      setUploadProgress(`${label}: live on the site.`);
+      trackVideoDesk("video_upload_ok", {
+        slot: slotId,
+        fileName: file.name,
+        bytes: file.size,
+      });
+      setUploadProgress(
+        `${label}: live on the site. Watch it, then trim start/end if you need to cut dead air.`,
+      );
       setMessage(`${label} published — members will see it on the next page load.`);
       setError(false);
     } catch (e: unknown) {
-      setUploadError(formatUploadError(e, file.name));
+      const formatted = formatUploadError(e, file.name);
+      trackVideoDesk("video_upload_fail", {
+        slot: slotId,
+        fileName: file.name,
+        bytes: file.size,
+        error: formatted.slice(0, 240),
+      });
+      setUploadError(formatted);
       setUploadProgress(null);
     } finally {
       setSlotUploading(null);
@@ -743,6 +890,7 @@ export default function AdminSiteVideosPanel({
       equipmentIntroVideoUrl: assignments.equipment.trim() || null,
       measurementsIntroVideoUrl: assignments.measurements.trim() || null,
       uploadedContentVolumeDb: volumeDb,
+      introTrims,
     });
 
     if ("error" in landingResult && landingResult.error) {
@@ -768,6 +916,11 @@ export default function AdminSiteVideosPanel({
     }
 
     if ("ok" in landingResult && landingResult.ok) {
+      if (landingResult.storedIntroTrims) {
+        const stored = normalizeIntroTrims(landingResult.storedIntroTrims);
+        setIntroTrims(stored);
+        introTrimsRef.current = stored;
+      }
       setAssignments(
         assignmentsFromLanding({
           welcomeVideoUrl: landingResult.storedWelcomeVideoUrl,
@@ -806,16 +959,21 @@ export default function AdminSiteVideosPanel({
   return (
     <div className="space-y-8">
       <div className="rounded-2xl border border-violet-500/30 bg-violet-500/5 p-4 text-sm text-[var(--muted)]">
-        <p className="font-semibold text-violet-100">Site video desk</p>
+        <p className="font-semibold text-violet-100">New intro? This is the desk.</p>
         <p className="mt-1">
-          Phone or desktop: tap <strong className="text-[var(--text)]">Upload video</strong> on the
-          slot (Overall, Free Explorer, Coach Class…). The clip is live when the green bar says so
-          — you do not need a second Save for intros.{" "}
-          <strong className="text-[var(--text)]">Watch</strong> plays it here. Guests still get the
-          ~5s gag, then <strong className="text-[var(--text)]">Free Explorer intro</strong>.
+          Tap <strong className="text-[var(--text)]">Replace video</strong> on{" "}
+          <strong className="text-[var(--text)]">Overall intro</strong> (home “Watch intro”). Stay
+          until the green bar says live — no second Save. Then{" "}
+          <strong className="text-[var(--text)]">Watch</strong> and trim start/end if you want to
+          cut dead air. Phone Photos / Camera (.MOV) work. Free Explorer is the clip after the gag.
         </p>
       </div>
 
+      {uploadBusy ? (
+        <p className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm font-semibold text-amber-100">
+          Stay on this page until the green bar. Leaving or locking the phone can kill the upload.
+        </p>
+      ) : null}
       {uploadProgress ? (
         <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
           {uploadProgress}
@@ -826,9 +984,11 @@ export default function AdminSiteVideosPanel({
           {uploadError}
         </p>
       ) : null}
+      {trimNote ? (
+        <p className="text-xs text-emerald-300">{trimNote}</p>
+      ) : null}
 
-      {/* —— Uploaded content volume —— */}
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+      <section className={`rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 ${showExtras ? "" : "hidden"}`}>
         <h2 className="text-lg font-semibold">Playback volume · uploaded intros</h2>
         <p className="mt-1 text-xs text-[var(--muted)]">
           Relative to native file volume, in <strong className="text-[var(--text)]">3 dB</strong>{" "}
@@ -881,16 +1041,15 @@ export default function AdminSiteVideosPanel({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">1 · Upload onto a slot (goes live)</h2>
+        <h2 className="text-lg font-semibold">Your intro videos</h2>
         <p className="text-xs text-[var(--muted)]">
-          This is the path that works on Jeremy&apos;s phone. Tap{" "}
-          <strong className="text-[var(--text)]">Upload video</strong> or{" "}
-          <strong className="text-[var(--text)]">Replace video</strong> on the slot — Photos /
-          Camera / Files. Stay on the page until the green bar says live. Clips over {MAX_MB} MB
-          will fail — export 1080p in Photos. Free Explorer is the clip after the gag.
+          Overall is the home-page intro. Free Explorer plays after the gag. Clips over {MAX_MB} MB
+          fail — export 1080p in Photos if the phone says the file is huge.
         </p>
         <div className="space-y-3">
           {COACH_INTRO_SLOTS.map((slot) => {
+            const isPrimarySlot = PRIMARY_SLOTS.has(slot.id);
+            if (!isPrimarySlot && !showExtras) return null;
             const currentUrl = urlForSlot(slot.id, assignments);
             const selectValue =
               library.find((i) => i.url === currentUrl)?.id ||
@@ -899,6 +1058,9 @@ export default function AdminSiteVideosPanel({
             const busy = slotUploading === slot.id;
             const hasVideo = Boolean(currentUrl && isAllowedCoachIntroVideoUrl(currentUrl));
             const isFree = slot.id === "free";
+            const isPrimary = isPrimarySlot;
+            const slotTrim = introTrimForSlot(introTrims, slot.id);
+            const duration = slotDurations[slot.id] || 0;
             return (
               <div
                 key={slot.id}
@@ -935,7 +1097,11 @@ export default function AdminSiteVideosPanel({
                     disabled={uploading}
                     busy={busy}
                     label={hasVideo ? "Replace video" : "Upload video"}
-                    className="btn-primary px-3 py-1.5 text-xs font-semibold"
+                    className={
+                      isPrimary
+                        ? "btn-primary w-full px-4 py-3 text-sm font-semibold sm:w-auto"
+                        : "btn-primary px-3 py-1.5 text-xs font-semibold"
+                    }
                     onFile={(file) => void handleSlotUpload(slot.id, file)}
                   />
                   <button
@@ -1034,8 +1200,77 @@ export default function AdminSiteVideosPanel({
                         volumeDb={volumeDb}
                         autoplay={false}
                         duckBackgroundMusic
+                        startSec={slotTrim.startSec}
+                        endSec={slotTrim.endSec}
+                        onDuration={(sec) =>
+                          setSlotDurations((prev) =>
+                            prev[slot.id] === sec ? prev : { ...prev, [slot.id]: sec },
+                          )
+                        }
                       />
                     </div>
+                    {(() => {
+                      const max = duration > 0 ? duration : Math.max(slotTrim.endSec || 30, slotTrim.startSec + 8);
+                      const window = introTrimWindow(slotTrim, duration || null);
+                      const kept = introTrimDurationSec(slotTrim, duration || null);
+                      const endValue = window.end ?? max;
+                      return (
+                        <div className="space-y-2 rounded-xl border border-violet-500/25 bg-violet-500/5 p-3">
+                          <p className="text-sm font-semibold text-violet-100">Trim (no re-export)</p>
+                          <p className="text-[11px] text-[var(--muted)]">
+                            Cut dead air at the start or stop before the end. Members hear this
+                            window. Saves as you drag.
+                          </p>
+                          <label className="block text-xs">
+                            Start ({formatIntroTime(window.start)})
+                            <input
+                              type="range"
+                              min={0}
+                              max={Math.max(0.1, max - INTRO_MIN_TRIM_SEC)}
+                              step={0.1}
+                              value={window.start}
+                              onChange={(e) =>
+                                updateSlotTrim(slot.id, { startSec: Number(e.target.value) })
+                              }
+                              className="mt-1 w-full"
+                            />
+                          </label>
+                          <label className="block text-xs">
+                            End (
+                            {window.end == null && !duration
+                              ? "end of file"
+                              : formatIntroTime(endValue)}
+                            )
+                            <input
+                              type="range"
+                              min={Math.min(max, window.start + INTRO_MIN_TRIM_SEC)}
+                              max={max}
+                              step={0.1}
+                              value={endValue}
+                              onChange={(e) =>
+                                updateSlotTrim(slot.id, { endSec: Number(e.target.value) })
+                              }
+                              className="mt-1 w-full"
+                            />
+                          </label>
+                          <p className="text-[11px] text-emerald-200/90">
+                            Members hear {kept != null ? formatIntroTime(kept) : "the full clip"}
+                            {duration ? ` of ${formatIntroTime(duration)}` : ""}
+                          </p>
+                          {!isDefaultIntroTrim(slotTrim) ? (
+                            <button
+                              type="button"
+                              className="text-[11px] font-semibold text-[var(--accent)] underline"
+                              onClick={() =>
+                                updateSlotTrim(slot.id, { startSec: 0, endSec: null })
+                              }
+                            >
+                              Reset trim (full clip)
+                            </button>
+                          ) : null}
+                        </div>
+                      );
+                    })()}
                   </div>
                 ) : null}
               </div>
@@ -1044,8 +1279,18 @@ export default function AdminSiteVideosPanel({
         </div>
       </section>
 
+      <button
+        type="button"
+        className="text-sm font-semibold text-[var(--accent)] underline"
+        onClick={() => setShowExtras((v) => !v)}
+      >
+        {showExtras
+          ? "Hide extra settings"
+          : "More slots, library, YouTube, gag, Save all videos"}
+      </button>
+
       {/* —— Library + assignments —— */}
-      <section className="space-y-4">
+      <section className={`space-y-4 ${showExtras ? "" : "hidden"}`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-lg font-semibold">2 · Extra clips (library)</h2>
@@ -1167,7 +1412,7 @@ export default function AdminSiteVideosPanel({
         )}
       </section>
 
-      <section className="space-y-3">
+      <section className={`space-y-3 ${showExtras ? "" : "hidden"}`}>
         <h2 className="text-lg font-semibold">3 · Free ticket gag (product-fixed)</h2>
         <p className="text-xs text-[var(--muted)] leading-relaxed">
           <strong className="text-[var(--text)]">Guests</strong> who tap Free always get the in-app{" "}
@@ -1220,7 +1465,7 @@ export default function AdminSiteVideosPanel({
         ) : null}
       </section>
 
-      <section className="space-y-3">
+      <section className={`space-y-3 ${showExtras ? "" : "hidden"}`}>
         <h2 className="text-lg font-semibold">4 · Thank you for the purchase · YouTube</h2>
         <YoutubeVideoField
           label="Post-checkout thank-you"
@@ -1230,7 +1475,7 @@ export default function AdminSiteVideosPanel({
         />
       </section>
 
-      <section className="space-y-3">
+      <section className={`space-y-3 ${showExtras ? "" : "hidden"}`}>
         <h2 className="text-lg font-semibold">5 · Member Today strip · YouTube</h2>
         <label className="block text-sm">
           <span className="font-medium">Weekly video title</span>
@@ -1252,7 +1497,7 @@ export default function AdminSiteVideosPanel({
         <YoutubeVideoField label="Dinner video" value={dinnerUrl} onChange={setDinnerUrl} />
       </section>
 
-      <section className="space-y-3">
+      <section className={`space-y-3 ${showExtras ? "" : "hidden"}`}>
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">6 · Daily inspirational · YouTube</h2>
           <button type="button" className="btn-ghost text-xs" onClick={addClip}>
@@ -1317,7 +1562,7 @@ export default function AdminSiteVideosPanel({
         )}
       </section>
 
-      <div className="sticky bottom-3 z-10 flex flex-col gap-2 rounded-xl border border-[var(--border)] bg-[var(--bg)]/95 p-3 backdrop-blur sm:flex-row sm:items-center">
+      <div className={`sticky bottom-3 z-10 flex flex-col gap-2 rounded-xl border border-[var(--border)] bg-[var(--bg)]/95 p-3 backdrop-blur sm:flex-row sm:items-center ${showExtras ? "" : "hidden"}`}>
         <button
           type="button"
           onClick={() => void handleSave()}

@@ -40,9 +40,8 @@ export default async function AdminVideosPage() {
       <div>
         <h1 className="text-2xl font-bold">Videos</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Tap Upload / Replace on a slot — stay until the green bar says live. Phone Photos and
-          Camera (.MOV) work; export 1080p if Photos says the file is huge. Free Explorer is the
-          clip after the gag. Thank-you, weekly, dinner, daily can still be YouTube.
+          Replace Overall intro, stay until the green bar, then Watch and trim if you want. Phone
+          Photos and Camera (.MOV) work; export 1080p if Photos says the file is huge.
         </p>
       </div>
       <AdminSiteVideosPanel
@@ -63,6 +62,7 @@ export default async function AdminVideosPage() {
         initialDailyClips={member.dailyInspirationClips}
         initialLibrary={library.items}
         initialUploadedContentVolumeDb={landing.uploadedContentVolumeDb}
+        initialIntroTrims={landing.introTrims}
       />
     </div>
   );

@@ -7,6 +7,7 @@ import {
   type HeroSlide,
   type WelcomeVideosByPlan,
 } from "@/lib/landing-media-store";
+import type { IntroTrims } from "@/lib/intro-trim";
 import {
   getMemberContent,
   saveMemberContent,
@@ -36,6 +37,7 @@ export async function saveLandingMediaAction(input: {
   themeSongEnabled?: boolean;
   themeSongVolume?: number;
   themeSongClickStarts?: number;
+  introTrims?: IntroTrims;
 }) {
   const session = await getSessionUser();
   if (!session || !isStaffRole(session.role)) {
@@ -62,6 +64,7 @@ export async function saveLandingMediaAction(input: {
       themeSongEnabled: input.themeSongEnabled,
       themeSongVolume: input.themeSongVolume,
       themeSongClickStarts: input.themeSongClickStarts,
+      introTrims: input.introTrims,
     });
     return {
       ok: true as const,
@@ -83,6 +86,7 @@ export async function saveLandingMediaAction(input: {
       storedThemeSongEnabled: config.themeSongEnabled,
       storedThemeSongVolume: config.themeSongVolume,
       storedThemeSongClickStarts: config.themeSongClickStarts,
+      storedIntroTrims: config.introTrims,
       updatedAt: config.updatedAt,
     };
   } catch (e: unknown) {

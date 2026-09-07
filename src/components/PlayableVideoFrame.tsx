@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
 import { holdBackgroundMusicForMedia } from "@/lib/background-music-control";
+import { introTrimWindow, type IntroTrim } from "@/lib/intro-trim";
 import {
   applyMediaVolumeDb,
   DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
@@ -27,6 +28,12 @@ type Props = {
    * Default +6 dB so intros play louder.
    */
   volumeDb?: number;
+  /** Skip dead air at the start (Admin → Videos trim). */
+  startSec?: number;
+  /** Stop before the file ends. Null/omit = play through. */
+  endSec?: number | null;
+  /** Fires with HTML5 duration once metadata is ready. */
+  onDuration?: (seconds: number) => void;
 };
 
 /**
@@ -41,8 +48,13 @@ export default function PlayableVideoFrame({
   kickPlayback = false,
   duckBackgroundMusic = false,
   volumeDb = DEFAULT_UPLOADED_CONTENT_VOLUME_DB,
+  startSec = 0,
+  endSec = null,
+  onDuration,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const onDurationRef = useRef(onDuration);
+  onDurationRef.current = onDuration;
 
   useEffect(() => {
     if (!duckBackgroundMusic) return;
@@ -55,6 +67,50 @@ export default function PlayableVideoFrame({
     if (!el) return;
     applyMediaVolumeDb(el, volumeDb);
   }, [videoUrl, volumeDb]);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    const trim: IntroTrim = { startSec: startSec || 0, endSec: endSec ?? null };
+
+    const applyWindow = () => {
+      const duration = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : null;
+      if (duration) onDurationRef.current?.(duration);
+      const { start, end } = introTrimWindow(trim, duration);
+      if (el.currentTime < start - 0.08) {
+        el.currentTime = start;
+      }
+      if (end != null && el.currentTime >= end - 0.05) {
+        el.pause();
+        el.currentTime = end;
+      }
+    };
+
+    const onMeta = () => applyWindow();
+    const onPlay = () => applyWindow();
+    const onTime = () => {
+      const duration = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : null;
+      const { start, end } = introTrimWindow(trim, duration);
+      if (el.currentTime < start - 0.08) {
+        el.currentTime = start;
+        return;
+      }
+      if (end != null && el.currentTime >= end - 0.05) {
+        el.pause();
+        el.currentTime = end;
+      }
+    };
+
+    el.addEventListener("loadedmetadata", onMeta);
+    el.addEventListener("play", onPlay);
+    el.addEventListener("timeupdate", onTime);
+    if (el.readyState >= 1) applyWindow();
+    return () => {
+      el.removeEventListener("loadedmetadata", onMeta);
+      el.removeEventListener("play", onPlay);
+      el.removeEventListener("timeupdate", onTime);
+    };
+  }, [videoUrl, startSec, endSec]);
 
   useEffect(() => {
     if (!autoplay || !kickPlayback) return;

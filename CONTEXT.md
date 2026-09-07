@@ -424,6 +424,22 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-06 (Jeremy new intro — not tried in last 4h)
+
+**Status:** Jeremy has **not** opened the app in the last 4 hours (0 analytics, 0 sessions). Last activity was **Fri Sep 4, 9:38pm PT** — two `/admin/videos` page views on **mobile**, 10 seconds apart, no Replace tap. Earlier that morning (10:51–10:52 PT) he **did** tap Watch then **Replace video**; the iPhone file-input fix (`938fc35`) landed at 11:07am, after that attempt. Live intros are still the site files `/videos/jeremy-welcome.mp4` and `/videos/jeremy-free-intro.mp4`. Landing media last saved Sep 1.
+
+**Shipped this pass:** Admin → Videos desk + intro trim. Apply `20260906180000_intro_trims` then ship `main`.
+- Admin → Videos is a short desk: Overall + Free first, big Replace, extras collapsed.
+- After Watch: **trim start/end** (no re-encode). Saves as he drags. Members hear that window.
+- Screen stay-awake + “stay on this page” while the file is going up.
+- Analytics: `coach_content_edit` `video_upload_start` / `_ok` / `_fail` with file name + size.
+
+**When back / to go live:**
+1. `npx prisma migrate deploy` then `npm run db:lockdown-postgrest`.
+2. Ship `main`. Hard-refresh Admin → Videos on Jeremy’s phone.
+3. Tell him: Admin → Videos → **Replace video** on **Overall intro** → pick from Photos → wait for the green bar → Watch → trim if needed.
+4. Watch with `MINUTES=240 npx tsx scripts/_jeremy-video-activity.mjs` or `npx tsx scripts/watch-jeremy-live.mjs`.
+
 **Date:** 2026-09-04 (Grant + member friction watch)
 
 **Status:** Grant Arnold upgraded to Coach Class yesterday (~7:52–8:13 PT: checkout, onboard skip, saved a measurement). No Today visit and no workout **today**. Last logged training was **Aug 20 Lower Body**. Todd was the only **Try again / Open Today** crash this morning. Member error boundary now posts `member_error` (digest) to analytics. Ops: `npx tsx scripts/watch-member-friction.mjs`.

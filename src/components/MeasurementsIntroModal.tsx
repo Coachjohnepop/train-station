@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useState } from "react";
 import PlayableVideoFrame from "@/components/PlayableVideoFrame";
+import { useIntroTrim } from "@/hooks/useIntroTrim";
 import { useUploadedContentVolumeDb } from "@/hooks/useUploadedContentVolumeDb";
 
 /** localStorage — first visit to Measurements auto-opens the how-to once. */
@@ -27,6 +28,7 @@ export default function MeasurementsIntroModal({
   const titleId = useId();
   const url = videoUrl?.trim() || "";
   const volumeDb = useUploadedContentVolumeDb();
+  const trim = useIntroTrim("measurements");
 
   const close = useCallback(() => {
     try {
@@ -106,6 +108,8 @@ export default function MeasurementsIntroModal({
             volumeDb={volumeDb}
             autoplay={false}
             duckBackgroundMusic
+            startSec={trim.startSec}
+            endSec={trim.endSec}
           />
         </div>
         <div className="flex justify-end gap-2 px-4 py-3">
