@@ -1,5 +1,5 @@
 /** Coach intro / per-ticket clips stored on Blob (or local uploads). */
-export const SITE_VIDEO_MAX_BYTES = 200 * 1024 * 1024;
+export const SITE_VIDEO_MAX_BYTES = 300 * 1024 * 1024;
 export const SITE_VIDEO_ALLOWED_MIME = new Set([
   "video/mp4",
   "video/webm",

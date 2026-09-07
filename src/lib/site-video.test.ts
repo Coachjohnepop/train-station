@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { clientSiteVideoMime, siteVideoMimeFromName } from "./site-video";
+import { clientSiteVideoMime, SITE_VIDEO_MAX_BYTES, siteVideoMimeFromName } from "./site-video";
 
 describe("clientSiteVideoMime", () => {
   it("uses the Photos .MOV filename when iPhone leaves type empty", () => {
@@ -21,5 +21,11 @@ describe("siteVideoMimeFromName", () => {
     assert.equal(siteVideoMimeFromName("a.mov"), "video/quicktime");
     assert.equal(siteVideoMimeFromName("a.m4v"), "video/x-m4v");
     assert.equal(siteVideoMimeFromName("a.webm"), "video/webm");
+  });
+});
+
+describe("SITE_VIDEO_MAX_BYTES", () => {
+  it("fits Jeremy's 217 MB iPhone .MOV", () => {
+    assert.ok(SITE_VIDEO_MAX_BYTES > 227351097);
   });
 });
