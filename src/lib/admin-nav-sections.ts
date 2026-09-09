@@ -157,6 +157,12 @@ export const COACH_NAV_GROUPS: AdminNavGroup[] = [
         match: (p) => p.startsWith("/admin/landing"),
       },
       {
+        href: "/admin/analytics",
+        label: "Station pulse",
+        match: (p) =>
+          p.startsWith("/admin/analytics") || p.startsWith("/admin/insights"),
+      },
+      {
         href: "/admin/videos",
         label: "Videos",
         match: (p) => p.startsWith("/admin/videos"),
@@ -249,7 +255,7 @@ export const PLATFORM_NAV_GROUPS: AdminNavGroup[] = [
       },
       {
         href: "/admin/analytics",
-        label: "Site Analytics",
+        label: "Station pulse",
         match: (p) =>
           p.startsWith("/admin/analytics") || p.startsWith("/admin/insights"),
       },
@@ -306,6 +312,13 @@ const PLATFORM_PATH_PREFIXES = [
 export function isPlatformAdminPath(pathname: string): boolean {
   return PLATFORM_PATH_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
+/** Coaches and platform staff — Station pulse / insights. */
+export function isSharedStaffPath(pathname: string): boolean {
+  return (
+    pathname.startsWith("/admin/analytics") || pathname.startsWith("/admin/insights")
   );
 }
 

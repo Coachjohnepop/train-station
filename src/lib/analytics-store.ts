@@ -10,6 +10,11 @@ import type {
   AnalyticsIngestPayload,
   AnalyticsSessionContext,
 } from "@/lib/analytics-types";
+import {
+  buildPlaybook,
+  emptyInsightInput,
+  type AnalyticsPlaybook,
+} from "@/lib/analytics-insights";
 
 const DEV_FILE = path.join(process.cwd(), "prisma", "analytics-events.dev.json");
 const BLOB_PATH = "demo/analytics-events.json";
@@ -278,10 +283,84 @@ export type AnalyticsOverview = {
       device: string | null;
     }>;
   };
+  /** Coach/admin playbook: better / effective / fun + ranked tests. */
+  playbook?: AnalyticsPlaybook;
 };
 
 function emptySections(): AnalyticsOverview["sections"] {
   return { landing: 0, member: 0, admin: 0, auth: 0, other: 0 };
+}
+
+const FACEBOOK_EVENT_WHERE = {
+  OR: [
+    { utmSource: { contains: "facebook", mode: "insensitive" as const } },
+    { referrer: { contains: "facebook", mode: "insensitive" as const } },
+    { referrer: { contains: "fbclid", mode: "insensitive" as const } },
+    { referrer: { contains: "instagram", mode: "insensitive" as const } },
+    { referrer: { contains: "fb.com", mode: "insensitive" as const } },
+  ],
+};
+
+function bumpMap(map: Record<string, number>, key: string | null | undefined, n = 1) {
+  if (!key) return;
+  map[key] = (map[key] ?? 0) + n;
+}
+
+function playbookFromEvents(
+  days: number,
+  events: Array<{
+    eventType: string;
+    pagePath?: string | null;
+    clickAction?: string | null;
+    elementText?: string | null;
+    referrer?: string | null;
+    utmSource?: string | null;
+    deviceType?: string | null;
+    sessionKey?: string | null;
+  }>,
+  extras: { signups: number; paidCount: number; sessions: number },
+): AnalyticsPlaybook {
+  const input = emptyInsightInput(days);
+  input.signups = extras.signups;
+  input.paidCount = extras.paidCount;
+  input.sessions = extras.sessions;
+  const sessionKeys = new Set<string>();
+
+  for (const e of events) {
+    if (e.sessionKey) sessionKeys.add(e.sessionKey);
+    const fb = inferFacebookTraffic(e.referrer, e.utmSource);
+    if (e.eventType === "page_view") {
+      input.views += 1;
+      if (e.pagePath === "/") input.homepageViews += 1;
+      if (e.pagePath?.startsWith("/join")) input.joinViews += 1;
+      if (e.pagePath?.startsWith("/signup")) input.signupViews += 1;
+      if (e.pagePath?.includes("/leaderboard")) input.leaderboardViews += 1;
+      if (e.pagePath?.includes("/chat")) input.chatViews += 1;
+      if (e.deviceType === "mobile") input.mobileViews += 1;
+      if (e.deviceType === "desktop") input.desktopViews += 1;
+      if (fb) input.facebookViews += 1;
+    }
+    if (e.eventType === "page_click") {
+      input.clicks += 1;
+      if (fb) input.facebookClicks += 1;
+      bumpMap(input.namedActions, e.clickAction);
+      const text = (e.elementText || "").replace(/\s+/g, " ").trim();
+      if (text && text.length <= 80) bumpMap(input.namedTexts, text);
+      const blob = `${e.clickAction || ""} ${text}`.toLowerCase();
+      if (blob.includes("background music") || blob.includes("theme song")) {
+        input.musicTaps += 1;
+      }
+      if (
+        blob.includes("exercise finished") ||
+        blob.includes("log workout complete") ||
+        /^set \d+$/i.test(text)
+      ) {
+        input.workoutFinishClicks += 1;
+      }
+    }
+  }
+  if (!extras.sessions) input.sessions = sessionKeys.size;
+  return buildPlaybook(input);
 }
 
 function bumpSection(
@@ -296,9 +375,31 @@ function bumpSection(
   }
 }
 
-export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview> {
+function analyticsWindowStart(days: number): Date {
+  if (days <= 1) {
+    const now = new Date();
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Los_Angeles",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(now);
+    const n = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+    const asUtc = Date.UTC(n("year"), n("month") - 1, n("day"), n("hour"), n("minute"), n("second"));
+    const offsetMs = asUtc - now.getTime();
+    return new Date(Date.UTC(n("year"), n("month") - 1, n("day"), 0, 0, 0) - offsetMs);
+  }
   const since = new Date();
   since.setDate(since.getDate() - days);
+  return since;
+}
+
+export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview> {
+  const since = analyticsWindowStart(days);
 
   if (isDatabaseConfigured() && !isDemoMode()) {
     const { prisma } = await import("@/lib/prisma");
@@ -349,15 +450,7 @@ export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview>
     });
 
     const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const facebookWhere = {
-      OR: [
-        { utmSource: { contains: "facebook", mode: "insensitive" as const } },
-        { referrer: { contains: "facebook", mode: "insensitive" as const } },
-        { referrer: { contains: "fbclid", mode: "insensitive" as const } },
-        { referrer: { contains: "instagram", mode: "insensitive" as const } },
-      ],
-    };
-    const [hourViews, hourClicks, hourFacebook, liveRows] = await Promise.all([
+    const [hourViews, hourClicks, hourFacebook, liveRows, windowEvents] = await Promise.all([
       prisma.analyticsEvent.count({
         where: { occurredAt: { gte: hourAgo }, eventType: "page_view" },
       }),
@@ -365,7 +458,7 @@ export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview>
         where: { occurredAt: { gte: hourAgo }, eventType: "page_click" },
       }),
       prisma.analyticsEvent.count({
-        where: { occurredAt: { gte: hourAgo }, eventType: "page_view", ...facebookWhere },
+        where: { occurredAt: { gte: hourAgo }, eventType: "page_view", ...FACEBOOK_EVENT_WHERE },
       }),
       prisma.analyticsEvent.findMany({
         where: { occurredAt: { gte: hourAgo } },
@@ -381,6 +474,20 @@ export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview>
           utmSource: true,
           deviceType: true,
           properties: true,
+        },
+      }),
+      prisma.analyticsEvent.findMany({
+        where: { occurredAt: { gte: since } },
+        take: 20_000,
+        select: {
+          eventType: true,
+          pagePath: true,
+          clickAction: true,
+          elementText: true,
+          referrer: true,
+          utmSource: true,
+          deviceType: true,
+          sessionKey: true,
         },
       }),
     ]);
@@ -444,6 +551,11 @@ export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview>
       newSignups,
       activeUsers,
       live,
+      playbook: playbookFromEvents(days, windowEvents, {
+        signups: newSignups,
+        paidCount: payments._count,
+        sessions,
+      }),
     };
   }
 
@@ -491,5 +603,10 @@ export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview>
     sections,
     newSignups: 0,
     activeUsers: userKeys.size,
+    playbook: playbookFromEvents(days, recent, {
+      signups: 0,
+      paidCount: 0,
+      sessions: sessionKeys.size,
+    }),
   };
 }

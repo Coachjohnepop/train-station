@@ -312,6 +312,7 @@ export default function LandingSeeInsideTour({
           {phase === "auto" ? (
             <button
               type="button"
+              data-analytics-action="tour-skip"
               onClick={() => {
                 paused.current = true;
                 clearTimers();
@@ -324,6 +325,7 @@ export default function LandingSeeInsideTour({
           ) : null}
           <button
             type="button"
+            data-analytics-action="close-tour"
             onClick={onClose}
             className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full border border-white/15 text-white/70 hover:bg-white/10 hover:text-[var(--text)]"
             aria-label="Close tour"

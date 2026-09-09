@@ -3,9 +3,10 @@ import {
   defaultCoachAdminPath,
   defaultPlatformAdminPath,
   isPlatformAdminPath,
+  isSharedStaffPath,
 } from "@/lib/admin-nav-sections";
 
-export { isPlatformAdminPath };
+export { isPlatformAdminPath, isSharedStaffPath };
 
 /** Coach workspace — programs, members, messages, day-to-day coaching. */
 export function canAccessCoachAdmin(role: UserRole): boolean {
@@ -64,6 +65,7 @@ export function staffRoleDescription(role: UserRole): string {
 /** Redirect platform-only staff away from coach admin URLs (and vice versa). */
 export function staffAdminRedirect(pathname: string, role: UserRole): string | null {
   if (!pathname.startsWith("/admin")) return null;
+  if (isSharedStaffPath(pathname) && isStaffRole(role)) return null;
 
   if (isPlatformAdminPath(pathname) && !canAccessPlatformAdmin(role)) {
     return defaultCoachAdminPath();

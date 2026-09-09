@@ -51,8 +51,8 @@ const CARDS = [
   },
   {
     href: "/admin/analytics",
-    title: "Site Analytics",
-    description: "Page views, sessions, signups, top pages & clicks from the live tracker.",
+    title: "Station pulse",
+    description: "Better, effective, fun — live hits plus a ranked improvement plan.",
     cta: "Open analytics →",
   },
   {
