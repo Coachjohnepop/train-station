@@ -77,6 +77,15 @@ async function saveDemoStore(store: DemoAnalyticsStore): Promise<boolean> {
   return blobSaved || !process.env.VERCEL;
 }
 
+export function inferFacebookTraffic(
+  referrer?: string | null,
+  utmSource?: string | null,
+  extra?: string | null,
+): boolean {
+  const blob = `${referrer || ""} ${utmSource || ""} ${extra || ""}`.toLowerCase();
+  return /facebook|fbclid|\bfb\.com|instagram|l\.facebook/.test(blob);
+}
+
 function inferPageSection(pagePath?: string): string | null {
   if (!pagePath) return null;
   if (pagePath.startsWith("/admin")) return "admin";
@@ -100,7 +109,14 @@ async function ingestToDatabase(
 ): Promise<{ accepted: number }> {
   const { prisma } = await import("@/lib/prisma");
   const now = new Date();
-  const sessionCtx = payload.session;
+  const sessionCtx = { ...payload.session };
+  if (
+    !sessionCtx.utmSource &&
+    inferFacebookTraffic(sessionCtx.referrer, sessionCtx.utmSource)
+  ) {
+    sessionCtx.utmSource = "facebook";
+    sessionCtx.utmMedium = sessionCtx.utmMedium || "social";
+  }
 
   let session = await prisma.analyticsSession.findUnique({
     where: { sessionKey: sessionCtx.sessionKey },
@@ -247,6 +263,21 @@ export type AnalyticsOverview = {
   newSignups: number;
   /** Distinct users with any analytics event (when known) */
   activeUsers: number;
+  /** Rolling last hour — Facebook launch watch. */
+  live?: {
+    minutes: number;
+    pageViews: number;
+    pageClicks: number;
+    facebookViews: number;
+    recent: Array<{
+      at: string;
+      type: string;
+      path: string;
+      label: string;
+      facebook: boolean;
+      device: string | null;
+    }>;
+  };
 };
 
 function emptySections(): AnalyticsOverview["sections"] {
@@ -317,6 +348,61 @@ export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview>
       take: 15,
     });
 
+    const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const facebookWhere = {
+      OR: [
+        { utmSource: { contains: "facebook", mode: "insensitive" as const } },
+        { referrer: { contains: "facebook", mode: "insensitive" as const } },
+        { referrer: { contains: "fbclid", mode: "insensitive" as const } },
+        { referrer: { contains: "instagram", mode: "insensitive" as const } },
+      ],
+    };
+    const [hourViews, hourClicks, hourFacebook, liveRows] = await Promise.all([
+      prisma.analyticsEvent.count({
+        where: { occurredAt: { gte: hourAgo }, eventType: "page_view" },
+      }),
+      prisma.analyticsEvent.count({
+        where: { occurredAt: { gte: hourAgo }, eventType: "page_click" },
+      }),
+      prisma.analyticsEvent.count({
+        where: { occurredAt: { gte: hourAgo }, eventType: "page_view", ...facebookWhere },
+      }),
+      prisma.analyticsEvent.findMany({
+        where: { occurredAt: { gte: hourAgo } },
+        orderBy: { occurredAt: "desc" },
+        take: 25,
+        select: {
+          occurredAt: true,
+          eventType: true,
+          pagePath: true,
+          elementText: true,
+          clickAction: true,
+          referrer: true,
+          utmSource: true,
+          deviceType: true,
+          properties: true,
+        },
+      }),
+    ]);
+    const live = {
+      minutes: 60,
+      pageViews: hourViews,
+      pageClicks: hourClicks,
+      facebookViews: hourFacebook,
+      recent: liveRows.map((e) => ({
+        at: e.occurredAt.toISOString(),
+        type: e.eventType,
+        path: e.pagePath ?? "?",
+        label: (e.clickAction || e.elementText || "").replace(/\s+/g, " ").trim().slice(0, 80),
+        facebook: inferFacebookTraffic(
+          e.referrer,
+          e.utmSource,
+          JSON.stringify(e.properties ?? {}),
+        ),
+        device: e.deviceType,
+      })),
+    };
+
     const sectionGroups = await prisma.analyticsEvent.groupBy({
       by: ["pageSection"],
       where: { eventType: "page_view", occurredAt: { gte: since } },
@@ -357,6 +443,7 @@ export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview>
       sections,
       newSignups,
       activeUsers,
+      live,
     };
   }
 

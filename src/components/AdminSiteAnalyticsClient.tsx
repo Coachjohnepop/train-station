@@ -22,6 +22,20 @@ type Overview = {
   activeUsers?: number;
   databaseConfigured?: boolean;
   periodDays?: number;
+  live?: {
+    minutes: number;
+    pageViews: number;
+    pageClicks: number;
+    facebookViews: number;
+    recent: Array<{
+      at: string;
+      type: string;
+      path: string;
+      label: string;
+      facebook: boolean;
+      device: string | null;
+    }>;
+  };
 };
 
 const PERIODS = [7, 14, 30, 90] as const;
@@ -60,8 +74,8 @@ export default function AdminSiteAnalyticsClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const res = await fetch(`/api/admin/analytics/overview?days=${days}`, {
@@ -70,20 +84,22 @@ export default function AdminSiteAnalyticsClient() {
       const body = await res.json();
       if (!res.ok) {
         setError(body.detail || body.error || "Could not load analytics");
-        setData(null);
+        if (!silent) setData(null);
         return;
       }
       setData(body);
     } catch {
       setError("Could not load analytics");
-      setData(null);
+      if (!silent) setData(null);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [days]);
 
   useEffect(() => {
-    void load();
+    void load(false);
+    const id = window.setInterval(() => void load(true), 15000);
+    return () => window.clearInterval(id);
   }, [load]);
 
   const sections = data?.sections;
@@ -119,7 +135,54 @@ export default function AdminSiteAnalyticsClient() {
         </div>
       </div>
 
-      {loading && <p className="text-sm text-[var(--muted)]">Loading…</p>}
+      {data?.live ? (
+        <section className="rounded-xl border border-sky-500/35 bg-sky-950/30 p-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-semibold text-sky-100">Live — last hour</h2>
+            <p className="text-[10px] text-[var(--muted)]">Refreshes every 15s</p>
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <MetricCard label="Views" value={data.live.pageViews} />
+            <MetricCard label="Clicks" value={data.live.pageClicks} />
+            <MetricCard
+              label="Facebook views"
+              value={data.live.facebookViews}
+              hint="referrer or fbclid"
+            />
+          </div>
+          {data.live.recent.length === 0 ? (
+            <p className="mt-3 text-sm text-[var(--muted)]">No events in the last hour yet.</p>
+          ) : (
+            <ol className="mt-3 max-h-64 space-y-1 overflow-y-auto text-xs">
+              {data.live.recent.map((row, idx) => (
+                <li
+                  key={`${row.at}-${idx}`}
+                  className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-[var(--border)]/60 py-1 last:border-0"
+                >
+                  <span className="tabular-nums text-[var(--muted)]">
+                    {new Date(row.at).toLocaleTimeString("en-US", {
+                      timeZone: "America/Los_Angeles",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                  {row.facebook ? (
+                    <span className="font-bold uppercase tracking-wide text-sky-300">FB</span>
+                  ) : null}
+                  <span className="text-[var(--muted)]">{row.device || ""}</span>
+                  <span className="font-medium">{row.type === "page_click" ? "click" : "view"}</span>
+                  <span className="font-mono text-[10px]">{row.path}</span>
+                  {row.label ? (
+                    <span className="min-w-0 truncate text-[var(--text)]">{row.label}</span>
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      ) : null}
+
+      {loading && !data && <p className="text-sm text-[var(--muted)]">Loading…</p>}
       {error && (
         <p className="rounded-lg border border-[var(--danger)]/30 bg-[var(--danger)]/10 px-3 py-2 text-sm text-[var(--danger)]">
           {error}

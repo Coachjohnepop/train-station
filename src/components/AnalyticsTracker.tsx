@@ -44,9 +44,15 @@ function pageSection(path: string): string {
 }
 
 function utmFromSearch(params: URLSearchParams) {
+  const explicit = params.get("utm_source") ?? undefined;
+  const ref = typeof document !== "undefined" ? document.referrer : "";
+  const facebook =
+    Boolean(params.get("fbclid")) ||
+    /facebook|fb\.com|instagram|l\.facebook/i.test(ref);
   return {
-    utmSource: params.get("utm_source") ?? undefined,
-    utmMedium: params.get("utm_medium") ?? undefined,
+    utmSource: explicit || (facebook ? "facebook" : undefined),
+    utmMedium:
+      params.get("utm_medium") ?? (facebook && !explicit ? "social" : undefined),
     utmCampaign: params.get("utm_campaign") ?? undefined,
     utmTerm: params.get("utm_term") ?? undefined,
     utmContent: params.get("utm_content") ?? undefined,
@@ -106,6 +112,8 @@ export default function AnalyticsTracker() {
   const queueRef = useRef<AnalyticsEventInput[]>([]);
   const flushingRef = useRef(false);
   const lastPathRef = useRef<string | null>(null);
+  const flushRef = useRef<() => void>(() => {});
+  const lastClickRef = useRef({ key: "", at: 0 });
 
   useEffect(() => {
     let sessionKey = readCookie(SESSION_COOKIE);
@@ -164,24 +172,43 @@ export default function AnalyticsTracker() {
       }
     };
 
-    const onClick = (event: MouseEvent) => {
-      const el = shouldTrackClick(event.target);
-      if (!el) return;
+    const emitClick = (el: HTMLElement) => {
       const meta = clickTargetLabel(el);
+      const key = `${meta.clickAction || ""}|${meta.elementText || ""}|${meta.clickHref || ""}`;
+      const now = Date.now();
+      if (key === lastClickRef.current.key && now - lastClickRef.current.at < 700) return;
+      lastClickRef.current = { key, at: now };
       enqueue({
         eventType: "page_click",
         pagePath: pathname,
         pageTitle: document.title,
         pageSection: pageSection(pathname),
+        referrer: document.referrer || undefined,
         ...meta,
       });
+      void flush();
+    };
+
+    const onClick = (event: MouseEvent) => {
+      const el = shouldTrackClick(event.target);
+      if (el) emitClick(el);
+    };
+    const onPointerUp = (event: PointerEvent) => {
+      if (event.pointerType === "mouse") return;
+      const el = shouldTrackClick(event.target);
+      if (el) emitClick(el);
     };
 
     const onVisibility = () => {
       if (document.visibilityState === "hidden") void flush();
     };
 
+    flushRef.current = () => {
+      void flush();
+    };
+
     document.addEventListener("click", onClick, true);
+    document.addEventListener("pointerup", onPointerUp, true);
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", () => void flush());
 
@@ -189,6 +216,7 @@ export default function AnalyticsTracker() {
 
     return () => {
       document.removeEventListener("click", onClick, true);
+      document.removeEventListener("pointerup", onPointerUp, true);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", () => void flush());
       window.clearInterval(interval);
@@ -215,6 +243,7 @@ export default function AnalyticsTracker() {
     };
 
     queueRef.current.push(event);
+    flushRef.current();
   }, [pathname, searchParams]);
 
   return null;
