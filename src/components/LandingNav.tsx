@@ -359,18 +359,6 @@ export default function LandingNav({
               </>
             ) : (
               <>
-                <button
-                  type="button"
-                  data-analytics-action="menu-free-tour"
-                  className="block w-full rounded-lg px-2 py-2 text-left text-sm font-semibold text-[var(--accent-fg)] hover:bg-[var(--surface-2)]"
-                  onClick={() => {
-                    noteConverted();
-                    closeMenus();
-                    openFreeQuickTour();
-                  }}
-                >
-                  Free Tour
-                </button>
                 <Link
                   href={JOIN_TICKETS_HREF}
                   data-analytics-action="menu-join-week"
@@ -383,6 +371,18 @@ export default function LandingNav({
                 >
                   Start membership
                 </Link>
+                <button
+                  type="button"
+                  data-analytics-action="menu-free-tour"
+                  className="block w-full rounded-lg px-2 py-2 text-left text-sm font-semibold text-[var(--accent-fg)] hover:bg-[var(--surface-2)]"
+                  onClick={() => {
+                    noteConverted();
+                    closeMenus();
+                    openFreeQuickTour();
+                  }}
+                >
+                  Free Tour
+                </button>
                 <Link
                   href="/login"
                   data-analytics-action="menu-sign-in"

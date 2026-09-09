@@ -232,18 +232,10 @@ export default function LandingHero({
                 kicker=""
                 hint={
                   returnMode
-                    ? "Free peek first · or pick a ticket"
-                    : "Tour is ~15 sec · Free is a real seat"
+                    ? "Pick a ticket · or peek ~15 sec"
+                    : "Tickets first · tour is ~15 sec"
                 }
               >
-                <button
-                  type="button"
-                  data-analytics-action={returnMode ? "hero-free-tour-return" : "hero-free-tour"}
-                  onClick={() => setTourOpen(true)}
-                  className="landing-hero-secondary-cta inline-flex h-[3.5rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg"
-                >
-                  Free Tour
-                </button>
                 <Link
                   href={JOIN_TICKETS_HREF}
                   data-analytics-action={returnMode ? "hero-start-membership-return" : "hero-start-membership"}
@@ -255,6 +247,14 @@ export default function LandingHero({
                 >
                   Start membership
                 </Link>
+                <button
+                  type="button"
+                  data-analytics-action={returnMode ? "hero-free-tour-return" : "hero-free-tour"}
+                  onClick={() => setTourOpen(true)}
+                  className="landing-hero-secondary-cta inline-flex h-[3.5rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg"
+                >
+                  Free Tour
+                </button>
                 <button
                   type="button"
                   data-analytics-action="hero-explore-content"

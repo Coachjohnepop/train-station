@@ -122,11 +122,11 @@ export default function FindTheTrainStationPage() {
         </section>
 
         <div className="mt-10 flex flex-wrap gap-3">
-          <Link href="/?tour=1" className="btn-primary px-5 py-2.5 text-sm font-semibold">
-            Free Tour
-          </Link>
-          <Link href={JOIN_TICKETS_HREF} className="btn-ghost px-5 py-2.5 text-sm">
+          <Link href={JOIN_TICKETS_HREF} className="btn-primary px-5 py-2.5 text-sm font-semibold">
             Start membership
+          </Link>
+          <Link href="/?tour=1" className="btn-ghost px-5 py-2.5 text-sm">
+            Free Tour
           </Link>
           <Link href="/jeremy" className="btn-ghost px-5 py-2.5 text-sm">
             Meet Jeremy

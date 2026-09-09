@@ -9,6 +9,10 @@ import {
 } from "@/lib/workout-confetti";
 import { PROGRAM_IMAGES } from "@/lib/program-constants";
 import EasyPathChoices from "@/components/EasyPathChoices";
+import {
+  fireLandingJoinHook,
+  markLandingConverted,
+} from "@/lib/landing-return-visit";
 
 /**
  * See inside — full auto-play tour for cold traffic only.
@@ -321,7 +325,7 @@ export default function LandingSeeInsideTour({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/15 text-white/70 hover:bg-white/10 hover:text-[var(--text)]"
+            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full border border-white/15 text-white/70 hover:bg-white/10 hover:text-[var(--text)]"
             aria-label="Close tour"
           >
             ✕
@@ -727,7 +731,11 @@ export default function LandingSeeInsideTour({
       </div>
 
       {/* Bottom step dots — full tour including final “Where next?” */}
-      <div className="flex shrink-0 justify-center gap-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1">
+      <div
+        className={`flex shrink-0 justify-center gap-1 pt-1 ${
+          phase === "auto" ? "pb-1" : "pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+        }`}
+      >
         {AUTO_BEATS.map((_, i) => {
           const active = phase === "auto" && i === beat;
           const done = phase === "end" || (phase === "auto" && i < beat);
@@ -747,6 +755,27 @@ export default function LandingSeeInsideTour({
           aria-hidden
         />
       </div>
+
+      {/* Always on screen while the tour plays — Facebook traffic is iPhone, so hover-only would never show. */}
+      {phase === "auto" ? (
+        <div
+          className="shrink-0 px-3 pt-1 sm:px-5"
+          style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+        >
+          <button
+            type="button"
+            data-analytics-action="tour-get-started"
+            onClick={(e) => {
+              markLandingConverted();
+              fireLandingJoinHook(e.currentTarget);
+              exitToSite("/join?from=tour#tickets");
+            }}
+            className="landing-hero-early-signup inline-flex min-h-11 w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98]"
+          >
+            Get started
+          </button>
+        </div>
+      ) : null}
     </div>,
     document.body
   );

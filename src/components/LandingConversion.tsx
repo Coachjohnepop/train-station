@@ -19,7 +19,7 @@ import SiteSeenLatch from "@/components/SiteSeenLatch";
 
 /**
  * Public landing for guests / SMS traffic.
- * Hero has three choices only: Free Tour, Start membership, Explore Content.
+ * Hero has three choices only: Start membership, Free Tour, Explore Content.
  * Ticket theater stays in onboarding — never lead the marketing site with seat cards.
  */
 export default function LandingConversion({
