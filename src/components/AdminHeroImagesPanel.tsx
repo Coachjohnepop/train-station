@@ -567,8 +567,8 @@ export default function AdminHeroImagesPanel({
       <div className="space-y-3 rounded-2xl border border-amber-400/30 bg-amber-400/5 p-4">
         <p className="text-sm font-semibold text-amber-100">Theme Song + mix</p>
         <p className="text-[11px] text-[var(--muted)]">
-          These controls are live on the public landing. Play mix on this page so you can hear
-          Theme Song against a slide’s audio and set the two volumes relative to each other.
+          First tap on thetrainstation.co plays Theme Song for guests. Play mix here to hear it
+          against a slide’s audio and set the two volumes relative to each other.
         </p>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -609,8 +609,7 @@ export default function AdminHeroImagesPanel({
           />
         </label>
         <label className="block text-xs">
-          Starts from silence (taps). Default 1 — first tap starts it; later taps do nothing
-          while it is playing.
+          Starts from silence. Default 2 — play, mute, play again; the second mute stays.
           <input
             type="number"
             min={THEME_SONG_CLICK_STARTS_MIN}

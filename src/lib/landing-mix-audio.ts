@@ -7,7 +7,7 @@
 export const THEME_SONG_SRC = "/background-music.mp3";
 export const THEME_SONG_DEFAULT_VOLUME = 0.55;
 export const THEME_SONG_DEFAULT_ENABLED = true;
-export const THEME_SONG_CLICK_STARTS_DEFAULT = 1;
+export const THEME_SONG_CLICK_STARTS_DEFAULT = 2;
 export const THEME_SONG_CLICK_STARTS_MIN = 1;
 export const THEME_SONG_CLICK_STARTS_MAX = 9;
 export const HERO_AUDIO_DEFAULT_VOLUME = 0.8;

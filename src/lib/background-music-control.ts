@@ -5,8 +5,10 @@ import { isMixAudioElement } from "@/lib/landing-mix-audio";
 export const BG_MUSIC_OVERLAY_EVENT = "ts-bg-music-overlay";
 /** Ask BackgroundMusic to unlock/play (call from a user gesture when possible). */
 export const BG_MUSIC_REQUEST_PLAY_EVENT = "ts-bg-music-request-play";
-/** Session mute — once they mute, Theme Song stays off until the tab closes. */
+/** Sticky mute — second speaker mute. Theme Song stays off until the tab closes. */
 export const BG_MUSIC_MUTED_KEY = "ts-bg-music-muted";
+/** First speaker mute — they can play once more. */
+export const BG_MUSIC_SOFT_MUTE_KEY = "ts-bg-music-soft-muted";
 /** Session flag — Theme Song already played once this tab (legacy boolean). */
 export const BG_MUSIC_PLAYED_KEY = "ts-bg-music-played";
 /** How many silence-starts have been used this tab. */
@@ -75,9 +77,36 @@ export function isBackgroundMusicUserMuted(): boolean {
 export function persistBackgroundMusicMute(muted: boolean): void {
   if (typeof window === "undefined") return;
   try {
-    if (muted) window.sessionStorage.setItem(BG_MUSIC_MUTED_KEY, "1");
-    else window.sessionStorage.removeItem(BG_MUSIC_MUTED_KEY);
+    if (muted) {
+      window.sessionStorage.setItem(BG_MUSIC_MUTED_KEY, "1");
+      window.sessionStorage.removeItem(BG_MUSIC_SOFT_MUTE_KEY);
+    } else {
+      window.sessionStorage.removeItem(BG_MUSIC_MUTED_KEY);
+    }
     window.localStorage.removeItem(BG_MUSIC_MUTED_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function isBackgroundMusicSoftMuted(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.sessionStorage.getItem(BG_MUSIC_SOFT_MUTE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function persistBackgroundMusicSoftMute(muted: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (muted) {
+      window.sessionStorage.setItem(BG_MUSIC_SOFT_MUTE_KEY, "1");
+      window.sessionStorage.removeItem(BG_MUSIC_MUTED_KEY);
+    } else {
+      window.sessionStorage.removeItem(BG_MUSIC_SOFT_MUTE_KEY);
+    }
   } catch {
     /* ignore */
   }
@@ -154,10 +183,19 @@ function isBackgroundMusic(el: EventTarget | null): boolean {
   );
 }
 
+/** Rest-timer primes / muted hero loops must not steal Theme Song. */
+export function mediaShouldDuckThemeSong(el: HTMLMediaElement): boolean {
+  if (isBackgroundMusic(el) || isMixAudioElement(el)) return false;
+  if (el.hasAttribute("data-ts-rest-audio")) return false;
+  if (el.closest("#ts-rest-audio-host")) return false;
+  if (el.muted || el.defaultMuted || el.volume === 0) return false;
+  return true;
+}
+
 function onMediaPlay(e: Event) {
   if (!e.isTrusted) return;
   const el = e.target;
-  if (!(el instanceof HTMLMediaElement) || isBackgroundMusic(el) || isMixAudioElement(el)) {
+  if (!(el instanceof HTMLMediaElement) || !mediaShouldDuckThemeSong(el)) {
     return;
   }
   playingMedia.add(el);

@@ -37,9 +37,9 @@ describe("landing mix volume", () => {
 });
 
 describe("theme song click starts", () => {
-  it("defaults to one", () => {
+  it("defaults to two — play, mute, play again, second mute stays", () => {
     assert.equal(clampThemeSongClickStarts(undefined), THEME_SONG_CLICK_STARTS_DEFAULT);
-    assert.equal(THEME_SONG_CLICK_STARTS_DEFAULT, 1);
+    assert.equal(THEME_SONG_CLICK_STARTS_DEFAULT, 2);
   });
 
   it("clamps 1–9", () => {
