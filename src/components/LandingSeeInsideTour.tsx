@@ -2,14 +2,22 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   confettiOriginFromElement,
   fireWorkoutConfetti,
 } from "@/lib/workout-confetti";
 import EasyPathChoices from "@/components/EasyPathChoices";
+import FreeTicketModal from "@/components/FreeTicketModal";
 import HowItWorksScreen from "@/components/HowItWorksScreen";
 import HowItWorksVoice from "@/components/HowItWorksVoice";
+import {
+  FREE_TICKET_GAG_HOST_ID,
+  preloadFreeTicketGag,
+  startFreeTicketGagFromGesture,
+} from "@/lib/play-free-ticket-gag";
+import { FREE_TICKET_FULL_SRC } from "@/lib/landing-media";
 import {
   fireLandingJoinHook,
   markLandingConverted,
@@ -66,7 +74,13 @@ export default function LandingSeeInsideTour({
   const confettiFired = useRef(false);
   const reducedMotion = useRef(false);
   const [howItWorks, setHowItWorks] = useState(defaultHowItWorks);
-  const [nextReady, setNextReady] = useState(false);
+  const [voiceReady, setVoiceReady] = useState(false);
+  const [sceneReady, setSceneReady] = useState(false);
+  const [freeOpen, setFreeOpen] = useState(false);
+  const [gagFullSrc, setGagFullSrc] = useState(FREE_TICKET_FULL_SRC);
+  const [freeIntroUrl, setFreeIntroUrl] = useState<string | null>(null);
+  const [welcomeUrl, setWelcomeUrl] = useState<string | null>(null);
+  const nextReady = voiceReady && sceneReady;
 
   // Portal to body so sticky landing nav (z-40) can’t sit above the tour
   // (hero is z-0 and traps fixed children otherwise).
@@ -103,14 +117,27 @@ export default function LandingSeeInsideTour({
     setPhase("auto");
     setBeat(0);
     confettiFired.current = false;
-    setNextReady(false);
+    setVoiceReady(false);
+    setSceneReady(false);
+    setFreeOpen(false);
     void fetch("/api/landing-media", { cache: "no-store" })
       .then((res) => res.json())
-      .then((body: { howItWorks?: unknown }) => {
-        if (body.howItWorks) setHowItWorks(normalizeHowItWorks(body.howItWorks));
-      })
+      .then(
+        (body: {
+          howItWorks?: unknown;
+          freeTicketFullUrl?: string | null;
+          freeChastiseVideoUrl?: string | null;
+          welcomeVideoUrl?: string | null;
+        }) => {
+          if (body.howItWorks) setHowItWorks(normalizeHowItWorks(body.howItWorks));
+          if (body.freeTicketFullUrl) setGagFullSrc(body.freeTicketFullUrl);
+          if (body.freeChastiseVideoUrl) setFreeIntroUrl(body.freeChastiseVideoUrl);
+          if (body.welcomeVideoUrl) setWelcomeUrl(body.welcomeVideoUrl);
+          preloadFreeTicketGag(body.freeTicketFullUrl || FREE_TICKET_FULL_SRC);
+        },
+      )
       .catch(() => {
-        /* keep defaults */
+        preloadFreeTicketGag(FREE_TICKET_FULL_SRC);
       });
   }, [open]);
 
@@ -118,11 +145,13 @@ export default function LandingSeeInsideTour({
     if (phase === "end") {
       setPhase("auto");
       setBeat(TOUR_BEATS.length - 1);
-      setNextReady(false);
+      setVoiceReady(false);
+      setSceneReady(false);
       return;
     }
     if (beat <= 0) return;
-    setNextReady(false);
+    setVoiceReady(false);
+    setSceneReady(false);
     setBeat((b) => b - 1);
   }, [phase, beat]);
 
@@ -133,7 +162,8 @@ export default function LandingSeeInsideTour({
       setPhase("end");
       return;
     }
-    setNextReady(false);
+    setVoiceReady(false);
+    setSceneReady(false);
     setBeat((b) => b + 1);
   }, [phase, beat, nextReady]);
 
@@ -141,11 +171,13 @@ export default function LandingSeeInsideTour({
   useEffect(() => {
     if (!open || phase !== "auto") return;
     const step = TOUR_BEATS[beat];
-    if (step !== "w_set3") return;
+    if (step !== "w_set3") {
+      confettiFired.current = false;
+      return;
+    }
     if (reducedMotion.current) return;
 
     let cancelled = false;
-    // Fire as set 3 checks (small delay so checkmark paints first)
     const t = window.setTimeout(() => {
       if (cancelled || confettiFired.current) return;
       confettiFired.current = true;
@@ -156,7 +188,7 @@ export default function LandingSeeInsideTour({
       } else {
         fireWorkoutConfetti(undefined, burstMs);
       }
-    }, 120);
+    }, 4000);
     return () => {
       cancelled = true;
       window.clearTimeout(t);
@@ -205,6 +237,7 @@ export default function LandingSeeInsideTour({
       : howStep?.coachLine || "";
 
   return createPortal(
+    <>
     <div
       className="landing-see-inside force-dark fixed inset-0 z-[100] flex flex-col bg-[#07040f]" data-force-dark
       role="dialog"
@@ -266,7 +299,13 @@ export default function LandingSeeInsideTour({
         >
           {phase === "auto" && howStep ? (
             <div className="w-full">
-              <HowItWorksScreen stepId={howStep.id} lastSetRef={lastSetRef} />
+              <HowItWorksScreen
+                stepId={howStep.id}
+                lastSetRef={lastSetRef}
+                motion="animate"
+                playKey={`${open}-${beat}`}
+                onReady={() => setSceneReady(true)}
+              />
             </div>
           ) : null}
 
@@ -280,7 +319,14 @@ export default function LandingSeeInsideTour({
                 <button
                   type="button"
                   data-analytics-action="tour-continue-free"
-                  onClick={() => exitToSite("/signup?plan=explorer")}
+                  onClick={(e) => {
+                    markLandingConverted();
+                    fireLandingJoinHook(e.currentTarget);
+                    flushSync(() => setFreeOpen(true));
+                    startFreeTicketGagFromGesture(
+                      document.getElementById(FREE_TICKET_GAG_HOST_ID),
+                    );
+                  }}
                   className="landing-hero-early-signup inline-flex h-14 w-full items-center justify-center rounded-full text-base font-extrabold"
                 >
                   Continue with Free
@@ -408,7 +454,7 @@ export default function LandingSeeInsideTour({
           <HowItWorksVoice
             step={howStep}
             active={phase === "auto"}
-            onReady={setNextReady}
+            onReady={setVoiceReady}
           />
           <div className="flex gap-2">
             <button
@@ -431,7 +477,7 @@ export default function LandingSeeInsideTour({
               </button>
             ) : (
               <div className="inline-flex min-h-14 flex-1 items-center justify-center rounded-full border border-white/20 px-8 text-[15px] font-semibold text-white/70">
-                Listen…
+                Watch…
               </div>
             )}
           </div>
@@ -449,7 +495,20 @@ export default function LandingSeeInsideTour({
           </button>
         </div>
       ) : null}
-    </div>,
+    </div>
+    <FreeTicketModal
+      open={freeOpen}
+      onClose={() => setFreeOpen(false)}
+      onUpgrade={() => {
+        setFreeOpen(false);
+        exitToSite("/join?from=tour#tickets");
+      }}
+      freeChastiseVideoUrl={freeIntroUrl}
+      welcomeVideoUrl={welcomeUrl}
+      gagFullSrc={gagFullSrc}
+      forceGag
+    />
+    </>,
     document.body
   );
 }
