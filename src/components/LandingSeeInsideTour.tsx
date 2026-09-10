@@ -8,7 +8,6 @@ import {
   confettiOriginFromElement,
   fireWorkoutConfetti,
 } from "@/lib/workout-confetti";
-import EasyPathChoices from "@/components/EasyPathChoices";
 import FreeTicketModal from "@/components/FreeTicketModal";
 import HowItWorksScreen from "@/components/HowItWorksScreen";
 import HowItWorksVoice from "@/components/HowItWorksVoice";
@@ -28,12 +27,23 @@ import {
   normalizeHowItWorks,
   type HowItWorksStepId,
 } from "@/lib/how-it-works";
+import { TICKET_TIERS } from "@/lib/landing-tickets";
+import { resolveProgramImage } from "@/lib/program-constants";
+import { TOP_LEVEL_PROGRAMS } from "@/lib/programs";
 
 /**
  * See inside — tap-Next tour for cold traffic.
  * Five digestible screens (not a timer): workout → ticket → program → gear → book.
- * Ends at “Where next?” → Continue with Free, pick a ticket, or programs.
+ * Ends at eight taps: four tickets by price, four programs.
  */
+
+const TOUR_END_TICKETS = TICKET_TIERS.filter((t) =>
+  ["free", "coach-class", "business-class", "first-class"].includes(t.id),
+);
+
+const TOUR_END_PROGRAMS = TOP_LEVEL_PROGRAMS.filter(
+  (p) => p.category === "workout" && p.catalogStatus === "live",
+).slice(0, 4);
 const SET3_CONFETTI_HOLD_MS = 1800;
 
 type TourBeat =
@@ -221,7 +231,7 @@ export default function LandingSeeInsideTour({
     current != null ? howItWorksStepById(howItWorks, TOUR_BEAT_TO_STEP[current]) : null;
   const coachLine =
     phase === "end"
-      ? "Pick a ticket if you want Jeremy. Free is still a seat if you just want in."
+      ? "Choose by price or by program — one tap and you’re in."
       : howStep?.coachLine || "";
 
   return createPortal(
@@ -298,103 +308,86 @@ export default function LandingSeeInsideTour({
 
           {/* ── END: exit wizard into normal site nav ── */}
           {phase === "end" && (
-            <div className="w-full">
-              <EasyPathChoices
-                kicker="Your move"
-                hint="Coach Class is when you want Jeremy. Free is still a real seat."
-              >
-                <button
-                  type="button"
-                  data-analytics-action="tour-pick-ticket"
-                  onClick={() => exitToSite("/join?from=tour#tickets")}
-                  className="landing-tour-pick-ticket inline-flex h-14 w-full items-center justify-center rounded-full text-base font-extrabold"
-                >
-                  Pick a ticket
-                </button>
-                <button
-                  type="button"
-                  data-analytics-action="tour-continue-free"
-                  onClick={(e) => {
-                    markLandingConverted();
-                    fireLandingJoinHook(e.currentTarget);
-                    flushSync(() => setFreeOpen(true));
-                    startFreeTicketGagFromGesture(
-                      document.getElementById(FREE_TICKET_GAG_HOST_ID),
-                    );
-                  }}
-                  className="landing-hero-secondary-cta inline-flex h-14 w-full items-center justify-center rounded-full text-base font-extrabold"
-                >
-                  Continue with Free
-                </button>
-              </EasyPathChoices>
-              <h3 className="mt-4 text-center text-xl font-semibold leading-tight text-[var(--text)] sm:text-2xl">
-                Or browse
-              </h3>
-              <div className="mt-2.5 grid grid-cols-2 gap-2 sm:mt-3 sm:gap-2.5">
-                {/* Left — ticket art → /join#tickets */}
-                <button
-                  type="button"
-                  onClick={() => exitToSite("/join?from=tour#tickets")}
-                  className="group flex flex-col overflow-hidden rounded-xl border border-[#7c3aed]/50 bg-[#1a0b2e] text-left shadow-[0_8px_28px_rgba(124,58,237,0.25)] transition hover:border-[#a78bfa]"
-                >
-                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-black/40">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src="/images/tickets/dual-tickets-fan.jpg"
-                      alt="Coach Class and First Class tickets"
-                      className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.03]"
-                    />
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#1a0b2e] via-transparent to-transparent" />
-                  </div>
-                  <div className="flex flex-1 flex-col p-3 sm:p-3.5">
-                    <p className="text-base font-semibold leading-tight text-[var(--text)] sm:text-lg">
-                      Choose ticket level
-                    </p>
-                    <p className="mt-1 text-xs leading-snug text-white/70">
-                      Free · Coach · Business · 1st
-                    </p>
-                    <span className="mt-1.5 text-sm font-semibold text-[var(--accent-fg)]">
-                      Open levels →
-                    </span>
-                  </div>
-                </button>
-
-                {/* Right — program art → /join#programs */}
-                <button
-                  type="button"
-                  onClick={() => exitToSite("/join?from=tour#programs")}
-                  className="group flex flex-col overflow-hidden rounded-xl border border-white/15 bg-[#12081f] text-left transition hover:border-[#7c3aed]/50"
-                >
-                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-black/40">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src="/images/programs/choose-program-collage.jpg"
-                      alt="Train Station programs — Adult, Athletes, Military, Mom & Dads, Adolescent, Speaking"
-                      className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.03]"
-                    />
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#12081f] via-transparent to-transparent" />
-                  </div>
-                  <div className="flex flex-1 flex-col p-3 sm:p-3.5">
-                    <p className="text-base font-semibold leading-tight text-[var(--text)] sm:text-lg">
-                      Choose program
-                    </p>
-                    <p className="mt-1 text-xs leading-snug text-white/70">
-                      Adult, Athletes, Military…
-                    </p>
-                    <span className="mt-1.5 text-sm font-semibold text-[var(--accent-fg)]">
-                      Open programs →
-                    </span>
-                  </div>
-                </button>
-              </div>
-              <p className="mt-2.5 text-center text-sm text-white/60">
-                Tickets first — programs are extra credit.
+            <div className="w-full pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+              <p className="text-center text-[10px] font-bold uppercase tracking-[0.22em] text-[#f0c75e]">
+                Choose by price
               </p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {TOUR_END_TICKETS.map((tier) => {
+                  const art =
+                    tier.seatArtSrc ||
+                    `/images/tickets/${tier.id === "coach-class" ? "coach-class" : tier.id === "business-class" ? "business-class" : tier.id === "first-class" ? "first-class" : "free"}.jpg`;
+                  const gold = tier.id === "business-class";
+                  return (
+                    <button
+                      key={tier.id}
+                      type="button"
+                      data-analytics-action={`tour-end-ticket-${tier.id}`}
+                      onClick={(e) => {
+                        markLandingConverted();
+                        fireLandingJoinHook(e.currentTarget);
+                        if (tier.signupPlan === "explorer") {
+                          flushSync(() => setFreeOpen(true));
+                          startFreeTicketGagFromGesture(
+                            document.getElementById(FREE_TICKET_GAG_HOST_ID),
+                          );
+                          return;
+                        }
+                        exitToSite(`/signup?plan=${encodeURIComponent(tier.signupPlan)}`);
+                      }}
+                      className={`overflow-hidden rounded-xl border bg-[#1a0b2e] text-left transition active:scale-[0.98] ${
+                        gold
+                          ? "border-[#f0c75e] ring-2 ring-[#f0c75e]/50"
+                          : "border-white/15 hover:border-[#a78bfa]"
+                      }`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={art} alt="" className="aspect-[4/3] w-full object-cover" />
+                      <div className="px-2 py-1.5">
+                        <p className="text-[12px] font-extrabold leading-tight text-white">{tier.title}</p>
+                        <p className="text-[11px] font-semibold text-[#f0c75e]">{tier.price}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <p className="mt-4 text-center text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--accent-fg)]">
+                Choose by program
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {TOUR_END_PROGRAMS.map((prog) => (
+                  <button
+                    key={prog.slug}
+                    type="button"
+                    data-analytics-action={`tour-end-program-${prog.slug}`}
+                    onClick={(e) => {
+                      markLandingConverted();
+                      fireLandingJoinHook(e.currentTarget);
+                      exitToSite(
+                        `/signup?plan=explorer&interest=${encodeURIComponent(prog.slug)}`,
+                      );
+                    }}
+                    className="overflow-hidden rounded-xl border border-white/15 bg-[#12081f] text-left transition hover:border-[#a78bfa] active:scale-[0.98]"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={resolveProgramImage(prog.slug)}
+                      alt=""
+                      className="h-[4.75rem] w-full object-cover sm:h-24"
+                    />
+                    <p className="px-2 py-1.5 text-[11px] font-semibold leading-snug text-white">
+                      {prog.name}
+                    </p>
+                  </button>
+                ))}
+              </div>
+
               <button
                 type="button"
                 data-analytics-action="tour-back"
                 onClick={goPrev}
-                className="mx-auto mt-3 flex min-h-12 items-center justify-center px-4 text-sm font-semibold text-white/70"
+                className="mx-auto mt-4 flex min-h-12 items-center justify-center px-4 text-sm font-semibold text-white/70"
               >
                 ← Back
               </button>

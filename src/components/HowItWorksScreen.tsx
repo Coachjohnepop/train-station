@@ -429,8 +429,6 @@ function ProgramScene({
   const reduce = usePrefersReducedMotion();
   const tick = useSceneClock(motion, playKey, reduce ? [240] : [2200], onReady);
   const selected = tick >= 1 ? "adult" : null;
-  const showFinger = motion === "animate" && !reduce;
-
   return (
     <div className="relative w-full overflow-visible rounded-2xl border border-white/15 bg-[#12081f] p-4">
       <p className="text-center text-[9px] font-bold uppercase tracking-[0.24em] text-[var(--accent-fg)]">
@@ -440,14 +438,6 @@ function ProgramScene({
         Pick a Program
       </h3>
       <div className="relative mt-3 grid grid-cols-2 gap-2">
-        {showFinger ? (
-          <GuideFinger
-            playKey={playKey}
-            duration={2600}
-            label="Like this"
-            stops={[{ id: "adult", at: 2200 }]}
-          />
-        ) : null}
         {PROGRAMS.map((p) => {
           const on = selected === p.id;
           return (
@@ -485,32 +475,20 @@ function GearScene({
   playKey: string | number;
   onReady?: () => void;
 }) {
-  const reduce = usePrefersReducedMotion();
   const delays = [400, 650, 900, 1150, 1400, 1650];
   const tick = useSceneClock(motion, playKey, delays, onReady);
   const selectedCount = tick === 99 ? 6 : Math.min(6, tick);
   const selectedIds = [...SELECTED_GEAR].slice(0, selectedCount);
-  const showFinger = motion === "animate" && !reduce;
 
   return (
     <div className="relative w-full overflow-visible rounded-2xl border border-white/15 bg-[#12081f] p-4">
-      <p className="text-center text-[9px] font-bold uppercase tracking-[0.24em] text-[var(--accent-fg)]">
+      <h3 className="text-center text-xl font-semibold leading-tight text-[var(--text)] sm:text-2xl">
         Gear at home
-      </p>
-      <h3 className="mt-0.5 text-center text-base font-semibold leading-tight text-[var(--text)]">
-        {selectedCount ? `${selectedCount} items selected` : "Your equipment list"}
       </h3>
-      <div className="relative mt-2 grid grid-cols-6 gap-1">
-        {showFinger ? (
-          <GuideFinger
-            playKey={playKey}
-            duration={1900}
-            label="Tap yours"
-            stops={["dumbbells", "kettlebell", "bands", "bench", "mat", "jump-rope"].map(
-              (id, i) => ({ id, at: delays[i] ?? 1650 }),
-            )}
-          />
-        ) : null}
+      <p className="mt-1 text-center text-sm text-white/70">
+        {selectedCount ? `${selectedCount} items selected` : "Your equipment list"}
+      </p>
+      <div className="relative mt-3 grid grid-cols-6 gap-1">
         {DEMO_EQUIPMENT.map((eq) => {
           const on = selectedIds.includes(eq.id);
           return (
@@ -547,13 +525,11 @@ function BookScene({
   playKey: string | number;
   onReady?: () => void;
 }) {
-  const reduce = usePrefersReducedMotion();
   const tick = useSceneClock(motion, playKey, [800, 1600, 2400, 3200], onReady);
   const dayPicked = tick >= 1;
   const timesOpen = tick >= 2;
   const timePicked = tick >= 3;
   const booked = tick >= 4;
-  const showFinger = motion === "animate" && !reduce;
 
   return (
     <div className="relative w-full overflow-visible rounded-2xl border border-emerald-500/30 bg-[#0c1a14] p-4">
@@ -564,18 +540,6 @@ function BookScene({
         Coach Jeremy Byrd
       </h3>
       <p className="text-center text-[10px] text-emerald-300/80">15-min intro</p>
-      {showFinger ? (
-        <GuideFinger
-          playKey={playKey}
-          duration={3400}
-          label="Like this"
-          stops={[
-            { id: "day", at: 800 },
-            { id: "time", at: 2400 },
-            { id: "confirm", at: 3200 },
-          ]}
-        />
-      ) : null}
       <div className="relative mt-2 overflow-hidden rounded-xl border border-white/12 bg-[var(--bg)]/90">
         <div className="flex items-center justify-between border-b border-white/10 px-2.5 py-2">
           <span className="text-xs font-semibold text-[var(--text)]">September 2026</span>
