@@ -221,7 +221,7 @@ export default function LandingSeeInsideTour({
     current != null ? howItWorksStepById(howItWorks, TOUR_BEAT_TO_STEP[current]) : null;
   const coachLine =
     phase === "end"
-      ? "Continue with Free, pick a ticket, or choose a program — tour ends here."
+      ? "Pick a ticket if you want Jeremy. Free is still a seat if you just want in."
       : howStep?.coachLine || "";
 
   return createPortal(
@@ -301,8 +301,16 @@ export default function LandingSeeInsideTour({
             <div className="w-full">
               <EasyPathChoices
                 kicker="Your move"
-                hint="Free is a real seat. Coach Class is when you want Jeremy."
+                hint="Coach Class is when you want Jeremy. Free is still a real seat."
               >
+                <button
+                  type="button"
+                  data-analytics-action="tour-pick-ticket"
+                  onClick={() => exitToSite("/join?from=tour#tickets")}
+                  className="landing-tour-pick-ticket inline-flex h-14 w-full items-center justify-center rounded-full text-base font-extrabold"
+                >
+                  Pick a ticket
+                </button>
                 <button
                   type="button"
                   data-analytics-action="tour-continue-free"
@@ -314,17 +322,9 @@ export default function LandingSeeInsideTour({
                       document.getElementById(FREE_TICKET_GAG_HOST_ID),
                     );
                   }}
-                  className="landing-hero-early-signup inline-flex h-14 w-full items-center justify-center rounded-full text-base font-extrabold"
-                >
-                  Continue with Free
-                </button>
-                <button
-                  type="button"
-                  data-analytics-action="tour-pick-ticket"
-                  onClick={() => exitToSite("/join?from=tour#tickets")}
                   className="landing-hero-secondary-cta inline-flex h-14 w-full items-center justify-center rounded-full text-base font-extrabold"
                 >
-                  Pick a ticket
+                  Continue with Free
                 </button>
               </EasyPathChoices>
               <h3 className="mt-4 text-center text-xl font-semibold leading-tight text-[var(--text)] sm:text-2xl">
