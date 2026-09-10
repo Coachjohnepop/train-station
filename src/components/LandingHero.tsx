@@ -276,7 +276,7 @@ export default function LandingHero({
               {headline}
             </h1>
 
-            <p className="max-w-[18.5rem] text-[15px] font-semibold leading-snug text-white/95 sm:max-w-sm sm:text-xl">
+            <p className="landing-hero-subhead max-w-[18.5rem] text-[15px] font-semibold leading-snug text-white sm:max-w-sm sm:text-xl">
               {returnMode ? (
                 <>
                   You already found us.
