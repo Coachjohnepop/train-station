@@ -142,8 +142,9 @@ function ScoresTabBar({
 
 export default function MemberLeaderboard() {
   const [scoresTab, setScoresTab] = useState<ScoresTab>("mine");
-  const [boardMode, setBoardMode] = useState<BoardMode>("division");
-  const [scope, setScope] = useState<LeaderboardScope>("program");
+  /** Launch: everyone on one board until there are enough racers to split. */
+  const [boardMode, setBoardMode] = useState<BoardMode>("legacy");
+  const [scope, setScope] = useState<LeaderboardScope>("site");
   const [data, setData] = useState<LeaderboardPayload | null>(null);
   const [division, setDivision] = useState<DivisionBoard | null>(null);
   const [progress, setProgress] = useState<MemberScoreProgress | null>(null);
@@ -416,6 +417,18 @@ export default function MemberLeaderboard() {
           <div className="flex rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-1">
             <button
               type="button"
+              onClick={() => {
+                setBoardMode("legacy");
+                setScope("site");
+              }}
+              className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold transition ${
+                boardMode === "legacy" ? "nav-tab-active text-accent" : "text-[var(--muted)]"
+              }`}
+            >
+              Everyone
+            </button>
+            <button
+              type="button"
               onClick={() => setBoardMode("division")}
               className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold transition ${
                 boardMode === "division" ? "nav-tab-active text-accent" : "text-[var(--muted)]"
@@ -423,39 +436,7 @@ export default function MemberLeaderboard() {
             >
               My division
             </button>
-            <button
-              type="button"
-              onClick={() => setBoardMode("legacy")}
-              className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold transition ${
-                boardMode === "legacy" ? "nav-tab-active text-accent" : "text-[var(--muted)]"
-              }`}
-            >
-              Program / station
-            </button>
           </div>
-
-          {boardMode === "legacy" ? (
-            <div className="flex rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-1">
-              <button
-                type="button"
-                onClick={() => setScope("program")}
-                className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold transition ${
-                  scope === "program" ? "nav-tab-active text-accent" : "text-[var(--muted)]"
-                }`}
-              >
-                My program
-              </button>
-              <button
-                type="button"
-                onClick={() => setScope("site")}
-                className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold transition ${
-                  scope === "site" ? "nav-tab-active text-accent" : "text-[var(--muted)]"
-                }`}
-              >
-                All station
-              </button>
-            </div>
-          ) : null}
 
           {boardMode === "division" && division ? (
             <p className="text-center text-xs text-[var(--muted)]">
@@ -465,13 +446,15 @@ export default function MemberLeaderboard() {
             </p>
           ) : null}
 
-          {boardMode === "legacy" && scope === "program" && data?.programName ? (
+          {boardMode === "legacy" ? (
             <p className="text-center text-xs text-[var(--muted)]">
-              Racers in <span className="font-medium text-[var(--text)]">{data.programName}</span>
+              All programs, all tickets — one board until the station fills up.
             </p>
           ) : null}
 
-          {boardMode === "division" && division?.viewer ? (
+          {boardMode === "division" &&
+          division?.viewer &&
+          !division.rows.some((r) => r.isSelf) ? (
             <div className="space-y-2">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
                 You on the board
@@ -491,7 +474,7 @@ export default function MemberLeaderboard() {
             </div>
           ) : null}
 
-          {boardMode === "legacy" && data?.viewer ? (
+          {boardMode === "legacy" && data?.viewer && !data.rows.some((r) => r.isSelf) ? (
             <div className="space-y-2">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
                 You on the board
