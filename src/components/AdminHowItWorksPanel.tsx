@@ -18,6 +18,11 @@ import {
   heroAudioExtFromMime,
   mixVolumePercent,
 } from "@/lib/landing-mix-audio";
+import {
+  coachVoiceFileExt,
+  createCoachVoiceRecorder,
+  openCoachVoiceStream,
+} from "@/lib/coach-voice-capture";
 import { formatIntroTime, INTRO_MIN_TRIM_SEC, introTrimDurationSec } from "@/lib/intro-trim";
 
 export default function AdminHowItWorksPanel({
@@ -187,14 +192,9 @@ export default function AdminHowItWorksPanel({
   async function startRecording(id: HowItWorksStepId) {
     stopPreview();
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await openCoachVoiceStream();
       streamRef.current = stream;
-      const mime = MediaRecorder.isTypeSupported("audio/mp4")
-        ? "audio/mp4"
-        : MediaRecorder.isTypeSupported("audio/webm")
-          ? "audio/webm"
-          : "";
-      const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      const rec = createCoachVoiceRecorder(stream);
       chunksRef.current = [];
       rec.ondataavailable = (ev) => {
         if (ev.data.size) chunksRef.current.push(ev.data);
@@ -203,8 +203,9 @@ export default function AdminHowItWorksPanel({
         window.clearInterval(recordTick.current);
         stream.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
-        const blob = new Blob(chunksRef.current, { type: rec.mimeType || "audio/mp4" });
-        const ext = rec.mimeType.includes("webm") ? "webm" : "m4a";
+        const type = rec.mimeType || "audio/webm";
+        const blob = new Blob(chunksRef.current, { type });
+        const ext = coachVoiceFileExt(type);
         const file = new File([blob], `how-it-works-${id}.${ext}`, { type: blob.type });
         setRecordingId(null);
         setRecordSec(0);
@@ -237,7 +238,8 @@ export default function AdminHowItWorksPanel({
         <h2 className="text-lg font-semibold">How it Works</h2>
         <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">
           Watch the same screen guests see, play it, do the voice-over here, try again, then trim
-          the audio. Pad Theme Song down so guests still hear it under your narration.
+          the audio. Mic processing is off so your S’s stay yours — headphones help if Theme Song
+          is playing. Pad Theme Song down so guests still hear it under your narration.
         </p>
       </div>
 
