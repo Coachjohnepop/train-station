@@ -197,7 +197,7 @@ export function buildPlaybook(input: InsightInput): AnalyticsPlaybook {
       pillar: "better",
       tone: "good",
       title: "People can board while the tour plays",
-      body: `${funnel.tourGetStarted} tapped Get started during the auto-play. Keep that dock; do not hide it behind hover.`,
+      body: `${funnel.tourGetStarted} tapped Get started during the tour. Keep that dock; do not hide it behind hover.`,
       stat: `${funnel.tourGetStarted} Get started`,
     });
   }
@@ -291,7 +291,7 @@ export function buildPlaybook(input: InsightInput): AnalyticsPlaybook {
       pillar: "fun",
       tone: "good",
       title: "Someone finished the tour",
-      body: `${funnel.tourCompletes} hit Continue with Free or Pick a ticket after the auto-play. The tour idea is good; leading with it is not.`,
+      body: `${funnel.tourCompletes} hit Continue with Free or Pick a ticket after the tour. The tour idea is good; leading with it is not.`,
       stat: `${funnel.tourCompletes} finished`,
     });
   } else if (funnel.tourOpens >= 5) {
@@ -386,7 +386,7 @@ export function buildPlaybook(input: InsightInput): AnalyticsPlaybook {
       pillar: "fun",
       title: "Shorten the tour or exit earlier to tickets",
       why: `${funnel.tourOpens} opens and ${funnel.tourCompletes} finished ${window}.`,
-      doNext: "If Get started still loses to Close after a week, cut the auto-play to workout + one ticket beat (~8 sec) and end on Pick a ticket.",
+      doNext: "If Get started still loses to Close after a week, cut the tour to workout + one ticket beat and end on Pick a ticket.",
       test: "tour-get-started + tour-pick-ticket + tour-continue-free should beat close-tour.",
     });
   } else {

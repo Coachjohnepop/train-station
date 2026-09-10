@@ -232,8 +232,8 @@ export default function LandingHero({
                 kicker=""
                 hint={
                   returnMode
-                    ? "Pick a ticket · or peek ~15 sec"
-                    : "Tickets first · tour is ~15 sec"
+                    ? "Pick a ticket · or tap Next through the tour"
+                    : "Tickets first · tour is tap Next"
                 }
               >
                 <Link

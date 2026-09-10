@@ -15,41 +15,24 @@ import {
 } from "@/lib/landing-return-visit";
 
 /**
- * See inside — full auto-play tour for cold traffic only.
- *
- * Auto: workout ×5 → Business → Adult → equip blank/all → book open/day/confirm
+ * See inside — tap-Next tour for cold traffic.
+ * Five digestible screens (not a timer): workout → ticket → program → gear → book.
  * Ends at “Where next?” → Continue with Free, pick a ticket, or programs.
- * Wizard never continues after that. Members never see this (home is welcome shell).
  */
-const STEP_MS = 1000;
-/** Last set + confetti: hold so burst can play before next slide */
 const SET3_CONFETTI_HOLD_MS = 1800;
-/** After workout (access, program, gear, book) */
-const AFTER_WORKOUT_MS = 1500;
 
-type AutoBeat =
-  | "w_weight"
-  | "w_set1"
-  | "w_set2"
-  /** Last set — checks set 3 and fires confetti (same as live member console) */
+type TourBeat =
   | "w_set3"
   | "access_business"
   | "pick_adult"
-  | "equip_blank"
   | "equip_all"
-  | "book_open"
-  | "book_day"
   | "book_confirm";
 
-const AUTO_BEATS: AutoBeat[] = [
-  "w_weight",
-  "w_set1",
-  "w_set2",
+const TOUR_BEATS: TourBeat[] = [
   "w_set3",
   "access_business",
   "pick_adult",
   "equip_all",
-  "book_day",
   "book_confirm",
 ];
 
@@ -77,8 +60,6 @@ export default function LandingSeeInsideTour({
   const lastSetRef = useRef<HTMLDivElement | null>(null);
   const confettiFired = useRef(false);
   const reducedMotion = useRef(false);
-  const timers = useRef<number[]>([]);
-  const paused = useRef(false);
 
   // Portal to body so sticky landing nav (z-40) can’t sit above the tour
   // (hero is z-0 and traps fixed children otherwise).
@@ -96,11 +77,6 @@ export default function LandingSeeInsideTour({
     };
   }, [open]);
 
-  const clearTimers = useCallback(() => {
-    for (const t of timers.current) window.clearTimeout(t);
-    timers.current = [];
-  }, []);
-
   /** Close wizard and land in normal join nav (tickets or programs). */
   const exitToSite = useCallback(
     (href: string) => {
@@ -117,72 +93,34 @@ export default function LandingSeeInsideTour({
     reducedMotion.current =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    paused.current = false;
     setPhase("auto");
     setBeat(0);
     confettiFired.current = false;
-    clearTimers();
-  }, [open, clearTimers]);
-
-  function holdMsForBeat(index: number): number {
-    if (reducedMotion.current) return 1000;
-    const id = AUTO_BEATS[index];
-    // Last set + confetti — hold long enough for the burst
-    if (id === "w_set3") return SET3_CONFETTI_HOLD_MS;
-    // Everything after workout
-    const set3Idx = AUTO_BEATS.indexOf("w_set3");
-    if (index > set3Idx) return AFTER_WORKOUT_MS;
-    return STEP_MS;
-  }
+  }, [open]);
 
   const goPrev = useCallback(() => {
-    paused.current = true;
-    clearTimers();
     if (phase === "end") {
-      // From “Where next?” back into auto sequence at last beat
       setPhase("auto");
-      setBeat(AUTO_BEATS.length - 1);
+      setBeat(TOUR_BEATS.length - 1);
       return;
     }
     if (beat <= 0) return;
     setBeat((b) => b - 1);
-  }, [phase, beat, clearTimers]);
+  }, [phase, beat]);
 
   const goNext = useCallback(() => {
-    paused.current = true;
-    clearTimers();
-    if (phase === "end") {
-      // Stay on choices — only explicit card taps exit the wizard
-      return;
-    }
-    if (beat >= AUTO_BEATS.length - 1) {
+    if (phase === "end") return;
+    if (beat >= TOUR_BEATS.length - 1) {
       setPhase("end");
       return;
     }
     setBeat((b) => b + 1);
-  }, [phase, beat, clearTimers]);
-
-  // Auto-advance (paused after manual arrow)
-  useEffect(() => {
-    if (!open || phase !== "auto" || paused.current) return;
-    clearTimers();
-    const ms = holdMsForBeat(beat);
-    const id = window.setTimeout(() => {
-      if (paused.current) return;
-      if (beat >= AUTO_BEATS.length - 1) {
-        setPhase("end");
-        return;
-      }
-      setBeat((b) => b + 1);
-    }, ms);
-    timers.current.push(id);
-    return clearTimers;
-  }, [open, phase, beat, clearTimers]);
+  }, [phase, beat]);
 
   // Last set (set 3) fires confetti — same as live member console
   useEffect(() => {
     if (!open || phase !== "auto") return;
-    const step = AUTO_BEATS[beat];
+    const step = TOUR_BEATS[beat];
     if (step !== "w_set3") return;
     if (reducedMotion.current) return;
 
@@ -236,61 +174,36 @@ export default function LandingSeeInsideTour({
 
   if (!open || !mounted) return null;
 
-  const current = phase === "auto" ? AUTO_BEATS[beat] : null;
+  const current = phase === "auto" ? TOUR_BEATS[beat] : null;
   const progress =
     phase === "auto"
-      ? ((beat + 1) / (AUTO_BEATS.length + 1)) * 100
+      ? ((beat + 1) / (TOUR_BEATS.length + 1)) * 100
       : 100;
 
-  const onWorkout =
-    current === "w_weight" ||
-    current === "w_set1" ||
-    current === "w_set2" ||
-    current === "w_set3";
+  const onWorkout = current === "w_set3";
 
   const displayWeight = onWorkout ? 135 : 95;
 
-  // Progressive checks — set 3 + confetti on last set (live console behavior)
-  const doneSets =
-    current === "w_set1"
-      ? [1]
-      : current === "w_set2"
-        ? [1, 2]
-        : current === "w_set3"
-          ? [1, 2, 3]
-          : [];
-  const set3JustDone = current === "w_set3";
-  const celebrating = current === "w_set3";
+  const doneSets = onWorkout ? [1, 2, 3] : [];
+  const set3JustDone = onWorkout;
+  const celebrating = onWorkout;
 
   const equipSelected = current === "equip_all";
-  const bookDayIndex =
-    current === "book_day" || current === "book_confirm" ? 0 : -1;
+  const bookDayIndex = current === "book_confirm" ? 0 : -1;
   const bookDone = current === "book_confirm";
 
   const coachLine =
     phase === "end"
       ? "Continue with Free, pick a ticket, or choose a program — tour ends here."
-      : current === "w_weight"
-        ? "Log the weight you used."
-        : current === "w_set1"
-          ? "Set 1 complete."
-          : current === "w_set2"
-            ? "Set 2 complete."
-            : current === "w_set3"
-              ? "Exercise Finished."
-            : current === "access_business"
-              ? "How to access — pick a ticket class (Business Class demo)."
-              : current === "pick_adult"
-                ? "Pick a program — Adult shown."
-                : current === "equip_blank"
-                  ? "Your gear list starts empty."
-                  : current === "equip_all"
-                    ? "Tap what you have at home — five items selected."
-                    : current === "book_open"
-                      ? "Book Call with Coach Jeremy."
-                      : current === "book_day"
-                        ? "Pick an open day and time."
-                        : "Booked — intro call locked in.";
+      : current === "w_set3"
+        ? "This is Today. Log the weight, check the sets — done."
+        : current === "access_business"
+          ? "How you get in. Pick a ticket class — Business shown."
+          : current === "pick_adult"
+            ? "Then pick a program. Adult is the home base."
+            : current === "equip_all"
+              ? "Tap what you have at home. Change it anytime in Settings."
+              : "Want a real voice? Book 15 minutes with Coach Jeremy.";
 
   return createPortal(
     <div
@@ -313,14 +226,10 @@ export default function LandingSeeInsideTour({
             <button
               type="button"
               data-analytics-action="tour-skip"
-              onClick={() => {
-                paused.current = true;
-                clearTimers();
-                setPhase("end");
-              }}
-              className="h-10 rounded-full border border-white/20 bg-white/5 px-3 text-sm font-semibold text-white/90"
+              onClick={() => setPhase("end")}
+              className="min-h-11 rounded-full border border-white/20 bg-white/5 px-3 text-sm font-semibold text-white/90"
             >
-              Skip to choices
+              Skip
             </button>
           ) : null}
           <button
@@ -349,29 +258,6 @@ export default function LandingSeeInsideTour({
             : "justify-start pt-3 sm:justify-center sm:pt-1.5"
         }`}
       >
-        {/* Left / right nav */}
-        <button
-          type="button"
-          onClick={goPrev}
-          disabled={phase === "auto" && beat === 0}
-          className={`absolute left-1.5 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/50 text-lg font-bold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/15 disabled:pointer-events-none disabled:opacity-25 sm:left-3 ${
-            phase === "end" ? "top-8" : "top-[9.75rem] sm:top-1/2 sm:-translate-y-1/2"
-          }`}
-          aria-label="Previous step"
-        >
-          ‹
-        </button>
-        <button
-          type="button"
-          onClick={goNext}
-          className={`absolute right-1.5 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/50 text-lg font-bold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/15 sm:right-3 ${
-            phase === "end" ? "top-8" : "top-[9.75rem] sm:top-1/2 sm:-translate-y-1/2"
-          }`}
-          aria-label="Next step"
-        >
-          ›
-        </button>
-
         <div
           className={`flex w-full flex-col items-center gap-2 px-1 sm:gap-2.5 sm:px-8 ${
             phase === "end" ? "max-w-xl" : "max-w-lg"
@@ -518,11 +404,11 @@ export default function LandingSeeInsideTour({
           {/* ── Equipment ── */}
             <div
               className={`landing-see-inside__slide w-full ${
-                current === "equip_blank" || current === "equip_all"
+                current === "equip_all"
                   ? "landing-see-inside__slide--active flex flex-col items-center"
                   : "landing-see-inside__slide--idle"
               }`}
-              aria-hidden={current !== "equip_blank" && current !== "equip_all"}
+              aria-hidden={current !== "equip_all"}
             >
             <div className="w-full rounded-2xl border border-white/15 bg-[#12081f] p-4">
               <p className="text-center text-[9px] font-bold uppercase tracking-[0.24em] text-[var(--accent-fg)]">
@@ -562,17 +448,11 @@ export default function LandingSeeInsideTour({
           {/* ── Book ── */}
             <div
               className={`landing-see-inside__slide w-full ${
-                current === "book_open" ||
-                current === "book_day" ||
                 current === "book_confirm"
                   ? "landing-see-inside__slide--active flex flex-col items-center"
                   : "landing-see-inside__slide--idle"
               }`}
-              aria-hidden={
-                current !== "book_open" &&
-                current !== "book_day" &&
-                current !== "book_confirm"
-              }
+              aria-hidden={current !== "book_confirm"}
             >
               <div className="w-full rounded-2xl border border-emerald-500/30 bg-[#0c1a14] p-4">
                 <p className="text-center text-[9px] font-bold uppercase tracking-[0.24em] text-emerald-300/90">
@@ -593,7 +473,7 @@ export default function LandingSeeInsideTour({
                       <p className="text-[10px] text-emerald-300/90">15-min intro · Calendly</p>
                     </div>
                   </div>
-                  {(current === "book_day" || current === "book_confirm") && (
+                  {current === "book_confirm" && (
                     <div className="space-y-1 px-2.5 py-2">
                       {BOOK_SLOTS.map((slot, i) => (
                         <div
@@ -614,19 +494,9 @@ export default function LandingSeeInsideTour({
                   )}
                   <div className="border-t border-white/10 px-2.5 py-2">
                     <div
-                      className={`flex h-9 items-center justify-center rounded-full text-xs font-bold ${
-                        bookDone
-                          ? "bg-emerald-400 text-[#042f1a]"
-                          : current === "book_open"
-                            ? "bg-emerald-500 text-[#042f1a] ring-2 ring-emerald-300/50"
-                            : "bg-emerald-500/80 text-[#042f1a]"
-                      }`}
+                      className="flex h-9 items-center justify-center rounded-full bg-emerald-400 text-xs font-bold text-[#042f1a]"
                     >
-                      {bookDone
-                        ? "Appointment booked ✓"
-                        : current === "book_open"
-                          ? "Book Call · Coach Jeremy"
-                          : "Confirm booking"}
+                      Appointment booked ✓
                     </div>
                   </div>
                 </div>
@@ -723,6 +593,14 @@ export default function LandingSeeInsideTour({
               <p className="mt-2.5 text-center text-sm text-white/60">
                 Tickets first — programs are extra credit.
               </p>
+              <button
+                type="button"
+                data-analytics-action="tour-back"
+                onClick={goPrev}
+                className="mx-auto mt-3 flex min-h-12 items-center justify-center px-4 text-sm font-semibold text-white/70"
+              >
+                ← Back
+              </button>
             </div>
           )}
 
@@ -732,38 +610,56 @@ export default function LandingSeeInsideTour({
         </div>
       </div>
 
-      {/* Bottom step dots — full tour including final “Where next?” */}
+      {/* Dots + thumb Next. No timer — too fast for some, too slow for others. */}
       <div
-        className={`flex shrink-0 justify-center gap-1 pt-1 ${
+        className={`flex shrink-0 justify-center gap-1.5 pt-1 ${
           phase === "auto" ? "pb-1" : "pb-[max(0.5rem,env(safe-area-inset-bottom))]"
         }`}
       >
-        {AUTO_BEATS.map((_, i) => {
+        {TOUR_BEATS.map((_, i) => {
           const active = phase === "auto" && i === beat;
           const done = phase === "end" || (phase === "auto" && i < beat);
           return (
             <span
               key={i}
-              className={`h-1 rounded-full transition-all ${
-                active ? "w-4 bg-white" : done ? "w-2 bg-[#a78bfa]" : "w-1.5 bg-white/25"
+              className={`h-1.5 rounded-full transition-all ${
+                active ? "w-5 bg-white" : done ? "w-2.5 bg-[#a78bfa]" : "w-2 bg-white/25"
               }`}
             />
           );
         })}
         <span
-          className={`h-1 rounded-full transition-all ${
-            phase === "end" ? "w-4 bg-white" : "w-1.5 bg-white/25"
+          className={`h-1.5 rounded-full transition-all ${
+            phase === "end" ? "w-5 bg-white" : "w-2 bg-white/25"
           }`}
           aria-hidden
         />
       </div>
 
-      {/* Always on screen while the tour plays — Facebook traffic is iPhone, so hover-only would never show. */}
       {phase === "auto" ? (
         <div
-          className="shrink-0 px-3 pt-1 sm:px-5"
+          className="shrink-0 space-y-2 px-3 pt-1 sm:px-5"
           style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
         >
+          <div className="flex gap-2">
+            <button
+              type="button"
+              data-analytics-action="tour-back"
+              onClick={goPrev}
+              disabled={beat <= 0}
+              className="inline-flex min-h-14 min-w-[5.5rem] items-center justify-center rounded-full border-2 border-white/70 px-5 text-[17px] font-extrabold text-white disabled:pointer-events-none disabled:opacity-30"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              data-analytics-action="tour-next"
+              onClick={goNext}
+              className="landing-hero-early-signup inline-flex min-h-14 flex-1 items-center justify-center rounded-full px-8 text-[19px] font-extrabold tracking-tight transition-transform active:scale-[0.98]"
+            >
+              {beat >= TOUR_BEATS.length - 1 ? "See tickets" : "Next"}
+            </button>
+          </div>
           <button
             type="button"
             data-analytics-action="tour-get-started"
@@ -772,7 +668,7 @@ export default function LandingSeeInsideTour({
               fireLandingJoinHook(e.currentTarget);
               exitToSite("/join?from=tour#tickets");
             }}
-            className="landing-hero-early-signup inline-flex min-h-11 w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98]"
+            className="landing-hero-secondary-cta inline-flex min-h-12 w-full items-center justify-center rounded-full px-8 text-[16px] font-extrabold tracking-tight transition-transform active:scale-[0.98]"
           >
             Get started
           </button>
