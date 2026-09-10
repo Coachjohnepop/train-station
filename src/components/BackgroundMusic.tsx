@@ -69,10 +69,10 @@ export default function BackgroundMusic() {
   const heardLiveRef = useRef(false);
   /**
    * User currently has the speaker off. Overlay must not auto-resume.
-   * Sticky (second mute) vs soft (first mute, can play once more) is stickyMuteRef.
+   * Sticky (second mute) vs soft (first mute, tap-anywhere can play once more) is stickyMuteRef.
    */
   const speakerMutedRef = useRef(false);
-  /** Second mute — stays off for this tab. */
+  /** Second mute — tap-anywhere stays off; the speaker button can still play. */
   const stickyMuteRef = useRef(false);
   const muteCountRef = useRef(0);
   /** Ignore activation that is the same click as the speaker mute (capture fires first). */
@@ -258,7 +258,9 @@ export default function BackgroundMusic() {
         stopAdminMusic(audio);
         return false;
       }
-      if (stickyMuteRef.current || isBackgroundMusicUserMuted()) {
+      const tapAnywhereLocked =
+        stickyMuteRef.current || isBackgroundMusicUserMuted();
+      if (tapAnywhereLocked && !opts?.fromSpeakerButton) {
         setSoundLive(false);
         setOff(true);
         return false;
@@ -305,7 +307,7 @@ export default function BackgroundMusic() {
           persistBackgroundMusicUnlockCount(gestureUnlockCountRef.current);
         }
       }
-      if (speakerMutedRef.current || stickyMuteRef.current) {
+      if (speakerMutedRef.current) {
         audio.muted = true;
         audio.pause();
         setSoundLive(false);
@@ -369,6 +371,9 @@ export default function BackgroundMusic() {
         audio.pause();
         setSoundLive(false);
         setOff(true);
+        return;
+      }
+      if (stickyMuteRef.current) {
         return;
       }
       if (
@@ -505,6 +510,7 @@ export default function BackgroundMusic() {
       if (overlayPauseRef.current) return;
       // Never un-mute or re-unlock just because the tab came back
       if (speakerMutedRef.current) return;
+      if (stickyMuteRef.current && (audio.paused || audio.muted)) return;
       if (
         !canStartThemeSongFromSilence(
           gestureUnlockCountRef.current,
@@ -525,6 +531,7 @@ export default function BackgroundMusic() {
         return;
       }
       if (speakerMutedRef.current) return;
+      if (stickyMuteRef.current) return;
       void startMusicWithFinger(audio);
     };
 
@@ -578,6 +585,7 @@ export default function BackgroundMusic() {
         return;
       }
       if (stickyMuteRef.current || isBackgroundMusicUserMuted()) {
+        // Second mute: only the speaker button may start the song again
         return;
       }
       // First mute: tap anywhere plays once more
@@ -626,7 +634,7 @@ export default function BackgroundMusic() {
         setSoundLive(false);
         return;
       }
-      if (stickyMuteRef.current || speakerMutedRef.current) return;
+      if (speakerMutedRef.current) return;
       if (!autoPlayAllowedRef.current) return;
       // Resume after How it Works / gag duck — same start, not a new budget spend
       if (
@@ -634,11 +642,15 @@ export default function BackgroundMusic() {
         !canStartThemeSongFromSilence(
           gestureUnlockCountRef.current,
           mixRef.current.clickStarts,
-        )
+        ) &&
+        !stickyMuteRef.current
       ) {
         return;
       }
-      void forceAudible(audio);
+      void forceAudible(
+        audio,
+        stickyMuteRef.current ? { fromSpeakerButton: true } : undefined,
+      );
     };
     window.addEventListener(BG_MUSIC_OVERLAY_EVENT, onOverlay);
     return () => window.removeEventListener(BG_MUSIC_OVERLAY_EVENT, onOverlay);
@@ -650,7 +662,8 @@ export default function BackgroundMusic() {
       if (!audio || adminRouteRef.current) return;
       // FreeTicketModal / intro close may request play — only on funnel routes
       if (!autoPlayAllowedRef.current) return;
-      if (stickyMuteRef.current || speakerMutedRef.current) return;
+      if (speakerMutedRef.current) return;
+      if (stickyMuteRef.current && (audio.paused || audio.muted)) return;
       if (!unlockedRef.current) return;
       if (
         !canStartThemeSongFromSilence(
@@ -679,14 +692,14 @@ export default function BackgroundMusic() {
       stopMusicQuiet(audio);
       return;
     }
-    if (stickyMuteRef.current || isBackgroundMusicUserMuted()) {
+    if (speakerMutedRef.current) {
       audio.muted = true;
       audio.pause();
       setSoundLive(false);
       setOff(true);
       return;
     }
-    if (speakerMutedRef.current) {
+    if (stickyMuteRef.current || isBackgroundMusicUserMuted()) {
       audio.muted = true;
       audio.pause();
       setSoundLive(false);
@@ -699,14 +712,13 @@ export default function BackgroundMusic() {
     void startMusicWithFinger(audio);
   }, [onAdmin, autoPlayAllowed, authReady, pathname, startMusicWithFinger, stopMusicQuiet]);
 
-  /** Play → mute → play again → mute stays. */
+  /** Play → mute → play again (anywhere) → second mute: only the speaker can play. */
   const toggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     ignoreNextActivationRef.current = true;
     const audio = audioRef.current;
     if (!audio || adminRouteRef.current || !autoPlayAllowedRef.current) return;
-    if (stickyMuteRef.current || isBackgroundMusicUserMuted()) return;
 
     const playing = !audio.paused && !audio.muted && soundLive;
     if (playing) {
@@ -733,7 +745,7 @@ export default function BackgroundMusic() {
     persistBackgroundMusicSoftMute(false);
     speakerMutedRef.current = false;
     setOff(false);
-    void forceAudible(audio);
+    void forceAudible(audio, { fromSpeakerButton: true });
   };
 
   const onPublicHome = pathname === "/" && !signedIn;
@@ -757,14 +769,14 @@ export default function BackgroundMusic() {
           ? "one play"
           : `${mix.clickStarts} plays used`;
   const bubbleMobile = off && remainingStarts <= 0
-    ? "Theme Song muted"
+    ? "Theme Song muted — tap the speaker to play"
     : soundLive
       ? "Theme Song — tap to mute"
       : off
         ? "Theme Song — tap to play again"
         : `Theme Song — ${againLabel}`;
   const bubbleDesktop = off && remainingStarts <= 0
-    ? "Theme Song muted"
+    ? "Theme Song muted — click the speaker to play"
     : soundLive
       ? "Theme Song — click to mute"
       : off

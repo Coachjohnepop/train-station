@@ -5,9 +5,9 @@ import { isMixAudioElement } from "@/lib/landing-mix-audio";
 export const BG_MUSIC_OVERLAY_EVENT = "ts-bg-music-overlay";
 /** Ask BackgroundMusic to unlock/play (call from a user gesture when possible). */
 export const BG_MUSIC_REQUEST_PLAY_EVENT = "ts-bg-music-request-play";
-/** Sticky mute — second speaker mute. Theme Song stays off until the tab closes. */
+/** Sticky mute — second speaker mute. Tap-anywhere stays off; the speaker can still play. */
 export const BG_MUSIC_MUTED_KEY = "ts-bg-music-muted";
-/** First speaker mute — they can play once more. */
+/** First speaker mute — tap-anywhere or the speaker can play once more. */
 export const BG_MUSIC_SOFT_MUTE_KEY = "ts-bg-music-soft-muted";
 /** Session flag — Theme Song already played once this tab (legacy boolean). */
 export const BG_MUSIC_PLAYED_KEY = "ts-bg-music-played";
