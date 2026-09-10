@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { setBackgroundMusicDuck } from "@/lib/background-music-control";
-import { MIX_AUDIO_ATTR } from "@/lib/landing-mix-audio";
-import { howItWorksHasVoice, howItWorksVoiceWindow, type HowItWorksStep } from "@/lib/how-it-works";
+import { howItWorksHasVoice, type HowItWorksStep } from "@/lib/how-it-works";
+import { startHowItWorksVoice, stopHowItWorksVoice } from "@/lib/play-how-it-works-voice";
 
 /**
- * Plays the trimmed voice-over for one How it Works screen.
- * Next is never held for this clip — tap Next to skip.
+ * How it Works narration. Same contract as the Free ticket gag:
+ * one shared Audio element, one play(), no pause in effect cleanup
+ * (that restart was the lisp-adjacent “starts, stops, starts again”).
  */
 export default function HowItWorksVoice({
   step,
@@ -18,63 +18,17 @@ export default function HowItWorksVoice({
 }) {
   const stepRef = useRef(step);
   stepRef.current = step;
-  const voiceKey = `${step?.id ?? ""}:${step?.voice.audioUrl ?? ""}:${step?.voice.startSec ?? 0}:${step?.voice.endSec ?? ""}`;
+  const url = step?.voice.audioUrl ?? "";
+  const voiceKey = `${step?.id ?? ""}:${url}:${step?.voice.startSec ?? 0}:${step?.voice.endSec ?? ""}`;
 
   useEffect(() => {
     const current = stepRef.current;
-    if (!active || !current || !howItWorksHasVoice(current) || !current.voice.audioUrl) {
+    if (!active || !howItWorksHasVoice(current)) {
+      stopHowItWorksVoice();
       return;
     }
-
-    const audio = new Audio(current.voice.audioUrl);
-    audio.preload = "auto";
-    audio.setAttribute(MIX_AUDIO_ATTR, "true");
-    let stopped = false;
-
-    const finish = () => {
-      if (stopped) return;
-      stopped = true;
-      audio.pause();
-      setBackgroundMusicDuck(false);
-    };
-
-    const applyTrimAndPlay = () => {
-      if (stopped) return;
-      const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
-      const { start, end } = howItWorksVoiceWindow(current.voice, duration || null);
-      try {
-        audio.currentTime = start;
-      } catch {
-        /* iOS may need a play() first */
-      }
-      const guard = () => {
-        if (end != null && audio.currentTime >= end - 0.05) finish();
-      };
-      audio.addEventListener("timeupdate", guard);
-      void audio
-        .play()
-        .then(() => {
-          if (stopped) return;
-          setBackgroundMusicDuck(true);
-          guard();
-        })
-        .catch(() => finish());
-    };
-
-    audio.addEventListener("ended", finish);
-    audio.addEventListener("error", finish);
-    const metadataWait = window.setTimeout(applyTrimAndPlay, 2500);
-    if (audio.readyState >= 1) applyTrimAndPlay();
-    else audio.addEventListener("loadedmetadata", applyTrimAndPlay, { once: true });
-
-    return () => {
-      stopped = true;
-      window.clearTimeout(metadataWait);
-      audio.pause();
-      audio.removeAttribute("src");
-      audio.load();
-      setBackgroundMusicDuck(false);
-    };
+    startHowItWorksVoice(current);
+    // Do not pause on cleanup — React remount would rewind the clip.
   }, [active, voiceKey]);
 
   if (!active || !howItWorksHasVoice(step)) return null;

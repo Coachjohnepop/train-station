@@ -90,6 +90,24 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 
 ## Durable product rules (don’t forget)
 
+### Audio / video playback — **same rules as Free gag + rest horn**
+Whenever you touch **audio or video**, copy the working implementations. Do not invent a second player.
+
+**Canonical:** `src/lib/play-free-ticket-gag.ts` (visible video) · `src/lib/rest-audio.ts` (HTMLAudio, one element) · `src/lib/play-how-it-works-voice.ts` (How it Works overdub).
+
+| Rule | Why |
+|------|-----|
+| **One element** | Never `new Audio()` / a second `<video>` per play. iOS restarts and draws chrome. |
+| **One `play()`** | No `loadedmetadata` **and** a timeout both calling play. That is “starts, pauses, restarts to finish.” |
+| **Play from the tap** | Same gesture as the button (`flushSync` open + `start…FromGesture`). Effects are for preload only. |
+| **Do not pause in effect cleanup** | React remount (Strict Mode) would rewind the clip. Stop only on close / next clip / real unmount of the *page*. |
+| **Do not `removeAttribute("src")` + `load()`** to “reset” | That restarts playback. Leave src; pause only when stopping for real. |
+| **No Web Audio GainNode on iOS** | Stutters intros. Linear `element.volume` only (`applyMixVolume`). |
+| **No YouTube for product gags / intros** | Local file. Dual iframes restart the chorus. |
+| **Coach overdubs** | Clean mic (`echoCancellation` / `noiseSuppression` / `autoGainControl` **off**). 192 kbps. No extra ffmpeg smash. |
+
+How it Works guest narration uses `startHowItWorksVoice` — same clip must not be seeked/played twice.
+
 ### Never hot-poll Postgres (non-negotiable)
 **No `setInterval` hitting `/api/*` or Prisma faster than 5 seconds.**  
 The 150ms live-session loop (Aug 2026) is why Free usage went off the charts. Live-class backup polls use `startLiveClassBackupPoll` and run **only while the coach is live** (`hostStarted`). Idle screens: one GET, SSE, refresh on tab-focus. `scripts/guard-hot-polls.mjs` runs on `npm run build` and fails the deploy if someone puts a faster network poll back. Rest-timer 200ms tick is local UI only.
@@ -423,6 +441,24 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ---
 
 ## WHERE WE LEFT OFF
+
+**Date:** 2026-09-10 (How it Works overdub restart + media standard)
+
+**Status:** Jeremy’s How it Works voice was **starting, pausing, restarting to finish** — same class of bug as the old rickroll (new `Audio()` in an effect, cleanup pause, plus `loadedmetadata` **and** a 2.5s timeout both calling `play()`). Playback now uses **one persistent element** (`play-how-it-works-voice.ts`), one `play()`, no cleanup pause. Next/Back start the clip from the tap. **CONTEXT:** any future audio/video must follow Free gag + rest-horn + this file (see Durable product rules).
+
+**Date:** 2026-09-09 (Jeremy assigned Leg Day Power with empty roster)
+
+**Status:** Jeremy built **Leg Day Power** last night (phone). First draft 8:31pm on Tue chips, then **9 Wed Tomorrow → 8 Tue Today → 9 Wed Tomorrow** — `key={sessionDate}` remounted the planner and wiped the in-progress plan (he called that “deleted it all”). Rebuilt, **Pick who gets it** at 8:45, **Deploy** at 8:46. No member-name / John & Steph clicks in analytics. Session saved for **2026-09-09** with **userIds: []**. Lemon John + Stephanie attached after the fact. Leg Press Machine is on the workout.
+
+**Shipped this pass:** Switching Today/Tomorrow while planning **keeps the draft** (only the save-to date changes). Published class has **Wrong day? Move this class** (Today / Tomorrow / Next). API `POST /api/today/move`. Coach can **Change class workout** on Go to Today / Dashboard mid-class; exercise edits bump the assignment stamp so member Today refreshes (5s while Zoom is live, plus tab-focus).
+
+**Date:** 2026-09-09 (Facebook first-click — Theme Song vs Cybertruck)
+
+**Status:** First tap on Today primed the rest-horn HTMLAudio (unmuted), which chirped Cybertruck and ducked Theme Song. Rest unlock is set-check only; muted/rest/hero media no longer pause Theme Song. Admin → Settings has **Theme Song** on/off + volume (same store as Landing mix). Guests: first tap should play the song, not the horn.
+
+**Date:** 2026-09-09 (landscape Zoom missing)
+
+**Status:** Member landscape Today hid the live Zoom strip (`display: none`) and the header button only rendered after the coach started Zoom — so Lemon John saw no Ping Coach / Join. Header now has **Ping Coach** (landscape) and **Join / Rejoin** when live. Compact strip is visible again in landscape. Portrait unchanged (Ping Coach stays on the blue bar).
 
 **Date:** 2026-09-06 (Jeremy new intro — not tried in last 4h)
 

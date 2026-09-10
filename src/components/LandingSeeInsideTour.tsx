@@ -11,6 +11,7 @@ import {
 import FreeTicketModal from "@/components/FreeTicketModal";
 import HowItWorksScreen from "@/components/HowItWorksScreen";
 import HowItWorksVoice from "@/components/HowItWorksVoice";
+import { startHowItWorksVoice, stopHowItWorksVoice } from "@/lib/play-how-it-works-voice";
 import {
   FREE_TICKET_GAG_HOST_ID,
   preloadFreeTicketGag,
@@ -117,7 +118,10 @@ export default function LandingSeeInsideTour({
   // Reset tour. Theme Song unlock is the global “tap anywhere” handler only
   // (one mute = corner speaker — no second control, no remute races).
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      stopHowItWorksVoice();
+      return;
+    }
     reducedMotion.current =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -150,20 +154,27 @@ export default function LandingSeeInsideTour({
     if (phase === "end") {
       setPhase("auto");
       setBeat(TOUR_BEATS.length - 1);
+      const step = howItWorksStepById(howItWorks, TOUR_BEAT_TO_STEP[TOUR_BEATS[TOUR_BEATS.length - 1]]);
+      startHowItWorksVoice(step);
       return;
     }
     if (beat <= 0) return;
-    setBeat((b) => b - 1);
-  }, [phase, beat]);
+    const nextBeat = beat - 1;
+    setBeat(nextBeat);
+    startHowItWorksVoice(howItWorksStepById(howItWorks, TOUR_BEAT_TO_STEP[TOUR_BEATS[nextBeat]]));
+  }, [phase, beat, howItWorks]);
 
   const goNext = useCallback(() => {
     if (phase === "end") return;
     if (beat >= TOUR_BEATS.length - 1) {
+      stopHowItWorksVoice();
       setPhase("end");
       return;
     }
-    setBeat((b) => b + 1);
-  }, [phase, beat]);
+    const nextBeat = beat + 1;
+    setBeat(nextBeat);
+    startHowItWorksVoice(howItWorksStepById(howItWorks, TOUR_BEAT_TO_STEP[TOUR_BEATS[nextBeat]]));
+  }, [phase, beat, howItWorks]);
 
   // Last set (set 3) fires confetti — same as live member console
   useEffect(() => {
@@ -258,7 +269,10 @@ export default function LandingSeeInsideTour({
             <button
               type="button"
               data-analytics-action="tour-skip"
-              onClick={() => setPhase("end")}
+              onClick={() => {
+                stopHowItWorksVoice();
+                setPhase("end");
+              }}
               className="min-h-11 rounded-full border border-white/20 bg-white/5 px-3 text-sm font-semibold text-white/90"
             >
               Skip
@@ -456,6 +470,7 @@ export default function LandingSeeInsideTour({
             data-analytics-action="tour-get-started"
             onClick={() => {
               markLandingConverted();
+              stopHowItWorksVoice();
               setPhase("end");
             }}
             className="landing-hero-secondary-cta inline-flex min-h-12 w-full items-center justify-center rounded-full px-8 text-[16px] font-extrabold tracking-tight transition-transform active:scale-[0.98]"
