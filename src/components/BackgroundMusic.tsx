@@ -63,6 +63,8 @@ export default function BackgroundMusic() {
   const signedInRef = useRef(false);
   const hintTimerRef = useRef<number | null>(null);
   const unlockedRef = useRef(false);
+  /** True after Theme Song actually played this tab — failed starts must not spend the budget. */
+  const heardLiveRef = useRef(false);
   /**
    * Session mute from the corner speaker (sessionStorage).
    * Once muted, Theme Song does not start again this tab — not even from the speaker.
@@ -73,6 +75,7 @@ export default function BackgroundMusic() {
   /** How many times the song has started from silence this tab. */
   const gestureUnlockCountRef = useRef(0);
   const [signedIn, setSignedIn] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [mix, setMix] = useState({
     enabled: true,
@@ -82,7 +85,7 @@ export default function BackgroundMusic() {
   const mixRef = useRef(mix);
   mixRef.current = mix;
 
-  const autoPlayAllowed = allowThemeSong(pathname, signedIn) && mix.enabled;
+  const autoPlayAllowed = allowThemeSong(pathname, signedIn, role) && mix.enabled;
 
   useEffect(() => {
     adminRouteRef.current = onAdmin;
@@ -110,6 +113,7 @@ export default function BackgroundMusic() {
         if (!res.ok) {
           if (!cancelled) {
             setSignedIn(false);
+            setRole(null);
             setAuthReady(true);
           }
           return;
@@ -117,10 +121,12 @@ export default function BackgroundMusic() {
         const data = await res.json();
         if (cancelled) return;
         setSignedIn(Boolean(data.signedIn && data.user));
+        setRole(typeof data.user?.role === "string" ? data.user.role : null);
         setAuthReady(true);
       } catch {
         if (!cancelled) {
           setSignedIn(false);
+          setRole(null);
           setAuthReady(true);
         }
       }
@@ -214,6 +220,7 @@ export default function BackgroundMusic() {
     setSoundLive(advancing);
     if (advancing) {
       unlockedRef.current = true;
+      heardLiveRef.current = true;
       persistBackgroundMusicPlayed();
       if (gestureUnlockCountRef.current < 1) {
         gestureUnlockCountRef.current = 1;
@@ -283,7 +290,6 @@ export default function BackgroundMusic() {
         setOff(true);
         return false;
       }
-      unlockedRef.current = true;
       setOff(false);
       const ok = await confirmSoundLive(audio);
       if (speakerMutedRef.current) {
@@ -572,10 +578,13 @@ export default function BackgroundMusic() {
           mixRef.current.clickStarts,
         )
       ) {
+        // Earlier tap counted before sound started (How it Works duck). Let them retry.
+        if (!heardLiveRef.current && !speakerMutedRef.current) {
+          void forceAudible(audio);
+        }
         return;
       }
-      gestureUnlockCountRef.current += 1;
-      persistBackgroundMusicUnlockCount(gestureUnlockCountRef.current);
+      // Count is stored only after sound is actually live (confirmSoundLive).
       void forceAudible(audio);
     };
     ACTIVATION_EVENTS.forEach((e) => window.addEventListener(e, onActivation, opts));
@@ -600,14 +609,13 @@ export default function BackgroundMusic() {
       // Don't auto-resume after video duck if user just muted via speaker
       if (speakerMutedRef.current) return;
       if (!autoPlayAllowedRef.current) return;
-      // Don't force theme song back after free-ticket / intro video unless already unlocked
-      if (!unlockedRef.current) return;
+      // Resume after How it Works / gag duck — same start, not a new budget spend
       if (
+        !unlockedRef.current &&
         !canStartThemeSongFromSilence(
           gestureUnlockCountRef.current,
           mixRef.current.clickStarts,
-        ) &&
-        (audio.paused || audio.muted)
+        )
       ) {
         return;
       }

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { setBackgroundMusicOverlay } from "@/lib/background-music-control";
+import { MIX_AUDIO_ATTR } from "@/lib/landing-mix-audio";
 import { howItWorksHasVoice, howItWorksVoiceWindow, type HowItWorksStep } from "@/lib/how-it-works";
 
 /**
@@ -20,22 +21,26 @@ export default function HowItWorksVoice({
 }) {
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
+  const stepRef = useRef(step);
+  stepRef.current = step;
+  const voiceKey = `${step?.id ?? ""}:${step?.voice.audioUrl ?? ""}:${step?.voice.startSec ?? 0}:${step?.voice.endSec ?? ""}`;
 
   useEffect(() => {
-    if (!active || !step) {
+    const current = stepRef.current;
+    if (!active || !current) {
       onReadyRef.current(true);
       return;
     }
-    if (!howItWorksHasVoice(step) || !step.voice.audioUrl) {
+    if (!howItWorksHasVoice(current) || !current.voice.audioUrl) {
       onReadyRef.current(true);
       return;
     }
 
     onReadyRef.current(false);
-    const audio = new Audio(step.voice.audioUrl);
+    const audio = new Audio(current.voice.audioUrl);
     audio.preload = "auto";
+    audio.setAttribute(MIX_AUDIO_ATTR, "true");
     let stopped = false;
-    let duration = 0;
 
     const finish = () => {
       if (stopped) return;
@@ -46,8 +51,9 @@ export default function HowItWorksVoice({
     };
 
     const applyTrimAndPlay = () => {
-      duration = Number.isFinite(audio.duration) ? audio.duration : 0;
-      const { start, end } = howItWorksVoiceWindow(step.voice, duration || null);
+      if (stopped) return;
+      const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+      const { start, end } = howItWorksVoiceWindow(current.voice, duration || null);
       try {
         audio.currentTime = start;
       } catch {
@@ -57,8 +63,14 @@ export default function HowItWorksVoice({
         if (end != null && audio.currentTime >= end - 0.05) finish();
       };
       audio.addEventListener("timeupdate", guard);
-      setBackgroundMusicOverlay(true);
-      void audio.play().then(guard).catch(() => finish());
+      void audio
+        .play()
+        .then(() => {
+          if (stopped) return;
+          setBackgroundMusicOverlay(true);
+          guard();
+        })
+        .catch(() => finish());
     };
 
     audio.addEventListener("ended", finish);
@@ -73,7 +85,7 @@ export default function HowItWorksVoice({
       audio.load();
       setBackgroundMusicOverlay(false);
     };
-  }, [active, step]);
+  }, [active, voiceKey]);
 
   if (!active || !howItWorksHasVoice(step)) return null;
 

@@ -38,12 +38,24 @@ export function isGuestThemeSongPath(pathname: string): boolean {
   return GUEST_PREFIXES.some((prefix) => matchesPrefix(p, prefix));
 }
 
-/** True only for signed-out visitors on public explore / create-login paths. */
-export function allowThemeSong(pathname: string, signedIn: boolean): boolean {
-  if (signedIn) return false;
+function isStaffRoleName(role?: string | null): boolean {
+  return role === "ADMIN" || role === "INSTRUCTOR" || role === "PLATFORM_ADMIN";
+}
+
+/**
+ * Guests on public pages, and staff previewing those same pages.
+ * Members and admin/member apps stay silent.
+ */
+export function allowThemeSong(
+  pathname: string,
+  signedIn: boolean,
+  role?: string | null,
+): boolean {
   const p = normalizePath(pathname);
   if (SILENT_PREFIXES.some((prefix) => matchesPrefix(p, prefix))) return false;
   if (p === "/admin" || p.startsWith("/admin/")) return false;
   if (p === "/member" || p.startsWith("/member/")) return false;
-  return isGuestThemeSongPath(p);
+  if (!isGuestThemeSongPath(p)) return false;
+  if (!signedIn) return true;
+  return isStaffRoleName(role);
 }

@@ -24,10 +24,16 @@ describe("theme song guest gate", () => {
     }
   });
 
-  it("never plays after a login exists", () => {
-    for (const path of ["/", "/join", "/member/today", "/member/workout", "/admin"]) {
-      assert.equal(allowThemeSong(path, true), false);
+  it("stays off for members after login", () => {
+    for (const path of ["/", "/join", "/member/today"]) {
+      assert.equal(allowThemeSong(path, true, "MEMBER"), false);
     }
+  });
+
+  it("plays for staff previewing the public landing", () => {
+    assert.equal(allowThemeSong("/", true, "ADMIN"), true);
+    assert.equal(allowThemeSong("/join", true, "INSTRUCTOR"), true);
+    assert.equal(allowThemeSong("/admin/today", true, "ADMIN"), false);
   });
 
   it("is off the member and coach apps even before auth resolves", () => {
