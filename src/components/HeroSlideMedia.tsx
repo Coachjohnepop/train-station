@@ -17,6 +17,7 @@ import {
 /**
  * One landing-hero / splash frame: photo or muted looping video, with crop, trim, and slow-mo.
  * Optional separate audio bed (video picture stays muted). Mixes with Theme Song.
+ * Playback follows Free gag rules: one element, one play(), no play-then-pause kick.
  */
 export default function HeroSlideMedia({
   slide,
@@ -68,10 +69,6 @@ export default function HeroSlideMedia({
 
     const onMeta = () => {
       applyWindow();
-      if (active) {
-        const play = el.play();
-        if (play && typeof play.catch === "function") play.catch(() => null);
-      }
     };
     const onTime = () => {
       const duration = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : null;
@@ -79,45 +76,27 @@ export default function HeroSlideMedia({
       const limit = end ?? duration;
       if (limit != null && el.currentTime >= limit - 0.04) {
         el.currentTime = start;
-        if (active) {
-          const play = el.play();
-          if (play && typeof play.catch === "function") play.catch(() => null);
-        }
       }
     };
 
     el.addEventListener("loadedmetadata", onMeta);
     el.addEventListener("timeupdate", onTime);
-    applyWindow();
-
-    let cancelled = false;
-    const onPlaying = () => {
-      if (cancelled || active) return;
-      el.pause();
-      applyWindow();
-    };
+    if (el.readyState >= 1) applyWindow();
 
     if (active) {
-      const play = el.play();
-      if (play && typeof play.catch === "function") play.catch(() => null);
-    } else {
-      // Decode the first trimmed frame so the crossfade has pixels, then pause.
-      el.addEventListener("playing", onPlaying);
-      const play = el.play();
-      if (play && typeof play.catch === "function") {
-        play.catch(() => {
-          el.pause();
-        });
+      if (el.paused) {
+        void el.play().catch(() => null);
       }
+    } else if (!el.paused) {
+      el.pause();
+      applyWindow();
     }
 
     return () => {
-      cancelled = true;
       el.removeEventListener("loadedmetadata", onMeta);
       el.removeEventListener("timeupdate", onTime);
-      el.removeEventListener("playing", onPlaying);
     };
-  }, [active, slide, slide.playbackRate, slide.src, slide.trimStartSec, slide.trimEndSec]);
+  }, [active, slide.playbackRate, slide.src, slide.trimStartSec, slide.trimEndSec]);
 
   useEffect(() => {
     const el = audioRef.current;
@@ -144,7 +123,6 @@ export default function HeroSlideMedia({
     sync();
     return () => {
       unsub();
-      el.pause();
     };
   }, [audioOn, slide.audioSrc, slide.audioVolume]);
 
@@ -171,7 +149,7 @@ export default function HeroSlideMedia({
           muted
           loop={!trimmed}
           playsInline
-          autoPlay={active}
+          autoPlay={false}
           preload="auto"
           aria-label={label}
           style={{ ...crop, backgroundColor: "#000" }}
