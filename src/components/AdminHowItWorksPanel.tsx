@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
 import { saveLandingMediaAction } from "@/app/admin/landing/actions";
+import HowItWorksScreen from "@/components/HowItWorksScreen";
 import {
   HOW_IT_WORKS_DEFAULT_STEPS,
   howItWorksVoiceWindow,
@@ -30,10 +31,14 @@ export default function AdminHowItWorksPanel({
   const [busyId, setBusyId] = useState<HowItWorksStepId | null>(null);
   const [durations, setDurations] = useState<Partial<Record<HowItWorksStepId, number>>>({});
   const [recordingId, setRecordingId] = useState<HowItWorksStepId | null>(null);
+  const [playingId, setPlayingId] = useState<HowItWorksStepId | null>(null);
+  const [recordSec, setRecordSec] = useState(0);
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+  const previewRef = useRef<HTMLAudioElement | null>(null);
   const saveTimer = useRef<number>(0);
+  const recordTick = useRef<number>(0);
   const configRef = useRef(config);
   configRef.current = config;
 
@@ -41,8 +46,19 @@ export default function AdminHowItWorksPanel({
     return () => {
       recRef.current?.stop();
       streamRef.current?.getTracks().forEach((t) => t.stop());
+      previewRef.current?.pause();
+      window.clearInterval(recordTick.current);
     };
   }, []);
+
+  function stopPreview() {
+    const audio = previewRef.current;
+    if (audio) {
+      audio.pause();
+      audio.removeAttribute("src");
+    }
+    setPlayingId(null);
+  }
 
   function patchStep(id: HowItWorksStepId, patch: Partial<HowItWorksStep>) {
     setConfig((prev) => ({
@@ -88,6 +104,7 @@ export default function AdminHowItWorksPanel({
     setBusyId(id);
     setError(null);
     setMessage(`Uploading ${file.name}…`);
+    stopPreview();
     try {
       const mime = clientHeroAudioMime(file);
       const ext = heroAudioExtFromMime(mime, file.name);
@@ -125,7 +142,7 @@ export default function AdminHowItWorksPanel({
       setConfig(next);
       configRef.current = next;
       await persist(next);
-      setMessage(`${HOW_IT_WORKS_DEFAULT_STEPS.find((s) => s.id === id)?.title} voice is live.`);
+      setMessage("Saved. Play it, trim it, or tap Try again.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
       setMessage(null);
@@ -134,7 +151,38 @@ export default function AdminHowItWorksPanel({
     }
   }
 
+  function playGuestHear(step: HowItWorksStep) {
+    if (!step.voice.audioUrl) return;
+    stopPreview();
+    const audio = previewRef.current ?? new Audio();
+    previewRef.current = audio;
+    const duration = durations[step.id] || 0;
+    const { start, end } = howItWorksVoiceWindow(step.voice, duration || null);
+    audio.src = step.voice.audioUrl;
+    const onMeta = () => {
+      try {
+        audio.currentTime = start;
+      } catch {
+        /* iOS */
+      }
+      void audio.play().catch(() => setPlayingId(null));
+    };
+    const onTime = () => {
+      if (end != null && audio.currentTime >= end - 0.05) {
+        audio.pause();
+        setPlayingId(null);
+      }
+    };
+    const onEnded = () => setPlayingId(null);
+    audio.addEventListener("loadedmetadata", onMeta, { once: true });
+    audio.addEventListener("timeupdate", onTime);
+    audio.addEventListener("ended", onEnded, { once: true });
+    audio.load();
+    setPlayingId(step.id);
+  }
+
   async function startRecording(id: HowItWorksStepId) {
+    stopPreview();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
@@ -149,21 +197,29 @@ export default function AdminHowItWorksPanel({
         if (ev.data.size) chunksRef.current.push(ev.data);
       };
       rec.onstop = () => {
+        window.clearInterval(recordTick.current);
         stream.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
         const blob = new Blob(chunksRef.current, { type: rec.mimeType || "audio/mp4" });
         const ext = rec.mimeType.includes("webm") ? "webm" : "m4a";
         const file = new File([blob], `how-it-works-${id}.${ext}`, { type: blob.type });
         setRecordingId(null);
+        setRecordSec(0);
         void uploadVoice(id, file);
       };
       recRef.current = rec;
       rec.start();
       setRecordingId(id);
-      setMessage("Recording… tap Stop when Jeremy is done.");
+      setRecordSec(0);
+      window.clearInterval(recordTick.current);
+      const started = Date.now();
+      recordTick.current = window.setInterval(() => {
+        setRecordSec(Math.floor((Date.now() - started) / 1000));
+      }, 250);
+      setMessage("Recording over this screen. Tap Stop, then Play to hear it.");
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Microphone blocked.");
+      setError(e instanceof Error ? e.message : "Microphone blocked — allow the mic and try again.");
     }
   }
 
@@ -176,16 +232,16 @@ export default function AdminHowItWorksPanel({
     <section className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">How it Works</h2>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Five screens guests tap through. Record or upload a voice-over per screen, then trim dead
-          air. Next stays hidden until that clip finishes.
+        <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">
+          Watch the same screen guests see, play it, do the voice-over here, try again, then trim
+          the audio. Next stays hidden for guests until that clip ends.
         </p>
       </div>
 
       {message ? <p className="text-sm text-emerald-300">{message}</p> : null}
       {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         {config.steps.map((step, index) => {
           const duration = durations[step.id] || 0;
           const window = howItWorksVoiceWindow(step.voice, duration || null);
@@ -194,16 +250,102 @@ export default function AdminHowItWorksPanel({
           const endValue = window.end ?? max;
           const busy = busyId === step.id;
           const recording = recordingId === step.id;
+          const playing = playingId === step.id;
+          const hasVoice = Boolean(step.voice.audioUrl);
           return (
             <article
               key={step.id}
-              className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4"
+              className={`space-y-3 rounded-xl border p-4 ${
+                recording
+                  ? "border-rose-400/50 bg-rose-950/20"
+                  : "border-[var(--border)] bg-[var(--surface)]"
+              }`}
             >
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--accent-fg)]">
-                Screen {index + 1}
+                Screen {index + 1} · {HOW_IT_WORKS_DEFAULT_STEPS.find((s) => s.id === step.id)?.title}
               </p>
+
+              <div className="relative">
+                <HowItWorksScreen stepId={step.id} />
+                {recording ? (
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-black/45">
+                    <p className="rounded-full bg-rose-500 px-4 py-2 text-sm font-extrabold text-white">
+                      Recording {formatIntroTime(recordSec)}
+                    </p>
+                  </div>
+                ) : null}
+                {playing ? (
+                  <div className="pointer-events-none absolute left-2 top-2 rounded-full bg-emerald-500/90 px-3 py-1 text-[11px] font-bold text-[#042f1a]">
+                    Playing
+                  </div>
+                ) : null}
+              </div>
+
+              <p className="text-center text-sm font-semibold text-[var(--text)]">{step.coachLine}</p>
+
+              <div className="flex flex-wrap gap-2">
+                {hasVoice ? (
+                  <button
+                    type="button"
+                    className="btn-primary min-h-11 px-4 text-sm font-semibold"
+                    disabled={busy || recording}
+                    onClick={() => {
+                      if (playing) stopPreview();
+                      else playGuestHear(step);
+                    }}
+                  >
+                    {playing ? "Stop" : "Play"}
+                  </button>
+                ) : null}
+                {recording ? (
+                  <button
+                    type="button"
+                    className="btn-ghost min-h-11 px-4 text-sm font-semibold text-rose-300"
+                    onClick={stopRecording}
+                  >
+                    Stop
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-ghost min-h-11 px-4 text-sm font-semibold"
+                    disabled={busy || Boolean(recordingId)}
+                    onClick={() => void startRecording(step.id)}
+                  >
+                    {hasVoice ? "Try again" : "Record voice-over"}
+                  </button>
+                )}
+                <label className="btn-ghost inline-flex min-h-11 cursor-pointer items-center px-4 text-sm font-semibold">
+                  {busy ? "Uploading…" : "Upload"}
+                  <input
+                    type="file"
+                    accept={HERO_AUDIO_CLIENT_ACCEPT}
+                    className="hidden"
+                    disabled={busy || Boolean(recordingId)}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      if (file) void uploadVoice(step.id, file);
+                    }}
+                  />
+                </label>
+                {hasVoice ? (
+                  <button
+                    type="button"
+                    className="btn-ghost min-h-11 px-4 text-sm text-red-300"
+                    onClick={() => {
+                      stopPreview();
+                      patchStep(step.id, { voice: { audioUrl: null, startSec: 0, endSec: null } });
+                      scheduleSave();
+                    }}
+                  >
+                    Clear
+                  </button>
+                ) : null}
+              </div>
+
               <label className="block text-xs text-[var(--muted)]">
-                Title
+                Title guests see
                 <input
                   value={step.title}
                   onChange={(e) => {
@@ -226,60 +368,11 @@ export default function AdminHowItWorksPanel({
                 />
               </label>
 
-              <div className="flex flex-wrap gap-2">
-                <label className="btn-primary inline-flex min-h-11 cursor-pointer items-center px-4 text-sm font-semibold">
-                  {busy ? "Uploading…" : step.voice.audioUrl ? "Replace voice" : "Upload voice"}
-                  <input
-                    type="file"
-                    accept={HERO_AUDIO_CLIENT_ACCEPT}
-                    className="hidden"
-                    disabled={busy || Boolean(recordingId)}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      e.target.value = "";
-                      if (file) void uploadVoice(step.id, file);
-                    }}
-                  />
-                </label>
-                {recording ? (
-                  <button
-                    type="button"
-                    className="btn-ghost min-h-11 px-4 text-sm font-semibold text-rose-300"
-                    onClick={stopRecording}
-                  >
-                    Stop
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn-ghost min-h-11 px-4 text-sm font-semibold"
-                    disabled={busy || Boolean(recordingId)}
-                    onClick={() => void startRecording(step.id)}
-                  >
-                    Record
-                  </button>
-                )}
-                {step.voice.audioUrl ? (
-                  <button
-                    type="button"
-                    className="btn-ghost min-h-11 px-4 text-sm text-red-300"
-                    onClick={() => {
-                      patchStep(step.id, { voice: { audioUrl: null, startSec: 0, endSec: null } });
-                      scheduleSave();
-                    }}
-                  >
-                    Clear voice
-                  </button>
-                ) : null}
-              </div>
-
-              {step.voice.audioUrl ? (
+              {hasVoice ? (
                 <div className="space-y-2 rounded-xl border border-violet-500/25 bg-violet-500/5 p-3">
                   <audio
-                    key={step.voice.audioUrl}
-                    className="w-full"
-                    controls
-                    src={step.voice.audioUrl}
+                    className="hidden"
+                    src={step.voice.audioUrl ?? undefined}
                     onLoadedMetadata={(e) => {
                       const sec = e.currentTarget.duration;
                       if (Number.isFinite(sec) && sec > 0) {
@@ -289,9 +382,9 @@ export default function AdminHowItWorksPanel({
                       }
                     }}
                   />
-                  <p className="text-sm font-semibold text-violet-100">Trim (no re-export)</p>
+                  <p className="text-sm font-semibold text-violet-100">Trim the audio</p>
                   <p className="text-[11px] text-[var(--muted)]">
-                    Guests hear this window. Next appears when it ends.
+                    Cut dead air. Play uses this window. Guests hear the same cut.
                   </p>
                   <label className="block text-xs">
                     Start ({formatIntroTime(window.start)})
@@ -328,13 +421,14 @@ export default function AdminHowItWorksPanel({
                     />
                   </label>
                   <p className="text-[11px] text-emerald-200/90">
-                    Guests hear {kept != null ? formatIntroTime(kept) : "the full clip"}
+                    Kept {kept != null ? formatIntroTime(kept) : "full clip"}
                     {duration ? ` of ${formatIntroTime(duration)}` : ""}
                   </p>
                 </div>
               ) : (
                 <p className="text-xs text-[var(--muted)]">
-                  No voice yet — Next shows as soon as they land on this screen.
+                  Look at the screen, tap Record voice-over, talk, Stop. Then Play. If you don’t like
+                  it, Try again.
                 </p>
               )}
             </article>
