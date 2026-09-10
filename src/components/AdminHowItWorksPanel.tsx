@@ -16,6 +16,7 @@ import {
   clientHeroAudioMime,
   HERO_AUDIO_CLIENT_ACCEPT,
   heroAudioExtFromMime,
+  mixVolumePercent,
 } from "@/lib/landing-mix-audio";
 import { formatIntroTime, INTRO_MIN_TRIM_SEC, introTrimDurationSec } from "@/lib/intro-trim";
 
@@ -62,6 +63,7 @@ export default function AdminHowItWorksPanel({
 
   function patchStep(id: HowItWorksStepId, patch: Partial<HowItWorksStep>) {
     setConfig((prev) => ({
+      ...prev,
       steps: prev.steps.map((step) =>
         step.id === id
           ? {
@@ -133,6 +135,7 @@ export default function AdminHowItWorksPanel({
         url = data.url;
       }
       const next: HowItWorksConfig = {
+        ...configRef.current,
         steps: configRef.current.steps.map((step) =>
           step.id === id
             ? { ...step, voice: { audioUrl: url, startSec: 0, endSec: null } }
@@ -234,9 +237,33 @@ export default function AdminHowItWorksPanel({
         <h2 className="text-lg font-semibold">How it Works</h2>
         <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">
           Watch the same screen guests see, play it, do the voice-over here, try again, then trim
-          the audio. Next stays hidden for guests until that clip ends.
+          the audio. Pad Theme Song down so guests still hear it under your narration.
         </p>
       </div>
+
+      <label className="block rounded-xl border border-amber-400/30 bg-amber-400/5 p-4 text-sm">
+        <span className="font-semibold text-amber-100">
+          Theme Song while you talk ({mixVolumePercent(config.themeSongDuck)}%)
+        </span>
+        <p className="mt-1 text-xs text-[var(--muted)]">
+          Percent of the Theme Song volume during a How it Works clip. 20% pads it down so your
+          voice sits on top. 0% is silent. 100% is no duck.
+        </p>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={1}
+          className="mt-2 w-full"
+          value={mixVolumePercent(config.themeSongDuck)}
+          onChange={(e) => {
+            const themeSongDuck = Number(e.target.value) / 100;
+            setConfig((prev) => ({ ...prev, themeSongDuck }));
+            configRef.current = { ...configRef.current, themeSongDuck };
+            scheduleSave();
+          }}
+        />
+      </label>
 
       {message ? <p className="text-sm text-emerald-300">{message}</p> : null}
       {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}

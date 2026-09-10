@@ -1,5 +1,9 @@
 import { introTrimWindow, type IntroTrim } from "@/lib/intro-trim";
-import { isAllowedHeroAudioUrl } from "@/lib/landing-mix-audio";
+import {
+  clampMixVolume,
+  isAllowedHeroAudioUrl,
+  THEME_SONG_NARRATION_DUCK_DEFAULT,
+} from "@/lib/landing-mix-audio";
 
 export const HOW_IT_WORKS_STEP_IDS = [
   "workout",
@@ -24,6 +28,8 @@ export type HowItWorksStep = {
 
 export type HowItWorksConfig = {
   steps: HowItWorksStep[];
+  /** Theme Song volume multiplier (0–1) while a How it Works voice-over plays. */
+  themeSongDuck: number;
 };
 
 export const HOW_IT_WORKS_DEFAULT_STEPS: HowItWorksStep[] = [
@@ -82,11 +88,14 @@ function cleanVoice(raw: unknown): HowItWorksVoice {
 }
 
 export function defaultHowItWorks(): HowItWorksConfig {
-  return { steps: HOW_IT_WORKS_DEFAULT_STEPS.map((step) => ({ ...step, voice: { ...step.voice } })) };
+  return {
+    steps: HOW_IT_WORKS_DEFAULT_STEPS.map((step) => ({ ...step, voice: { ...step.voice } })),
+    themeSongDuck: THEME_SONG_NARRATION_DUCK_DEFAULT,
+  };
 }
 
 export function normalizeHowItWorks(raw: unknown): HowItWorksConfig {
-  const data = raw && typeof raw === "object" ? (raw as { steps?: unknown }) : {};
+  const data = raw && typeof raw === "object" ? (raw as { steps?: unknown; themeSongDuck?: unknown }) : {};
   const incoming = Array.isArray(data.steps) ? data.steps : [];
   const byId = new Map<string, Record<string, unknown>>();
   for (const row of incoming) {
@@ -95,6 +104,7 @@ export function normalizeHowItWorks(raw: unknown): HowItWorksConfig {
     if (typeof rec.id === "string") byId.set(rec.id, rec);
   }
   return {
+    themeSongDuck: clampMixVolume(data.themeSongDuck, THEME_SONG_NARRATION_DUCK_DEFAULT),
     steps: HOW_IT_WORKS_DEFAULT_STEPS.map((fallback) => {
       const hit = byId.get(fallback.id);
       if (!hit) return { ...fallback, voice: { ...fallback.voice } };

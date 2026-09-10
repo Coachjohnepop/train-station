@@ -42,4 +42,11 @@ describe("normalizeHowItWorks", () => {
     assert.equal(cfg.steps[1].voice.audioUrl, null);
     assert.equal(defaultHowItWorks().steps.length, 5);
   });
+
+  it("pads Theme Song under narration (default 22%)", () => {
+    assert.equal(defaultHowItWorks().themeSongDuck, 0.22);
+    const cfg = normalizeHowItWorks({ themeSongDuck: 35 });
+    assert.equal(cfg.themeSongDuck, 0.35);
+    assert.equal(normalizeHowItWorks({ themeSongDuck: 200 }).themeSongDuck, 1);
+  });
 });

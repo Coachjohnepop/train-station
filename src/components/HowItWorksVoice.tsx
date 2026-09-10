@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { setBackgroundMusicOverlay } from "@/lib/background-music-control";
+import { setBackgroundMusicDuck } from "@/lib/background-music-control";
 import { MIX_AUDIO_ATTR } from "@/lib/landing-mix-audio";
 import { howItWorksHasVoice, howItWorksVoiceWindow, type HowItWorksStep } from "@/lib/how-it-works";
 
@@ -35,7 +35,7 @@ export default function HowItWorksVoice({
       if (stopped) return;
       stopped = true;
       audio.pause();
-      setBackgroundMusicOverlay(false);
+      setBackgroundMusicDuck(false);
     };
 
     const applyTrimAndPlay = () => {
@@ -55,7 +55,7 @@ export default function HowItWorksVoice({
         .play()
         .then(() => {
           if (stopped) return;
-          setBackgroundMusicOverlay(true);
+          setBackgroundMusicDuck(true);
           guard();
         })
         .catch(() => finish());
@@ -73,7 +73,7 @@ export default function HowItWorksVoice({
       audio.pause();
       audio.removeAttribute("src");
       audio.load();
-      setBackgroundMusicOverlay(false);
+      setBackgroundMusicDuck(false);
     };
   }, [active, voiceKey]);
 

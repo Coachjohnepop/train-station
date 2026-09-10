@@ -210,6 +210,52 @@ function WorkoutScene({
   );
 }
 
+function TicketPickFinger({ playKey }: { playKey: string | number }) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const fingerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    const finger = fingerRef.current;
+    if (!host || !finger) return;
+    const duration = 2200;
+    const started = performance.now();
+    let raf = 0;
+    const ease = (t: number) => 1 - Math.pow(1 - t, 1.18);
+    const frame = (now: number) => {
+      const t = Math.min(1, (now - started) / duration);
+      const e = ease(t);
+      const w = host.clientWidth;
+      const h = host.clientHeight;
+      const cx = w * (0.5 + (0.25 - 0.5) * e);
+      const cy = h * (0.46 + (0.74 - 0.46) * e);
+      const radius = Math.min(w, h) * 0.44 * (1 - e);
+      const angle = e * Math.PI * 2 * 1.9 - Math.PI / 2;
+      const x = cx + Math.cos(angle) * radius;
+      const y = cy + Math.sin(angle) * radius;
+      const press = t > 0.86 ? 1 - Math.min(1, (t - 0.86) / 0.1) * 0.28 : 1;
+      const rot = -18 + Math.sin(angle) * 14;
+      finger.style.transform = `translate(${x}px, ${y}px) translate(-50%, -18%) rotate(${rot}deg) scale(${1.55 * press})`;
+      finger.style.opacity = t > 0.96 ? String(1 - (t - 0.96) / 0.04 * 0.15) : "1";
+      if (t < 1) raf = window.requestAnimationFrame(frame);
+    };
+    raf = window.requestAnimationFrame(frame);
+    return () => window.cancelAnimationFrame(raf);
+  }, [playKey]);
+
+  return (
+    <div ref={hostRef} className="pointer-events-none absolute inset-0 z-20 overflow-visible">
+      <div
+        ref={fingerRef}
+        className="absolute left-0 top-0 origin-center text-[4.4rem] leading-none drop-shadow-[0_10px_22px_rgba(0,0,0,0.55)] sm:text-[5.4rem]"
+        aria-hidden
+      >
+        {"\u{1F447}\u{1F3FD}"}
+      </div>
+    </div>
+  );
+}
+
 function TicketScene({
   motion,
   playKey,
@@ -219,18 +265,22 @@ function TicketScene({
   playKey: string | number;
   onReady?: () => void;
 }) {
-  const tick = useSceneClock(motion, playKey, [1400], onReady);
+  const reduce =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const tick = useSceneClock(motion, playKey, reduce ? [240] : [2200], onReady);
   const selected = tick >= 1 ? "business" : null;
+  const showFinger = motion === "animate" && !reduce;
 
   return (
-    <div className="w-full rounded-2xl border border-[#7c3aed]/40 bg-[var(--surface)] p-4">
+    <div className="relative w-full overflow-visible rounded-2xl border border-[#7c3aed]/40 bg-[var(--surface)] p-4">
       <p className="text-center text-[9px] font-bold uppercase tracking-[0.24em] text-[var(--accent-fg)]">
         How to access
       </p>
       <h3 className="mt-0.5 text-center text-lg font-semibold leading-tight text-[var(--text)]">
         Pick a Ticket Class
       </h3>
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="relative mt-3 grid grid-cols-2 gap-2">
         {TICKETS.map((t) => {
           const on = selected === t.id;
           return (
@@ -238,7 +288,7 @@ function TicketScene({
               key={t.id}
               className={`overflow-hidden rounded-xl border transition duration-500 ${
                 on
-                  ? "border-[#a78bfa] ring-2 ring-[#7c3aed]/60"
+                  ? "border-[#a78bfa] ring-2 ring-[#7c3aed]/60 scale-[1.02]"
                   : selected
                     ? "border-white/10 opacity-50"
                     : "border-white/15"
@@ -254,6 +304,7 @@ function TicketScene({
             </div>
           );
         })}
+        {showFinger ? <TicketPickFinger playKey={playKey} /> : null}
       </div>
     </div>
   );

@@ -10,6 +10,8 @@ export const THEME_SONG_DEFAULT_ENABLED = true;
 export const THEME_SONG_CLICK_STARTS_DEFAULT = 2;
 export const THEME_SONG_CLICK_STARTS_MIN = 1;
 export const THEME_SONG_CLICK_STARTS_MAX = 9;
+/** Theme Song volume multiplier while How it Works narration plays. */
+export const THEME_SONG_NARRATION_DUCK_DEFAULT = 0.22;
 export const HERO_AUDIO_DEFAULT_VOLUME = 0.8;
 export const HERO_AUDIO_MAX_BYTES = 20 * 1024 * 1024;
 

@@ -9,6 +9,7 @@ import {
   mixVolumePercent,
   THEME_SONG_CLICK_STARTS_DEFAULT,
   THEME_SONG_DEFAULT_VOLUME,
+  THEME_SONG_NARRATION_DUCK_DEFAULT,
 } from "./landing-mix-audio";
 
 describe("landing mix volume", () => {
@@ -33,6 +34,10 @@ describe("landing mix volume", () => {
   it("rounds percent labels", () => {
     assert.equal(mixVolumePercent(0.55), 55);
     assert.equal(mixVolumePercent(1), 100);
+  });
+
+  it("defaults narration duck to 22%", () => {
+    assert.equal(THEME_SONG_NARRATION_DUCK_DEFAULT, 0.22);
   });
 });
 

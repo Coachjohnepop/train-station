@@ -3,6 +3,8 @@
 import { isMixAudioElement } from "@/lib/landing-mix-audio";
 
 export const BG_MUSIC_OVERLAY_EVENT = "ts-bg-music-overlay";
+/** Pad Theme Song under How it Works narration (volume duck, not pause). */
+export const BG_MUSIC_DUCK_EVENT = "ts-bg-music-duck";
 /** Ask BackgroundMusic to unlock/play (call from a user gesture when possible). */
 export const BG_MUSIC_REQUEST_PLAY_EVENT = "ts-bg-music-request-play";
 /** Sticky mute — second speaker mute. Tap-anywhere stays off; the speaker can still play. */
@@ -41,6 +43,14 @@ export function setBackgroundMusicOverlay(active: boolean): void {
   if (typeof window === "undefined") return;
   overlayHold = active;
   emitPauseState();
+}
+
+/** Lower Theme Song under narration. Does not pause — overlay still used for video. */
+export function setBackgroundMusicDuck(active: boolean): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent(BG_MUSIC_DUCK_EVENT, { detail: { active: Boolean(active) } }),
+  );
 }
 
 /**

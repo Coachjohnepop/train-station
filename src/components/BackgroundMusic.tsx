@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  BG_MUSIC_DUCK_EVENT,
   BG_MUSIC_OVERLAY_EVENT,
   BG_MUSIC_REQUEST_PLAY_EVENT,
   clearBackgroundMusicHolds,
@@ -23,6 +24,7 @@ import {
   clampThemeSongClickStarts,
   THEME_SONG_CLICK_STARTS_DEFAULT,
   THEME_SONG_DEFAULT_VOLUME,
+  THEME_SONG_NARRATION_DUCK_DEFAULT,
   THEME_SONG_SRC,
   unlockLandingMix,
 } from "@/lib/landing-mix-audio";
@@ -86,9 +88,11 @@ export default function BackgroundMusic() {
     enabled: true,
     volume: THEME_SONG_DEFAULT_VOLUME,
     clickStarts: THEME_SONG_CLICK_STARTS_DEFAULT,
+    narrationDuck: THEME_SONG_NARRATION_DUCK_DEFAULT,
   });
   const mixRef = useRef(mix);
   mixRef.current = mix;
+  const duckRef = useRef(false);
 
   const autoPlayAllowed = allowThemeSong(pathname, signedIn, role) && mix.enabled;
 
@@ -100,10 +104,16 @@ export default function BackgroundMusic() {
     autoPlayAllowedRef.current = autoPlayAllowed;
   }, [autoPlayAllowed]);
 
+  const applyThemeVolume = useCallback((audio: HTMLAudioElement) => {
+    const base = mixRef.current.volume;
+    const factor = duckRef.current ? mixRef.current.narrationDuck : 1;
+    applyMixVolume(audio, base * factor);
+  }, []);
+
   useEffect(() => {
     const audio = audioRef.current;
-    if (audio) applyMixVolume(audio, mix.volume);
-  }, [mix.volume]);
+    if (audio) applyThemeVolume(audio);
+  }, [mix.volume, mix.narrationDuck, applyThemeVolume]);
 
   useEffect(() => {
     signedInRef.current = signedIn;
@@ -171,6 +181,7 @@ export default function BackgroundMusic() {
           themeSongEnabled?: boolean;
           themeSongVolume?: unknown;
           themeSongClickStarts?: unknown;
+          howItWorks?: { themeSongDuck?: unknown };
         };
         if (cancelled) return;
         const next = {
@@ -179,6 +190,10 @@ export default function BackgroundMusic() {
           clickStarts: clampThemeSongClickStarts(
             data.themeSongClickStarts,
             THEME_SONG_CLICK_STARTS_DEFAULT,
+          ),
+          narrationDuck: clampMixVolume(
+            data.howItWorks?.themeSongDuck,
+            THEME_SONG_NARRATION_DUCK_DEFAULT,
           ),
         };
         mixRef.current = next;
@@ -282,7 +297,7 @@ export default function BackgroundMusic() {
           /* ignore */
         }
       }
-      applyMixVolume(audio, mixRef.current.volume);
+      applyThemeVolume(audio);
       audio.muted = false;
       try {
         await audio.play();
@@ -320,7 +335,7 @@ export default function BackgroundMusic() {
       }
       return !audio.paused && !audio.muted;
     },
-    [confirmSoundLive, stopAdminMusic],
+    [applyThemeVolume, confirmSoundLive, stopAdminMusic],
   );
 
   const whenCanPlay = (audio: HTMLAudioElement, ms = 8000) =>
@@ -410,7 +425,7 @@ export default function BackgroundMusic() {
       } catch {
         /* ignore */
       }
-      applyMixVolume(audio, mixRef.current.volume);
+      applyThemeVolume(audio);
 
       await whenCanPlay(audio);
       if (adminRouteRef.current || !autoPlayAllowedRef.current) {
@@ -446,7 +461,7 @@ export default function BackgroundMusic() {
           return;
         }
         audio.muted = false;
-        applyMixVolume(audio, mixRef.current.volume);
+        applyThemeVolume(audio);
         try {
           await audio.play();
           if (await confirmSoundLive(audio)) return;
@@ -472,10 +487,20 @@ export default function BackgroundMusic() {
       }
       setSoundLive(false);
     },
-    [showFingerForAtLeastTwentySeconds, confirmSoundLive, stopMusicQuiet],
+    [showFingerForAtLeastTwentySeconds, confirmSoundLive, stopMusicQuiet, applyThemeVolume],
   );
 
   useEffect(() => registerBackgroundMusicMediaDucking(), []);
+
+  useEffect(() => {
+    const onDuck = (e: Event) => {
+      const audio = audioRef.current;
+      duckRef.current = Boolean((e as CustomEvent<{ active?: boolean }>).detail?.active);
+      if (audio) applyThemeVolume(audio);
+    };
+    window.addEventListener(BG_MUSIC_DUCK_EVENT, onDuck);
+    return () => window.removeEventListener(BG_MUSIC_DUCK_EVENT, onDuck);
+  }, [applyThemeVolume]);
 
   useEffect(() => {
     const audio = audioRef.current;
