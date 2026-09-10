@@ -74,13 +74,10 @@ export default function LandingSeeInsideTour({
   const confettiFired = useRef(false);
   const reducedMotion = useRef(false);
   const [howItWorks, setHowItWorks] = useState(defaultHowItWorks);
-  const [voiceReady, setVoiceReady] = useState(false);
-  const [sceneReady, setSceneReady] = useState(false);
   const [freeOpen, setFreeOpen] = useState(false);
   const [gagFullSrc, setGagFullSrc] = useState(FREE_TICKET_FULL_SRC);
   const [freeIntroUrl, setFreeIntroUrl] = useState<string | null>(null);
   const [welcomeUrl, setWelcomeUrl] = useState<string | null>(null);
-  const nextReady = voiceReady && sceneReady;
 
   // Portal to body so sticky landing nav (z-40) can’t sit above the tour
   // (hero is z-0 and traps fixed children otherwise).
@@ -117,8 +114,6 @@ export default function LandingSeeInsideTour({
     setPhase("auto");
     setBeat(0);
     confettiFired.current = false;
-    setVoiceReady(false);
-    setSceneReady(false);
     setFreeOpen(false);
     void fetch("/api/landing-media", { cache: "no-store" })
       .then((res) => res.json())
@@ -145,27 +140,20 @@ export default function LandingSeeInsideTour({
     if (phase === "end") {
       setPhase("auto");
       setBeat(TOUR_BEATS.length - 1);
-      setVoiceReady(false);
-      setSceneReady(false);
       return;
     }
     if (beat <= 0) return;
-    setVoiceReady(false);
-    setSceneReady(false);
     setBeat((b) => b - 1);
   }, [phase, beat]);
 
   const goNext = useCallback(() => {
     if (phase === "end") return;
-    if (!nextReady) return;
     if (beat >= TOUR_BEATS.length - 1) {
       setPhase("end");
       return;
     }
-    setVoiceReady(false);
-    setSceneReady(false);
     setBeat((b) => b + 1);
-  }, [phase, beat, nextReady]);
+  }, [phase, beat]);
 
   // Last set (set 3) fires confetti — same as live member console
   useEffect(() => {
@@ -304,7 +292,6 @@ export default function LandingSeeInsideTour({
                 lastSetRef={lastSetRef}
                 motion="animate"
                 playKey={`${open}-${beat}`}
-                onReady={() => setSceneReady(true)}
               />
             </div>
           ) : null}
@@ -451,11 +438,7 @@ export default function LandingSeeInsideTour({
           className="shrink-0 space-y-2 px-3 pt-1 sm:px-5"
           style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
         >
-          <HowItWorksVoice
-            step={howStep}
-            active={phase === "auto"}
-            onReady={setVoiceReady}
-          />
+          <HowItWorksVoice step={howStep} active={phase === "auto"} />
           <div className="flex gap-2">
             <button
               type="button"
@@ -466,20 +449,14 @@ export default function LandingSeeInsideTour({
             >
               Back
             </button>
-            {nextReady ? (
-              <button
-                type="button"
-                data-analytics-action="tour-next"
-                onClick={goNext}
-                className="landing-hero-early-signup inline-flex min-h-14 flex-1 items-center justify-center rounded-full px-8 text-[19px] font-extrabold tracking-tight transition-transform active:scale-[0.98]"
-              >
-                {beat >= TOUR_BEATS.length - 1 ? "See tickets" : "Next"}
-              </button>
-            ) : (
-              <div className="inline-flex min-h-14 flex-1 items-center justify-center rounded-full border border-white/20 px-8 text-[15px] font-semibold text-white/70">
-                Watch…
-              </div>
-            )}
+            <button
+              type="button"
+              data-analytics-action="tour-next"
+              onClick={goNext}
+              className="landing-hero-early-signup inline-flex min-h-14 flex-1 items-center justify-center rounded-full px-8 text-[19px] font-extrabold tracking-tight transition-transform active:scale-[0.98]"
+            >
+              {beat >= TOUR_BEATS.length - 1 ? "See tickets" : "Next"}
+            </button>
           </div>
           <button
             type="button"

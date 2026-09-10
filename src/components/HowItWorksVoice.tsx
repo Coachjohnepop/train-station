@@ -7,36 +7,25 @@ import { howItWorksHasVoice, howItWorksVoiceWindow, type HowItWorksStep } from "
 
 /**
  * Plays the trimmed voice-over for one How it Works screen.
- * Calls onReady(true) when the clip ends, fails, or there is no audio —
- * that is when the big Next button may appear.
+ * Next is never held for this clip — tap Next to skip.
  */
 export default function HowItWorksVoice({
   step,
   active,
-  onReady,
 }: {
   step: HowItWorksStep | null;
   active: boolean;
-  onReady: (ready: boolean) => void;
 }) {
-  const onReadyRef = useRef(onReady);
-  onReadyRef.current = onReady;
   const stepRef = useRef(step);
   stepRef.current = step;
   const voiceKey = `${step?.id ?? ""}:${step?.voice.audioUrl ?? ""}:${step?.voice.startSec ?? 0}:${step?.voice.endSec ?? ""}`;
 
   useEffect(() => {
     const current = stepRef.current;
-    if (!active || !current) {
-      onReadyRef.current(true);
-      return;
-    }
-    if (!howItWorksHasVoice(current) || !current.voice.audioUrl) {
-      onReadyRef.current(true);
+    if (!active || !current || !howItWorksHasVoice(current) || !current.voice.audioUrl) {
       return;
     }
 
-    onReadyRef.current(false);
     const audio = new Audio(current.voice.audioUrl);
     audio.preload = "auto";
     audio.setAttribute(MIX_AUDIO_ATTR, "true");
@@ -47,7 +36,6 @@ export default function HowItWorksVoice({
       stopped = true;
       audio.pause();
       setBackgroundMusicOverlay(false);
-      onReadyRef.current(true);
     };
 
     const applyTrimAndPlay = () => {
@@ -75,11 +63,13 @@ export default function HowItWorksVoice({
 
     audio.addEventListener("ended", finish);
     audio.addEventListener("error", finish);
+    const metadataWait = window.setTimeout(applyTrimAndPlay, 2500);
     if (audio.readyState >= 1) applyTrimAndPlay();
     else audio.addEventListener("loadedmetadata", applyTrimAndPlay, { once: true });
 
     return () => {
       stopped = true;
+      window.clearTimeout(metadataWait);
       audio.pause();
       audio.removeAttribute("src");
       audio.load();
