@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type CSSProperties, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 
 type Variant = "default" | "signup";
 
@@ -40,6 +40,8 @@ type PasswordInputProps = {
   variant?: Variant;
   className?: string;
   wrapperClassName?: string;
+  /** Increment to reveal the value (used after Auto Generate). */
+  revealToken?: number;
 };
 
 function EyeIcon({ open }: { open: boolean }) {
@@ -80,11 +82,22 @@ export default function PasswordInput({
   variant = "default",
   className = "",
   wrapperClassName = "",
+  revealToken = 0,
 }: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
   // Browsers skip strong-password UI on controlled fields until the user focuses.
   const [unlocked, setUnlocked] = useState(purpose !== "new");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (value) setUnlocked(true);
+  }, [value]);
+
+  useEffect(() => {
+    if (!revealToken) return;
+    setUnlocked(true);
+    setVisible(true);
+  }, [revealToken]);
   const inputClass = [VARIANT_CLASS[variant], className].filter(Boolean).join(" ");
   const resolvedAutoComplete = autoComplete ?? PURPOSE_AUTOCOMPLETE[purpose];
 

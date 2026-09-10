@@ -6,9 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { normalizeSignupPlan, signupPlanLabel } from "@/lib/signup-plans";
 import EmailInput, { rememberEmail } from "@/components/EmailInput";
 import PasswordInput from "@/components/PasswordInput";
-import PhoneInput from "@/components/PhoneInput";
-import { formatPhoneInputValue } from "@/lib/sms-phone";
 import { offerSavePassword, offerSavePasswordFromForm } from "@/lib/browser-credentials";
+import { generateSignupPassword } from "@/lib/signup-password";
 import { useFormAutofillSync } from "@/hooks/useFormAutofillSync";
 import OAuthButtons from "@/components/OAuthButtons";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
@@ -29,9 +28,11 @@ function SignupForm() {
   const [email, setEmail] = useState(prefillEmail);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordRevealToken, setPasswordRevealToken] = useState(0);
+  const [passwordGenerated, setPasswordGenerated] = useState(false);
+  const [passwordSaveHint, setPasswordSaveHint] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -62,8 +63,6 @@ function SignupForm() {
       if (savedFirst) setFirstName(savedFirst);
       const savedLast = localStorage.getItem("ts-signup-last");
       if (savedLast) setLastName(savedLast);
-      const savedPhone = localStorage.getItem("ts-signup-phone");
-      if (savedPhone) setPhone(formatPhoneInputValue(savedPhone));
     } catch {
       /* ignore */
     }
@@ -73,11 +72,30 @@ function SignupForm() {
     try {
       localStorage.setItem("ts-signup-first", firstName);
       localStorage.setItem("ts-signup-last", lastName);
-      localStorage.setItem("ts-signup-phone", phone);
     } catch {
       /* ignore */
     }
-  }, [email, firstName, lastName, phone]);
+  }, [email, firstName, lastName]);
+
+  async function autoGeneratePassword() {
+    const generated = generateSignupPassword();
+    setPassword(generated);
+    setConfirmPassword(generated);
+    setPasswordRevealToken((n) => n + 1);
+    setPasswordGenerated(true);
+    setError(null);
+
+    const saved = await offerSavePassword({
+      email: email.trim(),
+      password: generated,
+      name: [firstName.trim(), lastName.trim()].filter(Boolean).join(" "),
+    });
+    setPasswordSaveHint(
+      saved
+        ? "Filled both fields and asked your password manager to save it."
+        : "Filled both fields. Save this password in your password manager when prompted (or copy it now).",
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -93,7 +111,6 @@ function SignupForm() {
             email: email.trim(),
             firstName: firstName.trim() || undefined,
             lastName: lastName.trim() || undefined,
-            phone: phone.trim() || undefined,
             plan: interest || undefined,
             source: `interest:${interest}`,
           }),
@@ -139,7 +156,6 @@ function SignupForm() {
           email: email.trim(),
           firstName: firstName.trim(),
           lastName: lastName.trim(),
-          phone: phone.trim() || undefined,
           plan: ticketPlan,
           password: password || undefined,
           referralCode: referralCode.trim() || undefined,
@@ -306,9 +322,41 @@ function SignupForm() {
                     required
                     minLength={8}
                     value={password}
-                    onChange={setPassword}
+                    onChange={(value) => {
+                      setPassword(value);
+                      setPasswordGenerated(false);
+                      setPasswordSaveHint(null);
+                    }}
                     placeholder="••••••••"
+                    revealToken={passwordRevealToken}
                   />
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void autoGeneratePassword()}
+                      className="rounded-full border border-[#7c3aed]/50 bg-[#7c3aed]/15 px-4 py-2 text-xs font-semibold text-[#c4b5fd] hover:bg-[#7c3aed]/25"
+                    >
+                      Auto Generate
+                    </button>
+                    {passwordGenerated ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void navigator.clipboard?.writeText(password).catch(() => undefined);
+                        }}
+                        className="rounded-full border border-[var(--border)] px-4 py-2 text-xs font-semibold text-[var(--muted)] hover:text-[var(--text)]"
+                      >
+                        Copy
+                      </button>
+                    ) : null}
+                  </div>
+                  {passwordSaveHint ? (
+                    <p className="mt-2 text-xs leading-relaxed text-[#c4b5fd]">{passwordSaveHint}</p>
+                  ) : (
+                    <p className="mt-2 text-xs leading-relaxed text-[#6b5b86]">
+                      Auto Generate fills both fields and asks your phone to save the login.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label htmlFor="signup-password-confirm" className="block text-xs text-[var(--muted)] mb-1">
@@ -322,8 +370,13 @@ function SignupForm() {
                     required
                     minLength={8}
                     value={confirmPassword}
-                    onChange={setConfirmPassword}
+                    onChange={(value) => {
+                      setConfirmPassword(value);
+                      setPasswordGenerated(false);
+                      setPasswordSaveHint(null);
+                    }}
                     placeholder="••••••••"
+                    revealToken={passwordRevealToken}
                   />
                 </div>
               </>
@@ -356,19 +409,6 @@ function SignupForm() {
                   className="w-full rounded-full border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-sm text-[var(--text)] placeholder:text-[var(--muted)]"
                 />
               </div>
-            </div>
-
-            <div>
-              <label className="block text-xs text-[var(--muted)] mb-1">
-                Phone <span className="text-[#6b5b86]">(optional — used for workout texts)</span>
-              </label>
-              <PhoneInput
-                name="tel"
-                value={phone}
-                onChange={setPhone}
-                placeholder="916.284.1994"
-                className="w-full rounded-full border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-sm text-[var(--text)] placeholder:text-[var(--muted)]"
-              />
             </div>
 
             {isWaitlistOnly && (

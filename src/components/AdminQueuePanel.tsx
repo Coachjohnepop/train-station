@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import CoachNeedsDonePanel from "@/components/CoachNeedsDonePanel";
+import { memberCardPath } from "@/lib/member-card-path";
 import { formatPhoneDisplay } from "@/lib/sms-phone";
 
 type QueueAction = "approve" | "mark_paid" | "intake" | "meeting" | "message";
@@ -154,6 +155,12 @@ export default function AdminQueuePanel() {
       case "intake":
         return (
           <>
+            <Link
+              href={memberCardPath(item.userId)}
+              className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-[color-mix(in_srgb,var(--ramp-gold)_50%,transparent)] text-[var(--ramp-gold-light)]"
+            >
+              Member card
+            </Link>
             <button
               type="button"
               onClick={() => void completeIntake(item.userId)}
@@ -239,7 +246,11 @@ export default function AdminQueuePanel() {
             <li key={`${item.userId}-${item.action}`}>
               <div className="card flex flex-col gap-3 px-4 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="text-lg font-semibold">{item.name}</p>
+                  <p className="text-lg font-semibold">
+                    <Link href={memberCardPath(item.userId)} className="hover:text-accent hover:underline">
+                      {item.name}
+                    </Link>
+                  </p>
                   <p className="text-xs text-[var(--muted)]">{item.email}</p>
                   {item.phone && (
                     <p className="text-xs text-[var(--muted)]">{formatPhoneDisplay(item.phone)}</p>

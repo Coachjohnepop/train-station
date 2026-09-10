@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { memberCardPath } from "@/lib/member-card-path";
 
 type Step = {
   id: string;
@@ -121,10 +122,10 @@ export default function CoachNeedsDonePanel({
                       Message
                     </Link>
                     <Link
-                      href={`/admin/members`}
+                      href={memberCardPath(m.userId)}
                       className="text-[10px] font-semibold text-[var(--muted)] hover:text-accent"
                     >
-                      Members
+                      Card
                     </Link>
                   </div>
                 </div>

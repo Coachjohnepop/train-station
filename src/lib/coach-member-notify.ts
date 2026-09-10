@@ -8,6 +8,7 @@ import { postCoachSystemMessage } from "@/lib/coach-chat";
 import { sendResendEmail, transactionalSubject } from "@/lib/resend-mail";
 import { deliverSms } from "@/lib/sms";
 import { isDemoMode } from "@/lib/demo-enrollments";
+import { memberCardPath } from "@/lib/member-card-path";
 import { onboardGenderLabel } from "@/lib/onboard-path";
 
 function appBaseUrl() {
@@ -358,7 +359,7 @@ export async function notifyCoachNewMember(params: {
     message:
       `${params.name} completed setup and is ready for a 15-minute intake.\n` +
       `Plan: ${params.plan}${genderLine}${programLine}${startLine}${equipLine}${phoneLine}${goalLine}`,
-    deepLink: `${appBaseUrl()}/admin/members`,
+    deepLink: `${appBaseUrl()}${memberCardPath(params.userId)}`,
   });
 
   // Explicit start-date event so funnel dashboards / prefs can treat it separately.
@@ -408,7 +409,7 @@ export async function notifyCoachEquipmentSelected(params: {
       `${params.name} updated what they have at home.\n` +
       (params.plan ? `Plan: ${params.plan}\n` : "") +
       `\n${list}${more}`,
-    deepLink: `${appBaseUrl()}/admin/members`,
+    deepLink: `${appBaseUrl()}${memberCardPath(params.userId)}`,
   });
 }
 
@@ -437,7 +438,7 @@ export async function notifyCoachProgramStartChosen(params: {
       `${params.name} set Day 1 to ${params.programStartDate}.\n` +
       `Plan: ${params.plan}` +
       (params.programSlug ? `\nProgram: ${params.programSlug}` : ""),
-    deepLink: `${appBaseUrl()}/admin/members`,
+    deepLink: `${appBaseUrl()}${memberCardPath(params.userId)}`,
   });
 }
 
@@ -493,7 +494,7 @@ export async function notifyCoachNewSignup(params: {
       (freeish
         ? `Free path — still needs setup / onboarding.`
         : `They still need to finish setup / payment and book their intro call.`),
-    deepLink: `${appBaseUrl()}/admin/members`,
+    deepLink: `${appBaseUrl()}${memberCardPath(params.userId)}`,
   });
 }
 
@@ -522,8 +523,8 @@ export async function notifyCoachMemberPaid(params: {
       `Plan: ${params.plan}\n` +
       `Method: ${method}` +
       (amount ? `\nAmount: ${amount}` : "") +
-      `\n\nOpen Members to continue intake if needed.`,
-    deepLink: `${appBaseUrl()}/admin/members`,
+      `\n\nOpen the member card to continue intake if needed.`,
+    deepLink: `${appBaseUrl()}${memberCardPath(params.userId)}`,
   });
 }
 

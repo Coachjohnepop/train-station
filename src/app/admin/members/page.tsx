@@ -10,6 +10,7 @@ import {
   COACHING_MODE_LABELS,
   type MemberCoachingMode,
 } from "@/lib/member-coaching-mode";
+import { memberCardPath } from "@/lib/member-card-path";
 import { signupPlanLabel } from "@/lib/signup-plans";
 import { formatPhoneDisplay } from "@/lib/sms-phone";
 
@@ -393,7 +394,9 @@ export default function AdminMembersPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Members</h1>
           <p className="text-sm text-[var(--muted)]">
-            Self-registered ticket signups — approve, mark paid, or{" "}
+            Self-registered ticket signups — open a{" "}
+            <strong className="font-semibold text-[var(--text)]">member card</strong> during the
+            15-minute intro to capture phone, goals, and notes. Approve, mark paid, or{" "}
             <strong className="font-semibold text-[var(--text)]">Staff grant</strong> a tier
             (Coach / Business / 1st Class) without Stripe. Staff grants need reapproval each{" "}
             <strong className="font-semibold text-[var(--text)]">1st of the month</strong> (you +
@@ -508,7 +511,14 @@ export default function AdminMembersPage() {
                   className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)]"
                 >
                   <td className="px-4 py-3">
-                    <div className="font-medium">{member.name}</div>
+                    <div className="font-medium">
+                      <Link
+                        href={memberCardPath(member.userId)}
+                        className="hover:text-accent hover:underline"
+                      >
+                        {member.name}
+                      </Link>
+                    </div>
                     {member.gender ? (
                       <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
                         {member.gender}
@@ -632,6 +642,12 @@ export default function AdminMembersPage() {
                   <td className="px-4 py-3 text-[var(--muted)]">{formatWhen(member.createdAt)}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex flex-col items-end gap-1.5">
+                      <Link
+                        href={memberCardPath(member.userId)}
+                        className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-[color-mix(in_srgb,var(--ramp-gold)_50%,transparent)] text-[var(--ramp-gold-light)]"
+                      >
+                        Member card
+                      </Link>
                       <Link
                         href={`/admin/chat?member=${encodeURIComponent(member.userId)}`}
                         className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-accent/30 text-accent"
