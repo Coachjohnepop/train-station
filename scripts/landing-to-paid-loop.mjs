@@ -294,17 +294,49 @@ async function browserRound(browser, viewportName, round) {
   if (exploreOpen) pass(`${tag} Explore unfolds`);
   else fail(`${tag} Explore unfolds`);
 
-  // Path: Free Tour
+  // Path: How it Works → Skip to 8-choice board
   await tour.first().click();
   await page.waitForTimeout(700);
   const tourFlag = await page.getAttribute("html", "data-landing-tour");
   const tourBits =
     tourFlag === "open" ||
     (await page.locator("text=Skip").count()) > 0 ||
-    (await page.locator("text=Where next").count()) > 0 ||
+    (await page.locator("text=How it Works").count()) > 0 ||
     (await page.locator("[data-landing-tour]").count()) > 0;
-  if (tourBits) pass(`${tag} Free Tour overlay`);
-  else fail(`${tag} Free Tour overlay`);
+  if (tourBits) pass(`${tag} How it Works overlay`);
+  else fail(`${tag} How it Works overlay`);
+
+  const skip = page.locator('[data-analytics-action="tour-skip"]');
+  if (await skip.count()) {
+    await skip.first().click();
+    await page.waitForTimeout(400);
+  } else {
+    const getStarted = page.locator('[data-analytics-action="tour-get-started"]');
+    if (await getStarted.count()) await getStarted.first().click();
+    await page.waitForTimeout(400);
+  }
+  const board = await page.locator("body").innerText();
+  if (/Choose by price/i.test(board) && /Choose by program/i.test(board)) {
+    pass(`${tag} tour end 8-choice board`);
+  } else {
+    fail(`${tag} tour end 8-choice board`, board.slice(0, 220).replace(/\s+/g, " "));
+  }
+  for (const seat of ["Free", "Coach Class", "Business", "1st Class"]) {
+    if (board.includes(seat) || (seat === "1st Class" && /1st/.test(board))) {
+      pass(`${tag} board has ${seat}`);
+    } else fail(`${tag} board has ${seat}`);
+  }
+  for (const prog of ["Adult", "Athletes", "Military"]) {
+    if (board.includes(prog)) pass(`${tag} board has ${prog}`);
+    else fail(`${tag} board has ${prog}`);
+  }
+  const biz = page.locator('[data-analytics-action="tour-end-ticket-business-class"]');
+  if (await biz.count()) {
+    const hrefish = await biz.first().evaluate((el) => el.getAttribute("data-analytics-action"));
+    pass(`${tag} Business Class is a tap`, String(hrefish));
+  } else {
+    fail(`${tag} Business Class is a tap`);
+  }
   const closeTour = page.locator('[aria-label="Close tour"]');
   if (await closeTour.count()) await closeTour.click().catch(() => {});
   await page.keyboard.press("Escape").catch(() => {});
@@ -319,11 +351,33 @@ async function browserRound(browser, viewportName, round) {
   if (weekUrl.includes("/join")) pass(`${tag} old week URL → tickets`, weekUrl.replace(BASE, ""));
   else pass(`${tag} old week URL still loads`, weekUrl.replace(BASE, ""));
 
-  // Path: paid ticket signup
+  // Path: paid ticket signup — low friction (no phone, Auto Generate)
   await page.goto(`${BASE}/signup?plan=member`, { waitUntil: "domcontentloaded", timeout: 30000 });
   const memberH = await page.locator("h1").innerText().catch(() => "");
   if (memberH.trim()) pass(`${tag} Coach Class signup`, memberH.replace(/\s+/g, " "));
   else fail(`${tag} Coach Class signup`);
+  const signupBody = await page.locator("body").innerText();
+  if (/Auto Generate/i.test(signupBody)) pass(`${tag} signup Auto Generate`);
+  else fail(`${tag} signup Auto Generate`);
+  if (/\bPhone\b/i.test(signupBody) && /workout texts/i.test(signupBody)) {
+    fail(`${tag} signup has no phone field`);
+  } else {
+    pass(`${tag} signup has no phone field`);
+  }
+  await page.goto(`${BASE}/signup?plan=explorer&interest=adult`, {
+    waitUntil: "domcontentloaded",
+    timeout: 30000,
+  });
+  await page.waitForTimeout(400);
+  const progUrl = page.url();
+  const progH = await page.locator("h1").innerText().catch(() => "");
+  if (progUrl.includes("/signup") && /create your account/i.test(progH)) {
+    pass(`${tag} program tap boards signup`, progUrl.replace(BASE, ""));
+  } else if (progUrl.includes("/join")) {
+    fail(`${tag} program tap boards signup`, `bounced to ${progUrl.replace(BASE, "")}`);
+  } else {
+    pass(`${tag} program tap stayed on signup`, `${progUrl.replace(BASE, "")} ${progH}`);
+  }
 
   // Path: /join tickets
   await page.goto(`${BASE}/join#tickets`, { waitUntil: "domcontentloaded", timeout: 30000 });

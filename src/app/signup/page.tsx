@@ -234,7 +234,7 @@ function SignupForm() {
             <p className="mt-3 text-[var(--muted)] text-sm leading-relaxed">
               {isWaitlistOnly
                 ? "We'll notify you when this program track launches."
-                : "Next you'll set up texts, book your coach, and open your training dashboard."}
+                : "Email, name, password — then your training dashboard."}
             </p>
           </div>
 

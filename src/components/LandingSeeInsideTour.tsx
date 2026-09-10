@@ -454,10 +454,9 @@ export default function LandingSeeInsideTour({
           <button
             type="button"
             data-analytics-action="tour-get-started"
-            onClick={(e) => {
+            onClick={() => {
               markLandingConverted();
-              fireLandingJoinHook(e.currentTarget);
-              exitToSite("/join?from=tour#tickets");
+              setPhase("end");
             }}
             className="landing-hero-secondary-cta inline-flex min-h-12 w-full items-center justify-center rounded-full px-8 text-[16px] font-extrabold tracking-tight transition-transform active:scale-[0.98]"
           >
@@ -471,7 +470,7 @@ export default function LandingSeeInsideTour({
       onClose={() => setFreeOpen(false)}
       onUpgrade={() => {
         setFreeOpen(false);
-        exitToSite("/join?from=tour#tickets");
+        exitToSite("/signup?plan=member");
       }}
       freeChastiseVideoUrl={freeIntroUrl}
       welcomeVideoUrl={welcomeUrl}
