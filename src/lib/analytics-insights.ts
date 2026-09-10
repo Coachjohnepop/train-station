@@ -208,7 +208,7 @@ export function buildPlaybook(input: InsightInput): AnalyticsPlaybook {
       pillar: "better",
       tone: "fix",
       title: "First tap is still the tour, not tickets",
-      body: `Free Tour ${funnel.tourOpens} vs Start membership ${funnel.startMembership} ${window}. Tickets belong on top. Measure for a week before touching the hero again.`,
+      body: `How it Works ${funnel.tourOpens} vs Start membership ${funnel.startMembership} ${window}. Tickets belong on top. Measure for a week before touching the hero again.`,
       stat: `${formatPct(funnel.startMembership, funnel.tourOpens)} tickets vs tour`,
     });
   }
@@ -343,7 +343,7 @@ export function buildPlaybook(input: InsightInput): AnalyticsPlaybook {
     why: mobileShare != null && mobileShare >= 60
       ? `${mobileShare}% of views are phones, and Facebook opens in-app Safari.`
       : "Jeremy’s Facebook share is iPhone. Hover never fires.",
-    doNext: "After any hero or tour tweak, open thetrainstation.co in iPhone Safari (and Facebook in-app if you can) and tap Start membership, Free Tour, Get started, Close.",
+    doNext: "After any hero or tour tweak, open thetrainstation.co in iPhone Safari (and Facebook in-app if you can) and tap Start membership, How it Works, Get started, Close.",
     test: "Pass only if the first thumb tap is tickets, Get started is visible the whole tour, and Close is at least 44px.",
   });
 
@@ -375,7 +375,7 @@ export function buildPlaybook(input: InsightInput): AnalyticsPlaybook {
     pillar: "better",
     title: "Name every guest button",
     why: "Workout cards dump huge click labels and drown the marketing signal. Guest CTAs need data-analytics-action.",
-    doNext: "Keep named actions on Start membership, Free Tour, Get started, Close tour, Skip, Continue with Free, Pick a ticket. Ignore member set checks in this dashboard.",
+    doNext: "Keep named actions on Start membership, How it Works, Get started, Close tour, Skip, Continue with Free, Pick a ticket. Ignore member set checks in this dashboard.",
     test: "In Station pulse → named clicks, those actions appear as keys, not as a paragraph of exercise copy.",
   });
 

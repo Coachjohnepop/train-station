@@ -5,6 +5,7 @@ import { isDatabaseConfigured } from "@/lib/database-config";
 import type { LandingMediaConfig, WelcomeVideosByPlan } from "@/lib/landing-media-store";
 import type { HeroSlide } from "@/lib/hero-slides";
 import { normalizeIntroTrims } from "@/lib/intro-trim";
+import { normalizeHowItWorks } from "@/lib/how-it-works";
 
 function rowToConfig(row: {
   welcomeVideoUrl: string | null;
@@ -31,6 +32,7 @@ function rowToConfig(row: {
   themeSongVolume?: number;
   themeSongClickStarts?: number;
   introTrims?: Prisma.JsonValue;
+  howItWorks?: Prisma.JsonValue;
   updatedAt: Date;
 }): LandingMediaConfig {
   return {
@@ -59,6 +61,7 @@ function rowToConfig(row: {
     themeSongClickStarts:
       typeof row.themeSongClickStarts === "number" ? row.themeSongClickStarts : 1,
     introTrims: normalizeIntroTrims(row.introTrims),
+    howItWorks: normalizeHowItWorks(row.howItWorks),
     updatedAt: row.updatedAt.toISOString(),
   };
 }
@@ -96,6 +99,7 @@ function configToRow(config: LandingMediaConfig) {
     themeSongVolume: config.themeSongVolume,
     themeSongClickStarts: config.themeSongClickStarts,
     introTrims: (config.introTrims || {}) as Prisma.InputJsonValue,
+    howItWorks: (config.howItWorks || {}) as Prisma.InputJsonValue,
   };
 }
 

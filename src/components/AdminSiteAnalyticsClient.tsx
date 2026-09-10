@@ -303,7 +303,7 @@ export default function AdminSiteAnalyticsClient() {
                   rate={formatPct(funnel.startMembership, funnel.homepageViews)}
                 />
                 <FunnelStep
-                  label="Free Tour"
+                  label="How it Works"
                   value={funnel.tourOpens}
                   rate={formatPct(funnel.tourOpens, funnel.homepageViews)}
                 />

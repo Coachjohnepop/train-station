@@ -1,4 +1,5 @@
 import AdminHeroImagesPanel from "@/components/AdminHeroImagesPanel";
+import AdminHowItWorksPanel from "@/components/AdminHowItWorksPanel";
 import AdminLandingMediaPanel from "@/components/AdminLandingMediaPanel";
 import AdminMemberContentPanel from "@/components/AdminMemberContentPanel";
 import AdminSiteBrandPanel from "@/components/AdminSiteBrandPanel";
@@ -27,6 +28,10 @@ export default async function AdminLandingPage() {
         <p className="font-semibold text-violet-100">Where things live</p>
         <ol className="mt-2 list-decimal space-y-1 pl-5">
           <li>
+            <strong className="text-violet-50">How it Works</strong> — guest tour screens, voice-over
+            record/upload, trim (below)
+          </li>
+          <li>
             <strong className="text-violet-50">Hero images &amp; videos</strong> — full-screen
             landing carousel, play order, crop, slow-mo, Theme Song mix (below)
           </li>
@@ -44,6 +49,7 @@ export default async function AdminLandingPage() {
         </ol>
       </div>
       <div className="mt-8 space-y-12">
+        <AdminHowItWorksPanel initial={config.howItWorks} />
         <AdminHeroImagesPanel
           initialSlides={config.heroSlides}
           initialThemeSongEnabled={config.themeSongEnabled}

@@ -126,7 +126,7 @@ export default function FindTheTrainStationPage() {
             Start membership
           </Link>
           <Link href="/?tour=1" className="btn-ghost px-5 py-2.5 text-sm">
-            Free Tour
+            How it Works
           </Link>
           <Link href="/jeremy" className="btn-ghost px-5 py-2.5 text-sm">
             Meet Jeremy

@@ -8,6 +8,7 @@ import {
   type WelcomeVideosByPlan,
 } from "@/lib/landing-media-store";
 import type { IntroTrims } from "@/lib/intro-trim";
+import type { HowItWorksConfig } from "@/lib/how-it-works";
 import {
   assignmentsFromLanding,
   setSlotUrl,
@@ -43,6 +44,7 @@ export async function saveLandingMediaAction(input: {
   themeSongVolume?: number;
   themeSongClickStarts?: number;
   introTrims?: IntroTrims;
+  howItWorks?: HowItWorksConfig;
 }) {
   const session = await getSessionUser();
   if (!session || !isStaffRole(session.role)) {
@@ -70,6 +72,7 @@ export async function saveLandingMediaAction(input: {
       themeSongVolume: input.themeSongVolume,
       themeSongClickStarts: input.themeSongClickStarts,
       introTrims: input.introTrims,
+      howItWorks: input.howItWorks,
     });
     return {
       ok: true as const,
@@ -92,6 +95,7 @@ export async function saveLandingMediaAction(input: {
       storedThemeSongVolume: config.themeSongVolume,
       storedThemeSongClickStarts: config.themeSongClickStarts,
       storedIntroTrims: config.introTrims,
+      storedHowItWorks: config.howItWorks,
       updatedAt: config.updatedAt,
     };
   } catch (e: unknown) {

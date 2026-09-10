@@ -1279,6 +1279,8 @@ model LandingMediaSettings {
   themeSongClickStarts       Int      @default(1)
   /// Per-slot playback windows { overall: { startSec, endSec }, free: … }.
   introTrims                 Json     @default("{}")
+  /// How it Works screens: copy + voice-over URL + trim per step.
+  howItWorks                 Json     @default("{}")
   updatedAt                  DateTime @updatedAt
 }
 

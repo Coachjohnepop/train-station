@@ -125,7 +125,7 @@ export default function JeremyByrdPage() {
             Start membership
           </Link>
           <Link href="/?tour=1" className="btn-ghost px-5 py-2.5 text-sm">
-            Free Tour
+            How it Works
           </Link>
           <a
             href={COACH_CALENDLY_URL}

@@ -27,6 +27,7 @@ export async function GET() {
     themeSongVolume: config.themeSongVolume,
     themeSongClickStarts: config.themeSongClickStarts,
     introTrims: config.introTrims,
+    howItWorks: config.howItWorks,
     gag: {
       enabled: gag.enabled,
       videoUrl: gag.videoUrl,

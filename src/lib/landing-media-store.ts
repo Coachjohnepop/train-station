@@ -24,6 +24,11 @@ import {
 import { isAllowedCoachIntroVideoUrl, isDirectVideoUrl } from "@/lib/site-video";
 import { isYoutubeUrl } from "@/lib/youtube";
 import { emptyIntroTrims, normalizeIntroTrims, type IntroTrims } from "@/lib/intro-trim";
+import {
+  defaultHowItWorks,
+  normalizeHowItWorks,
+  type HowItWorksConfig,
+} from "@/lib/how-it-works";
 
 /** Product defaults — same files as Free ticket, served from this app. */
 const DEFAULT_WELCOME_FILE = "/videos/jeremy-welcome.mp4";
@@ -93,6 +98,8 @@ export type LandingMediaConfig = {
   themeSongClickStarts: number;
   /** Per-slot start/end windows so Jeremy can cut dead air without re-encoding. */
   introTrims: IntroTrims;
+  /** How it Works screens: copy + voice-over + trim. */
+  howItWorks: HowItWorksConfig;
   updatedAt: string;
 };
 
@@ -140,6 +147,7 @@ function emptyConfig(): LandingMediaConfig {
     themeSongVolume: THEME_SONG_DEFAULT_VOLUME,
     themeSongClickStarts: THEME_SONG_CLICK_STARTS_DEFAULT,
     introTrims: emptyIntroTrims(),
+    howItWorks: defaultHowItWorks(),
     updatedAt: new Date().toISOString(),
   };
 }
@@ -210,6 +218,7 @@ function normalize(raw: unknown): LandingMediaConfig {
       THEME_SONG_CLICK_STARTS_DEFAULT,
     ),
     introTrims: normalizeIntroTrims((data as { introTrims?: unknown }).introTrims),
+    howItWorks: normalizeHowItWorks((data as { howItWorks?: unknown }).howItWorks),
     updatedAt:
       typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
   };
@@ -289,6 +298,7 @@ export async function saveLandingMedia(
       | "themeSongVolume"
       | "themeSongClickStarts"
       | "introTrims"
+      | "howItWorks"
     >
   >,
 ): Promise<LandingMediaConfig> {
@@ -455,6 +465,10 @@ export async function saveLandingMedia(
 
   if (patch.introTrims !== undefined) {
     next.introTrims = normalizeIntroTrims(patch.introTrims);
+  }
+
+  if (patch.howItWorks !== undefined) {
+    next.howItWorks = normalizeHowItWorks(patch.howItWorks);
   }
 
   const introChanged =

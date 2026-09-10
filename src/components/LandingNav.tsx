@@ -259,7 +259,7 @@ export default function LandingNav({
                     openFreeQuickTour();
                   }}
                 >
-                  Free Tour
+                  How it Works
                 </button>
                 <Link
                   href={JOIN_TICKETS_HREF}
@@ -381,7 +381,7 @@ export default function LandingNav({
                     openFreeQuickTour();
                   }}
                 >
-                  Free Tour
+                  How it Works
                 </button>
                 <Link
                   href="/login"

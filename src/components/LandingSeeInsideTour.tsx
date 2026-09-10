@@ -9,10 +9,17 @@ import {
 } from "@/lib/workout-confetti";
 import { PROGRAM_IMAGES } from "@/lib/program-constants";
 import EasyPathChoices from "@/components/EasyPathChoices";
+import HowItWorksVoice from "@/components/HowItWorksVoice";
 import {
   fireLandingJoinHook,
   markLandingConverted,
 } from "@/lib/landing-return-visit";
+import {
+  defaultHowItWorks,
+  howItWorksStepById,
+  normalizeHowItWorks,
+  type HowItWorksStepId,
+} from "@/lib/how-it-works";
 
 /**
  * See inside — tap-Next tour for cold traffic.
@@ -35,6 +42,14 @@ const TOUR_BEATS: TourBeat[] = [
   "equip_all",
   "book_confirm",
 ];
+
+const TOUR_BEAT_TO_STEP: Record<TourBeat, HowItWorksStepId> = {
+  w_set3: "workout",
+  access_business: "ticket",
+  pick_adult: "program",
+  equip_all: "gear",
+  book_confirm: "book",
+};
 
 const DEMO_EQUIPMENT = [
   { id: "dumbbells", name: "Dumbbells", img: "/images/equipment/dumbbells.jpg" },
@@ -60,6 +75,8 @@ export default function LandingSeeInsideTour({
   const lastSetRef = useRef<HTMLDivElement | null>(null);
   const confettiFired = useRef(false);
   const reducedMotion = useRef(false);
+  const [howItWorks, setHowItWorks] = useState(defaultHowItWorks);
+  const [nextReady, setNextReady] = useState(false);
 
   // Portal to body so sticky landing nav (z-40) can’t sit above the tour
   // (hero is z-0 and traps fixed children otherwise).
@@ -96,26 +113,39 @@ export default function LandingSeeInsideTour({
     setPhase("auto");
     setBeat(0);
     confettiFired.current = false;
+    setNextReady(false);
+    void fetch("/api/landing-media", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((body: { howItWorks?: unknown }) => {
+        if (body.howItWorks) setHowItWorks(normalizeHowItWorks(body.howItWorks));
+      })
+      .catch(() => {
+        /* keep defaults */
+      });
   }, [open]);
 
   const goPrev = useCallback(() => {
     if (phase === "end") {
       setPhase("auto");
       setBeat(TOUR_BEATS.length - 1);
+      setNextReady(false);
       return;
     }
     if (beat <= 0) return;
+    setNextReady(false);
     setBeat((b) => b - 1);
   }, [phase, beat]);
 
   const goNext = useCallback(() => {
     if (phase === "end") return;
+    if (!nextReady) return;
     if (beat >= TOUR_BEATS.length - 1) {
       setPhase("end");
       return;
     }
+    setNextReady(false);
     setBeat((b) => b + 1);
-  }, [phase, beat]);
+  }, [phase, beat, nextReady]);
 
   // Last set (set 3) fires confetti — same as live member console
   useEffect(() => {
@@ -192,18 +222,12 @@ export default function LandingSeeInsideTour({
   const bookDayIndex = current === "book_confirm" ? 0 : -1;
   const bookDone = current === "book_confirm";
 
+  const howStep =
+    current != null ? howItWorksStepById(howItWorks, TOUR_BEAT_TO_STEP[current]) : null;
   const coachLine =
     phase === "end"
       ? "Continue with Free, pick a ticket, or choose a program — tour ends here."
-      : current === "w_set3"
-        ? "This is Today. Log the weight, check the sets — done."
-        : current === "access_business"
-          ? "How you get in. Pick a ticket class — Business shown."
-          : current === "pick_adult"
-            ? "Then pick a program. Adult is the home base."
-            : current === "equip_all"
-              ? "Tap what you have at home. Change it anytime in Settings."
-              : "Want a real voice? Book 15 minutes with Coach Jeremy.";
+      : howStep?.coachLine || "";
 
   return createPortal(
     <div
@@ -215,10 +239,12 @@ export default function LandingSeeInsideTour({
       <div className="flex shrink-0 items-center justify-between gap-2 px-3 pb-1 pt-[max(0.4rem,env(safe-area-inset-top))] sm:px-5">
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--accent-fg)]">
-            Free Quick Tour
+            How it Works
           </p>
           <h2 id="see-inside-title" className="text-base font-semibold text-[var(--text)] sm:text-lg">
-            Station tour
+            {phase === "end"
+              ? "Your move"
+              : howItWorksStepById(howItWorks, TOUR_BEAT_TO_STEP[TOUR_BEATS[beat]]).title}
           </h2>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -641,6 +667,11 @@ export default function LandingSeeInsideTour({
           className="shrink-0 space-y-2 px-3 pt-1 sm:px-5"
           style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
         >
+          <HowItWorksVoice
+            step={howStep}
+            active={phase === "auto"}
+            onReady={setNextReady}
+          />
           <div className="flex gap-2">
             <button
               type="button"
@@ -651,14 +682,20 @@ export default function LandingSeeInsideTour({
             >
               Back
             </button>
-            <button
-              type="button"
-              data-analytics-action="tour-next"
-              onClick={goNext}
-              className="landing-hero-early-signup inline-flex min-h-14 flex-1 items-center justify-center rounded-full px-8 text-[19px] font-extrabold tracking-tight transition-transform active:scale-[0.98]"
-            >
-              {beat >= TOUR_BEATS.length - 1 ? "See tickets" : "Next"}
-            </button>
+            {nextReady ? (
+              <button
+                type="button"
+                data-analytics-action="tour-next"
+                onClick={goNext}
+                className="landing-hero-early-signup inline-flex min-h-14 flex-1 items-center justify-center rounded-full px-8 text-[19px] font-extrabold tracking-tight transition-transform active:scale-[0.98]"
+              >
+                {beat >= TOUR_BEATS.length - 1 ? "See tickets" : "Next"}
+              </button>
+            ) : (
+              <div className="inline-flex min-h-14 flex-1 items-center justify-center rounded-full border border-white/20 px-8 text-[15px] font-semibold text-white/70">
+                Listen…
+              </div>
+            )}
           </div>
           <button
             type="button"

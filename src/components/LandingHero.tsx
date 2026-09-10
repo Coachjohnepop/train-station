@@ -232,8 +232,8 @@ export default function LandingHero({
                 kicker=""
                 hint={
                   returnMode
-                    ? "Pick a ticket · or tap Next through the tour"
-                    : "Tickets first · tour is tap Next"
+                    ? "Pick a ticket · or tap How it Works"
+                    : "Tickets first · How it Works is tap Next"
                 }
               >
                 <Link
@@ -253,7 +253,7 @@ export default function LandingHero({
                   onClick={() => setTourOpen(true)}
                   className="landing-hero-secondary-cta inline-flex h-[3.5rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg"
                 >
-                  Free Tour
+                  How it Works
                 </button>
                 <button
                   type="button"

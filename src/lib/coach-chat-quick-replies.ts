@@ -24,7 +24,7 @@ The Train Station fitness
 
 Not just “train station” (that’s the railroad). Fitness, workout, or Jeremy Byrd after the name all land on thetrainstation.co.
 
-They can tap https://www.thetrainstation.co — Start membership first, or take the Free Tour. Free is a real seat.`,
+They can tap https://www.thetrainstation.co — Start membership first, or tap How it Works. Free is a real seat.`,
   },
   {
     id: "macros",
