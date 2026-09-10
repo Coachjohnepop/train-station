@@ -66,9 +66,22 @@ function usePrefersReducedMotion() {
   return reduce;
 }
 
-type GuideStop = { x: number; y: number; at: number };
+type GuideStop = { id: string; at: number };
 
-/** Coach finger: circle the lesson, spiral to the tap, press and hold. */
+/** Center of a marked button, in host-local pixels. */
+function guideTargetPoint(host: HTMLElement, id: string): { x: number; y: number } {
+  const root = host.parentElement ?? host;
+  const el = root.querySelector<HTMLElement>(`[data-guide-stop="${id}"]`);
+  const hb = host.getBoundingClientRect();
+  if (!el) return { x: hb.width / 2, y: hb.height / 2 };
+  const b = el.getBoundingClientRect();
+  return {
+    x: b.left + b.width / 2 - hb.left,
+    y: b.top + b.height / 2 - hb.top,
+  };
+}
+
+/** Coach finger: spiral to the tap, press with the tip on the button center. */
 function GuideFinger({
   playKey,
   stops,
@@ -94,58 +107,56 @@ function GuideFinger({
     if (!host || !finger || path.length === 0) return;
     const started = performance.now();
     let raf = 0;
+    finger.style.transformOrigin = "50% 90%";
 
     const posAt = (ms: number) => {
-      const first = path[0]!;
+      const pts = path.map((stop) => ({ ...stop, ...guideTargetPoint(host, stop.id) }));
+      const first = pts[0]!;
       const w = host.clientWidth;
       const h = host.clientHeight;
       if (ms <= first.at) {
         const t = Math.max(0, Math.min(1, ms / Math.max(1, first.at)));
         const e = 1 - Math.pow(1 - t, 1.12);
-        const orbitX = 0.5 + (first.x - 0.5) * e;
-        const orbitY = 0.46 + (first.y - 0.46) * e;
+        const cx = w / 2 + (first.x - w / 2) * e;
+        const cy = h / 2 + (first.y - h / 2) * e;
         const r = Math.min(w, h) * 0.42 * (1 - e);
         const angle = e * Math.PI * 2 * 1.7 - Math.PI / 2;
-        const press = t > 0.86 ? 1 - Math.min(1, (t - 0.86) / 0.14) * 0.22 : 1;
-        const rot = t > 0.86 ? 0 : -12 + Math.sin(angle) * 14;
+        const pressing = t > 0.88;
         return {
-          x: orbitX * w + Math.cos(angle) * r,
-          y: orbitY * h + Math.sin(angle) * r,
-          press,
-          rot,
+          x: cx + Math.cos(angle) * r,
+          y: cy + Math.sin(angle) * r,
+          press: pressing ? 1 - Math.min(1, (t - 0.88) / 0.12) * 0.18 : 1,
+          rot: pressing ? 0 : -12 + Math.sin(angle) * 14,
         };
       }
       let prev = first;
-      for (let i = 1; i < path.length; i += 1) {
-        const next = path[i]!;
+      for (let i = 1; i < pts.length; i += 1) {
+        const next = pts[i]!;
         if (ms <= next.at) {
           const span = Math.max(1, next.at - prev.at);
           const t = (ms - prev.at) / span;
           const e = t * t * (3 - 2 * t);
-          const arc = Math.sin(e * Math.PI) * Math.min(w, h) * 0.07;
-          const press = t > 0.76 ? 1 - Math.min(1, (t - 0.76) / 0.24) * 0.24 : 1;
-          const rot = -10 * (1 - t);
+          const arc = Math.sin(e * Math.PI) * Math.min(w, h) * 0.05;
+          const pressing = t > 0.82;
           return {
-            x: (prev.x + (next.x - prev.x) * e) * w,
-            y: (prev.y + (next.y - prev.y) * e) * h - arc,
-            press,
-            rot,
+            x: prev.x + (next.x - prev.x) * e,
+            y: prev.y + (next.y - prev.y) * e - arc,
+            press: pressing ? 1 - Math.min(1, (t - 0.82) / 0.18) * 0.18 : 1,
+            rot: pressing ? 0 : -8 * (1 - t),
           };
         }
         prev = next;
       }
-      const last = path[path.length - 1]!;
-      return { x: last.x * w, y: last.y * h, press: 0.9, rot: 0 };
+      const last = pts[pts.length - 1]!;
+      return { x: last.x, y: last.y, press: 0.88, rot: 0 };
     };
 
     const frame = (now: number) => {
       const ms = now - started;
       const p = posAt(Math.min(ms, duration));
-      // 👇 fingertip sits ~90% down the glyph — pin that point to the button.
-      finger.style.transformOrigin = "50% 90%";
-      finger.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -90%) rotate(${p.rot}deg) scale(${1.28 * p.press})`;
+      finger.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -90%) rotate(${p.rot}deg) scale(${1.22 * p.press})`;
       if (chip) {
-        chip.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, calc(-90% - 3.6rem))`;
+        chip.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, calc(-90% - 3.4rem))`;
         chip.style.opacity = ms < 160 ? "0" : "1";
       }
       if (ms < duration) raf = window.requestAnimationFrame(frame);
@@ -297,14 +308,15 @@ function WorkoutScene({
                 duration={4200}
                 label="Like this"
                 stops={[
-                  { x: 0.12, y: 0.55, at: 900 },
-                  { x: 0.4, y: 0.55, at: 2000 },
-                  { x: 0.64, y: 0.55, at: 3000 },
-                  { x: 0.88, y: 0.55, at: 4000 },
+                  { id: "weight", at: 900 },
+                  { id: "set-1", at: 2000 },
+                  { id: "set-2", at: 3000 },
+                  { id: "set-3", at: 4000 },
                 ]}
               />
             ) : null}
             <label
+              data-guide-stop="weight"
               className={`flex min-w-[3.75rem] flex-col rounded-md border px-1.5 py-1 ${
                 editing
                   ? "border-[#fde68a] bg-[#fde68a]/10 ring-2 ring-[#fde68a]/40"
@@ -323,6 +335,7 @@ function WorkoutScene({
               return (
                 <div
                   key={n}
+                  data-guide-stop={`set-${n}`}
                   ref={n === 3 ? lastSetRef : undefined}
                   className={`flex h-12 flex-1 flex-col items-center justify-center rounded-md border text-sm font-bold transition-colors duration-300 ${
                     done
@@ -372,6 +385,7 @@ function TicketScene({
           return (
             <div
               key={t.id}
+              data-guide-stop={t.id}
               className={`overflow-hidden rounded-xl border transition duration-500 ${
                 on
                   ? "border-[#a78bfa] ring-2 ring-[#7c3aed]/60 scale-[1.02]"
@@ -395,7 +409,7 @@ function TicketScene({
             playKey={playKey}
             duration={2800}
             label="Like this"
-            stops={[{ x: 0.25, y: 0.74, at: 2400 }]}
+            stops={[{ id: "business", at: 2400 }]}
           />
         ) : null}
       </div>
@@ -431,7 +445,7 @@ function ProgramScene({
             playKey={playKey}
             duration={2600}
             label="Like this"
-            stops={[{ x: 0.25, y: 0.48, at: 2200 }]}
+            stops={[{ id: "adult", at: 2200 }]}
           />
         ) : null}
         {PROGRAMS.map((p) => {
@@ -439,6 +453,7 @@ function ProgramScene({
           return (
             <div
               key={p.id}
+              data-guide-stop={p.id}
               className={`overflow-hidden rounded-xl border transition duration-500 ${
                 on
                   ? "border-[#7c3aed] ring-2 ring-[#7c3aed]/50"
@@ -491,11 +506,9 @@ function GearScene({
             playKey={playKey}
             duration={1900}
             label="Tap yours"
-            stops={[0, 1, 2, 3, 4, 5].map((i) => ({
-              x: (i + 0.5) / 6,
-              y: 0.48,
-              at: delays[i] ?? 1650,
-            }))}
+            stops={["dumbbells", "kettlebell", "bands", "bench", "mat", "jump-rope"].map(
+              (id, i) => ({ id, at: delays[i] ?? 1650 }),
+            )}
           />
         ) : null}
         {DEMO_EQUIPMENT.map((eq) => {
@@ -503,6 +516,7 @@ function GearScene({
           return (
             <div
               key={eq.id}
+              data-guide-stop={eq.id}
               className={`overflow-hidden rounded-lg border transition duration-300 ${
                 on ? "border-emerald-400/70 ring-1 ring-emerald-400/40" : "border-white/10 opacity-45"
               }`}
@@ -556,9 +570,9 @@ function BookScene({
           duration={3400}
           label="Like this"
           stops={[
-            { x: 0.36, y: 0.42, at: 800 },
-            { x: 0.5, y: 0.68, at: 2400 },
-            { x: 0.5, y: 0.92, at: 3200 },
+            { id: "day", at: 800 },
+            { id: "time", at: 2400 },
+            { id: "confirm", at: 3200 },
           ]}
         />
       ) : null}
@@ -574,6 +588,7 @@ function BookScene({
               <div key={d.n} className="text-center">
                 <p className="text-[8px] font-bold uppercase text-white/40">{d.label}</p>
                 <div
+                  data-guide-stop={d.pick ? "day" : undefined}
                   className={`mx-auto mt-0.5 flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition duration-400 ${
                     on
                       ? "bg-emerald-400 text-[#042f1a] ring-2 ring-emerald-200"
@@ -593,6 +608,7 @@ function BookScene({
               return (
                 <div
                   key={slot}
+                  data-guide-stop={i === 0 ? "time" : undefined}
                   className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-[11px] transition duration-300 ${
                     on
                       ? "border border-emerald-400/50 bg-emerald-500/20 text-white"
@@ -614,6 +630,7 @@ function BookScene({
         )}
         <div className="border-t border-white/10 px-2.5 py-2">
           <div
+            data-guide-stop="confirm"
             className={`flex h-9 items-center justify-center rounded-full text-xs font-bold transition ${
               booked ? "bg-emerald-400 text-[#042f1a]" : "bg-emerald-500/40 text-white/70"
             }`}
