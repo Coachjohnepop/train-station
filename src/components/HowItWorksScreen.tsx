@@ -106,12 +106,13 @@ function GuideFinger({
         const orbitY = 0.46 + (first.y - 0.46) * e;
         const r = Math.min(w, h) * 0.42 * (1 - e);
         const angle = e * Math.PI * 2 * 1.7 - Math.PI / 2;
-        const press = t > 0.86 ? 1 - Math.min(1, (t - 0.86) / 0.14) * 0.26 : 1;
+        const press = t > 0.86 ? 1 - Math.min(1, (t - 0.86) / 0.14) * 0.22 : 1;
+        const rot = t > 0.86 ? 0 : -12 + Math.sin(angle) * 14;
         return {
           x: orbitX * w + Math.cos(angle) * r,
           y: orbitY * h + Math.sin(angle) * r,
           press,
-          rot: -14 + Math.sin(angle) * 16,
+          rot,
         };
       }
       let prev = first;
@@ -123,25 +124,28 @@ function GuideFinger({
           const e = t * t * (3 - 2 * t);
           const arc = Math.sin(e * Math.PI) * Math.min(w, h) * 0.07;
           const press = t > 0.76 ? 1 - Math.min(1, (t - 0.76) / 0.24) * 0.24 : 1;
+          const rot = -10 * (1 - t);
           return {
             x: (prev.x + (next.x - prev.x) * e) * w,
             y: (prev.y + (next.y - prev.y) * e) * h - arc,
             press,
-            rot: -10,
+            rot,
           };
         }
         prev = next;
       }
       const last = path[path.length - 1]!;
-      return { x: last.x * w, y: last.y * h, press: 0.84, rot: -8 };
+      return { x: last.x * w, y: last.y * h, press: 0.9, rot: 0 };
     };
 
     const frame = (now: number) => {
       const ms = now - started;
       const p = posAt(Math.min(ms, duration));
-      finger.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -12%) rotate(${p.rot}deg) scale(${1.42 * p.press})`;
+      // 👇 fingertip sits ~90% down the glyph — pin that point to the button.
+      finger.style.transformOrigin = "50% 90%";
+      finger.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -90%) rotate(${p.rot}deg) scale(${1.28 * p.press})`;
       if (chip) {
-        chip.style.transform = `translate(${p.x}px, ${p.y}px) translate(-20%, -230%)`;
+        chip.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, calc(-90% - 3.6rem))`;
         chip.style.opacity = ms < 160 ? "0" : "1";
       }
       if (ms < duration) raf = window.requestAnimationFrame(frame);
@@ -160,7 +164,7 @@ function GuideFinger({
       </div>
       <div
         ref={fingerRef}
-        className="absolute left-0 top-0 origin-center text-[3.6rem] leading-none drop-shadow-[0_10px_22px_rgba(0,0,0,0.55)] sm:text-[4.6rem]"
+        className="absolute left-0 top-0 text-[3.6rem] leading-none drop-shadow-[0_10px_22px_rgba(0,0,0,0.55)] sm:text-[4.6rem]"
         aria-hidden
       >
         {"\u{1F447}\u{1F3FD}"}
