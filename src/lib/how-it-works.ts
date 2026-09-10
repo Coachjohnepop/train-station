@@ -42,13 +42,13 @@ export const HOW_IT_WORKS_DEFAULT_STEPS: HowItWorksStep[] = [
   {
     id: "ticket",
     title: "Tickets",
-    coachLine: "How you get in. Pick a ticket class — Business shown.",
+    coachLine: "How you get in. Like this — pick a ticket class. Business shown.",
     voice: { audioUrl: null, startSec: 0, endSec: null },
   },
   {
     id: "program",
     title: "Programs",
-    coachLine: "Then pick a program. Adult is the home base.",
+    coachLine: "Then pick a program. Like this — Adult is the home base.",
     voice: { audioUrl: null, startSec: 0, endSec: null },
   },
   {
