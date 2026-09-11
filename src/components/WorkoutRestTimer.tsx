@@ -203,7 +203,7 @@ export default function WorkoutRestTimer({
             onClick={onToggleMute}
             aria-pressed={Boolean(muted)}
           >
-            {muted ? "Unmute" : "Mute"}
+            {muted ? "Unmute sound" : "Mute sound"}
           </button>
         ) : null}
         <button

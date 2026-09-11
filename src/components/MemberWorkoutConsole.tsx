@@ -34,6 +34,7 @@ import {
   normalizeRestTimerSeconds,
   resolveExerciseHoldSeconds,
 } from "@/lib/rest-timer";
+import { readRestTimerMuted, writeRestTimerMuted } from "@/lib/rest-timer-mute";
 import {
   DEFAULT_REST_TIMER_SOUND,
   normalizeRestTimerSound,
@@ -131,8 +132,6 @@ export type MemberWorkoutView = {
   /** Rest after each warm-up movement (Admin). Default 15. */
   warmupRestSeconds?: number;
 };
-
-const REST_MUTE_KEY = "ts-rest-timer-mute";
 
 type ActiveRestTimer = {
   blockId: string;
@@ -386,7 +385,7 @@ export default function MemberWorkoutConsole({
   const [loggedDetailsOpen, setLoggedDetailsOpen] = useState(false);
   const [restTimer, setRestTimer] = useState<ActiveRestTimer | null>(null);
   const [restSecondsLeft, setRestSecondsLeft] = useState(0);
-  const [restMuted, setRestMuted] = useState(false);
+  const [restMuted, setRestMuted] = useState(() => readRestTimerMuted());
   /** Rest countdown is not a playing video — iOS will sleep the phone without this. */
   useScreenWakeLock(!reviewMode && !logResult);
   /** True while buzzer plays and popup is about to auto-close. */
@@ -401,32 +400,16 @@ export default function MemberWorkoutConsole({
   const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
   const restHornPlayedRef = useRef(false);
   const hitSeriesRef = useRef<HitSeries | null>(null);
-  const coachUnmutedThisSessionRef = useRef(false);
   const restTickAnnouncedRef = useRef<Set<number>>(new Set());
   /** Tracks open timer identity so duration retargets don't re-fire start/tick/complete storms. */
   const restTimerIdentityRef = useRef<string>("");
   const restMutedRef = useRef(restMuted);
-  restMutedRef.current = restMuted;
   const prevCompletedSetsRef = useRef<Record<string, Set<number>> | null>(null);
   /** When true, next completedSets change came from live partner (coach↔member). */
   const pendingRemoteRestRef = useRef(false);
   /** Skip rest on first remote snapshot (history), only fire on live checkoffs after that. */
   const liveRestBaselineReadyRef = useRef(false);
   const canCoachRestSettings = Boolean(instructorName || coachFloorMode);
-
-  useEffect(() => {
-    // Both sides hear rest. Coach can mute if they are standing next to the member.
-    try {
-      localStorage.removeItem(REST_MUTE_KEY);
-    } catch {
-      /* ignore */
-    }
-    if (coachFloorMode && coachUnmutedThisSessionRef.current) {
-      return;
-    }
-    setRestMuted(false);
-    restMutedRef.current = false;
-  }, [coachFloorMode]);
 
   // Unlock rest-end audio only on set / rest gestures — not every scroll tap
   // (that played the Cybertruck horn and ducked Theme Song).
@@ -483,15 +466,14 @@ export default function MemberWorkoutConsole({
   }, [sessionRestEnabled, sessionRestSeconds, sessionRestSound]);
 
   const toggleRestMute = useCallback(() => {
-    setRestMuted((prev) => {
-      const next = !prev;
-      if (!next) {
-        if (coachFloorMode) coachUnmutedThisSessionRef.current = true;
-        unlockRestAudio(restSoundRef.current);
-      }
-      return next;
-    });
-  }, [coachFloorMode]);
+    const next = !restMutedRef.current;
+    restMutedRef.current = next;
+    writeRestTimerMuted(next);
+    setRestMuted(next);
+    if (!next) {
+      unlockRestAudio(restSoundRef.current);
+    }
+  }, []);
 
   // Warmup used a blob store; checkoffs still belong in LiveWorkoutSession (Postgres).
   const liveSessionScope = !!liveSyncUserId && !reviewMode;
