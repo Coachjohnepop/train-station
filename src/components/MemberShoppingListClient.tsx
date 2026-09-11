@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useScreenWakeLock } from "@/hooks/useScreenWakeLock";
 import { GROCERY_CLEANSE_NOTE } from "@/lib/approved-grocery-seed";
 
@@ -24,6 +24,13 @@ export default function MemberShoppingListClient() {
   const [fading, setFading] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<"load" | "add" | "swap" | null>("load");
   const [error, setError] = useState<string | null>(null);
+  const draftRef = useRef<HTMLInputElement>(null);
+
+  function keepDraftFocus() {
+    const el = draftRef.current;
+    if (!el) return;
+    el.focus({ preventScroll: true });
+  }
 
   useScreenWakeLock(items.some((i) => !i.checked));
 
@@ -66,10 +73,12 @@ export default function MemberShoppingListClient() {
       if (!res.ok) throw new Error(data.error || "Could not add.");
       applyList(data.list);
       setDraft("");
+      keepDraftFocus();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Could not add.");
     } finally {
       setBusy(null);
+      keepDraftFocus();
     }
   }
 
@@ -141,31 +150,40 @@ export default function MemberShoppingListClient() {
     <div className="mx-auto max-w-lg space-y-4">
       <p className="text-sm leading-relaxed text-[var(--muted)]">{note}</p>
 
-      <form onSubmit={addItems} className="space-y-2">
-        <input
-          type="text"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onPaste={onDraftPaste}
-          enterKeyHint="done"
-          autoComplete="off"
-          autoCapitalize="sentences"
-          placeholder="Item name — Enter adds it, or paste a list"
-          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
-        />
-        <div className="flex flex-wrap gap-2">
-          <button type="submit" className="btn-primary px-4 py-2 text-sm" disabled={busy === "add"}>
-            {busy === "add" ? "Adding…" : "Add to list"}
-          </button>
+      <form onSubmit={addItems} className="shop-add space-y-2">
+        <div className="shop-add-row">
+          <input
+            ref={draftRef}
+            type="text"
+            inputMode="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onPaste={onDraftPaste}
+            enterKeyHint="enter"
+            autoComplete="off"
+            autoCapitalize="sentences"
+            autoCorrect="on"
+            placeholder="Add item"
+            className="shop-add-input"
+            aria-label="Grocery item"
+          />
           <button
-            type="button"
-            className="btn-ghost rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold"
-            onClick={() => void trainstationize()}
-            disabled={busy === "swap" || remaining === 0}
+            type="submit"
+            className="shop-add-btn btn-primary"
+            disabled={busy === "add"}
+            onMouseDown={(e) => e.preventDefault()}
           >
-            {busy === "swap" ? "Trainstationizing…" : "Trainstationize"}
+            {busy === "add" ? "…" : "Add"}
           </button>
         </div>
+        <button
+          type="button"
+          className="btn-ghost w-full rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold sm:w-auto"
+          onClick={() => void trainstationize()}
+          disabled={busy === "swap" || remaining === 0}
+        >
+          {busy === "swap" ? "Trainstationizing…" : "Trainstationize"}
+        </button>
       </form>
 
       {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}

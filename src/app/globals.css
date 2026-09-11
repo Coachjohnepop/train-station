@@ -2267,6 +2267,32 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 }
 
 /* Grocery run: two columns, fills the phone, thumb-sized checks. */
+.shop-add-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.45rem;
+}
+
+.shop-add-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 48px;
+  border-radius: 0.9rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0.65rem 0.85rem;
+  /* 16px: iOS will not pinch-zoom the field on focus */
+  font-size: 16px;
+}
+
+.shop-add-btn {
+  flex: 0 0 auto;
+  min-width: 4.25rem;
+  min-height: 48px;
+  padding: 0 0.9rem;
+  font-size: 16px;
+}
+
 .shop-check-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
