@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-11 (rest timer random-on)
+
+**Status:** Rest popup was opening without a set check. Client used a completedSets diff fallback when `restActive` was missing (hydrate / HIT / uncheck races), and Skip could be resurrected by poll/SSE after the 4s suppress window. Skip-clear was also dropped if the PUT failed. Rest is **restActive-only** on the remote path; skipped/expired windows stay ignored; skip retries until save succeeds. Loop: `node scripts/rest-timer-loop.mjs` (147/147 on prod API).
+
 **Date:** 2026-09-11 (don’t steal the phone’s podcast)
 
 **Status:** A member was listening to a podcast, tapped back into the app, and iOS killed the podcast. Cause: HTMLVideo / AudioContext default to Safari `audioSession` **playback** (exclusive). The Today keep-awake loop, rest-audio unlock (`preferPlaybackSession`), and Theme Song resume-on-visible all took the speaker. Fix: default **ambient**; rest horn is **transient**; Theme Song / intros / How it Works stay **playback** only when the user actually started them. Returning to the tab no longer auto-starts Theme Song.

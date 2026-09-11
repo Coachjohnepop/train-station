@@ -43,6 +43,10 @@ import CoachRestSoundLibrary from "@/components/CoachRestSoundLibrary";
 import { confettiOriginFromElement, fireWorkoutConfetti } from "@/lib/workout-confetti";
 import type { LiveRestActive } from "@/lib/live-workout-session";
 import {
+  remoteRestIsClear,
+  remoteRestShouldIgnore,
+} from "@/lib/live-rest-policy";
+import {
   clearMaintainResume,
   writeMaintainResume,
 } from "@/lib/member-maintain-resume";
@@ -250,6 +254,8 @@ export default function MemberWorkoutConsole({
   reviewMode = false,
   calendarDateLabel,
   scheduleLabel,
+  cycleDayLabel,
+  classOverride = false,
   liveSyncUserId,
   liveSessionDate,
   logSessionDate,
@@ -273,8 +279,12 @@ export default function MemberWorkoutConsole({
   reviewMode?: boolean;
   /** e.g. "Tuesday, June 23, 2026" */
   calendarDateLabel?: string;
-  /** e.g. "Week 1 · Tue" */
+  /** e.g. "Adult Strength & Conditioning · M1D4" */
   scheduleLabel?: string;
+  /** Program day code, e.g. M1D4 */
+  cycleDayLabel?: string;
+  /** Coach replaced this day's program workout with a class. */
+  classOverride?: boolean;
   /** Member id for live coach ↔ member checkoff sync */
   liveSyncUserId?: string;
   liveSessionDate?: string;
@@ -418,20 +428,8 @@ export default function MemberWorkoutConsole({
     restMutedRef.current = false;
   }, [coachFloorMode]);
 
-  // iOS/Safari: rest-end is timer-driven (no gesture). Unlock WebAudio + HTMLAudio
-  // on first tap so the rest-end sample can play when the countdown hits 0.
-  // pointerdown covers touch — do not also bind touchstart (that double-primed
-  // the Cybertruck clip). Prime is silent; still skip extra listeners after first.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const unlock = () => unlockRestAudio(restSoundRef.current);
-    window.addEventListener("pointerdown", unlock, { passive: true, once: true });
-    window.addEventListener("keydown", unlock, { once: true });
-    return () => {
-      window.removeEventListener("pointerdown", unlock);
-      window.removeEventListener("keydown", unlock);
-    };
-  }, []);
+  // Unlock rest-end audio only on set / rest gestures — not every scroll tap
+  // (that played the Cybertruck horn and ducked Theme Song).
 
   // Seed rest settings from workout prescription (coach can change mid-session).
   useEffect(() => {
@@ -516,6 +514,8 @@ export default function MemberWorkoutConsole({
   /** After skip, force restActive:null on next push even if something re-seeded the ref. */
   const pendingForceClearRestRef = useRef(false);
   const lastAppliedRestEndsAt = useRef(0);
+  /** endsAt of a timer we skipped/closed — poll/SSE must not resurrect it. */
+  const ignoredRestEndsAtRef = useRef(0);
   /** After intentional uncheck, block remote re-check / auto-timer for a short window. */
   const suppressAutoRestUntilRef = useRef(0);
   const lastAppliedRevision = useRef(0);
@@ -572,7 +572,7 @@ export default function MemberWorkoutConsole({
 
   const applyRemoteRestActive = useCallback((rest: LiveRestActive | null | undefined) => {
     if (rest === undefined) return;
-    if (rest === null) {
+    if (remoteRestIsClear(rest)) {
       // Partner closed shared rest. If countdown was already done / nearly done and we
       // never got our local finishAndClose (clock skew / coach clear after end), horn once.
       const prev = restActiveRef.current;
@@ -592,10 +592,16 @@ export default function MemberWorkoutConsole({
       setRestCompleting(false);
       return;
     }
-    // Ignore fully expired rest windows.
-    if (rest.endsAt <= Date.now() + 250) return;
-    // Don't resurrect a timer right after intentional uncheck/skip.
-    if (Date.now() < suppressAutoRestUntilRef.current) return;
+    if (
+      remoteRestShouldIgnore({
+        rest,
+        now: Date.now(),
+        suppressUntil: suppressAutoRestUntilRef.current,
+        ignoredEndsAt: ignoredRestEndsAtRef.current,
+      })
+    ) {
+      return;
+    }
 
     const prev = restActiveRef.current;
     const same =
@@ -780,10 +786,9 @@ export default function MemberWorkoutConsole({
 
       applyingRemote.current = true;
       if (!setsSame) {
-        // Fallback rest start if restActive missing (older clients / race).
-        if (!session.restActive) {
-          pendingRemoteRestRef.current = liveRestBaselineReadyRef.current;
-        }
+        // Rest popup is restActive-only. A completedSets diff must not spin rest
+        // (hydrate, HIT, uncheck/re-merge, and poll echoes all used to).
+        pendingRemoteRestRef.current = false;
         setCompletedSets(sets);
         stateRef.current = { ...stateRef.current, completedSets: sets };
       }
@@ -884,11 +889,11 @@ export default function MemberWorkoutConsole({
       // Only send restActive when we intentionally started/cleared it.
       // Omitting keeps the partner's countdown from being wiped by a null save.
       // After Skip, force null even if a race re-seeded the ref.
-      if (pendingForceClearRestRef.current) {
+      const forceClearRest = pendingForceClearRestRef.current;
+      if (forceClearRest) {
         payload.restActive = null;
         restActiveRef.current = null;
         restActiveDirtyRef.current = false;
-        pendingForceClearRestRef.current = false;
       } else if (restActiveDirtyRef.current) {
         payload.restActive = restActiveRef.current;
         restActiveDirtyRef.current = false;
@@ -915,6 +920,7 @@ export default function MemberWorkoutConsole({
         keepalive: true,
       });
       if (!res.ok) return;
+      if (forceClearRest) pendingForceClearRestRef.current = false;
       const data = await res.json();
       if (data.session && !(coachFloorMode && instructorName)) {
         applyRemoteSession(data.session);
@@ -1213,6 +1219,8 @@ export default function MemberWorkoutConsole({
 
   const clearRestTimer = useCallback(() => {
     hitSeriesRef.current = null;
+    ignoredRestEndsAtRef.current =
+      restActiveRef.current?.endsAt || lastAppliedRestEndsAt.current || ignoredRestEndsAtRef.current;
     setRestTimer(null);
     setRestSecondsLeft(0);
     setRestCompleting(false);
@@ -1329,14 +1337,6 @@ export default function MemberWorkoutConsole({
 
       if (phase === "rest" && opts?.secondsOverride == null) {
         if (restSettingsRef.current.enabled === false) return;
-        restSettingsRef.current = {
-          ...restSettingsRef.current,
-          enabled: true,
-          seconds: normalizeRestTimerSeconds(
-            restSettingsRef.current.seconds || DEFAULT_REST_TIMER_SECONDS,
-          ),
-        };
-        setSessionRestEnabled(true);
       }
 
       let seconds: number | null =
@@ -1613,6 +1613,7 @@ export default function MemberWorkoutConsole({
     const finishAndClose = () => {
       if (restHornPlayedRef.current) return;
       restHornPlayedRef.current = true;
+      ignoredRestEndsAtRef.current = endsAt;
       // Horn first, even if this effect is tearing down from a live retarget.
       if (!restMutedRef.current) {
         playRestComplete(restSoundRef.current, { force: true });
@@ -1716,53 +1717,15 @@ export default function MemberWorkoutConsole({
     };
   }, [restTimer?.endsAt, restTimer?.phase, restTimer?.blockId, restTimer?.completedSetNum]);
 
-  // When coach or member marks a set on the other side, start rest locally so both see/hear it.
+  // Track checkoff snapshots. Remote rest is restActive-only — do not start a
+  // timer from a completedSets diff (that was the random-on path).
   useEffect(() => {
-    // Seed baseline on first hydrate so we don't treat history as "new" checkoffs.
-    if (prevCompletedSetsRef.current == null) {
-      prevCompletedSetsRef.current = Object.fromEntries(
-        Object.entries(completedSets).map(([id, set]) => [id, new Set(set)]),
-      );
-      pendingRemoteRestRef.current = false;
-      liveRestBaselineReadyRef.current = true;
-      return;
-    }
-    const prev = prevCompletedSetsRef.current;
-    const newlyCompleted: Array<{ blockId: string; setNum: number }> = [];
-    for (const [blockId, nums] of Object.entries(completedSets)) {
-      const before = prev[blockId] ?? new Set<number>();
-      for (const n of nums) {
-        if (!before.has(n)) newlyCompleted.push({ blockId, setNum: n });
-      }
-    }
     prevCompletedSetsRef.current = Object.fromEntries(
       Object.entries(completedSets).map(([id, set]) => [id, new Set(set)]),
     );
-    if (newlyCompleted.length === 0) {
-      pendingRemoteRestRef.current = false;
-      return;
-    }
-    // Large history sync after empty local state — re-baseline, don't start rest.
-    if (newlyCompleted.length > 1 && !liveRestBaselineReadyRef.current) {
-      pendingRemoteRestRef.current = false;
-      liveRestBaselineReadyRef.current = true;
-      return;
-    }
-    if (!pendingRemoteRestRef.current) return;
     pendingRemoteRestRef.current = false;
     liveRestBaselineReadyRef.current = true;
-    // Only start for a single new checkoff (one set at a time).
-    if (newlyCompleted.length !== 1) return;
-    if (Date.now() < suppressAutoRestUntilRef.current) return;
-    const latest = newlyCompleted[0];
-    const block = workout.exercises.find((e) => e.id === latest.blockId);
-    const holdSec = block ? exerciseHoldDurationSec(block) : null;
-    maybeStartRestTimer(latest.blockId, latest.setNum, {
-      fromRemote: true,
-      phase: holdSec ? "exercise" : "rest",
-      secondsOverride: holdSec ?? undefined,
-    });
-  }, [completedSets, maybeStartRestTimer, workout.exercises]);
+  }, [completedSets]);
 
   // Re-seed when the workout / past logs change. Keep any in-session edits.
   const weightSeedKey = workout.exercises
@@ -1829,8 +1792,11 @@ export default function MemberWorkoutConsole({
       if (wasDone) {
         // Undo set: stay unchecked, kill any timer, do NOT auto re-check or re-launch.
         suppressAutoRestUntilRef.current = Date.now() + 4000;
+        ignoredRestEndsAtRef.current =
+          restActiveRef.current?.endsAt || lastAppliedRestEndsAt.current || ignoredRestEndsAtRef.current;
         restActiveRef.current = null;
         restActiveDirtyRef.current = true;
+        pendingForceClearRestRef.current = true;
         lastAppliedRestEndsAt.current = 0;
         setRestTimer(null);
         setRestSecondsLeft(0);
@@ -1912,8 +1878,11 @@ export default function MemberWorkoutConsole({
 
       if (wasDone) {
         suppressAutoRestUntilRef.current = Date.now() + 4000;
+        ignoredRestEndsAtRef.current =
+          restActiveRef.current?.endsAt || lastAppliedRestEndsAt.current || ignoredRestEndsAtRef.current;
         restActiveRef.current = null;
         restActiveDirtyRef.current = true;
+        pendingForceClearRestRef.current = true;
         lastAppliedRestEndsAt.current = 0;
         setRestTimer(null);
         setRestSecondsLeft(0);
@@ -2635,20 +2604,40 @@ export default function MemberWorkoutConsole({
       {!showLoggedSuccess && !embedded && (
         <>
           <p className="text-xs font-semibold uppercase tracking-widest text-accent">
-            {calendarDateLabel && !/^M\d+D\d+$/i.test(calendarDateLabel.trim())
-              ? "Scheduled workout"
-              : "Today\u2019s workout"}
+            Today&apos;s workout
           </p>
-          {calendarDateLabel && !/^M\d+D\d+$/i.test(calendarDateLabel.trim()) ? (
-            <p className="mt-1 text-sm font-medium text-[var(--text)]">{calendarDateLabel}</p>
-          ) : null}
-          {scheduleLabel &&
-          scheduleLabel.replace(/\s*·\s*M\d+D\d+\s*$/i, "").trim() ? (
-            <p className="mt-0.5 text-xs text-[var(--muted)]">
-              {scheduleLabel.replace(/\s*·\s*M\d+D\d+\s*$/i, "").trim()}
-            </p>
-          ) : null}
-          <h1 className={`${calendarDateLabel ? "mt-2" : "mt-1"} text-2xl font-bold`}>
+          {(() => {
+            const cycle =
+              cycleDayLabel ||
+              calendarDateLabel?.trim().match(/^M\d+D\d+$/i)?.[0]?.toUpperCase() ||
+              scheduleLabel?.match(/M\d+D\d+/i)?.[0]?.toUpperCase() ||
+              null;
+            const programName = scheduleLabel
+              ?.replace(/\s*·\s*M\d+D\d+\s*/gi, " ")
+              .replace(/\s*·\s*Class\s*/gi, " ")
+              .replace(/\s+/g, " ")
+              .trim();
+            return (
+              <>
+                {cycle ? (
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <p className="text-lg font-bold tabular-nums tracking-tight">{cycle}</p>
+                    {classOverride ? (
+                      <span className="rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-200">
+                        Class
+                      </span>
+                    ) : null}
+                  </div>
+                ) : calendarDateLabel ? (
+                  <p className="mt-1 text-sm font-medium text-[var(--text)]">{calendarDateLabel}</p>
+                ) : null}
+                {programName && programName.toLowerCase() !== "class" ? (
+                  <p className="mt-0.5 text-xs text-[var(--muted)]">{programName}</p>
+                ) : null}
+              </>
+            );
+          })()}
+          <h1 className="mt-2 text-2xl font-bold">
             {workout.workoutName}
           </h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
