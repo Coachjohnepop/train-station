@@ -8,6 +8,7 @@ import {
   isHeroVideoSrc,
   type HeroSlide,
 } from "@/lib/hero-slides";
+import { preferAmbientAudioSession } from "@/lib/audio-session";
 import {
   applyMixVolume,
   isLandingMixUnlocked,
@@ -85,6 +86,7 @@ export default function HeroSlideMedia({
 
     if (active) {
       if (el.paused) {
+        preferAmbientAudioSession();
         void el.play().catch(() => null);
       }
     } else if (!el.paused) {

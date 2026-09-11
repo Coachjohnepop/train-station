@@ -105,6 +105,7 @@ Whenever you touch **audio or video**, copy the working implementations. Do not 
 | **No Web Audio GainNode on iOS** | Stutters intros. Linear `element.volume` only (`applyMixVolume`). |
 | **No YouTube for product gags / intros** | Local file. Dual iframes restart the chorus. |
 | **Coach overdubs** | Clean mic (`echoCancellation` / `noiseSuppression` / `autoGainControl` **off**). 192 kbps. No extra ffmpeg smash. |
+| **Don’t steal the phone’s audio** | Safari `audioSession` stays **`ambient`** so returning to the app does not kill Podcasts / Music. Keep-awake video and silent rest primes are ambient. Rest horn / message whistle is **`transient`** (ducks, then they can keep listening). **`playback`** only for Theme Song, intros, and How it Works the user started. Never resume our music just because the tab became visible. Helper: `src/lib/audio-session.ts`. |
 
 How it Works guest narration uses `startHowItWorksVoice` — same clip must not be seeked/played twice.
 
@@ -441,6 +442,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ---
 
 ## WHERE WE LEFT OFF
+
+**Date:** 2026-09-11 (don’t steal the phone’s podcast)
+
+**Status:** A member was listening to a podcast, tapped back into the app, and iOS killed the podcast. Cause: HTMLVideo / AudioContext default to Safari `audioSession` **playback** (exclusive). The Today keep-awake loop, rest-audio unlock (`preferPlaybackSession`), and Theme Song resume-on-visible all took the speaker. Fix: default **ambient**; rest horn is **transient**; Theme Song / intros / How it Works stay **playback** only when the user actually started them. Returning to the tab no longer auto-starts Theme Song.
 
 **Date:** 2026-09-10 (How it Works overdub restart + media standard)
 

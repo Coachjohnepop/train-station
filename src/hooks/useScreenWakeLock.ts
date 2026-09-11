@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { preferAmbientAudioSession } from "@/lib/audio-session";
 
 const KEEP_AWAKE_SRC = "/videos/keep-awake.mp4";
 
@@ -45,17 +46,34 @@ export function useScreenWakeLock(active: boolean) {
     }
 
     function startVideo() {
-      if (video || cancelled) return;
+      if (cancelled) return;
+      // HTMLVideo defaults to exclusive `playback` and kills Podcasts.
+      preferAmbientAudioSession();
+      if (video) {
+        if (video.paused) {
+          void video.play().catch(() => {
+            /* needs a tap — pointerdown retries lock() */
+          });
+        }
+        return;
+      }
       const el = document.createElement("video");
       el.src = KEEP_AWAKE_SRC;
       el.muted = true;
       el.defaultMuted = true;
+      el.volume = 0;
       el.loop = true;
       el.autoplay = true;
       el.playsInline = true;
+      try {
+        el.disableRemotePlayback = true;
+      } catch {
+        /* older WebKit */
+      }
       el.setAttribute("playsinline", "");
       el.setAttribute("webkit-playsinline", "");
       el.setAttribute("muted", "");
+      el.setAttribute("disableremoteplayback", "");
       el.setAttribute("aria-hidden", "true");
       el.tabIndex = -1;
       Object.assign(el.style, {

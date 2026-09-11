@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  preferAmbientAudioSession,
+  preferTransientAudioSession,
+} from "@/lib/audio-session";
 import { holdBackgroundMusicForMedia } from "@/lib/background-music-control";
 import {
   DEFAULT_REST_TIMER_SOUND,
@@ -25,12 +29,7 @@ let audioUnlocked = false;
 const htmlPrimedSrcs = new Set<string>();
 let ctxResumeListenersBound = false;
 
-/**
- * Unmuted but inaudible. iOS will not later-play an element that was only
- * primed while `muted` — but volume 0.01 of the Cybertruck horn is a chirp
- * on phone speakers when you touch Today to scroll.
- */
-const HTML_PRIME_VOLUME = 0.0001;
+
 
 /** Global de-dupe so live coach+member retargets don't stack chirps/horns. */
 let lastStartAt = 0;
@@ -53,6 +52,7 @@ function bindCtxResumeListeners(): void {
   if (ctxResumeListenersBound || typeof document === "undefined") return;
   ctxResumeListenersBound = true;
   const kick = () => {
+    preferAmbientAudioSession();
     if (audioCtx && audioCtx.state !== "running") {
       void audioCtx.resume().catch(() => {});
     }
@@ -67,6 +67,7 @@ function bindCtxResumeListeners(): void {
 function getCtx(): AudioContext | null {
   if (typeof window === "undefined") return null;
   try {
+    preferAmbientAudioSession();
     if (!audioCtx) {
       const Ctx =
         window.AudioContext ||
@@ -241,6 +242,7 @@ function releaseSampleHold(token: number): void {
   if (token !== sampleReleaseToken) return;
   sampleRelease?.();
   sampleRelease = null;
+  preferAmbientAudioSession();
 }
 
 function decodeAudioDataCompat(ctx: AudioContext, raw: ArrayBuffer): Promise<AudioBuffer> {
@@ -323,6 +325,7 @@ function getOrCreateSample(src: string): HTMLAudioElement {
   let audio = sampleCache.get(src);
   if (audio) return audio;
   audio = new Audio(src);
+  audio.setAttribute("data-ts-rest-audio", "true");
   configureHtmlAudio(audio);
   try {
     sampleHost()?.appendChild(audio);
@@ -336,23 +339,13 @@ function getOrCreateSample(src: string): HTMLAudioElement {
   return audio;
 }
 
-function preferPlaybackSession(): void {
-  try {
-    const session = (
-      navigator as Navigator & { audioSession?: { type?: string } }
-    ).audioSession;
-    if (session && session.type !== "playback") session.type = "playback";
-  } catch {
-    /* Safari < 16.4 */
-  }
-}
-
 /**
  * Silent HTMLAudio play during a user gesture. iOS only lets a later timer
  * call play() on THIS same element.
  */
 function primeHtmlSample(src: string, volume: number): void {
   try {
+    preferAmbientAudioSession();
     const audio = getOrCreateSample(src);
     configureHtmlAudio(audio);
     // Real rest-end already playing — don't steal it.
@@ -362,10 +355,10 @@ function primeHtmlSample(src: string, volume: number): void {
     // Silent prime already in flight.
     if (!audio.paused && audio.volume <= 0.05) return;
     const gen = htmlPlayGeneration;
-    // iOS: muted+pause can mark the element as never-unlocked for later timer play().
-    // Unmuted + inaudible volume is what later rest-end needs — not the horn at 1%.
+    // Unlock the element without an audible Cybertruck chirp. Volume 0 is silent;
+    // later rest-end sets the real volume on this same element.
     audio.muted = false;
-    audio.volume = HTML_PRIME_VOLUME;
+    audio.volume = 0;
     void audio
       .play()
       .then(() => {
@@ -427,6 +420,7 @@ function playDecoded(
 function playHtmlSample(src: string, volume: number, token: number): Promise<boolean> {
   return new Promise((resolve) => {
     try {
+      preferTransientAudioSession();
       const audio = getOrCreateSample(src);
       configureHtmlAudio(audio);
       htmlPlayGeneration += 1;
@@ -492,7 +486,7 @@ export function unlockRestAudio(
 ): void {
   if (typeof window === "undefined") return;
   try {
-    preferPlaybackSession();
+    preferAmbientAudioSession();
     const ctx = getCtx();
     if (ctx) primeWebAudioUnlock(ctx);
     const src = restTimerSoundSrc(sound);
@@ -560,7 +554,7 @@ export function playRestComplete(
   const fallbackSrc = restTimerSoundFallbackSrc(id);
   const volume = restTimerSoundVolume(id);
 
-  preferPlaybackSession();
+  preferTransientAudioSession();
   sampleRelease?.();
   const token = ++sampleReleaseToken;
   sampleRelease = holdBackgroundMusicForMedia();
@@ -589,8 +583,10 @@ export function playRestComplete(
         return;
       }
       buzzFallback(ctx);
+      window.setTimeout(() => releaseSampleHold(token), 1000);
     } catch {
       buzzFallback(audioCtx);
+      window.setTimeout(() => releaseSampleHold(token), 1000);
     }
   })();
 }

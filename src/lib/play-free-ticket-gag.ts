@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  preferAmbientAudioSession,
+  preferPlaybackAudioSession,
+} from "@/lib/audio-session";
 import { holdBackgroundMusicForMedia } from "@/lib/background-music-control";
 import { FREE_TICKET_FULL_SRC } from "@/lib/landing-media";
 
@@ -66,6 +70,7 @@ export function startFreeTicketGagFromGesture(_host?: HTMLElement | null): void 
   playLock = true;
   stripNativeVideoChrome(video);
   duckThemeSong();
+  preferPlaybackAudioSession();
   video.muted = false;
   video.defaultMuted = false;
   video.volume = 1;
@@ -77,6 +82,7 @@ export function startFreeTicketGagFromGesture(_host?: HTMLElement | null): void 
   void video.play().catch(() => {
     playLock = false;
     unduckThemeSong();
+    preferAmbientAudioSession();
   });
 }
 
@@ -99,6 +105,7 @@ export function stopFreeTicketGag(): void {
     el.volume = 1;
   }
   unduckThemeSong();
+  preferAmbientAudioSession();
 }
 
 export function fadeStopFreeTicketGag(durationMs: number): () => void {

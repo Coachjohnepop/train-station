@@ -28,6 +28,10 @@ import {
   THEME_SONG_SRC,
   unlockLandingMix,
 } from "@/lib/landing-mix-audio";
+import {
+  preferAmbientAudioSession,
+  preferPlaybackAudioSession,
+} from "@/lib/audio-session";
 import { allowThemeSong, isGuestThemeSongPath } from "@/lib/theme-song";
 
 /**
@@ -255,6 +259,7 @@ export default function BackgroundMusic() {
     setSoundLive(false);
     unlockedRef.current = false;
     dismissHint();
+    preferAmbientAudioSession();
   }, [dismissHint]);
 
   const stopAdminMusic = useCallback(
@@ -299,9 +304,11 @@ export default function BackgroundMusic() {
       }
       applyThemeVolume(audio);
       audio.muted = false;
+      preferPlaybackAudioSession();
       try {
         await audio.play();
       } catch {
+        preferAmbientAudioSession();
         setSoundLive(false);
         return false;
       }
@@ -463,9 +470,12 @@ export default function BackgroundMusic() {
         audio.muted = false;
         applyThemeVolume(audio);
         try {
+          preferPlaybackAudioSession();
           await audio.play();
           if (await confirmSoundLive(audio)) return;
+          preferAmbientAudioSession();
         } catch {
+          preferAmbientAudioSession();
           /* blocked */
         }
         if (unlockedRef.current || speakerMutedRef.current) return;
@@ -490,6 +500,10 @@ export default function BackgroundMusic() {
     [showFingerForAtLeastTwentySeconds, confirmSoundLive, stopMusicQuiet, applyThemeVolume],
   );
 
+  useEffect(() => {
+    preferAmbientAudioSession();
+  }, []);
+
   useEffect(() => registerBackgroundMusicMediaDucking(), []);
 
   useEffect(() => {
@@ -512,6 +526,7 @@ export default function BackgroundMusic() {
       persistBackgroundMusicPlayed();
       setSoundLive(false);
       unlockedRef.current = false;
+      preferAmbientAudioSession();
     };
     audio.addEventListener("ended", onEnded);
 
@@ -532,22 +547,10 @@ export default function BackgroundMusic() {
         stopMusicQuiet(audio);
         return;
       }
-      if (overlayPauseRef.current) return;
-      // Never un-mute or re-unlock just because the tab came back
-      if (speakerMutedRef.current) return;
-      if (stickyMuteRef.current && (audio.paused || audio.muted)) return;
-      if (
-        !canStartThemeSongFromSilence(
-          gestureUnlockCountRef.current,
-          mixRef.current.clickStarts,
-        ) &&
-        (audio.paused || audio.muted)
-      ) {
-        return;
-      }
-      // Only resume if already unlocked and was playing path
-      if (unlockedRef.current && !audio.muted) {
-        void forceAudible(audio);
+      // Returning to the tab must not steal Podcasts / Music.
+      // If Theme Song is already playing, leave it; if iOS paused it, stay paused.
+      if (audio.paused || audio.muted || speakerMutedRef.current) {
+        preferAmbientAudioSession();
       }
     };
     const onPageShow = () => {
@@ -555,9 +558,9 @@ export default function BackgroundMusic() {
         stopMusicQuiet(audio);
         return;
       }
-      if (speakerMutedRef.current) return;
-      if (stickyMuteRef.current) return;
-      void startMusicWithFinger(audio);
+      if (audio.paused || audio.muted || speakerMutedRef.current) {
+        preferAmbientAudioSession();
+      }
     };
 
     document.addEventListener("visibilitychange", onVisible);
@@ -570,7 +573,6 @@ export default function BackgroundMusic() {
     };
   }, [
     startMusicWithFinger,
-    forceAudible,
     clearHintTimer,
     stopMusicQuiet,
     authReady,
@@ -755,6 +757,7 @@ export default function BackgroundMusic() {
       dismissHint();
       audio.muted = true;
       audio.pause();
+      preferAmbientAudioSession();
       if (muteCountRef.current >= 2) {
         stickyMuteRef.current = true;
         persistBackgroundMusicMute(true);

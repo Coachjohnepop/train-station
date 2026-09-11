@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  preferAmbientAudioSession,
+  preferTransientAudioSession,
+} from "@/lib/audio-session";
 import { holdBackgroundMusicForMedia } from "@/lib/background-music-control";
 
 const HORN_SRC = "/audio/rest-cybertruck-horn-v2.mp3";
@@ -16,6 +20,7 @@ export function playCybertruckHorn(): void {
       hornAudio.addEventListener("ended", () => {
         hornRelease?.();
         hornRelease = null;
+        preferAmbientAudioSession();
       });
     }
     // Match rest-complete Cybertruck level (hotter than whistle/bell/buzzer).
@@ -23,9 +28,11 @@ export function playCybertruckHorn(): void {
     hornRelease?.();
     hornRelease = holdBackgroundMusicForMedia();
     hornAudio.currentTime = 0;
+    preferTransientAudioSession();
     void hornAudio.play().catch(() => {
       hornRelease?.();
       hornRelease = null;
+      preferAmbientAudioSession();
     });
   } catch {
     /* Audio blocked or unavailable */

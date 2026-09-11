@@ -5,6 +5,10 @@
  * one element, one play(), never pause-and-restart the same clip.
  */
 
+import {
+  preferAmbientAudioSession,
+  preferPlaybackAudioSession,
+} from "@/lib/audio-session";
 import { setBackgroundMusicDuck } from "@/lib/background-music-control";
 import { MIX_AUDIO_ATTR } from "@/lib/landing-mix-audio";
 import {
@@ -86,6 +90,7 @@ export function startHowItWorksVoice(step: HowItWorksStep | null | undefined): v
     audio.addEventListener("timeupdate", guard);
   }
 
+  preferPlaybackAudioSession();
   void audio
     .play()
     .then(() => {
@@ -96,6 +101,7 @@ export function startHowItWorksVoice(step: HowItWorksStep | null | undefined): v
       if (playingKey !== key) return;
       playingKey = "";
       setBackgroundMusicDuck(false);
+      preferAmbientAudioSession();
     });
 }
 
@@ -104,6 +110,7 @@ export function stopHowItWorksVoice(): void {
   playingKey = "";
   clearEndWatch();
   setBackgroundMusicDuck(false);
+  preferAmbientAudioSession();
   if (!voice) return;
   voice.pause();
 }

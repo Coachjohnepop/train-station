@@ -3,6 +3,10 @@
  * Pure dual-tone train-whistle SFX (no speech / no vocal sample).
  */
 
+import {
+  preferAmbientAudioSession,
+  preferTransientAudioSession,
+} from "@/lib/audio-session";
 import { holdBackgroundMusicForMedia } from "@/lib/background-music-control";
 
 /** Robust dual-tone station whistle (same sample as rest-end "Train whistle"). */
@@ -40,11 +44,15 @@ export async function playMessageAlert(): Promise<void> {
       alertAudio.volume = 0.9;
     }
     alertAudio.currentTime = 0;
+    preferTransientAudioSession();
     await alertAudio.play();
   } catch {
     /* autoplay blocked until user gesture — silent fail */
   } finally {
     // Release duck after whistle finishes (~1.5s)
-    window.setTimeout(() => release?.(), 1600);
+    window.setTimeout(() => {
+      release?.();
+      preferAmbientAudioSession();
+    }, 1600);
   }
 }
