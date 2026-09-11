@@ -1,3 +1,5 @@
+import { warmupPinnedOrderedIds } from "@/lib/warmup-group";
+
 type DemoExercise = {
   id: string;
   name: string;
@@ -78,6 +80,30 @@ export function compactDemoWorkoutSortOrders(
     .filter((we) => we.workoutId === workoutId)
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   const idToOrder = new Map(rows.map((we, idx) => [we.id, idx]));
+  return workoutExercises.map((we) =>
+    we.workoutId === workoutId && idToOrder.has(we.id)
+      ? { ...we, sortOrder: idToOrder.get(we.id)! }
+      : we,
+  );
+}
+
+/** Warm-ups first, then main lifts, matching the admin sheet header. */
+export function pinDemoWorkoutWarmups(
+  workoutExercises: WorkoutExerciseRow[],
+  workoutId: string,
+  exList: DemoExercise[],
+  orderedIds?: string[],
+): WorkoutExerciseRow[] {
+  const rows = workoutExercises.filter((we) => we.workoutId === workoutId);
+  const ids = warmupPinnedOrderedIds(
+    rows.map((we) => ({
+      id: we.id,
+      name: resolveDemoExercise(we.exerciseId, exList).name,
+      notes: we.notes,
+    })),
+    orderedIds,
+  );
+  const idToOrder = new Map(ids.map((id, idx) => [id, idx]));
   return workoutExercises.map((we) =>
     we.workoutId === workoutId && idToOrder.has(we.id)
       ? { ...we, sortOrder: idToOrder.get(we.id)! }

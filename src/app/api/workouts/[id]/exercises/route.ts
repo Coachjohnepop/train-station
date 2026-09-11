@@ -9,15 +9,17 @@ import { getDemoSeed, mutateDemoSeed } from "@/lib/demo-seed-store";
 import { requireBlobPersisted } from "@/lib/demo-persistence";
 import { requireStaff } from "@/lib/api-auth";
 import {
-  compactDemoWorkoutSortOrders,
   ensureDemoWorkoutInSeed,
+  pinDemoWorkoutWarmups,
   resolveDemoExercise,
 } from "@/lib/demo-workout-items";
+import { warmupPinnedOrderedIds } from "@/lib/warmup-group";
 import {
   addSmsWorkoutExercise,
   deleteSmsWorkoutExercise,
   isSmsWorkoutId,
   patchSmsWorkoutExercise,
+  reorderSmsWorkoutExercises,
 } from "@/lib/sms-workout-builder-api";
 
 const addSchema = workoutPrescriptionSchema.extend({
@@ -37,7 +39,35 @@ const updateItemSchema = z.object({
   sortOrder: z.number().int().nonnegative().optional(),
 });
 
+const reorderSchema = z.object({
+  orderedIds: z.array(z.string().min(1)).min(1),
+});
+
 type Params = { params: Promise<{ id: string }> };
+
+async function reindexPrismaWorkoutPinned(workoutId: string, orderedIds?: string[]) {
+  const rows = await prisma.workoutExercise.findMany({
+    where: { workoutId },
+    include: { exercise: { select: { name: true } } },
+  });
+  const ids = warmupPinnedOrderedIds(
+    rows.map((row) => ({
+      id: row.id,
+      name: row.exercise?.name ?? "",
+      notes: row.notes,
+    })),
+    orderedIds,
+  );
+  if (ids.length === 0) return;
+  await prisma.$transaction(
+    ids.map((id, idx) =>
+      prisma.workoutExercise.update({
+        where: { id },
+        data: { sortOrder: idx },
+      }),
+    ),
+  );
+}
 
 export async function POST(request: Request, { params }: Params) {
   const auth = await requireStaff();
@@ -100,6 +130,11 @@ export async function POST(request: Request, { params }: Params) {
             exercise,
           };
           data.workoutExercises.push(newItem);
+          data.workoutExercises = pinDemoWorkoutWarmups(
+            data.workoutExercises as any[],
+            workoutId,
+            exList,
+          );
         });
         requireBlobPersisted(blobSaved, "Exercise add");
 
@@ -160,7 +195,12 @@ export async function POST(request: Request, { params }: Params) {
       },
       include: { exercise: true },
     });
-    return NextResponse.json(item, { status: 201 });
+    await reindexPrismaWorkoutPinned(workoutId);
+    const pinned = await prisma.workoutExercise.findUnique({
+      where: { id: item.id },
+      include: { exercise: true },
+    });
+    return NextResponse.json(pinned ?? item, { status: 201 });
   } catch (err) {
     console.error("workoutExercise.create failed:", err);
     const message =
@@ -187,7 +227,52 @@ export async function PATCH(request: Request, { params }: Params) {
   if (!auth.ok) return auth.response;
 
   const { id: workoutId } = await params;
-  const parsed = updateItemSchema.safeParse(await request.json());
+  const body = await request.json();
+  const reorder = reorderSchema.safeParse(body);
+  if (reorder.success) {
+    const orderedIds = reorder.data.orderedIds;
+    if (isSmsWorkoutId(workoutId)) {
+      try {
+        const workout = await reorderSmsWorkoutExercises(workoutId, orderedIds);
+        if (!workout) {
+          return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
+        }
+          return NextResponse.json({ ok: true, orderedIds: workout.exercises.map((row) => row.id) });
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "Exercise reorder failed";
+        return NextResponse.json({ detail: msg }, { status: 503 });
+      }
+    }
+    if (isCoachCatalogDemo()) {
+      await hydrateDemoExercises({ preferFresh: true });
+      const exList = loadDemoExercises();
+      try {
+        const { blobSaved } = await mutateDemoSeed((seedData) => {
+          if (!seedData.workoutExercises) seedData.workoutExercises = [];
+          seedData.workoutExercises = pinDemoWorkoutWarmups(
+            seedData.workoutExercises as any[],
+            workoutId,
+            exList,
+            orderedIds,
+          );
+        });
+        requireBlobPersisted(blobSaved, "Exercise reorder");
+        return NextResponse.json({ ok: true });
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "Exercise reorder failed";
+        return NextResponse.json({ detail: msg }, { status: 503 });
+      }
+    }
+    try {
+      await reindexPrismaWorkoutPinned(workoutId, orderedIds);
+      return NextResponse.json({ ok: true });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Exercise reorder failed";
+      return NextResponse.json({ detail: msg }, { status: 500 });
+    }
+  }
+
+  const parsed = updateItemSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ detail: parsed.error.flatten() }, { status: 400 });
   }
@@ -243,6 +328,11 @@ export async function PATCH(request: Request, { params }: Params) {
           we.exercise = resolveDemoExercise(we.exerciseId, exList);
 
           seedData.workoutExercises[weIdx] = we;
+          seedData.workoutExercises = pinDemoWorkoutWarmups(
+            seedData.workoutExercises as any[],
+            workoutId,
+            exList,
+          );
           updated = we;
         });
 
@@ -285,7 +375,12 @@ export async function PATCH(request: Request, { params }: Params) {
       data,
       include: { exercise: true },
     });
-    return NextResponse.json(item);
+    await reindexPrismaWorkoutPinned(workoutId);
+    const pinned = await prisma.workoutExercise.findUnique({
+      where: { id: itemId },
+      include: { exercise: true },
+    });
+    return NextResponse.json(pinned ?? item);
   } catch (err) {
     console.error("workoutExercise.update failed:", err);
     const message =
@@ -329,6 +424,8 @@ export async function DELETE(request: Request, { params }: Params) {
   }
 
   if (isCoachCatalogDemo()) {
+    await hydrateDemoExercises({ preferFresh: true });
+    const exList = loadDemoExercises();
     try {
       for (let attempt = 0; attempt < 4; attempt++) {
         let removed = false;
@@ -340,9 +437,10 @@ export async function DELETE(request: Request, { params }: Params) {
           );
           removed = seedData.workoutExercises.length !== before;
           if (removed) {
-            seedData.workoutExercises = compactDemoWorkoutSortOrders(
+            seedData.workoutExercises = pinDemoWorkoutWarmups(
               seedData.workoutExercises as any[],
               workoutId,
+              exList,
             );
           }
         });
@@ -381,24 +479,12 @@ export async function DELETE(request: Request, { params }: Params) {
   try {
     await prisma.$transaction(async (tx) => {
       await tx.workoutExercise.delete({ where: { id: itemId } });
-      const remaining = await tx.workoutExercise.findMany({
-        where: { workoutId },
-        orderBy: { sortOrder: "asc" },
-        select: { id: true },
-      });
-      await Promise.all(
-        remaining.map((row, idx) =>
-          tx.workoutExercise.update({
-            where: { id: row.id },
-            data: { sortOrder: idx },
-          }),
-        ),
-      );
       await tx.workout.update({
         where: { id: workoutId },
         data: { updatedAt: new Date() },
       });
     });
+    await reindexPrismaWorkoutPinned(workoutId);
     return new NextResponse(null, { status: 204 });
   } catch (err) {
     console.error("workoutExercise.delete failed:", err);

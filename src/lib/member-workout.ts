@@ -14,7 +14,7 @@ import { prisma } from "@/lib/prisma";
 import { collapseConsecutiveCloneExercises } from "@/lib/member-workout-lines";
 import { DEFAULT_REST_TIMER_SECONDS, normalizeRestTimerSeconds } from "@/lib/rest-timer";
 import { DEFAULT_REST_TIMER_SOUND } from "@/lib/rest-timer-sound";
-import { DEFAULT_WARMUP_REST_SECONDS } from "@/lib/warmup-group";
+import { DEFAULT_WARMUP_REST_SECONDS, pinWarmupsFirst } from "@/lib/warmup-group";
 import { getCoachSettings } from "@/lib/coach-settings-store";
 
 function mapItemToBlock(item: {
@@ -113,22 +113,24 @@ async function getMemberWorkoutFromPrisma(
   if (!workout) return null;
 
   const exercises = await attachPasts(
-    collapseConsecutiveCloneExercises(
-      workout.exercises.map((item) =>
-        mapItemToBlock({
-          id: item.id,
-          exerciseId: item.exerciseId,
-          exercise: item.exercise,
-          setScheme: item.setScheme,
-          repPattern: item.repPattern,
-          reps: item.reps,
-          // Prefer structured setCount; fall back to legacy sets column.
-          sets: item.setCount ?? item.sets,
-          weightTier: item.weightTier,
-          notes: item.notes,
-          restSec: item.restSec,
-          restBetweenSetsSec: item.restBetweenSetsSec,
-        }),
+    pinWarmupsFirst(
+      collapseConsecutiveCloneExercises(
+        workout.exercises.map((item) =>
+          mapItemToBlock({
+            id: item.id,
+            exerciseId: item.exerciseId,
+            exercise: item.exercise,
+            setScheme: item.setScheme,
+            repPattern: item.repPattern,
+            reps: item.reps,
+            // Prefer structured setCount; fall back to legacy sets column.
+            sets: item.setCount ?? item.sets,
+            weightTier: item.weightTier,
+            notes: item.notes,
+            restSec: item.restSec,
+            restBetweenSetsSec: item.restBetweenSetsSec,
+          }),
+        ),
       ),
     ),
     opts?.userId,
@@ -211,14 +213,16 @@ export async function getMemberWorkoutById(
         }));
 
   const exercises = await attachPasts(
-    collapseConsecutiveCloneExercises(
-      items.map((item: any) => {
-        const ex = item.exercise?.id ? item.exercise : exById[item.exerciseId] || {};
-        return mapItemToBlock({
-          ...item,
-          exercise: ex,
-        });
-      }),
+    pinWarmupsFirst(
+      collapseConsecutiveCloneExercises(
+        items.map((item: any) => {
+          const ex = item.exercise?.id ? item.exercise : exById[item.exerciseId] || {};
+          return mapItemToBlock({
+            ...item,
+            exercise: ex,
+          });
+        }),
+      ),
     ),
     opts?.userId,
   );

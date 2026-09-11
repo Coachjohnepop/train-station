@@ -13,8 +13,10 @@ import {
   leadingWarmupCount,
   normalizeWarmupRestSeconds,
   parseWarmupNoteMovements,
+  pinWarmupsFirst,
   resolveWarmupGroup,
   shortWarmupLabel,
+  warmupPinnedOrderedIds,
   withWarmupBlockNote,
   type ExpandableWarmupExercise,
 } from "./warmup-group";
@@ -59,6 +61,46 @@ describe("leadingWarmupCount", () => {
     assert.equal(shortWarmupLabel("Warm up well 5 min bike"), "Bike");
     assert.equal(shortWarmupLabel("Band Exercises"), "Band Exercises");
     assert.ok(isWarmupWorkoutLine({ name: "Bike", notes: "Warm-up block" }));
+  });
+});
+
+describe("pinWarmupsFirst", () => {
+  it("keeps a tagged warmup that drifted into the lifts in the header", () => {
+    const pinned = pinWarmupsFirst([
+      { name: "Bike", notes: "Warm-up block" },
+      { name: "Leg Press Machine", notes: null },
+      { name: "Jump Squats", notes: "Warm-up block" },
+    ]);
+    assert.deepEqual(
+      pinned.map((row) => row.name),
+      ["Bike", "Jump Squats", "Leg Press Machine"],
+    );
+  });
+
+  it("keeps relative order inside the header and the main lifts", () => {
+    const pinned = pinWarmupsFirst([
+      { id: "m1", name: "Leg Press", notes: null },
+      { id: "w2", name: "Band Exercises", notes: "Warm-up block" },
+      { id: "m2", name: "RDL", notes: null },
+      { id: "w1", name: "Bike", notes: "Warm-up block" },
+    ]);
+    assert.deepEqual(
+      pinned.map((row) => row.id),
+      ["w2", "w1", "m1", "m2"],
+    );
+  });
+
+  it("re-pins a requested reorder so warmups stay first", () => {
+    const items = [
+      { id: "w1", name: "Bike", notes: "Warm-up block" },
+      { id: "m1", name: "Leg Press", notes: null },
+      { id: "m2", name: "RDL", notes: null },
+    ];
+    assert.deepEqual(warmupPinnedOrderedIds(items, ["m2", "w1", "m1"]), [
+      "w1",
+      "m2",
+      "m1",
+    ]);
   });
 });
 

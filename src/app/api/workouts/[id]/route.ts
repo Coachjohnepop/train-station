@@ -16,6 +16,7 @@ import {
   isSmsWorkoutId,
   patchSmsWorkout,
 } from "@/lib/sms-workout-builder-api";
+import { pinWarmupsFirst } from "@/lib/warmup-group";
 import {
   ensureStandardWarmupWorkout,
   isStandardWarmupWorkoutId,
@@ -54,7 +55,9 @@ export async function GET(_request: Request, { params }: Params) {
     if (!w) {
       return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
     }
-    const items = buildDemoWorkoutExerciseItems(id, workoutExercises, exList);
+    const items = pinWarmupsFirst(
+      buildDemoWorkoutExerciseItems(id, workoutExercises, exList),
+    );
     return NextResponse.json({ ...w, exercises: items });
   }
   const workout = await prisma.workout.findUnique({
@@ -71,16 +74,18 @@ export async function GET(_request: Request, { params }: Params) {
   }
   return NextResponse.json({
     ...workout,
-    exercises: workout.exercises.map((item) => ({
-      ...item,
-      exercise: item.exercise ?? {
-        id: item.exerciseId,
-        name: "Unknown — use Swap",
-        description: null,
-        videoUrl: null,
-        tags: null,
-      },
-    })),
+    exercises: pinWarmupsFirst(
+      workout.exercises.map((item) => ({
+        ...item,
+        exercise: item.exercise ?? {
+          id: item.exerciseId,
+          name: "Unknown — use Swap",
+          description: null,
+          videoUrl: null,
+          tags: null,
+        },
+      })),
+    ),
   });
 }
 
@@ -234,7 +239,10 @@ export async function PATCH(request: Request, { params }: Params) {
         },
       },
     });
-    return NextResponse.json(workout);
+    return NextResponse.json({
+      ...workout,
+      exercises: pinWarmupsFirst(workout.exercises),
+    });
   } catch {
     return NextResponse.json({ detail: "Workout not found" }, { status: 404 });
   }

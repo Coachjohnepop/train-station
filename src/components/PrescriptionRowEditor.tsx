@@ -10,6 +10,11 @@ import {
 import { buildPrescriptionSummary } from "@/lib/prescription-example-summary";
 import { WEIGHT_TIERS, type WeightTierId } from "@/lib/workout-schemes";
 import { DEFAULT_REST_TIMER_SECONDS } from "@/lib/rest-timer";
+import {
+  HIT_REST_PRESETS,
+  HIT_WORK_PRESETS,
+  nextHitRestSec,
+} from "@/lib/hit-intervals";
 
 type Props = {
   exerciseName: string;
@@ -156,8 +161,9 @@ export default function PrescriptionRowEditor({
                   setPatternType(next);
                   if (next === "hit_intervals") {
                     setSetCount((c) => (c >= 4 ? c : 10));
-                    setPhase1DurationSec((d) => d ?? 20);
-                    setPhase2DurationSec((d) => d ?? 20);
+                    const work = phase1DurationSec ?? 20;
+                    setPhase1DurationSec(work);
+                    setPhase2DurationSec(work);
                   }
                 }}
               >
@@ -290,15 +296,15 @@ export default function PrescriptionRowEditor({
                   {patternType === "hit_intervals" ? "Work (seconds)" : "Work interval (seconds)"}
                 </p>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {[10, 15, 20, 30, 45, 60].map((n) => (
+                  {(patternType === "hit_intervals" ? HIT_WORK_PRESETS : [10, 15, 20, 30, 45, 60]).map((n) => (
                     <button
                       key={n}
                       type="button"
                       className={`coach-floor-set-btn min-w-[2.25rem] ${phase1DurationSec === n ? "ring-2 ring-accent" : ""}`}
                       onClick={() => {
                         setPhase1DurationSec(n);
-                        if (patternType === "hit_intervals" && (phase2DurationSec == null || phase2DurationSec === phase1DurationSec)) {
-                          setPhase2DurationSec(n);
+                        if (patternType === "hit_intervals") {
+                          setPhase2DurationSec(nextHitRestSec(n));
                         }
                       }}
                     >
@@ -340,14 +346,14 @@ export default function PrescriptionRowEditor({
               <div>
                 <p className="text-sm font-medium">Rest (seconds)</p>
                 <p className="mt-0.5 text-[11px] text-[var(--muted)]">
-                  Same as work unless you pick a different rest.
+                  Same as work — 20/20, 30/30, 40/40. Change rest only if you need a split.
                 </p>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {[10, 15, 20, 30, 45, 60].map((n) => (
+                  {HIT_REST_PRESETS.map((n) => (
                     <button
                       key={n}
                       type="button"
-                      className={`coach-floor-set-btn min-w-[2.25rem] ${phase2DurationSec === n ? "ring-2 ring-accent" : ""}`}
+                      className={`coach-floor-set-btn min-w-[2.25rem] ${(phase2DurationSec ?? phase1DurationSec) === n ? "ring-2 ring-accent" : ""}`}
                       onClick={() => setPhase2DurationSec(n)}
                     >
                       {n}

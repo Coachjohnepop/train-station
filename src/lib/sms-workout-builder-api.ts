@@ -7,7 +7,30 @@ import {
   readSmsWorkoutStore,
   writeSmsWorkoutStore,
 } from "@/lib/sms-generated-workouts";
+import { pinWarmupsFirst, warmupPinnedOrderedIds } from "@/lib/warmup-group";
 import { randomUUID } from "crypto";
+import type { SmsWorkoutStore } from "@/lib/sms-workouts-types";
+
+function pinSmsStoreExercises(
+  store: SmsWorkoutStore,
+  workoutId: string,
+  orderedIds?: string[],
+) {
+  const rows = store.workoutExercises.filter((we) => we.workoutId === workoutId);
+  const ids = warmupPinnedOrderedIds(
+    rows.map((we) => ({
+      id: we.id,
+      name: we.blockName || "",
+      notes: we.notes,
+    })),
+    orderedIds,
+  );
+  const idToOrder = new Map(ids.map((id, idx) => [id, idx]));
+  for (const we of store.workoutExercises) {
+    if (we.workoutId !== workoutId || !idToOrder.has(we.id)) continue;
+    we.sortOrder = idToOrder.get(we.id)!;
+  }
+}
 
 async function persistSmsWorkoutStore(
   store: Awaited<ReturnType<typeof readSmsWorkoutStore>>,
@@ -106,11 +129,13 @@ async function loadSmsWorkoutForBuilder(
     description: workout.description ?? "Generated from coach SMS",
     exportText: workout.exportText ?? null,
     certifiedAt: workout.certifiedAt ?? null,
-    exercises: items.map((item) =>
-      itemToBuilder(
-        item,
-        toBuilderExercise(
-          exById[item.exerciseId] || { id: item.exerciseId, name: "Exercise", videoUrl: null },
+    exercises: pinWarmupsFirst(
+      items.map((item) =>
+        itemToBuilder(
+          item,
+          toBuilderExercise(
+            exById[item.exerciseId] || { id: item.exerciseId, name: "Exercise", videoUrl: null },
+          ),
         ),
       ),
     ),
@@ -208,6 +233,7 @@ export async function addSmsWorkoutExercise(
     weightTier: data.weightTier,
   };
   store.workoutExercises.push(item);
+  pinSmsStoreExercises(store, workoutId);
   await persistSmsWorkoutStore(store, "Exercise add");
 
   const verified = await verifySmsWorkoutPersisted(
@@ -248,6 +274,7 @@ export async function patchSmsWorkoutExercise(
   if (data.sortOrder !== undefined) item.sortOrder = data.sortOrder;
 
   store.workoutExercises[idx] = item;
+  pinSmsStoreExercises(store, workoutId);
   await persistSmsWorkoutStore(store, "Exercise update");
 
   const verified = await verifySmsWorkoutPersisted(
@@ -265,6 +292,18 @@ export async function patchSmsWorkoutExercise(
   return verified.exercises.find((row) => row.id === itemId) ?? null;
 }
 
+export async function reorderSmsWorkoutExercises(
+  workoutId: string,
+  orderedIds: string[],
+): Promise<BuilderWorkout | null> {
+  await hydrateSmsWorkouts();
+  const store = readSmsWorkoutStore();
+  if (!store.workouts.some((w) => w.id === workoutId)) return null;
+  pinSmsStoreExercises(store, workoutId, orderedIds);
+  await persistSmsWorkoutStore(store, "Exercise reorder");
+  return verifySmsWorkoutPersisted(workoutId, () => true, "Exercise reorder");
+}
+
 export async function deleteSmsWorkoutExercise(
   workoutId: string,
   itemId: string,
@@ -277,12 +316,7 @@ export async function deleteSmsWorkoutExercise(
   );
   if (store.workoutExercises.length === before) return false;
 
-  const remaining = store.workoutExercises
-    .filter((we) => we.workoutId === workoutId)
-    .sort((a, b) => a.sortOrder - b.sortOrder);
-  remaining.forEach((we, index) => {
-    we.sortOrder = index;
-  });
+  pinSmsStoreExercises(store, workoutId);
 
   await persistSmsWorkoutStore(store, "Exercise remove");
   await verifySmsWorkoutPersisted(

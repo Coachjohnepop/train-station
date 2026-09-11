@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   formatHitReps,
   formatHitSummary,
+  nextHitRestSec,
   parseHitReps,
   resolveHitInterval,
 } from "./hit-intervals";
@@ -49,5 +50,12 @@ describe("HIT intervals", () => {
   it("stores equal intervals as 20s and splits as 20/15", () => {
     assert.equal(formatHitReps(20, 20), "20s");
     assert.equal(formatHitReps(20, 15), "20/15");
+  });
+
+  it("sets rest equal to work for 20/20, 30/30, 40/40", () => {
+    assert.equal(nextHitRestSec(20), 20);
+    assert.equal(nextHitRestSec(30), 30);
+    assert.equal(nextHitRestSec(40), 40);
+    assert.equal(formatHitReps(40, 40), "40s");
   });
 });

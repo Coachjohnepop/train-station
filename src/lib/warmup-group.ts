@@ -45,16 +45,59 @@ export function withWarmupBlockNote(
   return parts.length ? parts.join(" · ") : null;
 }
 
-/** A line is warm-up if Jeremy tagged it, or it is a standard template name. */
-export function isWarmupWorkoutLine(ex: {
-  name: string;
+export type WarmupLineLike = {
+  id?: string;
+  name?: string | null;
   notes?: string | null;
   coachNotes?: string | null;
   description?: string | null;
-}): boolean {
+  exercise?: { name?: string | null } | null;
+};
+
+export function warmupLineName(ex: WarmupLineLike): string {
+  return String(ex.exercise?.name || ex.name || "").trim();
+}
+
+/** A line is warm-up if Jeremy tagged it, or it is a standard template name. */
+export function isWarmupWorkoutLine(ex: WarmupLineLike): boolean {
   const notes = `${ex.notes || ""} ${ex.coachNotes || ""} ${ex.description || ""}`;
   if (notesMarkWarmup(notes)) return true;
-  return isStandardWarmupLineName(ex.name);
+  return isStandardWarmupLineName(warmupLineName(ex));
+}
+
+/**
+ * Warm-ups stay first, like a frozen sheet header, while keeping relative
+ * order inside the header and inside the main lifts.
+ */
+export function pinWarmupsFirst<T extends WarmupLineLike>(items: T[]): T[] {
+  const warmups: T[] = [];
+  const mains: T[] = [];
+  for (const item of items) {
+    if (isWarmupWorkoutLine(item)) warmups.push(item);
+    else mains.push(item);
+  }
+  return [...warmups, ...mains];
+}
+
+/** Persist sortOrder so members see the same header-first sheet. */
+export function warmupPinnedOrderedIds<T extends WarmupLineLike & { id: string }>(
+  items: T[],
+  requestedIds?: string[],
+): string[] {
+  const byId = new Map(items.map((item) => [item.id, item]));
+  const seen = new Set<string>();
+  const sequence: T[] = [];
+  for (const id of requestedIds ?? []) {
+    const item = byId.get(id);
+    if (!item || seen.has(id)) continue;
+    seen.add(id);
+    sequence.push(item);
+  }
+  for (const item of items) {
+    if (seen.has(item.id)) continue;
+    sequence.push(item);
+  }
+  return pinWarmupsFirst(sequence).map((item) => item.id);
 }
 
 /**

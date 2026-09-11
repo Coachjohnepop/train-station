@@ -11,8 +11,9 @@
 
 export const HIT_APPROACH_ID = "hit" as const;
 
-export const HIT_WORK_PRESETS = [10, 15, 20, 30, 45, 60] as const;
-export const HIT_REST_PRESETS = [10, 15, 20, 30, 45, 60] as const;
+/** Usual floor pairs: 20/20, 30/30, 40/40. Extra chips stay available. */
+export const HIT_WORK_PRESETS = [20, 30, 40, 10, 15, 45, 60] as const;
+export const HIT_REST_PRESETS = [20, 30, 40, 10, 15, 45, 60] as const;
 export const HIT_ROUND_COUNTS = [4, 6, 8, 10] as const;
 
 export const DEFAULT_HIT_WORK_SEC = 20;
@@ -83,6 +84,11 @@ export function formatHitReps(workSec: number, restSec: number): string {
   const w = clampSec(workSec);
   const r = clampSec(restSec);
   return w === r ? `${w}s` : `${w}/${r}`;
+}
+
+/** Picking work sets rest to the same length (20/20, 30/30, 40/40). */
+export function nextHitRestSec(nextWorkSec: number): number {
+  return clampSec(nextWorkSec);
 }
 
 export function resolveHitInterval(input: {

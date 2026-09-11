@@ -2,6 +2,7 @@ import type { PrescriptionExampleRow } from "@/lib/prescription-example-types";
 import { inferPrescriptionFromLegacy } from "@/lib/workout-prescription-backfill";
 import type { SetApproachId } from "@/lib/workout-schemes";
 import { DEFAULT_REST_TIMER_SECONDS } from "@/lib/rest-timer";
+import { parseHitReps } from "@/lib/hit-intervals";
 
 type LegacyItem = {
   setScheme: string | null;
@@ -46,10 +47,9 @@ export function legacyWorkoutItemToPrescriptionDraft(
   );
 
   if ((item.setScheme || "").toLowerCase() === "hit") {
-    const workMatch = (item.reps || "20").match(/(\d+)/);
-    const pair = (item.reps || "").match(/(\d+)\s*\/\s*(\d+)/);
-    const work = Number(workMatch?.[1] || 20);
-    const rest = pair ? Number(pair[2]) : item.restSec && item.restSec > 0 ? item.restSec : work;
+    const parsed = parseHitReps(item.reps);
+    const work = parsed?.workSec ?? 20;
+    const rest = parsed?.restSec ?? work;
     return {
       patternType: "hit_intervals",
       sampleExercise: exerciseName ?? item.exercise?.name ?? "Exercise",

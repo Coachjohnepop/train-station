@@ -16,7 +16,12 @@ import {
   normalizePrescription,
   weightTierLabel,
 } from "@/lib/workout-schemes";
-import { notesMarkWarmup, withWarmupBlockNote } from "@/lib/warmup-group";
+import {
+  isWarmupWorkoutLine,
+  notesMarkWarmup,
+  pinWarmupsFirst,
+  withWarmupBlockNote,
+} from "@/lib/warmup-group";
 import { isStandardWarmupWorkoutId } from "@/lib/warmup-template";
 import PencilButton from "@/components/PencilButton";
 
@@ -33,10 +38,22 @@ type WorkoutItem = {
   repPattern: string | null;
   reps: string | null;
   sets: number | null;
+  restSec?: number | null;
   weightTier: string | null;
   notes: string | null;
   exercise: Exercise;
 };
+
+function itemIsWarmup(item: WorkoutItem): boolean {
+  return isWarmupWorkoutLine({
+    name: item.exercise.name,
+    notes: item.notes,
+  });
+}
+
+function withPinnedSort(items: WorkoutItem[]): WorkoutItem[] {
+  return pinWarmupsFirst(items).map((row, idx) => ({ ...row, sortOrder: idx }));
+}
 
 type Workout = {
   id: string;
@@ -64,12 +81,14 @@ export default function WorkoutBuilder({
   onContinue,
   continueLabel = "Continue to assign class →",
   headerNote,
+  onSaved,
 }: {
   workoutId: string;
   embedded?: boolean;
   onContinue?: () => void;
   continueLabel?: string;
   headerNote?: React.ReactNode;
+  onSaved?: () => void;
 }) {
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [library, setLibrary] = useState<Exercise[]>([]);
@@ -89,6 +108,14 @@ export default function WorkoutBuilder({
   const [savingRename, setSavingRename] = useState(false);
   const nameSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => {
+    if (!editingItemId && !pickId) return;
+    document.getElementById("workout-builder-edit-dock")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [editingItemId, pickId]);
+
   const load = useCallback(async () => {
     setLoadError(null);
     const maxAttempts = workoutId.startsWith("new-w-") ? 4 : 1;
@@ -105,7 +132,10 @@ export default function WorkoutBuilder({
 
       const body = await wRes.json().catch(() => null);
       if (wRes.ok && isWorkoutPayload(body)) {
-        setWorkout(body);
+        setWorkout({
+          ...body,
+          exercises: withPinnedSort(body.exercises),
+        });
         setLoading(false);
         return;
       }
@@ -178,15 +208,14 @@ export default function WorkoutBuilder({
       const saved = (await res.json()) as WorkoutItem;
       setWorkout((prev) => {
         if (!prev) return prev;
-        if (itemId) {
-          return {
-            ...prev,
-            exercises: prev.exercises.map((row) =>
-              row.id === itemId ? { ...row, ...saved, exercise: saved.exercise ?? row.exercise } : row,
-            ),
-          };
-        }
-        return { ...prev, exercises: [...prev.exercises, saved] };
+        const nextItems = itemId
+          ? prev.exercises.map((row) =>
+              row.id === itemId
+                ? { ...row, ...saved, exercise: saved.exercise ?? row.exercise }
+                : row,
+            )
+          : [...prev.exercises, saved];
+        return { ...prev, exercises: withPinnedSort(nextItems) };
       });
 
       if (itemId) {
@@ -197,8 +226,9 @@ export default function WorkoutBuilder({
         setAddAsWarmup(isStandardWarmupWorkoutId(workoutId));
         setSaveMessage(`Added “${saved.exercise?.name ?? "exercise"}”.`);
       }
+      onSaved?.();
     },
-    [workoutId, addAsWarmup],
+    [workoutId, addAsWarmup, onSaved],
   );
 
   const defaultPrescriptionDraft = useCallback(
@@ -254,6 +284,48 @@ export default function WorkoutBuilder({
     setSaveMessage(
       item ? `Removed “${item.exercise.name}”.` : "Exercise removed.",
     );
+    onSaved?.();
+  }
+
+  async function persistOrder(orderedIds: string[]) {
+    setSaveError(null);
+    const res = await fetch(`/api/workouts/${workoutId}/exercises`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderedIds }),
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as {
+        detail?: unknown;
+      } | null;
+      setSaveError(
+        formatApiErrorDetail(body?.detail) ||
+          "Could not save exercise order — try again.",
+      );
+      await load();
+      return;
+    }
+    onSaved?.();
+  }
+
+  function moveItem(itemId: string, direction: -1 | 1) {
+    if (!workout) return;
+    const warmups = workout.exercises.filter(itemIsWarmup);
+    const mains = workout.exercises.filter((row) => !itemIsWarmup(row));
+    const inWarmup = warmups.some((row) => row.id === itemId);
+    const list = inWarmup ? [...warmups] : [...mains];
+    const idx = list.findIndex((row) => row.id === itemId);
+    const next = idx + direction;
+    if (idx < 0 || next < 0 || next >= list.length) return;
+    const swapped = [...list];
+    const a = swapped[idx];
+    const b = swapped[next];
+    if (!a || !b) return;
+    swapped[idx] = b;
+    swapped[next] = a;
+    const ordered = withPinnedSort(inWarmup ? [...swapped, ...mains] : [...warmups, ...swapped]);
+    setWorkout({ ...workout, exercises: ordered });
+    void persistOrder(ordered.map((row) => row.id));
   }
 
   function applyRenamedExercise(exerciseId: string, name: string) {
@@ -331,10 +403,11 @@ export default function WorkoutBuilder({
       const updated = await res.json();
       setWorkout((prev) => (prev ? { ...prev, name: updated.name ?? trimmed } : prev));
       setSaveMessage(`Workout renamed to “${updated.name ?? trimmed}”.`);
+      onSaved?.();
     } finally {
       setSavingName(false);
     }
-  }, [workout, workoutId]);
+  }, [workout, workoutId, onSaved]);
 
   useEffect(() => {
     return () => {
@@ -354,6 +427,8 @@ export default function WorkoutBuilder({
     [workout],
   );
 
+  const warmupItems = workout?.exercises.filter(itemIsWarmup) ?? [];
+  const mainItems = workout?.exercises.filter((row) => !itemIsWarmup(row)) ?? [];
   const pickedExercise = library.find((e) => e.id === pickId);
   const editingItem = workout?.exercises.find((i) => i.id === editingItemId);
 
@@ -451,12 +526,12 @@ export default function WorkoutBuilder({
         </p>
       </div>
 
-      <div className="card space-y-3">
+      <div id="workout-builder-edit-dock" className="card space-y-3 scroll-mt-4">
         <div className="flex flex-wrap items-end gap-3">
           <label className="min-w-[12rem] flex-1 text-sm">
             <span className="font-medium">Add from library</span>
             <select
-              className="input mt-1.5"
+              className="input mt-1.5 min-h-11"
               value={pickId}
               onChange={(e) => {
                 setPickId(e.target.value);
@@ -488,6 +563,7 @@ export default function WorkoutBuilder({
               Warm-up movement (saved as its own exercise, grouped on the member card)
             </label>
             <PrescriptionRowEditor
+              key={`add-${pickedExercise.id}`}
               exerciseName={pickedExercise.name}
               initial={defaultPrescriptionDraft(pickedExercise.name)}
               confirmLabel="Add to workout"
@@ -508,6 +584,7 @@ export default function WorkoutBuilder({
               Warm-up movement (saved as its own exercise, grouped on the member card)
             </label>
             <PrescriptionRowEditor
+              key={editingItem.id}
               exerciseName={editingItem.exercise.name}
               initial={legacyWorkoutItemToPrescriptionDraft(editingItem, editingItem.exercise.name)}
               confirmLabel="Save changes"
@@ -535,115 +612,183 @@ export default function WorkoutBuilder({
         </p>
       )}
 
-      <ul className="space-y-2">
-        {workout.exercises.map((item, index) => (
-          <li
-            key={item.id}
-            className="card flex flex-wrap items-center justify-between gap-3 py-3"
+      {(
+        [
+          {
+            key: "warmup" as const,
+            title: "Warm-up",
+            note: "Always first, like the header on a sheet. Edit or reorder here — these stay on top for the class.",
+            items: warmupItems,
+            empty: "No warm-up yet — check Warm-up movement when adding from the library.",
+          },
+          {
+            key: "main" as const,
+            title: "Workout",
+            note: "Main lifts. Move up or down inside this list; they stay under the warm-up header.",
+            items: mainItems,
+            empty: pickId
+              ? null
+              : workout.exercises.length === 0
+                ? "No exercises yet — pick one from the library above."
+                : "No main lifts yet — add from the library without the Warm-up box checked.",
+          },
+        ] as const
+      ).map((section) => (
+        <section
+          key={section.key}
+          className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]"
+        >
+          <div
+            className={`border-b border-[var(--border)] px-4 py-2.5 ${
+              section.key === "warmup"
+                ? "bg-[color-mix(in_srgb,var(--ramp-gold)_14%,transparent)]"
+                : "bg-[var(--surface-2)]"
+            }`}
           >
-            <div className="min-w-0 flex-1">
-              <p className="font-medium">
-                <span className="mr-2 text-xs text-[var(--muted)]">{index + 1}.</span>
-                {renamingItemId === item.id ? (
-                  <span className="inline-flex max-w-full flex-wrap items-center gap-1.5 align-middle">
-                    <input
-                      className="input h-8 min-w-[10rem] flex-1 py-0 text-sm font-medium"
-                      value={renameDraft}
-                      autoFocus
-                      aria-label={`Rename ${item.exercise.name}`}
-                      disabled={savingRename}
-                      onChange={(e) => setRenameDraft(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          void saveExerciseRename(item);
-                        }
-                        if (e.key === "Escape") {
-                          e.preventDefault();
-                          setRenamingItemId(null);
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="btn-primary px-2 py-1 text-xs"
-                      disabled={savingRename}
-                      onClick={() => void saveExerciseRename(item)}
-                    >
-                      {savingRename ? "Saving…" : "Save"}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-ghost px-2 py-1 text-xs"
-                      disabled={savingRename}
-                      onClick={() => setRenamingItemId(null)}
-                    >
-                      Cancel
-                    </button>
-                  </span>
-                ) : (
-                  <span className="inline-flex max-w-full items-center gap-1 align-middle">
-                    <span className="min-w-0 truncate">{item.exercise.name}</span>
-                    <PencilButton
-                      label={`Rename ${item.exercise.name} in the library`}
-                      onClick={() => {
-                        setRenamingItemId(item.id);
-                        setRenameDraft(item.exercise.name);
-                        setSaveError(null);
-                      }}
-                    />
-                  </span>
-                )}
-                {notesMarkWarmup(item.notes || "") ? (
-                  <span className="ml-2 rounded-full bg-[color-mix(in_srgb,var(--ramp-gold)_22%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--ramp-gold-light)]">
-                    Warm-up
-                  </span>
-                ) : null}
-              </p>
-              <p className="mt-0.5 text-sm text-[var(--muted)]">
-                {approachLabel(normalizePrescription(item).approach)} ·{" "}
-                {formatPrescriptionSummary(item)} · {weightTierLabel(item.weightTier)}
-              </p>
-              {item.notes && (
-                <p
-                  className="mt-1 line-clamp-2 text-xs text-violet-300/90"
-                  title={item.notes}
+            <p className="text-xs font-semibold uppercase tracking-wide">
+              {section.title}
+            </p>
+            <p className="mt-0.5 text-[11px] text-[var(--muted)]">{section.note}</p>
+          </div>
+          <ul className="divide-y divide-[var(--border)]">
+            {section.items.map((item, sectionIndex) => {
+              const index =
+                section.key === "warmup"
+                  ? sectionIndex + 1
+                  : warmupItems.length + sectionIndex + 1;
+              return (
+                <li
+                  key={item.id}
+                  className="flex flex-wrap items-center justify-between gap-3 px-3 py-3"
                 >
-                  <span className="font-semibold uppercase tracking-wide text-violet-400/80">
-                    Coach note:{" "}
-                  </span>
-                  {item.notes}
-                </p>
-              )}
-            </div>
-            <div className="flex shrink-0 gap-2">
-              <button
-                type="button"
-                className="btn-ghost text-sm"
-                onClick={() => {
-                  setPickId("");
-                  setAddAsWarmup(notesMarkWarmup(item.notes || ""));
-                  setEditingItemId(item.id);
-                }}
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                className="text-sm text-[var(--danger)]"
-                onClick={() => removeItem(item.id)}
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-        ))}
-        {workout.exercises.length === 0 && !pickId && (
-          <p className="text-sm text-[var(--muted)]">
-            No exercises yet — pick one from the library above.
-          </p>
-        )}
-      </ul>
+                  <div className="flex min-w-0 flex-1 items-start gap-2">
+                    <div className="mt-0.5 flex shrink-0 flex-col gap-0.5">
+                      <button
+                        type="button"
+                        className="min-h-8 rounded px-1.5 text-[10px] leading-none text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] disabled:opacity-25"
+                        disabled={sectionIndex === 0}
+                        title="Move up"
+                        aria-label={`Move ${item.exercise.name} up`}
+                        onClick={() => moveItem(item.id, -1)}
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        className="min-h-8 rounded px-1.5 text-[10px] leading-none text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] disabled:opacity-25"
+                        disabled={sectionIndex === section.items.length - 1}
+                        title="Move down"
+                        aria-label={`Move ${item.exercise.name} down`}
+                        onClick={() => moveItem(item.id, 1)}
+                      >
+                        ▼
+                      </button>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">
+                        <span className="mr-2 text-xs text-[var(--muted)]">{index}.</span>
+                        {renamingItemId === item.id ? (
+                          <span className="inline-flex max-w-full flex-wrap items-center gap-1.5 align-middle">
+                            <input
+                              className="input h-8 min-w-[10rem] flex-1 py-0 text-sm font-medium"
+                              value={renameDraft}
+                              autoFocus
+                              aria-label={`Rename ${item.exercise.name}`}
+                              disabled={savingRename}
+                              onChange={(e) => setRenameDraft(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  void saveExerciseRename(item);
+                                }
+                                if (e.key === "Escape") {
+                                  e.preventDefault();
+                                  setRenamingItemId(null);
+                                }
+                              }}
+                            />
+                            <button
+                              type="button"
+                              className="btn-primary px-2 py-1 text-xs"
+                              disabled={savingRename}
+                              onClick={() => void saveExerciseRename(item)}
+                            >
+                              {savingRename ? "Saving…" : "Save"}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-ghost px-2 py-1 text-xs"
+                              disabled={savingRename}
+                              onClick={() => setRenamingItemId(null)}
+                            >
+                              Cancel
+                            </button>
+                          </span>
+                        ) : (
+                          <span className="inline-flex max-w-full items-center gap-1 align-middle">
+                            <span className="min-w-0 truncate">{item.exercise.name}</span>
+                            <PencilButton
+                              label={`Rename ${item.exercise.name} in the library`}
+                              onClick={() => {
+                                setRenamingItemId(item.id);
+                                setRenameDraft(item.exercise.name);
+                                setSaveError(null);
+                              }}
+                            />
+                          </span>
+                        )}
+                        {notesMarkWarmup(item.notes || "") ? (
+                          <span className="ml-2 rounded-full bg-[color-mix(in_srgb,var(--ramp-gold)_22%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--ramp-gold-light)]">
+                            Warm-up
+                          </span>
+                        ) : null}
+                      </p>
+                      <p className="mt-0.5 text-sm text-[var(--muted)]">
+                        {approachLabel(normalizePrescription(item).approach)} ·{" "}
+                        {formatPrescriptionSummary(item)} · {weightTierLabel(item.weightTier)}
+                      </p>
+                      {item.notes && (
+                        <p
+                          className="mt-1 line-clamp-2 text-xs text-violet-300/90"
+                          title={item.notes}
+                        >
+                          <span className="font-semibold uppercase tracking-wide text-violet-400/80">
+                            Coach note:{" "}
+                          </span>
+                          {item.notes}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      type="button"
+                      className="btn-ghost min-h-11 px-3 text-sm"
+                      onClick={() => {
+                        setPickId("");
+                        setAddAsWarmup(notesMarkWarmup(item.notes || ""));
+                        setEditingItemId(item.id);
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="min-h-11 px-3 text-sm font-semibold text-[var(--danger)]"
+                      onClick={() => removeItem(item.id)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+            {section.items.length === 0 && section.empty ? (
+              <li className="px-4 py-3 text-sm text-[var(--muted)]">{section.empty}</li>
+            ) : null}
+          </ul>
+        </section>
+      ))}
 
       {parsedForExport && !embedded ? (
         <WorkoutCertifyPanel
