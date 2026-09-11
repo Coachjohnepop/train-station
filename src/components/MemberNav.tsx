@@ -365,6 +365,13 @@ export default function MemberNav({
             </Link>
           ))}
           <Link
+            href="/member/nutrition/list"
+            onClick={() => setNutritionOpen(false)}
+            className="member-nav-more-link"
+          >
+            <span>Shopping list</span>
+          </Link>
+          <Link
             href="/member/book?purpose=nutrition"
             onClick={() => setNutritionOpen(false)}
             className="member-nav-more-link member-nav-nutrition-advisory"

@@ -77,6 +77,7 @@ model User {
   weatherLogs        UserWeatherLog[]
   promptResponses    PromptResponse[]
   measurements       UserMeasurement[]
+  shoppingList       MemberShoppingList?
   analyticsSessions  AnalyticsSession[]
   analyticsEvents    AnalyticsEvent[]
   subscriptionPayments FactSubscriptionPayment[]
@@ -1297,6 +1298,52 @@ model MemberContentSettings {
   nutritionCalendlyUrl   String?
   nutritionDesk          Json     @default("{}")
   updatedAt              DateTime @updatedAt
+}
+
+/// Jeremy's cleanse grocery table — coach-editable. Used to Trainstationize member lists.
+model ApprovedGroceryFood {
+  id         String    @id @default(cuid())
+  name       String
+  /// Comma or newline separated extra names (chicken thighs, 80/20, bacon).
+  aliases    String    @default("") @db.Text
+  category   String
+  whyGood    String    @db.Text
+  /// Why the typical grocery version / fatty swap is off the cleanse.
+  whyAvoid   String    @db.Text
+  sortOrder  Int       @default(0)
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([category])
+  @@index([archivedAt])
+}
+
+/// One shopping checklist per member (phone grocery run).
+model MemberShoppingList {
+  id        String                   @id @default(cuid())
+  userId    String                   @unique
+  user      User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime                 @default(now())
+  updatedAt DateTime                 @updatedAt
+  items     MemberShoppingListItem[]
+}
+
+model MemberShoppingListItem {
+  id               String             @id @default(cuid())
+  listId           String
+  list             MemberShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  label            String
+  originalLabel    String
+  checked          Boolean            @default(false)
+  sortOrder        Int                @default(0)
+  approvedFoodId   String?
+  swapNote         String?            @db.Text
+  trainstationized Boolean            @default(false)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([listId, sortOrder])
 }
 
 /// Coach video library rows (Admin → Videos). Binary files stay on Blob.

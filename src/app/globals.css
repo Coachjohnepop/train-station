@@ -2266,6 +2266,99 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   color: var(--accent-fg);
 }
 
+/* Grocery run: two columns, fills the phone, thumb-sized checks. */
+.shop-check-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.shop-check-cell {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: start;
+  gap: 0.15rem 0.35rem;
+  min-height: 3.15rem;
+  padding: 0.45rem 0.4rem;
+  border-radius: 0.85rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+
+.shop-check-cell--fade {
+  opacity: 0;
+  transform: scale(0.96);
+}
+
+.shop-check-cell--done {
+  opacity: 0.45;
+}
+
+.shop-check-cell--off {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+
+.shop-check-box {
+  grid-row: 1;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 0.4rem;
+  border: 2px solid var(--accent);
+  background: transparent;
+  color: var(--on-accent);
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.shop-check-cell--done .shop-check-box {
+  background: var(--accent);
+}
+
+.shop-check-label {
+  grid-row: 1;
+  text-align: left;
+  min-width: 0;
+}
+
+.shop-check-name {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.shop-check-from {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.65rem;
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.shop-check-x {
+  grid-row: 1;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 999px;
+  font-size: 1.05rem;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.shop-check-why {
+  grid-column: 1 / -1;
+  margin: 0.15rem 0 0;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
 .member-text-scale {
   display: flex;
   align-items: center;

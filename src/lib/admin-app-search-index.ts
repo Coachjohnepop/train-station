@@ -199,6 +199,23 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
     keywords: ["gear", "shop", "amazon", "product", "equipment catalog"],
   },
   {
+    id: "coach-grocery",
+    title: "Grocery list",
+    description: "Jeremy’s cleanse foods — Trainstationize member shopping lists",
+    href: "/admin/grocery",
+    workspace: "coach",
+    group: "Content",
+    keywords: [
+      "grocery",
+      "shopping list",
+      "trainstationize",
+      "keto",
+      "bacon",
+      "nutrition food",
+      "approved foods",
+    ],
+  },
+  {
     id: "coach-landing",
     title: "Landing",
     description: "Public landing media, videos, Venmo QR",

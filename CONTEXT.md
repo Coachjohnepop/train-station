@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-11 (shopping list + Trainstationize)
+
+**Status:** Members open **Nutrition → Shopping list**. Two-column phone checklist, type/paste, checkboxes persist in Postgres. **Trainstationize** matches Jeremy’s cleanse table first (keto carbs, low-fat proteins, no bacon / fatty cuts); leftovers go through Grok against that table. Items fade and come back with why-in / why-out. Coach edits **Admin → Grocery list**. v1 is one cleanse list plus copy: 3-month cleanse, desire meal maybe once a month after goal weight. Apply `20260911120000_grocery_shopping` then `npm run db:lockdown-postgrest`.
+
 **Date:** 2026-09-11 (Nutrition menu vs live Join bar)
 
 **Status:** Live Class full-width bar sat in the same sticky chrome as the nav and painted over Nutrition / More. Header Join stays. When coach is live, the strip is a compact Join on the right (`pointer-events` only on the button). Header stacks above the strip so dropdowns cover it.
