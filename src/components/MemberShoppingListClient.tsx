@@ -51,16 +51,16 @@ export default function MemberShoppingListClient() {
     void load();
   }, [load]);
 
-  async function addItems(e: React.FormEvent) {
-    e.preventDefault();
-    if (!draft.trim()) return;
+  async function addFromText(text: string) {
+    const next = text.trim();
+    if (!next || busy === "add") return;
     setBusy("add");
     setError(null);
     try {
       const res = await fetch("/api/member/shopping-list", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: draft }),
+        body: JSON.stringify({ text: next }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not add.");
@@ -71,6 +71,18 @@ export default function MemberShoppingListClient() {
     } finally {
       setBusy(null);
     }
+  }
+
+  function addItems(e: React.FormEvent) {
+    e.preventDefault();
+    void addFromText(draft);
+  }
+
+  function onDraftPaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    const pasted = e.clipboardData.getData("text");
+    if (!/[\n,;]/.test(pasted)) return;
+    e.preventDefault();
+    void addFromText(pasted);
   }
 
   async function toggle(item: Item) {
@@ -130,11 +142,15 @@ export default function MemberShoppingListClient() {
       <p className="text-sm leading-relaxed text-[var(--muted)]">{note}</p>
 
       <form onSubmit={addItems} className="space-y-2">
-        <textarea
+        <input
+          type="text"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          rows={3}
-          placeholder="Add items — one per line, or paste a list"
+          onPaste={onDraftPaste}
+          enterKeyHint="done"
+          autoComplete="off"
+          autoCapitalize="sentences"
+          placeholder="Item name — Enter adds it, or paste a list"
           className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
         />
         <div className="flex flex-wrap gap-2">
