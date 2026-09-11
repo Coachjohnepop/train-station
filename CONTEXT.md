@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-11 (Nutrition menu vs live Join bar)
+
+**Status:** Live Class full-width bar sat in the same sticky chrome as the nav and painted over Nutrition / More. Header Join stays. When coach is live, the strip is a compact Join on the right (`pointer-events` only on the button). Header stacks above the strip so dropdowns cover it.
+
 **Date:** 2026-09-11 (rest timer random-on)
 
 **Status:** Rest popup was opening without a set check. Client used a completedSets diff fallback when `restActive` was missing (hydrate / HIT / uncheck races), and Skip could be resurrected by poll/SSE after the 4s suppress window. Skip-clear was also dropped if the PUT failed. Rest is **restActive-only** on the remote path; skipped/expired windows stay ignored; skip retries until save succeeds. Loop: `node scripts/rest-timer-loop.mjs` (147/147 on prod API).

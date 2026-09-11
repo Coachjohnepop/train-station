@@ -416,6 +416,31 @@ html[data-ts-text-scale="xl"] {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
+/* Header (nav + Nutrition/More menus) stacks above the live strip so dropdowns
+   are not cut through by Join / Ping Coach. Join stays in the header. */
+.member-sticky-chrome > .app-shell-header {
+  position: relative;
+  z-index: 2;
+}
+
+.member-sticky-chrome .member-live-strip {
+  position: relative;
+  z-index: 1;
+}
+
+/* Coach-is-live: no full-width opaque bar — just Join on the right, under menus. */
+.member-live-strip__join-slot {
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+  padding: 0.35rem max(1rem, env(safe-area-inset-right, 0px)) 0.4rem;
+}
+
+.member-live-strip__join-slot a,
+.member-live-strip__join-slot button {
+  pointer-events: auto;
+}
+
 .app-shell-subbar {
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg) 88%, var(--surface-2));
@@ -2190,7 +2215,7 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 
 .member-nav-more-panel {
   position: absolute;
-  z-index: 60;
+  z-index: 80;
   left: 0.5rem;
   right: 0.5rem;
   top: calc(100% - 0.35rem);

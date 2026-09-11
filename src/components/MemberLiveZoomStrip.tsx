@@ -2,7 +2,8 @@
 
 /**
  * Sticky top strip for members:
- * - Coach actively hosting, not yet joined → full "Join Live Zoom Now" strip
+ * - Coach actively hosting, not yet joined → compact Join on the right
+ *   (full-width bar used to cut through Nutrition / More). Header Join stays.
  * - After Join → nothing here. Sticky header already has Rejoin (a second
  *   `position:fixed` chip inside `.member-sticky-chrome` sat under the iOS
  *   clock because backdrop-filter makes `fixed` relative to that header).
@@ -60,6 +61,24 @@ export default function MemberLiveZoomStrip({
     return null;
   }
 
+  // Coach live, not yet joined: compact Join on the right — no full-width bar
+  // cutting through Nutrition / More. Header Join stays visible above the nav.
+  if (showJoin && status?.joinUrl) {
+    return (
+      <div className={embedded ? "member-live-strip__join-slot" : "sticky top-0 z-40 member-live-strip__join-slot"}>
+        <a
+          href={status.joinUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={onJoinClick}
+          className="btn-primary shrink-0 px-4 py-2 text-xs font-bold sm:px-5 sm:text-sm"
+        >
+          Join
+        </a>
+      </div>
+    );
+  }
+
   // ── Free Explorer: see live, soft-block join ───────────────────
   if (showFreeLiveTease) {
     return (
@@ -95,7 +114,7 @@ export default function MemberLiveZoomStrip({
     );
   }
 
-  // ── Pre-join full strip (persistent until Join) ─────────────────
+  // ── Waiting / ping (coach not live yet) ─────────────────────────
   return (
     <div
       className={`border-b border-sky-500/30 bg-sky-950/95 backdrop-blur-sm ${
@@ -108,33 +127,19 @@ export default function MemberLiveZoomStrip({
             Live class
           </p>
           <p className="truncate text-xs text-sky-100/80">
-            {showJoin
-              ? "Coach is live"
-              : status?.roomReady
-                ? "Room ready — waiting for coach to start"
-                : "Waiting for coach to open Zoom"}
+            {status?.roomReady
+              ? "Room ready — waiting for coach to start"
+              : "Waiting for coach to open Zoom"}
           </p>
         </div>
-        {showJoin && status?.joinUrl ? (
-          <a
-            href={status.joinUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={onJoinClick}
-            className="btn-primary shrink-0 px-4 py-2 text-xs font-bold sm:px-5 sm:text-sm"
-          >
-            Join
-          </a>
-        ) : (
-          <button
-            type="button"
-            className="btn-ghost shrink-0 border border-sky-400/40 bg-sky-500/15 px-3 py-2 text-xs font-bold text-sky-100 hover:bg-sky-500/25 sm:px-4 sm:text-sm"
-            title="Ping your coach to start the live Zoom"
-            onClick={() => setPingOpen(true)}
-          >
-            Ping Coach to Start Zoom
-          </button>
-        )}
+        <button
+          type="button"
+          className="btn-ghost shrink-0 border border-sky-400/40 bg-sky-500/15 px-3 py-2 text-xs font-bold text-sky-100 hover:bg-sky-500/25 sm:px-4 sm:text-sm"
+          title="Ping your coach to start the live Zoom"
+          onClick={() => setPingOpen(true)}
+        >
+          Ping Coach to Start Zoom
+        </button>
       </div>
       <PingCoachZoomModal
         open={pingOpen}
