@@ -134,7 +134,7 @@ export default function WorkoutBuilder({
       if (wRes.ok && isWorkoutPayload(body)) {
         setWorkout({
           ...body,
-          exercises: withPinnedSort(body.exercises),
+          exercises: body.exercises,
         });
         setLoading(false);
         return;
@@ -215,7 +215,7 @@ export default function WorkoutBuilder({
                 : row,
             )
           : [...prev.exercises, saved];
-        return { ...prev, exercises: withPinnedSort(nextItems) };
+        return { ...prev, exercises: nextItems };
       });
 
       if (itemId) {

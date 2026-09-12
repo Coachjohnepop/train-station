@@ -13,7 +13,6 @@ import {
   pinDemoWorkoutWarmups,
   resolveDemoExercise,
 } from "@/lib/demo-workout-items";
-import { warmupPinnedOrderedIds } from "@/lib/warmup-group";
 import {
   addSmsWorkoutExercise,
   deleteSmsWorkoutExercise,
@@ -49,17 +48,18 @@ type Params = { params: Promise<{ id: string }> };
 async function reindexPrismaWorkoutPinned(workoutId: string, orderedIds?: string[]) {
   const rows = await prisma.workoutExercise.findMany({
     where: { workoutId },
-    include: { exercise: { select: { name: true } } },
+    select: { id: true },
     orderBy: { sortOrder: "asc" },
   });
-  const ids = warmupPinnedOrderedIds(
-    rows.map((row) => ({
-      id: row.id,
-      name: row.exercise?.name ?? "",
-      notes: row.notes,
-    })),
-    orderedIds,
-  );
+  const have = new Set(rows.map((row) => row.id));
+  const ids: string[] = [];
+  for (const id of orderedIds ?? []) {
+    if (!have.has(id) || ids.includes(id)) continue;
+    ids.push(id);
+  }
+  for (const row of rows) {
+    if (!ids.includes(row.id)) ids.push(row.id);
+  }
   if (ids.length === 0) return;
   await prisma.$transaction(
     ids.map((id, idx) =>
@@ -388,12 +388,7 @@ export async function PATCH(request: Request, { params }: Params) {
       data,
       include: { exercise: true },
     });
-    await reindexPrismaWorkoutPinned(workoutId);
-    const pinned = await prisma.workoutExercise.findUnique({
-      where: { id: itemId },
-      include: { exercise: true },
-    });
-    return NextResponse.json(pinned ?? item);
+    return NextResponse.json(item);
   } catch (err) {
     console.error("workoutExercise.update failed:", err);
     const message =
