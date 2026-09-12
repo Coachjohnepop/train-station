@@ -445,7 +445,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Date:** 2026-09-12 (Jeremy note — Adult Home M1D4 cooldown jumps to slot 2)
 
-**Status:** Jeremy’s mouse: **+ Add below on 30–60 min (right)**, types “coo”, picks **Cool Down & Stretch**. It was landing as left-column #2 and shoving Incline onto the right. Cause: restacking the 5+4 grid + warm-up pin. Fix: fill the slot he clicked; delete leaves a hole; no admin re-sort. Pack: `.jeremy-review-frames/home-m1d4-cooldown/`.
+**Status:** Watched **Sept 12 fixes.mp4** (4:32, Adult `/admin/programs/adult`). Click warmup → HIIT editor; duplicate bench; click/save/scroll **moves HIIT / Cool Down between 0–30 and 30–60 columns**. “These were all in order.” Cause: 5+4 restack on every load/save. Fix `ebd57bd`: left column width stays; extras grow the right only; add fills the clicked slot; delete leaves a hole; blur saves the focused card. Pack: `.jeremy-review-frames/sept-12-fixes/`.
 
 **Date:** 2026-09-12 (partnership contract PDF + tax-bracket share)
 
