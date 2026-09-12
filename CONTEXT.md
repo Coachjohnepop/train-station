@@ -445,7 +445,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Date:** 2026-09-12 (Jeremy note — Adult Home M1D4 cooldown jumps to slot 2)
 
-**Status:** Delete was compacting the sheet so Cool Down jumped to the top of the right column. Delete now leaves a hole; remaining cards keep their slots. Meal Prep can sit after Cool Down. Member Today still pins warm-ups first. Pack: `.jeremy-review-frames/home-m1d4-cooldown/`.
+**Status:** Jeremy’s mouse: **+ Add below on 30–60 min (right)**, types “coo”, picks **Cool Down & Stretch**. It was landing as left-column #2 and shoving Incline onto the right. Cause: restacking the 5+4 grid + warm-up pin. Fix: fill the slot he clicked; delete leaves a hole; no admin re-sort. Pack: `.jeremy-review-frames/home-m1d4-cooldown/`.
 
 **Date:** 2026-09-12 (partnership contract PDF + tax-bracket share)
 

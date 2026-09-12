@@ -480,6 +480,34 @@ export function columnSlotCountsForExerciseCount(exerciseCount: number): number[
   return counts;
 }
 
+/** Put each exercise in its sortOrder slot. Do not pack left-to-right (that moves Cool Down). */
+export function placeItemsInSlotGrid<T extends { sortOrder: number }>(
+  items: T[],
+): { counts: number[]; grid: (T | null)[] } {
+  const maxOrder = items.reduce((max, item) => Math.max(max, item.sortOrder ?? 0), -1);
+  const counts = columnSlotCountsForExerciseCount(Math.max(items.length, maxOrder + 1, 1));
+  const total = totalSlotsFromColumnCounts(counts);
+  const grid: (T | null)[] = Array(total).fill(null);
+  for (const item of items) {
+    const idx = item.sortOrder ?? 0;
+    if (idx >= 0 && idx < total) grid[idx] = item;
+  }
+  return { counts, grid };
+}
+
+export function orderedIdsFromGrid<T extends { id: string }>(
+  grid: (T | null)[],
+  fillIndex?: number,
+  fillId?: string,
+): string[] {
+  const ids: string[] = [];
+  for (let i = 0; i < grid.length; i++) {
+    const id = i === fillIndex && fillId ? fillId : grid[i]?.id;
+    if (id) ids.push(id);
+  }
+  return ids;
+}
+
 export function timeBlockLabel(column: number): string {
   const start = column * DAY_TIME_BLOCK_MINUTES;
   return `${start}–${start + DAY_TIME_BLOCK_MINUTES} min`;

@@ -23,7 +23,8 @@ import {
 } from "@/lib/workout-content-name";
 import {
   calendarDateForProgramDay,
-  columnSlotCountsForExerciseCount,
+  orderedIdsFromGrid,
+  placeItemsInSlotGrid,
   daysInMonth,
   DEFAULT_COLUMN_SLOT_COUNTS,
   DEFAULT_DAY_OPTIONS,
@@ -280,6 +281,8 @@ export default function ProgramCalendarBuilder({
   const [slots, setSlots] = useState<(SlotItem | null)[]>(
     Array(totalSlotsFromColumnCounts(DEFAULT_COLUMN_SLOT_COUNTS)).fill(null),
   );
+  const slotsRef = useRef<(SlotItem | null)[]>(slots);
+  slotsRef.current = slots;
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const editorRef = useRef<HTMLDivElement>(null);
   const setsInputRef = useRef<HTMLInputElement>(null);
@@ -819,17 +822,7 @@ export default function ProgramCalendarBuilder({
         sortOrder: it.sortOrder ?? 0,
       }));
       items.sort((a, b) => a.sortOrder - b.sortOrder);
-      const maxOrder = items.reduce(
-        (max, item) => Math.max(max, item.sortOrder ?? 0),
-        -1,
-      );
-      const counts = columnSlotCountsForExerciseCount(Math.max(items.length, maxOrder + 1));
-      const total = totalSlotsFromColumnCounts(counts);
-      const grid: (SlotItem | null)[] = Array(total).fill(null);
-      items.forEach((item) => {
-        const idx = item.sortOrder ?? 0;
-        if (idx >= 0 && idx < total) grid[idx] = item;
-      });
+      const { counts, grid } = placeItemsInSlotGrid(items);
       setColumnSlotCounts(counts);
       setSlots(grid);
       const defaults = rx ?? DEFAULT_DAY_PRESCRIPTION;
@@ -1946,6 +1939,7 @@ export default function ProgramCalendarBuilder({
 
     const newSlots = [...slots];
     newSlots.splice(insertAt, 0, null);
+    slotsRef.current = newSlots;
     setSlots(newSlots);
     setCheckedSlots((prev) => {
       const next = new Set<number>();
@@ -1985,17 +1979,30 @@ export default function ProgramCalendarBuilder({
     }
     const created = await res.json();
     if (created.id) {
-      const orderedIds = slots
-        .map((slot, i) => (i === slotIndex ? created.id : slot?.id))
-        .filter((id): id is string => Boolean(id));
-      if (!orderedIds.includes(created.id)) orderedIds.push(created.id);
+      const grid = slotsRef.current;
+      const orderedIds = orderedIdsFromGrid(grid, slotIndex, created.id);
+      const next = grid.map((slot, i) =>
+        i === slotIndex
+          ? {
+              id: created.id,
+              exerciseId: created.exercise?.id || created.exerciseId || exerciseId,
+              name: created.exercise?.name || "Exercise",
+              sets: created.sets ?? null,
+              reps: created.reps ?? null,
+              restSec: created.restSec ?? null,
+              notes: created.notes ?? null,
+              sortOrder: i,
+            }
+          : slot,
+      );
+      slotsRef.current = next;
+      setSlots(next);
       await fetch(`/api/workouts/${focus.workoutId}/exercises`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderedIds }),
       });
     }
-    await loadSlots(focus.workoutId, prescription);
     setMessage("Saved.");
     setTimeout(() => setMessage(null), 1500);
   }
@@ -2025,18 +2032,16 @@ export default function ProgramCalendarBuilder({
         return;
       }
       if (idx >= 0) {
-        setSlots((prev) => {
-          const next = [...prev];
-          next[idx] = null;
-          return next;
-        });
+        const next = [...slotsRef.current];
+        next[idx] = null;
+        slotsRef.current = next;
+        setSlots(next);
         setCheckedSlots((prev) => {
-          const next = new Set(prev);
-          next.delete(idx);
-          return next;
+          const checked = new Set(prev);
+          checked.delete(idx);
+          return checked;
         });
       }
-      await loadSlots(workoutId, prescription);
       setMessage("Exercise removed.");
       setTimeout(() => setMessage(null), 1500);
     } finally {
