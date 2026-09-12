@@ -10,6 +10,7 @@ import PwaInstallHint from "@/components/PwaInstallHint";
 import PushAlertEnable from "@/components/PushAlertEnable";
 
 import MemberNav from "@/components/MemberNav";
+import MemberBookIntroPester from "@/components/MemberBookIntroPester";
 import MemberHeaderHomeLink from "@/components/MemberHeaderHomeLink";
 import MemberGateCookieSync from "@/components/MemberGateCookieSync";
 import SiteSeenLatch from "@/components/SiteSeenLatch";
@@ -43,6 +44,7 @@ export default function MemberShell({
   /** First visit to the site (not a returning member). Slim chrome until setup is done. */
   newbieMode = false,
   nutritionDesk = null,
+  needsIntroBooking = false,
 }: {
   children: React.ReactNode;
   tierLabel?: string;
@@ -57,6 +59,8 @@ export default function MemberShell({
   setupMode?: boolean;
   newbieMode?: boolean;
   nutritionDesk?: NutritionDesk | null;
+  /** Joined a seat but has not booked the 15-min intro. */
+  needsIntroBooking?: boolean;
 }) {
   const tierLabel = MEMBERSHIP_THEME_LABELS[membershipTier] || tierLabelProp || "Member";
   const hideMemberNav = setupMode || newbieMode || paymentGateActive;
@@ -147,6 +151,7 @@ export default function MemberShell({
               paymentGateActive={paymentGateActive}
               checkoutPlan={checkoutPlan}
               nutritionDesk={nutritionDesk}
+              needsIntroBooking={needsIntroBooking}
             />
           )}
         </header>
@@ -159,6 +164,8 @@ export default function MemberShell({
             </Link>
           </p>
         ) : null}
+
+        {needsIntroBooking && !setupMode && !paymentGateActive ? <MemberBookIntroPester /> : null}
 
         {paymentGateActive ? (
           <p className="mx-auto w-full max-w-lg border-b border-amber-500/25 bg-amber-500/10 px-4 py-2 text-center text-[11px] text-amber-100 md:max-w-3xl lg:max-w-6xl xl:max-w-7xl md:px-6 lg:px-8">

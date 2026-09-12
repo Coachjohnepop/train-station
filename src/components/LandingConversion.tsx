@@ -16,6 +16,7 @@ import {
   armLandingReturnOnLeave,
 } from "@/lib/landing-return-visit";
 import SiteSeenLatch from "@/components/SiteSeenLatch";
+import type { LandingAbVariant } from "@/lib/landing-ab";
 
 /**
  * Public landing for guests / SMS traffic.
@@ -29,6 +30,8 @@ export default function LandingConversion({
   returning = false,
   rememberReturn = true,
   purchaseAuth,
+  variant = "tour",
+  meetVideoUrl = null,
 }: {
   freeChastiseVideoUrl?: string | null;
   welcomeVideoUrl?: string | null;
@@ -38,6 +41,8 @@ export default function LandingConversion({
   /** Guest landing only — staff preview should not arm the return cookie. */
   rememberReturn?: boolean;
   purchaseAuth?: PurchaseAuth;
+  variant?: LandingAbVariant;
+  meetVideoUrl?: string | null;
 }) {
   const [liveReturn, setLiveReturn] = useState(false);
   const [exploreOpen, setExploreOpen] = useState(false);
@@ -103,7 +108,7 @@ export default function LandingConversion({
   }, [revealExplore]);
 
   return (
-    <div className="relative min-h-screen bg-black">
+    <div className="relative min-h-screen bg-black" data-landing-variant={variant}>
       <SiteSeenLatch />
       <ThemeAttributesSync membershipTier="explorer" />
       {/* Transparent nav over hero so SMS open is full-bleed athletes, not a grey header */}
@@ -115,6 +120,8 @@ export default function LandingConversion({
         returning={returnMode}
         exploreOpen={exploreOpen}
         onExplore={onExplore}
+        variant={variant}
+        meetVideoUrl={meetVideoUrl}
       />
       <div
         id="explore-content"

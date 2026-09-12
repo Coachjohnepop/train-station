@@ -7,7 +7,7 @@ import { isStaffRole } from "@/lib/auth-session";
 import { getCurrentUserId } from "@/lib/current-user";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { getMemberProfile } from "@/lib/member-profiles-store";
-import { isCoachIntakeComplete } from "@/lib/member-intake";
+import { isCoachIntakeComplete, memberNeedsIntroBooking } from "@/lib/member-intake";
 import { membershipThemeTierFromPlan } from "@/lib/membership-theme";
 import {
   memberNeedsFreePaymentMethodAsync,
@@ -161,6 +161,7 @@ export default async function MemberLayout({
       setupMode={setupMode}
       newbieMode={newbieMode}
       nutritionDesk={memberContent.nutritionDesk}
+      needsIntroBooking={memberNeedsIntroBooking(profile)}
     >
       {children}
     </MemberShell>

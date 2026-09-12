@@ -126,11 +126,13 @@ export default function MemberNav({
   paymentGateActive = false,
   checkoutPlan = "member",
   nutritionDesk = null,
+  needsIntroBooking = false,
 }: {
   intakePending?: boolean;
   paymentGateActive?: boolean;
   checkoutPlan?: SignupPlan;
   nutritionDesk?: NutritionDesk | null;
+  needsIntroBooking?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -421,6 +423,7 @@ export default function MemberNav({
             const locked = paymentGateActive && !item.openDuringPayment;
             const active = !onCheckout && item.match(pathname);
             const isAccountTab = item.href === "/member/account";
+            const isBookTab = item.href === "/member/book";
             return (
               <Link
                 key={item.href}
@@ -432,6 +435,13 @@ export default function MemberNav({
               >
                 {isAccountTab ? <UserBicepAvatar size={22} title="Account" /> : null}
                 <span>{item.label}</span>
+                {isBookTab && needsIntroBooking ? (
+                  <span
+                    className="h-2 w-2 rounded-full bg-[var(--ramp-gold)]"
+                    title="Book your 15-min intro"
+                    aria-label="Needs intro booking"
+                  />
+                ) : null}
                 {locked ? <span aria-hidden>🔒</span> : null}
               </Link>
             );

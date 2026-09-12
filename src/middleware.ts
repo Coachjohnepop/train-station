@@ -8,6 +8,15 @@ import {
 } from "@/lib/member-app-entry";
 import { purchaseHref } from "@/lib/member-purchase-path";
 import { memberPathRequiresPayment } from "@/lib/member-route-gates";
+import {
+  LANDING_AB_COOKIE,
+  LANDING_AB_COOKIE_MAX_AGE,
+  LANDING_AB_HEADER,
+  landingAbPath,
+  parseLandingAbVariant,
+  resolveLiveLandingAb,
+  type LandingAbVariant,
+} from "@/lib/landing-ab";
 
 const NEEDS_ONBOARD_COOKIE = "ts_needs_onboard";
 const SIGNUP_PLAN_COOKIE = "ts_signup_plan";
@@ -61,7 +70,76 @@ const PUBLIC_API_PREFIXES = [
 
 function isPublicPage(pathname: string): boolean {
   if (pathname === "/") return true;
+  if (pathname === "/l" || pathname.startsWith("/l/")) return true;
   return PUBLIC_PAGE_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+function applyLandingCookie(res: NextResponse, variant: LandingAbVariant) {
+  res.cookies.set(LANDING_AB_COOKIE, variant, {
+    path: "/",
+    maxAge: LANDING_AB_COOKIE_MAX_AGE,
+    sameSite: "lax",
+  });
+  return res;
+}
+
+function nextWithLandingVariant(
+  request: NextRequest,
+  pathname: string,
+  variant: LandingAbVariant,
+) {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", pathname);
+  requestHeaders.set(LANDING_AB_HEADER, variant);
+  const res = NextResponse.next({ request: { headers: requestHeaders } });
+  return applyLandingCookie(res, variant);
+}
+
+function rewriteHomeWithLandingVariant(request: NextRequest, variant: LandingAbVariant) {
+  const url = request.nextUrl.clone();
+  url.pathname = "/";
+  url.search = "";
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", "/");
+  requestHeaders.set(LANDING_AB_HEADER, variant);
+  const res = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+  res.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return applyLandingCookie(res, variant);
+}
+
+async function handleLandingAb(request: NextRequest): Promise<NextResponse | null> {
+  const { pathname } = request.nextUrl;
+  const fromPath = pathname.startsWith("/l/")
+    ? parseLandingAbVariant(pathname.slice(3).split("/")[0])
+    : null;
+  const fromQuery = parseLandingAbVariant(request.nextUrl.searchParams.get("v"));
+  const forced = fromPath || fromQuery;
+
+  if (pathname === "/" && fromQuery && forced) {
+    const dest = NextResponse.redirect(new URL(landingAbPath(forced), request.url));
+    return applyLandingCookie(dest, forced);
+  }
+
+  if (pathname.startsWith("/l/")) {
+    if (!forced) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    return rewriteHomeWithLandingVariant(request, forced);
+  }
+
+  if (pathname !== "/") return null;
+
+  const session = await sessionFromRequest(request);
+  if (session?.role === "MEMBER") {
+    return nextWithPath(request, pathname);
+  }
+  if (session && isStaffRole(session.role)) {
+    return nextWithLandingVariant(request, pathname, "tour");
+  }
+
+  const existing = parseLandingAbVariant(request.cookies.get(LANDING_AB_COOKIE)?.value);
+  const variant = resolveLiveLandingAb(existing);
+  return nextWithLandingVariant(request, pathname, variant);
 }
 
 function isPublicApi(pathname: string): boolean {
@@ -100,6 +178,9 @@ export async function middleware(request: NextRequest) {
   ) {
     return NextResponse.next();
   }
+
+  const landingAb = await handleLandingAb(request);
+  if (landingAb) return landingAb;
 
   // Lock down API routes: anonymous callers get 401 unless explicitly public.
   if (pathname.startsWith("/api/")) {

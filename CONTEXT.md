@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-11 (landing A/B + 15-min intro pester)
+
+**Status:** Guests on `/` split 50/50 **A tour** (current homepage, stays in stock) vs **B Meet Jeremy**. **C floor** is preview-only at `/l/floor`. Jeremy posts **thetrainstation.co** only — do not post `/l/jeremy`. Kill switch: `LANDING_AB_ENABLED` in `src/lib/landing-ab.ts`. Staff bar A/B/C links. Analytics `properties.landingVariant` + cookie `ts_landing`. Onboard: book 15 min is the purple button on every seat; Today still opens; pester bar until intro booked. Natasha has an intro stamp — no outreach. Jase (Free, no book) will see the pester.
+
 **Date:** 2026-09-11 (shopping list + Trainstationize)
 
 **Status:** Members open **Nutrition → Shopping list**. Two-column phone checklist, type/paste, checkboxes persist in Postgres. **Trainstationize** matches Jeremy’s cleanse table first (keto carbs, low-fat proteins, no bacon / fatty cuts); leftovers go through Grok against that table. Items fade and come back with why-in / why-out. Coach edits **Admin → Grocery list**. v1 is one cleanse list plus copy: 3-month cleanse, desire meal maybe once a month after goal weight. Apply `20260911120000_grocery_shopping` then `npm run db:lockdown-postgrest`.

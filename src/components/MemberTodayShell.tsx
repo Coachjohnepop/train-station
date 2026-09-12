@@ -12,6 +12,7 @@ import MemberTrainingLocationToggle from "@/components/MemberTrainingLocationTog
 import MemberWorkoutConsole, { type MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import type { MemberDaySummary, MemberDayWindowRollup } from "@/lib/member-day-window-types";
 import { scheduleDayHeadline } from "@/lib/workout-day-visibility";
+import { formatCycleDayFromWeekDay } from "@/lib/program-cycle-day";
 import {
   formatProgramStartOption,
   type ResolvedProgramBlock,
@@ -144,7 +145,11 @@ function DaySummaryCard({
       </div>
 
       {smsOverride && (
-        <p className="text-xs text-amber-300">Coach assigned a custom workout for this day.</p>
+        <p className="text-xs text-amber-200">
+          <span className="font-bold uppercase tracking-wide">Class</span>
+          {" — "}
+          coach set today&apos;s workout.
+        </p>
       )}
 
       {(phase === "past" || (isToday && !previewOnly)) && exerciseNames.length > 0 && (
@@ -367,7 +372,7 @@ export default function MemberTodayShell({
   const showFollowUpCard =
     autoPromptFollowUpBooking && isToday && !!coachMeetingRequestedAt && intakeComplete;
   const showIntroCard = !introBookedAt && isToday;
-  const showFirstHour = isToday && firstTimeOnSite && !introBookedAt;
+  const showFirstHour = isToday && firstTimeOnSite && Boolean(introBookedAt);
 
   const intakeStatus = {
     introBookedAt,
@@ -476,7 +481,11 @@ export default function MemberTodayShell({
             </button>
           ) : null}
         </div>
-        {isToday && rampHighlight && autoPromptIntroBooking ? (
+        {isToday && !introBookedAt ? (
+          <p className="mt-1 text-xs font-medium text-[var(--ramp-gold-light)] sm:text-sm">
+            Book 15 minutes with Jeremy first — then warm up below.
+          </p>
+        ) : isToday && rampHighlight && autoPromptIntroBooking ? (
           <p className="mt-1 text-xs font-medium text-[var(--ramp-gold-light)] sm:text-sm">
             Start here — book your intro, then warm up below.
           </p>
@@ -489,6 +498,12 @@ export default function MemberTodayShell({
           <p className="mt-0.5 text-xs text-amber-100/90">
             This is a missed day. Finish it now and it logs as today — you can still do today’s workout too.
           </p>
+        </div>
+      ) : null}
+
+      {showIntroCard && !showFollowUpCard ? (
+        <div id="member-book-intro">
+          <MemberIntakeIntroCard initialStatus={intakeStatus} pester />
         </div>
       ) : null}
 
@@ -570,12 +585,6 @@ export default function MemberTodayShell({
       {showFollowUpCard && (
         <div id="member-book-intro">
           <MemberIntakeIntroCard initialStatus={intakeStatus} followUpOnly />
-        </div>
-      )}
-
-      {showIntroCard && !showFollowUpCard && (
-        <div id="member-book-intro">
-          <MemberIntakeIntroCard initialStatus={intakeStatus} />
         </div>
       )}
 
@@ -683,6 +692,12 @@ export default function MemberTodayShell({
                   : scheduleLabel
               }
               calendarDateLabel={calendarDateLabel}
+              cycleDayLabel={
+                selectedSummary
+                  ? formatCycleDayFromWeekDay(selectedSummary.weekNumber, selectedSummary.dayNumber)
+                  : undefined
+              }
+              classOverride={Boolean(selectedSummary?.smsOverride)}
             />
           )}
         </div>

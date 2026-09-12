@@ -172,7 +172,7 @@ export default function BookClient() {
           ? "Book a nutrition appointment"
           : isSpeaking
             ? "Book your speaking scope call"
-            : "Book your onboarding call"}
+            : "Meet Jeremy — 15 minutes"}
       </h1>
       <p className="mt-2 text-sm text-[var(--muted)]">
         {isNutrition ? (
@@ -189,9 +189,9 @@ export default function BookClient() {
           </>
         ) : (
           <>
-            15-minute intro with Coach Jeremy on Zoom.{" "}
-            <strong className="text-[var(--foreground)]">Book on Calendly</strong> — it shows his real
-            open times (not our backup list below).
+            Every seat books this. 15 minutes on Zoom to meet your coach — working out is personal.{" "}
+            <strong className="text-[var(--foreground)]">Pick a time on Calendly</strong> (his real
+            open slots, not the backup list below).
           </>
         )}
       </p>

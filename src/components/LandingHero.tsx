@@ -21,6 +21,13 @@ import {
   trackLandingCustom,
 } from "@/lib/landing-return-visit";
 import EasyPathChoices from "@/components/EasyPathChoices";
+import LandingAbClip from "@/components/LandingAbClip";
+import type { LandingAbVariant } from "@/lib/landing-ab";
+import {
+  FREE_TICKET_FULL_SRC,
+  FREE_TICKET_GAG_POSTER,
+  JEREMY_WELCOME_VIDEO_SRC,
+} from "@/lib/landing-media";
 
 /** Locked first headline so SMS open doesn’t fight a rotating word. */
 const FIRST_HEADLINE = (
@@ -56,11 +63,13 @@ const ROTATING = [
  * Members never hit this shell (home is welcome + status after join).
  */
 export default function LandingHero({
-  welcomeVideoUrl: _welcomeVideoUrl = null,
+  welcomeVideoUrl = null,
   heroSlides = null,
   returning = false,
   exploreOpen = false,
   onExplore,
+  variant = "tour",
+  meetVideoUrl = null,
 }: {
   welcomeVideoUrl?: string | null;
   /** @deprecated Tour no longer hosts free ticket; kept optional for callers. */
@@ -71,6 +80,8 @@ export default function LandingHero({
   returning?: boolean;
   exploreOpen?: boolean;
   onExplore?: (origin: HTMLElement) => void;
+  variant?: LandingAbVariant;
+  meetVideoUrl?: string | null;
 }) {
   const [imageTick, setImageTick] = useState(0);
   const [phraseTick, setPhraseTick] = useState(0);
@@ -227,6 +238,24 @@ export default function LandingHero({
               The Train Station
             </p>
 
+            {variant === "jeremy" ? (
+              <JeremyHeroStack
+                meetSrc={meetVideoUrl?.trim() || FREE_TICKET_FULL_SRC}
+                returnMode={returnMode}
+                exploreOpen={exploreOpen}
+                onExplore={onExplore}
+                onTour={() => setTourOpen(true)}
+              />
+            ) : variant === "floor" ? (
+              <FloorHeroStack
+                floorSrc={welcomeVideoUrl?.trim() || JEREMY_WELCOME_VIDEO_SRC}
+                returnMode={returnMode}
+                exploreOpen={exploreOpen}
+                onExplore={onExplore}
+                onTour={() => setTourOpen(true)}
+              />
+            ) : (
+              <>
             <div className="w-full max-w-sm">
               <EasyPathChoices
                 kicker=""
@@ -293,6 +322,8 @@ export default function LandingHero({
                 </>
               )}
             </p>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -318,5 +349,165 @@ export default function LandingHero({
         onClose={() => setTourOpen(false)}
       />
     </section>
+  );
+}
+
+const START_FREE_HREF = "/signup?plan=explorer";
+
+const primaryCta =
+  "landing-hero-early-signup inline-flex h-[3.5rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg";
+const secondaryCta =
+  "landing-hero-secondary-cta inline-flex h-[3.25rem] w-full items-center justify-center rounded-full px-8 text-[16px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg";
+
+function JeremyHeroStack({
+  meetSrc,
+  returnMode,
+  exploreOpen,
+  onExplore,
+  onTour,
+}: {
+  meetSrc: string;
+  returnMode: boolean;
+  exploreOpen: boolean;
+  onExplore?: (origin: HTMLElement) => void;
+  onTour: () => void;
+}) {
+  return (
+    <>
+      <LandingAbClip
+        src={meetSrc}
+        poster={FREE_TICKET_GAG_POSTER}
+        title="Tap to meet Jeremy"
+        analyticsAction="hero-meet-jeremy-play"
+      />
+      <div className="mt-5 w-full max-w-sm">
+        <EasyPathChoices kicker="" hint="Every seat meets the coach · 15 minutes">
+          <Link
+            href={START_FREE_HREF}
+            data-analytics-action="hero-start-free-ab"
+            onClick={(e) => {
+              markLandingConverted();
+              fireLandingJoinHook(e.currentTarget);
+            }}
+            className={primaryCta}
+          >
+            Start Free
+          </Link>
+          <Link
+            href={JOIN_TICKETS_HREF}
+            data-analytics-action={returnMode ? "hero-start-membership-return" : "hero-start-membership"}
+            onClick={(e) => {
+              markLandingConverted();
+              fireLandingJoinHook(e.currentTarget);
+            }}
+            className={secondaryCta}
+          >
+            Start membership
+          </Link>
+          <button
+            type="button"
+            data-analytics-action="hero-free-tour"
+            onClick={onTour}
+            className="landing-hero-explore-cta inline-flex h-11 w-full items-center justify-center rounded-full px-8 text-[15px] font-bold tracking-tight text-white/90"
+          >
+            How it Works
+          </button>
+          <button
+            type="button"
+            data-analytics-action="hero-explore-content"
+            aria-expanded={exploreOpen}
+            aria-controls="explore-content"
+            onClick={(e) => onExplore?.(e.currentTarget)}
+            className="landing-hero-explore-cta inline-flex h-11 w-full items-center justify-center gap-2 rounded-full px-8 text-[15px] font-bold tracking-tight"
+          >
+            Explore Content
+          </button>
+        </EasyPathChoices>
+      </div>
+      <h1 className="landing-hero-headline mt-8 mb-3 text-[clamp(2.4rem,11vw,3.4rem)] font-semibold leading-[0.9] tracking-[-0.04em] text-white sm:mt-10 sm:text-6xl">
+        Meet your
+        <br />
+        <span className="landing-hero-accent">coach.</span>
+      </h1>
+      <p className="landing-hero-subhead max-w-[20rem] text-[15px] font-semibold leading-snug text-white sm:max-w-sm sm:text-xl">
+        Working out is personal. Free is how you get to know Jeremy.
+      </p>
+    </>
+  );
+}
+
+function FloorHeroStack({
+  floorSrc,
+  returnMode,
+  exploreOpen,
+  onExplore,
+  onTour,
+}: {
+  floorSrc: string;
+  returnMode: boolean;
+  exploreOpen: boolean;
+  onExplore?: (origin: HTMLElement) => void;
+  onTour: () => void;
+}) {
+  return (
+    <>
+      <LandingAbClip
+        src={floorSrc}
+        title="This is Today — tap to watch"
+        analyticsAction="hero-floor-play"
+      />
+      <div className="mt-5 w-full max-w-sm">
+        <EasyPathChoices kicker="" hint="A real day on your phone · his demo on the set">
+          <Link
+            href={START_FREE_HREF}
+            data-analytics-action="hero-start-free-ab"
+            onClick={(e) => {
+              markLandingConverted();
+              fireLandingJoinHook(e.currentTarget);
+            }}
+            className={primaryCta}
+          >
+            Start Free
+          </Link>
+          <Link
+            href={JOIN_TICKETS_HREF}
+            data-analytics-action={returnMode ? "hero-start-membership-return" : "hero-start-membership"}
+            onClick={(e) => {
+              markLandingConverted();
+              fireLandingJoinHook(e.currentTarget);
+            }}
+            className={secondaryCta}
+          >
+            Start membership
+          </Link>
+          <button
+            type="button"
+            data-analytics-action="hero-free-tour"
+            onClick={onTour}
+            className="landing-hero-explore-cta inline-flex h-11 w-full items-center justify-center rounded-full px-8 text-[15px] font-bold tracking-tight text-white/90"
+          >
+            How it Works
+          </button>
+          <button
+            type="button"
+            data-analytics-action="hero-explore-content"
+            aria-expanded={exploreOpen}
+            aria-controls="explore-content"
+            onClick={(e) => onExplore?.(e.currentTarget)}
+            className="landing-hero-explore-cta inline-flex h-11 w-full items-center justify-center gap-2 rounded-full px-8 text-[15px] font-bold tracking-tight"
+          >
+            Explore Content
+          </button>
+        </EasyPathChoices>
+      </div>
+      <h1 className="landing-hero-headline mt-8 mb-3 text-[clamp(2.4rem,11vw,3.4rem)] font-semibold leading-[0.9] tracking-[-0.04em] text-white sm:mt-10 sm:text-6xl">
+        This is
+        <br />
+        <span className="landing-hero-accent">Today.</span>
+      </h1>
+      <p className="landing-hero-subhead max-w-[20rem] text-[15px] font-semibold leading-snug text-white sm:max-w-sm sm:text-xl">
+        One exercise. His demo. On your phone — not a brochure.
+      </p>
+    </>
   );
 }

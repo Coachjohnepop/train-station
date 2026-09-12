@@ -6,6 +6,7 @@ import type { AnalyticsEventInput, AnalyticsIngestPayload } from "@/lib/analytic
 
 const SESSION_COOKIE = "ts_analytics_sid";
 const ANON_COOKIE = "ts_analytics_aid";
+const LANDING_AB_COOKIE = "ts_landing";
 const FLUSH_MS = 4000;
 const MAX_QUEUE = 40;
 
@@ -127,8 +128,16 @@ export default function AnalyticsTracker() {
       writeCookie(ANON_COOKIE, anonymousId);
     }
 
+    const landingVariant = readCookie(LANDING_AB_COOKIE) || undefined;
+
     const enqueue = (event: AnalyticsEventInput) => {
-      queueRef.current.push(event);
+      queueRef.current.push({
+        ...event,
+        properties: {
+          ...(event.properties || {}),
+          ...(landingVariant ? { landingVariant } : {}),
+        },
+      });
       if (queueRef.current.length >= MAX_QUEUE) {
         void flush();
       }
@@ -146,6 +155,7 @@ export default function AnalyticsTracker() {
           deviceType: deviceType(),
           userAgent: navigator.userAgent.slice(0, 500),
           ...utm,
+          utmContent: utm.utmContent || landingVariant,
         },
         events: [],
       };

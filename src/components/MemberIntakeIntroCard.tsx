@@ -20,12 +20,15 @@ export default function MemberIntakeIntroCard({
   followUpOnly = false,
   onBooked,
   compact = false,
+  pester = false,
 }: {
   initialStatus?: IntakeStatus | null;
   /** When true, only show the card for a coach-requested follow-up (post sign-off). */
   followUpOnly?: boolean;
   onBooked?: () => void;
   compact?: boolean;
+  /** Stronger “every seat books this” copy. */
+  pester?: boolean;
 }) {
   const [calendlyUrl, setCalendlyUrl] = useState(COACH_CALENDLY_URL);
   const [memberEmail, setMemberEmail] = useState<string | undefined>();
@@ -143,7 +146,13 @@ export default function MemberIntakeIntroCard({
       >
         <p className={`intake-next-step-badge ${introBooked ? "intake-next-step-badge--booked" : ""}`}>
           <span aria-hidden>{introBooked ? "✓" : "★"}</span>
-          {introBooked ? (meetingRequested ? "Follow-up requested" : "Intro scheduled") : "Your next step"}
+          {introBooked
+            ? meetingRequested
+              ? "Follow-up requested"
+              : "Intro scheduled"
+            : pester
+              ? "Required — every seat"
+              : "Your next step"}
         </p>
         <h2
           className={`intake-next-step-title font-bold leading-tight ${
@@ -152,7 +161,7 @@ export default function MemberIntakeIntroCard({
         >
           {meetingRequested && introBooked
             ? "Coach requested another check-in"
-            : "Book your 15-minute intro with Coach Jeremy"}
+            : "Meet Jeremy — book your 15-minute intro"}
         </h2>
         <p className="text-sm text-[var(--muted)]">
           {meetingRequested && introBooked ? (
@@ -164,8 +173,8 @@ export default function MemberIntakeIntroCard({
             <>You&apos;re on the board — warm up below while you wait for your call.</>
           ) : (
             <>
-              This unlocks your full program after coach sign-off. While you wait, knock out the warm-ups
-              below — checking them off gives your coach a heads-up so you have more time for main lifts.
+              Working out is personal. This call is how you get to know your coach — Free, Coach Class,
+              or Business. Pick a time. You can still train today; we&apos;ll keep this up until it&apos;s booked.
             </>
           )}
         </p>
@@ -185,8 +194,12 @@ export default function MemberIntakeIntroCard({
           ) : null}
 
           {showIntroBook && (
-            <NextStepButton onClick={() => setModalOpen(true)} disabled={booking}>
-              {booking ? "Saving…" : "Continue — book Jeremy"}
+            <NextStepButton
+              onClick={() => setModalOpen(true)}
+              disabled={booking}
+              data-analytics-action="book-jeremy"
+            >
+              {booking ? "Saving…" : "Book 15 min with Jeremy"}
             </NextStepButton>
           )}
 

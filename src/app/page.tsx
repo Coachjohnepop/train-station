@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { MEMBER_NAME_COOKIE } from "@/lib/current-user";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
@@ -22,16 +22,35 @@ import { membershipThemeTierFromPlan } from "@/lib/membership-theme";
 import { signupPlanLabel } from "@/lib/signup-plans";
 import { buildRootMetadata } from "@/lib/site-seo-server";
 import { LANDING_RETURN_COOKIE, isLandingReturnCookie } from "@/lib/landing-return-visit";
+import {
+  LANDING_AB_COOKIE,
+  LANDING_AB_HEADER,
+  landingAbPath,
+  parseLandingAbVariant,
+  type LandingAbVariant,
+} from "@/lib/landing-ab";
 
 /** Home share preview — driven by Admin → SEO desk. */
 export async function generateMetadata(): Promise<Metadata> {
   return buildRootMetadata();
 }
 
+async function resolveLandingVariant(
+  isStaff: boolean,
+  cookieStore: Awaited<ReturnType<typeof cookies>>,
+): Promise<LandingAbVariant> {
+  const headerVariant = parseLandingAbVariant((await headers()).get(LANDING_AB_HEADER));
+  if (headerVariant) return headerVariant;
+  if (isStaff) return "tour";
+  return parseLandingAbVariant(cookieStore.get(LANDING_AB_COOKIE)?.value) || "tour";
+}
+
 export default async function HomePage() {
   const cookieStore = await cookies();
   const session = await getSessionUser();
   const landingVideos = await getResolvedLandingVideos();
+  const staff = Boolean(session && isStaffRole(session.role));
+  const landingVariant = await resolveLandingVariant(staff, cookieStore);
 
   // Staff: same public POP landing cold traffic sees — never ticket theater.
   if (session && isStaffRole(session.role)) {
@@ -56,6 +75,15 @@ export default async function HomePage() {
               </span>
             </p>
             <div className="flex items-center gap-2">
+              <Link href={landingAbPath("tour")} className="text-[10px] font-bold uppercase tracking-wide text-white/70 hover:text-white">
+                A
+              </Link>
+              <Link href={landingAbPath("jeremy")} className="text-[10px] font-bold uppercase tracking-wide text-white/70 hover:text-white">
+                B
+              </Link>
+              <Link href={landingAbPath("floor")} className="text-[10px] font-bold uppercase tracking-wide text-white/70 hover:text-white">
+                C
+              </Link>
               <Link
                 href="/api/auth/logout"
                 className="inline-flex items-center rounded-full border border-white/30 px-4 py-1.5 text-xs font-bold text-white/90 transition hover:bg-white/10"
@@ -78,6 +106,8 @@ export default async function HomePage() {
           returning={false}
           rememberReturn={false}
           purchaseAuth={{ signedIn: true, role: session.role }}
+          variant={landingVariant}
+          meetVideoUrl={landingVideos.freeTicketFullUrl}
         />
       </>
     );
@@ -160,6 +190,8 @@ export default async function HomePage() {
       freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
       heroSlides={landingVideos.heroSlides}
       returning={returning}
+      variant={landingVariant}
+      meetVideoUrl={landingVideos.freeTicketFullUrl}
     />
   );
 }

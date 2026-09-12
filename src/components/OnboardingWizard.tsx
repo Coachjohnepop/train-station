@@ -224,7 +224,8 @@ export default function OnboardingWizard({
             <h1 className="font-bold">Welcome aboard</h1>
             <p className="text-sm leading-relaxed text-[var(--muted)]">
               You&apos;re on <strong className="text-[var(--text)]">{signupPlanLabel(plan)}</strong>.
-              Jeremy will get gear, weight, and goals on your intro call. Two taps, then Today.
+              Next you&apos;ll book 15 minutes to meet Jeremy — every seat does this. Working out is
+              personal; he shouldn&apos;t be a stranger.
             </p>
 
             <div className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-2.5">
@@ -286,17 +287,23 @@ export default function OnboardingWizard({
           <>
             {finishing ? (
               <p className="text-sm text-[var(--muted)]">Saving setup…</p>
-            ) : (
-              <NextStepButton onClick={() => void handleFinish()}>Continue</NextStepButton>
-            )}
-            <h2 className="font-semibold">Book your free 15-minute intro</h2>
+            ) : null}
+            <h2 className="font-semibold">Meet Jeremy — 15 minutes</h2>
             <p className="text-sm text-[var(--muted)]">
-              Continue opens Today now. Book if you want Jeremy to fill in gear, weight, and
-              goals on the call.
+              Every ticket books this. He&apos;s your coach, not an app. Pick a time, then we open
+              Today. You can train first if you have to — we&apos;ll keep asking until it&apos;s booked.
             </p>
-            <MemberIntakeIntroCard compact onBooked={() => void handleFinish()} />
+            <MemberIntakeIntroCard compact pester onBooked={() => void handleFinish()} />
             {finishing ? null : (
               <OnboardActionDock>
+                <button
+                  type="button"
+                  onClick={() => void handleFinish()}
+                  className="btn-ghost min-h-12 w-full text-sm"
+                  data-analytics-action="train-first-skip-book"
+                >
+                  I&apos;ll train first — keep asking me to book
+                </button>
                 <button type="button" onClick={prevStep} className="btn-ghost min-h-12 w-full">
                   Back
                 </button>
