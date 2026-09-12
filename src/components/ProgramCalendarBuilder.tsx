@@ -23,7 +23,6 @@ import {
 } from "@/lib/workout-content-name";
 import {
   calendarDateForProgramDay,
-  orderedIdsFromGrid,
   placeItemsInSlotGrid,
   daysInMonth,
   DEFAULT_COLUMN_SLOT_COUNTS,
@@ -283,6 +282,11 @@ export default function ProgramCalendarBuilder({
   );
   const slotsRef = useRef<(SlotItem | null)[]>(slots);
   slotsRef.current = slots;
+  const layoutRef = useRef<{ workoutId: string; counts: number[] }>({
+    workoutId: "",
+    counts: [...DEFAULT_COLUMN_SLOT_COUNTS],
+  });
+  const slotSaveIdxRef = useRef<number | null>(null);
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const editorRef = useRef<HTMLDivElement>(null);
   const setsInputRef = useRef<HTMLInputElement>(null);
@@ -822,7 +826,10 @@ export default function ProgramCalendarBuilder({
         sortOrder: it.sortOrder ?? 0,
       }));
       items.sort((a, b) => a.sortOrder - b.sortOrder);
-      const { counts, grid } = placeItemsInSlotGrid(items);
+      const locked =
+        layoutRef.current.workoutId === workoutId ? layoutRef.current.counts : undefined;
+      const { counts, grid } = placeItemsInSlotGrid(items, locked);
+      layoutRef.current = { workoutId, counts };
       setColumnSlotCounts(counts);
       setSlots(grid);
       const defaults = rx ?? DEFAULT_DAY_PRESCRIPTION;
@@ -1128,6 +1135,7 @@ export default function ProgramCalendarBuilder({
 
   async function saveSelectedSlot(opts?: {
     manageSaving?: boolean;
+    slotIdx?: number | null;
     /** Prefer the live input value (blur event) so notes never save empty from a stale render. */
     notesOverride?: string;
     setsOverride?: number;
@@ -1135,7 +1143,9 @@ export default function ProgramCalendarBuilder({
     restOverride?: number;
   }) {
     if (!focus || selectedSlotIdx === null) return;
-    const slot = slots[selectedSlotIdx];
+    const idx = opts?.slotIdx ?? slotSaveIdxRef.current ?? selectedSlotIdx;
+    if (idx === null || idx === undefined) return;
+    const slot = slotsRef.current[idx] ?? slots[idx];
     // Notes/sets saves should not flip global `saving` — that disables the note field
     // mid-edit and made it feel like notes couldn't be typed (Jeremy week-2 feedback).
     const manageSaving = opts?.manageSaving === true;
@@ -1160,7 +1170,7 @@ export default function ProgramCalendarBuilder({
       const setsValue = opts?.setsOverride ?? editorSets;
       const repsValue = opts?.repsOverride ?? editorReps;
       const restValue = opts?.restOverride ?? editorRest;
-      const ok = await persistExercisePatch(selectedSlotIdx, {
+      const ok = await persistExercisePatch(idx, {
         sets: setsValue,
         reps: repsValue,
         restSec: restValue,
@@ -1935,6 +1945,7 @@ export default function ProgramCalendarBuilder({
 
     const insertAt = lastIdx + 1;
     counts[column]++;
+    layoutRef.current = { workoutId: focus.workoutId, counts };
     setColumnSlotCounts(counts);
 
     const newSlots = [...slots];
@@ -1979,9 +1990,7 @@ export default function ProgramCalendarBuilder({
     }
     const created = await res.json();
     if (created.id) {
-      const grid = slotsRef.current;
-      const orderedIds = orderedIdsFromGrid(grid, slotIndex, created.id);
-      const next = grid.map((slot, i) =>
+      const next = slotsRef.current.map((slot, i) =>
         i === slotIndex
           ? {
               id: created.id,
@@ -1997,11 +2006,6 @@ export default function ProgramCalendarBuilder({
       );
       slotsRef.current = next;
       setSlots(next);
-      await fetch(`/api/workouts/${focus.workoutId}/exercises`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderedIds }),
-      });
     }
     setMessage("Saved.");
     setTimeout(() => setMessage(null), 1500);
@@ -2575,23 +2579,23 @@ export default function ProgramCalendarBuilder({
     if (!focus) return;
     setSaving(true);
     try {
-      const orderedIds = grid
-        .map((slot) => slot?.id)
-        .filter((id): id is string => Boolean(id));
-      if (orderedIds.length === 0) return;
-      const res = await fetch(`/api/workouts/${focus.workoutId}/exercises`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderedIds }),
-      });
-      if (!res.ok) {
-        setMessage("Could not save order.");
-        setTimeout(() => setMessage(null), 2500);
-        return;
+      for (let i = 0; i < grid.length; i++) {
+        const slot = grid[i];
+        if (!slot || slot.sortOrder === i) continue;
+        const res = await fetch(`/api/workouts/${focus.workoutId}/exercises`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ itemId: slot.id, sortOrder: i }),
+        });
+        if (!res.ok) {
+          setMessage("Could not save order.");
+          setTimeout(() => setMessage(null), 2500);
+          return;
+        }
+        slot.sortOrder = i;
       }
-      await loadSlots(focus.workoutId, prescription);
-      setMessage("Saved.");
-      setTimeout(() => setMessage(null), 1500);
+      slotsRef.current = grid;
+      setSlots([...grid]);
     } finally {
       setSaving(false);
     }
@@ -3811,6 +3815,9 @@ export default function ProgramCalendarBuilder({
                       className="input mt-0.5 h-7 w-12 px-1 text-xs"
                       value={editorSets}
                       disabled={selectedSlotIdx === null}
+                      onFocus={() => {
+                        slotSaveIdxRef.current = selectedSlotIdx;
+                      }}
                       onChange={(e) => {
                         const v = parseInt(e.target.value, 10);
                         if (!Number.isNaN(v)) setEditorSets(Math.max(1, v));
@@ -3824,6 +3831,9 @@ export default function ProgramCalendarBuilder({
                       className="input mt-0.5 h-7 w-14 px-1 text-xs"
                       value={editorReps}
                       disabled={selectedSlotIdx === null}
+                      onFocus={() => {
+                        slotSaveIdxRef.current = selectedSlotIdx;
+                      }}
                       onChange={(e) => setEditorReps(e.target.value)}
                       onBlur={() => void saveSelectedSlot()}
                     />
@@ -3837,6 +3847,9 @@ export default function ProgramCalendarBuilder({
                       className="input mt-0.5 h-7 w-12 px-1 text-xs"
                       value={editorRest}
                       disabled={selectedSlotIdx === null}
+                      onFocus={() => {
+                        slotSaveIdxRef.current = selectedSlotIdx;
+                      }}
                       onChange={(e) => {
                         const v = parseInt(e.target.value, 10);
                         if (!Number.isNaN(v)) setEditorRest(Math.max(0, v));

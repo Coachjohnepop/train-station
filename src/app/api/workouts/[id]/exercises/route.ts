@@ -185,6 +185,19 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   try {
+    const others = await prisma.workoutExercise.findMany({
+      where: { workoutId },
+      select: { id: true, sortOrder: true },
+      orderBy: { sortOrder: "desc" },
+    });
+    for (const row of others) {
+      if (row.sortOrder >= sortOrder) {
+        await prisma.workoutExercise.update({
+          where: { id: row.id },
+          data: { sortOrder: row.sortOrder + 1 },
+        });
+      }
+    }
     const item = await prisma.workoutExercise.create({
       data: {
         workoutId,
@@ -200,20 +213,7 @@ export async function POST(request: Request, { params }: Params) {
       },
       include: { exercise: true },
     });
-    const existingRows = await prisma.workoutExercise.findMany({
-      where: { workoutId },
-      select: { id: true, sortOrder: true },
-      orderBy: { sortOrder: "asc" },
-    });
-    const withoutNew = existingRows.filter((row) => row.id !== item.id).map((row) => row.id);
-    const insertAt = Math.max(0, Math.min(sortOrder, withoutNew.length));
-    withoutNew.splice(insertAt, 0, item.id);
-    await reindexPrismaWorkoutPinned(workoutId, withoutNew);
-    const pinned = await prisma.workoutExercise.findUnique({
-      where: { id: item.id },
-      include: { exercise: true },
-    });
-    return NextResponse.json(pinned ?? item, { status: 201 });
+    return NextResponse.json(item, { status: 201 });
   } catch (err) {
     console.error("workoutExercise.create failed:", err);
     const message =

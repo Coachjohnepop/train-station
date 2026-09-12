@@ -38,6 +38,20 @@ describe("placeItemsInSlotGrid", () => {
     assert.equal(grid[1]?.id, "a");
     assert.equal(grid[9]?.id, "cd");
   });
+
+  it("does not pull the first 30-60 min card into 0-30 min when a 10th card is added", () => {
+    const nine = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((sortOrder) => ({
+      id: `i${sortOrder}`,
+      sortOrder,
+    }));
+    const before = placeItemsInSlotGrid(nine);
+    assert.equal(before.grid[5]?.id, "i5");
+    const ten = [...nine, { id: "cool", sortOrder: 9 }];
+    const after = placeItemsInSlotGrid(ten, before.counts);
+    assert.equal(after.counts[0], 5);
+    assert.equal(after.grid[5]?.id, "i5");
+    assert.equal(after.grid[9]?.id, "cool");
+  });
 });
 
 describe("orderedIdsFromGrid", () => {

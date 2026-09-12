@@ -480,12 +480,28 @@ export function columnSlotCountsForExerciseCount(exerciseCount: number): number[
   return counts;
 }
 
+/**
+ * Keep the 0–30 min column width. Extra cards grow 30–60 min only.
+ * Rebalancing left vs right is what made HIIT / Cool Down jump columns.
+ */
+export function columnCountsKeepLeftFixed(
+  maxIndex: number,
+  leftCount = DEFAULT_COLUMN_SLOT_COUNTS[0],
+): number[] {
+  const left = Math.max(1, leftCount);
+  const needed = Math.max(maxIndex + 1, left + DEFAULT_COLUMN_SLOT_COUNTS[1]);
+  return [left, Math.max(DEFAULT_COLUMN_SLOT_COUNTS[1], needed - left)];
+}
+
 /** Put each exercise in its sortOrder slot. Do not pack left-to-right (that moves Cool Down). */
 export function placeItemsInSlotGrid<T extends { sortOrder: number }>(
   items: T[],
+  lockedCounts?: number[],
 ): { counts: number[]; grid: (T | null)[] } {
   const maxOrder = items.reduce((max, item) => Math.max(max, item.sortOrder ?? 0), -1);
-  const counts = columnSlotCountsForExerciseCount(Math.max(items.length, maxOrder + 1, 1));
+  const counts = lockedCounts?.length
+    ? columnCountsKeepLeftFixed(maxOrder, lockedCounts[0])
+    : columnCountsKeepLeftFixed(maxOrder);
   const total = totalSlotsFromColumnCounts(counts);
   const grid: (T | null)[] = Array(total).fill(null);
   for (const item of items) {
