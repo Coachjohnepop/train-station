@@ -50,6 +50,7 @@ async function reindexPrismaWorkoutPinned(workoutId: string, orderedIds?: string
   const rows = await prisma.workoutExercise.findMany({
     where: { workoutId },
     include: { exercise: { select: { name: true } } },
+    orderBy: { sortOrder: "asc" },
   });
   const ids = warmupPinnedOrderedIds(
     rows.map((row) => ({

@@ -73,22 +73,20 @@ export function isWarmupWorkoutLine(ex: WarmupLineLike): boolean {
 }
 
 /**
- * Warm-ups stay first, like a frozen sheet header. Cool-downs stay last.
- * Main lifts keep relative order in the middle.
+ * Warm-ups stay first for the member floor. Coach-saved order is not rewritten
+ * when they pass an explicit list (add below / drag / delete).
  */
 export function pinWarmupsFirst<T extends WarmupLineLike>(items: T[]): T[] {
   const warmups: T[] = [];
-  const mains: T[] = [];
-  const cooldowns: T[] = [];
+  const rest: T[] = [];
   for (const item of items) {
     if (isWarmupWorkoutLine(item)) warmups.push(item);
-    else if (isCooldownWorkoutLine(item)) cooldowns.push(item);
-    else mains.push(item);
+    else rest.push(item);
   }
-  return [...warmups, ...mains, ...cooldowns];
+  return [...warmups, ...rest];
 }
 
-/** Persist sortOrder so members see the same header-first sheet. */
+/** Persist sortOrder. Explicit coach order wins; otherwise warm-ups first. */
 export function warmupPinnedOrderedIds<T extends WarmupLineLike & { id: string }>(
   items: T[],
   requestedIds?: string[],
@@ -105,6 +103,9 @@ export function warmupPinnedOrderedIds<T extends WarmupLineLike & { id: string }
   for (const item of items) {
     if (seen.has(item.id)) continue;
     sequence.push(item);
+  }
+  if (requestedIds && requestedIds.length > 0) {
+    return sequence.map((item) => item.id);
   }
   return pinWarmupsFirst(sequence).map((item) => item.id);
 }

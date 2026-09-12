@@ -7,7 +7,7 @@ import {
   readSmsWorkoutStore,
   writeSmsWorkoutStore,
 } from "@/lib/sms-generated-workouts";
-import { pinWarmupsFirst, warmupPinnedOrderedIds } from "@/lib/warmup-group";
+import { warmupPinnedOrderedIds } from "@/lib/warmup-group";
 import { randomUUID } from "crypto";
 import type { SmsWorkoutStore } from "@/lib/sms-workouts-types";
 
@@ -129,13 +129,11 @@ async function loadSmsWorkoutForBuilder(
     description: workout.description ?? "Generated from coach SMS",
     exportText: workout.exportText ?? null,
     certifiedAt: workout.certifiedAt ?? null,
-    exercises: pinWarmupsFirst(
-      items.map((item) =>
-        itemToBuilder(
-          item,
-          toBuilderExercise(
-            exById[item.exerciseId] || { id: item.exerciseId, name: "Exercise", videoUrl: null },
-          ),
+    exercises: items.map((item) =>
+      itemToBuilder(
+        item,
+        toBuilderExercise(
+          exById[item.exerciseId] || { id: item.exerciseId, name: "Exercise", videoUrl: null },
         ),
       ),
     ),

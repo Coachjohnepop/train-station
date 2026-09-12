@@ -445,7 +445,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Date:** 2026-09-12 (Jeremy note — Adult Home M1D4 cooldown jumps to slot 2)
 
-**Status:** Phone video (~56s) then Jeremy: happens on **Home and Gym**, **Add below on the right** column, lands at the **top**. Fix: Cool Down is not a warm-up (`stretch` was matching the warmup-name regex); pin warm-ups first **and cool-downs last**; program-day add/reorder saves one `orderedIds` so drag sticks. Pack: `.jeremy-review-frames/home-m1d4-cooldown/`.
+**Status:** First cooldown fix (`05c19b7`) was too aggressive — pinned Cool Down last so Meal Prep couldn’t follow it, and delete reshuffled. Follow-up: coach **Add / drag / delete order is sacred**; Cool Down is still not a warm-up; admin GET does not re-pin. Member floor still pins warm-ups first. Pack: `.jeremy-review-frames/home-m1d4-cooldown/`.
 
 **Date:** 2026-09-12 (partnership contract PDF + tax-bracket share)
 

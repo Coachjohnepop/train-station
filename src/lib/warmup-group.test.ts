@@ -76,34 +76,34 @@ describe("pinWarmupsFirst", () => {
     );
   });
 
-  it("pins cool-down last even if added under the warm-up", () => {
+  it("leaves cool-down in place among the lifts", () => {
     const pinned = pinWarmupsFirst([
       { name: "General Warm Up + Shoulder Mobility", notes: null },
       { name: "Cool Down & Stretch", notes: null },
       { name: "Shoulder Taps", notes: null },
-      { name: "Dumbbell Flat Bench Chest Press", notes: null },
+      { name: "Meal Prep", notes: null },
     ]);
     assert.deepEqual(
       pinned.map((row) => row.name),
       [
         "General Warm Up + Shoulder Mobility",
-        "Shoulder Taps",
-        "Dumbbell Flat Bench Chest Press",
         "Cool Down & Stretch",
+        "Shoulder Taps",
+        "Meal Prep",
       ],
     );
   });
 
-  it("keeps a cool-down at the end when reordering", () => {
+  it("honors coach order so Meal Prep can follow Cool Down", () => {
     const items = [
       { id: "w1", name: "General Warm Up + Shoulder Mobility", notes: null },
       { id: "c1", name: "Cool Down & Stretch", notes: null },
-      { id: "m1", name: "Shoulder Taps", notes: null },
+      { id: "m1", name: "Meal Prep", notes: null },
     ];
-    assert.deepEqual(warmupPinnedOrderedIds(items, ["w1", "m1", "c1"]), [
+    assert.deepEqual(warmupPinnedOrderedIds(items, ["w1", "c1", "m1"]), [
       "w1",
-      "m1",
       "c1",
+      "m1",
     ]);
   });
 
@@ -132,15 +132,15 @@ describe("pinWarmupsFirst", () => {
     );
   });
 
-  it("re-pins a requested reorder so warmups stay first", () => {
+  it("does not rewrite an explicit coach order", () => {
     const items = [
       { id: "w1", name: "Bike", notes: "Warm-up block" },
       { id: "m1", name: "Leg Press", notes: null },
       { id: "m2", name: "RDL", notes: null },
     ];
     assert.deepEqual(warmupPinnedOrderedIds(items, ["m2", "w1", "m1"]), [
-      "w1",
       "m2",
+      "w1",
       "m1",
     ]);
   });
