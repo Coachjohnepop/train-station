@@ -445,7 +445,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Date:** 2026-09-12 (Jeremy note — Adult Home M1D4 cooldown jumps to slot 2)
 
-**Status:** First cooldown fix (`05c19b7`) was too aggressive — pinned Cool Down last so Meal Prep couldn’t follow it, and delete reshuffled. Follow-up: coach **Add / drag / delete order is sacred**; Cool Down is still not a warm-up; admin GET does not re-pin. Member floor still pins warm-ups first. Pack: `.jeremy-review-frames/home-m1d4-cooldown/`.
+**Status:** Delete was compacting the sheet so Cool Down jumped to the top of the right column. Delete now leaves a hole; remaining cards keep their slots. Meal Prep can sit after Cool Down. Member Today still pins warm-ups first. Pack: `.jeremy-review-frames/home-m1d4-cooldown/`.
 
 **Date:** 2026-09-12 (partnership contract PDF + tax-bracket share)
 

@@ -437,8 +437,6 @@ export async function DELETE(request: Request, { params }: Params) {
   }
 
   if (isCoachCatalogDemo()) {
-    await hydrateDemoExercises({ preferFresh: true });
-    const exList = loadDemoExercises();
     try {
       for (let attempt = 0; attempt < 4; attempt++) {
         let removed = false;
@@ -449,13 +447,6 @@ export async function DELETE(request: Request, { params }: Params) {
             (we: any) => !(we.id === itemId && we.workoutId === workoutId),
           );
           removed = seedData.workoutExercises.length !== before;
-          if (removed) {
-            seedData.workoutExercises = pinDemoWorkoutWarmups(
-              seedData.workoutExercises as any[],
-              workoutId,
-              exList,
-            );
-          }
         });
         if (!removed) {
           return NextResponse.json({ detail: "Item not found" }, { status: 404 });
@@ -497,7 +488,6 @@ export async function DELETE(request: Request, { params }: Params) {
         data: { updatedAt: new Date() },
       });
     });
-    await reindexPrismaWorkoutPinned(workoutId);
     return new NextResponse(null, { status: 204 });
   } catch (err) {
     console.error("workoutExercise.delete failed:", err);

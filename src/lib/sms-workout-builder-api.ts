@@ -314,8 +314,6 @@ export async function deleteSmsWorkoutExercise(
   );
   if (store.workoutExercises.length === before) return false;
 
-  pinSmsStoreExercises(store, workoutId);
-
   await persistSmsWorkoutStore(store, "Exercise remove");
   await verifySmsWorkoutPersisted(
     workoutId,

@@ -819,11 +819,16 @@ export default function ProgramCalendarBuilder({
         sortOrder: it.sortOrder ?? 0,
       }));
       items.sort((a, b) => a.sortOrder - b.sortOrder);
-      const counts = columnSlotCountsForExerciseCount(items.length);
+      const maxOrder = items.reduce(
+        (max, item) => Math.max(max, item.sortOrder ?? 0),
+        -1,
+      );
+      const counts = columnSlotCountsForExerciseCount(Math.max(items.length, maxOrder + 1));
       const total = totalSlotsFromColumnCounts(counts);
       const grid: (SlotItem | null)[] = Array(total).fill(null);
-      items.forEach((item, idx) => {
-        if (idx < total) grid[idx] = { ...item, sortOrder: idx };
+      items.forEach((item) => {
+        const idx = item.sortOrder ?? 0;
+        if (idx >= 0 && idx < total) grid[idx] = item;
       });
       setColumnSlotCounts(counts);
       setSlots(grid);
