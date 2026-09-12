@@ -24,6 +24,7 @@ import {
 
 const addSchema = workoutPrescriptionSchema.extend({
   exerciseId: z.string().min(1),
+  sortOrder: z.number().int().nonnegative().optional(),
 });
 
 const updateItemSchema = z.object({
@@ -161,7 +162,10 @@ export async function POST(request: Request, { params }: Params) {
     where: { workoutId },
     _max: { sortOrder: true },
   });
-  const sortOrder = (maxOrder._max.sortOrder ?? -1) + 1;
+  const sortOrder =
+    parsed.data.sortOrder !== undefined
+      ? parsed.data.sortOrder
+      : (maxOrder._max.sortOrder ?? -1) + 1;
 
   const exercise = await prisma.exercise.findUnique({
     where: { id: parsed.data.exerciseId },
@@ -195,7 +199,15 @@ export async function POST(request: Request, { params }: Params) {
       },
       include: { exercise: true },
     });
-    await reindexPrismaWorkoutPinned(workoutId);
+    const existingRows = await prisma.workoutExercise.findMany({
+      where: { workoutId },
+      select: { id: true, sortOrder: true },
+      orderBy: { sortOrder: "asc" },
+    });
+    const withoutNew = existingRows.filter((row) => row.id !== item.id).map((row) => row.id);
+    const insertAt = Math.max(0, Math.min(sortOrder, withoutNew.length));
+    withoutNew.splice(insertAt, 0, item.id);
+    await reindexPrismaWorkoutPinned(workoutId, withoutNew);
     const pinned = await prisma.workoutExercise.findUnique({
       where: { id: item.id },
       include: { exercise: true },

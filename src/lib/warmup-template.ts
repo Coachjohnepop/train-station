@@ -112,6 +112,8 @@ export const DEFAULT_WARMUP_BLOCKS: WarmupBlockTemplate[] = [
   },
 ];
 
+const COOLDOWN_NAME_RE = /cool[- ]?down|cooldown/i;
+
 const WARMUP_NAME_RE =
   /warm[- ]?up|mobility|stretch|foam|band|cardio warm|5 min bike|up with bands/i;
 
@@ -122,7 +124,9 @@ const STANDARD_WARMUP_LINE_RE =
 const REST_OR_OFF_RE = /rest\s*day|day\s*off|^off$|active recovery/i;
 
 export function isWarmupExerciseName(name: string): boolean {
-  return WARMUP_NAME_RE.test(name);
+  const n = String(name || "");
+  if (COOLDOWN_NAME_RE.test(n)) return false;
+  return WARMUP_NAME_RE.test(n);
 }
 
 export function isStandardWarmupLineName(name: string): boolean {

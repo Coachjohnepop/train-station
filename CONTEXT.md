@@ -45,7 +45,7 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 | 2. Money lands | **100%** (minus Stripe fees) → **Jeremy’s master Stripe balance** → business bank on payout schedule |
 | 3. Company keeps | Most revenue on platform (“company feed”) |
 | 4. **Dev & partnership fees** | **Not** at swipe. Later: Admin → **Dev & partnership** + **Connect Express** |
-| 5. John’s share | **100% of fee pool** until partners change (5% MRR → 30% after $5k goal) — development & partnership fees |
+| 5. John’s share | **100% of fee pool** until partners change. **Software today:** 5% of all MRR until $5k goal, then 30% of all MRR (cliff). **Draft partnership (not coded, not signed):** tax brackets — first $5k always 5%, $5k–$15k always 30%, above $15k always 50/50. Contract: `docs/partnership-drafts-2026-07-31/10-Partnership-Agreement-DRAFT.pdf`. |
 | 5b. **Payout minimum** | Fee pool must reach **$400** before **Run payout**. Env: `STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS` (default 400). Preview always OK. |
 | 6. Test vs Live | **`sk_test_`** = fake money. Real cards only after Live keys + live `price_…` |
 
@@ -442,6 +442,28 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ---
 
 ## WHERE WE LEFT OFF
+
+**Date:** 2026-09-12 (Jeremy note — Adult Home M1D4 cooldown jumps to slot 2)
+
+**Status:** Phone video (~56s) then Jeremy: happens on **Home and Gym**, **Add below on the right** column, lands at the **top**. Fix: Cool Down is not a warm-up (`stretch` was matching the warmup-name regex); pin warm-ups first **and cool-downs last**; program-day add/reorder saves one `orderedIds` so drag sticks. Pack: `.jeremy-review-frames/home-m1d4-cooldown/`.
+
+**Date:** 2026-09-12 (partnership contract PDF + tax-bracket share)
+
+**Status:** Cash share in the partnership drafts is now **marginal brackets**: first $5k Gross MRR always **5%** to John, $5k–**$15k** always **30%**, above $15k always **50/50**. Unified contract draft: `docs/partnership-drafts-2026-07-31/10-Partnership-Agreement-DRAFT.pdf` (also Desktop + Train Station folder as `Partnership-Agreement-DRAFT-2026-09-12.pdf`). Comp plan PDF `04` has the math table ($100k → John $45,750). **Not legal advice, not signed.** Admin → Dev & partnership still runs the old cliff until recoded after counsel. BYOW stays preview.
+
+**Date:** 2026-09-11–12 (session recap — journey, landing A/B, intro pester, BYOW)
+
+**Status:** Full pile from this stretch:
+
+- **Analytics:** Live first-party journey. Homepage is the storefront (194/252). Guest bounce ~78–80%. Tour 76 / Explore 65 / Start membership 32. Wed 9 Sep = Facebook in-app (FBAN). Fri 11 Sep = Instagram-to-Safari (iPhone Safari, blank referrer; tracker never wrote “Instagram”). Jase (Free) onboarded, zero sets, never booked. Skyler (Free) messaged and booked 15 min. Garry paid $25 Coach Class. Ali/Bella/Aiden stay on Zoom/Messages. Briefs: `Customer-Journey-Brief-2026-09-11.pdf`, `Ideas-and-Landing-ABC-2026-09-11.pdf`.
+- **Five ideas:** (1) landing first screen only (2) first hour one set with Jeremy’s demo (3) 15-min almost mandatory (4) FB vs IG are two rooms — one post URL (5) $25 is keep Jeremy; dollar-a-day is copy. Three-price SKU / $1/day / 10¢/min dropped (Stripe $0.30).
+- **Landing A/B on prod** (`ae8f285`, cookie fix `6553716`): `/` 50/50 **A tour** (current homepage, stays in stock) vs **B Meet Jeremy**. **C floor** preview `/l/floor`. Jeremy posts **thetrainstation.co** only. Kill switch `LANDING_AB_ENABLED`. Loop 71/71 after C-cookie sticky fix.
+- **15-min intro:** Book is the purple onboard button every seat; Today still opens; pester bar until booked. Natasha has intro stamp — **no outreach**.
+- **BYOW preview (do not build):** `docs/byow-platform-preview.md` + prompt `docs/prompts/byow-platform-preview.prompt.md`. Bring Your Own Workout instead of Free (1–2 months paste, then ~$2.99/mo), $10 Jeremy week then fall back, fit-%, App Store later. Text upload stays coach-only.
+
+**Date:** 2026-09-12 (BYOW platform preview — do not build)
+
+**Status:** John showed people the console (checkoffs, confetti, rest, HIIT); they don’t want Jeremy’s workout, they want **theirs**. Parked as preview: **Bring Your Own Workout** instead of Free (1–2 months free paste, then ~$2.99/mo), **$10 Jeremy week** then fall back to own program, fit-% / 1–2 Jeremy recommends, App Store later. Partner share **tax brackets** (not the current 5%→30% cliff): first $5k always 5% to John, next to **$15k** always 30%, above that 50/50 so he’s not left behind if it blows up. Canonical: `docs/byow-platform-preview.md`. Prompt: `docs/prompts/byow-platform-preview.prompt.md`. **Do not ship. Do not put on landing A/B.** Text upload stays coach-only until we leave preview.
 
 **Date:** 2026-09-11 (landing A/B + 15-min intro pester)
 

@@ -58,25 +58,34 @@ export function warmupLineName(ex: WarmupLineLike): string {
   return String(ex.exercise?.name || ex.name || "").trim();
 }
 
+const COOLDOWN_NAME_RE = /cool[- ]?down|cooldown/i;
+
+export function isCooldownWorkoutLine(ex: WarmupLineLike): boolean {
+  return COOLDOWN_NAME_RE.test(warmupLineName(ex));
+}
+
 /** A line is warm-up if Jeremy tagged it, or it is a standard template name. */
 export function isWarmupWorkoutLine(ex: WarmupLineLike): boolean {
+  if (isCooldownWorkoutLine(ex)) return false;
   const notes = `${ex.notes || ""} ${ex.coachNotes || ""} ${ex.description || ""}`;
   if (notesMarkWarmup(notes)) return true;
   return isStandardWarmupLineName(warmupLineName(ex));
 }
 
 /**
- * Warm-ups stay first, like a frozen sheet header, while keeping relative
- * order inside the header and inside the main lifts.
+ * Warm-ups stay first, like a frozen sheet header. Cool-downs stay last.
+ * Main lifts keep relative order in the middle.
  */
 export function pinWarmupsFirst<T extends WarmupLineLike>(items: T[]): T[] {
   const warmups: T[] = [];
   const mains: T[] = [];
+  const cooldowns: T[] = [];
   for (const item of items) {
     if (isWarmupWorkoutLine(item)) warmups.push(item);
+    else if (isCooldownWorkoutLine(item)) cooldowns.push(item);
     else mains.push(item);
   }
-  return [...warmups, ...mains];
+  return [...warmups, ...mains, ...cooldowns];
 }
 
 /** Persist sortOrder so members see the same header-first sheet. */

@@ -65,6 +65,48 @@ describe("leadingWarmupCount", () => {
 });
 
 describe("pinWarmupsFirst", () => {
+  it("does not treat Cool Down & Stretch as a warm-up", () => {
+    assert.equal(
+      isWarmupWorkoutLine({ name: "Cool Down & Stretch", notes: null }),
+      false,
+    );
+    assert.equal(
+      isWarmupWorkoutLine({ name: "Cool Down & Stretch", notes: "Warm-up block" }),
+      false,
+    );
+  });
+
+  it("pins cool-down last even if added under the warm-up", () => {
+    const pinned = pinWarmupsFirst([
+      { name: "General Warm Up + Shoulder Mobility", notes: null },
+      { name: "Cool Down & Stretch", notes: null },
+      { name: "Shoulder Taps", notes: null },
+      { name: "Dumbbell Flat Bench Chest Press", notes: null },
+    ]);
+    assert.deepEqual(
+      pinned.map((row) => row.name),
+      [
+        "General Warm Up + Shoulder Mobility",
+        "Shoulder Taps",
+        "Dumbbell Flat Bench Chest Press",
+        "Cool Down & Stretch",
+      ],
+    );
+  });
+
+  it("keeps a cool-down at the end when reordering", () => {
+    const items = [
+      { id: "w1", name: "General Warm Up + Shoulder Mobility", notes: null },
+      { id: "c1", name: "Cool Down & Stretch", notes: null },
+      { id: "m1", name: "Shoulder Taps", notes: null },
+    ];
+    assert.deepEqual(warmupPinnedOrderedIds(items, ["w1", "m1", "c1"]), [
+      "w1",
+      "m1",
+      "c1",
+    ]);
+  });
+
   it("keeps a tagged warmup that drifted into the lifts in the header", () => {
     const pinned = pinWarmupsFirst([
       { name: "Bike", notes: "Warm-up block" },

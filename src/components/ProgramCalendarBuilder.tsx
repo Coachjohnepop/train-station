@@ -1970,6 +1970,7 @@ export default function ProgramCalendarBuilder({
         weightTier: "medium",
         restSec: editorRest,
         notes: null,
+        sortOrder: slotIndex,
       }),
     });
     setSaving(false);
@@ -1979,10 +1980,14 @@ export default function ProgramCalendarBuilder({
     }
     const created = await res.json();
     if (created.id) {
+      const orderedIds = slots
+        .map((slot, i) => (i === slotIndex ? created.id : slot?.id))
+        .filter((id): id is string => Boolean(id));
+      if (!orderedIds.includes(created.id)) orderedIds.push(created.id);
       await fetch(`/api/workouts/${focus.workoutId}/exercises`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId: created.id, sortOrder: slotIndex }),
+        body: JSON.stringify({ orderedIds }),
       });
     }
     await loadSlots(focus.workoutId, prescription);
@@ -2560,26 +2565,23 @@ export default function ProgramCalendarBuilder({
     if (!focus) return;
     setSaving(true);
     try {
-      const patches: Promise<Response>[] = [];
-      for (let i = 0; i < grid.length; i++) {
-        const slot = grid[i];
-        if (!slot) continue;
-        if ((slot.sortOrder ?? i) !== i) {
-          patches.push(
-            fetch(`/api/workouts/${focus.workoutId}/exercises`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ itemId: slot.id, sortOrder: i }),
-            }),
-          );
-        }
+      const orderedIds = grid
+        .map((slot) => slot?.id)
+        .filter((id): id is string => Boolean(id));
+      if (orderedIds.length === 0) return;
+      const res = await fetch(`/api/workouts/${focus.workoutId}/exercises`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderedIds }),
+      });
+      if (!res.ok) {
+        setMessage("Could not save order.");
+        setTimeout(() => setMessage(null), 2500);
+        return;
       }
-      if (patches.length > 0) {
-        await Promise.all(patches);
-        await loadSlots(focus.workoutId, prescription);
-        setMessage("Saved.");
-        setTimeout(() => setMessage(null), 1500);
-      }
+      await loadSlots(focus.workoutId, prescription);
+      setMessage("Saved.");
+      setTimeout(() => setMessage(null), 1500);
     } finally {
       setSaving(false);
     }
