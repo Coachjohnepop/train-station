@@ -25,10 +25,8 @@ describe("resolveLiveLandingAb", () => {
     assert.equal(resolveLiveLandingAb("jeremy"), "jeremy");
   });
 
-  it("does not put floor (preview-only) on the live `/` split", () => {
-    const resolved = resolveLiveLandingAb("floor");
-    assert.ok(resolved === "tour" || resolved === "jeremy");
-    assert.notEqual(resolved, "floor");
+  it("keeps a preview C cookie sticky (does not re-roll A/B)", () => {
+    assert.equal(resolveLiveLandingAb("floor"), "floor");
   });
 });
 

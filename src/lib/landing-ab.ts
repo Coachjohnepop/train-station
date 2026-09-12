@@ -43,10 +43,13 @@ export function assignLiveLandingAb(): LandingAbVariant {
   return live[i] ?? LANDING_AB_CONTROL;
 }
 
-/** Sticky cookie only if that arm is still in the live stock. */
+/**
+ * Sticky cookie, including preview C. New guests only get A/B via assignLiveLandingAb.
+ * When the experiment is off, everyone on `/` is forced back to the current landing.
+ */
 export function resolveLiveLandingAb(existing: LandingAbVariant | null): LandingAbVariant {
   if (!LANDING_AB_ENABLED) return LANDING_AB_CONTROL;
-  if (existing && LANDING_AB_LIVE.includes(existing)) return existing;
+  if (existing) return existing;
   return assignLiveLandingAb();
 }
 
