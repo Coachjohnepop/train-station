@@ -85,24 +85,6 @@ function navHref(item: NavItem, paymentGateActive: boolean, checkoutPlan: Signup
   return memberCheckoutPath(checkoutPlan);
 }
 
-function homeIcon() {
-  return (
-    <svg
-      className="member-nav-home-icon"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M3 10.5 12 3l9 7.5" />
-      <path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5" />
-    </svg>
-  );
-}
-
 function lockIcon() {
   return (
     <svg
@@ -252,12 +234,11 @@ export default function MemberNav({
                   e.preventDefault();
                   goMemberTodayHome(router);
                 }}
-                className={`member-nav-home member-nav-home--ramp relative flex min-h-10 flex-[1.05] flex-row items-center justify-center gap-1 rounded-xl border px-1.5 py-1 text-center transition lg:min-h-[2.75rem] lg:min-w-[4.75rem] lg:flex-none lg:px-5 ${
-                  active ? "member-nav-home--active nav-tab-ramp-active" : "nav-tab-ramp"
+                className={`member-nav-today relative flex min-h-10 flex-[1.05] items-center justify-center rounded-xl border px-1.5 py-1 text-center text-[13px] font-semibold transition lg:min-h-[2.75rem] lg:min-w-[4.75rem] lg:flex-none lg:px-5 ${
+                  active ? "nav-tab-ramp-active" : "nav-tab-ramp"
                 } ${locked ? "opacity-80" : ""}`}
               >
-                {homeIcon()}
-                <span className="member-nav-home-label">{item.label}</span>
+                <span>{item.label}</span>
                 {rampHighlight && !active ? (
                   <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[var(--ramp-gold)] ring-2 ring-[var(--surface)]" />
                 ) : null}
