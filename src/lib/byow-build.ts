@@ -44,11 +44,12 @@ export async function buildByowWorkoutFromNotes(input: {
     throw new Error("No exercises found in that note. Put one move per line, then sets/reps under it.");
   }
 
+  const exactNotes = input.rawText;
   const workout = await prisma.byowWorkout.create({
     data: {
       ownerUserId: input.ownerUserId,
       name: parsed.title || "My workout",
-      exportText: parsed.rawText,
+      exportText: exactNotes,
       source: "notes",
     },
   });
@@ -79,7 +80,7 @@ export async function buildByowWorkoutFromNotes(input: {
       ownerUserId: input.ownerUserId,
       workoutId: workout.id,
       filename: input.filename?.trim() || null,
-      rawText: parsed.rawText,
+      rawText: exactNotes,
     },
   });
 

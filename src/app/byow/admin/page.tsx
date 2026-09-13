@@ -133,15 +133,23 @@ export default async function ByowAdminPage() {
           <ul className="space-y-2">
             {workouts.map((w) => (
               <li key={w.id}>
-                <Link
-                  href={`/member/workout?byow=${encodeURIComponent(w.id)}`}
-                  className="block rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-3"
-                >
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-3">
                   <p className="text-sm font-semibold">{w.name}</p>
                   <p className="text-xs text-[var(--muted)]">
                     {w.owner.name || w.owner.email} · {w._count.exercises} moves
                   </p>
-                </Link>
+                  <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                    <Link href={`/byow/admin/${encodeURIComponent(w.id)}`} className="text-accent hover:underline">
+                      Exact notes
+                    </Link>
+                    <Link
+                      href={`/member/workout?byow=${encodeURIComponent(w.id)}`}
+                      className="text-[var(--muted)] hover:underline"
+                    >
+                      Open console
+                    </Link>
+                  </div>
+                </div>
               </li>
             ))}
           </ul>

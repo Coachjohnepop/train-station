@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import ByowFormatGuide from "@/components/ByowFormatGuide";
 
 type Preview = {
   title: string;
@@ -63,6 +64,7 @@ export default function ByowUploadClient() {
 
   return (
     <div className="space-y-4">
+      <ByowFormatGuide rawText={rawText} />
       <label className="block">
         <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
           Notes file (.txt)
@@ -86,7 +88,7 @@ export default function ByowUploadClient() {
           }}
           rows={12}
           className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 font-mono text-sm"
-          placeholder={`Upper body\n\nWarm up 5 min\n\nFlat bench press\n10,10,10\n\nRows\n12,12,12`}
+          placeholder={"Type or paste here — same shape as the example above."}
         />
       </label>
       {filename ? (
