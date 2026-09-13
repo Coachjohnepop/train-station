@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LogoutButton from "@/components/LogoutButton";
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
@@ -84,13 +85,7 @@ export default async function HomePage() {
               <Link href={landingAbPath("floor")} className="text-[10px] font-bold uppercase tracking-wide text-white/70 hover:text-white">
                 C
               </Link>
-              <Link
-                href="/api/auth/logout?next=/login"
-                prefetch={false}
-                className="inline-flex items-center rounded-full border border-white/30 px-4 py-1.5 text-xs font-bold text-white/90 transition hover:bg-white/10"
-              >
-                Sign out
-              </Link>
+              <LogoutButton className="inline-flex h-auto items-center justify-center rounded-full border border-white/30 bg-transparent px-4 py-1.5 text-xs font-bold text-white/90 hover:bg-white/10 hover:text-white" />
               <Link
                 href="/admin"
                 className="inline-flex items-center rounded-full bg-[#7c3aed] px-4 py-1.5 text-xs font-bold text-white shadow-lg shadow-[#7c3aed]/35 transition hover:bg-[#6d28d9]"

@@ -192,21 +192,26 @@ function expireCookie(
   name: string,
 ) {
   const expired = new Date(0);
+  const secure = process.env.NODE_ENV === "production";
   const variants: Array<Record<string, unknown>> = [
     { path: "/", maxAge: 0, expires: expired },
+    { path: "/", maxAge: 0, expires: expired, secure, sameSite: "lax" as const },
     {
       path: "/",
       maxAge: 0,
       expires: expired,
       httpOnly: true,
       sameSite: "lax" as const,
-      secure: process.env.NODE_ENV === "production",
+      secure,
     },
   ];
-  const domain = productionCookieDomain();
+  const domains = [undefined, productionCookieDomain(), "thetrainstation.co"].filter(
+    (d, i, all) => d !== undefined || i === 0,
+  );
   for (const opts of variants) {
-    res.cookies.set(name, "", opts);
-    if (domain) res.cookies.set(name, "", { ...opts, domain });
+    for (const domain of [...new Set(domains)]) {
+      res.cookies.set(name, "", domain ? { ...opts, domain } : opts);
+    }
   }
 }
 
