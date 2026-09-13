@@ -252,17 +252,22 @@ export async function middleware(request: NextRequest) {
   }
 
   // Already signed in → skip the public login form.
+  // switch=1 is Sign out: stay on login even if the session cookie lagged one hop
+  // (iPhone Safari used to bounce members straight back into Today).
   if (pathname === "/login" || pathname.startsWith("/login/")) {
-    const session = await sessionFromRequest(request);
-    if (session?.role === "MEMBER") {
-      const redirectParam = request.nextUrl.searchParams.get("redirect");
-      if (redirectParam?.startsWith("/member")) {
-        return NextResponse.redirect(new URL(redirectParam, request.url));
+    const switching = request.nextUrl.searchParams.get("switch") === "1";
+    if (!switching) {
+      const session = await sessionFromRequest(request);
+      if (session?.role === "MEMBER") {
+        const redirectParam = request.nextUrl.searchParams.get("redirect");
+        if (redirectParam?.startsWith("/member")) {
+          return NextResponse.redirect(new URL(redirectParam, request.url));
+        }
+        return NextResponse.redirect(new URL(memberEntryFromRequest(request), request.url));
       }
-      return NextResponse.redirect(new URL(memberEntryFromRequest(request), request.url));
-    }
-    if (session && isStaffRole(session.role)) {
-      return NextResponse.redirect(new URL("/admin", request.url));
+      if (session && isStaffRole(session.role)) {
+        return NextResponse.redirect(new URL("/admin", request.url));
+      }
     }
   }
 

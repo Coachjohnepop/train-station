@@ -1,7 +1,5 @@
 "use client";
 
-import { signOutNow } from "@/lib/logout-url";
-
 export default function LogoutButton({
   className = "",
   compact = false,
@@ -10,24 +8,24 @@ export default function LogoutButton({
   compact?: boolean;
 }) {
   return (
-    <button
-      type="button"
-      className={[
-        // Clear browser hover target: color shift + 10% grow
-        "inline-flex items-center justify-center rounded-md text-xs font-medium",
-        "text-[var(--muted)] transition-all duration-150 ease-out",
-        "hover:scale-110 hover:text-rose-200 hover:bg-rose-500/20",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/60",
-        "active:scale-105",
-        compact ? "p-1.5" : "px-2 py-1",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      onClick={() => signOutNow()}
-      title="Sign out"
-      aria-label="Sign out"
-    >
+    <form method="POST" action="/api/auth/logout" className="inline-flex shrink-0">
+      <button
+        type="submit"
+        className={[
+          // Clear browser hover target: color shift + 10% grow
+          "inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-xs font-medium",
+          "text-[var(--muted)] transition-all duration-150 ease-out",
+          "hover:scale-110 hover:text-rose-200 hover:bg-rose-500/20",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/60",
+          "active:scale-105",
+          compact ? "p-1.5" : "px-2 py-1",
+          className,
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        title="Sign out"
+        aria-label="Sign out"
+      >
       <svg
         className={compact ? "logout-btn-icon" : "logout-btn-icon logout-btn-icon--optional"}
         width="18"
@@ -45,6 +43,7 @@ export default function LogoutButton({
         />
       </svg>
       <span className={compact ? "sr-only" : "logout-btn-label"}>Sign out</span>
-    </button>
+      </button>
+    </form>
   );
 }

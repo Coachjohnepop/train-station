@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import LandingNav from "@/components/LandingNav";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
-import { signOutNow } from "@/lib/logout-url";
+import LogoutButton from "@/components/LogoutButton";
 
 export default function LandingWelcomeBack({
   email,
@@ -15,10 +15,6 @@ export default function LandingWelcomeBack({
   isCoach?: boolean;
   children: ReactNode;
 }) {
-  function signOut() {
-    signOutNow();
-  }
-
   const programHref = isCoach ? "/admin" : "/member";
 
   return (
@@ -39,13 +35,7 @@ export default function LandingWelcomeBack({
                 {isCoach ? "Back to Coach Admin" : "Back to the Program"}
               </span>
             </Link>
-            <button
-              type="button"
-              onClick={signOut}
-              className="inline-flex h-12 items-center justify-center rounded-full border border-[var(--border)] px-8 text-sm font-semibold text-[var(--muted)] hover:text-[var(--text)] hover:border-[#7c3aed]/50 transition"
-            >
-              Sign out
-            </button>
+            <LogoutButton className="inline-flex h-12 items-center justify-center rounded-full border border-[var(--border)] px-8 text-sm font-semibold text-[var(--muted)] hover:text-[var(--text)] hover:border-[#7c3aed]/50" />
           </div>
 
           {email && (

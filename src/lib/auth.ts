@@ -234,6 +234,7 @@ export function clearSessionCookies(
   expireCookie(res, NEEDS_ONBOARD_COOKIE);
   expireCookie(res, SIGNUP_PLAN_COOKIE);
   expireCookie(res, NEEDS_PAYMENT_COOKIE);
+  expireCookie(res, NEEDS_FREE_PM_COOKIE);
   expireCookie(res, PENDING_APPROVAL_COOKIE);
 }
 

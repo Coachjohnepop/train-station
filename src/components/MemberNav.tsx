@@ -319,15 +319,37 @@ export default function MemberNav({
             setNutritionOpen(false);
             setMoreOpen((open) => !open);
           }}
-          className={`member-nav-item relative flex min-h-10 flex-[0.9] flex-col items-center justify-center rounded-lg px-1 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:flex-none lg:min-w-[4.25rem] lg:px-4 ${tabClass(
+          className={`member-nav-more member-nav-item relative flex min-h-11 min-w-11 flex-none flex-col items-center justify-center rounded-lg px-2 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:min-w-[4.25rem] lg:px-4 ${tabClass(
             moreActive || moreOpen,
             false,
           )}`}
         >
-          <span className="member-nav-more-icon" aria-hidden>
-            {moreOpen ? "✕" : "☰"}
-          </span>
-          <span>More</span>
+          {moreOpen ? (
+            <svg
+              className="member-nav-more-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              aria-hidden
+            >
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          ) : (
+            <svg
+              className="member-nav-more-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              aria-hidden
+            >
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          )}
+          <span className="member-nav-more-label">More</span>
         </button>
       </nav>
 

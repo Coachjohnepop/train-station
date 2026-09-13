@@ -18,21 +18,9 @@ export function signOutNow(): void {
   const form = document.createElement("form");
   form.method = "POST";
   form.action = "/api/auth/logout";
-  form.style.display = "none";
-  const path = window.location.pathname;
-  if (path.startsWith("/admin") || path.startsWith("/member")) {
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = "redirect";
-    input.value = path;
-    form.appendChild(input);
-  } else {
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = "next";
-    input.value = "/login";
-    form.appendChild(input);
-  }
+  form.setAttribute("aria-hidden", "true");
+  form.style.position = "absolute";
+  form.style.left = "-9999px";
   document.body.appendChild(form);
   form.submit();
 }

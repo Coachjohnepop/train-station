@@ -2135,6 +2135,13 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 /* Member top nav — daily tabs + More hamburger. */
 .member-nav {
   min-height: 2.75rem;
+  overflow: visible;
+}
+
+.member-nav > a,
+.member-nav > button:not(.member-nav-more),
+.member-nav-today {
+  min-width: 0;
 }
 
 .member-nav-home {
@@ -2213,10 +2220,27 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   opacity: 0.9;
 }
 
+.member-nav-more {
+  flex: 0 0 auto;
+}
+
 .member-nav-more-icon {
-  font-size: 1.05rem;
-  line-height: 1;
+  width: 1.35rem;
+  height: 1.35rem;
+  flex-shrink: 0;
+}
+
+.member-nav-more-label {
+  font-size: 0.7rem;
   font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 639px) {
+  .member-nav-more-label {
+    display: none;
+  }
 }
 
 .member-nav-more-panel {
@@ -2612,11 +2636,17 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
     font-size: 0.7rem;
   }
 
-  .member-app .member-nav-more-icon {
-    font-size: 0.85rem;
+  .member-app .member-nav-more {
+    flex: 0 0 auto !important;
+    min-width: 2.5rem !important;
   }
 
-  .member-app #member-nav-more > span:last-child {
+  .member-app .member-nav-more-icon {
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+
+  .member-app .member-nav-more-label {
     display: none;
   }
 
