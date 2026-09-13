@@ -13,6 +13,7 @@ import OAuthButtons from "@/components/OAuthButtons";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
 import { NextStepButton } from "@/components/NextStepButton";
 
+/** Ticket signup UI. Account creation is completeMemberSignup (shared with /byow). */
 function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();

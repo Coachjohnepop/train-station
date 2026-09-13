@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function ByowPage() {
   const session = await getSessionUser();
   if (!session) {
-    redirect("/login?redirect=/byow");
+    redirect("/byow/signup");
   }
   if (!canUseByowUpload(session)) {
     redirect("/login?redirect=/byow");

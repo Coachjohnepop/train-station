@@ -445,7 +445,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Date:** 2026-09-13 (hidden BYOW)
 
-**Status:** Preview door **`/byow`** (noindex, not on landing). Members paste/upload notes → **ByowWorkout / ByowExercise** tables, **not** Jeremy’s catalog. **`/byow/admin`** = John (ADMIN) only. Daughters run them at **`/member/byow`** → same workout console. More → My notes.
+**Status:** Hidden **`/byow`** (noindex, no landing links). **Free** — `/byow/signup` uses the same `completeMemberSignup({ channel: "byow" })` as main (no Stripe, no Adult enroll). Testers: `/member/byow`. John desk: `/byow/admin` (users, libraries, 14d journey). Isolated `Byow*` tables.
 
 **Date:** 2026-09-13 (Jeremy catalog persistence)
 

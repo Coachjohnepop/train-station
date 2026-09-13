@@ -1,5 +1,11 @@
 import type { SessionUser } from "@/lib/auth-session";
 
+export const BYOW_COOKIE = "ts_byow";
+
+export function isByowProfile(profile: { paymentNote?: string | null } | null | undefined): boolean {
+  return (profile?.paymentNote || "").trim().toLowerCase() === "byow";
+}
+
 /** John-only BYOW desk. Jeremy (INSTRUCTOR) does not see this library. */
 export function canAccessByowAdmin(session: { role: string; email?: string | null } | null): boolean {
   if (!session) return false;

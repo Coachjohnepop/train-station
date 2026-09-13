@@ -38,6 +38,7 @@ function deviceType(): string {
 
 function pageSection(path: string): string {
   if (path.startsWith("/admin")) return "admin";
+  if (path.startsWith("/byow") || path.startsWith("/member/byow")) return "byow";
   if (path.startsWith("/member")) return "member";
   if (path.startsWith("/login") || path.startsWith("/signup")) return "auth";
   if (path === "/" || path.startsWith("/join") || path === "/free") return "landing";

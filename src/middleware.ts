@@ -8,6 +8,7 @@ import {
 } from "@/lib/member-app-entry";
 import { purchaseHref } from "@/lib/member-purchase-path";
 import { memberPathRequiresPayment } from "@/lib/member-route-gates";
+import { BYOW_COOKIE } from "@/lib/byow-access";
 import {
   LANDING_AB_COOKIE,
   LANDING_AB_COOKIE_MAX_AGE,
@@ -33,6 +34,7 @@ const PUBLIC_PAGE_PREFIXES = [
   "/coming-soon",
   "/join",
   "/free",
+  "/byow/signup",
 ];
 
 function memberEntryFromRequest(request: NextRequest): string {
@@ -340,6 +342,12 @@ export async function middleware(request: NextRequest) {
       request.cookies.get(SIGNUP_PLAN_COOKIE)?.value;
 
     if (pathname.startsWith("/member")) {
+      const byowDoor =
+        request.cookies.get(BYOW_COOKIE)?.value === "1" ||
+        Boolean(request.nextUrl.searchParams.get("byow"));
+      if (byowDoor) {
+        return nextWithPath(request, pathname);
+      }
       if (
         memberPathRequiresPayment(pathname) &&
         request.cookies.get(NEEDS_PAYMENT_COOKIE)?.value === "1"

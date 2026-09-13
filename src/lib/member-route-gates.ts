@@ -26,6 +26,7 @@ export const MEMBER_PATHS_EXEMPT_FROM_PAYMENT_GATE = [
   "/member/pending",
   "/member/speaking",
   "/member/quote-received",
+  "/member/byow",
 ] as const;
 
 export function isMemberPathExemptFromPaymentGate(pathname: string): boolean {
