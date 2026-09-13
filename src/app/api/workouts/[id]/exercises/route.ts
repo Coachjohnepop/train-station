@@ -198,20 +198,27 @@ export async function POST(request: Request, { params }: Params) {
         });
       }
     }
-    const item = await prisma.workoutExercise.create({
-      data: {
-        workoutId,
-        exerciseId: parsed.data.exerciseId,
-        sortOrder,
-        setScheme: parsed.data.setScheme,
-        repPattern: parsed.data.repPattern ?? null,
-        reps: parsed.data.reps ?? null,
-        weightTier: parsed.data.weightTier,
-        sets: parsed.data.sets,
-        restSec: parsed.data.restSec ?? null,
-        notes: parsed.data.notes ?? null,
-      },
-      include: { exercise: true },
+    const item = await prisma.$transaction(async (tx) => {
+      const created = await tx.workoutExercise.create({
+        data: {
+          workoutId,
+          exerciseId: parsed.data.exerciseId,
+          sortOrder,
+          setScheme: parsed.data.setScheme,
+          repPattern: parsed.data.repPattern ?? null,
+          reps: parsed.data.reps ?? null,
+          weightTier: parsed.data.weightTier,
+          sets: parsed.data.sets,
+          restSec: parsed.data.restSec ?? null,
+          notes: parsed.data.notes ?? null,
+        },
+        include: { exercise: true },
+      });
+      await tx.workout.update({
+        where: { id: workoutId },
+        data: { updatedAt: new Date() },
+      });
+      return created;
     });
     return NextResponse.json(item, { status: 201 });
   } catch (err) {
@@ -383,10 +390,17 @@ export async function PATCH(request: Request, { params }: Params) {
     if (!existing) {
       return NextResponse.json({ detail: "Item not found" }, { status: 404 });
     }
-    const item = await prisma.workoutExercise.update({
-      where: { id: itemId },
-      data,
-      include: { exercise: true },
+    const item = await prisma.$transaction(async (tx) => {
+      const updated = await tx.workoutExercise.update({
+        where: { id: itemId },
+        data,
+        include: { exercise: true },
+      });
+      await tx.workout.update({
+        where: { id: workoutId },
+        data: { updatedAt: new Date() },
+      });
+      return updated;
     });
     return NextResponse.json(item);
   } catch (err) {
