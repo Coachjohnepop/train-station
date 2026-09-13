@@ -232,7 +232,7 @@ async function browserRound(browser, viewportName, round) {
   await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded", timeout: 45000 });
   await page.waitForSelector("h1", { timeout: 20000 });
   const headline = (await page.locator("h1").innerText()).replace(/\s+/g, " ");
-  if (/Train with|Still here/i.test(headline)) pass(`${tag} hero headline`, headline);
+  if (/Train with|Still here|Meet your/i.test(headline)) pass(`${tag} hero headline`, headline);
   else fail(`${tag} hero headline`, headline);
 
   const tour = page.locator('[data-analytics-action="hero-free-tour"], [data-analytics-action="hero-free-tour-return"]');

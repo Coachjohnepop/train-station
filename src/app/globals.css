@@ -28,11 +28,11 @@
   --danger: #f07178;
   --brass: var(--accent);
   --brass-hover: var(--accent-hover);
-  --ramp-gold: #d4af37;
-  --ramp-gold-light: #fde68a;
-  --ramp-gold-deep: #b8860b;
-  --ramp-gold-glow: rgba(212, 175, 55, 0.38);
-  /* Fixed coach tab bar (gold circles + label). Add safe-area + extra so last
+  --ramp-gold: #10b981;
+  --ramp-gold-light: #6ee7b7;
+  --ramp-gold-deep: #047857;
+  --ramp-gold-glow: rgba(16, 185, 129, 0.38);
+  /* Fixed coach tab bar (emerald circles + label). Add safe-area + extra so last
      form actions stay above the bar — do not use max(N, safe-area) or the
      inset replaces the bar height instead of stacking. */
   --app-bottom-nav-height: 5.75rem;
@@ -87,19 +87,19 @@ html {
   --border: color-mix(in srgb, #c0c5ce 42%, #3d2660);
 }
 
-/* 1st Class — gold trim on purple */
+/* 1st Class — emerald trim on purple */
 [data-membership-tier="pro"] {
   --accent: #7c3aed;
-  --accent-light: #fde68a;
-  --accent-fg: #fde68a;
+  --accent-light: #6ee7b7;
+  --accent-fg: #6ee7b7;
   --accent-deep: #5b21b6;
-  --accent-hover: #c4a24a;
-  --accent-glow: rgba(212, 175, 55, 0.32);
-  --tier-trim: #d4af37;
-  --tier-trim-strong: #f0c75e;
-  --tier-trim-glow: rgba(240, 199, 94, 0.4);
-  --tier-trim-soft: rgba(212, 175, 55, 0.2);
-  --border: color-mix(in srgb, #d4af37 36%, #3d2660);
+  --accent-hover: #34d399;
+  --accent-glow: rgba(16, 185, 129, 0.32);
+  --tier-trim: #10b981;
+  --tier-trim-strong: #34d399;
+  --tier-trim-glow: rgba(52, 211, 153, 0.4);
+  --tier-trim-soft: rgba(16, 185, 129, 0.2);
+  --border: color-mix(in srgb, #10b981 36%, #3d2660);
 }
 
 /* Light mode — shared lift; trim metals stay visible; accent TEXT must stay readable */
@@ -115,8 +115,8 @@ html {
   --accent-fg: #5b21b6;
   --accent-glow: color-mix(in srgb, var(--accent) 18%, transparent);
   --on-accent: #faf8ff;
-  --ramp-gold-deep: #92400e;
-  --ramp-gold-light: #a16207;
+  --ramp-gold-deep: #065f46;
+  --ramp-gold-light: #047857;
   --success: #15803d;
   --danger: #b91c1c;
 }
@@ -142,11 +142,11 @@ html {
 }
 
 [data-theme-mode="light"][data-membership-tier="pro"] {
-  --border: color-mix(in srgb, #d4af37 40%, #e8dcf8);
-  --tier-trim-strong: #b8860b;
-  --tier-trim: #c9a227;
-  --accent-light: #a16207;
-  --accent-fg: #92400e;
+  --border: color-mix(in srgb, #10b981 40%, #e8dcf8);
+  --tier-trim-strong: #047857;
+  --tier-trim: #059669;
+  --accent-light: #047857;
+  --accent-fg: #065f46;
 }
 
 /*
@@ -166,8 +166,8 @@ html {
   --accent-fg: #c4b5fd;
   --success: #4ade9a;
   --danger: #f07178;
-  --ramp-gold-light: #fde68a;
-  --ramp-gold-deep: #b8860b;
+  --ramp-gold-light: #6ee7b7;
+  --ramp-gold-deep: #047857;
   color: var(--text);
 }
 
@@ -1065,7 +1065,7 @@ table.data.table-sticky-actions td:last-child {
 .member-set-btn--done {
   border-color: var(--ramp-gold-light);
   background: linear-gradient(180deg, var(--ramp-gold-light) 0%, var(--ramp-gold) 100%);
-  color: #1a1028;
+  color: #042f1e;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--ramp-gold-glow) 50%, transparent);
 }
 
@@ -1255,7 +1255,7 @@ table.data.table-sticky-actions td:last-child {
 .coach-live-checkoff .coach-floor-set-btn--done {
   border-color: var(--ramp-gold-light);
   background: linear-gradient(180deg, var(--ramp-gold-light) 0%, var(--ramp-gold) 100%);
-  color: #1a1028;
+  color: #042f1e;
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--ramp-gold-glow) 45%, transparent);
 }
 
@@ -1405,7 +1405,7 @@ table.data.table-sticky-actions td:last-child {
   height: 1.75rem;
   border-radius: 9999px;
   background: linear-gradient(180deg, var(--ramp-gold-light) 0%, var(--ramp-gold) 100%);
-  color: #1a1028;
+  color: #042f1e;
   font-size: 0.875rem;
   font-weight: 800;
   box-shadow: 0 0 10px var(--ramp-gold-glow);
@@ -1773,21 +1773,21 @@ body:has([data-landing-nav]) [data-global-theme-toggle] {
 
 /* Tour last screen — Pick a ticket is the lesson, not Free */
 .landing-tour-pick-ticket {
-  background: linear-gradient(180deg, #ffe9a3 0%, #f0c75e 42%, #d4af37 100%) !important;
-  border: 1px solid #fff3c4 !important;
-  color: #1a1204 !important;
-  -webkit-text-fill-color: #1a1204 !important;
+  background: linear-gradient(180deg, #a7f3d0 0%, #34d399 42%, #10b981 100%) !important;
+  border: 1px solid #d1fae5 !important;
+  color: #042f1e !important;
+  -webkit-text-fill-color: #042f1e !important;
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.35) inset,
-    0 12px 36px rgba(212, 175, 55, 0.45),
-    0 0 42px rgba(240, 199, 94, 0.35);
+    0 12px 36px rgba(16, 185, 129, 0.45),
+    0 0 42px rgba(52, 211, 153, 0.35);
 }
 
 .landing-tour-pick-ticket:hover {
-  background: linear-gradient(180deg, #fff6d0 0%, #ffe08a 50%, #e4c15a 100%) !important;
-  border-color: #fff8e1 !important;
-  color: #140e02 !important;
-  -webkit-text-fill-color: #140e02 !important;
+  background: linear-gradient(180deg, #d1fae5 0%, #6ee7b7 50%, #10b981 100%) !important;
+  border-color: #ecfdf5 !important;
+  color: #022c22 !important;
+  -webkit-text-fill-color: #022c22 !important;
 }
 
 .landing-hero-explore-cta {
@@ -2082,11 +2082,11 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 }
 
 .ticket-card--first-class {
-  --ticket-trim: #f0c75e;
-  --ticket-bg-from: rgba(212, 175, 55, 0.22);
-  --ticket-bg-to: rgba(127, 78, 34, 0.28);
-  --ticket-border: rgba(240, 199, 94, 0.55);
-  box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.2);
+  --ticket-trim: #34d399;
+  --ticket-bg-from: rgba(16, 185, 129, 0.22);
+  --ticket-bg-to: rgba(6, 78, 59, 0.28);
+  --ticket-border: rgba(52, 211, 153, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.2);
 }
 
 .ticket-card--free,
@@ -2103,8 +2103,8 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 }
 
 [data-theme-mode="light"] .ticket-card--first-class {
-  --ticket-trim: #b8860b;
-  --ticket-border: rgba(184, 134, 11, 0.45);
+  --ticket-trim: #047857;
+  --ticket-border: rgba(4, 120, 87, 0.45);
 }
 
 .step-badge-active {
@@ -2848,7 +2848,7 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   color: var(--accent-fg);
 }
 
-/* Ramp-up / intake — gold “your next step” (distinct from tier purple accent) */
+/* Ramp-up / intake — emerald “your next step” (distinct from tier purple accent) */
 .member-today-gold-shell {
   border-radius: 1rem;
   box-shadow: 0 8px 36px color-mix(in srgb, var(--ramp-gold-glow) 22%, transparent);
@@ -2917,10 +2917,10 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   box-shadow: 0 0 24px var(--accent-glow);
 }
 
-/* Coach dashboard — gold CTAs + browser bottom-nav icon polish */
+/* Coach dashboard — emerald CTAs + browser bottom-nav icon polish */
 .coach-dashboard .btn-primary {
   background: linear-gradient(180deg, var(--ramp-gold-light) 0%, var(--ramp-gold) 100%);
-  color: #1a1028;
+  color: #042f1e;
   border: 1px solid color-mix(in srgb, var(--ramp-gold-light) 55%, var(--ramp-gold-deep));
   box-shadow: 0 4px 18px var(--ramp-gold-glow);
 }
@@ -3065,7 +3065,7 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   border-radius: 9999px;
   font-size: 1.1rem;
   line-height: 1;
-  color: #1a1028;
+  color: #042f1e;
   background: linear-gradient(180deg, var(--ramp-gold-light) 0%, var(--ramp-gold) 100%);
   border: 1px solid color-mix(in srgb, var(--ramp-gold-light) 55%, var(--ramp-gold-deep));
   box-shadow: 0 2px 10px var(--ramp-gold-glow);
@@ -3220,12 +3220,12 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   font-size: 0.5625rem;
   font-weight: 800;
   line-height: 1.2;
-  color: #1a1028;
+  color: #042f1e;
   box-shadow: 0 0 10px var(--ramp-gold-glow);
 }
 
 /**
- * Workout-complete / points celebrate — 3D gold “+N” that grows from landing-header
+ * Workout-complete / points celebrate — 3D emerald “+N” that grows from landing-header
  * size toward full width; confetti launches from this glyph.
  */
 .score-points-3d {
@@ -3236,24 +3236,24 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   font-weight: 700;
   line-height: 0.92;
   letter-spacing: -0.04em;
-  /* Metallic gold fill */
+  /* Metallic emerald fill */
   background: linear-gradient(
     165deg,
-    #fff8e7 0%,
-    #fde68a 18%,
-    #f0c75e 38%,
-    #d4af37 55%,
-    #b8860b 78%,
-    #8b6914 100%
+    #ecfdf5 0%,
+    #6ee7b7 18%,
+    #34d399 38%,
+    #10b981 55%,
+    #047857 78%,
+    #064e3b 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   /* Fake 3D extrusion + rim light (works with clipped gradient text via filter wrapper) */
-  filter: drop-shadow(0 1px 0 #8b6914) drop-shadow(0 2px 0 #7a5a0a)
-    drop-shadow(0 3px 0 #6b4e08) drop-shadow(0 5px 12px rgba(212, 175, 55, 0.55))
-    drop-shadow(0 0 28px rgba(253, 230, 138, 0.35));
-  -webkit-text-stroke: 1px color-mix(in srgb, #fde68a 40%, #b8860b);
+  filter: drop-shadow(0 1px 0 #064e3b) drop-shadow(0 2px 0 #065f46)
+    drop-shadow(0 3px 0 #047857) drop-shadow(0 5px 12px rgba(16, 185, 129, 0.55))
+    drop-shadow(0 0 28px rgba(110, 231, 183, 0.35));
+  -webkit-text-stroke: 1px color-mix(in srgb, #6ee7b7 40%, #047857);
 }
 
 .score-points-grow {
@@ -3271,7 +3271,7 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
     transform: scale(0.55);
     font-weight: 600;
     letter-spacing: 0.02em;
-    filter: drop-shadow(0 1px 0 #8b6914) drop-shadow(0 0 8px rgba(212, 175, 55, 0.25));
+    filter: drop-shadow(0 1px 0 #064e3b) drop-shadow(0 0 8px rgba(16, 185, 129, 0.25));
   }
   55% {
     font-weight: 800;
@@ -3281,9 +3281,9 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
     transform: scale(min(2.65, 90vw / 11rem));
     font-weight: 900;
     letter-spacing: -0.05em;
-    filter: drop-shadow(0 1px 0 #8b6914) drop-shadow(0 2px 0 #7a5a0a)
-      drop-shadow(0 4px 0 #6b4e08) drop-shadow(0 8px 18px rgba(212, 175, 55, 0.6))
-      drop-shadow(0 0 36px rgba(253, 230, 138, 0.45));
+    filter: drop-shadow(0 1px 0 #064e3b) drop-shadow(0 2px 0 #065f46)
+      drop-shadow(0 4px 0 #047857) drop-shadow(0 8px 18px rgba(16, 185, 129, 0.6))
+      drop-shadow(0 0 36px rgba(110, 231, 183, 0.45));
   }
 }
 

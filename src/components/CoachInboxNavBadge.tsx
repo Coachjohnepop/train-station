@@ -36,7 +36,7 @@ export default function CoachInboxNavBadge({
   if (count <= 0) return null;
 
   const gold =
-    "bg-[var(--ramp-gold)] text-[#1a1204] shadow-md ring-2";
+    "bg-[var(--ramp-gold)] text-[#042f1e] shadow-md ring-2";
 
   return (
     <span

@@ -674,7 +674,7 @@ export default function AdminHeroImagesPanel({
                   aria-label={`Slide ${index + 1}${slide.enabled ? "" : " (off)"}. Drag to reorder.`}
                   className={`relative h-24 w-[4.25rem] shrink-0 overflow-hidden rounded-lg border text-left ${
                     draggingId === slide.id
-                      ? "border-[#d4af37] ring-2 ring-[#d4af37]/60"
+                      ? "border-[#10b981] ring-2 ring-[#10b981]/60"
                       : slide.enabled
                         ? "border-[var(--border)]"
                         : "border-dashed border-[var(--border)] opacity-70"

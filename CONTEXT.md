@@ -443,6 +443,14 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-13 (gold → emerald + system flowchart)
+
+**Status:** Full-site gold trim is now **emerald** (`--ramp-gold` = `#10b981`). 1st Class tickets, tour CTA, confetti, score +N, How it Works, inbox chips, set-done buttons. CSS class names still say gold; they render green. Amber warnings stay amber.
+
+**Loops (prod):** site-loop-sweep **87 pages / 0 dead / 9 public APIs / 17 process gates**. Landing A/B **39/39**. Landing→paid **94 pass**; the one fail was desktop getting B “Meet your coach” (A/B working). Coach-auth full-site loop skipped (no prod password in env); admin routes 307 to `/login`.
+
+**Flowchart PDF:** `docs/system-flowchart-2026-09-13.pdf` and Desktop `System-Flowchart-2026-09-13.pdf` (9 landscape pages: map, guest, tickets, member, coach, live/audio, money, data, loops).
+
 **Date:** 2026-09-12 (Jeremy note — Adult Home M1D4 cooldown jumps to slot 2)
 
 **Status:** Watched **Sept 12 fixes.mp4** (4:32, Adult `/admin/programs/adult`). Click warmup → HIIT editor; duplicate bench; click/save/scroll **moves HIIT / Cool Down between 0–30 and 30–60 columns**. “These were all in order.” Cause: 5+4 restack on every load/save. Fix `ebd57bd`: left column width stays; extras grow the right only; add fills the clicked slot; delete leaves a hole; blur saves the focused card. Pack: `.jeremy-review-frames/sept-12-fixes/`.

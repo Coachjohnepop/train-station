@@ -292,7 +292,7 @@ export default function LandingSeeInsideTour({
 
       <div className="mx-3 h-0.5 shrink-0 overflow-hidden rounded-full bg-white/10 sm:mx-5">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-[#a78bfa] to-[#f0c75e] transition-[width] duration-700 ease-out"
+          className="h-full rounded-full bg-gradient-to-r from-[#a78bfa] to-[#34d399] transition-[width] duration-700 ease-out"
           style={{ width: `${Math.round(progress)}%` }}
         />
       </div>
@@ -323,7 +323,7 @@ export default function LandingSeeInsideTour({
           {/* ── END: exit wizard into normal site nav ── */}
           {phase === "end" && (
             <div className="w-full pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-              <p className="text-center text-[10px] font-bold uppercase tracking-[0.22em] text-[#f0c75e]">
+              <p className="text-center text-[10px] font-bold uppercase tracking-[0.22em] text-[#34d399]">
                 Choose by price
               </p>
               <div className="mt-2 grid grid-cols-2 gap-2">
@@ -351,7 +351,7 @@ export default function LandingSeeInsideTour({
                       }}
                       className={`overflow-hidden rounded-xl border bg-[#1a0b2e] text-left transition active:scale-[0.98] ${
                         gold
-                          ? "border-[#f0c75e] ring-2 ring-[#f0c75e]/50"
+                          ? "border-[#34d399] ring-2 ring-[#34d399]/50"
                           : "border-white/15 hover:border-[#a78bfa]"
                       }`}
                     >
@@ -359,7 +359,7 @@ export default function LandingSeeInsideTour({
                       <img src={art} alt="" className="aspect-[4/3] w-full object-cover" />
                       <div className="px-2 py-1.5">
                         <p className="text-[12px] font-extrabold leading-tight text-white">{tier.title}</p>
-                        <p className="text-[11px] font-semibold text-[#f0c75e]">{tier.price}</p>
+                        <p className="text-[11px] font-semibold text-[#34d399]">{tier.price}</p>
                       </div>
                     </button>
                   );
