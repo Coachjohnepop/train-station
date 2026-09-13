@@ -129,7 +129,20 @@ export async function POST(request: Request) {
       scheduledAt: meetingIso,
       bookingSource: body.bookingSource || (meetingIso ? "manual" : "calendly"),
       phone: body.phone || account?.account.phone || profile.phone || null,
+      calendlyInviteeUri: calendly.inviteeUri,
     });
+  } else {
+    try {
+      const { postIntroBookedChat } = await import("@/lib/coach-member-notify");
+      await postIntroBookedChat({
+        userId: session.id,
+        memberName: account?.account.name || session.name || "Member",
+        scheduledAt: meetingIso,
+        claimSuffix: calendly.inviteeUri || meetingIso,
+      });
+    } catch (e) {
+      console.warn("[intake-scheduled] intro chat failed", e);
+    }
   }
 
   const result = await awardGamificationPoints({

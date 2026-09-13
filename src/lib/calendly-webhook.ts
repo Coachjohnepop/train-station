@@ -312,6 +312,19 @@ export async function processCalendlyWebhookBody(
           console.warn("[calendly-webhook] member booking email failed", e);
         }
       }
+      if (existing.userId) {
+        try {
+          const { postIntroBookedChat } = await import("@/lib/coach-member-notify");
+          await postIntroBookedChat({
+            userId: existing.userId,
+            memberName: parsed.name || parsed.email,
+            scheduledAt: startTime,
+            claimSuffix: parsed.inviteeUri || startTime,
+          });
+        } catch (e) {
+          console.warn("[calendly-webhook] intro chat (duplicate path) failed", e);
+        }
+      }
       return {
         ok: true,
         event,
@@ -375,6 +388,7 @@ export async function processCalendlyWebhookBody(
       scheduledAt: startTime || startIso,
       bookingSource: "calendly",
       phone: parsed.phone || account?.phone || profile.phone || null,
+      calendlyInviteeUri: parsed.inviteeUri,
     });
     notified = true;
 

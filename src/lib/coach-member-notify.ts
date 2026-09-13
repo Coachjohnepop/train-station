@@ -532,6 +532,54 @@ function isPaidPlan(plan: string): boolean {
   return plan === "member" || plan === "pro" || plan === "business";
 }
 
+/**
+ * 1:1 Messages pair when a Calendly (or in-app) intro is booked.
+ * Coach-authored note → member unread badge. System note → Jeremy unread badge.
+ */
+export async function postIntroBookedChat(params: {
+  userId: string;
+  memberName: string;
+  scheduledAt?: string | null;
+  claimSuffix?: string | null;
+}): Promise<boolean> {
+  const userId = params.userId?.trim();
+  if (!userId || userId === "calendly-guest") return false;
+
+  const claimed = await claimCoachNotifyOnce({
+    memberUserId: userId,
+    claimKey: `intro-chat:${(params.claimSuffix || params.scheduledAt || "booked").slice(0, 72)}`,
+  });
+  if (!claimed) return false;
+
+  const when = formatCoachMeetingWhen(params.scheduledAt);
+  const { addChatMessage, ensureMemberThread } = await import("@/lib/coach-chat");
+  const { DEMO_COACH } = await import("@/lib/demo-coach");
+  const thread = await ensureMemberThread(userId);
+
+  await addChatMessage({
+    threadId: thread.id,
+    authorRole: "coach",
+    authorId: DEMO_COACH.id,
+    authorName: DEMO_COACH.displayName,
+    kind: "text",
+    body:
+      `You're booked with me.\n\n${when}\n\n` +
+      `I'll see you then — reply here if you need to move it.`,
+  });
+
+  await addChatMessage({
+    threadId: thread.id,
+    authorRole: "system",
+    authorId: "system",
+    authorName: "Train Station",
+    kind: "system",
+    body: `${params.memberName} booked a 15-min intro.\n\nWhen: ${when}`,
+    readByUserIds: [],
+  });
+
+  return true;
+}
+
 export async function notifyCoachIntakeReady(params: {
   userId: string;
   name: string;
@@ -544,6 +592,8 @@ export async function notifyCoachIntakeReady(params: {
   bookingSource?: string | null;
   phone?: string | null;
   skipInApp?: boolean;
+  /** Calendly invitee URI — used to dedupe the Messages pair. */
+  calendlyInviteeUri?: string | null;
 }): Promise<{ inApp: boolean; email: boolean; sms: boolean }> {
   const paymentPending =
     isPaidPlan(params.plan) && params.paymentStatus !== "paid" && params.paymentStatus !== "none";
@@ -561,6 +611,16 @@ export async function notifyCoachIntakeReady(params: {
         : params.bookingSource || "Booking";
   const phoneLine = params.phone?.trim() ? `\nPhone: ${params.phone.trim()}` : "";
 
+  let chatPosted = false;
+  if (!params.skipInApp) {
+    chatPosted = await postIntroBookedChat({
+      userId: params.userId,
+      memberName: params.name,
+      scheduledAt: params.scheduledAt,
+      claimSuffix: params.calendlyInviteeUri || params.scheduledAt,
+    });
+  }
+
   return notifyCoachForMemberEvent({
     event: "intakeScheduled",
     memberUserId: params.userId,
@@ -574,7 +634,7 @@ export async function notifyCoachIntakeReady(params: {
       `Plan: ${params.plan}${phoneLine}${paymentNote}\n\n` +
       `Open Queue / Bookings to confirm and send Zoom if needed.`,
     deepLink: `${appBaseUrl()}/admin/bookings`,
-    skipInApp: params.skipInApp,
+    skipInApp: params.skipInApp || chatPosted,
     inboxClaimKey: `booking:${params.userId}:${params.scheduledAt || "unscheduled"}`,
   });
 }
