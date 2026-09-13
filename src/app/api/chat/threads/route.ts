@@ -90,10 +90,13 @@ export async function GET(request: Request) {
     );
   }
 
+  const memberThreads = listThreadsForMember(uid, slugs);
+  const { loadMemberChatWindows } = await import("@/lib/chat-thread-cursor");
+  const windows = await loadMemberChatWindows(uid, memberThreads);
   return NextResponse.json(
     {
-      threads: listThreadsForMember(uid, slugs),
-      unreadByThread: getUnreadCountsByThreadForMember(uid, slugs),
+      threads: memberThreads,
+      unreadByThread: getUnreadCountsByThreadForMember(uid, slugs, windows),
     },
     { headers: { "Cache-Control": "no-store" } },
   );

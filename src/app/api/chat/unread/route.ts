@@ -39,5 +39,9 @@ export async function GET(request: Request) {
 
   const uid = session.id;
   const programs = await resolveMemberVisibleCohortSlugs(uid);
-  return NextResponse.json({ unread: getUnreadCountForMember(uid, programs) });
+  const { listThreadsForMember } = await import("@/lib/coach-chat");
+  const { loadMemberChatWindows } = await import("@/lib/chat-thread-cursor");
+  const threads = listThreadsForMember(uid, programs);
+  const windows = await loadMemberChatWindows(uid, threads);
+  return NextResponse.json({ unread: getUnreadCountForMember(uid, programs, windows) });
 }

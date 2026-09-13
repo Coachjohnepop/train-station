@@ -442,6 +442,9 @@ export default function ChatFeed({
   headerAccent,
   onReactionChange,
   mediaAutoplay = false,
+  onClearMessages,
+  clearing = false,
+  archiveMode = false,
 }: {
   thread: ChatThread | null;
   messages: ChatMessage[];
@@ -453,6 +456,9 @@ export default function ChatFeed({
   onReactionChange?: (message: ChatMessage) => void;
   /** Off in admin chat; on for member-facing surfaces. */
   mediaAutoplay?: boolean;
+  onClearMessages?: () => void;
+  clearing?: boolean;
+  archiveMode?: boolean;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -495,11 +501,28 @@ export default function ChatFeed({
                 {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
+            {onClearMessages && !archiveMode ? (
+              <button
+                type="button"
+                onClick={onClearMessages}
+                disabled={clearing}
+                className="ml-auto shrink-0 rounded-full border border-[var(--border)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)] hover:border-[var(--ramp-gold)] hover:text-[var(--ramp-gold-light)] disabled:opacity-60"
+              >
+                {clearing ? "Clearing…" : "Clear messages"}
+              </button>
+            ) : null}
+            {archiveMode ? (
+              <span className="ml-auto rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--muted)]">
+                Archive
+              </span>
+            ) : null}
           </div>
           <p className="text-[11px] text-[var(--muted)]">
-            {thread.kind === "cohort"
-              ? `Group feed · names on every post · ${COMMUNITY_NO_BROADCAST_NOTE}`
-              : "Direct messages with your coach"}
+            {archiveMode
+              ? "Cleared slate — read-only. New notes stay on Coach / group tabs."
+              : thread.kind === "cohort"
+                ? `Group feed · names on every post · ${COMMUNITY_NO_BROADCAST_NOTE}`
+                : "Direct messages with your coach"}
             {" · "}
             <span className="text-[var(--muted)]">Coach left · you / group right</span>
           </p>

@@ -42,12 +42,16 @@ function orderThreads(threads: ChatThread[]) {
 }
 
 function threadLabel(thread: ChatThread) {
+  if (thread.id === ARCHIVE_TAB_ID) return "Archive";
   if (thread.kind === "cohort") return `${thread.title} · Group`;
   return `Coach · ${DEMO_COACH.displayName}`;
 }
 
+const ARCHIVE_TAB_ID = "__archive__";
+
 /** Short jelly-bean label — fits many groups on one phone screen without side-scroll. */
 function beanLabel(thread: ChatThread) {
+  if (thread.id === ARCHIVE_TAB_ID) return "Archive";
   if (thread.kind === "member") return "Coach";
   const raw = (thread.title || "Group").trim();
   // Drop noisy suffixes so beans stay tiny: "Adult · Group" → "Adult"
@@ -93,6 +97,11 @@ export default function MemberChatWorkspace({
   );
   const [unreadByThread, setUnreadByThread] = useState<Record<string, number>>({});
   const [tabReady, setTabReady] = useState(false);
+  const [archiveSlices, setArchiveSlices] = useState<Array<{ thread: ChatThread; messages: ChatMessage[] }>>(
+    [],
+  );
+  const [archiveSliceId, setArchiveSliceId] = useState("");
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     try {
@@ -131,13 +140,32 @@ export default function MemberChatWorkspace({
   );
 
   const orderedThreads = useMemo(() => orderThreads(threads), [threads]);
-  const activeThread = threads.find((t) => t.id === activeId) || null;
+  const archiveOpen = activeId === ARCHIVE_TAB_ID;
+  const activeThread = archiveOpen
+    ? archiveSlices.find((s) => s.thread.id === archiveSliceId)?.thread ||
+      archiveSlices[0]?.thread ||
+      null
+    : threads.find((t) => t.id === activeId) || null;
   const freeOnCohort = freeExplorer && activeThread?.kind === "cohort";
-  const feedThread = displayThread(activeThread);
-  const visibleMessages = useMemo(
-    () => messages.filter((m) => m.threadId === activeId),
-    [messages, activeId],
-  );
+  const feedThread = archiveOpen
+    ? activeThread
+      ? { ...activeThread, title: `${beanLabel(activeThread)} · Archive` }
+      : {
+          id: ARCHIVE_TAB_ID,
+          kind: "member" as const,
+          title: "Archive",
+          createdAt: "",
+          updatedAt: "",
+        }
+    : displayThread(activeThread);
+  const visibleMessages = useMemo(() => {
+    if (archiveOpen) {
+      const slice =
+        archiveSlices.find((s) => s.thread.id === archiveSliceId) || archiveSlices[0];
+      return slice?.messages || [];
+    }
+    return messages.filter((m) => m.threadId === activeId);
+  }, [archiveOpen, archiveSlices, archiveSliceId, messages, activeId]);
   const freeMemberMsgCount = useMemo(
     () => visibleMessages.filter((m) => m.authorRole === "member").length,
     [visibleMessages],
@@ -163,6 +191,23 @@ export default function MemberChatWorkspace({
     },
     [asCoach],
   );
+
+  const loadArchive = useCallback(async () => {
+    try {
+      const res = await fetch("/api/chat/archive", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      const slices = Array.isArray(data.slices) ? data.slices : [];
+      setArchiveSlices(slices);
+      setArchiveSliceId((prev) =>
+        slices.some((s: { thread: ChatThread }) => s.thread.id === prev)
+          ? prev
+          : slices[0]?.thread.id || "",
+      );
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const refreshUnread = useCallback(async () => {
     try {
@@ -192,18 +237,48 @@ export default function MemberChatWorkspace({
   }, [refreshUnread]);
 
   useEffect(() => {
-    if (!activeId) return;
+    if (!activeId || archiveOpen) return;
     void loadMessages(activeId, { replace: true });
-  }, [activeId, loadMessages]);
+  }, [activeId, archiveOpen, loadMessages]);
 
   useEffect(() => {
-    if (!activeId) return;
+    if (!activeId || archiveOpen) return;
     const id = setInterval(() => loadMessages(activeId, { quiet: true }), 5000);
     return () => clearInterval(id);
-  }, [activeId, loadMessages]);
+  }, [activeId, archiveOpen, loadMessages]);
 
-  const activeReplyThread = threads.find((t) => t.id === activeId);
-  const replyThreadId = activeId;
+  useEffect(() => {
+    if (!archiveOpen) return;
+    void loadArchive();
+  }, [archiveOpen, loadArchive]);
+
+  async function clearActiveThread() {
+    if (!activeId || archiveOpen) return;
+    if (
+      !window.confirm(
+        "Clear this conversation? It moves to Archive. New messages start a fresh slate here.",
+      )
+    ) {
+      return;
+    }
+    setClearing(true);
+    try {
+      const res = await fetch("/api/chat/clear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ threadId: activeId }),
+      });
+      if (!res.ok) return;
+      await loadMessages(activeId, { replace: true });
+      await loadArchive();
+      window.dispatchEvent(new CustomEvent("chat-unread-refresh"));
+    } finally {
+      setClearing(false);
+    }
+  }
+
+  const activeReplyThread = archiveOpen ? null : threads.find((t) => t.id === activeId);
+  const replyThreadId = archiveOpen ? "" : activeId;
   const replyRole = asCoach ? "coach" : "member";
   const replyPlaceholder = asCoach
     ? activeReplyThread?.kind === "cohort"
@@ -306,7 +381,39 @@ export default function MemberChatWorkspace({
               );
             })
           )}
+          <button
+            type="button"
+            title="Archive"
+            aria-label="Archive"
+            aria-pressed={archiveOpen}
+            onClick={() => setActiveId(ARCHIVE_TAB_ID)}
+            className={`inline-flex max-w-full items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold leading-tight transition ${
+              archiveOpen
+                ? "bg-accent/20 text-accent ring-1 ring-accent/50"
+                : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"
+            }`}
+          >
+            <span>Archive</span>
+          </button>
         </div>
+        {archiveOpen && archiveSlices.length > 1 ? (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {archiveSlices.map((s) => (
+              <button
+                key={s.thread.id}
+                type="button"
+                onClick={() => setArchiveSliceId(s.thread.id)}
+                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  (archiveSliceId || archiveSlices[0]?.thread.id) === s.thread.id
+                    ? "bg-[var(--ramp-gold)]/20 text-[var(--ramp-gold-light)] ring-1 ring-[var(--ramp-gold)]/40"
+                    : "text-[var(--muted)] hover:text-[var(--text)]"
+                }`}
+              >
+                {beanLabel(s.thread)}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       <div className="chat-thread-shell flex flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
@@ -333,10 +440,15 @@ export default function MemberChatWorkspace({
               viewerRole="member"
               viewerId={memberId}
               mediaAutoplay
+              archiveMode={archiveOpen}
+              clearing={clearing}
+              onClearMessages={archiveOpen || asCoach ? undefined : () => void clearActiveThread()}
               emptyLabel={
-                activeReplyThread?.kind === "cohort"
-                  ? "No community posts yet."
-                  : "No messages from your coach yet."
+                archiveOpen
+                  ? "Nothing archived yet. Clear messages on Coach or a group to start a new slate."
+                  : activeReplyThread?.kind === "cohort"
+                    ? "No community posts yet."
+                    : "No messages from your coach yet."
               }
               onReactionChange={(updated) =>
                 setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))

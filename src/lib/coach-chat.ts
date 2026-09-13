@@ -25,6 +25,7 @@ import {
   type ChatThread,
   type ChatThreadKind,
 } from "@/lib/coach-chat-types";
+import { messageInLiveView, type MemberChatWindow } from "@/lib/chat-message-window";
 
 export type {
   ChatMessage,
@@ -466,15 +467,15 @@ export async function flagThreadUnreadForCoach(threadId: string): Promise<number
   return changed;
 }
 
-export function getUnreadCountForMember(memberId: string, programSlugs: string[] = []): number {
-  const threads = listThreadsForMember(memberId, programSlugs);
-  const threadIds = new Set(threads.map((t) => t.id));
-  return readStore().messages.filter(
-    (m) =>
-      threadIds.has(m.threadId) &&
-      m.authorRole === "coach" &&
-      !m.readByUserIds.includes(memberId),
-  ).length;
+export function getUnreadCountForMember(
+  memberId: string,
+  programSlugs: string[] = [],
+  windows?: Record<string, MemberChatWindow>,
+): number {
+  return Object.values(getUnreadCountsByThreadForMember(memberId, programSlugs, windows)).reduce(
+    (n, c) => n + c,
+    0,
+  );
 }
 
 export function getUnreadCountForCoach(): number {
@@ -500,6 +501,7 @@ export function getUnreadCountsByThreadForCoach(): Record<string, number> {
 export function getUnreadCountsByThreadForMember(
   memberId: string,
   programSlugs: string[] = [],
+  windows?: Record<string, MemberChatWindow>,
 ): Record<string, number> {
   const threads = listThreadsForMember(memberId, programSlugs);
   const threadIds = new Set(threads.map((t) => t.id));
@@ -508,6 +510,7 @@ export function getUnreadCountsByThreadForMember(
     if (!threadIds.has(m.threadId)) continue;
     if (m.authorRole !== "coach") continue;
     if (m.readByUserIds.includes(memberId)) continue;
+    if (windows && !messageInLiveView(m.createdAt, windows[m.threadId])) continue;
     counts[m.threadId] = (counts[m.threadId] || 0) + 1;
   }
   return counts;

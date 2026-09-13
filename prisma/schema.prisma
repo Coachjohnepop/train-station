@@ -78,6 +78,7 @@ model User {
   promptResponses    PromptResponse[]
   measurements       UserMeasurement[]
   shoppingList       MemberShoppingList?
+  chatThreadCursors  ChatThreadCursor[]
   analyticsSessions  AnalyticsSession[]
   analyticsEvents    AnalyticsEvent[]
   subscriptionPayments FactSubscriptionPayment[]
@@ -822,6 +823,20 @@ model PasswordResetToken {
 // ---------------------------------------------------------------------------
 // Blob migration — Tier 2 (chat, live sessions, coach settings, prefs)
 // ---------------------------------------------------------------------------
+
+/** Per-member "clear messages" cursor. Live tab shows after clearedAt; Archive shows before. */
+model ChatThreadCursor {
+  id        String   @id @default(cuid())
+  userId    String
+  threadId  String
+  clearedAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, threadId])
+  @@index([userId])
+}
 
 model CoachChatThread {
   id          String   @id

@@ -55,10 +55,20 @@ export async function GET(request: Request) {
     }).catch((e) => console.warn("[chat] messages-opened notify failed", e));
   }
 
-  const messages = getMessagesForThread(threadId);
+  let messages = getMessagesForThread(threadId);
+  const view = searchParams.get("view") === "archive" ? "archive" : "live";
+  if (role === "member" && access.session.role === "MEMBER" && access.memberId) {
+    const { loadMemberChatWindows } = await import("@/lib/chat-thread-cursor");
+    const { messageInArchiveView, messageInLiveView } = await import("@/lib/chat-message-window");
+    const windows = await loadMemberChatWindows(access.memberId, [thread]);
+    const w = windows[thread.id];
+    messages = messages.filter((m) =>
+      view === "archive" ? messageInArchiveView(m.createdAt, w) : messageInLiveView(m.createdAt, w),
+    );
+  }
 
   return NextResponse.json(
-    { thread, messages },
+    { thread, messages, view },
     { headers: { "Cache-Control": "no-store" } },
   );
 }
