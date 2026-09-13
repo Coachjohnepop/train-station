@@ -50,6 +50,10 @@ export default async function ByowPage() {
         </section>
       ) : null}
       <p className="text-xs text-[var(--muted)]">
+        <Link href="/member/byow?tab=report" className="text-accent hover:underline">
+          This week&apos;s report
+        </Link>
+        {" · "}
         <Link href="/member/byow" className="text-accent hover:underline">
           Open in the member app
         </Link>

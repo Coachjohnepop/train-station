@@ -82,6 +82,7 @@ model User {
   byowExercises      ByowExercise[]
   byowWorkouts       ByowWorkout[]
   byowSources        ByowSourceNote[]
+  byowLogs           ByowWorkoutLog[]
   analyticsSessions  AnalyticsSession[]
   analyticsEvents    AnalyticsEvent[]
   subscriptionPayments FactSubscriptionPayment[]
@@ -1855,6 +1856,7 @@ model ByowWorkout {
   owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
   exercises   ByowWorkoutExercise[]
   sourceNote  ByowSourceNote?
+  logs        ByowWorkoutLog[]
 
   @@index([ownerUserId, updatedAt])
 }
@@ -1886,4 +1888,21 @@ model ByowSourceNote {
   workout     ByowWorkout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
 
   @@index([ownerUserId, createdAt])
+}
+
+model ByowWorkoutLog {
+  id            String   @id @default(cuid())
+  userId        String
+  workoutId     String
+  startedAt     DateTime?
+  completedAt   DateTime @default(now())
+  durationSec   Int?
+  progress      Int      @default(100)
+  exerciseNames String   @db.Text
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workout       ByowWorkout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  @@index([userId, completedAt])
+  @@index([workoutId])
 }

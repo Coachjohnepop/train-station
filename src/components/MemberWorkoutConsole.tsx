@@ -269,6 +269,7 @@ export default function MemberWorkoutConsole({
   /** Maintain: notify parent/stage when member starts (weight / set / finish). */
   onEngage,
   membershipPlan = null,
+  byow = false,
 }: {
   workout: MemberWorkoutView;
   backHref?: string;
@@ -306,8 +307,27 @@ export default function MemberWorkoutConsole({
   onEngage?: () => void;
   /** Membership plan for Free Explorer soft limits (preview sets + ticket shelf). */
   membershipPlan?: string | null;
+  /** Bring-your-own notes workout — log to ByowWorkoutLog, not Jeremy's catalog. */
+  byow?: boolean;
 }) {
   const engageOnceRef = useRef(false);
+  const byowStartedAtRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!byow || typeof window === "undefined") return;
+    const key = `byow-start:${workout.workoutId}`;
+    try {
+      const existing = window.sessionStorage.getItem(key);
+      if (existing) {
+        byowStartedAtRef.current = existing;
+        return;
+      }
+      const now = new Date().toISOString();
+      window.sessionStorage.setItem(key, now);
+      byowStartedAtRef.current = now;
+    } catch {
+      byowStartedAtRef.current = new Date().toISOString();
+    }
+  }, [byow, workout.workoutId]);
   const isMaintainSession = programSlug === "maintain";
   const freeExplorer = isFreeExplorerPlan(membershipPlan) && !coachFloorMode && !reviewMode;
   const freeOpenCount = freePreviewOpenCount(workout.exercises.length);
@@ -2283,15 +2303,25 @@ export default function MemberWorkoutConsole({
 
     setIsLogging(true);
     try {
-      const payload: Record<string, unknown> = {
-        exercises: plan.exercises,
-        progress: plan.progress,
-      };
-      if (programSlug) payload.programSlug = programSlug;
-      if (targetUserId) payload.targetUserId = targetUserId;
-      const sessionDate = normalizeLogSessionDate(logSessionDate || liveSessionDate);
-      if (sessionDate) payload.sessionDate = sessionDate;
-      const res = await fetch(`/api/workouts/${workout.workoutId}/log`, {
+      const payload: Record<string, unknown> = byow
+        ? {
+            workoutId: workout.workoutId,
+            progress: plan.progress,
+            startedAt: byowStartedAtRef.current,
+            exerciseNames: workout.exercises.map((e) => e.name),
+          }
+        : {
+            exercises: plan.exercises,
+            progress: plan.progress,
+          };
+      if (!byow) {
+        if (programSlug) payload.programSlug = programSlug;
+        if (targetUserId) payload.targetUserId = targetUserId;
+        const sessionDate = normalizeLogSessionDate(logSessionDate || liveSessionDate);
+        if (sessionDate) payload.sessionDate = sessionDate;
+      }
+      const logUrl = byow ? "/api/byow/log" : `/api/workouts/${workout.workoutId}/log`;
+      const res = await fetch(logUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -2351,6 +2381,7 @@ export default function MemberWorkoutConsole({
     futurePreview,
     freeExplorer,
     freeLockedExerciseIds,
+    byow,
   ]);
 
   const showLoggedSuccess = !reviewMode && !hideLogButton && !!logResult;

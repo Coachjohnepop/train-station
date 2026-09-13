@@ -202,6 +202,7 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
             targetUserId={memberUserId}
             instructorName={asInstructor ? "Instructor" : undefined}
             reviewMode={!!review}
+            byow={Boolean(byow)}
             calendarDateLabel={workoutContext?.calendarDateLabel}
             scheduleLabel={workoutContext?.scheduleLabel}
             liveSyncUserId={memberUserId}
