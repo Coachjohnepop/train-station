@@ -130,7 +130,7 @@ export default function MemberShell({
                 ) : (
                   <Link
                     href="/member/account"
-                    className="member-chrome-hello min-w-0 rounded-lg transition hover:opacity-90"
+                    className="member-chrome-hello min-w-0 flex-1 rounded-lg transition hover:opacity-90"
                     title="Account & settings"
                   >
                     <p className="member-chrome-name truncate text-sm font-medium">Hi, {memberName}</p>
@@ -157,9 +157,6 @@ export default function MemberShell({
                   }
                 />
               ) : null}
-              <span className="member-chrome-tier badge-accent inline-block max-w-[7.5rem] truncate rounded-full px-2 py-0.5 text-xs font-semibold leading-tight tracking-wide sm:max-w-none">
-                {tierLabel}
-              </span>
               {/* Reuse .global-theme-toggle so label stays icon-only on narrow screens */}
               <div className="global-theme-toggle">
                 <ThemeModeToggle />
@@ -174,6 +171,7 @@ export default function MemberShell({
               checkoutPlan={checkoutPlan}
               nutritionDesk={nutritionDesk}
               needsIntroBooking={needsIntroBooking}
+              membershipLabel={tierLabel}
             />
           )}
         </header>

@@ -2132,6 +2132,37 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   background: color-mix(in srgb, var(--accent-deep) 12%, var(--surface));
 }
 
+.member-chrome-identity {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.member-chrome-user {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.member-chrome-hello {
+  flex: 1 1 auto;
+  min-width: 5.5rem;
+}
+
+.member-chrome-name {
+  max-width: 100%;
+}
+
+@media (max-width: 639px) {
+  .member-chrome-email {
+    display: none;
+  }
+
+  .member-chrome-bar {
+    gap: 0.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
 /* Member top nav — daily tabs + More hamburger. */
 .member-nav {
   min-height: 2.75rem;
@@ -2303,6 +2334,27 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   border-top: 1px solid var(--border);
   border-radius: 0.7rem;
   color: var(--accent-fg);
+}
+
+.member-nav-more-tier {
+  display: flex;
+  justify-content: flex-start;
+  padding: 0.35rem 0.85rem 0.55rem;
+  pointer-events: none;
+}
+
+.member-nav-more-tier__tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--ramp-gold) 40%, var(--border));
+  background: color-mix(in srgb, var(--ramp-gold) 12%, transparent);
+  color: var(--ramp-gold-light);
+  padding: 0.2rem 0.65rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 /* Grocery run: two columns, fills the phone, thumb-sized checks. */

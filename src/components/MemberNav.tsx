@@ -74,7 +74,7 @@ const moreItems: NavItem[] = [
   },
   {
     href: "/member/account",
-    label: "Account",
+    label: "Account settings",
     match: (p: string) => p.startsWith("/member/account"),
     openDuringPayment: true,
   },
@@ -109,12 +109,14 @@ export default function MemberNav({
   checkoutPlan = "member",
   nutritionDesk = null,
   needsIntroBooking = false,
+  membershipLabel = null,
 }: {
   intakePending?: boolean;
   paymentGateActive?: boolean;
   checkoutPlan?: SignupPlan;
   nutritionDesk?: NutritionDesk | null;
   needsIntroBooking?: boolean;
+  membershipLabel?: string | null;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -458,6 +460,11 @@ export default function MemberNav({
               </Link>
             );
           })}
+          {membershipLabel ? (
+            <p className="member-nav-more-tier" aria-label={`Ticket: ${membershipLabel}`}>
+              <span className="member-nav-more-tier__tag">{membershipLabel}</span>
+            </p>
+          ) : null}
         </div>
       ) : null}
     </div>
