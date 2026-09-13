@@ -2222,6 +2222,15 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 
 .member-nav-more {
   flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.member-nav-messages {
+  flex: 0 0 auto;
+}
+
+.member-nav-scores {
+  flex: 1.2 1 0;
 }
 
 .member-nav-more-icon {
@@ -2655,11 +2664,9 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   }
 
   .member-app .member-nav-score-badge {
-    top: -0.15rem;
-    right: 0.05rem;
-    font-size: 0.55rem;
-    min-width: 1rem;
-    padding: 0 0.2rem;
+    font-size: 1.1rem;
+    min-width: 1.6rem;
+    padding: 0 0.28rem;
   }
 
   .member-app .member-nav-more-panel {
@@ -3246,17 +3253,17 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 }
 
 .member-nav-score-badge {
-  position: absolute;
-  right: 0.15rem;
-  top: 0.1rem;
-  min-width: 1.15rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
   border-radius: 9999px;
   border: 1px solid color-mix(in srgb, var(--ramp-gold) 55%, transparent);
   background: linear-gradient(180deg, var(--ramp-gold-light) 0%, var(--ramp-gold) 100%);
-  padding: 0.05rem 0.3rem;
-  font-size: 0.5625rem;
+  padding: 0.05rem 0.4rem;
+  font-size: 1.125rem;
   font-weight: 800;
-  line-height: 1.2;
+  line-height: 1.15;
   color: #042f1e;
   box-shadow: 0 0 10px var(--ramp-gold-glow);
 }

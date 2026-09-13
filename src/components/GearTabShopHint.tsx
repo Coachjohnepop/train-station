@@ -10,7 +10,7 @@ export default function GearTabShopHint() {
   const [anchor, setAnchor] = useState<{ left: number; top: number } | null>(null);
 
   const place = useCallback(() => {
-    const el = document.getElementById("member-nav-gear");
+    const el = document.getElementById("member-nav-more");
     if (!el) {
       setAnchor(null);
       return;
@@ -29,7 +29,7 @@ export default function GearTabShopHint() {
 
   useEffect(() => {
     place();
-    const gear = document.getElementById("member-nav-gear");
+    const gear = document.getElementById("member-nav-more");
     window.addEventListener("resize", place);
     window.addEventListener("scroll", place, true);
     const ro =
@@ -42,7 +42,7 @@ export default function GearTabShopHint() {
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
       ro?.disconnect();
-      document.getElementById("member-nav-gear")?.classList.remove("member-nav-gear--hint");
+      document.getElementById("member-nav-more")?.classList.remove("member-nav-gear--hint");
     };
   }, [place]);
 
@@ -64,7 +64,7 @@ export default function GearTabShopHint() {
           Shop gear here too
         </p>
         <p className="mt-0.5 text-xs leading-snug text-white/85">
-          Tap <span className="font-bold">Gear</span> anytime to browse &amp; buy on this site
+          Tap <span className="font-bold">More</span>, then <span className="font-bold">Gear</span> to browse &amp; buy
         </p>
       </div>
     </div>

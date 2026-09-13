@@ -25,37 +25,37 @@ type NavItem = {
   openDuringPayment?: boolean;
 };
 
-const primaryItems: NavItem[] = [
-  {
-    href: "/member/today",
-    label: "Today",
-    match: (p: string) =>
-      p !== "/member/checkout" &&
-      (p === "/member/today" ||
-        p === "/member/workout" ||
-        p === "/member" ||
-        p.startsWith("/member/programs")),
-  },
-  {
-    href: "/member/chat",
-    label: "Messages",
-    match: (p: string) => p.startsWith("/member/chat"),
-    badge: true,
-    openDuringPayment: true,
-  },
-  {
-    href: "/member/leaderboard",
-    label: "Scores",
-    match: (p: string) => p.startsWith("/member/leaderboard"),
-  },
+const todayItem: NavItem = {
+  href: "/member/today",
+  label: "Today",
+  match: (p: string) =>
+    p !== "/member/checkout" &&
+    (p === "/member/today" ||
+      p === "/member/workout" ||
+      p === "/member" ||
+      p.startsWith("/member/programs")),
+};
+
+const scoresItem: NavItem = {
+  href: "/member/leaderboard",
+  label: "Scores",
+  match: (p: string) => p.startsWith("/member/leaderboard"),
+};
+
+const messagesItem: NavItem = {
+  href: "/member/chat",
+  label: "Messages",
+  match: (p: string) => p.startsWith("/member/chat"),
+  badge: true,
+  openDuringPayment: true,
+};
+
+const moreItems: NavItem[] = [
   {
     href: "/member/equipment",
     label: "Gear",
     match: (p: string) => p.startsWith("/member/equipment"),
   },
-];
-
-const moreItems: NavItem[] = [
   {
     href: "/member/measurements",
     label: "Measure",
@@ -212,18 +212,13 @@ export default function MemberNav({
         className="member-nav mx-auto flex w-full max-w-lg items-stretch gap-1 px-2 pb-2.5 md:max-w-3xl md:px-6 lg:max-w-6xl lg:justify-center lg:px-8 xl:max-w-7xl"
         aria-label="Member dashboard"
       >
-        {primaryItems.map((item) => {
-          const href = navHref(item, paymentGateActive, checkoutPlan);
-          const locked = paymentGateActive && !item.openDuringPayment;
-          const active = !onCheckout && item.match(pathname);
-          const isTodayTab = item.href === "/member/today";
-          const isScoresTab = item.href === "/member/leaderboard";
-          const isGearTab = item.href === "/member/equipment";
-          const rampHighlight = intakePending && isTodayTab && !locked;
-
-          if (isTodayTab) {
-            return (
-              <Fragment key="today-nutrition">
+        {(() => {
+          const href = navHref(todayItem, paymentGateActive, checkoutPlan);
+          const locked = paymentGateActive && !todayItem.openDuringPayment;
+          const active = !onCheckout && todayItem.match(pathname);
+          const rampHighlight = intakePending && !locked;
+          return (
+            <Fragment key="today-nutrition">
               <Link
                 id="member-nav-today"
                 href={href}
@@ -238,7 +233,7 @@ export default function MemberNav({
                   active ? "nav-tab-ramp-active" : "nav-tab-ramp"
                 } ${locked ? "opacity-80" : ""}`}
               >
-                <span>{item.label}</span>
+                <span>{todayItem.label}</span>
                 {rampHighlight && !active ? (
                   <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[var(--ramp-gold)] ring-2 ring-[var(--surface)]" />
                 ) : null}
@@ -267,46 +262,36 @@ export default function MemberNav({
                 {nutritionTabLabel}
                 {nutritionLocked ? lockIcon() : null}
               </button>
-              </Fragment>
-            );
-          }
+            </Fragment>
+          );
+        })()}
 
+        {(() => {
+          const href = navHref(scoresItem, paymentGateActive, checkoutPlan);
+          const locked = paymentGateActive && !scoresItem.openDuringPayment;
+          const active = !onCheckout && scoresItem.match(pathname);
           return (
             <Link
-              key={item.href}
-              id={
-                isScoresTab ? "member-nav-scores" : isGearTab ? "member-nav-gear" : undefined
-              }
+              id="member-nav-scores"
               href={href}
-              title={
-                locked
-                  ? "Complete your ticket to unlock"
-                  : isGearTab
-                    ? "Gear shop — browse & buy equipment"
-                    : undefined
-              }
-              className={`member-nav-item relative flex min-h-10 flex-1 flex-col items-center justify-center rounded-lg px-1 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:flex-none lg:min-w-[4.75rem] lg:px-5 ${tabClass(
+              title={locked ? "Complete your ticket to unlock" : undefined}
+              className={`member-nav-scores member-nav-item relative flex min-h-10 flex-[1.15] flex-col items-center justify-center rounded-lg px-1 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:min-w-[5.5rem] lg:px-5 ${tabClass(
                 active,
                 false,
-              )} ${isScoresTab && scorePulse ? "member-nav-score-pulse" : ""} ${
-                locked ? "opacity-75" : ""
-              }`}
+              )} ${scorePulse ? "member-nav-score-pulse" : ""} ${locked ? "opacity-75" : ""}`}
             >
-              {item.label}
+              <span>{scoresItem.label}</span>
               {locked ? lockIcon() : null}
-              {isScoresTab && scorePoints != null && scorePoints > 0 ? (
+              {scorePoints != null && scorePoints > 0 ? (
                 <span
                   className={`member-nav-score-badge ${scorePulse ? "member-nav-score-badge--pulse" : ""}`}
                 >
                   {scorePoints}
                 </span>
               ) : null}
-              {"badge" in item && item.badge ? (
-                <ChatNavBadge role="member" placement="corner" />
-              ) : null}
             </Link>
           );
-        })}
+        })()}
 
         <button
           type="button"
@@ -351,6 +336,26 @@ export default function MemberNav({
           )}
           <span className="member-nav-more-label">More</span>
         </button>
+
+        {(() => {
+          const href = navHref(messagesItem, paymentGateActive, checkoutPlan);
+          const locked = paymentGateActive && !messagesItem.openDuringPayment;
+          const active = !onCheckout && messagesItem.match(pathname);
+          return (
+            <Link
+              id="member-nav-messages"
+              href={href}
+              className={`member-nav-messages member-nav-item relative flex min-h-10 flex-none flex-col items-center justify-center rounded-lg px-2 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:min-w-[5.25rem] lg:px-5 ${tabClass(
+                active,
+                false,
+              )} ${locked ? "opacity-75" : ""}`}
+            >
+              {messagesItem.label}
+              {locked ? lockIcon() : null}
+              <ChatNavBadge role="member" placement="corner" />
+            </Link>
+          );
+        })()}
       </nav>
 
       {nutritionOpen && !nutritionLocked ? (
@@ -426,15 +431,17 @@ export default function MemberNav({
             const locked = paymentGateActive && !item.openDuringPayment;
             const active = !onCheckout && item.match(pathname);
             const isMeasureTab = item.href === "/member/measurements";
+            const isGearTab = item.href === "/member/equipment";
             const isBookTab = item.href === "/member/book";
             return (
               <Link
                 key={item.href}
+                id={isGearTab ? "member-nav-gear" : undefined}
                 href={href}
                 onClick={() => setMoreOpen(false)}
                 className={`member-nav-more-link ${active ? "member-nav-more-link--active" : ""} ${
                   locked ? "opacity-75" : ""
-                }`}
+                } ${isGearTab ? "member-nav-gear" : ""}`}
               >
                 {isMeasureTab ? (
                   <UserBicepAvatar size={22} tone="emerald" title="Measurements" />
