@@ -285,7 +285,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const needsAuth = pathname.startsWith("/member") || pathname.startsWith("/admin");
+  const needsAuth =
+    pathname.startsWith("/member") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/byow");
   if (!needsAuth) {
     return NextResponse.next();
   }

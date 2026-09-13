@@ -23,6 +23,7 @@ type Props = {
     asInstructor?: string;
     forUser?: string;
     review?: string;
+    byow?: string;
   }>;
 };
 
@@ -40,11 +41,24 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
     asInstructor,
     forUser,
     review,
+    byow,
   } = await searchParams;
 
   const smsOverride = smsDay ? getActiveScheduleOverride(smsDay) : null;
 
   let workout = workoutId ? await getMemberWorkoutById(workoutId) : null;
+  if (!workout && byow) {
+    const { getByowMemberWorkout } = await import("@/lib/byow-member-workout");
+    const { getSessionUser } = await import("@/lib/auth");
+    const { canAccessByowAdmin } = await import("@/lib/byow-access");
+    const session = await getSessionUser();
+    const uid = await resolveMemberUserId();
+    workout = await getByowMemberWorkout(byow, {
+      userId: uid,
+      isAdmin: canAccessByowAdmin(session),
+      memberName: session?.name || "Member",
+    });
+  }
 
   // /member/workout?program=adult → current enrollment week/day (not generic preview shell)
   if (!workout && program) {
@@ -86,8 +100,8 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
       })
     : null;
 
-  const backHref = "/member/today";
-  const backLabel = program ? "← Back to program" : "← Dashboard";
+  const backHref = byow ? "/member/byow" : "/member/today";
+  const backLabel = byow ? "← My notes" : program ? "← Back to program" : "← Dashboard";
 
   // Location + current weather for the member (from onboarding cookies or DB)
   // Used to show in console and for instructor context. Also logged for historical reference.

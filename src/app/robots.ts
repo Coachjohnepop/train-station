@@ -34,6 +34,8 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         "/forgot-password",
         "/reset-password",
         "/setup-quick-auth",
+        "/byow",
+        "/byow/",
       ],
     },
     sitemap: `${origin}/sitemap.xml`,

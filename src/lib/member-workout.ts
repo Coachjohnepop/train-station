@@ -19,7 +19,7 @@ import { DEFAULT_REST_TIMER_SOUND } from "@/lib/rest-timer-sound";
 import { DEFAULT_WARMUP_REST_SECONDS, pinWarmupsFirst } from "@/lib/warmup-group";
 import { getCoachSettings } from "@/lib/coach-settings-store";
 
-function mapItemToBlock(item: {
+export function mapItemToBlock(item: {
   id: string;
   exerciseId?: string;
   exercise?: {

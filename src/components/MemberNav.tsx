@@ -73,6 +73,11 @@ const moreItems: NavItem[] = [
     openDuringPayment: true,
   },
   {
+    href: "/member/byow",
+    label: "My notes",
+    match: (p: string) => p.startsWith("/member/byow"),
+  },
+  {
     href: "/member/account",
     label: "Account settings",
     match: (p: string) => p.startsWith("/member/account"),

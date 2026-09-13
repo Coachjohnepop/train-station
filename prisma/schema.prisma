@@ -79,6 +79,9 @@ model User {
   measurements       UserMeasurement[]
   shoppingList       MemberShoppingList?
   chatThreadCursors  ChatThreadCursor[]
+  byowExercises      ByowExercise[]
+  byowWorkouts       ByowWorkout[]
+  byowSources        ByowSourceNote[]
   analyticsSessions  AnalyticsSession[]
   analyticsEvents    AnalyticsEvent[]
   subscriptionPayments FactSubscriptionPayment[]
@@ -1819,4 +1822,68 @@ model AcctJournalLine {
   @@index([entryId, lineNo])
   @@index([accountId])
   @@index([partyId])
+}
+
+// ——— Bring Your Own Workout (isolated from Jeremy's catalog) ———
+// Same shape as Exercise / Workout / WorkoutExercise, separate tables so
+// member notes never land in the coach library.
+
+model ByowExercise {
+  id          String   @id @default(cuid())
+  ownerUserId String
+  name        String
+  description String?
+  videoUrl    String?
+  tags        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  lines       ByowWorkoutExercise[]
+
+  @@index([ownerUserId, name])
+}
+
+model ByowWorkout {
+  id          String   @id @default(cuid())
+  ownerUserId String
+  name        String
+  description String?
+  exportText  String?  @db.Text
+  source      String   @default("notes")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  exercises   ByowWorkoutExercise[]
+  sourceNote  ByowSourceNote?
+
+  @@index([ownerUserId, updatedAt])
+}
+
+model ByowWorkoutExercise {
+  id         String   @id @default(cuid())
+  workoutId  String
+  exerciseId String
+  sortOrder  Int      @default(0)
+  setScheme  String?
+  reps       String?
+  sets       Int?
+  restSec    Int?
+  notes      String?
+  workout    ByowWorkout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exercise   ByowExercise @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+
+  @@index([workoutId, sortOrder])
+}
+
+model ByowSourceNote {
+  id          String   @id @default(cuid())
+  ownerUserId String
+  workoutId   String   @unique
+  filename    String?
+  rawText     String   @db.Text
+  createdAt   DateTime @default(now())
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  workout     ByowWorkout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  @@index([ownerUserId, createdAt])
 }

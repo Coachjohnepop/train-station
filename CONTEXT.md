@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-13 (hidden BYOW)
+
+**Status:** Preview door **`/byow`** (noindex, not on landing). Members paste/upload notes → **ByowWorkout / ByowExercise** tables, **not** Jeremy’s catalog. **`/byow/admin`** = John (ADMIN) only. Daughters run them at **`/member/byow`** → same workout console. More → My notes.
+
 **Date:** 2026-09-13 (Jeremy catalog persistence)
 
 **Status:** His programming **is in live Postgres** (`train-station-catalog`). Counts: **613 workouts, 4,219 exercise lines, 669 program days**. Touched **today** (e.g. Split Routine Chest/Triceps 09:13 PT). Catalog API writes Prisma, not blob. Snapshot: Desktop `The Train Station/backups/catalog-2026-09-13T16-18-27.json.gz`. Add/update now also stamps `Workout.updatedAt`. **Supabase org is still Free = no vendor backups** — keep taking snapshots; upgrade Pro if we want platform backups.
