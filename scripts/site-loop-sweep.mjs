@@ -218,6 +218,10 @@ async function main() {
     "/signup",
     "/member/checkout",
     "/member/today",
+    "/byow",
+    "/byow/signup",
+    "/byow/admin",
+    "/member/byow",
     "/api/payments/public",
     "/api/pricing/public",
     "/api/landing-media",
@@ -307,6 +311,11 @@ async function main() {
     { path: "/api/onboard/complete", method: "POST", body: {} },
     { path: "/api/signup/register", method: "POST", body: {} },
     { path: "/api/admin/members/x/mark-paid", method: "POST", body: {} },
+    { path: "/api/byow/parse", method: "POST", body: {} },
+    { path: "/api/byow/build", method: "POST", body: {} },
+    { path: "/api/byow/log", method: "POST", body: {} },
+    { path: "/api/chat/archive", method: "GET" },
+    { path: "/api/chat/clear", method: "POST", body: {} },
   ];
   for (const g of gated) {
     const r = await probe(g.path, { method: g.method, body: g.body });

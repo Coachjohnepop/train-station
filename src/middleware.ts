@@ -290,7 +290,9 @@ export async function middleware(request: NextRequest) {
   const needsAuth =
     pathname.startsWith("/member") ||
     pathname.startsWith("/admin") ||
-    pathname.startsWith("/byow");
+    (pathname.startsWith("/byow") &&
+      pathname !== "/byow" &&
+      !pathname.startsWith("/byow/signup"));
   if (!needsAuth) {
     return NextResponse.next();
   }

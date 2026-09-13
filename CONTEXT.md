@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-13 (prod sweep + ERD + PCI draft)
+
+**Status:** main is prod (`b0e1613`+). Sweep: **92 pages / 0 dead / 9 public APIs / 22 process gates** (BYOW parse/build/log included). `/byow` is public and sends cold traffic to signup. Packs: `docs/full-erd-2026-09-13.pdf`, `docs/system-flowchart-2026-09-13-byow.pdf`, `docs/pci-saq-a-draft-2026-09-13.pdf` (SAQ A path, **not an attestation**). Desktop copies in The Train Station folder.
+
 **Date:** 2026-09-13 (hidden BYOW)
 
 **Status:** Hidden **`/byow`** (noindex, no landing links). **Free** — `/byow/signup` uses the same `completeMemberSignup({ channel: "byow" })` as main (no Stripe, no Adult enroll). Testers: `/member/byow`. John desk: `/byow/admin` (users, libraries, 14d journey). Isolated `Byow*` tables.
