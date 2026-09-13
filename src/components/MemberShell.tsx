@@ -93,31 +93,53 @@ export default function MemberShell({
                   }
                 />
               </div>
-              {setupMode ? (
-                <div className="member-chrome-user flex min-w-0 items-center gap-2">
-                  <UserBicepAvatar size={34} title="Account" className="member-chrome-avatar" />
+              <div className="member-chrome-user flex min-w-0 items-center gap-2">
+                {setupMode ? (
+                  <UserBicepAvatar
+                    size={34}
+                    tone="emerald"
+                    title="Measurements"
+                    className="member-chrome-avatar"
+                  />
+                ) : (
+                  <Link
+                    href={
+                      paymentGateActive
+                        ? memberCheckoutPath(checkoutPlan)
+                        : "/member/measurements"
+                    }
+                    className="rounded-full transition hover:opacity-90"
+                    title="Measurements"
+                    aria-label="Measurements"
+                  >
+                    <UserBicepAvatar
+                      size={34}
+                      tone="emerald"
+                      title="Measurements"
+                      className="member-chrome-avatar"
+                    />
+                  </Link>
+                )}
+                {setupMode ? (
                   <div className="member-chrome-hello min-w-0">
                     <p className="member-chrome-name truncate text-sm font-medium">Hi, {memberName}</p>
                     {memberEmail && (
                       <p className="member-chrome-email truncate text-xs text-[var(--muted)]">{memberEmail}</p>
                     )}
                   </div>
-                </div>
-              ) : (
-                <Link
-                  href="/member/account"
-                  className="member-chrome-user flex min-w-0 items-center gap-2 rounded-lg transition hover:opacity-90"
-                  title="Account & settings"
-                >
-                  <UserBicepAvatar size={34} title="Account" className="member-chrome-avatar" />
-                  <div className="member-chrome-hello min-w-0">
+                ) : (
+                  <Link
+                    href="/member/account"
+                    className="member-chrome-hello min-w-0 rounded-lg transition hover:opacity-90"
+                    title="Account & settings"
+                  >
                     <p className="member-chrome-name truncate text-sm font-medium">Hi, {memberName}</p>
                     {memberEmail && (
                       <p className="member-chrome-email truncate text-xs text-[var(--muted)]">{memberEmail}</p>
                     )}
-                  </div>
-                </Link>
-              )}
+                  </Link>
+                )}
+              </div>
             </div>
             <div className="member-chrome-actions flex shrink-0 items-center gap-1.5 sm:gap-2.5">
               {!setupMode && !paymentGateActive ? (

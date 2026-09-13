@@ -2544,8 +2544,9 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
     height: 22px !important;
   }
 
-  .member-app .member-chrome-avatar > span {
-    font-size: 11px !important;
+  .member-app .member-chrome-avatar svg {
+    width: 13px !important;
+    height: 13px !important;
   }
 
   .member-app .member-nav-wrap {

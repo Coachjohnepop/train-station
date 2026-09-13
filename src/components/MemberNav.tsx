@@ -403,7 +403,7 @@ export default function MemberNav({
             const href = navHref(item, paymentGateActive, checkoutPlan);
             const locked = paymentGateActive && !item.openDuringPayment;
             const active = !onCheckout && item.match(pathname);
-            const isAccountTab = item.href === "/member/account";
+            const isMeasureTab = item.href === "/member/measurements";
             const isBookTab = item.href === "/member/book";
             return (
               <Link
@@ -414,7 +414,9 @@ export default function MemberNav({
                   locked ? "opacity-75" : ""
                 }`}
               >
-                {isAccountTab ? <UserBicepAvatar size={22} title="Account" /> : null}
+                {isMeasureTab ? (
+                  <UserBicepAvatar size={22} tone="emerald" title="Measurements" />
+                ) : null}
                 <span>{item.label}</span>
                 {isBookTab && needsIntroBooking ? (
                   <span
