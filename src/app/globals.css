@@ -2743,9 +2743,7 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
     font-size: 0.7rem;
   }
 
-  .member-app .member-aux-hints {
-    display: none;
-  }
+  /* Keep Enable alerts visible on landscape phones — it is a mobile feature. */
 
   .member-app > main {
     padding-top: 0.4rem;

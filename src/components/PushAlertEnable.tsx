@@ -27,11 +27,10 @@ export default function PushAlertEnable({ compact = false }: { compact?: boolean
   useEffect(() => {
     // Desktop browser: never show the amber strip (phone / home-screen only).
     if (!isMobilePushSurface()) return;
-    if (!isPushSupported()) return;
 
     // Already enabled once — permanent, no banner (quiet re-sync only).
     if (isPushAlertsPermanentlyEnabled()) {
-      void enablePushAlerts({ forceResubscribe: false });
+      if (isPushSupported()) void enablePushAlerts({ forceResubscribe: false });
       return;
     }
 
@@ -39,6 +38,18 @@ export default function PushAlertEnable({ compact = false }: { compact?: boolean
     setStandalone(installed);
 
     void (async () => {
+      try {
+        if (window.localStorage.getItem(DISMISS_LATER_KEY) === "1") return;
+      } catch {
+        /* ignore */
+      }
+
+      // iPhone Safari (not Home Screen) has no PushManager — still show Add to Home Screen.
+      if (!isPushSupported()) {
+        setVisible(true);
+        return;
+      }
+
       const perm = await getPushPermission();
 
       // Already allowed on this device before we tracked permanent flag — treat as done.
@@ -46,16 +57,6 @@ export default function PushAlertEnable({ compact = false }: { compact?: boolean
         markPushAlertsPermanentlyEnabled();
         void enablePushAlerts({ forceResubscribe: false });
         return;
-      }
-
-      try {
-        if (window.localStorage.getItem(DISMISS_LATER_KEY) === "1") {
-          // "Later" only hides until next session if not installed; if installed, hide for a while.
-          // User can still enable from Account settings.
-          return;
-        }
-      } catch {
-        /* ignore */
       }
 
       if (perm === "denied") {

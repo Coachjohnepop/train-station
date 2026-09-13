@@ -231,7 +231,6 @@ export default function MemberShell({
       >
         {!setupMode ? (
           <div className="member-aux-hints mb-3 space-y-2 px-4 md:px-0">
-            <PwaInstallHint compact />
             <PushAlertEnable compact />
           </div>
         ) : null}

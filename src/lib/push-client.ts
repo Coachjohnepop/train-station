@@ -43,12 +43,22 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return out;
 }
 
+/** iPhone / iPod / iPad — including Safari, where PushManager is missing until Home Screen. */
+export function isIosDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  if (/iPhone|iPod|iPad/i.test(ua)) return true;
+  // iPadOS 13+ desktop UA
+  return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+}
+
 /**
  * Phone alerts are for real phones (home-screen PWA / mobile Safari), not desktop
  * browser chrome. Matches PwaInstallHint (~900px) + touch-primary devices.
  */
 export function isMobilePushSurface(): boolean {
   if (typeof window === "undefined") return false;
+  if (isIosDevice()) return true;
   try {
     if (window.matchMedia("(max-width: 899px)").matches) return true;
     // iPad landscape can be wide but still a tablet
@@ -109,19 +119,19 @@ export async function getPushPermission(): Promise<NotificationPermission | "uns
 export async function enablePushAlerts(opts?: {
   forceResubscribe?: boolean;
 }): Promise<{ ok: boolean; error?: string; standalone?: boolean }> {
-  if (!isPushSupported()) {
-    return { ok: false, error: "This browser does not support push alerts." };
-  }
-
   const standalone = isStandalonePwa();
-  // iOS will accept subscribe in Safari sometimes, but closed-app delivery needs Home Screen.
-  if (!standalone) {
+  // iOS Safari in a tab has no PushManager. Delivery only works from the Home Screen app.
+  if (!standalone && (isIosDevice() || !isPushSupported())) {
     return {
       ok: false,
       standalone: false,
       error:
         "Open the Home Screen app (not Safari). iPhone: Share → Add to Home Screen, then open that icon and try again.",
     };
+  }
+
+  if (!isPushSupported()) {
+    return { ok: false, error: "This browser does not support push alerts." };
   }
 
   try {
