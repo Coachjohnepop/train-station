@@ -28,8 +28,46 @@ export default function ThemeModeToggle({ className = "" }: { className?: string
       aria-label={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
       title={mode === "dark" ? "Light mode" : "Dark mode"}
     >
-      <span aria-hidden>{mode === "dark" ? "☀" : "☾"}</span>
+      {mode === "dark" ? <SunIcon /> : <MoonIcon />}
       <span className="theme-mode-toggle__label">{mode === "dark" ? "Light" : "Dark"}</span>
     </button>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.1"
+      strokeLinecap="round"
+      aria-hidden
+      className="theme-mode-toggle__icon"
+    >
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 3v2.2M12 18.8V21M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M3 12h2.2M18.8 12H21M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.1"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className="theme-mode-toggle__icon"
+    >
+      <path d="M16.4 13.6A6.4 6.4 0 0 1 10.4 4.8 7 7 0 1 0 19.2 16.4a6.4 6.4 0 0 1-2.8-2.8Z" />
+    </svg>
   );
 }

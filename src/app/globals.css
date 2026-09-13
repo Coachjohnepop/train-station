@@ -1499,18 +1499,24 @@ table.data.table-sticky-actions td:last-child {
   gap: 0.35rem;
   padding: 0.35rem 0.65rem;
   border-radius: 9999px;
-  border: 1px solid color-mix(in srgb, var(--tier-trim) 35%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--ramp-gold) 45%, var(--border));
   background: color-mix(in srgb, var(--surface-2) 80%, transparent);
-  color: var(--muted);
+  color: var(--ramp-gold-light);
   font-size: 0.7rem;
   font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 
 .theme-mode-toggle:hover {
-  border-color: var(--tier-trim-strong);
-  color: var(--text);
+  border-color: var(--ramp-gold-light);
+  color: var(--ramp-gold-light);
+  background: color-mix(in srgb, var(--ramp-gold) 14%, transparent);
+}
+
+.theme-mode-toggle__icon {
+  display: block;
+  flex-shrink: 0;
 }
 
 .theme-mode-toggle__label {
@@ -1930,14 +1936,14 @@ body:has([data-landing-nav]) [data-global-theme-toggle] {
 }
 
 .landing-nav--over-hero .theme-mode-toggle {
-  color: rgba(255, 255, 255, 0.95);
+  color: #6ee7b7;
   background: rgba(0, 0, 0, 0.45);
-  border-color: rgba(255, 255, 255, 0.35);
+  border-color: rgba(52, 211, 153, 0.45);
 }
 
 .landing-nav--over-hero .theme-mode-toggle:hover {
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.6);
+  color: #a7f3d0;
+  border-color: rgba(110, 231, 183, 0.7);
 }
 
 /* Join on the photo bar — `a { color: inherit }` would make this white-on-white */
