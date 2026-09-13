@@ -191,10 +191,23 @@ function expireCookie(
   res: { cookies: { set: (name: string, value: string, opts?: object) => void } },
   name: string,
 ) {
-  const clear = { path: "/", maxAge: 0 };
-  res.cookies.set(name, "", clear);
+  const expired = new Date(0);
+  const variants: Array<Record<string, unknown>> = [
+    { path: "/", maxAge: 0, expires: expired },
+    {
+      path: "/",
+      maxAge: 0,
+      expires: expired,
+      httpOnly: true,
+      sameSite: "lax" as const,
+      secure: process.env.NODE_ENV === "production",
+    },
+  ];
   const domain = productionCookieDomain();
-  if (domain) res.cookies.set(name, "", { ...clear, domain });
+  for (const opts of variants) {
+    res.cookies.set(name, "", opts);
+    if (domain) res.cookies.set(name, "", { ...opts, domain });
+  }
 }
 
 export function applySessionCookies(

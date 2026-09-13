@@ -1,6 +1,6 @@
 "use client";
 
-import { logoutUrl } from "@/lib/logout-url";
+import { signOutNow } from "@/lib/logout-url";
 
 export default function LogoutButton({
   className = "",
@@ -24,9 +24,7 @@ export default function LogoutButton({
       ]
         .filter(Boolean)
         .join(" ")}
-      onClick={() => {
-        window.location.href = logoutUrl();
-      }}
+      onClick={() => signOutNow()}
       title="Sign out"
       aria-label="Sign out"
     >

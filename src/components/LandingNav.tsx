@@ -9,7 +9,7 @@ import {
   LANDING_NAV_SECTIONS,
   landingNavHref,
 } from "@/lib/landing-nav";
-import { logoutUrl } from "@/lib/logout-url";
+import { signOutNow } from "@/lib/logout-url";
 import ThemeModeToggle from "@/components/ThemeModeToggle";
 import { type PurchaseAuth } from "@/lib/member-purchase-path";
 import { isStaffRole } from "@/lib/staff-access";
@@ -149,7 +149,7 @@ export default function LandingNav({
                   <button
                     type="button"
                     onClick={() => {
-                      window.location.href = logoutUrl();
+                      signOutNow();
                     }}
                     className="landing-nav__link landing-nav__link--compact"
                   >
@@ -207,7 +207,7 @@ export default function LandingNav({
                 <button
                   type="button"
                   onClick={() => {
-                    window.location.href = logoutUrl();
+                    signOutNow();
                   }}
                   className="landing-nav__link"
                 >
@@ -229,7 +229,7 @@ export default function LandingNav({
             <button
               type="button"
               onClick={() => {
-                window.location.href = logoutUrl();
+                signOutNow();
               }}
               className="landing-nav__link landing-nav__link--compact md:hidden"
             >
@@ -351,7 +351,7 @@ export default function LandingNav({
                   type="button"
                   className="block w-full rounded-lg px-2 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--surface-2)]"
                   onClick={() => {
-                    window.location.href = logoutUrl();
+                    signOutNow();
                   }}
                 >
                   Sign out

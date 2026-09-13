@@ -85,7 +85,8 @@ export default async function HomePage() {
                 C
               </Link>
               <Link
-                href="/api/auth/logout"
+                href="/api/auth/logout?next=/login"
+                prefetch={false}
                 className="inline-flex items-center rounded-full border border-white/30 px-4 py-1.5 text-xs font-bold text-white/90 transition hover:bg-white/10"
               >
                 Sign out

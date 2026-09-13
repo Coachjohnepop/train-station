@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import LandingNav from "@/components/LandingNav";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
-import { logoutUrl } from "@/lib/logout-url";
+import { signOutNow } from "@/lib/logout-url";
 
 export default function LandingWelcomeBack({
   email,
@@ -16,7 +16,7 @@ export default function LandingWelcomeBack({
   children: ReactNode;
 }) {
   function signOut() {
-    window.location.href = logoutUrl();
+    signOutNow();
   }
 
   const programHref = isCoach ? "/admin" : "/member";

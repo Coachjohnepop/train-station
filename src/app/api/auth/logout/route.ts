@@ -35,12 +35,19 @@ async function rememberEmailOnLogout(
   );
 }
 
+function noStore(res: NextResponse) {
+  res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+  res.headers.set("CDN-Cache-Control", "no-store");
+  res.headers.set("Vercel-CDN-Cache-Control", "no-store");
+  return res;
+}
+
 export async function POST() {
   const email = await emailToRememberOnLogout();
   const res = NextResponse.json({ ok: true });
   await rememberEmailOnLogout(res, email);
   clearSessionCookies(res);
-  return res;
+  return noStore(res);
 }
 
 export async function GET(request: Request) {
@@ -59,5 +66,5 @@ export async function GET(request: Request) {
   const res = NextResponse.redirect(destination);
   await rememberEmailOnLogout(res, email);
   clearSessionCookies(res);
-  return res;
+  return noStore(res);
 }
