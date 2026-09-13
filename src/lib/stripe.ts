@@ -143,6 +143,12 @@ export function appBaseUrl(): string {
   return "http://localhost:3000";
 }
 
+/**
+ * PCI standing rule: card numbers never touch this origin.
+ * Only Checkout Sessions (hosted redirect). Do not add Payment Element,
+ * CardElement, or raw card API calls without a new SAQ review (A-EP or D).
+ * See docs/pci/NO-CARD-UI.md
+ */
 async function createCheckoutSession(
   stripe: StripeClient,
   sessionParams: import("stripe").Stripe.Checkout.SessionCreateParams,

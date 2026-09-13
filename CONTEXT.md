@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-13 (PCI now-list + weekly DB backup)
+
+**Status:** Standing rule: **no card UI on our origin** (`docs/pci/NO-CARD-UI.md`, comment on Checkout Session create). Stripe AoC must be downloaded from [Dashboard compliance documents](https://dashboard.stripe.com/settings/compliance/documents) — not public wget; steps in `docs/pci/HOW-TO-GET-STRIPE-AOC.md`. Stripe’s own PCI form: later when the banner appears; cheat sheet is in that file. **ASV/counsel later.** Supabase Pro is a **dashboard click** (~$25); until then **weekly cron** `GET /api/cron/postgres-backup` (Sun 16:00 UTC) + local full dumps in Desktop `backups/`.
+
 **Date:** 2026-09-13 (prod sweep + ERD + PCI draft)
 
 **Status:** main is prod (`b0e1613`+). Sweep: **92 pages / 0 dead / 9 public APIs / 22 process gates** (BYOW parse/build/log included). `/byow` is public and sends cold traffic to signup. Packs: `docs/full-erd-2026-09-13.pdf`, `docs/system-flowchart-2026-09-13-byow.pdf`, `docs/pci-saq-a-draft-2026-09-13.pdf` (SAQ A path, **not an attestation**). Desktop copies in The Train Station folder.
