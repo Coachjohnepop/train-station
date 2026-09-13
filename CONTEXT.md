@@ -443,9 +443,19 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-13 (PCI form answers + weekly backup)
+
+**Status:**
+- **No card UI** on our origin (`docs/pci/NO-CARD-UI.md`). Checkout = Stripe-hosted Sessions only.
+- **Stripe PCI wizard answers:** `docs/pci/STRIPE-PCI-FORM-ANSWERS.md` — integration is SAQ A / Checkout redirect; copy into [Dashboard compliance documents](https://dashboard.stripe.com/settings/compliance/documents). Merchant = Jeremy LIVE. John does not sign.
+- **Stripe’s own AoC** still a Dashboard download (not wget). Same URL. Park next to `PCI-SAQ-A-Draft-2026-09-13.pdf`.
+- **ASV / counsel later** (only if Stripe or the bank requires a scan).
+- **Supabase Pro** (~$25) still a billing click for vendor backups. Until then: weekly cron `GET /api/cron/postgres-backup` (Sun 16:00 UTC, Blob, 8 kept, hashes redacted) + Desktop `backups/full-*.json.gz` (offline, includes hashes).
+- Standing tripwire: Elements / card `<input>` / raw PAN API → void SAQ A → A-EP or D.
+
 **Date:** 2026-09-13 (PCI now-list + weekly DB backup)
 
-**Status:** Standing rule: **no card UI on our origin** (`docs/pci/NO-CARD-UI.md`, comment on Checkout Session create). Stripe AoC must be downloaded from [Dashboard compliance documents](https://dashboard.stripe.com/settings/compliance/documents) — not public wget; steps in `docs/pci/HOW-TO-GET-STRIPE-AOC.md`. Stripe’s own PCI form: later when the banner appears; cheat sheet is in that file. **ASV/counsel later.** Supabase Pro is a **dashboard click** (~$25); until then **weekly cron** `GET /api/cron/postgres-backup` (Sun 16:00 UTC) + local full dumps in Desktop `backups/`.
+**Status:** See entry above (form answers + cron).
 
 **Date:** 2026-09-13 (prod sweep + ERD + PCI draft)
 
