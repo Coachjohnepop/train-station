@@ -1036,7 +1036,7 @@ export default function ProgramCalendarBuilder({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           exerciseId: cardioEx.id,
-          setScheme: "standard",
+          setScheme: "timed",
           repPattern: null,
           reps: fastedCardioReps(minutes),
           sets: 1,

@@ -28,6 +28,7 @@ import {
   unlockRestAudio,
   warmRestAudio,
 } from "@/lib/rest-audio";
+import { preferAmbientAudioSession } from "@/lib/audio-session";
 import {
   DEFAULT_REST_TIMER_SECONDS,
   REST_TIMER_PRESETS,
@@ -1375,6 +1376,9 @@ export default function MemberWorkoutConsole({
         queueLiveSave(true);
       }
 
+      if (phase === "exercise") {
+        preferAmbientAudioSession();
+      }
       if (!opts?.silentStart && !restMutedRef.current) {
         playRestStart();
       }
@@ -1423,9 +1427,13 @@ export default function MemberWorkoutConsole({
   /** After timed hold ends (or is skipped), open the between-set rest timer. */
   const flipExerciseTimerToRest = useCallback(
     (blockId: string, setNum: number) => {
+      const block = workout.exercises.find((e) => e.id === blockId);
+      if (block && (block.restSec === 0 || /fasted\s*cardio/i.test(block.name))) {
+        return;
+      }
       maybeStartRestTimer(blockId, setNum, { phase: "rest", silentStart: false });
     },
-    [maybeStartRestTimer],
+    [maybeStartRestTimer, workout.exercises],
   );
 
   const saveCoachRestSettings = useCallback(
@@ -1812,6 +1820,7 @@ export default function MemberWorkoutConsole({
           maybeStartRestTimer(blockId, setNum, {
             phase: "exercise",
             secondsOverride: holdSec,
+            silentStart: holdSec >= 60,
           });
         } else {
           maybeStartRestTimer(blockId, setNum, { phase: "rest" });

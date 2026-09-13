@@ -1,4 +1,5 @@
 import { DAYS_PER_WEEK } from "@/lib/program-constants";
+import { DEFAULT_FASTED_CARDIO_MINUTES } from "@/lib/fasted-cardio";
 
 /** Monday of the week containing `date` (local time). */
 export function mondayOfWeek(date: Date): Date {
@@ -289,7 +290,7 @@ export const DEFAULT_DAY_OPTIONS = ["Gym", "Home"] as const;
 
 export const DAY_OFF_LABEL = "Day Off";
 export const FASTED_CARDIO_LABEL = "Fasted cardio";
-export const DEFAULT_FASTED_CARDIO_MINUTES = 30;
+export { DEFAULT_FASTED_CARDIO_MINUTES };
 
 export type DayOptionLike = {
   workoutId: string;

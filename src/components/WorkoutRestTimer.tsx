@@ -113,7 +113,9 @@ export default function WorkoutRestTimer({
         ? "Almost done…"
         : "Get ready…"
       : isExercise
-        ? "Hold / timed set · cybertruck when done · then rest"
+        ? totalSeconds >= 600
+          ? "Music and podcasts keep playing · alert when time is up"
+          : "Hold / timed set · alert when done · then rest"
         : "After each set (including last) · closes on rest-end sound";
 
   const skipLabel = isHit

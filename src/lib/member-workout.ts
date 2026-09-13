@@ -12,7 +12,9 @@ import {
 import { resolveExerciseVideoUrl } from "@/lib/exercise-video-hints";
 import { prisma } from "@/lib/prisma";
 import { collapseConsecutiveCloneExercises } from "@/lib/member-workout-lines";
+import { isFastedCardioBlock, fastedCardioMinutesFromText } from "@/lib/fasted-cardio";
 import { DEFAULT_REST_TIMER_SECONDS, normalizeRestTimerSeconds } from "@/lib/rest-timer";
+import { TIMED_APPROACH_ID } from "@/lib/workout-schemes";
 import { DEFAULT_REST_TIMER_SOUND } from "@/lib/rest-timer-sound";
 import { DEFAULT_WARMUP_REST_SECONDS, pinWarmupsFirst } from "@/lib/warmup-group";
 import { getCoachSettings } from "@/lib/coach-settings-store";
@@ -53,6 +55,15 @@ function mapItemToBlock(item: {
     videoUrl: ex.videoUrl ?? null,
   });
 
+  const cardio = isFastedCardioBlock({
+    name,
+    notes: coachNotes,
+    reps: rx.reps,
+  });
+  const cardioMins = cardio
+    ? fastedCardioMinutesFromText(rx.reps, coachNotes, libraryDescription)
+    : null;
+
   return {
     id: item.id,
     exerciseId: item.exerciseId || ex.id || item.id,
@@ -61,12 +72,12 @@ function mapItemToBlock(item: {
     coachNotes,
     libraryDescription,
     videoUrl,
-    setScheme: rx.approach,
-    repPattern: rx.repPattern,
-    reps: rx.reps,
-    setCount: rx.sets ?? 3,
+    setScheme: cardio ? TIMED_APPROACH_ID : rx.approach,
+    repPattern: cardio ? null : rx.repPattern,
+    reps: cardio ? `${cardioMins} min` : rx.reps,
+    setCount: cardio ? 1 : rx.sets ?? 3,
     weightTier: item.weightTier ?? "light",
-    restSec,
+    restSec: cardio ? 0 : restSec,
     past: null as MemberWorkoutView["exercises"][0]["past"],
   };
 }

@@ -22,12 +22,12 @@ export function parseHoldDurationSeconds(reps: string | null | undefined): numbe
   const mmss = raw.match(/^(\d{1,2}):(\d{2})$/);
   if (mmss) {
     const total = Number(mmss[1]) * 60 + Number(mmss[2]);
-    if (Number.isFinite(total) && total >= 5 && total <= 1800) return total;
+    if (Number.isFinite(total) && total >= 5 && total <= 5400) return total;
   }
   const min = raw.match(/^(\d+(?:\.\d+)?)\s*(m|min|mins|minute|minutes)\b/);
   if (min) {
     const n = Number(min[1]);
-    if (Number.isFinite(n) && n > 0 && n <= 30) return Math.round(n * 60);
+    if (Number.isFinite(n) && n > 0 && n <= 90) return Math.round(n * 60);
   }
   const sec = raw.match(/^(\d+(?:\.\d+)?)\s*(s|sec|secs|second|seconds)\b/);
   if (sec) {
@@ -92,5 +92,5 @@ export function resolveExerciseHoldSeconds(input: {
   if (fromReps != null) return fromReps;
   const mins = Number(input.setCount);
   if (!Number.isFinite(mins) || mins < 1) return null;
-  return Math.min(30, Math.max(1, Math.round(mins))) * 60;
+  return Math.min(90, Math.max(1, Math.round(mins))) * 60;
 }

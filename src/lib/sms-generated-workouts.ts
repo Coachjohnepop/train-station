@@ -24,6 +24,7 @@ import { DEFAULT_REST_TIMER_SECONDS, normalizeRestTimerSeconds } from "@/lib/res
 import { DEFAULT_WARMUP_REST_SECONDS, expandParsedWarmupExercises } from "@/lib/warmup-group";
 import { getCoachSettings } from "@/lib/coach-settings-store";
 import { collapseConsecutiveCloneExercises } from "@/lib/member-workout-lines";
+import { fastedCardioMinutesFromText, isFastedCardioBlock } from "@/lib/fasted-cardio";
 import {
   DEFAULT_REST_TIMER_SOUND,
   normalizeRestTimerSound,
@@ -318,19 +319,28 @@ export async function getSmsGeneratedWorkout(
     const ex = exById[item.exerciseId] || { name: "Exercise" };
     const displayName =
       sanitizeSmsExerciseName(item.blockName || "") || ex.name || "Exercise";
+    const cardio = isFastedCardioBlock({
+      name: displayName,
+      notes: item.notes,
+      reps: item.reps,
+    });
+    const cardioMins = cardio
+      ? fastedCardioMinutesFromText(item.reps, item.notes)
+      : null;
     return {
       id: item.id,
       exerciseId: item.exerciseId,
       name: displayName,
       description: item.notes ?? ex.description ?? null,
       videoUrl: resolveExerciseVideoUrl(ex),
-      setScheme: item.setScheme || "standard",
+      setScheme: cardio ? "timed" : item.setScheme || "standard",
       repPattern: null,
-      reps: item.reps,
-      setCount: item.sets ?? 3,
+      reps: cardio ? `${cardioMins} min` : item.reps,
+      setCount: cardio ? 1 : item.sets ?? 3,
       weightTier: item.weightTier ?? "medium",
-      restSec:
-        workout.restTimerEnabled === false
+      restSec: cardio
+        ? 0
+        : workout.restTimerEnabled === false
           ? 0
           : normalizeRestTimerSeconds(
               workout.restTimerSeconds ?? DEFAULT_REST_TIMER_SECONDS,

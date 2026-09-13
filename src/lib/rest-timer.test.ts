@@ -11,6 +11,7 @@ describe("rest-timer holds vs rest", () => {
     assert.equal(parseHoldDurationSeconds("45s"), 45);
     assert.equal(parseHoldDurationSeconds("2 min"), 120);
     assert.equal(parseHoldDurationSeconds("1:30"), 90);
+    assert.equal(parseHoldDurationSeconds("35 min"), 2100);
   });
 
   it("does not start a hold after a standard 5-min bike set", () => {
