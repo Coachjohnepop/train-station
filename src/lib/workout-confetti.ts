@@ -26,13 +26,13 @@ export function runConfetti(
   const ox = origin?.x ?? window.innerWidth / 2;
   const oy = origin?.y ?? window.innerHeight / 2;
 
-  // Emerald-heavy palette so bursts read as “from the points” on celebrate
+  // Gold-heavy palette so bursts read as “from the points” on celebrate
   const colors = [
-    "#10b981",
-    "#6ee7b7",
-    "#34d399",
-    "#ecfdf5",
-    "#047857",
+    "#d4af37",
+    "#fde68a",
+    "#f0c75e",
+    "#fff8e7",
+    "#b8860b",
     "#7c3aed",
     "#c4b5fd",
     "#f472b6",
@@ -150,7 +150,7 @@ export function runFireworks(canvas: HTMLCanvasElement, durationMs = 3000) {
   canvas.style.height = `${h}px`;
   ctx.scale(dpr, dpr);
 
-  const colors = ["#6ee7b7", "#34d399", "#10b981", "#f472b6", "#c4b5fd", "#7c3aed", "#4ade9a", "#fff"];
+  const colors = ["#fde68a", "#f0c75e", "#d4af37", "#f472b6", "#c4b5fd", "#7c3aed", "#4ade9a", "#fff"];
   const particles: FireworkParticle[] = [];
   const start = performance.now();
   let raf = 0;

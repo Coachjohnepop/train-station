@@ -1,6 +1,6 @@
 /**
  * Universal user modicon — flexed bicep in a circle.
- * Emerald tone is the member Measurements mark; accent is coach/account identity.
+ * Gold tone is the member Measurements mark; accent is coach/account identity.
  */
 
 type Props = {
@@ -8,14 +8,14 @@ type Props = {
   size?: number;
   className?: string;
   title?: string;
-  /** Emerald = measurements / body. Accent = purple identity (coach, account). */
-  tone?: "accent" | "emerald";
+  /** Gold = measurements / body. Accent = purple identity (coach, account). */
+  tone?: "accent" | "gold";
 };
 
 const TONE_CLASS = {
   accent:
     "border-[color-mix(in_srgb,var(--accent)_45%,var(--border))] bg-[color-mix(in_srgb,var(--accent)_18%,var(--surface-2))] text-[var(--accent-fg)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_20%,transparent)]",
-  emerald:
+  gold:
     "border-[color-mix(in_srgb,var(--ramp-gold)_55%,var(--border))] bg-[color-mix(in_srgb,var(--ramp-gold)_18%,var(--surface-2))] text-[var(--ramp-gold-light)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ramp-gold)_28%,transparent)]",
 } as const;
 

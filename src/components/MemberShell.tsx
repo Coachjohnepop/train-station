@@ -97,7 +97,7 @@ export default function MemberShell({
                 {setupMode ? (
                   <UserBicepAvatar
                     size={34}
-                    tone="emerald"
+                    tone="gold"
                     title="Measurements"
                     className="member-chrome-avatar"
                   />
@@ -114,7 +114,7 @@ export default function MemberShell({
                   >
                     <UserBicepAvatar
                       size={34}
-                      tone="emerald"
+                      tone="gold"
                       title="Measurements"
                       className="member-chrome-avatar"
                     />

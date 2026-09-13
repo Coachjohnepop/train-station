@@ -446,7 +446,7 @@ export default function MemberNav({
                 } ${isGearTab ? "member-nav-gear" : ""}`}
               >
                 {isMeasureTab ? (
-                  <UserBicepAvatar size={22} tone="emerald" title="Measurements" />
+                  <UserBicepAvatar size={22} tone="gold" title="Measurements" />
                 ) : null}
                 <span>{item.label}</span>
                 {isBookTab && needsIntroBooking ? (

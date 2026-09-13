@@ -443,9 +443,13 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-13 (emerald reverted — gold is back)
+
+**Status:** Jeremy did not like emerald. Brand metal is **gold** again (`--ramp-gold` = `#d4af37`). 1st Class tickets, tour CTA, confetti, score +N, How it Works, inbox chips, set-done, theme toggle, flexed-arm mark. Success greens (paid, live Zoom dots) stay green. Amber warnings stay amber.
+
 **Date:** 2026-09-13 (gold → emerald + system flowchart)
 
-**Status:** Full-site gold trim is now **emerald** (`--ramp-gold` = `#10b981`). 1st Class tickets, tour CTA, confetti, score +N, How it Works, inbox chips, set-done buttons. CSS class names still say gold; they render green. Amber warnings stay amber.
+**Status:** Reverted the same day. See entry above.
 
 **Loops (prod):** site-loop-sweep **87 pages / 0 dead / 9 public APIs / 17 process gates**. Landing A/B **39/39**. Landing→paid **94 pass**; the one fail was desktop getting B “Meet your coach” (A/B working). Coach-auth full-site loop skipped (no prod password in env); admin routes 307 to `/login`.
 

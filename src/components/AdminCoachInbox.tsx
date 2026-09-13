@@ -105,7 +105,7 @@ export default function AdminCoachInbox() {
             type="button"
             className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
               filter === f
-                ? "bg-[var(--ramp-gold)] text-[#042f1e]"
+                ? "bg-[var(--ramp-gold)] text-[#1a1204]"
                 : "btn-ghost"
             }`}
             onClick={() => setFilter(f)}
@@ -147,12 +147,12 @@ export default function AdminCoachInbox() {
                 }`}
               >
                 <div className="flex flex-wrap items-start gap-2">
-                  <span className="rounded-full bg-[var(--ramp-gold)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#042f1e]">
+                  <span className="rounded-full bg-[var(--ramp-gold)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#1a1204]">
                     {KIND_LABEL[item.kind]}
                   </span>
                   <span className="text-[11px] text-[var(--muted)]">{whenLabel(item.createdAt)}</span>
                   {unreadItem ? (
-                    <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--ramp-gold)] px-1.5 text-[10px] font-bold leading-none text-[#042f1e]">
+                    <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--ramp-gold)] px-1.5 text-[10px] font-bold leading-none text-[#1a1204]">
                       New
                     </span>
                   ) : null}

@@ -169,7 +169,7 @@ function GuideFinger({
     <div ref={hostRef} className="pointer-events-none absolute inset-0 z-20 overflow-visible">
       <div
         ref={chipRef}
-        className="absolute left-0 top-0 rounded-full bg-[#6ee7b7] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#042f1e] shadow-[0_8px_18px_rgba(0,0,0,0.35)]"
+        className="absolute left-0 top-0 rounded-full bg-[#fde68a] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#3b2a08] shadow-[0_8px_18px_rgba(0,0,0,0.35)]"
       >
         {label}
       </div>
@@ -296,7 +296,7 @@ function WorkoutScene({
               <h3 className="text-lg font-semibold leading-tight text-[var(--text)]">Goblet squat</h3>
               <p className="text-xs text-white/70">3 × 8 · Medium</p>
             </div>
-            <span className="text-xs font-bold tabular-nums text-[#6ee7b7]">
+            <span className="text-xs font-bold tabular-nums text-[#fde68a]">
               {weight || "—"}
               <span className="ml-0.5 text-[9px] text-white/45">lbs</span>
             </span>
@@ -319,12 +319,12 @@ function WorkoutScene({
               data-guide-stop="weight"
               className={`flex min-w-[3.75rem] flex-col rounded-md border px-1.5 py-1 ${
                 editing
-                  ? "border-[#6ee7b7] bg-[#6ee7b7]/10 ring-2 ring-[#6ee7b7]/40"
+                  ? "border-[#fde68a] bg-[#fde68a]/10 ring-2 ring-[#fde68a]/40"
                   : "border-white/15 bg-black/30"
               }`}
             >
               <span className="text-[7px] font-bold uppercase text-white/40">Weight</span>
-              <span className="text-base font-bold tabular-nums leading-none text-[#6ee7b7]">
+              <span className="text-base font-bold tabular-nums leading-none text-[#fde68a]">
                 {weight || ""}
                 {editing ? <span className="ml-0.5 animate-pulse">|</span> : null}
               </span>
@@ -340,8 +340,8 @@ function WorkoutScene({
                   className={`flex h-12 flex-1 flex-col items-center justify-center rounded-md border text-sm font-bold transition-colors duration-300 ${
                     done
                       ? just
-                        ? "scale-105 border-[#10b981]/70 bg-[#10b981]/30 text-[#6ee7b7]"
-                        : "border-[#10b981]/55 bg-[#10b981]/20 text-[#6ee7b7]"
+                        ? "scale-105 border-[#d4af37]/70 bg-[#d4af37]/30 text-[#fde68a]"
+                        : "border-[#d4af37]/55 bg-[#d4af37]/20 text-[#fde68a]"
                       : "border-white/15 bg-white/5 text-white/80"
                   }`}
                 >
