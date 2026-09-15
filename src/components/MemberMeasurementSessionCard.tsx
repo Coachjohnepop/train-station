@@ -30,7 +30,7 @@ export default function MemberMeasurementSessionCard({
         </p>
         <h2 className="mt-1 text-lg font-semibold">Check-in logged</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">Tape session is done for today.</p>
-        <Link href="/member/measurements" className="mt-3 inline-block text-sm font-semibold text-accent">
+        <Link href="/member/measurements/enter" className="mt-3 inline-block text-sm font-semibold text-accent">
           Review sheet →
         </Link>
       </div>
@@ -53,7 +53,7 @@ export default function MemberMeasurementSessionCard({
         <li>Save the check-in</li>
       </ol>
       <Link href="/member/measurements" className="btn-primary inline-flex justify-center">
-        Start measurements →
+        How to / Enter measurements →
       </Link>
     </div>
   );

@@ -1,5 +1,5 @@
 /**
- * Universal user modicon — flexed bicep in a circle.
+ * Universal user modicon — flexed bicep in a circle, or a number for Measurements.
  * Gold tone is the member Measurements mark; accent is coach/account identity.
  */
 
@@ -10,8 +10,10 @@ type Props = {
   title?: string;
   /** Gold = measurements / body. Accent = purple identity (coach, account). */
   tone?: "accent" | "gold";
-  /** Gold dot — measurements due / never logged. */
+  /** Gold ring — measurements due / never logged. */
   flagged?: boolean;
+  /** Check-in count. When set, the circle shows this number instead of 💪. */
+  count?: number | null;
 };
 
 const TONE_CLASS = {
@@ -27,29 +29,29 @@ export default function UserBicepAvatar({
   title = "Account",
   tone = "accent",
   flagged = false,
+  count = null,
 }: Props) {
-  const fontSize = Math.round(size * 0.52);
+  const showCount = typeof count === "number";
+  const label = showCount ? (count > 99 ? "99+" : String(count)) : "💪";
+  const fontSize = showCount
+    ? Math.round(size * (label.length > 1 ? 0.38 : 0.48))
+    : Math.round(size * 0.52);
 
   return (
     <span className={`relative inline-flex shrink-0 ${className}`.trim()}>
       <span
-        className={`inline-flex items-center justify-center rounded-full border ${TONE_CLASS[tone]}`}
+        className={`inline-flex items-center justify-center rounded-full border font-bold tabular-nums ${TONE_CLASS[tone]} ${
+          flagged ? "ring-2 ring-[var(--ramp-gold)]" : ""
+        }`}
         style={{ width: size, height: size }}
         title={title}
         role="img"
         aria-label={title}
       >
         <span className="select-none leading-none" style={{ fontSize }} aria-hidden>
-          💪
+          {label}
         </span>
       </span>
-      {flagged ? (
-        <span
-          className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[var(--ramp-gold)] ring-2 ring-[var(--bg)]"
-          title="Measurements due"
-          aria-label="Measurements due"
-        />
-      ) : null}
     </span>
   );
 }

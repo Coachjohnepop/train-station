@@ -20,7 +20,7 @@ import {
 import type { SignupPlan } from "@/lib/signup-plans";
 import { SITE_SEEN_COOKIE, isFirstTimeOnSite } from "@/lib/site-visit";
 import { getMemberContent } from "@/lib/member-content-store";
-import { listUserMeasurements } from "@/lib/measurements-store";
+import { countUserMeasurements, listUserMeasurements } from "@/lib/measurements-store";
 import {
   isoDateFromTimestamp,
   memberNeedsFirstTapeMeasurements,
@@ -128,6 +128,7 @@ export default async function MemberLayout({
   }
 
   const checkIns = profileUserId ? await listUserMeasurements(profileUserId, 1) : [];
+  const measurementCount = profileUserId ? await countUserMeasurements(profileUserId) : 0;
   const measurementSchedule = resolveMeasurementDay({
     intakeComplete: true,
     lastMeasuredIso: isoDateFromTimestamp(checkIns[0]?.measuredAt ?? null),
@@ -171,6 +172,7 @@ export default async function MemberLayout({
       nutritionDesk={memberContent.nutritionDesk}
       needsIntroBooking={memberNeedsIntroBooking(profile)}
       needsMeasurements={needsMeasurements}
+      measurementCount={measurementCount}
     >
       {children}
     </MemberShell>

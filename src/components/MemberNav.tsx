@@ -115,6 +115,7 @@ export default function MemberNav({
   nutritionDesk = null,
   needsIntroBooking = false,
   needsMeasurements = false,
+  measurementCount = 0,
   membershipLabel = null,
 }: {
   intakePending?: boolean;
@@ -123,6 +124,7 @@ export default function MemberNav({
   nutritionDesk?: NutritionDesk | null;
   needsIntroBooking?: boolean;
   needsMeasurements?: boolean;
+  measurementCount?: number;
   membershipLabel?: string | null;
 }) {
   const pathname = usePathname();
@@ -458,6 +460,7 @@ export default function MemberNav({
                     tone="gold"
                     title="Measurements"
                     flagged={needsMeasurements}
+                    count={measurementCount}
                   />
                 ) : null}
                 <span>{item.label}</span>

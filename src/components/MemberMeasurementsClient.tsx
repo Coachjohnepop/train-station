@@ -203,11 +203,13 @@ export default function MemberMeasurementsClient({
   introVideoUrl = null,
   freeExplorer = false,
   firstOnboard = false,
+  autoOpenIntro = true,
 }: {
   introVideoUrl?: string | null;
   /** Soft glass ceiling: full multi-check-in archive is Coach Class+. */
   freeExplorer?: boolean;
   firstOnboard?: boolean;
+  autoOpenIntro?: boolean;
 }) {
   const [rows, setRows] = useState<MeasurementRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1016,6 +1018,7 @@ export default function MemberMeasurementsClient({
       <MeasurementsIntroModal
         videoUrl={hasVideo ? videoUrl : null}
         forceOpen={watchAgain}
+        autoOpen={autoOpenIntro}
         onForceOpenHandled={() => setWatchAgain(false)}
       />
 
@@ -1039,7 +1042,7 @@ export default function MemberMeasurementsClient({
                 onClick={() => setWatchAgain(true)}
                 className="rounded border border-[var(--ms-rule)] bg-[var(--ms-box)] px-3 py-1 font-serif text-[11px] font-semibold text-[var(--ms-accent)] hover:bg-[rgba(124,58,237,0.35)]"
               >
-                ▶ Watch how-to (optional)
+                ▶ Watch how-to video
               </button>
             </div>
           ) : null}

@@ -297,6 +297,12 @@ export async function setMemberBeforePhotoCrop(
   });
 }
 
+export async function countUserMeasurements(userId: string): Promise<number> {
+  if (!isDatabaseConfigured()) return 0;
+  const { prisma } = await import("@/lib/prisma");
+  return prisma.userMeasurement.count({ where: { userId } });
+}
+
 export async function listUserMeasurements(
   userId: string,
   limit = 50,

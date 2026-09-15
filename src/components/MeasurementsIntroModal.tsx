@@ -12,6 +12,8 @@ type Props = {
   videoUrl: string | null;
   forceOpen?: boolean;
   onForceOpenHandled?: () => void;
+  /** First-visit auto popup. Off when the hub/how-to already showed the video. */
+  autoOpen?: boolean;
 };
 
 /**
@@ -22,6 +24,7 @@ export default function MeasurementsIntroModal({
   videoUrl,
   forceOpen = false,
   onForceOpenHandled,
+  autoOpen = true,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState(false);
@@ -46,6 +49,10 @@ export default function MeasurementsIntroModal({
       setReady(true);
       return;
     }
+    if (!autoOpen) {
+      setReady(true);
+      return;
+    }
     try {
       const seen = localStorage.getItem(MEASUREMENTS_INTRO_SEEN_KEY) === "1";
       if (!seen) setOpen(true);
@@ -53,7 +60,7 @@ export default function MeasurementsIntroModal({
       setOpen(true);
     }
     setReady(true);
-  }, [url]);
+  }, [url, autoOpen]);
 
   useEffect(() => {
     if (forceOpen && url) setOpen(true);
