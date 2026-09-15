@@ -11,13 +11,6 @@ function scrollTop() {
   return document.scrollingElement?.scrollTop ?? window.scrollY;
 }
 
-function isInteractive(target: EventTarget | null) {
-  return (
-    target instanceof Element &&
-    Boolean(target.closest("a, button, input, textarea, select, [role='button']"))
-  );
-}
-
 export default function MemberTodaySoftRefresh({
   userId,
   viewDate,
@@ -31,6 +24,7 @@ export default function MemberTodaySoftRefresh({
   const start = useRef<{ x: number; y: number; atTop: boolean } | null>(null);
   const pulling = useRef(false);
   const pullRef = useRef(0);
+  const wheelSettle = useRef<ReturnType<typeof setTimeout> | null>(null);
   const phaseRef = useRef<"idle" | "pull" | "armed" | "refresh">("idle");
   const [pull, setPull] = useState(0);
   const [phase, setPhase] = useState<"idle" | "pull" | "armed" | "refresh">("idle");
@@ -54,45 +48,23 @@ export default function MemberTodaySoftRefresh({
       setPhaseBoth("idle");
       setPull(0);
       pullRef.current = 0;
+      pulling.current = false;
     }
   }, [router, setPhaseBoth, userId, viewDate]);
 
   useEffect(() => {
-    function onDown(e: PointerEvent) {
-      if (phaseRef.current === "refresh") return;
-      if (e.pointerType === "mouse" && e.button !== 0) return;
-      if (isInteractive(e.target)) return;
-      start.current = { x: e.clientX, y: e.clientY, atTop: scrollTop() <= 8 };
-      pulling.current = false;
-    }
-
-    function onMove(e: PointerEvent) {
-      const origin = start.current;
-      if (!origin || phaseRef.current === "refresh") return;
-      const dy = e.clientY - origin.y;
-      const dx = e.clientX - origin.x;
-      if (!origin.atTop || dy < 12 || Math.abs(dx) > dy) {
-        if (!pulling.current) return;
-        pulling.current = false;
-        pullRef.current = 0;
-        setPull(0);
-        setPhaseBoth("idle");
-        return;
-      }
-      pulling.current = true;
-      const dist = Math.min(MAX_PX, dy * RESIST);
+    function applyPull(dist: number) {
+      pulling.current = dist > 0;
       pullRef.current = dist;
       setPull(dist);
-      setPhaseBoth(dist >= ARM_PX ? "armed" : "pull");
-      if (e.cancelable) e.preventDefault();
+      setPhaseBoth(dist >= ARM_PX ? "armed" : dist > 0 ? "pull" : "idle");
     }
 
-    function onUp() {
-      const wasPulling = pulling.current;
+    function finishPull() {
       const dist = pullRef.current;
       start.current = null;
       pulling.current = false;
-      if (!wasPulling || phaseRef.current === "refresh") {
+      if (phaseRef.current === "refresh") {
         pullRef.current = 0;
         return;
       }
@@ -105,15 +77,62 @@ export default function MemberTodaySoftRefresh({
       setPhaseBoth("idle");
     }
 
+    function onDown(e: PointerEvent) {
+      if (phaseRef.current === "refresh") return;
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      start.current = { x: e.clientX, y: e.clientY, atTop: scrollTop() <= 8 };
+      pulling.current = false;
+    }
+
+    function onMove(e: PointerEvent) {
+      const origin = start.current;
+      if (!origin || phaseRef.current === "refresh") return;
+      const dy = e.clientY - origin.y;
+      const dx = e.clientX - origin.x;
+      if (!origin.atTop || dy < 12 || Math.abs(dx) > dy) {
+        if (!pulling.current) return;
+        applyPull(0);
+        pulling.current = false;
+        return;
+      }
+      const dist = Math.min(MAX_PX, dy * RESIST);
+      applyPull(dist);
+      if (e.cancelable) e.preventDefault();
+    }
+
+    function onWheel(e: WheelEvent) {
+      if (phaseRef.current === "refresh") return;
+      const atTop = scrollTop() <= 8;
+      const pullingDown = e.deltaY < 0;
+      if (!atTop && !pulling.current) return;
+      if (!pullingDown && !pulling.current) return;
+      if (!atTop && pullingDown) return;
+
+      const next = pullingDown
+        ? Math.min(MAX_PX, pullRef.current + -e.deltaY * 0.45)
+        : Math.max(0, pullRef.current - e.deltaY * 0.45);
+      if (next > 0 && e.cancelable) e.preventDefault();
+      applyPull(next);
+
+      if (wheelSettle.current) clearTimeout(wheelSettle.current);
+      wheelSettle.current = setTimeout(() => {
+        wheelSettle.current = null;
+        finishPull();
+      }, 140);
+    }
+
     window.addEventListener("pointerdown", onDown, { passive: true });
     window.addEventListener("pointermove", onMove, { passive: false });
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
+    window.addEventListener("pointerup", finishPull);
+    window.addEventListener("pointercancel", finishPull);
+    window.addEventListener("wheel", onWheel, { passive: false });
     return () => {
       window.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
+      window.removeEventListener("pointerup", finishPull);
+      window.removeEventListener("pointercancel", finishPull);
+      window.removeEventListener("wheel", onWheel);
+      if (wheelSettle.current) clearTimeout(wheelSettle.current);
     };
   }, [runRefresh, setPhaseBoth]);
 
