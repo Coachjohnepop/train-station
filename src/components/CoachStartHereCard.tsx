@@ -32,6 +32,12 @@ const COACH_JOBS: JobLink[] = [
     chip: "People",
   },
   {
+    href: "/admin/bookings",
+    label: "Coach calendar",
+    oneLiner: "Calendly 1:1s — add to Google Calendar, Zoom, message the member.",
+    chip: "Calendar",
+  },
+  {
     href: "/admin/programs",
     label: "Build / fix the plan",
     oneLiner: "Weeks, days, and workouts (curriculum factory).",

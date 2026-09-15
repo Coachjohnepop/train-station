@@ -1,6 +1,7 @@
 import { getBookings } from "@/lib/booking";
 import { getSessionsForDate } from "@/lib/today-sessions";
 import { resolveDemoUser, resolveDemoUserByEmail } from "@/lib/demo-user-directory";
+import { localTodayIso } from "@/lib/program-calendar";
 
 export type TodayAppointment = {
   id: string;
@@ -21,7 +22,7 @@ export type TodayAppointment = {
 
 function dateKey(d: Date | string) {
   const dt = typeof d === "string" ? new Date(d) : d;
-  return dt.toISOString().slice(0, 10);
+  return localTodayIso(dt);
 }
 
 function resolveMembersFromIds(userIds: string[]) {

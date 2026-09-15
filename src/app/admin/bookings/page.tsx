@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import AdminBookingZoomActions from "@/components/AdminBookingZoomActions";
 import AdminCalendlyConnect from "@/components/AdminCalendlyConnect";
+import CoachCalendarPanel from "@/components/CoachCalendarPanel";
 import SmsWorkoutOverridePanel from "@/components/SmsWorkoutOverridePanel";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
 import PhoneInput from "@/components/PhoneInput";
@@ -194,6 +195,8 @@ export default function AdminBookingsPage() {
       <p className="text-sm text-[var(--muted)]">
         Coach contact/availability for Zoom onboarding (15 min). Use the new SMS Broadcast tool below to text members (or staff) directly. Daily reminders still available via the simulate button.
       </p>
+
+      <CoachCalendarPanel />
 
       {msg && <p className="text-sm text-[var(--success)]">{msg}</p>}
 

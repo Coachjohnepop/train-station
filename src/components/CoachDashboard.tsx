@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import CoachClassDayBand from "@/components/CoachClassDayBand";
 import CoachLessonPlanBuilder from "@/components/CoachLessonPlanBuilder";
 import CoachNeedsDonePanel from "@/components/CoachNeedsDonePanel";
+import CoachCalendarPanel from "@/components/CoachCalendarPanel";
 import CoachStartHereCard from "@/components/CoachStartHereCard";
 import type { CoachMemberOption } from "@/components/CoachMemberPicker";
 import type { CoachDayStudentCard, CoachDaySummary } from "@/lib/coach-day";
@@ -237,6 +238,8 @@ export default function CoachDashboard({
             Planning for a future day — use <strong>Go to Today</strong> on class day to run the floor.
           </p>
         )}
+
+        <CoachCalendarPanel />
 
         <CoachNeedsDonePanel compact />
 
