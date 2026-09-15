@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       return NextResponse.json(result);
     }
     if (body.action === "publish-saved") {
-      const sessions = getSessionsForDate(body.sessionDate).filter((s) => s.userIds.length > 0);
+      const sessions = getSessionsForDate(body.sessionDate);
       if (sessions.length === 0) {
         return NextResponse.json(
           { error: "No saved workout on this day yet — build one first." },

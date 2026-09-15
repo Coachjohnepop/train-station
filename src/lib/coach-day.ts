@@ -158,7 +158,7 @@ export function buildCoachDaySummaries(dates: string[]): Record<string, CoachDay
     }
     const primary = sessions.find((s) => s.userIds.length > 0) ?? sessions[0];
     out[date] = {
-      hasWorkout: assigned.size > 0,
+      hasWorkout: sessions.length > 0,
       assignedCount: assigned.size,
       sessionCount: sessions.length,
       title: primary?.title,

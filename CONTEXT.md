@@ -443,6 +443,14 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-15 (Jeremy posted Leg day — empty roster)
+
+**Status:** Jeremy did post **Leg day** at 6:30 PT (`today-2026-09-15-8e871d94`, `sms-w-1c1053e6`: warm-up, air squats, leg press 4×10 pause, RDL, calves, quad extension, lateral raises, cool down). He tapped **Pick who gets it →** then **Deploy** with **no names** (same as Sep 9 and Sep 12 Rest/meal prep). Confirm “save anyway” wrote `userIds: []`, so phones stayed on program (Ali/John/Todd = Fasted cardio; Dan = Adult Day 1). Zoom still started 6:31.
+
+**Patched live:** attached **Lemon John, Stephanie, Ali**. Hard-refresh Today. Dan/Todd left on their own days.
+
+**Code (not necessarily shipped yet):** deploy requires at least one student (no save-anyway); assign step defaults **John & Steph**; Dashboard “Add more to this class” can see empty-roster saves; day-band ✓ if a class row exists, copy says nobody assigned.
+
 **Date:** 2026-09-13 (PCI form answers + weekly backup)
 
 **Status:**

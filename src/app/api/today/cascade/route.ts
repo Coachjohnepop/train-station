@@ -58,9 +58,9 @@ export async function POST(request: Request) {
     individuals = [],
   } = parsed.data;
 
-  if (!cascade?.workoutId && !cascade?.userIds?.length && individuals.length === 0) {
+  if (!cascade?.userIds?.length && individuals.length === 0) {
     return NextResponse.json(
-      { error: "Assign at least one student, or save a class workout first." },
+      { error: "Assign at least one student. A class with nobody selected never shows on phones." },
       { status: 400 },
     );
   }

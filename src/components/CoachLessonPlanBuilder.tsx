@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import TimeScrollPicker from "@/components/TimeScrollPicker";
@@ -99,6 +99,7 @@ export default function CoachLessonPlanBuilder({
   const [draftWorkoutId, setDraftWorkoutId] = useState<string | null>(null);
   /** Plan text used to build the current draft — re-interpret with different text gets a new draft. */
   const [draftSourceText, setDraftSourceText] = useState<string | null>(null);
+  const didDefaultRoster = useRef(false);
 
   const templateMember = memberOptions.find((m) => m.id === templateMemberId);
 
@@ -190,6 +191,34 @@ export default function CoachLessonPlanBuilder({
         );
       });
     });
+  }, [memberOptions]);
+
+  useEffect(() => {
+    if (didDefaultRoster.current || memberOptions.length === 0) return;
+    const fallback = memberIdsForEmails(memberOptions, JOHN_STEPH_CLASS_EMAILS);
+    if (fallback.length) {
+      didDefaultRoster.current = true;
+      setCascadeIds(fallback);
+    }
+    const known = new Set(memberOptions.map((m) => m.id));
+    void (async () => {
+      try {
+        const res = await fetch("/api/today?all=1", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json().catch(() => ({}));
+        const last = (Array.isArray(data.sessions) ? data.sessions : [])
+          .filter((s: { userIds?: string[] }) => Array.isArray(s.userIds) && s.userIds.length > 0)
+          .sort(
+            (a: { createdAt?: string }, b: { createdAt?: string }) =>
+              new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
+          )[0] as { userIds: string[] } | undefined;
+        if (!last) return;
+        const ids = last.userIds.filter((id) => known.has(id));
+        if (ids.length) setCascadeIds(ids);
+      } catch {
+        /* keep John & Steph fallback */
+      }
+    })();
   }, [memberOptions]);
 
   async function runInterpret(nextAnswers?: Record<string, string>) {
@@ -346,14 +375,11 @@ export default function CoachLessonPlanBuilder({
       .map((d) => ({ userId: d.userId, rawSms: d.rawSms.trim() }));
 
     if (cascadeIds.length === 0 && individuals.length === 0) {
-      const ok = window.confirm(
-        "No students selected. Save today's class anyway so it stays on the calendar?",
+      setError(true);
+      setMessage(
+        "Tap who gets this workout (John & Steph, All students, or names). Saving with nobody selected leaves it off their phones.",
       );
-      if (!ok) {
-        setError(true);
-        setMessage("Pick who gets the cascade workout or mark students for individual plans.");
-        return;
-      }
+      return;
     }
 
     if (isLiveReplace) {
@@ -599,6 +625,10 @@ export default function CoachLessonPlanBuilder({
         <div className="card space-y-5">
           <div>
             <h2 className="font-semibold text-lg">Assign class</h2>
+            <p className="mt-1 text-xs text-sky-200">
+              Saving to <strong>{viewDateLabel}</strong>. Wrong day? Tap Today / Tomorrow in the
+              squares above — this plan stays; only the date changes.
+            </p>
             <p className="mt-1 text-xs text-[var(--muted)]">
               Only the people you tap get this workout. Everyone else stays on their own program.
               You can fully replace an active live class — those members get the new plan on their
@@ -788,7 +818,7 @@ export default function CoachLessonPlanBuilder({
             <button
               type="button"
               onClick={handleDeploy}
-              disabled={saving}
+              disabled={saving || selectedForDeploy.length === 0}
               className="btn-primary px-4 py-2 text-sm"
             >
               {saving
@@ -799,9 +829,11 @@ export default function CoachLessonPlanBuilder({
                     : "Building workout…"
                 : isLiveReplace
                   ? "Replace active workout & send"
-                  : matchingSavedSession
-                    ? "Publish saved class"
-                    : "Deploy to students"}
+                  : selectedForDeploy.length === 0
+                    ? "Tap who gets it first"
+                    : matchingSavedSession
+                      ? `Publish to ${selectedForDeploy.length}`
+                      : `Deploy to ${selectedForDeploy.length}`}
             </button>
           </div>
         </div>
@@ -873,7 +905,8 @@ export default function CoachLessonPlanBuilder({
                 setDraftSourceText(null);
                 setRawText("");
                 setInterpretation(null);
-                setCascadeIds([]);
+                setCascadeIds(memberIdsForEmails(memberOptions, JOHN_STEPH_CLASS_EMAILS));
+                didDefaultRoster.current = true;
                 setStep(0);
               }}
             >
