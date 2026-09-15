@@ -12,7 +12,7 @@ import {
   type TodaySession,
 } from "@/lib/today-sessions";
 import { resolveCoachMemberName } from "@/lib/coach-roster";
-import { parseEnrollmentDayKey } from "@/lib/member-enrollment-day";
+import { enrollmentDayKey, parseEnrollmentDayKey } from "@/lib/member-enrollment-day";
 import {
   resolveDayPartsForEnrollment,
   resolveDayWorkoutForEnrollment,
@@ -21,6 +21,7 @@ import type { ResolvedDayPart } from "@/lib/program-day-sessions";
 import { memberScheduleLabel } from "@/lib/member-day-window";
 import { localTodayIso } from "@/lib/program-calendar";
 import {
+  effectiveEnrollmentPosition,
   personalCoordinateForCalendarDate,
   resolveProgramBlock,
 } from "@/lib/member-program-block";
@@ -190,6 +191,43 @@ export async function resolveTodayPageWorkout(
   ]);
 
   const memberName = await resolveCoachMemberName(userId, nameFallback);
+  const calendarToday = localTodayIso();
+  const classToday = getSessionForUserOnDate(userId, calendarToday);
+  if (classToday?.workoutId) {
+    let viewingToday = viewDate === calendarToday;
+    if (!viewingToday) {
+      const enrolls = await getUserEnrollments(userId);
+      const startSettings = programStartSettingsFromCoach(await getCoachSettings());
+      for (const slug of await enrollmentSlugsForUser(userId)) {
+        const program = await getProgramBySlug(slug);
+        const enrollment = enrolls[slug];
+        if (!program || !enrollment) continue;
+        const effective = effectiveEnrollmentPosition(
+          enrollment,
+          calendarToday,
+          program.durationWeeks,
+          startSettings.blockDays,
+        );
+        if (viewDate === enrollmentDayKey(effective.currentWeek, effective.currentDay)) {
+          viewingToday = true;
+          break;
+        }
+      }
+    }
+    if (viewingToday) {
+      const workout = await getSmsGeneratedWorkout(classToday.workoutId, memberName, userId);
+      if (workout) {
+        return {
+          session: classToday,
+          workout,
+          programSlug: classToday.programSlug || "adult",
+          source: "sms",
+          scheduleLabel: classToday.title,
+        };
+      }
+    }
+  }
+
   const enrollmentCoord = parseEnrollmentDayKey(viewDate);
 
   if (enrollmentCoord) {
