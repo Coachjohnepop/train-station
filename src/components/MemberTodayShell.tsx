@@ -757,7 +757,7 @@ export default function MemberTodayShell({
 
       {isToday && hasCoachSession && !workout && (
         <div className="card border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">
-          <p>Your coach assigned today&apos;s workout — it&apos;s still loading. Pull to refresh or wait a few seconds.</p>
+          <p>Your coach assigned today&apos;s workout — it&apos;s still loading. Pull down to update, or wait a few seconds.</p>
         </div>
       )}
 

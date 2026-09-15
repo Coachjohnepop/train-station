@@ -6,6 +6,7 @@ import MemberTodayHub from "@/components/MemberTodayHub";
 import MemberTodayShell from "@/components/MemberTodayShell";
 import TodaySessionPanel from "@/components/TodaySessionPanel";
 import TodayPageLiveRefresh from "@/components/TodayPageLiveRefresh";
+import MemberTodaySoftRefresh from "@/components/MemberTodaySoftRefresh";
 import MemberWorkoutConsole from "@/components/MemberWorkoutConsole";
 import { getMemberDashboard } from "@/lib/member-context";
 import {
@@ -395,7 +396,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
       />
 
       {!asInstructor ? (
-        <>
+        <MemberTodaySoftRefresh userId={uid} viewDate={viewDate}>
           <MemberCoachMediaStrip content={memberContent} />
 
           <Suspense fallback={<div className="card h-40 animate-pulse p-4" />}>
@@ -487,7 +488,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
             dashboard={dashboard}
             maintainAccess={maintainAccess}
           />
-        </>
+        </MemberTodaySoftRefresh>
       ) : (
         <>
           <div className="flex flex-wrap items-start justify-between gap-3">

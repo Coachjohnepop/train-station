@@ -5,6 +5,7 @@ import { useEffect } from "react";
 /**
  * iOS Safari / standalone PWA treat a downward flick at scroll-top as
  * pull-to-refresh and reload the page — that wipes in-progress set checkoffs.
+ * Today uses MemberTodaySoftRefresh (router.refresh) instead of a full reload.
  */
 export default function DisablePullToRefresh() {
   useEffect(() => {
