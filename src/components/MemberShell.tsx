@@ -45,6 +45,7 @@ export default function MemberShell({
   newbieMode = false,
   nutritionDesk = null,
   needsIntroBooking = false,
+  needsMeasurements = false,
 }: {
   children: React.ReactNode;
   tierLabel?: string;
@@ -61,6 +62,8 @@ export default function MemberShell({
   nutritionDesk?: NutritionDesk | null;
   /** Joined a seat but has not booked the 15-min intro. */
   needsIntroBooking?: boolean;
+  /** Never logged tape, or measurement day is due. */
+  needsMeasurements?: boolean;
 }) {
   const tierLabel = MEMBERSHIP_THEME_LABELS[membershipTier] || tierLabelProp || "Member";
   const hideMemberNav = setupMode || newbieMode || paymentGateActive;
@@ -99,6 +102,7 @@ export default function MemberShell({
                     size={34}
                     tone="gold"
                     title="Measurements"
+                    flagged={needsMeasurements}
                     className="member-chrome-avatar"
                   />
                 ) : (
@@ -116,6 +120,7 @@ export default function MemberShell({
                       size={34}
                       tone="gold"
                       title="Measurements"
+                      flagged={needsMeasurements}
                       className="member-chrome-avatar"
                     />
                   </Link>
@@ -171,6 +176,7 @@ export default function MemberShell({
               checkoutPlan={checkoutPlan}
               nutritionDesk={nutritionDesk}
               needsIntroBooking={needsIntroBooking}
+              needsMeasurements={needsMeasurements}
               membershipLabel={tierLabel}
             />
           )}

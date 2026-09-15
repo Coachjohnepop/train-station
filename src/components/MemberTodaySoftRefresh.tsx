@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState, type ReactNode, type TouchEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
 const ARM_PX = 56;
@@ -9,6 +9,13 @@ const RESIST = 0.42;
 
 function scrollTop() {
   return document.scrollingElement?.scrollTop ?? window.scrollY;
+}
+
+function isInteractive(target: EventTarget | null) {
+  return (
+    target instanceof Element &&
+    Boolean(target.closest("a, button, input, textarea, select, [role='button']"))
+  );
 }
 
 export default function MemberTodaySoftRefresh({
@@ -24,11 +31,17 @@ export default function MemberTodaySoftRefresh({
   const start = useRef<{ x: number; y: number; atTop: boolean } | null>(null);
   const pulling = useRef(false);
   const pullRef = useRef(0);
+  const phaseRef = useRef<"idle" | "pull" | "armed" | "refresh">("idle");
   const [pull, setPull] = useState(0);
   const [phase, setPhase] = useState<"idle" | "pull" | "armed" | "refresh">("idle");
 
+  const setPhaseBoth = useCallback((next: typeof phase) => {
+    phaseRef.current = next;
+    setPhase(next);
+  }, []);
+
   const runRefresh = useCallback(async () => {
-    setPhase("refresh");
+    setPhaseBoth("refresh");
     setPull(ARM_PX);
     try {
       const q = new URLSearchParams({ userId, date: viewDate });
@@ -38,54 +51,71 @@ export default function MemberTodaySoftRefresh({
     } catch {
       /* still snap back */
     } finally {
-      setPhase("idle");
+      setPhaseBoth("idle");
       setPull(0);
+      pullRef.current = 0;
     }
-  }, [router, userId, viewDate]);
+  }, [router, setPhaseBoth, userId, viewDate]);
 
-  const onTouchStart = useCallback((e: TouchEvent) => {
-    if (phase === "refresh") return;
-    const t = e.changedTouches[0] || e.touches[0];
-    if (!t) return;
-    start.current = { x: t.clientX, y: t.clientY, atTop: scrollTop() <= 2 };
-    pulling.current = false;
-  }, [phase]);
-
-  const onTouchMove = useCallback((e: TouchEvent) => {
-    const origin = start.current;
-    if (!origin || phase === "refresh") return;
-    const t = e.touches[0];
-    if (!t) return;
-    const dy = t.clientY - origin.y;
-    const dx = t.clientX - origin.x;
-    if (!origin.atTop || dy < 10 || Math.abs(dx) > dy) {
-      if (!pulling.current) return;
-      setPull(0);
-      setPhase("idle");
+  useEffect(() => {
+    function onDown(e: PointerEvent) {
+      if (phaseRef.current === "refresh") return;
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      if (isInteractive(e.target)) return;
+      start.current = { x: e.clientX, y: e.clientY, atTop: scrollTop() <= 8 };
       pulling.current = false;
-      return;
     }
-    pulling.current = true;
-    const dist = Math.min(MAX_PX, dy * RESIST);
-    pullRef.current = dist;
-    setPull(dist);
-    setPhase(dist >= ARM_PX ? "armed" : "pull");
-  }, [phase]);
 
-  const onTouchEnd = useCallback(() => {
-    const wasPulling = pulling.current;
-    const dist = pullRef.current;
-    start.current = null;
-    pulling.current = false;
-    pullRef.current = 0;
-    if (!wasPulling || phase === "refresh") return;
-    if (dist >= ARM_PX) {
-      void runRefresh();
-      return;
+    function onMove(e: PointerEvent) {
+      const origin = start.current;
+      if (!origin || phaseRef.current === "refresh") return;
+      const dy = e.clientY - origin.y;
+      const dx = e.clientX - origin.x;
+      if (!origin.atTop || dy < 12 || Math.abs(dx) > dy) {
+        if (!pulling.current) return;
+        pulling.current = false;
+        pullRef.current = 0;
+        setPull(0);
+        setPhaseBoth("idle");
+        return;
+      }
+      pulling.current = true;
+      const dist = Math.min(MAX_PX, dy * RESIST);
+      pullRef.current = dist;
+      setPull(dist);
+      setPhaseBoth(dist >= ARM_PX ? "armed" : "pull");
+      if (e.cancelable) e.preventDefault();
     }
-    setPhase("idle");
-    setPull(0);
-  }, [phase, runRefresh]);
+
+    function onUp() {
+      const wasPulling = pulling.current;
+      const dist = pullRef.current;
+      start.current = null;
+      pulling.current = false;
+      if (!wasPulling || phaseRef.current === "refresh") {
+        pullRef.current = 0;
+        return;
+      }
+      if (dist >= ARM_PX) {
+        void runRefresh();
+        return;
+      }
+      pullRef.current = 0;
+      setPull(0);
+      setPhaseBoth("idle");
+    }
+
+    window.addEventListener("pointerdown", onDown, { passive: true });
+    window.addEventListener("pointermove", onMove, { passive: false });
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, [runRefresh, setPhaseBoth]);
 
   const label =
     phase === "refresh"
@@ -95,20 +125,14 @@ export default function MemberTodaySoftRefresh({
         : "Pull to update";
 
   return (
-    <div
-      data-soft-refresh=""
-      className="space-y-4"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-      onTouchCancel={onTouchEnd}
-    >
+    <div data-soft-refresh="" className="space-y-4">
       <div
         className="flex items-center justify-center overflow-hidden text-[11px] font-semibold tracking-wide text-[var(--ramp-gold-light)]"
         style={{
           height: pull,
           opacity: pull > 8 ? 1 : 0,
-          transition: phase === "refresh" || phase === "idle" ? "height 160ms ease, opacity 160ms ease" : undefined,
+          transition:
+            phase === "refresh" || phase === "idle" ? "height 160ms ease, opacity 160ms ease" : undefined,
         }}
         aria-live="polite"
       >

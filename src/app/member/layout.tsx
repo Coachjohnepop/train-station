@@ -20,6 +20,12 @@ import {
 import type { SignupPlan } from "@/lib/signup-plans";
 import { SITE_SEEN_COOKIE, isFirstTimeOnSite } from "@/lib/site-visit";
 import { getMemberContent } from "@/lib/member-content-store";
+import { listUserMeasurements } from "@/lib/measurements-store";
+import {
+  isoDateFromTimestamp,
+  memberNeedsFirstTapeMeasurements,
+  resolveMeasurementDay,
+} from "@/lib/member-measurement-schedule";
 
 export default async function MemberLayout({
   children,
@@ -121,6 +127,13 @@ export default async function MemberLayout({
     }
   }
 
+  const checkIns = profileUserId ? await listUserMeasurements(profileUserId, 1) : [];
+  const measurementSchedule = resolveMeasurementDay({
+    intakeComplete: true,
+    lastMeasuredIso: isoDateFromTimestamp(checkIns[0]?.measuredAt ?? null),
+  });
+  const needsMeasurements = measurementSchedule.kind !== "none";
+
   if (
     session?.role === "MEMBER" &&
     profileUserId?.startsWith("member-") &&
@@ -132,11 +145,6 @@ export default async function MemberLayout({
     pathOnly !== "/member/account" &&
     !pathOnly.startsWith("/member/checkout")
   ) {
-    const { listUserMeasurements } = await import("@/lib/measurements-store");
-    const { memberNeedsFirstTapeMeasurements } = await import(
-      "@/lib/member-measurement-schedule"
-    );
-    const checkIns = await listUserMeasurements(profileUserId, 1);
     if (
       memberNeedsFirstTapeMeasurements({
         onboardingComplete: true,
@@ -162,6 +170,7 @@ export default async function MemberLayout({
       newbieMode={newbieMode}
       nutritionDesk={memberContent.nutritionDesk}
       needsIntroBooking={memberNeedsIntroBooking(profile)}
+      needsMeasurements={needsMeasurements}
     >
       {children}
     </MemberShell>

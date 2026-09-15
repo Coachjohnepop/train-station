@@ -451,7 +451,14 @@ export default async function MemberTodayPage({ searchParams }: Props) {
               forceShowWorkout={consoleIsMaintain || canPreviewThisDate}
               schedulePreviewChips={schedulePreview?.visibleChips}
               previewFutureReadOnly={Boolean(schedulePreview && !canStartThisDate && canPreviewThisDate)}
-              measurementDay={measurementSchedule.kind === "today" || measurementSchedule.kind === "tomorrow" ? measurementSchedule.kind : null}
+              measurementDay={
+                measurementSchedule.kind === "today" ||
+                measurementSchedule.kind === "first_due"
+                  ? "today"
+                  : measurementSchedule.kind === "tomorrow"
+                    ? "tomorrow"
+                    : null
+              }
               measurementCompletedToday={measurementCompletedToday}
               firstTimeOnSite={
                 firstTimeOnSite && finishedSetupThisVisit(profile?.completedAt)

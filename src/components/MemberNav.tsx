@@ -114,6 +114,7 @@ export default function MemberNav({
   checkoutPlan = "member",
   nutritionDesk = null,
   needsIntroBooking = false,
+  needsMeasurements = false,
   membershipLabel = null,
 }: {
   intakePending?: boolean;
@@ -121,6 +122,7 @@ export default function MemberNav({
   checkoutPlan?: SignupPlan;
   nutritionDesk?: NutritionDesk | null;
   needsIntroBooking?: boolean;
+  needsMeasurements?: boolean;
   membershipLabel?: string | null;
 }) {
   const pathname = usePathname();
@@ -451,7 +453,12 @@ export default function MemberNav({
                 } ${isGearTab ? "member-nav-gear" : ""}`}
               >
                 {isMeasureTab ? (
-                  <UserBicepAvatar size={22} tone="gold" title="Measurements" />
+                  <UserBicepAvatar
+                    size={22}
+                    tone="gold"
+                    title="Measurements"
+                    flagged={needsMeasurements}
+                  />
                 ) : null}
                 <span>{item.label}</span>
                 {isBookTab && needsIntroBooking ? (
