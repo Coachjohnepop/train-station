@@ -550,7 +550,7 @@ export default function MemberTodayShell({
       {(() => {
         const selectedNames = selectedSummary?.finisherNames ?? [];
         const yesterdayNames =
-          days.find((d) => d.phase === "past")?.finisherNames ?? [];
+          days.find((d) => d.daysFromToday === -1)?.finisherNames ?? [];
         const showYesterdayOnToday = isToday && yesterdayNames.length > 0;
         if (!selectedNames.length && !showYesterdayOnToday) return null;
         return (
