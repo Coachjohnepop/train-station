@@ -12,7 +12,12 @@ import {
   type TodaySession,
 } from "@/lib/today-sessions";
 import { resolveCoachMemberName } from "@/lib/coach-roster";
-import { enrollmentDayKey, parseEnrollmentDayKey } from "@/lib/member-enrollment-day";
+import {
+  cycleDayKeyFromLinear,
+  enrollmentDayKey,
+  parseEnrollmentDayKey,
+} from "@/lib/member-enrollment-day";
+import { daysFromToday } from "@/lib/workout-day-visibility";
 import {
   resolveDayPartsForEnrollment,
   resolveDayWorkoutForEnrollment,
@@ -202,6 +207,20 @@ export async function resolveTodayPageWorkout(
         const program = await getProgramBySlug(slug);
         const enrollment = enrolls[slug];
         if (!program || !enrollment) continue;
+        if (enrollment.programStartDate) {
+          const todayLinear = Math.max(
+            1,
+            daysFromToday(calendarToday, enrollment.programStartDate) + 1,
+          );
+          if (
+            viewDate === calendarToday ||
+            viewDate === cycleDayKeyFromLinear(todayLinear)
+          ) {
+            viewingToday = true;
+            break;
+          }
+          continue;
+        }
         const effective = effectiveEnrollmentPosition(
           enrollment,
           calendarToday,

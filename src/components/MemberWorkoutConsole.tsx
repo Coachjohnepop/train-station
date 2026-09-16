@@ -2642,12 +2642,17 @@ export default function MemberWorkoutConsole({
             return (
               <>
                 {cycle ? (
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <p className="text-lg font-bold tabular-nums tracking-tight">{cycle}</p>
-                    {classOverride ? (
-                      <span className="rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-200">
-                        Class
-                      </span>
+                  <div className="mt-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-lg font-bold tabular-nums tracking-tight">{cycle}</p>
+                      {classOverride ? (
+                        <span className="rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-200">
+                          Class
+                        </span>
+                      ) : null}
+                    </div>
+                    {calendarDateLabel && !/^M\d+D\d+$/i.test(calendarDateLabel.trim()) ? (
+                      <p className="mt-0.5 text-sm font-medium text-[var(--text)]">{calendarDateLabel}</p>
                     ) : null}
                   </div>
                 ) : calendarDateLabel ? (

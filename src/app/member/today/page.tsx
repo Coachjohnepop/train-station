@@ -92,12 +92,27 @@ type Props = {
 };
 
 function formatDateLabel(dateKey: string) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+    return new Date(`${dateKey}T12:00:00`).toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "America/Los_Angeles",
+    });
+  }
   const enrollment = parseEnrollmentDayKey(dateKey);
   if (enrollment) {
     return formatCycleDayFromWeekDay(enrollment.weekNumber, enrollment.dayNumber);
   }
   const d = new Date(`${dateKey}T12:00:00`);
-  return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  return d.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "America/Los_Angeles",
+  });
 }
 
 export default async function MemberTodayPage({ searchParams }: Props) {
@@ -163,10 +178,6 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   // Members never swipe the shared gym calendar (June Adult dates). Today is
   // their 28-day month. Calendar chips are only a last-ditch empty fallback.
   const useCalendarStrip = false;
-  const programTodayKey = useCalendarStrip
-    ? calendarToday
-    : (dayWindow?.programTodayKey ?? calendarToday);
-  const rawViewDate = sp.date || programTodayKey;
   const intakeComplete =
     !uid.startsWith("member-") || isCoachIntakeComplete(profile);
   const latestMeasures = await listUserMeasurements(uid, 1);
@@ -231,6 +242,19 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     };
   });
   const memberRollup = memberDays.length ? rollupForMemberDays(memberDays) : null;
+  const calendarTodayDay = memberDays.find(
+    (d) => d.calendarDate === calendarToday || d.daysFromToday === 0,
+  );
+  const programTodayKey = useCalendarStrip
+    ? calendarToday
+    : (calendarTodayDay?.iso ?? dayWindow?.programTodayKey ?? calendarToday);
+  let rawViewDate = sp.date || programTodayKey;
+  if (sp.date && programBlock?.blockEndsAt && calendarToday > programBlock.blockEndsAt) {
+    const hit = memberDays.find((d) => d.iso === sp.date);
+    if (hit?.calendarDate === programBlock.blockEndsAt) {
+      rawViewDate = programTodayKey;
+    }
+  }
   // Clamp deep-links outside the catch-up window back to program today.
   const allowedIsos = new Set(memberDays.map((d) => d.iso));
   const viewDate = allowedIsos.has(rawViewDate) ? rawViewDate : programTodayKey;
@@ -415,7 +439,11 @@ export default async function MemberTodayPage({ searchParams }: Props) {
               scheduleLabel={
                 consoleIsMaintain ? "Quick maintain · not program day" : scheduleLabel
               }
-              calendarDateLabel={formatDateLabel(clampedViewDate)}
+              calendarDateLabel={formatDateLabel(
+                selectedSummary?.calendarDate && /^\d{4}-\d{2}-\d{2}$/.test(selectedSummary.calendarDate)
+                  ? selectedSummary.calendarDate
+                  : clampedViewDate,
+              )}
               subtitle={
                 consoleIsMaintain
                   ? "Quick maintain (5 uses / month) — log it when you finish."
@@ -517,7 +545,13 @@ export default async function MemberTodayPage({ searchParams }: Props) {
             <Link href={`/member/today${dateQuery(prevKey)}`} className="btn-ghost px-2 py-1 text-xs">
               ← Prev
             </Link>
-            <span className="font-medium">{formatDateLabel(viewDate)}</span>
+            <span className="font-medium">
+              {formatDateLabel(
+                selectedSummary?.calendarDate && /^\d{4}-\d{2}-\d{2}$/.test(selectedSummary.calendarDate)
+                  ? selectedSummary.calendarDate
+                  : viewDate,
+              )}
+            </span>
             <Link href={`/member/today${dateQuery(nextKey)}`} className="btn-ghost px-2 py-1 text-xs">
               Next →
             </Link>
@@ -549,7 +583,11 @@ export default async function MemberTodayPage({ searchParams }: Props) {
                   (/^\d{4}-\d{2}-\d{2}$/.test(viewDate) ? viewDate : calendarToday)
                 }
                 scheduleLabel={scheduleLabel}
-                calendarDateLabel={formatDateLabel(viewDate)}
+                calendarDateLabel={formatDateLabel(
+                  selectedSummary?.calendarDate && /^\d{4}-\d{2}-\d{2}$/.test(selectedSummary.calendarDate)
+                    ? selectedSummary.calendarDate
+                    : viewDate,
+                )}
               />
             </div>
           ) : (

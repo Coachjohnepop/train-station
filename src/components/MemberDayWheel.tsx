@@ -178,7 +178,7 @@ export default function MemberDayWheel({
                     compactChip ? "text-[10px]" : "text-xs"
                   } ${todayGold ? "text-[var(--ramp-gold-light)]" : ""}`}
                 >
-                  {formatCycleDayFromWeekDay(day.weekNumber, day.dayNumber)}
+                  {day.shortDate.split(" ").pop() || formatCycleDayFromWeekDay(day.weekNumber, day.dayNumber)}
                 </span>
                 {day.completed && (
                   <span
