@@ -443,13 +443,21 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-15 (sign-off)
+
+**Prod HEAD:** `581e7c5` on thetrainstation.co.
+
+**Morning class:** Jeremy posted **Leg day** (`today-2026-09-15-8e871d94`, `sms-w-1c1053e6`) at 6:30 PT with **empty roster** (Pick who gets it → Deploy, no names — same as Sep 9 / Sep 12). Phones stayed on Fasted cardio. **Attached live:** Lemon John, Stephanie, Ali, then Todd. Empty-roster deploy is blocked on prod (defaults last class / John & Steph; API 400s `userIds: []`). Today prefers calendar-today class even if the 28-day block ended (John/Ali blocks expired Sep 13–14).
+
+**New paid member:** Dan Richey `the5richeys@gmail.com` — Coach Class $25 Stripe live ~6:40 PT, intro booked Calendly, Adult Day 1. Left off Leg day.
+
+**Business Class promo:** Todd, Ali, Stephanie → `plan=business` paid. Steph standing staff grant through 2027-08-01. Todd still on $25 Stripe sub (not billed $50).
+
+**Shipped today:** member Today soft pull-down (phone + Chrome trackpad at top); 💪 measurements badge + gold due-dot; coach calendar on Dashboard/Bookings (Add to Google / .ics). Calendly embed still often stores *booked-at* not slot time — Jeremy PAT at Admin → Bookings → Calendly API. Connect Google inside Calendly for auto GCal.
+
+**Uncommitted local:** Dashboard move-class / change-workout (`/api/today/move`, `CoachClassWorkoutEditor`), day-band plan-without-remount, lots of soak scripts. Do not mix into an unrelated ship.
+
 **Date:** 2026-09-15 (Jeremy posted Leg day — empty roster)
-
-**Status:** Jeremy did post **Leg day** at 6:30 PT (`today-2026-09-15-8e871d94`, `sms-w-1c1053e6`: warm-up, air squats, leg press 4×10 pause, RDL, calves, quad extension, lateral raises, cool down). He tapped **Pick who gets it →** then **Deploy** with **no names** (same as Sep 9 and Sep 12 Rest/meal prep). Confirm “save anyway” wrote `userIds: []`, so phones stayed on program (Ali/John/Todd = Fasted cardio; Dan = Adult Day 1). Zoom still started 6:31.
-
-**Patched live:** attached **Lemon John, Stephanie, Ali**. Hard-refresh Today. Dan/Todd left on their own days.
-
-**Code (not necessarily shipped yet):** deploy requires at least one student (no save-anyway); assign step defaults **John & Steph**; Dashboard “Add more to this class” can see empty-roster saves; day-band ✓ if a class row exists, copy says nobody assigned.
 
 **Date:** 2026-09-13 (PCI form answers + weekly backup)
 
@@ -785,7 +793,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 |-----|------|--------|
 | **Ali Fletcher** `fletcherboys@att.net` | Coach Class paid (Aug 10, LETSGO26 ~$5) | Async/on-demand. **Re-onboard.** Texted: private window, Free joke first, then Coach Class → Continue already paid → woman → goals → book Jeremy. Temp **14-day** Today preview. Copy: `ALI_FLETCHER_SCRIPT.md`. |
 | **Bella Roy** `bellaroyy03@gmail.com` | Coach Class paid (Aug 12) | **Onboard incomplete.** Same welcome retry + onboard gate. |
-| **Stephanie Popham** `sprealty9@gmail.com` | Coach Class · standing staff grant | Onboard done. Does not expire on the 1st. |
+| **Stephanie Popham** `sprealty9@gmail.com` | Business Class · standing staff grant | Promoted 2026-09-15. Does not expire on the 1st. |
 | **Lemon John** `john@lemonvoice.com` | Paid member | Training account with Stephanie. |
 | **Jeremy Byrd 2** `coachbyrd84@aol.com` | Business paid | Onboard done. |
 | Coop Fletcher `cooperfletcher892@gmail.com` | Merchandise | Payment pending, onboard incomplete. |

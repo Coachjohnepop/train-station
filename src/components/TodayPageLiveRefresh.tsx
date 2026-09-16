@@ -70,10 +70,26 @@ export default function TodayPageLiveRefresh({
     };
 
     void poll();
-    if (!liveClassOn) return;
-    return startLiveClassBackupPoll(() => {
-      void poll();
-    });
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void poll();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    window.addEventListener("pageshow", onVisible);
+
+    const stopPoll = liveClassOn
+      ? startLiveClassBackupPoll(() => {
+          void poll();
+        })
+      : undefined;
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+      window.removeEventListener("pageshow", onVisible);
+      stopPoll?.();
+    };
   }, [userId, viewDate, router, liveClassOn]);
 
   return null;

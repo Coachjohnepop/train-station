@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import CoachSettingsPanel from "@/components/CoachSettingsPanel";
+import CoachThemeSongCard from "@/components/CoachThemeSongCard";
 import ZoomConnectPanel from "@/components/ZoomConnectPanel";
 
 export default function AdminCoachSettingsPage() {
@@ -9,7 +10,7 @@ export default function AdminCoachSettingsPage() {
       <div>
         <h1 className="text-2xl font-bold">Coach settings</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Alerts, warm-up template, Zoom live rooms, and the 2-week new-member ramp plan.
+          Theme Song for guests, alerts, warm-up template, Zoom live rooms, and the 2-week ramp.
         </p>
       </div>
 
@@ -26,6 +27,8 @@ export default function AdminCoachSettingsPage() {
           Open Video admin →
         </Link>
       </div>
+
+      <CoachThemeSongCard />
 
       <Suspense fallback={<p className="text-sm text-[var(--muted)]">Loading Zoom…</p>}>
         <ZoomConnectPanel />

@@ -30,11 +30,14 @@ export default function CoachClassDayBand({
   calendarToday,
   daySummaries = {},
   planOpen = false,
+  onSelectDate,
 }: {
   sessionDate: string;
   calendarToday: string;
   daySummaries?: Record<string, CoachDaySummary>;
   planOpen?: boolean;
+  /** When set (plan open), chips retarget the draft instead of navigating away. */
+  onSelectDate?: (iso: string) => void;
 }) {
   const quickSlots: DaySlot[] = (() => {
     const base: DaySlot[] = [
@@ -59,30 +62,29 @@ export default function CoachClassDayBand({
     return `${slotLabel}${title} · ${summary.assignedCount} assigned`;
   }
 
+  const navClass = "coach-day-cell coach-day-cell--nav";
+
   return (
     <div className="coach-class-day-band" role="navigation" aria-label="Class day">
-      <Link
-        href={dayHref(prevIso, calendarToday, planOpen)}
-        className="coach-day-cell coach-day-cell--nav"
-        aria-label="Previous day"
-      >
-        ‹
-      </Link>
+      {onSelectDate ? (
+        <button type="button" className={navClass} aria-label="Previous day" onClick={() => onSelectDate(prevIso)}>
+          ‹
+        </button>
+      ) : (
+        <Link href={dayHref(prevIso, calendarToday, planOpen)} className={navClass} aria-label="Previous day">
+          ‹
+        </Link>
+      )}
       {quickSlots.map((slot) => {
         const meta = dayMeta(slot.iso);
         const active = sessionDate === slot.iso;
         const summary = daySummaries[slot.iso];
         const planned = summary?.hasWorkout;
-        return (
-          <Link
-            key={slot.iso}
-            href={dayHref(slot.iso, calendarToday, planOpen)}
-            className={`coach-day-cell ${active ? "coach-day-cell--active" : ""} ${
-              planned ? "coach-day-cell--planned" : ""
-            }`}
-            aria-current={active ? "date" : undefined}
-            title={cellTitle(slot.iso, slot.label)}
-          >
+        const cellClass = `coach-day-cell ${active ? "coach-day-cell--active" : ""} ${
+          planned ? "coach-day-cell--planned" : ""
+        }`;
+        const inner = (
+          <>
             <span className="coach-day-cell__num">{meta.dayNum}</span>
             <span className="coach-day-cell__wd">{meta.weekday}</span>
             <span className="coach-day-cell__lbl">{slot.label}</span>
@@ -91,16 +93,43 @@ export default function CoachClassDayBand({
                 ✓
               </span>
             ) : null}
+          </>
+        );
+        if (onSelectDate) {
+          return (
+            <button
+              key={slot.iso}
+              type="button"
+              className={cellClass}
+              aria-current={active ? "date" : undefined}
+              title={cellTitle(slot.iso, slot.label)}
+              onClick={() => onSelectDate(slot.iso)}
+            >
+              {inner}
+            </button>
+          );
+        }
+        return (
+          <Link
+            key={slot.iso}
+            href={dayHref(slot.iso, calendarToday, planOpen)}
+            className={cellClass}
+            aria-current={active ? "date" : undefined}
+            title={cellTitle(slot.iso, slot.label)}
+          >
+            {inner}
           </Link>
         );
       })}
-      <Link
-        href={dayHref(nextIso, calendarToday, planOpen)}
-        className="coach-day-cell coach-day-cell--nav"
-        aria-label="Next day"
-      >
-        ›
-      </Link>
+      {onSelectDate ? (
+        <button type="button" className={navClass} aria-label="Next day" onClick={() => onSelectDate(nextIso)}>
+          ›
+        </button>
+      ) : (
+        <Link href={dayHref(nextIso, calendarToday, planOpen)} className={navClass} aria-label="Next day">
+          ›
+        </Link>
+      )}
     </div>
   );
 }

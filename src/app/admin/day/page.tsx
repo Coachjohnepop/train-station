@@ -56,7 +56,6 @@ export default async function AdminDayPage({ searchParams }: Props) {
     <div className="coach-dashboard pb-4">
       <CoachResumeRedirect />
       <CoachDashboard
-        key={sessionDate}
         sessionDate={sessionDate}
         calendarToday={todayKey}
         dateLabel={formatDateLabel(sessionDate)}

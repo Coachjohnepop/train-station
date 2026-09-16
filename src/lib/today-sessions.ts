@@ -368,6 +368,65 @@ export async function createTodaySessionFromSms(input: {
   };
 }
 
+function retargetScheduledAt(scheduledAt: string, toDate: string): string {
+  const time = scheduledAt.includes("T") ? scheduledAt.slice(scheduledAt.indexOf("T") + 1) : "06:30:00.000Z";
+  return `${toDate}T${time}`;
+}
+
+/** Bump assignment stamp so member Today refreshes after a live edit. */
+export async function bumpSessionsForWorkout(
+  workoutId: string,
+  opts?: { title?: string },
+): Promise<number> {
+  if (!workoutId) return 0;
+  await hydrateTodaySessions({ preferFresh: true });
+  const store = readStore();
+  const now = new Date().toISOString();
+  const hits = Object.values(store.sessions).filter((s) => s.workoutId === workoutId);
+  if (hits.length === 0) return 0;
+  for (const session of hits) {
+    session.createdAt = now;
+    if (opts?.title?.trim()) session.title = opts.title.trim();
+    store.sessions[session.id] = session;
+  }
+  if (!isDemoMode()) {
+    setMemory(store);
+    for (const session of hits) await upsertSessionDb(session);
+    return hits.length;
+  }
+  await writeStore(store);
+  return hits.length;
+}
+
+/** Move a published class to another calendar day. Roster and workout stay attached. */
+export async function moveTodaySession(sessionId: string, toDate: string) {
+  if (!DATE_KEY_RE.test(toDate)) throw new Error("Invalid date");
+  await hydrateTodaySessions({ preferFresh: true });
+  const store = readStore();
+  const session = store.sessions[sessionId];
+  if (!session) throw new Error("Session not found");
+  if (session.sessionDate === toDate) {
+    return { session, moved: false as const, fromDate: toDate };
+  }
+
+  const fromDate = session.sessionDate;
+  const emptied: string[] = [];
+  if (session.userIds.length > 0) {
+    const result = detachUsersFromSessionsOnDate(store, session.userIds, toDate, sessionId);
+    emptied.push(...result.emptiedSessionIds);
+  }
+
+  const moved: TodaySession = {
+    ...session,
+    sessionDate: toDate,
+    scheduledAt: retargetScheduledAt(session.scheduledAt, toDate),
+    createdAt: new Date().toISOString(),
+  };
+  store.sessions[sessionId] = moved;
+  await persistSessionAndCleanup(store, moved, emptied);
+  return { session: moved, moved: true as const, fromDate };
+}
+
 export async function deleteTodaySession(sessionIdOrDate: string) {
   await hydrateTodaySessions({ preferFresh: true });
   const store = readStore();

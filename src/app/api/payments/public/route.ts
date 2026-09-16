@@ -16,6 +16,7 @@ import { publicTipConfig } from "@/lib/stripe-checkout-tips";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  try {
   const config = await getLandingMedia();
   const stripeEnabled = isStripePaymentsEnabled();
   const merchandise = await listMerchandiseSkus();
@@ -95,4 +96,20 @@ export async function GET() {
       maxCustomDollars: tips.maxCustomDollars,
     },
   });
+  } catch (e) {
+    console.error("[payments/public]", e instanceof Error ? e.message : e);
+    return NextResponse.json(
+      {
+        stripeEnabled: false,
+        stripePublishableKey: null,
+        memberships: [],
+        services: [],
+        merchandise: [],
+        feeCategories: [],
+        venmo: { qrUrl: null, handle: null, instructions: null, hasQr: false },
+        tips: { enabled: false, presets: [], customEnabled: false },
+      },
+      { status: 200 },
+    );
+  }
 }

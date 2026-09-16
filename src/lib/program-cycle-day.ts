@@ -39,6 +39,19 @@ export function formatCycleDayFromWeekDay(weekNumber: number, dayNumber: number)
   return formatCycleDayFromLinear(linear);
 }
 
+/** Member-facing mark when the coach replaced that day's program workout. */
+export const CLASS_DAY_MARK = "Class";
+
+/** "M1D4" or "M1D4 · Class" */
+export function memberWorkoutDayLabel(
+  weekNumber: number,
+  dayNumber: number,
+  opts?: { classOverride?: boolean },
+): string {
+  const code = formatCycleDayFromWeekDay(weekNumber, dayNumber);
+  return opts?.classOverride ? `${code} · ${CLASS_DAY_MARK}` : code;
+}
+
 export function parseCycleDayKey(value: string): CycleCoordinate | null {
   const match = value.trim().match(/^M(\d+)D(\d+)$/i);
   if (!match) return null;

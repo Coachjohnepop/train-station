@@ -5,12 +5,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import CoachClassDayBand from "@/components/CoachClassDayBand";
 import CoachLessonPlanBuilder from "@/components/CoachLessonPlanBuilder";
+import CoachClassWorkoutEditor from "@/components/CoachClassWorkoutEditor";
 import CoachNeedsDonePanel from "@/components/CoachNeedsDonePanel";
 import CoachCalendarPanel from "@/components/CoachCalendarPanel";
 import CoachStartHereCard from "@/components/CoachStartHereCard";
 import type { CoachMemberOption } from "@/components/CoachMemberPicker";
 import type { CoachDayStudentCard, CoachDaySummary } from "@/lib/coach-day";
 import type { TodaySession } from "@/lib/today-sessions";
+import { addDaysIso } from "@/lib/workout-day-visibility";
 
 type LiveFloorTile = {
   userId: string;
@@ -75,6 +77,9 @@ export default function CoachDashboard({
   const [message, setMessage] = useState<string | null>(null);
   const [showPlanWorkout, setShowPlanWorkout] = useState(initialPlanOpen);
   const [publishingSaved, setPublishingSaved] = useState(false);
+  const [movingClass, setMovingClass] = useState(false);
+  const [editingLiveClass, setEditingLiveClass] = useState(false);
+  const [planTargetDate, setPlanTargetDate] = useState(sessionDate);
   const assignedStudents = students.filter((s) => s.assigned);
   const openStudents = students.filter((s) => !s.assigned);
   const tileByUser = useMemo(() => new Map(tiles.map((t) => [t.userId, t])), [tiles]);
@@ -89,13 +94,23 @@ export default function CoachDashboard({
   );
 
   const invitedCount = Math.max(0, assignedStudents.length - joinedCount);
-  const isCalendarToday = sessionDate === calendarToday;
-  const selectedDaySummary = daySummaries[sessionDate];
+  const activePlanDate = showPlanWorkout ? planTargetDate : sessionDate;
+  const isCalendarToday = activePlanDate === calendarToday;
+  const selectedDaySummary = daySummaries[activePlanDate];
   const classSectionLabel = isCalendarToday ? "Today's class" : "Class roster";
+  const planDateLabel = new Date(`${activePlanDate}T12:00:00`).toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
 
   useEffect(() => {
     setStudents(initialStudents);
   }, [initialStudents]);
+
+  useEffect(() => {
+    if (!showPlanWorkout) setPlanTargetDate(sessionDate);
+  }, [sessionDate, showPlanWorkout]);
 
   useEffect(() => {
     if (!initialPlanOpen) return;
@@ -143,11 +158,12 @@ export default function CoachDashboard({
   }, [sessionDate, applyTiles]);
 
   const openPlanWorkout = useCallback(() => {
+    setPlanTargetDate(sessionDate);
     setShowPlanWorkout(true);
     requestAnimationFrame(() => {
       newWorkoutRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
-  }, []);
+  }, [sessionDate]);
 
   const closePlanWorkout = useCallback(() => {
     setShowPlanWorkout(false);
@@ -190,38 +206,85 @@ export default function CoachDashboard({
     }
   }
 
+  const primarySession = useMemo(() => {
+    if (!savedSessions.length) return null;
+    return [...savedSessions].sort((a, b) => b.userIds.length - a.userIds.length)[0];
+  }, [savedSessions]);
+
+  const moveTargets = useMemo(() => {
+    const slots = [
+      { iso: calendarToday, label: "Today" },
+      { iso: addDaysIso(calendarToday, 1), label: "Tomorrow" },
+      { iso: addDaysIso(calendarToday, 2), label: "Next" },
+    ];
+    return slots.filter((s) => s.iso !== sessionDate);
+  }, [calendarToday, sessionDate]);
+
+  async function moveClassTo(toDate: string, label: string) {
+    if (!primarySession) return;
+    const title = primarySession.title || "this class";
+    const ok = window.confirm(
+      `Move "${title}" to ${label}?\n\nThe workout and who you picked stay the same. Members will see it on that day instead.`,
+    );
+    if (!ok) return;
+    setMovingClass(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/today/move", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: primarySession.id, toDate }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessage(data.error || "Could not move class.");
+        return;
+      }
+      const qs = new URLSearchParams();
+      if (toDate !== calendarToday) qs.set("date", toDate);
+      const href = qs.toString() ? `/admin/day?${qs.toString()}` : "/admin/day";
+      router.push(href);
+      router.refresh();
+    } finally {
+      setMovingClass(false);
+    }
+  }
+
   return (
     <div className="coach-dashboard flex min-h-[calc(100dvh-10rem)] flex-col gap-4">
       <div className="shrink-0 space-y-4">
         <header className="card border-accent/30 bg-accent/5 py-4 space-y-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-accent">Dashboard</p>
-            <h1 className="mt-1 text-xl font-bold sm:text-2xl">{dateLabel}</h1>
+            <h1 className="mt-1 text-xl font-bold sm:text-2xl">{planDateLabel}</h1>
             <p className="mt-1 text-sm text-[var(--muted)]">
               {assignedStudents.length} invited · {joinedCount} in workout · {openStudents.length} on
               their own program
             </p>
             {selectedDaySummary?.hasWorkout ? (
               <p className="mt-1 text-xs text-[var(--success)]">
-                ✓ {selectedDaySummary.title || "Workout planned"} · {selectedDaySummary.assignedCount}{" "}
-                assigned
+                ✓ {selectedDaySummary.title || "Workout planned"} ·{" "}
+                {selectedDaySummary.assignedCount > 0
+                  ? `${selectedDaySummary.assignedCount} assigned`
+                  : "saved, nobody assigned — phones still on their own program"}
               </p>
             ) : (
               <p className="mt-1 text-xs text-[var(--muted)]">No workout on this day yet</p>
             )}
           </div>
           <CoachClassDayBand
-            sessionDate={sessionDate}
+            sessionDate={activePlanDate}
             calendarToday={calendarToday}
             daySummaries={daySummaries}
             planOpen={showPlanWorkout}
+            onSelectDate={showPlanWorkout ? setPlanTargetDate : undefined}
           />
         </header>
 
         {/* Coach app 101 — job map (dismissible). Preview review before prod. */}
         <CoachStartHereCard />
 
-        {isCalendarToday ? (
+        {sessionDate === calendarToday ? (
           <>
             <Link
               href="/admin/today"
@@ -289,16 +352,56 @@ export default function CoachDashboard({
           </button>
         )}
 
+        {primarySession && !showPlanWorkout ? (
+          <div className="space-y-2">
+            {moveTargets.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-[var(--muted)]">Wrong day? Move this class:</span>
+                {moveTargets.map((slot) => (
+                  <button
+                    key={slot.iso}
+                    type="button"
+                    disabled={movingClass}
+                    onClick={() => void moveClassTo(slot.iso, slot.label)}
+                    className="btn-ghost min-h-[36px] px-3 py-1 text-xs"
+                  >
+                    {movingClass ? "Moving…" : slot.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            <button
+              type="button"
+              className="btn-primary min-h-11 w-full px-4 text-sm font-bold sm:w-auto"
+              onClick={() => setEditingLiveClass(true)}
+            >
+              Change class workout
+            </button>
+            <CoachClassWorkoutEditor
+              open={editingLiveClass}
+              workoutId={primarySession.workoutId}
+              title={primarySession.title || "Class workout"}
+              onClose={() => setEditingLiveClass(false)}
+            />
+          </div>
+        ) : null}
+
         {showPlanWorkout && (
           <div ref={newWorkoutRef}>
             <CoachLessonPlanBuilder
-              key={sessionDate}
-              sessionDate={sessionDate}
-              viewDateLabel={dateLabel}
+              sessionDate={activePlanDate}
+              viewDateLabel={planDateLabel}
               memberOptions={memberOptions}
               savedSessions={savedSessions}
               embedded
-              onPublished={() => router.refresh()}
+              onPublished={() => {
+                if (activePlanDate !== sessionDate) {
+                  const qs = new URLSearchParams();
+                  if (activePlanDate !== calendarToday) qs.set("date", activePlanDate);
+                  router.push(qs.toString() ? `/admin/day?${qs.toString()}` : "/admin/day");
+                }
+                router.refresh();
+              }}
             />
           </div>
         )}

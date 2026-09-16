@@ -52,14 +52,18 @@ export async function POST(request: Request) {
 
   const session = await getSessionUser();
 
-  const result = await ingestAnalyticsEvents(parsed.data, {
-    userId: session?.id ?? null,
-    role: session?.role ?? null,
-  });
-
-  return NextResponse.json({
-    ok: true,
-    accepted: result.accepted,
-    storage: result.storage,
-  });
+  try {
+    const result = await ingestAnalyticsEvents(parsed.data, {
+      userId: session?.id ?? null,
+      role: session?.role ?? null,
+    });
+    return NextResponse.json({
+      ok: true,
+      accepted: result.accepted,
+      storage: result.storage,
+    });
+  } catch (e) {
+    console.error("[analytics/events]", e instanceof Error ? e.message : e);
+    return NextResponse.json({ ok: false, accepted: 0, storage: "error" }, { status: 200 });
+  }
 }

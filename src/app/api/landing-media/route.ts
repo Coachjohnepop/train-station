@@ -12,6 +12,7 @@ import { activeHeroSlides } from "@/lib/hero-slides";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  try {
   const config = await getLandingMedia();
   const gag = resolveFreeTicketGag(config);
   const heroSlides = activeHeroSlides(config.heroSlides);
@@ -42,4 +43,23 @@ export async function GET() {
       equipmentIntroVideoUrlFromConfig(config.equipmentIntroVideoUrl),
     ),
   });
+  } catch (e) {
+    console.error("[landing-media]", e instanceof Error ? e.message : e);
+    return NextResponse.json(
+      {
+        welcomeVideoUrl: null,
+        freeChastiseVideoUrl: null,
+        freeTicketFullUrl: null,
+        purchaseThankYouVideoUrl: null,
+        equipmentIntroVideoUrl: null,
+        heroSlides: [],
+        gag: { enabled: false, videoUrl: null, startSec: 0, durationSec: 0 },
+        hasWelcome: false,
+        hasFreeChastise: false,
+        hasPurchaseThankYou: false,
+        hasEquipmentIntro: false,
+      },
+      { status: 200 },
+    );
+  }
 }

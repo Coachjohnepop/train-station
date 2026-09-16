@@ -25,6 +25,7 @@ export async function getSiteSeoResolved(): Promise<SiteSeoConfig & { origin: st
  * Root layout metadata from SEO desk (+ brand name for template).
  */
 export async function buildRootMetadata(): Promise<Metadata> {
+  try {
   const [seo, brand] = await Promise.all([getSiteSeo(), getResolvedSiteBrand()]);
   const origin = siteOrigin();
   const brandName = brand.brandName || BRAND_NAME;
@@ -121,4 +122,12 @@ export async function buildRootMetadata(): Promise<Metadata> {
       images: [ogImage],
     },
   };
+  } catch (e) {
+    console.error("[seo-metadata]", e instanceof Error ? e.message : e);
+    return {
+      title: `${BRAND_NAME} — Train with purpose`,
+      description:
+        "Coach Jeremy Byrd’s training app. Online coaching, live class, and accountability.",
+    };
+  }
 }

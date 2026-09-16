@@ -2,6 +2,7 @@
 
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { MemberDaySummary } from "@/lib/member-day-window-types";
+import { formatCycleDayFromWeekDay } from "@/lib/program-cycle-day";
 
 const MAX_CHIP_W = 76;
 const MIN_CHIP_W = 48;
@@ -174,10 +175,10 @@ export default function MemberDayWheel({
                 </span>
                 <span
                   className={`mt-0.5 font-bold tabular-nums ${
-                    compactChip ? "text-xs" : "text-sm"
+                    compactChip ? "text-[10px]" : "text-xs"
                   } ${todayGold ? "text-[var(--ramp-gold-light)]" : ""}`}
                 >
-                  {day.shortDate.split(" ")[1]}
+                  {formatCycleDayFromWeekDay(day.weekNumber, day.dayNumber)}
                 </span>
                 {day.completed && (
                   <span

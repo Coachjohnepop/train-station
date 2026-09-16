@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import CoachLiveFloorZoomPanel from "@/components/CoachLiveFloorZoomPanel";
 import MemberWorkoutConsole, { type MemberWorkoutView } from "@/components/MemberWorkoutConsole";
+import CoachClassWorkoutEditor from "@/components/CoachClassWorkoutEditor";
 import type { CoachDayStudentCard } from "@/lib/coach-day";
 
 type LiveFloorTile = {
@@ -96,6 +97,13 @@ export default function CoachDayHub({
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [workouts, setWorkouts] = useState<Record<string, LoadedWorkout>>({});
   const [workoutLoading, setWorkoutLoading] = useState<string | null>(null);
+  const [editingClass, setEditingClass] = useState(false);
+
+  const classWorkout = useMemo(() => {
+    const assigned = students.find((s) => s.assigned && s.workoutId);
+    if (!assigned?.workoutId) return null;
+    return { workoutId: assigned.workoutId, title: assigned.workoutTitle || "Class workout" };
+  }, [students]);
 
   useEffect(() => {
     setStudents(initialStudents);
@@ -200,6 +208,39 @@ export default function CoachDayHub({
       >
         {/* Primary Zoom CTA is sticky in AdminShell top bar (Join Live Now). Panel keeps embed/details. */}
         <CoachLiveFloorZoomPanel sessionDate={sessionDate} variant="floor" />
+
+        {classWorkout ? (
+          <div className="rounded-2xl border border-sky-500/30 bg-sky-950/40 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-sky-300">
+                  Live class
+                </p>
+                <p className="truncate text-sm font-semibold text-sky-50">{classWorkout.title}</p>
+              </div>
+              <button
+                type="button"
+                className="btn-primary min-h-11 shrink-0 px-4 text-sm font-bold"
+                onClick={() => setEditingClass(true)}
+              >
+                Change workout
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        <CoachClassWorkoutEditor
+          open={Boolean(editingClass && classWorkout)}
+          workoutId={classWorkout?.workoutId || ""}
+          title={classWorkout?.title || "Class workout"}
+          onClose={() => setEditingClass(false)}
+          onSaved={() => {
+            void loadFloor();
+            const expanded = students.find((s) => s.id === expandedUserId);
+            if (expanded) void loadWorkout(expanded);
+            else setWorkouts({});
+          }}
+        />
 
         <header className={isFloor ? "py-1" : "card border-accent/30 bg-accent/5 py-4"}>
           <p className="text-xs font-semibold uppercase tracking-wider text-accent">Live floor</p>

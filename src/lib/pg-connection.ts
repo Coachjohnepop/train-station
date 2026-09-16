@@ -20,12 +20,28 @@ function needsRemoteSsl(connectionString: string): boolean {
   );
 }
 
+const pools = new Map<string, pg.Pool>();
+
 /** Shared pg Pool for Prisma adapter (Supabase / remote Postgres). */
 export function createPgPool(connectionString: string): pg.Pool {
   const cleaned = stripSslModeParams(connectionString);
-  const config: pg.PoolConfig = { connectionString: cleaned };
+  const existing = pools.get(cleaned);
+  if (existing) return existing;
+
+  const config: pg.PoolConfig = {
+    connectionString: cleaned,
+    max: 5,
+    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 8_000,
+    allowExitOnIdle: true,
+  };
   if (needsRemoteSsl(connectionString)) {
     config.ssl = { rejectUnauthorized: false };
   }
-  return new pg.Pool(config);
+  const pool = new pg.Pool(config);
+  pool.on("error", (err) => {
+    console.error("[pg-pool]", err.message);
+  });
+  pools.set(cleaned, pool);
+  return pool;
 }
