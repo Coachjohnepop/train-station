@@ -4,15 +4,16 @@ import { DAY_LABELS } from "@/lib/program-constants";
 import { localTodayIso } from "@/lib/program-calendar";
 import {
   coordinateFromEnrollmentDay,
+  cycleDayKeyFromLinear,
   enrollmentDayKey,
   formatCycleDayFromWeekDay,
   linearEnrollmentDay,
   rollingEnrollmentProgramDays,
 } from "@/lib/member-enrollment-day";
+import { cycleFromLinear, weekDayFromCycle } from "@/lib/program-cycle-day";
 import {
   blockPhaseForCalendarDate,
   calendarDateForBlockDay,
-  effectiveEnrollmentPosition,
   resolveProgramBlock,
   type ResolvedProgramBlock,
 } from "@/lib/member-program-block";
@@ -44,11 +45,18 @@ import { dayWorkoutCompleted } from "@/lib/member-day-completion";
 const STRETCH_RE = /stretch|mobility|foam|yoga|warm[- ]?up|cool[- ]?down|flex/i;
 
 function formatWeekday(iso: string): string {
-  return new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { weekday: "short" });
+  return new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", {
+    weekday: "short",
+    timeZone: "America/Los_Angeles",
+  });
 }
 
 function formatShortDate(iso: string): string {
-  return new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "America/Los_Angeles",
+  });
 }
 
 async function exerciseNamesForWorkout(workoutId: string): Promise<string[]> {
@@ -228,7 +236,7 @@ async function summarizeProgramDay(
   },
 ): Promise<MemberDaySummary> {
   const enrollmentDayNumber = entry.enrollmentDayNumber;
-  const dayLabel = `Day ${enrollmentDayNumber}`;
+  const dayLabel = formatCycleDayFromWeekDay(entry.weekNumber, entry.dayNumber);
   const visibilityTier =
     extras?.visibilityTier ?? dayVisibilityTierByOffset(entry.offset);
   const isProgramToday = entry.offset === 0;
@@ -361,17 +369,19 @@ export async function buildMemberDayWindow(
       program.durationWeeks,
       startSettings.blockDays,
     );
-    const effective = effectiveEnrollmentPosition(
-      enrollment,
-      calendarToday,
-      program.durationWeeks,
-      startSettings.blockDays,
+    const cycleDays = Math.max(1, startSettings.blockDays);
+    const todayLinear = Math.max(
+      1,
+      daysFromToday(calendarToday, block.programStartDate) + 1,
     );
-    const programTodayKey = enrollmentDayKey(effective.currentWeek, effective.currentDay);
+    const programTodayKey = cycleDayKeyFromLinear(todayLinear);
+    const lookahead = upcomingDays ?? 2;
+    const maxLinear = Math.max(cycleDays, todayLinear + lookahead);
     const days: MemberDaySummary[] = [];
 
-    for (let linearDay = 1; linearDay <= startSettings.blockDays; linearDay++) {
-      const coord = coordinateFromEnrollmentDay(linearDay, program.durationWeeks);
+    for (let linearDay = 1; linearDay <= maxLinear; linearDay++) {
+      const wrapLinear = ((linearDay - 1) % cycleDays) + 1;
+      const coord = coordinateFromEnrollmentDay(wrapLinear, program.durationWeeks);
       if (!coord) continue;
       const week = program.weeks.find(
         (w: { weekNumber: number; days: unknown[] }) => w.weekNumber === coord.weekNumber,
@@ -381,6 +391,10 @@ export async function buildMemberDayWindow(
       );
       if (!week || !day) continue;
 
+      const display = weekDayFromCycle(
+        cycleFromLinear(linearDay).cycleMonth,
+        cycleFromLinear(linearDay).cycleDay,
+      );
       const calendarDate = calendarDateForBlockDay(block.programStartDate, linearDay);
       const phase = blockPhaseForCalendarDate(calendarDate, calendarToday);
       const offset = daysFromToday(calendarDate, calendarToday);
@@ -389,9 +403,9 @@ export async function buildMemberDayWindow(
           ? futureVisibility
           : dayVisibilityTier(calendarDate, calendarToday);
       const entry = {
-        key: enrollmentDayKey(coord.weekNumber, coord.dayNumber),
-        weekNumber: coord.weekNumber,
-        dayNumber: coord.dayNumber,
+        key: cycleDayKeyFromLinear(linearDay),
+        weekNumber: display.weekNumber,
+        dayNumber: display.dayNumber,
         enrollmentDayNumber: linearDay,
         day,
         phase,
