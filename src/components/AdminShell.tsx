@@ -27,6 +27,7 @@ import UnreadAppBadge from "@/components/UnreadAppBadge";
 import PwaInstallHint from "@/components/PwaInstallHint";
 import PushAlertEnable from "@/components/PushAlertEnable";
 import UserBicepAvatar from "@/components/UserBicepAvatar";
+import ThemeModeToggle from "@/components/ThemeModeToggle";
 import type { SessionUser } from "@/lib/auth-session";
 import {
   readAdminNavCollapsed,
@@ -211,7 +212,10 @@ export default function AdminShell({
   // Messages: slim top chrome so member jelly-bean chips freeze and stay tappable.
   if (coachMessagesFocus) {
     return (
-      <div className="coach-messages-shell flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-[var(--bg)]">
+      <div
+        className="coach-messages-shell flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-[var(--bg)]"
+        data-admin-chrome
+      >
         <header className="coach-messages-sticky-chrome sticky top-0 z-50 shrink-0 border-b border-violet-500/30 bg-[var(--bg)]/95 backdrop-blur-sm">
           <div className="flex min-h-[44px] items-center justify-between gap-2 px-2 py-1.5 sm:px-3">
             <Link
@@ -286,7 +290,7 @@ export default function AdminShell({
   }
 
   return (
-    <div className="app-shell-bg flex min-h-screen flex-col xl:flex-row">
+    <div className="app-shell-bg flex min-h-screen flex-col xl:flex-row" data-admin-chrome>
       <Suspense fallback={null}>
         <ResumePathTracker area="coach" />
       </Suspense>
@@ -341,6 +345,9 @@ export default function AdminShell({
               Alerts
               <CoachInboxNavBadge placement="corner" />
             </Link>
+            <div className="admin-header-theme">
+              <ThemeModeToggle />
+            </div>
           </div>
         </div>
       </header>
@@ -543,7 +550,7 @@ export default function AdminShell({
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Desktop sticky search — stays at top of the browser viewport while content scrolls */}
         <div className="app-shell-header sticky top-0 z-40 hidden border-b border-[var(--border)] bg-[var(--bg)]/95 px-4 py-2.5 backdrop-blur-md xl:block">
-          <div className="mx-auto flex w-full max-w-6xl items-center gap-3 md:max-w-7xl xl:max-w-[min(100%,96rem)]">
+          <div className="mx-auto flex w-full max-w-6xl items-center gap-2 md:max-w-7xl xl:max-w-[min(100%,96rem)]">
             {navHidden ? (
               <button
                 type="button"
@@ -563,38 +570,36 @@ export default function AdminShell({
                 enableHotkey
               />
             </div>
-            <Link
-              href="/admin/alerts"
-              className="relative inline-flex shrink-0 items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold"
-            >
-              Alerts
-              <CoachInboxNavBadge placement="inline" />
-            </Link>
-            {onGoToToday ? (
-              <>
-                <Link
-                  href="/admin/day"
-                  className="btn-ghost shrink-0 px-3 py-2 text-xs font-semibold"
-                >
-                  ← Dashboard
-                </Link>
-                <Link
-                  href="/admin/chat"
-                  className="relative inline-flex shrink-0 items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold"
-                >
-                  Messages
-                  <ChatNavBadge role="coach" placement="inline" />
-                </Link>
-                <CoachJoinLiveNavStrip />
-              </>
-            ) : null}
-            <Link
-              href="/admin/discounts"
-              className="btn-ghost shrink-0 px-3 py-2 text-xs font-semibold"
-              title="Discount codes"
-            >
-              Discount codes
-            </Link>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <Link
+                href="/admin/alerts"
+                className="relative inline-flex items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold"
+              >
+                Alerts
+                <CoachInboxNavBadge placement="inline" />
+              </Link>
+              {onGoToToday ? (
+                <>
+                  <Link
+                    href="/admin/day"
+                    className="btn-ghost px-3 py-2 text-xs font-semibold"
+                  >
+                    ← Dashboard
+                  </Link>
+                  <Link
+                    href="/admin/chat"
+                    className="relative inline-flex items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold"
+                  >
+                    Messages
+                    <ChatNavBadge role="coach" placement="inline" />
+                  </Link>
+                  <CoachJoinLiveNavStrip />
+                </>
+              ) : null}
+              <div className="admin-header-theme">
+                <ThemeModeToggle />
+              </div>
+            </div>
           </div>
         </div>
         <main className="admin-main mx-auto w-full max-w-6xl flex-1 px-3 py-4 md:max-w-7xl md:px-6 md:py-6 xl:max-w-[min(100%,96rem)] xl:px-8">

@@ -443,11 +443,17 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
-**Date:** 2026-09-18 (allaboard.fit + 6:30am A/B)
+**Date:** 2026-09-18 (allaboard.fit, 6:30am A/B, admin header, scores, daily activity)
 
-**Status:**
-- **www.allaboard.fit** / **allaboard.fit** 301/308 to **https://www.thetrainstation.co** (same path). Middleware + `vercel.json`. Add both hosts on the Vercel project and point DNS (A/CNAME or Vercel nameservers).
-- **Landing A/B next pass:** `/` is 50/50 **A tour** vs **D class** (`/l/class`). D offers **Tue/Wed/Fri 6:30am Pacific Zoom** → Coach Class signup `/signup?plan=member`. Meet Jeremy (`/l/jeremy`) and floor (`/l/floor`) are preview. Old `ts_landing=jeremy` cookies re-roll into the new split. Kill switch still `LANDING_AB_ENABLED`.
+**Status (this session):**
+
+- **www.allaboard.fit** + **allaboard.fit** redirect to **https://www.thetrainstation.co** (same path + query). Code: middleware 308 + `vercel.json` host redirects. **DNS still needed:** add both hosts on the Vercel `train-station` project, then at the registrar either Vercel nameservers or `A 10.0.1.2` (apex) + `CNAME cname.vercel-dns.com` (www). Domain add was blocked while prod deploys were Error.
+- **Landing A/B next pass:** `/` 50/50 **A tour** vs **D class** (`/l/class`). D = **Tue · Wed · Fri · 6:30am Pacific** live Zoom → Coach Class `/signup?plan=member`. Meet Jeremy `/l/jeremy` and floor `/l/floor` are preview. Old `ts_landing=jeremy` cookies re-roll. Kill switch: `LANDING_AB_ENABLED`.
+- **Admin top bar overlap:** fixed DARK toggle sat on **Discount codes**. Discount dropped from the sticky bar (still in left nav). Theme toggle is icon-only in the header. `data-admin-chrome` hides the global fixed toggle.
+- **Daily activity:** `/admin/activity?date=YYYY-MM-DD` (People → Daily activity). Yesterday 2026-09-17 PT: Todd Upper Body 6:39a, Aiden Back/Bicep 10:24a, Dan Fasted cardio 3:01p, Garry Lower Body ×3 ~6:27p. No live class / Zoom. Jeremy homepage once.
+- **Gamification reset:** all scores **0**. 81 events / 12 people wiped (Todd 1280, Lemon John 1120, Aiden 800…). Blob `demo/member-gamification.json` emptied. Admin → Gamification → Actions → Reset all scores to zero. New workouts earn from now; yesterday’s logs do not re-score.
+
+**Prod note:** two deploys (`3290d09`, `b9930c0`) failed typecheck (`DailyGuestSummary` missing). Fix is in `3b2f02c` plus this header commit. Confirm `thetrainstation.co` is on the new HEAD before treating A/B or allaboard as live.
 
 **Date:** 2026-09-18 (gamification scores reset)
 
