@@ -185,6 +185,8 @@ export type BankPayoutRow = {
   arrivalDate: string | null;
   createdAt: string;
   destinationLabel: string | null;
+  /** Payments-balance → FA vs real bank ACH. */
+  destinationKind: "financial_account" | "bank" | "unknown";
   failureCode: string | null;
   failureMessage: string | null;
   description: string | null;
@@ -508,18 +510,35 @@ export async function listBankPayouts(
     );
 
     const rows: BankPayoutRow[] = list.data.map((p) => {
+      const extra = p as Stripe.Payout & { payout_method?: string | null };
+      const payoutType = String(extra.type || "");
+      const fa =
+        payoutType === "payout_method" ||
+        (typeof extra.payout_method === "string" && extra.payout_method.startsWith("fa_")) ||
+        /financial account|automatic balance transfer/i.test(p.description || "");
       let destinationLabel: string | null = null;
-      const dest = p.destination;
-      if (typeof dest === "string") {
-        destinationLabel = dest;
-      } else if (dest && typeof dest === "object") {
-        const d = dest as { last4?: string; bank_name?: string; id?: string };
-        if (d.bank_name || d.last4) {
-          destinationLabel = [d.bank_name, d.last4 ? `••••${d.last4}` : null]
-            .filter(Boolean)
-            .join(" ");
-        } else if (d.id) {
-          destinationLabel = d.id;
+      let destinationKind: BankPayoutRow["destinationKind"] = "unknown";
+      if (fa) {
+        destinationKind = "financial_account";
+        destinationLabel = extra.payout_method
+          ? `Financial Account · ${extra.payout_method}`
+          : "Financial Account";
+      } else {
+        const dest = p.destination;
+        if (typeof dest === "string") {
+          destinationLabel = dest;
+          destinationKind = dest.startsWith("ba_") ? "bank" : "unknown";
+        } else if (dest && typeof dest === "object") {
+          const d = dest as { last4?: string; bank_name?: string; id?: string };
+          if (d.bank_name || d.last4) {
+            destinationKind = "bank";
+            destinationLabel = [d.bank_name, d.last4 ? `••••${d.last4}` : null]
+              .filter(Boolean)
+              .join(" ");
+          } else if (d.id) {
+            destinationLabel = d.id;
+            destinationKind = d.id.startsWith("ba_") ? "bank" : "unknown";
+          }
         }
       }
 
@@ -536,6 +555,7 @@ export async function listBankPayouts(
           : null,
         createdAt: new Date(p.created * 1000).toISOString(),
         destinationLabel,
+        destinationKind,
         failureCode: p.failure_code || null,
         failureMessage: p.failure_message || null,
         description: p.description || null,
@@ -610,6 +630,6 @@ export async function listShareTransfers(
 export async function getLastBankPayout(
   accountParam: string | null | undefined = "platform",
 ): Promise<BankPayoutRow | null> {
-  const { rows } = await listBankPayouts(accountParam, { limit: 1 });
-  return rows[0] || null;
+  const { rows } = await listBankPayouts(accountParam, { limit: 20 });
+  return rows.find((r) => r.destinationKind === "bank") || null;
 }

@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-18 (Stripe money desk: FA + four buckets)
+
+**Status:** Admin → **Stripe money** Overview now shows **where cash sits** (payments available / pending / **Financial Account**) and **where it should go**: Platform Fees (Grok $30 / Vercel $20 / Supabase $35), Reinvest, Jeremy Pay, John Pay. Payout schedule badge (manual). FA dollars are a **ledger of payments→FA transfers** until `STRIPE_FA_RESTRICTED_KEY` can read live FA. Bank tab labels FA vs bank so auto “payouts” are not mistaken for deposits. Leftover default = 100% Reinvest (hold). Settings persist in `MoneyDeskSettings`.
+
 **Date:** 2026-09-18 (developer not billed)
 
 **Status:** John is **not a paying member**. Standing staff grant (same path as Stephanie) on `john@lemonvoice.com` (Lemon John · Business) and `coachjohnepop@yahoo.com` (Coach Ed / yahoo soak that Stripe was charging $25). Code skips checkout for those emails + `john@thetrainstation.co`. Cancel Live sub `sub_1U5GBdQWnajU9uykdF5p5GCL` after this deploy so the webhook skip is live. No refund of the Sep 17 $25 unless John asks.

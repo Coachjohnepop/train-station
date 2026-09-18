@@ -94,6 +94,60 @@ type Overview = {
     cardLast4: string | null;
     receiptUrl: string | null;
   } | null;
+  moneyMap?: MoneyMap | null;
+};
+
+type MoneyMap = {
+  payoutSchedule: {
+    interval: string | null;
+    manual: boolean;
+    autoFaRules: boolean;
+    label: string;
+  };
+  financialAccount: {
+    id: string | null;
+    availableCents: number | null;
+    availableLabel: string | null;
+    source: "live" | "payout_ledger" | "none";
+    note: string;
+    inboundCents: number;
+    returnedCents: number;
+    transferCount: number;
+  };
+  payments: {
+    availableLabel: string | null;
+    pendingLabel: string | null;
+  };
+  settings: {
+    grokCents: number;
+    vercelCents: number;
+    supabaseCents: number;
+    refundBufferCents: number;
+    reinvestPercent: number;
+  };
+  split: {
+    visibleCents: number;
+    platformFeesCents: number;
+    johnPayCents: number;
+    reinvestCents: number;
+    jeremyPayCents: number;
+    leftoverCents: number;
+    buckets: Array<{
+      id: string;
+      label: string;
+      amountCents: number;
+      detail: string;
+    }>;
+  };
+  johnPay: {
+    poolLabel: string;
+    floorLabel: string;
+    floorMet: boolean;
+    connectReady: boolean;
+    periodPaid: boolean;
+  };
+  lastFaTransfer: { id: string; amountLabel: string; createdAt: string } | null;
+  lastBankPayout: { id: string; amountLabel: string; createdAt: string } | null;
 };
 
 type Tx = {
@@ -178,6 +232,7 @@ type BankRow = {
   arrivalDate: string | null;
   createdAt: string;
   destinationLabel: string | null;
+  destinationKind?: "financial_account" | "bank" | "unknown";
   failureMessage: string | null;
 };
 
@@ -275,6 +330,10 @@ function statusPill(status: string, tone?: "ok" | "warn" | "bad" | "muted") {
   );
 }
 
+function usd(cents: number): string {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
+}
+
 function Kpi({
   title,
   value,
@@ -289,6 +348,188 @@ function Kpi({
       <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">{title}</p>
       <p className="mt-1 text-xl font-semibold tabular-nums">{value}</p>
       {hint ? <p className="mt-1 text-xs text-[var(--muted)]">{hint}</p> : null}
+    </div>
+  );
+}
+
+function MoneyMapBoard({
+  map,
+  busy,
+  onSaved,
+  onError,
+}: {
+  map: MoneyMap;
+  busy: boolean;
+  onSaved: (next: MoneyMap) => void;
+  onError: (msg: string) => void;
+}) {
+  const [grok, setGrok] = useState(String(map.settings.grokCents / 100));
+  const [vercel, setVercel] = useState(String(map.settings.vercelCents / 100));
+  const [supabase, setSupabase] = useState(String(map.settings.supabaseCents / 100));
+  const [reinvest, setReinvest] = useState(String(map.settings.reinvestPercent));
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setGrok(String(map.settings.grokCents / 100));
+    setVercel(String(map.settings.vercelCents / 100));
+    setSupabase(String(map.settings.supabaseCents / 100));
+    setReinvest(String(map.settings.reinvestPercent));
+  }, [
+    map.settings.grokCents,
+    map.settings.vercelCents,
+    map.settings.supabaseCents,
+    map.settings.reinvestPercent,
+  ]);
+
+  async function save() {
+    setSaving(true);
+    onError("");
+    try {
+      const res = await fetch("/api/admin/billing/money-desk", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          grokCents: Math.round(Number(grok) * 100),
+          vercelCents: Math.round(Number(vercel) * 100),
+          supabaseCents: Math.round(Number(supabase) * 100),
+          reinvestPercent: Math.round(Number(reinvest)),
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || "Save failed");
+      if (body.moneyMap) onSaved(body.moneyMap);
+    } catch (e) {
+      onError(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const bucketTone: Record<string, string> = {
+    platform_fees: "border-violet-500/40 bg-violet-500/10",
+    reinvest: "border-sky-500/40 bg-sky-500/10",
+    jeremy_pay: "border-emerald-500/40 bg-emerald-500/10",
+    john_pay: "border-amber-500/40 bg-amber-500/10",
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        {statusPill(map.payoutSchedule.label, map.payoutSchedule.manual ? "ok" : "warn")}
+        {map.payoutSchedule.autoFaRules
+          ? statusPill("FA auto-transfer ON", "warn")
+          : statusPill("FA auto-transfer off", "ok")}
+        {map.financialAccount.id ? (
+          <span className="font-mono text-[10px] text-[var(--muted)]">{map.financialAccount.id}</span>
+        ) : null}
+      </div>
+
+      <div>
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[var(--muted)]">
+          Where the dollars sit
+        </p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Kpi
+            title="Payments · available"
+            value={map.payments.availableLabel || "—"}
+            hint="Card charges after Stripe fees, before FA / bank"
+          />
+          <Kpi
+            title="Payments · pending"
+            value={map.payments.pendingLabel || "—"}
+            hint="Usually ~2 days to available"
+          />
+          <Kpi
+            title="Financial Account"
+            value={map.financialAccount.availableLabel || "$0.00"}
+            hint={
+              map.financialAccount.source === "payout_ledger"
+                ? `In ${usd(map.financialAccount.inboundCents)} · back ${usd(map.financialAccount.returnedCents)}`
+                : map.financialAccount.note
+            }
+          />
+        </div>
+        {map.financialAccount.source === "payout_ledger" ? (
+          <p className="mt-2 text-xs text-[var(--muted)]">{map.financialAccount.note}</p>
+        ) : null}
+      </div>
+
+      <div>
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[var(--muted)]">
+          Where it should go · {usd(map.split.visibleCents)} visible
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {map.split.buckets.map((b) => (
+            <div key={b.id} className={`rounded-xl border p-4 ${bucketTone[b.id] || "card"}`}>
+              <p className="text-[10px] font-bold uppercase tracking-wide">{b.label}</p>
+              <p className="mt-1 text-xl font-semibold tabular-nums">{usd(b.amountCents)}</p>
+              <p className="mt-1 text-xs opacity-80">{b.detail}</p>
+              {b.id === "john_pay" ? (
+                <p className="mt-2 text-[11px] opacity-90">
+                  Pool {map.johnPay.poolLabel} · floor {map.johnPay.floorLabel}
+                  {map.johnPay.floorMet ? " met" : " not met"}
+                  {" · "}
+                  {map.johnPay.connectReady ? "Connect ready" : "Connect not linked"}
+                  {map.johnPay.periodPaid ? " · paid this period" : ""}
+                </p>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="card space-y-3 p-4">
+        <p className="text-sm font-medium text-[var(--text)]">Platform fee lines + leftover split</p>
+        <div className="grid gap-3 sm:grid-cols-4">
+          <label className="text-xs text-[var(--muted)]">
+            Grok $/mo
+            <input
+              className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm text-[var(--text)]"
+              inputMode="decimal"
+              value={grok}
+              onChange={(e) => setGrok(e.target.value)}
+            />
+          </label>
+          <label className="text-xs text-[var(--muted)]">
+            Vercel $/mo
+            <input
+              className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm text-[var(--text)]"
+              inputMode="decimal"
+              value={vercel}
+              onChange={(e) => setVercel(e.target.value)}
+            />
+          </label>
+          <label className="text-xs text-[var(--muted)]">
+            Supabase $/mo
+            <input
+              className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm text-[var(--text)]"
+              inputMode="decimal"
+              value={supabase}
+              onChange={(e) => setSupabase(e.target.value)}
+            />
+          </label>
+          <label className="text-xs text-[var(--muted)]">
+            Reinvest leftover %
+            <input
+              className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm text-[var(--text)]"
+              inputMode="numeric"
+              value={reinvest}
+              onChange={(e) => setReinvest(e.target.value)}
+            />
+            <span className="mt-1 block text-[10px]">
+              Rest of leftover is Jeremy Pay ({100 - (Number(reinvest) || 0)}%)
+            </span>
+          </label>
+        </div>
+        <button
+          type="button"
+          className="btn-secondary text-xs"
+          disabled={saving || busy}
+          onClick={() => void save()}
+        >
+          {saving ? "Saving…" : "Save split"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -677,9 +918,8 @@ export default function AdminBillingClient() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Stripe money</h1>
           <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-            Two accounts, two steps: <strong className="text-[var(--text)]">Share</strong> moves
-            partner revenue into their Stripe · <strong className="text-[var(--text)]">Bank</strong>{" "}
-            is when each person pays out from their own Stripe to their bank.
+            Where cash sits (payments balance + Financial Account) and where it should go:
+            Platform Fees, Reinvest, Jeremy Pay, John Pay. Look first — payouts are manual.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -705,21 +945,22 @@ export default function AdminBillingClient() {
         </div>
       </div>
 
-      {/* Two-step explainer */}
-      <div className="card grid gap-3 p-4 text-sm sm:grid-cols-2">
+      <div className="card grid gap-3 p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-accent">Step 1 · Share</p>
-          <p className="mt-1 text-[var(--muted)]">
-            Platform (Jeremy) sends partner pool into John’s Connect Stripe balance. Staff runs this
-            here on the Share tab.
-          </p>
+          <p className="text-[10px] font-bold uppercase tracking-wide text-accent">Platform Fees</p>
+          <p className="mt-1 text-[var(--muted)]">Grok + Vercel + Supabase. Reserved before anyone is paid.</p>
         </div>
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-accent">Step 2 · Bank</p>
-          <p className="mt-1 text-[var(--muted)]">
-            Each person decides when to push <em>their</em> Stripe balance to <em>their</em> bank.
-            App lists history only — no force bank button.
-          </p>
+          <p className="text-[10px] font-bold uppercase tracking-wide text-accent">Reinvest</p>
+          <p className="mt-1 text-[var(--muted)]">Hold in the Financial Account / Stripe until you move it.</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wide text-accent">Jeremy Pay</p>
+          <p className="mt-1 text-[var(--muted)]">Business bank. Manual — Confirm later, not auto-sweep.</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wide text-accent">John Pay</p>
+          <p className="mt-1 text-[var(--muted)]">Partner share via Connect. Not at swipe. Floor still $400.</p>
         </div>
       </div>
 
@@ -853,14 +1094,33 @@ export default function AdminBillingClient() {
             </p>
           )}
           <LatestStripePurchaseCard purchase={overview.latestPurchase} />
+          {overview.moneyMap && (
+            <MoneyMapBoard
+              map={overview.moneyMap}
+              busy={Boolean(busy)}
+              onSaved={(next) => setOverview((o) => (o ? { ...o, moneyMap: next } : o))}
+              onError={setError}
+            />
+          )}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Kpi
-              title="Available"
+              title="Payments available"
               value={balance?.availableLabel || overview.balance?.availableLabel || "—"}
               hint={
                 balance?.pendingLabel || overview.balance?.pendingLabel
                   ? `Pending ${balance?.pendingLabel || overview.balance?.pendingLabel}`
                   : undefined
+              }
+            />
+            <Kpi
+              title="Financial Account"
+              value={overview.moneyMap?.financialAccount.availableLabel || "—"}
+              hint={
+                overview.moneyMap?.financialAccount.source === "payout_ledger"
+                  ? `${overview.moneyMap.financialAccount.transferCount} FA transfers · ledger`
+                  : overview.moneyMap?.financialAccount.source === "live"
+                    ? "Live FA balance"
+                    : "No FA transfers yet"
               }
             />
             <Kpi
@@ -873,13 +1133,30 @@ export default function AdminBillingClient() {
               value={overview.mrr?.label || "—"}
               hint={`${overview.mrr?.activeSubscriptions ?? 0} active subs`}
             />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Kpi
+              title="Last FA transfer"
+              value={overview.moneyMap?.lastFaTransfer?.amountLabel || "—"}
+              hint={
+                overview.moneyMap?.lastFaTransfer
+                  ? `${fmtDate(overview.moneyMap.lastFaTransfer.createdAt)} · not a bank deposit`
+                  : "None"
+              }
+            />
             <Kpi
               title="Last bank payout"
-              value={overview.lastBankPayout?.amountLabel || "—"}
+              value={
+                overview.moneyMap?.lastBankPayout?.amountLabel ||
+                overview.lastBankPayout?.amountLabel ||
+                "—"
+              }
               hint={
-                overview.lastBankPayout
-                  ? `${overview.lastBankPayout.status} · arrive ${fmtDay(overview.lastBankPayout.arrivalDate)}`
-                  : "None listed yet"
+                overview.moneyMap?.lastBankPayout
+                  ? fmtDate(overview.moneyMap.lastBankPayout.createdAt)
+                  : overview.lastBankPayout
+                    ? `${overview.lastBankPayout.status} · arrive ${fmtDay(overview.lastBankPayout.arrivalDate)}`
+                    : "None to a bank yet — autos went to FA"
               }
             />
           </div>
@@ -970,9 +1247,12 @@ export default function AdminBillingClient() {
       {tab === "balance" && !loading && (
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Kpi title="Available" value={balance?.availableLabel || "—"} />
-            <Kpi title="Pending" value={balance?.pendingLabel || "—"} />
+            <Kpi title="Payments · available" value={balance?.availableLabel || "—"} />
+            <Kpi title="Payments · pending" value={balance?.pendingLabel || "—"} />
           </div>
+          <p className="text-xs text-[var(--muted)]">
+            Financial Account dollars are on Overview (not this payments-balance snapshot).
+          </p>
           {balance?.error && (
             <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
               {balance.error}
@@ -1001,8 +1281,8 @@ export default function AdminBillingClient() {
             </div>
           )}
           <p className="text-xs text-[var(--muted)]">
-            Bank payouts are listed on the Bank tab (read-only). Schedule is controlled in Stripe
-            Dashboard / Express.
+            Payout history is on the Bank tab. Automatic rows to Financial Account are not bank
+            deposits. Schedule is manual on the live master.
           </p>
         </div>
       )}
@@ -1069,10 +1349,11 @@ export default function AdminBillingClient() {
       {tab === "bank" && !loading && (
         <div className="space-y-3">
           <p className="text-sm text-[var(--muted)]">
-            <strong className="text-[var(--text)]">Bank payouts</strong> = this Stripe account → bank.
-            Read-only here.{" "}
+            <strong className="text-[var(--text)]">Payouts</strong> from this Stripe account.
+            Rows tagged <strong className="text-[var(--text)]">Financial Account</strong> never
+            hit a bank — that is why Jeremy saw $0 deposits.{" "}
             {isPlatform
-              ? "Jeremy manages schedule in Stripe Dashboard."
+              ? "Schedule is manual. Confirm a bank payout later."
               : "Partner manages push in their Express dashboard."}
           </p>
           <div className="card overflow-x-auto p-0">
@@ -1104,7 +1385,14 @@ export default function AdminBillingClient() {
                       )}
                     </td>
                     <td className="px-3 py-3 text-xs text-[var(--muted)]">{fmtDay(r.arrivalDate)}</td>
-                    <td className="px-3 py-3 text-xs text-[var(--muted)]">{r.destinationLabel || "—"}</td>
+                    <td className="px-3 py-3 text-xs text-[var(--muted)]">
+                      {r.destinationKind === "financial_account"
+                        ? statusPill("Financial Account", "warn")
+                        : r.destinationKind === "bank"
+                          ? statusPill("Bank", "ok")
+                          : null}{" "}
+                      {r.destinationLabel || "—"}
+                    </td>
                   </tr>
                 ))}
                 {bankRows.length === 0 && (

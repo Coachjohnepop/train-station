@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getStripe, getStripePublishableKey } from "@/lib/stripe";
+import { getMoneyMap } from "@/lib/stripe-money-map";
 import { isStripeTestMode } from "@/lib/stripe-price-ids";
 import { fetchActiveMrrCents, formatUsdFromCents } from "@/lib/stripe-commission";
 import { listMemberProfiles } from "@/lib/member-profiles-store";
@@ -251,15 +252,17 @@ export async function getBillingAdminOverview() {
     };
   }
 
-  const [balanceSnap, lastPayout, mrr, charges, refunds, openPi, latestPurchase] = await Promise.all([
-    getStripeBalanceSnapshot("platform"),
-    getLastBankPayout("platform"),
-    fetchActiveMrrCents(),
-    stripe.charges.list({ limit: 100 }),
-    stripe.refunds.list({ limit: 50 }),
-    stripe.paymentIntents.list({ limit: 30, expand: [] }),
-    getLatestStripePurchase(),
-  ]);
+  const [balanceSnap, lastPayout, mrr, charges, refunds, openPi, latestPurchase, moneyMap] =
+    await Promise.all([
+      getStripeBalanceSnapshot("platform"),
+      getLastBankPayout("platform"),
+      fetchActiveMrrCents(),
+      stripe.charges.list({ limit: 100 }),
+      stripe.refunds.list({ limit: 50 }),
+      stripe.paymentIntents.list({ limit: 30, expand: [] }),
+      getLatestStripePurchase(),
+      getMoneyMap().catch(() => null),
+    ]);
 
   const now = Date.now();
   const day30 = now - 30 * 24 * 60 * 60 * 1000;
@@ -333,6 +336,7 @@ export async function getBillingAdminOverview() {
       openPaymentIntents: requiresAction,
     },
     latestPurchase,
+    moneyMap,
   };
 }
 
