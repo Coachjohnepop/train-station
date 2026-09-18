@@ -10,25 +10,28 @@ import {
   displayActivityName,
   emptyDailyActivityReport,
   emptyGuestSummary,
-  formatActivityDateLabel,
   friendlyPath,
   headlinesFromFacts,
+  isoDateInZone,
   isIsoDate,
   pacificDayBounds,
+  parseUsageRange,
   sortActiveUsers,
+  usageTotalsFrom,
+  usageWindow,
   yesterdayIso,
   type DailyActivityEvent,
   type DailyActivityReport,
-  type DailyGuestSummary,
   type DailyQuietMember,
   type DailyUserActivity,
+  type UsageRange,
   type UserActivityFacts,
 } from "@/lib/daily-user-activity-format";
 
 const SKIP_EMAIL = /@example\.com$/i;
 const DEMO_MEMBER_EMAIL = /@(thetrainstation\.co)$/i;
-const EVENT_CAP = 12_000;
-const TIMELINE_CAP = 14;
+const EVENT_CAP: Record<UsageRange, number> = { day: 12_000, week: 20_000, month: 30_000 };
+const TIMELINE_CAP: Record<UsageRange, number> = { day: 14, week: 8, month: 6 };
 
 type PageCount = { path: string; label: string; views: number };
 
@@ -57,8 +60,8 @@ function pageList(pages: Map<string, number>, take = 6): PageCount[] {
     .map(([path, views]) => ({ path, label: friendlyPath(path), views }));
 }
 
-function pushTimeline(list: DailyActivityEvent[], event: DailyActivityEvent) {
-  if (list.length >= TIMELINE_CAP) return;
+function pushTimeline(list: DailyActivityEvent[], event: DailyActivityEvent, cap: number) {
+  if (list.length >= cap) return;
   const last = list[list.length - 1];
   if (last && last.kind === event.kind && last.label === event.label) return;
   list.push(event);
@@ -84,15 +87,23 @@ function notableClickLabel(text: string | null | undefined, action: string | nul
   return raw;
 }
 
-export async function getDailyUserActivity(dateInput?: string | null): Promise<DailyActivityReport> {
+export async function getDailyUserActivity(
+  dateInput?: string | null,
+  rangeInput?: string | null,
+): Promise<DailyActivityReport> {
   const date = isIsoDate(dateInput) ? dateInput : yesterdayIso();
+  const range = parseUsageRange(rangeInput);
+  const window = usageWindow(range, date);
 
   if (!isDatabaseConfigured() || isDemoMode()) {
-    return emptyDailyActivityReport(date, "demo");
+    return emptyDailyActivityReport(date, "demo", range);
   }
 
   const { prisma } = await import("@/lib/prisma");
-  const { start, end } = pacificDayBounds(date);
+  const { start } = pacificDayBounds(window.startIso);
+  const { start: end } = pacificDayBounds(window.endIsoExclusive);
+  const eventCap = EVENT_CAP[range];
+  const timelineCap = TIMELINE_CAP[range];
 
   const [
     users,
@@ -106,7 +117,7 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
     measurements,
     payments,
     classSessions,
-    zoomDay,
+    zoomDays,
   ] = await Promise.all([
     prisma.user.findMany({
       where: { hidden: false },
@@ -124,7 +135,7 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
     prisma.analyticsEvent.findMany({
       where: { occurredAt: { gte: start, lt: end } },
       orderBy: { occurredAt: "asc" },
-      take: EVENT_CAP,
+      take: eventCap,
       select: {
         occurredAt: true,
         eventType: true,
@@ -148,7 +159,7 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
       },
     }),
     prisma.liveWorkoutSession.findMany({
-      where: { sessionDate: date },
+      where: { sessionDate: { gte: window.startIso, lt: window.endIsoExclusive } },
       select: {
         userId: true,
         workoutId: true,
@@ -197,7 +208,10 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
     }),
     prisma.coachTodaySession.findMany({
       where: {
-        OR: [{ sessionDate: date }, { createdAt: { gte: start, lt: end } }],
+        OR: [
+          { sessionDate: { gte: window.startIso, lt: window.endIsoExclusive } },
+          { createdAt: { gte: start, lt: end } },
+        ],
       },
       select: {
         sessionDate: true,
@@ -207,10 +221,10 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
         createdBy: true,
       },
     }),
-    prisma.liveClassZoomDay.findUnique({
-      where: { sessionDate: date },
-      select: { record: true, updatedAt: true },
-    }).catch(() => null),
+    prisma.liveClassZoomDay.findMany({
+      where: { sessionDate: { gte: window.startIso, lt: window.endIsoExclusive } },
+      select: { sessionDate: true, record: true, updatedAt: true },
+    }).catch(() => []),
   ]);
 
   const profileByUser = new Map(profiles.map((p) => [p.userId, p]));
@@ -228,7 +242,15 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
 
   type Bag = UserActivityFacts & {
     pagesMap: Map<string, number>;
+    days: Set<string>;
   };
+
+  function stamp(bag: Bag, at: Date | string | null | undefined) {
+    if (!at) return;
+    bag.firstSeenAt = touchTime(bag.firstSeenAt, at, "min");
+    bag.lastSeenAt = touchTime(bag.lastSeenAt, at, "max");
+    bag.days.add(isoDateInZone(at));
+  }
 
   const bags = new Map<string, Bag>();
 
@@ -266,6 +288,7 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
       device: null,
       coachEdits: [],
       pagesMap: new Map(),
+      days: new Set<string>(),
     };
     bags.set(userId, next);
     return next;
@@ -276,13 +299,12 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
       const bag = bagFor(user.id);
       if (bag) {
         bag.signedUp = true;
-        bag.firstSeenAt = touchTime(bag.firstSeenAt, user.createdAt, "min");
-        bag.lastSeenAt = touchTime(bag.lastSeenAt, user.createdAt, "max");
+        stamp(bag, user.createdAt);
         pushTimeline(bag.timeline, {
           at: user.createdAt.toISOString(),
           kind: "signup",
           label: "Created account",
-        });
+        }, timelineCap);
       }
     }
   }
@@ -291,8 +313,7 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
     if (!event.userId) continue;
     const bag = bagFor(event.userId);
     if (!bag) continue;
-    bag.firstSeenAt = touchTime(bag.firstSeenAt, event.occurredAt, "min");
-    bag.lastSeenAt = touchTime(bag.lastSeenAt, event.occurredAt, "max");
+    stamp(bag, event.occurredAt);
     if (event.deviceType && !bag.device) bag.device = event.deviceType;
     if (event.eventType === "page_view") addPage(bag.pagesMap, event.pagePath);
     if (event.eventType === "live_session_joined") {
@@ -301,7 +322,7 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
         at: event.occurredAt.toISOString(),
         kind: "zoom",
         label: "Joined live Zoom",
-      });
+      }, timelineCap);
     }
     if (event.eventType === "coach_content_edit") {
       const label = notableClickLabel(event.elementText, event.clickAction) || "Edited content";
@@ -310,7 +331,7 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
         at: event.occurredAt.toISOString(),
         kind: "edit",
         label,
-      });
+      }, timelineCap);
     }
     if (event.eventType === "page_click") {
       const label = notableClickLabel(event.elementText, event.clickAction);
@@ -319,7 +340,7 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
           at: event.occurredAt.toISOString(),
           kind: "click",
           label,
-        });
+        }, timelineCap);
       }
     }
   }
@@ -329,13 +350,12 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
     if (!bag) continue;
     const name = log.workout?.name || "Workout";
     bag.workouts.push({ name, completed: log.completed, progress: log.progress });
-    bag.firstSeenAt = touchTime(bag.firstSeenAt, log.performedAt, "min");
-    bag.lastSeenAt = touchTime(bag.lastSeenAt, log.performedAt, "max");
+    stamp(bag, log.performedAt);
     pushTimeline(bag.timeline, {
       at: log.performedAt.toISOString(),
       kind: "workout",
       label: log.completed ? `Logged ${name}` : `Logged ${name} (${log.progress}%)`,
-    });
+    }, timelineCap);
   }
 
   for (const session of liveSessions) {
@@ -345,8 +365,7 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
     const finished = Array.isArray(session.finishedExercises) ? session.finishedExercises.length : 0;
     bag.setsChecked += sets;
     bag.exercisesFinished += finished;
-    bag.firstSeenAt = touchTime(bag.firstSeenAt, session.updatedAt, "min");
-    bag.lastSeenAt = touchTime(bag.lastSeenAt, session.updatedAt, "max");
+    stamp(bag, session.updatedAt);
     const workoutName = workoutNameById.get(session.workoutId);
     if (sets > 0 || finished > 0) {
       pushTimeline(bag.timeline, {
@@ -356,20 +375,19 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
           `${sets} set${sets === 1 ? "" : "s"} checked` +
           (workoutName ? ` on ${workoutName}` : "") +
           (finished ? ` · ${finished} finished` : ""),
-      });
+      }, timelineCap);
     }
   }
 
   for (const ev of gami) {
     const bag = bagFor(ev.userId);
     if (!bag) continue;
-    bag.firstSeenAt = touchTime(bag.firstSeenAt, ev.at, "min");
-    bag.lastSeenAt = touchTime(bag.lastSeenAt, ev.at, "max");
+    stamp(bag, ev.at);
     pushTimeline(bag.timeline, {
       at: ev.at.toISOString(),
       kind: "score",
       label: `${ev.label || ev.type} (+${ev.points})`,
-    });
+    }, timelineCap);
   }
 
   for (const message of messages) {
@@ -378,14 +396,13 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
       const sender = bagFor(message.authorId);
       if (sender) {
         sender.messagesSent += 1;
-        sender.firstSeenAt = touchTime(sender.firstSeenAt, message.createdAt, "min");
-        sender.lastSeenAt = touchTime(sender.lastSeenAt, message.createdAt, "max");
+        stamp(sender, message.createdAt);
         const snippet = (message.body || "").replace(/\s+/g, " ").trim().slice(0, 80);
         pushTimeline(sender.timeline, {
           at: message.createdAt.toISOString(),
           kind: "message",
           label: snippet ? `Sent: ${snippet}` : "Sent a message",
-        });
+        }, timelineCap);
       }
     }
     const memberId = message.thread?.memberId;
@@ -393,8 +410,7 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
       const member = bagFor(memberId);
       if (member) {
         if (!system) member.messagesReceived += 1;
-        member.firstSeenAt = touchTime(member.firstSeenAt, message.createdAt, "min");
-        member.lastSeenAt = touchTime(member.lastSeenAt, message.createdAt, "max");
+        stamp(member, message.createdAt);
       }
     }
   }
@@ -407,27 +423,25 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
     const bag = bagFor(user.id);
     if (!bag) continue;
     bag.bookings.push({ at: booking.scheduledAt.toISOString(), status: booking.status });
-    bag.firstSeenAt = touchTime(bag.firstSeenAt, booking.createdAt, "min");
-    bag.lastSeenAt = touchTime(bag.lastSeenAt, booking.createdAt, "max");
+    stamp(bag, booking.createdAt);
     pushTimeline(bag.timeline, {
       at: booking.createdAt.toISOString(),
       kind: "booking",
       label: `Intro booking (${booking.status})`,
-    });
+    }, timelineCap);
   }
 
   for (const row of measurements) {
     const bag = bagFor(row.userId);
     if (!bag) continue;
     bag.measurements += 1;
-    bag.firstSeenAt = touchTime(bag.firstSeenAt, row.measuredAt, "min");
-    bag.lastSeenAt = touchTime(bag.lastSeenAt, row.measuredAt, "max");
+    stamp(bag, row.measuredAt);
     const weight = row.weightLbs != null ? ` · ${row.weightLbs} lb` : "";
     pushTimeline(bag.timeline, {
       at: row.measuredAt.toISOString(),
       kind: "measure",
       label: `Measurements${weight}`,
-    });
+    }, timelineCap);
   }
 
   for (const pay of payments) {
@@ -436,18 +450,20 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
     if (!bag) continue;
     const label = moneyLabel(pay.amountCents, pay.currency);
     bag.payments.push({ cents: pay.amountCents, label });
-    bag.firstSeenAt = touchTime(bag.firstSeenAt, pay.paidAt, "min");
-    bag.lastSeenAt = touchTime(bag.lastSeenAt, pay.paidAt, "max");
+    stamp(bag, pay.paidAt);
     pushTimeline(bag.timeline, {
       at: pay.paidAt.toISOString(),
       kind: "pay",
       label: `Paid ${label}`,
-    });
+    }, timelineCap);
   }
 
   for (const session of classSessions) {
     const title = session.title || "Class";
-    if (session.sessionDate === date) {
+    if (
+      session.sessionDate >= window.startIso &&
+      session.sessionDate < window.endIsoExclusive
+    ) {
       for (const userId of session.userIds || []) {
         const bag = bagFor(userId);
         if (bag && !bag.classAssigned) bag.classAssigned = title;
@@ -462,43 +478,43 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
         const bag = bagFor(creator.id);
         if (bag) {
           bag.classPosted = `${title} (${session.userIds?.length || 0} on roster)`;
-          bag.firstSeenAt = touchTime(bag.firstSeenAt, session.createdAt, "min");
-          bag.lastSeenAt = touchTime(bag.lastSeenAt, session.createdAt, "max");
+          stamp(bag, session.createdAt);
           pushTimeline(bag.timeline, {
             at: session.createdAt.toISOString(),
             kind: "class",
             label: `Posted ${title} for ${session.sessionDate}`,
-          });
+          }, timelineCap);
         }
       }
     }
   }
 
-  const zoomRecord =
-    zoomDay?.record && typeof zoomDay.record === "object"
-      ? (zoomDay.record as { hostStartedAt?: string; hostCoachEmail?: string | null })
-      : null;
-  if (zoomRecord?.hostStartedAt) {
+  for (const zoomDay of zoomDays) {
+    const zoomRecord =
+      zoomDay?.record && typeof zoomDay.record === "object"
+        ? (zoomDay.record as { hostStartedAt?: string; hostCoachEmail?: string | null })
+        : null;
+    if (!zoomRecord?.hostStartedAt) continue;
     const started = new Date(zoomRecord.hostStartedAt);
-    if (started >= start && started < end) {
-      const host =
-        (zoomRecord.hostCoachEmail
-          ? userByEmail.get(zoomRecord.hostCoachEmail.toLowerCase())
-          : null) || users.find((u) => u.role === "INSTRUCTOR" || u.role === "ADMIN");
-      if (host) {
-        const bag = bagFor(host.id);
-        if (bag) {
-          bag.startedZoom = true;
-          bag.firstSeenAt = touchTime(bag.firstSeenAt, started, "min");
-          bag.lastSeenAt = touchTime(bag.lastSeenAt, started, "max");
-          pushTimeline(bag.timeline, {
-            at: started.toISOString(),
-            kind: "zoom",
-            label: "Started live Zoom",
-          });
-        }
-      }
-    }
+    if (started < start || started >= end) continue;
+    const host =
+      (zoomRecord.hostCoachEmail
+        ? userByEmail.get(zoomRecord.hostCoachEmail.toLowerCase())
+        : null) || users.find((u) => u.role === "INSTRUCTOR" || u.role === "ADMIN");
+    if (!host) continue;
+    const bag = bagFor(host.id);
+    if (!bag) continue;
+    bag.startedZoom = true;
+    stamp(bag, started);
+    pushTimeline(
+      bag.timeline,
+      {
+        at: started.toISOString(),
+        kind: "zoom",
+        label: "Started live Zoom",
+      },
+      timelineCap,
+    );
   }
 
   const guests: DailyGuestSummary = emptyGuestSummary();
@@ -544,6 +560,8 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
       bag.pagesMap.size > 0 ||
       bag.coachEdits.length > 0;
     if (!hasSignal) continue;
+    const activeDays = bag.days.size;
+    bag.activeDays = activeDays;
     activeUsers.push({
       userId: bag.userId,
       name: bag.name,
@@ -568,6 +586,7 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
       pages: bag.pages,
       timeline: bag.timeline,
       device: bag.device,
+      activeDays,
     });
   }
 
@@ -589,15 +608,20 @@ export async function getDailyUserActivity(dateInput?: string | null): Promise<D
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  const sorted = sortActiveUsers(activeUsers);
   return {
     date,
-    dateLabel: formatActivityDateLabel(date),
+    dateLabel: window.label,
     timeZone: ACTIVITY_TIME_ZONE,
     storage: "database",
-    users: sortActiveUsers(activeUsers),
+    range,
+    startIso: window.startIso,
+    endIsoExclusive: window.endIsoExclusive,
+    users: sorted,
     quietMembers,
     guests,
+    totals: usageTotalsFrom(sorted, guests),
   };
 }
 
-export { yesterdayIso, isIsoDate };
+export { yesterdayIso, isIsoDate, parseUsageRange };

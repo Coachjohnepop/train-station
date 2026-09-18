@@ -92,8 +92,8 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
   },
   {
     id: "coach-daily-activity",
-    title: "Daily activity",
-    description: "What each member and coach did yesterday (or any day)",
+    title: "Usage",
+    description: "Who trained — day, week, or month",
     href: "/admin/activity",
     workspace: "both",
     group: "People",
@@ -105,6 +105,8 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
       "per user",
       "member activity",
       "daily",
+      "week",
+      "month",
     ],
   },
   {

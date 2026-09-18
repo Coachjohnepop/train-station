@@ -57,9 +57,9 @@ const CARDS = [
   },
   {
     href: "/admin/activity",
-    title: "Daily activity",
-    description: "What each member and coach did yesterday — workouts, Zoom, messages.",
-    cta: "Open daily activity →",
+    title: "Usage",
+    description: "Day, week, and month — who trained, sets, Zoom, messages.",
+    cta: "Open usage →",
   },
   {
     href: "/admin/seo",

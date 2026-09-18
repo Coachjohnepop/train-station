@@ -16,6 +16,8 @@ export type DailyUserWorkout = {
   progress: number;
 };
 
+export type UsageRange = "day" | "week" | "month";
+
 export type DailyUserActivity = {
   userId: string;
   name: string;
@@ -40,6 +42,21 @@ export type DailyUserActivity = {
   pages: Array<{ path: string; label: string; views: number }>;
   timeline: DailyActivityEvent[];
   device: string | null;
+  activeDays: number;
+};
+
+export type UsageTotals = {
+  membersActive: number;
+  staffActive: number;
+  trained: number;
+  workoutsLogged: number;
+  setsChecked: number;
+  zoomJoins: number;
+  messages: number;
+  signups: number;
+  paymentsCents: number;
+  guestSessions: number;
+  guestPageViews: number;
 };
 
 export type DailyQuietMember = {
@@ -62,9 +79,13 @@ export type DailyActivityReport = {
   dateLabel: string;
   timeZone: string;
   storage: "database" | "demo";
+  range: UsageRange;
+  startIso: string;
+  endIsoExclusive: string;
   users: DailyUserActivity[];
   quietMembers: DailyQuietMember[];
   guests: DailyGuestSummary;
+  totals: UsageTotals;
 };
 
 export function isIsoDate(value: string | null | undefined): value is string {
@@ -87,6 +108,118 @@ export function todayIsoInZone(now = new Date(), timeZone = ACTIVITY_TIME_ZONE):
 
 export function yesterdayIso(now = new Date(), timeZone = ACTIVITY_TIME_ZONE): string {
   return addCalendarDays(todayIsoInZone(now, timeZone), -1);
+}
+
+export function parseUsageRange(raw: string | null | undefined): UsageRange {
+  const v = (raw || "").trim().toLowerCase();
+  if (v === "week" || v === "month") return v;
+  return "day";
+}
+
+/** Monday of the week containing `iso` (YYYY-MM-DD, date-only). */
+export function weekStartIso(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const wd = new Date(Date.UTC(y, (m || 1) - 1, d || 1)).getUTCDay();
+  const back = (wd + 6) % 7;
+  return addCalendarDays(iso, -back);
+}
+
+export function monthStartIso(iso: string): string {
+  return `${iso.slice(0, 7)}-01`;
+}
+
+export function addCalendarMonths(iso: string, months: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, (m || 1) - 1 + months, d || 1));
+  return dt.toISOString().slice(0, 10);
+}
+
+export function shiftUsageDate(iso: string, range: UsageRange, direction: -1 | 1): string {
+  if (range === "week") return addCalendarDays(iso, direction * 7);
+  if (range === "month") return addCalendarMonths(iso, direction);
+  return addCalendarDays(iso, direction);
+}
+
+export function isoDateInZone(at: string | Date, timeZone = ACTIVITY_TIME_ZONE): string {
+  return new Date(at).toLocaleDateString("en-CA", { timeZone });
+}
+
+export function usageWindow(
+  range: UsageRange,
+  iso: string,
+): { startIso: string; endIsoExclusive: string; label: string } {
+  const date = isIsoDate(iso) ? iso : todayIsoInZone();
+  if (range === "week") {
+    const startIso = weekStartIso(date);
+    const endIsoExclusive = addCalendarDays(startIso, 7);
+    const endIncl = addCalendarDays(endIsoExclusive, -1);
+    return {
+      startIso,
+      endIsoExclusive,
+      label: `${formatShortWindow(startIso)} – ${formatShortWindow(endIncl)}`,
+    };
+  }
+  if (range === "month") {
+    const startIso = monthStartIso(date);
+    const endIsoExclusive = addCalendarMonths(startIso, 1);
+    const label = new Date(`${startIso}T12:00:00Z`).toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+    return { startIso, endIsoExclusive, label };
+  }
+  return {
+    startIso: date,
+    endIsoExclusive: addCalendarDays(date, 1),
+    label: formatActivityDateLabel(date),
+  };
+}
+
+function formatShortWindow(iso: string): string {
+  const { start } = pacificDayBounds(iso);
+  return start.toLocaleDateString("en-US", {
+    timeZone: ACTIVITY_TIME_ZONE,
+    month: "short",
+    day: "numeric",
+  });
+}
+
+export function emptyUsageTotals(): UsageTotals {
+  return {
+    membersActive: 0,
+    staffActive: 0,
+    trained: 0,
+    workoutsLogged: 0,
+    setsChecked: 0,
+    zoomJoins: 0,
+    messages: 0,
+    signups: 0,
+    paymentsCents: 0,
+    guestSessions: 0,
+    guestPageViews: 0,
+  };
+}
+
+export function usageTotalsFrom(
+  users: DailyUserActivity[],
+  guests: DailyGuestSummary,
+): UsageTotals {
+  const members = users.filter((u) => u.role === "MEMBER");
+  const staff = users.filter((u) => u.role !== "MEMBER");
+  return {
+    membersActive: members.length,
+    staffActive: staff.length,
+    trained: members.filter((u) => u.workouts.length > 0 || u.setsChecked > 0).length,
+    workoutsLogged: users.reduce((n, u) => n + u.workouts.length, 0),
+    setsChecked: users.reduce((n, u) => n + u.setsChecked, 0),
+    zoomJoins: users.filter((u) => u.joinedZoom).length,
+    messages: users.reduce((n, u) => n + u.messagesSent, 0),
+    signups: users.filter((u) => u.signedUp).length,
+    paymentsCents: users.reduce((n, u) => n + u.payments.reduce((s, p) => s + p.cents, 0), 0),
+    guestSessions: guests.sessions,
+    guestPageViews: guests.pageViews,
+  };
 }
 
 /**
@@ -153,7 +286,7 @@ export function friendlyPath(pagePath: string | null | undefined): string {
   if (path.startsWith("/admin/landing")) return "Landing";
   if (path.startsWith("/admin/assign")) return "Assign";
   if (path.startsWith("/admin/bookings")) return "Bookings";
-  if (path.startsWith("/admin/activity")) return "Daily activity";
+  if (path.startsWith("/admin/activity")) return "Usage";
   if (path.startsWith("/admin")) return "Coach desk";
   return path;
 }
@@ -205,6 +338,7 @@ export type UserActivityFacts = {
   timeline: DailyActivityEvent[];
   device: string | null;
   coachEdits: string[];
+  activeDays?: number;
 };
 
 function listAnd(items: string[]): string {
@@ -216,6 +350,9 @@ function listAnd(items: string[]): string {
 
 export function headlinesFromFacts(facts: UserActivityFacts): string[] {
   const lines: string[] = [];
+  if ((facts.activeDays ?? 0) > 1) {
+    lines.push(`${facts.activeDays} active days`);
+  }
   if (facts.signedUp) lines.push("Created an account");
   if (facts.payments.length) {
     lines.push(`Paid ${facts.payments.map((p) => p.label).join(", ")}`);
@@ -298,14 +435,23 @@ export function emptyGuestSummary(): DailyGuestSummary {
   return { sessions: 0, pageViews: 0, topPages: [], notableClicks: [] };
 }
 
-export function emptyDailyActivityReport(date: string, storage: "database" | "demo"): DailyActivityReport {
+export function emptyDailyActivityReport(
+  date: string,
+  storage: "database" | "demo",
+  range: UsageRange = "day",
+): DailyActivityReport {
+  const window = isIsoDate(date) ? usageWindow(range, date) : null;
   return {
     date,
-    dateLabel: isIsoDate(date) ? formatActivityDateLabel(date) : date,
+    dateLabel: window?.label || (isIsoDate(date) ? formatActivityDateLabel(date) : date),
     timeZone: ACTIVITY_TIME_ZONE,
     storage,
+    range,
+    startIso: window?.startIso || date,
+    endIsoExclusive: window?.endIsoExclusive || date,
     users: [],
     quietMembers: [],
     guests: emptyGuestSummary(),
+    totals: emptyUsageTotals(),
   };
 }

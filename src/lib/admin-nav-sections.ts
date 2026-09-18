@@ -40,7 +40,7 @@ const peopleItems: AdminNavItem[] = [
   },
   {
     href: "/admin/activity",
-    label: "Daily activity",
+    label: "Usage",
     match: (p) => p.startsWith("/admin/activity"),
   },
   ...(SHOW_LEADS
@@ -271,7 +271,7 @@ export const PLATFORM_NAV_GROUPS: AdminNavGroup[] = [
       },
       {
         href: "/admin/activity",
-        label: "Daily activity",
+        label: "Usage",
         match: (p) => p.startsWith("/admin/activity"),
       },
       {

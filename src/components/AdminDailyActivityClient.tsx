@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  addCalendarDays,
   formatActivityTime,
+  shiftUsageDate,
   todayIsoInZone,
   yesterdayIso,
   type DailyActivityReport,
   type DailyUserActivity,
+  type UsageRange,
 } from "@/lib/daily-user-activity-format";
 
 function roleChip(role: string): string {
@@ -35,6 +36,7 @@ function UserCard({ user }: { user: DailyUserActivity }) {
           </p>
         </div>
         <p className="text-xs tabular-nums text-[var(--muted)]">
+          {user.activeDays > 1 ? `${user.activeDays} days · ` : null}
           {user.firstSeenAt ? formatActivityTime(user.firstSeenAt) : "—"}
           {user.lastSeenAt && user.lastSeenAt !== user.firstSeenAt
             ? ` – ${formatActivityTime(user.lastSeenAt)}`
@@ -70,8 +72,29 @@ function UserCard({ user }: { user: DailyUserActivity }) {
   );
 }
 
-export default function AdminDailyActivityClient({ initialDate }: { initialDate: string }) {
+const RANGES: Array<{ id: UsageRange; label: string }> = [
+  { id: "day", label: "Day" },
+  { id: "week", label: "Week" },
+  { id: "month", label: "Month" },
+];
+
+function money(cents: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(cents / 100);
+}
+
+export default function AdminDailyActivityClient({
+  initialDate,
+  initialRange = "day",
+}: {
+  initialDate: string;
+  initialRange?: UsageRange;
+}) {
   const [date, setDate] = useState(initialDate);
+  const [range, setRange] = useState<UsageRange>(initialRange);
   const [data, setData] = useState<DailyActivityReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,9 +106,10 @@ export default function AdminDailyActivityClient({ initialDate }: { initialDate:
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/activity?date=${encodeURIComponent(date)}`, {
-        cache: "no-store",
-      });
+      const res = await fetch(
+        `/api/admin/activity?date=${encodeURIComponent(date)}&range=${encodeURIComponent(range)}`,
+        { cache: "no-store" },
+      );
       const body = await res.json();
       if (!res.ok) {
         setError(body.error || "Could not load activity");
@@ -99,7 +123,7 @@ export default function AdminDailyActivityClient({ initialDate }: { initialDate:
     } finally {
       setLoading(false);
     }
-  }, [date]);
+  }, [date, range]);
 
   useEffect(() => {
     void load();
@@ -108,12 +132,12 @@ export default function AdminDailyActivityClient({ initialDate }: { initialDate:
   useEffect(() => {
     const next = new URL(window.location.href);
     next.searchParams.set("date", date);
+    next.searchParams.set("range", range);
     window.history.replaceState(null, "", next.pathname + next.search);
-  }, [date]);
+  }, [date, range]);
 
   const members = data?.users.filter((u) => u.role === "MEMBER") ?? [];
   const staff = data?.users.filter((u) => u.role !== "MEMBER") ?? [];
-  const trained = members.filter((u) => u.workouts.length > 0 || u.setsChecked > 0);
 
   return (
     <div className="space-y-6 pb-8">
@@ -122,17 +146,31 @@ export default function AdminDailyActivityClient({ initialDate }: { initialDate:
           <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[var(--accent-fg)]">
             Coaches + admins
           </p>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Daily activity</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Usage</h1>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-[var(--muted)]">
-            What each person did that calendar day (Pacific). Workouts, sets, Zoom, messages,
-            bookings, and pages.
+            Who trained this day, week, or month (Pacific). Workouts, sets, Zoom, messages, and
+            guests.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-lg border border-[var(--border)] p-0.5">
+            {RANGES.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                className={`min-h-10 rounded-md px-3 text-xs font-semibold ${
+                  range === r.id ? "bg-[var(--accent)] text-white" : "text-[var(--muted)]"
+                }`}
+                onClick={() => setRange(r.id)}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
           <button
             type="button"
             className="btn-ghost min-h-11 px-3 text-xs"
-            onClick={() => setDate(addCalendarDays(date, -1))}
+            onClick={() => setDate(shiftUsageDate(date, range, -1))}
           >
             ← Prev
           </button>
@@ -147,21 +185,27 @@ export default function AdminDailyActivityClient({ initialDate }: { initialDate:
             type="button"
             className="btn-ghost min-h-11 px-3 text-xs"
             disabled={date >= today}
-            onClick={() => setDate(addCalendarDays(date, 1))}
+            onClick={() => setDate(shiftUsageDate(date, range, 1))}
           >
             Next →
           </button>
           <button
             type="button"
-            className={`btn-ghost min-h-11 px-3 text-xs ${date === yesterday ? "ring-1 ring-accent" : ""}`}
-            onClick={() => setDate(yesterday)}
+            className={`btn-ghost min-h-11 px-3 text-xs ${date === yesterday && range === "day" ? "ring-1 ring-accent" : ""}`}
+            onClick={() => {
+              setRange("day");
+              setDate(yesterday);
+            }}
           >
             Yesterday
           </button>
           <button
             type="button"
-            className={`btn-ghost min-h-11 px-3 text-xs ${date === today ? "ring-1 ring-accent" : ""}`}
-            onClick={() => setDate(today)}
+            className={`btn-ghost min-h-11 px-3 text-xs ${date === today && range === "day" ? "ring-1 ring-accent" : ""}`}
+            onClick={() => {
+              setRange("day");
+              setDate(today);
+            }}
           >
             Today
           </button>
@@ -169,19 +213,42 @@ export default function AdminDailyActivityClient({ initialDate }: { initialDate:
       </div>
 
       {data ? (
-        <p className="text-sm text-[var(--muted)]">
-          <span className="font-semibold text-[var(--text)]">{data.dateLabel}</span>
-          {" · "}
-          {trained.length} trained
-          {" · "}
-          {members.length} members active
-          {" · "}
-          {staff.length} staff
-          {" · "}
-          {data.quietMembers.length} quiet
-          {" · "}
-          {data.guests.sessions} guest sessions
-        </p>
+        <>
+          <p className="text-sm text-[var(--muted)]">
+            <span className="font-semibold text-[var(--text)]">{data.dateLabel}</span>
+            {" · "}
+            {data.totals.trained} trained
+            {" · "}
+            {data.totals.membersActive} members active
+            {" · "}
+            {data.totals.staffActive} staff
+            {" · "}
+            {data.quietMembers.length} quiet
+            {" · "}
+            {data.totals.guestSessions} guest sessions
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+            {[
+              ["Trained", data.totals.trained],
+              ["Workouts", data.totals.workoutsLogged],
+              ["Sets", data.totals.setsChecked],
+              ["Zoom", data.totals.zoomJoins],
+              ["Messages", data.totals.messages],
+              ["Signups", data.totals.signups],
+              ["Paid", money(data.totals.paymentsCents)],
+            ].map(([label, value]) => (
+              <div
+                key={String(label)}
+                className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+                  {label}
+                </p>
+                <p className="text-xl font-semibold tabular-nums">{value}</p>
+              </div>
+            ))}
+          </div>
+        </>
       ) : null}
 
       {loading && !data ? <p className="text-sm text-[var(--muted)]">Loading…</p> : null}
@@ -205,7 +272,7 @@ export default function AdminDailyActivityClient({ initialDate }: { initialDate:
               </div>
             </section>
           ) : (
-            <p className="text-sm text-[var(--muted)]">No members were active this day.</p>
+            <p className="text-sm text-[var(--muted)]">No members were active in this window.</p>
           )}
 
           {staff.length ? (
@@ -235,7 +302,7 @@ export default function AdminDailyActivityClient({ initialDate }: { initialDate:
                 ))}
               </ul>
             ) : (
-              <p className="mt-2 text-sm text-[var(--muted)]">No guest hits this day.</p>
+              <p className="mt-2 text-sm text-[var(--muted)]">No guest hits in this window.</p>
             )}
             {data.guests.notableClicks.length ? (
               <p className="mt-3 text-xs text-[var(--muted)]">
@@ -249,7 +316,7 @@ export default function AdminDailyActivityClient({ initialDate }: { initialDate:
             <section>
               <h2 className="text-lg font-semibold">No activity</h2>
               <p className="mt-0.5 text-xs text-[var(--muted)]">
-                Members with an account who did not open the app this day.
+                Members with an account who did not open the app in this window.
               </p>
               <ul className="mt-3 columns-1 gap-x-6 text-sm sm:columns-2 lg:columns-3">
                 {data.quietMembers.map((m) => (

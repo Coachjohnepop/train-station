@@ -6,7 +6,11 @@ import {
   friendlyPath,
   headlinesFromFacts,
   pacificDayBounds,
+  parseUsageRange,
+  shiftUsageDate,
   sortActiveUsers,
+  usageWindow,
+  weekStartIso,
   yesterdayIso,
   type DailyUserActivity,
   type UserActivityFacts,
@@ -67,6 +71,29 @@ describe("yesterdayIso", () => {
 describe("addCalendarDays", () => {
   it("crosses months", () => {
     assert.equal(addCalendarDays("2026-09-01", -1), "2026-08-31");
+  });
+});
+
+describe("usageWindow", () => {
+  it("weeks start Monday", () => {
+    assert.equal(weekStartIso("2026-09-17"), "2026-09-14");
+    const w = usageWindow("week", "2026-09-17");
+    assert.equal(w.startIso, "2026-09-14");
+    assert.equal(w.endIsoExclusive, "2026-09-21");
+  });
+
+  it("months are calendar months", () => {
+    const m = usageWindow("month", "2026-09-18");
+    assert.equal(m.startIso, "2026-09-01");
+    assert.equal(m.endIsoExclusive, "2026-10-01");
+    assert.equal(m.label, "September 2026");
+  });
+
+  it("shifts by the selected range", () => {
+    assert.equal(shiftUsageDate("2026-09-18", "day", -1), "2026-09-17");
+    assert.equal(shiftUsageDate("2026-09-18", "week", -1), "2026-09-11");
+    assert.equal(shiftUsageDate("2026-09-18", "month", -1), "2026-08-18");
+    assert.equal(parseUsageRange("WEEK"), "week");
   });
 });
 

@@ -209,7 +209,7 @@ export default function AdminSiteAnalyticsClient() {
             Where the site can be better, more effective, and more fun — from live hits, not vibes.
             Per person:{" "}
             <Link href="/admin/activity" className="text-accent hover:underline">
-              Daily activity
+              Usage
             </Link>
             .
           </p>
