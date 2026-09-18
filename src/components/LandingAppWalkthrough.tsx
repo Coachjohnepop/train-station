@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   APP_WALK_COPY,
   APP_WALK_EXERCISES,
-  JEREMY_WALK_INTRO_SRC,
+  WALK_VOICE_SRC,
   type AppWalkPhase,
 } from "@/lib/landing-app-walk";
 import { MIX_AUDIO_ATTR } from "@/lib/landing-mix-audio";
@@ -21,13 +21,16 @@ const START_STYLE_HREF = "/signup?plan=explorer";
 
 let walkVoice: HTMLAudioElement | null = null;
 
-function playJeremyIntro(): void {
+function playWalkVoice(src: string): void {
   if (typeof window === "undefined") return;
   if (!walkVoice) {
-    walkVoice = new Audio(JEREMY_WALK_INTRO_SRC);
+    walkVoice = new Audio();
     walkVoice.preload = "auto";
     walkVoice.setAttribute(MIX_AUDIO_ATTR, "true");
     walkVoice.setAttribute("playsinline", "true");
+  }
+  if (walkVoice.getAttribute("src") !== src) {
+    walkVoice.src = src;
   }
   walkVoice.currentTime = 0;
   void walkVoice.play().catch(() => {
@@ -35,7 +38,7 @@ function playJeremyIntro(): void {
   });
 }
 
-function stopJeremyIntro(): void {
+function stopWalkVoice(): void {
   if (!walkVoice) return;
   walkVoice.pause();
   walkVoice.currentTime = 0;
@@ -60,7 +63,7 @@ export default function LandingAppWalkthrough({
 
   useEffect(() => {
     if (!open) {
-      stopJeremyIntro();
+      stopWalkVoice();
       setPhase("ask");
       setRestLeft(45);
       if (restRef.current) window.clearInterval(restRef.current);
@@ -89,12 +92,12 @@ export default function LandingAppWalkthrough({
   const go = useCallback((next: AppWalkPhase) => {
     setPhase(next);
     trackLandingCustom(`walk-${next}`);
-    if (next === "today") playJeremyIntro();
+    if (next !== "ask") playWalkVoice(WALK_VOICE_SRC[next]);
   }, []);
 
   const exitTo = useCallback(
     (href: string) => {
-      stopJeremyIntro();
+      stopWalkVoice();
       onClose();
       router.push(href);
     },
@@ -126,7 +129,7 @@ export default function LandingAppWalkthrough({
           type="button"
           data-analytics-action="walk-close"
           onClick={() => {
-            stopJeremyIntro();
+            stopWalkVoice();
             onClose();
           }}
           className="min-h-11 rounded-full border border-white/20 bg-white/5 px-3 text-sm font-semibold text-white/90"
@@ -168,7 +171,7 @@ export default function LandingAppWalkthrough({
             </p>
             {phase !== "done" ? (
               <p className="mt-1 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">
-                Jeremy&apos;s intro playing · his real voice from the videos
+                Voice-over · Eddy
               </p>
             ) : null}
 

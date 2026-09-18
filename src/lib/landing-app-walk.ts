@@ -1,12 +1,18 @@
 /**
  * B get-started walk: real Today console, not the ticket/program caricature.
- * Voice: Jeremy's recorded intro clip (from his video). We cannot clone TTS
- * from that video in this stack — captions carry the screen-by-screen lines.
+ * Voice: free macOS Eddy (US) TTS clips in /audio/walk-*.mp3.
  */
 
-export const JEREMY_WALK_INTRO_SRC = "/audio/jeremy-app-walk-intro.mp3";
-
 export type AppWalkPhase = "ask" | "today" | "set" | "rest" | "done";
+
+export const WALK_VOICE_NAME = "Eddy (English (US))";
+
+export const WALK_VOICE_SRC: Record<Exclude<AppWalkPhase, "ask">, string> = {
+  today: "/audio/walk-today.mp3",
+  set: "/audio/walk-set.mp3",
+  rest: "/audio/walk-rest.mp3",
+  done: "/audio/walk-done.mp3",
+};
 
 export const APP_WALK_EXERCISES = [
   { name: "Air Squats", rx: "3 × 10" },
