@@ -443,9 +443,13 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-18 (even 25% four-way split)
+
+**Status:** Visible Stripe cash (FA + pending + available) splits **25% each**: Platform Fees · John Pay · Reinvest · Jeremy Pay. Percents are editable and must total 100. Vendor lines (Grok/Vercel/Supabase) stay as the monthly list, not the split.
+
 **Date:** 2026-09-18 (Stripe money desk: FA + four buckets)
 
-**Status:** Admin → **Stripe money** Overview now shows **where cash sits** (payments available / pending / **Financial Account**) and **where it should go**: Platform Fees (Grok $30 / Vercel $20 / Supabase $35), Reinvest, Jeremy Pay, John Pay. Payout schedule badge (manual). FA dollars are a **ledger of payments→FA transfers** until `STRIPE_FA_RESTRICTED_KEY` can read live FA. Bank tab labels FA vs bank so auto “payouts” are not mistaken for deposits. Leftover default = 100% Reinvest (hold). Settings persist in `MoneyDeskSettings`.
+**Status:** Admin → **Stripe money** Overview now shows **where cash sits** (payments available / pending / **Financial Account**) and **where it should go**: Platform Fees, Reinvest, Jeremy Pay, John Pay. Payouts are manual. FA dollars are a ledger of payments→FA transfers until `STRIPE_FA_RESTRICTED_KEY`. Bank tab labels FA vs bank.
 
 **Date:** 2026-09-18 (house / tester Business Class grants)
 

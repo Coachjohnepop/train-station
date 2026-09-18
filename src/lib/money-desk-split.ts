@@ -1,28 +1,33 @@
 /**
- * Allocate visible Stripe cash across the four next-phase buckets.
+ * Allocate visible Stripe cash across the four buckets.
  * Pure — no I/O. Wallets (where cash sits) vs buckets (where it should go).
  */
 
-export type MoneyDeskSettingsInput = {
+export type MoneyDeskPercents = {
+  platformFeesPercent: number;
+  johnPayPercent: number;
+  reinvestPercent: number;
+  jeremyPayPercent: number;
+};
+
+export type MoneyDeskSettingsInput = MoneyDeskPercents & {
   grokCents: number;
   vercelCents: number;
   supabaseCents: number;
   refundBufferCents: number;
-  /** 0–100 of leftover after platform fees + John Pay. Remainder is Jeremy Pay. */
-  reinvestPercent: number;
 };
 
 export type MoneyDeskSplitInput = MoneyDeskSettingsInput & {
   faCents: number;
   availableCents: number;
   pendingCents: number;
-  johnPayCents: number;
 };
 
 export type MoneyDeskBucket = {
   id: "platform_fees" | "reinvest" | "jeremy_pay" | "john_pay";
   label: string;
   amountCents: number;
+  percent: number;
   detail: string;
 };
 
@@ -36,9 +41,18 @@ export type MoneyDeskSplit = {
   leftoverCents: number;
   reinvestCents: number;
   jeremyPayCents: number;
+  platformFeesPercent: number;
+  johnPayPercent: number;
   reinvestPercent: number;
   jeremyPayPercent: number;
   buckets: MoneyDeskBucket[];
+};
+
+export const EVEN_SPLIT_PERCENTS: MoneyDeskPercents = {
+  platformFeesPercent: 25,
+  johnPayPercent: 25,
+  reinvestPercent: 25,
+  jeremyPayPercent: 25,
 };
 
 function clampCents(n: number): number {
@@ -51,8 +65,29 @@ function clampPercent(n: number): number {
   return Math.max(0, Math.min(100, Math.round(n)));
 }
 
-export function platformFeesTotalCents(s: MoneyDeskSettingsInput): number {
+export function platformFeesTotalCents(s: Pick<MoneyDeskSettingsInput, "grokCents" | "vercelCents" | "supabaseCents">): number {
   return clampCents(s.grokCents) + clampCents(s.vercelCents) + clampCents(s.supabaseCents);
+}
+
+/** First three buckets get rounded shares; Jeremy Pay gets the remainder so cents sum. */
+export function allocateByPercents(
+  totalCents: number,
+  percents: MoneyDeskPercents,
+): {
+  platformFeesCents: number;
+  johnPayCents: number;
+  reinvestCents: number;
+  jeremyPayCents: number;
+} {
+  const total = clampCents(totalCents);
+  const pFees = clampPercent(percents.platformFeesPercent);
+  const pJohn = clampPercent(percents.johnPayPercent);
+  const pReinvest = clampPercent(percents.reinvestPercent);
+  const platformFeesCents = Math.round((total * pFees) / 100);
+  const johnPayCents = Math.round((total * pJohn) / 100);
+  const reinvestCents = Math.round((total * pReinvest) / 100);
+  const jeremyPayCents = total - platformFeesCents - johnPayCents - reinvestCents;
+  return { platformFeesCents, johnPayCents, reinvestCents, jeremyPayCents };
 }
 
 export function splitVisibleCash(input: MoneyDeskSplitInput): MoneyDeskSplit {
@@ -65,44 +100,45 @@ export function splitVisibleCash(input: MoneyDeskSplitInput): MoneyDeskSplit {
   const grok = clampCents(input.grokCents);
   const vercel = clampCents(input.vercelCents);
   const supabase = clampCents(input.supabaseCents);
-  const platformFeesCents = grok + vercel + supabase;
   const refundBufferCents = clampCents(input.refundBufferCents);
-  const reinvestPercent = clampPercent(input.reinvestPercent);
-  const jeremyPayPercent = 100 - reinvestPercent;
 
-  const johnWanted = clampCents(input.johnPayCents);
-  const afterFees = Math.max(0, visibleCents - platformFeesCents);
-  const johnPayCents = Math.min(johnWanted, afterFees);
-  const leftoverCents = Math.max(0, afterFees - johnPayCents);
-  const reinvestCents = Math.round((leftoverCents * reinvestPercent) / 100);
-  const jeremyPayCents = leftoverCents - reinvestCents;
+  const percents: MoneyDeskPercents = {
+    platformFeesPercent: clampPercent(input.platformFeesPercent),
+    johnPayPercent: clampPercent(input.johnPayPercent),
+    reinvestPercent: clampPercent(input.reinvestPercent),
+    jeremyPayPercent: clampPercent(input.jeremyPayPercent),
+  };
+
+  const parts = allocateByPercents(visibleCents, percents);
 
   const buckets: MoneyDeskBucket[] = [
     {
       id: "platform_fees",
       label: "Platform Fees",
-      amountCents: platformFeesCents,
-      detail: `Grok $${(grok / 100).toFixed(0)} · Vercel $${(vercel / 100).toFixed(0)} · Supabase $${(supabase / 100).toFixed(0)} / mo`,
+      amountCents: parts.platformFeesCents,
+      percent: percents.platformFeesPercent,
+      detail: `${percents.platformFeesPercent}% · Grok $${(grok / 100).toFixed(0)} / Vercel $${(vercel / 100).toFixed(0)} / Supabase $${(supabase / 100).toFixed(0)} listed`,
     },
     {
       id: "john_pay",
       label: "John Pay",
-      amountCents: johnPayCents,
-      detail: johnWanted > johnPayCents
-        ? `Partner pool $${(johnWanted / 100).toFixed(2)} — short vs visible cash`
-        : "Partner share (Connect) — not at swipe",
+      amountCents: parts.johnPayCents,
+      percent: percents.johnPayPercent,
+      detail: `${percents.johnPayPercent}% · Connect when you Confirm`,
     },
     {
       id: "reinvest",
       label: "Reinvest",
-      amountCents: reinvestCents,
-      detail: `${reinvestPercent}% of leftover after fees + John · hold in FA / Stripe`,
+      amountCents: parts.reinvestCents,
+      percent: percents.reinvestPercent,
+      detail: `${percents.reinvestPercent}% · hold in FA / Stripe`,
     },
     {
       id: "jeremy_pay",
       label: "Jeremy Pay",
-      amountCents: jeremyPayCents,
-      detail: `${jeremyPayPercent}% of leftover · business bank when you Confirm`,
+      amountCents: parts.jeremyPayCents,
+      percent: percents.jeremyPayPercent,
+      detail: `${percents.jeremyPayPercent}% · business bank when you Confirm`,
     },
   ];
 
@@ -110,14 +146,16 @@ export function splitVisibleCash(input: MoneyDeskSplitInput): MoneyDeskSplit {
     visibleCents,
     paymentsCents,
     faCents,
-    platformFeesCents,
+    platformFeesCents: parts.platformFeesCents,
     refundBufferCents,
-    johnPayCents,
-    leftoverCents,
-    reinvestCents,
-    jeremyPayCents,
-    reinvestPercent,
-    jeremyPayPercent,
+    johnPayCents: parts.johnPayCents,
+    leftoverCents: 0,
+    reinvestCents: parts.reinvestCents,
+    jeremyPayCents: parts.jeremyPayCents,
+    platformFeesPercent: percents.platformFeesPercent,
+    johnPayPercent: percents.johnPayPercent,
+    reinvestPercent: percents.reinvestPercent,
+    jeremyPayPercent: percents.jeremyPayPercent,
     buckets,
   };
 }

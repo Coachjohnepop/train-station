@@ -290,8 +290,10 @@ export async function getMoneyMap(): Promise<MoneyMap> {
     vercelCents: settings.vercelCents,
     supabaseCents: settings.supabaseCents,
     refundBufferCents: settings.refundBufferCents,
-    johnPayCents: periodPaid ? 0 : johnWanted,
+    platformFeesPercent: settings.platformFeesPercent,
+    johnPayPercent: settings.johnPayPercent,
     reinvestPercent: settings.reinvestPercent,
+    jeremyPayPercent: settings.jeremyPayPercent,
   });
 
   const stripe = getStripe() as unknown as StripeLike | null;

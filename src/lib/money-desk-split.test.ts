@@ -1,73 +1,56 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { platformFeesTotalCents, splitVisibleCash } from "./money-desk-split";
+import {
+  allocateByPercents,
+  EVEN_SPLIT_PERCENTS,
+  platformFeesTotalCents,
+  splitVisibleCash,
+} from "./money-desk-split";
+
+const lines = {
+  grokCents: 3000,
+  vercelCents: 2000,
+  supabaseCents: 3500,
+  refundBufferCents: 5000,
+  ...EVEN_SPLIT_PERCENTS,
+};
 
 describe("money-desk-split", () => {
-  it("defaults to $85 platform fees", () => {
-    assert.equal(
-      platformFeesTotalCents({
-        grokCents: 3000,
-        vercelCents: 2000,
-        supabaseCents: 3500,
-        refundBufferCents: 5000,
-        reinvestPercent: 100,
-      }),
-      8500,
-    );
+  it("still lists $85 monthly platform-fee lines", () => {
+    assert.equal(platformFeesTotalCents(lines), 8500);
   });
 
-  it("holds leftover in Reinvest when percent is 100", () => {
+  it("even 25% split of visible cash sums exactly", () => {
     const s = splitVisibleCash({
+      ...lines,
       faCents: 8052,
       availableCents: -20,
       pendingCents: 2397,
-      grokCents: 3000,
-      vercelCents: 2000,
-      supabaseCents: 3500,
-      refundBufferCents: 5000,
-      johnPayCents: 0,
-      reinvestPercent: 100,
     });
-    assert.equal(s.visibleCents, 8052 + 2397);
-    assert.equal(s.platformFeesCents, 8500);
-    assert.equal(s.johnPayCents, 0);
-    assert.equal(s.jeremyPayCents, 0);
-    assert.equal(s.reinvestCents, s.visibleCents - 8500);
-    assert.equal(s.buckets.map((b) => b.id).join(","), "platform_fees,john_pay,reinvest,jeremy_pay");
+    const visible = 8052 + 2397;
+    assert.equal(s.visibleCents, visible);
+    assert.equal(
+      s.platformFeesCents + s.johnPayCents + s.reinvestCents + s.jeremyPayCents,
+      visible,
+    );
+    assert.equal(s.platformFeesPercent, 25);
+    assert.equal(s.johnPayPercent, 25);
+    assert.equal(s.reinvestPercent, 25);
+    assert.equal(s.jeremyPayPercent, 25);
+    // 10449 / 4 = 2612.25 → round first three, remainder on Jeremy
+    const parts = allocateByPercents(visible, EVEN_SPLIT_PERCENTS);
+    assert.equal(s.platformFeesCents, parts.platformFeesCents);
+    assert.equal(s.jeremyPayCents, parts.jeremyPayCents);
   });
 
-  it("does not let John Pay starve platform fees", () => {
-    const s = splitVisibleCash({
-      faCents: 0,
-      availableCents: 10000,
-      pendingCents: 0,
-      grokCents: 3000,
-      vercelCents: 2000,
-      supabaseCents: 3500,
-      refundBufferCents: 5000,
-      johnPayCents: 50000,
-      reinvestPercent: 0,
-    });
-    assert.equal(s.platformFeesCents, 8500);
-    assert.equal(s.johnPayCents, 1500);
-    assert.equal(s.jeremyPayCents, 0);
-  });
-
-  it("splits leftover between Reinvest and Jeremy Pay", () => {
-    const s = splitVisibleCash({
-      faCents: 0,
-      availableCents: 20000,
-      pendingCents: 0,
-      grokCents: 3000,
-      vercelCents: 2000,
-      supabaseCents: 3500,
-      refundBufferCents: 5000,
-      johnPayCents: 1500,
-      reinvestPercent: 40,
-    });
-    // leftover = 20000 - 8500 - 1500 = 10000 → 40% reinvest, 60% jeremy
-    assert.equal(s.leftoverCents, 10000);
-    assert.equal(s.reinvestCents, 4000);
-    assert.equal(s.jeremyPayCents, 6000);
+  it("odd cents land on Jeremy Pay so the four buckets sum", () => {
+    const parts = allocateByPercents(100, EVEN_SPLIT_PERCENTS);
+    assert.equal(parts.platformFeesCents, 25);
+    assert.equal(parts.johnPayCents, 25);
+    assert.equal(parts.reinvestCents, 25);
+    assert.equal(parts.jeremyPayCents, 25);
+    const odd = allocateByPercents(101, EVEN_SPLIT_PERCENTS);
+    assert.equal(odd.platformFeesCents + odd.johnPayCents + odd.reinvestCents + odd.jeremyPayCents, 101);
+    assert.equal(odd.jeremyPayCents, 101 - odd.platformFeesCents - odd.johnPayCents - odd.reinvestCents);
   });
 });

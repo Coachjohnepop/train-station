@@ -1825,17 +1825,19 @@ model AcctJournalLine {
   @@index([partyId])
 }
 
-/** Singleton: monthly platform-fee lines + leftover split after fees + John Pay. */
+/** Singleton: monthly platform-fee lines + 4-way split of visible Stripe cash. */
 model MoneyDeskSettings {
-  id                 String   @id @default("default")
-  grokCents          Int      @default(3000)
-  vercelCents        Int      @default(2000)
-  supabaseCents      Int      @default(3500)
-  refundBufferCents  Int      @default(5000)
-  /** 0–100 of leftover after platform fees + John Pay. Rest is Jeremy Pay. */
-  reinvestPercent    Int      @default(100)
-  updatedAt          DateTime @updatedAt
-  updatedBy          String?
+  id                   String   @id @default("default")
+  grokCents            Int      @default(3000)
+  vercelCents          Int      @default(2000)
+  supabaseCents        Int      @default(3500)
+  refundBufferCents    Int      @default(5000)
+  platformFeesPercent  Int      @default(25)
+  johnPayPercent       Int      @default(25)
+  reinvestPercent      Int      @default(25)
+  jeremyPayPercent     Int      @default(25)
+  updatedAt            DateTime @updatedAt
+  updatedBy            String?
 }
 
 // ——— Bring Your Own Workout (isolated from Jeremy's catalog) ———

@@ -11,7 +11,10 @@ const schema = z.object({
   vercelCents: z.number().int().min(0).max(50_000).optional(),
   supabaseCents: z.number().int().min(0).max(50_000).optional(),
   refundBufferCents: z.number().int().min(0).max(20_000).optional(),
+  platformFeesPercent: z.number().int().min(0).max(100).optional(),
+  johnPayPercent: z.number().int().min(0).max(100).optional(),
   reinvestPercent: z.number().int().min(0).max(100).optional(),
+  jeremyPayPercent: z.number().int().min(0).max(100).optional(),
 });
 
 export async function GET() {

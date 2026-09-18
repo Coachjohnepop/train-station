@@ -123,7 +123,10 @@ type MoneyMap = {
     vercelCents: number;
     supabaseCents: number;
     refundBufferCents: number;
+    platformFeesPercent: number;
+    johnPayPercent: number;
     reinvestPercent: number;
+    jeremyPayPercent: number;
   };
   split: {
     visibleCents: number;
@@ -136,6 +139,7 @@ type MoneyMap = {
       id: string;
       label: string;
       amountCents: number;
+      percent?: number;
       detail: string;
     }>;
   };
@@ -366,19 +370,28 @@ function MoneyMapBoard({
   const [grok, setGrok] = useState(String(map.settings.grokCents / 100));
   const [vercel, setVercel] = useState(String(map.settings.vercelCents / 100));
   const [supabase, setSupabase] = useState(String(map.settings.supabaseCents / 100));
-  const [reinvest, setReinvest] = useState(String(map.settings.reinvestPercent));
+  const [pctFees, setPctFees] = useState(String(map.settings.platformFeesPercent));
+  const [pctJohn, setPctJohn] = useState(String(map.settings.johnPayPercent));
+  const [pctReinvest, setPctReinvest] = useState(String(map.settings.reinvestPercent));
+  const [pctJeremy, setPctJeremy] = useState(String(map.settings.jeremyPayPercent));
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setGrok(String(map.settings.grokCents / 100));
     setVercel(String(map.settings.vercelCents / 100));
     setSupabase(String(map.settings.supabaseCents / 100));
-    setReinvest(String(map.settings.reinvestPercent));
+    setPctFees(String(map.settings.platformFeesPercent));
+    setPctJohn(String(map.settings.johnPayPercent));
+    setPctReinvest(String(map.settings.reinvestPercent));
+    setPctJeremy(String(map.settings.jeremyPayPercent));
   }, [
     map.settings.grokCents,
     map.settings.vercelCents,
     map.settings.supabaseCents,
+    map.settings.platformFeesPercent,
+    map.settings.johnPayPercent,
     map.settings.reinvestPercent,
+    map.settings.jeremyPayPercent,
   ]);
 
   async function save() {
@@ -392,7 +405,10 @@ function MoneyMapBoard({
           grokCents: Math.round(Number(grok) * 100),
           vercelCents: Math.round(Number(vercel) * 100),
           supabaseCents: Math.round(Number(supabase) * 100),
-          reinvestPercent: Math.round(Number(reinvest)),
+          platformFeesPercent: Math.round(Number(pctFees)),
+          johnPayPercent: Math.round(Number(pctJohn)),
+          reinvestPercent: Math.round(Number(pctReinvest)),
+          jeremyPayPercent: Math.round(Number(pctJeremy)),
         }),
       });
       const body = await res.json().catch(() => ({}));
@@ -461,7 +477,10 @@ function MoneyMapBoard({
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {map.split.buckets.map((b) => (
             <div key={b.id} className={`rounded-xl border p-4 ${bucketTone[b.id] || "card"}`}>
-              <p className="text-[10px] font-bold uppercase tracking-wide">{b.label}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wide">
+                {b.label}
+                {typeof b.percent === "number" ? ` · ${b.percent}%` : ""}
+              </p>
               <p className="mt-1 text-xl font-semibold tabular-nums">{usd(b.amountCents)}</p>
               <p className="mt-1 text-xs opacity-80">{b.detail}</p>
               {b.id === "john_pay" ? (
@@ -479,8 +498,49 @@ function MoneyMapBoard({
       </div>
 
       <div className="card space-y-3 p-4">
-        <p className="text-sm font-medium text-[var(--text)]">Platform fee lines + leftover split</p>
+        <p className="text-sm font-medium text-[var(--text)]">Split of visible cash (must total 100%)</p>
         <div className="grid gap-3 sm:grid-cols-4">
+          <label className="text-xs text-[var(--muted)]">
+            Platform Fees %
+            <input
+              className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm text-[var(--text)]"
+              inputMode="numeric"
+              value={pctFees}
+              onChange={(e) => setPctFees(e.target.value)}
+            />
+          </label>
+          <label className="text-xs text-[var(--muted)]">
+            John Pay %
+            <input
+              className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm text-[var(--text)]"
+              inputMode="numeric"
+              value={pctJohn}
+              onChange={(e) => setPctJohn(e.target.value)}
+            />
+          </label>
+          <label className="text-xs text-[var(--muted)]">
+            Reinvest %
+            <input
+              className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm text-[var(--text)]"
+              inputMode="numeric"
+              value={pctReinvest}
+              onChange={(e) => setPctReinvest(e.target.value)}
+            />
+          </label>
+          <label className="text-xs text-[var(--muted)]">
+            Jeremy Pay %
+            <input
+              className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm text-[var(--text)]"
+              inputMode="numeric"
+              value={pctJeremy}
+              onChange={(e) => setPctJeremy(e.target.value)}
+            />
+          </label>
+        </div>
+        <p className="text-[10px] text-[var(--muted)]">
+          Monthly vendor list (not the split): Grok / Vercel / Supabase
+        </p>
+        <div className="grid gap-3 sm:grid-cols-3">
           <label className="text-xs text-[var(--muted)]">
             Grok $/mo
             <input
@@ -507,18 +567,6 @@ function MoneyMapBoard({
               value={supabase}
               onChange={(e) => setSupabase(e.target.value)}
             />
-          </label>
-          <label className="text-xs text-[var(--muted)]">
-            Reinvest leftover %
-            <input
-              className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm text-[var(--text)]"
-              inputMode="numeric"
-              value={reinvest}
-              onChange={(e) => setReinvest(e.target.value)}
-            />
-            <span className="mt-1 block text-[10px]">
-              Rest of leftover is Jeremy Pay ({100 - (Number(reinvest) || 0)}%)
-            </span>
           </label>
         </div>
         <button
