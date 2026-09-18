@@ -22,6 +22,7 @@ import {
   yesterdayIso,
   type DailyActivityEvent,
   type DailyActivityReport,
+  type DailyGuestSummary,
   type DailyQuietMember,
   type DailyUserActivity,
   type UsageRange,
