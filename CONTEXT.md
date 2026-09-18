@@ -862,10 +862,10 @@ Rollback: `POST /v1/balance_settings` `payments[payouts][schedule][interval]=dai
 
 | Who | Plan | Notes |
 |-----|------|--------|
-| **Ali Fletcher** `fletcherboys@att.net` | Coach Class paid (Aug 10, LETSGO26 ~$5) | Async/on-demand. **Re-onboard.** Texted: private window, Free joke first, then Coach Class → Continue already paid → woman → goals → book Jeremy. Temp **14-day** Today preview. Copy: `ALI_FLETCHER_SCRIPT.md`. |
+| **Ali Fletcher** `fletcherboys@att.net` | Business Class · standing staff grant | Train at her house. Not billed. Auto-renew. |
 | **Bella Roy** `bellaroyy03@gmail.com` | Coach Class paid (Aug 12) | **Onboard incomplete.** Same welcome retry + onboard gate. |
-| **Stephanie Popham** `sprealty9@gmail.com` | Business Class · standing staff grant | Promoted 2026-09-15. Does not expire on the 1st. |
-| **Lemon John** `john@lemonvoice.com` | Paid member | Training account with Stephanie. |
+| **Stephanie Popham** `sprealty9@gmail.com` | Business Class · standing staff grant | Developer / tester. Not billed. Auto-renew. |
+| **Lemon John** `john@lemonvoice.com` | Business Class · standing staff grant | Developer / tester. Training with Stephanie. Not billed. |
 | **Jeremy Byrd 2** `coachbyrd84@aol.com` | Business paid | Onboard done. |
 | Coop Fletcher `cooperfletcher892@gmail.com` | Merchandise | Payment pending, onboard incomplete. |
 | ~~Will / Quinn~~ | — | Purged 2026-08-12. |
