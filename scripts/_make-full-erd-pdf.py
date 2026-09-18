@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Full Train Station ERD as of 13 Sep 2026."""
+"""Full Train Station ERD as of 18 Sep 2026."""
 
 import os
 import shutil
@@ -10,8 +10,8 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
-OUT_DOCS = "/Users/johnpopham/projects/train-station/docs/full-erd-2026-09-13.pdf"
-OUT_DESK = "/Users/johnpopham/Desktop/Stuff/Lemon Voice/The Train Station/Full-ERD-2026-09-13.pdf"
+OUT_DOCS = "/Users/johnpopham/projects/train-station/docs/full-erd-2026-09-18.pdf"
+OUT_DESK = "/Users/johnpopham/Desktop/Stuff/Lemon Voice/The Train Station/Full-ERD-2026-09-18.pdf"
 
 pdfmetrics.registerFont(TTFont("Georgia", "/System/Library/Fonts/Supplemental/Georgia.ttf"))
 pdfmetrics.registerFont(TTFont("Georgia-Bold", "/System/Library/Fonts/Supplemental/Georgia Bold.ttf"))
@@ -48,7 +48,7 @@ def header_footer(c, page, title, pages=8):
     c.rect(0, 0, PAGE_W, 0.3 * inch, fill=1, stroke=0)
     c.setFillColor(WHITE)
     c.setFont("Helvetica", 7.5)
-    c.drawString(LEFT, 0.11 * inch, "Postgres catalog  ·  Prisma  ·  13 Sep 2026  ·  not a legal schema dump")
+    c.drawString(LEFT, 0.11 * inch, "Postgres catalog  ·  Prisma  ·  18 Sep 2026  ·  not a legal schema dump")
     c.drawRightString(PAGE_W - LEFT, 0.11 * inch, f"Page {page} of {pages}")
 
 
@@ -229,7 +229,7 @@ def page5(c):
         (colors.HexColor("#635BFF"), "STRIPE WEBHOOK EVENT", ["id  type  payload", "idempotent process"]),
         (NAVY, "FACT SUBSCRIPTION PAYMENT", ["amountCents  status", "plan  paidAt  userId"]),
         (GOLD, "COMMISSION", ["Partner  Payout  Line", "cliff coded; brackets draft"]),
-        (PURPLE, "REFERRAL / DISCOUNT", ["ReferralCode", "Stripe coupon via admin"]),
+        (PURPLE, "MONEY DESK SETTINGS", ["singleton default", "25% x4 split percents", "Grok/Vercel/Supabase lines", "bills x4 = $340 outflow floor"]),
         (EMERALD, "WAITLIST / LEADS", ["WaitlistEntry source", "byow-signup vs signup-register"]),
         (ROSE, "ACCT BOOKS", ["Entity Account Party", "Period Journal Entry Line"]),
     ]
@@ -240,7 +240,7 @@ def page5(c):
     y = y - 2.55 * inch
     c.setFillColor(MUTED)
     c.setFont("Helvetica", 8)
-    c.drawString(LEFT, y, "Card numbers never persist here. Checkout is Stripe-hosted. Venmo is Mark paid. BYOW is free (no payment rows).")
+    c.drawString(LEFT, y, "Card numbers never persist here. Checkout is Stripe-hosted. Venmo is Mark paid. FA + 4 buckets live on Admin Stripe money; MoneyDeskSettings is the split.")
     c.showPage()
 
 
@@ -281,6 +281,8 @@ def page7(c):
         "User -- WorkoutLog (Jeremy catalog only)    User -- AnalyticsEvent",
         "Stripe Checkout --> WebhookEvent --> paymentStatus=paid on MemberProfile",
         "Venmo --> Admin Mark paid --> same paymentStatus",
+        "Standing staff grant (Stephanie / Ali / John) --> paymentMethod=manual, skip checkout",
+        "Visible cash = FA ledger + pending + available; no outflow until bills x 4 ($340)",
         "ChatThreadCursor.clearedAt splits live vs Archive per user; cohort joinAfter hides pre-enroll history.",
     ]
     ty = y
@@ -289,7 +291,7 @@ def page7(c):
         ty -= 18
     c.setFillColor(MUTED)
     c.setFont("Helvetica", 8)
-    c.drawString(LEFT, ty - 8, "91+ tables in public schema after BYOW logs. RLS on; Prisma as postgres (not PostgREST).")
+    c.drawString(LEFT, ty - 8, "93 tables in public schema. RLS on; Prisma as postgres (not PostgREST). MoneyDeskSettings added 18 Sep 2026.")
     c.showPage()
 
 
@@ -317,7 +319,7 @@ def main():
     os.makedirs(os.path.dirname(OUT_DOCS), exist_ok=True)
     os.makedirs(os.path.dirname(OUT_DESK), exist_ok=True)
     c = canvas.Canvas(OUT_DOCS, pagesize=landscape(letter))
-    c.setTitle("The Train Station -- full ERD 13 Sep 2026")
+    c.setTitle("The Train Station -- full ERD 18 Sep 2026")
     c.setAuthor("The Train Station")
     page1(c); page2(c); page3(c); page4(c); page5(c); page6(c); page7(c); page8(c)
     c.save()

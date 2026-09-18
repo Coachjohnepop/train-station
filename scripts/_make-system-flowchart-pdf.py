@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The Train Station -- system flowchart as of 13 Sep 2026."""
+"""The Train Station -- system flowchart as of 18 Sep 2026."""
 
 import math
 import os
@@ -13,8 +13,8 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 
-OUT_DESK = "/Users/johnpopham/Desktop/Stuff/Lemon Voice/The Train Station/System-Flowchart-2026-09-13.pdf"
-OUT_DOCS = "/Users/johnpopham/projects/train-station/docs/system-flowchart-2026-09-13.pdf"
+OUT_DESK = "/Users/johnpopham/Desktop/Stuff/Lemon Voice/The Train Station/System-Flowchart-2026-09-18.pdf"
+OUT_DOCS = "/Users/johnpopham/projects/train-station/docs/system-flowchart-2026-09-18.pdf"
 LOGO = "/Users/johnpopham/projects/train-station/public/images/logo.png"
 
 pdfmetrics.registerFont(TTFont("Georgia", "/System/Library/Fonts/Supplemental/Georgia.ttf"))
@@ -63,7 +63,7 @@ def header_footer(c, page, title):
     c.rect(0, 0, PAGE_W, 0.32 * inch, fill=1, stroke=0)
     c.setFillColor(WHITE)
     c.setFont("Helvetica", 7.5)
-    c.drawString(LEFT, 0.12 * inch, "System as of 13 Sep 2026  ·  live: thetrainstation.co  ·  not for members")
+    c.drawString(LEFT, 0.12 * inch, "System as of 18 Sep 2026  ·  live: thetrainstation.co  ·  not for members")
     c.drawRightString(PAGE_W - RIGHT, 0.12 * inch, f"Page {page}")
 
 
@@ -580,13 +580,13 @@ def page7(c):
 
     y = PAGE_H - 1.02 * inch
     box(c, LEFT, y - 1.85 * inch, 4.7 * inch, 1.85 * inch, "TODAY  (coded)", [
-        "Member pays -> Jeremy's master Stripe (or Venmo)",
-        "Company keeps the feed",
-        "Dev & partnership fees are NOT at swipe",
-        "Software cliff: 5% of MRR until $5k, then 30% of all MRR",
-        "Fee pool must hit $400 before Run payout",
-        "John = 100% of fee pool until partners change",
-        "Admin -> Dev & partnership + Connect Express (later)",
+        "Member pays -> Jeremy master Stripe (manual payouts)",
+        "Autos to Financial Account are OFF; look then pay",
+        "Admin Stripe money: 25% x4 buckets of visible cash",
+        "Platform + John Pay -> John's Stripe, HOLD until Mercury",
+        "Reinvest -> Train Station Mercury (hold in FA until open)",
+        "Jeremy Pay -> currently mapped Stripe payout",
+        "No outflow until monthly bills x4 ($85 -> $340)",
     ], NAVY)
     box(c, LEFT + 4.9 * inch, y - 1.85 * inch, 4.58 * inch, 1.85 * inch, "DRAFT PARTNERSHIP  (not coded, not signed)", [
         "Tax brackets on Gross MRR:",
@@ -644,7 +644,7 @@ def page8(c):
         (EMERALD, "WORKOUT", ["exercises + sets", "warmup / cooldown", "timed hold (35 min)", "logs + catch-up"]),
         (colors.HexColor("#0F766E"), "ENROLLMENT", ["personal 28-day month", "Day 1 = Adult W1D1", "Todd exception Day 2", "location home/gym"]),
         (colors.HexColor("#B45309"), "BOOKING", ["Calendly event", "intro 15-min", "nutrition appt", "reschedule fields"]),
-        (colors.HexColor("#635BFF"), "MONEY", ["Stripe events", "Venmo mark-paid", "tips  ·  discounts", "commission pool"]),
+        (colors.HexColor("#635BFF"), "MONEY", ["FA + payments wallets", "MoneyDeskSettings 25%x4", "$340 savings floor", "Venmo mark-paid"]),
         (VIOLET, "LIVE", ["CoachTodaySession", "userIds subset", "Zoom day", "restActive"]),
         (colors.HexColor("#374151"), "ANALYTICS", ["AnalyticsSession", "AnalyticsEvent", "landingVariant", "first-party only"]),
     ]
@@ -663,7 +663,7 @@ def page8(c):
     box(c, LEFT, y - 1.22 * inch, 4.7 * inch, 1.22 * inch, "PEOPLE", [
         "Jeremy  jeremy@thetrainstation.co  -- coach, merchant, Zoom host",
         "John admin  john@thetrainstation.co  -- app admin",
-        "Lemon John  john@lemonvoice.com  -- member soak account",
+        "Lemon John / Steph / Ali -- Business Class standing staff grants",
         "Vercel/GitHub  john@bcxvoice.com  -- deploys only, not a member",
         "Natasha  tangledsigns@gmail.com  -- Free, no outreach",
     ], NAVY)
@@ -679,8 +679,8 @@ def page8(c):
 
 def page9(c, loop):
     header_footer(c, 9, "Loop tests  ·  emerald sweep  ·  what is live")
-    kicker(c, "13 Sep 2026 sweep", PAGE_H - 0.58 * inch)
-    h1(c, "Gold is gone. Links hold. Workflows that need a coach password were gated.", PAGE_H - 0.82 * inch)
+    kicker(c, "18 Sep 2026 sweep", PAGE_H - 0.58 * inch)
+    h1(c, "Links hold. Money desk is live. Workflows that need a coach password stay gated.", PAGE_H - 0.82 * inch)
 
     y = PAGE_H - 1.0 * inch
     box(c, LEFT, y - 1.55 * inch, 4.7 * inch, 1.55 * inch, "EMERALD SWEEP", [
@@ -703,11 +703,10 @@ def page9(c, loop):
 
     y = y - 1.75 * inch
     box(c, LEFT, y - 1.55 * inch, PAGE_W - LEFT - RIGHT, 1.55 * inch, "SHIPPED THIS WEEK + THIS PACK", [
-        "Landing A/B  ·  intro pester  ·  iOS logout form POST  ·  Today without house icon",
-        "Fasted cardio = one 35-min timer, ambient music, buzzer at the end",
-        "Adult calendar: Cool Down in the clicked slot; delete leaves a hole; left column width locked",
-        "Partnership draft PDF + $15k brackets (not coded). BYOW stays preview.",
-        "Emerald ships on main with this pack so the live site matches the flowchart.",
+        "Admin Stripe money: FA wallet, 25%x4 buckets, $340 savings floor, rails to John Stripe / TS Mercury / Jeremy mapped",
+        "Manual payouts on Jeremy Live; FA transfer_all off; standing Business Class for Steph / Ali / John",
+        "Landing A/B, set-log finger, usage Day/Week/Month, allaboard.fit 308 to /l/class",
+        "Partnership tax brackets still draft (not coded). BYOW stays preview.",
     ], PURPLE, PURPLE_PALE)
 
     y = y - 1.75 * inch
@@ -719,26 +718,26 @@ def page9(c, loop):
     c.setFont("Helvetica", 8.5)
     c.drawString(LEFT + 12, y - 0.42 * inch, "1.  Post hits /  ->  A or B  ->  ticket  ->  checkout or Free onboard  ->  book 15 min  ->  Today.")
     c.drawString(LEFT + 12, y - 0.60 * inch, "2.  Jeremy plans a class  ->  assigns a subset  ->  Zoom  ->  checkoffs. Everyone else stays on their own month.")
-    c.drawString(LEFT + 12, y - 0.78 * inch, "3.  Card money lands in Jeremy's Stripe. Venmo is the same company after Mark paid. John's share is later, not at swipe.")
+    c.drawString(LEFT + 12, y - 0.78 * inch, "3.  Card money lands in Jeremy's Stripe (manual). Hold to $340. Then 25% fees+John / reinvest / Jeremy. Venmo is the same company after Mark paid.")
     c.drawString(LEFT + 12, y - 0.96 * inch, "4.  Postgres is the truth. Don't poll it. Don't steal the phone's podcast. Don't restack Jeremy's columns.")
     c.showPage()
 
 
 def main():
     loop = {
-        "pages": "87",
+        "pages": "95",
         "pages_bad": "0",
         "apis": "9/9",
-        "flows": "17/17",
+        "flows": "24/24",
         "dead": "0",
-        "ab": "39/39 pass  ·  A+B split  ·  C excluded  ·  doors sticky",
-        "paid": "94 pass / 1 fail  ·  fail = desktop got B headline (A/B working)",
+        "ab": "not re-run this pack (prior 39/39)",
+        "paid": "not re-run this pack (prior 94/95, fail = A/B working)",
         "coach": "login skipped -- prod password not in env; admin routes 307 to /login",
     }
     os.makedirs(os.path.dirname(OUT_DESK), exist_ok=True)
     os.makedirs(os.path.dirname(OUT_DOCS), exist_ok=True)
     c = canvas.Canvas(OUT_DOCS, pagesize=landscape(letter))
-    c.setTitle("The Train Station -- system flowchart 13 Sep 2026")
+    c.setTitle("The Train Station -- system flowchart 18 Sep 2026")
     c.setAuthor("The Train Station")
     page1(c)
     page2(c)

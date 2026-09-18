@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-18 (prod sweep + ERD/flowchart pack)
+
+**Status:** Prod site-loop-sweep **95 pages / 0 dead / 9 public APIs / 24 process gates** (money-desk included). Stripe LIVE + Venmo + tips. Packs: `docs/full-erd-2026-09-18.pdf`, `docs/system-flowchart-2026-09-18.pdf`, `docs/system-flowchart-2026-09-18-byow.pdf` (+ Desktop copies). Landing A/B and landing→paid loops not re-run this pack.
+
 **Date:** 2026-09-18 (savings threshold = bills × 4)
 
 **Status:** No money leaves Stripe until visible cash ≥ **monthly platform bills × 4**. Default Grok $30 + Vercel $20 + Supabase $35 = **$85 → $340**. At 25% each, the Platform Fees slice then covers one month of bills. Shortfall shows on Admin → Stripe money.

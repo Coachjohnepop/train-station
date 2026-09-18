@@ -297,6 +297,7 @@ async function main() {
     { path: "/api/stripe/checkout", method: "POST", body: {} },
     { path: "/api/admin/billing/discounts", method: "GET" },
     { path: "/api/admin/billing/overview", method: "GET" },
+    { path: "/api/admin/billing/money-desk", method: "GET" },
     { path: "/api/admin/pricing", method: "GET" },
     { path: "/api/admin/members", method: "GET" },
     { path: "/api/admin/activity", method: "GET" },

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""System flowchart including BYOW, gold trim, report tab -- 13 Sep 2026."""
+"""System flowchart including BYOW -- 18 Sep 2026."""
 
 import os
 import shutil
@@ -10,8 +10,8 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
-OUT_DOCS = "/Users/johnpopham/projects/train-station/docs/system-flowchart-2026-09-13-byow.pdf"
-OUT_DESK = "/Users/johnpopham/Desktop/Stuff/Lemon Voice/The Train Station/System-Flowchart-2026-09-13-BYOW.pdf"
+OUT_DOCS = "/Users/johnpopham/projects/train-station/docs/system-flowchart-2026-09-18-byow.pdf"
+OUT_DESK = "/Users/johnpopham/Desktop/Stuff/Lemon Voice/The Train Station/System-Flowchart-2026-09-18-BYOW.pdf"
 
 pdfmetrics.registerFont(TTFont("Georgia-Bold", "/System/Library/Fonts/Supplemental/Georgia Bold.ttf"))
 pdfmetrics.registerFont(TTFont("Georgia", "/System/Library/Fonts/Supplemental/Georgia.ttf"))
@@ -46,7 +46,7 @@ def hf(c, n, title):
     c.rect(0, 0, PAGE_W, 0.28 * inch, fill=1, stroke=0)
     c.setFillColor(WHITE)
     c.setFont("Helvetica", 7.5)
-    c.drawString(LEFT, 0.1 * inch, "Workflows as of 13 Sep 2026  ·  live thetrainstation.co")
+    c.drawString(LEFT, 0.1 * inch, "Workflows as of 18 Sep 2026  ·  live thetrainstation.co")
     c.drawRightString(PAGE_W - LEFT, 0.1 * inch, f"Page {n}")
 
 
@@ -153,7 +153,7 @@ def p2(c):
     box(c, LEFT, y - 1.15 * inch, PAGE_W - 2 * LEFT, 1.15 * inch, "TABLES  (same Postgres, not Jeremy's catalog)", [
         "ByowExercise  ByowWorkout  ByowWorkoutExercise  ByowSourceNote (rawText)  ByowWorkoutLog",
         "User + MemberProfile still used (paymentNote=byow). Signup changes on main go through completeMemberSignup.",
-        "Sweep 13 Sep: /byow/signup 200  ·  parse/build/log 401 unauth  ·  no dead hrefs.",
+        "Sweep 18 Sep: /byow/signup 200  ·  parse/build/log 401 unauth  ·  no dead hrefs.",
     ], PURPLE)
     c.showPage()
 
@@ -166,9 +166,9 @@ def p3(c):
     y = PAGE_H - 0.95 * inch
     box(c, LEFT, y - 1.55 * inch, 3.35 * inch, 1.55 * inch, "MONEY", [
         "Stripe Checkout hosted LIVE",
-        "Webhook marks paid",
+        "Manual payouts + FA hold",
+        "25%x4 until $340 floor",
         "Venmo + Mark paid",
-        "No $1/day SKU",
         "PCI draft: SAQ A path",
     ], colors.HexColor("#635BFF"))
     box(c, LEFT + 3.5 * inch, y - 1.55 * inch, 3.35 * inch, 1.55 * inch, "LIVE CLASS", [
@@ -189,15 +189,15 @@ def p3(c):
 
 
 def p4(c):
-    hf(c, 4, "Sweep 13 Sep 2026")
+    hf(c, 4, "Sweep 18 Sep 2026")
     c.setFillColor(NAVY_DEEP)
     c.setFont("Georgia-Bold", 15)
-    c.drawString(LEFT, PAGE_H - 0.72 * inch, "Prod loop: 92 pages, 0 dead, 22/22 gates")
+    c.drawString(LEFT, PAGE_H - 0.72 * inch, "Prod loop: 95 pages, 0 dead, 24/24 gates")
     y = PAGE_H - 0.95 * inch
     box(c, LEFT, y - 1.7 * inch, 5.1 * inch, 1.7 * inch, "SITE LOOP SWEEP", [
-        "92 pages ok/gated/redirect  ·  bad 0",
+        "95 pages ok/gated/redirect  ·  bad 0",
         "Public APIs 9/9  ·  Stripe LIVE + Venmo + tips",
-        "Process flows 22/22 including BYOW parse/build/log",
+        "Process flows 24/24 including money-desk + BYOW",
         "Chat archive + clear gated 401",
         "/byow/signup public 200",
     ], NAVY)
